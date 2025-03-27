@@ -1,0 +1,522 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 프로젝트 구조 가이드라인
+---
+# 옛날 프로젝트 기능을 반영한 개선된 프로젝트 구조
+
+옛날 프로젝트의 기능(장비 관리, 교정 관리, 대여/반출 관리, 팀별 구분 등)을 현대적인 Next.js와 NestJS 스택에 통합한 개선된 프로젝트 구조를 제안합니다.
+
+### 데이터베이스
+- **RDBMS**: PostgreSQL (MySQL에서 마이그레이션 완료)
+- **ORM**: Drizzle ORM
+- **마이그레이션**: Drizzle Kit
+- **캐싱**: Redis (필요시)
+
+### 주요 모델
+1. User
+   - 역할: 관리자(admin), 일반 사용자(user), 승인자(approver)
+   - 소속팀: RF팀, SAR팀, EMC팀, Automotive팀
+2. Equipment (장비)
+   - 기본 정보: 장비명, 관리번호, 자산번호, 모델명, 제조사, 일련번호, 위치
+   - 교정 정보: 교정주기, 최종교정일, 차기교정일, 교정기관, 중간점검 대상
+   - 상태 정보: 사용 가능, 대여 중, 반출 중, 교정 예정, 교정 기한 초과, 여분
+   - 관리 정보: 구입년도, 관리방법(외부교정, 자체점검, 비대상), 소속팀, 관리자
+   - 추가 정보: 공급사, 연락처, S/W 버전, 펌웨어 버전, 메뉴얼 위치, 부속품, 주요 기능, 기술책임자
+   - 대여 정보: 대여자, 대여일, 반납 예정일
+3. EquipmentLoan (장비 대여)
+   - 대여 정보: 장비, 대여자, 대여일, 반납 예정일, 반납일, 메모
+4. EquipmentCheckout (장비 반출)
+   - 반출 정보: 반출 장소, 전화번호, 주소, 사유, 반출일, 반납일, 담당자, 반납 담당자
+5. 기타 모델
+   - 장비 위치 변동 이력, 교정 이력, 유지보수 이력, 수리 이력, 알림
+
+## 프론트엔드 페이지 및 필드
+1. 로그인 페이지 (Login.js)
+   - 사용자 ID, 비밀번호
+2. 대시보드 (Dashboard.js)
+   - 장비 통계: 총 장비, 사용 가능 장비, 반출 중 장비, 대여 중 장비, 교정 예정 장비, 교정 기한 초과 장비
+   - 팀별 장비 현황: RF팀, SAR팀, EMC팀, AUTO팀의 각 카테고리별 장비 수
+   - 최근 활동 내역
+   - 교정 예정 장비 목록
+   - 반납 기한 초과 장비 목록
+3. 장비 목록 페이지 (EquipmentList.js)
+   - 검색 및 필터: 검색어, 상태, 위치, 제조사, 팀
+   - 표시 필드: 관리번호, 장비명, 모델명, 상태, 위치, 최종교정일, 차기교정일
+   - 페이지네이션 기능
+   - 다운로드 기능
+4. 장비 상세 페이지 (EquipmentDetail.js)
+   - 기본 정보: 장비명, 관리번호, 자산번호, 모델명, 제조사, 일련번호, 팀, 위치
+   - 교정 정보: 교정주기, 최종교정일, 차기교정일, 교정기관, 관리방법
+   - 추가 정보: 공급사, 연락처, S/W 버전, 펌웨어 버전, 구입년도, 설치일시, 메뉴얼 위치, 장비 사양
+   - 대여 정보: 현재 대여 상태, 대여자, 대여일, 반납 예정일
+   - 이력 정보: 위치 변동 이력, 교정 이력, 유지보수 이력, 수리 이력
+   - 대여 및 반출 기능
+5. 장비 등록/수정 페이지 (EquipmentForm.js)
+   - 기본 정보 입력 필드: 장비명, 관리번호, 자산번호, 모델명, 제조사, 일련번호, 팀, 위치
+   - 교정 정보 입력 필드: 교정주기, 최종교정일, 교정기관, 관리방법
+   - 추가 정보 입력 필드: 공급사, 연락처, S/W 버전, 펌웨어 버전, 구입년도, 설치일시, 메뉴얼 위치, 장비 사양, 부속품
+   - 상태 정보 및 이미지 업로드
+6. 반출 목록 페이지 (CheckoutList.js)
+   - 검색 기능
+   - 표시 필드: 반출 장소, 담당자, 반출 장비, 반출일, 반납일, 상태
+   - 페이지네이션 기능
+7. 반출 상세 페이지 (CheckoutDetail.js)
+   - 반출 정보: 반출 장소, 전화번호, 주소, 사유, 반출일, 반납일, 담당자
+   - 반출 장비 목록: 장비명, 관리번호, 모델명, 일련번호, 수량
+   - 장비 추가 및 제거 기능
+   - 반출 등록 및 반납 처리 기능
+8. 최근 활동 페이지 (RecentActivity.js)
+   - 장비 등록, 수정, 삭제 활동
+   - 대여 및 반납 활동
+   - 반출 및 반입 활동
+   - 교정 등록 활동
+   - 필터링 및 페이지네이션 기능
+
+## 주요 특징
+- 팀별 장비 관리 (RF팀, SAR팀, EMC팀, Automotive팀)
+- 장비의 교정 관리 (교정주기, 교정일, 교정기관)
+- 장비 대여 및 반출 관리
+- 장비 이력 관리 (위치, 교정, 유지보수, 수리)
+- 각종 통계 및 현황 대시보드
+이 시스템은 장비의 전체 수명주기를 관리하며, 특히 교정, 대여, 반출 관리에 중점을 두고 있습니다.
+
+## 현재 프로젝트 구조
+
+```
+/
+├── apps/                    # 애플리케이션
+│   ├── backend/             # NestJS 백엔드 앱
+│   └── frontend/            # Next.js 프론트엔드 앱
+├── packages/                # 공유 패키지
+│   ├── schemas/             # 공유 스키마 및 타입
+│   ├── ui/                  # 공유 UI 컴포넌트
+│   └── api-client/          # API 클라이언트
+├── docs/                    # 문서
+│   ├── guides/              # 사용자 가이드
+│   ├── api/                 # API 문서
+│   ├── development/         # 개발 문서
+│   └── migration/           # 마이그레이션 관련 문서
+├── scripts/                 # 유틸리티 스크립트
+├── database/                # 데이터베이스 관련 파일
+├── docker-compose.yml       # Docker 설정
+├── package.json             # 루트 패키지 정의
+├── turbo.json               # Turborepo 설정
+├── pnpm-workspace.yaml      # Workspaces 정의
+└── README.md                # 프로젝트 설명
+```
+
+## 백엔드 구조 (apps/backend/)
+
+```
+apps/backend/
+├── src/
+│ ├── modules/                
+│ │ ├── equipment/            # 장비 관련 모듈
+│ │ │ ├── equipment.module.ts
+│ │ │ ├── equipment.controller.ts
+│ │ │ ├── equipment.service.ts
+│ │ │ ├── dto/                
+│ │ │ │ ├── create-equipment.dto.ts
+│ │ │ │ ├── update-equipment.dto.ts
+│ │ │ │ └── equipment-query.dto.ts    # 검색 및 필터링
+│ │ │ ├── entities/           
+│ │ │ │ └── equipment.entity.ts
+│ │ │ └── enums/
+│ │ │   ├── equipment-status.enum.ts  # 장비 상태 정의
+│ │ │   └── calibration-method.enum.ts # 교정 방법 정의
+│ │ │
+│ │ ├── loans/                # 장비 대여 모듈
+│ │ │ ├── loans.module.ts
+│ │ │ ├── loans.controller.ts
+│ │ │ ├── loans.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │
+│ │ ├── checkouts/            # 장비 반출 모듈
+│ │ │ ├── checkouts.module.ts
+│ │ │ ├── checkouts.controller.ts
+│ │ │ ├── checkouts.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │
+│ │ ├── calibrations/         # 장비 교정 모듈
+│ │ │ ├── calibrations.module.ts
+│ │ │ ├── calibrations.controller.ts
+│ │ │ ├── calibrations.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │
+│ │ ├── maintenance/          # 장비 유지보수 모듈
+│ │ │ ├── maintenance.module.ts
+│ │ │ ├── maintenance.controller.ts
+│ │ │ ├── maintenance.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │
+│ │ ├── teams/                # 팀 관리 모듈
+│ │ │ ├── teams.module.ts
+│ │ │ ├── teams.controller.ts
+│ │ │ ├── teams.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │
+│ │ ├── users/                # 사용자 모듈
+│ │ │ ├── users.module.ts
+│ │ │ ├── users.controller.ts
+│ │ │ ├── users.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │
+│ │ ├── notifications/        # 알림 모듈 (교정 예정, 반납 기한 등)
+│ │ │ ├── notifications.module.ts
+│ │ │ ├── notifications.controller.ts
+│ │ │ ├── notifications.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │
+│ │ ├── dashboard/            # 대시보드 데이터 모듈
+│ │ │ ├── dashboard.module.ts
+│ │ │ ├── dashboard.controller.ts
+│ │ │ ├── dashboard.service.ts
+│ │ │ └── dto/
+│ │ │   └── dashboard-stats.dto.ts
+│ │ │
+│ │ ├── history/              # 이력 관리 모듈
+│ │ │ ├── history.module.ts
+│ │ │ ├── history.controller.ts
+│ │ │ ├── history.service.ts
+│ │ │ ├── dto/
+│ │ │ └── entities/
+│ │ │   ├── location-history.entity.ts  # 위치 변동 이력
+│ │ │   ├── calibration-history.entity.ts # 교정 이력
+│ │ │   └── repair-history.entity.ts    # 수리 이력
+│ └── database/
+│   ├── drizzle/
+│   │ ├── schema/
+│   │ │ ├── equipment.ts      # 장비 스키마
+│   │ │ ├── teams.ts          # 팀 스키마
+│   │ │ ├── users.ts          # 사용자 스키마
+│   │ │ ├── loans.ts          # 대여 스키마
+│   │ │ ├── checkouts.ts      # 반출 스키마
+│   │ │ ├── calibrations.ts   # 교정 스키마
+│   │ │ ├── maintenance.ts    # 유지보수 스키마
+│   │ │ ├── history.ts        # 이력 스키마
+│   │ │ ├── notifications.ts  # 알림 스키마
+│   │ │ └── index.ts
+```
+
+## 프론트엔드 구조 (apps/frontend/)
+
+```
+apps/frontend/
+├── app/
+│ ├── [locale]/
+│ │ ├── dashboard/            # 대시보드 페이지
+│ │ │ ├── page.tsx
+│ │ │ ├── stats/              # 통계 컴포넌트
+│ │ │ │ ├── EquipmentSummary.tsx      # 장비 현황 요약
+│ │ │ │ ├── TeamEquipmentStats.tsx    # 팀별 장비 통계
+│ │ │ │ └── CalibrationSchedule.tsx   # 교정 일정
+│ │ │ └── components/
+│ │ │   ├── RecentActivitiesCard.tsx  # 최근 활동 내역
+│ │ │   ├── OverdueCalibrationList.tsx # 교정 기한 초과 목록
+│ │ │   └── OverdueLoanList.tsx       # 반납 기한 초과 목록
+│ │ │
+│ │ ├── equipment/            # 장비 관련 페이지
+│ │ │ ├── page.tsx            # 장비 목록 페이지
+│ │ │ ├── create/             # 장비 등록 페이지
+│ │ │ │ └── page.tsx
+│ │ │ ├── [id]/               # 장비 상세 페이지
+│ │ │ │ ├── page.tsx
+│ │ │ │ ├── edit/             # 장비 수정 페이지
+│ │ │ │ │ └── page.tsx
+│ │ │ │ ├── loan/             # 장비 대여 페이지
+│ │ │ │ │ └── page.tsx
+│ │ │ │ ├── checkout/         # 장비 반출 페이지
+│ │ │ │ │ └── page.tsx
+│ │ │ │ ├── calibration/      # 교정 관리 페이지
+│ │ │ │ │ └── page.tsx
+│ │ │ │ └── history/          # 이력 관리 페이지
+│ │ │ │   └── page.tsx
+│ │ │ └── components/
+│ │ │   ├── EquipmentSearchFilter.tsx # 고급 검색/필터
+│ │ │   ├── EquipmentTable.tsx        # 장비 목록 테이블
+│ │ │   └── EquipmentExport.tsx       # 목록 내보내기
+│ │ │
+│ │ ├── loans/                # 대여 관리 페이지
+│ │ │ ├── page.tsx            # 대여 목록 페이지
+│ │ │ ├── create/             # 대여 등록 페이지
+│ │ │ │ └── page.tsx
+│ │ │ └── [id]/               # 대여 상세 페이지
+│ │ │   └── page.tsx
+│ │ │
+│ │ ├── checkouts/            # 반출 관리 페이지
+│ │ │ ├── page.tsx            # 반출 목록 페이지
+│ │ │ ├── create/             # 반출 등록 페이지
+│ │ │ │ └── page.tsx
+│ │ │ └── [id]/               # 반출 상세 페이지
+│ │ │   └── page.tsx
+│ │ │
+│ │ ├── calibrations/         # 교정 관리 페이지
+│ │ │ ├── page.tsx            # 교정 일정 페이지
+│ │ │ ├── create/             # 교정 등록 페이지
+│ │ │ │ └── page.tsx
+│ │ │ └── [id]/               # 교정 상세 페이지
+│ │ │   └── page.tsx
+│ │ │
+│ │ ├── teams/                # 팀 관리 페이지
+│ │ │ ├── page.tsx            # 팀 목록 페이지
+│ │ │ └── [id]/               # 팀 상세 페이지
+│ │ │   └── page.tsx
+│ │ │
+│ │ ├── history/              # 활동 이력 페이지
+│ │ │ └── page.tsx            # 통합 이력 조회 페이지
+│ │ │
+│ │ ├── admin/                # 관리자 페이지
+│ │ │ ├── users/              # 사용자 관리
+│ │ │ │ └── page.tsx
+│ │ │ ├── settings/           # 시스템 설정
+│ │ │ │ └── page.tsx
+│ │ │ └── page.tsx
+│ │ │
+│ │ ├── reports/              # 보고서 페이지
+│ │ │ ├── equipment/          # 장비 현황 보고서
+│ │ │ │ └── page.tsx
+│ │ │ ├── calibration/        # 교정 현황 보고서
+│ │ │ │ └── page.tsx
+│ │ │ └── page.tsx
+│ │ │
+├── components/
+│ ├── equipment/              # 장비 관련 컴포넌트
+│ │ ├── EquipmentCard.tsx
+│ │ ├── EquipmentForm.tsx
+│ │ ├── EquipmentDetailTabs.tsx  # 상세정보 탭 컴포넌트
+│ │ ├── CalibrationInfo.tsx      # 교정 정보 컴포넌트
+│ │ ├── LoanHistory.tsx          # 대여 이력 컴포넌트
+│ │ ├── MaintenanceHistory.tsx   # 유지보수 이력 컴포넌트
+│ │ └── EquipmentStatusBadge.tsx # 상태 뱃지 컴포넌트
+│ │
+│ ├── loans/                  # 대여 관련 컴포넌트
+│ │ ├── LoanForm.tsx
+│ │ ├── LoanCard.tsx
+│ │ └── LoanStatusBadge.tsx
+│ │
+│ ├── checkouts/              # 반출 관련 컴포넌트
+│ │ ├── CheckoutForm.tsx
+│ │ ├── CheckoutCard.tsx
+│ │ └── CheckoutEquipmentList.tsx
+│ │
+│ ├── calibrations/           # 교정 관련 컴포넌트
+│ │ ├── CalibrationForm.tsx
+│ │ ├── CalibrationScheduleCard.tsx
+│ │ └── CalibrationStatusBadge.tsx
+│ │
+│ ├── dashboard/              # 대시보드 컴포넌트
+│ │ ├── StatsCard.tsx
+│ │ ├── EquipmentStatusChart.tsx
+│ │ ├── CalibrationCalendar.tsx
+│ │ └── TeamDistributionChart.tsx
+│ │
+│ ├── history/                # 이력 관련 컴포넌트
+│ │ ├── ActivityFeed.tsx
+│ │ ├── HistoryTimeline.tsx
+│ │ └── HistoryFilter.tsx
+│ │
+│ ├── shared/                 # 공통 컴포넌트
+│ │ ├── SearchBar.tsx
+│ │ ├── FilterDropdown.tsx
+│ │ ├── DataTable.tsx         # 재사용 가능한 데이터 테이블
+│ │ ├── Pagination.tsx
+│ │ ├── StatusBadge.tsx
+│ │ ├── DateRangePicker.tsx
+│ │ └── ExportButton.tsx
+│
+├── hooks/
+│ ├── use-equipment.ts        # 장비 관련 훅
+│ ├── use-loans.ts            # 대여 관련 훅
+│ ├── use-checkouts.ts        # 반출 관련 훅
+│ ├── use-calibrations.ts     # 교정 관련 훅
+│ ├── use-teams.ts            # 팀 관련 훅
+│ ├── use-dashboard-stats.ts  # 대시보드 통계 훅
+│ ├── use-history.ts          # 이력 관련 훅
+│ └── use-notifications.ts    # 알림 관련 훅
+│
+├── store/
+│ ├── equipment-filter.ts     # 장비 필터 상태
+│ ├── dashboard-view.ts       # 대시보드 뷰 설정
+│ └── notification.ts         # 알림 상태
+│
+├── types/
+│ ├── equipment.ts            # 장비 관련 타입
+│ ├── loan.ts                 # 대여 관련 타입
+│ ├── checkout.ts             # 반출 관련 타입
+│ ├── calibration.ts          # 교정 관련 타입
+│ ├── maintenance.ts          # 유지보수 관련 타입
+│ ├── team.ts                 # 팀 관련 타입
+│ ├── history.ts              # 이력 관련 타입
+│ └── dashboard.ts            # 대시보드 관련 타입
+```
+
+## 공유 패키지 구조 (packages/)
+
+```
+packages/
+├── schemas/                # 공유 데이터 스키마
+│ ├── src/
+│ │ ├── equipment.ts       # 장비 스키마
+│ │ ├── loan.ts            # 대여 스키마
+│ │ ├── checkout.ts        # 반출 스키마
+│ │ ├── calibration.ts     # 교정 스키마
+│ │ ├── maintenance.ts     # 유지보수 스키마
+│ │ ├── team.ts            # 팀 스키마
+│ │ ├── history.ts         # 이력 스키마
+│ │ ├── user.ts            # 사용자 스키마
+│ │ └── enums/
+│ │   ├── equipment-status.ts
+│ │   ├── calibration-method.ts
+│ │   ├── team-types.ts
+│ │   └── user-roles.ts
+│
+├── api-client/            # API 클라이언트
+│ ├── src/
+│ │ ├── equipment.ts       # 장비 API
+│ │ ├── loan.ts            # 대여 API
+│ │ ├── checkout.ts        # 반출 API
+│ │ ├── calibration.ts     # 교정 API
+│ │ ├── dashboard.ts       # 대시보드 API
+│ │ ├── team.ts            # 팀 API
+│ │ ├── history.ts         # 이력 API
+│ │ └── index.ts
+│
+├── ui/                   # 공유 UI 컴포넌트
+│ ├── src/
+│ │ ├── data-display/
+│ │ │ ├── StatusBadge.tsx
+│ │ │ ├── HistoryTimeline.tsx
+│ │ │ ├── StatCard.tsx
+│ │ │ └── CalendarView.tsx
+│ │ ├── forms/
+│ │ │ ├── FilterBar.tsx
+│ │ │ ├── SearchInput.tsx
+│ │ │ └── DateRangePicker.tsx
+│ │ ├── layout/
+│ │ │ ├── PageHeader.tsx
+│ │ │ ├── SectionCard.tsx
+│ │ │ └── TabContainer.tsx
+│ │ └── feedback/
+│ │   ├── AlertBanner.tsx
+│ │   ├── LoadingSpinner.tsx
+│ │   └── EmptyState.tsx
+```
+
+## 핵심 모델 정의 (apps/backend/database/drizzle/schema/)
+
+```typescript
+// equipment.ts - 장비 스키마 예시
+import { pgTable, varchar, integer, timestamp, text, boolean } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { teams } from './teams';
+import { users } from './users';
+import { loans } from './loans';
+import { calibrations } from './calibrations';
+
+export const equipmentStatus = [
+  'available',    // 사용 가능
+  'loaned',       // 대여 중
+  'checked_out',  // 반출 중
+  'calibration_scheduled', // 교정 예정
+  'calibration_overdue',   // 교정 기한 초과
+  'maintenance',  // 유지보수 중
+  'retired'       // 사용 중지
+] as const;
+
+export const calibrationMethods = [
+  'external_calibration',  // 외부 교정
+  'self_inspection',       // 자체 점검
+  'not_applicable'         // 비대상
+] as const;
+
+export const equipment = pgTable('equipment', {
+  id: varchar('id', { length: 36 }).primaryKey().notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  managementNumber: varchar('management_number', { length: 50 }).unique().notNull(),
+  assetNumber: varchar('asset_number', { length: 50 }),
+  modelName: varchar('model_name', { length: 100 }),
+  manufacturer: varchar('manufacturer', { length: 100 }),
+  serialNumber: varchar('serial_number', { length: 100 }),
+  location: varchar('location', { length: 100 }),
+  
+  // 교정 정보
+  calibrationCycle: integer('calibration_cycle'), // 개월 단위
+  lastCalibrationDate: timestamp('last_calibration_date'),
+  nextCalibrationDate: timestamp('next_calibration_date'),
+  calibrationAgency: varchar('calibration_agency', { length: 100 }),
+  needsIntermediateCheck: boolean('needs_intermediate_check').default(false),
+  calibrationMethod: varchar('calibration_method', { length: 50 }).notNull(),
+  
+  // 관리 정보
+  purchaseYear: integer('purchase_year'),
+  teamId: varchar('team_id', { length: 36 }).references(() => teams.id),
+  managerId: varchar('manager_id', { length: 36 }).references(() => users.id),
+  
+  // 추가 정보
+  supplier: varchar('supplier', { length: 100 }),
+  contactInfo: varchar('contact_info', { length: 100 }),
+  softwareVersion: varchar('software_version', { length: 50 }),
+  firmwareVersion: varchar('firmware_version', { length: 50 }),
+  manualLocation: text('manual_location'),
+  accessories: text('accessories'),
+  mainFeatures: text('main_features'),
+  technicalManager: varchar('technical_manager', { length: 100 }),
+  
+  // 상태 정보
+  status: varchar('status', { length: 50 }).notNull().default('available'),
+  
+  // 시스템 필드
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
+});
+
+// 관계 정의
+export const equipmentRelations = relations(equipment, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [equipment.teamId],
+    references: [teams.id],
+  }),
+  manager: one(users, {
+    fields: [equipment.managerId],
+    references: [users.id],
+  }),
+  loans: many(loans),
+  calibrations: many(calibrations),
+  // 기타 관계
+}));
+```
+
+## 개선 요약
+
+1. **도메인 모듈 확장**:
+   - 기존 'equipment' 모듈에 추가로 'loans', 'checkouts', 'calibrations', 'maintenance', 'history' 모듈 추가
+   - 팀 관리 및 대시보드 관련 모듈 추가
+
+2. **세부 페이지 구조**:
+   - 옛날 프로젝트의 모든 페이지를 Next.js App Router 구조에 맞게 구현
+   - 장비 상세 정보 내에 교정, 대여, 반출, 이력 서브페이지 추가
+
+3. **컴포넌트 계층 구성**:
+   - 각 도메인별 컴포넌트 폴더 구성
+   - 대시보드에 통계, 장비 상태, 팀별 분포 등 시각화 컴포넌트 추가
+
+4. **공유 패키지 강화**:
+   - 모든 도메인 영역에 걸친 스키마 및 타입 정의
+   - API 클라이언트와 UI 컴포넌트 패키지화로 재사용성 향상
+
+5. **세부 타입 정의**:
+   - 장비, 대여, 반출 등 각 도메인에 대한 세부 타입 및 enum 정의
+   - 옛날 프로젝트의 필드들을 TypeScript 인터페이스로 변환
+
+이 개선된 구조는 옛날 프로젝트의 모든 기능을 포함하면서도, 현대적인 Next.js/NestJS 기술 스택의 장점을 최대한 활용할 수 있는 구조입니다.

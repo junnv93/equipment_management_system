@@ -1,0 +1,102 @@
+{
+  "title": "예약 관리",
+  "subtitle": "장비 예약 및 일정 관리",
+  "list": {
+    "title": "예약 목록",
+    "subtitle": "모든 예약 정보를 조회합니다",
+    "createButton": "새 예약 만들기",
+    "empty": "예약이 없습니다",
+    "emptyDescription": "새 예약을 생성하여 장비를 예약하세요",
+    "status": "상태",
+    "equipment": "장비",
+    "period": "기간",
+    "purpose": "목적",
+    "user": "신청자",
+    "actions": "작업"
+  },
+  "detail": {
+    "title": "예약 상세",
+    "subtitle": "예약 상세 정보를 확인합니다",
+    "reservationFor": "예약 장비:",
+    "requestedBy": "신청자:",
+    "period": "예약 기간",
+    "purpose": "예약 목적",
+    "notes": "추가 메모",
+    "approverNotes": "승인자 메모",
+    "approverNotesPlaceholder": "승인 또는 거부 이유를 입력하세요",
+    "edit": "수정",
+    "cancel": "취소",
+    "approve": "승인",
+    "reject": "거부",
+    "alreadyProcessed": "이 예약은 이미 처리되었습니다.",
+    "approveSuccess": "예약 승인 완료",
+    "approveError": "예약 승인 실패",
+    "rejectSuccess": "예약 거부 완료",
+    "rejectError": "예약 거부 실패",
+    "cancelSuccess": "예약 취소 완료",
+    "cancelError": "예약 취소 실패",
+    "statusUpdated": "예약 상태가 업데이트되었습니다",
+    "tryAgain": "다시 시도해주세요",
+    "notesRequired": "메모 필요",
+    "provideRejectionReason": "거부 이유를 입력해주세요",
+    "tabs": {
+      "details": "예약 정보",
+      "equipment": "장비 정보",
+      "manage": "승인 관리"
+    },
+    "equipmentName": "장비 이름",
+    "managementNumber": "관리 번호",
+    "category": "카테고리",
+    "status": "상태",
+    "viewEquipment": "장비 정보 보기"
+  },
+  "create": {
+    "title": "예약 생성",
+    "subtitle": "장비 예약을 신청합니다",
+    "success": "예약이 생성되었습니다",
+    "error": "예약 생성 실패"
+  },
+  "edit": {
+    "title": "예약 수정",
+    "subtitle": "예약 정보를 수정합니다",
+    "updateSuccess": "예약 수정 완료",
+    "updateError": "예약 수정 실패",
+    "reservationUpdated": "예약 정보가 업데이트되었습니다",
+    "tryAgain": "다시 시도해주세요",
+    "processedReservation": "처리된 예약",
+    "cannotModify": "이미 승인, 거부 또는 취소된 예약은 수정할 수 없습니다."
+  },
+  "form": {
+    "selectEquipment": "장비 선택",
+    "selectEquipmentPlaceholder": "예약할 장비를 선택하세요",
+    "startDate": "시작 날짜",
+    "endDate": "종료 날짜",
+    "startDateDescription": "예약 시작 날짜를 선택하세요",
+    "endDateDescription": "예약 종료 날짜를 선택하세요",
+    "purpose": "예약 목적",
+    "purposePlaceholder": "예약 목적을 입력하세요",
+    "purposeDescription": "이 장비를 예약하는 목적을 설명해주세요",
+    "notes": "추가 메모",
+    "notesPlaceholder": "추가 정보가 있으면 입력하세요",
+    "notesDescription": "선택 사항: 예약에 대한 추가 정보를 제공하세요",
+    "pickDate": "날짜 선택"
+  },
+  "status": {
+    "pending": "대기 중",
+    "approved": "승인됨",
+    "rejected": "거부됨",
+    "cancelled": "취소됨",
+    "completed": "완료됨"
+  },
+  "common": {
+    "backToList": "목록으로 돌아가기",
+    "backToDetails": "상세 정보로 돌아가기",
+    "create": "생성",
+    "edit": "수정",
+    "save": "저장",
+    "saving": "저장 중...",
+    "cancel": "취소",
+    "delete": "삭제",
+    "view": "보기"
+  }
+} 

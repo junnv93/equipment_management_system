@@ -1,0 +1,1 @@
+ python manage.py import_equipment Cequipment_management_system장비목록.xlsx

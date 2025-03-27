@@ -1,0 +1,29 @@
+{
+  "name": "equipment-management-system",
+  "version": "1.0.0",
+  "description": "장비 관리 시스템 마이그레이션 도구",
+  "private": true,
+  "scripts": {
+    "migrate": "ts-node scripts/migrate-to-postgres.ts",
+    "build:all": "pnpm --filter=\"*\" build",
+    "dev:backend": "pnpm --filter=\"backend\" start:dev",
+    "dev:frontend": "pnpm --filter=\"frontend\" dev",
+    "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.10.9",
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.20.14",
+    "drizzle-orm": "^0.29.5",
+    "mysql2": "^3.14.0",
+    "pg": "^8.11.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

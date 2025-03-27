@@ -1,0 +1,102 @@
+{
+  "title": "Reservation Management",
+  "subtitle": "Equipment Reservation and Schedule Management",
+  "list": {
+    "title": "Reservation List",
+    "subtitle": "View all equipment reservations",
+    "createButton": "Create New Reservation",
+    "empty": "No reservations found",
+    "emptyDescription": "Create a new reservation to book equipment",
+    "status": "Status",
+    "equipment": "Equipment",
+    "period": "Period",
+    "purpose": "Purpose",
+    "user": "Requester",
+    "actions": "Actions"
+  },
+  "detail": {
+    "title": "Reservation Details",
+    "subtitle": "View detailed reservation information",
+    "reservationFor": "Reservation for:",
+    "requestedBy": "Requested by:",
+    "period": "Reservation Period",
+    "purpose": "Reservation Purpose",
+    "notes": "Additional Notes",
+    "approverNotes": "Approver Notes",
+    "approverNotesPlaceholder": "Enter reasons for approval or rejection",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "approve": "Approve",
+    "reject": "Reject",
+    "alreadyProcessed": "This reservation has already been processed.",
+    "approveSuccess": "Reservation approved successfully",
+    "approveError": "Failed to approve reservation",
+    "rejectSuccess": "Reservation rejected successfully",
+    "rejectError": "Failed to reject reservation",
+    "cancelSuccess": "Reservation cancelled successfully",
+    "cancelError": "Failed to cancel reservation",
+    "statusUpdated": "Reservation status has been updated",
+    "tryAgain": "Please try again",
+    "notesRequired": "Notes Required",
+    "provideRejectionReason": "Please provide a reason for rejection",
+    "tabs": {
+      "details": "Reservation Details",
+      "equipment": "Equipment Information",
+      "manage": "Approval Management"
+    },
+    "equipmentName": "Equipment Name",
+    "managementNumber": "Management Number",
+    "category": "Category",
+    "status": "Status",
+    "viewEquipment": "View Equipment Details"
+  },
+  "create": {
+    "title": "Create Reservation",
+    "subtitle": "Request an equipment reservation",
+    "success": "Reservation created successfully",
+    "error": "Failed to create reservation"
+  },
+  "edit": {
+    "title": "Edit Reservation",
+    "subtitle": "Modify reservation information",
+    "updateSuccess": "Reservation updated successfully",
+    "updateError": "Failed to update reservation",
+    "reservationUpdated": "Reservation information has been updated",
+    "tryAgain": "Please try again",
+    "processedReservation": "Processed Reservation",
+    "cannotModify": "Reservations that have been approved, rejected, or cancelled cannot be modified."
+  },
+  "form": {
+    "selectEquipment": "Select Equipment",
+    "selectEquipmentPlaceholder": "Choose equipment to reserve",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "startDateDescription": "Select when your reservation begins",
+    "endDateDescription": "Select when your reservation ends",
+    "purpose": "Reservation Purpose",
+    "purposePlaceholder": "Enter the purpose of your reservation",
+    "purposeDescription": "Explain why you need to reserve this equipment",
+    "notes": "Additional Notes",
+    "notesPlaceholder": "Enter any additional information",
+    "notesDescription": "Optional: Provide more details about your reservation",
+    "pickDate": "Pick a date"
+  },
+  "status": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "cancelled": "Cancelled",
+    "completed": "Completed"
+  },
+  "common": {
+    "backToList": "Back to List",
+    "backToDetails": "Back to Details",
+    "create": "Create",
+    "edit": "Edit",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "view": "View"
+  }
+} 
