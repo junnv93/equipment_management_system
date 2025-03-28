@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { CreateRentalDto, UpdateRentalDto, RentalQueryDto } from './dto';
+import { CreateRentalDto, UpdateRentalDto, RentalQueryDto, ReturnRequestDto, ApproveReturnDto } from './dto';
 import { Rental, RentalListResponse } from '@equipment-management/schemas';
 import { RentalStatusEnum, RentalTypeEnum } from '../../types/enums';
+import { NotificationsService } from '../notifications/notifications.service';
 
 // 타입이 안전한 임시 데이터
 const rentals: Rental[] = [
@@ -58,6 +59,8 @@ const rentals: Rental[] = [
 
 @Injectable()
 export class RentalsService {
+  constructor(private readonly notificationsService: NotificationsService) {}
+
   async findAll(query: RentalQueryDto): Promise<RentalListResponse> {
     let filteredRentals = [...rentals];
     
@@ -363,5 +366,112 @@ export class RentalsService {
     return this.update(id, { 
       status: 'CANCELED'
     });
+  }
+
+  async requestReturn(id: string, returnRequestDto: ReturnRequestDto): Promise<Rental | null> {
+    const rental = await this.findOne(id);
+    if (!rental) {
+      return null;
+    }
+    
+    if (rental.status !== RentalStatusEnum.APPROVED) {
+      throw new BadRequestException('승인된 대여/반출만 반납 요청할 수 있습니다.');
+    }
+    
+    // 상태를 RETURN_REQUESTED로 변경하고, 반납 조건과 메모 추가
+    const updatedRental = await this.update(id, { 
+      status: RentalStatusEnum.RETURN_REQUESTED,
+      notes: `반납 요청됨. 상태: ${returnRequestDto.returnCondition}${
+        returnRequestDto.returnNotes ? `, 메모: ${returnRequestDto.returnNotes}` : ''
+      }`
+    });
+
+    // 몇 가지 미구현된 기능에서 필요한 데이터를 가정
+    const approverId = '550e8400-e29b-41d4-a716-446655440000'; // 시뮬레이션용 승인자 ID
+    const userId = rental.userId; // 대여한 사용자의 ID
+    const equipmentName = `장비 #${rental.equipmentId}`; // 실제로는 장비 정보를 조회해야 함
+
+    // 반납 요청 알림 생성
+    try {
+      await this.notificationsService.createReturnRequestNotification(
+        id,
+        approverId,
+        userId,
+        equipmentName
+      );
+    } catch (error) {
+      console.error('알림 생성 중 오류 발생:', error);
+      // 알림 생성 실패는 전체 프로세스에 영향을 주지 않음
+    }
+    
+    return updatedRental;
+  }
+
+  async approveReturn(id: string, approveReturnDto: ApproveReturnDto): Promise<Rental | null> {
+    const rental = await this.findOne(id);
+    if (!rental) {
+      return null;
+    }
+    
+    if (rental.status !== RentalStatusEnum.RETURN_REQUESTED) {
+      throw new BadRequestException('반납 요청 상태인 대여/반출만 승인할 수 있습니다.');
+    }
+    
+    const { status, notes, approverId } = approveReturnDto;
+    let updatedRental: Rental | null = null;
+    
+    // 반납 승인
+    if (status === 'approved') {
+      const updateData: UpdateRentalDto = {
+        status: 'RETURNED',
+        notes: notes || '반납 승인됨'
+      };
+      
+      updatedRental = await this.update(id, updateData).then(result => {
+        if (result) {
+          // actualEndDate와 approverId 업데이트
+          result.actualEndDate = new Date();
+          result.approverId = approverId;
+          
+          const index = rentals.findIndex(r => r.id === id);
+          if (index !== -1) {
+            rentals[index] = result;
+          }
+        }
+        return result;
+      });
+    } 
+    // 반납 거절
+    else if (status === 'rejected') {
+      updatedRental = await this.update(id, {
+        status: 'APPROVED', // 원래 대여 중 상태로 되돌림
+        notes: notes || '반납 거절됨'
+      });
+    }
+    
+    if (!updatedRental) {
+      throw new BadRequestException('유효하지 않은 승인 상태입니다.');
+    }
+
+    // 몇 가지 미구현된 기능에서 필요한 데이터를 가정
+    const userId = rental.userId; // 대여한 사용자의 ID
+    const equipmentName = `장비 #${rental.equipmentId}`; // 실제로는 장비 정보를 조회해야 함
+    const isApproved = status === 'approved';
+
+    // 반납 승인/거절 알림 생성
+    try {
+      await this.notificationsService.createReturnStatusNotification(
+        id,
+        userId,
+        equipmentName,
+        isApproved,
+        notes
+      );
+    } catch (error) {
+      console.error('알림 생성 중 오류 발생:', error);
+      // 알림 생성 실패는 전체 프로세스에 영향을 주지 않음
+    }
+    
+    return updatedRental;
   }
 } 

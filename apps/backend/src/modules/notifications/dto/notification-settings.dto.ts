@@ -1,4 +1,4 @@
-import { IsUUID, IsBoolean, IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsUUID, IsBoolean, IsString, IsOptional, IsEnum, IsNotEmpty, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum NotificationFrequencyEnum {
@@ -78,6 +78,33 @@ export class NotificationSettingsDto {
   @IsBoolean()
   @IsOptional()
   @ApiProperty({ 
+    description: '반납 요청 알림', 
+    default: true,
+    required: false 
+  })
+  returnRequestedEnabled?: boolean = true;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ 
+    description: '반납 승인 알림', 
+    default: true,
+    required: false 
+  })
+  returnApprovedEnabled?: boolean = true;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ 
+    description: '반납 거절 알림', 
+    default: true,
+    required: false 
+  })
+  returnRejectedEnabled?: boolean = true;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({ 
     description: '대여/반출 알림', 
     default: true,
     required: false 
@@ -109,6 +136,9 @@ export class NotificationSettingsDto {
     default: '09:00',
     required: false,
     example: '09:00' 
+  })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: '시간은 HH:MM 형식이어야 합니다 (예: 09:00).'
   })
   notificationTime?: string = '09:00';
 

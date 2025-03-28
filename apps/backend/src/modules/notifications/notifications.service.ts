@@ -360,26 +360,127 @@ export class NotificationsService {
     });
   }
   
-  // 대여 승인/거절 알림 생성
+  /**
+   * 대여/반출 상태 변경 알림 생성
+   */
   async createRentalStatusNotification(
     rentalId: string, 
     userId: string, 
     equipmentName: string, 
     isApproved: boolean
   ) {
-    const title = `장비 대여 ${isApproved ? '승인' : '거절'}: ${equipmentName}`;
-    const content = `${equipmentName} 장비 대여 요청이 ${isApproved ? '승인' : '거절'}되었습니다.`;
-    const type = isApproved ? NotificationTypeEnum.RENTAL_APPROVED : NotificationTypeEnum.RENTAL_REJECTED;
+    const notificationType = isApproved 
+      ? NotificationTypeEnum.RENTAL_APPROVED 
+      : NotificationTypeEnum.RENTAL_REJECTED;
     
-    return this.create({
+    const title = isApproved 
+      ? '장비 대여 요청 승인' 
+      : '장비 대여 요청 거절';
+      
+    const content = isApproved 
+      ? `${equipmentName} 장비 대여 요청이 승인되었습니다.` 
+      : `${equipmentName} 장비 대여 요청이 거절되었습니다.`;
+    
+    const newNotification = {
+      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title,
       content,
-      type,
+      type: notificationType,
       priority: NotificationPriorityEnum.MEDIUM,
       recipientId: userId,
+      isTeamNotification: false,
+      equipmentId: null,
+      calibrationId: null,
       rentalId,
       linkUrl: `/rentals/${rentalId}`,
-    });
+      isRead: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    notifications.push(newNotification);
+    
+    return newNotification;
+  }
+  
+  /**
+   * 반납 요청 알림 생성
+   */
+  async createReturnRequestNotification(
+    rentalId: string, 
+    approverId: string, 
+    userId: string,
+    equipmentName: string
+  ) {
+    const newNotification = {
+      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: '장비 반납 요청',
+      content: `${equipmentName} 장비에 대한 반납 요청이 접수되었습니다.`,
+      type: NotificationTypeEnum.RETURN_REQUESTED,
+      priority: NotificationPriorityEnum.MEDIUM,
+      recipientId: approverId, // 알림을 받을 승인자 ID
+      isTeamNotification: false,
+      equipmentId: null,
+      calibrationId: null,
+      rentalId,
+      linkUrl: `/admin/return-approvals`,
+      isRead: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    notifications.push(newNotification);
+    
+    return newNotification;
+  }
+  
+  /**
+   * 반납 승인/거절 알림 생성
+   */
+  async createReturnStatusNotification(
+    rentalId: string, 
+    userId: string, 
+    equipmentName: string, 
+    isApproved: boolean,
+    notes?: string
+  ) {
+    const notificationType = isApproved 
+      ? NotificationTypeEnum.RETURN_APPROVED 
+      : NotificationTypeEnum.RETURN_REJECTED;
+    
+    const title = isApproved 
+      ? '장비 반납 요청 승인' 
+      : '장비 반납 요청 거절';
+      
+    let content = isApproved 
+      ? `${equipmentName} 장비 반납 요청이 승인되었습니다.` 
+      : `${equipmentName} 장비 반납 요청이 거절되었습니다.`;
+    
+    // 메모가 있을 경우 내용에 추가
+    if (notes) {
+      content += ` 메모: ${notes}`;
+    }
+    
+    const newNotification = {
+      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      content,
+      type: notificationType,
+      priority: NotificationPriorityEnum.MEDIUM,
+      recipientId: userId,
+      isTeamNotification: false,
+      equipmentId: null,
+      calibrationId: null,
+      rentalId,
+      linkUrl: `/rentals/${rentalId}`,
+      isRead: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    notifications.push(newNotification);
+    
+    return newNotification;
   }
   
   // 미확인 알림 개수 조회
@@ -459,28 +560,40 @@ export class NotificationsService {
     return this.notificationSettings[userId];
   }
   
-  // 특정 알림 유형이 사용자에게 활성화되어 있는지 확인
+  /**
+   * 사용자의 특정 알림 유형이 활성화되어 있는지 확인
+   */
   isNotificationEnabled(userId: string, notificationType: NotificationTypeEnum): boolean {
     const settings = this.getUserNotificationSettings(userId);
     
-    // 알림 유형에 따라 설정 확인
+    if (!settings.inAppEnabled) {
+      return false;
+    }
+    
     switch (notificationType) {
       case NotificationTypeEnum.CALIBRATION_DUE:
-        return settings.calibrationDueEnabled === true;
+        return settings.calibrationDueEnabled;
       case NotificationTypeEnum.CALIBRATION_COMPLETED:
-        return settings.calibrationCompletedEnabled === true;
+        return settings.calibrationCompletedEnabled;
       case NotificationTypeEnum.RENTAL_REQUEST:
-        return settings.rentalRequestEnabled === true;
+        return settings.rentalRequestEnabled;
       case NotificationTypeEnum.RENTAL_APPROVED:
-        return settings.rentalApprovedEnabled === true;
+        return settings.rentalApprovedEnabled;
       case NotificationTypeEnum.RENTAL_REJECTED:
-        return settings.rentalRejectedEnabled === true;
-      case NotificationTypeEnum.CHECKOUT:
-        return settings.checkoutEnabled === true;
+        return settings.rentalRejectedEnabled;
+      case NotificationTypeEnum.RETURN_REQUESTED:
+        return settings.returnRequestedEnabled ?? true; // 기본값은 true
+      case NotificationTypeEnum.RETURN_APPROVED:
+        return settings.returnApprovedEnabled ?? true; // 기본값은 true
+      case NotificationTypeEnum.RETURN_REJECTED:
+        return settings.returnRejectedEnabled ?? true; // 기본값은 true
+      case NotificationTypeEnum.EQUIPMENT_MAINTENANCE:
       case NotificationTypeEnum.MAINTENANCE:
-        return settings.maintenanceEnabled === true;
+        return settings.maintenanceEnabled;
+      case NotificationTypeEnum.CHECKOUT:
+        return settings.checkoutEnabled;
       case NotificationTypeEnum.SYSTEM:
-        return settings.systemNotificationsEnabled === true;
+        return settings.systemNotificationsEnabled;
       default:
         return true;
     }

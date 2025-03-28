@@ -94,6 +94,12 @@ export default function DashboardLayout({
             isActive={pathname?.startsWith("/rentals")}
           />
           <SidebarItem 
+            icon={<ClipboardList className="h-5 w-5" />} 
+            href="/loans" 
+            label="내 대여 현황" 
+            isActive={pathname?.startsWith("/loans")}
+          />
+          <SidebarItem 
             icon={<FileSpreadsheet className="h-5 w-5" />} 
             href="/calibration" 
             label="교정 관리" 

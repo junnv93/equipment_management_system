@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
       target: development
-    container_name: frontend_equipment
     volumes:
       - ./apps/frontend:/app/apps/frontend
       - ./packages:/app/packages
@@ -15,37 +14,36 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://backend:3001
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
     depends_on:
       - backend
     networks:
       - app-network
-    restart: unless-stopped
+    command: pnpm dev
 
   backend:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
       target: development
-    container_name: backend_equipment
     volumes:
       - ./apps/backend:/app/apps/backend
       - ./packages:/app/packages
       - backend-node-modules:/app/node_modules
     ports:
       - "3001:3001"
+      - "9229:9229"
     environment:
       - NODE_ENV=development
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=equipment_management
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/equipment_management
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=1d
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - app-network
-    restart: unless-stopped
+    command: pnpm dev:backend
 
   postgres:
     image: postgres:15
@@ -59,20 +57,19 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-postgres.sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql
     networks:
       - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
 
 networks:
   app-network:
-    driver: bridge
 
 volumes:
-  postgres_data:
   frontend-node-modules:
-  backend-node-modules: 
+  backend-node-modules:
+  postgres_data: 

@@ -6,9 +6,7 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
       target: production
-    container_name: frontend_equipment_prod
-    ports:
-      - "3000:3000"
+    restart: always
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=/api
@@ -17,41 +15,34 @@ services:
     networks:
       - app-network
       - web-public
-    restart: always
 
   backend:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
       target: production
-    container_name: backend_equipment_prod
-    expose:
-      - "3001"
+    restart: always
     environment:
       - NODE_ENV=production
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - DB_NAME=equipment_management
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/equipment_management
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=1d
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - app-network
-    restart: always
 
   postgres:
     image: postgres:15
-    container_name: postgres_equipment_prod
     restart: always
     environment:
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_USER: postgres
       POSTGRES_DB: equipment_management
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-postgres.sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql
     networks:
       - app-network
     healthcheck:
@@ -62,28 +53,25 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: nginx_equipment
+    restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/certs:/etc/nginx/certs
     networks:
       - web-public
       - app-network
     depends_on:
       - frontend
       - backend
-    restart: always
 
 networks:
   app-network:
-    driver: bridge
     internal: true
   web-public:
-    driver: bridge
 
 volumes:
   postgres_data: 

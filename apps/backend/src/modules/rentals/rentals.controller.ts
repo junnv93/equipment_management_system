@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, NotFoundException, BadRequestException, HttpStatus, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { RentalsService } from './rentals.service';
-import { CreateRentalDto, UpdateRentalDto, RentalQueryDto } from './dto';
+import { CreateRentalDto, UpdateRentalDto, RentalQueryDto, ReturnRequestDto, ApproveReturnDto } from './dto';
 import { Rental, RentalListResponse } from '@equipment-management/schemas';
 
 @ApiTags('rentals')
@@ -121,6 +121,42 @@ export class RentalsController {
   @ApiResponse({ status: 404, description: '대여/반출을 찾을 수 없음' })
   async cancel(@Param('id') id: string): Promise<Rental> {
     const rental = await this.rentalsService.cancel(id);
+    if (!rental) {
+      throw new NotFoundException(`대여/반출 ID ${id}를 찾을 수 없습니다.`);
+    }
+    return rental;
+  }
+
+  @Post(':id/request-return')
+  @ApiOperation({ summary: '반납 요청', description: '사용자가 장비 반납을 요청합니다.' })
+  @ApiParam({ name: 'id', description: '대여/반출 ID' })
+  @ApiBody({ type: ReturnRequestDto })
+  @ApiResponse({ status: 200, description: '반납 요청 성공' })
+  @ApiResponse({ status: 400, description: '잘못된 요청' })
+  @ApiResponse({ status: 404, description: '대여/반출을 찾을 수 없음' })
+  async requestReturn(
+    @Param('id') id: string,
+    @Body() returnRequestDto: ReturnRequestDto
+  ): Promise<Rental> {
+    const rental = await this.rentalsService.requestReturn(id, returnRequestDto);
+    if (!rental) {
+      throw new NotFoundException(`대여/반출 ID ${id}를 찾을 수 없습니다.`);
+    }
+    return rental;
+  }
+
+  @Patch(':id/approve-return')
+  @ApiOperation({ summary: '반납 요청 승인', description: '사용자가 요청한 장비 반납을 승인합니다.' })
+  @ApiParam({ name: 'id', description: '대여/반출 ID' })
+  @ApiBody({ type: ApproveReturnDto })
+  @ApiResponse({ status: 200, description: '반납 승인 성공' })
+  @ApiResponse({ status: 400, description: '잘못된 요청' })
+  @ApiResponse({ status: 404, description: '대여/반출을 찾을 수 없음' })
+  async approveReturn(
+    @Param('id') id: string,
+    @Body() approveReturnDto: ApproveReturnDto
+  ): Promise<Rental> {
+    const rental = await this.rentalsService.approveReturn(id, approveReturnDto);
     if (!rental) {
       throw new NotFoundException(`대여/반출 ID ${id}를 찾을 수 없습니다.`);
     }

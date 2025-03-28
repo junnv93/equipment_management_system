@@ -20,7 +20,7 @@ export interface Rental {
   startDate: string;
   expectedReturnDate: string;
   actualReturnDate?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'returned' | 'overdue';
+  status: 'pending' | 'approved' | 'rejected' | 'returned' | 'overdue' | 'return_requested';
   purpose: string;
   approvedById?: string;
   approvedBy?: {
@@ -91,8 +91,19 @@ export interface RentalSummary {
   returnedToday: number;
 }
 
+export interface ReturnRequestDto {
+  returnCondition: string;
+  returnNotes?: string;
+}
+
+export interface ApproveReturnDto {
+  status: 'approved' | 'rejected';
+  approverId: string;
+  notes?: string;
+}
+
 // 상태 타입 정의
-export type RentalStatus = 'pending' | 'approved' | 'rejected' | 'returned' | 'overdue';
+export type RentalStatus = 'pending' | 'approved' | 'rejected' | 'returned' | 'overdue' | 'return_requested';
 
 const rentalApi = {
   /**
@@ -234,6 +245,22 @@ const rentalApi = {
     const url = `/api/rentals/today-returns?${queryParams.toString()}`;
     const response = await axios.get(url);
     return response.data;
+  },
+
+  /**
+   * 사용자가 장비 반납을 요청합니다.
+   */
+  async requestReturn(id: string, data: ReturnRequestDto): Promise<Rental> {
+    const response = await axios.post(`/api/rentals/${id}/request-return`, data);
+    return response.data.data;
+  },
+
+  /**
+   * 반납 요청을 승인하거나 거절합니다.
+   */
+  async approveReturn(id: string, data: ApproveReturnDto): Promise<Rental> {
+    const response = await axios.patch(`/api/rentals/${id}/approve-return`, data);
+    return response.data.data;
   }
 };
 

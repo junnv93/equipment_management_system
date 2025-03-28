@@ -39,7 +39,8 @@ export enum RentalStatusEnum {
   BORROWED = 'borrowed', // 대여 중
   RETURNED = 'returned', // 반납 완료
   OVERDUE = 'overdue', // 연체
-  CANCELED = 'canceled' // 취소됨
+  CANCELED = 'canceled', // 취소됨
+  RETURN_REQUESTED = 'return_requested' // 반납 요청됨
 }
 
 // 대여 유형 열거형
