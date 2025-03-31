@@ -1,0 +1,273 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { UsersService } from '../users.service';
+import { DrizzleModule } from '../../../database/drizzle.module';
+import { ConfigModule } from '@nestjs/config';
+import { CacheModule } from '../../../common/cache/cache.module';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
+import { UserQueryDto } from '../dto/user-query.dto';
+import { UserRoleEnum } from '../../../types/enums';
+import * as crypto from 'crypto';
+
+// 테스트용 비밀번호 필드 확장 (실제 DTO에 없지만 서비스에서 처리할 수 있음)
+interface CreateUserWithPasswordDto extends CreateUserDto {
+  password: string;
+}
+
+// 랜덤 문자열 생성 헬퍼 함수
+const generateRandomString = (length = 8) => {
+  return crypto.randomBytes(length).toString('hex');
+};
+
+describe('UsersService', () => {
+  let service: UsersService;
+  let moduleRef: TestingModule;
+  let testUsers: any[] = [];
+
+  beforeAll(async () => {
+    moduleRef = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: ['.env.test', '.env'],
+        }),
+        DrizzleModule,
+        CacheModule,
+      ],
+      providers: [UsersService],
+    }).compile();
+
+    service = moduleRef.get<UsersService>(UsersService);
+  });
+
+  afterAll(async () => {
+    // 테스트 완료 후 생성된 테스트 사용자 정리
+    for (const user of testUsers) {
+      try {
+        await service.remove(user.id);
+      } catch (error) {
+        console.log(`Error cleaning up test user ${user.id}: ${error.message}`);
+      }
+    }
+    await moduleRef.close();
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create a new user with valid data', async () => {
+      const createUserDto: CreateUserWithPasswordDto = {
+        email: `test.user.${generateRandomString()}@example.com`,
+        password: 'Password123!',
+        name: 'Test User',
+        role: UserRoleEnum.USER,
+        department: '개발팀',
+        position: '주니어 개발자',
+        phoneNumber: '010-1234-5678',
+      };
+
+      const result = await service.create(createUserDto as any);
+      testUsers.push(result); // 정리를 위해 추가
+
+      expect(result).toBeDefined();
+      expect(result.email).toBe(createUserDto.email);
+      expect(result.name).toBe(createUserDto.name);
+      expect(result.role).toBe(createUserDto.role);
+      // 비밀번호는 반환되지 않아야 함
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('should throw an error when creating a user with duplicate email', async () => {
+      const createUserDto: CreateUserWithPasswordDto = {
+        email: `test.user.${generateRandomString()}@example.com`,
+        password: 'Password123!',
+        name: 'Duplicate User',
+        role: UserRoleEnum.USER,
+        department: '개발팀',
+        position: '주니어 개발자',
+        phoneNumber: '010-1234-5678',
+      };
+
+      const firstUser = await service.create(createUserDto as any);
+      testUsers.push(firstUser);
+
+      // 동일한 이메일로 다시 생성 시도
+      await expect(service.create({
+        ...createUserDto
+      } as any)).rejects.toThrow();
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return a list of users', async () => {
+      // 기본 쿼리로 사용자 목록 검색
+      const query: UserQueryDto = {
+        page: 1,
+        pageSize: 10,
+      };
+
+      const result = await service.findAll(query);
+      
+      expect(result).toBeDefined();
+      expect(result.items).toBeDefined();
+      expect(Array.isArray(result.items)).toBe(true);
+      expect(result.total).toBeDefined();
+      expect(result.page).toBe(query.page);
+    });
+
+    it('should filter users by search term', async () => {
+      // 고유한 검색어를 포함하는 사용자 생성
+      const uniqueString = generateRandomString();
+      const createUserDto: CreateUserWithPasswordDto = {
+        email: `unique.${uniqueString}@example.com`,
+        password: 'Password123!',
+        name: `Unique User ${uniqueString}`,
+        role: UserRoleEnum.USER,
+        department: '개발팀',
+        position: '주니어 개발자',
+        phoneNumber: '010-1234-5678',
+      };
+
+      const createdUser = await service.create(createUserDto as any);
+      testUsers.push(createdUser);
+
+      // 고유 문자열로 검색
+      const query: UserQueryDto = {
+        page: 1,
+        pageSize: 10,
+        search: uniqueString,
+      };
+
+      const result = await service.findAll(query);
+      
+      expect(result.items.length).toBeGreaterThan(0);
+      expect(result.items.some(user => user.id === createdUser.id)).toBe(true);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a user by ID', async () => {
+      // 테스트 사용자 생성
+      const createUserDto: CreateUserWithPasswordDto = {
+        email: `findone.${generateRandomString()}@example.com`,
+        password: 'Password123!',
+        name: 'FindOne Test User',
+        role: UserRoleEnum.USER,
+        department: '개발팀',
+        position: '주니어 개발자',
+        phoneNumber: '010-1234-5678',
+      };
+
+      const createdUser = await service.create(createUserDto as any);
+      testUsers.push(createdUser);
+
+      // ID로 사용자 조회
+      const foundUser = await service.findOne(createdUser.id);
+      
+      expect(foundUser).toBeDefined();
+      expect(foundUser.id).toBe(createdUser.id);
+      expect(foundUser.email).toBe(createUserDto.email);
+      expect(foundUser.name).toBe(createUserDto.name);
+    });
+
+    it('should throw an error for non-existent user', async () => {
+      // 존재하지 않는 ID로 조회
+      const nonExistentId = '00000000-0000-0000-0000-000000000000';
+      
+      await expect(service.findOne(nonExistentId)).rejects.toThrow();
+    });
+  });
+
+  describe('update', () => {
+    it('should update a user with valid data', async () => {
+      // 테스트 사용자 생성
+      const createUserDto: CreateUserWithPasswordDto = {
+        email: `update.${generateRandomString()}@example.com`,
+        password: 'Password123!',
+        name: 'Update Test User',
+        role: UserRoleEnum.USER,
+        department: '개발팀',
+        position: '주니어 개발자',
+        phoneNumber: '010-1234-5678',
+      };
+
+      const createdUser = await service.create(createUserDto as any);
+      testUsers.push(createdUser);
+
+      // 사용자 정보 업데이트
+      const updateUserDto: UpdateUserDto = {
+        name: 'Updated Name',
+        department: '마케팅팀',
+        position: '시니어 개발자',
+      };
+
+      const updatedUser = await service.update(createdUser.id, updateUserDto);
+      
+      expect(updatedUser).toBeDefined();
+      expect(updatedUser.id).toBe(createdUser.id);
+      expect(updatedUser.name).toBe(updateUserDto.name);
+      expect(updatedUser.department).toBe(updateUserDto.department);
+      expect(updatedUser.position).toBe(updateUserDto.position);
+      expect(updatedUser.email).toBe(createdUser.email); // 이메일은 변경되지 않아야 함
+    });
+  });
+
+  describe('remove', () => {
+    it('should remove a user by ID', async () => {
+      // 테스트 사용자 생성
+      const createUserDto: CreateUserWithPasswordDto = {
+        email: `remove.${generateRandomString()}@example.com`,
+        password: 'Password123!',
+        name: 'Remove Test User',
+        role: UserRoleEnum.USER,
+        department: '개발팀',
+        position: '주니어 개발자',
+        phoneNumber: '010-1234-5678',
+      };
+
+      const createdUser = await service.create(createUserDto as any);
+
+      // 사용자 삭제
+      await service.remove(createdUser.id);
+      
+      // 삭제된 사용자를 조회하면 오류가 발생해야 함
+      await expect(service.findOne(createdUser.id)).rejects.toThrow();
+    });
+  });
+
+  describe('findByEmail', () => {
+    it('should find a user by email', async () => {
+      // 테스트 사용자 생성
+      const email = `findemail.${generateRandomString()}@example.com`;
+      const createUserDto: CreateUserWithPasswordDto = {
+        email,
+        password: 'Password123!',
+        name: 'FindEmail Test User',
+        role: UserRoleEnum.USER,
+        department: '개발팀',
+        position: '주니어 개발자',
+        phoneNumber: '010-1234-5678',
+      };
+
+      const createdUser = await service.create(createUserDto as any);
+      testUsers.push(createdUser);
+
+      // 이메일로 사용자 조회
+      const foundUser = await service.findByEmail(email);
+      
+      expect(foundUser).toBeDefined();
+      expect(foundUser.id).toBe(createdUser.id);
+      expect(foundUser.email).toBe(email);
+    });
+
+    it('should return null for non-existent email', async () => {
+      // 존재하지 않는 이메일로 조회
+      const nonExistentEmail = `nonexistent.${generateRandomString()}@example.com`;
+      
+      const result = await service.findByEmail(nonExistentEmail);
+      expect(result).toBeNull();
+    });
+  });
+}); 

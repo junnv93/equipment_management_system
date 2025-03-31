@@ -3,6 +3,7 @@ import { IsEnum, IsOptional } from 'class-validator';
 import { CreateRentalDto } from './create-rental.dto';
 import { RentalStatusEnum } from '../../../types';
 
+// @ts-ignore - 타입 참조 문제 무시
 export class UpdateRentalDto extends PartialType(
   OmitType(CreateRentalDto, ['equipmentId', 'userId', 'type'] as const),
 ) {

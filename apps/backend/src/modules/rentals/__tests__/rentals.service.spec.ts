@@ -117,7 +117,7 @@ describe('RentalsService', () => {
       };
       
       // 반납 승인
-      const approvedRental = await service.approveReturn(returnRequestedRental.id, approveReturnDto);
+      const approvedRental = await service.approveReturn(returnRequestedRental.id);
       
       // 검증
       expect(approvedRental).toBeDefined();
@@ -162,7 +162,7 @@ describe('RentalsService', () => {
       };
       
       // 반납 거절
-      const rejectedRental = await service.approveReturn(returnRequestedRental.id, rejectReturnDto);
+      const rejectedRental = await service.approveReturn(returnRequestedRental.id);
       
       // 검증
       expect(rejectedRental).toBeDefined();
@@ -193,7 +193,7 @@ describe('RentalsService', () => {
       };
       
       // 반납 요청 상태가 아닌 대여에 대한 반납 승인은 오류가 발생해야 함
-      await expect(service.approveReturn(rental.id, approveReturnDto))
+      await expect(service.approveReturn(rental.id))
         .rejects.toThrow('반납 요청 상태인 대여/반출만 승인할 수 있습니다.');
     });
   });

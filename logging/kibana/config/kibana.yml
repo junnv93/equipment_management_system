@@ -1,0 +1,14 @@
+server.name: kibana
+server.host: "0.0.0.0"
+elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+monitoring.ui.container.elasticsearch.enabled: true
+
+# Enable Elastic Security
+xpack.security.enabled: false
+
+# Enable Stack Monitoring
+xpack.monitoring.collection.enabled: true
+
+# Default application on startup
+xpack.reporting.encryptionKey: "a_random_string"
+xpack.security.encryptionKey: "something_at_least_32_characters" 
