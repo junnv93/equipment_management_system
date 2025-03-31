@@ -1,63 +1,20 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-
+/**
+ * 사용자 역할을 나타내는 열거형
+ */
 export enum UserRole {
   USER = 'USER',
   MANAGER = 'MANAGER',
   ADMIN = 'ADMIN'
 }
 
+/**
+ * 사용자 상태를 나타내는 열거형
+ */
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
   PENDING = 'PENDING'
 }
 
-@Entity()
-export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ unique: true })
-  email: string;
-
-  @Column()
-  name: string;
-
-  @Column({ select: false })
-  password: string;
-
-  @Column({ nullable: true })
-  department: string;
-
-  @Column({ nullable: true })
-  position: string;
-
-  @Column({ nullable: true })
-  phoneNumber: string;
-
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    default: UserRole.USER
-  })
-  role: UserRole;
-
-  @Column({
-    type: 'enum',
-    enum: UserStatus,
-    default: UserStatus.ACTIVE
-  })
-  status: UserStatus;
-
-  @Column({ nullable: true })
-  teamId: string;
-
-  @Column({ nullable: true, type: 'timestamp' })
-  lastLoginAt: Date;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-} 
+// 참고: entity 클래스는 제거되었으며, 대신 drizzle 스키마가 사용됩니다.
+// 스키마 정의는 apps/backend/src/database/drizzle/schema/users.ts 파일을 참조하세요. 

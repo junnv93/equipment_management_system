@@ -18,7 +18,6 @@ import {
   Bell
 } from 'lucide-react';
 import { ReactNode } from "react";
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -29,8 +28,8 @@ interface SidebarItemProps {
 
 function SidebarItem({ icon, href, label, isActive }: SidebarItemProps) {
   const baseClasses = "flex items-center gap-3 rounded-lg px-3 py-2 transition-all";
-  const activeClasses = "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/50 font-medium";
-  const inactiveClasses = "text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800";
+  const activeClasses = "text-blue-600 bg-blue-50 font-medium";
+  const inactiveClasses = "text-gray-500 hover:text-gray-900 hover:bg-gray-100";
   
   return (
     <Link 
@@ -65,10 +64,10 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex min-h-screen bg-gray-50">
       {/* 사이드바 */}
-      <div className="fixed inset-y-0 z-10 w-64 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
-        <div className="flex h-14 items-center border-b px-4 border-gray-200 dark:border-gray-800">
+      <div className="fixed inset-y-0 z-10 w-64 border-r border-gray-200 bg-white">
+        <div className="flex h-14 items-center border-b px-4 border-gray-200">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <Package2 className="h-6 w-6" />
             <span>장비 관리 시스템</span>
@@ -128,10 +127,10 @@ export default function DashboardLayout({
       
       {/* 메인 콘텐츠 */}
       <div className="flex flex-col flex-1 ml-64">
-        <header className="flex h-14 items-center gap-4 border-b bg-white dark:bg-gray-950 dark:border-gray-800 px-6">
+        <header className="flex h-14 items-center gap-4 border-b bg-white px-6">
           <h1 className="text-lg font-semibold">장비 관리 시스템</h1>
           <div className="ml-auto flex items-center gap-4">
-            <ThemeToggle />
+            {/* ThemeToggle 제거 */}
           </div>
         </header>
         <main className="flex-1 overflow-auto">

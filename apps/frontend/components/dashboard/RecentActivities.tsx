@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,84 +27,125 @@ interface RecentActivitiesProps {
   loading?: boolean;
 }
 
-export function RecentActivities({ data, loading = false }: RecentActivitiesProps) {
+// 활동 타입에 따른 정보 정의를 컴포넌트 외부로 이동
+const ACTIVITY_TYPES: Record<
+  string,
+  { icon: React.ReactNode; label: string; variant: "default" | "secondary" | "outline" | "destructive" }
+> = {
+  equipment_added: {
+    icon: <PlusCircle className="h-4 w-4" />,
+    label: "장비 등록",
+    variant: "default"
+  },
+  equipment_updated: {
+    icon: <Pen className="h-4 w-4" />,
+    label: "장비 수정",
+    variant: "secondary"
+  },
+  calibration_created: {
+    icon: <Wrench className="h-4 w-4" />,
+    label: "교정 등록",
+    variant: "default"
+  },
+  rental_created: {
+    icon: <Send className="h-4 w-4" />,
+    label: "대여 신청",
+    variant: "outline"
+  },
+  rental_returned: {
+    icon: <RotateCcw className="h-4 w-4" />,
+    label: "대여 반납",
+    variant: "outline"
+  },
+  checkout_created: {
+    icon: <Truck className="h-4 w-4" />,
+    label: "반출 신청",
+    variant: "outline"
+  },
+  checkout_returned: {
+    icon: <Package className="h-4 w-4" />,
+    label: "반출 반납",
+    variant: "outline"
+  }
+};
+
+// 활동 정보 타입과 라우트 정보 타입 정의
+const ROUTES: Record<string, string> = {
+  equipment_added: `/equipment/`,
+  equipment_updated: `/equipment/`,
+  calibration_created: `/calibration/`,
+  rental_created: `/rentals/`,
+  rental_returned: `/rentals/`,
+  checkout_created: `/checkouts/`,
+  checkout_returned: `/checkouts/`
+};
+
+// 개별 활동 항목 컴포넌트 분리
+const ActivityItem = memo(function ActivityItem({
+  activity,
+  onNavigate
+}: {
+  activity: RecentActivity;
+  onNavigate: (activity: RecentActivity) => void;
+}) {
+  const { icon, label, variant } = ACTIVITY_TYPES[activity.type] || {
+    icon: <FileCheck className="h-4 w-4" />,
+    label: "기타 활동",
+    variant: "default"
+  };
+
+  return (
+    <div className="flex items-start space-x-4">
+      <div className="mt-1 bg-muted rounded-full p-2">
+        {icon}
+      </div>
+      <div className="flex-1 space-y-1">
+        <div className="flex items-center">
+          <Badge variant={variant} className="mr-2 py-1">
+            {label}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            <Clock className="inline-block h-3 w-3 mr-1" />
+            {formatDateTime(activity.timestamp)}
+          </span>
+        </div>
+        <p className="text-sm">
+          <span className="font-medium">{activity.userName}</span>님이{" "}
+          <span className="font-medium">{activity.entityName}</span>
+          {activity.details ? ` ${activity.details}` : ""}
+        </p>
+        <Button
+          variant="link"
+          size="sm"
+          className="h-6 px-0"
+          onClick={() => onNavigate(activity)}
+        >
+          자세히 보기
+        </Button>
+      </div>
+    </div>
+  );
+});
+
+export const RecentActivities = memo(function RecentActivities({ 
+  data, 
+  loading = false 
+}: RecentActivitiesProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<string>("all");
 
-  // 활동 유형에 따른 아이콘 및 라벨 반환
-  const getActivityInfo = (activity: RecentActivity) => {
-    const activityTypes: Record<
-      string,
-      { icon: React.ReactNode; label: string; variant: "default" | "secondary" | "outline" | "destructive" }
-    > = {
-      equipment_added: {
-        icon: <PlusCircle className="h-4 w-4" />,
-        label: "장비 등록",
-        variant: "default"
-      },
-      equipment_updated: {
-        icon: <Pen className="h-4 w-4" />,
-        label: "장비 수정",
-        variant: "secondary"
-      },
-      calibration_created: {
-        icon: <Wrench className="h-4 w-4" />,
-        label: "교정 등록",
-        variant: "default"
-      },
-      rental_created: {
-        icon: <Send className="h-4 w-4" />,
-        label: "대여 신청",
-        variant: "outline"
-      },
-      rental_returned: {
-        icon: <RotateCcw className="h-4 w-4" />,
-        label: "대여 반납",
-        variant: "outline"
-      },
-      checkout_created: {
-        icon: <Truck className="h-4 w-4" />,
-        label: "반출 신청",
-        variant: "outline"
-      },
-      checkout_returned: {
-        icon: <Package className="h-4 w-4" />,
-        label: "반출 반납",
-        variant: "outline"
-      }
-    }
-
-    return (
-      activityTypes[activity.type] || {
-        icon: <FileCheck className="h-4 w-4" />,
-        label: "기타 활동",
-        variant: "default"
-      }
-    )
-  }
-
-  // 활동 상세 페이지로 이동
-  const handleNavigateToDetail = (activity: RecentActivity) => {
-    const routes: Record<string, string> = {
-      equipment_added: `/equipment/${activity.entityId}`,
-      equipment_updated: `/equipment/${activity.entityId}`,
-      calibration_created: `/calibration/${activity.entityId}`,
-      rental_created: `/rentals/${activity.entityId}`,
-      rental_returned: `/rentals/${activity.entityId}`,
-      checkout_created: `/checkouts/${activity.entityId}`,
-      checkout_returned: `/checkouts/${activity.entityId}`
-    }
-
-    const route = routes[activity.type]
+  // 활동 상세 페이지 이동 함수 최적화
+  const handleNavigateToDetail = useCallback((activity: RecentActivity) => {
+    const route = ROUTES[activity.type];
     if (route) {
-      router.push(route)
+      router.push(`${route}${activity.entityId}`);
     }
-  }
+  }, [router]);
 
-  // 필터된 활동 데이터
-  const filteredActivities = filter === "all" 
-    ? data 
-    : data.filter(activity => activity.type === filter);
+  // 필터링된 활동 데이터 최적화
+  const filteredActivities = useMemo(() => 
+    filter === "all" ? data : data.filter(activity => activity.type === filter),
+  [data, filter]);
 
   return (
     <Card>
@@ -131,44 +172,16 @@ export function RecentActivities({ data, loading = false }: RecentActivitiesProp
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredActivities.map((activity) => {
-              const { icon, label, variant } = getActivityInfo(activity)
-              
-              return (
-                <div key={activity.id} className="flex items-start space-x-4">
-                  <div className="mt-1 bg-muted rounded-full p-2">
-                    {icon}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center">
-                      <Badge variant={variant} className="mr-2 py-1">
-                        {label}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        <Clock className="inline-block h-3 w-3 mr-1" />
-                        {formatDateTime(activity.timestamp)}
-                      </span>
-                    </div>
-                    <p className="text-sm">
-                      <span className="font-medium">{activity.userName}</span>님이{" "}
-                      <span className="font-medium">{activity.entityName}</span>
-                      {activity.details ? ` ${activity.details}` : ""}
-                    </p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-6 px-0"
-                      onClick={() => handleNavigateToDetail(activity)}
-                    >
-                      자세히 보기
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
+            {filteredActivities.map((activity) => (
+              <ActivityItem
+                key={activity.id}
+                activity={activity}
+                onNavigate={handleNavigateToDetail}
+              />
+            ))}
           </div>
         )}
       </CardContent>
     </Card>
   );
-} 
+}); 

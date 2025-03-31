@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 // 로그인이 필요하지 않은 경로
-const publicPaths = ['/login', '/api/auth'];
+const publicPaths = ['/login', '/api/auth', '/api/monitoring'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

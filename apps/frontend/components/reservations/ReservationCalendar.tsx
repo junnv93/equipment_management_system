@@ -5,7 +5,7 @@ import { Calendar, Views, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { toast as sonnerToast } from 'sonner';
+import { toast } from 'sonner';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ export function ReservationCalendar() {
 
   useEffect(() => {
     if (error) {
-      sonnerToast.error('Failed to load reservations');
+      toast.error('Failed to load reservations');
     }
   }, [error]);
 

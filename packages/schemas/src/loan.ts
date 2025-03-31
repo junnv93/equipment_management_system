@@ -9,7 +9,8 @@ export const RentalStatusEnum = z.enum([
   'borrowed', // 대여 중
   'returned', // 반납 완료
   'overdue', // 연체
-  'canceled' // 취소됨
+  'canceled', // 취소됨
+  'return_requested' // 반납 요청됨
 ]);
 
 export type RentalStatus = z.infer<typeof RentalStatusEnum>;

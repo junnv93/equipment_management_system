@@ -1,6 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
-import { Reservation } from '../../reservations/entities/reservation.entity';
-
+/**
+ * 장비 상태를 나타내는 열거형
+ */
 export enum EquipmentStatusEnum {
   AVAILABLE = 'AVAILABLE',
   IN_USE = 'IN_USE',
@@ -9,66 +9,5 @@ export enum EquipmentStatusEnum {
   RETIRED = 'RETIRED'
 }
 
-@Entity()
-export class Equipment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column()
-  name: string;
-
-  @Column()
-  managementNumber: string;
-
-  @Column({ nullable: true })
-  assetNumber: string;
-
-  @Column()
-  modelName: string;
-
-  @Column()
-  manufacturer: string;
-
-  @Column({ nullable: true })
-  serialNumber: string;
-
-  @Column()
-  location: string;
-
-  @Column({
-    type: 'enum',
-    enum: EquipmentStatusEnum,
-    default: EquipmentStatusEnum.AVAILABLE
-  })
-  status: EquipmentStatusEnum;
-
-  @Column({ nullable: true })
-  purchaseDate: Date;
-
-  @Column({ nullable: true })
-  lastCalibrationDate: Date;
-
-  @Column({ nullable: true })
-  nextCalibrationDate: Date;
-
-  @Column({ nullable: true })
-  calibrationCycle: number;
-
-  @Column({ default: false })
-  isCalibrationRequired: boolean;
-
-  @Column({ nullable: true })
-  teamId: string;
-
-  @Column({ nullable: true })
-  responsiblePersonId: string;
-
-  @OneToMany(() => Reservation, reservation => reservation.equipment)
-  reservations: Reservation[];
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-} 
+// 참고: entity 클래스는 제거되었으며, 대신 drizzle 스키마가 사용됩니다.
+// 스키마 정의는 apps/backend/src/database/drizzle/schema/equipment.ts 파일을 참조하세요. 

@@ -2,8 +2,19 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { CreateRentalDto, UpdateRentalDto, RentalQueryDto, ReturnRequestDto, ApproveReturnDto } from './dto';
 import { Rental, RentalListResponse } from '@equipment-management/schemas';
-import { RentalStatusEnum, RentalTypeEnum } from '../../types/enums';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationPriorityEnum } from '../notifications/dto/create-notification.dto';
+
+// 대여 상태를 문자열 리터럴 타입으로 정의
+export type RentalStatus = 
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'borrowed'
+  | 'returned'
+  | 'overdue'
+  | 'canceled'
+  | 'return_requested';
 
 // 타입이 안전한 임시 데이터
 const rentals: Rental[] = [
@@ -11,8 +22,8 @@ const rentals: Rental[] = [
     id: '550e8400-e29b-41d4-a716-446655440010',
     equipmentId: '550e8400-e29b-41d4-a716-446655440100',
     userId: '550e8400-e29b-41d4-a716-446655440001',
-    type: RentalTypeEnum.INTERNAL as any,
-    status: RentalStatusEnum.APPROVED as any,
+    type: 'internal' as any,
+    status: 'approved' as RentalStatus,
     startDate: new Date('2023-06-01T09:00:00Z'),
     expectedEndDate: new Date('2023-06-15T18:00:00Z'),
     actualEndDate: null,
@@ -27,8 +38,8 @@ const rentals: Rental[] = [
     id: '550e8400-e29b-41d4-a716-446655440011',
     equipmentId: '550e8400-e29b-41d4-a716-446655440101',
     userId: '550e8400-e29b-41d4-a716-446655440002',
-    type: RentalTypeEnum.EXTERNAL as any,
-    status: RentalStatusEnum.RETURNED as any,
+    type: 'external' as any,
+    status: 'returned' as RentalStatus,
     startDate: new Date('2023-05-15T08:00:00Z'),
     expectedEndDate: new Date('2023-05-25T17:00:00Z'),
     actualEndDate: new Date('2023-05-24T16:30:00Z'),
@@ -43,8 +54,8 @@ const rentals: Rental[] = [
     id: '550e8400-e29b-41d4-a716-446655440012',
     equipmentId: '550e8400-e29b-41d4-a716-446655440102',
     userId: '550e8400-e29b-41d4-a716-446655440003',
-    type: RentalTypeEnum.INTERNAL as any,
-    status: RentalStatusEnum.PENDING as any,
+    type: 'internal' as any,
+    status: 'pending' as RentalStatus,
     startDate: new Date('2023-06-10T10:00:00Z'),
     expectedEndDate: new Date('2023-06-20T18:00:00Z'),
     actualEndDate: null,
@@ -202,9 +213,7 @@ export class RentalsService {
     
     // DTO에서 받은 대소문자 값을 소문자로 변환
     const typeValue = createRentalDto.type.toLowerCase();
-    const typeEnumValue = typeValue === 'internal' 
-      ? RentalTypeEnum.INTERNAL 
-      : RentalTypeEnum.EXTERNAL;
+    const typeEnumValue = typeValue === 'internal' ? 'internal' : 'external';
     
     // 타입 안전한 방식으로 생성
     const rental: Rental = {
@@ -212,7 +221,7 @@ export class RentalsService {
       equipmentId: createRentalDto.equipmentId,
       userId: createRentalDto.userId,
       type: typeEnumValue as any,
-      status: RentalStatusEnum.PENDING as any,
+      status: 'pending' as RentalStatus,
       startDate: createRentalDto.startDate,
       expectedEndDate: createRentalDto.expectedEndDate,
       actualEndDate: null,
@@ -237,36 +246,33 @@ export class RentalsService {
     // 상태값 처리
     const parsedDto: any = { ...updateRentalDto };
     
-    // status 값이 있으면 enum 값으로 변환
+    // status 값이 있으면 소문자로 변환
     if (updateRentalDto.status) {
-      switch(updateRentalDto.status) {
-        case 'PENDING':
+      const statusValue = updateRentalDto.status.toLowerCase() as RentalStatus;
+      switch(statusValue) {
         case 'pending':
-          parsedDto.status = RentalStatusEnum.PENDING;
+          parsedDto.status = 'pending' as RentalStatus;
           break;
-        case 'APPROVED':
         case 'approved':
-          parsedDto.status = RentalStatusEnum.APPROVED;
+          parsedDto.status = 'approved' as RentalStatus;
           break;
-        case 'REJECTED':
         case 'rejected':
-          parsedDto.status = RentalStatusEnum.REJECTED;
+          parsedDto.status = 'rejected' as RentalStatus;
           break;
-        case 'BORROWED':
         case 'borrowed':
-          parsedDto.status = RentalStatusEnum.BORROWED;
+          parsedDto.status = 'borrowed' as RentalStatus;
           break;
-        case 'RETURNED':
         case 'returned':
-          parsedDto.status = RentalStatusEnum.RETURNED;
+          parsedDto.status = 'returned' as RentalStatus;
           break;
-        case 'OVERDUE':
         case 'overdue':
-          parsedDto.status = RentalStatusEnum.OVERDUE;
+          parsedDto.status = 'overdue' as RentalStatus;
           break;
-        case 'CANCELED':
         case 'canceled':
-          parsedDto.status = RentalStatusEnum.CANCELED;
+          parsedDto.status = 'canceled' as RentalStatus;
+          break;
+        case 'return_requested':
+          parsedDto.status = 'return_requested' as RentalStatus;
           break;
       }
     }
@@ -299,12 +305,12 @@ export class RentalsService {
       return null;
     }
     
-    if (rental.status !== RentalStatusEnum.PENDING) {
+    if (rental.status !== 'pending') {
       throw new BadRequestException('대기 중인 대여/반출만 승인할 수 있습니다.');
     }
     
     return this.update(id, { 
-      status: 'APPROVED',
+      status: 'approved' as RentalStatus,
       approverId
     });
   }
@@ -315,12 +321,12 @@ export class RentalsService {
       return null;
     }
     
-    if (rental.status !== RentalStatusEnum.PENDING) {
+    if (rental.status !== 'pending') {
       throw new BadRequestException('대기 중인 대여/반출만 거절할 수 있습니다.');
     }
     
     return this.update(id, { 
-      status: 'REJECTED',
+      status: 'rejected' as RentalStatus,
       approverId,
       notes: reason || '거절 사유 없음'
     });
@@ -332,12 +338,12 @@ export class RentalsService {
       return null;
     }
     
-    if (rental.status !== RentalStatusEnum.BORROWED && rental.status !== RentalStatusEnum.APPROVED) {
+    if (rental.status !== 'borrowed' && rental.status !== 'approved') {
       throw new BadRequestException('대여 중이거나 승인된 대여/반출만 완료할 수 있습니다.');
     }
     
     const updateData: UpdateRentalDto = {
-      status: 'RETURNED'
+      status: 'returned' as RentalStatus
     };
     
     // actualEndDate는 UpdateRentalDto에 없기 때문에 별도 처리
@@ -359,12 +365,12 @@ export class RentalsService {
       return null;
     }
     
-    if (rental.status !== RentalStatusEnum.PENDING && rental.status !== RentalStatusEnum.APPROVED) {
+    if (rental.status !== 'pending' && rental.status !== 'approved') {
       throw new BadRequestException('대기 중이거나 승인된 대여/반출만 취소할 수 있습니다.');
     }
     
     return this.update(id, { 
-      status: 'CANCELED'
+      status: 'canceled' as RentalStatus
     });
   }
 
@@ -374,13 +380,13 @@ export class RentalsService {
       return null;
     }
     
-    if (rental.status !== RentalStatusEnum.APPROVED) {
+    if (rental.status !== 'approved') {
       throw new BadRequestException('승인된 대여/반출만 반납 요청할 수 있습니다.');
     }
     
-    // 상태를 RETURN_REQUESTED로 변경하고, 반납 조건과 메모 추가
+    // 상태를 return_requested로 변경하고, 반납 조건과 메모 추가
     const updatedRental = await this.update(id, { 
-      status: RentalStatusEnum.RETURN_REQUESTED,
+      status: 'return_requested' as RentalStatus,
       notes: `반납 요청됨. 상태: ${returnRequestDto.returnCondition}${
         returnRequestDto.returnNotes ? `, 메모: ${returnRequestDto.returnNotes}` : ''
       }`
@@ -407,71 +413,56 @@ export class RentalsService {
     return updatedRental;
   }
 
-  async approveReturn(id: string, approveReturnDto: ApproveReturnDto): Promise<Rental | null> {
+  async approveReturn(id: string): Promise<Rental | null> {
     const rental = await this.findOne(id);
     if (!rental) {
-      return null;
-    }
-    
-    if (rental.status !== RentalStatusEnum.RETURN_REQUESTED) {
-      throw new BadRequestException('반납 요청 상태인 대여/반출만 승인할 수 있습니다.');
-    }
-    
-    const { status, notes, approverId } = approveReturnDto;
-    let updatedRental: Rental | null = null;
-    
-    // 반납 승인
-    if (status === 'approved') {
-      const updateData: UpdateRentalDto = {
-        status: 'RETURNED',
-        notes: notes || '반납 승인됨'
-      };
-      
-      updatedRental = await this.update(id, updateData).then(result => {
-        if (result) {
-          // actualEndDate와 approverId 업데이트
-          result.actualEndDate = new Date();
-          result.approverId = approverId;
-          
-          const index = rentals.findIndex(r => r.id === id);
-          if (index !== -1) {
-            rentals[index] = result;
-          }
-        }
-        return result;
-      });
-    } 
-    // 반납 거절
-    else if (status === 'rejected') {
-      updatedRental = await this.update(id, {
-        status: 'APPROVED', // 원래 대여 중 상태로 되돌림
-        notes: notes || '반납 거절됨'
-      });
-    }
-    
-    if (!updatedRental) {
-      throw new BadRequestException('유효하지 않은 승인 상태입니다.');
+      throw new NotFoundException(`Rental with ID ${id} not found`);
     }
 
-    // 몇 가지 미구현된 기능에서 필요한 데이터를 가정
-    const userId = rental.userId; // 대여한 사용자의 ID
-    const equipmentName = `장비 #${rental.equipmentId}`; // 실제로는 장비 정보를 조회해야 함
-    const isApproved = status === 'approved';
-
-    // 반납 승인/거절 알림 생성
-    try {
-      await this.notificationsService.createReturnStatusNotification(
-        id,
-        userId,
-        equipmentName,
-        isApproved,
-        notes
-      );
-    } catch (error) {
-      console.error('알림 생성 중 오류 발생:', error);
-      // 알림 생성 실패는 전체 프로세스에 영향을 주지 않음
+    if (rental.status !== 'return_requested') {
+      throw new BadRequestException('반납 승인은 반납 요청된 대여에 대해서만 가능합니다.');
     }
-    
-    return updatedRental;
+
+    // 반납 승인 처리
+    const updated = await this.update(id, {
+      status: 'returned' as RentalStatus,
+    });
+
+    // 사용자에게 알림 전송
+    this.notificationsService.createSystemNotification(
+      '장비 반납 승인',
+      `장비 반납이 승인되었습니다.`, 
+      NotificationPriorityEnum.MEDIUM
+    );
+
+    return updated;
+  }
+
+  async rejectReturn(id: string, reason?: string): Promise<Rental | null> {
+    const rental = await this.findOne(id);
+    if (!rental) {
+      throw new NotFoundException(`Rental with ID ${id} not found`);
+    }
+
+    if (rental.status !== 'return_requested') {
+      throw new BadRequestException('반납 거부는 반납 요청된 대여에 대해서만 가능합니다.');
+    }
+
+    // 반납 거부 처리 - 다시 'approved' 상태로 되돌림
+    const updated = await this.update(id, {
+      status: 'approved' as RentalStatus,
+      notes: reason 
+        ? `${rental.notes || ''}\n반납 거부 사유: ${reason}` 
+        : rental.notes
+    });
+
+    // 사용자에게 알림 전송
+    this.notificationsService.createSystemNotification(
+      '장비 반납 거부',
+      `장비 반납이 거부되었습니다. ${reason ? `사유: ${reason}` : ''}`, 
+      NotificationPriorityEnum.HIGH
+    );
+
+    return updated;
   }
 } 

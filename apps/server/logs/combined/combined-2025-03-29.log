@@ -1,0 +1,2 @@
+2025-03-29 10:10:57:1057 [31merror[39m: [31mRedis Error: Error: connect ECONNREFUSED 127.0.0.1:6379[39m
+2025-03-29 10:10:57:1057 [32minfo[39m: [32mRetrying Redis connection in 50ms...[39m

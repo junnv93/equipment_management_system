@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReservationsService } from './reservations.service';
 import { ReservationsController } from './reservations.controller';
-import { Reservation } from './entities/reservation.entity';
+// Reservation 엔티티 임포트 제거 (Drizzle ORM 사용으로 인해)
 import { EquipmentModule } from '../equipment/equipment.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Reservation]),
-    EquipmentModule
+    // Drizzle DB는 app.module에서 전역으로 제공됨
   ],
   controllers: [ReservationsController],
   providers: [ReservationsService],

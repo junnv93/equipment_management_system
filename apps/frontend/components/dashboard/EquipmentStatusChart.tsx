@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useMemo, memo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,18 +30,36 @@ interface EquipmentStatusChartProps {
   loading?: boolean
 }
 
-export function EquipmentStatusChart({ data, loading = false }: EquipmentStatusChartProps) {
-  // 데이터 가공
-  const chartData = Object.entries(data).map(([status, count]) => ({
-    name: STATUS_LABELS[status] || status,
-    value: count,
-    color: STATUS_COLORS[status] || "#e5e7eb", // 기본 색상
-    key: status
-  }))
+export const EquipmentStatusChart = memo(function EquipmentStatusChart({ 
+  data, 
+  loading = false 
+}: EquipmentStatusChartProps) {
+  // 데이터 가공 - useMemo로 최적화
+  const { chartData, totalEquipment } = useMemo(() => {
+    const formattedData = Object.entries(data).map(([status, count]) => ({
+      name: STATUS_LABELS[status] || status,
+      value: count,
+      color: STATUS_COLORS[status] || "#e5e7eb", // 기본 색상
+      key: status
+    }));
+    
+    const total = formattedData.reduce((sum, item) => sum + item.value, 0);
+    
+    return {
+      chartData: formattedData,
+      totalEquipment: total
+    };
+  }, [data]);
 
-  const totalEquipment = chartData.reduce((sum, item) => sum + item.value, 0)
-
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  // 렌더링 함수 - useCallback으로 최적화
+  const renderCustomizedLabel = useCallback(({ 
+    cx, 
+    cy, 
+    midAngle, 
+    innerRadius, 
+    outerRadius, 
+    percent 
+  }: any) => {
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
@@ -60,7 +78,12 @@ export function EquipmentStatusChart({ data, loading = false }: EquipmentStatusC
         {`${(percent * 100).toFixed(0)}%`}
       </text>
     ) : null
-  }
+  }, []);
+
+  // Tooltip formatter 함수도 useCallback으로 최적화
+  const tooltipFormatter = useCallback((value: number) => {
+    return [`${value}대 (${((value / totalEquipment) * 100).toFixed(1)}%)`, ""]
+  }, [totalEquipment]);
 
   return (
     <Card>
@@ -98,9 +121,7 @@ export function EquipmentStatusChart({ data, loading = false }: EquipmentStatusC
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`${value}대 (${((value / totalEquipment) * 100).toFixed(1)}%)`, ""]}
-                  />
+                  <Tooltip formatter={tooltipFormatter} />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -113,4 +134,4 @@ export function EquipmentStatusChart({ data, loading = false }: EquipmentStatusC
       </CardContent>
     </Card>
   )
-} 
+}) 

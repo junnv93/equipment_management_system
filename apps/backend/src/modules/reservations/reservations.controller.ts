@@ -108,7 +108,7 @@ export class ReservationsController {
   @ApiResponse({ status: HttpStatus.CONFLICT, description: '이미 취소된 예약' })
   cancel(@Param('id', ParseUUIDPipe) id: string, @Req() req) {
     // 일반 사용자는 자신의 예약만 취소할 수 있도록 확인 필요
-    return this.reservationsService.cancelReservation(id);
+    return this.reservationsService.cancelReservation(id, req.user.id);
   }
 
   @Post(':id/approve')
@@ -155,6 +155,6 @@ export class ReservationsController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '완료할 수 없는 상태의 예약' })
   @UseGuards(JwtAuthGuard)
   complete(@Param('id', ParseUUIDPipe) id: string, @Req() req) {
-    return this.reservationsService.completeReservation(id, req.user.id);
+    return this.reservationsService.completeReservation(id);
   }
 } 

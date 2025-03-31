@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { FaWarehouse, FaExchangeAlt, FaTools } from "react-icons/fa"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -12,7 +12,7 @@ import { OverdueRentalsList } from "@/components/dashboard/OverdueRentalsList"
 import { RecentActivities } from "@/components/dashboard/RecentActivities"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Socket, io } from "socket.io-client"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast, Toast } from "@/components/ui/use-toast"
 import { dashboardApi } from "@/lib/api/dashboard-api"
 import type {
   DashboardSummary,
@@ -23,6 +23,7 @@ import type {
   RecentActivity,
 } from "@/lib/api/dashboard-api"
 import { FiBox, FiCheckCircle, FiAlertCircle, FiClock } from "react-icons/fi"
+import type { ToasterToast } from "@/components/ui/toast"
 
 // 웹소켓 연결 설정
 const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001"
@@ -45,6 +46,7 @@ const STALE_TIME = 1000 * 30 // 30초
 export default function DashboardPage() {
   const queryClient = useQueryClient()
   const { toast } = useToast()
+  const [activeView, setActiveView] = useState("all")
 
   // React Query를 사용한 데이터 페칭
   const { data: summary = {
@@ -108,6 +110,25 @@ export default function DashboardPage() {
     staleTime: STALE_TIME,
   })
 
+  // 웹소켓 업데이트 핸들러
+  const handleDashboardUpdate = useCallback((data: DashboardUpdateEvent) => {
+    // 캐시된 데이터 업데이트
+    queryClient.setQueryData(["dashboard-summary"], data.summary)
+    queryClient.setQueryData(["equipment-by-team"], data.equipmentByTeam)
+    queryClient.setQueryData(["overdue-calibrations"], data.overdueCalibrations)
+    queryClient.setQueryData(["upcoming-calibrations"], data.upcomingCalibrations)
+    queryClient.setQueryData(["overdue-rentals"], data.overdueRentals)
+    queryClient.setQueryData(["recent-activities"], data.recentActivities)
+    queryClient.setQueryData(["equipment-status-stats"], data.equipmentStatusStats)
+
+    // 토스트 알림 표시
+    toast({
+      title: "대시보드 업데이트",
+      description: "대시보드 데이터가 업데이트되었습니다.",
+      duration: 3000,
+    } as ToasterToast)
+  }, [queryClient, toast]);
+
   // 웹소켓 연결 설정
   useEffect(() => {
     const socket = io(SOCKET_URL, {
@@ -121,7 +142,7 @@ export default function DashboardPage() {
         title: "실시간 연결 완료",
         description: "대시보드 데이터가 실시간으로 업데이트됩니다.",
         duration: 3000,
-      })
+      } as ToasterToast)
     })
 
     socket.on("disconnect", () => {
@@ -131,36 +152,40 @@ export default function DashboardPage() {
         description: "실시간 업데이트가 중단되었습니다. 재연결을 시도합니다.",
         variant: "destructive",
         duration: 3000,
-      })
+      } as ToasterToast)
     })
 
     // 실시간 데이터 업데이트 이벤트 핸들러
-    socket.on("dashboard-update", (data: DashboardUpdateEvent) => {
-      // 캐시된 데이터 업데이트
-      queryClient.setQueryData(["dashboard-summary"], data.summary)
-      queryClient.setQueryData(["equipment-by-team"], data.equipmentByTeam)
-      queryClient.setQueryData(["overdue-calibrations"], data.overdueCalibrations)
-      queryClient.setQueryData(["upcoming-calibrations"], data.upcomingCalibrations)
-      queryClient.setQueryData(["overdue-rentals"], data.overdueRentals)
-      queryClient.setQueryData(["recent-activities"], data.recentActivities)
-      queryClient.setQueryData(["equipment-status-stats"], data.equipmentStatusStats)
-
-      // 토스트 알림 표시
-      toast({
-        title: "대시보드 업데이트",
-        description: "대시보드 데이터가 업데이트되었습니다.",
-        duration: 3000,
-      })
-    })
+    socket.on("dashboard-update", handleDashboardUpdate)
 
     return () => {
       socket.disconnect()
     }
-  }, [queryClient, toast])
+  }, [toast, handleDashboardUpdate]) // queryClient 의존성 제거
 
-  const [activeView, setActiveView] = useState("all")
-  const isLoading = summaryLoading || teamLoading || calibrationLoading || upcomingLoading || 
-                   rentalLoading || activitiesLoading || statsLoading
+  // 탭 변경 핸들러 최적화
+  const handleTabChange = useCallback((value: string) => {
+    setActiveView(value);
+  }, []);
+
+  // 로딩 상태 계산 - useMemo로 최적화
+  const isLoading = useMemo(() => 
+    summaryLoading || 
+    teamLoading || 
+    calibrationLoading || 
+    upcomingLoading || 
+    rentalLoading || 
+    activitiesLoading || 
+    statsLoading,
+  [
+    summaryLoading, 
+    teamLoading, 
+    calibrationLoading, 
+    upcomingLoading, 
+    rentalLoading, 
+    activitiesLoading, 
+    statsLoading
+  ]);
 
   return (
     <div className="space-y-6 p-6">
@@ -171,7 +196,7 @@ export default function DashboardPage() {
         </p>
       </div>
       
-      <Tabs defaultValue="all" value={activeView} onValueChange={setActiveView}>
+      <Tabs defaultValue="all" value={activeView} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="all">전체</TabsTrigger>
           <TabsTrigger value="equipment">장비</TabsTrigger>
@@ -185,27 +210,27 @@ export default function DashboardPage() {
             <StatsCard
               title="전체 장비"
               value={summary?.totalEquipment || 0}
-              loading={isLoading}
+              loading={summaryLoading}
               icon={FiBox}
             />
             <StatsCard
               title="사용 가능 장비"
               value={summary?.availableEquipment || 0}
-              loading={isLoading}
+              loading={summaryLoading}
               icon={FiCheckCircle}
               variant="success"
             />
             <StatsCard
               title="교정 예정"
               value={summary?.upcomingCalibrations || 0}
-              loading={isLoading}
+              loading={summaryLoading}
               icon={FiAlertCircle}
               variant="warning"
             />
             <StatsCard
               title="대여 중"
               value={summary?.activeRentals || 0}
-              loading={isLoading}
+              loading={summaryLoading}
               icon={FiClock}
               variant="primary"
             />
@@ -215,25 +240,25 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <EquipmentStatusChart 
               data={equipmentStatusStats || {}} 
-              loading={isLoading}
+              loading={statsLoading}
             />
             <CalibrationList
               title="교정 예정 장비"
               description="다음 30일 이내 교정 예정인 장비 목록입니다"
               data={upcomingCalibrations}
-              loading={isLoading}
+              loading={upcomingLoading}
               type="upcoming"
             />
             <OverdueRentalsList
               data={overdueRentals}
-              loading={isLoading}
+              loading={rentalLoading}
             />
           </div>
           
           {/* 최근 활동 */}
           <RecentActivities
             data={recentActivities}
-            loading={isLoading}
+            loading={activitiesLoading}
           />
         </TabsContent>
         
@@ -249,14 +274,14 @@ export default function DashboardPage() {
                   <div className="min-h-[300px]">
                     <EquipmentStatusChart 
                       data={equipmentStatusStats || {}} 
-                      loading={isLoading}
+                      loading={statsLoading}
                     />
                   </div>
                 </div>
                 <div>
                   <h3 className="font-medium mb-2" data-testid="equipment-tab-title">팀별 장비 현황</h3>
                   <div className="space-y-2">
-                    {isLoading ? (
+                    {teamLoading ? (
                       Array(4).fill(0).map((_, i) => (
                         <div key={`loading-${i}`} className="h-8 bg-muted rounded animate-pulse" />
                       ))
@@ -279,7 +304,7 @@ export default function DashboardPage() {
           <div>
             <h3 className="font-medium mb-2" data-testid="calibration-tab-title">교정 예정 장비</h3>
             <div className="space-y-2">
-              {isLoading ? (
+              {calibrationLoading ? (
                 Array(4).fill(0).map((_, i) => (
                   <div key={`loading-${i}`} className="h-8 bg-muted rounded animate-pulse" />
                 ))
@@ -299,7 +324,7 @@ export default function DashboardPage() {
           <div>
             <h3 className="font-medium mb-2" data-testid="rental-tab-title">대여 중인 장비</h3>
             <div className="space-y-2">
-              {isLoading ? (
+              {rentalLoading ? (
                 Array(4).fill(0).map((_, i) => (
                   <div key={`loading-${i}`} className="h-8 bg-muted rounded animate-pulse" />
                 ))

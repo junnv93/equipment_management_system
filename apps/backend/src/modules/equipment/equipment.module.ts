@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { EquipmentService } from './equipment.service';
 import { EquipmentController } from './equipment.controller';
-import { Equipment } from './entities/equipment.entity';
+import { EquipmentService } from './equipment.service';
+import { CacheModule } from '../../common/cache/cache.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Equipment])
+    // Drizzle DB는 app.module에서 전역으로 제공됨
+    CacheModule,
   ],
   controllers: [EquipmentController],
   providers: [EquipmentService],

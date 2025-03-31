@@ -10,6 +10,7 @@ services:
       - ./apps/frontend:/app/apps/frontend
       - ./packages:/app/packages
       - frontend-node-modules:/app/node_modules
+      - /app/apps/frontend/node_modules
     ports:
       - "3000:3000"
     environment:
@@ -19,7 +20,7 @@ services:
       - backend
     networks:
       - app-network
-    command: pnpm dev
+    command: npx next dev
 
   backend:
     build:
@@ -30,20 +31,24 @@ services:
       - ./apps/backend:/app/apps/backend
       - ./packages:/app/packages
       - backend-node-modules:/app/node_modules
+      - /app/apps/backend/node_modules
     ports:
       - "3001:3001"
       - "9229:9229"
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/equipment_management
-      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-supersecretkey}
       - JWT_EXPIRATION=1d
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - app-network
-    command: pnpm dev:backend
+    command: pnpm --filter backend start:dev
 
   postgres:
     image: postgres:15
@@ -57,11 +62,27 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql
+      - ./init-postgres.sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: redis_equipment
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -72,4 +93,5 @@ networks:
 volumes:
   frontend-node-modules:
   backend-node-modules:
-  postgres_data: 
+  postgres_data:
+  redis_data: 

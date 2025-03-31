@@ -1,39 +1,118 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
 import equipmentApi, { Equipment, EquipmentQuery } from "@/lib/api/equipment-api";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { useRouter } from "next/navigation";
+import debounce from "lodash/debounce";
+import VirtualizedEquipmentList from "@/components/equipment/VirtualizedEquipmentList";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// PaginationState 인터페이스 정의
+interface PaginationState {
+  pageIndex: number;
+  pageSize: number;
+}
 
 export default function EquipmentPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-
-  // API 쿼리 파라미터 구성
-  const queryParams: EquipmentQuery = {
-    page,
-    pageSize,
-    ...(searchTerm && { search: searchTerm }),
-    ...(statusFilter !== "all" && { status: statusFilter }),
-    ...(categoryFilter !== "all" && { category: categoryFilter }),
-  };
-
-  // 장비 데이터 불러오기
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['equipment', queryParams],
-    queryFn: () => equipmentApi.getEquipmentList(queryParams),
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
   });
+
+  // useMemo를 사용하여 검색 조건 최적화
+  const queryOptions = useMemo(() => {
+    return {
+      term: searchTerm,
+      status: statusFilter !== "ALL" ? statusFilter : undefined,
+      category: categoryFilter !== "ALL" ? categoryFilter : undefined,
+      page: pagination.pageIndex + 1,
+      limit: pagination.pageSize,
+    };
+  }, [searchTerm, statusFilter, categoryFilter, pagination]);
+
+  // 장비 데이터 쿼리
+  const {
+    data,
+    isLoading,
+    refetch,
+    isFetching,
+  } = useQuery({
+    queryKey: ["equipmentList", queryOptions],
+    queryFn: () => equipmentApi.getEquipmentList(queryOptions),
+  });
+
+  // 더 많은 데이터 로드 함수 정의
+  const loadMoreData = useCallback(() => {
+    setPagination((prev: PaginationState) => ({
+      ...prev,
+      pageIndex: prev.pageIndex + 1
+    }));
+    return Promise.resolve();
+  }, []);
+
+  // 검색어 입력에 디바운스 적용
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setSearchTerm(value);
+        setPagination((prev: PaginationState) => ({
+          ...prev,
+          pageIndex: 0, // 검색 시 첫 페이지로 리셋
+        }));
+      }, 500),
+    []
+  );
+
+  // 컴포넌트 언마운트 시 디바운스 취소
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
+
+  // 장비 상태 변경 핸들러
+  const handleStatusChange = useCallback((value: string) => {
+    setStatusFilter(value);
+    setPagination((prev: PaginationState) => ({
+      ...prev,
+      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
+    }));
+  }, []);
+
+  // 장비 카테고리 변경 핸들러
+  const handleCategoryChange = useCallback((value: string) => {
+    setCategoryFilter(value);
+    setPagination((prev: PaginationState) => ({
+      ...prev,
+      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
+    }));
+  }, []);
+
+  // 장비 상세 페이지로 이동하는 핸들러
+  const handleEquipmentClick = useCallback((equipment: Equipment) => {
+    router.push(`/equipment/${equipment.id}`);
+  }, [router]);
 
   // 상태에 따른 뱃지 컴포넌트
   const getStatusBadge = (status: string) => {
@@ -89,149 +168,73 @@ export default function EquipmentPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 bg-white dark:bg-gray-900">
-      <PageHeader 
-        title="장비 관리" 
-        actionButton={
-          <Link href="/equipment/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              신규 장비 등록
-            </Button>
-          </Link>
-        }
-      />
-      
-      <div className="flex flex-col gap-4">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <Input
-            placeholder="장비명, 관리번호 검색..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="상태 필터" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">모든 상태</SelectItem>
-              <SelectItem value="AVAILABLE">사용 가능</SelectItem>
-              <SelectItem value="IN_USE">사용 중</SelectItem>
-              <SelectItem value="MAINTENANCE">유지보수 중</SelectItem>
-              <SelectItem value="CALIBRATION">교정 중</SelectItem>
-              <SelectItem value="DISPOSAL">폐기</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="분류 필터" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">모든 분류</SelectItem>
-              <SelectItem value="테스트 장비">테스트 장비</SelectItem>
-              <SelectItem value="컴퓨터">컴퓨터</SelectItem>
-              <SelectItem value="통신 장비">통신 장비</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
+        <Button onClick={() => router.push("/equipment/new")}>장비 등록</Button>
       </div>
 
-      <div className="border rounded-lg overflow-hidden overflow-x-auto dark:border-gray-700">
-        <Table>
-          <TableHeader>
-            <TableRow className="dark:border-gray-700">
-              <TableHead className="w-[100px] md:w-auto">관리번호</TableHead>
-              <TableHead>장비명</TableHead>
-              <TableHead className="hidden sm:table-cell">분류</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead className="hidden md:table-cell">마지막 교정일</TableHead>
-              <TableHead className="hidden md:table-cell">위치</TableHead>
-              <TableHead className="text-right">상세</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow className="dark:border-gray-700">
-                <TableCell colSpan={7} className="h-24 text-center">
-                  데이터를 불러오는 중...
-                </TableCell>
-              </TableRow>
-            ) : isError ? (
-              <TableRow className="dark:border-gray-700">
-                <TableCell colSpan={7} className="h-24 text-center text-red-500 dark:text-red-400">
-                  데이터를 불러오는 중 오류가 발생했습니다.
-                </TableCell>
-              </TableRow>
-            ) : !data?.items || data.items.length === 0 ? (
-              <TableRow className="dark:border-gray-700">
-                <TableCell colSpan={7} className="h-24 text-center">
-                  검색 결과가 없습니다
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.items.map((equipment: Equipment) => (
-                <TableRow key={equipment.id} className="dark:border-gray-700">
-                  <TableCell className="font-medium">
-                    {equipment.managementNumber}
-                  </TableCell>
-                  <TableCell className="max-w-[150px] sm:max-w-none truncate">
-                    {equipment.name}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">
-                    {equipment.category}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(equipment.status)}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {formatDate(equipment.lastCalibrationDate)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {equipment.location}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/equipment/${equipment.id}`}>
-                      <Button variant="outline" size="sm">
-                        상세
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      
-      {/* 페이지네이션 */}
-      {data && data.totalPages > 1 && (
-        <div className="flex justify-center mt-4">
-          <div className="flex gap-1">
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={page === 1}
-              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-            >
-              이전
-            </Button>
-            <span className="px-4 py-2 dark:text-gray-300">
-              {page} / {data.totalPages}
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={page === data.totalPages}
-              onClick={() => setPage(prev => Math.min(prev + 1, data.totalPages))}
-            >
-              다음
-            </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>장비 검색</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="search">검색어</Label>
+              <Input
+                id="search"
+                placeholder="장비명, 관리번호, 위치 등으로 검색"
+                onChange={(e) => debouncedSearch(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">상태</Label>
+              <Select defaultValue="ALL" onValueChange={handleStatusChange}>
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="모든 상태" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">모든 상태</SelectItem>
+                  <SelectItem value="AVAILABLE">사용 가능</SelectItem>
+                  <SelectItem value="IN_USE">사용 중</SelectItem>
+                  <SelectItem value="MAINTENANCE">유지보수 중</SelectItem>
+                  <SelectItem value="CALIBRATION">교정 중</SelectItem>
+                  <SelectItem value="DISPOSAL">폐기</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">분류</Label>
+              <Select defaultValue="ALL" onValueChange={handleCategoryChange}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="모든 분류" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">모든 분류</SelectItem>
+                  <SelectItem value="MEASUREMENT">측정장비</SelectItem>
+                  <SelectItem value="TESTING">시험장비</SelectItem>
+                  <SelectItem value="ANALYSIS">분석장비</SelectItem>
+                  <SelectItem value="CALIBRATION">교정장비</SelectItem>
+                  <SelectItem value="SAFETY">안전장비</SelectItem>
+                  <SelectItem value="IT">IT장비</SelectItem>
+                  <SelectItem value="TOOL">공구</SelectItem>
+                  <SelectItem value="OTHER">기타</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
+
+      {/* 가상화된 장비 리스트로 교체 */}
+      <VirtualizedEquipmentList
+        items={data?.items || []}
+        isLoading={isLoading || isFetching}
+        hasNextPage={data ? data.page < data.totalPages : false}
+        loadNextPage={loadMoreData}
+        onItemClick={handleEquipmentClick}
+      />
     </div>
   );
 } 

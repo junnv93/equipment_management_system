@@ -1,38 +1,67 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import { testConnection } from './database/drizzle';
+import { HelmetConfigService } from './common/middleware/helmet-config';
+import * as cookieParser from 'cookie-parser';
+import * as compression from 'compression';
+import { LoggerService } from './common/logger/logger.service';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ErrorInterceptor } from './common/interceptors/error.interceptor';
+import { MonitoringService } from './modules/monitoring/monitoring.service';
 
 async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+  
   const configService = app.get(ConfigService);
+  const loggerService = app.get(LoggerService);
+  const helmetConfigService = app.get(HelmetConfigService);
+  const monitoringService = app.get(MonitoringService);
   
-  // 전역 프리픽스 설정
-  app.setGlobalPrefix('api');
+  app.useLogger(loggerService);
   
-  // 전역 파이프 설정 (유효성 검사)
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    forbidNonWhitelisted: true,
-  }));
+  // 보안 미들웨어 설정
+  app.use(helmetConfigService.createHelmetMiddleware());
+  app.use(cookieParser());
+  app.use(compression());
+  
+  // API 검증 파이프
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+  
+  // 글로벌 인터셉터 등록
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(loggerService, monitoringService),
+    new ErrorInterceptor(loggerService, monitoringService)
+  );
   
   // CORS 설정
   app.enableCors({
-    origin: configService.get('NODE_ENV') === 'production' 
-      ? 'https://your-production-domain.com' 
-      : true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    origin: configService.get('FRONTEND_URL') || 'http://localhost:3000',
     credentials: true,
   });
   
-  // 환경 변수에서 포트 가져오기
-  const port = configService.get('PORT') || 3001;
+  // 글로벌 접두사
+  app.setGlobalPrefix('api');
   
+  const port = configService.get('PORT') || 3001;
   await app.listen(port);
-  logger.log(`애플리케이션이 ${port} 포트에서 실행 중입니다.`);
-  logger.log(`환경: ${configService.get('NODE_ENV')}`);
+  
+  loggerService.log(`Application is running on: http://localhost:${port}/api`);
 }
 
-bootstrap(); 
+bootstrap().catch((err) => {
+  console.error('Error starting server:', err);
+  process.exit(1);
+});

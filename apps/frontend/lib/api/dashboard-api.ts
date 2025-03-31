@@ -38,13 +38,15 @@ export type OverdueRental = {
 
 export interface RecentActivity {
   id: string
-  type: "rental" | "return" | "calibration" | "maintenance" | "checkout" | "checkin"
+  type: string
   equipmentId: string
   equipmentName: string
   userId: string
   userName: string
   timestamp: string
   details: string
+  entityId: string
+  entityName: string
 }
 
 class DashboardApi {

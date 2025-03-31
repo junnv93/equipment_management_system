@@ -148,15 +148,13 @@ export class RentalsController {
   @Patch(':id/approve-return')
   @ApiOperation({ summary: '반납 요청 승인', description: '사용자가 요청한 장비 반납을 승인합니다.' })
   @ApiParam({ name: 'id', description: '대여/반출 ID' })
-  @ApiBody({ type: ApproveReturnDto })
   @ApiResponse({ status: 200, description: '반납 승인 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
   @ApiResponse({ status: 404, description: '대여/반출을 찾을 수 없음' })
   async approveReturn(
-    @Param('id') id: string,
-    @Body() approveReturnDto: ApproveReturnDto
+    @Param('id') id: string
   ): Promise<Rental> {
-    const rental = await this.rentalsService.approveReturn(id, approveReturnDto);
+    const rental = await this.rentalsService.approveReturn(id);
     if (!rental) {
       throw new NotFoundException(`대여/반출 ID ${id}를 찾을 수 없습니다.`);
     }

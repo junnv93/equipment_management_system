@@ -8,6 +8,13 @@
       "when": 1716617689350,
       "tag": "0000_initial_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1743256531708,
+      "tag": "0001_lame_valkyrie",
+      "breakpoints": true
     }
   ]
-} 
+}
