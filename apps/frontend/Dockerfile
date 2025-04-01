@@ -24,13 +24,20 @@ ENV NODE_ENV=development
 ENV PORT=3000
 EXPOSE 3000
 
-CMD ["node", "node_modules/.bin/next", "dev", "--port", "3000"]
+# 개발 환경에서 pnpm 설치
+RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
+
+# 프론트엔드 서비스 실행
+CMD ["pnpm", "--filter", "frontend", "dev"]
 
 # 빌드 환경
 FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# pnpm 설치
+RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
 
 # 빌드 실행
 ENV NEXT_TELEMETRY_DISABLED 1

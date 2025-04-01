@@ -1,80 +1,71 @@
 FROM node:18-alpine AS base
-
-# 공통 레이어 - 모든 스테이지에서 재사용됨
-FROM base AS deps
 WORKDIR /app
 
-# pnpm 설치
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# 공통 의존성 레이어
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
 
-# 의존성 파일만 복사 (레이어 캐싱 활용)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# 의존성 파일만 복사하여 레이어 캐싱 활용
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/backend/package.json ./apps/backend/
-COPY packages/*/package.json ./packages/*/
+COPY packages ./packages/
+
+# 의존성 설치
+RUN pnpm install --strict-peer-dependencies=false
 
 # 개발 환경
-FROM deps AS development
+FROM base AS development
 WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# 필요한 도구 설치
-RUN apk add --no-cache python3 make g++
+ENV NODE_ENV=development
+ENV PORT=3001
+EXPOSE 3001
+EXPOSE 9229
 
-# 모든 의존성 설치 (개발 의존성 포함)
-RUN --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
-    pnpm install --no-frozen-lockfile --strict-peer-dependencies=false
-
-# 전체 소스 코드 복사
-COPY packages ./packages
-WORKDIR /app/apps/backend
-
-# 소스 코드는 개발 환경에서 볼륨으로 마운트됨
-EXPOSE 3001 9229
+# 개발 환경에서 pnpm 설치
+RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
 
 # 백엔드 서비스 실행
-CMD ["pnpm", "start:dev"]
+CMD ["pnpm", "--filter", "backend", "start:dev"]
 
-# 프로덕션 빌드
-FROM deps AS build
+# 빌드 환경
+FROM base AS build
 WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# 필요한 도구 설치
-RUN apk add --no-cache python3 make g++
+# pnpm 설치
+RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
 
-# 모든 의존성 설치 (개발 의존성 포함)
-RUN --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
-    pnpm install --no-frozen-lockfile --strict-peer-dependencies=false
+# 빌드 실행
+RUN pnpm --filter backend build
 
-# 소스 코드 복사
-COPY packages ./packages
-COPY apps/backend ./apps/backend
-
-# 백엔드 빌드
-RUN pnpm --filter=backend build
-
-# 프로덕션 환경 - 최소 이미지
+# 프로덕션 환경
 FROM base AS production
 WORKDIR /app
 
-# pnpm 설치
-RUN corepack enable && corepack prepare pnpm@latest --activate
+ENV NODE_ENV=production
+ENV PORT=3001
 
 # 필요한 파일만 복사
-COPY --from=deps /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc ./
-COPY --from=build /app/apps/backend/package.json ./apps/backend/
-COPY --from=build /app/apps/backend/dist ./apps/backend/dist
-COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/backend/dist ./dist
+COPY --from=build /app/apps/backend/package.json ./
 
-# 프로덕션 의존성만 설치 (개발 의존성 제외)
-RUN --mount=type=cache,id=pnpm-store,target=/root/.pnpm-store \
-    pnpm install --prod --no-frozen-lockfile --strict-peer-dependencies=false
+# 프로덕션 의존성만 설치
+COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=build /app/packages ./packages/
+RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
+RUN pnpm install --prod --strict-peer-dependencies=false
 
-# 보안을 위해 비루트 사용자로 전환
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 -G nodejs
+# 보안을 위해 루트가 아닌 사용자로 전환
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+RUN chown -R nestjs:nodejs /app
 USER nestjs
 
-# 환경 변수 설정
-ENV NODE_ENV=production
-
 EXPOSE 3001
-CMD ["node", "apps/backend/dist/main"] 
+
+CMD ["node", "dist/main"] 
