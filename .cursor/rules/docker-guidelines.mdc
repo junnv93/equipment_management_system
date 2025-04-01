@@ -3,6 +3,11 @@ description:
 globs: 
 alwaysApply: true
 ---
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Docker 가이드라인: 장비 관리 시스템
 
 ## 개요

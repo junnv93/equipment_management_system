@@ -3,6 +3,11 @@ description:
 globs: 
 alwaysApply: true
 ---
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Git 워크플로우 가이드라인
 
 ## 개요

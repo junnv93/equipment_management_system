@@ -10,6 +10,7 @@ import { LoggerService } from './common/logger/logger.service';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ErrorInterceptor } from './common/interceptors/error.interceptor';
 import { MonitoringService } from './modules/monitoring/monitoring.service';
+import { GlobalExceptionFilter } from './common/filters/error.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -45,6 +46,9 @@ async function bootstrap() {
     new LoggingInterceptor(loggerService, monitoringService),
     new ErrorInterceptor(loggerService, monitoringService)
   );
+  
+  // 글로벌 예외 필터 등록
+  app.useGlobalFilters(new GlobalExceptionFilter());
   
   // CORS 설정
   app.enableCors({

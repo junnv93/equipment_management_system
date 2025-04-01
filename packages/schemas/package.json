@@ -1,22 +1,16 @@
 {
   "name": "@equipment-management/schemas",
   "version": "0.1.0",
-  "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "description": "공유 타입과 스키마 정의",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "lint": "eslint src/**/*.ts",
-    "clean": "rimraf ./dist"
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
   },
   "dependencies": {
     "zod": "^3.24.2"
-  },
-  "devDependencies": {
-    "@types/jest": "^29.5.12",
-    "eslint": "^8.40.0",
-    "rimraf": "^5.0.1",
-    "typescript": "^5.0.4"
   }
 }

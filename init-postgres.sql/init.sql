@@ -8,6 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm"; -- 텍스트 검색 성능 향상
 CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(100) NOT NULL UNIQUE,
+  code VARCHAR(50) NOT NULL UNIQUE,
   description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -19,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(100) NOT NULL,
   role VARCHAR(50) NOT NULL CHECK (role IN ('ADMIN', 'USER', 'APPROVER')),
-  team_id UUID,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -175,11 +176,12 @@ CREATE INDEX IF NOT EXISTS idx_history_user ON history(user_id);
 CREATE INDEX IF NOT EXISTS idx_history_action_time ON history(action_time);
 
 -- 기본 데이터 삽입
-INSERT INTO teams (id, name, description) VALUES 
-  ('11111111-1111-1111-1111-111111111111', 'RF팀', 'RF 장비 관리 팀'),
-  ('22222222-2222-2222-2222-222222222222', 'SAR팀', 'SAR 장비 관리 팀'),
-  ('33333333-3333-3333-3333-333333333333', 'EMC팀', 'EMC 장비 관리 팀'),
-  ('44444444-4444-4444-4444-444444444444', 'Automotive팀', '자동차 관련 장비 관리 팀')
+INSERT INTO teams (id, name, code, description) VALUES 
+  ('11111111-1111-1111-1111-111111111111', 'RF팀', 'rf', 'RF 장비 관리 팀'),
+  ('22222222-2222-2222-2222-222222222222', 'SAR팀', 'sar', 'SAR 장비 관리 팀'),
+  ('33333333-3333-3333-3333-333333333333', 'EMC팀', 'emc', 'EMC 장비 관리 팀'),
+  ('44444444-4444-4444-4444-444444444444', 'Automotive팀', 'automotive', 'Automotive 장비 관리 팀'),
+  ('55555555-5555-5555-5555-555555555555', '공통', 'common', '공통 장비 관리')
 ON CONFLICT DO NOTHING;
 
 -- 기본 관리자 계정 (비밀번호: admin123, 실제 사용 시 변경 필요)
