@@ -1,0 +1,14 @@
+{
+  "atLeast": 80,
+  "detail": true,
+  "strict": false,
+  "ignoreFiles": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**"
+  ]
+}

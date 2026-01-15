@@ -150,7 +150,8 @@ describe('AuthController', () => {
         },
       };
 
-      jest.spyOn(authService, 'validateAzureADUser').mockResolvedValue(expectedResult);
+      // 타입 문제를 해결하기 위해 any로 캐스팅 (테스트 환경만 해당)
+      (authService.validateAzureADUser as jest.Mock).mockReturnValue(expectedResult);
 
       // Act
       const result = await controller.azureLogin(req);

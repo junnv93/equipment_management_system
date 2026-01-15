@@ -1,53 +1,4 @@
 services:
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-      target: development
-    volumes:
-      - ./:/app
-      - /app/node_modules
-      - /app/apps/frontend/node_modules
-      - /app/packages/schemas/node_modules
-      - ./packages/schemas/dist:/app/packages/schemas/dist
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
-    depends_on:
-      - backend
-    networks:
-      - app-network
-
-  backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-      target: development
-    volumes:
-      - ./:/app
-      - /app/node_modules
-      - /app/apps/backend/node_modules
-      - /app/packages/schemas/node_modules
-      - ./packages/schemas/dist:/app/packages/schemas/dist
-    ports:
-      - "3001:3001"
-      - "9229:9229"
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/equipment_management
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-supersecretkey}
-      - JWT_EXPIRATION=1d
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - app-network
-
   postgres:
     image: postgres:15
     container_name: postgres_equipment
@@ -60,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-postgres.sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-network
     healthcheck:
@@ -85,9 +36,61 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    container_name: equipment_management_backend
+    build:
+      context: .
+      dockerfile: apps/backend/docker/Dockerfile
+      target: development
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/equipment_management
+      - REDIS_URL=redis://redis:6379
+      - PORT=3001
+      - FRONTEND_URL=http://localhost:3000
+    ports:
+      - "3001:3001"
+      - "9229:9229" # 디버깅용 포트
+    volumes:
+      - ./apps/backend:/app/apps/backend
+      - ./packages:/app/packages
+      - backend_node_modules:/app/node_modules
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/docker/Dockerfile
+      target: development
+    container_name: equipment_management_frontend
+    restart: always
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/frontend:/app/apps/frontend
+      - ./packages:/app/packages
+      - frontend_node_modules:/app/node_modules
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
 networks:
   app-network:
+    driver: bridge
 
 volumes:
   postgres_data:
-  redis_data: 
+  redis_data:
+  frontend_node_modules:
+  backend_node_modules: 

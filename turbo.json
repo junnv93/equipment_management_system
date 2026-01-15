@@ -4,22 +4,40 @@
   "pipeline": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": ["dist/**", ".next/**", "public/dist/**"]
     },
     "lint": {
       "outputs": []
     },
+    "lint:fix": {
+      "outputs": []
+    },
     "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"]
+    },
+    "clean": {
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"],
+      "outputs": ["coverage/**"]
+    },
+    "test:watch": {
       "cache": false,
       "persistent": true
     },
     "start": {
-      "dependsOn": ["^build"],
-      "cache": false
+      "dependsOn": ["build"],
+      "outputs": []
     },
-    "test": {
-      "outputs": ["coverage/**"],
-      "dependsOn": []
+    "format": {
+      "outputs": []
+    },
+    "format:check": {
+      "outputs": []
     }
   }
 } 

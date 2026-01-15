@@ -72,8 +72,10 @@ export class AppError extends Error {
     this.name = 'AppError';
     
     // 스택 트레이스 유지를 위한 설정
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, AppError);
+    // TS2339 오류 회피
+    const captureStackTrace = (Error as any).captureStackTrace;
+    if (captureStackTrace) {
+      captureStackTrace(this, AppError);
     }
   }
   

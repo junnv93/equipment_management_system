@@ -18,7 +18,7 @@ export class EquipmentService {
   private readonly CACHE_PREFIX = 'equipment:';
 
   constructor(
-    @Inject('DRIZZLE_DB')
+    @Inject('DRIZZLE_INSTANCE')
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly cacheService: SimpleCacheService
   ) {}

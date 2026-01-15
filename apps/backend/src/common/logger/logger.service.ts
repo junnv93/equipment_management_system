@@ -1,7 +1,7 @@
 import { Injectable, LoggerService as NestLoggerService, Scope } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as winston from 'winston';
-import * as DailyRotateFile from 'winston-daily-rotate-file';
+import 'winston-daily-rotate-file';
 
 @Injectable({ scope: Scope.TRANSIENT })
 export class LoggerService implements NestLoggerService {
@@ -34,7 +34,7 @@ export class LoggerService implements NestLoggerService {
     
     if (isProduction) {
       // 운영 환경에서만 파일 로깅 활성화
-      const fileTransport = new DailyRotateFile({
+      const fileTransport = new winston.transports.DailyRotateFile({
         format: fileFormat,
         dirname: 'logs',
         filename: 'application-%DATE%.log',
@@ -43,7 +43,7 @@ export class LoggerService implements NestLoggerService {
         maxFiles: '14d',
       });
 
-      const errorFileTransport = new DailyRotateFile({
+      const errorFileTransport = new winston.transports.DailyRotateFile({
         format: fileFormat,
         dirname: 'logs',
         filename: 'error-%DATE%.log',

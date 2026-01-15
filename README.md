@@ -1,209 +1,354 @@
-# 장비 관리 시스템
+# 장비 관리 시스템 (Equipment Management System)
 
-장비 관리, 교정, 대여/반출 관리를 위한 웹 애플리케이션입니다.
+기업의 장비 대여, 교정, 반출 관리를 위한 종합 웹 애플리케이션
+
+## 📋 목차
+
+- [개요](#개요)
+- [주요 기능](#주요-기능)
+- [기술 스택](#기술-스택)
+- [시작하기](#시작하기)
+- [프로젝트 구조](#프로젝트-구조)
+- [개발 가이드](#개발-가이드)
+- [문서](#문서)
+
+---
+
+## 개요
+
+장비 관리 시스템은 기업 내 장비의 전체 수명주기를 관리하는 웹 기반 애플리케이션입니다. 장비 대여, 반출, 교정 관리부터 팀별 장비 할당까지 종합적인 관리 기능을 제공합니다.
+
+### 주요 특징
+
+- 🏢 **팀별 장비 관리**: RF팀, SAR팀, EMC팀, Automotive팀 등 팀별 장비 구분
+- 📦 **대여/반출 관리**: 장비 대여 신청, 승인, 반납 프로세스 자동화
+- 🔧 **교정 관리**: 교정 주기 추적, 알림, 이력 관리
+- 📊 **대시보드**: 실시간 장비 현황 및 통계
+- 🔐 **권한 관리**: 역할 기반 접근 제어 (RBAC)
+- 🌐 **다국어 지원**: 한국어/영어 (i18n)
+
+---
+
+## 주요 기능
+
+### 1. 장비 관리
+- 장비 등록, 수정, 삭제
+- 상세 정보 조회 (모델명, 제조사, 일련번호 등)
+- 장비 검색 및 필터링
+- 장비 상태 추적 (사용 가능, 대여 중, 반출 중, 교정 중 등)
+
+### 2. 대여 관리
+- 장비 대여 신청
+- 대여 승인/거부 프로세스
+- 반납 기한 관리
+- 대여 이력 조회
+
+### 3. 반출 관리
+- 장비 반출 등록
+- 반출 장소 및 담당자 관리
+- 반출 장비 목록 관리
+
+### 4. 교정 관리
+- 교정 주기 설정
+- 교정 예정 알림
+- 교정 이력 관리
+- 교정 기한 초과 알림
+
+### 5. 대시보드
+- 장비 통계 (총 장비, 사용 가능, 대여 중 등)
+- 팀별 장비 현황
+- 최근 활동 내역
+- 교정 예정 목록
+
+---
 
 ## 기술 스택
 
-- **프론트엔드**: Next.js 14+, TypeScript, TailwindCSS, ShadCN/UI
-- **백엔드**: NestJS, TypeScript, Drizzle ORM
-- **데이터베이스**: PostgreSQL
+### 프론트엔드
+- **프레임워크**: Next.js 14 (App Router)
+- **언어**: TypeScript
+- **UI**: ShadCN/UI, TailwindCSS
+- **상태 관리**: 
+  - TanStack Query (서버 상태)
+  - Zustand (클라이언트 상태)
+- **폼 관리**: React Hook Form + Zod
+- **국제화**: next-intl
+
+### 백엔드
+- **프레임워크**: NestJS 10
+- **언어**: TypeScript
+- **API**: RESTful API
+- **인증**: JWT
+- **권한**: 역할 기반 접근 제어 (RBAC)
+- **문서화**: Swagger/OpenAPI
+
+### 데이터베이스
+- **RDBMS**: PostgreSQL 15
+- **ORM**: Drizzle ORM
+- **마이그레이션**: Drizzle Kit
 - **캐싱**: Redis
-- **컨테이너화**: Docker, Docker Compose
-- **패키지 관리**: pnpm 워크스페이스 (모노레포)
+
+### 인프라
+- **모노레포**: pnpm + Turborepo
+- **컨테이너**: Docker
 - **CI/CD**: GitHub Actions
+
+---
 
 ## 시작하기
 
-### 사전 요구 사항
+### 사전 요구사항
 
-- Docker 및 Docker Compose 설치
-- Node.js 18+ 및 pnpm 설치
+- Node.js 18+
+- pnpm 10+
+- Docker & Docker Compose
+- PostgreSQL 15 (Docker로 실행 가능)
 
-### 환경 설정
+### 설치
 
-1. 저장소 클론
-   ```bash
-   git clone https://github.com/your-username/equipment-management-system.git
-   cd equipment-management-system
-   ```
+```bash
+# 1. 저장소 클론
+git clone <repository-url>
+cd equipment-management-system
 
-2. 개발 환경 설정 스크립트 실행
-   ```bash
-   bash scripts/setup.sh
-   ```
+# 2. 의존성 설치
+pnpm install
 
-3. 로컬 개발을 위한 Docker 환경 실행
-   ```bash
-   docker-compose up -d
-   ```
+# 3. 환경 변수 설정
+cp .env.example .env
+# .env 파일을 열어 실제 값으로 수정
 
-4. 브라우저에서 접속
-   - 프론트엔드: http://localhost:3000
-   - 백엔드 API: http://localhost:3001
+# 4. Docker 컨테이너 시작 (PostgreSQL, Redis)
+pnpm docker:up
 
-### 개발 환경
+# 5. 데이터베이스 마이그레이션
+cd apps/backend
+pnpm db:migrate
 
-Docker 없이 로컬에서 개발하려면:
+# 6. 개발 서버 실행
+cd ../..
+pnpm dev
+```
 
-1. 의존성 설치
-   ```bash
-   pnpm install
-   ```
+### 접속
 
-2. PostgreSQL 및 Redis 실행 (Docker 사용)
-   ```bash
-   docker-compose up -d postgres redis
-   ```
+- **프론트엔드**: http://localhost:3000
+- **백엔드 API**: http://localhost:3001/api
+- **API 문서**: http://localhost:3001/api/docs
 
-3. 백엔드 실행
-   ```bash
-   pnpm dev:backend
-   ```
-
-4. 프론트엔드 실행
-   ```bash
-   pnpm dev:frontend
-   ```
+---
 
 ## 프로젝트 구조
 
 ```
-/
-├── .github/                 # GitHub 워크플로우 설정
-│   └── workflows/           # CI/CD 워크플로우
-├── apps/                    # 애플리케이션
-│   ├── backend/             # NestJS 백엔드 앱
-│   └── frontend/            # Next.js 프론트엔드 앱
-├── packages/                # 공유 패키지
-│   ├── schemas/             # 공유 스키마 및 타입
-│   ├── ui/                  # 공유 UI 컴포넌트
-│   └── api-client/          # API 클라이언트
-├── scripts/                 # 유틸리티 스크립트
-├── init-postgres.sql/       # PostgreSQL 초기화 스크립트
-├── docker-compose.yml       # 개발용 Docker 설정
-├── docker-compose.prod.yml  # 프로덕션용 Docker 설정
-├── .npmrc                   # pnpm 설정
-├── .eslintrc.js             # ESLint 공통 설정
-├── tsconfig.json            # TypeScript 공통 설정
+equipment-management-system/
+├── apps/
+│   ├── backend/          # NestJS 백엔드
+│   │   ├── src/
+│   │   │   ├── modules/  # 기능별 모듈
+│   │   │   ├── database/ # 데이터베이스 관련
+│   │   │   └── common/   # 공통 유틸리티
+│   │   └── drizzle/      # 마이그레이션 파일
+│   │
+│   └── frontend/         # Next.js 프론트엔드
+│       ├── app/          # App Router 페이지
+│       ├── components/   # UI 컴포넌트
+│       ├── lib/          # 유틸리티 함수
+│       └── hooks/        # 커스텀 훅
+│
+├── packages/
+│   ├── schemas/          # 공유 데이터 스키마
+│   ├── api-client/       # API 클라이언트
+│   └── ui/               # 공유 UI 컴포넌트
+│
+└── docs/                 # 프로젝트 문서
 ```
 
-## 주요 기능
+---
 
-- 장비 관리 (등록, 조회, 수정, 삭제)
-- 장비 교정 관리 (교정 일정, 교정 기록 관리)
-- 장비 대여 및 반출 관리
-- 팀별 장비 관리
-- 대시보드 및 통계
+## 개발 가이드
 
-## 모노레포 패키지 관리
+### 스크립트
 
-### 패키지 의존성 추가
-
-특정 워크스페이스에 의존성 추가:
 ```bash
-pnpm --filter <패키지명> add <의존성>
-```
+# 개발 서버 실행
+pnpm dev
 
-예: 백엔드에 lodash 추가
-```bash
-pnpm --filter backend add lodash
-```
-
-개발 의존성 추가:
-```bash
-pnpm --filter <패키지명> add -D <의존성>
-```
-
-루트 워크스페이스에 공통 개발 의존성 추가:
-```bash
-pnpm add -D -w <의존성>
-```
-
-### 패키지 빌드
-
-전체 패키지 빌드:
-```bash
+# 빌드
 pnpm build
+
+# 프로덕션 서버 실행
+pnpm start
+
+# 린트
+pnpm lint
+
+# 테스트
+pnpm test
+
+# Docker 관리
+pnpm docker:up      # 컨테이너 시작
+pnpm docker:down    # 컨테이너 중지
+pnpm docker:logs    # 로그 확인
+pnpm docker:clean   # 모든 컨테이너 및 볼륨 제거
 ```
 
-특정 패키지만 빌드:
+### 데이터베이스 작업
+
 ```bash
-pnpm --filter <패키지명> build
+cd apps/backend
+
+# 마이그레이션 생성
+pnpm db:generate
+
+# 마이그레이션 적용
+pnpm db:migrate
+
+# Drizzle Studio 실행 (GUI)
+pnpm db:studio
 ```
 
-## 오류 처리
+### 브랜치 전략
 
-프로젝트에는 체계적인 오류 처리 시스템이 통합되어 있습니다:
+- `main`: 프로덕션 릴리스
+- `develop`: 개발 브랜치
+- `feature/*`: 새 기능 개발
+- `fix/*`: 버그 수정
 
-- 표준화된 오류 코드 및 메시지
-- 프론트엔드와 백엔드 간 일관된 오류 처리
-- Zod를 사용한 유효성 검사 오류 처리
-- 로깅 및 모니터링 통합
+---
+
+## 문서
+
+### 주요 문서
+
+- [프로젝트 분석 보고서](./PROJECT_ANALYSIS.md) - 현재 상태 및 문제점 분석
+- [마이그레이션 가이드](./MIGRATION_GUIDE.md) - 리팩토링 변경 사항
+- [다음 단계](./NEXT_STEPS.md) - 앞으로 해야 할 작업
+- [백엔드 가이드](./apps/backend/README.md) - 백엔드 개발 가이드
+
+### API 문서
+
+개발 서버 실행 후 Swagger UI에서 확인:
+- http://localhost:3001/api/docs
+
+### 코드 규칙
+
+프로젝트는 다음 코드 스타일을 따릅니다:
+
+- **명명 규칙**:
+  - 변수/함수: camelCase
+  - 클래스/인터페이스: PascalCase
+  - 상수: UPPER_SNAKE_CASE
+  - 파일명: kebab-case (컴포넌트는 PascalCase)
+
+- **커밋 메시지**:
+  ```
+  <타입>(<범위>): <제목>
+  
+  예: feat(equipment): 장비 검색 기능 추가
+  ```
+
+---
+
+## 환경 변수
+
+주요 환경 변수 목록:
+
+```env
+# 데이터베이스
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=equipment_management
+DB_USER=postgres
+DB_PASSWORD=postgres
+
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# 백엔드
+PORT=3001
+NODE_ENV=development
+
+# 프론트엔드
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+FRONTEND_URL=http://localhost:3000
+
+# JWT
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=24h
+```
+
+자세한 내용은 `.env.example` 파일을 참조하세요.
+
+---
 
 ## 문제 해결
 
-일반적인 문제 및 해결 방법:
+### 일반적인 문제
 
-### Docker 이미지 재빌드
-
-의존성 변경 후 Docker 이미지를 재빌드하려면:
+#### 데이터베이스 연결 실패
 
 ```bash
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+# Docker 컨테이너 확인
+docker ps
+
+# PostgreSQL 컨테이너 재시작
+docker restart postgres_equipment
+
+# 연결 테스트
+psql -h localhost -U postgres -d equipment_management
 ```
 
-### 데이터베이스 초기화
-
-데이터베이스를 초기화하려면:
+#### 의존성 문제
 
 ```bash
-docker-compose down -v
-docker-compose up -d
-```
-
-### 모노레포 캐시 정리
-
-문제가 발생할 경우 캐시를 정리합니다:
-
-```bash
+# pnpm 캐시 정리
 pnpm store prune
+
+# node_modules 재설치
 rm -rf node_modules
 pnpm install
 ```
 
-## UI 컴포넌트 설정
-
-이 프로젝트는 ShadCN UI 컴포넌트 라이브러리를 사용합니다. 새로운 컴포넌트를 추가하거나 기존 문제를 해결하려면 다음 안내를 참조하세요.
-
-### 초기 설정
-
-프로젝트에 필요한 모든 UI 컴포넌트와 의존성을 설치하려면:
+#### 빌드 오류
 
 ```bash
-# 설정 스크립트 실행
-bash scripts/setup-ui.sh
+# Turbo 캐시 정리
+rm -rf .turbo
+
+# 전체 재빌드
+pnpm clean
+pnpm install
+pnpm build
 ```
 
-### 개별 컴포넌트 추가
+---
 
-필요한 컴포넌트만 추가하려면:
+## 기여하기
 
-```bash
-cd apps/frontend
-npx shadcn-ui@latest add [component-name]
-```
+1. 이 저장소를 Fork
+2. Feature 브랜치 생성 (`git checkout -b feature/amazing-feature`)
+3. 변경사항 커밋 (`git commit -m 'feat: Add amazing feature'`)
+4. 브랜치에 Push (`git push origin feature/amazing-feature`)
+5. Pull Request 생성
 
-### 의존성 문제 해결
+코드 리뷰 후 병합됩니다.
 
-ShadCN UI 관련 의존성 오류가 발생하면:
+---
 
-```bash
-# 필수 의존성 설치
-pnpm --filter frontend add @radix-ui/react-slot class-variance-authority clsx tailwind-merge
+## 라이선스
 
-# Docker 환경에서는 이미지 재빌드
-docker-compose build frontend
-docker-compose up -d frontend
-```
+이 프로젝트는 MIT 라이선스 하에 있습니다.
+
+---
+
+## 연락처
+
+- **프로젝트 관리자**: [이름]
+- **이메일**: [이메일]
+- **이슈 트래커**: [GitHub Issues URL]
+
+---
+
+**마지막 업데이트**: 2026-01-15

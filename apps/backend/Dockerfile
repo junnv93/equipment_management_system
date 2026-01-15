@@ -1,47 +1,80 @@
-FROM node:18-alpine AS base
+# 기본 이미지
+FROM node:18-slim AS base
 WORKDIR /app
+ENV SHELL=/bin/bash
 
-# 공통 의존성 레이어
+# Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
+# Install necessary packages
+RUN apt-get update && apt-get install -y git && \
+    corepack enable && corepack prepare pnpm@latest --activate
 
-# 의존성 파일만 복사하여 레이어 캐싱 활용
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+# rimraf와 typescript를 프로젝트 의존성으로 설치
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN mkdir -p /app/packages/schemas /app/apps/backend
+COPY packages/schemas/package.json ./packages/schemas/
 COPY apps/backend/package.json ./apps/backend/
-COPY packages ./packages/
+RUN pnpm install
+RUN pnpm add rimraf typescript @types/jest zod -w --save-dev
 
-# 의존성 설치
-RUN pnpm install --strict-peer-dependencies=false
+# Copy schemas files
+COPY packages/schemas/tsconfig.json ./packages/schemas/
+COPY packages/schemas/jest.config.js ./packages/schemas/
+COPY packages/schemas/src ./packages/schemas/src
 
-# 개발 환경
+# Debug: List files in schemas directory
+RUN echo "Schemas directory contents:" && ls -la /app/packages/schemas/src
+
+# Development image, copy all the files and run nest
 FROM base AS development
 WORKDIR /app
+
+# Install development tools and pnpm
+RUN apt-get update && apt-get install -y git && \
+    corepack enable && corepack prepare pnpm@latest --activate
+
+# Copy dependency files and install
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/schemas/node_modules ./packages/schemas/node_modules
+COPY --from=deps /app/apps/backend/node_modules ./apps/backend/node_modules
+
+# Copy source code
 COPY . .
 
-ENV NODE_ENV=development
-ENV PORT=3001
+# Debug: List files in schemas directory after copying source code
+RUN echo "Schemas directory contents after copying source code:" && ls -la /app/packages/schemas/src
+
+# Build schemas package
+WORKDIR /app/packages/schemas
+RUN echo "Building schemas package in:" && pwd && \
+    echo "Directory contents:" && ls -la && \
+    echo "tsconfig.json contents:" && cat tsconfig.json && \
+    npx rimraf dist && npx tsc -p tsconfig.json --skipLibCheck
+
+# Set up backend
+WORKDIR /app/apps/backend
+
+# Environment variables
+ENV NODE_ENV development
+ENV PORT 3001
+
+# Expose ports
 EXPOSE 3001
 EXPOSE 9229
 
-# 개발 환경에서 pnpm 설치
-RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
-
-# 백엔드 서비스 실행
-CMD ["pnpm", "--filter", "backend", "start:dev"]
+# Start the server in development mode
+CMD ["sh", "-c", "cd /app/apps/backend && pnpm install && npm run start:dev"]
 
 # 빌드 환경
-FROM base AS build
+FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/schemas/dist ./packages/schemas/dist
 COPY . .
 
-# pnpm 설치
-RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
-
-# 빌드 실행
-RUN pnpm --filter backend build
+# 스키마 빌드 후 백엔드 빌드
+RUN cd packages/schemas && npx rimraf dist && npx tsc -p tsconfig.json --skipLibCheck
+RUN cd apps/backend && pnpm run build
 
 # 프로덕션 환경
 FROM base AS production
@@ -51,14 +84,15 @@ ENV NODE_ENV=production
 ENV PORT=3001
 
 # 필요한 파일만 복사
-COPY --from=build /app/apps/backend/dist ./dist
-COPY --from=build /app/apps/backend/package.json ./
+COPY --from=builder /app/apps/backend/dist ./dist
+COPY --from=builder /app/apps/backend/package.json ./package.json
+COPY --from=builder /app/packages/schemas/dist ./packages/schemas/dist
+COPY --from=builder /app/packages/schemas/package.json ./packages/schemas/package.json
 
 # 프로덕션 의존성만 설치
-COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
-COPY --from=build /app/packages ./packages/
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 RUN corepack enable && corepack prepare pnpm@10.7.0 --activate
-RUN pnpm install --prod --strict-peer-dependencies=false
+RUN pnpm install --prod --no-frozen-lockfile
 
 # 보안을 위해 루트가 아닌 사용자로 전환
 RUN addgroup --system --gid 1001 nodejs

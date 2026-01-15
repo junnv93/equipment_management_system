@@ -4,7 +4,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: apps/frontend/Dockerfile
+      dockerfile: apps/frontend/docker/Dockerfile
       target: production
     restart: always
     environment:
@@ -24,20 +24,13 @@ services:
   backend:
     build:
       context: .
-      dockerfile: apps/backend/Dockerfile
+      dockerfile: apps/backend/docker/Dockerfile
       target: production
     restart: always
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD}@postgres:5432/equipment_management
+      - DATABASE_URL=postgresql://user:password@db:5432/equipment_management
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION=1d
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
     networks:
       - app-network
     logging:
