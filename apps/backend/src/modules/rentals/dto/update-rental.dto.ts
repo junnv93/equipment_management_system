@@ -1,21 +1,31 @@
 import { ApiProperty, PartialType, OmitType } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsDateString, IsIn } from 'class-validator';
 import { CreateRentalDto } from './create-rental.dto';
-import { RentalStatusEnum } from '../../../types';
+// ✅ Single Source of Truth: enums.ts에서 import
+import { LoanStatus, LOAN_STATUS_VALUES } from '@equipment-management/schemas';
 
-// @ts-ignore - 타입 참조 문제 무시
+// @ts-expect-error - PartialType과 OmitType의 타입 추론 제한으로 인한 타입 오류
 export class UpdateRentalDto extends PartialType(
-  OmitType(CreateRentalDto, ['equipmentId', 'userId', 'type'] as const),
+  OmitType(CreateRentalDto, ['equipmentId', 'userId', 'type'] as const)
 ) {
   @ApiProperty({
-    description: '대여/반출 상태',
-    enum: RentalStatusEnum,
+    description: '대여 상태',
+    enum: LOAN_STATUS_VALUES,
     example: 'approved',
     required: false,
   })
-  @IsEnum(RentalStatusEnum)
   @IsOptional()
-  status?: keyof typeof RentalStatusEnum | string;
+  @IsIn(LOAN_STATUS_VALUES, { message: '유효하지 않은 대여 상태값입니다.' })
+  status?: LoanStatus;
+
+  @ApiProperty({
+    description: '예상 반납일',
+    example: '2023-06-15T18:00:00Z',
+    required: false,
+  })
+  @IsDateString()
+  @IsOptional()
+  expectedEndDate?: string;
 
   @ApiProperty({
     description: '대여/반출 관련 메모',
@@ -34,4 +44,4 @@ export class UpdateRentalDto extends PartialType(
   @IsUUID('4')
   @IsOptional()
   approverId?: string;
-} 
+}

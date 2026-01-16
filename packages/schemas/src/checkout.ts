@@ -1,17 +1,10 @@
 import { z } from 'zod';
+import { CheckoutStatusEnum, CheckoutStatus, CheckoutPurposeEnum, CheckoutPurpose } from './enums';
 
-// 반출 상태 열거형
-export const CheckoutStatusEnum = z.enum([
-  'pending', // 반출 신청
-  'approved', // 승인됨
-  'rejected', // 거절됨
-  'checked_out', // 반출 중
-  'returned', // 반납 완료
-  'overdue', // 연체
-  'canceled' // 취소됨
-]);
-
-export type CheckoutStatus = z.infer<typeof CheckoutStatusEnum>;
+/**
+ * ✅ Single Source of Truth 준수
+ * CheckoutStatusEnum과 CheckoutPurposeEnum은 enums.ts에서 import하여 사용
+ */
 
 // 반출 스키마
 export const CheckoutSchema = z.object({
@@ -21,14 +14,14 @@ export const CheckoutSchema = z.object({
   destinationName: z.string(),
   destinationAddress: z.string(),
   destinationContact: z.string(),
-  purpose: z.string(),
+  purpose: CheckoutPurposeEnum,
   startDate: z.string().or(z.date()),
   expectedEndDate: z.string().or(z.date()),
   actualEndDate: z.string().or(z.date()).optional(),
   notes: z.string().optional(),
   status: CheckoutStatusEnum,
   createdAt: z.date(),
-  updatedAt: z.date()
+  updatedAt: z.date(),
 });
 
 export type Checkout = z.infer<typeof CheckoutSchema>;
@@ -41,7 +34,7 @@ export const CheckoutEquipmentSchema = z.object({
   condition: z.string().optional(),
   notes: z.string().optional(),
   createdAt: z.date(),
-  updatedAt: z.date()
+  updatedAt: z.date(),
 });
 
 export type CheckoutEquipment = z.infer<typeof CheckoutEquipmentSchema>;
@@ -53,4 +46,4 @@ export interface CheckoutListResponse {
   page: number;
   pageSize: number;
   totalPages: number;
-} 
+}

@@ -28,6 +28,8 @@
     "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts"
   },
   "dependencies": {
+    "@equipment-management/db": "workspace:*",
+    "@equipment-management/schemas": "workspace:*",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^10.0.0",
@@ -40,11 +42,10 @@
     "class-validator": "^0.14.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",
-    "drizzle-orm": "^0.36.0",
+    "nestjs-zod": "^5.1.1",
     "passport": "^0.6.0",
     "passport-azure-ad": "^4.3.5",
     "passport-jwt": "^4.0.1",
-    "pg": "^8.11.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "uuid": "^9.0.1",
@@ -87,7 +88,32 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "paths": {
+              "@equipment-management/schemas": [
+                "../../packages/schemas/src"
+              ],
+              "@equipment-management/db": [
+                "../../packages/db/src"
+              ],
+              "@equipment-management/db/*": [
+                "../../packages/db/src/*"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@equipment-management/schemas$": "<rootDir>/../../../packages/schemas/src/index.ts",
+      "^@equipment-management/schemas/(.*)$": "<rootDir>/../../../packages/schemas/src/$1",
+      "^@equipment-management/db$": "<rootDir>/../../../packages/db/src/index.ts",
+      "^@equipment-management/db/schema$": "<rootDir>/../../../packages/db/src/schema/index.ts",
+      "^@equipment-management/db/schema/(.*)$": "<rootDir>/../../../packages/db/src/schema/$1",
+      "^@equipment-management/db/(.*)$": "<rootDir>/../../../packages/db/src/$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

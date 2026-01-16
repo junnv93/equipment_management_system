@@ -20,9 +20,11 @@
     "noFallthroughCasesInSwitch": false,
     "moduleResolution": "node",
     "paths": {
-      "@equipment-management/schemas": ["../../packages/schemas/src"]
+      "@equipment-management/schemas": ["../../packages/schemas/src"],
+      "@equipment-management/db": ["../../packages/db/src"],
+      "@equipment-management/db/*": ["../../packages/db/src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "test/**/*", "drizzle.config.ts"],
   "exclude": ["node_modules", "dist"]
-} 
+}

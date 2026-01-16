@@ -1,24 +1,19 @@
 import { z } from 'zod';
-import { UserRoleEnum } from './enums';
+import { LoanStatusEnum, LoanStatus } from './enums';
 
-// 대여 상태 열거형
-export const RentalStatusEnum = z.enum([
-  'pending', // 대여 신청
-  'approved', // 승인됨
-  'rejected', // 거절됨
-  'borrowed', // 대여 중
-  'returned', // 반납 완료
-  'overdue', // 연체
-  'canceled', // 취소됨
-  'return_requested' // 반납 요청됨
-]);
-
-export type RentalStatus = z.infer<typeof RentalStatusEnum>;
+/**
+ * ✅ Single Source of Truth 준수
+ * LoanStatusEnum은 enums.ts에서 import하여 사용
+ *
+ * @deprecated RentalStatus는 LoanStatus의 별칭입니다. LoanStatus를 직접 사용하세요.
+ */
+export const RentalStatusEnum = LoanStatusEnum;
+export type RentalStatus = LoanStatus;
 
 // 대여 유형 열거형
 export const RentalTypeEnum = z.enum([
   'internal', // 내부 대여
-  'external' // 외부 대여
+  'external', // 외부 대여
 ]);
 
 export type RentalType = z.infer<typeof RentalTypeEnum>;
@@ -38,7 +33,7 @@ export const RentalSchema = z.object({
   notes: z.string().optional(),
   location: z.string().optional(),
   createdAt: z.date(),
-  updatedAt: z.date()
+  updatedAt: z.date(),
 });
 
 export type Rental = z.infer<typeof RentalSchema>;
@@ -50,4 +45,4 @@ export interface RentalListResponse {
   page: number;
   pageSize: number;
   totalPages: number;
-} 
+}

@@ -1,57 +1,61 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Edit, 
-  Settings, 
-  MapPin, 
-  Tag, 
-  Clipboard, 
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import {
+  ArrowLeft,
+  Calendar,
+  Edit,
+  Settings,
+  MapPin,
+  Tag,
+  Clipboard,
   Clock,
   Plus,
   Wrench,
   ClipboardList,
   History,
-  Package
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
-import equipmentApi from "@/lib/api/equipment-api";
-import calibrationApi from "@/lib/api/calibration-api";
-import maintenanceApi from "@/lib/api/maintenance-api";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+  Package,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { useEquipment } from '@/hooks/use-equipment';
+import calibrationApi from '@/lib/api/calibration-api';
+import maintenanceApi from '@/lib/api/maintenance-api';
+import dayjs from 'dayjs';
 
 export default function EquipmentDetailPage() {
   const router = useRouter();
   const params = useParams();
   const equipmentId = params.id as string;
-  const [activeTab, setActiveTab] = useState("info");
-  
-  // API에서 장비 정보 가져오기
-  const { 
-    data: equipment, 
-    isLoading, 
-    isError 
-  } = useQuery({
-    queryKey: ['equipment', equipmentId],
-    queryFn: () => equipmentApi.getEquipment(equipmentId),
-    enabled: !!equipmentId,
-  });
-  
+  const [activeTab, setActiveTab] = useState('info');
+
+  // 커스텀 훅을 사용하여 장비 정보 가져오기
+  const { data: equipment, isLoading, isError } = useEquipment(equipmentId);
+
   // 교정 이력 가져오기
   const {
     data: calibrations,
     isLoading: isCalibrationLoading,
-    isError: isCalibrationError
+    isError: isCalibrationError,
   } = useQuery({
     queryKey: ['calibration', 'equipment', equipmentId],
     queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
@@ -62,11 +66,11 @@ export default function EquipmentDetailPage() {
   const {
     data: maintenances,
     isLoading: isMaintenanceLoading,
-    isError: isMaintenanceError
+    isError: isMaintenanceError,
   } = useQuery({
     queryKey: ['maintenance', 'equipment', equipmentId],
     queryFn: () => maintenanceApi.getEquipmentMaintenances(equipmentId),
-    enabled: !!equipmentId && activeTab === "maintenance",
+    enabled: !!equipmentId && activeTab === 'maintenance',
   });
 
   // API 데이터 로딩 중 표시
@@ -88,61 +92,76 @@ export default function EquipmentDetailPage() {
         <div className="text-center text-red-500">
           <p className="text-lg font-bold mb-2">오류 발생</p>
           <p>장비 정보를 불러오는 데 실패했습니다.</p>
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()} 
-            className="mt-4"
-          >
+          <Button variant="outline" onClick={() => router.back()} className="mt-4">
             뒤로 가기
           </Button>
         </div>
       </div>
     );
   }
-  
+
   // 상태에 따른 뱃지 컴포넌트
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { class: string, label: string }> = {
-      AVAILABLE: { class: "bg-green-100 text-green-800", label: "사용 가능" },
-      IN_USE: { class: "bg-blue-100 text-blue-800", label: "사용 중" },
-      MAINTENANCE: { class: "bg-yellow-100 text-yellow-800", label: "유지보수 중" },
-      CALIBRATION: { class: "bg-purple-100 text-purple-800", label: "교정 중" },
-      DISPOSAL: { class: "bg-red-100 text-red-800", label: "폐기" }
+    const statusConfig: Record<string, { class: string; label: string }> = {
+      AVAILABLE: { class: 'bg-green-100 text-green-800', label: '사용 가능' },
+      IN_USE: { class: 'bg-blue-100 text-blue-800', label: '사용 중' },
+      MAINTENANCE: { class: 'bg-yellow-100 text-yellow-800', label: '유지보수 중' },
+      CALIBRATION: { class: 'bg-purple-100 text-purple-800', label: '교정 중' },
+      DISPOSAL: { class: 'bg-red-100 text-red-800', label: '폐기' },
     };
 
-    const config = statusConfig[status] || { class: "bg-gray-100 text-gray-800", label: "알 수 없음" };
-    
+    const config = statusConfig[status] || {
+      class: 'bg-gray-100 text-gray-800',
+      label: '알 수 없음',
+    };
+
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.class}`}>
         {config.label}
       </span>
     );
   };
-  
+
   // 교정 결과에 따른 뱃지
   const getCalibrationResultBadge = (result: string) => {
-    const resultConfig: Record<string, { variant: string, label: string }> = {
-      PASS: { variant: "success", label: "적합" },
-      FAIL: { variant: "destructive", label: "부적합" },
-      CONDITIONAL: { variant: "warning", label: "조건부 적합" }
+    const resultConfig: Record<string, { variant: string; label: string }> = {
+      PASS: { variant: 'success', label: '적합' },
+      FAIL: { variant: 'destructive', label: '부적합' },
+      CONDITIONAL: { variant: 'warning', label: '조건부 적합' },
     };
-    
-    const config = resultConfig[result] || { variant: "outline", label: "미확인" };
-    
+
+    const config = resultConfig[result] || { variant: 'outline', label: '미확인' };
+
     return <Badge variant={config.variant as any}>{config.label}</Badge>;
   };
 
   // 점검 상태에 따른 배지 스타일
   const getMaintenanceStatusBadge = (status: string) => {
     switch (status) {
-      case "scheduled":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">예정됨</Badge>;
-      case "in_progress":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">진행 중</Badge>;
-      case "completed":
-        return <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">완료됨</Badge>;
-      case "canceled":
-        return <Badge variant="outline" className="bg-gray-50 text-gray-800 hover:bg-gray-50">취소됨</Badge>;
+      case 'scheduled':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
+            예정됨
+          </Badge>
+        );
+      case 'in_progress':
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
+            진행 중
+          </Badge>
+        );
+      case 'completed':
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
+            완료됨
+          </Badge>
+        );
+      case 'canceled':
+        return (
+          <Badge variant="outline" className="bg-gray-50 text-gray-800 hover:bg-gray-50">
+            취소됨
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -151,12 +170,24 @@ export default function EquipmentDetailPage() {
   // 점검 결과에 따른 배지 스타일
   const getMaintenanceResultBadge = (result: string) => {
     switch (result) {
-      case "completed":
-        return <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">통과</Badge>;
-      case "pending":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">보류</Badge>;
-      case "failed":
-        return <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">불합격</Badge>;
+      case 'completed':
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
+            통과
+          </Badge>
+        );
+      case 'pending':
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
+            보류
+          </Badge>
+        );
+      case 'failed':
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">
+            불합격
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{result}</Badge>;
     }
@@ -165,26 +196,26 @@ export default function EquipmentDetailPage() {
   // 점검 유형에 따른 한글 표시
   const getMaintenanceTypeText = (type: string) => {
     switch (type) {
-      case "regular":
-        return "정기 점검";
-      case "repair":
-        return "수리";
-      case "inspection":
-        return "검사";
-      case "other":
-        return "기타";
+      case 'regular':
+        return '정기 점검';
+      case 'repair':
+        return '수리';
+      case 'inspection':
+        return '검사';
+      case 'other':
+        return '기타';
       default:
         return type;
     }
   };
 
   // 날짜 포맷 함수
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "-";
+  const formatDate = (dateString?: string | Date | null) => {
+    if (!dateString) return '-';
     try {
-      return format(new Date(dateString), "yyyy-MM-dd", { locale: ko });
+      return dayjs(dateString).format('YYYY-MM-DD');
     } catch (error) {
-      return dateString;
+      return String(dateString);
     }
   };
 
@@ -211,7 +242,7 @@ export default function EquipmentDetailPage() {
           </Link>
         </div>
       </div>
-      
+
       {/* 탭 내비게이션 */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
@@ -221,7 +252,7 @@ export default function EquipmentDetailPage() {
           <TabsTrigger value="checkout">반출 이력</TabsTrigger>
           <TabsTrigger value="maintenance">점검 이력</TabsTrigger>
         </TabsList>
-        
+
         {/* 기본 정보 탭 */}
         <TabsContent value="info" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -245,11 +276,15 @@ export default function EquipmentDetailPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">일련번호</p>
-                    <p className="font-medium">{equipment.serialNumber}</p>
+                    <p className="font-medium">{equipment.serialNumber || '-'}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">구입일</p>
-                    <p className="font-medium">{formatDate(equipment.purchaseDate)}</p>
+                    <p className="font-medium">
+                      {equipment.purchaseYear
+                        ? `${equipment.purchaseYear}년`
+                        : formatDate(equipment.purchaseDate)}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">카테고리</p>
@@ -258,7 +293,7 @@ export default function EquipmentDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>위치 및 관리 정보</CardTitle>
@@ -282,7 +317,7 @@ export default function EquipmentDetailPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             {equipment.description && (
               <Card className="md:col-span-2">
                 <CardHeader>
@@ -295,14 +330,14 @@ export default function EquipmentDetailPage() {
             )}
           </div>
         </TabsContent>
-        
+
         {/* 교정 정보 탭 */}
         <TabsContent value="calibration" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>교정 정보</CardTitle>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => router.push(`/calibration/register?equipmentId=${equipmentId}`)}
               >
@@ -327,7 +362,7 @@ export default function EquipmentDetailPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* 교정 이력 */}
           <Card>
             <CardHeader>
@@ -360,11 +395,17 @@ export default function EquipmentDetailPage() {
                   <TableBody>
                     {calibrations.map((calibration) => (
                       <TableRow key={calibration.id}>
-                        <TableCell className="font-medium">{formatDate(calibration.calibrationDate)}</TableCell>
+                        <TableCell className="font-medium">
+                          {formatDate(calibration.calibrationDate)}
+                        </TableCell>
                         <TableCell>{formatDate(calibration.nextCalibrationDate)}</TableCell>
                         <TableCell>{calibration.calibrationAgency}</TableCell>
-                        <TableCell>{getCalibrationResultBadge(calibration.calibrationResult)}</TableCell>
-                        <TableCell className="max-w-xs truncate">{calibration.notes || '-'}</TableCell>
+                        <TableCell>
+                          {getCalibrationResultBadge(calibration.calibrationResult)}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {calibration.notes || '-'}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -373,9 +414,9 @@ export default function EquipmentDetailPage() {
                 <div className="text-center py-8 text-gray-500">
                   <Calendar className="h-10 w-10 mx-auto mb-2 text-gray-300" />
                   <p>등록된 교정 이력이 없습니다.</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="mt-4"
                     onClick={() => router.push(`/calibration/register?equipmentId=${equipmentId}`)}
                   >
@@ -386,7 +427,7 @@ export default function EquipmentDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* 대여 이력 탭 */}
         <TabsContent value="rental" className="space-y-4">
           <Card>
@@ -400,14 +441,14 @@ export default function EquipmentDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* 유지보수 탭 */}
         <TabsContent value="maintenance" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>점검 이력</CardTitle>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => router.push(`/maintenance/create?equipmentId=${equipmentId}`)}
               >
@@ -441,9 +482,15 @@ export default function EquipmentDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {maintenances.data.map((maintenance) => (
-                      <TableRow key={maintenance.id} className="cursor-pointer" onClick={() => router.push(`/maintenance/${maintenance.id}`)}>
+                      <TableRow
+                        key={maintenance.id}
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/maintenance/${maintenance.id}`)}
+                      >
                         <TableCell>{getMaintenanceTypeText(maintenance.maintenanceType)}</TableCell>
-                        <TableCell className="font-medium">{formatDate(maintenance.maintenanceDate)}</TableCell>
+                        <TableCell className="font-medium">
+                          {formatDate(maintenance.maintenanceDate)}
+                        </TableCell>
                         <TableCell>{formatDate(maintenance.nextMaintenanceDate)}</TableCell>
                         <TableCell>{maintenance.performedBy}</TableCell>
                         <TableCell>{getMaintenanceStatusBadge(maintenance.status)}</TableCell>
@@ -456,9 +503,9 @@ export default function EquipmentDetailPage() {
                 <div className="text-center py-8 text-gray-500">
                   <Wrench className="h-10 w-10 mx-auto mb-2 text-gray-300" />
                   <p>등록된 점검 이력이 없습니다.</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="mt-4"
                     onClick={() => router.push(`/maintenance/create?equipmentId=${equipmentId}`)}
                   >
@@ -472,4 +519,4 @@ export default function EquipmentDetailPage() {
       </Tabs>
     </div>
   );
-} 
+}

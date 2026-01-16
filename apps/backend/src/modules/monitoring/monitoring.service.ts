@@ -6,10 +6,9 @@ import { MetricsService } from '../../common/metrics/metrics.service';
 
 @Injectable()
 export class MonitoringService {
-  
   // 시스템 시작 시간
   private readonly startTime = Date.now();
-  
+
   // 최근 메트릭 정보
   private metrics = {
     cpu: {
@@ -34,7 +33,7 @@ export class MonitoringService {
       diskTotal: 0,
     },
   };
-  
+
   // 로그 레벨별 카운터
   private logCounts = {
     error: 0,
@@ -43,7 +42,7 @@ export class MonitoringService {
     debug: 0,
     verbose: 0,
   };
-  
+
   // HTTP 요청 통계
   private httpStats = {
     totalRequests: 0,
@@ -52,24 +51,24 @@ export class MonitoringService {
     requestsByEndpoint: new Map<string, number>(),
     responseTimeByEndpoint: new Map<string, number[]>(),
   };
-  
+
   // 메트릭 업데이트 간격 (30초)
   private readonly updateInterval = 30000;
-  
+
   constructor(
     private readonly logger: LoggerService,
     private readonly metricsService: MetricsService
   ) {
     this.logger.setContext('MonitoringService');
-    
+
     // 최초 메트릭 수집
     this.updateMetrics();
     this.logger.log('모니터링 서비스가 초기화되었습니다.');
-    
+
     // 주기적 메트릭 수집
     setInterval(() => this.updateMetrics(), this.updateInterval);
   }
-  
+
   /**
    * 시스템 메트릭 업데이트
    */
@@ -81,15 +80,15 @@ export class MonitoringService {
         return acc + Object.values(cpu.times).reduce((sum, time) => sum + time, 0);
       }, 0);
       const idleCpu = cpus.reduce((acc, cpu) => acc + cpu.times.idle, 0);
-      this.metrics.cpu.usage = 100 - (idleCpu / totalCpu * 100);
+      this.metrics.cpu.usage = 100 - (idleCpu / totalCpu) * 100;
       this.metrics.cpu.loadAvg = os.loadavg();
-      
+
       // 메모리 사용량 계산
       this.metrics.memory.total = os.totalmem();
       this.metrics.memory.free = os.freemem();
       this.metrics.memory.used = this.metrics.memory.total - this.metrics.memory.free;
       this.metrics.memory.percentage = (this.metrics.memory.used / this.metrics.memory.total) * 100;
-      
+
       // 업타임 계산
       this.metrics.uptime = (Date.now() - this.startTime) / 1000;
 
@@ -100,7 +99,7 @@ export class MonitoringService {
         diskFree: 107374182400, // 100GB
         diskTotal: 429496729600, // 400GB
       };
-      
+
       // 네트워크 메트릭 (실제로는 API를 통해 수집해야 함)
       // 개발 환경에서는 더미 데이터 사용
       this.metrics.network = {
@@ -108,16 +107,16 @@ export class MonitoringService {
         errorRate: Math.random() * 2,
         avgResponseTime: Math.random() * 100 + 50, // ms
       };
-      
+
       this.logger.debug('시스템 메트릭이 업데이트되었습니다.', {
         cpuUsage: this.metrics.cpu.usage.toFixed(2) + '%',
-        memoryUsage: this.metrics.memory.percentage.toFixed(2) + '%'
+        memoryUsage: this.metrics.memory.percentage.toFixed(2) + '%',
       });
     } catch (error) {
       this.logger.error('메트릭 업데이트 중 오류가 발생했습니다.', error.stack);
     }
   }
-  
+
   /**
    * 로그 레벨별 카운트 증가
    */
@@ -126,23 +125,23 @@ export class MonitoringService {
       this.logCounts[level]++;
     }
   }
-  
+
   /**
    * HTTP 요청 통계 기록
    */
   recordHttpRequest(endpoint: string, statusCode: number, responseTime: number): void {
     this.httpStats.totalRequests++;
-    
+
     if (statusCode >= 200 && statusCode < 400) {
       this.httpStats.successRequests++;
     } else {
       this.httpStats.errorRequests++;
     }
-    
+
     // 엔드포인트별 요청 수 기록
     const currentCount = this.httpStats.requestsByEndpoint.get(endpoint) || 0;
     this.httpStats.requestsByEndpoint.set(endpoint, currentCount + 1);
-    
+
     // 엔드포인트별 응답 시간 기록
     const responseTimes = this.httpStats.responseTimeByEndpoint.get(endpoint) || [];
     responseTimes.push(responseTime);
@@ -151,13 +150,9 @@ export class MonitoringService {
       responseTimes.shift();
     }
     this.httpStats.responseTimeByEndpoint.set(endpoint, responseTimes);
-    
+
     // Prometheus 메트릭 기록
-    this.metricsService.incrementHttpRequestTotal(
-      'ALL', 
-      endpoint, 
-      statusCode.toString()
-    );
+    this.metricsService.incrementHttpRequestTotal('ALL', endpoint, statusCode.toString());
     this.metricsService.observeHttpRequestDuration(
       'ALL',
       endpoint,
@@ -165,7 +160,7 @@ export class MonitoringService {
       responseTime / 1000 // 초 단위로 변환
     );
   }
-  
+
   /**
    * 시스템 메트릭 조회
    */
@@ -181,7 +176,7 @@ export class MonitoringService {
       nodeEnv: process.env.NODE_ENV,
     };
   }
-  
+
   /**
    * HTTP 요청 통계 조회
    */
@@ -194,7 +189,7 @@ export class MonitoringService {
         avgResponseTimes.set(endpoint, sum / times.length);
       }
     });
-    
+
     // 요청 수 기준 상위 5개 엔드포인트
     const topEndpoints = [...this.httpStats.requestsByEndpoint.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -202,26 +197,27 @@ export class MonitoringService {
       .map(([endpoint, count]) => ({
         endpoint,
         count,
-        avgResponseTime: avgResponseTimes.get(endpoint) || 0
+        avgResponseTime: avgResponseTimes.get(endpoint) || 0,
       }));
-    
+
     return {
       totalRequests: this.httpStats.totalRequests,
       successRequests: this.httpStats.successRequests,
       errorRequests: this.httpStats.errorRequests,
-      errorRate: this.httpStats.totalRequests > 0
-        ? (this.httpStats.errorRequests / this.httpStats.totalRequests) * 100
-        : 0,
+      errorRate:
+        this.httpStats.totalRequests > 0
+          ? (this.httpStats.errorRequests / this.httpStats.totalRequests) * 100
+          : 0,
       topEndpoints,
     };
   }
-  
+
   /**
    * 데이터베이스 진단 정보 조회
    */
   getDatabaseDiagnostics() {
     this.logger.log('데이터베이스 진단 정보 조회');
-    
+
     // 임시로 더미 데이터 반환
     return {
       status: 'connected',
@@ -229,7 +225,7 @@ export class MonitoringService {
       connections: {
         active: 10,
         idle: 5,
-        max: 50
+        max: 50,
       },
       metrics: {
         connectionsCreated: 15,
@@ -246,40 +242,41 @@ export class MonitoringService {
       tablesInfo: [
         { name: 'users', rowCount: 125, size: '12MB' },
         { name: 'equipment', rowCount: 1458, size: '56MB' },
-        { name: 'reservations', rowCount: 8754, size: '120MB' },
+        { name: 'loans', rowCount: 8754, size: '120MB' }, // reservations 테이블은 loans로 통합됨
         { name: 'rentals', rowCount: 6542, size: '95MB' },
       ],
       replicationLag: 0, // ms (Primary DB)
     };
   }
-  
+
   /**
    * 애플리케이션 전체 건강 상태 조회
    */
   getHealthStatus() {
     this.logger.log('애플리케이션 건강 상태 조회');
-    
+
     // 임계치 설정
     const cpuThreshold = 90;
     const memoryThreshold = 85;
     const errorRateThreshold = 5; // 5%
-    
+
     // 현재 상태에 따른 건강 상태 판단
     const isCpuCritical = this.metrics.cpu.usage > cpuThreshold;
     const isMemoryCritical = this.metrics.memory.percentage > memoryThreshold;
-    
+
     // HTTP 에러율 계산
-    const errorRate = this.httpStats.totalRequests > 0
-      ? (this.httpStats.errorRequests / this.httpStats.totalRequests) * 100
-      : 0;
+    const errorRate =
+      this.httpStats.totalRequests > 0
+        ? (this.httpStats.errorRequests / this.httpStats.totalRequests) * 100
+        : 0;
     const isErrorRateCritical = errorRate > errorRateThreshold;
-    
+
     // 전체 건강 상태 결정
     let overallStatus = 'healthy';
     if (isCpuCritical || isMemoryCritical || isErrorRateCritical) {
       overallStatus = 'degraded';
     }
-    
+
     return {
       status: overallStatus,
       timestamp: new Date().toISOString(),
@@ -292,7 +289,7 @@ export class MonitoringService {
             queriesExecuted: 1250,
             queriesFailed: 2,
             avgQueryTime: 15,
-          }
+          },
         },
         system: {
           status: isCpuCritical || isMemoryCritical ? 'overloaded' : 'running',
@@ -318,12 +315,12 @@ export class MonitoringService {
         cache: {
           status: 'operational',
           hitRate: 0.93,
-        }
+        },
       },
       lastChecked: new Date().toISOString(),
     };
   }
-  
+
   /**
    * 상세 진단 정보 조회
    */
@@ -346,10 +343,10 @@ export class MonitoringService {
           p99: 700, // ms
         },
         throughput: 85, // requests/sec
-      }
+      },
     };
   }
-  
+
   /**
    * 업타임 포맷팅
    */
@@ -358,7 +355,7 @@ export class MonitoringService {
     const hours = Math.floor((uptime % 86400) / 3600);
     const minutes = Math.floor(((uptime % 86400) % 3600) / 60);
     const seconds = Math.floor(((uptime % 86400) % 3600) % 60);
-    
+
     return `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }
-} 
+}

@@ -1,9 +1,6 @@
 {
-  "*.{ts,tsx}": [
-    "eslint --fix",
-    "prettier --write"
-  ],
-  "*.{js,jsx,json,md,yml,yaml}": [
-    "prettier --write"
-  ]
+  "apps/backend/**/*.{ts}": ["eslint --fix --max-warnings=50", "prettier --write"],
+  "apps/frontend/**/*.{ts,tsx}": ["eslint --fix --max-warnings=50", "prettier --write"],
+  "packages/**/*.{ts}": ["eslint --fix --max-warnings=50", "prettier --write"],
+  "*.{js,jsx,json,md,yml,yaml}": ["prettier --write"]
 }

@@ -20,7 +20,13 @@ import { AzureADStrategy } from './strategies/azure-ad.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, AzureADStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    // Azure AD 설정이 있을 때만 AzureADStrategy 등록
+    // 테스트 환경에서는 환경 변수가 없어도 더미 값으로 초기화되도록 AzureADStrategy 내부에서 처리
+    AzureADStrategy,
+  ],
   exports: [AuthService],
 })
-export class AuthModule {} 
+export class AuthModule {}

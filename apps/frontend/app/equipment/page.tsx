@@ -1,28 +1,35 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { Search, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Search, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
-import equipmentApi, { Equipment, EquipmentQuery } from "@/lib/api/equipment-api";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { useRouter } from "next/navigation";
-import debounce from "lodash/debounce";
-import VirtualizedEquipmentList from "@/components/equipment/VirtualizedEquipmentList";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { useQuery } from '@tanstack/react-query';
+import equipmentApi, { Equipment, EquipmentQuery } from '@/lib/api/equipment-api';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { useRouter } from 'next/navigation';
+import debounce from 'lodash/debounce';
+import VirtualizedEquipmentList from '@/components/equipment/VirtualizedEquipmentList';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // PaginationState 인터페이스 정의
 interface PaginationState {
@@ -32,9 +39,9 @@ interface PaginationState {
 
 export default function EquipmentPage() {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -43,22 +50,17 @@ export default function EquipmentPage() {
   // useMemo를 사용하여 검색 조건 최적화
   const queryOptions = useMemo(() => {
     return {
-      term: searchTerm,
-      status: statusFilter !== "ALL" ? statusFilter : undefined,
-      category: categoryFilter !== "ALL" ? categoryFilter : undefined,
+      search: searchTerm || undefined,
+      status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
       page: pagination.pageIndex + 1,
-      limit: pagination.pageSize,
+      pageSize: pagination.pageSize,
     };
   }, [searchTerm, statusFilter, categoryFilter, pagination]);
 
   // 장비 데이터 쿼리
-  const {
-    data,
-    isLoading,
-    refetch,
-    isFetching,
-  } = useQuery({
-    queryKey: ["equipmentList", queryOptions],
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['equipmentList', queryOptions],
     queryFn: () => equipmentApi.getEquipmentList(queryOptions),
   });
 
@@ -66,7 +68,7 @@ export default function EquipmentPage() {
   const loadMoreData = useCallback(() => {
     setPagination((prev: PaginationState) => ({
       ...prev,
-      pageIndex: prev.pageIndex + 1
+      pageIndex: prev.pageIndex + 1,
     }));
     return Promise.resolve();
   }, []);
@@ -110,48 +112,53 @@ export default function EquipmentPage() {
   }, []);
 
   // 장비 상세 페이지로 이동하는 핸들러
-  const handleEquipmentClick = useCallback((equipment: Equipment) => {
-    router.push(`/equipment/${equipment.id}`);
-  }, [router]);
+  const handleEquipmentClick = useCallback(
+    (equipment: Equipment) => {
+      router.push(`/equipment/${equipment.id}`);
+    },
+    [router]
+  );
 
   // 상태에 따른 뱃지 컴포넌트
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { class: string, darkClass: string, label: string }> = {
-      AVAILABLE: { 
-        class: "bg-green-100 text-green-800", 
-        darkClass: "dark:bg-green-950 dark:text-green-300", 
-        label: "사용 가능" 
+    const statusConfig: Record<string, { class: string; darkClass: string; label: string }> = {
+      AVAILABLE: {
+        class: 'bg-green-100 text-green-800',
+        darkClass: 'dark:bg-green-950 dark:text-green-300',
+        label: '사용 가능',
       },
-      IN_USE: { 
-        class: "bg-blue-100 text-blue-800", 
-        darkClass: "dark:bg-blue-950 dark:text-blue-300", 
-        label: "사용 중" 
+      IN_USE: {
+        class: 'bg-blue-100 text-blue-800',
+        darkClass: 'dark:bg-blue-950 dark:text-blue-300',
+        label: '사용 중',
       },
-      MAINTENANCE: { 
-        class: "bg-yellow-100 text-yellow-800", 
-        darkClass: "dark:bg-yellow-950 dark:text-yellow-300", 
-        label: "유지보수 중" 
+      MAINTENANCE: {
+        class: 'bg-yellow-100 text-yellow-800',
+        darkClass: 'dark:bg-yellow-950 dark:text-yellow-300',
+        label: '유지보수 중',
       },
-      CALIBRATION: { 
-        class: "bg-purple-100 text-purple-800", 
-        darkClass: "dark:bg-purple-950 dark:text-purple-300", 
-        label: "교정 중" 
+      CALIBRATION: {
+        class: 'bg-purple-100 text-purple-800',
+        darkClass: 'dark:bg-purple-950 dark:text-purple-300',
+        label: '교정 중',
       },
-      DISPOSAL: { 
-        class: "bg-red-100 text-red-800", 
-        darkClass: "dark:bg-red-950 dark:text-red-300", 
-        label: "폐기" 
-      }
+      DISPOSAL: {
+        class: 'bg-red-100 text-red-800',
+        darkClass: 'dark:bg-red-950 dark:text-red-300',
+        label: '폐기',
+      },
     };
 
-    const config = statusConfig[status] || { 
-      class: "bg-gray-100 text-gray-800", 
-      darkClass: "dark:bg-gray-800 dark:text-gray-300", 
-      label: "알 수 없음" 
+    const config = statusConfig[status] || {
+      class: 'bg-gray-100 text-gray-800',
+      darkClass: 'dark:bg-gray-800 dark:text-gray-300',
+      label: '알 수 없음',
     };
-    
+
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.class} ${config.darkClass}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${config.class} ${config.darkClass}`}
+      >
         {config.label}
       </span>
     );
@@ -159,9 +166,9 @@ export default function EquipmentPage() {
 
   // 날짜 포맷 함수
   const formatDate = (dateString?: string) => {
-    if (!dateString) return "-";
+    if (!dateString) return '-';
     try {
-      return format(new Date(dateString), "yyyy-MM-dd", { locale: ko });
+      return dayjs(dateString).format('YYYY-MM-DD');
     } catch (error) {
       return dateString;
     }
@@ -171,7 +178,7 @@ export default function EquipmentPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
-        <Button onClick={() => router.push("/equipment/new")}>장비 등록</Button>
+        <Button onClick={() => router.push('/equipment/create')}>장비 등록</Button>
       </div>
 
       <Card>
@@ -231,10 +238,15 @@ export default function EquipmentPage() {
       <VirtualizedEquipmentList
         items={data?.items || []}
         isLoading={isLoading || isFetching}
-        hasNextPage={data ? data.page < data.totalPages : false}
+        hasNextPage={
+          data
+            ? (data.meta?.currentPage || data.page || 1) <
+              (data.meta?.totalPages || data.totalPages || 1)
+            : false
+        }
         loadNextPage={loadMoreData}
         onItemClick={handleEquipmentClick}
       />
     </div>
   );
-} 
+}

@@ -1,17 +1,14 @@
 import { Test } from '@nestjs/testing';
 import { DrizzleModule } from '../drizzle.module';
 import { ConfigModule } from '@nestjs/config';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq, sql } from 'drizzle-orm';
 import * as pg from 'pg';
-import { equipment, teams, users, loans, checkouts, calibrations, history } from '../schema';
+import { equipment, teams, users, loans, calibrations } from '@equipment-management/db/schema';
 
 describe('Database Performance', () => {
-  let db: ReturnType<typeof drizzle>;
   let pool: pg.Pool;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
+    await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({
           isGlobal: true,
@@ -23,7 +20,9 @@ describe('Database Performance', () => {
 
     // 테스트를 위한 임시 DB 풀 생성
     pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/equipment_management_test',
+      connectionString:
+        process.env.DATABASE_URL ||
+        'postgres://postgres:postgres@localhost:5432/equipment_management_test',
     });
     db = drizzle(pool);
   });
@@ -42,14 +41,14 @@ describe('Database Performance', () => {
         SELECT * FROM ${equipment._.name}
         WHERE id = '00000000-0000-0000-0000-000000000001'
       `);
-      
+
       // 2. 대여 상태별 검색 성능 테스트 (인덱스 활용)
       const loanStatusQuery = await client.query(`
         EXPLAIN ANALYZE 
         SELECT * FROM ${loans._.name}
         WHERE status = 'ACTIVE'
       `);
-      
+
       // 3. 교정 날짜별 검색 성능 테스트 (인덱스 활용)
       const calibrationDateQuery = await client.query(`
         EXPLAIN ANALYZE 
@@ -79,7 +78,7 @@ describe('Database Performance', () => {
         JOIN ${users._.name} u ON u.team_id = t.id
         LIMIT 100
       `);
-      
+
       // 2. 장비와 교정 조인 성능 테스트
       const equipmentCalibrationJoinQuery = await client.query(`
         EXPLAIN ANALYZE 
@@ -88,7 +87,7 @@ describe('Database Performance', () => {
         JOIN ${calibrations._.name} c ON c.equipment_id = e.id
         LIMIT 100
       `);
-      
+
       // 각 쿼리 결과 확인
       expect(teamUserJoinQuery.rows.length).toBeGreaterThan(0);
       expect(equipmentCalibrationJoinQuery.rows.length).toBeGreaterThan(0);
@@ -99,20 +98,20 @@ describe('Database Performance', () => {
 
   it('트랜잭션 성능 테스트', async () => {
     const testStart = Date.now();
-    
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      
+
       // 더미 쿼리 수행
       await client.query(`SELECT 1`);
       await client.query(`SELECT 2`);
       await client.query(`SELECT 3`);
-      
+
       await client.query('COMMIT');
-      
+
       const duration = Date.now() - testStart;
-      
+
       // 트랜잭션 수행 시간이 200ms 미만이어야 함
       expect(duration).toBeLessThan(200);
     } catch (e) {
@@ -122,4 +121,4 @@ describe('Database Performance', () => {
       client.release();
     }
   });
-}); 
+});

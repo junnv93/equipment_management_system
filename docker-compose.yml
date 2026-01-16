@@ -8,14 +8,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: equipment_management
     ports:
-      - "5432:5432"
+      - '5433:5432' # 호스트 포트를 5433으로 변경하여 기존 PostgreSQL과 충돌 방지
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,13 +25,13 @@ services:
     container_name: redis_equipment
     restart: always
     ports:
-      - "6379:6379"
+      - '6380:6379' # 호스트 포트를 6380으로 변경하여 기존 Redis와 충돌 방지
     volumes:
       - redis_data:/data
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -55,8 +55,8 @@ services:
       - PORT=3001
       - FRONTEND_URL=http://localhost:3000
     ports:
-      - "3001:3001"
-      - "9229:9229" # 디버깅용 포트
+      - '3001:3001'
+      - '9229:9229' # 디버깅용 포트
     volumes:
       - ./apps/backend:/app/apps/backend
       - ./packages:/app/packages
@@ -75,7 +75,7 @@ services:
       - NODE_ENV=development
       - NEXT_PUBLIC_API_URL=http://localhost:3001/api
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./apps/frontend:/app/apps/frontend
       - ./packages:/app/packages
@@ -93,4 +93,4 @@ volumes:
   postgres_data:
   redis_data:
   frontend_node_modules:
-  backend_node_modules: 
+  backend_node_modules:

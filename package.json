@@ -42,5 +42,12 @@
     "only-allow": "^1.2.1",
     "type-coverage": "^2.28.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "zod": "^4.3.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "zod": "^4.3.5"
+    }
+  }
 }
