@@ -4,7 +4,6 @@ import { CreateRentalDto } from './create-rental.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { LoanStatus, LOAN_STATUS_VALUES } from '@equipment-management/schemas';
 
-// @ts-expect-error - PartialType과 OmitType의 타입 추론 제한으로 인한 타입 오류
 export class UpdateRentalDto extends PartialType(
   OmitType(CreateRentalDto, ['equipmentId', 'userId', 'type'] as const)
 ) {

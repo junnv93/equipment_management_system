@@ -13,8 +13,8 @@ import { ApproveCheckoutDto } from './dto/approve-checkout.dto';
 import { RejectCheckoutDto } from './dto/reject-checkout.dto';
 import { ReturnCheckoutDto } from './dto/return-checkout.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
-import { CheckoutStatus } from '@equipment-management/schemas';
-import { eq, and, like, gte, lte, or, desc, asc, sql, SQL } from 'drizzle-orm';
+import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '@equipment-management/schemas';
+import { eq, and, like, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
@@ -793,7 +793,7 @@ export class CheckoutsService {
 
       if (updateCheckoutDto.status !== undefined) {
         const status = updateCheckoutDto.status as CheckoutStatus;
-        if (!CheckoutStatusEnum.safeParse(status).success) {
+        if (!(CHECKOUT_STATUS_VALUES as readonly string[]).includes(status)) {
           throw new BadRequestException(`유효하지 않은 상태값: ${status}`);
         }
         updateFields.status = status;

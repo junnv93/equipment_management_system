@@ -1,4 +1,5 @@
 import { Module, Global, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import {
   db,
   pgPool,

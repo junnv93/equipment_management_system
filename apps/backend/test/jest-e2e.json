@@ -4,10 +4,25 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": "<rootDir>/../tsconfig.json"
+      }
+    ]
   },
   "moduleNameMapper": {
-    "^src/(.*)$": "<rootDir>/../src/$1"
+    "^src/(.*)$": "<rootDir>/../src/$1",
+    "^@equipment-management/schemas$": "<rootDir>/../../../packages/schemas/src/index.ts",
+    "^@equipment-management/schemas/(.*)$": "<rootDir>/../../../packages/schemas/src/$1",
+    "^@equipment-management/db$": "<rootDir>/../../../packages/db/src/index.ts",
+    "^@equipment-management/db/schema$": "<rootDir>/../../../packages/db/src/schema/index.ts",
+    "^@equipment-management/db/schema/(.*)$": "<rootDir>/../../../packages/db/src/schema/$1",
+    "^@equipment-management/db/(.*)$": "<rootDir>/../../../packages/db/src/$1"
   },
+  "transformIgnorePatterns": [
+    "node_modules/(?!(@equipment-management)/)",
+    "<rootDir>/../../../packages/*/dist"
+  ],
   "setupFilesAfterEnv": ["<rootDir>/jest-setup.ts"]
-} 
+}

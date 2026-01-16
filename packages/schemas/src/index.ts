@@ -34,6 +34,15 @@ import {
   UserRole,
   TeamEnum,
   TeamId,
+  LoanStatusEnum,
+  LoanStatus,
+  LOAN_STATUS_VALUES,
+  CheckoutStatusEnum,
+  CheckoutStatus,
+  CHECKOUT_STATUS_VALUES,
+  CheckoutPurposeEnum,
+  CheckoutPurpose,
+  CHECKOUT_PURPOSE_VALUES,
 } from './enums';
 
 import { Team, CreateTeamInput, UpdateTeamInput, isTeam, teamSchema } from './team';

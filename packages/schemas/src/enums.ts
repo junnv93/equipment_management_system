@@ -89,7 +89,7 @@ export const LOAN_STATUS_VALUES = [
   'canceled', // 취소됨
 ] as const;
 
-export const LoanStatusEnum = z.enum(LOAN_STATUS_VALUES as [string, ...string[]]);
+export const LoanStatusEnum = z.enum(LOAN_STATUS_VALUES as unknown as [string, ...string[]]);
 export type LoanStatus = z.infer<typeof LoanStatusEnum>;
 
 /**
@@ -117,7 +117,9 @@ export const CHECKOUT_STATUS_VALUES = [
   'canceled', // 취소됨
 ] as const;
 
-export const CheckoutStatusEnum = z.enum(CHECKOUT_STATUS_VALUES as [string, ...string[]]);
+export const CheckoutStatusEnum = z.enum(
+  CHECKOUT_STATUS_VALUES as unknown as [string, ...string[]]
+);
 export type CheckoutStatus = z.infer<typeof CheckoutStatusEnum>;
 
 /**
@@ -130,5 +132,7 @@ export const CHECKOUT_PURPOSE_VALUES = [
   'external_rental', // 외부 대여
 ] as const;
 
-export const CheckoutPurposeEnum = z.enum(CHECKOUT_PURPOSE_VALUES as [string, ...string[]]);
+export const CheckoutPurposeEnum = z.enum(
+  CHECKOUT_PURPOSE_VALUES as unknown as [string, ...string[]]
+);
 export type CheckoutPurpose = z.infer<typeof CheckoutPurposeEnum>;
