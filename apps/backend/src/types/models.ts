@@ -1,12 +1,12 @@
-import { 
-  EquipmentStatusEnum, 
-  CalibrationMethodEnum, 
+import {
+  EquipmentStatusEnum,
+  CalibrationMethodEnum,
   UserRoleEnum,
   TeamEnum,
   RentalStatusEnum,
   RentalTypeEnum,
   CalibrationStatusEnum,
-  CheckoutStatusEnum
+  CheckoutStatusEnum,
 } from './enums';
 
 // 장비 인터페이스
@@ -184,4 +184,4 @@ export interface CheckoutListResponse {
   page: number;
   pageSize: number;
   totalPages: number;
-} 
+}

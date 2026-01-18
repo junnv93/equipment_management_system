@@ -8,10 +8,12 @@ import {
   boolean,
   varchar,
   index,
+  uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { teams } from './teams';
 
 // 장비 상태 정의
 // ⚠️ 중요: 이 값들은 packages/schemas/src/enums.ts의 EquipmentStatusEnum과 반드시 일치해야 함
@@ -59,8 +61,9 @@ export const equipment = pgTable(
     calibrationMethod: varchar('calibration_method', { length: 50 }),
 
     // 관리 정보
-    teamId: integer('team_id'),
+    teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
     managerId: varchar('manager_id', { length: 36 }),
+    site: varchar('site', { length: 20 }).notNull(), // ✅ 사이트별 권한 관리: 필수 필드 'suwon' | 'uiwang'
     purchaseDate: timestamp('purchase_date'),
     price: integer('price'),
 
@@ -78,6 +81,18 @@ export const equipment = pgTable(
     status: varchar('status', { length: 50 }).notNull().default('available'),
     isActive: boolean('is_active').default(true),
 
+    // 승인 프로세스 필드
+    approvalStatus: varchar('approval_status', { length: 50 }).default('approved'), // 'pending_approval' | 'approved' | 'rejected'
+    requestedBy: varchar('requested_by', { length: 36 }), // 요청자 ID
+    approvedBy: varchar('approved_by', { length: 36 }), // 승인자 ID
+
+    // 추가 필수 필드 (프롬프트 3 요구사항)
+    equipmentType: varchar('equipment_type', { length: 50 }), // 장비 타입
+    calibrationResult: text('calibration_result'), // 교정 결과
+    correctionFactor: varchar('correction_factor', { length: 50 }), // 보정계수
+    intermediateCheckSchedule: timestamp('intermediate_check_schedule'), // 중간점검일정
+    repairHistory: text('repair_history'), // 장비 수리 내역
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -90,6 +105,7 @@ export const equipment = pgTable(
       manufacturerIdx: index('equipment_manufacturer_idx').on(table.manufacturer),
       teamIdIdx: index('equipment_team_id_idx').on(table.teamId),
       managerIdIdx: index('equipment_manager_id_idx').on(table.managerId),
+      siteIdx: index('equipment_site_idx').on(table.site),
       nextCalibrationDateIdx: index('equipment_next_calibration_date_idx').on(
         table.nextCalibrationDate
       ),
@@ -120,7 +136,6 @@ export type NewEquipment = typeof equipment.$inferInsert;
 // 필요시 @equipment-management/schemas에서 직접 import하여 사용
 
 // 관계 타입 (다른 스키마 파일과의 순환 참조 방지를 위해 타입만 정의)
-import type { teams } from './teams';
 import type { users } from './users';
 import type { loans } from './loans';
 
@@ -130,8 +145,11 @@ export type EquipmentWithRelations = Equipment & {
   loans?: Array<typeof loans.$inferSelect>;
 };
 
-export const equipmentRelations = {
-  loans: [],
-  team: null,
-  manager: null,
-} as const;
+// ✅ Drizzle relations 설정 (타입 안전한 조인)
+export const equipmentRelations = relations(equipment, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [equipment.teamId],
+    references: [teams.id],
+  }),
+  // manager와 loans relations는 향후 필요시 추가
+}));

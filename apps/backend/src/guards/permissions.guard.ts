@@ -17,4 +17,4 @@ export class PermissionsGuard implements CanActivate {
     // TODO: 실제 권한 검사 로직 구현
     return true;
   }
-} 
+}

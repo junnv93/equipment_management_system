@@ -1,29 +1,29 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { formatDateTime } from "@/lib/utils/date"
-import { OverdueRental } from "@/lib/api/dashboard-api"
-import { AlertCircle, ChevronRight } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDateTime } from '@/lib/utils/date';
+import { OverdueRental } from '@/lib/api/dashboard-api';
+import { AlertCircle, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface OverdueRentalsListProps {
-  data: OverdueRental[]
-  loading?: boolean
+  data: OverdueRental[];
+  loading?: boolean;
 }
 
 export function OverdueRentalsList({ data, loading = false }: OverdueRentalsListProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   // 대여 상세 페이지로 이동
   const handleViewRental = (id: string) => {
-    router.push(`/rentals/${id}`)
-  }
+    router.push(`/rentals/${id}`);
+  };
 
   // 모든 연체 대여 목록 페이지로 이동
   const handleViewAll = () => {
-    router.push("/rentals?status=overdue")
-  }
+    router.push('/rentals?status=overdue');
+  };
 
   return (
     <Card>
@@ -38,21 +38,21 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
                 </Badge>
               )}
             </CardTitle>
-            <CardDescription>
-              대여 기한이 지난 장비 목록입니다
-            </CardDescription>
+            <CardDescription>대여 기한이 지난 장비 목록입니다</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="space-y-3">
-            {Array(3).fill(0).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2">
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-3 w-3/5" />
-              </div>
-            ))}
+            {Array(3)
+              .fill(0)
+              .map((_, i) => (
+                <div key={i} className="flex flex-col gap-2">
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="h-3 w-3/5" />
+                </div>
+              ))}
           </div>
         ) : data.length === 0 ? (
           <div className="py-6 text-center text-muted-foreground">
@@ -63,9 +63,12 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
             {data.slice(0, 3).map((rental) => (
               <div key={rental.id} className="flex justify-between items-center">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium line-clamp-1">{rental.equipmentName}</p>
+                  <p className="text-sm font-medium line-clamp-1">
+                    {rental.equipment?.name || '알 수 없음'}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {rental.userName} · {formatDateTime(rental.expectedReturnDate)}
+                    {rental.user?.name || '알 수 없음'} ·{' '}
+                    {formatDateTime(rental.expectedReturnDate)}
                   </p>
                 </div>
                 <div className="flex items-center">
@@ -84,14 +87,9 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
                 </div>
               </div>
             ))}
-            
+
             {data.length > 3 && (
-              <Button
-                variant="link"
-                size="sm"
-                className="w-full mt-2"
-                onClick={handleViewAll}
-              >
+              <Button variant="link" size="sm" className="w-full mt-2" onClick={handleViewAll}>
                 모든 기한 초과 대여 보기 ({data.length})
               </Button>
             )}
@@ -99,5 +97,5 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
         )}
       </CardContent>
     </Card>
-  )
-} 
+  );
+}

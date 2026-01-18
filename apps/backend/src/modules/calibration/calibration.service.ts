@@ -96,11 +96,11 @@ const temporaryCalibrations = [
     additionalInfo: null,
     createdAt: new Date('2023-04-10'),
     updatedAt: new Date('2023-05-25'),
-  }
+  },
 ];
 
 // 검색 가능한 교정 목록
-let calibrations = [...temporaryCalibrations];
+const calibrations = [...temporaryCalibrations];
 
 @Injectable()
 export class CalibrationService {
@@ -108,21 +108,21 @@ export class CalibrationService {
     const newCalibration = {
       id: `calibration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       // id: uuidv4(),
-      
+
       ...createCalibrationDto,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     (calibrations as any).push(newCalibration);
     return newCalibration;
   }
-  
+
   async findAll(query: CalibrationQueryDto) {
-    const { 
-      equipmentId, 
-      calibrationManagerId, 
-      statuses, 
+    const {
+      equipmentId,
+      calibrationManagerId,
+      statuses,
       methods,
       calibrationAgency,
       fromDate,
@@ -132,85 +132,93 @@ export class CalibrationService {
       isPassed,
       search,
       sort = 'calibrationDate.desc',
-      page = 1, 
-      pageSize = 20 
+      page = 1,
+      pageSize = 20,
     } = query;
-    
+
     // 필터링
     let filteredCalibrations = [...calibrations];
-    
+
     if (equipmentId) {
-      filteredCalibrations = filteredCalibrations.filter(cal => cal.equipmentId === equipmentId);
+      filteredCalibrations = filteredCalibrations.filter((cal) => cal.equipmentId === equipmentId);
     }
-    
+
     if (calibrationManagerId) {
-      filteredCalibrations = filteredCalibrations.filter(cal => cal.calibrationManagerId === calibrationManagerId);
-    }
-    
-    if (statuses) {
-      const statusArray = statuses.split(',').map(s => s.trim());
-      filteredCalibrations = filteredCalibrations.filter(cal => statusArray.includes(cal.status));
-    }
-    
-    if (methods) {
-      const methodArray = methods.split(',').map(m => m.trim());
-      filteredCalibrations = filteredCalibrations.filter(cal => methodArray.includes(cal.calibrationMethod));
-    }
-    
-    if (calibrationAgency) {
-      filteredCalibrations = filteredCalibrations.filter(cal => 
-        cal.calibrationAgency && cal.calibrationAgency.toLowerCase().includes(calibrationAgency.toLowerCase())
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) => cal.calibrationManagerId === calibrationManagerId
       );
     }
-    
+
+    if (statuses) {
+      const statusArray = statuses.split(',').map((s) => s.trim());
+      filteredCalibrations = filteredCalibrations.filter((cal) => statusArray.includes(cal.status));
+    }
+
+    if (methods) {
+      const methodArray = methods.split(',').map((m) => m.trim());
+      filteredCalibrations = filteredCalibrations.filter((cal) =>
+        methodArray.includes(cal.calibrationMethod)
+      );
+    }
+
+    if (calibrationAgency) {
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) =>
+          cal.calibrationAgency &&
+          cal.calibrationAgency.toLowerCase().includes(calibrationAgency.toLowerCase())
+      );
+    }
+
     if (fromDate) {
       const fromDateObj = new Date(fromDate);
-      filteredCalibrations = filteredCalibrations.filter(cal => 
-        cal.calibrationDate && new Date(cal.calibrationDate) >= fromDateObj
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) => cal.calibrationDate && new Date(cal.calibrationDate) >= fromDateObj
       );
     }
-    
+
     if (toDate) {
       const toDateObj = new Date(toDate);
-      filteredCalibrations = filteredCalibrations.filter(cal => 
-        cal.calibrationDate && new Date(cal.calibrationDate) <= toDateObj
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) => cal.calibrationDate && new Date(cal.calibrationDate) <= toDateObj
       );
     }
-    
+
     if (nextFromDate) {
       const nextFromDateObj = new Date(nextFromDate);
-      filteredCalibrations = filteredCalibrations.filter(cal => 
-        cal.nextCalibrationDate && new Date(cal.nextCalibrationDate) >= nextFromDateObj
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) => cal.nextCalibrationDate && new Date(cal.nextCalibrationDate) >= nextFromDateObj
       );
     }
-    
+
     if (nextToDate) {
       const nextToDateObj = new Date(nextToDate);
-      filteredCalibrations = filteredCalibrations.filter(cal => 
-        cal.nextCalibrationDate && new Date(cal.nextCalibrationDate) <= nextToDateObj
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) => cal.nextCalibrationDate && new Date(cal.nextCalibrationDate) <= nextToDateObj
       );
     }
-    
+
     if (isPassed !== undefined) {
       const isParsedPassed = isPassed === 'true';
-      filteredCalibrations = filteredCalibrations.filter(cal => cal.isPassed === isParsedPassed);
+      filteredCalibrations = filteredCalibrations.filter((cal) => cal.isPassed === isParsedPassed);
     }
-    
+
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredCalibrations = filteredCalibrations.filter(cal => 
-        (cal.certificationNumber && cal.certificationNumber.toLowerCase().includes(searchLower)) ||
-        (cal.resultNotes && cal.resultNotes.toLowerCase().includes(searchLower)) ||
-        (cal.additionalInfo && cal.additionalInfo.toLowerCase().includes(searchLower)) ||
-        (cal.calibrationAgency && cal.calibrationAgency.toLowerCase().includes(searchLower))
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) =>
+          (cal.certificationNumber &&
+            cal.certificationNumber.toLowerCase().includes(searchLower)) ||
+          (cal.resultNotes && cal.resultNotes.toLowerCase().includes(searchLower)) ||
+          (cal.additionalInfo && cal.additionalInfo.toLowerCase().includes(searchLower)) ||
+          (cal.calibrationAgency && cal.calibrationAgency.toLowerCase().includes(searchLower))
       );
     }
-    
+
     // 정렬
     if (sort) {
       const [field, direction] = sort.split('.');
       const isAsc = direction === 'asc';
-      
+
       filteredCalibrations.sort((a, b) => {
         if (a[field] === null) return isAsc ? 1 : -1;
         if (b[field] === null) return isAsc ? -1 : 1;
@@ -219,13 +227,13 @@ export class CalibrationService {
         return 0;
       });
     }
-    
+
     // 페이지네이션
     const totalItems = filteredCalibrations.length;
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
     const paginatedCalibrations = filteredCalibrations.slice(offset, offset + pageSize);
-    
+
     return {
       items: paginatedCalibrations,
       meta: {
@@ -239,91 +247,91 @@ export class CalibrationService {
   }
 
   async findOne(id: string) {
-    const calibration = calibrations.find(cal => cal.id === id);
-    
+    const calibration = calibrations.find((cal) => cal.id === id);
+
     if (!calibration) {
       throw new NotFoundException(`교정 ID ${id}를 찾을 수 없습니다.`);
     }
-    
+
     return calibration;
   }
 
   async update(id: string, updateCalibrationDto: UpdateCalibrationDto) {
-    const index = calibrations.findIndex(cal => cal.id === id);
-    
+    const index = calibrations.findIndex((cal) => cal.id === id);
+
     if (index === -1) {
       throw new NotFoundException(`교정 ID ${id}를 찾을 수 없습니다.`);
     }
-    
+
     const now = new Date();
     calibrations[index] = {
       ...calibrations[index],
       ...updateCalibrationDto,
       updatedAt: now,
     };
-    
+
     return calibrations[index];
   }
 
   async remove(id: string) {
-    const index = calibrations.findIndex(cal => cal.id === id);
-    
+    const index = calibrations.findIndex((cal) => cal.id === id);
+
     if (index === -1) {
       throw new NotFoundException(`교정 ID ${id}를 찾을 수 없습니다.`);
     }
-    
+
     calibrations.splice(index, 1);
     return { id, deleted: true };
   }
-  
+
   // 특정 장비의 교정 기록 조회
   async findByEquipment(equipmentId: string) {
     return this.findAll({ equipmentId });
   }
-  
+
   // 특정 날짜 범위의 교정 일정 조회
   async findScheduled(fromDate: Date, toDate: Date) {
-    return this.findAll({ 
-      fromDate, 
+    return this.findAll({
+      fromDate,
       toDate,
-      statuses: 'scheduled' 
+      statuses: 'scheduled',
     });
   }
-  
+
   // 교정 상태 변경
   async updateStatus(id: string, status: CalibrationStatusEnum) {
     const calibration = await this.findOne(id);
     return this.update(id, { status });
   }
-  
+
   // 예정된 교정 완료 처리
   async completeCalibration(id: string, updateDto: UpdateCalibrationDto) {
     const calibration = await this.findOne(id);
-    
+
     if (calibration.status !== 'scheduled' && calibration.status !== 'in_progress') {
       throw new Error('예정되었거나 진행 중인 교정만 완료 처리할 수 있습니다.');
     }
-    
+
     return this.update(id, {
       ...updateDto,
-      status: 'completed'
+      status: 'completed',
     });
   }
-  
+
   // 특정 담당자가 담당하는 교정 목록 조회
   async findByManager(calibrationManagerId: string) {
     return this.findAll({ calibrationManagerId });
   }
-  
+
   // 다음 교정 예정일이 다가오는 장비 교정 기록 조회
   async findDueCalibrations(days: number) {
     const today = new Date();
     const dueDate = new Date();
     dueDate.setDate(today.getDate() + days);
-    
-    return this.findAll({ 
+
+    return this.findAll({
       nextFromDate: today,
-      nextToDate: dueDate
+      nextToDate: dueDate,
     });
   }
-} 
+}

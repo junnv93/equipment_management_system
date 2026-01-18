@@ -1,7 +1,16 @@
+/**
+ * ✅ Single Source of Truth: schemas 패키지 타입 사용
+ *
+ * 모든 타입은 @equipment-management/schemas 패키지에서 가져옵니다.
+ *
+ * @see packages/schemas/src/equipment.ts
+ * @see docs/development/API_STANDARDS.md
+ */
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import type { EquipmentStatus } from '@equipment-management/schemas';
 import equipmentApi, {
   Equipment,
   EquipmentQuery,
@@ -40,13 +49,24 @@ export function useCreateEquipment() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (data: CreateEquipmentDto) => equipmentApi.createEquipment(data),
-    onSuccess: () => {
+    mutationFn: ({ data, files }: { data: CreateEquipmentDto; files?: File[] }) =>
+      equipmentApi.createEquipment(data, files),
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] });
-      toast({
-        title: '성공',
-        description: '장비가 성공적으로 등록되었습니다.',
-      });
+      queryClient.invalidateQueries({ queryKey: ['equipment-requests'] });
+
+      // 승인 요청인 경우 다른 메시지 표시
+      if (response?.requestUuid) {
+        toast({
+          title: '요청 제출 완료',
+          description: '장비 등록 요청이 제출되었습니다. 승인 대기 중입니다.',
+        });
+      } else {
+        toast({
+          title: '성공',
+          description: '장비가 성공적으로 등록되었습니다.',
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -66,15 +86,25 @@ export function useUpdateEquipment() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateEquipmentDto }) =>
-      equipmentApi.updateEquipment(id, data),
-    onSuccess: (_, variables) => {
+    mutationFn: ({ id, data, files }: { id: string; data: UpdateEquipmentDto; files?: File[] }) =>
+      equipmentApi.updateEquipment(id, data, files),
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['equipment', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] });
-      toast({
-        title: '성공',
-        description: '장비 정보가 성공적으로 수정되었습니다.',
-      });
+      queryClient.invalidateQueries({ queryKey: ['equipment-requests'] });
+
+      // 승인 요청인 경우 다른 메시지 표시
+      if (response?.requestUuid) {
+        toast({
+          title: '요청 제출 완료',
+          description: '장비 수정 요청이 제출되었습니다. 승인 대기 중입니다.',
+        });
+      } else {
+        toast({
+          title: '성공',
+          description: '장비 정보가 성공적으로 수정되었습니다.',
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -120,7 +150,7 @@ export function useUpdateEquipmentStatus() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: Equipment['status'] }) =>
+    mutationFn: ({ id, status }: { id: string; status: EquipmentStatus }) =>
       equipmentApi.updateEquipmentStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['equipment', variables.id] });

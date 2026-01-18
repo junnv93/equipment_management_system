@@ -38,14 +38,16 @@
 
 ## 구현 계획
 
-### Step 1: Rentals 모듈 DB 기반 전환
+### Step 1: Rentals 모듈 DB 기반 전환 ✅ 완료
 
-- [ ] rentals.service.ts를 Equipment 모듈과 동일한 표준으로 재작성
-- [ ] loans 테이블 사용 (Drizzle ORM)
-- [ ] EquipmentService 의존성 추가
-- [ ] Logger, 에러 처리, 헬퍼 메서드 등 Equipment 모듈 패턴 적용
-- [ ] 1단계 승인 프로세스 구현
-- [ ] 반려 사유 필수 검증
+- [x] rentals.service.ts를 Equipment 모듈과 동일한 표준으로 재작성
+- [x] loans 테이블 사용 (Drizzle ORM)
+- [x] EquipmentService 의존성 추가
+- [x] Logger, 에러 처리, 헬퍼 메서드 등 Equipment 모듈 패턴 적용
+- [x] 1단계 승인 프로세스 구현
+- [x] 반려 사유 필수 검증
+- [x] 데이터베이스 마이그레이션 완료
+- [x] E2E 테스트 작성 및 통과 (10/10)
 
 ### Step 2: Checkouts 모듈 구현
 
@@ -77,9 +79,9 @@
 
 ### Step 6: 테스트 작성
 
-- [ ] Rentals E2E 테스트
-- [ ] Checkouts E2E 테스트
-- [ ] 승인 프로세스 테스트
+- [x] Rentals E2E 테스트 ✅ (10/10 통과)
+- [ ] Checkouts E2E 테스트 (5개 실패, 8개 통과 - 수정 필요)
+- [x] 승인 프로세스 테스트 ✅ (Rentals)
 - [ ] 반입 관리 테스트
 
 ## 데이터베이스 스키마
@@ -154,6 +156,34 @@
 - POST /checkouts/:id/inspection - 반입 검사
 - PATCH /checkouts/:id/approve-inspection - 반입 검사 최종 승인
 
+## 완료 상태
+
+### ✅ 완료된 작업
+
+- **Step 1: Rentals 모듈 DB 기반 전환** - 완료 (2026-01-16)
+- **Step 6: Rentals E2E 테스트** - 완료 (10/10 통과)
+
+자세한 내용은 [PHASE2_2_RENTALS_COMPLETE.md](./PHASE2_2_RENTALS_COMPLETE.md)를 참조하세요.
+
 ## 다음 단계
 
-Step 1부터 순차적으로 진행합니다.
+### Phase 2.3: Checkouts 모듈 테스트 수정 및 프론트엔드 구현
+
+1. **Checkouts E2E 테스트 수정** (우선순위: 높음)
+
+   - 현재 5개 테스트 실패
+   - Rentals와 동일한 패턴으로 수정
+   - `findOne` 메서드 개선 필요
+
+2. **프론트엔드 Rentals 구현**
+
+   - 대여 신청 페이지
+   - 대여 목록 페이지
+   - 대여 상세 페이지
+   - 승인/반려 UI
+
+3. **프론트엔드 Checkouts 구현**
+   - 반출 신청 페이지
+   - 반출 목록 페이지
+   - 반출 상세 페이지
+   - 2단계 승인 UI

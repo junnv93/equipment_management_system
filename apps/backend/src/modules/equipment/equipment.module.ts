@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { EquipmentController } from './equipment.controller';
 import { EquipmentService } from './equipment.service';
+import { EquipmentApprovalService } from './services/equipment-approval.service';
+import { EquipmentAttachmentService } from './services/equipment-attachment.service';
+import { FileUploadService } from './services/file-upload.service';
 import { CacheModule } from '../../common/cache/cache.module';
 
 @Module({
@@ -9,7 +12,17 @@ import { CacheModule } from '../../common/cache/cache.module';
     CacheModule,
   ],
   controllers: [EquipmentController],
-  providers: [EquipmentService],
-  exports: [EquipmentService]
+  providers: [
+    EquipmentService,
+    EquipmentApprovalService,
+    EquipmentAttachmentService,
+    FileUploadService,
+  ],
+  exports: [
+    EquipmentService,
+    EquipmentApprovalService,
+    EquipmentAttachmentService,
+    FileUploadService,
+  ],
 })
-export class EquipmentModule {} 
+export class EquipmentModule {}

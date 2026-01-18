@@ -1,4 +1,7 @@
 import axios from 'axios';
+import type { SingleResourceResponse } from '@equipment-management/schemas';
+import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
+import type { PaginatedResponse } from './types';
 
 // 스키마 타입을 직접 정의
 export interface Reservation {
@@ -73,32 +76,25 @@ export interface ReservationQuery {
   search?: string;
 }
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: {
-    pagination: {
-      total: number;
-      pageSize: number;
-      currentPage: number;
-      totalPages: number;
-    };
-  };
-}
+// ✅ Single Source of Truth: 공통 타입 사용
+import type { PaginatedResponse } from './types';
 
 // 예약 관련 API 서비스
 const reservationApi = {
   /**
    * 모든 예약 목록을 조회합니다.
    */
-  async getReservations(query: ReservationQuery = {}): Promise<PaginatedResponse<ExpandedReservation>> {
+  async getReservations(
+    query: ReservationQuery = {}
+  ): Promise<PaginatedResponse<ExpandedReservation>> {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         queryParams.append(key, String(value));
       }
     });
-    
+
     const url = `/api/reservations${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await axios.get(url);
     return response.data;
@@ -154,31 +150,39 @@ const reservationApi = {
   /**
    * 특정 장비의 예약 목록을 조회합니다.
    */
-  async getEquipmentReservations(equipmentId: string, query: ReservationQuery = {}): Promise<PaginatedResponse<Reservation>> {
+  async getEquipmentReservations(
+    equipmentId: string,
+    query: ReservationQuery = {}
+  ): Promise<PaginatedResponse<Reservation>> {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         queryParams.append(key, String(value));
       }
     });
-    
-    const response = await axios.get(`/api/equipment/${equipmentId}/reservations?${queryParams.toString()}`);
+
+    const response = await axios.get(
+      `/api/equipment/${equipmentId}/reservations?${queryParams.toString()}`
+    );
     return response.data;
   },
 
   /**
    * 특정 사용자의 예약 목록을 조회합니다.
    */
-  async getUserReservations(userId: string, query: ReservationQuery = {}): Promise<PaginatedResponse<Reservation>> {
+  async getUserReservations(
+    userId: string,
+    query: ReservationQuery = {}
+  ): Promise<PaginatedResponse<Reservation>> {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         queryParams.append(key, String(value));
       }
     });
-    
+
     const response = await axios.get(`/api/users/${userId}/reservations?${queryParams.toString()}`);
     return response.data;
   },
@@ -188,13 +192,13 @@ const reservationApi = {
    */
   async getMyReservations(query: ReservationQuery = {}): Promise<PaginatedResponse<Reservation>> {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         queryParams.append(key, String(value));
       }
     });
-    
+
     const response = await axios.get(`/api/reservations/me?${queryParams.toString()}`);
     return response.data;
   },
@@ -205,7 +209,7 @@ const reservationApi = {
   async completeReservation(id: string): Promise<Reservation> {
     const response = await axios.post(`/api/reservations/${id}/complete`);
     return response.data.data;
-  }
+  },
 };
 
-export default reservationApi; 
+export default reservationApi;

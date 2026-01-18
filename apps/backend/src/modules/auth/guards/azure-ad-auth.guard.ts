@@ -19,7 +19,7 @@ export class AzureADAuthGuard extends AuthGuard('azure-ad') {
     if (isPublic) {
       return true;
     }
-    
+
     return super.canActivate(context);
   }
 
@@ -30,4 +30,4 @@ export class AzureADAuthGuard extends AuthGuard('azure-ad') {
     }
     return user;
   }
-} 
+}

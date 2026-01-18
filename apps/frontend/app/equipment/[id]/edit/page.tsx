@@ -17,11 +17,13 @@ export default function EditEquipmentPage() {
   const { data: equipment, isLoading, isError } = useEquipment(equipmentId);
   const updateEquipment = useUpdateEquipment();
 
-  const handleSubmit = async (data: UpdateEquipmentInput) => {
+  const handleSubmit = async (data: UpdateEquipmentInput, files?: Array<{ file: File }>) => {
     try {
+      const fileList = files?.map((f) => f.file);
       await updateEquipment.mutateAsync({
         id: equipmentId,
         data,
+        files: fileList,
       });
       router.push(`/equipment/${equipmentId}`);
     } catch (error) {
@@ -75,32 +77,32 @@ export default function EditEquipmentPage() {
 
   // 장비 데이터를 폼에 맞게 변환
   const initialData = {
-    name: equipment.name,
-    managementNumber: equipment.managementNumber,
-    assetNumber: equipment.assetNumber,
-    modelName: equipment.modelName,
-    manufacturer: equipment.manufacturer,
-    serialNumber: equipment.serialNumber,
-    location: equipment.location,
-    description: equipment.description,
-    calibrationCycle: equipment.calibrationCycle,
-    lastCalibrationDate: equipment.lastCalibrationDate,
-    nextCalibrationDate: equipment.nextCalibrationDate,
-    calibrationAgency: equipment.calibrationAgency,
-    needsIntermediateCheck: equipment.needsIntermediateCheck,
-    calibrationMethod: equipment.calibrationMethod,
-    purchaseYear: equipment.purchaseYear,
-    teamId: typeof equipment.teamId === 'number' ? equipment.teamId : undefined,
-    managerId: equipment.managerId,
-    supplier: equipment.supplier,
-    contactInfo: equipment.contactInfo,
-    softwareVersion: equipment.softwareVersion,
-    firmwareVersion: equipment.firmwareVersion,
-    manualLocation: equipment.manualLocation,
-    accessories: equipment.accessories,
-    mainFeatures: equipment.mainFeatures,
-    technicalManager: equipment.technicalManager,
-    status: equipment.status,
+    name: equipment.name || undefined,
+    managementNumber: equipment.managementNumber || undefined,
+    assetNumber: equipment.assetNumber || undefined,
+    modelName: equipment.modelName || undefined,
+    manufacturer: equipment.manufacturer || undefined,
+    serialNumber: equipment.serialNumber || undefined,
+    location: equipment.location || undefined,
+    description: equipment.description || undefined,
+    calibrationCycle: equipment.calibrationCycle || undefined,
+    lastCalibrationDate: equipment.lastCalibrationDate || undefined,
+    nextCalibrationDate: equipment.nextCalibrationDate || undefined,
+    calibrationAgency: equipment.calibrationAgency || undefined,
+    needsIntermediateCheck: equipment.needsIntermediateCheck || false,
+    calibrationMethod: equipment.calibrationMethod || undefined,
+    purchaseYear: equipment.purchaseYear || undefined,
+    teamId: typeof equipment.teamId === 'number' ? equipment.teamId : equipment.teamId || undefined,
+    managerId: equipment.managerId || undefined,
+    supplier: equipment.supplier || undefined,
+    contactInfo: equipment.contactInfo || undefined,
+    softwareVersion: equipment.softwareVersion || undefined,
+    firmwareVersion: equipment.firmwareVersion || undefined,
+    manualLocation: equipment.manualLocation || undefined,
+    accessories: equipment.accessories || undefined,
+    mainFeatures: equipment.mainFeatures || undefined,
+    technicalManager: equipment.technicalManager || undefined,
+    status: equipment.status || undefined,
   };
 
   return (

@@ -1,52 +1,80 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-import { CalendarClock, ClipboardList, Clock, Search, Plus, Filter } from "lucide-react";
-import rentalApi, { Rental, RentalSummary } from "@/lib/api/rental-api";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { CalendarClock, ClipboardList, Clock, Search, Plus, Filter } from 'lucide-react';
+import rentalApi, { Rental, RentalSummary } from '@/lib/api/rental-api';
 
 export default function RentalsPage() {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentTab, setCurrentTab] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentTab, setCurrentTab] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // 대여 요약 정보 가져오기
+  // ⚠️ 백엔드에 summary 엔드포인트가 없으므로 findAll로 대체
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["rental-summary"],
-    queryFn: () => rentalApi.getRentalSummary(),
+    queryKey: ['rental-summary'],
+    queryFn: async () => {
+      const response = await rentalApi.getRentals({ pageSize: 1 });
+      // 간단한 요약 정보 생성 (실제로는 백엔드에서 제공해야 함)
+      return {
+        total: response.meta.pagination.total,
+        pending: 0,
+        approved: 0,
+        overdue: 0,
+        returnedToday: 0,
+      };
+    },
   });
 
   // 대여 목록 가져오기
   const { data: rentalsData, isLoading: rentalsLoading } = useQuery({
-    queryKey: ["rentals", currentTab, statusFilter, searchTerm],
+    queryKey: ['rentals', currentTab, statusFilter, searchTerm],
     queryFn: async () => {
       const query: any = {
         pageSize: 100,
         search: searchTerm || undefined,
       };
 
-      if (statusFilter !== "all") {
+      if (statusFilter !== 'all') {
         query.status = statusFilter;
       }
 
+      // ✅ 백엔드에 overdue, today-returns 엔드포인트가 없으므로 findAll에 필터로 처리
       switch (currentTab) {
-        case "overdue":
-          return rentalApi.getOverdueRentals(query);
-        case "today":
-          return rentalApi.getTodayReturns(query);
+        case 'overdue':
+          // 기한 초과는 status 필터로 처리 (실제로는 백엔드에 overdue 필터 추가 필요)
+          return rentalApi.getRentals({ ...query, status: 'overdue' });
+        case 'today':
+          // 오늘 반납 예정은 날짜 필터로 처리 (실제로는 백엔드에 날짜 필터 추가 필요)
+          const today = new Date().toISOString().split('T')[0];
+          return rentalApi.getRentals({ ...query, endDate: today });
         default:
           return rentalApi.getRentals(query);
       }
@@ -54,21 +82,41 @@ export default function RentalsPage() {
   });
 
   // 오늘 날짜 포맷
-  const today = format(new Date(), "yyyy-MM-dd", { locale: ko });
+  const today = format(new Date(), 'yyyy-MM-dd', { locale: ko });
 
   // 대여 상태에 따른 배지 스타일
   const getRentalStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">승인 대기중</Badge>;
-      case "approved":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">승인됨</Badge>;
-      case "rejected":
-        return <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">거부됨</Badge>;
-      case "returned":
-        return <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">반납됨</Badge>;
-      case "overdue":
-        return <Badge variant="outline" className="bg-red-100 text-red-900 hover:bg-red-100">기한 초과</Badge>;
+      case 'pending':
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
+            승인 대기중
+          </Badge>
+        );
+      case 'approved':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
+            승인됨
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">
+            거부됨
+          </Badge>
+        );
+      case 'returned':
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
+            반납됨
+          </Badge>
+        );
+      case 'overdue':
+        return (
+          <Badge variant="outline" className="bg-red-100 text-red-900 hover:bg-red-100">
+            기한 초과
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -95,10 +143,13 @@ export default function RentalsPage() {
       <ClipboardList className="h-12 w-12 text-gray-400 mb-4" />
       <h3 className="text-lg font-medium text-gray-900">대여 정보가 없습니다</h3>
       <p className="text-sm text-gray-500 mt-2 mb-4">검색 조건에 맞는 대여 정보가 없습니다.</p>
-      <Button variant="outline" onClick={() => {
-        setSearchTerm("");
-        setStatusFilter("all");
-      }}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setSearchTerm('');
+          setStatusFilter('all');
+        }}
+      >
         필터 초기화
       </Button>
     </div>
@@ -109,12 +160,24 @@ export default function RentalsPage() {
     <>
       {[1, 2, 3, 4, 5].map((i) => (
         <TableRow key={i}>
-          <TableCell><Skeleton className="h-5 w-[180px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[120px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[100px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[180px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[120px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[100px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[80px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[80px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[80px]" />
+          </TableCell>
         </TableRow>
       ))}
     </>
@@ -127,7 +190,7 @@ export default function RentalsPage() {
           <h1 className="text-3xl font-bold tracking-tight">대여 관리</h1>
           <p className="text-muted-foreground">장비 대여 요청 및 현황을 관리합니다.</p>
         </div>
-        <Button onClick={() => router.push("/rentals/create")}>
+        <Button onClick={() => router.push('/rentals/create')}>
           <Plus className="mr-2 h-4 w-4" /> 대여 신청
         </Button>
       </div>
@@ -250,16 +313,16 @@ export default function RentalsPage() {
               </TableRow>
             ) : (
               rentalsData?.data?.map((rental: Rental) => (
-                <TableRow key={rental.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/rentals/${rental.id}`)}>
+                <TableRow
+                  key={rental.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/rentals/${rental.id}`)}
+                >
                   <TableCell className="font-medium">
                     {rental.equipment?.name || '알 수 없는 장비'}
                   </TableCell>
-                  <TableCell>
-                    {rental.user?.name || '알 수 없는 사용자'}
-                  </TableCell>
-                  <TableCell>
-                    {getRentalStatusBadge(rental.status)}
-                  </TableCell>
+                  <TableCell>{rental.user?.name || '알 수 없는 사용자'}</TableCell>
+                  <TableCell>{getRentalStatusBadge(rental.status)}</TableCell>
                   <TableCell>
                     {format(new Date(rental.startDate), 'yyyy-MM-dd', { locale: ko })}
                   </TableCell>
@@ -267,7 +330,9 @@ export default function RentalsPage() {
                     {format(new Date(rental.expectedReturnDate), 'yyyy-MM-dd', { locale: ko })}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(rental.requestDate || rental.createdAt), 'yyyy-MM-dd', { locale: ko })}
+                    {format(new Date(rental.requestDate || rental.createdAt), 'yyyy-MM-dd', {
+                      locale: ko,
+                    })}
                   </TableCell>
                 </TableRow>
               ))
@@ -277,4 +342,4 @@ export default function RentalsPage() {
       </div>
     </div>
   );
-} 
+}

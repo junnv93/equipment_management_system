@@ -1,47 +1,79 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Trash2, Building, Calendar, Phone, ClipboardList, MapPin } from "lucide-react";
-import { format, addDays } from "date-fns";
-import { ko } from "date-fns/locale";
-import equipmentApi, { Equipment } from "@/lib/api/equipment-api";
-import checkoutApi, { CreateCheckoutDto } from "@/lib/api/checkout-api";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import {
+  Search,
+  Plus,
+  Trash2,
+  Building,
+  Calendar,
+  Phone,
+  ClipboardList,
+  MapPin,
+} from 'lucide-react';
+import { format, addDays } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
+import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 
 export default function CreateCheckoutPage() {
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // 폼 상태 관리
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
-  const [location, setLocation] = useState("");
-  const [customLocation, setCustomLocation] = useState("");
-  const [contactNumber, setContactNumber] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [destination, setDestination] = useState(''); // ✅ 필드명 변경 (location → destination)
+  const [customDestination, setCustomDestination] = useState(''); // ✅ 필드명 변경
+  const [phoneNumber, setPhoneNumber] = useState(''); // ✅ 필드명 변경 (contactNumber → phoneNumber)
+  const [address, setAddress] = useState(''); // ✅ address 필드 추가
+  const [purpose, setPurpose] = useState<'calibration' | 'repair' | 'external_rental'>(
+    'calibration'
+  ); // ✅ CheckoutPurpose 타입
+  const [reason, setReason] = useState(''); // ✅ 필수 필드 추가
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date>(addDays(new Date(), 7));
-  const [notes, setNotes] = useState("");
+  // startDate는 백엔드에서 자동 설정되므로 제거
 
   // 장비 목록 조회
   const { data: equipmentsData, isLoading: equipmentsLoading } = useQuery({
-    queryKey: ["equipments", "available", searchTerm],
+    queryKey: ['equipments', 'available', searchTerm],
     queryFn: async () => {
-      const response = await equipmentApi.getEquipments({
-        status: "available",
+      const response = await equipmentApi.getEquipmentList({
+        status: 'available',
         search: searchTerm || undefined,
         pageSize: 100,
       });
@@ -54,18 +86,18 @@ export default function CreateCheckoutPage() {
     mutationFn: (data: CreateCheckoutDto) => checkoutApi.createCheckout(data),
     onSuccess: () => {
       toast({
-        title: "반출 신청 완료",
-        description: "반출 신청이 성공적으로 접수되었습니다.",
-        variant: "default",
+        title: '반출 신청 완료',
+        description: '반출 신청이 성공적으로 접수되었습니다.',
+        variant: 'default',
       } as any);
-      queryClient.invalidateQueries({ queryKey: ["checkouts"] });
-      router.push("/checkouts");
+      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
+      router.push('/checkouts');
     },
     onError: (error: any) => {
       toast({
-        title: "반출 신청 실패",
-        description: error?.message || "반출 신청 중 오류가 발생했습니다.",
-        variant: "destructive",
+        title: '반출 신청 실패',
+        description: error?.message || '반출 신청 중 오류가 발생했습니다.',
+        variant: 'destructive',
       } as any);
       console.error(error);
     },
@@ -73,65 +105,66 @@ export default function CreateCheckoutPage() {
 
   // 장비 선택 처리
   const handleAddEquipment = (equipment: Equipment) => {
-    if (!selectedEquipments.some(e => e.id === equipment.id)) {
+    if (!selectedEquipments.some((e) => e.id === equipment.id)) {
       setSelectedEquipments([...selectedEquipments, equipment]);
     }
   };
 
   // 장비 제거 처리
-  const handleRemoveEquipment = (equipmentId: string) => {
-    setSelectedEquipments(selectedEquipments.filter(e => e.id !== equipmentId));
+  const handleRemoveEquipment = (equipmentId: string | number) => {
+    setSelectedEquipments(selectedEquipments.filter((e) => String(e.id) !== String(equipmentId)));
   };
 
   // 반출 신청 제출 처리
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (selectedEquipments.length === 0) {
       toast({
-        title: "장비를 선택해주세요",
-        description: "최소 1개 이상의 장비를 선택해야 합니다.",
-        variant: "destructive",
+        title: '장비를 선택해주세요',
+        description: '최소 1개 이상의 장비를 선택해야 합니다.',
+        variant: 'destructive',
       } as any);
       return;
     }
 
-    if (!location) {
+    if (!destination) {
       toast({
-        title: "반출지를 선택해주세요",
-        description: "장비가 반출될 장소를 선택해주세요.",
-        variant: "destructive",
+        title: '반출지를 입력해주세요',
+        description: '장비가 반출될 장소를 입력해주세요.',
+        variant: 'destructive',
       } as any);
       return;
     }
 
-    if (!contactNumber) {
+    if (!reason || !reason.trim()) {
       toast({
-        title: "연락처를 입력해주세요",
-        description: "반출 기간 동안 연락 가능한 번호를 입력해주세요.",
-        variant: "destructive",
+        title: '반출 사유를 입력해주세요',
+        description: '반출 사유는 필수입니다.',
+        variant: 'destructive',
       } as any);
       return;
     }
 
     if (!purpose) {
       toast({
-        title: "용도를 입력해주세요",
-        description: "장비 반출 용도를 간략히 입력해주세요.",
-        variant: "destructive",
+        title: '반출 목적을 선택해주세요',
+        description: '장비 반출 목적을 선택해주세요.',
+        variant: 'destructive',
       } as any);
       return;
     }
 
-    // 반출 신청 데이터 생성
+    // ✅ 백엔드 API에 맞게 수정
     const checkoutData: CreateCheckoutDto = {
-      equipmentIds: selectedEquipments.map(e => e.id),
-      location: location === "other" ? customLocation : location,
-      contactNumber,
-      purpose,
-      startDate: startDate.toISOString(),
-      expectedReturnDate: expectedReturnDate.toISOString(),
-      notes,
+      equipmentIds: selectedEquipments.map((e) => String(e.id)),
+      destination: destination === 'other' ? customDestination : destination, // ✅ 필드명 변경 (location → destination)
+      phoneNumber: phoneNumber || undefined, // ✅ 필드명 변경 (contactNumber → phoneNumber), 선택 필드
+      address: address || undefined, // ✅ address 필드 추가
+      purpose, // ✅ CheckoutPurpose (calibration, repair, external_rental)
+      reason: reason.trim(), // ✅ 필수 필드
+      expectedReturnDate: expectedReturnDate.toISOString(), // ISO 형식
+      // startDate는 백엔드에서 자동 설정되므로 보내지 않음
     };
 
     // 반출 신청 제출
@@ -145,7 +178,7 @@ export default function CreateCheckoutPage() {
           <h1 className="text-3xl font-bold tracking-tight">장비 반출 신청</h1>
           <p className="text-muted-foreground">사용할 장비를 선택하고 반출 정보를 입력하세요.</p>
         </div>
-        <Button variant="outline" onClick={() => router.push("/checkouts")}>
+        <Button variant="outline" onClick={() => router.push('/checkouts')}>
           반출 목록으로 돌아가기
         </Button>
       </div>
@@ -201,7 +234,7 @@ export default function CreateCheckoutPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleAddEquipment(equipment)}
-                              disabled={selectedEquipments.some(e => e.id === equipment.id)}
+                              disabled={selectedEquipments.some((e) => e.id === equipment.id)}
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
@@ -219,13 +252,22 @@ export default function CreateCheckoutPage() {
                   <p className="text-sm text-muted-foreground">선택된 장비가 없습니다.</p>
                 ) : (
                   <div className="space-y-2">
-                    {selectedEquipments.map(equipment => (
-                      <div key={equipment.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                    {selectedEquipments.map((equipment) => (
+                      <div
+                        key={equipment.id}
+                        className="flex items-center justify-between p-2 bg-muted rounded-md"
+                      >
                         <div>
                           <p className="font-medium">{equipment.name}</p>
-                          <p className="text-xs text-muted-foreground">{equipment.managementNumber}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {equipment.managementNumber}
+                          </p>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleRemoveEquipment(equipment.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveEquipment(equipment.id)}
+                        >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
@@ -245,105 +287,111 @@ export default function CreateCheckoutPage() {
           </CardHeader>
           <CardContent>
             <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location">반출지</Label>
-                  <Select value={location} onValueChange={setLocation}>
-                    <SelectTrigger id="location">
-                      <div className="flex items-center">
-                        <MapPin className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="반출 장소 선택" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="customer">고객사</SelectItem>
-                      <SelectItem value="partner">협력사</SelectItem>
-                      <SelectItem value="branch">지사</SelectItem>
-                      <SelectItem value="exhibition">전시회</SelectItem>
-                      <SelectItem value="other">기타</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {location === "other" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="customLocation">기타 반출지 상세</Label>
-                    <Input
-                      id="customLocation"
-                      placeholder="반출지 상세 정보 입력"
-                      value={customLocation}
-                      onChange={(e) => setCustomLocation(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="contactNumber">연락처</Label>
-                  <Input
-                    id="contactNumber"
-                    placeholder="반출 기간 동안 연락 가능한 번호"
-                    value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
-                  />
-                </div>
-              </div>
-
+              {/* ✅ 반출 목적 선택 (필수) */}
               <div className="space-y-2">
-                <Label htmlFor="purpose">반출 용도</Label>
-                <Input
-                  id="purpose"
-                  placeholder="장비 반출 용도를 간략히 입력하세요"
+                <Label htmlFor="purpose">
+                  반출 목적 <span className="text-red-500">*</span>
+                </Label>
+                <Select
                   value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
+                  onValueChange={(value) =>
+                    setPurpose(value as 'calibration' | 'repair' | 'external_rental')
+                  }
+                >
+                  <SelectTrigger id="purpose">
+                    <SelectValue placeholder="반출 목적을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="calibration">교정</SelectItem>
+                    <SelectItem value="repair">수리</SelectItem>
+                    <SelectItem value="external_rental">외부 대여</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* ✅ 반출지 입력 (필수) */}
+              <div className="space-y-2">
+                <Label htmlFor="destination">
+                  반출 장소 <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="destination"
+                  placeholder="반출 장소를 입력하세요 (예: 교정기관 ABC)"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* ✅ 반출 사유 입력 (필수) */}
+              <div className="space-y-2">
+                <Label htmlFor="reason">
+                  반출 사유 <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="reason"
+                  placeholder="반출 사유를 상세히 입력하세요"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  required
+                  rows={3}
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ✅ 연락처 (선택) */}
                 <div className="space-y-2">
-                  <Label>반출일</Label>
-                  <DatePicker
-                    selected={startDate}
-                    onSelect={(date) => date && setStartDate(date)}
-                    disabled={(date) => date < new Date()}
+                  <Label htmlFor="phoneNumber">연락처</Label>
+                  <Input
+                    id="phoneNumber"
+                    placeholder="반출 기간 동안 연락 가능한 번호"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                   />
                 </div>
 
+                {/* ✅ 주소 (선택) */}
                 <div className="space-y-2">
-                  <Label>반입 예정일</Label>
-                  <DatePicker
-                    selected={expectedReturnDate}
-                    onSelect={(date) => date && setExpectedReturnDate(date)}
-                    disabled={(date) => date <= startDate}
+                  <Label htmlFor="address">주소</Label>
+                  <Input
+                    id="address"
+                    placeholder="반출 장소의 상세 주소"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
                   />
                 </div>
               </div>
 
+              {/* ✅ 반입 예정일 (필수) - startDate는 백엔드에서 자동 설정 */}
               <div className="space-y-2">
-                <Label htmlFor="notes">비고</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="추가 참고사항이 있으면 입력하세요"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
+                <Label htmlFor="expectedReturnDate">
+                  반입 예정일 <span className="text-red-500">*</span>
+                </Label>
+                <DatePicker
+                  selected={expectedReturnDate}
+                  onSelect={(date) => date && setExpectedReturnDate(date)}
+                  disabled={(date) => date <= new Date()} // 오늘 이후만 선택 가능
                 />
+                <p className="text-xs text-muted-foreground">
+                  반출일은 반출 시작 시점에 자동으로 설정됩니다.
+                </p>
               </div>
             </form>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.push("/checkouts")}>
+            <Button type="button" variant="outline" onClick={() => router.push('/checkouts')}>
               취소
             </Button>
-            <Button 
-              type="submit" 
-              form="checkout-form" 
+            <Button
+              type="submit"
+              form="checkout-form"
               disabled={createCheckoutMutation.isPending || selectedEquipments.length === 0}
             >
-              {createCheckoutMutation.isPending ? "처리 중..." : "반출 신청"}
+              {createCheckoutMutation.isPending ? '처리 중...' : '반출 신청'}
             </Button>
           </CardFooter>
         </Card>
       </div>
     </div>
   );
-} 
+}

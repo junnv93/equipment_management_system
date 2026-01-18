@@ -22,7 +22,7 @@ const generateRandomString = (length = 8) => {
 describe('UsersService', () => {
   let service: UsersService;
   let moduleRef: TestingModule;
-  let testUsers: any[] = [];
+  const testUsers: any[] = [];
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
@@ -62,7 +62,7 @@ describe('UsersService', () => {
         email: `test.user.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Test User',
-        role: UserRoleEnum.USER,
+        role: UserRoleEnum.TEST_OPERATOR,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -84,7 +84,7 @@ describe('UsersService', () => {
         email: `test.user.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Duplicate User',
-        role: UserRoleEnum.USER,
+        role: UserRoleEnum.TEST_OPERATOR,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -94,9 +94,11 @@ describe('UsersService', () => {
       testUsers.push(firstUser);
 
       // 동일한 이메일로 다시 생성 시도
-      await expect(service.create({
-        ...createUserDto
-      } as any)).rejects.toThrow();
+      await expect(
+        service.create({
+          ...createUserDto,
+        } as any)
+      ).rejects.toThrow();
     });
   });
 
@@ -109,7 +111,7 @@ describe('UsersService', () => {
       };
 
       const result = await service.findAll(query);
-      
+
       expect(result).toBeDefined();
       expect(result.items).toBeDefined();
       expect(Array.isArray(result.items)).toBe(true);
@@ -124,7 +126,7 @@ describe('UsersService', () => {
         email: `unique.${uniqueString}@example.com`,
         password: 'Password123!',
         name: `Unique User ${uniqueString}`,
-        role: UserRoleEnum.USER,
+        role: UserRoleEnum.TEST_OPERATOR,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -141,9 +143,9 @@ describe('UsersService', () => {
       };
 
       const result = await service.findAll(query);
-      
+
       expect(result.items.length).toBeGreaterThan(0);
-      expect(result.items.some(user => user.id === createdUser.id)).toBe(true);
+      expect(result.items.some((user) => user.id === createdUser.id)).toBe(true);
     });
   });
 
@@ -154,7 +156,7 @@ describe('UsersService', () => {
         email: `findone.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'FindOne Test User',
-        role: UserRoleEnum.USER,
+        role: UserRoleEnum.TEST_OPERATOR,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -165,7 +167,7 @@ describe('UsersService', () => {
 
       // ID로 사용자 조회
       const foundUser = await service.findOne(createdUser.id);
-      
+
       expect(foundUser).toBeDefined();
       expect(foundUser.id).toBe(createdUser.id);
       expect(foundUser.email).toBe(createUserDto.email);
@@ -175,7 +177,7 @@ describe('UsersService', () => {
     it('should throw an error for non-existent user', async () => {
       // 존재하지 않는 ID로 조회
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
-      
+
       await expect(service.findOne(nonExistentId)).rejects.toThrow();
     });
   });
@@ -187,7 +189,7 @@ describe('UsersService', () => {
         email: `update.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Update Test User',
-        role: UserRoleEnum.USER,
+        role: UserRoleEnum.TEST_OPERATOR,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -204,7 +206,7 @@ describe('UsersService', () => {
       };
 
       const updatedUser = await service.update(createdUser.id, updateUserDto);
-      
+
       expect(updatedUser).toBeDefined();
       expect(updatedUser.id).toBe(createdUser.id);
       expect(updatedUser.name).toBe(updateUserDto.name);
@@ -221,7 +223,7 @@ describe('UsersService', () => {
         email: `remove.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Remove Test User',
-        role: UserRoleEnum.USER,
+        role: UserRoleEnum.TEST_OPERATOR,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -231,7 +233,7 @@ describe('UsersService', () => {
 
       // 사용자 삭제
       await service.remove(createdUser.id);
-      
+
       // 삭제된 사용자를 조회하면 오류가 발생해야 함
       await expect(service.findOne(createdUser.id)).rejects.toThrow();
     });
@@ -245,7 +247,7 @@ describe('UsersService', () => {
         email,
         password: 'Password123!',
         name: 'FindEmail Test User',
-        role: UserRoleEnum.USER,
+        role: UserRoleEnum.TEST_OPERATOR,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -256,7 +258,7 @@ describe('UsersService', () => {
 
       // 이메일로 사용자 조회
       const foundUser = await service.findByEmail(email);
-      
+
       expect(foundUser).toBeDefined();
       expect(foundUser.id).toBe(createdUser.id);
       expect(foundUser.email).toBe(email);
@@ -265,9 +267,9 @@ describe('UsersService', () => {
     it('should return null for non-existent email', async () => {
       // 존재하지 않는 이메일로 조회
       const nonExistentEmail = `nonexistent.${generateRandomString()}@example.com`;
-      
+
       const result = await service.findByEmail(nonExistentEmail);
       expect(result).toBeNull();
     });
   });
-}); 
+});

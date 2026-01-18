@@ -1,108 +1,96 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, CalendarIcon, Info, Search } from "lucide-react";
-import { format, addDays } from "date-fns";
-import { ko } from "date-fns/locale";
-import equipmentApi from "@/lib/api/equipment-api";
-import rentalApi, { CreateRentalDto } from "@/lib/api/rental-api";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
+import { useToast } from '@/components/ui/use-toast';
+import { ArrowLeft, Info } from 'lucide-react';
+import { addDays } from 'date-fns';
+import { EquipmentSelector } from '@/components/shared/EquipmentSelector';
+import { useEquipment } from '@/hooks/use-equipment';
+import { useFormSubmission } from '@/hooks/use-form-submission';
+import rentalApi, { CreateRentalDto } from '@/lib/api/rental-api';
 
 export default function CreateRentalPage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+
   // 상태 관리
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date>(addDays(new Date(), 7));
-  const [purpose, setPurpose] = useState("");
-  const [notes, setNotes] = useState("");
-  
-  // 장비 목록 가져오기
-  const { data: equipmentData, isLoading: equipmentLoading } = useQuery({
-    queryKey: ["equipment", searchTerm],
-    queryFn: async () => {
-      return equipmentApi.getEquipmentList({
-        status: "available", // 사용 가능한 장비만 조회
-        search: searchTerm || undefined,
-        pageSize: 100
-      });
-    },
-  });
-  
-  // 선택된 장비 정보 가져오기
-  const { data: selectedEquipment, isLoading: selectedEquipmentLoading } = useQuery({
-    queryKey: ["equipment", selectedEquipmentId],
-    queryFn: () => equipmentApi.getEquipment(selectedEquipmentId!),
-    enabled: !!selectedEquipmentId,
-  });
-  
-  // 대여 신청 뮤테이션
-  const createRentalMutation = useMutation({
+  const [purpose, setPurpose] = useState('');
+  const [notes, setNotes] = useState('');
+
+  // 선택된 장비 정보 조회 (공통 훅 사용)
+  const { data: selectedEquipment, isLoading: selectedEquipmentLoading } = useEquipment(
+    selectedEquipmentId || ''
+  );
+
+  // 대여 신청 뮤테이션 (공통 훅 사용)
+  const createRentalMutation = useFormSubmission({
     mutationFn: (data: CreateRentalDto) => rentalApi.createRental(data),
-    onSuccess: () => {
-      toast({
-        title: "대여 신청 완료",
-        description: "대여 신청이 성공적으로 접수되었습니다.",
-      } as any);
-      queryClient.invalidateQueries({ queryKey: ["rentals"] });
-      router.push("/rentals");
+    invalidateQueries: [['rentals']],
+    redirectPath: '/rentals',
+    successMessage: {
+      title: '대여 신청 완료',
+      description: '대여 신청이 성공적으로 접수되었습니다.',
     },
-    onError: (error: any) => {
-      toast({
-        title: "대여 신청 실패",
-        description: error?.message || "대여 신청 중 오류가 발생했습니다.",
-        variant: "destructive",
-      } as any);
-      console.error(error);
+    errorMessage: {
+      title: '대여 신청 실패',
+      description: '대여 신청 중 오류가 발생했습니다.',
     },
   });
-  
+
   // 대여 신청 핸들러
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // 유효성 검사
     if (!selectedEquipmentId) {
       toast({
-        title: "장비 선택 필요",
-        description: "대여할 장비를 선택해주세요.",
-        variant: "destructive",
-      } as any);
+        title: '장비 선택 필요',
+        description: '대여할 장비를 선택해주세요.',
+        variant: 'destructive',
+      });
       return;
     }
-    
+
     if (!purpose.trim()) {
       toast({
-        title: "대여 목적 필요",
-        description: "대여 목적을 입력해주세요.",
-        variant: "destructive",
-      } as any);
+        title: '대여 목적 필요',
+        description: '대여 목적을 입력해주세요.',
+        variant: 'destructive',
+      });
       return;
     }
-    
+
+    // ✅ API_STANDARDS 준수: ISO 형식, 필드명 일치
     const rentalData: CreateRentalDto = {
       equipmentId: selectedEquipmentId,
-      startDate: format(startDate, "yyyy-MM-dd"),
-      expectedReturnDate: format(endDate, "yyyy-MM-dd"),
-      purpose,
+      startDate: startDate.toISOString(),
+      expectedEndDate: endDate.toISOString(),
+      purpose: purpose.trim(),
       notes: notes.trim() || undefined,
+      // userId는 서버에서 JWT에서 자동으로 가져오므로 보내지 않음
     };
-    
+
     createRentalMutation.mutate(rentalData);
   };
-  
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex items-center mb-6">
@@ -115,57 +103,18 @@ export default function CreateRentalPage() {
           <p className="text-muted-foreground">필요한 장비를 검색하고 대여 신청서를 작성하세요.</p>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 장비 검색 및 선택 */}
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle>장비 선택</CardTitle>
-            <CardDescription>대여할 장비를 검색하고 선택하세요.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="장비명, 관리번호 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 mb-4"
-              />
-            </div>
-            
-            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {equipmentLoading ? (
-                <div className="text-center py-8">로딩 중...</div>
-              ) : equipmentData?.data?.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  검색 결과가 없습니다.
-                </div>
-              ) : (
-                equipmentData?.data?.map((equipment) => (
-                  <div
-                    key={equipment.id}
-                    className={`p-3 border rounded-md cursor-pointer transition-colors ${
-                      selectedEquipmentId === equipment.id
-                        ? "border-primary bg-primary/5"
-                        : "hover:bg-muted/50"
-                    }`}
-                    onClick={() => setSelectedEquipmentId(equipment.id)}
-                  >
-                    <div className="font-medium">{equipment.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      관리번호: {equipment.managementNumber}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      위치: {equipment.location || "정보 없음"}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        
+        {/* 장비 검색 및 선택 (공통 컴포넌트 사용) */}
+        <div className="md:col-span-1">
+          <EquipmentSelector
+            selectedEquipmentId={selectedEquipmentId}
+            onSelect={setSelectedEquipmentId}
+            statusFilter="available"
+            maxHeight="400px"
+          />
+        </div>
+
         {/* 대여 신청 폼 */}
         <Card className="md:col-span-2">
           <CardHeader>
@@ -183,7 +132,7 @@ export default function CreateRentalPage() {
                       <div className="font-medium">선택된 장비</div>
                       <div className="text-muted-foreground">
                         {selectedEquipmentLoading
-                          ? "정보를 불러오는 중..."
+                          ? '정보를 불러오는 중...'
                           : `${selectedEquipment?.name} (관리번호: ${selectedEquipment?.managementNumber})`}
                       </div>
                     </div>
@@ -202,27 +151,27 @@ export default function CreateRentalPage() {
                   </div>
                 </div>
               )}
-              
+
               {/* 대여 기간 설정 */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">대여 시작일</Label>
-                  <DatePicker 
-                    selected={startDate} 
-                    onSelect={(date) => date && setStartDate(date)} 
+                  <DatePicker
+                    selected={startDate}
+                    onSelect={(date) => date && setStartDate(date)}
                     disabled={(date) => date < new Date()}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">반납 예정일</Label>
-                  <DatePicker 
-                    selected={endDate} 
+                  <DatePicker
+                    selected={endDate}
                     onSelect={(date) => date && setEndDate(date)}
-                    disabled={(date) => date < startDate} 
+                    disabled={(date) => date < startDate}
                   />
                 </div>
               </div>
-              
+
               {/* 대여 목적 */}
               <div className="space-y-2">
                 <Label htmlFor="purpose">대여 목적</Label>
@@ -234,7 +183,7 @@ export default function CreateRentalPage() {
                   placeholder="장비를 대여하는 목적을 입력하세요"
                 />
               </div>
-              
+
               {/* 추가 메모 */}
               <div className="space-y-2">
                 <Label htmlFor="notes">추가 메모</Label>
@@ -252,16 +201,16 @@ export default function CreateRentalPage() {
             <Button variant="outline" onClick={() => router.back()}>
               취소
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               onClick={handleSubmit}
               disabled={!selectedEquipmentId || !purpose.trim() || createRentalMutation.isPending}
             >
-              {createRentalMutation.isPending ? "처리 중..." : "대여 신청"}
+              {createRentalMutation.isPending ? '처리 중...' : '대여 신청'}
             </Button>
           </CardFooter>
         </Card>
       </div>
     </div>
   );
-} 
+}

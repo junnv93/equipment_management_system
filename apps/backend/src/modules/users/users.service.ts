@@ -9,18 +9,18 @@ const users: User[] = [
     id: '550e8400-e29b-41d4-a716-446655440000',
     email: 'admin@example.com',
     name: '관리자',
-    role: 'admin',
+    role: 'site_admin',
     isActive: true,
     equipmentCount: 0,
     rentalsCount: 0,
     createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-01-01')
+    updatedAt: new Date('2023-01-01'),
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440001',
     email: 'manager@example.com',
     name: 'RF팀 관리자',
-    role: 'manager',
+    role: 'technical_manager',
     teamId: 'rf',
     department: '연구개발부',
     position: '팀장',
@@ -29,13 +29,13 @@ const users: User[] = [
     equipmentCount: 5,
     rentalsCount: 2,
     createdAt: new Date('2023-01-02'),
-    updatedAt: new Date('2023-02-15')
+    updatedAt: new Date('2023-02-15'),
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440002',
     email: 'user1@example.com',
     name: '김사용',
-    role: 'user',
+    role: 'test_operator',
     teamId: 'rf',
     department: '연구개발부',
     position: '연구원',
@@ -44,13 +44,13 @@ const users: User[] = [
     equipmentCount: 3,
     rentalsCount: 1,
     createdAt: new Date('2023-01-03'),
-    updatedAt: new Date('2023-03-10')
+    updatedAt: new Date('2023-03-10'),
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440003',
     email: 'user2@example.com',
     name: '이테스터',
-    role: 'user',
+    role: 'test_operator',
     teamId: 'sar',
     department: '연구개발부',
     position: '선임연구원',
@@ -59,13 +59,13 @@ const users: User[] = [
     equipmentCount: 2,
     rentalsCount: 0,
     createdAt: new Date('2023-01-04'),
-    updatedAt: new Date('2023-02-20')
+    updatedAt: new Date('2023-02-20'),
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440004',
     email: 'inactive@example.com',
     name: '퇴사자',
-    role: 'user',
+    role: 'test_operator',
     teamId: 'emc',
     department: '연구개발부',
     position: '연구원',
@@ -73,75 +73,71 @@ const users: User[] = [
     equipmentCount: 0,
     rentalsCount: 0,
     createdAt: new Date('2023-01-05'),
-    updatedAt: new Date('2023-04-15')
-  }
+    updatedAt: new Date('2023-04-15'),
+  },
 ];
 
 @Injectable()
 export class UsersService {
   async findAll(query: UserQueryDto): Promise<UserListResponse> {
     let filteredUsers = [...users];
-    
+
     // 이메일 필터링
     if (query.email) {
-      filteredUsers = filteredUsers.filter(user => 
+      filteredUsers = filteredUsers.filter((user) =>
         user.email.toLowerCase().includes(query.email.toLowerCase())
       );
     }
-    
+
     // 이름 필터링
     if (query.name) {
-      filteredUsers = filteredUsers.filter(user => 
+      filteredUsers = filteredUsers.filter((user) =>
         user.name.toLowerCase().includes(query.name.toLowerCase())
       );
     }
-    
+
     // 역할 필터링
     if (query.roles) {
       const roles = query.roles.split(',');
-      filteredUsers = filteredUsers.filter(user => 
-        roles.includes(user.role)
-      );
+      filteredUsers = filteredUsers.filter((user) => roles.includes(user.role));
     }
-    
+
     // 팀 필터링
     if (query.teams) {
       const teams = query.teams.split(',');
-      filteredUsers = filteredUsers.filter(user => 
-        user.teamId && teams.includes(user.teamId)
-      );
+      filteredUsers = filteredUsers.filter((user) => user.teamId && teams.includes(user.teamId));
     }
-    
+
     // 부서 필터링
     if (query.department) {
-      filteredUsers = filteredUsers.filter(user => 
-        user.department && user.department.toLowerCase().includes(query.department.toLowerCase())
+      filteredUsers = filteredUsers.filter(
+        (user) =>
+          user.department && user.department.toLowerCase().includes(query.department.toLowerCase())
       );
     }
-    
+
     // 활성 상태 필터링
     if (query.isActive !== undefined) {
-      filteredUsers = filteredUsers.filter(user => 
-        user.isActive === query.isActive
-      );
+      filteredUsers = filteredUsers.filter((user) => user.isActive === query.isActive);
     }
-    
+
     // 검색어 필터링
     if (query.search) {
       const searchLowerCase = query.search.toLowerCase();
-      filteredUsers = filteredUsers.filter(user =>
-        user.name.toLowerCase().includes(searchLowerCase) ||
-        user.email.toLowerCase().includes(searchLowerCase) ||
-        (user.position && user.position.toLowerCase().includes(searchLowerCase)) ||
-        (user.department && user.department.toLowerCase().includes(searchLowerCase))
+      filteredUsers = filteredUsers.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchLowerCase) ||
+          user.email.toLowerCase().includes(searchLowerCase) ||
+          (user.position && user.position.toLowerCase().includes(searchLowerCase)) ||
+          (user.department && user.department.toLowerCase().includes(searchLowerCase))
       );
     }
-    
+
     // 정렬
     if (query.sort) {
       const [field, direction] = query.sort.split('.');
       const sortDir = direction === 'desc' ? -1 : 1;
-      
+
       filteredUsers.sort((a, b) => {
         if (a[field] < b[field]) return -1 * sortDir;
         if (a[field] > b[field]) return 1 * sortDir;
@@ -151,32 +147,32 @@ export class UsersService {
       // 기본 정렬: 이름 오름차순
       filteredUsers.sort((a, b) => a.name.localeCompare(b.name));
     }
-    
+
     // 페이지네이션
     const page = query.page || 1;
     const pageSize = query.pageSize || 20;
     const total = filteredUsers.length;
     const totalPages = Math.ceil(total / pageSize);
     const skip = (page - 1) * pageSize;
-    
+
     const items = filteredUsers.slice(skip, skip + pageSize);
-    
+
     return {
       items,
       total,
       page,
       pageSize,
-      totalPages
+      totalPages,
     };
   }
 
   async findOne(id: string): Promise<User | null> {
-    const user = users.find(user => user.id === id);
+    const user = users.find((user) => user.id === id);
     return user || null;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const user = users.find(user => user.email.toLowerCase() === email.toLowerCase());
+    const user = users.find((user) => user.email.toLowerCase() === email.toLowerCase());
     return user || null;
   }
 
@@ -186,7 +182,7 @@ export class UsersService {
     if (existingUser) {
       throw new BadRequestException(`이메일 '${createUserDto.email}'는 이미 사용 중입니다.`);
     }
-    
+
     const now = new Date();
     const user = {
       id: createUserDto.id || randomUUID(),
@@ -194,54 +190,54 @@ export class UsersService {
       equipmentCount: 0,
       rentalsCount: 0,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     } as User;
-    
+
     users.push(user);
     return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
-    const userIndex = users.findIndex(user => user.id === id);
+    const userIndex = users.findIndex((user) => user.id === id);
     if (userIndex === -1) {
       return null;
     }
-    
+
     const updatedUser = {
       ...users[userIndex],
       ...updateUserDto,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     } as User;
-    
+
     users[userIndex] = updatedUser;
     return updatedUser;
   }
 
   async remove(id: string): Promise<boolean> {
-    const userIndex = users.findIndex(user => user.id === id);
+    const userIndex = users.findIndex((user) => user.id === id);
     if (userIndex === -1) {
       return false;
     }
-    
+
     // 실제 시스템에서는 사용자가 소유한 장비나 대여 기록이 있는지 확인 필요
     // 여기서는 임시로 삭제만 수행
     users.splice(userIndex, 1);
     return true;
   }
-  
+
   // 사용자 활성/비활성화
   async toggleActive(id: string, isActive: boolean): Promise<User | null> {
-    const userIndex = users.findIndex(user => user.id === id);
+    const userIndex = users.findIndex((user) => user.id === id);
     if (userIndex === -1) {
       return null;
     }
-    
+
     const updatedUser = {
       ...users[userIndex],
       isActive,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     } as User;
-    
+
     users[userIndex] = updatedUser;
     return updatedUser;
   }
@@ -279,11 +275,11 @@ export class UsersService {
     ];
 
     // 해당 사용자의 권한 필터링 (실제로는 역할에 따라 권한 매핑)
-    return { 
-      userId: id, 
-      username: user.name, 
+    return {
+      userId: id,
+      username: user.name,
       role: user.role,
-      permissions
+      permissions,
     };
   }
 
@@ -293,20 +289,20 @@ export class UsersService {
     if (!user) {
       return null;
     }
-    
+
     // 임시 비밀번호 생성 (8자리)
     const tempPassword = Math.random().toString(36).substring(2, 10);
-    
+
     // 실제로는 비밀번호 해싱 후 저장
     // await this.update(id, { password: hashedPassword });
-    
+
     // 이메일로 임시 비밀번호 발송 로직 (실제 구현 필요)
     console.log(`사용자 ${user.name}의 임시 비밀번호: ${tempPassword}`);
-    
+
     return {
       success: true,
       message: '임시 비밀번호가 생성되어 이메일로 발송되었습니다.',
-      tempPassword // 실제 프로덕션에서는 클라이언트에 반환하지 말고 이메일로만 전송해야 함
+      tempPassword, // 실제 프로덕션에서는 클라이언트에 반환하지 말고 이메일로만 전송해야 함
     };
   }
-} 
+}

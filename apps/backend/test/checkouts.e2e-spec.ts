@@ -23,6 +23,7 @@ describe('CheckoutsController (e2e)', () => {
   let accessToken: string;
   let createdCheckoutIds: string[] = [];
   let testEquipmentUuid: string;
+  let testApproverId: string; // ✅ UUID 형식의 승인자 ID
   const testUserEmail = 'admin@example.com';
   const testUserPassword = 'admin123';
 
@@ -65,6 +66,7 @@ describe('CheckoutsController (e2e)', () => {
         serialNumber: `SN-${Date.now()}`,
         status: 'available',
         location: 'Test Location',
+        site: 'suwon', // ✅ site 필드 추가 (필수)
       });
 
     if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {
@@ -75,6 +77,35 @@ describe('CheckoutsController (e2e)', () => {
         body: equipmentResponse.body,
       });
       throw new Error('Failed to create test equipment');
+    }
+
+    // ✅ 테스트용 승인자 ID 생성 (UUID 형식)
+    // 로그인 응답에서 사용자 ID를 가져오되, UUID 형식이 아니면 생성
+    const loginUserId = loginResponse.body.user?.id;
+    
+    // UUID 형식 검증 함수
+    const isValidUUID = (str: string): boolean => {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    };
+    
+    // UUID v4 형식 생성 함수
+    const generateUUID = (): string => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    };
+    
+    if (loginUserId && isValidUUID(loginUserId)) {
+      // 로그인 응답의 사용자 ID가 유효한 UUID 형식인 경우
+      testApproverId = loginUserId;
+    } else {
+      // UUID 형식이 아니거나 없는 경우, 테스트용 UUID 생성
+      testApproverId = generateUUID();
+      console.warn(
+        `⚠️  로그인 응답의 사용자 ID(${loginUserId || '없음'})가 UUID 형식이 아니어서 테스트용 UUID를 생성했습니다: ${testApproverId}`
+      );
     }
   });
 
@@ -121,9 +152,19 @@ describe('CheckoutsController (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/checkouts')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send(createCheckoutDto)
-        .expect(201);
+        .send(createCheckoutDto);
 
+      // 에러 발생 시 상세 정보 출력
+      if (response.status !== 201) {
+        console.error('Create checkout failed:', {
+          status: response.status,
+          body: response.body,
+          requestData: createCheckoutDto,
+          testEquipmentUuid,
+        });
+      }
+
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
       expect(response.body.status).toBe('pending');
       expect(response.body.purpose).toBe('calibration');
@@ -204,10 +245,20 @@ describe('CheckoutsController (e2e)', () => {
 
     it('should return 404 for non-existent checkout UUID', async () => {
       const fakeUuid = '00000000-0000-0000-0000-000000000000';
-      await request(app.getHttpServer())
+      const response = await request(app.getHttpServer())
         .get(`/checkouts/${fakeUuid}`)
-        .set('Authorization', `Bearer ${accessToken}`)
-        .expect(404);
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      // 에러 발생 시 상세 정보 출력
+      if (response.status !== 404) {
+        console.error('Get non-existent checkout failed:', {
+          status: response.status,
+          body: response.body,
+          fakeUuid,
+        });
+      }
+
+      expect(response.status).toBe(404);
     });
   });
 
@@ -234,13 +285,13 @@ describe('CheckoutsController (e2e)', () => {
           .patch(`/checkouts/${checkoutUuid}/approve-first`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: 'test-approver-id',
+            approverId: testApproverId,
           })
           .expect(200);
 
         // 내부 목적(calibration)은 1차 승인으로 최종 승인됨
         expect(approveResponse.body.status).toBe('final_approved');
-        expect(approveResponse.body.firstApproverId).toBe('test-approver-id');
+        expect(approveResponse.body.firstApproverId).toBe(testApproverId);
       }
     });
 
@@ -266,12 +317,12 @@ describe('CheckoutsController (e2e)', () => {
           .patch(`/checkouts/${checkoutUuid}/approve-first`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: 'test-first-approver-id',
+            approverId: testApproverId,
           })
           .expect(200);
 
         expect(approveResponse.body.status).toBe('first_approved');
-        expect(approveResponse.body.firstApproverId).toBe('test-first-approver-id');
+        expect(approveResponse.body.firstApproverId).toBe(testApproverId);
       }
     });
   });
@@ -299,7 +350,7 @@ describe('CheckoutsController (e2e)', () => {
           .patch(`/checkouts/${checkoutUuid}/approve-first`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: 'test-first-approver-id',
+            approverId: testApproverId,
           })
           .expect(200);
 
@@ -308,12 +359,12 @@ describe('CheckoutsController (e2e)', () => {
           .patch(`/checkouts/${checkoutUuid}/approve-final`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: 'test-final-approver-id',
+            approverId: testApproverId,
           })
           .expect(200);
 
         expect(finalApproveResponse.body.status).toBe('final_approved');
-        expect(finalApproveResponse.body.finalApproverId).toBe('test-final-approver-id');
+        expect(finalApproveResponse.body.finalApproverId).toBe(testApproverId);
       }
     });
   });
@@ -341,7 +392,7 @@ describe('CheckoutsController (e2e)', () => {
           .patch(`/checkouts/${checkoutUuid}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: 'test-approver-id',
+            approverId: testApproverId,
             reason: 'E2E 테스트를 위한 반려 사유',
           })
           .expect(200);
@@ -373,7 +424,7 @@ describe('CheckoutsController (e2e)', () => {
           .patch(`/checkouts/${checkoutUuid}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: 'test-approver-id',
+            approverId: testApproverId,
             // reason 필드 누락
           })
           .expect(400);
@@ -404,7 +455,7 @@ describe('CheckoutsController (e2e)', () => {
           .patch(`/checkouts/${checkoutUuid}/approve-first`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            approverId: 'test-approver-id',
+            approverId: testApproverId,
           })
           .expect(200);
 

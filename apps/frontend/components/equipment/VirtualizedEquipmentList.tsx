@@ -1,8 +1,8 @@
 'use client';
 
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { FixedSizeList as List } from 'react-window';
-import InfiniteLoader from 'react-window-infinite-loader';
+import { List } from 'react-window';
+import { InfiniteLoader } from 'react-window-infinite-loader';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -16,7 +16,7 @@ import Link from 'next/link';
 import dayjs from 'dayjs';
 import { Equipment } from '@/lib/api/equipment-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { AutoSizer } from 'react-virtualized-auto-sizer';
 
 // 아이템 높이 및 기타 상수 정의
 const ITEM_HEIGHT = 64; // 각 행의, 높이

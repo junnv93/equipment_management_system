@@ -5,7 +5,7 @@ import { Calendar, Views, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export function ReservationCalendar() {
   const t = useTranslations('reservations');
   const router = useRouter();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [view, setView] = useState(Views.MONTH);
   const [date, setDate] = useState(new Date());
@@ -43,9 +44,13 @@ export function ReservationCalendar() {
 
   useEffect(() => {
     if (error) {
-      toast.error('Failed to load reservations');
+      toast({
+        title: '오류',
+        description: '예약 목록을 불러오는데 실패했습니다.',
+        variant: 'destructive',
+      });
     }
-  }, [error]);
+  }, [error, toast]);
 
   // 예약 데이터를 캘린더 이벤트로 변환
   useEffect(() => {
@@ -68,7 +73,7 @@ export function ReservationCalendar() {
   // 이벤트 스타일 커스터마이징
   const eventStyleGetter = (event: CalendarEvent) => {
     let backgroundColor = '#3B82F6'; // 기본 파란색 (대기 중)
-    
+
     switch (event.status) {
       case ReservationStatus.APPROVED:
         backgroundColor = '#10B981'; // 초록색
@@ -179,9 +184,7 @@ export function ReservationCalendar() {
                 dayHeaderFormat: 'MM/DD ddd',
                 monthHeaderFormat: 'YYYY MMMM',
                 dayRangeHeaderFormat: ({ start, end }) =>
-                  `${moment(start).format('MMMM DD')} - ${moment(end).format(
-                    'MMMM DD, YYYY'
-                  )}`,
+                  `${moment(start).format('MMMM DD')} - ${moment(end).format('MMMM DD, YYYY')}`,
               }}
             />
           </div>
@@ -189,4 +192,4 @@ export function ReservationCalendar() {
       </CardContent>
     </Card>
   );
-} 
+}

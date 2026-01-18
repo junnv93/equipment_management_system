@@ -33,14 +33,28 @@ export function useAuth() {
     [isAuthenticated, session]
   );
 
-  // 관리자 권한 확인
+  // 시험소별 관리자 권한 확인
   const isAdmin = useCallback(() => {
-    return hasRole(['ADMIN', 'admin']);
+    return hasRole(['SITE_ADMIN', 'site_admin', 'ADMIN', 'admin']); // 하위 호환성 유지
   }, [hasRole]);
 
-  // 매니저 권한 확인
+  // 기술책임자 권한 확인
   const isManager = useCallback(() => {
-    return hasRole(['MANAGER', 'manager', 'ADMIN', 'admin']);
+    return hasRole([
+      'TECHNICAL_MANAGER',
+      'technical_manager',
+      'MANAGER',
+      'manager',
+      'SITE_ADMIN',
+      'site_admin',
+      'ADMIN',
+      'admin',
+    ]); // 하위 호환성 유지
+  }, [hasRole]);
+
+  // 시험실무자 권한 확인
+  const isTestOperator = useCallback(() => {
+    return hasRole(['TEST_OPERATOR', 'test_operator', 'USER', 'user']); // 하위 호환성 유지
   }, [hasRole]);
 
   // 로그아웃 함수
@@ -58,6 +72,7 @@ export function useAuth() {
     hasRole,
     isAdmin,
     isManager,
+    isTestOperator,
     logout,
   };
 }

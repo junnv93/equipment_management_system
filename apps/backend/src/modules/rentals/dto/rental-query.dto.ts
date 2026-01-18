@@ -1,6 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDate, IsEnum, IsISO8601, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsDate,
+  IsEnum,
+  IsISO8601,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import { RentalStatusEnum, RentalTypeEnum } from '@equipment-management/schemas';
 
 export class RentalQueryDto {
@@ -127,4 +137,4 @@ export class RentalQueryDto {
   @Max(100)
   @IsOptional()
   pageSize?: number;
-} 
+}

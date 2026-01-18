@@ -3,7 +3,7 @@
 // helmet 타입 정의
 declare module 'helmet' {
   import { RequestHandler } from 'express';
-  
+
   interface HelmetOptions {
     contentSecurityPolicy?: boolean | object;
     crossOriginEmbedderPolicy?: boolean | object;
@@ -21,34 +21,35 @@ declare module 'helmet' {
     referrerPolicy?: boolean | object;
     xssFilter?: boolean | object;
   }
-  
+
   function helmet(options?: HelmetOptions): RequestHandler;
-  
+
   export = helmet;
 }
 
 // cookie-parser 타입 정의
 declare module 'cookie-parser' {
   import { RequestHandler } from 'express';
-  
+
   function cookieParser(secret?: string | string[], options?: object): RequestHandler;
-  
+
   export = cookieParser;
 }
 
 // compression 타입 정의
 declare module 'compression' {
+  import { Request, Response } from 'express';
   import { RequestHandler } from 'express';
-  
+
   interface CompressionOptions {
-    filter?: Function;
+    filter?: (req: Request, res: Response) => boolean;
     threshold?: number;
     level?: number;
     chunkSize?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   }
-  
+
   function compression(options?: CompressionOptions): RequestHandler;
-  
+
   export = compression;
-} 
+}

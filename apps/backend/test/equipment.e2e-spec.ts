@@ -111,6 +111,7 @@ describe('EquipmentController (e2e)', () => {
         name: `Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
         managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
         status: 'available',
+        site: 'suwon', // ✅ site 필드 추가 (필수)
       };
 
       const response = await request(app.getHttpServer())
@@ -164,6 +165,7 @@ describe('EquipmentController (e2e)', () => {
         mainFeatures: 'Test Features',
         technicalManager: 'Test Manager',
         status: 'available',
+        site: 'suwon', // ✅ site 필드 추가 (필수)
       };
 
       const response = await request(app.getHttpServer())
@@ -202,6 +204,7 @@ describe('EquipmentController (e2e)', () => {
         name: `Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
         managementNumber,
         status: 'available',
+        site: 'suwon', // ✅ site 필드 추가 (필수)
       };
 
       // 첫 번째 장비 생성
@@ -339,6 +342,7 @@ describe('EquipmentController (e2e)', () => {
           name: `Get Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
+          site: 'suwon', // ✅ site 필드 추가 (필수)
         })
         .expect(201);
 
@@ -382,6 +386,7 @@ describe('EquipmentController (e2e)', () => {
           name: `Update Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
+          site: 'suwon', // ✅ site 필드 추가 (필수)
         })
         .expect(201);
 
@@ -418,6 +423,7 @@ describe('EquipmentController (e2e)', () => {
           name: `Calibration Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
+          site: 'suwon', // ✅ site 필드 추가 (필수)
         })
         .expect(201);
 
@@ -454,6 +460,7 @@ describe('EquipmentController (e2e)', () => {
           name: `Invalid Update Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
+          site: 'suwon', // ✅ site 필드 추가 (필수)
         })
         .expect(201);
 
@@ -507,6 +514,7 @@ describe('EquipmentController (e2e)', () => {
           name: `Delete Test Equipment ${crypto.randomBytes(4).toString('hex')}`,
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
+          site: 'suwon', // ✅ site 필드 추가 (필수)
         })
         .expect(201);
 
@@ -549,6 +557,7 @@ describe('EquipmentController (e2e)', () => {
         manufacturer: 'CRUD Manufacturer',
         location: 'CRUD Location',
         status: 'available',
+        site: 'suwon', // ✅ site 필드 추가 (필수)
       };
 
       const createResponse = await request(app.getHttpServer())

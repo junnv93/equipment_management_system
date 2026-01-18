@@ -7,4 +7,4 @@ import { CalibrationController } from './calibration.controller';
   providers: [CalibrationService],
   exports: [CalibrationService],
 })
-export class CalibrationModule {} 
+export class CalibrationModule {}

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { EquipmentForm } from '@/components/equipment/EquipmentForm';
 import { useCreateEquipment } from '@/hooks/use-equipment';
-import { CreateEquipmentInput } from '@equipment-management/schemas';
+import { CreateEquipmentInput, UpdateEquipmentInput } from '@equipment-management/schemas';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,16 @@ export default function CreateEquipmentPage() {
   const router = useRouter();
   const createEquipment = useCreateEquipment();
 
-  const handleSubmit = async (data: CreateEquipmentInput) => {
+  const handleSubmit = async (
+    data: CreateEquipmentInput | UpdateEquipmentInput,
+    files?: Array<{ file: File }>
+  ): Promise<void> => {
     try {
-      await createEquipment.mutateAsync(data);
+      const fileList = files?.map((f) => f.file);
+      await createEquipment.mutateAsync({
+        data: data as CreateEquipmentInput,
+        files: fileList,
+      });
       router.push('/equipment');
     } catch (error) {
       // 에러는 훅에서 처리됨

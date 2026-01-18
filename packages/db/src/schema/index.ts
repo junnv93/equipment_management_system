@@ -5,3 +5,5 @@ export * from './users';
 export * from './loans';
 export * from './checkouts';
 export * from './calibrations';
+export * from './equipment-requests';
+export * from './equipment-attachments';

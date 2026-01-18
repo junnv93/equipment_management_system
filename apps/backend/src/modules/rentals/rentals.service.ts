@@ -18,6 +18,8 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { EquipmentService } from '../equipment/equipment.service';
+import { TeamsService } from '../teams/teams.service';
+import { ForbiddenException } from '@nestjs/common';
 // Drizzle에서 자동 추론되는 타입 사용
 type Loan = typeof loans.$inferSelect;
 
@@ -69,7 +71,8 @@ export class RentalsService {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly cacheService: SimpleCacheService,
-    private readonly equipmentService: EquipmentService
+    private readonly equipmentService: EquipmentService,
+    private readonly teamsService: TeamsService
   ) {}
 
   /**
@@ -311,6 +314,7 @@ export class RentalsService {
   /**
    * UUID로 대여 조회
    * API 표준: 모든 리소스 식별자는 uuid로 통일
+   * ✅ 일관성: db.select()를 사용하여 다른 쿼리와 동일한 패턴 유지
    */
   async findOne(uuid: string): Promise<Loan> {
     const cacheKey = this.buildCacheKey('detail', { uuid });
@@ -319,9 +323,8 @@ export class RentalsService {
       cacheKey,
       async () => {
         try {
-          const loan = await this.db.query.loans.findFirst({
-            where: eq(loans.id, uuid),
-          });
+          // ✅ 일관성: db.query 대신 db.select() 사용 (관계 쿼리 API 의존성 제거)
+          const [loan] = await this.db.select().from(loans).where(eq(loans.id, uuid)).limit(1);
 
           if (!loan) {
             throw new NotFoundException(`UUID ${uuid}의 대여를 찾을 수 없습니다.`);
@@ -344,13 +347,101 @@ export class RentalsService {
   }
 
   /**
+   * 팀별 권한 체크 헬퍼 메서드
+   * EMC팀은 RF팀 장비 대여 신청/승인 불가 (같은 사이트 내에서도)
+   */
+  private async checkTeamPermission(equipmentId: string, userTeamId?: string): Promise<void> {
+    if (!userTeamId) {
+      return; // 팀 정보가 없으면 체크하지 않음
+    }
+
+    // 장비 정보 조회
+    const equipment = await this.equipmentService.findOne(equipmentId);
+    if (!equipment.teamId) {
+      return; // 장비에 팀이 없으면 체크하지 않음
+    }
+
+    // 사용자 팀 정보 조회
+    const userTeam = await this.teamsService.findOne(userTeamId);
+    if (!userTeam) {
+      return; // 사용자 팀 정보를 찾을 수 없으면 체크하지 않음
+    }
+
+    // 사용자 팀 타입 확인
+    const userTeamType = userTeam.type?.toUpperCase();
+
+    // EMC팀은 RF팀 장비 대여 신청/승인 불가
+    if (userTeamType === 'EMC') {
+      try {
+        // ✅ 스키마 일치화: EquipmentService를 사용하여 타입 안전하게 조회
+        const equipmentData = await this.equipmentService.findOne(equipmentId, true);
+
+        if (!equipmentData.teamId) {
+          // 팀이 없으면 체크하지 않음
+          return;
+        }
+
+        const equipmentTeamType = equipmentData.team?.type?.toUpperCase();
+
+        // EMC팀은 RF팀 장비 대여 신청/승인 불가
+        if (equipmentTeamType === 'RF') {
+          throw new ForbiddenException('EMC팀은 RF팀 장비에 대한 대여 신청/승인 권한이 없습니다.');
+        }
+      } catch (error) {
+        if (error instanceof ForbiddenException) {
+          throw error;
+        }
+        this.logger.error(
+          `팀별 권한 체크 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+        );
+        // 오류 발생 시 체크를 건너뛰고 진행 (보안보다는 안정성 우선)
+      }
+    }
+  }
+
+  /**
    * 대여 생성
    * 장비 존재 여부 확인 및 대여 가능 여부 검증
+   * ✅ 개선: startDate 선택 필드 처리, 날짜 검증 강화, 에러 처리 개선
+   * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 대여 신청 불가
    */
-  async create(createRentalDto: CreateRentalDto): Promise<Loan> {
+  /**
+   * UUID 형식 검증 헬퍼 메서드
+   * ✅ 재사용 가능한 유틸리티 함수로 분리
+   */
+  private validateUuid(uuid: string, fieldName: string): void {
+    if (!uuid || typeof uuid !== 'string') {
+      throw new BadRequestException(`${fieldName}는 필수이며 문자열이어야 합니다.`);
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+      throw new BadRequestException(`유효하지 않은 ${fieldName} UUID 형식입니다.`);
+    }
+  }
+
+  async create(createRentalDto: CreateRentalDto, userTeamId?: string): Promise<Loan> {
     try {
+      // ✅ UUID 형식 검증 (일관된 검증 로직)
+      this.validateUuid(createRentalDto.equipmentId, '장비');
+      this.validateUuid(createRentalDto.userId, '사용자');
+      if (createRentalDto.approverId) {
+        this.validateUuid(createRentalDto.approverId, '승인자');
+      }
+
       // 장비 존재 여부 확인
-      const equipment = await this.equipmentService.findOne(createRentalDto.equipmentId);
+      let equipment;
+      try {
+        equipment = await this.equipmentService.findOne(createRentalDto.equipmentId);
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          throw new BadRequestException(
+            `UUID ${createRentalDto.equipmentId}의 장비를 찾을 수 없습니다.`
+          );
+        }
+        throw error;
+      }
+
+      // ✅ Equipment 객체의 uuid 필드 사용 (equipment.id는 serial이므로 UUID가 아님)
+      // equipment.uuid는 이미 createRentalDto.equipmentId와 동일하므로 검증 완료
 
       // 장비가 사용 가능한 상태인지 확인
       if (equipment.status !== 'available') {
@@ -359,12 +450,37 @@ export class RentalsService {
         );
       }
 
-      // 대여 기간 검증
-      const startDate = new Date(createRentalDto.startDate);
+      // 팀별 권한 체크: EMC팀은 RF팀 장비 대여 신청 불가
+      await this.checkTeamPermission(createRentalDto.equipmentId, userTeamId);
+
+      // 날짜 처리 및 검증
+      // startDate는 선택 필드이므로, 제공되지 않으면 현재 시점 또는 expectedEndDate 기준으로 계산
       const expectedReturnDate = new Date(createRentalDto.expectedEndDate);
 
+      // expectedEndDate 유효성 검증
+      if (isNaN(expectedReturnDate.getTime())) {
+        throw new BadRequestException('유효하지 않은 반납 예정일 형식입니다.');
+      }
+
+      // startDate 처리: 제공되지 않으면 현재 시점 사용
+      const startDate = createRentalDto.startDate
+        ? new Date(createRentalDto.startDate)
+        : new Date();
+
+      // startDate 유효성 검증
+      if (isNaN(startDate.getTime())) {
+        throw new BadRequestException('유효하지 않은 시작일 형식입니다.');
+      }
+
+      // 대여 기간 검증
       if (startDate >= expectedReturnDate) {
         throw new BadRequestException('반납 예정일은 시작일보다 늦어야 합니다.');
+      }
+
+      // 미래 날짜 검증 (과거 날짜로 대여 신청 방지)
+      const now = new Date();
+      if (startDate < now) {
+        throw new BadRequestException('시작일은 현재 시점 이후여야 합니다.');
       }
 
       // 기간 중복 확인 (동일 장비의 활성 대여와 겹치지 않는지)
@@ -408,6 +524,7 @@ export class RentalsService {
 
   /**
    * 대여 기간 충돌 확인
+   * ✅ 개선: 날짜 null 처리 강화, 안전한 날짜 비교 로직
    */
   private async checkRentalConflict(
     equipmentId: string,
@@ -416,17 +533,31 @@ export class RentalsService {
     excludeLoanId?: string
   ): Promise<void> {
     try {
+      // 날짜 유효성 검증
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new BadRequestException('유효하지 않은 날짜 형식입니다.');
+      }
+
+      if (startDate >= endDate) {
+        throw new BadRequestException('시작일은 종료일보다 이전이어야 합니다.');
+      }
+
       const conflictConditions = [
         eq(loans.equipmentId, equipmentId),
         // 활성 상태의 대여만 확인 (반납 완료된 것은 제외)
         sql`${loans.status} IN ('pending', 'approved', 'active')`,
         // 날짜 범위가 겹치는지 확인
+        // ✅ 개선: loanDate가 null인 경우와 아닌 경우를 안전하게 처리
         or(
+          // loanDate가 있는 경우: 실제 대여 기간과 겹치는지 확인
+          // (loanDate <= endDate) AND (expectedReturnDate >= startDate)
           and(
             sql`${loans.loanDate} IS NOT NULL`,
             lte(loans.loanDate, endDate),
             gte(loans.expectedReturnDate, startDate)
           ),
+          // loanDate가 null인 경우 (pending/approved 상태): expectedReturnDate 기준으로 확인
+          // expectedReturnDate >= startDate (예정된 반납일이 새 대여 시작일 이후)
           and(isNull(loans.loanDate), gte(loans.expectedReturnDate, startDate))
         ),
       ];
@@ -447,7 +578,7 @@ export class RentalsService {
         );
       }
     } catch (error) {
-      if (error instanceof ConflictException) {
+      if (error instanceof ConflictException || error instanceof BadRequestException) {
         throw error;
       }
       this.logger.error(
@@ -472,11 +603,31 @@ export class RentalsService {
       }
 
       // 날짜가 변경되었을 경우 충돌 검사
-      const startDate = existingLoan.loanDate ? new Date(existingLoan.loanDate) : new Date(); // loanDate가 없으면 현재 시점 기준
+      // ✅ 개선: 날짜 null 처리 및 유효성 검증 강화
+      let startDate: Date;
+      if (existingLoan.loanDate) {
+        startDate = new Date(existingLoan.loanDate);
+        if (isNaN(startDate.getTime())) {
+          throw new BadRequestException('기존 대여 시작일이 유효하지 않습니다.');
+        }
+      } else {
+        // loanDate가 없으면 현재 시점 또는 expectedReturnDate 기준으로 계산
+        startDate = new Date();
+      }
 
       const expectedReturnDate = updateRentalDto.expectedEndDate
         ? new Date(updateRentalDto.expectedEndDate)
         : new Date(existingLoan.expectedReturnDate);
+
+      // 날짜 유효성 검증
+      if (isNaN(expectedReturnDate.getTime())) {
+        throw new BadRequestException('유효하지 않은 반납 예정일 형식입니다.');
+      }
+
+      // 대여 기간 검증
+      if (startDate >= expectedReturnDate) {
+        throw new BadRequestException('반납 예정일은 시작일보다 늦어야 합니다.');
+      }
 
       // expectedEndDate가 변경된 경우에만 충돌 검사
       if (updateRentalDto.expectedEndDate) {
@@ -586,14 +737,18 @@ export class RentalsService {
   /**
    * 대여 승인
    * 장비 소유 팀의 담당자 또는 매니저가 승인
+   * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 대여 승인 불가
    */
-  async approve(uuid: string, approverId: string): Promise<Loan> {
+  async approve(uuid: string, approverId: string, approverTeamId?: string): Promise<Loan> {
     try {
       const loan = await this.findOne(uuid);
 
       if (loan.status !== 'pending') {
         throw new BadRequestException('대기 중인 대여만 승인할 수 있습니다.');
       }
+
+      // 팀별 권한 체크: 대여 장비에 대해 체크
+      await this.checkTeamPermission(loan.equipmentId, approverTeamId);
 
       // 승인 처리
       const updateData: Partial<Loan> = {

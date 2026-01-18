@@ -33,11 +33,21 @@ export enum CalibrationMethodEnum {
 }
 
 // 사용자 역할 열거형
+// @deprecated 이 enum은 하위 호환성을 위해 유지됩니다.
+// 새로운 코드에서는 @equipment-management/schemas의 UserRoleEnum을 사용하세요.
 export enum UserRoleEnum {
-  ADMIN = 'admin', // 관리자
-  MANAGER = 'manager', // 팀 관리자
-  USER = 'user', // 일반 사용자
+  TEST_OPERATOR = 'test_operator', // 시험실무자
+  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자
+  SITE_ADMIN = 'site_admin', // 시험소별 관리자
 }
+
+// 하위 호환성을 위한 별칭 (enum 외부에 정의)
+/** @deprecated Use UserRoleEnum.TEST_OPERATOR instead */
+export const USER = UserRoleEnum.TEST_OPERATOR;
+/** @deprecated Use UserRoleEnum.TECHNICAL_MANAGER instead */
+export const MANAGER = UserRoleEnum.TECHNICAL_MANAGER;
+/** @deprecated Use UserRoleEnum.SITE_ADMIN instead */
+export const ADMIN = UserRoleEnum.SITE_ADMIN;
 
 // 팀 ID 열거형
 export enum TeamEnum {

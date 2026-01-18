@@ -1,10 +1,12 @@
 /**
  * 사용자 역할을 나타내는 열거형
+ * @deprecated 이 enum은 더 이상 사용되지 않습니다.
+ * 대신 apps/backend/src/modules/auth/rbac/roles.enum.ts의 UserRole을 사용하세요.
  */
 export enum UserRole {
-  USER = 'USER',
-  MANAGER = 'MANAGER',
-  ADMIN = 'ADMIN'
+  TEST_OPERATOR = 'test_operator',
+  TECHNICAL_MANAGER = 'technical_manager',
+  SITE_ADMIN = 'site_admin',
 }
 
 /**
@@ -13,8 +15,8 @@ export enum UserRole {
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
-  PENDING = 'PENDING'
+  PENDING = 'PENDING',
 }
 
 // 참고: entity 클래스는 제거되었으며, 대신 drizzle 스키마가 사용됩니다.
-// 스키마 정의는 apps/backend/src/database/drizzle/schema/users.ts 파일을 참조하세요. 
+// 스키마 정의는 apps/backend/src/database/drizzle/schema/users.ts 파일을 참조하세요.

@@ -24,7 +24,7 @@ export class DatabaseConnection {
   private reconnectAttempts = 0;
   private readonly reconnectInterval = 5000; // 5초
   private readonly healthCheckInterval = 30000; // 30초
-  
+
   // 성능 메트릭
   private metrics = {
     connectionsCreated: 0,
@@ -36,7 +36,7 @@ export class DatabaseConnection {
     avgQueryTime: 0,
     totalQueryTime: 0,
     lastErrorTime: null as Date | null,
-    lastReconnectTime: null as Date | null
+    lastReconnectTime: null as Date | null,
   };
 
   private constructor() {
@@ -53,7 +53,7 @@ export class DatabaseConnection {
       statement_timeout: 30000, // 30초
       query_timeout: 30000, // 30초
       keepAlive: true,
-      keepAliveInitialDelayMillis: 10000
+      keepAliveInitialDelayMillis: 10000,
     };
 
     this.initializePool(poolConfig);
@@ -105,10 +105,10 @@ export class DatabaseConnection {
           const startTime = Date.now();
           await client.query('SELECT 1');
           const endTime = Date.now();
-          
+
           // 헬스 체크 쿼리 성능 메트릭 업데이트
           this.updateQueryMetrics(endTime - startTime, true);
-          
+
           this.logger.debug('헬스 체크 성공');
         } finally {
           client.release();
@@ -177,18 +177,22 @@ export class DatabaseConnection {
     }
 
     const backoffTime = this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
-    this.logger.log(`${backoffTime}ms 후 재연결 시도 예정 (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+    this.logger.log(
+      `${backoffTime}ms 후 재연결 시도 예정 (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`
+    );
 
     this.reconnectTimer = setTimeout(async () => {
       this.reconnectAttempts++;
-      this.logger.log(`데이터베이스 재연결 시도 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+      this.logger.log(
+        `데이터베이스 재연결 시도 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`
+      );
 
       try {
         if (this.pool) {
           // 기존 풀 종료 후 재생성
           await this.pool.end();
           this.pool = null;
-          
+
           // 풀 재생성
           const config: PoolConfig = {
             host: process.env.DB_HOST || 'localhost',
@@ -203,11 +207,11 @@ export class DatabaseConnection {
             statement_timeout: 30000,
             query_timeout: 30000,
             keepAlive: true,
-            keepAliveInitialDelayMillis: 10000
+            keepAliveInitialDelayMillis: 10000,
           };
           this.initializePool(config);
         }
-        
+
         await this.connect();
         this.logger.log('데이터베이스에 성공적으로 재연결되었습니다.');
       } catch (error) {
@@ -230,24 +234,24 @@ export class DatabaseConnection {
       await this.connect();
     }
 
-    const client = transactionClient || await this.pool!.connect();
+    const client = transactionClient || (await this.pool!.connect());
     const startTime = Date.now();
     this.metrics.queriesExecuted++;
 
     try {
       const result = await client.query(queryText, params);
       const endTime = Date.now();
-      
+
       this.updateQueryMetrics(endTime - startTime, true);
-      
+
       return result.rows as T;
     } catch (error) {
       const endTime = Date.now();
       this.updateQueryMetrics(endTime - startTime, false);
-      
+
       this.logger.error(`쿼리 실행 오류: ${error.message}`);
       this.metrics.queriesFailed++;
-      
+
       throw error;
     } finally {
       if (!transactionClient) {
@@ -262,7 +266,7 @@ export class DatabaseConnection {
     }
 
     const client = await this.pool!.connect();
-    
+
     try {
       await client.query('BEGIN');
       const result = await callback(client);
@@ -279,13 +283,13 @@ export class DatabaseConnection {
 
   private updateQueryMetrics(duration: number, success: boolean): void {
     this.metrics.totalQueryTime += duration;
-    
+
     if (success) {
       this.metrics.queriesSucceeded++;
     } else {
       this.metrics.queriesFailed++;
     }
-    
+
     const totalQueries = this.metrics.queriesSucceeded + this.metrics.queriesFailed;
     this.metrics.avgQueryTime = this.metrics.totalQueryTime / totalQueries;
   }
@@ -307,4 +311,4 @@ export class DatabaseConnection {
       this.isConnected = false;
     }
   }
-} 
+}

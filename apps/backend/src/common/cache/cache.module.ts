@@ -6,4 +6,4 @@ import { SimpleCacheService } from './simple-cache.service';
   providers: [SimpleCacheService],
   exports: [SimpleCacheService],
 })
-export class CacheModule {} 
+export class CacheModule {}

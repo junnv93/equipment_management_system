@@ -13,8 +13,9 @@ async function manualMigrate() {
   console.log('📊 수동 마이그레이션 실행 중...');
 
   // 데이터베이스 연결 정보
-  const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/equipment_management';
-  
+  const connectionString =
+    process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/equipment_management';
+
   // 클라이언트 생성
   const client = new Client({ connectionString });
 
@@ -24,14 +25,14 @@ async function manualMigrate() {
 
     // SQL 파일 경로
     const sqlFilePath = path.join(process.cwd(), 'drizzle', 'manual', 'create_tables.sql');
-    
+
     // SQL 파일 읽기
     const sqlQueries = fs.readFileSync(sqlFilePath, 'utf-8');
-    
+
     // SQL 쿼리 실행
     console.log('📄 SQL 쿼리 실행 중...');
     await client.query(sqlQueries);
-    
+
     console.log('✅ 마이그레이션 완료');
   } catch (error) {
     console.error('❌ 마이그레이션 실패:', error);
@@ -54,4 +55,4 @@ if (require.main === module) {
     });
 }
 
-export { manualMigrate }; 
+export { manualMigrate };

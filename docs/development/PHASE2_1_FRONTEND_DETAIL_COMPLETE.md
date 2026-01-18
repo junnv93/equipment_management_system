@@ -85,8 +85,15 @@
 
 Phase 2.1의 다음 작업:
 
-- [ ] 장비 등록/수정 폼 구현
-- [ ] Equipment API 통합 테스트 작성
+- [x] 장비 등록/수정 폼 구현 ✅
+  - `apps/frontend/app/equipment/create/page.tsx` - 장비 등록 페이지
+  - `apps/frontend/app/equipment/[id]/edit/page.tsx` - 장비 수정 페이지
+  - `apps/frontend/components/equipment/EquipmentForm.tsx` - 재사용 가능한 폼 컴포넌트
+  - **API_STANDARDS 준수**: schemas 패키지의 enum 사용 (`EquipmentStatusEnum`, `CalibrationMethodEnum`)
+  - **Single Source of Truth 원칙**: 하드코딩된 상태값 제거, enum 기반으로 통일
+- [x] Equipment API 통합 테스트 작성 ✅
+  - `apps/backend/test/equipment.e2e-spec.ts` - 완전한 E2E 테스트 커버리지
+  - CRUD 워크플로우, 필터링, 페이지네이션, 에러 처리 등 모든 시나리오 테스트 완료
 
 ---
 

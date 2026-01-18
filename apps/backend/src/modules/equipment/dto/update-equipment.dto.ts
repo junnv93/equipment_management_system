@@ -53,11 +53,18 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
   @ApiPropertyOptional({ description: '구매 연도' })
   purchaseYear?: number;
 
-  @ApiPropertyOptional({ description: '팀 ID' })
-  teamId?: number;
+  @ApiPropertyOptional({ description: '팀 ID (UUID)' })
+  teamId?: string;
 
   @ApiPropertyOptional({ description: '관리자 ID' })
   managerId?: string;
+
+  @ApiPropertyOptional({
+    description: '사이트',
+    enum: ['suwon', 'uiwang'],
+    example: 'suwon',
+  })
+  site?: 'suwon' | 'uiwang';
 
   @ApiPropertyOptional({ description: '공급사' })
   supplier?: string;
@@ -83,6 +90,22 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
   @ApiPropertyOptional({ description: '기술 책임자' })
   technicalManager?: string;
 
+  // 추가 필수 필드 (프롬프트 3 요구사항)
+  @ApiPropertyOptional({ description: '장비 타입' })
+  equipmentType?: string;
+
+  @ApiPropertyOptional({ description: '교정 결과' })
+  calibrationResult?: string;
+
+  @ApiPropertyOptional({ description: '보정계수' })
+  correctionFactor?: string;
+
+  @ApiPropertyOptional({ description: '중간점검일정' })
+  intermediateCheckSchedule?: Date;
+
+  @ApiPropertyOptional({ description: '장비 수리 내역' })
+  repairHistory?: string;
+
   @ApiPropertyOptional({
     description: '장비 상태',
     enum: [
@@ -97,6 +120,13 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
     example: 'in_use',
   })
   status?: EquipmentStatus;
+
+  // 승인 프로세스 필드
+  @ApiPropertyOptional({
+    description: '승인 상태',
+    enum: ['pending_approval', 'approved', 'rejected'],
+  })
+  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
 }
 
 // Zod 검증 파이프 생성

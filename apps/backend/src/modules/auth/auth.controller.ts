@@ -42,4 +42,4 @@ export class AuthController {
       timestamp: new Date().toISOString(),
     };
   }
-} 
+}

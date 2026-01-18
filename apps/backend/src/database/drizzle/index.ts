@@ -65,19 +65,19 @@ pgPool.on('error', (err) => {
   metrics.connectionErrors++;
   metrics.lastErrorTime = new Date();
   logger.error(`PostgreSQL connection error: ${err.message}`);
-  
+
   // 백오프 알고리즘을 사용한 재연결
   if (reconnectAttempts < maxReconnectAttempts) {
     const backoffTime = reconnectInterval * Math.pow(2, reconnectAttempts);
     setTimeout(async () => {
       reconnectAttempts++;
       logger.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
-      
+
       try {
         const client = await pgPool.connect();
         await client.query('SELECT 1');
         client.release();
-        
+
         reconnectAttempts = 0; // 성공 시 카운터 리셋
         metrics.lastReconnectTime = new Date();
         logger.log('Successfully reconnected to PostgreSQL');
@@ -114,12 +114,12 @@ export async function testConnection(): Promise<boolean> {
     const client = await pgPool.connect();
     const result = await client.query('SELECT NOW()');
     client.release();
-    
+
     if (result.rows.length > 0) {
       logger.log(`PostgreSQL connection successful: ${result.rows[0].now}`);
       return true;
     }
-    
+
     return false;
   } catch (error) {
     logger.error(`PostgreSQL connection test failed: ${error.message}`);
@@ -144,11 +144,11 @@ export async function healthCheck(): Promise<{
   error?: string;
 }> {
   const startTime = Date.now();
-  
+
   try {
     await testConnection();
     const latency = Date.now() - startTime;
-    
+
     return {
       status: 'healthy',
       latency,
@@ -160,4 +160,4 @@ export async function healthCheck(): Promise<{
       error: error.message,
     };
   }
-} 
+}

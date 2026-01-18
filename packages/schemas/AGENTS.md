@@ -19,11 +19,9 @@ Shared schemas package rules. Read root `./AGENTS.md` first.
 
 ## Tech Stack
 
-| Component  | Version | Notes                                    |
-| ---------- | ------- | ---------------------------------------- |
-| Zod        | 4.x     | Schema validation (workspace dependency) |
-| TypeScript | 5.x     | Type definitions                         |
-| Jest       | 29.x    | Schema testing                           |
+- Zod 4.x - Schema validation (workspace dependency)
+- TypeScript 5.x - Type definitions
+- Jest 29.x - Schema testing
 
 ---
 
@@ -186,14 +184,12 @@ export { UserRole } from './types/user-role.enum';
 
 ### Naming Conventions
 
-| Type          | Pattern                  | Example                 |
-| ------------- | ------------------------ | ----------------------- |
-| Schema        | PascalCase + Schema      | `EquipmentSchema`       |
-| Create Schema | Create + Entity + Schema | `CreateEquipmentSchema` |
-| Update Schema | Update + Entity + Schema | `UpdateEquipmentSchema` |
-| Query Schema  | Entity + QuerySchema     | `EquipmentQuerySchema`  |
-| Type          | PascalCase (no suffix)   | `Equipment`             |
-| Input Type    | Entity + Input           | `CreateEquipmentInput`  |
+- Schema: PascalCase + Schema suffix - Example: `EquipmentSchema`
+- Create Schema: Create + Entity + Schema - Example: `CreateEquipmentSchema`
+- Update Schema: Update + Entity + Schema - Example: `UpdateEquipmentSchema`
+- Query Schema: Entity + QuerySchema - Example: `EquipmentQuerySchema`
+- Type: PascalCase (no suffix) - Example: `Equipment`
+- Input Type: Entity + Input - Example: `CreateEquipmentInput`
 
 ### Validation Patterns
 

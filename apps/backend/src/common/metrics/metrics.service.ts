@@ -39,7 +39,12 @@ export class MetricsService {
     this.httpRequestTotal.inc({ method, route, status });
   }
 
-  observeHttpRequestDuration(method: string, route: string, status: string, duration: number): void {
+  observeHttpRequestDuration(
+    method: string,
+    route: string,
+    status: string,
+    duration: number
+  ): void {
     this.httpRequestDuration.observe({ method, route, status }, duration);
   }
 
@@ -58,4 +63,4 @@ export class MetricsService {
   getContentType(): string {
     return this.registry.contentType;
   }
-} 
+}

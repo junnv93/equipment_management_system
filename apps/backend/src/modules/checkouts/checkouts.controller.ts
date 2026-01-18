@@ -56,7 +56,11 @@ export class CheckoutsController {
     if (!requesterId) {
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
     }
-    return this.checkoutsService.create(createCheckoutDto, requesterId);
+    const userTeamId = req.user?.teamId; // 사용자 팀 ID
+    // ✅ UUID 형식 검증 (서비스에서도 검증하지만, 컨트롤러에서도 사전 검증)
+    // 개발 환경에서는 UUID가 아닌 ID도 허용할 수 있지만, 프로덕션에서는 UUID 필수
+    // 서비스에서 validateUuid를 호출하므로 여기서는 기본 검증만 수행
+    return this.checkoutsService.create(createCheckoutDto, requesterId, userTeamId);
   }
 
   @Get()
@@ -130,9 +134,11 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async approveFirst(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() approveDto: ApproveCheckoutDto
+    @Body() approveDto: ApproveCheckoutDto,
+    @Request() req: any
   ) {
-    return this.checkoutsService.approveFirst(uuid, approveDto);
+    const approverTeamId = req.user?.teamId; // 승인자 팀 ID
+    return this.checkoutsService.approveFirst(uuid, approveDto, approverTeamId);
   }
 
   @Patch(':uuid/approve-final')
@@ -148,9 +154,11 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async approveFinal(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() approveDto: ApproveCheckoutDto
+    @Body() approveDto: ApproveCheckoutDto,
+    @Request() req: any
   ) {
-    return this.checkoutsService.approveFinal(uuid, approveDto);
+    const approverTeamId = req.user?.teamId; // 승인자 팀 ID
+    return this.checkoutsService.approveFinal(uuid, approveDto, approverTeamId);
   }
 
   @Patch(':uuid/reject')

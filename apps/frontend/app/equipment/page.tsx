@@ -24,12 +24,15 @@ import { useQuery } from '@tanstack/react-query';
 import equipmentApi, { Equipment, EquipmentQuery } from '@/lib/api/equipment-api';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import dayjs from 'dayjs';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { useRouter } from 'next/navigation';
 import debounce from 'lodash/debounce';
 import VirtualizedEquipmentList from '@/components/equipment/VirtualizedEquipmentList';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/use-auth';
+import type { Site } from '@equipment-management/schemas';
 
 // PaginationState 인터페이스 정의
 interface PaginationState {
@@ -39,9 +42,18 @@ interface PaginationState {
 
 export default function EquipmentPage() {
   const router = useRouter();
+  const { user, isManager, isAdmin } = useAuth();
+  const userSite = (user as any)?.site as Site | undefined;
+  const userRoles = (user as any)?.roles || [];
+  const isTestOperator = userRoles.includes('test_operator') && !isManager() && !isAdmin();
+  const canViewAllSites = isManager() || isAdmin();
+
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [siteFilter, setSiteFilter] = useState<string>(
+    isTestOperator && userSite ? userSite : 'ALL'
+  );
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -49,14 +61,23 @@ export default function EquipmentPage() {
 
   // useMemo를 사용하여 검색 조건 최적화
   const queryOptions = useMemo(() => {
+    // 시험실무자는 자신의 사이트만 조회, 기술책임자/관리자는 선택 가능
+    const site =
+      isTestOperator && userSite
+        ? userSite
+        : siteFilter !== 'ALL'
+          ? (siteFilter as Site)
+          : undefined;
+
     return {
       search: searchTerm || undefined,
-      status: statusFilter !== 'ALL' ? statusFilter : undefined,
+      status: statusFilter !== 'ALL' ? (statusFilter as any) : undefined, // EquipmentStatus enum으로 변환
       category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
+      site,
       page: pagination.pageIndex + 1,
       pageSize: pagination.pageSize,
     };
-  }, [searchTerm, statusFilter, categoryFilter, pagination]);
+  }, [searchTerm, statusFilter, categoryFilter, siteFilter, pagination, isTestOperator, userSite]);
 
   // 장비 데이터 쿼리
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -105,6 +126,15 @@ export default function EquipmentPage() {
   // 장비 카테고리 변경 핸들러
   const handleCategoryChange = useCallback((value: string) => {
     setCategoryFilter(value);
+    setPagination((prev: PaginationState) => ({
+      ...prev,
+      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
+    }));
+  }, []);
+
+  // 사이트 필터 변경 핸들러
+  const handleSiteChange = useCallback((value: string) => {
+    setSiteFilter(value);
     setPagination((prev: PaginationState) => ({
       ...prev,
       pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
@@ -186,7 +216,7 @@ export default function EquipmentPage() {
           <CardTitle>장비 검색</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">검색어</Label>
               <Input
@@ -211,6 +241,21 @@ export default function EquipmentPage() {
                 </SelectContent>
               </Select>
             </div>
+            {canViewAllSites && (
+              <div className="space-y-2">
+                <Label htmlFor="site">사이트</Label>
+                <Select value={siteFilter} onValueChange={handleSiteChange}>
+                  <SelectTrigger id="site">
+                    <SelectValue placeholder="모든 사이트" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">모든 사이트</SelectItem>
+                    <SelectItem value="suwon">수원</SelectItem>
+                    <SelectItem value="uiwang">의왕</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="category">분류</Label>
               <Select defaultValue="ALL" onValueChange={handleCategoryChange}>
@@ -236,12 +281,11 @@ export default function EquipmentPage() {
 
       {/* 가상화된 장비 리스트로 교체 */}
       <VirtualizedEquipmentList
-        items={data?.items || []}
+        items={data?.data || []}
         isLoading={isLoading || isFetching}
         hasNextPage={
           data
-            ? (data.meta?.currentPage || data.page || 1) <
-              (data.meta?.totalPages || data.totalPages || 1)
+            ? (data.meta?.pagination?.currentPage || 1) < (data.meta?.pagination?.totalPages || 1)
             : false
         }
         loadNextPage={loadMoreData}

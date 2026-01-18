@@ -88,11 +88,26 @@ const status = 'loaned'; // 표준에 없는 값 사용 금지
 
 ### 표준 값
 
-| 값        | 설명        |
-| --------- | ----------- |
-| `admin`   | 관리자      |
-| `manager` | 팀 관리자   |
-| `user`    | 일반 사용자 |
+| 값                  | 설명            |
+| ------------------- | --------------- |
+| `test_operator`     | 시험실무자      |
+| `technical_manager` | 기술책임자      |
+| `site_admin`        | 시험소별 관리자 |
+
+### 역할 설명
+
+- **test_operator (시험실무자)**: 기본 조회 및 대여 신청 권한
+- **technical_manager (기술책임자)**: 장비 관리 및 승인 권한
+- **site_admin (시험소별 관리자)**: 해당 시험소 내 모든 권한
+
+### 하위 호환성
+
+기존 역할은 다음과 같이 매핑됩니다:
+
+- `admin` → `site_admin`
+- `manager` → `technical_manager`
+- `user` → `test_operator`
+- `approver` → `technical_manager`
 
 ## 팀 ID 표준
 
@@ -196,6 +211,233 @@ findOne(@Param('id') id: string) {  // ParseUUIDPipe 없음
 }
 ```
 
+## API 응답 구조 표준
+
+### 핵심 원칙
+
+- **Single Source of Truth**: 모든 API 응답 타입은 `packages/schemas/src/api-response.ts`에서 정의
+- **일관성**: 백엔드와 프론트엔드 간 응답 구조 일치 보장
+- **중복 제거**: 공통 유틸리티 함수 사용으로 변환 로직 중복 방지
+
+### 백엔드 응답 구조
+
+#### 페이지네이션된 목록 응답
+
+백엔드 서비스는 다음 구조로 응답을 반환합니다:
+
+```typescript
+interface PaginatedListResponse<T> {
+  items: T[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+  };
+}
+```
+
+**예시**:
+
+```json
+{
+  "items": [
+    { "id": "uuid-1", "name": "장비 1" },
+    { "id": "uuid-2", "name": "장비 2" }
+  ],
+  "meta": {
+    "totalItems": 100,
+    "itemCount": 2,
+    "itemsPerPage": 20,
+    "totalPages": 5,
+    "currentPage": 1
+  }
+}
+```
+
+#### 단일 리소스 응답
+
+백엔드 컨트롤러는 서비스에서 반환한 값을 그대로 반환합니다:
+
+```typescript
+type SingleResourceResponse<T> = T;
+```
+
+**예시**:
+
+```json
+{
+  "id": "uuid-1",
+  "name": "장비 1",
+  "status": "available",
+  "createdAt": "2025-01-16T00:00:00Z"
+}
+```
+
+### 프론트엔드 응답 구조
+
+프론트엔드는 백엔드 응답을 다음 구조로 변환하여 사용합니다:
+
+#### 페이지네이션된 목록 응답
+
+```typescript
+interface FrontendPaginatedResponse<T> {
+  data: T[];
+  meta: {
+    pagination: {
+      total: number;
+      pageSize: number;
+      currentPage: number;
+      totalPages: number;
+    };
+  };
+}
+```
+
+**예시**:
+
+```json
+{
+  "data": [
+    { "id": "uuid-1", "name": "장비 1" },
+    { "id": "uuid-2", "name": "장비 2" }
+  ],
+  "meta": {
+    "pagination": {
+      "total": 100,
+      "pageSize": 20,
+      "currentPage": 1,
+      "totalPages": 5
+    }
+  }
+}
+```
+
+### 응답 변환 유틸리티
+
+**위치**: `apps/frontend/lib/api/utils/response-transformers.ts`
+
+모든 API 클라이언트는 공통 유틸리티 함수를 사용하여 응답을 변환합니다:
+
+```typescript
+// 페이지네이션 응답 변환
+import { transformPaginatedResponse } from './utils/response-transformers';
+
+const response = await axios.get('/api/equipment');
+const transformed = transformPaginatedResponse<Equipment>(response);
+// transformed.data, transformed.meta.pagination 사용
+```
+
+```typescript
+// 단일 리소스 응답 변환
+import { transformSingleResponse } from './utils/response-transformers';
+
+const response = await axios.get('/api/equipment/uuid-1');
+const equipment = transformSingleResponse<Equipment>(response);
+// equipment 직접 사용
+```
+
+### 공통 타입 사용
+
+**위치**: `apps/frontend/lib/api/types.ts`
+
+모든 API 클라이언트는 공통 타입을 사용합니다:
+
+```typescript
+// ✅ 올바른 사용
+import type { PaginatedResponse } from './types';
+
+async getRentals(): Promise<PaginatedResponse<Rental>> {
+  // ...
+}
+```
+
+```typescript
+// ❌ 잘못된 사용 - 각 파일마다 개별 정의 금지
+export interface PaginatedResponse<T> {
+  // 중복 정의 금지
+}
+```
+
+### 에러 응답 구조
+
+백엔드는 다음 구조로 에러를 반환합니다:
+
+```typescript
+interface ErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+  meta: {
+    timestamp: string;
+  };
+}
+```
+
+프론트엔드는 공통 에러 변환 유틸리티를 사용합니다:
+
+```typescript
+import { transformErrorResponse } from './utils/response-transformers';
+
+try {
+  await apiClient.get('/api/equipment');
+} catch (error) {
+  const transformed = transformErrorResponse(error);
+  // transformed.message, transformed.code 사용
+}
+```
+
+### 사용 규칙
+
+1. **백엔드**: 서비스에서 `PaginatedListResponse<T>` 구조로 반환
+2. **프론트엔드**: 공통 유틸리티 함수로 `FrontendPaginatedResponse<T>`로 변환
+3. **타입 정의**: `packages/schemas/src/api-response.ts`에서만 정의
+4. **변환 로직**: `apps/frontend/lib/api/utils/response-transformers.ts`에서만 정의
+5. **중복 금지**: 각 API 클라이언트에서 개별적으로 변환 로직 작성 금지
+
+### 예시
+
+```typescript
+// ✅ 올바른 API 클라이언트 구현
+import type { PaginatedResponse } from './types';
+import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
+
+const rentalApi = {
+  async getRentals(): Promise<PaginatedResponse<Rental>> {
+    const response = await axios.get('/api/rentals');
+    return transformPaginatedResponse<Rental>(response);
+  },
+
+  async getRental(id: string): Promise<Rental> {
+    const response = await axios.get(`/api/rentals/${id}`);
+    return transformSingleResponse<Rental>(response);
+  },
+};
+```
+
+```typescript
+// ❌ 잘못된 구현 - 중복된 변환 로직
+const rentalApi = {
+  async getRentals() {
+    const response = await axios.get('/api/rentals');
+    // 중복된 변환 로직 - 금지
+    return {
+      data: response.data.items || [],
+      meta: { pagination: {...} },
+    };
+  },
+};
+```
+
+### 참고 파일
+
+- **타입 정의**: `packages/schemas/src/api-response.ts`
+- **변환 유틸리티**: `apps/frontend/lib/api/utils/response-transformers.ts`
+- **공통 타입**: `apps/frontend/lib/api/types.ts`
+
 ## 데이터베이스 스키마 동기화
 
 ### 원칙
@@ -274,14 +516,27 @@ PATCH /rentals/:uuid/reject
 
 ## 참고 파일
 
-- **표준 정의**: `packages/schemas/src/enums.ts`
+- **표준 정의**:
+  - `packages/schemas/src/enums.ts` - 열거형 및 상태값
+  - `packages/schemas/src/api-response.ts` - API 응답 타입
 - **데이터베이스 스키마**:
   - `packages/db/src/schema/equipment.ts`
   - `packages/db/src/schema/loans.ts`
   - `packages/db/src/schema/checkouts.ts`
+- **프론트엔드 유틸리티**:
+  - `apps/frontend/lib/api/utils/response-transformers.ts` - 응답 변환 유틸리티
+  - `apps/frontend/lib/api/types.ts` - 공통 타입 별칭
 - **API 문서**: Swagger UI (`/api/docs`)
 
 ---
 
-**마지막 업데이트**: 2025-01-28
-**버전**: 1.1.0
+**마지막 업데이트**: 2026-01-16
+**버전**: 1.2.0
+
+### 변경 이력
+
+- **v1.2.0** (2026-01-16): API 응답 구조 표준 추가
+  - 백엔드/프론트엔드 응답 구조 정의
+  - 공통 응답 변환 유틸리티 표준화
+  - 타입 안전성 및 중복 제거 원칙 추가
+- **v1.1.0** (2025-01-28): 초기 버전

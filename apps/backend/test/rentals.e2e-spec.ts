@@ -66,6 +66,7 @@ describe('RentalsController (e2e)', () => {
         serialNumber: `SN-${Date.now()}`,
         status: 'available',
         location: 'Test Location',
+        site: 'suwon', // ✅ site 필드 추가 (필수)
       });
 
     if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {
@@ -78,8 +79,34 @@ describe('RentalsController (e2e)', () => {
       throw new Error('Failed to create test equipment');
     }
 
-    // 테스트용 사용자 ID (현재는 하드코딩된 사용자 사용)
-    testUserId = loginResponse.body.user?.id || 'test-user-id';
+    // 테스트용 사용자 ID (UUID 형식이어야 함)
+    // ✅ 근본적 해결: 로그인 응답에서 사용자 ID를 가져오되, UUID 형식이 아니면 생성
+    const loginUserId = loginResponse.body.user?.id;
+    
+    // UUID 형식 검증 함수
+    const isValidUUID = (str: string): boolean => {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    };
+    
+    // UUID v4 형식 생성 함수
+    const generateUUID = (): string => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    };
+    
+    if (loginUserId && isValidUUID(loginUserId)) {
+      // 로그인 응답의 사용자 ID가 유효한 UUID 형식인 경우
+      testUserId = loginUserId;
+    } else {
+      // UUID 형식이 아니거나 없는 경우, 테스트용 UUID 생성
+      testUserId = generateUUID();
+      console.warn(
+        `⚠️  로그인 응답의 사용자 ID(${loginUserId || '없음'})가 UUID 형식이 아니어서 테스트용 UUID를 생성했습니다: ${testUserId}`
+      );
+    }
   });
 
   afterAll(async () => {
@@ -124,9 +151,20 @@ describe('RentalsController (e2e)', () => {
       const response = await request(app.getHttpServer())
         .post('/rentals')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send(createRentalDto)
-        .expect(201);
+        .send(createRentalDto);
 
+      // 에러 발생 시 상세 정보 출력
+      if (response.status !== 201) {
+        console.error('Create rental failed:', {
+          status: response.status,
+          body: response.body,
+          requestData: createRentalDto,
+          testUserId,
+          testEquipmentUuid,
+        });
+      }
+
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('id');
       expect(response.body.status).toBe('pending');
       expect(response.body.equipmentId).toBe(testEquipmentUuid);

@@ -7,13 +7,14 @@ export class ReportsService {
     startDate?: string,
     endDate?: string,
     equipmentId?: string,
-    departmentId?: string,
+    departmentId?: string
   ) {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     // 임시 데이터 반환
     return {
       timeframe: {
-        startDate: startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
+        startDate:
+          startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
         endDate: endDate || new Date().toISOString(),
       },
       totalUsageHours: 1250,
@@ -63,15 +64,12 @@ export class ReportsService {
   }
 
   // 대여 통계 보고서
-  async getRentalStatistics(
-    startDate?: string,
-    endDate?: string,
-    departmentId?: string,
-  ) {
+  async getRentalStatistics(startDate?: string, endDate?: string, departmentId?: string) {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
       timeframe: {
-        startDate: startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
+        startDate:
+          startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
         endDate: endDate || new Date().toISOString(),
       },
       summary: {
@@ -103,7 +101,7 @@ export class ReportsService {
   async getUtilizationRate(
     period: 'week' | 'month' | 'quarter' | 'year' = 'month',
     equipmentId?: string,
-    categoryId?: string,
+    categoryId?: string
   ) {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
@@ -122,10 +120,20 @@ export class ReportsService {
       topUtilized: [
         { equipmentId: 'EQ-001', name: 'RF 분석기', utilizationRate: 92.5, department: '연구소' },
         { equipmentId: 'EQ-005', name: 'HPLC', utilizationRate: 88.3, department: '품질관리' },
-        { equipmentId: 'EQ-008', name: '원자흡광분광기', utilizationRate: 85.1, department: '연구소' },
+        {
+          equipmentId: 'EQ-008',
+          name: '원자흡광분광기',
+          utilizationRate: 85.1,
+          department: '연구소',
+        },
       ],
       lowUtilized: [
-        { equipmentId: 'EQ-015', name: '디지털 멀티미터', utilizationRate: 15.2, department: '생산' },
+        {
+          equipmentId: 'EQ-015',
+          name: '디지털 멀티미터',
+          utilizationRate: 15.2,
+          department: '생산',
+        },
         { equipmentId: 'EQ-022', name: '진공 펌프', utilizationRate: 18.5, department: '연구소' },
         { equipmentId: 'EQ-030', name: '온도 챔버', utilizationRate: 19.7, department: '품질관리' },
       ],
@@ -133,15 +141,12 @@ export class ReportsService {
   }
 
   // 장비 가동 중단 보고서
-  async getEquipmentDowntime(
-    startDate?: string,
-    endDate?: string,
-    equipmentId?: string,
-  ) {
+  async getEquipmentDowntime(startDate?: string, endDate?: string, equipmentId?: string) {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
       timeframe: {
-        startDate: startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
+        startDate:
+          startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
         endDate: endDate || new Date().toISOString(),
       },
       summary: {
@@ -172,11 +177,7 @@ export class ReportsService {
   }
 
   // 장비 사용 보고서 내보내기
-  async exportEquipmentUsage(
-    format: 'excel' | 'csv',
-    startDate?: string,
-    endDate?: string,
-  ) {
+  async exportEquipmentUsage(format: 'excel' | 'csv', startDate?: string, endDate?: string) {
     // 실제 구현에서는 보고서 데이터를 엑셀 또는 CSV 형식으로 생성하여 반환
     // 여기서는 임시 응답만 반환
     return {
@@ -187,4 +188,4 @@ export class ReportsService {
       generatedAt: new Date().toISOString(),
     };
   }
-} 
+}

@@ -9,14 +9,48 @@ import {
   Query,
   UseGuards,
   HttpStatus,
+  HttpCode,
   UsePipes,
   ParseUUIDPipe,
+  Req,
+  ForbiddenException,
+  BadRequestException,
+  UseInterceptors,
+  UploadedFiles,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FormDataParserInterceptor } from './interceptors/form-data-parser.interceptor';
+
+// Multer 타입 정의
+interface MulterFile {
+  fieldname: string;
+  originalname: string;
+  encoding: string;
+  mimetype: string;
+  size: number;
+  destination: string;
+  filename: string;
+  path: string;
+  buffer: Buffer;
+}
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { EquipmentService } from './equipment.service';
+import { EquipmentApprovalService } from './services/equipment-approval.service';
+import { EquipmentAttachmentService } from './services/equipment-attachment.service';
+import { FileUploadService } from './services/file-upload.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
+import { ApproveEquipmentRequestDto } from './dto/approve-equipment-request.dto';
 import { RequirePermissions } from '../../decorators/require-permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
 import { PermissionsGuard } from '../../guards/permissions.guard';
@@ -26,24 +60,84 @@ import { EquipmentStatus } from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
+import { ApproveEquipmentRequestValidationPipe } from './dto/approve-equipment-request.dto';
 
 @ApiTags('장비 관리')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('equipment')
 export class EquipmentController {
-  constructor(private readonly equipmentService: EquipmentService) {}
+  constructor(
+    private readonly equipmentService: EquipmentService,
+    private readonly approvalService: EquipmentApprovalService,
+    private readonly fileUploadService: FileUploadService,
+    private readonly attachmentService: EquipmentAttachmentService
+  ) {}
 
   @Post()
-  @ApiOperation({ summary: '장비 등록', description: '새로운 장비를 시스템에 등록합니다.' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: '장비가 성공적으로 등록되었습니다.' })
+  @ApiOperation({
+    summary: '장비 등록 요청',
+    description:
+      '새로운 장비 등록을 요청합니다. 시험실무자는 승인 대기 상태로 생성되며, 시스템 관리자는 직접 승인 가능합니다.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        managementNumber: { type: 'string' },
+        // ... 기타 필드
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '장비 등록 요청이 생성되었습니다.' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @UseInterceptors(
+    FilesInterceptor('files', 10), // 최대 10개 파일
+    FormDataParserInterceptor // FormData JSON 파싱
+  )
   @UsePipes(CreateEquipmentValidationPipe)
-  create(@Body() createEquipmentDto: CreateEquipmentDto) {
-    return this.equipmentService.create(createEquipmentDto);
+  async create(
+    @Body() createEquipmentDto: CreateEquipmentDto,
+    @UploadedFiles() files?: MulterFile[],
+    @Req() req?: any
+  ) {
+    const userRoles = req?.user?.roles || [];
+    const userId = req?.user?.userId || req?.user?.id;
+    const isAdmin = userRoles.includes('site_admin') || userRoles.includes('SITE_ADMIN');
+
+    // 파일 업로드 처리
+    let attachmentUuids: string[] = [];
+    if (files && files.length > 0) {
+      const attachmentType = 'inspection_report'; // 신규 등록은 검수보고서
+      const attachments = await this.attachmentService.createAttachments(files, attachmentType);
+      attachmentUuids = attachments.map((a) => a.uuid);
+    }
+
+    // 시스템 관리자는 직접 승인 가능
+    if (isAdmin && createEquipmentDto.approvalStatus === 'approved') {
+      return this.equipmentService.create(createEquipmentDto);
+    }
+
+    // 시험실무자는 승인 요청 생성
+    const request = await this.approvalService.createEquipmentRequest(
+      createEquipmentDto,
+      userId,
+      attachmentUuids
+    );
+    return {
+      message: '장비 등록 요청이 생성되었습니다.',
+      requestUuid: request.uuid,
+      request,
+    };
   }
 
   @Get()
@@ -53,8 +147,19 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @UsePipes(EquipmentQueryValidationPipe)
-  findAll(@Query() query: EquipmentQueryDto) {
-    return this.equipmentService.findAll(query);
+  findAll(@Query() query: EquipmentQueryDto, @Req() req: any) {
+    // 시험실무자는 자신의 사이트 장비만 조회 가능
+    // 기술책임자/관리자는 모든 사이트 조회 가능
+    const userSite = req.user?.site;
+    const userRoles = req.user?.roles || [];
+    const isTestOperator = userRoles.includes('test_operator');
+    const canViewAllSites =
+      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+
+    // 시험실무자이고 쿼리에 site가 없으면 자신의 사이트로 필터링
+    const siteFilter = isTestOperator && !canViewAllSites && !query.site ? userSite : undefined;
+
+    return this.equipmentService.findAll(query, siteFilter);
   }
 
   @Get(':uuid')
@@ -65,37 +170,113 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string) {
-    return this.equipmentService.findOne(uuid);
+  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string, @Req() req: any) {
+    const equipment = await this.equipmentService.findOne(uuid);
+
+    // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
+    const userSite = req.user?.site;
+    const userRoles = req.user?.roles || [];
+    const isTestOperator = userRoles.includes('test_operator');
+    const canViewAllSites =
+      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+
+    // 시험실무자이고 자신의 사이트가 아닌 장비를 조회하려는 경우 거부
+    if (isTestOperator && !canViewAllSites && userSite && equipment.site !== userSite) {
+      throw new ForbiddenException('다른 사이트의 장비를 조회할 권한이 없습니다.');
+    }
+
+    return equipment;
   }
 
   @Patch(':uuid')
-  @ApiOperation({ summary: '장비 정보 수정', description: '특정 장비의 정보를 수정합니다.' })
+  @ApiOperation({
+    summary: '장비 정보 수정 요청',
+    description:
+      '특정 장비의 정보 수정을 요청합니다. 시험실무자는 승인 대기 상태로 생성되며, 시스템 관리자는 직접 승인 가능합니다.',
+  })
+  @ApiConsumes('multipart/form-data')
   @ApiParam({ name: 'uuid', description: '장비 UUID', type: String, format: 'uuid' })
-  @ApiResponse({ status: HttpStatus.OK, description: '장비 정보 수정 성공' })
+  @ApiResponse({ status: HttpStatus.OK, description: '장비 정보 수정 요청이 생성되었습니다.' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '장비를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @UseInterceptors(
+    FilesInterceptor('files', 10),
+    FormDataParserInterceptor // FormData JSON 파싱
+  )
   @UsePipes(UpdateEquipmentValidationPipe)
-  update(
+  async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateEquipmentDto: UpdateEquipmentDto
+    @Body() updateEquipmentDto: UpdateEquipmentDto,
+    @UploadedFiles() files?: MulterFile[],
+    @Req() req?: any
   ) {
-    return this.equipmentService.update(uuid, updateEquipmentDto);
+    const userRoles = req?.user?.roles || [];
+    const userId = req?.user?.userId || req?.user?.id;
+    const isAdmin = userRoles.includes('site_admin') || userRoles.includes('SITE_ADMIN');
+
+    // 파일 업로드 처리
+    let attachmentUuids: string[] = [];
+    if (files && files.length > 0) {
+      const attachmentType = 'history_card'; // 기존 수정은 이력카드
+      const attachments = await this.attachmentService.createAttachments(files, attachmentType);
+      attachmentUuids = attachments.map((a) => a.uuid);
+    }
+
+    // 시스템 관리자는 직접 승인 가능
+    if (isAdmin && updateEquipmentDto.approvalStatus === 'approved') {
+      return this.equipmentService.update(uuid, updateEquipmentDto);
+    }
+
+    // 시험실무자는 승인 요청 생성
+    const request = await this.approvalService.updateEquipmentRequest(
+      uuid,
+      updateEquipmentDto,
+      userId,
+      attachmentUuids
+    );
+    return {
+      message: '장비 수정 요청이 생성되었습니다.',
+      requestUuid: request.uuid,
+      request,
+    };
   }
 
   @Delete(':uuid')
-  @ApiOperation({ summary: '장비 삭제', description: '특정 장비를 시스템에서 삭제합니다.' })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({
+    summary: '장비 삭제 요청',
+    description:
+      '특정 장비 삭제를 요청합니다. 시험실무자는 승인 대기 상태로 생성되며, 시스템 관리자는 직접 삭제 가능합니다.',
+  })
   @ApiParam({ name: 'uuid', description: '장비 UUID', type: String, format: 'uuid' })
-  @ApiResponse({ status: HttpStatus.OK, description: '장비 삭제 성공' })
+  @ApiResponse({ status: HttpStatus.ACCEPTED, description: '장비 삭제 요청이 생성되었습니다.' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '장비를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.DELETE_EQUIPMENT)
-  remove(@Param('uuid', ParseUUIDPipe) uuid: string) {
-    return this.equipmentService.remove(uuid);
+  async remove(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Req() req?: any
+  ): Promise<{ message: string; requestUuid?: string }> {
+    const userRoles = req?.user?.roles || [];
+    const userId = req?.user?.userId || req?.user?.id;
+    const isAdmin = userRoles.includes('site_admin') || userRoles.includes('SITE_ADMIN');
+
+    // 시스템 관리자는 직접 삭제 가능
+    if (isAdmin) {
+      await this.equipmentService.remove(uuid);
+      return { message: '장비가 삭제되었습니다.' };
+    }
+
+    // 시험실무자는 승인 요청 생성
+    const request = await this.approvalService.deleteEquipmentRequest(uuid, userId);
+    return {
+      message: '장비 삭제 요청이 생성되었습니다.',
+      requestUuid: request.uuid,
+    };
   }
 
   @Patch(':uuid/status')
@@ -124,8 +305,22 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  findByTeam(@Param('teamId') teamId: string) {
-    return this.equipmentService.findByTeam(teamId);
+  async findByTeam(@Param('teamId') teamId: string, @Req() req: any) {
+    const equipmentList = await this.equipmentService.findByTeam(teamId);
+
+    // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
+    const userSite = req.user?.site;
+    const userRoles = req.user?.roles || [];
+    const isTestOperator = userRoles.includes('test_operator');
+    const canViewAllSites =
+      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+
+    // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
+    if (isTestOperator && !canViewAllSites && userSite) {
+      return equipmentList.filter((equipment) => equipment.site === userSite);
+    }
+
+    return equipmentList;
   }
 
   @Get('calibration/due')
@@ -137,7 +332,159 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  findCalibrationDue(@Query('days') days: number = 30) {
-    return this.equipmentService.findCalibrationDue(days);
+  async findCalibrationDue(@Query('days') days: number = 30, @Req() req: any) {
+    const equipmentList = await this.equipmentService.findCalibrationDue(days);
+
+    // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
+    const userSite = req.user?.site;
+    const userRoles = req.user?.roles || [];
+    const isTestOperator = userRoles.includes('test_operator');
+    const canViewAllSites =
+      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+
+    // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
+    if (isTestOperator && !canViewAllSites && userSite) {
+      return equipmentList.filter((equipment) => equipment.site === userSite);
+    }
+
+    return equipmentList;
+  }
+
+  // ========== 승인 프로세스 엔드포인트 ==========
+
+  @Get('requests/pending')
+  @ApiOperation({
+    summary: '승인 대기 요청 목록 조회',
+    description: '승인 대기 중인 장비 등록/수정/삭제 요청 목록을 조회합니다.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '승인 대기 요청 목록 조회 성공' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_EQUIPMENT_REQUESTS)
+  async findPendingRequests(@Req() req: any) {
+    const userRoles = req.user?.roles || [];
+    const userSite = req.user?.site;
+    return this.approvalService.findPendingRequests(userRoles, userSite);
+  }
+
+  @Get('requests/:requestUuid')
+  @ApiOperation({
+    summary: '요청 상세 조회',
+    description: '특정 장비 요청의 상세 정보를 조회합니다.',
+  })
+  @ApiParam({ name: 'requestUuid', description: '요청 UUID', type: String, format: 'uuid' })
+  @ApiResponse({ status: HttpStatus.OK, description: '요청 상세 조회 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '요청을 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_EQUIPMENT_REQUESTS)
+  async findRequestByUuid(@Param('requestUuid', ParseUUIDPipe) requestUuid: string) {
+    return this.approvalService.findRequestByUuid(requestUuid);
+  }
+
+  @Post('requests/:requestUuid/approve')
+  @ApiOperation({
+    summary: '요청 승인',
+    description: '장비 등록/수정/삭제 요청을 승인합니다.',
+  })
+  @ApiParam({ name: 'requestUuid', description: '요청 UUID', type: String, format: 'uuid' })
+  @ApiResponse({ status: HttpStatus.OK, description: '요청이 승인되었습니다.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.APPROVE_EQUIPMENT)
+  async approveRequest(@Param('requestUuid', ParseUUIDPipe) requestUuid: string, @Req() req: any) {
+    const userRoles = req.user?.roles || [];
+    const userId = req.user?.userId || req.user?.id;
+    return this.approvalService.approveRequest(requestUuid, userId, userRoles);
+  }
+
+  @Post('requests/:requestUuid/reject')
+  @ApiOperation({
+    summary: '요청 반려',
+    description: '장비 등록/수정/삭제 요청을 반려합니다. 반려 사유는 필수입니다.',
+  })
+  @ApiParam({ name: 'requestUuid', description: '요청 UUID', type: String, format: 'uuid' })
+  @ApiResponse({ status: HttpStatus.OK, description: '요청이 반려되었습니다.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 (반려 사유 누락 등)' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.REJECT_EQUIPMENT)
+  @UsePipes(ApproveEquipmentRequestValidationPipe)
+  async rejectRequest(
+    @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
+    @Body() approveDto: ApproveEquipmentRequestDto,
+    @Req() req: any
+  ) {
+    const userRoles = req.user?.roles || [];
+    const userId = req.user?.userId || req.user?.id;
+
+    if (!approveDto.rejectionReason) {
+      throw new BadRequestException('반려 사유는 필수입니다.');
+    }
+
+    return this.approvalService.rejectRequest(
+      requestUuid,
+      userId,
+      approveDto.rejectionReason,
+      userRoles
+    );
+  }
+
+  // ========== 파일 업로드 엔드포인트 ==========
+
+  @Post('attachments')
+  @ApiOperation({
+    summary: '파일 업로드',
+    description: '장비 관련 파일(이력카드, 검수보고서 등)을 업로드합니다.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        attachmentType: { type: 'string', enum: ['inspection_report', 'history_card', 'other'] },
+        description: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '파일이 업로드되었습니다.' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 파일 형식 또는 크기 초과' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @UploadedFile() file: MulterFile,
+    @Body('attachmentType') attachmentType: 'inspection_report' | 'history_card' | 'other',
+    @Body('description') description?: string
+  ) {
+    if (!file) {
+      throw new BadRequestException('파일이 필요합니다.');
+    }
+
+    if (!attachmentType) {
+      throw new BadRequestException('첨부 파일 타입이 필요합니다.');
+    }
+
+    const attachment = await this.attachmentService.createAttachment(
+      file,
+      attachmentType,
+      undefined, // equipmentId는 나중에 연결
+      undefined, // requestId는 나중에 연결
+      description
+    );
+
+    return {
+      message: '파일이 업로드되었습니다.',
+      attachment: {
+        uuid: attachment.uuid,
+        fileName: attachment.fileName,
+        originalFileName: attachment.originalFileName,
+        fileSize: attachment.fileSize,
+        mimeType: attachment.mimeType,
+        attachmentType: attachment.attachmentType,
+      },
+    };
   }
 }

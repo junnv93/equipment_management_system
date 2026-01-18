@@ -1,14 +1,20 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +24,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -26,32 +32,41 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Filter, Check, X, RotateCcw, Building, CalendarClock, Clock } from "lucide-react";
-import { format, isAfter } from "date-fns";
-import { ko } from "date-fns/locale";
-import checkoutApi, { Checkout, ReturnCheckoutDto } from "@/lib/api/checkout-api";
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Search, Filter, Check, X, RotateCcw, Building, CalendarClock, Clock } from 'lucide-react';
+import { format, isAfter } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import checkoutApi, { Checkout, ReturnCheckoutDto } from '@/lib/api/checkout-api';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function ManageCheckoutsPage() {
   const router = useRouter();
+  const { user } = useAuth(); // ✅ JWT에서 사용자 ID 가져오기
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentTab, setCurrentTab] = useState("pending");
-  const [returnCondition, setReturnCondition] = useState("good");
-  const [returnNotes, setReturnNotes] = useState("");
-  const [rejectReason, setRejectReason] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentTab, setCurrentTab] = useState('pending');
+  const [returnCondition, setReturnCondition] = useState('good');
+  const [returnNotes, setReturnNotes] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
   const [selectedCheckout, setSelectedCheckout] = useState<Checkout | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
 
   // 반출 목록 조회
   const { data: checkoutsData, isLoading } = useQuery({
-    queryKey: ["checkouts", "manage", currentTab, searchTerm],
+    queryKey: ['checkouts', 'manage', currentTab, searchTerm],
     queryFn: async () => {
       const query: any = {
         pageSize: 100,
@@ -60,13 +75,13 @@ export default function ManageCheckoutsPage() {
 
       // 탭에 따라 다른 상태의 반출 목록 조회
       switch (currentTab) {
-        case "pending":
-          query.status = "pending";
+        case 'pending':
+          query.status = 'pending';
           break;
-        case "approved":
-          query.status = "approved";
+        case 'approved':
+          query.status = 'approved';
           break;
-        case "all":
+        case 'all':
           // 모든 상태 조회 (상태 필터 적용 안함)
           break;
       }
@@ -75,71 +90,103 @@ export default function ManageCheckoutsPage() {
     },
   });
 
-  // 반출 승인 mutation
-  const approveMutation = useMutation({
-    mutationFn: (checkoutId: string) => checkoutApi.approveCheckout(checkoutId),
+  // 반출 1차 승인 mutation
+  // ✅ 백엔드 API에 맞게 수정: approveFirst 사용, approverId 필수
+  const approveFirstMutation = useMutation({
+    mutationFn: ({ checkoutId, approverId }: { checkoutId: string; approverId: string }) =>
+      checkoutApi.approveFirst(checkoutId, approverId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checkouts"] });
+      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       toast({
-        title: "반출 승인 완료",
-        description: "반출 요청이 승인되었습니다.",
-        variant: "default",
+        title: '반출 1차 승인 완료',
+        description: '반출 요청이 1차 승인되었습니다.',
+        variant: 'default',
       });
     },
     onError: (error) => {
       toast({
-        title: "반출 승인 중 오류 발생",
+        title: '반출 승인 중 오류 발생',
         description: `오류: ${error.message}`,
-        variant: "destructive",
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 반출 최종 승인 mutation
+  // ✅ 백엔드 API에 맞게 수정: approveFinal 사용, approverId 필수
+  const approveFinalMutation = useMutation({
+    mutationFn: ({ checkoutId, approverId }: { checkoutId: string; approverId: string }) =>
+      checkoutApi.approveFinal(checkoutId, approverId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
+      toast({
+        title: '반출 최종 승인 완료',
+        description: '반출 요청이 최종 승인되었습니다.',
+        variant: 'default',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: '반출 승인 중 오류 발생',
+        description: `오류: ${error.message}`,
+        variant: 'destructive',
       });
     },
   });
 
   // 반출 거부 mutation
+  // ✅ 백엔드 API에 맞게 수정: approverId 선택 (JWT에서 가져올 수 있음)
   const rejectMutation = useMutation({
-    mutationFn: ({ checkoutId, reason }: { checkoutId: string; reason: string }) =>
-      checkoutApi.rejectCheckout(checkoutId, { reason }),
+    mutationFn: ({ checkoutId, reason }: { checkoutId: string; reason: string }) => {
+      const approverId = user?.id;
+      return checkoutApi.rejectCheckout(checkoutId, reason, approverId);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checkouts"] });
+      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       setRejectDialogOpen(false);
-      setRejectReason("");
+      setRejectReason('');
       setSelectedCheckout(null);
       toast({
-        title: "반출 거부 완료",
-        description: "반출 요청이 거부되었습니다.",
-        variant: "default",
+        title: '반출 거부 완료',
+        description: '반출 요청이 거부되었습니다.',
+        variant: 'default',
       });
     },
     onError: (error) => {
       toast({
-        title: "반출 거부 중 오류 발생",
+        title: '반출 거부 중 오류 발생',
         description: `오류: ${error.message}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
 
   // 반입 처리 mutation
   const returnMutation = useMutation({
-    mutationFn: ({ checkoutId, returnData }: { checkoutId: string; returnData: ReturnCheckoutDto }) =>
-      checkoutApi.returnCheckout(checkoutId, returnData),
+    mutationFn: ({
+      checkoutId,
+      returnData,
+    }: {
+      checkoutId: string;
+      returnData: ReturnCheckoutDto;
+    }) => checkoutApi.returnCheckout(checkoutId, returnData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["checkouts"] });
+      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       setReturnDialogOpen(false);
-      setReturnCondition("good");
-      setReturnNotes("");
+      setReturnCondition('good');
+      setReturnNotes('');
       setSelectedCheckout(null);
       toast({
-        title: "반입 처리 완료",
-        description: "장비 반입이 처리되었습니다.",
-        variant: "default",
+        title: '반입 처리 완료',
+        description: '장비 반입이 처리되었습니다.',
+        variant: 'default',
       });
     },
     onError: (error) => {
       toast({
-        title: "반입 처리 중 오류 발생",
+        title: '반입 처리 중 오류 발생',
         description: `오류: ${error.message}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
@@ -147,14 +194,30 @@ export default function ManageCheckoutsPage() {
   // 반출 상태에 따른 배지 스타일
   const getCheckoutStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">승인 대기중</Badge>;
-      case "approved":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">반출 중</Badge>;
-      case "rejected":
-        return <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">거부됨</Badge>;
-      case "returned":
-        return <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">반입됨</Badge>;
+      case 'pending':
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
+            승인 대기중
+          </Badge>
+        );
+      case 'approved':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
+            반출 중
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">
+            거부됨
+          </Badge>
+        );
+      case 'returned':
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
+            반입됨
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -162,18 +225,42 @@ export default function ManageCheckoutsPage() {
 
   // 연체 상태 확인
   const isOverdue = (checkout: Checkout) => {
-    if (checkout.status !== "approved") return false;
-    
+    if (checkout.status !== 'final_approved' && checkout.status !== 'checked_out') return false;
+
     const expectedReturnDate = new Date(checkout.expectedReturnDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     return isAfter(today, expectedReturnDate);
   };
 
   // 반출 승인 처리
+  // ✅ 백엔드 API에 맞게 수정: 목적에 따라 1차/최종 승인 분리
   const handleApprove = (checkout: Checkout) => {
-    approveMutation.mutate(checkout.id);
+    const approverId = user?.id;
+    if (!approverId) {
+      toast({
+        title: '오류',
+        description: '사용자 정보를 찾을 수 없습니다.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // 목적에 따라 다른 승인 처리
+    if (checkout.purpose === 'external_rental') {
+      // 외부 대여는 2단계 승인 필요
+      if (checkout.status === 'pending') {
+        // 1차 승인
+        approveFirstMutation.mutate({ checkoutId: checkout.id, approverId });
+      } else if (checkout.status === 'first_approved') {
+        // 최종 승인
+        approveFinalMutation.mutate({ checkoutId: checkout.id, approverId });
+      }
+    } else {
+      // 내부 목적(calibration, repair)은 1차 승인으로 완료
+      approveFirstMutation.mutate({ checkoutId: checkout.id, approverId });
+    }
   };
 
   // 반출 거부 다이얼로그 열기
@@ -185,7 +272,7 @@ export default function ManageCheckoutsPage() {
   // 반출 거부 제출
   const handleReject = () => {
     if (!selectedCheckout || !rejectReason.trim()) return;
-    
+
     rejectMutation.mutate({
       checkoutId: selectedCheckout.id,
       reason: rejectReason.trim(),
@@ -201,12 +288,13 @@ export default function ManageCheckoutsPage() {
   // 반입 처리 제출
   const handleReturn = () => {
     if (!selectedCheckout) return;
-    
+
     returnMutation.mutate({
       checkoutId: selectedCheckout.id,
       returnData: {
-        condition: returnCondition,
-        notes: returnNotes.trim(),
+        actualReturnDate: new Date().toISOString(),
+        returnCondition: returnCondition,
+        returnNotes: returnNotes.trim(),
       },
     });
   };
@@ -281,21 +369,21 @@ export default function ManageCheckoutsPage() {
                 </TableRow>
               ) : (
                 checkoutsData?.data?.map((checkout: Checkout) => (
-                  <TableRow 
-                    key={checkout.id} 
-                    className={isOverdue(checkout) ? "bg-red-50" : ""}
-                  >
+                  <TableRow key={checkout.id} className={isOverdue(checkout) ? 'bg-red-50' : ''}>
                     <TableCell className="font-medium">
-                      {checkout.equipment && checkout.equipment.length > 0 
-                        ? `${checkout.equipment[0].name} ${checkout.equipment.length > 1 ? `외 ${checkout.equipment.length - 1}건` : ''}` 
+                      {checkout.equipment && checkout.equipment.length > 0
+                        ? `${checkout.equipment[0].name} ${checkout.equipment.length > 1 ? `외 ${checkout.equipment.length - 1}건` : ''}`
                         : '장비 정보 없음'}
                     </TableCell>
-                    <TableCell>
-                      {checkout.user?.name || '알 수 없는 사용자'}
-                    </TableCell>
+                    <TableCell>{checkout.user?.name || '알 수 없는 사용자'}</TableCell>
                     <TableCell>
                       {isOverdue(checkout) ? (
-                        <Badge variant="outline" className="bg-red-100 text-red-900 hover:bg-red-100">기한 초과</Badge>
+                        <Badge
+                          variant="outline"
+                          className="bg-red-100 text-red-900 hover:bg-red-100"
+                        >
+                          기한 초과
+                        </Badge>
                       ) : (
                         getCheckoutStatusBadge(checkout.status)
                       )}
@@ -303,31 +391,41 @@ export default function ManageCheckoutsPage() {
                     <TableCell>
                       <div className="flex items-center">
                         <Building className="h-4 w-4 mr-1 text-gray-500" />
-                        {checkout.location}
+                        {checkout.destination || checkout.location}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(checkout.startDate), 'yyyy-MM-dd', { locale: ko })}
+                      {checkout.checkoutDate
+                        ? format(new Date(checkout.checkoutDate), 'yyyy-MM-dd', { locale: ko })
+                        : checkout.startDate
+                          ? format(new Date(checkout.startDate), 'yyyy-MM-dd', { locale: ko })
+                          : '-'}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center">
-                        <CalendarClock className={`h-4 w-4 mr-1 ${isOverdue(checkout) ? 'text-red-500' : 'text-gray-500'}`} />
-                        {format(new Date(checkout.expectedReturnDate), 'yyyy-MM-dd', { locale: ko })}
+                        <CalendarClock
+                          className={`h-4 w-4 mr-1 ${isOverdue(checkout) ? 'text-red-500' : 'text-gray-500'}`}
+                        />
+                        {format(new Date(checkout.expectedReturnDate), 'yyyy-MM-dd', {
+                          locale: ko,
+                        })}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {checkout.status === "pending" && (
+                        {checkout.status === 'pending' && (
                           <>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleApprove(checkout)}
-                              disabled={approveMutation.isPending}
+                              disabled={
+                                approveFirstMutation.isPending || approveFinalMutation.isPending
+                              }
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
                               <Check className="h-4 w-4 mr-1" />
-                              승인
+                              {checkout.purpose === 'external_rental' ? '1차 승인' : '승인'}
                             </Button>
                             <Button
                               variant="ghost"
@@ -341,7 +439,21 @@ export default function ManageCheckoutsPage() {
                             </Button>
                           </>
                         )}
-                        {checkout.status === "approved" && (
+                        {checkout.status === 'first_approved' &&
+                          checkout.purpose === 'external_rental' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleApprove(checkout)}
+                              disabled={approveFinalMutation.isPending}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            >
+                              <Check className="h-4 w-4 mr-1" />
+                              최종 승인
+                            </Button>
+                          )}
+                        {(checkout.status === 'final_approved' ||
+                          checkout.status === 'checked_out') && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -386,7 +498,7 @@ export default function ManageCheckoutsPage() {
             <AlertDialogCancel
               onClick={() => {
                 setRejectDialogOpen(false);
-                setRejectReason("");
+                setRejectReason('');
                 setSelectedCheckout(null);
               }}
             >
@@ -397,7 +509,7 @@ export default function ManageCheckoutsPage() {
               disabled={rejectMutation.isPending || !rejectReason.trim()}
               className="bg-red-600 hover:bg-red-700"
             >
-              {rejectMutation.isPending ? "처리 중..." : "반출 거부"}
+              {rejectMutation.isPending ? '처리 중...' : '반출 거부'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -408,9 +520,7 @@ export default function ManageCheckoutsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>장비 반입 처리</DialogTitle>
-            <DialogDescription>
-              장비 반입 상태 및 비고 사항을 입력하세요.
-            </DialogDescription>
+            <DialogDescription>장비 반입 상태 및 비고 사항을 입력하세요.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 my-4">
             <div className="space-y-2">
@@ -444,23 +554,19 @@ export default function ManageCheckoutsPage() {
               variant="outline"
               onClick={() => {
                 setReturnDialogOpen(false);
-                setReturnCondition("good");
-                setReturnNotes("");
+                setReturnCondition('good');
+                setReturnNotes('');
                 setSelectedCheckout(null);
               }}
             >
               취소
             </Button>
-            <Button 
-              type="button" 
-              onClick={handleReturn}
-              disabled={returnMutation.isPending}
-            >
-              {returnMutation.isPending ? "처리 중..." : "반입 처리"}
+            <Button type="button" onClick={handleReturn} disabled={returnMutation.isPending}>
+              {returnMutation.isPending ? '처리 중...' : '반입 처리'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-} 
+}

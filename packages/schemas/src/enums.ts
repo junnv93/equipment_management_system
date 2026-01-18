@@ -42,12 +42,20 @@ export type CalibrationMethod = z.infer<typeof CalibrationMethodEnum>;
 
 // 사용자 역할 열거형
 export const UserRoleEnum = z.enum([
-  'admin', // 관리자
-  'manager', // 팀 관리자
-  'user', // 일반 사용자
+  'test_operator', // 시험실무자
+  'technical_manager', // 기술책임자
+  'site_admin', // 시험소별 관리자
 ]);
 
 export type UserRole = z.infer<typeof UserRoleEnum>;
+
+// 사이트 타입 열거형
+export const SiteEnum = z.enum(['suwon', 'uiwang']);
+export type Site = z.infer<typeof SiteEnum>;
+
+// 위치 타입 열거형
+export const LocationEnum = z.enum(['수원랩', '의왕랩']);
+export type Location = z.infer<typeof LocationEnum>;
 
 // 팀 ID 열거형
 export const TeamEnum = z.enum([

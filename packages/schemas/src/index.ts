@@ -14,6 +14,30 @@ import {
 } from './equipment';
 
 import {
+  EquipmentRequest,
+  CreateEquipmentRequestInput,
+  ApproveEquipmentRequestInput,
+  isEquipmentRequest,
+  equipmentRequestSchema,
+  createEquipmentRequestSchema,
+  approveEquipmentRequestSchema,
+  ApprovalStatus,
+  ApprovalStatusEnum,
+  RequestType,
+  RequestTypeEnum,
+} from './equipment-request';
+
+import {
+  EquipmentAttachment,
+  CreateEquipmentAttachmentInput,
+  isEquipmentAttachment,
+  equipmentAttachmentSchema,
+  createEquipmentAttachmentSchema,
+  AttachmentType,
+  AttachmentTypeEnum,
+} from './equipment-attachment';
+
+import {
   User,
   CreateUserInput,
   UpdateUserInput,
@@ -83,6 +107,16 @@ import {
 
 import { AppError, ErrorCode, ErrorResponse, ErrorResponseSchema, handleZodError } from './errors';
 
+// API 응답 타입
+import {
+  PaginatedListResponse,
+  FrontendPaginatedResponse,
+  SingleResourceResponse,
+  PaginationMeta,
+  paginationMetaSchema,
+  createPaginatedResponseSchema,
+} from './api-response';
+
 // 각 모듈에서 가져온 객체 및 타입 내보내기
 export {
   // Equipment
@@ -96,6 +130,28 @@ export {
   createEquipmentSchema,
   updateEquipmentSchema,
   baseEquipmentSchema,
+
+  // Equipment Request
+  EquipmentRequest,
+  CreateEquipmentRequestInput,
+  ApproveEquipmentRequestInput,
+  isEquipmentRequest,
+  equipmentRequestSchema,
+  createEquipmentRequestSchema,
+  approveEquipmentRequestSchema,
+  ApprovalStatus,
+  ApprovalStatusEnum,
+  RequestType,
+  RequestTypeEnum,
+
+  // Equipment Attachment
+  EquipmentAttachment,
+  CreateEquipmentAttachmentInput,
+  isEquipmentAttachment,
+  equipmentAttachmentSchema,
+  createEquipmentAttachmentSchema,
+  AttachmentType,
+  AttachmentTypeEnum,
 
   // User
   User,
@@ -172,6 +228,14 @@ export {
   ErrorResponse,
   ErrorResponseSchema,
   handleZodError,
+
+  // API Response Types
+  PaginatedListResponse,
+  FrontendPaginatedResponse,
+  SingleResourceResponse,
+  PaginationMeta,
+  paginationMetaSchema,
+  createPaginatedResponseSchema,
 };
 
 // ListResponse 타입 임시 선언 - 백엔드와 일치시키기 위함

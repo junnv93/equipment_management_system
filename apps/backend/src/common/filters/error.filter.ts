@@ -12,13 +12,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    
+
     let errorResponse: ErrorResponse;
-    
+
     // 요청 정보 로깅
     this.logger.error(
       `Exception occurred during ${request.method} ${request.url}`,
-      exception instanceof Error ? exception.stack : '',
+      exception instanceof Error ? exception.stack : ''
     );
 
     if (exception instanceof AppError) {
@@ -34,30 +34,33 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // NestJS HTTP 예외 처리
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      const message = typeof exceptionResponse === 'object' 
-        ? (exceptionResponse as any).message || 'HTTP 오류가 발생했습니다'
-        : exceptionResponse;
-      
+      const message =
+        typeof exceptionResponse === 'object'
+          ? (exceptionResponse as any).message || 'HTTP 오류가 발생했습니다'
+          : exceptionResponse;
+
       errorResponse = {
         code: this.mapHttpStatusToErrorCode(status),
         message: Array.isArray(message) ? message.join(', ') : String(message),
         timestamp: new Date().toISOString(),
-        details: typeof exceptionResponse === 'object' ? exceptionResponse : undefined
+        details: typeof exceptionResponse === 'object' ? exceptionResponse : undefined,
       };
-      
+
       return response.status(status).json(errorResponse);
     } else {
       // 미처리 예외는 서버 오류로 처리
-      const errorMessage = exception instanceof Error ? exception.message : '알 수 없는 서버 오류가 발생했습니다';
+      const errorMessage =
+        exception instanceof Error ? exception.message : '알 수 없는 서버 오류가 발생했습니다';
       errorResponse = {
         code: ErrorCode.InternalServerError,
         message: errorMessage,
         timestamp: new Date().toISOString(),
-        details: process.env.NODE_ENV === 'development' ? 
-          { stack: exception instanceof Error ? exception.stack : undefined } : 
-          undefined
+        details:
+          process.env.NODE_ENV === 'development'
+            ? { stack: exception instanceof Error ? exception.stack : undefined }
+            : undefined,
       };
-      
+
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse);
     }
   }
@@ -80,4 +83,4 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         return ErrorCode.InternalServerError;
     }
   }
-} 
+}

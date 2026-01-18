@@ -1,12 +1,19 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Check, X } from "lucide-react";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search, Check, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -14,37 +21,38 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { format, parseISO } from "date-fns";
-import { useToast } from "@/components/ui/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import rentalApi, { Rental } from "@/lib/api/rental-api";
-import { ko } from "date-fns/locale";
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { format, parseISO } from 'date-fns';
+import { useToast } from '@/components/ui/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import rentalApi, { Rental } from '@/lib/api/rental-api';
+import { ko } from 'date-fns/locale';
 
 export default function ReturnApprovalsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("pending");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('pending');
   const [selectedRental, setSelectedRental] = useState<Rental | null>(null);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState('');
 
   // 반납 요청 목록 조회
   const { data: rentals, isLoading } = useQuery({
-    queryKey: ["return-requests", activeTab],
+    queryKey: ['return-requests', activeTab],
     queryFn: async () => {
-      const status = activeTab === "pending" 
-        ? "return_requested" 
-        : activeTab === "approved" 
-          ? "returned" 
-          : "all";
-            
+      const status =
+        activeTab === 'pending'
+          ? 'return_requested'
+          : activeTab === 'approved'
+            ? 'returned'
+            : 'all';
+
       // 실제 API 호출은 구현되어야 함
       return rentalApi.getRentals({
-        statuses: status,
+        status: status,
         search: searchTerm || undefined,
         pageSize: 50,
       });
@@ -53,26 +61,26 @@ export default function ReturnApprovalsPage() {
 
   // 반납 승인 mutation
   const approveReturnMutation = useMutation({
-    mutationFn: (data: { rentalId: string, notes: string }) => 
+    mutationFn: (data: { rentalId: string; notes: string }) =>
       rentalApi.approveReturn(data.rentalId, {
         status: 'approved',
         approverId: 'current-admin-id', // 실제로는 로그인한 관리자 ID
-        notes: data.notes
+        notes: data.notes,
       }),
     onSuccess: () => {
       toast({
-        title: "반납 승인 완료",
-        description: "장비 반납이 승인되었습니다.",
+        title: '반납 승인 완료',
+        description: '장비 반납이 승인되었습니다.',
       });
       setIsApproveDialogOpen(false);
-      setNotes("");
-      queryClient.invalidateQueries({ queryKey: ["return-requests"] });
+      setNotes('');
+      queryClient.invalidateQueries({ queryKey: ['return-requests'] });
     },
     onError: (error) => {
       toast({
-        title: "반납 승인 실패",
-        description: "장비 반납 승인 중 오류가 발생했습니다.",
-        variant: "destructive",
+        title: '반납 승인 실패',
+        description: '장비 반납 승인 중 오류가 발생했습니다.',
+        variant: 'destructive',
       });
       console.error(error);
     },
@@ -80,26 +88,26 @@ export default function ReturnApprovalsPage() {
 
   // 반납 거절 mutation
   const rejectReturnMutation = useMutation({
-    mutationFn: (data: { rentalId: string, notes: string }) => 
+    mutationFn: (data: { rentalId: string; notes: string }) =>
       rentalApi.approveReturn(data.rentalId, {
         status: 'rejected',
         approverId: 'current-admin-id', // 실제로는 로그인한 관리자 ID
-        notes: data.notes
+        notes: data.notes,
       }),
     onSuccess: () => {
       toast({
-        title: "반납 거절 완료",
-        description: "장비 반납 요청이 거절되었습니다.",
+        title: '반납 거절 완료',
+        description: '장비 반납 요청이 거절되었습니다.',
       });
       setIsRejectDialogOpen(false);
-      setNotes("");
-      queryClient.invalidateQueries({ queryKey: ["return-requests"] });
+      setNotes('');
+      queryClient.invalidateQueries({ queryKey: ['return-requests'] });
     },
     onError: (error) => {
       toast({
-        title: "반납 거절 실패",
-        description: "장비 반납 거절 중 오류가 발생했습니다.",
-        variant: "destructive",
+        title: '반납 거절 실패',
+        description: '장비 반납 거절 중 오류가 발생했습니다.',
+        variant: 'destructive',
       });
       console.error(error);
     },
@@ -109,7 +117,7 @@ export default function ReturnApprovalsPage() {
     if (!selectedRental) return;
     approveReturnMutation.mutate({
       rentalId: selectedRental.id,
-      notes
+      notes,
     });
   };
 
@@ -117,35 +125,39 @@ export default function ReturnApprovalsPage() {
     if (!selectedRental) return;
     rejectReturnMutation.mutate({
       rentalId: selectedRental.id,
-      notes
+      notes,
     });
   };
 
   const openApproveDialog = (rental: Rental) => {
     setSelectedRental(rental);
-    setNotes("");
+    setNotes('');
     setIsApproveDialogOpen(true);
   };
 
   const openRejectDialog = (rental: Rental) => {
     setSelectedRental(rental);
-    setNotes("");
+    setNotes('');
     setIsRejectDialogOpen(true);
   };
 
   // 필터링된 대여 목록
   const getFilteredRentals = () => {
     if (!rentals || !rentals.data) return [];
-    
-    return rentals.data.filter(rental => {
+
+    return rentals.data.filter((rental) => {
       // 검색어 필터링
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         return (
-          (rental.equipment?.name?.toLowerCase().includes(searchLower) || false) ||
-          (rental.equipment?.managementNumber?.toLowerCase().includes(searchLower) || false) ||
-          (rental.user?.name?.toLowerCase().includes(searchLower) || false) ||
-          (rental.purpose?.toLowerCase().includes(searchLower) || false)
+          rental.equipment?.name?.toLowerCase().includes(searchLower) ||
+          false ||
+          rental.equipment?.managementNumber?.toLowerCase().includes(searchLower) ||
+          false ||
+          rental.user?.name?.toLowerCase().includes(searchLower) ||
+          false ||
+          rental.purpose?.toLowerCase().includes(searchLower) ||
+          false
         );
       }
       return true;
@@ -156,15 +168,15 @@ export default function ReturnApprovalsPage() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">반납 승인 관리</h1>
-        <p className="text-muted-foreground">
-          장비 반납 요청을 관리하고 승인할 수 있습니다.
-        </p>
+        <p className="text-muted-foreground">장비 반납 요청을 관리하고 승인할 수 있습니다.</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>반납 요청 목록</CardTitle>
-          <CardDescription>사용자가 요청한 장비 반납을 승인하거나 거절할 수 있습니다.</CardDescription>
+          <CardDescription>
+            사용자가 요청한 장비 반납을 승인하거나 거절할 수 있습니다.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -192,7 +204,7 @@ export default function ReturnApprovalsPage() {
                 <div className="text-center py-8">데이터를 불러오는 중...</div>
               ) : getFilteredRentals().length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? "검색 결과가 없습니다." : "반납 요청이 없습니다."}
+                  {searchTerm ? '검색 결과가 없습니다.' : '반납 요청이 없습니다.'}
                 </div>
               ) : (
                 <Table>
@@ -211,38 +223,44 @@ export default function ReturnApprovalsPage() {
                     {getFilteredRentals().map((rental) => (
                       <TableRow key={rental.id}>
                         <TableCell className="font-medium">
-                          {rental.equipment?.name || "알 수 없음"}
+                          {rental.equipment?.name || '알 수 없음'}
                           <div className="text-sm text-muted-foreground">
-                            관리번호: {rental.equipment?.managementNumber || "N/A"}
+                            관리번호: {rental.equipment?.managementNumber || 'N/A'}
                           </div>
                         </TableCell>
                         <TableCell>
-                          {rental.user?.name || "알 수 없음"}
+                          {rental.user?.name || '알 수 없음'}
                           <div className="text-sm text-muted-foreground">
-                            {rental.user?.department || ""}
+                            {rental.user?.department || ''}
                           </div>
                         </TableCell>
                         <TableCell>
                           {rental.startDate
-                            ? format(parseISO(rental.startDate), "yyyy-MM-dd", { locale: ko })
-                            : "N/A"}
+                            ? format(parseISO(rental.startDate), 'yyyy-MM-dd', { locale: ko })
+                            : 'N/A'}
                         </TableCell>
                         <TableCell>
                           {rental.expectedReturnDate
-                            ? format(parseISO(rental.expectedReturnDate), "yyyy-MM-dd", { locale: ko })
-                            : "N/A"}
+                            ? format(parseISO(rental.expectedReturnDate), 'yyyy-MM-dd', {
+                                locale: ko,
+                              })
+                            : 'N/A'}
                         </TableCell>
                         <TableCell>
                           {rental.updatedAt && rental.status === 'return_requested'
-                            ? format(parseISO(rental.updatedAt), "yyyy-MM-dd", { locale: ko })
-                            : "N/A"}
+                            ? format(parseISO(rental.updatedAt), 'yyyy-MM-dd', { locale: ko })
+                            : 'N/A'}
                         </TableCell>
                         <TableCell>
                           {rental.status === 'return_requested' && (
-                            <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">승인 대기</span>
+                            <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                              승인 대기
+                            </span>
                           )}
                           {rental.status === 'returned' && (
-                            <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">반납 완료</span>
+                            <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                              반납 완료
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -285,16 +303,32 @@ export default function ReturnApprovalsPage() {
             <DialogDescription>
               다음 장비의 반납을 승인합니다:
               <div className="mt-2 p-3 bg-muted rounded">
-                <div><strong>장비:</strong> {selectedRental?.equipment?.name}</div>
-                <div><strong>사용자:</strong> {selectedRental?.user?.name}</div>
-                <div><strong>대여일:</strong> {selectedRental?.startDate && format(parseISO(selectedRental.startDate), "yyyy-MM-dd", { locale: ko })}</div>
-                <div><strong>반납 예정일:</strong> {selectedRental?.expectedReturnDate && format(parseISO(selectedRental.expectedReturnDate), "yyyy-MM-dd", { locale: ko })}</div>
+                <div>
+                  <strong>장비:</strong> {selectedRental?.equipment?.name}
+                </div>
+                <div>
+                  <strong>사용자:</strong> {selectedRental?.user?.name}
+                </div>
+                <div>
+                  <strong>대여일:</strong>{' '}
+                  {selectedRental?.startDate &&
+                    format(parseISO(selectedRental.startDate), 'yyyy-MM-dd', { locale: ko })}
+                </div>
+                <div>
+                  <strong>반납 예정일:</strong>{' '}
+                  {selectedRental?.expectedReturnDate &&
+                    format(parseISO(selectedRental.expectedReturnDate), 'yyyy-MM-dd', {
+                      locale: ko,
+                    })}
+                </div>
               </div>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <label htmlFor="notes" className="text-sm font-medium">메모</label>
+            <label htmlFor="notes" className="text-sm font-medium">
+              메모
+            </label>
             <Textarea
               id="notes"
               placeholder="승인 관련 메모를 입력해주세요"
@@ -307,11 +341,8 @@ export default function ReturnApprovalsPage() {
             <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
               취소
             </Button>
-            <Button 
-              onClick={handleApprove}
-              disabled={approveReturnMutation.isPending}
-            >
-              {approveReturnMutation.isPending ? "처리 중..." : "승인"}
+            <Button onClick={handleApprove} disabled={approveReturnMutation.isPending}>
+              {approveReturnMutation.isPending ? '처리 중...' : '승인'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -325,16 +356,32 @@ export default function ReturnApprovalsPage() {
             <DialogDescription>
               다음 장비의 반납을 거절합니다:
               <div className="mt-2 p-3 bg-muted rounded">
-                <div><strong>장비:</strong> {selectedRental?.equipment?.name}</div>
-                <div><strong>사용자:</strong> {selectedRental?.user?.name}</div>
-                <div><strong>대여일:</strong> {selectedRental?.startDate && format(parseISO(selectedRental.startDate), "yyyy-MM-dd", { locale: ko })}</div>
-                <div><strong>반납 예정일:</strong> {selectedRental?.expectedReturnDate && format(parseISO(selectedRental.expectedReturnDate), "yyyy-MM-dd", { locale: ko })}</div>
+                <div>
+                  <strong>장비:</strong> {selectedRental?.equipment?.name}
+                </div>
+                <div>
+                  <strong>사용자:</strong> {selectedRental?.user?.name}
+                </div>
+                <div>
+                  <strong>대여일:</strong>{' '}
+                  {selectedRental?.startDate &&
+                    format(parseISO(selectedRental.startDate), 'yyyy-MM-dd', { locale: ko })}
+                </div>
+                <div>
+                  <strong>반납 예정일:</strong>{' '}
+                  {selectedRental?.expectedReturnDate &&
+                    format(parseISO(selectedRental.expectedReturnDate), 'yyyy-MM-dd', {
+                      locale: ko,
+                    })}
+                </div>
               </div>
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <label htmlFor="reject-reason" className="text-sm font-medium">거절 사유</label>
+            <label htmlFor="reject-reason" className="text-sm font-medium">
+              거절 사유
+            </label>
             <Textarea
               id="reject-reason"
               placeholder="거절 사유를 입력해주세요"
@@ -347,16 +394,16 @@ export default function ReturnApprovalsPage() {
             <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
               취소
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={handleReject}
               disabled={rejectReturnMutation.isPending}
             >
-              {rejectReturnMutation.isPending ? "처리 중..." : "거절"}
+              {rejectReturnMutation.isPending ? '처리 중...' : '거절'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-} 
+}

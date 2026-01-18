@@ -55,7 +55,7 @@ export class TeamsController {
   @ApiResponse({ status: 404, description: '팀을 찾을 수 없음' })
   async findOne(@Param('id') id: string) {
     const team = await this.teamsService.findOne(id);
-    
+
     if (!team) {
       throw new NotFoundException({
         error: {
@@ -68,7 +68,7 @@ export class TeamsController {
         },
       });
     }
-    
+
     return {
       data: team,
       meta: {
@@ -111,12 +111,9 @@ export class TeamsController {
   @ApiOperation({ summary: '팀 정보 업데이트' })
   @ApiResponse({ status: 200, description: '팀 업데이트 성공' })
   @ApiResponse({ status: 404, description: '팀을 찾을 수 없음' })
-  async update(
-    @Param('id') id: string,
-    @Body() updateTeamDto: UpdateTeamDto,
-  ) {
+  async update(@Param('id') id: string, @Body() updateTeamDto: UpdateTeamDto) {
     const team = await this.teamsService.update(id, updateTeamDto);
-    
+
     if (!team) {
       throw new NotFoundException({
         error: {
@@ -129,7 +126,7 @@ export class TeamsController {
         },
       });
     }
-    
+
     return {
       data: team,
       meta: {
@@ -146,7 +143,7 @@ export class TeamsController {
   @ApiResponse({ status: 404, description: '팀을 찾을 수 없음' })
   async remove(@Param('id') id: string) {
     const deleted = await this.teamsService.remove(id);
-    
+
     if (!deleted) {
       throw new NotFoundException({
         error: {
@@ -159,7 +156,7 @@ export class TeamsController {
         },
       });
     }
-    
+
     // 204 응답은 본문이 없음
   }
-} 
+}

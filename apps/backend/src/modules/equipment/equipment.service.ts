@@ -86,13 +86,15 @@ export class EquipmentService {
 
   /**
    * TeamId 정규화 헬퍼 메서드
-   * 문자열 또는 숫자를 숫자로 변환
+   * ✅ 스키마 일치화: 이제 teamId는 uuid(string) 타입이므로 정규화 불필요
+   * 하지만 하위 호환성을 위해 유지 (string만 반환)
    */
-  private normalizeTeamId(teamId?: string | number): number | undefined {
+  private normalizeTeamId(teamId?: string | number): string | undefined {
     if (teamId === undefined || teamId === null) {
       return undefined;
     }
-    return typeof teamId === 'string' ? parseInt(teamId, 10) : teamId;
+    // uuid는 문자열이므로 문자열로 변환
+    return typeof teamId === 'string' ? teamId : String(teamId);
   }
 
   /**
@@ -123,10 +125,17 @@ export class EquipmentService {
    * 쿼리 조건 빌더
    * findAll 메서드의 복잡한 쿼리 로직을 분리
    */
-  private buildQueryConditions(queryParams: EquipmentQueryDto): QueryConditions {
-    const { search, status, location, manufacturer, teamId, calibrationDue, sort } = queryParams;
+  private buildQueryConditions(queryParams: EquipmentQueryDto, userSite?: string): QueryConditions {
+    const { search, status, location, manufacturer, teamId, calibrationDue, sort, site } =
+      queryParams;
 
     const whereConditions: SQL<unknown>[] = [eq(equipment.isActive, true)];
+
+    // 사이트 필터링: 쿼리 파라미터가 있으면 우선, 없으면 사용자 사이트로 필터링
+    const siteFilter = site || userSite;
+    if (siteFilter) {
+      whereConditions.push(eq(equipment.site, siteFilter));
+    }
 
     // 인덱스를 활용할 수 있는 조건을 먼저 추가 (성능 최적화)
     if (status) {
@@ -253,6 +262,7 @@ export class EquipmentService {
       location: dto.location,
       calibrationCycle: dto.calibrationCycle,
       teamId,
+      site: dto.site, // 사이트 필드 추가
       lastCalibrationDate: dto.lastCalibrationDate ? new Date(dto.lastCalibrationDate) : undefined,
       nextCalibrationDate,
       calibrationAgency: dto.calibrationAgency,
@@ -269,6 +279,20 @@ export class EquipmentService {
       technicalManager: dto.technicalManager,
       status: dto.status ?? 'available',
       isActive: true,
+
+      // 승인 프로세스 필드
+      approvalStatus: dto.approvalStatus ?? 'approved', // 시스템 관리자는 직접 승인 가능
+      // requestedBy와 approvedBy는 승인 프로세스에서 별도로 설정됨
+
+      // 추가 필수 필드 (프롬프트 3 요구사항)
+      equipmentType: dto.equipmentType,
+      calibrationResult: dto.calibrationResult,
+      correctionFactor: dto.correctionFactor,
+      intermediateCheckSchedule: dto.intermediateCheckSchedule
+        ? new Date(dto.intermediateCheckSchedule)
+        : undefined,
+      repairHistory: dto.repairHistory,
+
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -340,6 +364,14 @@ export class EquipmentService {
       'mainFeatures',
       'technicalManager',
       'status',
+      'site',
+      'approvalStatus',
+      // 'requestedBy', 'approvedBy'는 승인 프로세스에서 별도로 관리됨
+      'equipmentType',
+      'calibrationResult',
+      'correctionFactor',
+      'intermediateCheckSchedule',
+      'repairHistory',
     ];
 
     for (const field of fields) {
@@ -366,6 +398,11 @@ export class EquipmentService {
         throw new BadRequestException(
           `관리번호 ${createEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`
         );
+      }
+
+      // 사이트 필드 검증: 필수 필드
+      if (!createEquipmentDto.site) {
+        throw new BadRequestException('사이트 정보는 필수입니다.');
       }
 
       // DTO를 DB 엔티티로 변환
@@ -395,8 +432,10 @@ export class EquipmentService {
   /**
    * 장비 목록 조회 (필터링, 정렬, 페이지네이션 지원)
    * ✅ Single Source of Truth: Zod 스키마가 타입 변환 및 검증을 모두 처리
+   * @param queryParams 쿼리 파라미터
+   * @param userSite 사용자 사이트 (시험실무자는 자신의 사이트만 조회)
    */
-  async findAll(queryParams: EquipmentQueryDto): Promise<EquipmentListResponse> {
+  async findAll(queryParams: EquipmentQueryDto, userSite?: string): Promise<EquipmentListResponse> {
     const { page = 1, pageSize = 20 } = queryParams;
 
     // 캐시 키 생성
@@ -407,6 +446,7 @@ export class EquipmentService {
       manufacturer: queryParams.manufacturer,
       teamId: queryParams.teamId,
       calibrationDue: queryParams.calibrationDue,
+      site: queryParams.site, // ✅ 사이트 필터 캐시 키에 포함
       sort: queryParams.sort,
       page,
       pageSize,
@@ -417,7 +457,7 @@ export class EquipmentService {
       async () => {
         try {
           // 쿼리 조건 빌드
-          const { whereConditions, orderBy } = this.buildQueryConditions(queryParams);
+          const { whereConditions, orderBy } = this.buildQueryConditions(queryParams, userSite);
 
           // 총 아이템 수 계산
           const countCacheKey = this.buildCacheKey('count', {
@@ -496,17 +536,20 @@ export class EquipmentService {
    * UUID로 장비 조회
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    * 내부 id는 데이터베이스 내부에서만 사용
+   * ✅ 스키마 일치화: Drizzle relations를 사용하여 타입 안전한 조인
    */
-  async findOne(uuid: string): Promise<Equipment> {
-    const cacheKey = this.buildCacheKey('detail', { uuid });
+  async findOne(uuid: string, includeTeam = false): Promise<Equipment & { team?: any }> {
+    const cacheKey = this.buildCacheKey('detail', { uuid, includeTeam });
 
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
         try {
           // 소프트 삭제된 항목은 제외 (isActive = true만 조회)
+          // ✅ Drizzle relations 사용 (CAST 불필요)
           const equipmentData = await this.db.query.equipment.findFirst({
             where: and(eq(equipment.uuid, uuid), eq(equipment.isActive, true)),
+            with: includeTeam ? { team: true } : undefined,
           });
 
           if (!equipmentData) {
@@ -725,6 +768,25 @@ export class EquipmentService {
       },
       this.CACHE_TTL
     );
+  }
+
+  /**
+   * 장비의 팀 타입 조회
+   * ✅ 스키마 일치화: Drizzle relations를 사용하여 간단하고 타입 안전하게 조회
+   */
+  async getEquipmentTeamType(equipmentId: string): Promise<string | null> {
+    try {
+      // ✅ relations를 사용하여 팀 정보 포함 조회
+      const equipmentData = await this.findOne(equipmentId, true);
+
+      // ✅ 간단하게 team?.type 접근 가능
+      return equipmentData.team?.type || null;
+    } catch (error) {
+      this.logger.error(
+        `장비 팀 타입 조회 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return null;
+    }
   }
 
   /**

@@ -1,58 +1,71 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast, type Toast } from "@/components/ui/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { DatePicker } from "@/components/ui/date-picker";
-import { format, addMonths } from "date-fns";
-import { ko } from "date-fns/locale";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Calendar, Wrench, Clock, User, DollarSign, ClipboardCheck } from "lucide-react";
-import equipmentApi, { Equipment } from "@/lib/api/equipment-api";
-import maintenanceApi, { 
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast, type Toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { DatePicker } from '@/components/ui/date-picker';
+import { format, addMonths } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Search, Calendar, Wrench, Clock, User, DollarSign, ClipboardCheck } from 'lucide-react';
+import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
+import maintenanceApi, {
   CreateMaintenanceDto,
   MaintenanceType,
   MaintenanceStatus,
-  MaintenanceResult
-} from "@/lib/api/maintenance-api";
-import { ToastAction } from "@/components/ui/toast";
+  MaintenanceResult,
+} from '@/lib/api/maintenance-api';
+import { ToastAction } from '@/components/ui/toast';
 
 export default function CreateMaintenancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // URL에서 장비 ID 파라미터 가져오기
   const equipmentIdParam = searchParams.get('equipmentId');
-  
+
   // 폼 상태 관리
-  const [equipmentId, setEquipmentId] = useState<string>(equipmentIdParam || "");
-  const [maintenanceType, setMaintenanceType] = useState<MaintenanceType>("regular");
+  const [equipmentId, setEquipmentId] = useState<string>(equipmentIdParam || '');
+  const [maintenanceType, setMaintenanceType] = useState<MaintenanceType>('regular');
   const [maintenanceDate, setMaintenanceDate] = useState<Date>(new Date());
-  const [performedBy, setPerformedBy] = useState("");
-  const [performedByContact, setPerformedByContact] = useState("");
-  const [cost, setCost] = useState<string>("");
-  const [status, setStatus] = useState<MaintenanceStatus>("scheduled");
-  const [result, setResult] = useState<MaintenanceResult>("pending");
-  const [notes, setNotes] = useState("");
+  const [performedBy, setPerformedBy] = useState('');
+  const [performedByContact, setPerformedByContact] = useState('');
+  const [cost, setCost] = useState<string>('');
+  const [status, setStatus] = useState<MaintenanceStatus>('scheduled');
+  const [result, setResult] = useState<MaintenanceResult>('pending');
+  const [notes, setNotes] = useState('');
   const [parts, setParts] = useState<string[]>([]);
-  const [newPart, setNewPart] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [maintenancePeriod, setMaintenancePeriod] = useState<string>("0");
+  const [newPart, setNewPart] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [maintenancePeriod, setMaintenancePeriod] = useState<string>('0');
   const [useRegularPeriod, setUseRegularPeriod] = useState(true);
   const [calculatedNextDate, setCalculatedNextDate] = useState<Date | null>(null);
 
   // 장비 목록 조회
   const { data: equipmentData, isLoading: equipmentLoading } = useQuery({
-    queryKey: ["equipment-list", searchTerm],
+    queryKey: ['equipment-list', searchTerm],
     queryFn: async () => {
       if (equipmentIdParam) {
         // 특정 장비 정보만 가져오기
@@ -71,9 +84,9 @@ export default function CreateMaintenancePage() {
 
   // 선택된 장비 정보 조회
   const { data: selectedEquipment, isLoading: selectedEquipmentLoading } = useQuery({
-    queryKey: ["equipment", equipmentId],
+    queryKey: ['equipment', equipmentId],
     queryFn: () => equipmentApi.getEquipment(equipmentId),
-    enabled: !!equipmentId && equipmentId !== "",
+    enabled: !!equipmentId && equipmentId !== '',
   });
 
   // 다음 점검일 계산
@@ -87,8 +100,8 @@ export default function CreateMaintenancePage() {
 
   // 선택된 장비의 정기 점검 주기 가져오기
   useEffect(() => {
-    if (selectedEquipment && useRegularPeriod && maintenanceType === "regular") {
-      const period = selectedEquipment.maintenancePeriod || 0;
+    if (selectedEquipment && useRegularPeriod && maintenanceType === 'regular') {
+      const period = (selectedEquipment as any).maintenancePeriod || 0;
       setMaintenancePeriod(period.toString());
     }
   }, [selectedEquipment, useRegularPeriod, maintenanceType]);
@@ -98,20 +111,19 @@ export default function CreateMaintenancePage() {
     mutationFn: (data: CreateMaintenanceDto) => maintenanceApi.createMaintenance(data),
     onSuccess: () => {
       toast({
-        title: "점검 정보 등록 완료",
-        description: "장비 점검 정보가 성공적으로 등록되었습니다.",
-        variant: "default",
-      } as Toast);
-      queryClient.invalidateQueries({ queryKey: ["maintenance-history"] });
-      queryClient.invalidateQueries({ queryKey: ["equipment"] });
-      router.push("/maintenance");
+        title: '점검 정보 등록 완료',
+        description: '장비 점검 정보가 성공적으로 등록되었습니다.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['maintenance-history'] });
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      router.push('/maintenance');
     },
     onError: (error: any) => {
       toast({
-        title: "점검 정보 등록 실패",
-        description: error?.message || "점검 정보 등록 중 오류가 발생했습니다.",
-        variant: "destructive",
-      } as Toast);
+        title: '점검 정보 등록 실패',
+        description: error?.message || '점검 정보 등록 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
       console.error(error);
     },
   });
@@ -120,7 +132,7 @@ export default function CreateMaintenancePage() {
   const handleAddPart = () => {
     if (newPart.trim()) {
       setParts([...parts, newPart.trim()]);
-      setNewPart("");
+      setNewPart('');
     }
   };
 
@@ -134,29 +146,29 @@ export default function CreateMaintenancePage() {
   // 점검 등록 제출 처리
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!equipmentId) {
       toast({
-        title: "장비를 선택해주세요",
-        description: "점검할 장비를 선택해야 합니다.",
-        variant: "destructive",
-      } as Toast);
+        title: '장비를 선택해주세요',
+        description: '점검할 장비를 선택해야 합니다.',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (!performedBy) {
       toast({
-        title: "담당자를 입력해주세요",
-        description: "점검 담당자 정보를 입력해야 합니다.",
-        variant: "destructive",
-      } as Toast);
+        title: '담당자를 입력해주세요',
+        description: '점검 담당자 정보를 입력해야 합니다.',
+        variant: 'destructive',
+      });
       return;
     }
 
     // 점검 데이터 생성
     const costValue = cost ? parseFloat(cost) : undefined;
     const periodValue = maintenancePeriod ? parseInt(maintenancePeriod) : undefined;
-    
+
     const maintenanceData: CreateMaintenanceDto = {
       equipmentId,
       maintenanceType,
@@ -183,7 +195,7 @@ export default function CreateMaintenancePage() {
           <h1 className="text-3xl font-bold tracking-tight">점검 등록</h1>
           <p className="text-muted-foreground">장비 점검 정보를 등록합니다.</p>
         </div>
-        <Button variant="outline" onClick={() => router.push("/maintenance")}>
+        <Button variant="outline" onClick={() => router.push('/maintenance')}>
           점검 목록으로 돌아가기
         </Button>
       </div>
@@ -193,7 +205,8 @@ export default function CreateMaintenancePage() {
           <CardHeader>
             <CardTitle>장비 선택</CardTitle>
             <CardDescription>
-              점검할 장비를 선택하세요. {equipmentIdParam ? "URL에서 장비가 자동으로 선택되었습니다." : ""}
+              점검할 장비를 선택하세요.{' '}
+              {equipmentIdParam ? 'URL에서 장비가 자동으로 선택되었습니다.' : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -216,16 +229,24 @@ export default function CreateMaintenancePage() {
                     <p>검색 결과가 없습니다.</p>
                   ) : (
                     equipmentData?.map((equipment: Equipment) => (
-                      <Card key={equipment.id} className={`cursor-pointer transition-colors ${equipmentId === equipment.id ? 'border-primary' : ''}`} onClick={() => setEquipmentId(equipment.id)}>
+                      <Card
+                        key={equipment.id}
+                        className={`cursor-pointer transition-colors ${equipmentId === String(equipment.id) ? 'border-primary' : ''}`}
+                        onClick={() => setEquipmentId(String(equipment.id))}
+                      >
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
                             <div>
                               <h3 className="font-medium">{equipment.name}</h3>
-                              <p className="text-sm text-muted-foreground">{equipment.managementNumber}</p>
-                              <p className="text-sm mt-1">{equipment.model} ({equipment.manufacturer})</p>
+                              <p className="text-sm text-muted-foreground">
+                                {equipment.managementNumber}
+                              </p>
+                              <p className="text-sm mt-1">
+                                {equipment.model} ({equipment.manufacturer})
+                              </p>
                             </div>
                             <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center mt-1">
-                              {equipmentId === equipment.id && (
+                              {equipmentId === String(equipment.id) && (
                                 <div className="h-2 w-2 rounded-full bg-white" />
                               )}
                             </div>
@@ -261,22 +282,25 @@ export default function CreateMaintenancePage() {
                       <p className="text-sm text-muted-foreground">제조사</p>
                       <p className="font-medium">{selectedEquipment.manufacturer}</p>
                     </div>
-                    {selectedEquipment.maintenancePeriod && maintenanceType === "regular" && (
-                      <div className="md:col-span-2">
-                        <p className="text-sm text-muted-foreground">정기 점검 주기</p>
-                        <p className="font-medium">{selectedEquipment.maintenancePeriod}개월</p>
-                        <div className="flex items-center mt-2">
-                          <Checkbox
-                            id="useRegularPeriod"
-                            checked={useRegularPeriod}
-                            onCheckedChange={(checked) => setUseRegularPeriod(checked as boolean)}
-                          />
-                          <label htmlFor="useRegularPeriod" className="ml-2 text-sm">
-                            장비의 정기 점검 주기 사용
-                          </label>
+                    {(selectedEquipment as any).maintenancePeriod &&
+                      maintenanceType === 'regular' && (
+                        <div className="md:col-span-2">
+                          <p className="text-sm text-muted-foreground">정기 점검 주기</p>
+                          <p className="font-medium">
+                            {(selectedEquipment as any).maintenancePeriod}개월
+                          </p>
+                          <div className="flex items-center mt-2">
+                            <Checkbox
+                              id="useRegularPeriod"
+                              checked={useRegularPeriod}
+                              onCheckedChange={(checked) => setUseRegularPeriod(checked as boolean)}
+                            />
+                            <label htmlFor="useRegularPeriod" className="ml-2 text-sm">
+                              장비의 정기 점검 주기 사용
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 ) : (
                   <p>선택된 장비 정보가 없습니다.</p>
@@ -295,8 +319,8 @@ export default function CreateMaintenancePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="maintenanceType">점검 유형</Label>
-                <Select 
-                  value={maintenanceType} 
+                <Select
+                  value={maintenanceType}
                   onValueChange={(value: string) => setMaintenanceType(value as MaintenanceType)}
                 >
                   <SelectTrigger id="maintenanceType">
@@ -316,8 +340,8 @@ export default function CreateMaintenancePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="status">상태</Label>
-                <Select 
-                  value={status} 
+                <Select
+                  value={status}
                   onValueChange={(value: string) => setStatus(value as MaintenanceStatus)}
                 >
                   <SelectTrigger id="status">
@@ -343,19 +367,23 @@ export default function CreateMaintenancePage() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="maintenancePeriod">점검 주기 (개월)</Label>
-                  {maintenanceType === "regular" && selectedEquipment?.maintenancePeriod && !useRegularPeriod && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setMaintenancePeriod(selectedEquipment.maintenancePeriod?.toString() || "0");
-                      }}
-                      className="text-xs"
-                    >
-                      기본값 적용
-                    </Button>
-                  )}
+                  {maintenanceType === 'regular' &&
+                    (selectedEquipment as any)?.maintenancePeriod &&
+                    !useRegularPeriod && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setMaintenancePeriod(
+                            (selectedEquipment as any).maintenancePeriod?.toString() || '0'
+                          );
+                        }}
+                        className="text-xs"
+                      >
+                        기본값 적용
+                      </Button>
+                    )}
                 </div>
                 <Input
                   id="maintenancePeriod"
@@ -364,12 +392,18 @@ export default function CreateMaintenancePage() {
                   step="1"
                   value={maintenancePeriod}
                   onChange={(e) => setMaintenancePeriod(e.target.value)}
-                  disabled={maintenanceType === "regular" && useRegularPeriod && !!selectedEquipment?.maintenancePeriod}
+                  disabled={
+                    maintenanceType === 'regular' &&
+                    useRegularPeriod &&
+                    !!(selectedEquipment as any)?.maintenancePeriod
+                  }
                 />
                 {calculatedNextDate && (
                   <div className="text-sm text-muted-foreground mt-1 flex items-center">
                     <Clock className="h-3 w-3 mr-1" />
-                    <span>다음 점검일: {format(calculatedNextDate, 'yyyy-MM-dd', { locale: ko })}</span>
+                    <span>
+                      다음 점검일: {format(calculatedNextDate, 'yyyy-MM-dd', { locale: ko })}
+                    </span>
                   </div>
                 )}
               </div>
@@ -417,8 +451,8 @@ export default function CreateMaintenancePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="result">점검 결과</Label>
-                <Select 
-                  value={result} 
+                <Select
+                  value={result}
                   onValueChange={(value: string) => setResult(value as MaintenanceResult)}
                 >
                   <SelectTrigger id="result">
@@ -451,7 +485,10 @@ export default function CreateMaintenancePage() {
                 {parts.length > 0 && (
                   <div className="mt-2 space-y-2">
                     {parts.map((part, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 bg-muted rounded-md"
+                      >
                         <span>{part}</span>
                         <Button
                           type="button"
@@ -481,18 +518,18 @@ export default function CreateMaintenancePage() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => router.push("/maintenance")}>
+            <Button type="button" variant="outline" onClick={() => router.push('/maintenance')}>
               취소
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={createMaintenanceMutation.isPending || !equipmentId || !performedBy}
             >
-              {createMaintenanceMutation.isPending ? "등록 중..." : "점검 등록"}
+              {createMaintenanceMutation.isPending ? '등록 중...' : '점검 등록'}
             </Button>
           </CardFooter>
         </Card>
       </form>
     </div>
   );
-} 
+}

@@ -12,11 +12,13 @@ export const teamTypes = [
 ] as const;
 
 // 팀 테이블 스키마
+// ✅ 스키마 일치화: id가 uuid 타입으로 변경됨
 export const teams = pgTable('teams', {
   id: uuid('id').primaryKey().defaultRandom().notNull(),
   name: varchar('name', { length: 100 }).notNull(),
-  type: varchar('type', { length: 50 }).notNull(),
+  type: varchar('type', { length: 50 }), // ✅ 실제 DB에는 type 컬럼이 없을 수 있음 (옵셔널로 처리)
   description: varchar('description', { length: 255 }),
+  site: varchar('site', { length: 20 }), // 'suwon' | 'uiwang'
 
   // 시스템 필드
   createdAt: timestamp('created_at').defaultNow().notNull(),

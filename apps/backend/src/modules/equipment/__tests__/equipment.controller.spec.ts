@@ -108,6 +108,7 @@ describe('EquipmentController', () => {
         name: '새 장비',
         managementNumber: 'EQP-NEW-001',
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       };
 
       jest.spyOn(equipmentService, 'create').mockResolvedValue(mockEquipment);
@@ -126,6 +127,7 @@ describe('EquipmentController', () => {
         name: '중복 장비',
         managementNumber: 'EQP-DUP-001',
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       };
 
       jest
@@ -151,11 +153,12 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);
 
       // Act
-      const result = await controller.findAll(query);
+      const mockReq = { user: { site: undefined, roles: [] } } as any;
+      const result = await controller.findAll(query, mockReq);
 
       // Assert
       expect(result).toEqual(mockEquipmentList);
-      expect(equipmentService.findAll).toHaveBeenCalledWith(query);
+      expect(equipmentService.findAll).toHaveBeenCalledWith(query, undefined);
     });
 
     it('should filter equipment by status', async () => {
@@ -169,11 +172,13 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);
 
       // Act
-      const result = await controller.findAll(query);
+      const result = await controller.findAll(query, {
+        user: { site: undefined, roles: [] },
+      } as any);
 
       // Assert
       expect(result).toEqual(mockEquipmentList);
-      expect(equipmentService.findAll).toHaveBeenCalledWith(query);
+      expect(equipmentService.findAll).toHaveBeenCalledWith(query, undefined);
     });
   });
 
@@ -181,11 +186,12 @@ describe('EquipmentController', () => {
     it('should return an equipment by ID', async () => {
       // Arrange
       const id = '1';
+      const mockReq = { user: { site: 'suwon', roles: ['technical_manager'] } } as any;
 
       jest.spyOn(equipmentService, 'findOne').mockResolvedValue(mockEquipment);
 
       // Act
-      const result = await controller.findOne(id);
+      const result = await controller.findOne(id, mockReq);
 
       // Assert
       expect(result).toEqual(mockEquipment);
@@ -201,7 +207,8 @@ describe('EquipmentController', () => {
         .mockRejectedValue(new NotFoundException('장비를 찾을 수 없습니다.'));
 
       // Act & Assert
-      await expect(controller.findOne(id)).rejects.toThrow(NotFoundException);
+      const mockReq = { user: { site: 'suwon', roles: ['technical_manager'] } } as any;
+      await expect(controller.findOne(id, mockReq)).rejects.toThrow(NotFoundException);
       expect(equipmentService.findOne).toHaveBeenCalledWith(id);
     });
   });

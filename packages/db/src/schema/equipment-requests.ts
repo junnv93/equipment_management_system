@@ -1,0 +1,96 @@
+import {
+  integer,
+  pgEnum,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
+  index,
+  uuid,
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { equipment } from './equipment';
+import { users } from './users';
+
+// 승인 상태 enum
+export const approvalStatusEnum = pgEnum('approval_status', [
+  'pending_approval', // 승인 대기
+  'approved', // 승인됨
+  'rejected', // 반려됨
+]);
+
+// 요청 타입 enum
+export const requestTypeEnum = pgEnum('request_type', [
+  'create', // 등록
+  'update', // 수정
+  'delete', // 삭제
+]);
+
+// 장비 요청 테이블 (승인 프로세스용)
+export const equipmentRequests = pgTable(
+  'equipment_requests',
+  {
+    id: serial('id').primaryKey(),
+    uuid: varchar('uuid', { length: 36 }).notNull().unique(),
+
+    // 요청 정보
+    requestType: requestTypeEnum('request_type').notNull(),
+    equipmentId: integer('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }), // 수정/삭제 시 기존 장비 ID
+    requestedBy: varchar('requested_by', { length: 36 })
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    requestedAt: timestamp('requested_at').defaultNow().notNull(),
+
+    // 승인 정보
+    approvalStatus: approvalStatusEnum('approval_status').notNull().default('pending_approval'),
+    approvedBy: varchar('approved_by', { length: 36 }).references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    approvedAt: timestamp('approved_at'),
+    rejectionReason: text('rejection_reason'), // 반려 사유
+
+    // 요청 데이터 (JSON 형태로 저장)
+    requestData: text('request_data'), // JSON stringified equipment data
+
+    // 시스템 필드
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => {
+    return {
+      // 인덱스 추가
+      uuidIdx: index('equipment_requests_uuid_idx').on(table.uuid),
+      requestTypeIdx: index('equipment_requests_request_type_idx').on(table.requestType),
+      approvalStatusIdx: index('equipment_requests_approval_status_idx').on(table.approvalStatus),
+      requestedByIdx: index('equipment_requests_requested_by_idx').on(table.requestedBy),
+      approvedByIdx: index('equipment_requests_approved_by_idx').on(table.approvedBy),
+      equipmentIdIdx: index('equipment_requests_equipment_id_idx').on(table.equipmentId),
+      // 복합 인덱스: 승인 대기 목록 조회 최적화
+      statusTypeIdx: index('equipment_requests_status_type_idx').on(
+        table.approvalStatus,
+        table.requestType
+      ),
+    };
+  }
+);
+
+// 장비 요청 타입 정의
+export type EquipmentRequest = typeof equipmentRequests.$inferSelect;
+export type NewEquipmentRequest = typeof equipmentRequests.$inferInsert;
+
+// Drizzle relations 설정
+export const equipmentRequestsRelations = relations(equipmentRequests, ({ one }) => ({
+  equipment: one(equipment, {
+    fields: [equipmentRequests.equipmentId],
+    references: [equipment.id],
+  }),
+  requester: one(users, {
+    fields: [equipmentRequests.requestedBy],
+    references: [users.id],
+  }),
+  approver: one(users, {
+    fields: [equipmentRequests.approvedBy],
+    references: [users.id],
+  }),
+}));

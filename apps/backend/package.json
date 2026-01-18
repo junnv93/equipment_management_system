@@ -25,6 +25,7 @@
     "db:manual-migrate": "npx ts-node src/database/manual-migrate.ts",
     "db:studio": "npx drizzle-kit studio",
     "db:test:migrate": "npx ts-node src/database/tests/migrate.test.ts",
+    "db:verify": "npx ts-node scripts/verify-migration.ts",
     "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts"
   },
   "dependencies": {

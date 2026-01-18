@@ -15,8 +15,10 @@ async function runTestMigration() {
   console.log('📊 테스트 데이터베이스 마이그레이션 시작...');
 
   // 테스트 데이터베이스 연결 정보
-  const testDatabaseUrl = process.env.TEST_DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/equipment_management_test';
-  
+  const testDatabaseUrl =
+    process.env.TEST_DATABASE_URL ||
+    'postgres://postgres:postgres@localhost:5432/equipment_management_test';
+
   // 기본 클라이언트 (테스트 DB 생성/삭제 등을 위한 용도)
   const baseClient = new Client({
     connectionString: testDatabaseUrl.replace('equipment_management_test', 'postgres'),
@@ -58,7 +60,7 @@ async function runTestMigration() {
     try {
       // 마이그레이션 경로
       const migrationsFolder = path.join(process.cwd(), 'drizzle');
-      
+
       // 마이그레이션 실행
       await migrate(db, { migrationsFolder });
       console.log('✅ 테스트 데이터베이스 마이그레이션 완료');
@@ -89,4 +91,4 @@ if (require.main === module) {
     });
 }
 
-export { runTestMigration }; 
+export { runTestMigration };

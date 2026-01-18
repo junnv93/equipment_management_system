@@ -11,7 +11,7 @@ describe('Type Guards', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         email: 'test@example.com',
         name: 'Test User',
-        role: UserRoleEnum.enum.user,
+        role: 'test_operator' as const,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -67,4 +67,4 @@ describe('Type Guards', () => {
       expect(isTeam(undefined)).toBe(false);
     });
   });
-}); 
+});

@@ -1,4 +1,14 @@
-import { IsString, IsOptional, IsEnum, IsUUID, Min, Max, IsInt, IsBoolean, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsUUID,
+  Min,
+  Max,
+  IsInt,
+  IsBoolean,
+  IsDateString,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { NotificationTypeEnum, NotificationPriorityEnum } from './create-notification.dto';
@@ -41,20 +51,20 @@ export class NotificationQueryDto {
   search?: string;
 
   @IsOptional()
-  @Transform(({ value }) => Array.isArray(value) ? value : [value])
-  @ApiPropertyOptional({ 
-    description: '알림 유형 (여러 개 선택 가능)', 
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @ApiPropertyOptional({
+    description: '알림 유형 (여러 개 선택 가능)',
     enum: NotificationTypeEnum,
-    isArray: true
+    isArray: true,
   })
   types?: NotificationTypeEnum[];
 
   @IsOptional()
-  @Transform(({ value }) => Array.isArray(value) ? value : [value])
-  @ApiPropertyOptional({ 
-    description: '알림 우선순위 (여러 개 선택 가능)', 
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @ApiPropertyOptional({
+    description: '알림 우선순위 (여러 개 선택 가능)',
     enum: NotificationPriorityEnum,
-    isArray: true
+    isArray: true,
   })
   priorities?: NotificationPriorityEnum[];
 
@@ -98,4 +108,4 @@ export class NotificationQueryDto {
     default: 20,
   })
   pageSize?: number = 20;
-} 
+}

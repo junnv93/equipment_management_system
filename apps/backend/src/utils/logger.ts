@@ -21,19 +21,16 @@ const logFormat = winston.format.combine(
 
 // 콘솔 출력 설정
 const consoleTransport = new winston.transports.Console({
-  format: winston.format.combine(
-    winston.format.colorize(),
-    winston.format.simple()
-  ),
+  format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
 });
 
 // 파일 출력 설정 (선택적)
-let fileTransports: winston.transport[] = [];
+const fileTransports: winston.transport[] = [];
 
 // 개발 환경이 아닌 경우 파일 로깅 활성화
 if (process.env.NODE_ENV !== 'development') {
   const logsDir = path.join(process.cwd(), 'logs');
-  
+
   // 오류 로그 파일
   fileTransports.push(
     new winston.transports.File({
@@ -41,7 +38,7 @@ if (process.env.NODE_ENV !== 'development') {
       level: 'error',
     })
   );
-  
+
   // 전체 로그 파일
   fileTransports.push(
     new winston.transports.File({
@@ -59,4 +56,4 @@ export const logger = winston.createLogger({
   exitOnError: false,
 });
 
-export default logger; 
+export default logger;

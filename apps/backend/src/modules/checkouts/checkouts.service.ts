@@ -20,6 +20,8 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { EquipmentService } from '../equipment/equipment.service';
+import { TeamsService } from '../teams/teams.service';
+import { ForbiddenException } from '@nestjs/common';
 // Drizzle에서 자동 추론되는 타입 사용
 type Checkout = typeof checkouts.$inferSelect;
 
@@ -71,8 +73,22 @@ export class CheckoutsService {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly cacheService: SimpleCacheService,
-    private readonly equipmentService: EquipmentService
+    private readonly equipmentService: EquipmentService,
+    private readonly teamsService: TeamsService
   ) {}
+
+  /**
+   * UUID 형식 검증 헬퍼 메서드
+   * ✅ 재사용 가능한 유틸리티 함수로 분리 (Rentals와 동일한 패턴)
+   */
+  private validateUuid(uuid: string, fieldName: string): void {
+    if (!uuid || typeof uuid !== 'string') {
+      throw new BadRequestException(`${fieldName}는 필수이며 문자열이어야 합니다.`);
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+      throw new BadRequestException(`유효하지 않은 ${fieldName} UUID 형식입니다.`);
+    }
+  }
 
   /**
    * 캐시 키 생성 헬퍼 메서드
@@ -328,6 +344,8 @@ export class CheckoutsService {
 
   /**
    * UUID로 반출 조회
+   * ✅ 일관성: db.select()를 사용하여 다른 쿼리와 동일한 패턴 유지 (Rentals와 동일)
+   * ✅ 개선: 관계 쿼리 API 의존성 제거로 안정성 향상
    */
   async findOne(uuid: string): Promise<Checkout> {
     const cacheKey = this.buildCacheKey('detail', { uuid });
@@ -336,22 +354,20 @@ export class CheckoutsService {
       cacheKey,
       async () => {
         try {
-          const checkout = await this.db.query.checkouts.findFirst({
-            where: eq(checkouts.id, uuid),
-            with: {
-              items: {
-                with: {
-                  equipment: true,
-                },
-              },
-            },
-          });
+          // ✅ 일관성: db.query 대신 db.select() 사용 (관계 쿼리 API 의존성 제거)
+          const [checkout] = await this.db
+            .select()
+            .from(checkouts)
+            .where(eq(checkouts.id, uuid))
+            .limit(1);
 
           if (!checkout) {
             throw new NotFoundException(`UUID ${uuid}의 반출을 찾을 수 없습니다.`);
           }
 
-          return checkout as unknown as Checkout;
+          // ✅ 개선: checkoutItems는 별도로 조회 (필요시)
+          // 관계 데이터가 필요한 경우 별도 메서드로 분리하거나, 조인 쿼리 사용
+          return checkout;
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw error;
@@ -368,25 +384,113 @@ export class CheckoutsService {
   }
 
   /**
+   * 팀별 권한 체크 헬퍼 메서드
+   * EMC팀은 RF팀 장비 반출 신청/승인 불가 (같은 사이트 내에서도)
+   */
+  private async checkTeamPermission(equipmentId: string, userTeamId?: string): Promise<void> {
+    if (!userTeamId) {
+      return; // 팀 정보가 없으면 체크하지 않음
+    }
+
+    // 장비 정보 조회
+    const equipment = await this.equipmentService.findOne(equipmentId);
+    if (!equipment.teamId) {
+      return; // 장비에 팀이 없으면 체크하지 않음
+    }
+
+    // 사용자 팀 정보 조회
+    const userTeam = await this.teamsService.findOne(userTeamId);
+    if (!userTeam) {
+      return; // 사용자 팀 정보를 찾을 수 없으면 체크하지 않음
+    }
+
+    // 사용자 팀 타입 확인
+    const userTeamType = userTeam.type?.toUpperCase();
+
+    // EMC팀은 RF팀 장비 반출 신청/승인 불가
+    if (userTeamType === 'EMC') {
+      try {
+        // ✅ 스키마 일치화: EquipmentService를 사용하여 타입 안전하게 조회
+        const equipmentData = await this.equipmentService.findOne(equipmentId, true);
+
+        if (!equipmentData.teamId) {
+          // 팀이 없으면 체크하지 않음
+          return;
+        }
+
+        const equipmentTeamType = equipmentData.team?.type?.toUpperCase();
+
+        // EMC팀은 RF팀 장비 반출 신청/승인 불가
+        if (equipmentTeamType === 'RF') {
+          throw new ForbiddenException('EMC팀은 RF팀 장비에 대한 반출 신청/승인 권한이 없습니다.');
+        }
+      } catch (error) {
+        if (error instanceof ForbiddenException) {
+          throw error;
+        }
+        this.logger.error(
+          `팀별 권한 체크 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+        );
+        // 오류 발생 시 체크를 건너뛰고 진행 (보안보다는 안정성 우선)
+      }
+    }
+  }
+
+  /**
    * 반출 생성
    * 장비 담당자만 신청 가능 (요구사항)
+   * ✅ 개선: UUID 검증, 날짜 처리 강화, 에러 처리 개선 (Rentals와 동일한 패턴)
+   * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 반출 신청 불가
    */
-  async create(createCheckoutDto: CreateCheckoutDto, requesterId: string): Promise<Checkout> {
+  async create(
+    createCheckoutDto: CreateCheckoutDto,
+    requesterId: string,
+    userTeamId?: string
+  ): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증 (일관된 검증 로직)
+      this.validateUuid(requesterId, '신청자');
+
+      if (!createCheckoutDto.equipmentIds || createCheckoutDto.equipmentIds.length === 0) {
+        throw new BadRequestException('반출할 장비를 최소 1개 이상 선택해야 합니다.');
+      }
+      for (const equipmentId of createCheckoutDto.equipmentIds) {
+        this.validateUuid(equipmentId, '장비');
+      }
+
       // 장비 존재 여부 및 사용 가능 여부 확인
       for (const equipmentId of createCheckoutDto.equipmentIds) {
-        const equipment = await this.equipmentService.findOne(equipmentId);
+        let equipment;
+        try {
+          equipment = await this.equipmentService.findOne(equipmentId);
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            throw new BadRequestException(`UUID ${equipmentId}의 장비를 찾을 수 없습니다.`);
+          }
+          throw error;
+        }
 
         if (equipment.status !== 'available') {
           throw new BadRequestException(
             `장비 ${equipment.name}이(가) 현재 사용 가능한 상태가 아닙니다. 현재 상태: ${equipment.status}`
           );
         }
+
+        // 팀별 권한 체크: EMC팀은 RF팀 장비 반출 신청 불가
+        await this.checkTeamPermission(equipmentId, userTeamId);
       }
 
-      // 반입 예정일 검증
+      // ✅ 날짜 처리 및 검증 강화
       const expectedReturnDate = new Date(createCheckoutDto.expectedReturnDate);
-      if (expectedReturnDate <= new Date()) {
+
+      // expectedReturnDate 유효성 검증
+      if (isNaN(expectedReturnDate.getTime())) {
+        throw new BadRequestException('유효하지 않은 반입 예정일 형식입니다.');
+      }
+
+      // 반입 예정일은 현재 시점보다 늦어야 함
+      const now = new Date();
+      if (expectedReturnDate <= now) {
         throw new BadRequestException('반입 예정일은 현재 시점보다 늦어야 합니다.');
       }
 
@@ -447,13 +551,33 @@ export class CheckoutsService {
   /**
    * 1차 승인 (내부 목적: 교정/수리)
    * 팀 매니저가 승인 (요구사항)
+   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
+   * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 반출 승인 불가
    */
-  async approveFirst(uuid: string, approveDto: ApproveCheckoutDto): Promise<Checkout> {
+  async approveFirst(
+    uuid: string,
+    approveDto: ApproveCheckoutDto,
+    approverTeamId?: string
+  ): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+      this.validateUuid(approveDto.approverId, '승인자');
+
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== 'pending') {
         throw new BadRequestException('대기 중인 반출만 승인할 수 있습니다.');
+      }
+
+      // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크
+      const items = await this.db
+        .select()
+        .from(checkoutItems)
+        .where(eq(checkoutItems.checkoutId, uuid));
+
+      for (const item of items) {
+        await this.checkTeamPermission(item.equipmentId, approverTeamId);
       }
 
       // 내부 목적(교정/수리)은 1단계 승인으로 완료
@@ -517,9 +641,19 @@ export class CheckoutsService {
   /**
    * 최종 승인 (외부 대여 목적만)
    * 팀 매니저가 최종 승인 (요구사항)
+   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
+   * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 반출 승인 불가
    */
-  async approveFinal(uuid: string, approveDto: ApproveCheckoutDto): Promise<Checkout> {
+  async approveFinal(
+    uuid: string,
+    approveDto: ApproveCheckoutDto,
+    approverTeamId?: string
+  ): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+      this.validateUuid(approveDto.approverId, '승인자');
+
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== 'first_approved') {
@@ -528,6 +662,16 @@ export class CheckoutsService {
 
       if (checkout.purpose !== 'external_rental') {
         throw new BadRequestException('외부 대여 목적 반출만 최종 승인이 필요합니다.');
+      }
+
+      // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크
+      const items = await this.db
+        .select()
+        .from(checkoutItems)
+        .where(eq(checkoutItems.checkoutId, uuid));
+
+      for (const item of items) {
+        await this.checkTeamPermission(item.equipmentId, approverTeamId);
       }
 
       const updateData: Partial<Checkout> = {
@@ -562,9 +706,16 @@ export class CheckoutsService {
   /**
    * 반출 반려
    * 반려 사유 필수 (요구사항)
+   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
   async reject(uuid: string, rejectDto: RejectCheckoutDto): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+      if (rejectDto.approverId) {
+        this.validateUuid(rejectDto.approverId, '승인자');
+      }
+
       const checkout = await this.findOne(uuid);
 
       // 대기 중이거나 1차 승인된 상태만 반려 가능
@@ -612,9 +763,13 @@ export class CheckoutsService {
   /**
    * 반출 시작 (실제 반출 처리)
    * 최종 승인된 반출만 반출 가능
+   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
   async startCheckout(uuid: string): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== 'final_approved') {
@@ -664,6 +819,7 @@ export class CheckoutsService {
   /**
    * 반입 처리
    * 교정/수리 확인 및 작동 여부 확인 포함 (요구사항)
+   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
   async returnCheckout(
     uuid: string,
@@ -671,6 +827,10 @@ export class CheckoutsService {
     returnerId: string
   ): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+      this.validateUuid(returnerId, '반입 처리자');
+
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== 'checked_out') {
@@ -725,9 +885,13 @@ export class CheckoutsService {
   /**
    * 반출 취소
    * 승인 전 신청자만 취소 가능 (요구사항)
+   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
   async cancel(uuid: string): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== 'pending') {
@@ -764,9 +928,13 @@ export class CheckoutsService {
 
   /**
    * UUID로 반출 업데이트
+   * ✅ 개선: UUID 검증, 날짜 처리 강화 (Rentals와 동일한 패턴)
    */
   async update(uuid: string, updateCheckoutDto: UpdateCheckoutDto): Promise<Checkout> {
     try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+
       const existingCheckout = await this.findOne(uuid);
 
       // 승인된 반출은 수정 불가
@@ -779,8 +947,22 @@ export class CheckoutsService {
         updatedAt: new Date(),
       };
 
+      // ✅ 날짜 처리 및 검증 강화
       if (updateCheckoutDto.expectedReturnDate !== undefined) {
-        updateFields.expectedReturnDate = new Date(updateCheckoutDto.expectedReturnDate);
+        const expectedReturnDate = new Date(updateCheckoutDto.expectedReturnDate);
+
+        // 날짜 유효성 검증
+        if (isNaN(expectedReturnDate.getTime())) {
+          throw new BadRequestException('유효하지 않은 반입 예정일 형식입니다.');
+        }
+
+        // 반입 예정일은 현재 시점보다 늦어야 함
+        const now = new Date();
+        if (expectedReturnDate <= now) {
+          throw new BadRequestException('반입 예정일은 현재 시점보다 늦어야 합니다.');
+        }
+
+        updateFields.expectedReturnDate = expectedReturnDate;
       }
 
       if (updateCheckoutDto.destination !== undefined) {

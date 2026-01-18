@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -8,7 +8,14 @@ import {
   updateEquipmentSchema,
   CreateEquipmentInput,
   UpdateEquipmentInput,
+  EquipmentStatusEnum,
+  CalibrationMethodEnum,
+  SiteEnum,
+  type EquipmentStatus,
+  type CalibrationMethod,
+  type Site,
 } from '@equipment-management/schemas';
+import { useAuth } from '@/hooks/use-auth';
 import {
   Form,
   FormControl,
@@ -31,11 +38,38 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 import dayjs from 'dayjs';
+
+/**
+ * 장비 상태값 한글 라벨 매핑
+ * API_STANDARDS.md의 표준 상태값을 한글로 변환
+ */
+const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
+  available: '사용 가능',
+  in_use: '사용 중',
+  checked_out: '반출 중',
+  calibration_scheduled: '교정 예정',
+  calibration_overdue: '교정 기한 초과',
+  under_maintenance: '유지보수 중',
+  retired: '사용 중지',
+};
+
+/**
+ * 교정 방법 한글 라벨 매핑
+ */
+const CALIBRATION_METHOD_LABELS: Record<CalibrationMethod, string> = {
+  external_calibration: '외부 교정',
+  self_inspection: '자체 점검',
+  not_applicable: '비대상',
+};
 
 interface EquipmentFormProps {
   initialData?: Partial<CreateEquipmentInput>;
-  onSubmit: (data: CreateEquipmentInput | UpdateEquipmentInput) => Promise<void>;
+  onSubmit: (
+    data: CreateEquipmentInput | UpdateEquipmentInput,
+    files?: UploadedFile[]
+  ) => Promise<void>;
   onCancel?: () => void;
   isEdit?: boolean;
   isLoading?: boolean;
@@ -50,6 +84,10 @@ export function EquipmentForm({
 }: EquipmentFormProps) {
   // 스키마 선택 (등록/수정)
   const schema = isEdit ? updateEquipmentSchema : createEquipmentSchema;
+
+  // 사용자 정보 가져오기 (사이트 기본값 설정용)
+  const { user } = useAuth();
+  const userSite = (user as any)?.site as Site | undefined;
 
   // 폼에서 날짜는 문자열로 처리하고, 제출 시 Date로 변환
   // CreateEquipmentInput과 UpdateEquipmentInput의 모든 필드를 포함하되, 날짜 필드만 문자열로 변경
@@ -67,10 +105,11 @@ export function EquipmentForm({
     nextCalibrationDate?: string; // Date 대신 string
     calibrationAgency?: string;
     needsIntermediateCheck?: boolean;
-    calibrationMethod?: 'external_calibration' | 'self_inspection' | 'not_applicable';
+    calibrationMethod?: CalibrationMethod;
     purchaseYear?: number;
     teamId?: number;
     managerId?: string;
+    site?: Site;
     supplier?: string;
     contactInfo?: string;
     softwareVersion?: string;
@@ -79,14 +118,13 @@ export function EquipmentForm({
     accessories?: string;
     mainFeatures?: string;
     technicalManager?: string;
-    status?:
-      | 'available'
-      | 'loaned'
-      | 'checked_out'
-      | 'calibration_scheduled'
-      | 'calibration_overdue'
-      | 'maintenance'
-      | 'retired';
+    status?: EquipmentStatus;
+    // 추가 필수 필드 (프롬프트 3 요구사항)
+    equipmentType?: string;
+    calibrationResult?: string;
+    correctionFactor?: string;
+    intermediateCheckSchedule?: string;
+    repairHistory?: string;
   };
 
   const form = useForm<FormValues>({
@@ -113,6 +151,7 @@ export function EquipmentForm({
       purchaseYear: initialData?.purchaseYear,
       teamId: initialData?.teamId,
       managerId: initialData?.managerId || '',
+      site: (initialData?.site || userSite) as Site | undefined,
       supplier: initialData?.supplier || '',
       contactInfo: initialData?.contactInfo || '',
       softwareVersion: initialData?.softwareVersion || '',
@@ -121,23 +160,75 @@ export function EquipmentForm({
       accessories: initialData?.accessories || '',
       mainFeatures: initialData?.mainFeatures || '',
       technicalManager: initialData?.technicalManager || '',
-      status: initialData?.status || 'available',
+      status: (initialData?.status || 'available') as EquipmentStatus,
+      equipmentType: initialData?.equipmentType || '',
+      calibrationResult: initialData?.calibrationResult || '',
+      correctionFactor: initialData?.correctionFactor || '',
+      intermediateCheckSchedule: initialData?.intermediateCheckSchedule
+        ? dayjs(initialData.intermediateCheckSchedule).format('YYYY-MM-DD')
+        : '',
+      repairHistory: initialData?.repairHistory || '',
     },
   });
+
+  // 파일 업로드 상태
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   // 폼 제출 핸들러
   const handleSubmit = async (data: FormValues) => {
     // 날짜 문자열을 Date 객체로 변환
-    const processedData: CreateEquipmentInput | UpdateEquipmentInput = {
-      ...data,
+    // 빈 문자열을 undefined로 변환하여 타입 안전성 보장
+    const processedData = {
+      name: data.name,
+      managementNumber: data.managementNumber,
+      assetNumber: data.assetNumber || undefined,
+      modelName: data.modelName || undefined,
+      manufacturer: data.manufacturer || undefined,
+      serialNumber: data.serialNumber || undefined,
+      location: data.location || undefined,
+      description: data.description || undefined,
+      calibrationCycle: data.calibrationCycle || undefined,
       lastCalibrationDate: data.lastCalibrationDate
         ? dayjs(data.lastCalibrationDate).toDate()
         : undefined,
       nextCalibrationDate: data.nextCalibrationDate
         ? dayjs(data.nextCalibrationDate).toDate()
         : undefined,
-    };
-    await onSubmit(processedData);
+      calibrationAgency: data.calibrationAgency || undefined,
+      needsIntermediateCheck: data.needsIntermediateCheck || false,
+      calibrationMethod: data.calibrationMethod || undefined,
+      purchaseYear: data.purchaseYear || undefined,
+      teamId: data.teamId || undefined,
+      managerId: data.managerId && data.managerId.trim() ? data.managerId : undefined,
+      site: data.site || undefined,
+      supplier: data.supplier && data.supplier.trim() ? data.supplier : undefined,
+      contactInfo: data.contactInfo && data.contactInfo.trim() ? data.contactInfo : undefined,
+      softwareVersion:
+        data.softwareVersion && data.softwareVersion.trim() ? data.softwareVersion : undefined,
+      firmwareVersion:
+        data.firmwareVersion && data.firmwareVersion.trim() ? data.firmwareVersion : undefined,
+      manualLocation:
+        data.manualLocation && data.manualLocation.trim() ? data.manualLocation : undefined,
+      accessories: data.accessories && data.accessories.trim() ? data.accessories : undefined,
+      mainFeatures: data.mainFeatures && data.mainFeatures.trim() ? data.mainFeatures : undefined,
+      technicalManager:
+        data.technicalManager && data.technicalManager.trim() ? data.technicalManager : undefined,
+      status: data.status || undefined,
+      equipmentType:
+        data.equipmentType && data.equipmentType.trim() ? data.equipmentType : undefined,
+      calibrationResult:
+        data.calibrationResult && data.calibrationResult.trim()
+          ? data.calibrationResult
+          : undefined,
+      correctionFactor:
+        data.correctionFactor && data.correctionFactor.trim() ? data.correctionFactor : undefined,
+      intermediateCheckSchedule: data.intermediateCheckSchedule
+        ? dayjs(data.intermediateCheckSchedule).toDate()
+        : undefined,
+      repairHistory:
+        data.repairHistory && data.repairHistory.trim() ? data.repairHistory : undefined,
+    } as CreateEquipmentInput | UpdateEquipmentInput;
+    await onSubmit(processedData, uploadedFiles.length > 0 ? uploadedFiles : undefined);
   };
 
   // 교정 주기 변경 시 다음 교정일 자동 계산
@@ -289,6 +380,33 @@ export function EquipmentForm({
 
               <FormField
                 control={form.control}
+                name="site"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>사이트 *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="사이트를 선택하세요" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="suwon">수원</SelectItem>
+                        <SelectItem value="uiwang">의왕</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>장비가 위치한 사이트를 선택하세요</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
@@ -304,13 +422,11 @@ export function EquipmentForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="available">사용 가능</SelectItem>
-                        <SelectItem value="loaned">대여 중</SelectItem>
-                        <SelectItem value="checked_out">반출 중</SelectItem>
-                        <SelectItem value="calibration_scheduled">교정 예정</SelectItem>
-                        <SelectItem value="calibration_overdue">교정 기한 초과</SelectItem>
-                        <SelectItem value="maintenance">유지보수 중</SelectItem>
-                        <SelectItem value="retired">사용 중지</SelectItem>
+                        {Object.entries(EQUIPMENT_STATUS_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -436,9 +552,11 @@ export function EquipmentForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="external_calibration">외부 교정</SelectItem>
-                        <SelectItem value="self_inspection">자체 점검</SelectItem>
-                        <SelectItem value="not_applicable">비대상</SelectItem>
+                        {Object.entries(CALIBRATION_METHOD_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -608,6 +726,109 @@ export function EquipmentForm({
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            {/* 추가 필수 필드 (프롬프트 3 요구사항) */}
+            <FormField
+              control={form.control}
+              name="equipmentType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>장비 타입</FormLabel>
+                  <FormControl>
+                    <Input placeholder="예: 분석기, 측정기" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="calibrationResult"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>교정 결과</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="교정 결과를 입력하세요"
+                      className="min-h-[80px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="correctionFactor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>보정계수</FormLabel>
+                  <FormControl>
+                    <Input placeholder="예: 1.002" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="intermediateCheckSchedule"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>중간점검일정</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="repairHistory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>장비 수리 내역</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="장비 수리 내역을 입력하세요"
+                      className="min-h-[80px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* 파일 첨부 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>파일 첨부</CardTitle>
+            <CardDescription>
+              {isEdit ? '이력카드' : '검수보고서'}를 첨부하세요 (선택사항)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FileUpload
+              files={uploadedFiles}
+              onChange={setUploadedFiles}
+              attachmentType={isEdit ? 'history_card' : 'inspection_report'}
+              label={isEdit ? '이력카드 첨부' : '검수보고서 첨부'}
+              description={
+                isEdit
+                  ? '기존 장비 등록 시 이력카드를 첨부하세요'
+                  : '신규 장비 등록 시 검수보고서를 첨부하세요'
+              }
+              disabled={isLoading}
             />
           </CardContent>
         </Card>

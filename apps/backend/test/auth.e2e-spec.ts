@@ -2,7 +2,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import * as crypto from 'crypto';
 
@@ -16,6 +16,10 @@ describe('AuthController (e2e)', () => {
   const userPassword = 'user123';
 
   beforeAll(async () => {
+    // 테스트 환경 변수 설정
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-e2e-testing';
+    process.env.NODE_ENV = 'test';
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -42,13 +46,15 @@ describe('AuthController (e2e)', () => {
           email: adminEmail,
           password: adminPassword,
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
       expect(response.body.user.email).toBe(adminEmail);
       expect(response.body.user.name).toBe('관리자');
-      expect(response.body.user.roles).toContain('ADMIN');
+      expect(response.body.user.site).toBe('suwon');
+      expect(response.body.user.location).toBe('수원랩');
+      expect(response.body.user.roles).toContain('site_admin');
       expect(response.body.user).not.toHaveProperty('password');
     });
 
@@ -59,13 +65,15 @@ describe('AuthController (e2e)', () => {
           email: managerEmail,
           password: managerPassword,
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
       expect(response.body.user.email).toBe(managerEmail);
-      expect(response.body.user.name).toBe('매니저');
-      expect(response.body.user.roles).toContain('MANAGER');
+      expect(response.body.user.name).toBe('기술책임자');
+      expect(response.body.user.site).toBe('suwon');
+      expect(response.body.user.location).toBe('수원랩');
+      expect(response.body.user.roles).toContain('technical_manager');
       expect(response.body.user).not.toHaveProperty('password');
     });
 
@@ -76,13 +84,15 @@ describe('AuthController (e2e)', () => {
           email: userEmail,
           password: userPassword,
         })
-        .expect(200);
+        .expect(201);
 
       expect(response.body).toHaveProperty('access_token');
       expect(response.body).toHaveProperty('user');
       expect(response.body.user.email).toBe(userEmail);
-      expect(response.body.user.name).toBe('일반 사용자');
-      expect(response.body.user.roles).toContain('USER');
+      expect(response.body.user.name).toBe('시험실무자');
+      expect(response.body.user.site).toBe('suwon');
+      expect(response.body.user.location).toBe('수원랩');
+      expect(response.body.user.roles).toContain('test_operator');
       expect(response.body.user).not.toHaveProperty('password');
     });
 
@@ -120,7 +130,7 @@ describe('AuthController (e2e)', () => {
 
       expect(response.body).toHaveProperty('id');
       expect(response.body.email).toBe(adminEmail);
-      expect(response.body.roles).toContain('ADMIN');
+      expect(response.body.roles).toContain('site_admin');
     });
 
     it('should not get user profile without token', async () => {

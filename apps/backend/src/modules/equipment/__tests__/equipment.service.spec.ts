@@ -58,6 +58,7 @@ describe('EquipmentService', () => {
         name: `테스트 장비 ${generateRandomString()}`,
         managementNumber: `EQP-TEST-${generateRandomString()}`,
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       } as CreateEquipmentDto;
 
       const result = await service.create(createEquipmentDto);
@@ -75,6 +76,7 @@ describe('EquipmentService', () => {
         name: '중복 테스트 장비 1',
         managementNumber,
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       };
 
       const firstEquipment = await service.create(createEquipmentDto);
@@ -96,6 +98,7 @@ describe('EquipmentService', () => {
         name: `교정 테스트 장비 ${generateRandomString()}`,
         managementNumber: `EQP-CAL-${generateRandomString()}`,
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon' as const, // ✅ 사이트별 권한 관리: 필수 필드
         lastCalibrationDate: lastCalibrationDate.toISOString(),
         calibrationCycle,
       } as any;
@@ -142,6 +145,7 @@ describe('EquipmentService', () => {
         name: `고유 장비 ${uniqueString}`,
         managementNumber: `EQP-SEARCH-${generateRandomString()}`,
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       };
 
       const createdEquipment = await service.create(createEquipmentDto);
@@ -166,6 +170,7 @@ describe('EquipmentService', () => {
         name: `상태 필터 테스트 ${generateRandomString()}`,
         managementNumber: `EQP-STATUS-${generateRandomString()}`,
         status: 'in_use' as EquipmentStatus, // 표준 상태값: 사용 중
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       } as CreateEquipmentDto;
 
       const createdEquipment = await service.create(createEquipmentDto);
@@ -192,6 +197,7 @@ describe('EquipmentService', () => {
         name: `조회 테스트 장비 ${generateRandomString()}`,
         managementNumber: `EQP-FIND-${generateRandomString()}`,
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       };
 
       const createdEquipment = await service.create(createEquipmentDto);
@@ -221,6 +227,7 @@ describe('EquipmentService', () => {
         name: `업데이트 테스트 장비 ${generateRandomString()}`,
         managementNumber: `EQP-UPDATE-${generateRandomString()}`,
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       } as CreateEquipmentDto;
 
       const createdEquipment = await service.create(createEquipmentDto);
@@ -260,6 +267,7 @@ describe('EquipmentService', () => {
         name: `삭제 테스트 장비 ${generateRandomString()}`,
         managementNumber: `EQP-REMOVE-${generateRandomString()}`,
         status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
+        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
       };
 
       const createdEquipment = await service.create(createEquipmentDto);

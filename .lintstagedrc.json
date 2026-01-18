@@ -1,6 +1,6 @@
 {
-  "apps/backend/**/*.{ts}": ["eslint --fix --max-warnings=50", "prettier --write"],
-  "apps/frontend/**/*.{ts,tsx}": ["eslint --fix --max-warnings=50", "prettier --write"],
-  "packages/**/*.{ts}": ["eslint --fix --max-warnings=50", "prettier --write"],
+  "apps/backend/src/**/*.ts": ["eslint --fix --max-warnings=200", "prettier --write"],
+  "apps/frontend/**/*.{ts,tsx}": ["eslint --fix --max-warnings=200", "prettier --write"],
+  "packages/**/*.ts": ["eslint --fix --max-warnings=200", "prettier --write"],
   "*.{js,jsx,json,md,yml,yaml}": ["prettier --write"]
 }

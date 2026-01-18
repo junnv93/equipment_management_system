@@ -10,39 +10,53 @@ Central governance file for AI agents. All agents MUST read this file first and 
 
 **Architecture:** pnpm monorepo with Turborepo orchestration.
 
-| Layer    | Technology                                          | Version                                         |
-| -------- | --------------------------------------------------- | ----------------------------------------------- |
-| Frontend | Next.js (App Router), React, TailwindCSS, shadcn/ui | Next.js 14.0.3, React 18                        |
-| Backend  | NestJS, Drizzle ORM, PostgreSQL                     | NestJS 10.x, Drizzle 0.36.x, drizzle-kit 0.20.x |
-| Shared   | TypeScript, Zod validation schemas                  | TypeScript 5.x, Zod 4.x                         |
-| Auth     | NextAuth.js + Azure AD + JWT                        | next-auth 4.24.x                                |
-| Testing  | Jest, React Testing Library, Supertest              | Jest 29.x                                       |
+**Tech Stack:**
+
+- Frontend: Next.js 14 (App Router), React 18, TailwindCSS, shadcn/ui
+- Backend: NestJS 10.x, Drizzle ORM 0.36.x, PostgreSQL
+- Shared: TypeScript 5.x, Zod 4.x
+- Auth: NextAuth.js 4.24.x + Azure AD + JWT
+- Testing: Jest 29.x, React Testing Library, Supertest
 
 ---
 
 ## Operational Commands
 
+**Root Level:**
+
 ```bash
-# Development
 pnpm install              # Install all dependencies
-pnpm dev                  # Run all apps in dev mode
+pnpm dev                  # Run all apps in dev mode (Turborepo)
 pnpm build                # Build all apps
 pnpm test                 # Run all tests
 pnpm lint                 # Lint all packages
+pnpm format               # Format code with Prettier
+```
 
-# Docker
+**Docker:**
+
+```bash
 pnpm docker:up            # Start containers
 pnpm docker:down          # Stop containers
 pnpm docker:logs          # View logs
+pnpm docker:build         # Build images
+```
 
-# Backend specific (from apps/backend)
+**Backend (from apps/backend):**
+
+```bash
 pnpm start:dev            # NestJS dev server with watch
 pnpm db:migrate           # Run Drizzle migrations
 pnpm db:studio            # Open Drizzle Studio
+pnpm db:generate          # Generate migration files
 pnpm test:e2e             # Run E2E tests
+```
 
-# Frontend specific (from apps/frontend)
+**Frontend (from apps/frontend):**
+
+```bash
 pnpm dev                  # Next.js dev server (port 3000)
+pnpm build                # Production build
 pnpm test:watch           # Jest in watch mode
 ```
 
@@ -54,8 +68,8 @@ pnpm test:watch           # Jest in watch mode
 
 1. **TypeScript Strict Mode:** Never use `any` type. Use `unknown` with type guards.
 2. **Schema Source of Truth:**
-   - Database schema: `@equipment-management/db` (Drizzle schemas)
-   - Validation schemas: `@equipment-management/schemas` (Zod schemas)
+   - Database schema: `packages/db/src/schema/` (Drizzle schemas)
+   - Validation schemas: `packages/schemas/src/` (Zod schemas)
    - All data types MUST derive from these packages.
 3. **No Direct DB Access in Controllers:** Controllers call Services only.
 4. **API Routes:** Current implementation uses `/api/` prefix (e.g., `/api/equipment`). Future versioning may migrate to `/api/v1/`.
@@ -63,8 +77,8 @@ pnpm test:watch           # Jest in watch mode
 
 ### Do's
 
-- Use Drizzle schemas from `@equipment-management/db` for database operations.
-- **Use Zod schemas from `@equipment-management/schemas` for ALL validation.** (Single Source of Truth)
+- Use Drizzle schemas from `packages/db` for database operations.
+- Use Zod schemas from `packages/schemas` for ALL validation (Single Source of Truth).
 - Use `ZodValidationPipe` with `@UsePipes` decorator in controllers for validation.
 - DTO classes are for Swagger documentation (`@ApiProperty`) and type hints only - actual validation is done by Zod.
 - Use React Query (`@tanstack/react-query`) for server state.
@@ -80,6 +94,7 @@ pnpm test:watch           # Jest in watch mode
 - Don't bypass authentication guards in protected routes.
 - Don't use inline styles; use TailwindCSS classes.
 - Don't commit without running `pnpm lint`.
+- Don't use emojis in code or documentation.
 
 ---
 
@@ -87,14 +102,12 @@ pnpm test:watch           # Jest in watch mode
 
 ### Naming Conventions
 
-| Type                | Convention       | Example                           |
-| ------------------- | ---------------- | --------------------------------- |
-| Files (components)  | PascalCase       | `EquipmentList.tsx`               |
-| Files (utilities)   | kebab-case       | `date-utils.ts`                   |
-| Variables/Functions | camelCase        | `getEquipmentById`                |
-| Types/Interfaces    | PascalCase       | `Equipment`, `CreateEquipmentDto` |
-| Constants           | UPPER_SNAKE_CASE | `MAX_PAGE_SIZE`                   |
-| API Routes          | kebab-case       | `/api/v1/equipment-categories`    |
+- Files (components): PascalCase - `EquipmentList.tsx`
+- Files (utilities): kebab-case - `date-utils.ts`
+- Variables/Functions: camelCase - `getEquipmentById`
+- Types/Interfaces: PascalCase - `Equipment`, `CreateEquipmentDto`
+- Constants: UPPER_SNAKE_CASE - `MAX_PAGE_SIZE`
+- API Routes: kebab-case - `/api/equipment-categories`
 
 ### Git Strategy
 
@@ -121,15 +134,13 @@ When code diverges from these rules, agents SHOULD:
 - **[Next.js Frontend App](./apps/frontend/AGENTS.md)** - Pages, components, hooks, API client, styling, state management.
 
 - **[Database Package](./packages/db/AGENTS.md)** - Drizzle schemas and client (single source of truth for DB schema).
+
 - **[Shared Schemas Package](./packages/schemas/AGENTS.md)** - Zod schemas, TypeScript types, enums, validation utilities.
 
 - **[API Client Package](./packages/api-client/src/)** - HTTP client configuration, type-safe API calls.
 
 - **[UI Components Package](./packages/ui/src/)** - Shared cross-app UI components (currently minimal).
 
-- **[Docker Configuration](./docker/)** - Dockerfile definitions for frontend and backend.
-
-- **[Database Package](./packages/db/)** - Drizzle schema and client (single source of truth for DB schema).
 - **[Database Migrations](./apps/backend/drizzle/)** - Drizzle migration files.
 
 - **[E2E Tests](./apps/backend/test/)** - End-to-end API tests with Supertest.

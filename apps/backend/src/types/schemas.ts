@@ -1,12 +1,12 @@
-import { 
-  EquipmentStatusEnum, 
-  CalibrationMethodEnum, 
+import {
+  EquipmentStatusEnum,
+  CalibrationMethodEnum,
   UserRoleEnum,
   TeamEnum,
   RentalStatusEnum,
   RentalTypeEnum,
   CalibrationStatusEnum,
-  CheckoutStatusEnum
+  CheckoutStatusEnum,
 } from './enums';
 
 // 장비 스키마
@@ -304,4 +304,4 @@ export const createCheckoutEquipmentSchema = {
 export const updateCheckoutEquipmentSchema = {
   condition: { type: 'string', optional: true },
   notes: { type: 'string', optional: true },
-}; 
+};

@@ -10,7 +10,7 @@ export class LoggerService implements NestLoggerService {
 
   constructor(private configService: ConfigService) {
     const isProduction = configService.get('NODE_ENV') === 'production';
-    
+
     const consoleFormat = winston.format.combine(
       winston.format.timestamp(),
       winston.format.colorize(),
@@ -18,20 +18,17 @@ export class LoggerService implements NestLoggerService {
         return `${timestamp} [${context || 'Application'}] ${level}: ${message}${
           Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : ''
         }${trace ? `\n${trace}` : ''}`;
-      }),
+      })
     );
-    
-    const fileFormat = winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json(),
-    );
-    
+
+    const fileFormat = winston.format.combine(winston.format.timestamp(), winston.format.json());
+
     const transports: winston.transport[] = [
       new winston.transports.Console({
         format: consoleFormat,
       }),
     ];
-    
+
     if (isProduction) {
       // 운영 환경에서만 파일 로깅 활성화
       const fileTransport = new winston.transports.DailyRotateFile({
@@ -52,16 +49,13 @@ export class LoggerService implements NestLoggerService {
         maxFiles: '14d',
         level: 'error',
       });
-      
+
       transports.push(fileTransport, errorFileTransport);
     }
-    
+
     this.logger = winston.createLogger({
       level: isProduction ? 'info' : 'debug',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json(),
-      ),
+      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
       defaultMeta: { service: 'equipment-management' },
       transports,
     });
@@ -77,10 +71,10 @@ export class LoggerService implements NestLoggerService {
   }
 
   error(message: string, trace?: string, ...optionalParams: any[]) {
-    this.logger.error(message, { 
-      context: this.context, 
-      trace, 
-      ...this.extractMetadata(optionalParams) 
+    this.logger.error(message, {
+      context: this.context,
+      trace,
+      ...this.extractMetadata(optionalParams),
     });
   }
 
@@ -93,18 +87,21 @@ export class LoggerService implements NestLoggerService {
   }
 
   verbose(message: string, ...optionalParams: any[]) {
-    this.logger.verbose(message, { context: this.context, ...this.extractMetadata(optionalParams) });
+    this.logger.verbose(message, {
+      context: this.context,
+      ...this.extractMetadata(optionalParams),
+    });
   }
 
   private extractMetadata(params: any[]) {
     if (params.length === 0) {
       return {};
     }
-    
+
     if (params.length === 1 && typeof params[0] === 'object') {
       return params[0];
     }
-    
+
     return { additionalParams: params };
   }
-} 
+}

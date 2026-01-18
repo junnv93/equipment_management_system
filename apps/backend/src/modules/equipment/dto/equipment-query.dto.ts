@@ -56,6 +56,13 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
   teamId?: string;
 
   @ApiPropertyOptional({
+    description: '사이트',
+    enum: ['suwon', 'uiwang'],
+    example: 'suwon',
+  })
+  site?: 'suwon' | 'uiwang';
+
+  @ApiPropertyOptional({
     description: '교정 예정일 기준 필터링 (일)',
     example: 30,
   })

@@ -7,4 +7,4 @@ import { TeamsService } from './teams.service';
   providers: [TeamsService],
   exports: [TeamsService],
 })
-export class TeamsModule {} 
+export class TeamsModule {}

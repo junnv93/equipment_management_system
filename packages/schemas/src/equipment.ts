@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CalibrationMethodEnum, EquipmentStatusEnum } from './enums';
+import { CalibrationMethodEnum, EquipmentStatusEnum, SiteEnum } from './enums';
 import { SoftDeleteEntity, PaginatedResponse } from './common/base';
 
 /**
@@ -50,8 +50,9 @@ export const baseEquipmentSchema = z.object({
 
   // 관리 정보
   purchaseYear: z.number().int().min(1990).max(2100).optional(),
-  teamId: z.number().int().positive().optional(),
+  teamId: z.string().uuid().optional().nullable(), // ✅ 스키마 일치화: uuid 타입으로 변경
   managerId: z.string().optional(),
+  site: SiteEnum, // ✅ 사이트별 권한 관리: 필수 필드로 변경
 
   // 추가 정보
   supplier: z.string().optional(),
@@ -62,6 +63,18 @@ export const baseEquipmentSchema = z.object({
   accessories: z.string().optional(),
   mainFeatures: z.string().optional(),
   technicalManager: z.string().optional(),
+
+  // 승인 프로세스 필드
+  approvalStatus: z.enum(['pending_approval', 'approved', 'rejected']).optional(),
+  requestedBy: z.string().uuid().optional(),
+  approvedBy: z.string().uuid().optional(),
+
+  // 추가 필수 필드 (프롬프트 3 요구사항)
+  equipmentType: z.string().optional(), // 장비 타입
+  calibrationResult: z.string().optional(), // 교정 결과
+  correctionFactor: z.string().optional(), // 보정계수
+  intermediateCheckSchedule: z.coerce.date().optional(), // 중간점검일정
+  repairHistory: z.string().optional(), // 장비 수리 내역
 
   // 상태 정보 (기본값이 있지만 생성 시 선택적)
   status: EquipmentStatusEnum.optional(),
@@ -96,6 +109,7 @@ export const equipmentFilterSchema = z.object({
   teamId: z.string().uuid().optional(),
   location: z.string().optional(),
   manufacturer: z.string().optional(),
+  site: SiteEnum.optional(),
   calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환
   sort: z.string().optional(), // 정렬 기준 (예: 'name.asc')
   // 페이지네이션은 선택적이며, 기본값은 서비스 레이어에서 처리

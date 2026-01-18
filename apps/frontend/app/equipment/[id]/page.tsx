@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useEquipment } from '@/hooks/use-equipment';
+import { useQuery } from '@tanstack/react-query';
 import calibrationApi from '@/lib/api/calibration-api';
 import maintenanceApi from '@/lib/api/maintenance-api';
 import dayjs from 'dayjs';
@@ -101,7 +102,8 @@ export default function EquipmentDetailPage() {
   }
 
   // 상태에 따른 뱃지 컴포넌트
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | undefined) => {
+    if (!status) return null;
     const statusConfig: Record<string, { class: string; label: string }> = {
       AVAILABLE: { class: 'bg-green-100 text-green-800', label: '사용 가능' },
       IN_USE: { class: 'bg-blue-100 text-blue-800', label: '사용 중' },
@@ -228,7 +230,7 @@ export default function EquipmentDetailPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">{equipment.name}</h1>
-          {getStatusBadge(equipment.status)}
+          {equipment.status && getStatusBadge(equipment.status)}
         </div>
         <div className="flex gap-2">
           <Link href={`/equipment/${equipmentId}/rent`}>
@@ -288,7 +290,7 @@ export default function EquipmentDetailPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm text-gray-500">카테고리</p>
-                    <p className="font-medium">{equipment.category}</p>
+                    <p className="font-medium">{(equipment as any).category || '-'}</p>
                   </div>
                 </div>
               </CardContent>

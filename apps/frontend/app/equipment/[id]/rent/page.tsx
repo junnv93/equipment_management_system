@@ -1,90 +1,93 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useToast } from "@/components/ui/use-toast";
-import equipmentApi from "@/lib/api/equipment-api";
-import rentalApi, { CreateRentalDto } from "@/lib/api/rental-api";
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Calendar, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { format } from 'date-fns';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
+import equipmentApi from '@/lib/api/equipment-api';
+import rentalApi, { CreateRentalDto } from '@/lib/api/rental-api';
 
 export default function EquipmentRentPage() {
   const router = useRouter();
   const params = useParams();
   const equipmentId = params.id as string;
   const { toast } = useToast();
-  
+
   // 장비 정보 가져오기
-  const { 
-    data: equipment, 
+  const {
+    data: equipment,
     isLoading,
     isError,
-    error 
+    error,
   } = useQuery({
     queryKey: ['equipment', equipmentId],
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     enabled: !!equipmentId,
   });
-  
+
   // 폼 상태 관리
   const [formData, setFormData] = useState({
-    startDate: format(new Date(), "yyyy-MM-dd"),
-    dueDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
-    purpose: "",
-    location: "",
-    type: "RENTAL",
-    notes: ""
+    startDate: format(new Date(), 'yyyy-MM-dd'),
+    dueDate: format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    purpose: '',
+    location: '',
+    type: 'RENTAL',
+    notes: '',
   });
-  
+
   // 대여 신청 mutation
   const createRentalMutation = useMutation({
     mutationFn: (rentalData: CreateRentalDto) => rentalApi.createRental(rentalData),
     onSuccess: () => {
       toast({
-        title: "신청 완료",
-        description: "장비 대여 신청이 완료되었습니다.",
+        title: '신청 완료',
+        description: '장비 대여 신청이 완료되었습니다.',
       });
       router.push(`/equipment/${equipmentId}`);
     },
     onError: (error: any) => {
       toast({
-        title: "신청 실패",
-        description: error?.message || "장비 대여 신청 중 오류가 발생했습니다.",
-        variant: "destructive",
+        title: '신청 실패',
+        description: error?.message || '장비 대여 신청 중 오류가 발생했습니다.',
+        variant: 'destructive',
       });
     },
   });
-  
+
   // 입력값 변경 처리
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
-  
+
   // 폼 제출 처리
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // 사용자 ID는 실제 구현에서는 인증 시스템에서 가져옵니다
-    // 지금은 임시로 고정값 사용
-    const tempBorrowerId = "user1";
-    
+
+    // ✅ 백엔드 API에 맞게 수정
+    // userId는 서버에서 JWT에서 자동으로 가져오므로 프론트엔드에서 보내지 않음
     const rentalData: CreateRentalDto = {
       equipmentId,
-      borrowerId: tempBorrowerId,
       startDate: formData.startDate,
-      dueDate: formData.dueDate,
+      expectedEndDate: formData.dueDate, // ✅ 필드명 변경 (dueDate → expectedEndDate)
       purpose: formData.purpose,
-      type: formData.type as 'RENTAL' | 'CHECKOUT',
-      notes: formData.notes || undefined
+      location: formData.location || undefined,
+      notes: formData.notes || undefined,
     };
-    
+
     createRentalMutation.mutate(rentalData);
   };
 
@@ -107,11 +110,7 @@ export default function EquipmentRentPage() {
         <div className="text-center text-red-500">
           <p className="text-lg font-bold mb-2">오류 발생</p>
           <p>장비 정보를 불러오는 데 실패했습니다.</p>
-          <Button 
-            variant="outline" 
-            onClick={() => router.back()} 
-            className="mt-4"
-          >
+          <Button variant="outline" onClick={() => router.back()} className="mt-4">
             뒤로 가기
           </Button>
         </div>
@@ -128,7 +127,7 @@ export default function EquipmentRentPage() {
         </Button>
         <h1 className="text-2xl font-bold ml-2">장비 대여 신청</h1>
       </div>
-      
+
       {/* 장비 정보 요약 */}
       <Card>
         <CardHeader>
@@ -146,18 +145,18 @@ export default function EquipmentRentPage() {
             </div>
             <div>
               <p className="text-sm text-gray-500">분류</p>
-              <p className="font-medium">{equipment.category}</p>
+              <p className="font-medium">{(equipment as any).category || '-'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">상태</p>
               <p className="font-medium">
-                {equipment.status === "AVAILABLE" ? "대여 가능" : "대여 불가"}
+                {equipment.status === 'available' ? '대여 가능' : '대여 불가'}
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
-      
+
       {/* 대여 신청 폼 */}
       <form onSubmit={handleSubmit}>
         <Card>
@@ -186,7 +185,7 @@ export default function EquipmentRentPage() {
                   />
                 </div>
               </div>
-              
+
               {/* 대여 종료일 */}
               <div className="space-y-2">
                 <label htmlFor="dueDate" className="text-sm font-medium">
@@ -207,7 +206,7 @@ export default function EquipmentRentPage() {
                   />
                 </div>
               </div>
-              
+
               {/* 대여 목적 */}
               <div className="space-y-2">
                 <label htmlFor="purpose" className="text-sm font-medium">
@@ -222,15 +221,15 @@ export default function EquipmentRentPage() {
                   required
                 />
               </div>
-              
+
               {/* 대여 유형 */}
               <div className="space-y-2">
                 <label htmlFor="type" className="text-sm font-medium">
                   대여 유형
                 </label>
-                <Select 
-                  value={formData.type} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value }))}
                 >
                   <SelectTrigger id="type">
                     <SelectValue placeholder="대여 유형 선택" />
@@ -241,7 +240,7 @@ export default function EquipmentRentPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* 사용 위치 */}
               <div className="space-y-2">
                 <label htmlFor="location" className="text-sm font-medium">
@@ -256,7 +255,7 @@ export default function EquipmentRentPage() {
                   required
                 />
               </div>
-              
+
               {/* 비고 */}
               <div className="space-y-2 md:col-span-2">
                 <label htmlFor="notes" className="text-sm font-medium">
@@ -272,21 +271,14 @@ export default function EquipmentRentPage() {
                 />
               </div>
             </div>
-            
+
             {/* 제출 버튼 */}
             <div className="flex justify-end gap-2 mt-6">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => router.back()}
-              >
+              <Button type="button" variant="outline" onClick={() => router.back()}>
                 취소
               </Button>
-              <Button 
-                type="submit"
-                disabled={createRentalMutation.isPending}
-              >
-                {createRentalMutation.isPending ? "처리 중..." : "대여 신청"}
+              <Button type="submit" disabled={createRentalMutation.isPending}>
+                {createRentalMutation.isPending ? '처리 중...' : '대여 신청'}
               </Button>
             </div>
           </CardContent>
@@ -294,4 +286,4 @@ export default function EquipmentRentPage() {
       </form>
     </div>
   );
-} 
+}

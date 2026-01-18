@@ -20,6 +20,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: payload.email,
       roles: payload.roles,
       department: payload.department,
+      site: payload.site, // 사이트 정보 추가
+      teamId: payload.teamId, // 팀 ID 추가
     };
   }
-} 
+}

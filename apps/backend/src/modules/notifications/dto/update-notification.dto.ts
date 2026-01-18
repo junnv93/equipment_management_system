@@ -9,9 +9,9 @@ export class UpdateNotificationDto extends PartialType(
   @ApiProperty({
     description: '읽음 상태',
     example: true,
-    default: false
+    default: false,
   })
   @IsBoolean()
   @IsOptional()
   isRead?: boolean;
-} 
+}

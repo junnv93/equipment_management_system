@@ -7,6 +7,6 @@ import { MetricsModule } from '../../common/metrics/metrics.module';
   imports: [MetricsModule],
   controllers: [MonitoringController],
   providers: [MonitoringService],
-  exports: [MonitoringService]
+  exports: [MonitoringService],
 })
-export class MonitoringModule {} 
+export class MonitoringModule {}

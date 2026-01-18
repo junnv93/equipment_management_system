@@ -58,11 +58,13 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('access_token');
       expect(result).toHaveProperty('user');
       expect(result.user).toEqual({
-        id: '1',
+        id: '00000000-0000-0000-0000-000000000001',
         email: 'admin@example.com',
         name: '관리자',
-        roles: [UserRole.ADMIN],
+        roles: [UserRole.SITE_ADMIN],
         department: undefined,
+        site: 'suwon',
+        location: '수원랩',
       });
       expect(jwtService.sign).toHaveBeenCalled();
     });
@@ -81,11 +83,13 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('access_token');
       expect(result).toHaveProperty('user');
       expect(result.user).toEqual({
-        id: '2',
+        id: '00000000-0000-0000-0000-000000000002',
         email: 'manager@example.com',
-        name: '매니저',
-        roles: [UserRole.MANAGER],
-        department: 'IT',
+        name: '기술책임자',
+        roles: [UserRole.TECHNICAL_MANAGER],
+        department: 'RF팀',
+        site: 'suwon',
+        location: '수원랩',
       });
     });
 
@@ -103,11 +107,13 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('access_token');
       expect(result).toHaveProperty('user');
       expect(result.user).toEqual({
-        id: '3',
+        id: '00000000-0000-0000-0000-000000000003',
         email: 'user@example.com',
-        name: '일반 사용자',
-        roles: [UserRole.USER],
+        name: '시험실무자',
+        roles: [UserRole.TEST_OPERATOR],
         department: 'RF팀',
+        site: 'suwon',
+        location: '수원랩',
       });
     });
 
@@ -145,7 +151,7 @@ describe('AuthService', () => {
         id: 'azure-id',
         email: 'azure@example.com',
         name: 'Azure User',
-        roles: [UserRole.ADMIN],
+        roles: [UserRole.SITE_ADMIN],
         department: 'IT',
       });
       expect(jwtService.sign).toHaveBeenCalled();
@@ -156,7 +162,7 @@ describe('AuthService', () => {
       expect(() => service.validateAzureADUser(null)).toThrow(UnauthorizedException);
     });
 
-    it('should default to USER role if no roles provided', () => {
+    it('should default to TEST_OPERATOR role if no roles provided', () => {
       // Arrange
       const azureUser = {
         oid: 'azure-id',
@@ -169,7 +175,7 @@ describe('AuthService', () => {
       const result = service.validateAzureADUser(azureUser);
 
       // Assert
-      expect(result.user.roles).toEqual([UserRole.USER]);
+      expect(result.user.roles).toEqual([UserRole.TEST_OPERATOR]);
     });
   });
 
@@ -177,7 +183,7 @@ describe('AuthService', () => {
     it('should map Azure AD roles to app roles', () => {
       // Arrange
       const azureRoles = ['Admin', 'Manager'];
-      
+
       // Using private method through any trick
       const service_any = service as any;
 
@@ -185,13 +191,13 @@ describe('AuthService', () => {
       const result = service_any.mapAzureRolesToAppRoles(azureRoles);
 
       // Assert
-      expect(result).toEqual([UserRole.ADMIN, UserRole.MANAGER]);
+      expect(result).toEqual([UserRole.SITE_ADMIN, UserRole.TECHNICAL_MANAGER]);
     });
 
-    it('should return USER role if no mappable roles are found', () => {
+    it('should return TEST_OPERATOR role if no mappable roles are found', () => {
       // Arrange
       const azureRoles = ['Unknown'];
-      
+
       // Using private method through any trick
       const service_any = service as any;
 
@@ -199,7 +205,123 @@ describe('AuthService', () => {
       const result = service_any.mapAzureRolesToAppRoles(azureRoles);
 
       // Assert
-      expect(result).toEqual([UserRole.USER]);
+      expect(result).toEqual([UserRole.TEST_OPERATOR]);
+    });
+
+    it('should map new Azure AD roles correctly', () => {
+      // Arrange
+      const azureRoles = ['SiteAdmin', 'TechnicalManager', 'TestOperator'];
+
+      // Using private method through any trick
+      const service_any = service as any;
+
+      // Act
+      const result = service_any.mapAzureRolesToAppRoles(azureRoles);
+
+      // Assert
+      expect(result).toEqual([
+        UserRole.SITE_ADMIN,
+        UserRole.TECHNICAL_MANAGER,
+        UserRole.TEST_OPERATOR,
+      ]);
     });
   });
-}); 
+
+  describe('mapAzureGroupsToTeamAndLocation', () => {
+    it('should map LST.SUW.RF to RF team and Suwon location', () => {
+      // Arrange
+      const azureGroups = ['LST.SUW.RF'];
+
+      // Using private method through any trick
+      const service_any = service as any;
+
+      // Act
+      const result = service_any.mapAzureGroupsToTeamAndLocation(azureGroups);
+
+      // Assert
+      expect(result).toEqual({
+        teamId: 'rf',
+        site: 'suwon',
+        location: '수원랩',
+      });
+    });
+
+    it('should map LST.UIW.SAR to SAR team and Uiwang location', () => {
+      // Arrange
+      const azureGroups = ['LST.UIW.SAR'];
+
+      // Using private method through any trick
+      const service_any = service as any;
+
+      // Act
+      const result = service_any.mapAzureGroupsToTeamAndLocation(azureGroups);
+
+      // Assert
+      expect(result).toEqual({
+        teamId: 'sar',
+        site: 'uiwang',
+        location: '의왕랩',
+      });
+    });
+
+    it('should return empty object if no valid group pattern found', () => {
+      // Arrange
+      const azureGroups = ['InvalidGroup', 'OtherGroup'];
+
+      // Using private method through any trick
+      const service_any = service as any;
+
+      // Act
+      const result = service_any.mapAzureGroupsToTeamAndLocation(azureGroups);
+
+      // Assert
+      expect(result).toEqual({});
+    });
+
+    it('should handle multiple groups and return first valid match', () => {
+      // Arrange
+      const azureGroups = ['LST.SUW.RF', 'LST.UIW.EMC'];
+
+      // Using private method through any trick
+      const service_any = service as any;
+
+      // Act
+      const result = service_any.mapAzureGroupsToTeamAndLocation(azureGroups);
+
+      // Assert
+      expect(result).toEqual({
+        teamId: 'rf',
+        site: 'suwon',
+        location: '수원랩',
+      });
+    });
+  });
+
+  describe('validateAzureADUser with site and location', () => {
+    it('should include site and location from Azure groups', () => {
+      // Arrange
+      const azureUser = {
+        oid: 'azure-id',
+        preferred_username: 'azure@example.com',
+        name: 'Azure User',
+        roles: ['SiteAdmin'],
+        groups: ['LST.SUW.RF'],
+        department: 'IT',
+      };
+
+      // Act
+      const result = service.validateAzureADUser(azureUser);
+
+      // Assert
+      expect(result.user).toMatchObject({
+        id: 'azure-id',
+        email: 'azure@example.com',
+        name: 'Azure User',
+        roles: [UserRole.SITE_ADMIN],
+        site: 'suwon',
+        location: '수원랩',
+        teamId: 'rf',
+      });
+    });
+  });
+});

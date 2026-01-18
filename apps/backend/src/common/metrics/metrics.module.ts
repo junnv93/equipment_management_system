@@ -7,4 +7,4 @@ import { MetricsController } from './metrics.controller';
   providers: [MetricsService],
   exports: [MetricsService],
 })
-export class MetricsModule {} 
+export class MetricsModule {}

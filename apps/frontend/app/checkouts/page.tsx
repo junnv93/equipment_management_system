@@ -1,57 +1,85 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-import { Building, ClipboardList, Clock, Search, Plus, Filter, MapPin } from "lucide-react";
-import checkoutApi, { Checkout, CheckoutSummary } from "@/lib/api/checkout-api";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { Building, ClipboardList, Clock, Search, Plus, Filter, MapPin } from 'lucide-react';
+import checkoutApi, { Checkout, CheckoutSummary } from '@/lib/api/checkout-api';
 
 export default function CheckoutsPage() {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentTab, setCurrentTab] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentTab, setCurrentTab] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
 
   // 반출 요약 정보 가져오기
+  // ⚠️ 백엔드에 summary 엔드포인트가 없으므로 findAll로 대체
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ["checkout-summary"],
-    queryFn: () => checkoutApi.getCheckoutSummary(),
+    queryKey: ['checkout-summary'],
+    queryFn: async () => {
+      const response = await checkoutApi.getCheckouts({ pageSize: 1 });
+      // 간단한 요약 정보 생성 (실제로는 백엔드에서 제공해야 함)
+      return {
+        total: response.meta.pagination.total,
+        pending: 0,
+        approved: 0,
+        overdue: 0,
+        returnedToday: 0,
+      };
+    },
   });
 
   // 반출 목록 가져오기
   const { data: checkoutsData, isLoading: checkoutsLoading } = useQuery({
-    queryKey: ["checkouts", currentTab, statusFilter, locationFilter, searchTerm],
+    queryKey: ['checkouts', currentTab, statusFilter, locationFilter, searchTerm],
     queryFn: async () => {
       const query: any = {
         pageSize: 100,
         search: searchTerm || undefined,
       };
 
-      if (statusFilter !== "all") {
+      if (statusFilter !== 'all') {
         query.status = statusFilter;
       }
 
-      if (locationFilter !== "all") {
+      if (locationFilter !== 'all') {
         query.location = locationFilter;
       }
 
+      // ✅ 백엔드에 overdue, today-returns 엔드포인트가 없으므로 findAll에 필터로 처리
       switch (currentTab) {
-        case "overdue":
-          return checkoutApi.getOverdueCheckouts(query);
-        case "today":
-          return checkoutApi.getTodayReturns(query);
+        case 'overdue':
+          // 기한 초과는 status 필터로 처리 (실제로는 백엔드에 overdue 필터 추가 필요)
+          return checkoutApi.getCheckouts({ ...query, status: 'overdue' });
+        case 'today':
+          // 오늘 반납 예정은 날짜 필터로 처리 (실제로는 백엔드에 날짜 필터 추가 필요)
+          const today = new Date().toISOString().split('T')[0];
+          return checkoutApi.getCheckouts({ ...query, endDate: today });
         default:
           return checkoutApi.getCheckouts(query);
       }
@@ -61,16 +89,48 @@ export default function CheckoutsPage() {
   // 반출 상태에 따른 배지 스타일
   const getCheckoutStatusBadge = (status: string) => {
     switch (status) {
-      case "pending":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">승인 대기중</Badge>;
-      case "approved":
-        return <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">반출 중</Badge>;
-      case "rejected":
-        return <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">거부됨</Badge>;
-      case "returned":
-        return <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">반입됨</Badge>;
-      case "overdue":
-        return <Badge variant="outline" className="bg-red-100 text-red-900 hover:bg-red-100">기한 초과</Badge>;
+      case 'pending':
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
+            승인 대기중
+          </Badge>
+        );
+      case 'first_approved':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
+            1차 승인
+          </Badge>
+        );
+      case 'final_approved':
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
+            최종 승인
+          </Badge>
+        );
+      case 'checked_out':
+        return (
+          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
+            반출 중
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">
+            거부됨
+          </Badge>
+        );
+      case 'returned':
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
+            반입됨
+          </Badge>
+        );
+      case 'overdue':
+        return (
+          <Badge variant="outline" className="bg-red-100 text-red-900 hover:bg-red-100">
+            기한 초과
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -102,11 +162,14 @@ export default function CheckoutsPage() {
       <ClipboardList className="h-12 w-12 text-gray-400 mb-4" />
       <h3 className="text-lg font-medium text-gray-900">반출 정보가 없습니다</h3>
       <p className="text-sm text-gray-500 mt-2 mb-4">검색 조건에 맞는 반출 정보가 없습니다.</p>
-      <Button variant="outline" onClick={() => {
-        setSearchTerm("");
-        setStatusFilter("all");
-        setLocationFilter("all");
-      }}>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setSearchTerm('');
+          setStatusFilter('all');
+          setLocationFilter('all');
+        }}
+      >
         필터 초기화
       </Button>
     </div>
@@ -117,12 +180,24 @@ export default function CheckoutsPage() {
     <>
       {[1, 2, 3, 4, 5].map((i) => (
         <TableRow key={i}>
-          <TableCell><Skeleton className="h-5 w-[180px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[120px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[100px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[120px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[180px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[120px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[100px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[120px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[80px]" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-5 w-[80px]" />
+          </TableCell>
         </TableRow>
       ))}
     </>
@@ -135,7 +210,7 @@ export default function CheckoutsPage() {
           <h1 className="text-3xl font-bold tracking-tight">반출 관리</h1>
           <p className="text-muted-foreground">장비 반출 요청 및 현황을 관리합니다.</p>
         </div>
-        <Button onClick={() => router.push("/checkouts/create")}>
+        <Button onClick={() => router.push('/checkouts/create')}>
           <Plus className="mr-2 h-4 w-4" /> 반출 신청
         </Button>
       </div>
@@ -225,7 +300,9 @@ export default function CheckoutsPage() {
             <SelectContent>
               <SelectItem value="all">전체</SelectItem>
               <SelectItem value="pending">승인 대기중</SelectItem>
-              <SelectItem value="approved">반출 중</SelectItem>
+              <SelectItem value="first_approved">1차 승인</SelectItem>
+              <SelectItem value="final_approved">최종 승인</SelectItem>
+              <SelectItem value="checked_out">반출 중</SelectItem>
               <SelectItem value="rejected">거부됨</SelectItem>
               <SelectItem value="returned">반입됨</SelectItem>
               <SelectItem value="overdue">기한 초과</SelectItem>
@@ -274,29 +351,33 @@ export default function CheckoutsPage() {
               </TableRow>
             ) : (
               checkoutsData?.data?.map((checkout: Checkout) => (
-                <TableRow key={checkout.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/checkouts/${checkout.id}`)}>
+                <TableRow
+                  key={checkout.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/checkouts/${checkout.id}`)}
+                >
                   <TableCell className="font-medium">
-                    {checkout.equipment && checkout.equipment.length > 0 
-                      ? `${checkout.equipment[0].name} ${checkout.equipment.length > 1 ? `외 ${checkout.equipment.length - 1}건` : ''}` 
+                    {checkout.equipment && checkout.equipment.length > 0
+                      ? `${checkout.equipment[0].name} ${checkout.equipment.length > 1 ? `외 ${checkout.equipment.length - 1}건` : ''}`
                       : '장비 정보 없음'}
                   </TableCell>
-                  <TableCell>
-                    {checkout.user?.name || '알 수 없는 사용자'}
-                  </TableCell>
-                  <TableCell>
-                    {getCheckoutStatusBadge(checkout.status)}
-                  </TableCell>
+                  <TableCell>{checkout.user?.name || '알 수 없는 사용자'}</TableCell>
+                  <TableCell>{getCheckoutStatusBadge(checkout.status)}</TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <Building className="h-4 w-4 mr-1 text-gray-500" />
-                      {checkout.location}
+                      {checkout.destination || checkout.location}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {format(new Date(checkout.startDate), 'yyyy-MM-dd', { locale: ko })}
+                    {checkout.startDate
+                      ? format(new Date(checkout.startDate), 'yyyy-MM-dd', { locale: ko })
+                      : '-'}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(checkout.expectedReturnDate), 'yyyy-MM-dd', { locale: ko })}
+                    {checkout.expectedReturnDate
+                      ? format(new Date(checkout.expectedReturnDate), 'yyyy-MM-dd', { locale: ko })
+                      : '-'}
                   </TableCell>
                 </TableRow>
               ))
@@ -306,4 +387,4 @@ export default function CheckoutsPage() {
       </div>
     </div>
   );
-} 
+}

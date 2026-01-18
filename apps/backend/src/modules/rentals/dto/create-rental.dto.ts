@@ -13,12 +13,13 @@ export class CreateRentalDto {
   equipmentId: string;
 
   @ApiProperty({
-    description: '대여 신청자 UUID',
+    description: '대여 신청자 UUID (서버에서 JWT에서 자동 설정, 클라이언트에서 보내지 않음)',
     example: '550e8400-e29b-41d4-a716-446655440002',
+    required: false,
   })
   @IsUUID('4')
-  @IsNotEmpty()
-  userId: string;
+  @IsOptional()
+  userId?: string;
 
   // Note: type 필드는 현재 loans 테이블에 없지만, 향후 확장을 위해 유지
   // 실제로는 모든 rentals가 'internal' (같은 시험소 내 대여)

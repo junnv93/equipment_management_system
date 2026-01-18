@@ -1,7 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 // import { v4 as uuidv4 } from 'uuid';
-import { CreateNotificationDto, NotificationTypeEnum, NotificationPriorityEnum } from './dto/create-notification.dto';
-import { NotificationFrequencyEnum, NotificationSettingsDto } from './dto/notification-settings.dto';
+import {
+  CreateNotificationDto,
+  NotificationTypeEnum,
+  NotificationPriorityEnum,
+} from './dto/create-notification.dto';
+import {
+  NotificationFrequencyEnum,
+  NotificationSettingsDto,
+} from './dto/notification-settings.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 
@@ -71,7 +78,8 @@ const temporaryNotifications = [
     equipmentId: '3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r',
     calibrationId: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
     rentalId: null,
-    linkUrl: '/equipment/3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r/calibrations/4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
+    linkUrl:
+      '/equipment/3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r/calibrations/4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
     isRead: false,
     createdAt: new Date('2023-05-15T11:20:00Z'),
     updatedAt: new Date('2023-05-15T11:20:00Z'),
@@ -107,14 +115,14 @@ const temporaryNotifications = [
     isRead: false,
     createdAt: new Date('2023-05-25T10:00:00Z'),
     updatedAt: new Date('2023-05-25T10:00:00Z'),
-  }
+  },
 ];
 
 // 검색 가능한 알림 목록
-let notifications: Notification[] = [...temporaryNotifications];
+const notifications: Notification[] = [...temporaryNotifications];
 
 // 임시 알림 설정 데이터
-let notificationSettings = [
+const notificationSettings = [
   {
     id: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
     userId: '550e8400-e29b-41d4-a716-446655440001',
@@ -132,7 +140,7 @@ let notificationSettings = [
     systemNotificationsEnabled: true,
     createdAt: new Date('2023-05-01T09:00:00Z'),
     updatedAt: new Date('2023-05-01T09:00:00Z'),
-  }
+  },
 ];
 
 @Injectable()
@@ -144,16 +152,16 @@ export class NotificationsService {
     const newNotification = {
       id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       // id: uuidv4(),
-      
+
       // ... existing code ...
     };
 
     // ... existing code ...
   }
-  
+
   async findAll(query: NotificationQueryDto) {
-    const { 
-      recipientId, 
+    const {
+      recipientId,
       teamId,
       types,
       priorities,
@@ -165,102 +173,104 @@ export class NotificationsService {
       fromDate,
       toDate,
       sort = 'createdAt.desc',
-      page = 1, 
-      pageSize = 20 
+      page = 1,
+      pageSize = 20,
     } = query;
-    
+
     // 필터링
     let filteredNotifications = [...notifications];
-    
+
     if (recipientId) {
-      filteredNotifications = filteredNotifications.filter(notification => 
-        notification.recipientId === recipientId || notification.recipientId === 'all'
+      filteredNotifications = filteredNotifications.filter(
+        (notification) =>
+          notification.recipientId === recipientId || notification.recipientId === 'all'
       );
     }
-    
+
     if (teamId) {
-      filteredNotifications = filteredNotifications.filter(notification => 
-        notification.isTeamNotification && notification.recipientId === teamId
+      filteredNotifications = filteredNotifications.filter(
+        (notification) => notification.isTeamNotification && notification.recipientId === teamId
       );
     }
-    
+
     if (types) {
-      filteredNotifications = filteredNotifications.filter(notification => 
+      filteredNotifications = filteredNotifications.filter((notification) =>
         types.includes(notification.type)
       );
     }
-    
+
     if (priorities) {
-      filteredNotifications = filteredNotifications.filter(notification => 
+      filteredNotifications = filteredNotifications.filter((notification) =>
         priorities.includes(notification.priority)
       );
     }
-    
+
     if (equipmentId) {
-      filteredNotifications = filteredNotifications.filter(notification => 
-        notification.equipmentId === equipmentId
+      filteredNotifications = filteredNotifications.filter(
+        (notification) => notification.equipmentId === equipmentId
       );
     }
-    
+
     if (calibrationId) {
-      filteredNotifications = filteredNotifications.filter(notification => 
-        notification.calibrationId === calibrationId
+      filteredNotifications = filteredNotifications.filter(
+        (notification) => notification.calibrationId === calibrationId
       );
     }
-    
+
     if (rentalId) {
-      filteredNotifications = filteredNotifications.filter(notification => 
-        notification.rentalId === rentalId
+      filteredNotifications = filteredNotifications.filter(
+        (notification) => notification.rentalId === rentalId
       );
     }
-    
+
     if (isRead !== undefined) {
-      filteredNotifications = filteredNotifications.filter(notification => 
-        notification.isRead === isRead
+      filteredNotifications = filteredNotifications.filter(
+        (notification) => notification.isRead === isRead
       );
     }
-    
+
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredNotifications = filteredNotifications.filter(notification => 
-        notification.title.toLowerCase().includes(searchLower) || 
-        notification.content.toLowerCase().includes(searchLower)
+      filteredNotifications = filteredNotifications.filter(
+        (notification) =>
+          notification.title.toLowerCase().includes(searchLower) ||
+          notification.content.toLowerCase().includes(searchLower)
       );
     }
-    
+
     if (fromDate) {
       const fromDateObj = new Date(fromDate);
-      filteredNotifications = filteredNotifications.filter(notification => 
-        new Date(notification.createdAt) >= fromDateObj
+      filteredNotifications = filteredNotifications.filter(
+        (notification) => new Date(notification.createdAt) >= fromDateObj
       );
     }
-    
+
     if (toDate) {
       const toDateObj = new Date(toDate);
       toDateObj.setHours(23, 59, 59, 999); // 해당 날짜의 마지막 시간으로 설정
-      filteredNotifications = filteredNotifications.filter(notification => 
-        new Date(notification.createdAt) <= toDateObj
+      filteredNotifications = filteredNotifications.filter(
+        (notification) => new Date(notification.createdAt) <= toDateObj
       );
     }
-    
+
     // 정렬
     if (sort) {
       const [field, direction] = sort.split('.');
       const isAsc = direction === 'asc';
-      
+
       filteredNotifications.sort((a, b) => {
         if (a[field] < b[field]) return isAsc ? -1 : 1;
         if (a[field] > b[field]) return isAsc ? 1 : -1;
         return 0;
       });
     }
-    
+
     // 페이지네이션
     const totalItems = filteredNotifications.length;
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
     const paginatedNotifications = filteredNotifications.slice(offset, offset + pageSize);
-    
+
     return {
       items: paginatedNotifications,
       meta: {
@@ -274,65 +284,70 @@ export class NotificationsService {
   }
 
   async findOne(id: string) {
-    const notification = notifications.find(n => n.id === id);
-    
+    const notification = notifications.find((n) => n.id === id);
+
     if (!notification) {
       throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
     }
-    
+
     return notification;
   }
 
   async update(id: string, updateNotificationDto: UpdateNotificationDto) {
-    const index = notifications.findIndex(n => n.id === id);
-    
+    const index = notifications.findIndex((n) => n.id === id);
+
     if (index === -1) {
       throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
     }
-    
+
     const now = new Date();
     notifications[index] = {
       ...notifications[index],
       ...updateNotificationDto,
       updatedAt: now,
     };
-    
+
     return notifications[index];
   }
 
   async remove(id: string) {
-    const index = notifications.findIndex(n => n.id === id);
-    
+    const index = notifications.findIndex((n) => n.id === id);
+
     if (index === -1) {
       throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
     }
-    
+
     notifications.splice(index, 1);
     return { id, deleted: true };
   }
-  
+
   // 읽음 표시
   async markAsRead(id: string) {
     return this.update(id, { isRead: true });
   }
-  
+
   // 모든 알림 읽음 표시
   async markAllAsRead(recipientId: string) {
-    const userNotifications = notifications.filter(n => 
-      n.recipientId === recipientId || n.recipientId === 'all'
+    const userNotifications = notifications.filter(
+      (n) => n.recipientId === recipientId || n.recipientId === 'all'
     );
-    
-    const updatePromises = userNotifications.map(n => this.markAsRead(n.id));
+
+    const updatePromises = userNotifications.map((n) => this.markAsRead(n.id));
     await Promise.all(updatePromises);
-    
+
     return { success: true, count: userNotifications.length };
   }
-  
+
   // 교정 일정 알림 생성
-  async createCalibrationDueNotification(equipmentId: string, recipientId: string, days: number, equipmentName: string) {
+  async createCalibrationDueNotification(
+    equipmentId: string,
+    recipientId: string,
+    days: number,
+    equipmentName: string
+  ) {
     const title = `장비 교정 예정 알림: ${equipmentName}`;
     const content = `${equipmentName} 장비의 교정이 ${days}일 후로 예정되어 있습니다.`;
-    
+
     return this.create({
       title,
       content,
@@ -343,12 +358,17 @@ export class NotificationsService {
       linkUrl: `/equipment/${equipmentId}/calibrations`,
     });
   }
-  
+
   // 대여 요청 알림 생성
-  async createRentalRequestNotification(rentalId: string, approverId: string, equipmentName: string, requesterName: string) {
+  async createRentalRequestNotification(
+    rentalId: string,
+    approverId: string,
+    equipmentName: string,
+    requesterName: string
+  ) {
     const title = `장비 대여 요청: ${equipmentName}`;
     const content = `${requesterName}님이 ${equipmentName} 장비 대여를 요청했습니다.`;
-    
+
     return this.create({
       title,
       content,
@@ -359,28 +379,26 @@ export class NotificationsService {
       linkUrl: `/rentals/${rentalId}`,
     });
   }
-  
+
   /**
    * 대여/반출 상태 변경 알림 생성
    */
   async createRentalStatusNotification(
-    rentalId: string, 
-    userId: string, 
-    equipmentName: string, 
+    rentalId: string,
+    userId: string,
+    equipmentName: string,
     isApproved: boolean
   ) {
-    const notificationType = isApproved 
-      ? NotificationTypeEnum.RENTAL_APPROVED 
+    const notificationType = isApproved
+      ? NotificationTypeEnum.RENTAL_APPROVED
       : NotificationTypeEnum.RENTAL_REJECTED;
-    
-    const title = isApproved 
-      ? '장비 대여 요청 승인' 
-      : '장비 대여 요청 거절';
-      
-    const content = isApproved 
-      ? `${equipmentName} 장비 대여 요청이 승인되었습니다.` 
+
+    const title = isApproved ? '장비 대여 요청 승인' : '장비 대여 요청 거절';
+
+    const content = isApproved
+      ? `${equipmentName} 장비 대여 요청이 승인되었습니다.`
       : `${equipmentName} 장비 대여 요청이 거절되었습니다.`;
-    
+
     const newNotification = {
       id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title,
@@ -397,18 +415,18 @@ export class NotificationsService {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     notifications.push(newNotification);
-    
+
     return newNotification;
   }
-  
+
   /**
    * 반납 요청 알림 생성
    */
   async createReturnRequestNotification(
-    rentalId: string, 
-    approverId: string, 
+    rentalId: string,
+    approverId: string,
     userId: string,
     equipmentName: string
   ) {
@@ -428,39 +446,37 @@ export class NotificationsService {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     notifications.push(newNotification);
-    
+
     return newNotification;
   }
-  
+
   /**
    * 반납 승인/거절 알림 생성
    */
   async createReturnStatusNotification(
-    rentalId: string, 
-    userId: string, 
-    equipmentName: string, 
+    rentalId: string,
+    userId: string,
+    equipmentName: string,
     isApproved: boolean,
     notes?: string
   ) {
-    const notificationType = isApproved 
-      ? NotificationTypeEnum.RETURN_APPROVED 
+    const notificationType = isApproved
+      ? NotificationTypeEnum.RETURN_APPROVED
       : NotificationTypeEnum.RETURN_REJECTED;
-    
-    const title = isApproved 
-      ? '장비 반납 요청 승인' 
-      : '장비 반납 요청 거절';
-      
-    let content = isApproved 
-      ? `${equipmentName} 장비 반납 요청이 승인되었습니다.` 
+
+    const title = isApproved ? '장비 반납 요청 승인' : '장비 반납 요청 거절';
+
+    let content = isApproved
+      ? `${equipmentName} 장비 반납 요청이 승인되었습니다.`
       : `${equipmentName} 장비 반납 요청이 거절되었습니다.`;
-    
+
     // 메모가 있을 경우 내용에 추가
     if (notes) {
       content += ` 메모: ${notes}`;
     }
-    
+
     const newNotification = {
       id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title,
@@ -477,27 +493,26 @@ export class NotificationsService {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     notifications.push(newNotification);
-    
+
     return newNotification;
   }
-  
+
   // 미확인 알림 개수 조회
   async countUnread(recipientId: string) {
-    const unreadCount = notifications.filter(n => 
-      (n.recipientId === recipientId || n.recipientId === 'all') && 
-      !n.isRead
+    const unreadCount = notifications.filter(
+      (n) => (n.recipientId === recipientId || n.recipientId === 'all') && !n.isRead
     ).length;
-    
+
     return { count: unreadCount };
   }
-  
+
   // 시스템 알림 생성 (모든 사용자 대상)
   async createSystemNotification(
     title: string,
     content: string,
-    priority: NotificationPriorityEnum = NotificationPriorityEnum.MEDIUM,
+    priority: NotificationPriorityEnum = NotificationPriorityEnum.MEDIUM
   ): Promise<Notification> {
     // 시스템 알림 생성 로직
     const systemNotification: Notification = {
@@ -538,38 +553,41 @@ export class NotificationsService {
       };
       return defaultSettings;
     }
-    
+
     return this.notificationSettings[userId];
   }
-  
-  updateUserNotificationSettings(userId: string, settingsDto: NotificationSettingsDto): NotificationSettingsDto {
+
+  updateUserNotificationSettings(
+    userId: string,
+    settingsDto: NotificationSettingsDto
+  ): NotificationSettingsDto {
     // userId 일치 확인
     if (userId !== settingsDto.userId) {
       throw new BadRequestException('userId가 일치하지 않습니다.');
     }
-    
+
     // 기존 설정 가져오기
     const existingSettings = this.getUserNotificationSettings(userId);
-    
+
     // 새 설정으로 업데이트
     this.notificationSettings[userId] = {
       ...existingSettings,
       ...settingsDto,
     };
-    
+
     return this.notificationSettings[userId];
   }
-  
+
   /**
    * 사용자의 특정 알림 유형이 활성화되어 있는지 확인
    */
   isNotificationEnabled(userId: string, notificationType: NotificationTypeEnum): boolean {
     const settings = this.getUserNotificationSettings(userId);
-    
+
     if (!settings.inAppEnabled) {
       return false;
     }
-    
+
     switch (notificationType) {
       case NotificationTypeEnum.CALIBRATION_DUE:
         return settings.calibrationDueEnabled;
@@ -598,30 +616,30 @@ export class NotificationsService {
         return true;
     }
   }
-  
+
   // 이메일 발송 여부 확인
   shouldSendEmail(userId: string, notificationType: NotificationTypeEnum): boolean {
     const settings = this.getUserNotificationSettings(userId);
     return settings.emailEnabled === true && this.isNotificationEnabled(userId, notificationType);
   }
-  
+
   // 일간 알림 스케줄링
-  scheduleDailyNotifications(): { success: boolean, message: string } {
+  scheduleDailyNotifications(): { success: boolean; message: string } {
     // 실제로는 스케줄러를 통해 일정 시간에 실행되어야 함
     // 여기서는 즉시 실행 구현
-    
+
     // 빈 결과 배열 초기화
-    const result: {userId: string, notificationCount: number}[] = [];
-    
+    const result: { userId: string; notificationCount: number }[] = [];
+
     // 모든 사용자의 알림 설정 확인
-    Object.keys(this.notificationSettings).forEach(userId => {
+    Object.keys(this.notificationSettings).forEach((userId) => {
       const settings = this.notificationSettings[userId];
-      
+
       // 일간 알림 설정인 경우에만 처리
       if (settings.frequency === NotificationFrequencyEnum.DAILY) {
         // 해당 사용자에 대한 알림 수 카운트
         let notificationCount = 0;
-        
+
         // 1. 교정 예정 알림
         if (settings.calibrationDueEnabled === true) {
           this.createSystemNotification(
@@ -630,56 +648,58 @@ export class NotificationsService {
             NotificationPriorityEnum.HIGH
           ).then(() => notificationCount++);
         }
-        
+
         // 2. 대여 상태 알림
-        if (settings.rentalRequestEnabled === true || 
-            settings.rentalApprovedEnabled === true || 
-            settings.rentalRejectedEnabled === true) {
+        if (
+          settings.rentalRequestEnabled === true ||
+          settings.rentalApprovedEnabled === true ||
+          settings.rentalRejectedEnabled === true
+        ) {
           this.createSystemNotification(
             '일간 대여 상태 요약',
             '귀하의 대여 요청과 승인 상태를 확인하세요.',
             NotificationPriorityEnum.MEDIUM
           ).then(() => notificationCount++);
         }
-        
+
         // 결과 추가
         result.push({
           userId,
-          notificationCount
+          notificationCount,
         });
       }
     });
-    
+
     return {
       success: true,
-      message: `${result.length}명의 사용자에게 일간 알림을 발송했습니다.`
+      message: `${result.length}명의 사용자에게 일간 알림을 발송했습니다.`,
     };
   }
-  
+
   // 주간 알림 스케줄링
-  scheduleWeeklyNotifications(): { success: boolean, message: string } {
+  scheduleWeeklyNotifications(): { success: boolean; message: string } {
     // 실제로는 스케줄러를 통해 일정 시간에 실행되어야 함
     // 여기서는 즉시 실행 구현
-    
+
     // 빈 결과 배열 초기화
-    const result: {userId: string, notificationCount: number}[] = [];
-    
+    const result: { userId: string; notificationCount: number }[] = [];
+
     // 모든 사용자의 알림 설정 확인
-    Object.keys(this.notificationSettings).forEach(userId => {
+    Object.keys(this.notificationSettings).forEach((userId) => {
       const settings = this.notificationSettings[userId];
-      
+
       // 주간 알림 설정인 경우에만 처리
       if (settings.frequency === NotificationFrequencyEnum.WEEKLY) {
         // 해당 사용자에 대한 알림 수 카운트
         let notificationCount = 0;
-        
+
         // 1. 주간 장비 상태 요약
         this.createSystemNotification(
           '주간 장비 상태 요약',
           '이번 주에 관리가 필요한 장비 목록을 확인하세요.',
           NotificationPriorityEnum.MEDIUM
         ).then(() => notificationCount++);
-        
+
         // 2. 주간 교정 요약
         if (settings.calibrationDueEnabled === true) {
           this.createSystemNotification(
@@ -688,18 +708,18 @@ export class NotificationsService {
             NotificationPriorityEnum.MEDIUM
           ).then(() => notificationCount++);
         }
-        
+
         // 결과 추가
         result.push({
           userId,
-          notificationCount
+          notificationCount,
         });
       }
     });
-    
+
     return {
       success: true,
-      message: `${result.length}명의 사용자에게 주간 알림을 발송했습니다.`
+      message: `${result.length}명의 사용자에게 주간 알림을 발송했습니다.`,
     };
   }
-} 
+}

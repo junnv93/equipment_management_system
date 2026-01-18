@@ -19,12 +19,10 @@ Shared database package rules. Read root `./AGENTS.md` first.
 
 ## Tech Stack
 
-| Component   | Version | Notes            |
-| ----------- | ------- | ---------------- |
-| Drizzle ORM | 0.36.x  | Database ORM     |
-| PostgreSQL  | 15      | Database         |
-| drizzle-kit | 0.20.x  | Migration tool   |
-| TypeScript  | 5.x     | Type definitions |
+- Drizzle ORM 0.36.x - Database ORM
+- PostgreSQL 15 - Database
+- drizzle-kit 0.20.x - Migration tool
+- TypeScript 5.x - Type definitions
 
 ---
 

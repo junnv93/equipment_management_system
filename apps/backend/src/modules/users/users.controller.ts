@@ -1,4 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, NotFoundException, BadRequestException, HttpStatus, HttpCode, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  NotFoundException,
+  BadRequestException,
+  HttpStatus,
+  HttpCode,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto';
@@ -21,14 +35,20 @@ export class UsersController {
   }
 
   @Get()
-  @ApiOperation({ summary: '사용자 목록 조회', description: '사용자 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다.' })
+  @ApiOperation({
+    summary: '사용자 목록 조회',
+    description: '사용자 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다.',
+  })
   @ApiResponse({ status: 200, description: '사용자 목록 조회 성공' })
   async findAll(@Query() query: UserQueryDto): Promise<UserListResponse> {
     return this.usersService.findAll(query);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '사용자 상세 조회', description: '특정 ID를 가진 사용자의 상세 정보를 조회합니다.' })
+  @ApiOperation({
+    summary: '사용자 상세 조회',
+    description: '특정 ID를 가진 사용자의 상세 정보를 조회합니다.',
+  })
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '사용자 조회 성공' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없음' })
@@ -41,7 +61,10 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: '사용자 정보 수정', description: '특정 ID를 가진 사용자의 정보를 수정합니다.' })
+  @ApiOperation({
+    summary: '사용자 정보 수정',
+    description: '특정 ID를 가진 사용자의 정보를 수정합니다.',
+  })
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: '사용자 수정 성공' })
@@ -68,7 +91,10 @@ export class UsersController {
   }
 
   @Patch(':id/activate')
-  @ApiOperation({ summary: '사용자 계정 활성화', description: '비활성화된 사용자 계정을 활성화합니다.' })
+  @ApiOperation({
+    summary: '사용자 계정 활성화',
+    description: '비활성화된 사용자 계정을 활성화합니다.',
+  })
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '사용자 계정이 성공적으로 활성화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
@@ -82,7 +108,10 @@ export class UsersController {
   }
 
   @Patch(':id/deactivate')
-  @ApiOperation({ summary: '사용자 계정 비활성화', description: '활성화된 사용자 계정을 비활성화합니다.' })
+  @ApiOperation({
+    summary: '사용자 계정 비활성화',
+    description: '활성화된 사용자 계정을 비활성화합니다.',
+  })
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '사용자 계정이 성공적으로 비활성화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
@@ -105,7 +134,10 @@ export class UsersController {
   }
 
   @Post(':id/reset-password')
-  @ApiOperation({ summary: '비밀번호 초기화', description: '관리자가 사용자의 비밀번호를 초기화합니다.' })
+  @ApiOperation({
+    summary: '비밀번호 초기화',
+    description: '관리자가 사용자의 비밀번호를 초기화합니다.',
+  })
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '비밀번호가 성공적으로 초기화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
@@ -116,6 +148,9 @@ export class UsersController {
     if (!result) {
       throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
     }
-    return { message: '비밀번호가 성공적으로 초기화되었습니다.', temporaryPassword: result.tempPassword };
+    return {
+      message: '비밀번호가 성공적으로 초기화되었습니다.',
+      temporaryPassword: result.tempPassword,
+    };
   }
-} 
+}

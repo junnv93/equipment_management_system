@@ -89,4 +89,4 @@ export class UserQueryDto {
     default: 20,
   })
   pageSize?: number = 20;
-} 
+}

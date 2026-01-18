@@ -22,16 +22,14 @@ Frontend-specific rules for the Next.js application. Read root `./AGENTS.md` fir
 
 ## Tech Stack
 
-| Component       | Version | Notes             |
-| --------------- | ------- | ----------------- |
-| Next.js         | 14.x    | App Router        |
-| React           | 18.x    | UI library        |
-| TailwindCSS     | 3.x     | Styling           |
-| shadcn/ui       | latest  | Component library |
-| React Query     | 5.x     | Server state      |
-| React Hook Form | 7.x     | Form handling     |
-| Zod             | 3.x     | Validation        |
-| next-auth       | 4.x     | Authentication    |
+- Next.js 14.x - App Router
+- React 18.x - UI library
+- TailwindCSS 3.x - Styling
+- shadcn/ui latest - Component library
+- React Query 5.x - Server state
+- React Hook Form 7.x - Form handling
+- Zod 3.x - Validation
+- next-auth 4.x - Authentication
 
 ---
 
@@ -417,15 +415,13 @@ Or in `__tests__/` folder for page tests.
 
 ## File Naming
 
-| Type      | Pattern              | Example                    |
-| --------- | -------------------- | -------------------------- |
-| Page      | `page.tsx`           | `app/equipment/page.tsx`   |
-| Layout    | `layout.tsx`         | `app/equipment/layout.tsx` |
-| Component | PascalCase           | `EquipmentCard.tsx`        |
-| Hook      | kebab-case with use- | `use-equipment.ts`         |
-| Utility   | kebab-case           | `date-utils.ts`            |
-| API       | kebab-case with -api | `equipment-api.ts`         |
-| Test      | [name].test.tsx      | `EquipmentCard.test.tsx`   |
+- Page: `page.tsx` - Example: `app/equipment/page.tsx`
+- Layout: `layout.tsx` - Example: `app/equipment/layout.tsx`
+- Component: PascalCase - Example: `EquipmentCard.tsx`
+- Hook: kebab-case with use- prefix - Example: `use-equipment.ts`
+- Utility: kebab-case - Example: `date-utils.ts`
+- API: kebab-case with -api suffix - Example: `equipment-api.ts`
+- Test: `[name].test.tsx` - Example: `EquipmentCard.test.tsx`
 
 ---
 

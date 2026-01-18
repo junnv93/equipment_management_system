@@ -11,7 +11,7 @@ export class UpdateCalibrationDto extends PartialType(
     description: '교정 상태',
     enum: CalibrationStatusEnum,
     example: 'completed',
-    required: false
+    required: false,
   })
   @IsEnum(CalibrationStatusEnum)
   @IsOptional()
@@ -20,18 +20,18 @@ export class UpdateCalibrationDto extends PartialType(
   @ApiProperty({
     description: '교정 결과 (합격/불합격)',
     example: true,
-    required: false
+    required: false,
   })
   @IsBoolean()
   @IsOptional()
   isPassed?: boolean;
-  
+
   @ApiProperty({
     description: '교정 결과 메모',
     example: '모든 파라미터가 허용 오차 범위 내에 있습니다.',
-    required: false
+    required: false,
   })
   @IsString()
   @IsOptional()
   resultNotes?: string;
-} 
+}

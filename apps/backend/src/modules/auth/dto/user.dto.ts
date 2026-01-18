@@ -7,4 +7,4 @@ export class UserDto {
   roles: UserRole[];
   department?: string;
   employeeId?: string;
-} 
+}

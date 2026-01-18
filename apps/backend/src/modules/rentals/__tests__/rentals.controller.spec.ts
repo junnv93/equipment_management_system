@@ -250,7 +250,7 @@ describe('RentalsController', () => {
     it('should remove a rental', async () => {
       // Mock data for the delete result
       const deleteResult = { deleted: true };
-      
+
       // Mock service method
       jest.spyOn(service, 'remove').mockImplementation(async () => deleteResult as any);
 
@@ -262,4 +262,4 @@ describe('RentalsController', () => {
       expect(service.remove).toHaveBeenCalledWith('test-rental-id');
     });
   });
-}); 
+});

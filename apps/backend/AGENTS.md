@@ -20,15 +20,13 @@ Backend-specific rules for the NestJS API server. Read root `./AGENTS.md` first.
 
 ## Tech Stack
 
-| Component       | Version               | Notes             |
-| --------------- | --------------------- | ----------------- |
-| NestJS          | ^10.0.0               | Core framework    |
-| Drizzle ORM     | ^0.36.0               | Database ORM      |
-| drizzle-kit     | ^0.20.13              | Migration tool    |
-| PostgreSQL      | 15.x                  | Primary database  |
-| Passport        | ^0.6.0                | Authentication    |
-| class-validator | ^0.14.0               | DTO validation    |
-| Zod             | ^3.x (via nestjs-zod) | Schema validation |
+- NestJS ^10.0.0 - Core framework
+- Drizzle ORM ^0.36.0 - Database ORM
+- drizzle-kit ^0.20.13 - Migration tool
+- PostgreSQL 15.x - Primary database
+- Passport ^0.6.0 - Authentication
+- class-validator ^0.14.0 - DTO validation
+- Zod ^3.x (via nestjs-zod) - Schema validation
 
 ---
 

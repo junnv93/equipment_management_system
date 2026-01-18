@@ -1,7 +1,7 @@
 // winston-daily-rotate-file 타입 정의
 declare module 'winston-daily-rotate-file' {
   import { transport } from 'winston';
-  
+
   interface DailyRotateFileTransportOptions {
     level?: string;
     filename?: string;
@@ -19,4 +19,4 @@ declare module 'winston-daily-rotate-file' {
   export default class DailyRotateFileTransport extends transport {
     constructor(options: DailyRotateFileTransportOptions);
   }
-} 
+}

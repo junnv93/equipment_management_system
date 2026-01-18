@@ -21,7 +21,9 @@ describe('Database Migration', () => {
 
     // 테스트를 위한 임시 DB 풀 생성
     pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/equipment_management_test',
+      connectionString:
+        process.env.DATABASE_URL ||
+        'postgres://postgres:postgres@localhost:5432/equipment_management_test',
     });
   });
 
@@ -34,8 +36,7 @@ describe('Database Migration', () => {
     expect(fs.existsSync(migrationPath)).toBe(true);
 
     // 마이그레이션 파일 확인
-    const migrationFiles = fs.readdirSync(migrationPath)
-      .filter(file => file.endsWith('.sql'));
+    const migrationFiles = fs.readdirSync(migrationPath).filter((file) => file.endsWith('.sql'));
 
     expect(migrationFiles.length).toBeGreaterThan(0);
   });
@@ -45,8 +46,7 @@ describe('Database Migration', () => {
     expect(fs.existsSync(metaPath)).toBe(true);
 
     // 메타데이터 파일 확인
-    const metaFiles = fs.readdirSync(metaPath)
-      .filter(file => file.endsWith('.json'));
+    const metaFiles = fs.readdirSync(metaPath).filter((file) => file.endsWith('.json'));
 
     expect(metaFiles.length).toBeGreaterThan(0);
 
@@ -71,10 +71,10 @@ describe('Database Migration', () => {
           AND table_name = 'drizzle_migrations'
         );
       `);
-      
+
       expect(result.rows[0].exists).toBe(true);
     } finally {
       client.release();
     }
   });
-}); 
+});

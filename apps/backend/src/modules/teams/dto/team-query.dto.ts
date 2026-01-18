@@ -48,4 +48,4 @@ export class TeamQueryDto {
     default: 20,
   })
   pageSize?: number = 20;
-} 
+}

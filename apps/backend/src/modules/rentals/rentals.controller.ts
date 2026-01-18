@@ -12,6 +12,7 @@ import {
   UseGuards,
   ParseUUIDPipe,
   BadRequestException,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -47,8 +48,15 @@ export class RentalsController {
   @ApiResponse({ status: HttpStatus.CONFLICT, description: '대여 기간 충돌' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  async create(@Body() createRentalDto: CreateRentalDto) {
-    return this.rentalsService.create(createRentalDto);
+  async create(@Body() createRentalDto: CreateRentalDto, @Request() req: any) {
+    // ✅ 일관성: Checkouts와 동일한 패턴 - JWT에서 userId 가져오기
+    const userId = req.user?.userId || req.user?.sub;
+    if (!userId) {
+      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+    }
+    const userTeamId = req.user?.teamId; // 사용자 팀 ID
+    // userId를 DTO에 추가 (프론트엔드에서 보내지 않으므로 서버에서 설정)
+    return this.rentalsService.create({ ...createRentalDto, userId }, userTeamId);
   }
 
   @Get()
@@ -129,9 +137,17 @@ export class RentalsController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '대여를 찾을 수 없음' })
   async approve(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body('approverId') approverId: string
+    @Body('approverId') approverId: string,
+    @Request() req: any
   ) {
-    return this.rentalsService.approve(uuid, approverId);
+    // ✅ 일관성: JWT에서 approverId를 가져오거나 Body에서 받기
+    // Body에서 approverId를 받되, 없으면 JWT에서 가져오기
+    const finalApproverId = approverId || req.user?.userId || req.user?.sub;
+    if (!finalApproverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    const approverTeamId = req.user?.teamId; // 승인자 팀 ID
+    return this.rentalsService.approve(uuid, finalApproverId, approverTeamId);
   }
 
   @Patch(':uuid/reject')
@@ -145,7 +161,7 @@ export class RentalsController {
         approverId: { type: 'string', format: 'uuid' },
         reason: { type: 'string', description: '반려 사유 (필수)' },
       },
-      required: ['approverId', 'reason'],
+      required: ['reason'] as string[],
     },
   })
   @ApiResponse({ status: HttpStatus.OK, description: '대여 반려 성공' })
@@ -155,14 +171,20 @@ export class RentalsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   async reject(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body('approverId') approverId: string,
-    @Body('reason') reason: string
+    @Body('reason') reason: string,
+    @Body('approverId') approverId?: string,
+    @Request() req?: any
   ) {
     // 반려 사유 필수 검증 (요구사항)
     if (!reason || reason.trim().length === 0) {
       throw new BadRequestException('반려 사유는 필수입니다.');
     }
-    return this.rentalsService.reject(uuid, approverId, reason);
+    // ✅ 일관성: JWT에서 approverId를 가져오거나 Body에서 받기
+    const finalApproverId = approverId || req?.user?.userId || req?.user?.sub;
+    if (!finalApproverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.rentalsService.reject(uuid, finalApproverId, reason);
   }
 
   @Patch(':uuid/complete')

@@ -19,7 +19,7 @@ describe('AuthController', () => {
     id: 'test-user-id',
     email: 'test@example.com',
     name: 'Test User',
-    roles: [UserRole.USER],
+    roles: [UserRole.TEST_OPERATOR],
     department: 'Testing',
   };
 
@@ -91,7 +91,9 @@ describe('AuthController', () => {
         password: 'wrongpassword',
       };
 
-      jest.spyOn(authService, 'login').mockRejectedValue(new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.'));
+      jest
+        .spyOn(authService, 'login')
+        .mockRejectedValue(new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.'));
 
       // Act & Assert
       await expect(controller.login(loginDto)).rejects.toThrow(UnauthorizedException);
@@ -102,13 +104,13 @@ describe('AuthController', () => {
   describe('getProfile', () => {
     it('should return user profile', async () => {
       // Arrange
-      const req = { 
+      const req = {
         user: {
           userId: mockUser.id,
           email: mockUser.email,
           roles: mockUser.roles,
           department: mockUser.department,
-        }
+        },
       };
 
       const expectedProfile = {
@@ -145,7 +147,7 @@ describe('AuthController', () => {
           id: 'azure-id',
           email: 'azure@example.com',
           name: 'Azure User',
-          roles: [UserRole.ADMIN],
+          roles: [UserRole.SITE_ADMIN],
           department: 'IT',
         },
       };
@@ -172,4 +174,4 @@ describe('AuthController', () => {
       expect(result).toHaveProperty('timestamp');
     });
   });
-}); 
+});
