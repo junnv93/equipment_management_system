@@ -12,6 +12,7 @@ import { CheckoutQueryDto } from './dto/checkout-query.dto';
 import { ApproveCheckoutDto } from './dto/approve-checkout.dto';
 import { RejectCheckoutDto } from './dto/reject-checkout.dto';
 import { ReturnCheckoutDto } from './dto/return-checkout.dto';
+import { ApproveReturnDto } from './dto/approve-return.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '@equipment-management/schemas';
 import { eq, and, like, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
@@ -47,7 +48,7 @@ interface PaginationMeta {
 /**
  * 반출 목록 응답 인터페이스
  */
-interface CheckoutListResponse {
+export interface CheckoutListResponse {
   items: Checkout[];
   meta: PaginationMeta;
 }
@@ -819,7 +820,8 @@ export class CheckoutsService {
   /**
    * 반입 처리
    * 교정/수리 확인 및 작동 여부 확인 포함 (요구사항)
-   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
+   * 상태: checked_out → returned (검사 완료, 기술책임자 승인 대기)
+   * ✅ 개선: UUID 검증 추가, 반출 유형별 필수 검사 항목 검증
    */
   async returnCheckout(
     uuid: string,
@@ -837,7 +839,25 @@ export class CheckoutsService {
         throw new BadRequestException('반출 중인 반출만 반입할 수 있습니다.');
       }
 
-      // 반입 처리
+      // ✅ 반출 유형별 필수 검사 항목 검증
+      const purpose = checkout.purpose;
+
+      // 모든 유형: workingStatusChecked 필수
+      if (!returnDto.workingStatusChecked) {
+        throw new BadRequestException('작동 여부 확인은 필수입니다.');
+      }
+
+      // 교정 목적: calibrationChecked 필수
+      if (purpose === 'calibration' && !returnDto.calibrationChecked) {
+        throw new BadRequestException('교정 목적 반출의 경우 교정 확인은 필수입니다.');
+      }
+
+      // 수리 목적: repairChecked 필수
+      if (purpose === 'repair' && !returnDto.repairChecked) {
+        throw new BadRequestException('수리 목적 반출의 경우 수리 확인은 필수입니다.');
+      }
+
+      // 반입 처리 (검사 완료 상태로 변경)
       const updateData: Partial<Checkout> = {
         status: 'returned' as CheckoutStatus,
         actualReturnDate: new Date(),
@@ -859,7 +879,58 @@ export class CheckoutsService {
         throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
       }
 
-      // 반입된 장비들의 상태를 'available'로 복원
+      // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
+
+      await this.invalidateCache();
+      return updated;
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(
+        `반입 처리 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 반입 최종 승인
+   * 기술책임자가 검사 완료된 반입을 최종 승인 (요구사항)
+   * 상태: returned → return_approved
+   * 장비 상태: available로 자동 복원
+   */
+  async approveReturn(uuid: string, approveReturnDto: ApproveReturnDto): Promise<Checkout> {
+    try {
+      // ✅ UUID 형식 검증
+      this.validateUuid(uuid, '반출');
+      this.validateUuid(approveReturnDto.approverId, '승인자');
+
+      const checkout = await this.findOne(uuid);
+
+      if (checkout.status !== 'returned') {
+        throw new BadRequestException('검사 완료된(returned) 반입만 최종 승인할 수 있습니다.');
+      }
+
+      // 반입 최종 승인 처리
+      const updateData: Partial<Checkout> = {
+        status: 'return_approved' as CheckoutStatus,
+        returnApprovedBy: approveReturnDto.approverId,
+        returnApprovedAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const [updated] = await this.db
+        .update(checkouts)
+        .set(updateData as Record<string, unknown>)
+        .where(eq(checkouts.id, uuid))
+        .returning();
+
+      if (!updated) {
+        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
+      }
+
+      // ✅ 반입 승인 후 장비 상태를 'available'로 복원
       const items = await this.db
         .select()
         .from(checkoutItems)
@@ -876,7 +947,7 @@ export class CheckoutsService {
         throw error;
       }
       this.logger.error(
-        `반입 처리 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+        `반입 최종 승인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
     }

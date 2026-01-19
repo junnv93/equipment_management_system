@@ -34,7 +34,7 @@ interface PaginationMeta {
 /**
  * 장비 목록 응답 인터페이스
  */
-interface EquipmentListResponse {
+export interface EquipmentListResponse {
   items: Equipment[];
   meta: PaginationMeta;
 }

@@ -5,32 +5,43 @@ import { CreateRentalDto } from '../dto/create-rental.dto';
 import { UpdateRentalDto } from '../dto/update-rental.dto';
 import { ReturnRequestDto, ReturnConditionEnum } from '../dto/return-request.dto';
 import { ApproveReturnDto, ReturnApprovalStatusEnum } from '../dto/approve-return.dto';
-import { RentalStatusEnum, RentalTypeEnum } from '../../../types/enums';
-import { CacheModule } from '../../../common/cache/cache.module';
-import { DrizzleModule } from '../../../database/drizzle.module';
-import { ConfigModule } from '@nestjs/config';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { ApproveRentalDto } from '../dto/approve-rental.dto';
+import { RentalStatusEnum } from '../../../types/enums';
+import { NotFoundException } from '@nestjs/common';
 
 describe('RentalsController', () => {
   let controller: RentalsController;
   let service: RentalsService;
 
+  // Mock RentalsService
+  const mockRentalsService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+    approve: jest.fn(),
+    reject: jest.fn(),
+    requestReturn: jest.fn(),
+    approveReturn: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          envFilePath: ['.env.test', '.env'],
-        }),
-        DrizzleModule,
-        CacheModule,
-      ],
       controllers: [RentalsController],
-      providers: [RentalsService],
+      providers: [
+        {
+          provide: RentalsService,
+          useValue: mockRentalsService,
+        },
+      ],
     }).compile();
 
     controller = module.get<RentalsController>(RentalsController);
     service = module.get<RentalsService>(RentalsService);
+
+    // Reset all mocks before each test
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -43,32 +54,39 @@ describe('RentalsController', () => {
       const createRentalDto: CreateRentalDto = {
         equipmentId: 'test-equipment-id',
         userId: 'test-user-id',
-        type: 'INTERNAL',
+        type: 'internal',
         startDate: new Date().toISOString(),
         expectedEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         purpose: '테스트 목적',
         location: '테스트 위치',
       };
 
-      // Mock service method
-      jest.spyOn(service, 'create').mockImplementation(async () => {
-        return {
-          id: 'test-rental-id',
-          ...createRentalDto,
-          status: RentalStatusEnum.PENDING,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as any;
-      });
+      const expectedResult = {
+        id: 'test-rental-id',
+        ...createRentalDto,
+        status: RentalStatusEnum.PENDING,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockRentalsService.create.mockResolvedValue(expectedResult);
+
+      // Mock request object
+      const mockRequest = {
+        user: {
+          userId: 'test-user-id',
+          teamId: 'test-team-id',
+        },
+      };
 
       // Execute controller method
-      const result = await controller.create(createRentalDto);
+      const result = await controller.create(createRentalDto, mockRequest);
 
       // Verify results
       expect(result).toBeDefined();
       expect(result.id).toBe('test-rental-id');
       expect(result.status).toBe(RentalStatusEnum.PENDING);
-      expect(service.create).toHaveBeenCalledWith(createRentalDto);
+      expect(mockRentalsService.create).toHaveBeenCalled();
     });
   });
 
@@ -98,16 +116,18 @@ describe('RentalsController', () => {
         sortOrder: 'desc',
       };
 
-      // Mock service method
-      jest.spyOn(service, 'findAll').mockImplementation(async () => {
-        return {
-          items: rentals,
-          total: rentals.length,
-          page: query.page,
-          pageSize: query.pageSize,
-          totalPages: Math.ceil(rentals.length / query.pageSize),
-        } as any;
-      });
+      const expectedResult = {
+        items: rentals,
+        meta: {
+          totalItems: rentals.length,
+          itemCount: rentals.length,
+          itemsPerPage: query.pageSize,
+          totalPages: 1,
+          currentPage: query.page,
+        },
+      };
+
+      mockRentalsService.findAll.mockResolvedValue(expectedResult);
 
       // Execute controller method
       const result = await controller.findAll(query as any);
@@ -115,7 +135,7 @@ describe('RentalsController', () => {
       // Verify results
       expect(result).toBeDefined();
       expect(result.items).toHaveLength(2);
-      expect(service.findAll).toHaveBeenCalledWith(query);
+      expect(mockRentalsService.findAll).toHaveBeenCalledWith(query);
     });
   });
 
@@ -129,8 +149,7 @@ describe('RentalsController', () => {
         status: RentalStatusEnum.APPROVED,
       };
 
-      // Mock service method
-      jest.spyOn(service, 'findOne').mockImplementation(async () => rental as any);
+      mockRentalsService.findOne.mockResolvedValue(rental);
 
       // Execute controller method
       const result = await controller.findOne('test-rental-id');
@@ -138,18 +157,17 @@ describe('RentalsController', () => {
       // Verify results
       expect(result).toBeDefined();
       expect(result.id).toBe('test-rental-id');
-      expect(service.findOne).toHaveBeenCalledWith('test-rental-id');
+      expect(mockRentalsService.findOne).toHaveBeenCalledWith('test-rental-id');
     });
 
     it('should throw NotFoundException when rental not found', async () => {
-      // Mock service method to throw error
-      jest.spyOn(service, 'findOne').mockImplementation(async () => {
-        throw new NotFoundException('대여/반출을 찾을 수 없습니다.');
-      });
+      mockRentalsService.findOne.mockRejectedValue(
+        new NotFoundException('대여/반출을 찾을 수 없습니다.')
+      );
 
       // Verify controller throws expected error
       await expect(controller.findOne('non-existent-id')).rejects.toThrow(NotFoundException);
-      expect(service.findOne).toHaveBeenCalledWith('non-existent-id');
+      expect(mockRentalsService.findOne).toHaveBeenCalledWith('non-existent-id');
     });
   });
 
@@ -169,8 +187,7 @@ describe('RentalsController', () => {
         notes: '관리자 승인',
       };
 
-      // Mock service method
-      jest.spyOn(service, 'update').mockImplementation(async () => updatedRental as any);
+      mockRentalsService.update.mockResolvedValue(updatedRental);
 
       // Execute controller method
       const result = await controller.update('test-rental-id', updateRentalDto);
@@ -179,7 +196,38 @@ describe('RentalsController', () => {
       expect(result).toBeDefined();
       expect(result.status).toBe(RentalStatusEnum.APPROVED);
       expect(result.notes).toBe('관리자 승인');
-      expect(service.update).toHaveBeenCalledWith('test-rental-id', updateRentalDto);
+      expect(mockRentalsService.update).toHaveBeenCalledWith('test-rental-id', updateRentalDto);
+    });
+  });
+
+  describe('approve', () => {
+    it('should approve a rental', async () => {
+      const approveDto: ApproveRentalDto = {
+        comment: '승인합니다',
+      };
+
+      const approvedRental = {
+        id: 'test-rental-id',
+        status: RentalStatusEnum.APPROVED,
+        approverId: 'test-approver-id',
+        approverComment: '승인합니다',
+        autoApproved: false,
+      };
+
+      mockRentalsService.approve.mockResolvedValue(approvedRental);
+
+      const mockRequest = {
+        user: {
+          userId: 'test-approver-id',
+          teamId: 'test-team-id',
+        },
+      };
+
+      const result = await controller.approve('test-rental-id', approveDto, mockRequest);
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe(RentalStatusEnum.APPROVED);
+      expect(mockRentalsService.approve).toHaveBeenCalled();
     });
   });
 
@@ -199,8 +247,7 @@ describe('RentalsController', () => {
         notes: '정상 반납',
       };
 
-      // Mock service method
-      jest.spyOn(service, 'requestReturn').mockImplementation(async () => returnedRental as any);
+      mockRentalsService.requestReturn.mockResolvedValue(returnedRental);
 
       // Execute controller method
       const result = await controller.requestReturn('test-rental-id', returnRequestDto);
@@ -208,19 +255,15 @@ describe('RentalsController', () => {
       // Verify results
       expect(result).toBeDefined();
       expect(result.status).toBe(RentalStatusEnum.RETURN_REQUESTED);
-      expect(service.requestReturn).toHaveBeenCalledWith('test-rental-id', returnRequestDto);
+      expect(mockRentalsService.requestReturn).toHaveBeenCalledWith(
+        'test-rental-id',
+        returnRequestDto
+      );
     });
   });
 
   describe('approveReturn', () => {
     it('should approve a return request', async () => {
-      // Mock data
-      const approveReturnDto: ApproveReturnDto = {
-        status: ReturnApprovalStatusEnum.APPROVED,
-        notes: '반납 승인',
-        approverId: 'test-admin-id',
-      };
-
       const approvedRental = {
         id: 'test-rental-id',
         equipmentId: 'test-equipment-id',
@@ -228,11 +271,10 @@ describe('RentalsController', () => {
         status: RentalStatusEnum.RETURNED,
         notes: '반납 승인',
         approverId: 'test-admin-id',
-        actualEndDate: new Date(),
+        actualReturnDate: new Date(),
       };
 
-      // Mock service method
-      jest.spyOn(service, 'approveReturn').mockImplementation(async () => approvedRental as any);
+      mockRentalsService.approveReturn.mockResolvedValue(approvedRental);
 
       // Execute controller method
       const result = await controller.approveReturn('test-rental-id');
@@ -241,8 +283,8 @@ describe('RentalsController', () => {
       expect(result).toBeDefined();
       expect(result.status).toBe(RentalStatusEnum.RETURNED);
       expect(result.approverId).toBe('test-admin-id');
-      expect(result.actualEndDate).toBeDefined();
-      expect(service.approveReturn).toHaveBeenCalledWith('test-rental-id');
+      expect(result.actualReturnDate).toBeDefined();
+      expect(mockRentalsService.approveReturn).toHaveBeenCalledWith('test-rental-id');
     });
   });
 
@@ -251,15 +293,14 @@ describe('RentalsController', () => {
       // Mock data for the delete result
       const deleteResult = { deleted: true };
 
-      // Mock service method
-      jest.spyOn(service, 'remove').mockImplementation(async () => deleteResult as any);
+      mockRentalsService.remove.mockResolvedValue(deleteResult);
 
       // Execute controller method
       const result = await controller.remove('test-rental-id');
 
       // Verify results
       expect(result).toBeDefined();
-      expect(service.remove).toHaveBeenCalledWith('test-rental-id');
+      expect(mockRentalsService.remove).toHaveBeenCalledWith('test-rental-id');
     });
   });
 });

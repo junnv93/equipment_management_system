@@ -84,6 +84,19 @@ export enum CalibrationStatusEnum {
   CANCELLED = 'cancelled', // 취소됨
 }
 
+// 교정 승인 상태 열거형
+export enum CalibrationApprovalStatusEnum {
+  PENDING_APPROVAL = 'pending_approval', // 승인 대기
+  APPROVED = 'approved', // 승인됨
+  REJECTED = 'rejected', // 반려됨
+}
+
+// 교정 등록자 역할 열거형
+export enum CalibrationRegisteredByRoleEnum {
+  TEST_OPERATOR = 'test_operator', // 시험실무자
+  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자
+}
+
 // 반출 상태 열거형
 export enum CheckoutStatusEnum {
   PENDING = 'pending', // 반출 신청
@@ -119,6 +132,8 @@ export enum Permission {
   CREATE_CALIBRATION = 'create:calibration',
   UPDATE_CALIBRATION = 'update:calibration',
   DELETE_CALIBRATION = 'delete:calibration',
+  APPROVE_CALIBRATION = 'approve:calibration',
+  VIEW_CALIBRATION_REQUESTS = 'view:calibration:requests',
 
   // 팀 관련 권한
   VIEW_TEAMS = 'view:teams',

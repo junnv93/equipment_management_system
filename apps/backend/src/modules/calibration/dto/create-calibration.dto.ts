@@ -10,11 +10,16 @@ import {
   IsNumber,
   Min,
   IsBoolean,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-// import { CalibrationMethodEnum, CalibrationStatusEnum } from '@equipment-management/schemas';
-import { CalibrationMethodEnum, CalibrationStatusEnum } from '../../../types';
+import {
+  CalibrationMethodEnum,
+  CalibrationStatusEnum,
+  CalibrationApprovalStatusEnum,
+  CalibrationRegisteredByRoleEnum,
+} from '../../../types';
 
 export class CreateCalibrationDto {
   @ApiProperty({
@@ -135,4 +140,44 @@ export class CreateCalibrationDto {
   @IsString()
   @IsOptional()
   additionalInfo?: string;
+
+  @ApiProperty({
+    description: '중간점검 일정',
+    example: '2024-06-15',
+    required: false,
+  })
+  @IsDate()
+  @Type(() => Date)
+  @IsOptional()
+  intermediateCheckDate?: Date;
+
+  @ApiProperty({
+    description: '등록자 ID',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+    required: false,
+  })
+  @IsUUID('4')
+  @IsOptional()
+  registeredBy?: string;
+
+  @ApiProperty({
+    description: '등록자 역할',
+    enum: CalibrationRegisteredByRoleEnum,
+    example: 'test_operator',
+    required: false,
+  })
+  @IsEnum(CalibrationRegisteredByRoleEnum)
+  @IsOptional()
+  registeredByRole?: string;
+
+  @ApiProperty({
+    description: '등록자 코멘트 (기술책임자 직접 등록 시 필수)',
+    example: '교정 결과 검토 완료',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  @ValidateIf((o) => o.registeredByRole === 'technical_manager')
+  @IsNotEmpty({ message: '기술책임자는 등록자 코멘트를 반드시 입력해야 합니다.' })
+  registrarComment?: string;
 }

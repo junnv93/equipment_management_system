@@ -1,4 +1,4 @@
-import { mysqlTable, varchar, timestamp, text, decimal } from 'drizzle-orm/mysql-core';
+import { pgTable, varchar, timestamp, text, decimal, uuid, date } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // 교정 상태 정의
@@ -9,23 +9,53 @@ export const calibrationStatus = [
   'failed', // 실패
 ] as const;
 
+// 교정 승인 상태 정의
+export const calibrationApprovalStatus = [
+  'pending_approval', // 승인 대기
+  'approved', // 승인됨
+  'rejected', // 반려됨
+] as const;
+
+// 교정 등록자 역할 정의
+export const calibrationRegisteredByRole = [
+  'test_operator', // 시험실무자
+  'technical_manager', // 기술책임자
+] as const;
+
 // 교정 테이블 스키마
-export const calibrations = mysqlTable('calibrations', {
-  id: varchar('id', { length: 36 }).primaryKey().notNull(),
-  equipmentId: varchar('equipment_id', { length: 36 }).notNull(),
-  technicianId: varchar('technician_id', { length: 36 }),
+export const calibrations = pgTable('calibrations', {
+  id: uuid('id').primaryKey().defaultRandom().notNull(),
+  equipmentId: uuid('equipment_id').notNull(),
+  technicianId: uuid('technician_id'),
   status: varchar('status', { length: 50 }).notNull().default('scheduled'),
 
   // 교정 정보
   calibrationDate: timestamp('calibration_date').notNull(),
   completionDate: timestamp('completion_date'),
+  nextCalibrationDate: timestamp('next_calibration_date'),
   agencyName: varchar('agency_name', { length: 100 }),
   certificateNumber: varchar('certificate_number', { length: 100 }),
   result: varchar('result', { length: 100 }),
   cost: decimal('cost', { precision: 10, scale: 2 }),
   notes: text('notes'),
 
+  // 중간점검 일정
+  intermediateCheckDate: date('intermediate_check_date'),
+
+  // 승인 프로세스 필드
+  approvalStatus: varchar('approval_status', { length: 50 }).notNull().default('pending_approval'),
+  registeredBy: uuid('registered_by'), // 등록자 ID
+  approvedBy: uuid('approved_by'), // 승인자 ID (기술책임자)
+  registeredByRole: varchar('registered_by_role', { length: 50 }), // 등록자 역할
+  registrarComment: text('registrar_comment'), // 등록자 코멘트 (기술책임자 직접 등록 시 필수)
+  approverComment: text('approver_comment'), // 승인자 코멘트 (기술책임자 승인 시 필수)
+  rejectionReason: text('rejection_reason'), // 반려 사유
+
   // 시스템 필드
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// 교정 타입
+export type Calibration = typeof calibrations.$inferSelect;
+export type NewCalibration = typeof calibrations.$inferInsert;

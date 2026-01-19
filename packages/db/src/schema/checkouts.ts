@@ -17,7 +17,8 @@ export const checkoutStatus = [
   'final_approved', // 최종 승인됨 (반출 가능)
   'rejected', // 거절됨
   'checked_out', // 반출 중
-  'returned', // 반입 완료
+  'returned', // 반입 완료 (검사 완료)
+  'return_approved', // 반입 최종 승인됨 (기술책임자 승인)
   'overdue', // 반입 기한 초과
   'canceled', // 취소됨
 ] as const;
@@ -30,6 +31,16 @@ export const checkoutPurpose = [
   'calibration', // 교정
   'repair', // 수리
   'external_rental', // 외부 대여
+] as const;
+
+/**
+ * 반출 유형 열거형
+ * @see packages/schemas/src/enums.ts - CheckoutTypeEnum
+ */
+export const checkoutType = [
+  'internal_calibration', // 내부 교정 목적 반출
+  'internal_repair', // 내부 수리 목적 반출
+  'external_rental', // 외부 대여 목적 반출
 ] as const;
 
 // 장비 반출 테이블 스키마
@@ -46,7 +57,12 @@ export const checkouts = pgTable('checkouts', {
 
   // 반출 정보
   purpose: varchar('purpose', { length: 50 }).notNull(), // 목적: calibration, repair, external_rental
+  checkoutType: varchar('checkout_type', { length: 50 }).notNull().default('internal_calibration'), // 반출 유형: internal_calibration, internal_repair, external_rental
   destination: varchar('destination', { length: 255 }).notNull(), // 반출 장소
+
+  // 외부 대여 시 빌려주는 측 정보
+  lenderTeamId: uuid('lender_team_id'), // 빌려주는 측 팀 ID
+  lenderSiteId: varchar('lender_site_id', { length: 50 }), // 빌려주는 측 사이트 ID
   phoneNumber: varchar('phone_number', { length: 50 }),
   address: text('address'),
   reason: text('reason').notNull(), // 반출 사유
@@ -65,6 +81,10 @@ export const checkouts = pgTable('checkouts', {
   repairChecked: boolean('repair_checked').default(false), // 수리 확인 여부
   workingStatusChecked: boolean('working_status_checked').default(false), // 작동 여부 확인
   inspectionNotes: text('inspection_notes'), // 검사 비고
+
+  // 반입 승인 정보
+  returnApprovedBy: uuid('return_approved_by').references(() => users.id), // 반입 최종 승인자 (기술책임자)
+  returnApprovedAt: timestamp('return_approved_at'), // 반입 최종 승인 시간
 
   // 시스템 필드
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -112,6 +132,11 @@ export const checkoutsRelations = relations(checkouts, ({ one, many }) => ({
     fields: [checkouts.returnerId],
     references: [users.id],
     relationName: 'checkout_returner',
+  }),
+  returnApprover: one(users, {
+    fields: [checkouts.returnApprovedBy],
+    references: [users.id],
+    relationName: 'checkout_return_approver',
   }),
   items: many(checkoutItems),
 }));

@@ -1,8 +1,11 @@
 import { IsString, IsOptional, IsInt, IsEnum, IsUUID, Min, Max, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-// import { CalibrationMethodEnum, CalibrationStatusEnum } from '@equipment-management/schemas';
-import { CalibrationMethodEnum, CalibrationStatusEnum } from '../../../types';
+import {
+  CalibrationMethodEnum,
+  CalibrationStatusEnum,
+  CalibrationApprovalStatusEnum,
+} from '../../../types';
 
 export class CalibrationQueryDto {
   @ApiPropertyOptional({
@@ -95,6 +98,15 @@ export class CalibrationQueryDto {
   @IsString()
   @IsOptional()
   search?: string;
+
+  @ApiPropertyOptional({
+    description: '승인 상태',
+    enum: CalibrationApprovalStatusEnum,
+    example: 'pending_approval',
+  })
+  @IsEnum(CalibrationApprovalStatusEnum)
+  @IsOptional()
+  approvalStatus?: string;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',

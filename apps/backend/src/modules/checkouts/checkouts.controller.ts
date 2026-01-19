@@ -30,6 +30,7 @@ import {
   ApproveCheckoutDto,
   RejectCheckoutDto,
   ReturnCheckoutDto,
+  ApproveReturnDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -192,12 +193,21 @@ export class CheckoutsController {
   @RequirePermissions(Permission.VIEW_CHECKOUTS) // TODO: 반입 권한 별도 정의 필요
   @ApiOperation({
     summary: '반입 처리',
-    description: '반출된 장비를 반입 처리합니다. 교정/수리 확인 및 작동 여부 확인을 포함합니다.',
+    description:
+      '반출된 장비를 반입 처리합니다. 교정/수리 확인 및 작동 여부 확인을 포함합니다. ' +
+      '반출 유형에 따라 필수 검사 항목이 다릅니다: 교정 목적(calibrationChecked 필수), ' +
+      '수리 목적(repairChecked 필수), 모든 유형(workingStatusChecked 필수).',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: ReturnCheckoutDto })
-  @ApiResponse({ status: HttpStatus.OK, description: '반입 처리 성공' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '반입 처리 불가능한 상태' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '반입 처리 성공 (상태: returned, 기술책임자 승인 대기)',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: '반입 처리 불가능한 상태 또는 필수 검사 항목 누락',
+  })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async returnCheckout(
     @Param('uuid', ParseUUIDPipe) uuid: string,
@@ -209,6 +219,41 @@ export class CheckoutsController {
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
     }
     return this.checkoutsService.returnCheckout(uuid, returnDto, returnerId);
+  }
+
+  @Patch(':uuid/approve-return')
+  @RequirePermissions(Permission.APPROVE_CHECKOUT) // 기술책임자 권한
+  @ApiOperation({
+    summary: '반입 최종 승인',
+    description:
+      '기술책임자가 검사 완료된 반입을 최종 승인합니다. ' +
+      '승인 후 장비 상태가 자동으로 available로 복원됩니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: ApproveReturnDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '반입 최종 승인 성공 (상태: return_approved, 장비 상태: available)',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: '승인 불가능한 상태 (returned 상태만 승인 가능)',
+  })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '기술책임자 권한 없음' })
+  async approveReturn(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() approveReturnDto: ApproveReturnDto,
+    @Request() req: any
+  ) {
+    // 승인자 ID가 없으면 현재 로그인한 사용자 ID 사용
+    if (!approveReturnDto.approverId) {
+      approveReturnDto.approverId = req.user?.userId || req.user?.sub;
+    }
+    if (!approveReturnDto.approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.checkoutsService.approveReturn(uuid, approveReturnDto);
   }
 
   @Patch(':uuid/cancel')

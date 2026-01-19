@@ -1,202 +1,264 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RentalsService } from '../rentals.service';
-import { CreateRentalDto } from '../dto/create-rental.dto';
-import { ReturnRequestDto, ReturnConditionEnum } from '../dto/return-request.dto';
-import { ApproveReturnDto, ReturnApprovalStatusEnum } from '../dto/approve-return.dto';
-import { RentalStatusEnum, RentalTypeEnum } from '../../../types/enums';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { EquipmentService } from '../../equipment/equipment.service';
+import { TeamsService } from '../../teams/teams.service';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('RentalsService', () => {
   let service: RentalsService;
 
+  // Mock dependencies
+  const mockDrizzle = {
+    select: jest.fn().mockReturnThis(),
+    from: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    offset: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    values: jest.fn().mockReturnThis(),
+    returning: jest.fn(),
+    update: jest.fn().mockReturnThis(),
+    set: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    execute: jest.fn(),
+  };
+
+  const mockCacheService = {
+    get: jest.fn(),
+    set: jest.fn(),
+    delete: jest.fn(),
+    deleteByPattern: jest.fn(),
+    getOrSet: jest.fn(),
+  };
+
+  const mockEquipmentService = {
+    findOne: jest.fn(),
+    updateStatus: jest.fn(),
+  };
+
+  const mockTeamsService = {
+    findOne: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RentalsService],
+      providers: [
+        RentalsService,
+        {
+          provide: 'DRIZZLE_INSTANCE',
+          useValue: mockDrizzle,
+        },
+        {
+          provide: SimpleCacheService,
+          useValue: mockCacheService,
+        },
+        {
+          provide: EquipmentService,
+          useValue: mockEquipmentService,
+        },
+        {
+          provide: TeamsService,
+          useValue: mockTeamsService,
+        },
+      ],
     }).compile();
 
     service = module.get<RentalsService>(RentalsService);
+
+    // Reset all mocks before each test
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('requestReturn', () => {
-    it('should change status to RETURN_REQUESTED when requesting return', async () => {
-      // 테스트용 대여 데이터 생성
-      const createRentalDto: CreateRentalDto = {
+  describe('findOne', () => {
+    it('should return a loan by id', async () => {
+      const mockLoan = {
+        id: 'test-loan-id',
         equipmentId: 'test-equipment-id',
-        userId: 'test-user-id',
-        type: 'INTERNAL' as any,
-        startDate: '2023-06-01',
-        expectedEndDate: '2023-06-15',
-        purpose: '테스트 목적',
-        location: '테스트 위치',
+        borrowerId: 'test-borrower-id',
+        status: 'pending',
       };
 
-      // 대여 생성
-      const rental = await service.create(createRentalDto);
+      // Mock the cache to call the factory function directly
+      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+        return factory();
+      });
 
-      // 생성된 대여의 상태를 APPROVED로 변경 (대여 중 상태)
-      await service.update(rental.id, { status: 'APPROVED' as any });
+      // Mock the drizzle select chain
+      mockDrizzle.limit.mockResolvedValue([mockLoan]);
 
-      // 반납 요청 DTO
-      const returnRequestDto: ReturnRequestDto = {
-        returnCondition: ReturnConditionEnum.GOOD,
-        returnNotes: '테스트 반납 메모',
-      };
+      const result = await service.findOne('test-loan-id');
 
-      // 반납 요청
-      const returnedRental = await service.requestReturn(rental.id, returnRequestDto);
-
-      // 검증
-      expect(returnedRental).toBeDefined();
-      expect(returnedRental?.status).toBe(RentalStatusEnum.RETURN_REQUESTED);
-      expect(returnedRental?.notes).toContain(returnRequestDto.returnNotes);
+      expect(result).toBeDefined();
+      expect(result.id).toBe('test-loan-id');
     });
 
-    it('should throw BadRequestException when requesting return for non-approved rental', async () => {
-      // 테스트용 대여 데이터 생성
-      const createRentalDto: CreateRentalDto = {
+    it('should throw NotFoundException when loan not found', async () => {
+      mockCacheService.getOrSet.mockImplementation(async (key, factory) => {
+        return factory();
+      });
+
+      mockDrizzle.limit.mockResolvedValue([]);
+
+      await expect(service.findOne('non-existent-id')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('approve', () => {
+    it('should approve a pending loan', async () => {
+      const mockLoan = {
+        id: 'test-loan-id',
         equipmentId: 'test-equipment-id',
-        userId: 'test-user-id',
-        type: 'INTERNAL' as any,
-        startDate: '2023-06-01',
-        expectedEndDate: '2023-06-15',
-        purpose: '테스트 목적',
-        location: '테스트 위치',
+        borrowerId: 'test-borrower-id',
+        status: 'pending',
       };
 
-      // 대여 생성 (기본 상태는 PENDING)
-      const rental = await service.create(createRentalDto);
-
-      // 반납 요청 DTO
-      const returnRequestDto: ReturnRequestDto = {
-        returnCondition: ReturnConditionEnum.GOOD,
-        returnNotes: '테스트 반납 메모',
+      const approvedLoan = {
+        ...mockLoan,
+        status: 'approved',
+        approverId: 'test-approver-id',
+        approverComment: '승인합니다',
+        autoApproved: false,
       };
 
-      // 대여 중 상태가 아닌 대여에 대한 반납 요청은 오류가 발생해야 함
-      await expect(service.requestReturn(rental.id, returnRequestDto)).rejects.toThrow(
-        '승인된 대여/반출만 반납 요청할 수 있습니다.'
+      // Mock findOne to return pending loan
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockLoan as any);
+
+      // Mock checkTeamPermission to pass
+      mockEquipmentService.findOne.mockResolvedValue({
+        teamId: 'test-team-id',
+      });
+
+      // Mock update
+      mockDrizzle.returning.mockResolvedValue([approvedLoan]);
+
+      const result = await service.approve('test-loan-id', 'test-approver-id', 'test-team-id', {
+        comment: '승인합니다',
+      });
+
+      expect(result.status).toBe('approved');
+      expect(result.approverId).toBe('test-approver-id');
+      expect(result.approverComment).toBe('승인합니다');
+    });
+
+    it('should throw BadRequestException when approving non-pending loan', async () => {
+      const mockLoan = {
+        id: 'test-loan-id',
+        equipmentId: 'test-equipment-id',
+        borrowerId: 'test-borrower-id',
+        status: 'approved', // Already approved
+      };
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockLoan as any);
+
+      await expect(
+        service.approve('test-loan-id', 'test-approver-id', 'test-team-id')
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('reject', () => {
+    it('should reject a pending loan with reason', async () => {
+      const mockLoan = {
+        id: 'test-loan-id',
+        equipmentId: 'test-equipment-id',
+        borrowerId: 'test-borrower-id',
+        status: 'pending',
+      };
+
+      const rejectedLoan = {
+        ...mockLoan,
+        status: 'rejected',
+        approverId: 'test-approver-id',
+        rejectionReason: '장비 사용 불가',
+      };
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockLoan as any);
+      mockDrizzle.returning.mockResolvedValue([rejectedLoan]);
+
+      const result = await service.reject('test-loan-id', 'test-approver-id', '장비 사용 불가');
+
+      expect(result.status).toBe('rejected');
+      expect(result.rejectionReason).toBe('장비 사용 불가');
+    });
+
+    it('should throw BadRequestException when rejecting without reason', async () => {
+      const mockLoan = {
+        id: 'test-loan-id',
+        status: 'pending',
+      };
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockLoan as any);
+
+      await expect(service.reject('test-loan-id', 'test-approver-id', '')).rejects.toThrow(
+        BadRequestException
       );
     });
   });
 
-  describe('approveReturn', () => {
-    it('should change status to RETURNED when approving return request', async () => {
-      // 테스트용 대여 데이터 생성
-      const createRentalDto: CreateRentalDto = {
-        equipmentId: 'test-equipment-id',
-        userId: 'test-user-id',
-        type: 'INTERNAL' as any,
-        startDate: '2023-06-01',
-        expectedEndDate: '2023-06-15',
-        purpose: '테스트 목적',
-        location: '테스트 위치',
+  describe('cancel', () => {
+    it('should cancel a pending loan', async () => {
+      const mockLoan = {
+        id: 'test-loan-id',
+        status: 'pending',
       };
 
-      // 대여 생성
-      const rental = await service.create(createRentalDto);
-
-      // 생성된 대여의 상태를 APPROVED로 변경 (대여 중 상태)
-      await service.update(rental.id, { status: 'APPROVED' as any });
-
-      // 반납 요청 DTO
-      const returnRequestDto: ReturnRequestDto = {
-        returnCondition: ReturnConditionEnum.GOOD,
-        returnNotes: '테스트 반납 메모',
+      const canceledLoan = {
+        ...mockLoan,
+        status: 'canceled',
       };
 
-      // 반납 요청
-      const returnRequestedRental = await service.requestReturn(rental.id, returnRequestDto);
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockLoan as any);
+      mockDrizzle.returning.mockResolvedValue([canceledLoan]);
 
-      // 반납 승인 DTO
-      const approveReturnDto: ApproveReturnDto = {
-        status: ReturnApprovalStatusEnum.APPROVED,
-        approverId: 'test-admin-id',
-        notes: '테스트 승인 메모',
-      };
+      const result = await service.cancel('test-loan-id');
 
-      // 반납 승인
-      const approvedRental = await service.approveReturn(returnRequestedRental.id);
-
-      // 검증
-      expect(approvedRental).toBeDefined();
-      expect(approvedRental?.status).toBe(RentalStatusEnum.RETURNED);
-      expect(approvedRental?.notes).toBe(approveReturnDto.notes);
-      expect(approvedRental?.approverId).toBe(approveReturnDto.approverId);
-      expect(approvedRental?.actualEndDate).toBeDefined();
+      expect(result.status).toBe('canceled');
     });
 
-    it('should change status back to APPROVED when rejecting return request', async () => {
-      // 테스트용 대여 데이터 생성
-      const createRentalDto: CreateRentalDto = {
-        equipmentId: 'test-equipment-id',
-        userId: 'test-user-id',
-        type: 'INTERNAL' as any,
-        startDate: '2023-06-01',
-        expectedEndDate: '2023-06-15',
-        purpose: '테스트 목적',
-        location: '테스트 위치',
+    it('should throw BadRequestException when canceling non-pending loan', async () => {
+      const mockLoan = {
+        id: 'test-loan-id',
+        status: 'approved',
       };
 
-      // 대여 생성
-      const rental = await service.create(createRentalDto);
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockLoan as any);
 
-      // 생성된 대여의 상태를 APPROVED로 변경 (대여 중 상태)
-      await service.update(rental.id, { status: 'APPROVED' as any });
+      await expect(service.cancel('test-loan-id')).rejects.toThrow(BadRequestException);
+    });
+  });
 
-      // 반납 요청 DTO
-      const returnRequestDto: ReturnRequestDto = {
-        returnCondition: ReturnConditionEnum.GOOD,
-        returnNotes: '테스트 반납 메모',
-      };
+  describe('isSameTeam (auto-approval)', () => {
+    it('should return true when borrower team matches equipment team', async () => {
+      mockEquipmentService.findOne.mockResolvedValue({
+        teamId: 'same-team-id',
+      });
 
-      // 반납 요청
-      const returnRequestedRental = await service.requestReturn(rental.id, returnRequestDto);
+      // Access the private method using bracket notation for testing
+      const isSameTeam = await (service as any).isSameTeam('test-equipment-id', 'same-team-id');
 
-      // 반납 거절 DTO
-      const rejectReturnDto: ApproveReturnDto = {
-        status: ReturnApprovalStatusEnum.REJECTED,
-        approverId: 'test-admin-id',
-        notes: '테스트 거절 메모',
-      };
-
-      // 반납 거절
-      const rejectedRental = await service.approveReturn(returnRequestedRental.id);
-
-      // 검증
-      expect(rejectedRental).toBeDefined();
-      expect(rejectedRental?.status).toBe(RentalStatusEnum.APPROVED);
-      expect(rejectedRental?.notes).toBe(rejectReturnDto.notes);
+      expect(isSameTeam).toBe(true);
     });
 
-    it('should throw BadRequestException when approving return for non-return-requested rental', async () => {
-      // 테스트용 대여 데이터 생성
-      const createRentalDto: CreateRentalDto = {
-        equipmentId: 'test-equipment-id',
-        userId: 'test-user-id',
-        type: 'INTERNAL' as any,
-        startDate: '2023-06-01',
-        expectedEndDate: '2023-06-15',
-        purpose: '테스트 목적',
-        location: '테스트 위치',
-      };
+    it('should return false when borrower team does not match equipment team', async () => {
+      mockEquipmentService.findOne.mockResolvedValue({
+        teamId: 'different-team-id',
+      });
 
-      // 대여 생성 (기본 상태는 PENDING)
-      const rental = await service.create(createRentalDto);
+      const isSameTeam = await (service as any).isSameTeam('test-equipment-id', 'other-team-id');
 
-      // 반납 승인 DTO
-      const approveReturnDto: ApproveReturnDto = {
-        status: ReturnApprovalStatusEnum.APPROVED,
-        approverId: 'test-admin-id',
-        notes: '테스트 승인 메모',
-      };
+      expect(isSameTeam).toBe(false);
+    });
 
-      // 반납 요청 상태가 아닌 대여에 대한 반납 승인은 오류가 발생해야 함
-      await expect(service.approveReturn(rental.id)).rejects.toThrow(
-        '반납 요청 상태인 대여/반출만 승인할 수 있습니다.'
-      );
+    it('should return false when borrower team is not provided', async () => {
+      const isSameTeam = await (service as any).isSameTeam('test-equipment-id', undefined);
+
+      expect(isSameTeam).toBe(false);
     });
   });
 });

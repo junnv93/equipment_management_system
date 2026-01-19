@@ -1,12 +1,50 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-// import { v4 as uuidv4 } from 'uuid';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
-import { CalibrationStatusEnum } from '../../types';
+import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
+import {
+  CalibrationStatusEnum,
+  CalibrationApprovalStatusEnum,
+  CalibrationRegisteredByRoleEnum,
+} from '../../types';
+
+// 교정 기록 인터페이스
+export interface CalibrationRecord {
+  id: string;
+  equipmentId: string;
+  calibrationManagerId: string;
+  calibrationDate: Date;
+  nextCalibrationDate: Date;
+  calibrationMethod: string;
+  status: string;
+  calibrationAgency: string;
+  certificationNumber: string | null;
+  cost: number | null;
+  isPassed: boolean | null;
+  resultNotes: string | null;
+  reportFilePath: string | null;
+  additionalInfo: string | null;
+  // 승인 프로세스 필드
+  approvalStatus: string;
+  registeredBy: string | null;
+  approvedBy: string | null;
+  registeredByRole: string | null;
+  registrarComment: string | null;
+  approverComment: string | null;
+  rejectionReason: string | null;
+  intermediateCheckDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // 임시 교정 데이터
-const temporaryCalibrations = [
+const temporaryCalibrations: CalibrationRecord[] = [
   {
     id: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
     equipmentId: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
@@ -22,6 +60,14 @@ const temporaryCalibrations = [
     resultNotes: '모든 파라미터가 허용 오차 범위 내에 있습니다.',
     reportFilePath: '/reports/calibration/EQ-RF-001-2023.pdf',
     additionalInfo: '온도 23±2°C, 습도 50±10%RH 환경에서 교정 수행',
+    approvalStatus: 'approved',
+    registeredBy: '550e8400-e29b-41d4-a716-446655440001',
+    approvedBy: '550e8400-e29b-41d4-a716-446655440001',
+    registeredByRole: 'technical_manager',
+    registrarComment: '검토 완료',
+    approverComment: null,
+    rejectionReason: null,
+    intermediateCheckDate: new Date('2023-07-15'),
     createdAt: new Date('2022-12-20'),
     updatedAt: new Date('2023-01-20'),
   },
@@ -40,6 +86,14 @@ const temporaryCalibrations = [
     resultNotes: '모든 테스트 통과.',
     reportFilePath: '/reports/calibration/OSC-001-2023.pdf',
     additionalInfo: null,
+    approvalStatus: 'pending_approval',
+    registeredBy: '770a0600-a40c-63f6-c938-668877660222',
+    approvedBy: null,
+    registeredByRole: 'test_operator',
+    registrarComment: null,
+    approverComment: null,
+    rejectionReason: null,
+    intermediateCheckDate: null,
     createdAt: new Date('2023-01-15'),
     updatedAt: new Date('2023-02-25'),
   },
@@ -58,63 +112,72 @@ const temporaryCalibrations = [
     resultNotes: null,
     reportFilePath: null,
     additionalInfo: '730일 주기로 교정 필요',
+    approvalStatus: 'approved',
+    registeredBy: '550e8400-e29b-41d4-a716-446655440001',
+    approvedBy: '550e8400-e29b-41d4-a716-446655440001',
+    registeredByRole: 'technical_manager',
+    registrarComment: '교정 예정 등록 확인',
+    approverComment: null,
+    rejectionReason: null,
+    intermediateCheckDate: new Date('2025-06-15'),
     createdAt: new Date('2023-03-10'),
     updatedAt: new Date('2023-03-10'),
-  },
-  {
-    id: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    equipmentId: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    calibrationManagerId: '550e8400-e29b-41d4-a716-446655440001',
-    calibrationDate: new Date('2023-04-05'),
-    nextCalibrationDate: new Date('2024-04-05'),
-    calibrationMethod: 'internal_calibration',
-    status: 'completed',
-    calibrationAgency: '내부 교정실',
-    certificationNumber: 'INT-2023-0001',
-    cost: 0,
-    isPassed: true,
-    resultNotes: '내부 표준에 따라 교정 완료.',
-    reportFilePath: '/reports/calibration/PS-001-2023.pdf',
-    additionalInfo: null,
-    createdAt: new Date('2023-03-25'),
-    updatedAt: new Date('2023-04-10'),
-  },
-  {
-    id: '5e6f7g8h-9i0j-1k2l-3m4n-5o6p7q8r9s0t',
-    equipmentId: '5e6f7g8h-9i0j-1k2l-3m4n-5o6p7q8r9s0t',
-    calibrationManagerId: '770a0600-a40c-63f6-c938-668877660222',
-    calibrationDate: new Date('2023-05-20'),
-    nextCalibrationDate: new Date('2024-05-20'),
-    calibrationMethod: 'external_calibration',
-    status: 'completed',
-    calibrationAgency: 'Fluke 공인센터',
-    certificationNumber: 'CERT-2023-0003',
-    cost: 250000,
-    isPassed: true,
-    resultNotes: '온도 측정 정확도 검증 완료. 모든 성능 지표 충족.',
-    reportFilePath: '/reports/calibration/TC-001-2023.pdf',
-    additionalInfo: null,
-    createdAt: new Date('2023-04-10'),
-    updatedAt: new Date('2023-05-25'),
   },
 ];
 
 // 검색 가능한 교정 목록
-const calibrations = [...temporaryCalibrations];
+const calibrations: CalibrationRecord[] = [...temporaryCalibrations];
 
 @Injectable()
 export class CalibrationService {
   create(createCalibrationDto: CreateCalibrationDto) {
-    const newCalibration = {
-      id: `calibration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      // id: uuidv4(),
+    const { registeredBy, registeredByRole, registrarComment, ...rest } = createCalibrationDto;
 
-      ...createCalibrationDto,
+    // 기술책임자는 등록자 코멘트 필수
+    if (
+      registeredByRole === CalibrationRegisteredByRoleEnum.TECHNICAL_MANAGER &&
+      !registrarComment
+    ) {
+      throw new BadRequestException('기술책임자는 등록자 코멘트를 반드시 입력해야 합니다.');
+    }
+
+    // 승인 상태 결정: 기술책임자가 등록하면 바로 approved, 시험실무자는 pending_approval
+    const approvalStatus =
+      registeredByRole === CalibrationRegisteredByRoleEnum.TECHNICAL_MANAGER
+        ? CalibrationApprovalStatusEnum.APPROVED
+        : CalibrationApprovalStatusEnum.PENDING_APPROVAL;
+
+    const newCalibration: CalibrationRecord = {
+      id: `calibration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      equipmentId: rest.equipmentId,
+      calibrationManagerId: rest.calibrationManagerId,
+      calibrationDate: rest.calibrationDate,
+      nextCalibrationDate: rest.nextCalibrationDate,
+      calibrationMethod: rest.calibrationMethod,
+      status: rest.status || 'scheduled',
+      calibrationAgency: rest.calibrationAgency,
+      certificationNumber: rest.certificationNumber || null,
+      cost: rest.cost || null,
+      isPassed: rest.isPassed ?? null,
+      resultNotes: rest.resultNotes || null,
+      reportFilePath: rest.reportFilePath || null,
+      additionalInfo: rest.additionalInfo || null,
+      approvalStatus,
+      registeredBy: registeredBy || null,
+      approvedBy:
+        registeredByRole === CalibrationRegisteredByRoleEnum.TECHNICAL_MANAGER
+          ? registeredBy || null
+          : null,
+      registeredByRole: registeredByRole || null,
+      registrarComment: registrarComment || null,
+      approverComment: null,
+      rejectionReason: null,
+      intermediateCheckDate: (rest as any).intermediateCheckDate || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    (calibrations as any).push(newCalibration);
+    calibrations.push(newCalibration);
     return newCalibration;
   }
 
@@ -134,6 +197,7 @@ export class CalibrationService {
       sort = 'calibrationDate.desc',
       page = 1,
       pageSize = 20,
+      approvalStatus,
     } = query;
 
     // 필터링
@@ -202,6 +266,13 @@ export class CalibrationService {
       filteredCalibrations = filteredCalibrations.filter((cal) => cal.isPassed === isParsedPassed);
     }
 
+    // 승인 상태 필터
+    if (approvalStatus) {
+      filteredCalibrations = filteredCalibrations.filter(
+        (cal) => cal.approvalStatus === approvalStatus
+      );
+    }
+
     if (search) {
       const searchLower = search.toLowerCase();
       filteredCalibrations = filteredCalibrations.filter(
@@ -220,10 +291,12 @@ export class CalibrationService {
       const isAsc = direction === 'asc';
 
       filteredCalibrations.sort((a, b) => {
-        if (a[field] === null) return isAsc ? 1 : -1;
-        if (b[field] === null) return isAsc ? -1 : 1;
-        if (a[field] < b[field]) return isAsc ? -1 : 1;
-        if (a[field] > b[field]) return isAsc ? 1 : -1;
+        const aVal = a[field as keyof CalibrationRecord];
+        const bVal = b[field as keyof CalibrationRecord];
+        if (aVal === null) return isAsc ? 1 : -1;
+        if (bVal === null) return isAsc ? -1 : 1;
+        if (aVal < bVal) return isAsc ? -1 : 1;
+        if (aVal > bVal) return isAsc ? 1 : -1;
         return 0;
       });
     }
@@ -268,7 +341,7 @@ export class CalibrationService {
       ...calibrations[index],
       ...updateCalibrationDto,
       updatedAt: now,
-    };
+    } as CalibrationRecord;
 
     return calibrations[index];
   }
@@ -332,6 +405,78 @@ export class CalibrationService {
     return this.findAll({
       nextFromDate: today,
       nextToDate: dueDate,
+    });
+  }
+
+  // 승인 대기 중인 교정 목록 조회
+  async findPendingApprovals() {
+    return this.findAll({
+      approvalStatus: CalibrationApprovalStatusEnum.PENDING_APPROVAL,
+    });
+  }
+
+  // 교정 승인
+  async approveCalibration(id: string, approveDto: ApproveCalibrationDto) {
+    const calibration = await this.findOne(id);
+
+    if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.PENDING_APPROVAL) {
+      throw new BadRequestException('승인 대기 상태인 교정만 승인할 수 있습니다.');
+    }
+
+    if (!approveDto.approverComment) {
+      throw new BadRequestException('승인 시 승인자 코멘트는 필수입니다.');
+    }
+
+    const index = calibrations.findIndex((cal) => cal.id === id);
+    const now = new Date();
+
+    calibrations[index] = {
+      ...calibrations[index],
+      approvalStatus: CalibrationApprovalStatusEnum.APPROVED,
+      approvedBy: approveDto.approverId,
+      approverComment: approveDto.approverComment,
+      updatedAt: now,
+    };
+
+    return calibrations[index];
+  }
+
+  // 교정 반려
+  async rejectCalibration(id: string, rejectDto: RejectCalibrationDto) {
+    const calibration = await this.findOne(id);
+
+    if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.PENDING_APPROVAL) {
+      throw new BadRequestException('승인 대기 상태인 교정만 반려할 수 있습니다.');
+    }
+
+    if (!rejectDto.rejectionReason) {
+      throw new BadRequestException('반려 사유는 필수입니다.');
+    }
+
+    const index = calibrations.findIndex((cal) => cal.id === id);
+    const now = new Date();
+
+    calibrations[index] = {
+      ...calibrations[index],
+      approvalStatus: CalibrationApprovalStatusEnum.REJECTED,
+      approvedBy: rejectDto.approverId,
+      rejectionReason: rejectDto.rejectionReason,
+      updatedAt: now,
+    };
+
+    return calibrations[index];
+  }
+
+  // 중간점검 일정이 다가오는 교정 조회
+  async findUpcomingIntermediateChecks(days: number = 7) {
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + days);
+
+    return calibrations.filter((cal) => {
+      if (!cal.intermediateCheckDate) return false;
+      const checkDate = new Date(cal.intermediateCheckDate);
+      return checkDate >= today && checkDate <= futureDate;
     });
   }
 }

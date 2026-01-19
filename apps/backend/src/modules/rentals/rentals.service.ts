@@ -10,6 +10,7 @@ import { CreateRentalDto } from './dto/create-rental.dto';
 import { UpdateRentalDto } from './dto/update-rental.dto';
 import { RentalQueryDto } from './dto/rental-query.dto';
 import { ReturnRequestDto } from './dto/return-request.dto';
+import { ApproveRentalDto } from './dto/approve-rental.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { LoanStatusEnum, LoanStatus } from '@equipment-management/schemas';
 import { eq, and, like, gte, lte, or, desc, asc, sql, SQL, ne, isNull } from 'drizzle-orm';
@@ -45,7 +46,7 @@ interface PaginationMeta {
 /**
  * 대여 목록 응답 인터페이스
  */
-interface LoanListResponse {
+export interface LoanListResponse {
   items: Loan[];
   meta: PaginationMeta;
 }
@@ -504,6 +505,21 @@ export class RentalsService {
       // 데이터베이스에 삽입
       const [newLoan] = await this.db.insert(loans).values(insertData).returning();
 
+      // ✅ 동일 팀 자동 승인 로직
+      // 대여 신청자의 팀과 장비 소유 팀이 동일한 경우 자동 승인
+      const isSameTeamRequest = await this.isSameTeam(createRentalDto.equipmentId, userTeamId);
+      if (isSameTeamRequest && createRentalDto.userId) {
+        this.logger.log(`동일 팀 대여 신청 자동 승인: loanId=${newLoan.id}`);
+        const autoApprovedLoan = await this.approve(
+          newLoan.id,
+          createRentalDto.userId, // 신청자를 승인자로 설정
+          userTeamId,
+          { comment: '동일 팀 장비 대여 - 자동 승인' },
+          true // isAutoApproved
+        );
+        return autoApprovedLoan;
+      }
+
       // 장비 상태를 'in_use'로 변경하지 않음 (승인 전이므로)
       // 승인 시 상태 변경 예정
 
@@ -738,8 +754,15 @@ export class RentalsService {
    * 대여 승인
    * 장비 소유 팀의 담당자 또는 매니저가 승인
    * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 대여 승인 불가
+   * ✅ 승인자 코멘트 및 자동 승인 여부 필드 추가
    */
-  async approve(uuid: string, approverId: string, approverTeamId?: string): Promise<Loan> {
+  async approve(
+    uuid: string,
+    approverId: string,
+    approverTeamId?: string,
+    approveDto?: ApproveRentalDto,
+    isAutoApproved = false
+  ): Promise<Loan> {
     try {
       const loan = await this.findOne(uuid);
 
@@ -747,13 +770,17 @@ export class RentalsService {
         throw new BadRequestException('대기 중인 대여만 승인할 수 있습니다.');
       }
 
-      // 팀별 권한 체크: 대여 장비에 대해 체크
-      await this.checkTeamPermission(loan.equipmentId, approverTeamId);
+      // 팀별 권한 체크: 대여 장비에 대해 체크 (자동 승인이 아닌 경우만)
+      if (!isAutoApproved) {
+        await this.checkTeamPermission(loan.equipmentId, approverTeamId);
+      }
 
       // 승인 처리
       const updateData: Partial<Loan> = {
         status: 'approved' as LoanStatus,
         approverId,
+        approverComment: approveDto?.comment || null,
+        autoApproved: isAutoApproved,
         updatedAt: new Date(),
       };
 
@@ -782,6 +809,29 @@ export class RentalsService {
         `대여 승인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
+    }
+  }
+
+  /**
+   * 동일 팀 여부 확인 (자동 승인용)
+   * 신청자 팀과 장비 소유 팀이 동일한지 확인
+   */
+  private async isSameTeam(equipmentId: string, borrowerTeamId?: string): Promise<boolean> {
+    if (!borrowerTeamId) {
+      return false;
+    }
+
+    try {
+      const equipment = await this.equipmentService.findOne(equipmentId, true);
+      if (!equipment.teamId) {
+        return false;
+      }
+      return equipment.teamId === borrowerTeamId;
+    } catch (error) {
+      this.logger.warn(
+        `동일 팀 확인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return false;
     }
   }
 

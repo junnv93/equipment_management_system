@@ -23,7 +23,13 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { RentalsService } from './rentals.service';
-import { CreateRentalDto, UpdateRentalDto, RentalQueryDto, ReturnRequestDto } from './dto';
+import {
+  CreateRentalDto,
+  UpdateRentalDto,
+  RentalQueryDto,
+  ReturnRequestDto,
+  ApproveRentalDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -126,28 +132,25 @@ export class RentalsController {
   })
   @ApiParam({ name: 'uuid', description: '대여 UUID', type: String, format: 'uuid' })
   @ApiBody({
-    schema: {
-      type: 'object',
-      properties: { approverId: { type: 'string', format: 'uuid' } },
-      required: ['approverId'],
-    },
+    type: ApproveRentalDto,
+    description: '대여 승인 요청 본문',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '대여 승인 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '승인 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '대여를 찾을 수 없음' })
   async approve(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body('approverId') approverId: string,
+    @Body() approveDto: ApproveRentalDto,
     @Request() req: any
   ) {
     // ✅ 일관성: JWT에서 approverId를 가져오거나 Body에서 받기
     // Body에서 approverId를 받되, 없으면 JWT에서 가져오기
-    const finalApproverId = approverId || req.user?.userId || req.user?.sub;
+    const finalApproverId = approveDto.approverId || req.user?.userId || req.user?.sub;
     if (!finalApproverId) {
       throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
     }
     const approverTeamId = req.user?.teamId; // 승인자 팀 ID
-    return this.rentalsService.approve(uuid, finalApproverId, approverTeamId);
+    return this.rentalsService.approve(uuid, finalApproverId, approverTeamId, approveDto);
   }
 
   @Patch(':uuid/reject')

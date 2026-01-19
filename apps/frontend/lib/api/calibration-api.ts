@@ -12,6 +12,15 @@ export interface Calibration {
   calibrationCycle: number;
   calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
   notes?: string;
+  // 승인 프로세스 필드
+  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
+  registeredBy?: string;
+  approvedBy?: string;
+  registeredByRole?: 'test_operator' | 'technical_manager';
+  registrarComment?: string;
+  approverComment?: string;
+  rejectionReason?: string;
+  intermediateCheckDate?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,10 +35,12 @@ export interface CalibrationHistory {
   calibrationAgency: string;
   calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
   team?: string;
+  approvalStatus?: string;
+  registeredByRole?: string;
   createdAt: string;
 }
 
-// ✅ Single Source of Truth: 공통 타입 사용
+// 공통 타입 사용
 import type { PaginatedResponse } from './types';
 
 export interface CalibrationQuery {
@@ -41,6 +52,7 @@ export interface CalibrationQuery {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
+  approvalStatus?: string;
 }
 
 export interface CreateCalibrationDto {
@@ -51,9 +63,24 @@ export interface CreateCalibrationDto {
   calibrationCycle: number;
   calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
   notes?: string;
+  // 승인 프로세스 필드
+  registeredBy?: string;
+  registeredByRole?: 'test_operator' | 'technical_manager';
+  registrarComment?: string;
+  intermediateCheckDate?: string;
 }
 
 export interface UpdateCalibrationDto extends Partial<CreateCalibrationDto> {}
+
+export interface ApproveCalibrationDto {
+  approverId: string;
+  approverComment: string;
+}
+
+export interface RejectCalibrationDto {
+  approverId: string;
+  rejectionReason: string;
+}
 
 export interface CalibrationSummary {
   total: number;
@@ -120,6 +147,26 @@ const calibrationApi = {
   // 곧 교정이 필요한 장비
   getUpcomingCalibrations: async (days: number = 30): Promise<CalibrationHistory[]> => {
     return apiClient.get(`/api/calibration/upcoming?days=${days}`);
+  },
+
+  // 승인 대기 교정 목록 조회
+  getPendingCalibrations: async (): Promise<{ items: Calibration[] }> => {
+    return apiClient.get('/api/calibration/pending');
+  },
+
+  // 교정 승인
+  approveCalibration: async (id: string, data: ApproveCalibrationDto): Promise<Calibration> => {
+    return apiClient.patch(`/api/calibration/${id}/approve`, data);
+  },
+
+  // 교정 반려
+  rejectCalibration: async (id: string, data: RejectCalibrationDto): Promise<Calibration> => {
+    return apiClient.patch(`/api/calibration/${id}/reject`, data);
+  },
+
+  // 중간점검 예정 조회
+  getUpcomingIntermediateChecks: async (days: number = 7): Promise<Calibration[]> => {
+    return apiClient.get(`/api/calibration/intermediate-checks?days=${days}`);
   },
 };
 

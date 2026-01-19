@@ -38,8 +38,22 @@ export interface Checkout {
     | 'rejected'
     | 'checked_out'
     | 'returned'
+    | 'return_approved'
     | 'overdue'
     | 'canceled'; // ✅ 백엔드 상태값
+  // 반출 유형
+  checkoutType?: 'internal_calibration' | 'internal_repair' | 'external_rental';
+  // 외부 대여 시 빌려주는 측 정보
+  lenderTeamId?: string;
+  lenderSiteId?: string;
+  // 반입 검사 정보
+  calibrationChecked?: boolean;
+  repairChecked?: boolean;
+  workingStatusChecked?: boolean;
+  inspectionNotes?: string;
+  // 반입 승인 정보
+  returnApprovedBy?: string;
+  returnApprovedAt?: string;
   firstApproverId?: string; // ✅ 백엔드 필드명
   finalApproverId?: string; // ✅ 백엔드 필드명
   approvedById?: string; // 레거시 호환성
@@ -98,9 +112,19 @@ export interface UpdateCheckoutDto {
 }
 
 export interface ReturnCheckoutDto {
-  actualReturnDate: string;
+  calibrationChecked?: boolean; // 교정 확인 (교정 목적 반출 시 필수)
+  repairChecked?: boolean; // 수리 확인 (수리 목적 반출 시 필수)
+  workingStatusChecked: boolean; // 작동 여부 확인 (모든 유형 필수)
+  inspectionNotes?: string; // 검사 비고
+  // 레거시 호환성
+  actualReturnDate?: string;
   returnCondition?: string;
   returnNotes?: string;
+}
+
+export interface ApproveReturnDto {
+  approverId?: string; // 승인자 UUID (선택, 미제공 시 현재 로그인 사용자)
+  comment?: string; // 승인 코멘트
 }
 
 export interface CheckoutSummary {
@@ -242,11 +266,31 @@ const checkoutApi = {
 
   /**
    * 장비 반입(반납)을 처리합니다.
+   * 상태: checked_out → returned (검사 완료, 기술책임자 승인 대기)
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async returnCheckout(id: string, data: ReturnCheckoutDto): Promise<Checkout> {
     const response = await axios.post(`/api/checkouts/${id}/return`, data);
     return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
+   * 반입 최종 승인을 처리합니다 (기술책임자).
+   * 상태: returned → return_approved
+   * 장비 상태: available로 자동 복원
+   * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
+   */
+  async approveReturn(id: string, data: ApproveReturnDto = {}): Promise<Checkout> {
+    const response = await axios.patch(`/api/checkouts/${id}/approve-return`, data);
+    return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
+   * 검사 완료된 반입 건 목록 조회 (기술책임자 승인 대기)
+   * ✅ 공통 메서드 재사용: 중복 제거
+   */
+  async getPendingReturnApprovals(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
+    return this.getCheckouts({ ...query, status: 'returned' });
   },
 
   /**

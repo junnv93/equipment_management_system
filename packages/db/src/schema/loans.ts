@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, text, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, text, uuid, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 /**
@@ -33,6 +33,8 @@ export const loans = pgTable('loans', {
   actualReturnDate: timestamp('actual_return_date'),
   notes: text('notes'),
   rejectionReason: text('rejection_reason'), // 반려 사유 (반려 시 필수)
+  approverComment: text('approver_comment'), // 승인자 코멘트
+  autoApproved: boolean('auto_approved').default(false), // 동일 팀 자동 승인 여부
 
   // 시스템 필드
   createdAt: timestamp('created_at').defaultNow().notNull(),

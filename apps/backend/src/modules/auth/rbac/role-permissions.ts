@@ -9,6 +9,7 @@ export const ROLE_PERMISSIONS = {
     Permission.REQUEST_RENTAL,
     Permission.VIEW_CHECKOUTS,
     Permission.VIEW_CALIBRATIONS,
+    Permission.CREATE_CALIBRATION, // 교정 등록 (승인 대기 상태로 등록)
   ],
   // 기술책임자: 장비 관리 및 승인 권한
   [UserRole.TECHNICAL_MANAGER]: [
@@ -25,6 +26,8 @@ export const ROLE_PERMISSIONS = {
     Permission.VIEW_CALIBRATIONS,
     Permission.CREATE_CALIBRATION,
     Permission.UPDATE_CALIBRATION,
+    Permission.APPROVE_CALIBRATION, // 교정 승인 권한
+    Permission.VIEW_CALIBRATION_REQUESTS, // 교정 승인 대기 목록 조회
     Permission.VIEW_USERS,
   ],
   // 시험소별 관리자: 모든 권한 (해당 시험소 내)

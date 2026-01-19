@@ -24,6 +24,8 @@ export enum Permission {
   CREATE_CALIBRATION = 'create:calibration',
   UPDATE_CALIBRATION = 'update:calibration',
   DELETE_CALIBRATION = 'delete:calibration',
+  APPROVE_CALIBRATION = 'approve:calibration', // 교정 승인 권한 (기술책임자)
+  VIEW_CALIBRATION_REQUESTS = 'view:calibration:requests', // 교정 승인 대기 목록 조회
 
   // 팀 관련 권한
   VIEW_TEAMS = 'view:teams',
