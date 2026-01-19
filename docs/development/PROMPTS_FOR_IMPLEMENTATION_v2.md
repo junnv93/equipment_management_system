@@ -530,17 +530,17 @@ AGENTS.md와 API_STANDARDS.md를 참조하여 같은 시험소 내 대여 승인
 
 **이행 체크리스트 5-0:**
 
-- [ ] rentals.ts에 approval_status, approved_by 필드 추가됨
-- [ ] rentals.ts에 approver_comment, auto_approved 필드 추가됨
-- [ ] approve-rental.dto.ts 파일 생성됨
-- [ ] PATCH /rentals/:uuid/approve 엔드포인트 구현됨
-- [ ] PATCH /rentals/:uuid/reject 엔드포인트 구현됨
-- [ ] 장비 소유 팀 권한 체크 구현됨
-- [ ] 동일 팀 자동 승인 로직 구현됨
-- [ ] 마이그레이션 파일 생성됨
-- [ ] pnpm db:migrate 성공
-- [ ] pnpm tsc --noEmit 성공
-- [ ] pnpm test 성공
+- [x] rentals.ts에 approval_status, approved_by 필드 추가됨
+- [x] rentals.ts에 approver_comment, auto_approved 필드 추가됨
+- [x] approve-rental.dto.ts 파일 생성됨
+- [x] PATCH /rentals/:uuid/approve 엔드포인트 구현됨
+- [x] PATCH /rentals/:uuid/reject 엔드포인트 구현됨
+- [x] 장비 소유 팀 권한 체크 구현됨
+- [x] 동일 팀 자동 승인 로직 구현됨
+- [x] 마이그레이션 파일 생성됨
+- [x] pnpm db:migrate 성공
+- [x] pnpm tsc --noEmit 성공
+- [x] pnpm test 성공
 
 ---
 
@@ -666,8 +666,8 @@ pending → [빌려주는 측 시험실무자] → first_approved → [빌려주
 - [x] pnpm db:generate 성공
 - [x] pnpm db:migrate 성공
 - [x] pnpm tsc --noEmit 성공
-- [ ] checkouts.ts에 lender_confirmed_by, lender_confirmed_at, lender_confirm_notes 필드 추가됨
-- [ ] 시험소간 대여 양측 확인 로직 테스트됨
+- [x] checkouts.ts에 lender_confirmed_by, lender_confirmed_at, lender_confirm_notes 필드 추가됨
+- [x] 시험소간 대여 양측 확인 로직 테스트됨
 
 ### 프롬프트 5-3: 반입 승인 백엔드 API
 
