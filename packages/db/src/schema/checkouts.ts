@@ -86,6 +86,11 @@ export const checkouts = pgTable('checkouts', {
   returnApprovedBy: uuid('return_approved_by').references(() => users.id), // 반입 최종 승인자 (기술책임자)
   returnApprovedAt: timestamp('return_approved_at'), // 반입 최종 승인 시간
 
+  // 시험소간 대여 반입 시 빌려준 측 확인 정보
+  lenderConfirmedBy: uuid('lender_confirmed_by').references(() => users.id), // 빌려준 측 확인자
+  lenderConfirmedAt: timestamp('lender_confirmed_at'), // 빌려준 측 확인 일시
+  lenderConfirmNotes: text('lender_confirm_notes'), // 빌려준 측 확인 메모
+
   // 시스템 필드
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -137,6 +142,11 @@ export const checkoutsRelations = relations(checkouts, ({ one, many }) => ({
     fields: [checkouts.returnApprovedBy],
     references: [users.id],
     relationName: 'checkout_return_approver',
+  }),
+  lenderConfirmer: one(users, {
+    fields: [checkouts.lenderConfirmedBy],
+    references: [users.id],
+    relationName: 'checkout_lender_confirmer',
   }),
   items: many(checkoutItems),
 }));
