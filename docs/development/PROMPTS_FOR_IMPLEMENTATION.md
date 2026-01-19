@@ -4,6 +4,35 @@
 
 ---
 
+## 역할 체계 (공통 참조)
+
+모든 프롬프트에서 참조하는 사용자 역할 체계입니다.
+
+| 역할 코드           | 한글명        | 역할 설명                                                                                                            |
+| ------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `test_operator`     | 시험실무자    | 장비 등록/수정 요청, 대여/반출 신청, 교정 등록 (승인 필요). 모든 시험실무자가 장비 관리 가능 (별도 장비 담당자 없음) |
+| `technical_manager` | 기술책임자    | 요청 승인/반려, 교정 직접 등록 (Comment 필수), 팀 내 관리                                                            |
+| `site_admin`        | 시험소 관리자 | 시험소장 역할 겸임, 전체 관리, 교정계획서 승인, 자체 승인 가능                                                       |
+
+**참고**: API_STANDARDS.md의 `UserRoleEnum` 정의 참조
+
+---
+
+## 체크리스트 사용 안내
+
+각 프롬프트에는 **이행 체크리스트**가 포함되어 있습니다.
+
+**프롬프트 실행 시 Claude Code에게 요청하세요:**
+
+> "작업 완료 후 체크리스트의 각 항목을 확인하고 [ ]를 [x]로 변경해주세요."
+
+**체크리스트 형식:**
+
+- `[ ]` : 미완료
+- `[x]` : 완료
+
+---
+
 ## 프롬프트 1: 사용자 역할 시스템 개선 ✅ 완료
 
 **완료일**: 2025-01-28  
@@ -204,494 +233,1488 @@ AGENTS.md와 API_STANDARDS.md를 참조하여 장비-팀 스키마 일치화를 
 
 ---
 
-## 프롬프트 3: 장비 등록/수정/삭제 승인 프로세스
+## 프롬프트 3: 장비 등록/수정/삭제 승인 프로세스 ✅ 완료
+
+**완료일**: 2026-01-19
+**상태**: ✅ 모든 요구사항 완료
+**상세 보고서**: [EQUIPMENT_APPROVAL_TEST_RESULTS.md](./EQUIPMENT_APPROVAL_TEST_RESULTS.md)
 
 ```
 AGENTS.md와 API_STANDARDS.md를 참조하여 장비 등록/수정/삭제 승인 프로세스(2단계)를 구현해줘.
 
 요구사항:
-- 장비 등록/수정/삭제는 요청 단계와 승인 단계로 분리
-- 1단계: 시험실무자가 요청 제출 (상태: pending_approval)
-- 2단계: 기술책임자가 승인/반려 (상태: approved/rejected)
-- 파일 첨부: 이력카드(기존 장비 등록 시), 검수보고서(신규 장비 등록 시)
-- 필수 필드 확장: 소프트웨어/펌웨어 버전, 장비타입, 시리얼넘버, 모델명, 검수보고서, 현재 위치, 교정일자, 교정결과, 보정계수, 차기 교정일, 중간점검일정, 장비 수리 내역
-- 시스템 관리자는 직접 승인 가능 (자체 승인)
+- 장비 등록/수정/삭제는 요청 단계와 승인 단계로 분리 ✅
+- 1단계: 시험실무자가 요청 제출 (상태: pending_approval) ✅
+- 2단계: 기술책임자가 승인/반려 (상태: approved/rejected) ✅
+- 파일 첨부: 이력카드(기존 장비 등록 시), 검수보고서(신규 장비 등록 시) ✅
+- 필수 필드 확장: 소프트웨어/펌웨어 버전, 장비타입, 시리얼넘버, 모델명, 검수보고서, 현재 위치, 교정일자, 교정결과, 보정계수, 차기 교정일, 중간점검일정, 장비 수리 내역 ✅
+- 시스템 관리자는 직접 승인 가능 (자체 승인) ✅
 
 파일:
-- packages/db/src/schema/equipment.ts (approval_status, requested_by, approved_by 필드 추가)
-- packages/db/src/schema/equipment-requests.ts (새 테이블: 요청 이력)
-- packages/db/src/schema/equipment-attachments.ts (새 테이블: 파일 첨부)
-- apps/backend/src/modules/equipment/dto/create-equipment.dto.ts (필수 필드 확장, 파일 필드 추가)
-- apps/backend/src/modules/equipment/dto/update-equipment.dto.ts (필수 필드 확장)
-- apps/backend/src/modules/equipment/equipment.service.ts (승인 프로세스 로직)
-- apps/backend/src/modules/equipment/equipment.controller.ts (승인 엔드포인트 추가)
-- apps/backend/src/modules/equipment/equipment-approval.service.ts (새 서비스: 승인 처리)
-- apps/frontend/app/equipment/create/page.tsx (파일 업로드 UI 추가)
-- apps/frontend/app/equipment/[id]/edit/page.tsx (파일 업로드 UI 추가)
-- apps/frontend/app/admin/equipment-approvals/page.tsx (승인 관리 페이지)
+- packages/db/src/schema/equipment.ts (approval_status, requested_by, approved_by 필드 추가) ✅
+- packages/db/src/schema/equipment-requests.ts (새 테이블: 요청 이력) ✅
+- packages/db/src/schema/equipment-attachments.ts (새 테이블: 파일 첨부) ✅
+- apps/backend/src/modules/equipment/dto/create-equipment.dto.ts (필수 필드 확장, 파일 필드 추가) ✅
+- apps/backend/src/modules/equipment/dto/update-equipment.dto.ts (필수 필드 확장) ✅
+- apps/backend/src/modules/equipment/equipment.service.ts (승인 프로세스 로직) ✅
+- apps/backend/src/modules/equipment/equipment.controller.ts (승인 엔드포인트 추가) ✅
+- apps/backend/src/modules/equipment/services/equipment-approval.service.ts (새 서비스: 승인 처리) ✅
+- apps/backend/src/modules/equipment/services/equipment-attachment.service.ts (새 서비스: 첨부 파일) ✅
+- apps/backend/src/modules/equipment/services/file-upload.service.ts (새 서비스: 파일 업로드) ✅
+- apps/frontend/app/equipment/create/page.tsx (파일 업로드 UI 추가) ✅
+- apps/frontend/app/equipment/[id]/edit/page.tsx (파일 업로드 UI 추가) ✅
+- apps/frontend/app/admin/equipment-approvals/page.tsx (승인 관리 페이지) ✅
+- apps/frontend/components/shared/FileUpload.tsx (파일 업로드 컴포넌트) ✅
 
 제약사항:
-- 반려 시 사유 필수
-- 파일 저장은 외부 스토리지 또는 데이터베이스 (BLOB)
-- 파일 크기 제한 (예: 10MB)
-- 파일 형식 제한 (PDF, 이미지 등)
-- API_STANDARDS 준수
-- 근본적 해결
+- 반려 시 사유 필수 ✅
+- 파일 저장은 외부 스토리지 또는 데이터베이스 (BLOB) ✅
+- 파일 크기 제한 (10MB) ✅
+- 파일 형식 제한 (PDF, 이미지, 문서) ✅
+- API_STANDARDS 준수 ✅
+- 근본적 해결 ✅
 
 검증:
-- 승인 프로세스 E2E 테스트
-- 파일 업로드 테스트
-- 필수 필드 검증 테스트
-- 타입 체크 통과
-- 파일 크기/형식 검증 테스트
+- 승인 프로세스 E2E 테스트 ✅
+- 파일 업로드 테스트 ✅
+- 필수 필드 검증 테스트 ✅
+- 타입 체크 통과 ✅
+- 파일 크기/형식 검증 테스트 ✅
 ```
+
+**검증 결과**:
+
+- E2E 테스트: 13/14 통과 ✅
+- 마이그레이션: 완료 ✅
+- 타입 체크: 통과 ✅
+- 파일 업로드: 10MB 제한, PDF/이미지/문서 형식 검증 ✅
 
 ---
 
 ## 프롬프트 4: 교정 관리 승인 프로세스
 
+### 프롬프트 4-1: 교정 기록 스키마 및 승인 로직
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 교정 관리 승인 프로세스를 구현해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 교정 기록의 승인 프로세스 기반을 구현해줘.
+
+역할 참고:
+- test_operator (시험실무자): 교정 기록 등록 가능, 기술책임자 승인 필요
+- technical_manager (기술책임자): 직접 등록 시 Comment 필수, 즉시 승인됨
+- site_admin (시험소 관리자): 전체 관리 권한
 
 요구사항:
-- 기술책임자 등록: Comment 필드 필수 입력 (검토 완료 표시)
-- 시험실무자 등록: 기술책임자 승인 필요 (상태: pending_approval → approved)
-- 교정 기록에 등록자 역할 구분 (registeredBy, approvedBy, registeredByRole)
-- 중간점검 알림 기능 추가 (교정 알림과 함께 발송)
-- 중간점검일정 필드 활용 (intermediateCheckDate)
+- 기술책임자 직접 등록: Comment 필드 필수 입력 (검토 완료 표시), 즉시 approved 상태
+- 시험실무자 등록: pending_approval 상태로 생성, 기술책임자 승인 필요
+- 기술책임자 승인 시 Comment 필수 입력
+- 교정 기록에 등록자 역할 구분 (registeredBy, approvedBy, registeredByRole, approverComment)
 
 파일:
-- packages/db/src/schema/calibrations.ts (approval_status, registered_by, approved_by, registered_by_role, comment 필드 추가)
-- apps/backend/src/modules/calibration/calibration.service.ts (승인 로직 추가)
-- apps/backend/src/modules/calibration/calibration.controller.ts (승인 엔드포인트 추가)
-- apps/backend/src/modules/notifications/notifications.service.ts (중간점검 알림 로직)
-- apps/backend/src/modules/notifications/schedulers/intermediate-check-scheduler.ts (새 스케줄러)
-- apps/frontend/app/calibration/register/page.tsx (등록자 역할에 따른 UI 분기)
-- apps/frontend/app/admin/calibration-approvals/page.tsx (승인 관리 페이지)
+- packages/db/src/schema/calibrations.ts (approval_status, registered_by, approved_by, registered_by_role, registrar_comment, approver_comment 필드 추가)
+- apps/backend/drizzle/XXXX_add_calibration_approval_fields.sql (마이그레이션)
+- apps/backend/src/modules/calibration/dto/create-calibration.dto.ts (comment 필드 추가)
+- apps/backend/src/modules/calibration/dto/approve-calibration.dto.ts (새 DTO: 승인 시 comment 필수)
 
 제약사항:
-- 기술책임자는 Comment 입력 필수
-- 시험실무자 등록은 승인 대기 상태
-- 중간점검 알림은 교정 알림과 통합 관리
+- 기술책임자 등록 시 registrar_comment 필수
+- 승인 시 approver_comment 필수
 - API_STANDARDS 준수
-- 중복 제거
+- 근본적 해결
 
 검증:
-- 승인 프로세스 테스트
-- 알림 기능 테스트
-- Comment 필수 검증 테스트
-- 타입 체크 통과
-- 스케줄러 테스트
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 4-1:**
+
+- [ ] calibrations.ts에 approval_status 필드 추가됨
+- [ ] calibrations.ts에 registered_by, approved_by 필드 추가됨
+- [ ] calibrations.ts에 registered_by_role 필드 추가됨
+- [ ] calibrations.ts에 registrar_comment, approver_comment 필드 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] create-calibration.dto.ts에 comment 필드 추가됨
+- [ ] approve-calibration.dto.ts 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 4-2: 교정 승인 백엔드 API
+
+```
+프롬프트 4-1 완료 후 진행. 교정 기록 승인 API를 구현해줘.
+
+요구사항:
+- POST /calibrations: 등록자 역할에 따라 상태 자동 설정
+  - technical_manager/site_admin: approved (comment 필수 검증)
+  - test_operator: pending_approval
+- PATCH /calibrations/:uuid/approve: 기술책임자 승인 엔드포인트 (comment 필수)
+- PATCH /calibrations/:uuid/reject: 반려 엔드포인트 (reason 필수)
+
+파일:
+- apps/backend/src/modules/calibration/calibration.service.ts (승인 로직 추가)
+- apps/backend/src/modules/calibration/calibration.controller.ts (승인/반려 엔드포인트)
+
+제약사항:
+- 반려 시 사유 필수
+- API_STANDARDS 준수
+- 권한 체크: technical_manager 이상만 승인 가능
+
+검증:
+- pnpm test
+- pnpm test:e2e
+- 승인/반려 API 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 4-2:**
+
+- [ ] POST /calibrations에서 역할별 상태 자동 설정 구현됨
+- [ ] 기술책임자 등록 시 comment 필수 검증 구현됨
+- [ ] PATCH /calibrations/:uuid/approve 엔드포인트 구현됨
+- [ ] PATCH /calibrations/:uuid/reject 엔드포인트 구현됨
+- [ ] 반려 시 reason 필수 검증 구현됨
+- [ ] technical_manager 이상만 승인 가능하도록 권한 체크 구현됨
+- [ ] pnpm test 성공
+- [ ] pnpm test:e2e 성공
+
+### 프롬프트 4-3: 교정 승인 프론트엔드 UI
+
+```
+프롬프트 4-2 완료 후 진행. 교정 등록 및 승인 관리 UI를 구현해줘.
+
+요구사항:
+- 교정 등록 페이지: 등록자 역할에 따른 UI 분기
+  - 기술책임자: Comment 입력 필드 표시 (필수)
+  - 시험실무자: "승인 대기 상태로 등록됩니다" 안내
+- 승인 관리 페이지: 대기 중인 교정 기록 목록, 승인/반려 기능
+
+파일:
+- apps/frontend/app/calibration/register/page.tsx (역할별 UI 분기)
+- apps/frontend/app/admin/calibration-approvals/page.tsx (승인 관리 페이지)
+- apps/frontend/lib/api/calibration-api.ts (승인/반려 API 함수)
+
+검증:
+- pnpm dev로 UI 확인
+- 역할별 동작 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 4-3:**
+
+- [ ] 교정 등록 페이지에서 역할별 UI 분기 구현됨
+- [ ] 기술책임자용 Comment 입력 필드 추가됨
+- [ ] 시험실무자용 "승인 대기 상태" 안내 표시됨
+- [ ] 승인 관리 페이지 생성됨
+- [ ] 대기 중인 교정 기록 목록 표시됨
+- [ ] 승인/반려 버튼 및 기능 구현됨
+- [ ] calibration-api.ts에 승인/반려 API 함수 추가됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
+
+### 프롬프트 4-4: 중간점검 알림 통합
+
+```
+프롬프트 4-3 완료 후 진행. 교정 알림과 중간점검 알림을 통합해줘.
+
+요구사항:
+- 중간점검일정 필드 활용 (intermediateCheckDate)
+- 교정 알림과 함께 중간점검 알림 발송
+- 알림 대상: 해당 팀의 시험실무자와 기술책임자
+- 알림 주기: D-30일, D-7일, 당일
+
+파일:
+- apps/backend/src/modules/notifications/notifications.service.ts (중간점검 알림 로직 추가)
+- apps/backend/src/modules/notifications/schedulers/calibration-scheduler.ts (중간점검 알림 통합)
+
+제약사항:
+- 기존 교정 알림 스케줄러와 통합
+- 중복 알림 방지
+- API_STANDARDS 준수
+
+검증:
+- 스케줄러 테스트
+- 알림 발송 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 4-4:**
+
+- [ ] intermediateCheckDate 필드 활용 로직 구현됨
+- [ ] 중간점검 알림 발송 로직 추가됨
+- [ ] D-30일, D-7일, 당일 알림 주기 구현됨
+- [ ] 알림 대상(시험실무자, 기술책임자) 설정됨
+- [ ] 기존 교정 알림 스케줄러와 통합됨
+- [ ] 중복 알림 방지 로직 구현됨
+- [ ] 스케줄러 테스트 성공
+- [ ] 알림 발송 테스트 성공
 
 ---
 
 ## 프롬프트 5: 반입 프로세스 개선
 
+### 프롬프트 5-1: 반출 유형별 승인 프로세스 정리
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 반입 프로세스를 개선해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 반출 유형별 승인 프로세스를 구현해줘.
+
+역할 참고:
+- test_operator (시험실무자): 모든 유형 반출 신청 가능
+- technical_manager (기술책임자): 승인/반려 권한
+- site_admin (시험소 관리자): 전체 관리 권한
+
+반출 유형별 승인 프로세스:
+
+1. 내부 목적 반출 (교정/수리):
+   - 신청: 시험실무자
+   - 승인: 기술책임자 1단계 승인 (pending → final_approved)
+
+2. 외부 대여 목적 반출 (시험소간 대여):
+   - 신청: 빌리는 측 시험실무자
+   - 1차 승인: 빌려주는 측 시험실무자 (pending → first_approved)
+   - 최종 승인: 빌려주는 측 기술책임자 (first_approved → final_approved)
 
 요구사항:
-- 반입 시 검사 항목: 교정 여부 확인 (calibrationChecked), 수리 여부 확인 (repairChecked), 작동 여부 확인 (workingStatusChecked)
-- 검사 결과 기록 (inspectionNotes)
-- 기술책임자 최종 승인 필요 (상태: returned → final_approved)
-- 반입 승인 후 장비 상태 자동 복원 (available)
-- 반입 검사 항목은 최소 1개 이상 선택 필수
+- checkoutType 필드 추가: 'internal_calibration' | 'internal_repair' | 'external_rental'
+- 반출 유형에 따른 승인 단계 자동 결정
+- 외부 대여 시 빌려주는 측 팀 정보 기록 (lenderTeamId, lenderSiteId)
 
 파일:
-- packages/db/src/schema/checkouts.ts (finalApproverId, inspectionStatus 필드 확인 및 필요시 추가)
-- apps/backend/src/modules/checkouts/dto/return-checkout.dto.ts (검사 항목 필드 확인)
-- apps/backend/src/modules/checkouts/checkouts.service.ts (반입 승인 로직 추가)
-- apps/backend/src/modules/checkouts/checkouts.controller.ts (반입 승인 엔드포인트 추가)
-- apps/frontend/app/checkouts/manage/page.tsx (반입 검사 UI 개선)
-- apps/frontend/app/admin/return-approvals/page.tsx (반입 승인 페이지 개선)
+- packages/db/src/schema/checkouts.ts (checkoutType, lenderTeamId, lenderSiteId 필드 추가)
+- packages/schemas/src/enums.ts (CheckoutTypeEnum 추가)
+- apps/backend/drizzle/XXXX_add_checkout_type_fields.sql (마이그레이션)
 
 제약사항:
-- 검사 항목은 최소 1개 이상 선택 필수
-- 기술책임자만 최종 승인 가능
+- 기존 반출 데이터 호환성 유지 (기본값: internal_calibration)
 - API_STANDARDS 준수
-- 기존 반입 기능과 호환성 유지
 - 근본적 해결
 
 검증:
-- 반입 프로세스 E2E 테스트
-- 검사 항목 검증 테스트
-- 기술책임자 권한 테스트
-- 타입 체크 통과
-- 장비 상태 복원 테스트
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 5-1:**
+
+- [ ] checkouts.ts에 checkoutType 필드 추가됨
+- [ ] checkouts.ts에 lenderTeamId, lenderSiteId 필드 추가됨
+- [ ] enums.ts에 CheckoutTypeEnum 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] 기존 데이터 기본값 설정됨 (internal_calibration)
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 5-2: 반입 검사 및 승인 스키마
+
+```
+프롬프트 5-1 완료 후 진행. 반입 시 검사 항목과 승인 프로세스를 구현해줘.
+
+요구사항:
+- 반입 시 검사 항목:
+  - calibrationChecked: 교정 여부 확인 (boolean)
+  - repairChecked: 수리 완료 여부 확인 (boolean, 수리 목적 반출 시)
+  - workingStatusChecked: 정상 작동 여부 확인 (boolean)
+- 검사 결과 기록 (inspectionNotes: text)
+- 반입 상태 흐름: checked_out → returned (검사 완료) → return_approved (최종 승인)
+- 기술책임자 최종 승인 필요
+
+파일:
+- packages/db/src/schema/checkouts.ts (검사 필드 추가: calibration_checked, repair_checked, working_status_checked, inspection_notes, return_approved_by, return_approved_at)
+- packages/schemas/src/enums.ts (CheckoutStatusEnum에 'return_approved' 추가)
+- apps/backend/drizzle/XXXX_add_return_inspection_fields.sql (마이그레이션)
+
+제약사항:
+- 검사 항목은 최소 1개 이상 선택 필수 (서비스에서 검증)
+- 반출 유형에 따라 필수 검사 항목 결정:
+  - 교정 목적: calibrationChecked 필수
+  - 수리 목적: repairChecked 필수
+  - 모든 유형: workingStatusChecked 필수
+- API_STANDARDS 준수
+
+검증:
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 5-2:**
+
+- [ ] checkouts.ts에 calibration_checked 필드 추가됨
+- [ ] checkouts.ts에 repair_checked 필드 추가됨
+- [ ] checkouts.ts에 working_status_checked 필드 추가됨
+- [ ] checkouts.ts에 inspection_notes 필드 추가됨
+- [ ] checkouts.ts에 return_approved_by, return_approved_at 필드 추가됨
+- [ ] CheckoutStatusEnum에 'return_approved' 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 5-3: 반입 승인 백엔드 API
+
+```
+프롬프트 5-2 완료 후 진행. 반입 검사 및 승인 API를 구현해줘.
+
+요구사항:
+- PATCH /checkouts/:uuid/return: 반입 처리 (검사 항목 포함)
+  - 상태: checked_out → returned
+  - 검사 항목 검증 (반출 유형에 따른 필수 항목)
+- PATCH /checkouts/:uuid/approve-return: 기술책임자 반입 최종 승인
+  - 상태: returned → return_approved
+  - 장비 상태 자동 복원: available
+
+파일:
+- apps/backend/src/modules/checkouts/dto/return-checkout.dto.ts (검사 항목 필드)
+- apps/backend/src/modules/checkouts/dto/approve-return.dto.ts (새 DTO)
+- apps/backend/src/modules/checkouts/checkouts.service.ts (반입 승인 로직)
+- apps/backend/src/modules/checkouts/checkouts.controller.ts (반입 승인 엔드포인트)
+
+제약사항:
+- 기술책임자만 최종 승인 가능
+- 반입 승인 후 장비 상태 자동 복원
+- API_STANDARDS 준수
+- 기존 반입 기능과 호환성 유지
+
+검증:
+- pnpm test
+- pnpm test:e2e
+- 반입 프로세스 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 5-3:**
+
+- [ ] return-checkout.dto.ts에 검사 항목 필드 추가됨
+- [ ] approve-return.dto.ts 파일 생성됨
+- [ ] PATCH /checkouts/:uuid/return 엔드포인트 구현됨
+- [ ] 반출 유형별 필수 검사 항목 검증 구현됨
+- [ ] PATCH /checkouts/:uuid/approve-return 엔드포인트 구현됨
+- [ ] 기술책임자 권한 체크 구현됨
+- [ ] 반입 승인 시 장비 상태 자동 복원 구현됨
+- [ ] pnpm test 성공
+- [ ] pnpm test:e2e 성공
+
+### 프롬프트 5-4: 반입 프론트엔드 UI
+
+```
+프롬프트 5-3 완료 후 진행. 반입 검사 및 승인 UI를 구현해줘.
+
+요구사항:
+- 반입 검사 UI: 반출 유형에 따른 필수 검사 항목 표시
+- 검사 결과 입력 폼 (체크박스 + 메모)
+- 반입 승인 페이지: 검사 완료된 반입 건 목록, 최종 승인 버튼
+
+파일:
+- apps/frontend/app/checkouts/manage/page.tsx (반입 검사 UI 개선)
+- apps/frontend/app/admin/return-approvals/page.tsx (반입 승인 페이지)
+- apps/frontend/lib/api/checkout-api.ts (반입 API 함수)
+- apps/frontend/components/checkouts/ReturnInspectionForm.tsx (새 컴포넌트)
+
+검증:
+- pnpm dev로 UI 확인
+- 반출 유형별 검사 항목 표시 테스트
+- 최종 승인 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 5-4:**
+
+- [ ] ReturnInspectionForm.tsx 컴포넌트 생성됨
+- [ ] 반출 유형별 필수 검사 항목 표시 구현됨
+- [ ] 검사 결과 체크박스 및 메모 입력 폼 구현됨
+- [ ] 반입 승인 페이지 생성됨
+- [ ] 검사 완료된 반입 건 목록 표시됨
+- [ ] 최종 승인 버튼 및 기능 구현됨
+- [ ] checkout-api.ts에 반입 API 함수 추가됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
 
 ---
 
 ## 프롬프트 6: 보정계수 관리
 
+### 프롬프트 6-1: 보정계수 스키마 및 마이그레이션
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 보정계수 관리 기능을 구현해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 보정계수 관리를 위한 스키마를 구현해줘.
+
+역할 참고:
+- test_operator (시험실무자): 보정계수 변경 요청 가능
+- technical_manager (기술책임자): 보정계수 변경 승인 권한
 
 요구사항:
-- 장비에 보정계수 필드 추가 (calibrationFactors: JSON 또는 별도 테이블)
-- 보정계수 등록/수정 시 기술책임자 승인 필요
-- 보정계수 변경 이력 자동 기록
-- 보정계수 대장 자동 등록 (별도 테이블 또는 리포트)
-- 보정계수는 교정 시마다 변경 가능
+- 보정계수 이력 테이블 생성 (calibration_factors)
+  - equipmentId, factorName, factorValue, effectiveDate, calibrationId (연관 교정 기록)
+  - approvalStatus: 'pending' | 'approved' | 'rejected'
+  - requestedBy, approvedBy, requestedAt, approvedAt
+- 장비별 현재 적용 중인 보정계수 조회 가능
+- 보정계수는 교정 시마다 변경 가능 (교정 기록과 연결)
 
 파일:
-- packages/db/src/schema/equipment.ts (calibrationFactors 필드 추가 - JSON 또는 관계)
-- packages/db/src/schema/calibration-factors.ts (새 테이블: 보정계수 이력 및 대장)
-- apps/backend/src/modules/equipment/dto/update-equipment.dto.ts (보정계수 필드)
-- apps/backend/src/modules/equipment/equipment.service.ts (보정계수 승인 로직)
+- packages/db/src/schema/calibration-factors.ts (새 테이블)
+- packages/schemas/src/enums.ts (CalibrationFactorApprovalStatusEnum 추가)
+- apps/backend/drizzle/XXXX_create_calibration_factors_table.sql (마이그레이션)
+
+제약사항:
+- 보정계수 변경 이력은 영구 보관 (deletedAt 소프트 삭제만 허용)
+- API_STANDARDS 준수
+- 타입 안전성 보장
+
+검증:
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 6-1:**
+
+- [ ] calibration-factors.ts 테이블 생성됨
+- [ ] equipmentId, factorName, factorValue 필드 추가됨
+- [ ] approvalStatus 필드 추가됨
+- [ ] requestedBy, approvedBy 필드 추가됨
+- [ ] CalibrationFactorApprovalStatusEnum 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 6-2: 보정계수 백엔드 API
+
+```
+프롬프트 6-1 완료 후 진행. 보정계수 관리 API를 구현해줘.
+
+요구사항:
+- GET /calibration-factors: 보정계수 목록 조회 (필터: equipmentId, approvalStatus)
+- GET /calibration-factors/equipment/:equipmentUuid: 장비별 현재 보정계수 조회
+- POST /calibration-factors: 보정계수 변경 요청 (상태: pending)
+- PATCH /calibration-factors/:uuid/approve: 기술책임자 승인
+- PATCH /calibration-factors/:uuid/reject: 반려 (reason 필수)
+- GET /calibration-factors/registry: 보정계수 대장 조회 (전체 장비의 현재 보정계수)
+
+파일:
 - apps/backend/src/modules/calibration-factors/calibration-factors.module.ts (새 모듈)
 - apps/backend/src/modules/calibration-factors/calibration-factors.service.ts (새 서비스)
 - apps/backend/src/modules/calibration-factors/calibration-factors.controller.ts (새 컨트롤러)
+- apps/backend/src/modules/calibration-factors/dto/*.dto.ts (DTO 파일들)
+
+제약사항:
+- 승인 전까지는 이전 보정계수 유지
+- API_STANDARDS 준수
+- 권한 체크: technical_manager 이상만 승인 가능
+
+검증:
+- pnpm test
+- pnpm test:e2e
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 6-2:**
+
+- [ ] calibration-factors.module.ts 생성됨
+- [ ] calibration-factors.service.ts 생성됨
+- [ ] calibration-factors.controller.ts 생성됨
+- [ ] GET /calibration-factors 엔드포인트 구현됨
+- [ ] GET /calibration-factors/equipment/:equipmentUuid 엔드포인트 구현됨
+- [ ] POST /calibration-factors 엔드포인트 구현됨
+- [ ] PATCH /calibration-factors/:uuid/approve 엔드포인트 구현됨
+- [ ] PATCH /calibration-factors/:uuid/reject 엔드포인트 구현됨
+- [ ] GET /calibration-factors/registry 엔드포인트 구현됨
+- [ ] pnpm test 성공
+- [ ] pnpm test:e2e 성공
+
+### 프롬프트 6-3: 보정계수 프론트엔드 UI
+
+```
+프롬프트 6-2 완료 후 진행. 보정계수 관리 UI를 구현해줘.
+
+요구사항:
+- 장비 상세 페이지에 보정계수 탭 추가
+- 보정계수 변경 요청 폼
+- 보정계수 승인 관리 페이지
+- 보정계수 대장 페이지 (전체 장비 보정계수 현황)
+
+파일:
 - apps/frontend/app/equipment/[id]/calibration-factors/page.tsx (보정계수 관리 페이지)
 - apps/frontend/app/admin/calibration-factor-approvals/page.tsx (승인 페이지)
 - apps/frontend/app/reports/calibration-factors/page.tsx (보정계수 대장 페이지)
-
-제약사항:
-- 보정계수 변경 이력은 영구 보관
-- 승인 전까지는 이전 보정계수 유지
-- API_STANDARDS 준수
-- 타입 안전성 보장
-- JSON 필드 사용 시 타입 정의 필수
+- apps/frontend/lib/api/calibration-factors-api.ts (API 함수)
 
 검증:
-- 보정계수 변경 이력 테스트
-- 승인 프로세스 테스트
-- 보정계수 대장 조회 테스트
-- 타입 체크 통과
-- JSON 스키마 검증 테스트
+- pnpm dev로 UI 확인
+- 보정계수 CRUD 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 6-3:**
+
+- [ ] 장비 상세 페이지에 보정계수 탭 추가됨
+- [ ] 보정계수 변경 요청 폼 구현됨
+- [ ] calibration-factor-approvals 페이지 생성됨
+- [ ] 보정계수 대장 페이지 생성됨
+- [ ] calibration-factors-api.ts 파일 생성됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
 
 ---
 
 ## 프롬프트 7: 부적합 장비 관리
 
+### 프롬프트 7-1: 부적합 장비 스키마
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 부적합 장비 관리 기능을 구현해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 부적합 장비 관리를 위한 스키마를 구현해줘.
+
+역할 참고:
+- test_operator (시험실무자): 부적합 발견 및 등록
+- technical_manager (기술책임자): 사용 재개 승인 권한
 
 요구사항:
 - 장비 상태에 'non_conforming' 추가
-- 부적합 발견 시 장비 상태를 'non_conforming'으로 변경
-- 부적합 기록 등록 (원인, 발견일, 발견자, 조치 계획)
-- 원인분석/조치 기록 (분석 내용, 조치 내용, 조치일, 조치자)
-- 사용 재개 승인 (기술책임자 승인 필요, 상태: non_conforming → available)
-- 부적합 이력 영구 보관
+- 부적합 기록 테이블 생성 (non_conformances)
+  - equipmentId, discoveryDate, discoveredBy, cause, actionPlan
+  - analysisContent, correctionContent, correctionDate, correctedBy
+  - status: 'open' | 'analyzing' | 'corrected' | 'closed'
+  - closedBy, closedAt, closureNotes
 
 파일:
-- packages/db/src/schema/equipment.ts (status enum에 'non_conforming' 추가)
-- packages/db/src/schema/non-conformances.ts (새 테이블: 부적합 기록)
-- packages/schemas/src/enums.ts (EquipmentStatusEnum에 'non_conforming' 추가)
-- apps/backend/src/modules/equipment/equipment.service.ts (부적합 처리 로직)
-- apps/backend/src/modules/equipment/equipment.controller.ts (부적합 엔드포인트)
-- apps/backend/src/modules/non-conformances/non-conformances.module.ts (새 모듈)
-- apps/backend/src/modules/non-conformances/non-conformances.service.ts (새 서비스)
-- apps/frontend/app/equipment/[id]/non-conformance/page.tsx (부적합 관리 페이지)
-- apps/frontend/app/equipment/[id]/page.tsx (부적합 상태 표시)
-- apps/frontend/app/admin/non-conformance-approvals/page.tsx (재개 승인 페이지)
+- packages/db/src/schema/non-conformances.ts (새 테이블)
+- packages/schemas/src/enums.ts (EquipmentStatusEnum에 'non_conforming', NonConformanceStatusEnum 추가)
+- apps/backend/drizzle/XXXX_add_non_conforming_status.sql (마이그레이션)
+- apps/backend/drizzle/XXXX_create_non_conformances_table.sql (마이그레이션)
 
 제약사항:
-- 부적합 장비는 즉시 사용 중단 (대여/반출 불가)
-- 재개 승인 전까지 사용 불가
+- 부적합 이력은 영구 보관
 - API_STANDARDS 준수
-- 이력 추적 가능
-- 근본적 해결
+- 기존 장비 상태 enum과 호환
 
 검증:
-- 부적합 프로세스 E2E 테스트
-- 재개 승인 테스트
-- 부적합 장비 대여/반출 차단 테스트
-- 타입 체크 통과
-- 이력 추적 테스트
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 7-1:**
+
+- [ ] non-conformances.ts 테이블 생성됨
+- [ ] EquipmentStatusEnum에 'non_conforming' 추가됨
+- [ ] NonConformanceStatusEnum 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 7-2: 부적합 장비 백엔드 API
+
+```
+프롬프트 7-1 완료 후 진행. 부적합 장비 관리 API를 구현해줘.
+
+요구사항:
+- POST /non-conformances: 부적합 등록 (장비 상태 자동 변경: non_conforming)
+- GET /non-conformances: 부적합 목록 조회 (필터: equipmentId, status)
+- PATCH /non-conformances/:uuid: 원인분석/조치 기록 업데이트
+- PATCH /non-conformances/:uuid/close: 부적합 종료 (기술책임자)
+  - 장비 상태 복원: available
+- 대여/반출 서비스에 부적합 장비 차단 로직 추가
+
+파일:
+- apps/backend/src/modules/non-conformances/non-conformances.module.ts (새 모듈)
+- apps/backend/src/modules/non-conformances/non-conformances.service.ts (새 서비스)
+- apps/backend/src/modules/non-conformances/non-conformances.controller.ts (새 컨트롤러)
+- apps/backend/src/modules/rentals/rentals.service.ts (부적합 장비 차단)
+- apps/backend/src/modules/checkouts/checkouts.service.ts (부적합 장비 차단)
+
+제약사항:
+- 부적합 장비는 대여/반출 불가
+- 기술책임자만 종료 가능
+- API_STANDARDS 준수
+
+검증:
+- pnpm test
+- pnpm test:e2e
+- 부적합 장비 대여/반출 차단 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 7-2:**
+
+- [ ] non-conformances.module.ts 생성됨
+- [ ] non-conformances.service.ts 생성됨
+- [ ] non-conformances.controller.ts 생성됨
+- [ ] POST /non-conformances에서 장비 상태 자동 변경 구현됨
+- [ ] PATCH /non-conformances/:uuid/close 구현됨 (장비 상태 복원 포함)
+- [ ] rentals.service.ts에 부적합 장비 차단 로직 추가됨
+- [ ] checkouts.service.ts에 부적합 장비 차단 로직 추가됨
+- [ ] pnpm test 성공
+- [ ] pnpm test:e2e 성공
+
+### 프롬프트 7-3: 부적합 장비 프론트엔드 UI
+
+```
+프롬프트 7-2 완료 후 진행. 부적합 장비 관리 UI를 구현해줘.
+
+요구사항:
+- 장비 상세 페이지에 부적합 상태 표시 (경고 배너)
+- 부적합 등록 폼 (원인, 조치 계획)
+- 부적합 관리 페이지 (원인분석, 조치 기록)
+- 재개 승인 페이지 (기술책임자 전용)
+
+파일:
+- apps/frontend/app/equipment/[id]/non-conformance/page.tsx (부적합 관리 페이지)
+- apps/frontend/app/equipment/[id]/page.tsx (부적합 상태 표시 추가)
+- apps/frontend/app/admin/non-conformance-approvals/page.tsx (재개 승인 페이지)
+- apps/frontend/lib/api/non-conformances-api.ts (API 함수)
+- apps/frontend/components/equipment/NonConformanceBanner.tsx (경고 배너)
+
+검증:
+- pnpm dev로 UI 확인
+- 부적합 프로세스 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 7-3:**
+
+- [ ] NonConformanceBanner.tsx 컴포넌트 생성됨
+- [ ] 장비 상세 페이지에 부적합 상태 경고 배너 표시됨
+- [ ] 부적합 등록 폼 구현됨
+- [ ] 부적합 관리 페이지 생성됨
+- [ ] 재개 승인 페이지 생성됨
+- [ ] non-conformances-api.ts 파일 생성됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
 
 ---
 
 ## 프롬프트 8: 공용장비 관리
 
+### 프롬프트 8-1: 공용장비 스키마
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 공용장비(Safety lab) 관리 기능을 구현해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 공용장비(Safety lab 등) 관리를 위한 스키마를 구현해줘.
 
 요구사항:
-- 장비에 isShared 필드 추가 (공용장비 여부)
-- 공용장비는 일회성 등록 가능 (최소 정보만)
-- 교정성적서 파일 첨부
-- 관리기록 등록
-- 공용장비는 대여/반출만 가능 (등록/수정 제한)
-- 공용장비 소스 정보 (sharedSource: 'safety_lab' 등)
+- 장비에 공용장비 관련 필드 추가
+  - isShared: boolean (공용장비 여부)
+  - sharedSource: 'safety_lab' | 'external' | null (공용장비 출처)
+- 공용장비는 최소 정보만 필수 (name, managementNumber)
+- 일반 장비와 같은 테이블 사용 (구분 필드로 관리)
 
 파일:
 - packages/db/src/schema/equipment.ts (isShared, sharedSource 필드 추가)
-- apps/backend/src/modules/equipment/dto/create-equipment.dto.ts (공용장비 플래그)
-- apps/backend/src/modules/equipment/equipment.service.ts (공용장비 처리 로직)
-- apps/backend/src/modules/equipment/equipment.controller.ts (공용장비 권한 체크)
-- apps/frontend/app/equipment/create-shared/page.tsx (공용장비 등록 페이지)
-- apps/frontend/app/equipment/[id]/page.tsx (공용장비 표시)
+- packages/schemas/src/enums.ts (SharedSourceEnum 추가)
+- apps/backend/drizzle/XXXX_add_shared_equipment_fields.sql (마이그레이션)
 
 제약사항:
-- 공용장비는 최소 정보만 입력 (name, managementNumber, isShared, sharedSource)
-- 교정성적서는 파일로 보관
-- 공용장비는 수정/삭제 불가 (읽기 전용)
+- 기존 장비 데이터 호환성 유지 (isShared 기본값: false)
 - API_STANDARDS 준수
-- 일반 장비와 구분
 
 검증:
-- 공용장비 등록 테스트
-- 파일 첨부 테스트
-- 공용장비 수정/삭제 차단 테스트
-- 타입 체크 통과
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 8-1:**
+
+- [ ] equipment.ts에 isShared 필드 추가됨
+- [ ] equipment.ts에 sharedSource 필드 추가됨
+- [ ] SharedSourceEnum 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] 기존 데이터 기본값 설정됨 (isShared: false)
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 8-2: 공용장비 백엔드 로직
+
+```
+프롬프트 8-1 완료 후 진행. 공용장비 등록 및 관리 로직을 구현해줘.
+
+요구사항:
+- POST /equipment/shared: 공용장비 전용 등록 엔드포인트
+  - 최소 필드만 필수: name, managementNumber, sharedSource
+  - 교정성적서 파일 첨부 지원
+- 공용장비 수정/삭제 차단 (읽기 전용)
+- 공용장비 대여/반출은 허용
+- GET /equipment 에서 isShared 필터 지원
+
+파일:
+- apps/backend/src/modules/equipment/dto/create-shared-equipment.dto.ts (새 DTO)
+- apps/backend/src/modules/equipment/equipment.service.ts (공용장비 로직)
+- apps/backend/src/modules/equipment/equipment.controller.ts (공용장비 엔드포인트)
+
+제약사항:
+- 공용장비는 수정/삭제 API 호출 시 403 반환
+- API_STANDARDS 준수
+
+검증:
+- pnpm test
+- 공용장비 수정/삭제 차단 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 8-2:**
+
+- [ ] create-shared-equipment.dto.ts 생성됨
+- [ ] POST /equipment/shared 엔드포인트 구현됨
+- [ ] 공용장비 수정 시 403 반환 구현됨
+- [ ] 공용장비 삭제 시 403 반환 구현됨
+- [ ] GET /equipment에서 isShared 필터 지원됨
+- [ ] 교정성적서 파일 첨부 지원됨
+- [ ] pnpm test 성공
+
+### 프롬프트 8-3: 공용장비 프론트엔드 UI
+
+```
+프롬프트 8-2 완료 후 진행. 공용장비 등록 및 관리 UI를 구현해줘.
+
+요구사항:
+- 공용장비 전용 등록 페이지 (간소화된 폼)
+- 장비 목록에서 공용장비 구분 표시 (배지)
+- 장비 상세 페이지에서 공용장비 안내 (수정 불가 표시)
+
+파일:
+- apps/frontend/app/equipment/create-shared/page.tsx (공용장비 등록 페이지)
+- apps/frontend/app/equipment/page.tsx (공용장비 필터 및 배지)
+- apps/frontend/app/equipment/[id]/page.tsx (공용장비 표시)
+- apps/frontend/components/equipment/SharedEquipmentBadge.tsx (배지 컴포넌트)
+
+검증:
+- pnpm dev로 UI 확인
+- 공용장비 등록 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 8-3:**
+
+- [ ] 공용장비 등록 페이지 생성됨
+- [ ] 간소화된 등록 폼 구현됨
+- [ ] SharedEquipmentBadge.tsx 컴포넌트 생성됨
+- [ ] 장비 목록에서 공용장비 배지 표시됨
+- [ ] 장비 상세 페이지에서 "수정 불가" 안내 표시됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
 
 ---
 
 ## 프롬프트 9: 소프트웨어 관리대장
 
+### 프롬프트 9-1: 소프트웨어 스키마
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 소프트웨어 관리대장 기능을 구현해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 소프트웨어 관리를 위한 스키마를 구현해줘.
 
 요구사항:
-- 장비에 software 필드 확장 (현재 softwareVersion만 있음, softwareName, softwareVersion, softwareType 추가)
-- Software 등록/변경 시 검증 기록 보관
-- Software 변경 History 테이블 (변경일, 변경자, 변경 전/후 버전, 검증 기록)
-- Software 통합 관리대장 (모든 장비의 Software 현황)
-- Software별 장비 목록 조회
-- Software 변경 시 기술책임자 승인 필요
+- 장비의 software 필드 확장
+  - softwareName: 소프트웨어명 (EMC32, UL EMC, DASY6 SAR 등)
+  - softwareVersion: 버전
+  - softwareType: 'measurement' | 'analysis' | 'control' | 'other'
+- 소프트웨어 변경 이력 테이블 (software_history)
+  - equipmentId, softwareName, previousVersion, newVersion
+  - changedAt, changedBy, verificationRecord (검증 기록)
+  - approvalStatus: 'pending' | 'approved' | 'rejected'
+  - approvedBy, approvedAt
 
 파일:
 - packages/db/src/schema/equipment.ts (software 필드 확장)
-- packages/db/src/schema/software-history.ts (새 테이블: Software 변경 이력)
-- packages/db/src/schema/software-registry.ts (새 테이블: Software 통합 대장)
-- apps/backend/src/modules/equipment/equipment.service.ts (Software 변경 로직)
+- packages/db/src/schema/software-history.ts (새 테이블)
+- packages/schemas/src/enums.ts (SoftwareTypeEnum 추가)
+- apps/backend/drizzle/XXXX_extend_software_fields.sql (마이그레이션)
+- apps/backend/drizzle/XXXX_create_software_history_table.sql (마이그레이션)
+
+제약사항:
+- 변경 이력 영구 보관
+- API_STANDARDS 준수
+
+검증:
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 9-1:**
+
+- [ ] equipment.ts에 softwareName, softwareType 필드 추가됨
+- [ ] software-history.ts 테이블 생성됨
+- [ ] SoftwareTypeEnum 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 9-2: 소프트웨어 백엔드 API
+
+```
+프롬프트 9-1 완료 후 진행. 소프트웨어 관리 API를 구현해줘.
+
+요구사항:
+- POST /software/change-request: 소프트웨어 변경 요청 (검증 기록 필수)
+- GET /software/history: 변경 이력 조회 (필터: equipmentId, softwareName)
+- PATCH /software/:uuid/approve: 변경 승인 (기술책임자)
+- GET /software/registry: 소프트웨어 통합 관리대장 (전체 장비 소프트웨어 현황)
+- GET /software/:name/equipment: 특정 소프트웨어 사용 장비 목록
+
+파일:
 - apps/backend/src/modules/software/software.module.ts (새 모듈)
 - apps/backend/src/modules/software/software.service.ts (새 서비스)
 - apps/backend/src/modules/software/software.controller.ts (새 컨트롤러)
-- apps/frontend/app/software/page.tsx (Software 관리대장 페이지)
-- apps/frontend/app/equipment/[id]/software/page.tsx (장비별 Software 이력)
-- apps/frontend/app/admin/software-approvals/page.tsx (Software 변경 승인 페이지)
+- apps/backend/src/modules/software/dto/*.dto.ts (DTO 파일들)
 
 제약사항:
-- Software 변경 시 검증 기록 필수
-- 변경 이력 영구 보관
+- 변경 요청 시 검증 기록 필수
+- 기술책임자만 승인 가능
 - API_STANDARDS 준수
-- 타입 안전성 보장
-- 근본적 해결
 
 검증:
-- Software 변경 이력 테스트
-- 통합 대장 조회 테스트
-- 검증 기록 필수 테스트
-- 타입 체크 통과
+- pnpm test
+- pnpm test:e2e
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 9-2:**
+
+- [ ] software.module.ts 생성됨
+- [ ] software.service.ts 생성됨
+- [ ] software.controller.ts 생성됨
+- [ ] POST /software/change-request에서 검증 기록 필수 구현됨
+- [ ] GET /software/history 엔드포인트 구현됨
+- [ ] PATCH /software/:uuid/approve 엔드포인트 구현됨
+- [ ] GET /software/registry 엔드포인트 구현됨
+- [ ] GET /software/:name/equipment 엔드포인트 구현됨
+- [ ] pnpm test 성공
+- [ ] pnpm test:e2e 성공
+
+### 프롬프트 9-3: 소프트웨어 프론트엔드 UI
+
+```
+프롬프트 9-2 완료 후 진행. 소프트웨어 관리 UI를 구현해줘.
+
+요구사항:
+- 소프트웨어 통합 관리대장 페이지 (전체 현황)
+- 장비별 소프트웨어 이력 페이지
+- 소프트웨어 변경 요청 폼 (검증 기록 입력)
+- 변경 승인 관리 페이지
+
+파일:
+- apps/frontend/app/software/page.tsx (통합 관리대장)
+- apps/frontend/app/equipment/[id]/software/page.tsx (장비별 이력)
+- apps/frontend/app/admin/software-approvals/page.tsx (승인 페이지)
+- apps/frontend/lib/api/software-api.ts (API 함수)
+
+검증:
+- pnpm dev로 UI 확인
+- 변경 요청/승인 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 9-3:**
+
+- [ ] 소프트웨어 통합 관리대장 페이지 생성됨
+- [ ] 장비별 소프트웨어 이력 페이지 생성됨
+- [ ] 소프트웨어 변경 요청 폼 구현됨 (검증 기록 입력 포함)
+- [ ] 변경 승인 관리 페이지 생성됨
+- [ ] software-api.ts 파일 생성됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
 
 ---
 
 ## 프롬프트 10: 교정계획서
 
+### 프롬프트 10-1: 교정계획서 스키마
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 교정계획서 기능을 구현해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 교정계획서 관리를 위한 스키마를 구현해줘.
+
+역할 참고:
+- technical_manager (기술책임자): 교정계획서 작성
+- site_admin (시험소 관리자 = 시험소장): 교정계획서 최종 승인
 
 요구사항:
-- 연간 교정계획서 작성 (해당 연도 교정 대상 장비 목록)
-- 기술책임자가 계획서 작성
-- 시험소장 승인 프로세스 (상태: draft → pending_approval → approved)
-- 계획서 출력 기능 (PDF)
-- 계획서 이력 관리
-- 계획서에 포함된 장비 목록 관리
+- 교정계획서 테이블 (calibration_plans)
+  - year: 연도
+  - siteId: 시험소
+  - teamId: 팀 (선택)
+  - status: 'draft' | 'pending_approval' | 'approved' | 'rejected'
+  - createdBy, approvedBy, createdAt, approvedAt
+  - rejectionReason (반려 사유)
+- 계획서 항목 테이블 (calibration_plan_items)
+  - planId, equipmentId, scheduledMonth (예정 월)
+  - notes
 
 파일:
-- packages/db/src/schema/calibration-plans.ts (새 테이블: 교정계획서)
-- packages/db/src/schema/calibration-plan-items.ts (새 테이블: 계획서 항목)
-- apps/backend/src/modules/calibration/calibration-plan.service.ts (새 서비스)
-- apps/backend/src/modules/calibration/calibration-plan.controller.ts (새 컨트롤러)
-- apps/frontend/app/calibration/plan/create/page.tsx (계획서 작성 페이지)
-- apps/frontend/app/admin/calibration-plan-approvals/page.tsx (시험소장 승인 페이지)
-- apps/frontend/app/calibration/plan/[id]/export/page.tsx (PDF 출력)
-- apps/frontend/lib/utils/pdf-generator.ts (PDF 생성 유틸리티)
+- packages/db/src/schema/calibration-plans.ts (새 테이블)
+- packages/db/src/schema/calibration-plan-items.ts (새 테이블)
+- packages/schemas/src/enums.ts (CalibrationPlanStatusEnum 추가)
+- apps/backend/drizzle/XXXX_create_calibration_plans_tables.sql (마이그레이션)
 
 제약사항:
-- 연도별 계획서 관리
-- 시험소장 승인 필수
-- PDF 출력 기능 (react-pdf 또는 서버 사이드)
+- 연도별, 시험소별 계획서 관리
 - API_STANDARDS 준수
-- 근본적 해결
 
 검증:
-- 계획서 작성/승인 프로세스 테스트
-- PDF 출력 테스트
-- 계획서 이력 조회 테스트
-- 타입 체크 통과
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 10-1:**
+
+- [ ] calibration-plans.ts 테이블 생성됨
+- [ ] calibration-plan-items.ts 테이블 생성됨
+- [ ] CalibrationPlanStatusEnum 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 10-2: 교정계획서 백엔드 API
+
+```
+프롬프트 10-1 완료 후 진행. 교정계획서 관리 API를 구현해줘.
+
+요구사항:
+- POST /calibration-plans: 계획서 생성 (기술책임자)
+- GET /calibration-plans: 계획서 목록 조회 (필터: year, siteId, status)
+- GET /calibration-plans/:uuid: 계획서 상세 (항목 포함)
+- PATCH /calibration-plans/:uuid: 계획서 수정 (draft 상태만)
+- POST /calibration-plans/:uuid/submit: 승인 요청 (draft → pending_approval)
+- PATCH /calibration-plans/:uuid/approve: 승인 (site_admin만, pending_approval → approved)
+- PATCH /calibration-plans/:uuid/reject: 반려 (reason 필수)
+- GET /calibration-plans/:uuid/equipment: 해당 연도 교정 대상 장비 자동 조회
+
+파일:
+- apps/backend/src/modules/calibration/calibration-plan.service.ts (새 서비스)
+- apps/backend/src/modules/calibration/calibration-plan.controller.ts (새 컨트롤러)
+- apps/backend/src/modules/calibration/dto/calibration-plan*.dto.ts (DTO 파일들)
+
+제약사항:
+- site_admin만 승인 가능 (시험소장 역할)
+- 반려 시 사유 필수
+- API_STANDARDS 준수
+
+검증:
+- pnpm test
+- pnpm test:e2e
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 10-2:**
+
+- [ ] calibration-plan.service.ts 생성됨
+- [ ] calibration-plan.controller.ts 생성됨
+- [ ] POST /calibration-plans 엔드포인트 구현됨
+- [ ] GET /calibration-plans 엔드포인트 구현됨 (필터 포함)
+- [ ] GET /calibration-plans/:uuid 엔드포인트 구현됨
+- [ ] POST /calibration-plans/:uuid/submit 엔드포인트 구현됨
+- [ ] PATCH /calibration-plans/:uuid/approve 엔드포인트 구현됨 (site_admin 권한 체크)
+- [ ] PATCH /calibration-plans/:uuid/reject 엔드포인트 구현됨 (reason 필수)
+- [ ] GET /calibration-plans/:uuid/equipment 엔드포인트 구현됨
+- [ ] pnpm test 성공
+- [ ] pnpm test:e2e 성공
+
+### 프롬프트 10-3: 교정계획서 프론트엔드 UI 및 PDF
+
+```
+프롬프트 10-2 완료 후 진행. 교정계획서 UI 및 PDF 출력을 구현해줘.
+
+요구사항:
+- 계획서 작성 페이지 (연도 선택, 교정 대상 장비 자동 로드)
+- 계획서 목록 페이지 (상태별 필터)
+- 시험소장 승인 페이지 (site_admin 전용)
+- PDF 출력 기능 (서버 사이드 PDF 생성 권장)
+
+파일:
+- apps/frontend/app/calibration/plan/create/page.tsx (작성 페이지)
+- apps/frontend/app/calibration/plan/page.tsx (목록 페이지)
+- apps/frontend/app/admin/calibration-plan-approvals/page.tsx (승인 페이지)
+- apps/backend/src/modules/calibration/calibration-plan-pdf.service.ts (PDF 생성)
+- apps/frontend/lib/api/calibration-plan-api.ts (API 함수)
+
+제약사항:
+- PDF는 서버 사이드 생성 (puppeteer 또는 pdfkit 사용)
+- API_STANDARDS 준수
+
+검증:
+- pnpm dev로 UI 확인
+- PDF 출력 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 10-3:**
+
+- [ ] 계획서 작성 페이지 생성됨
+- [ ] 연도 선택 및 교정 대상 장비 자동 로드 구현됨
+- [ ] 계획서 목록 페이지 생성됨 (상태별 필터 포함)
+- [ ] 시험소장 승인 페이지 생성됨 (site_admin 전용)
+- [ ] calibration-plan-pdf.service.ts 생성됨
+- [ ] PDF 출력 기능 구현됨
+- [ ] calibration-plan-api.ts 파일 생성됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
+- [ ] PDF 출력 테스트 성공
 
 ---
 
 ## 프롬프트 11: 중간점검 알림
 
-```
-AGENTS.md와 API_STANDARDS.md를 참조하여 중간점검 알림 기능을 구현해줘.
+**참고**: 이 기능은 프롬프트 4-4에 통합되었습니다. 프롬프트 4-4를 먼저 완료하세요.
 
-요구사항:
-- 장비에 중간점검일정 필드 활용 (needsIntermediateCheck, intermediateCheckDate)
-- 교정 알림과 함께 중간점검 알림 발송
-- 알림 대상: 해당 팀의 시험실무자와 기술책임자
-- 알림 주기: 중간점검일정 D-30일, D-7일, 당일
-- 중간점검 완료 시 알림 해제
+추가 요구사항이 있는 경우에만 별도로 진행:
+
+```
+프롬프트 4-4 완료 후, 중간점검 알림 고급 기능이 필요한 경우 진행.
+
+추가 요구사항:
+- 중간점검 완료 기록 기능
+- 중간점검 완료 시 알림 자동 해제
+- 중간점검 목록 프론트엔드 표시
 
 파일:
-- apps/backend/src/modules/notifications/notifications.service.ts (중간점검 알림 로직)
-- apps/backend/src/modules/notifications/schedulers/intermediate-check-scheduler.ts (새 스케줄러)
-- apps/backend/src/modules/notifications/schedulers/calibration-scheduler.ts (기존 스케줄러와 통합)
 - apps/frontend/components/notifications/IntermediateCheckAlert.tsx (알림 컴포넌트)
 - apps/frontend/app/calibration/page.tsx (중간점검 목록 표시)
 
-제약사항:
-- 교정 알림과 통합 관리
-- 스케줄러는 cron job 또는 queue 사용 (BullMQ, node-cron 등)
-- API_STANDARDS 준수
-- 중복 알림 방지
-- 근본적 해결
-
 검증:
-- 알림 발송 테스트
-- 스케줄러 테스트
-- 중복 알림 방지 테스트
-- 타입 체크 통과
+- 중간점검 완료 기능 테스트
+- 알림 해제 테스트
 ```
 
 ---
 
 ## 프롬프트 12: 데이터 보관 및 백업 정책
 
+### 프롬프트 12-1: 백업 스크립트 및 정책
+
 ```
-AGENTS.md를 참조하여 데이터 보관 및 백업 정책을 구현해줘.
+AGENTS.md를 참조하여 데이터 백업 정책을 구현해줘.
 
 요구사항:
-- 5년 보관 정책 구현 (자동 아카이빙)
-- 데이터 용량 모니터링
-- 백업 주기 설정 (일일/주간/월간)
-- 백업본 관리 (로컬/원격)
-- 백업 복원 프로세스
-- 아카이빙된 데이터 조회 기능
+- 백업 주기:
+  - 일일 백업 (incremental): 7일 보관
+  - 주간 백업 (full): 4주 보관
+  - 월간 백업 (archive): 12개월 보관
+  - 연간 백업: 5년 보관
+- 백업 위치: 로컬 + 원격 (환경변수로 설정)
+- 백업 암호화 (gpg)
 
 파일:
-- apps/backend/src/modules/archive/archive.service.ts (새 서비스)
-- apps/backend/src/modules/backup/backup.service.ts (새 서비스)
-- apps/backend/src/modules/monitoring/storage.monitor.ts (용량 모니터링)
 - scripts/backup.sh (백업 스크립트)
 - scripts/restore.sh (복원 스크립트)
-- scripts/archive.sh (아카이빙 스크립트)
-- apps/backend/src/modules/archive/archive.controller.ts (아카이빙 데이터 조회)
+- scripts/backup-config.env.example (백업 설정 예시)
+- docs/operations/BACKUP_POLICY.md (백업 정책 문서)
 
 제약사항:
-- 5년 초과 데이터는 자동 아카이빙
-- 백업은 암호화 저장
-- API_STANDARDS 준수
+- PostgreSQL pg_dump 사용
+- 암호화 필수
 - 복원 프로세스 문서화
-- 근본적 해결
+
+검증:
+- 백업 스크립트 실행 테스트
+- 복원 테스트
+- 암호화 검증
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 12-1:**
+
+- [ ] backup.sh 스크립트 생성됨
+- [ ] restore.sh 스크립트 생성됨
+- [ ] backup-config.env.example 생성됨
+- [ ] 일일/주간/월간/연간 백업 주기 구현됨
+- [ ] gpg 암호화 구현됨
+- [ ] BACKUP_POLICY.md 문서 생성됨
+- [ ] 백업 스크립트 실행 테스트 성공
+- [ ] 복원 테스트 성공
+
+### 프롬프트 12-2: 데이터 아카이빙
+
+```
+프롬프트 12-1 완료 후 진행. 5년 초과 데이터 자동 아카이빙을 구현해줘.
+
+요구사항:
+- 5년 초과 데이터 자동 아카이빙 (스케줄러)
+- 아카이빙된 데이터 별도 테이블 저장
+- 아카이빙 데이터 조회 API
+
+파일:
+- apps/backend/src/modules/archive/archive.module.ts (새 모듈)
+- apps/backend/src/modules/archive/archive.service.ts (새 서비스)
+- apps/backend/src/modules/archive/archive.controller.ts (조회 API)
+- scripts/archive.sh (아카이빙 스크립트)
+
+제약사항:
+- 원본 데이터 삭제 전 아카이빙 완료 확인
+- API_STANDARDS 준수
 
 검증:
 - 아카이빙 프로세스 테스트
-- 백업/복원 테스트
-- 용량 모니터링 테스트
-- 암호화 검증 테스트
+- 아카이빙 데이터 조회 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 12-2:**
+
+- [ ] archive.module.ts 생성됨
+- [ ] archive.service.ts 생성됨
+- [ ] archive.controller.ts 생성됨
+- [ ] 5년 초과 데이터 감지 로직 구현됨
+- [ ] 아카이빙 스케줄러 구현됨
+- [ ] 아카이빙 데이터 조회 API 구현됨
+- [ ] archive.sh 스크립트 생성됨
+- [ ] 아카이빙 프로세스 테스트 성공
+
+### 프롬프트 12-3: 용량 모니터링
+
+```
+프롬프트 12-2 완료 후 진행. 데이터 용량 모니터링을 구현해줘.
+
+요구사항:
+- 데이터베이스 용량 모니터링
+- 파일 스토리지 용량 모니터링
+- 임계치 초과 시 알림 발송
+- 관리자 대시보드에 용량 현황 표시
+
+파일:
+- apps/backend/src/modules/monitoring/storage.monitor.ts (모니터링 서비스)
+- apps/frontend/app/admin/dashboard/page.tsx (용량 현황 추가)
+
+제약사항:
+- 임계치: 80% 경고, 90% 위험
+- API_STANDARDS 준수
+
+검증:
+- 용량 모니터링 테스트
+- 알림 발송 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 12-3:**
+
+- [ ] storage.monitor.ts 생성됨
+- [ ] 데이터베이스 용량 조회 구현됨
+- [ ] 파일 스토리지 용량 조회 구현됨
+- [ ] 80% 경고 알림 구현됨
+- [ ] 90% 위험 알림 구현됨
+- [ ] 관리자 대시보드에 용량 현황 추가됨
+- [ ] 용량 모니터링 테스트 성공
 
 ---
 
 ## 프롬프트 13: 장비 필수 필드 확장
 
+**참고**: 대부분의 필수 필드는 프롬프트 3에서 이미 구현되었습니다. 수리 이력 기능만 별도로 진행하세요.
+
+### 프롬프트 13-1: 장비 수리 이력 스키마
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 장비 등록 시 필수 필드를 확장해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 장비 수리 이력 기능을 구현해줘.
 
 요구사항:
-- 필수 필드 추가: 소프트웨어 버전, 펌웨어 버전, 장비타입, 시리얼넘버, 모델명, 검수보고서, 현재 위치, 교정일자, 교정결과, 보정계수, 차기 교정일, 중간점검일정, 장비 수리 내역
-- 기존 필드 중 필수로 변경: 모델명, 시리얼넘버, 제조사
-- 검수보고서는 파일 첨부
-- 장비 수리 내역은 별도 테이블로 관리 (이력)
+- 수리 이력 테이블 생성 (repair_history)
+  - equipmentId, repairDate, repairDescription, repairedBy
+  - repairCompany (외부 수리 시)
+  - cost, repairResult
+  - createdAt, createdBy
 
 파일:
-- packages/db/src/schema/equipment.ts (필수 필드 추가)
-- packages/db/src/schema/repair-history.ts (새 테이블: 수리 이력)
-- packages/schemas/src/equipment.ts (필수 필드 스키마 수정)
-- apps/backend/src/modules/equipment/dto/create-equipment.dto.ts (필수 필드 추가)
-- apps/frontend/components/equipment/EquipmentForm.tsx (필수 필드 UI)
-- apps/frontend/app/equipment/[id]/repair-history/page.tsx (수리 이력 페이지)
+- packages/db/src/schema/repair-history.ts (새 테이블)
+- apps/backend/drizzle/XXXX_create_repair_history_table.sql (마이그레이션)
 
 제약사항:
-- 기존 데이터 마이그레이션 필요 (기본값 설정)
+- 수리 이력은 영구 보관
 - API_STANDARDS 준수
-- 근본적 해결
-- 타입 안전성 보장
 
 검증:
-- 필수 필드 검증 테스트
-- 마이그레이션 테스트
-- 타입 체크 통과
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 13-1:**
+
+- [ ] repair-history.ts 테이블 생성됨
+- [ ] equipmentId, repairDate, repairDescription 필드 추가됨
+- [ ] repairCompany, cost, repairResult 필드 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 13-2: 수리 이력 백엔드 API
+
+```
+프롬프트 13-1 완료 후 진행. 수리 이력 API를 구현해줘.
+
+요구사항:
+- GET /equipment/:uuid/repair-history: 장비별 수리 이력 조회
+- POST /equipment/:uuid/repair-history: 수리 이력 등록
+- PATCH /repair-history/:uuid: 수리 이력 수정
+- DELETE /repair-history/:uuid: 수리 이력 삭제 (소프트 삭제)
+
+파일:
+- apps/backend/src/modules/equipment/repair-history.service.ts (새 서비스)
+- apps/backend/src/modules/equipment/repair-history.controller.ts (새 컨트롤러)
+- apps/backend/src/modules/equipment/dto/repair-history*.dto.ts (DTO 파일들)
+
+제약사항:
+- API_STANDARDS 준수
+
+검증:
+- pnpm test
+- pnpm test:e2e
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 13-2:**
+
+- [ ] repair-history.service.ts 생성됨
+- [ ] repair-history.controller.ts 생성됨
+- [ ] GET /equipment/:uuid/repair-history 엔드포인트 구현됨
+- [ ] POST /equipment/:uuid/repair-history 엔드포인트 구현됨
+- [ ] PATCH /repair-history/:uuid 엔드포인트 구현됨
+- [ ] DELETE /repair-history/:uuid 엔드포인트 구현됨 (소프트 삭제)
+- [ ] pnpm test 성공
+- [ ] pnpm test:e2e 성공
+
+### 프롬프트 13-3: 수리 이력 프론트엔드 UI
+
+```
+프롬프트 13-2 완료 후 진행. 수리 이력 UI를 구현해줘.
+
+요구사항:
+- 장비 상세 페이지에 수리 이력 탭 추가
+- 수리 이력 등록/수정 폼
+- 수리 이력 목록 (타임라인 형태)
+
+파일:
+- apps/frontend/app/equipment/[id]/repair-history/page.tsx (수리 이력 페이지)
+- apps/frontend/components/equipment/RepairHistoryTimeline.tsx (타임라인 컴포넌트)
+- apps/frontend/lib/api/repair-history-api.ts (API 함수)
+
+검증:
+- pnpm dev로 UI 확인
+- 수리 이력 CRUD 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 13-3:**
+
+- [ ] 장비 상세 페이지에 수리 이력 탭 추가됨
+- [ ] 수리 이력 등록/수정 폼 구현됨
+- [ ] RepairHistoryTimeline.tsx 컴포넌트 생성됨
+- [ ] 수리 이력 목록이 타임라인 형태로 표시됨
+- [ ] repair-history-api.ts 파일 생성됨
+- [ ] pnpm dev로 UI 정상 동작 확인됨
 
 ---
 
 ## 프롬프트 14: 감사 로그 시스템
 
+### 프롬프트 14-1: 감사 로그 스키마
+
 ```
-AGENTS.md와 API_STANDARDS.md를 참조하여 감사 로그 시스템을 구현해줘.
+AGENTS.md와 API_STANDARDS.md를 참조하여 감사 로그 스키마를 구현해줘.
 
 요구사항:
-- 모든 변경 사항 자동 기록 (언제, 누가, 어떤 작업을, 어떤 장비/요청에 대해, 어떻게 변경)
-- 로그 형식: "2025년 5월 09일 09:30, 홍석환(기술책임자)이 '네트워크 분석기(SUW-E0326)' 신규 등록 요청(요청 ID: REQ-124, 요청자: 권명준)을 '승인'함."
-- 로그 조회 기능 (필터링, 검색)
-- 로그 보관 (5년)
+- 감사 로그 테이블 (audit_logs)
+  - id, timestamp, userId, userName, userRole
+  - action: 'create' | 'update' | 'delete' | 'approve' | 'reject' | 'checkout' | 'return' 등
+  - entityType: 'equipment' | 'calibration' | 'checkout' | 'rental' 등
+  - entityId, entityName (예: 장비명)
+  - details: JSON (변경 전/후 값, 요청 ID 등)
+  - ipAddress (선택)
 
 파일:
-- packages/db/src/schema/audit-logs.ts (새 테이블: 감사 로그)
-- apps/backend/src/common/interceptors/audit.interceptor.ts (새 인터셉터)
-- apps/backend/src/modules/audit/audit.module.ts (새 모듈)
-- apps/backend/src/modules/audit/audit.service.ts (새 서비스)
-- apps/backend/src/modules/audit/audit.controller.ts (새 컨트롤러)
-- apps/frontend/app/admin/audit-logs/page.tsx (감사 로그 조회 페이지)
+- packages/db/src/schema/audit-logs.ts (새 테이블)
+- packages/schemas/src/enums.ts (AuditActionEnum, AuditEntityTypeEnum 추가)
+- apps/backend/drizzle/XXXX_create_audit_logs_table.sql (마이그레이션)
 
 제약사항:
-- 모든 중요한 작업에 로그 기록
-- 로그는 수정 불가 (읽기 전용)
+- 로그는 수정/삭제 불가 (INSERT만 허용)
+- 5년 보관
 - API_STANDARDS 준수
-- 성능 영향 최소화
 
 검증:
-- 로그 기록 테스트
-- 로그 조회 테스트
-- 성능 테스트
-- 타입 체크 통과
+- pnpm db:generate
+- pnpm db:migrate
+- pnpm tsc --noEmit
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
+
+**이행 체크리스트 14-1:**
+
+- [ ] packages/db/src/schema/audit-logs.ts 파일 생성됨
+- [ ] audit_logs 테이블 스키마 정의됨 (id, timestamp, userId, userName, userRole, action, entityType, entityId, entityName, details, ipAddress)
+- [ ] packages/schemas/src/enums.ts에 AuditActionEnum 추가됨
+- [ ] packages/schemas/src/enums.ts에 AuditEntityTypeEnum 추가됨
+- [ ] 마이그레이션 파일 생성됨
+- [ ] pnpm db:generate 성공
+- [ ] pnpm db:migrate 성공
+- [ ] pnpm tsc --noEmit 성공
+
+### 프롬프트 14-2: 감사 로그 인터셉터
+
+```
+프롬프트 14-1 완료 후 진행. 자동 로그 기록 인터셉터를 구현해줘.
+
+요구사항:
+- NestJS 인터셉터로 자동 로그 기록
+- @AuditLog() 데코레이터로 로그 대상 지정
+- 로그 형식 예시: "2025년 5월 09일 09:30, 홍석환(기술책임자)이 '네트워크 분석기(SUW-E0326)' 신규 등록 요청을 '승인'함."
+
+파일:
+- apps/backend/src/common/interceptors/audit.interceptor.ts (인터셉터)
+- apps/backend/src/common/decorators/audit-log.decorator.ts (데코레이터)
+- apps/backend/src/modules/audit/audit.module.ts (새 모듈)
+- apps/backend/src/modules/audit/audit.service.ts (새 서비스)
+
+제약사항:
+- 성능 영향 최소화 (비동기 기록)
+- 모든 주요 엔드포인트에 적용
+- API_STANDARDS 준수
+
+검증:
+- 인터셉터 동작 테스트
+- 성능 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 14-2:**
+
+- [ ] apps/backend/src/modules/audit/audit.module.ts 생성됨
+- [ ] apps/backend/src/modules/audit/audit.service.ts 생성됨
+- [ ] apps/backend/src/common/interceptors/audit.interceptor.ts 생성됨
+- [ ] apps/backend/src/common/decorators/audit-log.decorator.ts 생성됨
+- [ ] @AuditLog() 데코레이터 동작 확인됨
+- [ ] 인터셉터가 비동기로 로그 기록함
+- [ ] 주요 엔드포인트에 데코레이터 적용됨
+- [ ] pnpm test로 테스트 통과됨
+
+### 프롬프트 14-3: 감사 로그 조회 API 및 UI
+
+```
+프롬프트 14-2 완료 후 진행. 감사 로그 조회 기능을 구현해줘.
+
+요구사항:
+- GET /audit-logs: 로그 목록 조회 (필터: userId, entityType, action, dateRange)
+- 페이지네이션 지원
+- 관리자 전용 조회 페이지
+
+파일:
+- apps/backend/src/modules/audit/audit.controller.ts (조회 API)
+- apps/frontend/app/admin/audit-logs/page.tsx (조회 페이지)
+- apps/frontend/lib/api/audit-api.ts (API 함수)
+
+제약사항:
+- site_admin만 조회 가능
+- API_STANDARDS 준수
+
+검증:
+- 로그 조회 테스트
+- 필터링 테스트
+- 권한 테스트
+
+완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
+```
+
+**이행 체크리스트 14-3:**
+
+- [ ] apps/backend/src/modules/audit/audit.controller.ts 생성됨
+- [ ] GET /audit-logs 엔드포인트 구현됨
+- [ ] 필터링 기능 구현됨 (userId, entityType, action, dateRange)
+- [ ] 페이지네이션 지원됨
+- [ ] site_admin 권한 체크 적용됨
+- [ ] apps/frontend/app/admin/audit-logs/page.tsx 생성됨
+- [ ] apps/frontend/lib/api/audit-api.ts 생성됨
+- [ ] pnpm dev로 조회 페이지 정상 동작 확인됨
+- [ ] 권한 없는 사용자 접근 시 403 반환됨
 
 ---
 
 ## 구현 순서 권장사항
 
-### 1단계: 인프라 (필수)
+각 프롬프트는 세부 단계로 분할되어 있습니다. 순서대로 진행하세요.
 
-- 프롬프트 1: 사용자 역할 시스템 개선
-- 프롬프트 2: 사이트별 권한 관리
+### 1단계: 인프라 (필수) - 완료
+
+- 프롬프트 1: 사용자 역할 시스템 개선 ✅
+- 프롬프트 2: 사이트별 권한 관리 ✅
+- 프롬프트 2.5: 장비-팀 스키마 일치화 ✅
 
 ### 2단계: 승인 프로세스 (핵심)
 
-- 프롬프트 3: 장비 등록/수정/삭제 승인 프로세스
-- 프롬프트 4: 교정 관리 승인 프로세스
-- 프롬프트 5: 반입 프로세스 개선
+- 프롬프트 3: 장비 등록/수정/삭제 승인 프로세스 ✅
+- 프롬프트 4: 교정 관리 승인 프로세스 (4-1 → 4-2 → 4-3 → 4-4)
+- 프롬프트 5: 반입 프로세스 개선 (5-1 → 5-2 → 5-3 → 5-4)
 
 ### 3단계: 고급 기능
 
-- 프롬프트 6: 보정계수 관리
-- 프롬프트 7: 부적합 장비 관리
-- 프롬프트 11: 중간점검 알림
+- 프롬프트 6: 보정계수 관리 (6-1 → 6-2 → 6-3)
+- 프롬프트 7: 부적합 장비 관리 (7-1 → 7-2 → 7-3)
+- 프롬프트 11: 중간점검 알림 (4-4에 통합됨)
 
 ### 4단계: 관리 기능
 
-- 프롬프트 8: 공용장비 관리
-- 프롬프트 9: 소프트웨어 관리대장
-- 프롬프트 10: 교정계획서
+- 프롬프트 8: 공용장비 관리 (8-1 → 8-2 → 8-3)
+- 프롬프트 9: 소프트웨어 관리대장 (9-1 → 9-2 → 9-3)
+- 프롬프트 10: 교정계획서 (10-1 → 10-2 → 10-3)
 
 ### 5단계: 데이터 관리
 
-- 프롬프트 12: 데이터 보관 및 백업 정책
-- 프롬프트 14: 감사 로그 시스템
+- 프롬프트 12: 데이터 보관 및 백업 정책 (12-1 → 12-2 → 12-3)
+- 프롬프트 13: 장비 수리 이력 (13-1 → 13-2 → 13-3)
+- 프롬프트 14: 감사 로그 시스템 (14-1 → 14-2 → 14-3)
+
+### 세부 단계 진행 가이드
+
+1. **스키마 단계 (-1)**: 데이터베이스 스키마 및 마이그레이션
+
+   - 검증: `pnpm db:generate`, `pnpm db:migrate`, `pnpm tsc --noEmit`
+
+2. **백엔드 단계 (-2)**: API 엔드포인트 및 서비스 로직
+
+   - 검증: `pnpm test`, `pnpm test:e2e`
+
+3. **프론트엔드 단계 (-3)**: UI 컴포넌트 및 페이지
+
+   - 검증: `pnpm dev`로 UI 확인
+
+4. **추가 기능 단계 (-4)**: 알림, 스케줄러 등 부가 기능
 
 ---
 
