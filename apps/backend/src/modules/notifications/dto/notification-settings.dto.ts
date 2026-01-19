@@ -59,6 +59,24 @@ export class NotificationSettingsDto {
   @IsBoolean()
   @IsOptional()
   @ApiProperty({
+    description: '중간점검 알림',
+    default: true,
+    required: false,
+  })
+  intermediateCheckEnabled?: boolean = true;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({
+    description: '교정 승인 알림',
+    default: true,
+    required: false,
+  })
+  calibrationApprovalEnabled?: boolean = true;
+
+  @IsBoolean()
+  @IsOptional()
+  @ApiProperty({
     description: '대여 요청 알림',
     default: true,
     required: false,

@@ -359,6 +359,133 @@ export class NotificationsService {
     });
   }
 
+  // 중간점검 알림 생성
+  async createIntermediateCheckNotification(
+    calibrationId: string,
+    equipmentId: string,
+    recipientId: string,
+    days: number,
+    equipmentName: string
+  ) {
+    const title = `중간점검 예정 알림: ${equipmentName}`;
+    const content = `${equipmentName} 장비의 중간점검이 ${days}일 후로 예정되어 있습니다.`;
+
+    const newNotification = {
+      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      content,
+      type: NotificationTypeEnum.INTERMEDIATE_CHECK_DUE,
+      priority: NotificationPriorityEnum.MEDIUM,
+      recipientId,
+      isTeamNotification: false,
+      equipmentId,
+      calibrationId,
+      rentalId: null,
+      linkUrl: `/calibration/${calibrationId}`,
+      isRead: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    notifications.push(newNotification);
+    return newNotification;
+  }
+
+  // 교정 승인 대기 알림 생성
+  async createCalibrationApprovalPendingNotification(
+    calibrationId: string,
+    equipmentId: string,
+    approverId: string,
+    equipmentName: string,
+    requesterName: string
+  ) {
+    const title = `교정 승인 요청: ${equipmentName}`;
+    const content = `${requesterName}님이 ${equipmentName} 장비의 교정 기록을 등록했습니다. 검토 후 승인해주세요.`;
+
+    const newNotification = {
+      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      content,
+      type: NotificationTypeEnum.CALIBRATION_APPROVAL_PENDING,
+      priority: NotificationPriorityEnum.HIGH,
+      recipientId: approverId,
+      isTeamNotification: false,
+      equipmentId,
+      calibrationId,
+      rentalId: null,
+      linkUrl: `/admin/calibration-approvals`,
+      isRead: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    notifications.push(newNotification);
+    return newNotification;
+  }
+
+  // 교정 승인 완료 알림 생성
+  async createCalibrationApprovedNotification(
+    calibrationId: string,
+    equipmentId: string,
+    userId: string,
+    equipmentName: string
+  ) {
+    const title = `교정 승인 완료: ${equipmentName}`;
+    const content = `${equipmentName} 장비의 교정 기록이 승인되었습니다.`;
+
+    const newNotification = {
+      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      content,
+      type: NotificationTypeEnum.CALIBRATION_APPROVED,
+      priority: NotificationPriorityEnum.MEDIUM,
+      recipientId: userId,
+      isTeamNotification: false,
+      equipmentId,
+      calibrationId,
+      rentalId: null,
+      linkUrl: `/calibration/${calibrationId}`,
+      isRead: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    notifications.push(newNotification);
+    return newNotification;
+  }
+
+  // 교정 반려 알림 생성
+  async createCalibrationRejectedNotification(
+    calibrationId: string,
+    equipmentId: string,
+    userId: string,
+    equipmentName: string,
+    reason: string
+  ) {
+    const title = `교정 반려: ${equipmentName}`;
+    const content = `${equipmentName} 장비의 교정 기록이 반려되었습니다. 사유: ${reason}`;
+
+    const newNotification = {
+      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title,
+      content,
+      type: NotificationTypeEnum.CALIBRATION_REJECTED,
+      priority: NotificationPriorityEnum.HIGH,
+      recipientId: userId,
+      isTeamNotification: false,
+      equipmentId,
+      calibrationId,
+      rentalId: null,
+      linkUrl: `/calibration/${calibrationId}`,
+      isRead: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    notifications.push(newNotification);
+    return newNotification;
+  }
+
   // 대여 요청 알림 생성
   async createRentalRequestNotification(
     rentalId: string,
@@ -593,6 +720,12 @@ export class NotificationsService {
         return settings.calibrationDueEnabled;
       case NotificationTypeEnum.CALIBRATION_COMPLETED:
         return settings.calibrationCompletedEnabled;
+      case NotificationTypeEnum.INTERMEDIATE_CHECK_DUE:
+        return (settings as any).intermediateCheckEnabled ?? true;
+      case NotificationTypeEnum.CALIBRATION_APPROVAL_PENDING:
+      case NotificationTypeEnum.CALIBRATION_APPROVED:
+      case NotificationTypeEnum.CALIBRATION_REJECTED:
+        return (settings as any).calibrationApprovalEnabled ?? true;
       case NotificationTypeEnum.RENTAL_REQUEST:
         return settings.rentalRequestEnabled;
       case NotificationTypeEnum.RENTAL_APPROVED:
@@ -600,11 +733,11 @@ export class NotificationsService {
       case NotificationTypeEnum.RENTAL_REJECTED:
         return settings.rentalRejectedEnabled;
       case NotificationTypeEnum.RETURN_REQUESTED:
-        return settings.returnRequestedEnabled ?? true; // 기본값은 true
+        return settings.returnRequestedEnabled ?? true;
       case NotificationTypeEnum.RETURN_APPROVED:
-        return settings.returnApprovedEnabled ?? true; // 기본값은 true
+        return settings.returnApprovedEnabled ?? true;
       case NotificationTypeEnum.RETURN_REJECTED:
-        return settings.returnRejectedEnabled ?? true; // 기본값은 true
+        return settings.returnRejectedEnabled ?? true;
       case NotificationTypeEnum.EQUIPMENT_MAINTENANCE:
       case NotificationTypeEnum.MAINTENANCE:
         return settings.maintenanceEnabled;

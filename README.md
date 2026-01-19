@@ -1,8 +1,14 @@
 # 장비 관리 시스템 (Equipment Management System)
 
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-orange)
+![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green)
+![pnpm](https://img.shields.io/badge/pnpm-%3E%3D10.0.0-yellow)
+
 기업의 장비 대여, 교정, 반출 관리를 위한 종합 웹 애플리케이션
 
-## 📋 목차
+## 목차
 
 - [개요](#개요)
 - [주요 기능](#주요-기능)
@@ -10,7 +16,10 @@
 - [시작하기](#시작하기)
 - [프로젝트 구조](#프로젝트-구조)
 - [개발 가이드](#개발-가이드)
-- [문서](#문서)
+- [API 문서](#api-문서)
+- [환경 변수](#환경-변수)
+- [트러블슈팅](#트러블슈팅)
+- [기여하기](#기여하기)
 
 ---
 
@@ -20,41 +29,46 @@
 
 ### 주요 특징
 
-- 🏢 **팀별 장비 관리**: RF팀, SAR팀, EMC팀, Automotive팀 등 팀별 장비 구분
-- 📦 **대여/반출 관리**: 장비 대여 신청, 승인, 반납 프로세스 자동화
-- 🔧 **교정 관리**: 교정 주기 추적, 알림, 이력 관리
-- 📊 **대시보드**: 실시간 장비 현황 및 통계
-- 🔐 **권한 관리**: 역할 기반 접근 제어 (RBAC)
-- 🌐 **다국어 지원**: 한국어/영어 (i18n)
+- **팀별 장비 관리**: RF팀, SAR팀, EMC팀, Automotive팀 등 팀별 장비 구분
+- **대여/반출 관리**: 장비 대여 신청, 승인, 반납 프로세스 자동화
+- **교정 관리**: 교정 주기 추적, 알림, 이력 관리
+- **대시보드**: 실시간 장비 현황 및 통계
+- **권한 관리**: 역할 기반 접근 제어 (RBAC) + Azure AD 인증
+- **다국어 지원**: 한국어/영어 (i18n)
 
 ---
 
 ## 주요 기능
 
-### 1. 장비 관리
+### 장비 관리
+
 - 장비 등록, 수정, 삭제
 - 상세 정보 조회 (모델명, 제조사, 일련번호 등)
 - 장비 검색 및 필터링
 - 장비 상태 추적 (사용 가능, 대여 중, 반출 중, 교정 중 등)
 
-### 2. 대여 관리
+### 대여 관리
+
 - 장비 대여 신청
 - 대여 승인/거부 프로세스
 - 반납 기한 관리
 - 대여 이력 조회
 
-### 3. 반출 관리
+### 반출 관리
+
 - 장비 반출 등록
 - 반출 장소 및 담당자 관리
 - 반출 장비 목록 관리
 
-### 4. 교정 관리
+### 교정 관리
+
 - 교정 주기 설정
 - 교정 예정 알림
 - 교정 이력 관리
 - 교정 기한 초과 알림
 
-### 5. 대시보드
+### 대시보드
+
 - 장비 통계 (총 장비, 사용 가능, 대여 중 등)
 - 팀별 장비 현황
 - 최근 활동 내역
@@ -64,34 +78,39 @@
 
 ## 기술 스택
 
-### 프론트엔드
-- **프레임워크**: Next.js 14 (App Router)
-- **언어**: TypeScript
-- **UI**: ShadCN/UI, TailwindCSS
-- **상태 관리**: 
-  - TanStack Query (서버 상태)
-  - Zustand (클라이언트 상태)
-- **폼 관리**: React Hook Form + Zod
-- **국제화**: next-intl
+### Frontend
 
-### 백엔드
-- **프레임워크**: NestJS 10
-- **언어**: TypeScript
-- **API**: RESTful API
-- **인증**: JWT
-- **권한**: 역할 기반 접근 제어 (RBAC)
-- **문서화**: Swagger/OpenAPI
+| 기술            | 버전   | 용도                          |
+| --------------- | ------ | ----------------------------- |
+| Next.js         | 14.0.3 | React 프레임워크 (App Router) |
+| TypeScript      | 5.x    | 타입 안전성                   |
+| TailwindCSS     | -      | 스타일링                      |
+| Radix UI        | -      | 헤드리스 UI 컴포넌트          |
+| TanStack Query  | 5.0    | 서버 상태 관리                |
+| React Hook Form | 7.48   | 폼 관리                       |
+| Zod             | -      | 스키마 검증                   |
+| next-intl       | 4.7    | 국제화                        |
 
-### 데이터베이스
-- **RDBMS**: PostgreSQL 15
-- **ORM**: Drizzle ORM
-- **마이그레이션**: Drizzle Kit
-- **캐싱**: Redis
+### Backend
 
-### 인프라
-- **모노레포**: pnpm + Turborepo
-- **컨테이너**: Docker
-- **CI/CD**: GitHub Actions
+| 기술        | 버전 | 용도                 |
+| ----------- | ---- | -------------------- |
+| NestJS      | 10.x | Node.js 프레임워크   |
+| TypeScript  | 5.x  | 타입 안전성          |
+| Drizzle ORM | -    | 데이터베이스 ORM     |
+| Passport    | -    | 인증 (JWT, Azure AD) |
+| Swagger     | 7.x  | API 문서화           |
+| Winston     | 3.x  | 로깅                 |
+
+### Database & Infrastructure
+
+| 기술       | 버전   | 용도                 |
+| ---------- | ------ | -------------------- |
+| PostgreSQL | 15     | 주 데이터베이스      |
+| Redis      | Alpine | 캐싱                 |
+| Docker     | -      | 컨테이너화           |
+| Turborepo  | 1.13   | 모노레포 빌드 시스템 |
+| pnpm       | 10.7   | 패키지 매니저        |
 
 ---
 
@@ -102,7 +121,6 @@
 - Node.js 18+
 - pnpm 10+
 - Docker & Docker Compose
-- PostgreSQL 15 (Docker로 실행 가능)
 
 ### 설치
 
@@ -130,11 +148,14 @@ cd ../..
 pnpm dev
 ```
 
-### 접속
+### 접속 URL
 
-- **프론트엔드**: http://localhost:3000
-- **백엔드 API**: http://localhost:3001/api
-- **API 문서**: http://localhost:3001/api/docs
+| 서비스             | URL                            |
+| ------------------ | ------------------------------ |
+| 프론트엔드         | http://localhost:3000          |
+| 백엔드 API         | http://localhost:3001/api      |
+| API 문서 (Swagger) | http://localhost:3001/api/docs |
+| Drizzle Studio     | `pnpm db:studio` 실행 후 접속  |
 
 ---
 
@@ -143,42 +164,44 @@ pnpm dev
 ```
 equipment-management-system/
 ├── apps/
-│   ├── backend/          # NestJS 백엔드
+│   ├── backend/              # NestJS 백엔드
 │   │   ├── src/
-│   │   │   ├── modules/  # 기능별 모듈
-│   │   │   ├── database/ # 데이터베이스 관련
-│   │   │   └── common/   # 공통 유틸리티
-│   │   └── drizzle/      # 마이그레이션 파일
+│   │   │   ├── modules/      # 기능별 모듈 (equipment, rental, calibration 등)
+│   │   │   ├── database/     # 데이터베이스 설정 및 마이그레이션
+│   │   │   └── common/       # 공통 유틸리티, 가드, 데코레이터
+│   │   └── test/             # E2E 테스트
 │   │
-│   └── frontend/         # Next.js 프론트엔드
-│       ├── app/          # App Router 페이지
-│       ├── components/   # UI 컴포넌트
-│       ├── lib/          # 유틸리티 함수
-│       └── hooks/        # 커스텀 훅
+│   ├── frontend/             # Next.js 프론트엔드
+│   │   ├── app/              # App Router 페이지
+│   │   ├── components/       # UI 컴포넌트
+│   │   ├── lib/              # API 클라이언트, 유틸리티
+│   │   └── hooks/            # 커스텀 훅
+│   │
+│   └── server/               # 추가 서버 (선택적)
 │
 ├── packages/
-│   ├── schemas/          # 공유 데이터 스키마
-│   ├── api-client/       # API 클라이언트
-│   └── ui/               # 공유 UI 컴포넌트
+│   ├── db/                   # Drizzle ORM 스키마 및 마이그레이션
+│   ├── schemas/              # Zod 스키마 (프론트엔드/백엔드 공유)
+│   ├── api-client/           # 타입 안전한 API 클라이언트
+│   └── ui/                   # 공유 UI 컴포넌트
 │
-└── docs/                 # 프로젝트 문서
+├── docker/                   # Docker 설정 파일
+├── docs/                     # 프로젝트 문서
+└── scripts/                  # 유틸리티 스크립트
 ```
 
 ---
 
 ## 개발 가이드
 
-### 스크립트
+### 주요 스크립트
 
 ```bash
-# 개발 서버 실행
+# 개발 서버 (모든 앱)
 pnpm dev
 
 # 빌드
 pnpm build
-
-# 프로덕션 서버 실행
-pnpm start
 
 # 린트
 pnpm lint
@@ -186,11 +209,18 @@ pnpm lint
 # 테스트
 pnpm test
 
-# Docker 관리
-pnpm docker:up      # 컨테이너 시작
-pnpm docker:down    # 컨테이너 중지
-pnpm docker:logs    # 로그 확인
-pnpm docker:clean   # 모든 컨테이너 및 볼륨 제거
+# 타입 체크
+pnpm type-check
+```
+
+### Docker 명령어
+
+```bash
+pnpm docker:up       # 컨테이너 시작
+pnpm docker:down     # 컨테이너 중지
+pnpm docker:logs     # 로그 확인
+pnpm docker:restart  # 컨테이너 재시작
+pnpm docker:clean    # 컨테이너 및 볼륨 완전 삭제
 ```
 
 ### 데이터베이스 작업
@@ -198,128 +228,108 @@ pnpm docker:clean   # 모든 컨테이너 및 볼륨 제거
 ```bash
 cd apps/backend
 
-# 마이그레이션 생성
-pnpm db:generate
-
-# 마이그레이션 적용
-pnpm db:migrate
-
-# Drizzle Studio 실행 (GUI)
-pnpm db:studio
+pnpm db:generate     # 마이그레이션 파일 생성
+pnpm db:migrate      # 마이그레이션 적용
+pnpm db:studio       # Drizzle Studio GUI 실행
 ```
 
-### 브랜치 전략
+### 커밋 컨벤션
 
-- `main`: 프로덕션 릴리스
-- `develop`: 개발 브랜치
-- `feature/*`: 새 기능 개발
-- `fix/*`: 버그 수정
+```
+<타입>(<범위>): <제목>
+
+예: feat(equipment): 장비 검색 기능 추가
+예: fix(rental): 대여 반납 날짜 버그 수정
+```
+
+**타입**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
 ---
 
-## 문서
+## API 문서
 
-### 주요 문서
+개발 서버 실행 후 Swagger UI에서 전체 API 문서를 확인할 수 있습니다:
 
-- [프로젝트 분석 보고서](./PROJECT_ANALYSIS.md) - 현재 상태 및 문제점 분석
-- [마이그레이션 가이드](./MIGRATION_GUIDE.md) - 리팩토링 변경 사항
-- [다음 단계](./NEXT_STEPS.md) - 앞으로 해야 할 작업
-- [백엔드 가이드](./apps/backend/README.md) - 백엔드 개발 가이드
+**http://localhost:3001/api/docs**
 
-### API 문서
+### 주요 엔드포인트
 
-개발 서버 실행 후 Swagger UI에서 확인:
-- http://localhost:3001/api/docs
-
-### 코드 규칙
-
-프로젝트는 다음 코드 스타일을 따릅니다:
-
-- **명명 규칙**:
-  - 변수/함수: camelCase
-  - 클래스/인터페이스: PascalCase
-  - 상수: UPPER_SNAKE_CASE
-  - 파일명: kebab-case (컴포넌트는 PascalCase)
-
-- **커밋 메시지**:
-  ```
-  <타입>(<범위>): <제목>
-  
-  예: feat(equipment): 장비 검색 기능 추가
-  ```
+| 메서드 | 경로               | 설명           |
+| ------ | ------------------ | -------------- |
+| GET    | /api/equipment     | 장비 목록 조회 |
+| POST   | /api/equipment     | 장비 등록      |
+| GET    | /api/equipment/:id | 장비 상세 조회 |
+| GET    | /api/rentals       | 대여 목록 조회 |
+| POST   | /api/rentals       | 대여 신청      |
+| GET    | /api/calibrations  | 교정 목록 조회 |
 
 ---
 
 ## 환경 변수
 
-주요 환경 변수 목록:
+| 변수명               | 설명                   | 필수 | 예시                   |
+| -------------------- | ---------------------- | ---- | ---------------------- |
+| `NODE_ENV`           | 실행 환경              | Y    | `development`          |
+| `PORT`               | 백엔드 포트            | Y    | `3001`                 |
+| `DB_HOST`            | PostgreSQL 호스트      | Y    | `localhost`            |
+| `DB_PORT`            | PostgreSQL 포트        | Y    | `5433`                 |
+| `DB_USER`            | PostgreSQL 사용자      | Y    | `postgres`             |
+| `DB_PASSWORD`        | PostgreSQL 비밀번호    | Y    | `postgres`             |
+| `DB_NAME`            | 데이터베이스명         | Y    | `equipment_management` |
+| `REDIS_HOST`         | Redis 호스트           | N    | `localhost`            |
+| `REDIS_PORT`         | Redis 포트             | N    | `6380`                 |
+| `JWT_SECRET`         | JWT 서명 키            | Y    | `your-secret-key`      |
+| `JWT_EXPIRATION`     | JWT 만료 시간          | N    | `1d`                   |
+| `AZURE_AD_CLIENT_ID` | Azure AD 클라이언트 ID | N    | -                      |
+| `AZURE_AD_TENANT_ID` | Azure AD 테넌트 ID     | N    | -                      |
 
-```env
-# 데이터베이스
-DATABASE_URL=postgresql://user:pass@host:5432/dbname
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=equipment_management
-DB_USER=postgres
-DB_PASSWORD=postgres
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# 백엔드
-PORT=3001
-NODE_ENV=development
-
-# 프론트엔드
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-FRONTEND_URL=http://localhost:3000
-
-# JWT
-JWT_SECRET=your-secret-key
-JWT_EXPIRES_IN=24h
-```
-
-자세한 내용은 `.env.example` 파일을 참조하세요.
+전체 목록은 `.env.example` 파일을 참조하세요.
 
 ---
 
-## 문제 해결
+## 트러블슈팅
 
-### 일반적인 문제
+### 포트 충돌
 
-#### 데이터베이스 연결 실패
+**문제:** `Error: listen EADDRINUSE: address already in use`
 
 ```bash
-# Docker 컨테이너 확인
+# 사용 중인 포트 확인
+lsof -i :3000
+lsof -i :3001
+
+# 프로세스 종료
+kill -9 <PID>
+```
+
+### 데이터베이스 연결 실패
+
+```bash
+# Docker 컨테이너 상태 확인
 docker ps
 
 # PostgreSQL 컨테이너 재시작
 docker restart postgres_equipment
 
-# 연결 테스트
-psql -h localhost -U postgres -d equipment_management
+# 연결 테스트 (포트 5433 사용)
+psql -h localhost -p 5433 -U postgres -d equipment_management
 ```
 
-#### 의존성 문제
+### 의존성 문제
 
 ```bash
-# pnpm 캐시 정리
-pnpm store prune
-
 # node_modules 재설치
 rm -rf node_modules
+rm -rf apps/*/node_modules
+rm -rf packages/*/node_modules
 pnpm install
 ```
 
-#### 빌드 오류
+### 빌드 오류
 
 ```bash
-# Turbo 캐시 정리
+# Turbo 캐시 정리 후 재빌드
 rm -rf .turbo
-
-# 전체 재빌드
-pnpm clean
-pnpm install
 pnpm build
 ```
 
@@ -327,28 +337,18 @@ pnpm build
 
 ## 기여하기
 
-1. 이 저장소를 Fork
+1. Fork
 2. Feature 브랜치 생성 (`git checkout -b feature/amazing-feature`)
-3. 변경사항 커밋 (`git commit -m 'feat: Add amazing feature'`)
-4. 브랜치에 Push (`git push origin feature/amazing-feature`)
+3. 커밋 (`git commit -m 'feat: Add amazing feature'`)
+4. Push (`git push origin feature/amazing-feature`)
 5. Pull Request 생성
-
-코드 리뷰 후 병합됩니다.
 
 ---
 
 ## 라이선스
 
-이 프로젝트는 MIT 라이선스 하에 있습니다.
+MIT License. [LICENSE](LICENSE) 파일 참조.
 
 ---
 
-## 연락처
-
-- **프로젝트 관리자**: [이름]
-- **이메일**: [이메일]
-- **이슈 트래커**: [GitHub Issues URL]
-
----
-
-**마지막 업데이트**: 2026-01-15
+**마지막 업데이트**: 2026-01-19

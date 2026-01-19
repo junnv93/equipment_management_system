@@ -12,6 +12,10 @@ import { ApiProperty } from '@nestjs/swagger';
 export enum NotificationTypeEnum {
   CALIBRATION_DUE = 'calibration_due',
   CALIBRATION_COMPLETED = 'calibration_completed',
+  CALIBRATION_APPROVAL_PENDING = 'calibration_approval_pending', // 교정 승인 대기
+  CALIBRATION_APPROVED = 'calibration_approved', // 교정 승인됨
+  CALIBRATION_REJECTED = 'calibration_rejected', // 교정 반려됨
+  INTERMEDIATE_CHECK_DUE = 'intermediate_check_due', // 중간점검 예정
   RENTAL_REQUEST = 'rental_request',
   RENTAL_APPROVED = 'rental_approved',
   RENTAL_REJECTED = 'rental_rejected',
