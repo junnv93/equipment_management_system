@@ -87,6 +87,12 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
     default: 20,
   })
   pageSize?: number;
+
+  @ApiPropertyOptional({
+    description: '공용장비 필터 (true: 공용장비만, false: 일반장비만)',
+    example: true,
+  })
+  isShared?: boolean;
 }
 
 // Zod 검증 파이프 생성

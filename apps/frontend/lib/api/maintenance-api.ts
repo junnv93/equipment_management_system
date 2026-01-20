@@ -27,9 +27,6 @@ export interface Maintenance {
   updatedAt: string;
 }
 
-// ✅ Single Source of Truth: 공통 타입 사용
-import type { PaginatedResponse } from './types';
-
 export interface MaintenanceQuery {
   page?: number;
   pageSize?: number;

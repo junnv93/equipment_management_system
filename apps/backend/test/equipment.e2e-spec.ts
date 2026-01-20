@@ -112,6 +112,7 @@ describe('EquipmentController (e2e)', () => {
         managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
         status: 'available',
         site: 'suwon', // ✅ site 필드 추가 (필수)
+        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       };
 
       const response = await request(app.getHttpServer())
@@ -166,6 +167,7 @@ describe('EquipmentController (e2e)', () => {
         technicalManager: 'Test Manager',
         status: 'available',
         site: 'suwon', // ✅ site 필드 추가 (필수)
+        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       };
 
       const response = await request(app.getHttpServer())
@@ -205,6 +207,7 @@ describe('EquipmentController (e2e)', () => {
         managementNumber,
         status: 'available',
         site: 'suwon', // ✅ site 필드 추가 (필수)
+        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       };
 
       // 첫 번째 장비 생성
@@ -343,6 +346,7 @@ describe('EquipmentController (e2e)', () => {
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
           site: 'suwon', // ✅ site 필드 추가 (필수)
+          approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         })
         .expect(201);
 
@@ -387,6 +391,7 @@ describe('EquipmentController (e2e)', () => {
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
           site: 'suwon', // ✅ site 필드 추가 (필수)
+          approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         })
         .expect(201);
 
@@ -399,6 +404,7 @@ describe('EquipmentController (e2e)', () => {
         status: 'in_use' as const, // API 표준 상태값: 사용 중
         description: 'Updated Description',
         location: 'Updated Location',
+        approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
       };
 
       const response = await request(app.getHttpServer())
@@ -424,6 +430,7 @@ describe('EquipmentController (e2e)', () => {
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
           site: 'suwon', // ✅ site 필드 추가 (필수)
+          approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         })
         .expect(201);
 
@@ -438,6 +445,7 @@ describe('EquipmentController (e2e)', () => {
         calibrationAgency: 'Test Agency',
         needsIntermediateCheck: true,
         calibrationMethod: 'external_calibration',
+        approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
       };
 
       const response = await request(app.getHttpServer())
@@ -461,6 +469,7 @@ describe('EquipmentController (e2e)', () => {
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
           site: 'suwon', // ✅ site 필드 추가 (필수)
+          approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         })
         .expect(201);
 
@@ -515,16 +524,19 @@ describe('EquipmentController (e2e)', () => {
           managementNumber: `MN-${crypto.randomBytes(8).toString('hex')}`,
           status: 'available',
           site: 'suwon', // ✅ site 필드 추가 (필수)
+          approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         })
         .expect(201);
 
       const equipmentUuid = createResponse.body.uuid;
 
-      // 장비 삭제 (UUID 사용)
-      await request(app.getHttpServer())
+      // 장비 삭제 (UUID 사용) - 관리자 직접 삭제는 202 Accepted 반환
+      const deleteResponse = await request(app.getHttpServer())
         .delete(`/equipment/${equipmentUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
+        .expect(202);
+
+      expect(deleteResponse.body).toHaveProperty('message', '장비가 삭제되었습니다.');
 
       // 삭제 후 조회 시 404 확인
       await request(app.getHttpServer())
@@ -558,6 +570,7 @@ describe('EquipmentController (e2e)', () => {
         location: 'CRUD Location',
         status: 'available',
         site: 'suwon', // ✅ site 필드 추가 (필수)
+        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       };
 
       const createResponse = await request(app.getHttpServer())
@@ -587,6 +600,7 @@ describe('EquipmentController (e2e)', () => {
         name: 'Updated CRUD Equipment Name',
         location: 'Updated CRUD Location',
         status: 'in_use' as const, // API 표준 상태값: 사용 중
+        approvalStatus: 'approved', // ✅ 관리자 직접 수정 (E2E 테스트용)
       };
 
       const updateResponse = await request(app.getHttpServer())
@@ -611,11 +625,13 @@ describe('EquipmentController (e2e)', () => {
       expect(foundEquipment).toBeDefined();
       expect(foundEquipment.name).toBe(updateData.name);
 
-      // 5. DELETE (UUID 사용)
-      await request(app.getHttpServer())
+      // 5. DELETE (UUID 사용) - 관리자 직접 삭제는 202 Accepted 반환
+      const deleteResponse = await request(app.getHttpServer())
         .delete(`/equipment/${equipmentUuid}`)
         .set('Authorization', `Bearer ${accessToken}`)
-        .expect(200);
+        .expect(202);
+
+      expect(deleteResponse.body).toHaveProperty('message', '장비가 삭제되었습니다.');
 
       // 삭제 확인
       await request(app.getHttpServer())

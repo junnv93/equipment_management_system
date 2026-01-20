@@ -51,7 +51,7 @@ export class EquipmentApprovalService {
       });
 
       // 사용자가 없으면 기본 관리자 사용 (테스트 환경 대응)
-      const validRequestedBy = user ? requestedBy : '00000000-0000-0000-0000-000000000001';
+      const validRequestedBy = user ? requestedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
       // 요청 데이터를 JSON으로 직렬화
       const requestData = JSON.stringify(createDto);
@@ -114,7 +114,7 @@ export class EquipmentApprovalService {
       const user = await this.db.query.users.findFirst({
         where: eq(users.id, requestedBy),
       });
-      const validRequestedBy = user ? requestedBy : '00000000-0000-0000-0000-000000000001';
+      const validRequestedBy = user ? requestedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
       // 요청 생성
       const [request] = await this.db
@@ -173,7 +173,7 @@ export class EquipmentApprovalService {
       const user = await this.db.query.users.findFirst({
         where: eq(users.id, requestedBy),
       });
-      const validRequestedBy = user ? requestedBy : '00000000-0000-0000-0000-000000000001';
+      const validRequestedBy = user ? requestedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
       // 요청 생성
       const [request] = await this.db
@@ -337,7 +337,7 @@ export class EquipmentApprovalService {
       const approver = await this.db.query.users.findFirst({
         where: eq(users.id, approvedBy),
       });
-      const validApprovedBy = approver ? approvedBy : '00000000-0000-0000-0000-000000000001';
+      const validApprovedBy = approver ? approvedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
       // 요청 상태 업데이트
       const [updated] = await this.db
@@ -403,7 +403,7 @@ export class EquipmentApprovalService {
       const approver = await this.db.query.users.findFirst({
         where: eq(users.id, approvedBy),
       });
-      const validApprovedBy = approver ? approvedBy : '00000000-0000-0000-0000-000000000001';
+      const validApprovedBy = approver ? approvedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
       // 요청 상태 업데이트
       const [updated] = await this.db

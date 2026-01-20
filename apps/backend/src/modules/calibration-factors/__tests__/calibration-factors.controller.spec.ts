@@ -1,0 +1,262 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { CalibrationFactorsController } from '../calibration-factors.controller';
+import { CalibrationFactorsService } from '../calibration-factors.service';
+import { CalibrationFactorType } from '../dto/create-calibration-factor.dto';
+import { CalibrationFactorApprovalStatus } from '../dto/calibration-factor-query.dto';
+
+describe('CalibrationFactorsController', () => {
+  let controller: CalibrationFactorsController;
+  let service: CalibrationFactorsService;
+
+  const mockCalibrationFactorsService = {
+    create: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    findByEquipment: jest.fn(),
+    getRegistry: jest.fn(),
+    findPendingApprovals: jest.fn(),
+    approve: jest.fn(),
+    reject: jest.fn(),
+    remove: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [CalibrationFactorsController],
+      providers: [
+        {
+          provide: CalibrationFactorsService,
+          useValue: mockCalibrationFactorsService,
+        },
+      ],
+    }).compile();
+
+    controller = module.get<CalibrationFactorsController>(CalibrationFactorsController);
+    service = module.get<CalibrationFactorsService>(CalibrationFactorsService);
+
+    jest.clearAllMocks();
+  });
+
+  it('should be defined', () => {
+    expect(controller).toBeDefined();
+  });
+
+  describe('create', () => {
+    it('should create a new calibration factor', () => {
+      const createDto = {
+        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+        factorType: CalibrationFactorType.ANTENNA_GAIN,
+        factorName: '3GHz 안테나 이득',
+        factorValue: 12.5,
+        unit: 'dBi',
+        effectiveDate: '2024-01-15',
+        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
+      };
+
+      const expectedResult = {
+        id: 'new-factor-id',
+        ...createDto,
+        approvalStatus: 'pending',
+        approvedBy: null,
+        requestedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      mockCalibrationFactorsService.create.mockReturnValue(expectedResult);
+
+      const result = controller.create(createDto);
+
+      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return paginated list of calibration factors', async () => {
+      const query = { page: 1, pageSize: 20 };
+      const expectedResult = {
+        items: [],
+        meta: {
+          totalItems: 0,
+          itemCount: 0,
+          itemsPerPage: 20,
+          totalPages: 0,
+          currentPage: 1,
+        },
+      };
+
+      mockCalibrationFactorsService.findAll.mockResolvedValue(expectedResult);
+
+      const result = await controller.findAll(query);
+
+      expect(service.findAll).toHaveBeenCalledWith(query);
+      expect(result).toEqual(expectedResult);
+    });
+
+    it('should filter by equipmentId', async () => {
+      const query = {
+        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+      };
+
+      mockCalibrationFactorsService.findAll.mockResolvedValue({ items: [], meta: {} });
+
+      await controller.findAll(query);
+
+      expect(service.findAll).toHaveBeenCalledWith(query);
+    });
+
+    it('should filter by approvalStatus', async () => {
+      const query = {
+        approvalStatus: CalibrationFactorApprovalStatus.PENDING,
+      };
+
+      mockCalibrationFactorsService.findAll.mockResolvedValue({ items: [], meta: {} });
+
+      await controller.findAll(query);
+
+      expect(service.findAll).toHaveBeenCalledWith(query);
+    });
+  });
+
+  describe('findPendingApprovals', () => {
+    it('should return pending calibration factors', async () => {
+      const expectedResult = {
+        items: [
+          {
+            id: 'pending-factor-id',
+            approvalStatus: 'pending',
+          },
+        ],
+        meta: { totalItems: 1 },
+      };
+
+      mockCalibrationFactorsService.findPendingApprovals.mockResolvedValue(expectedResult);
+
+      const result = await controller.findPendingApprovals();
+
+      expect(service.findPendingApprovals).toHaveBeenCalled();
+      expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('getRegistry', () => {
+    it('should return calibration factor registry', async () => {
+      const expectedResult = {
+        registry: [],
+        totalEquipments: 0,
+        totalFactors: 0,
+        generatedAt: new Date(),
+      };
+
+      mockCalibrationFactorsService.getRegistry.mockResolvedValue(expectedResult);
+
+      const result = await controller.getRegistry();
+
+      expect(service.getRegistry).toHaveBeenCalled();
+      expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('findByEquipment', () => {
+    it('should return factors for specific equipment', async () => {
+      const equipmentUuid = '550e8400-e29b-41d4-a716-446655440001';
+      const expectedResult = {
+        equipmentId: equipmentUuid,
+        factors: [],
+        count: 0,
+      };
+
+      mockCalibrationFactorsService.findByEquipment.mockResolvedValue(expectedResult);
+
+      const result = await controller.findByEquipment(equipmentUuid);
+
+      expect(service.findByEquipment).toHaveBeenCalledWith(equipmentUuid);
+      expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a calibration factor by uuid', async () => {
+      const uuid = 'factor-uuid';
+      const expectedResult = {
+        id: uuid,
+        factorName: 'Test Factor',
+        approvalStatus: 'approved',
+      };
+
+      mockCalibrationFactorsService.findOne.mockResolvedValue(expectedResult);
+
+      const result = await controller.findOne(uuid);
+
+      expect(service.findOne).toHaveBeenCalledWith(uuid);
+      expect(result).toEqual(expectedResult);
+    });
+  });
+
+  describe('approve', () => {
+    it('should approve a pending calibration factor', async () => {
+      const uuid = 'pending-factor-uuid';
+      const approveDto = {
+        approverId: '550e8400-e29b-41d4-a716-446655440003',
+        approverComment: '검토 완료',
+      };
+
+      const expectedResult = {
+        id: uuid,
+        approvalStatus: 'approved',
+        approvedBy: approveDto.approverId,
+        approverComment: approveDto.approverComment,
+      };
+
+      mockCalibrationFactorsService.approve.mockResolvedValue(expectedResult);
+
+      const result = await controller.approve(uuid, approveDto);
+
+      expect(service.approve).toHaveBeenCalledWith(uuid, approveDto);
+      expect(result.approvalStatus).toBe('approved');
+      expect(result.approvedBy).toBe(approveDto.approverId);
+    });
+  });
+
+  describe('reject', () => {
+    it('should reject a pending calibration factor', async () => {
+      const uuid = 'pending-factor-uuid';
+      const rejectDto = {
+        approverId: '550e8400-e29b-41d4-a716-446655440003',
+        rejectionReason: '값이 범위를 벗어남',
+      };
+
+      const expectedResult = {
+        id: uuid,
+        approvalStatus: 'rejected',
+        approvedBy: rejectDto.approverId,
+        approverComment: rejectDto.rejectionReason,
+      };
+
+      mockCalibrationFactorsService.reject.mockResolvedValue(expectedResult);
+
+      const result = await controller.reject(uuid, rejectDto);
+
+      expect(service.reject).toHaveBeenCalledWith(uuid, rejectDto);
+      expect(result.approvalStatus).toBe('rejected');
+    });
+  });
+
+  describe('remove', () => {
+    it('should soft delete a calibration factor', async () => {
+      const uuid = 'factor-to-delete';
+      const expectedResult = {
+        id: uuid,
+        deleted: true,
+      };
+
+      mockCalibrationFactorsService.remove.mockResolvedValue(expectedResult);
+
+      const result = await controller.remove(uuid);
+
+      expect(service.remove).toHaveBeenCalledWith(uuid);
+      expect(result).toEqual(expectedResult);
+    });
+  });
+});

@@ -471,6 +471,13 @@ export class CheckoutsService {
           throw error;
         }
 
+        // 부적합 장비 반출 차단
+        if (equipment.status === 'non_conforming') {
+          throw new BadRequestException(
+            `장비 ${equipment.name}이(가) 부적합 상태입니다. 부적합 처리가 완료된 후 반출 신청해주세요.`
+          );
+        }
+
         if (equipment.status !== 'available') {
           throw new BadRequestException(
             `장비 ${equipment.name}이(가) 현재 사용 가능한 상태가 아닙니다. 현재 상태: ${equipment.status}`

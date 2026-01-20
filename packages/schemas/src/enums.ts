@@ -15,6 +15,7 @@ import { z } from 'zod';
  * - calibration_scheduled: 교정 예정
  * - calibration_overdue: 교정 기한 초과
  * - under_maintenance: 유지보수 중
+ * - non_conforming: 부적합
  * - retired: 사용 중지
  *
  * @see docs/development/API_STANDARDS.md
@@ -26,6 +27,7 @@ export const EquipmentStatusEnum = z.enum([
   'calibration_scheduled', // 교정 예정
   'calibration_overdue', // 교정 기한 초과
   'under_maintenance', // 유지보수 중
+  'non_conforming', // 부적합
   'retired', // 사용 중지
 ]);
 
@@ -194,3 +196,212 @@ export const CHECKOUT_TYPE_VALUES = [
 
 export const CheckoutTypeEnum = z.enum(CHECKOUT_TYPE_VALUES as unknown as [string, ...string[]]);
 export type CheckoutType = z.infer<typeof CheckoutTypeEnum>;
+
+/**
+ * ⚠️ SINGLE SOURCE OF TRUTH: 보정계수 타입 열거형
+ *
+ * 표준 타입값 (소문자 + 언더스코어):
+ * - antenna_gain: 안테나 이득
+ * - cable_loss: 케이블 손실
+ * - path_loss: 경로 손실
+ * - amplifier_gain: 증폭기 이득
+ * - other: 기타
+ */
+export const CALIBRATION_FACTOR_TYPE_VALUES = [
+  'antenna_gain', // 안테나 이득
+  'cable_loss', // 케이블 손실
+  'path_loss', // 경로 손실
+  'amplifier_gain', // 증폭기 이득
+  'other', // 기타
+] as const;
+
+export const CalibrationFactorTypeEnum = z.enum(
+  CALIBRATION_FACTOR_TYPE_VALUES as unknown as [string, ...string[]]
+);
+export type CalibrationFactorType = z.infer<typeof CalibrationFactorTypeEnum>;
+
+/**
+ * ⚠️ SINGLE SOURCE OF TRUTH: 보정계수 승인 상태 열거형
+ *
+ * 표준 상태값 (소문자):
+ * - pending: 승인 대기 (시험실무자가 변경 요청)
+ * - approved: 승인됨 (기술책임자가 승인)
+ * - rejected: 반려됨
+ */
+export const CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES = [
+  'pending', // 승인 대기
+  'approved', // 승인됨
+  'rejected', // 반려됨
+] as const;
+
+export const CalibrationFactorApprovalStatusEnum = z.enum(
+  CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type CalibrationFactorApprovalStatus = z.infer<typeof CalibrationFactorApprovalStatusEnum>;
+
+/**
+ * ⚠️ SINGLE SOURCE OF TRUTH: 부적합 상태 열거형
+ *
+ * 표준 상태값 (소문자 + 언더스코어):
+ * - open: 부적합 등록 (발견됨)
+ * - analyzing: 원인 분석 중
+ * - corrected: 조치 완료 (종료 승인 대기)
+ * - closed: 종료됨 (기술책임자 승인)
+ */
+export const NON_CONFORMANCE_STATUS_VALUES = [
+  'open', // 부적합 등록 (발견됨)
+  'analyzing', // 원인 분석 중
+  'corrected', // 조치 완료 (종료 승인 대기)
+  'closed', // 종료됨 (기술책임자 승인)
+] as const;
+
+export const NonConformanceStatusEnum = z.enum(
+  NON_CONFORMANCE_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type NonConformanceStatus = z.infer<typeof NonConformanceStatusEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 공용장비 출처 열거형
+ *
+ * 표준 값 (소문자 + 언더스코어):
+ * - safety_lab: Safety Lab 등 사내 공용장비
+ * - external: 외부 기관 보유 장비
+ */
+export const SHARED_SOURCE_VALUES = [
+  'safety_lab', // Safety Lab 등 사내 공용장비
+  'external', // 외부 기관 보유 장비
+] as const;
+
+export const SharedSourceEnum = z.enum(SHARED_SOURCE_VALUES as unknown as [string, ...string[]]);
+export type SharedSource = z.infer<typeof SharedSourceEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 소프트웨어 타입 열거형
+ *
+ * 표준 타입값 (소문자 + 언더스코어):
+ * - measurement: 측정 소프트웨어 (EMC32, DASY6 SAR 등)
+ * - analysis: 분석 소프트웨어
+ * - control: 제어 소프트웨어
+ * - other: 기타
+ */
+export const SOFTWARE_TYPE_VALUES = [
+  'measurement', // 측정 소프트웨어
+  'analysis', // 분석 소프트웨어
+  'control', // 제어 소프트웨어
+  'other', // 기타
+] as const;
+
+export const SoftwareTypeEnum = z.enum(SOFTWARE_TYPE_VALUES as unknown as [string, ...string[]]);
+export type SoftwareType = z.infer<typeof SoftwareTypeEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 소프트웨어 변경 승인 상태 열거형
+ *
+ * 표준 상태값 (소문자):
+ * - pending: 승인 대기 (변경 요청)
+ * - approved: 승인됨 (기술책임자가 승인)
+ * - rejected: 반려됨
+ */
+export const SOFTWARE_APPROVAL_STATUS_VALUES = [
+  'pending', // 승인 대기
+  'approved', // 승인됨
+  'rejected', // 반려됨
+] as const;
+
+export const SoftwareApprovalStatusEnum = z.enum(
+  SOFTWARE_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type SoftwareApprovalStatus = z.infer<typeof SoftwareApprovalStatusEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 교정계획서 상태 열거형
+ *
+ * 표준 상태값 (소문자 + 언더스코어):
+ * - draft: 작성 중 (기술책임자가 계획서 작성 중)
+ * - pending_approval: 승인 대기 (시험소장에게 승인 요청됨)
+ * - approved: 승인됨 (시험소장이 승인 완료)
+ * - rejected: 반려됨 (시험소장이 반려, 사유 필수)
+ *
+ * @see docs/development/API_STANDARDS.md
+ */
+export const CALIBRATION_PLAN_STATUS_VALUES = [
+  'draft', // 작성 중
+  'pending_approval', // 승인 대기
+  'approved', // 승인됨
+  'rejected', // 반려됨
+] as const;
+
+export const CalibrationPlanStatusEnum = z.enum(
+  CALIBRATION_PLAN_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type CalibrationPlanStatus = z.infer<typeof CalibrationPlanStatusEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 감사 로그 액션 열거형
+ *
+ * 표준 액션값 (소문자 + 언더스코어):
+ * - create: 생성
+ * - update: 수정
+ * - delete: 삭제
+ * - approve: 승인
+ * - reject: 반려
+ * - checkout: 반출
+ * - return: 반입/반납
+ * - cancel: 취소
+ * - login: 로그인
+ * - logout: 로그아웃
+ *
+ * @see docs/development/API_STANDARDS.md
+ */
+export const AUDIT_ACTION_VALUES = [
+  'create', // 생성
+  'update', // 수정
+  'delete', // 삭제
+  'approve', // 승인
+  'reject', // 반려
+  'checkout', // 반출
+  'return', // 반입/반납
+  'cancel', // 취소
+  'login', // 로그인
+  'logout', // 로그아웃
+] as const;
+
+export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES as unknown as [string, ...string[]]);
+export type AuditAction = z.infer<typeof AuditActionEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 감사 로그 엔티티 타입 열거형
+ *
+ * 표준 엔티티 타입값 (소문자 + 언더스코어):
+ * - equipment: 장비
+ * - calibration: 교정
+ * - checkout: 반출
+ * - rental: 대여
+ * - user: 사용자
+ * - team: 팀
+ * - calibration_factor: 보정계수
+ * - non_conformance: 부적합
+ * - software: 소프트웨어
+ * - calibration_plan: 교정계획서
+ * - repair_history: 수리이력
+ *
+ * @see docs/development/API_STANDARDS.md
+ */
+export const AUDIT_ENTITY_TYPE_VALUES = [
+  'equipment', // 장비
+  'calibration', // 교정
+  'checkout', // 반출
+  'rental', // 대여
+  'user', // 사용자
+  'team', // 팀
+  'calibration_factor', // 보정계수
+  'non_conformance', // 부적합
+  'software', // 소프트웨어
+  'calibration_plan', // 교정계획서
+  'repair_history', // 수리이력
+] as const;
+
+export const AuditEntityTypeEnum = z.enum(
+  AUDIT_ENTITY_TYPE_VALUES as unknown as [string, ...string[]]
+);
+export type AuditEntityType = z.infer<typeof AuditEntityTypeEnum>;

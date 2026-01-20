@@ -83,6 +83,46 @@ export class CalibrationController {
     return this.calibrationService.findUpcomingIntermediateChecks(days);
   }
 
+  @Get('intermediate-checks/all')
+  @ApiOperation({
+    summary: '전체 중간점검 목록 조회',
+    description: '모든 중간점검 일정을 조회합니다 (지연/예정 포함).',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '중간점검 목록 조회 성공' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  findAllIntermediateChecks(
+    @Query('status') status?: 'pending' | 'overdue',
+    @Query('equipmentId') equipmentId?: string,
+    @Query('managerId') managerId?: string
+  ) {
+    return this.calibrationService.findAllIntermediateChecks({
+      status,
+      equipmentId,
+      managerId,
+    });
+  }
+
+  @Post(':uuid/intermediate-check/complete')
+  @ApiOperation({
+    summary: '중간점검 완료 처리',
+    description: '특정 교정의 중간점검을 완료 처리하고 관련 알림을 해제합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정 ID (UUID)' })
+  @ApiResponse({ status: HttpStatus.OK, description: '중간점검 완료 처리 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정 일정을 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '중간점검이 예정되지 않은 교정' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  completeIntermediateCheck(
+    @Param('uuid') uuid: string,
+    @Body() body: { completedBy: string; notes?: string }
+  ) {
+    return this.calibrationService.completeIntermediateCheck(uuid, body.completedBy, body.notes);
+  }
+
   @Get('equipment/:equipmentId')
   @ApiOperation({
     summary: '장비별 교정 기록 조회',

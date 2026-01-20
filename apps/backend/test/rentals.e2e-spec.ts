@@ -67,6 +67,7 @@ describe('RentalsController (e2e)', () => {
         status: 'available',
         location: 'Test Location',
         site: 'suwon', // ✅ site 필드 추가 (필수)
+        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
     if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {

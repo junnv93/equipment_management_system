@@ -72,6 +72,11 @@ export const equipment = pgTable(
     contactInfo: varchar('contact_info', { length: 100 }),
     softwareVersion: varchar('software_version', { length: 50 }),
     firmwareVersion: varchar('firmware_version', { length: 50 }),
+
+    // 소프트웨어 정보 (프롬프트 9-1)
+    // @see packages/schemas/src/enums.ts - SoftwareTypeEnum
+    softwareName: varchar('software_name', { length: 200 }), // 소프트웨어명 (EMC32, UL EMC, DASY6 SAR 등)
+    softwareType: varchar('software_type', { length: 50 }), // 'measurement' | 'analysis' | 'control' | 'other'
     manualLocation: text('manual_location'),
     accessories: text('accessories'),
     mainFeatures: text('main_features'),
@@ -92,6 +97,11 @@ export const equipment = pgTable(
     correctionFactor: varchar('correction_factor', { length: 50 }), // 보정계수
     intermediateCheckSchedule: timestamp('intermediate_check_schedule'), // 중간점검일정
     repairHistory: text('repair_history'), // 장비 수리 내역
+
+    // 공용장비 필드 (프롬프트 8-1)
+    // @see packages/schemas/src/enums.ts - SharedSourceEnum
+    isShared: boolean('is_shared').default(false).notNull(), // 공용장비 여부
+    sharedSource: varchar('shared_source', { length: 50 }), // 공용장비 출처: 'safety_lab' | 'external' | null
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow(),
@@ -119,6 +129,10 @@ export const equipment = pgTable(
         table.isActive,
         table.nextCalibrationDate
       ),
+      // 공용장비 검색 최적화
+      isSharedIdx: index('equipment_is_shared_idx').on(table.isShared),
+      // 소프트웨어 검색 최적화
+      softwareNameIdx: index('equipment_software_name_idx').on(table.softwareName),
     };
   }
 );

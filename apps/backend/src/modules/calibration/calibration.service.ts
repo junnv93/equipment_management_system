@@ -479,4 +479,97 @@ export class CalibrationService {
       return checkDate >= today && checkDate <= futureDate;
     });
   }
+
+  // 중간점검 완료 처리
+  async completeIntermediateCheck(
+    id: string,
+    completedBy: string,
+    notes?: string
+  ): Promise<{ calibration: CalibrationRecord; message: string }> {
+    const calibration = await this.findOne(id);
+
+    if (!calibration.intermediateCheckDate) {
+      throw new BadRequestException('이 교정에는 중간점검이 예정되어 있지 않습니다.');
+    }
+
+    const index = calibrations.findIndex((cal) => cal.id === id);
+    const now = new Date();
+
+    // 중간점검 완료 기록 (다음 중간점검일은 6개월 후로 설정)
+    const nextIntermediateCheckDate = new Date(now);
+    nextIntermediateCheckDate.setMonth(nextIntermediateCheckDate.getMonth() + 6);
+
+    calibrations[index] = {
+      ...calibrations[index],
+      // 중간점검 완료 시 다음 중간점검일로 업데이트
+      intermediateCheckDate: nextIntermediateCheckDate,
+      resultNotes: notes
+        ? `${calibrations[index].resultNotes || ''}\n[${now.toISOString()}] 중간점검 완료: ${notes} (담당자: ${completedBy})`
+        : `${calibrations[index].resultNotes || ''}\n[${now.toISOString()}] 중간점검 완료 (담당자: ${completedBy})`,
+      updatedAt: now,
+    };
+
+    return {
+      calibration: calibrations[index],
+      message: '중간점검이 완료되었습니다.',
+    };
+  }
+
+  // 중간점검 필요 장비 목록 조회 (과거 및 예정)
+  async findAllIntermediateChecks(query?: {
+    status?: 'pending' | 'completed' | 'overdue';
+    equipmentId?: string;
+    managerId?: string;
+  }) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let results = calibrations.filter((cal) => cal.intermediateCheckDate !== null);
+
+    if (query?.equipmentId) {
+      results = results.filter((cal) => cal.equipmentId === query.equipmentId);
+    }
+
+    if (query?.managerId) {
+      results = results.filter((cal) => cal.calibrationManagerId === query.managerId);
+    }
+
+    if (query?.status) {
+      results = results.filter((cal) => {
+        const checkDate = new Date(cal.intermediateCheckDate!);
+        checkDate.setHours(0, 0, 0, 0);
+
+        if (query.status === 'overdue') {
+          return checkDate < today;
+        } else if (query.status === 'pending') {
+          return checkDate >= today;
+        }
+        return true;
+      });
+    }
+
+    // 날짜순 정렬 (가까운 날짜 우선)
+    results.sort((a, b) => {
+      const dateA = new Date(a.intermediateCheckDate!).getTime();
+      const dateB = new Date(b.intermediateCheckDate!).getTime();
+      return dateA - dateB;
+    });
+
+    return {
+      items: results,
+      meta: {
+        totalItems: results.length,
+        overdueCount: results.filter((cal) => {
+          const checkDate = new Date(cal.intermediateCheckDate!);
+          checkDate.setHours(0, 0, 0, 0);
+          return checkDate < today;
+        }).length,
+        pendingCount: results.filter((cal) => {
+          const checkDate = new Date(cal.intermediateCheckDate!);
+          checkDate.setHours(0, 0, 0, 0);
+          return checkDate >= today;
+        }).length,
+      },
+    };
+  }
 }

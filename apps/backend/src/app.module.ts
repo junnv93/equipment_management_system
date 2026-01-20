@@ -10,6 +10,10 @@ import { RentalsModule } from './modules/rentals/rentals.module';
 import { CheckoutsModule } from './modules/checkouts/checkouts.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { CalibrationModule } from './modules/calibration/calibration.module';
+import { CalibrationFactorsModule } from './modules/calibration-factors/calibration-factors.module';
+import { NonConformancesModule } from './modules/non-conformances/non-conformances.module';
+import { SoftwareModule } from './modules/software/software.module';
+import { CalibrationPlansModule } from './modules/calibration-plans/calibration-plans.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DrizzleModule } from './database/drizzle.module';
@@ -18,6 +22,8 @@ import { MetricsModule } from './common/metrics/metrics.module';
 import { MetricsMiddleware } from './common/metrics/metrics.middleware';
 import { LoggerModule } from './common/logger/logger.module';
 import { MonitoringMiddleware } from './common/middleware/monitoring.middleware';
+import { HelmetConfigService } from './common/middleware/helmet-config';
+import { AuditModule } from './modules/audit/audit.module';
 
 @Module({
   imports: [
@@ -30,6 +36,7 @@ import { MonitoringMiddleware } from './common/middleware/monitoring.middleware'
     CacheModule,
     LoggerModule,
     MetricsModule,
+    AuditModule,
 
     // 데이터베이스 모듈
     DrizzleModule,
@@ -42,12 +49,17 @@ import { MonitoringMiddleware } from './common/middleware/monitoring.middleware'
     RentalsModule,
     CheckoutsModule,
     CalibrationModule,
+    CalibrationFactorsModule,
+    NonConformancesModule,
+    SoftwareModule,
+    CalibrationPlansModule,
     NotificationsModule,
     ReportsModule,
     MonitoringModule,
   ],
   controllers: [],
   providers: [
+    HelmetConfigService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

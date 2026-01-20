@@ -33,6 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import type { Site } from '@equipment-management/schemas';
+import { SharedEquipmentBadge } from '@/components/equipment/SharedEquipmentBadge';
 
 // PaginationState 인터페이스 정의
 interface PaginationState {
@@ -54,6 +55,7 @@ export default function EquipmentPage() {
   const [siteFilter, setSiteFilter] = useState<string>(
     isTestOperator && userSite ? userSite : 'ALL'
   );
+  const [sharedFilter, setSharedFilter] = useState<string>('ALL');
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -74,10 +76,20 @@ export default function EquipmentPage() {
       status: statusFilter !== 'ALL' ? (statusFilter as any) : undefined, // EquipmentStatus enum으로 변환
       category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
       site,
+      isShared: sharedFilter === 'ALL' ? undefined : sharedFilter === 'SHARED' ? true : false,
       page: pagination.pageIndex + 1,
       pageSize: pagination.pageSize,
     };
-  }, [searchTerm, statusFilter, categoryFilter, siteFilter, pagination, isTestOperator, userSite]);
+  }, [
+    searchTerm,
+    statusFilter,
+    categoryFilter,
+    siteFilter,
+    sharedFilter,
+    pagination,
+    isTestOperator,
+    userSite,
+  ]);
 
   // 장비 데이터 쿼리
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -135,6 +147,15 @@ export default function EquipmentPage() {
   // 사이트 필터 변경 핸들러
   const handleSiteChange = useCallback((value: string) => {
     setSiteFilter(value);
+    setPagination((prev: PaginationState) => ({
+      ...prev,
+      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
+    }));
+  }, []);
+
+  // 공용장비 필터 변경 핸들러
+  const handleSharedChange = useCallback((value: string) => {
+    setSharedFilter(value);
     setPagination((prev: PaginationState) => ({
       ...prev,
       pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
@@ -208,7 +229,12 @@ export default function EquipmentPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
-        <Button onClick={() => router.push('/equipment/create')}>장비 등록</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push('/equipment/create-shared')}>
+            공용장비 등록
+          </Button>
+          <Button onClick={() => router.push('/equipment/create')}>장비 등록</Button>
+        </div>
       </div>
 
       <Card>
@@ -272,6 +298,19 @@ export default function EquipmentPage() {
                   <SelectItem value="IT">IT장비</SelectItem>
                   <SelectItem value="TOOL">공구</SelectItem>
                   <SelectItem value="OTHER">기타</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="shared">장비 구분</Label>
+              <Select value={sharedFilter} onValueChange={handleSharedChange}>
+                <SelectTrigger id="shared">
+                  <SelectValue placeholder="모든 장비" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">모든 장비</SelectItem>
+                  <SelectItem value="NORMAL">일반 장비</SelectItem>
+                  <SelectItem value="SHARED">공용장비</SelectItem>
                 </SelectContent>
               </Select>
             </div>

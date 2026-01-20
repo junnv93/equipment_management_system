@@ -41,6 +41,11 @@ import { useEquipment } from '@/hooks/use-equipment';
 import { useQuery } from '@tanstack/react-query';
 import calibrationApi from '@/lib/api/calibration-api';
 import maintenanceApi from '@/lib/api/maintenance-api';
+import nonConformancesApi from '@/lib/api/non-conformances-api';
+import NonConformanceBanner from '@/components/equipment/NonConformanceBanner';
+import { SharedEquipmentBadge } from '@/components/equipment/SharedEquipmentBadge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
 
 export default function EquipmentDetailPage() {
@@ -72,6 +77,13 @@ export default function EquipmentDetailPage() {
     queryKey: ['maintenance', 'equipment', equipmentId],
     queryFn: () => maintenanceApi.getEquipmentMaintenances(equipmentId),
     enabled: !!equipmentId && activeTab === 'maintenance',
+  });
+
+  // 부적합 기록 가져오기
+  const { data: nonConformances } = useQuery({
+    queryKey: ['non-conformances', 'equipment', equipmentId],
+    queryFn: () => nonConformancesApi.getEquipmentNonConformances(equipmentId),
+    enabled: !!equipmentId,
   });
 
   // API 데이터 로딩 중 표시
@@ -231,19 +243,48 @@ export default function EquipmentDetailPage() {
           </Button>
           <h1 className="text-2xl font-bold">{equipment.name}</h1>
           {equipment.status && getStatusBadge(equipment.status)}
+          {(equipment as any).isShared && (
+            <SharedEquipmentBadge sharedSource={(equipment as any).sharedSource} />
+          )}
         </div>
         <div className="flex gap-2">
           <Link href={`/equipment/${equipmentId}/rent`}>
             <Button>장비 대여</Button>
           </Link>
-          <Link href={`/equipment/${equipmentId}/edit`}>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              수정
-            </Button>
-          </Link>
+          {!(equipment as any).isShared && (
+            <Link href={`/equipment/${equipmentId}/edit`}>
+              <Button variant="outline">
+                <Edit className="h-4 w-4 mr-2" />
+                수정
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* 공용장비 안내 배너 */}
+      {(equipment as any).isShared && (
+        <Alert
+          variant="default"
+          className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+        >
+          <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-800 dark:text-blue-200">공용장비 안내</AlertTitle>
+          <AlertDescription className="text-blue-700 dark:text-blue-300">
+            이 장비는 공용장비로 등록되어 있어 수정 및 삭제가 불가능합니다. 대여 및 반출은
+            가능합니다.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* 부적합 상태 경고 배너 */}
+      {nonConformances && nonConformances.length > 0 && (
+        <NonConformanceBanner
+          equipmentId={equipmentId}
+          nonConformances={nonConformances}
+          showDetails={false}
+        />
+      )}
 
       {/* 탭 내비게이션 */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">

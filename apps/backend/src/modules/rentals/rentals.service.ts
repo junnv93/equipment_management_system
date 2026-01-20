@@ -444,6 +444,13 @@ export class RentalsService {
       // ✅ Equipment 객체의 uuid 필드 사용 (equipment.id는 serial이므로 UUID가 아님)
       // equipment.uuid는 이미 createRentalDto.equipmentId와 동일하므로 검증 완료
 
+      // 부적합 장비 대여 차단
+      if (equipment.status === 'non_conforming') {
+        throw new BadRequestException(
+          '부적합 상태의 장비는 대여할 수 없습니다. 부적합 처리가 완료된 후 대여 신청해주세요.'
+        );
+      }
+
       // 장비가 사용 가능한 상태인지 확인
       if (equipment.status !== 'available') {
         throw new BadRequestException(

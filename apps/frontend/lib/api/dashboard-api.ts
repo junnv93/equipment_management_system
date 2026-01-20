@@ -19,6 +19,8 @@ export type OverdueCalibration = {
   name: string;
   dueDate: string;
   equipmentId: string;
+  equipmentName?: string;
+  daysOverdue?: number;
 };
 
 export interface UpcomingCalibration {
@@ -67,6 +69,28 @@ class DashboardApi {
   async getSummary(): Promise<DashboardSummary> {
     const response = await apiClient.get('/api/dashboard/summary');
     return response.data;
+  }
+
+  // 별칭 메서드들 (컴포넌트 호환성)
+  async getDashboardSummary(): Promise<DashboardSummary> {
+    return this.getSummary();
+  }
+
+  async getEquipmentSummary(): Promise<DashboardSummary> {
+    return this.getSummary();
+  }
+
+  async getEquipmentList(): Promise<unknown[]> {
+    const response = await apiClient.get('/api/equipment?limit=10');
+    return response.data?.items || [];
+  }
+
+  async getCalibrationSchedule(): Promise<UpcomingCalibration[]> {
+    return this.getUpcomingCalibrations(30);
+  }
+
+  async getOverdueLoans(): Promise<OverdueRental[]> {
+    return this.getOverdueRentals();
   }
 
   async getEquipmentByTeam(): Promise<EquipmentByTeam[]> {

@@ -3,7 +3,16 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, Clock, Filter, Plus, Search } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import {
+  CalendarDays,
+  Clock,
+  Filter,
+  Plus,
+  Search,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -30,18 +39,98 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useQuery } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import calibrationApi from '@/lib/api/calibration-api';
+import { apiClient } from '@/lib/api/api-client';
 import { format, addDays, differenceInDays, isBefore } from 'date-fns';
+import { ko } from 'date-fns/locale';
+
+// 중간점검 데이터 타입
+interface IntermediateCheckItem {
+  id: string;
+  equipmentId: string;
+  calibrationManagerId: string;
+  intermediateCheckDate: string;
+  calibrationDate: string;
+  nextCalibrationDate: string;
+  calibrationMethod: string;
+  status: string;
+  calibrationAgency: string;
+  resultNotes: string | null;
+}
+
+interface IntermediateChecksResponse {
+  items: IntermediateCheckItem[];
+  meta: {
+    totalItems: number;
+    overdueCount: number;
+    pendingCount: number;
+  };
+}
+
+// 중간점검 상태별 스타일
+function getIntermediateCheckStatusStyle(checkDate: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const date = new Date(checkDate);
+  date.setHours(0, 0, 0, 0);
+  const diff = differenceInDays(date, today);
+
+  if (diff < 0) {
+    return {
+      badge: 'bg-red-100 text-red-800',
+      text: `${Math.abs(diff)}일 초과`,
+      status: 'overdue',
+    };
+  }
+  if (diff === 0) {
+    return {
+      badge: 'bg-orange-100 text-orange-800',
+      text: '오늘',
+      status: 'today',
+    };
+  }
+  if (diff <= 7) {
+    return {
+      badge: 'bg-yellow-100 text-yellow-800',
+      text: `D-${diff}`,
+      status: 'upcoming',
+    };
+  }
+  return {
+    badge: 'bg-blue-100 text-blue-800',
+    text: `D-${diff}`,
+    status: 'future',
+  };
+}
 
 export default function CalibrationPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   // 상태 관리
   const [searchTerm, setSearchTerm] = useState('');
   const [teamFilter, setTeamFilter] = useState('all');
   const [currentTab, setCurrentTab] = useState('all');
+  const [selectedIntermediateCheck, setSelectedIntermediateCheck] =
+    useState<IntermediateCheckItem | null>(null);
+  const [completionNotes, setCompletionNotes] = useState('');
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
 
   // 교정 요약 통계 조회
   const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
@@ -79,13 +168,65 @@ export default function CalibrationPage() {
       }),
   });
 
+  // 전체 중간점검 목록 조회
+  const { data: intermediateChecksData, isLoading: isIntermediateChecksLoading } =
+    useQuery<IntermediateChecksResponse>({
+      queryKey: ['intermediate-checks', 'all'],
+      queryFn: async () => {
+        return apiClient.get('/api/calibration/intermediate-checks/all');
+      },
+    });
+
+  // 중간점검 완료 뮤테이션
+  const completeIntermediateCheckMutation = useMutation({
+    mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      return apiClient.post(`/api/calibration/${id}/intermediate-check/complete`, {
+        completedBy: session?.user?.id,
+        notes: notes || undefined,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: '중간점검 완료',
+        description: '중간점검이 완료 처리되었습니다.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['intermediate-checks'] });
+      queryClient.invalidateQueries({ queryKey: ['calibration-history'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      setIsCompleteDialogOpen(false);
+      setSelectedIntermediateCheck(null);
+      setCompletionNotes('');
+    },
+    onError: (error: any) => {
+      toast({
+        title: '완료 처리 실패',
+        description: error.response?.data?.message || '중간점검 완료 처리 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleIntermediateCheckComplete = (check: IntermediateCheckItem) => {
+    setSelectedIntermediateCheck(check);
+    setIsCompleteDialogOpen(true);
+  };
+
+  const handleConfirmComplete = () => {
+    if (!selectedIntermediateCheck) return;
+    completeIntermediateCheckMutation.mutate({
+      id: selectedIntermediateCheck.id,
+      notes: completionNotes,
+    });
+  };
+
   // 로딩 상태 통합
   const isLoading =
     isSummaryLoading ||
     isOverdueLoading ||
     isUpcomingLoading ||
     isEquipmentLoading ||
-    isHistoryLoading;
+    isHistoryLoading ||
+    isIntermediateChecksLoading;
 
   // 데이터 연결 상태 확인
   const isError =
@@ -278,6 +419,9 @@ export default function CalibrationPage() {
           <TabsTrigger value="upcoming" className="text-yellow-500">
             30일 이내 예정
           </TabsTrigger>
+          <TabsTrigger value="intermediate-checks" className="text-purple-500">
+            중간점검 ({intermediateChecksData?.meta?.totalItems || 0})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={currentTab} className="mt-0">
@@ -386,7 +530,188 @@ export default function CalibrationPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* 중간점검 탭 내용 */}
+        <TabsContent value="intermediate-checks" className="mt-0">
+          {isIntermediateChecksLoading ? (
+            <div className="flex justify-center py-8">
+              <p>데이터를 불러오는 중...</p>
+            </div>
+          ) : !intermediateChecksData?.items?.length ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <CheckCircle2 className="h-12 w-12 text-gray-300 mb-2" />
+              <h3 className="text-lg font-medium">중간점검 일정이 없습니다</h3>
+              <p className="text-sm text-gray-500 mt-1 max-w-md">예정된 중간점검이 없습니다.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* 중간점검 요약 */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-500">
+                      전체 중간점검
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {intermediateChecksData.meta.totalItems}건
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-red-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-red-600">기한 초과</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {intermediateChecksData.meta.overdueCount}건
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-blue-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-blue-600">예정</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
+                      {intermediateChecksData.meta.pendingCount}건
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 중간점검 목록 테이블 */}
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>상태</TableHead>
+                      <TableHead>점검 예정일</TableHead>
+                      <TableHead>장비 ID</TableHead>
+                      <TableHead>교정 방법</TableHead>
+                      <TableHead>교정 기관</TableHead>
+                      <TableHead>차기 교정일</TableHead>
+                      <TableHead className="text-right">액션</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {intermediateChecksData.items.map((check) => {
+                      const style = getIntermediateCheckStatusStyle(check.intermediateCheckDate);
+                      return (
+                        <TableRow key={check.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {style.status === 'overdue' && (
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                              )}
+                              {style.status === 'today' && (
+                                <Clock className="h-4 w-4 text-orange-500" />
+                              )}
+                              {(style.status === 'upcoming' || style.status === 'future') && (
+                                <Clock className="h-4 w-4 text-blue-500" />
+                              )}
+                              <Badge className={style.badge}>{style.text}</Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(check.intermediateCheckDate), 'yyyy-MM-dd', {
+                              locale: ko,
+                            })}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">{check.equipmentId}</TableCell>
+                          <TableCell>
+                            {check.calibrationMethod === 'external_calibration'
+                              ? '외부 교정'
+                              : check.calibrationMethod === 'self_inspection'
+                                ? '자체 점검'
+                                : check.calibrationMethod}
+                          </TableCell>
+                          <TableCell>{check.calibrationAgency || '-'}</TableCell>
+                          <TableCell>
+                            {format(new Date(check.nextCalibrationDate), 'yyyy-MM-dd', {
+                              locale: ko,
+                            })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              onClick={() => handleIntermediateCheckComplete(check)}
+                              disabled={completeIntermediateCheckMutation.isPending}
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                              완료
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* 중간점검 완료 다이얼로그 */}
+      <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>중간점검 완료</DialogTitle>
+            <DialogDescription>
+              장비 {selectedIntermediateCheck?.equipmentId}의 중간점검을 완료합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedIntermediateCheck && (
+              <div className="p-4 bg-gray-100 rounded-lg space-y-2">
+                <p className="text-sm">
+                  <strong>점검 예정일:</strong>{' '}
+                  {format(
+                    new Date(selectedIntermediateCheck.intermediateCheckDate),
+                    'yyyy년 M월 d일',
+                    {
+                      locale: ko,
+                    }
+                  )}
+                </p>
+                <p className="text-sm">
+                  <strong>교정 기관:</strong> {selectedIntermediateCheck.calibrationAgency || '-'}
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="notes">점검 내용 (선택)</Label>
+              <Textarea
+                id="notes"
+                placeholder="점검 결과나 특이사항을 입력하세요"
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCompleteDialogOpen(false);
+                setSelectedIntermediateCheck(null);
+                setCompletionNotes('');
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handleConfirmComplete}
+              disabled={completeIntermediateCheckMutation.isPending}
+            >
+              {completeIntermediateCheckMutation.isPending ? '처리 중...' : '완료 처리'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -18,7 +18,8 @@ async function bootstrap() {
 
   // 기본 서비스 및 설정 초기화
   const configService = app.get(ConfigService);
-  const loggerService = app.get(LoggerService);
+  // LoggerService는 Scope.TRANSIENT이므로 resolve() 사용
+  const loggerService = await app.resolve(LoggerService);
   const helmetConfigService = app.get(HelmetConfigService);
 
   app.useLogger(loggerService);

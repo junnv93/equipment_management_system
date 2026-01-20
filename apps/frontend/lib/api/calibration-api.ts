@@ -40,9 +40,6 @@ export interface CalibrationHistory {
   createdAt: string;
 }
 
-// 공통 타입 사용
-import type { PaginatedResponse } from './types';
-
 export interface CalibrationQuery {
   equipmentId?: string;
   startDate?: string;

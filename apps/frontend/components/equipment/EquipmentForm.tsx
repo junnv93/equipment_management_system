@@ -52,6 +52,7 @@ const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
   calibration_scheduled: '교정 예정',
   calibration_overdue: '교정 기한 초과',
   under_maintenance: '유지보수 중',
+  non_conforming: '부적합',
   retired: '사용 중지',
 };
 

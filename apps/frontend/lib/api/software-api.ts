@@ -1,0 +1,176 @@
+import { apiClient } from './api-client';
+import type { PaginatedResponse } from './types';
+import { transformPaginatedResponse } from './utils/response-transformers';
+
+// 소프트웨어 타입
+export type SoftwareType = 'measurement' | 'analysis' | 'control' | 'other';
+
+// 소프트웨어 변경 승인 상태
+export type SoftwareApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface SoftwareHistory {
+  id: string;
+  equipmentId: string;
+  softwareName: string;
+  previousVersion: string | null;
+  newVersion: string;
+  changedAt: string;
+  changedBy: string;
+  verificationRecord: string;
+  approvalStatus: SoftwareApprovalStatus;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  approverComment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SoftwareHistoryQuery {
+  equipmentId?: string;
+  softwareName?: string;
+  approvalStatus?: SoftwareApprovalStatus;
+  search?: string;
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateSoftwareChangeDto {
+  equipmentId: string;
+  softwareName: string;
+  previousVersion?: string;
+  newVersion: string;
+  verificationRecord: string;
+  changedBy: string;
+}
+
+export interface ApproveSoftwareChangeDto {
+  approverId: string;
+  approverComment: string;
+}
+
+export interface RejectSoftwareChangeDto {
+  approverId: string;
+  rejectionReason: string;
+}
+
+export interface EquipmentSoftwareInfo {
+  equipmentId: string;
+  equipmentName: string;
+  softwareName: string | null;
+  softwareVersion: string | null;
+  softwareType: SoftwareType | null;
+  lastUpdated: string | null;
+}
+
+export interface SoftwareRegistry {
+  registry: EquipmentSoftwareInfo[];
+  summary: {
+    softwareName: string;
+    equipmentCount: number;
+    versions: (string | null)[];
+  }[];
+  totalEquipments: number;
+  totalSoftwareTypes: number;
+  generatedAt: string;
+}
+
+export interface EquipmentBySoftware {
+  softwareName: string;
+  equipments: {
+    equipmentId: string;
+    equipmentName: string;
+    softwareVersion: string | null;
+    softwareType: SoftwareType | null;
+    lastUpdated: string | null;
+  }[];
+  count: number;
+}
+
+// 소프트웨어 타입 라벨
+export const SOFTWARE_TYPE_LABELS: Record<SoftwareType, string> = {
+  measurement: '측정 소프트웨어',
+  analysis: '분석 소프트웨어',
+  control: '제어 소프트웨어',
+  other: '기타',
+};
+
+// 승인 상태 라벨
+export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, string> = {
+  pending: '승인 대기',
+  approved: '승인됨',
+  rejected: '반려됨',
+};
+
+// 승인 상태 색상
+export const SOFTWARE_APPROVAL_STATUS_COLORS: Record<SoftwareApprovalStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-green-100 text-green-800',
+  rejected: 'bg-red-100 text-red-800',
+};
+
+// 소프트웨어 API 객체
+const softwareApi = {
+  // 소프트웨어 변경 요청
+  createSoftwareChange: async (data: CreateSoftwareChangeDto): Promise<SoftwareHistory> => {
+    return apiClient.post('/api/software/change-request', data).then((res) => res.data);
+  },
+
+  // 소프트웨어 변경 이력 조회
+  getSoftwareHistory: async (
+    query: SoftwareHistoryQuery = {}
+  ): Promise<PaginatedResponse<SoftwareHistory>> => {
+    const params = new URLSearchParams();
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, String(value));
+      }
+    });
+
+    const url = `/api/software/history${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get(url).then((res) => transformPaginatedResponse<SoftwareHistory>(res));
+  },
+
+  // 소프트웨어 변경 이력 상세 조회
+  getSoftwareHistoryDetail: async (id: string): Promise<SoftwareHistory> => {
+    return apiClient.get(`/api/software/${id}`).then((res) => res.data);
+  },
+
+  // 승인 대기 목록 조회
+  getPendingSoftwareChanges: async (): Promise<PaginatedResponse<SoftwareHistory>> => {
+    return apiClient
+      .get('/api/software/pending')
+      .then((res) => transformPaginatedResponse<SoftwareHistory>(res));
+  },
+
+  // 소프트웨어 통합 관리대장 조회
+  getSoftwareRegistry: async (): Promise<SoftwareRegistry> => {
+    return apiClient.get('/api/software/registry').then((res) => res.data);
+  },
+
+  // 특정 소프트웨어 사용 장비 목록 조회
+  getEquipmentBySoftware: async (softwareName: string): Promise<EquipmentBySoftware> => {
+    return apiClient
+      .get(`/api/software/${encodeURIComponent(softwareName)}/equipment`)
+      .then((res) => res.data);
+  },
+
+  // 소프트웨어 변경 승인
+  approveSoftwareChange: async (
+    id: string,
+    data: ApproveSoftwareChangeDto
+  ): Promise<SoftwareHistory> => {
+    return apiClient.patch(`/api/software/${id}/approve`, data).then((res) => res.data);
+  },
+
+  // 소프트웨어 변경 반려
+  rejectSoftwareChange: async (
+    id: string,
+    data: RejectSoftwareChangeDto
+  ): Promise<SoftwareHistory> => {
+    return apiClient.patch(`/api/software/${id}/reject`, data).then((res) => res.data);
+  },
+};
+
+export default softwareApi;

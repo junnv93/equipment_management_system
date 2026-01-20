@@ -12,7 +12,7 @@ describe('UsersController (e2e)', () => {
   let userAccessToken: string;
   let userId: string;
   const adminEmail = 'admin@example.com';
-  const adminPassword = 'Admin@123456';
+  const adminPassword = 'admin123'; // ✅ AuthService의 하드코딩된 비밀번호
   const testUserEmail = `test.user.${crypto.randomBytes(4).toString('hex')}@example.com`;
   const testUserPassword = 'Test@123456';
 

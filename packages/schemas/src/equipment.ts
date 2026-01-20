@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { CalibrationMethodEnum, EquipmentStatusEnum, SiteEnum } from './enums';
+import {
+  CalibrationMethodEnum,
+  EquipmentStatusEnum,
+  SiteEnum,
+  SharedSourceEnum,
+  SoftwareTypeEnum,
+} from './enums';
 import { SoftDeleteEntity, PaginatedResponse } from './common/base';
 
 /**
@@ -59,6 +65,10 @@ export const baseEquipmentSchema = z.object({
   contactInfo: z.string().optional(),
   softwareVersion: z.string().optional(),
   firmwareVersion: z.string().optional(),
+
+  // 소프트웨어 정보 (프롬프트 9-1)
+  softwareName: z.string().optional(), // 소프트웨어명 (EMC32, UL EMC, DASY6 SAR 등)
+  softwareType: SoftwareTypeEnum.optional(), // 'measurement' | 'analysis' | 'control' | 'other'
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
   mainFeatures: z.string().optional(),
@@ -78,6 +88,11 @@ export const baseEquipmentSchema = z.object({
 
   // 상태 정보 (기본값이 있지만 생성 시 선택적)
   status: EquipmentStatusEnum.optional(),
+
+  // 공용장비 필드 (프롬프트 8-1)
+  // 기본값은 서비스 레이어에서 처리 (DB 기본값: false)
+  isShared: z.boolean().optional(), // 공용장비 여부
+  sharedSource: SharedSourceEnum.optional().nullable(), // 공용장비 출처: 'safety_lab' | 'external' | null
 });
 
 // 장비 생성 스키마
@@ -112,6 +127,13 @@ export const equipmentFilterSchema = z.object({
   site: SiteEnum.optional(),
   calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환
   sort: z.string().optional(), // 정렬 기준 (예: 'name.asc')
+  isShared: z
+    .preprocess((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return val;
+    }, z.boolean())
+    .optional(), // 공용장비 필터 (true: 공용장비만, false: 일반장비만)
   // 페이지네이션은 선택적이며, 기본값은 서비스 레이어에서 처리
   page: z.coerce.number().int().positive().optional().default(1),
   pageSize: z.coerce.number().int().positive().max(100).optional().default(20),

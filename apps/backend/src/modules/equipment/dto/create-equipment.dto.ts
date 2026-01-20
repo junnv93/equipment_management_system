@@ -133,6 +133,19 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
     default: 'pending_approval',
   })
   approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
+
+  // 공용장비 필드 (프롬프트 8-1)
+  @ApiPropertyOptional({
+    description: '공용장비 여부',
+    default: false,
+  })
+  isShared?: boolean;
+
+  @ApiPropertyOptional({
+    description: '공용장비 출처',
+    enum: ['safety_lab', 'external'],
+  })
+  sharedSource?: 'safety_lab' | 'external';
 }
 
 // Zod 검증 파이프 생성

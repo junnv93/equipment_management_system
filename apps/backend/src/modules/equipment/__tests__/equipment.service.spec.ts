@@ -40,7 +40,7 @@ describe('EquipmentService', () => {
     // 테스트 완료 후 생성된 테스트 장비 정리
     for (const equipment of testEquipments) {
       try {
-        await service.remove(equipment.id.toString());
+        await service.remove(equipment.uuid);
       } catch (error) {
         console.log(`Error cleaning up test equipment ${equipment.id}: ${error.message}`);
       }
@@ -203,8 +203,8 @@ describe('EquipmentService', () => {
       const createdEquipment = await service.create(createEquipmentDto);
       testEquipments.push(createdEquipment);
 
-      // ID로 장비 조회
-      const foundEquipment = await service.findOne(createdEquipment.id.toString());
+      // UUID로 장비 조회
+      const foundEquipment = await service.findOne(createdEquipment.uuid);
 
       expect(foundEquipment).toBeDefined();
       expect(foundEquipment.id).toBe(createdEquipment.id);
@@ -240,10 +240,7 @@ describe('EquipmentService', () => {
         status: 'in_use' as EquipmentStatus, // 표준 상태값: 사용 중
       } as any;
 
-      const updatedEquipment = await service.update(
-        createdEquipment.id.toString(),
-        updateEquipmentDto
-      );
+      const updatedEquipment = await service.update(createdEquipment.uuid, updateEquipmentDto);
 
       expect(updatedEquipment).toBeDefined();
       expect(updatedEquipment.id).toBe(createdEquipment.id);
@@ -273,10 +270,10 @@ describe('EquipmentService', () => {
       const createdEquipment = await service.create(createEquipmentDto);
 
       // 장비 삭제
-      await service.remove(createdEquipment.id.toString());
+      await service.remove(createdEquipment.uuid);
 
       // 삭제된 장비를 조회하면 오류가 발생해야 함
-      await expect(service.findOne(createdEquipment.id.toString())).rejects.toThrow();
+      await expect(service.findOne(createdEquipment.uuid)).rejects.toThrow();
     });
   });
 });

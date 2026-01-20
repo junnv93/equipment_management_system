@@ -93,6 +93,7 @@ describe('Site Permissions (e2e)', () => {
         status: 'available',
         location: 'Test Location',
         site: 'suwon',
+        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
     if (suwonEquipmentResponse.status === 201 && suwonEquipmentResponse.body?.uuid) {
@@ -112,6 +113,7 @@ describe('Site Permissions (e2e)', () => {
         status: 'available',
         location: 'Test Location',
         site: 'uiwang',
+        approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
     if (uiwangEquipmentResponse.status === 201 && uiwangEquipmentResponse.body?.uuid) {
@@ -125,14 +127,14 @@ describe('Site Permissions (e2e)', () => {
       await request(app.getHttpServer())
         .delete(`/equipment/${suwonEquipmentUuid}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(204);
+        .expect(202); // ✅ 프롬프트 3에서 삭제는 202 Accepted 반환
     }
 
     if (uiwangEquipmentUuid) {
       await request(app.getHttpServer())
         .delete(`/equipment/${uiwangEquipmentUuid}`)
         .set('Authorization', `Bearer ${adminToken}`)
-        .expect(204);
+        .expect(202); // ✅ 프롬프트 3에서 삭제는 202 Accepted 반환
     }
 
     await app.close();
@@ -325,6 +327,7 @@ describe('Site Permissions (e2e)', () => {
           managementNumber: `E2E-WITH-SITE-${Date.now()}`,
           status: 'available',
           site: 'suwon',
+          approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         })
         .expect(201);
 
@@ -336,7 +339,7 @@ describe('Site Permissions (e2e)', () => {
         await request(app.getHttpServer())
           .delete(`/equipment/${response.body.uuid || response.body.data?.uuid}`)
           .set('Authorization', `Bearer ${adminToken}`)
-          .expect(204);
+          .expect(202); // ✅ 프롬프트 3에서 삭제는 202 Accepted 반환
       }
     });
   });
@@ -367,6 +370,7 @@ describe('Site Permissions (e2e)', () => {
             status: 'available',
             location: 'RF Test Location',
             site: 'suwon',
+            approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
             // teamId는 실제 RF팀 ID로 설정 필요
             // teamId: rfTeamId,
           });

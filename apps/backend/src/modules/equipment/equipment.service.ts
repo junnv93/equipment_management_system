@@ -4,7 +4,8 @@ import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
-import { EquipmentStatus } from '@equipment-management/schemas';
+import { EquipmentStatus, SharedSource } from '@equipment-management/schemas';
+import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
 import { eq, and, like, lte, or, desc, asc, sql, SQL } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -126,7 +127,7 @@ export class EquipmentService {
    * findAll 메서드의 복잡한 쿼리 로직을 분리
    */
   private buildQueryConditions(queryParams: EquipmentQueryDto, userSite?: string): QueryConditions {
-    const { search, status, location, manufacturer, teamId, calibrationDue, sort, site } =
+    const { search, status, location, manufacturer, teamId, calibrationDue, sort, site, isShared } =
       queryParams;
 
     const whereConditions: SQL<unknown>[] = [eq(equipment.isActive, true)];
@@ -135,6 +136,11 @@ export class EquipmentService {
     const siteFilter = site || userSite;
     if (siteFilter) {
       whereConditions.push(eq(equipment.site, siteFilter));
+    }
+
+    // 공용장비 필터 (isShared 인덱스 활용)
+    if (isShared !== undefined) {
+      whereConditions.push(eq(equipment.isShared, isShared));
     }
 
     // 인덱스를 활용할 수 있는 조건을 먼저 추가 (성능 최적화)
@@ -430,6 +436,80 @@ export class EquipmentService {
   }
 
   /**
+   * 공용장비 생성
+   * 최소 필수 정보만으로 공용장비를 등록합니다.
+   * 공용장비는 isShared = true로 설정됩니다.
+   */
+  async createShared(createSharedEquipmentDto: CreateSharedEquipmentDto): Promise<Equipment> {
+    try {
+      // 관리번호 중복 확인
+      const existingEquipment = await this.db.query.equipment.findFirst({
+        where: eq(equipment.managementNumber, createSharedEquipmentDto.managementNumber),
+      });
+
+      if (existingEquipment) {
+        throw new BadRequestException(
+          `관리번호 ${createSharedEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`
+        );
+      }
+
+      // 다음 교정일 계산
+      const nextCalibrationDate = this.calculateNextCalibrationDate(
+        createSharedEquipmentDto.lastCalibrationDate,
+        createSharedEquipmentDto.calibrationCycle
+      );
+
+      // 공용장비 데이터 구성
+      const insertData: Partial<Equipment> = {
+        uuid: uuidv4(),
+        name: createSharedEquipmentDto.name,
+        managementNumber: createSharedEquipmentDto.managementNumber,
+        site: createSharedEquipmentDto.site,
+        modelName: createSharedEquipmentDto.modelName,
+        manufacturer: createSharedEquipmentDto.manufacturer,
+        serialNumber: createSharedEquipmentDto.serialNumber,
+        location: createSharedEquipmentDto.location,
+        description: createSharedEquipmentDto.description,
+        calibrationCycle: createSharedEquipmentDto.calibrationCycle,
+        lastCalibrationDate: createSharedEquipmentDto.lastCalibrationDate
+          ? new Date(createSharedEquipmentDto.lastCalibrationDate)
+          : undefined,
+        nextCalibrationDate,
+        calibrationAgency: createSharedEquipmentDto.calibrationAgency,
+        calibrationMethod: createSharedEquipmentDto.calibrationMethod,
+        // 공용장비 필드 설정
+        isShared: true,
+        sharedSource: createSharedEquipmentDto.sharedSource,
+        // 기본값 설정
+        status: 'available',
+        isActive: true,
+        approvalStatus: 'approved', // 공용장비는 바로 승인 상태
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // 데이터베이스에 삽입
+      const [newEquipment] = await this.db
+        .insert(equipment)
+        .values(insertData as typeof equipment.$inferInsert)
+        .returning();
+
+      // 캐시 무효화
+      await this.invalidateCache();
+
+      return newEquipment;
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.logger.error(
+        `공용장비 생성 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error;
+    }
+  }
+
+  /**
    * 장비 목록 조회 (필터링, 정렬, 페이지네이션 지원)
    * ✅ Single Source of Truth: Zod 스키마가 타입 변환 및 검증을 모두 처리
    * @param queryParams 쿼리 파라미터
@@ -447,6 +527,7 @@ export class EquipmentService {
       teamId: queryParams.teamId,
       calibrationDue: queryParams.calibrationDue,
       site: queryParams.site, // ✅ 사이트 필터 캐시 키에 포함
+      isShared: queryParams.isShared, // ✅ 공용장비 필터 캐시 키에 포함
       sort: queryParams.sort,
       page,
       pageSize,

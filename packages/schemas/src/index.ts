@@ -67,6 +67,17 @@ import {
   CheckoutPurposeEnum,
   CheckoutPurpose,
   CHECKOUT_PURPOSE_VALUES,
+  SharedSourceEnum,
+  SharedSource,
+  SHARED_SOURCE_VALUES,
+  SiteEnum,
+  Site,
+  SoftwareTypeEnum,
+  SoftwareType,
+  SOFTWARE_TYPE_VALUES,
+  SoftwareApprovalStatusEnum,
+  SoftwareApprovalStatus,
+  SOFTWARE_APPROVAL_STATUS_VALUES,
 } from './enums';
 
 import { Team, CreateTeamInput, UpdateTeamInput, isTeam, teamSchema } from './team';
@@ -181,6 +192,17 @@ export {
   CheckoutPurposeEnum,
   CheckoutPurpose,
   CHECKOUT_PURPOSE_VALUES,
+  SharedSourceEnum,
+  SharedSource,
+  SHARED_SOURCE_VALUES,
+  SiteEnum,
+  Site,
+  SoftwareTypeEnum,
+  SoftwareType,
+  SOFTWARE_TYPE_VALUES,
+  SoftwareApprovalStatusEnum,
+  SoftwareApprovalStatus,
+  SOFTWARE_APPROVAL_STATUS_VALUES,
 
   // Team
   Team,

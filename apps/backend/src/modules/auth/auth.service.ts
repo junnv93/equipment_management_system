@@ -35,9 +35,10 @@ export class AuthService {
     // 개발 편의를 위한 하드코딩된 사용자 (실제로는 데이터베이스에서 조회해야 함)
     // ✅ UUID 형식의 ID 사용 (users 테이블의 id는 uuid 타입)
     // 일관된 UUID 형식 사용으로 다른 모듈과의 호환성 확보
+    // ✅ UUID v4 형식 사용 (DTO @IsUUID('4') 검증 호환)
     const testUsers = {
       'admin@example.com': {
-        id: '00000000-0000-0000-0000-000000000001',
+        id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         email: 'admin@example.com',
         name: '관리자',
         roles: [UserRole.SITE_ADMIN],
@@ -46,7 +47,7 @@ export class AuthService {
         location: '수원랩' as const,
       },
       'manager@example.com': {
-        id: '00000000-0000-0000-0000-000000000002',
+        id: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
         email: 'manager@example.com',
         name: '기술책임자',
         roles: [UserRole.TECHNICAL_MANAGER],
@@ -55,7 +56,7 @@ export class AuthService {
         location: '수원랩' as const,
       },
       'user@example.com': {
-        id: '00000000-0000-0000-0000-000000000003',
+        id: '12345678-1234-4567-8901-234567890abc',
         email: 'user@example.com',
         name: '시험실무자',
         roles: [UserRole.TEST_OPERATOR],

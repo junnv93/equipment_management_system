@@ -4,9 +4,10 @@ import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto';
 import { User, UserListResponse, UserRoleEnum } from '@equipment-management/schemas';
 
 // 임시 데이터 저장소 (실제로는 DB를 사용)
+// ✅ AuthService의 테스트 사용자 ID와 동기화 (UUID v4 형식)
 const users: User[] = [
   {
-    id: '550e8400-e29b-41d4-a716-446655440000',
+    id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', // AuthService admin과 동일
     email: 'admin@example.com',
     name: '관리자',
     role: 'site_admin',
@@ -17,7 +18,7 @@ const users: User[] = [
     updatedAt: new Date('2023-01-01'),
   },
   {
-    id: '550e8400-e29b-41d4-a716-446655440001',
+    id: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', // AuthService manager와 동일
     email: 'manager@example.com',
     name: 'RF팀 관리자',
     role: 'technical_manager',
@@ -32,9 +33,9 @@ const users: User[] = [
     updatedAt: new Date('2023-02-15'),
   },
   {
-    id: '550e8400-e29b-41d4-a716-446655440002',
-    email: 'user1@example.com',
-    name: '김사용',
+    id: '12345678-1234-4567-8901-234567890abc', // AuthService user와 동일
+    email: 'user@example.com',
+    name: '시험실무자',
     role: 'test_operator',
     teamId: 'rf',
     department: '연구개발부',
@@ -48,12 +49,12 @@ const users: User[] = [
   },
   {
     id: '550e8400-e29b-41d4-a716-446655440003',
-    email: 'user2@example.com',
-    name: '이테스터',
+    email: 'user1@example.com',
+    name: '김사용',
     role: 'test_operator',
-    teamId: 'sar',
+    teamId: 'rf',
     department: '연구개발부',
-    position: '선임연구원',
+    position: '연구원',
     phoneNumber: '010-3456-7890',
     isActive: true,
     equipmentCount: 2,

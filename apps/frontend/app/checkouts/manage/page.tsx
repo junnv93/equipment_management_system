@@ -295,6 +295,7 @@ export default function ManageCheckoutsPage() {
         actualReturnDate: new Date().toISOString(),
         returnCondition: returnCondition,
         returnNotes: returnNotes.trim(),
+        workingStatusChecked: true, // 반입 시 작동 상태 확인
       },
     });
   };
