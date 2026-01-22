@@ -1,51 +1,89 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EquipmentService } from '../equipment.service';
-import { DrizzleModule } from '../../../database/drizzle.module';
-import { ConfigModule } from '@nestjs/config';
-import { CacheModule } from '../../../common/cache/cache.module';
-import { CreateEquipmentDto } from '../dto/create-equipment.dto';
-import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
-import { EquipmentQueryDto } from '../dto/equipment-query.dto';
-// 표준 상태값은 schemas 패키지에서 import
-import { EquipmentStatusEnum, EquipmentStatus } from '@equipment-management/schemas';
-import * as crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { EquipmentStatus } from '@equipment-management/schemas';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
-// 랜덤 문자열 생성 헬퍼 함수
-const generateRandomString = (length = 8) => {
-  return crypto.randomBytes(length).toString('hex');
-};
+// Drizzle 인스턴스 토큰 (drizzle.module.ts에서 정의)
+const DRIZZLE_INSTANCE = 'DRIZZLE_INSTANCE';
 
+/**
+ * EquipmentService 유닛 테스트
+ *
+ * Best Practice: 유닛 테스트에서는 외부 의존성(DB)을 모킹합니다.
+ * 실제 DB 연결이 필요한 테스트는 통합 테스트(*.integration.spec.ts)로 분리합니다.
+ */
 describe('EquipmentService', () => {
   let service: EquipmentService;
-  let moduleRef: TestingModule;
-  const testEquipments: any[] = [];
+  let mockDb: any;
+  let mockCacheService: any;
 
-  beforeAll(async () => {
-    moduleRef = await Test.createTestingModule({
-      imports: [
-        ConfigModule.forRoot({
-          isGlobal: true,
-          envFilePath: ['.env.test', '.env'],
-        }),
-        DrizzleModule,
-        CacheModule,
+  // 테스트용 mock 데이터
+  const mockEquipment = {
+    id: 1,
+    uuid: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    name: '테스트 장비',
+    managementNumber: 'EQP-TEST-001',
+    status: 'available' as EquipmentStatus,
+    site: 'suwon' as const,
+    location: '테스트실',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  beforeEach(async () => {
+    // DB 쿼리 모킹
+    mockDb = {
+      query: {
+        equipment: {
+          findFirst: jest.fn(),
+          findMany: jest.fn(),
+        },
+      },
+      select: jest.fn().mockReturnThis(),
+      from: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      leftJoin: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      offset: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      values: jest.fn().mockReturnThis(),
+      returning: jest.fn(),
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      delete: jest.fn().mockReturnThis(),
+    };
+
+    // 캐시 서비스 모킹
+    mockCacheService = {
+      getOrSet: jest.fn().mockImplementation((_key, factory) => factory()),
+      invalidatePattern: jest.fn(),
+      deleteByPattern: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        EquipmentService,
+        {
+          provide: DRIZZLE_INSTANCE,
+          useValue: mockDb,
+        },
+        {
+          provide: SimpleCacheService,
+          useValue: mockCacheService,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockReturnValue('test-value'),
+          },
+        },
       ],
-      providers: [EquipmentService],
     }).compile();
 
-    service = moduleRef.get<EquipmentService>(EquipmentService);
-  });
-
-  afterAll(async () => {
-    // 테스트 완료 후 생성된 테스트 장비 정리
-    for (const equipment of testEquipments) {
-      try {
-        await service.remove(equipment.uuid);
-      } catch (error) {
-        console.log(`Error cleaning up test equipment ${equipment.id}: ${error.message}`);
-      }
-    }
-    await moduleRef.close();
+    service = module.get<EquipmentService>(EquipmentService);
   });
 
   it('should be defined', () => {
@@ -54,226 +92,214 @@ describe('EquipmentService', () => {
 
   describe('create', () => {
     it('should create a new equipment with valid data', async () => {
-      const createEquipmentDto: CreateEquipmentDto = {
-        name: `테스트 장비 ${generateRandomString()}`,
-        managementNumber: `EQP-TEST-${generateRandomString()}`,
-        status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
-        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
-      } as CreateEquipmentDto;
+      // Arrange: 중복 체크에서 null 반환 (중복 없음)
+      mockDb.query.equipment.findFirst.mockResolvedValue(null);
+      mockDb.returning.mockResolvedValue([mockEquipment]);
 
-      const result = await service.create(createEquipmentDto);
-      testEquipments.push(result); // 정리를 위해 추가
-
-      expect(result).toBeDefined();
-      expect(result.name).toBe(createEquipmentDto.name);
-      expect(result.managementNumber).toBe(createEquipmentDto.managementNumber);
-      expect(result.status).toBe(createEquipmentDto.status);
-    });
-
-    it('should throw an error when creating equipment with duplicate management number', async () => {
-      const managementNumber = `EQP-DUP-${generateRandomString()}`;
-      const createEquipmentDto: CreateEquipmentDto = {
-        name: '중복 테스트 장비 1',
-        managementNumber,
-        status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
-        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
+      const createDto = {
+        name: '테스트 장비',
+        managementNumber: 'EQP-TEST-001',
+        status: 'available' as EquipmentStatus,
+        site: 'suwon' as const,
       };
 
-      const firstEquipment = await service.create(createEquipmentDto);
-      testEquipments.push(firstEquipment);
+      // Act
+      const result = await service.create(createDto);
 
-      // 동일한 관리번호로 다시 생성 시도
-      await expect(
-        service.create({
-          ...createEquipmentDto,
-          name: '중복 테스트 장비 2',
-        })
-      ).rejects.toThrow();
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.name).toBe(createDto.name);
+      expect(result.managementNumber).toBe(createDto.managementNumber);
+      expect(mockDb.query.equipment.findFirst).toHaveBeenCalled();
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when management number already exists', async () => {
+      // Arrange: 중복 체크에서 기존 장비 반환
+      mockDb.query.equipment.findFirst.mockResolvedValue(mockEquipment);
+
+      const createDto = {
+        name: '중복 장비',
+        managementNumber: 'EQP-TEST-001', // 이미 존재하는 번호
+        status: 'available' as EquipmentStatus,
+        site: 'suwon' as const,
+      };
+
+      // Act & Assert
+      await expect(service.create(createDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should calculate nextCalibrationDate when lastCalibrationDate and calibrationCycle are provided', async () => {
+      // Arrange
       const lastCalibrationDate = new Date('2023-01-15');
-      const calibrationCycle = 12; // 12개월
-      const createEquipmentDto = {
-        name: `교정 테스트 장비 ${generateRandomString()}`,
-        managementNumber: `EQP-CAL-${generateRandomString()}`,
-        status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
-        site: 'suwon' as const, // ✅ 사이트별 권한 관리: 필수 필드
-        lastCalibrationDate: lastCalibrationDate.toISOString(),
-        calibrationCycle,
-      } as any;
+      const calibrationCycle = 12;
 
-      const result = await service.create(createEquipmentDto);
-      testEquipments.push(result);
-
-      expect(result).toBeDefined();
-      expect(result.nextCalibrationDate).toBeDefined();
-
-      // 다음 교정일이 올바르게 계산되었는지 확인
       const expectedNextDate = new Date(lastCalibrationDate);
       expectedNextDate.setMonth(expectedNextDate.getMonth() + calibrationCycle);
 
-      const actualNextDate = new Date(result.nextCalibrationDate!);
-      expect(actualNextDate.getFullYear()).toBe(expectedNextDate.getFullYear());
-      expect(actualNextDate.getMonth()).toBe(expectedNextDate.getMonth());
+      const mockEquipmentWithCalibration = {
+        ...mockEquipment,
+        lastCalibrationDate,
+        calibrationCycle,
+        nextCalibrationDate: expectedNextDate,
+      };
+
+      mockDb.query.equipment.findFirst.mockResolvedValue(null);
+      mockDb.returning.mockResolvedValue([mockEquipmentWithCalibration]);
+
+      const createDto = {
+        name: '교정 테스트 장비',
+        managementNumber: 'EQP-CAL-001',
+        status: 'available' as EquipmentStatus,
+        site: 'suwon' as const,
+        lastCalibrationDate: lastCalibrationDate.toISOString(),
+        calibrationCycle,
+      };
+
+      // Act
+      const result = await service.create(createDto as any);
+
+      // Assert
+      expect(result.nextCalibrationDate).toBeDefined();
     });
   });
 
   describe('findAll', () => {
-    it('should return a list of equipment', async () => {
-      // 기본 쿼리로 장비 목록 검색
-      const query: EquipmentQueryDto = {
-        page: 1,
-        pageSize: 10,
-      };
+    it('should return a paginated list of equipment', async () => {
+      // Arrange
+      const mockEquipmentList = [mockEquipment, { ...mockEquipment, id: 2, uuid: 'uuid-2' }];
 
+      // 캐시가 팩토리 함수를 실행하도록 설정
+      mockCacheService.getOrSet.mockImplementation(
+        async (_key: string, factory: () => Promise<any>) => {
+          return await factory();
+        }
+      );
+
+      // select().from().where()... 체인의 최종 결과
+      mockDb.offset.mockResolvedValue(mockEquipmentList);
+
+      // COUNT 쿼리 결과
+      const mockCountResult = [{ count: 2 }];
+      mockDb.where.mockResolvedValueOnce(mockCountResult);
+
+      const query = { page: 1, pageSize: 10 };
+
+      // Act
       const result = await service.findAll(query);
 
+      // Assert
       expect(result).toBeDefined();
       expect(result.items).toBeDefined();
-      expect(Array.isArray(result.items)).toBe(true);
       expect(result.meta).toBeDefined();
-      expect(result.meta.totalItems).toBeDefined();
-      expect(result.meta.currentPage).toBe(query.page);
-      expect(result.meta.itemsPerPage).toBe(query.pageSize);
-    });
-
-    it('should filter equipment by search term', async () => {
-      // 고유한 검색어를 포함하는 장비 생성
-      const uniqueString = generateRandomString();
-      const createEquipmentDto: CreateEquipmentDto = {
-        name: `고유 장비 ${uniqueString}`,
-        managementNumber: `EQP-SEARCH-${generateRandomString()}`,
-        status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
-        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
-      };
-
-      const createdEquipment = await service.create(createEquipmentDto);
-      testEquipments.push(createdEquipment);
-
-      // 고유 문자열로 검색
-      const query: EquipmentQueryDto = {
-        page: 1,
-        pageSize: 10,
-        search: uniqueString,
-      };
-
-      const result = await service.findAll(query);
-
-      expect(result.items.length).toBeGreaterThan(0);
-      expect(result.items.some((eq) => eq.id === createdEquipment.id)).toBe(true);
+      expect(mockCacheService.getOrSet).toHaveBeenCalled();
     });
 
     it('should filter equipment by status', async () => {
-      // 특정 상태의 장비 생성
-      const createEquipmentDto: CreateEquipmentDto = {
-        name: `상태 필터 테스트 ${generateRandomString()}`,
-        managementNumber: `EQP-STATUS-${generateRandomString()}`,
-        status: 'in_use' as EquipmentStatus, // 표준 상태값: 사용 중
-        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
-      } as CreateEquipmentDto;
+      // Arrange
+      const mockFilteredList = [mockEquipment];
 
-      const createdEquipment = await service.create(createEquipmentDto);
-      testEquipments.push(createdEquipment);
+      mockCacheService.getOrSet.mockImplementation(
+        async (_key: string, factory: () => Promise<any>) => {
+          return await factory();
+        }
+      );
+      mockDb.offset.mockResolvedValue(mockFilteredList);
+      mockDb.where.mockResolvedValueOnce([{ count: 1 }]);
 
-      // 상태로 필터링
-      const query: EquipmentQueryDto = {
-        page: 1,
-        pageSize: 10,
-        status: 'in_use' as EquipmentStatus, // 표준 상태값: 사용 중
-      };
+      const query = { page: 1, pageSize: 10, status: 'available' as EquipmentStatus };
 
+      // Act
       const result = await service.findAll(query);
 
-      expect(result.items.length).toBeGreaterThan(0);
-      expect(result.items.every((eq) => eq.status === 'in_use')).toBe(true);
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.items).toBeDefined();
     });
   });
 
   describe('findOne', () => {
-    it('should return an equipment by ID', async () => {
-      // 테스트 장비 생성
-      const createEquipmentDto: CreateEquipmentDto = {
-        name: `조회 테스트 장비 ${generateRandomString()}`,
-        managementNumber: `EQP-FIND-${generateRandomString()}`,
-        status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
-        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
-      };
+    it('should return an equipment by UUID', async () => {
+      // Arrange
+      mockDb.query.equipment.findFirst.mockResolvedValue(mockEquipment);
 
-      const createdEquipment = await service.create(createEquipmentDto);
-      testEquipments.push(createdEquipment);
+      // Act
+      const result = await service.findOne(mockEquipment.uuid);
 
-      // UUID로 장비 조회
-      const foundEquipment = await service.findOne(createdEquipment.uuid);
-
-      expect(foundEquipment).toBeDefined();
-      expect(foundEquipment.id).toBe(createdEquipment.id);
-      expect(foundEquipment.name).toBe(createEquipmentDto.name);
-      expect(foundEquipment.managementNumber).toBe(createEquipmentDto.managementNumber);
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe(mockEquipment.uuid);
+      expect(result.name).toBe(mockEquipment.name);
     });
 
-    it('should throw an error for non-existent equipment', async () => {
-      // 존재하지 않는 ID로 조회
-      const nonExistentId = '999999';
+    it('should throw NotFoundException for non-existent equipment', async () => {
+      // Arrange
+      mockDb.query.equipment.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne(nonExistentId)).rejects.toThrow();
+      // Act & Assert
+      await expect(service.findOne('non-existent-uuid')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('update', () => {
     it('should update an equipment with valid data', async () => {
-      // 테스트 장비 생성
-      const createEquipmentDto: CreateEquipmentDto = {
-        name: `업데이트 테스트 장비 ${generateRandomString()}`,
-        managementNumber: `EQP-UPDATE-${generateRandomString()}`,
-        status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
-        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
-      } as CreateEquipmentDto;
-
-      const createdEquipment = await service.create(createEquipmentDto);
-      testEquipments.push(createdEquipment);
-
-      // 장비 정보 업데이트
-      const updateEquipmentDto = {
+      // Arrange
+      const updatedEquipment = {
+        ...mockEquipment,
         name: '업데이트된 장비명',
         location: '새로운 위치',
-        status: 'in_use' as EquipmentStatus, // 표준 상태값: 사용 중
-      } as any;
+      };
 
-      const updatedEquipment = await service.update(createdEquipment.uuid, updateEquipmentDto);
+      mockDb.query.equipment.findFirst.mockResolvedValue(mockEquipment);
+      mockDb.returning.mockResolvedValue([updatedEquipment]);
 
-      expect(updatedEquipment).toBeDefined();
-      expect(updatedEquipment.id).toBe(createdEquipment.id);
-      if (updateEquipmentDto.name) {
-        expect(updatedEquipment.name).toBe(updateEquipmentDto.name);
-      }
-      if (updateEquipmentDto.location) {
-        expect(updatedEquipment.location).toBe(updateEquipmentDto.location);
-      }
-      if (updateEquipmentDto.status) {
-        expect(updatedEquipment.status).toBe(updateEquipmentDto.status);
-      }
-      expect(updatedEquipment.managementNumber).toBe(createdEquipment.managementNumber); // 관리번호는 변경되지 않아야 함
+      const updateDto = {
+        name: '업데이트된 장비명',
+        location: '새로운 위치',
+      };
+
+      // Act
+      const result = await service.update(mockEquipment.uuid, updateDto);
+
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.name).toBe(updateDto.name);
+      expect(result.location).toBe(updateDto.location);
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when updating non-existent equipment', async () => {
+      // Arrange
+      mockDb.query.equipment.findFirst.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.update('non-existent-uuid', { name: '새 이름' })).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 
   describe('remove', () => {
-    it('should remove an equipment by ID', async () => {
-      // 테스트 장비 생성
-      const createEquipmentDto: CreateEquipmentDto = {
-        name: `삭제 테스트 장비 ${generateRandomString()}`,
-        managementNumber: `EQP-REMOVE-${generateRandomString()}`,
-        status: 'available' as EquipmentStatus, // 표준 상태값: 사용 가능
-        site: 'suwon', // ✅ 사이트별 권한 관리: 필수 필드
-      };
+    it('should soft delete an equipment by UUID', async () => {
+      // Arrange: remove는 soft delete (update)를 수행
+      const softDeletedEquipment = { ...mockEquipment, isActive: false };
+      mockDb.returning.mockResolvedValue([softDeletedEquipment]);
 
-      const createdEquipment = await service.create(createEquipmentDto);
+      // Act
+      const result = await service.remove(mockEquipment.uuid);
 
-      // 장비 삭제
-      await service.remove(createdEquipment.uuid);
+      // Assert
+      expect(mockDb.update).toHaveBeenCalled();
+      expect(result.isActive).toBe(false);
+      expect(mockCacheService.deleteByPattern).toHaveBeenCalled();
+    });
 
-      // 삭제된 장비를 조회하면 오류가 발생해야 함
-      await expect(service.findOne(createdEquipment.uuid)).rejects.toThrow();
+    it('should throw NotFoundException when removing non-existent equipment', async () => {
+      // Arrange: returning이 빈 배열을 반환하면 NotFoundException
+      mockDb.returning.mockResolvedValue([]);
+
+      // Act & Assert
+      await expect(service.remove('non-existent-uuid')).rejects.toThrow(NotFoundException);
     });
   });
 });

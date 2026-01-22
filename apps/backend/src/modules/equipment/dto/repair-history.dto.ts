@@ -1,16 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsDateString,
-  IsNumber,
-  IsEnum,
-  IsUUID,
-  MinLength,
-  Min,
-  IsBoolean,
-} from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // 수리 결과 enum
 export enum RepairResultEnum {
@@ -18,6 +8,51 @@ export enum RepairResultEnum {
   PARTIAL = 'partial',
   FAILED = 'failed',
 }
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 수리 이력 생성 스키마
+ */
+export const createRepairHistorySchema = z.object({
+  repairDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
+  repairedBy: z.string().optional(),
+  repairCompany: z.string().optional(),
+  cost: z.number().min(0, '수리 비용은 0 이상이어야 합니다').optional(),
+  repairResult: z.nativeEnum(RepairResultEnum).optional(),
+  notes: z.string().optional(),
+  attachmentPath: z.string().optional(),
+});
+
+export type CreateRepairHistoryInput = z.infer<typeof createRepairHistorySchema>;
+export const CreateRepairHistoryValidationPipe = new ZodValidationPipe(createRepairHistorySchema);
+
+/**
+ * 수리 이력 수정 스키마
+ */
+export const updateRepairHistorySchema = createRepairHistorySchema.partial();
+export type UpdateRepairHistoryInput = z.infer<typeof updateRepairHistorySchema>;
+export const UpdateRepairHistoryValidationPipe = new ZodValidationPipe(updateRepairHistorySchema);
+
+/**
+ * 수리 이력 조회 쿼리 스키마
+ */
+export const repairHistoryQuerySchema = z.object({
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+  repairResult: z.nativeEnum(RepairResultEnum).optional(),
+  repairCompany: z.string().optional(),
+  includeDeleted: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
+  sort: z.string().optional(),
+  page: z.preprocess((val) => (val ? Number(val) : undefined), z.number().optional()),
+  pageSize: z.preprocess((val) => (val ? Number(val) : undefined), z.number().optional()),
+});
+
+export type RepairHistoryQueryInput = z.infer<typeof repairHistoryQuerySchema>;
+export const RepairHistoryQueryValidationPipe = new ZodValidationPipe(repairHistoryQuerySchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 /**
  * 수리 이력 생성 DTO
@@ -27,7 +62,6 @@ export class CreateRepairHistoryDto {
     description: '수리 일자',
     example: '2024-01-15T00:00:00.000Z',
   })
-  @IsDateString()
   repairDate: string;
 
   @ApiProperty({
@@ -35,24 +69,18 @@ export class CreateRepairHistoryDto {
     example: '전원부 고장으로 인한 전원 보드 교체',
     minLength: 10,
   })
-  @IsString()
-  @MinLength(10, { message: '수리 내용은 최소 10자 이상 입력해야 합니다.' })
   repairDescription: string;
 
   @ApiPropertyOptional({
     description: '수리 담당자',
     example: '홍길동',
   })
-  @IsOptional()
-  @IsString()
   repairedBy?: string;
 
   @ApiPropertyOptional({
     description: '외부 수리 업체',
     example: '키사이트 코리아',
   })
-  @IsOptional()
-  @IsString()
   repairCompany?: string;
 
   @ApiPropertyOptional({
@@ -60,9 +88,6 @@ export class CreateRepairHistoryDto {
     example: 500000,
     minimum: 0,
   })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
   cost?: number;
 
   @ApiPropertyOptional({
@@ -70,24 +95,18 @@ export class CreateRepairHistoryDto {
     enum: RepairResultEnum,
     example: RepairResultEnum.COMPLETED,
   })
-  @IsOptional()
-  @IsEnum(RepairResultEnum)
   repairResult?: RepairResultEnum;
 
   @ApiPropertyOptional({
     description: '비고',
     example: '보증 기간 내 무상 수리',
   })
-  @IsOptional()
-  @IsString()
   notes?: string;
 
   @ApiPropertyOptional({
     description: '첨부 파일 경로',
     example: '/uploads/repair/2024/repair-report.pdf',
   })
-  @IsOptional()
-  @IsString()
   attachmentPath?: string;
 }
 
@@ -104,67 +123,48 @@ export class RepairHistoryQueryDto {
     description: '시작 날짜 (필터)',
     example: '2024-01-01',
   })
-  @IsOptional()
-  @IsDateString()
   fromDate?: string;
 
   @ApiPropertyOptional({
     description: '종료 날짜 (필터)',
     example: '2024-12-31',
   })
-  @IsOptional()
-  @IsDateString()
   toDate?: string;
 
   @ApiPropertyOptional({
     description: '수리 결과 필터',
     enum: RepairResultEnum,
   })
-  @IsOptional()
-  @IsEnum(RepairResultEnum)
   repairResult?: RepairResultEnum;
 
   @ApiPropertyOptional({
     description: '수리 업체 필터',
     example: '키사이트',
   })
-  @IsOptional()
-  @IsString()
   repairCompany?: string;
 
   @ApiPropertyOptional({
     description: '삭제된 항목 포함 여부',
     example: false,
   })
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
   includeDeleted?: boolean;
 
   @ApiPropertyOptional({
     description: '정렬 기준',
     example: 'repairDate.desc',
   })
-  @IsOptional()
-  @IsString()
   sort?: string;
 
   @ApiPropertyOptional({
     description: '페이지 번호',
     example: 1,
   })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
   page?: number;
 
   @ApiPropertyOptional({
     description: '페이지 크기',
     example: 20,
   })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
   pageSize?: number;
 }
 

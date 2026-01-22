@@ -1,5 +1,6 @@
 import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
 import { ZodSchema, ZodError } from 'zod';
+import { getErrorMessage } from '../utils/error';
 
 /**
  * Zod 기반 검증 파이프
@@ -86,7 +87,7 @@ export class ZodValidationPipe implements PipeTransform {
       }
       throw new BadRequestException({
         message: '입력 데이터 검증 실패',
-        errors: error.message || '알 수 없는 오류',
+        errors: getErrorMessage(error) || '알 수 없는 오류',
       });
     }
   }

@@ -1,8 +1,28 @@
 import { PartialType, OmitType } from '@nestjs/mapped-types';
 import { ApiProperty } from '@nestjs/swagger';
-import { CreateCalibrationDto } from './create-calibration.dto';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
-import { CalibrationStatusEnum } from '@equipment-management/schemas';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { CreateCalibrationDto, calibrationBaseSchema } from './create-calibration.dto';
+import { CalibrationStatusEnum } from '../../../types';
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 교정 수정 스키마 (base 스키마에서 파생 - Zod v4에서는 refine 후 omit 불가)
+ */
+export const updateCalibrationSchema = calibrationBaseSchema
+  .omit({ equipmentId: true })
+  .partial()
+  .extend({
+    status: z.nativeEnum(CalibrationStatusEnum).optional(),
+    isPassed: z.boolean().optional(),
+    resultNotes: z.string().optional(),
+  });
+
+export type UpdateCalibrationInput = z.infer<typeof updateCalibrationSchema>;
+export const UpdateCalibrationValidationPipe = new ZodValidationPipe(updateCalibrationSchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class UpdateCalibrationDto extends PartialType(
   OmitType(CreateCalibrationDto, ['equipmentId'] as const)
@@ -13,8 +33,6 @@ export class UpdateCalibrationDto extends PartialType(
     example: 'completed',
     required: false,
   })
-  @IsEnum(CalibrationStatusEnum)
-  @IsOptional()
   status?: string;
 
   @ApiProperty({
@@ -22,8 +40,6 @@ export class UpdateCalibrationDto extends PartialType(
     example: true,
     required: false,
   })
-  @IsBoolean()
-  @IsOptional()
   isPassed?: boolean;
 
   @ApiProperty({
@@ -31,7 +47,5 @@ export class UpdateCalibrationDto extends PartialType(
     example: '모든 파라미터가 허용 오차 범위 내에 있습니다.',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   resultNotes?: string;
 }

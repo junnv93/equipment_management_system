@@ -45,7 +45,7 @@ const temporaryNotifications = [
     isTeamNotification: false,
     equipmentId: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
     calibrationId: '3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r',
-    rentalId: null,
+    rentalId: undefined,
     linkUrl: '/equipment/1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p/calibrations',
     isRead: false,
     createdAt: new Date('2023-05-01T09:00:00Z'),
@@ -60,7 +60,7 @@ const temporaryNotifications = [
     recipientId: '660f9500-f30b-52e5-b827-557766550111',
     isTeamNotification: false,
     equipmentId: '2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q',
-    calibrationId: null,
+    calibrationId: undefined,
     rentalId: '7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v',
     linkUrl: '/rentals/7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v',
     isRead: true,
@@ -77,7 +77,7 @@ const temporaryNotifications = [
     isTeamNotification: true,
     equipmentId: '3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r',
     calibrationId: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    rentalId: null,
+    rentalId: undefined,
     linkUrl:
       '/equipment/3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r/calibrations/4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
     isRead: false,
@@ -93,7 +93,7 @@ const temporaryNotifications = [
     recipientId: '770a0600-a40c-63f6-c938-668877660222',
     isTeamNotification: false,
     equipmentId: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    calibrationId: null,
+    calibrationId: undefined,
     rentalId: '8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w',
     linkUrl: '/rentals/8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w',
     isRead: false,
@@ -108,10 +108,10 @@ const temporaryNotifications = [
     priority: NotificationPriorityEnum.HIGH,
     recipientId: 'all',
     isTeamNotification: false,
-    equipmentId: null,
-    calibrationId: null,
-    rentalId: null,
-    linkUrl: null,
+    equipmentId: undefined,
+    calibrationId: undefined,
+    rentalId: undefined,
+    linkUrl: undefined,
     isRead: false,
     createdAt: new Date('2023-05-25T10:00:00Z'),
     updatedAt: new Date('2023-05-25T10:00:00Z'),
@@ -380,7 +380,7 @@ export class NotificationsService {
       isTeamNotification: false,
       equipmentId,
       calibrationId,
-      rentalId: null,
+      rentalId: undefined,
       linkUrl: `/calibration/${calibrationId}`,
       isRead: false,
       createdAt: new Date(),
@@ -412,7 +412,7 @@ export class NotificationsService {
       isTeamNotification: false,
       equipmentId,
       calibrationId,
-      rentalId: null,
+      rentalId: undefined,
       linkUrl: `/admin/calibration-approvals`,
       isRead: false,
       createdAt: new Date(),
@@ -443,7 +443,7 @@ export class NotificationsService {
       isTeamNotification: false,
       equipmentId,
       calibrationId,
-      rentalId: null,
+      rentalId: undefined,
       linkUrl: `/calibration/${calibrationId}`,
       isRead: false,
       createdAt: new Date(),
@@ -475,7 +475,7 @@ export class NotificationsService {
       isTeamNotification: false,
       equipmentId,
       calibrationId,
-      rentalId: null,
+      rentalId: undefined,
       linkUrl: `/calibration/${calibrationId}`,
       isRead: false,
       createdAt: new Date(),
@@ -534,8 +534,8 @@ export class NotificationsService {
       priority: NotificationPriorityEnum.MEDIUM,
       recipientId: userId,
       isTeamNotification: false,
-      equipmentId: null,
-      calibrationId: null,
+      equipmentId: undefined,
+      calibrationId: undefined,
       rentalId,
       linkUrl: `/rentals/${rentalId}`,
       isRead: false,
@@ -565,8 +565,8 @@ export class NotificationsService {
       priority: NotificationPriorityEnum.MEDIUM,
       recipientId: approverId, // 알림을 받을 승인자 ID
       isTeamNotification: false,
-      equipmentId: null,
-      calibrationId: null,
+      equipmentId: undefined,
+      calibrationId: undefined,
       rentalId,
       linkUrl: `/admin/return-approvals`,
       isRead: false,
@@ -612,8 +612,8 @@ export class NotificationsService {
       priority: NotificationPriorityEnum.MEDIUM,
       recipientId: userId,
       isTeamNotification: false,
-      equipmentId: null,
-      calibrationId: null,
+      equipmentId: undefined,
+      calibrationId: undefined,
       rentalId,
       linkUrl: `/rentals/${rentalId}`,
       isRead: false,
@@ -717,9 +717,9 @@ export class NotificationsService {
 
     switch (notificationType) {
       case NotificationTypeEnum.CALIBRATION_DUE:
-        return settings.calibrationDueEnabled;
+        return settings.calibrationDueEnabled ?? true;
       case NotificationTypeEnum.CALIBRATION_COMPLETED:
-        return settings.calibrationCompletedEnabled;
+        return settings.calibrationCompletedEnabled ?? true;
       case NotificationTypeEnum.INTERMEDIATE_CHECK_DUE:
         return (settings as any).intermediateCheckEnabled ?? true;
       case NotificationTypeEnum.CALIBRATION_APPROVAL_PENDING:
@@ -727,11 +727,11 @@ export class NotificationsService {
       case NotificationTypeEnum.CALIBRATION_REJECTED:
         return (settings as any).calibrationApprovalEnabled ?? true;
       case NotificationTypeEnum.RENTAL_REQUEST:
-        return settings.rentalRequestEnabled;
+        return settings.rentalRequestEnabled ?? true;
       case NotificationTypeEnum.RENTAL_APPROVED:
-        return settings.rentalApprovedEnabled;
+        return settings.rentalApprovedEnabled ?? true;
       case NotificationTypeEnum.RENTAL_REJECTED:
-        return settings.rentalRejectedEnabled;
+        return settings.rentalRejectedEnabled ?? true;
       case NotificationTypeEnum.RETURN_REQUESTED:
         return settings.returnRequestedEnabled ?? true;
       case NotificationTypeEnum.RETURN_APPROVED:
@@ -740,11 +740,11 @@ export class NotificationsService {
         return settings.returnRejectedEnabled ?? true;
       case NotificationTypeEnum.EQUIPMENT_MAINTENANCE:
       case NotificationTypeEnum.MAINTENANCE:
-        return settings.maintenanceEnabled;
+        return settings.maintenanceEnabled ?? true;
       case NotificationTypeEnum.CHECKOUT:
-        return settings.checkoutEnabled;
+        return settings.checkoutEnabled ?? true;
       case NotificationTypeEnum.SYSTEM:
-        return settings.systemNotificationsEnabled;
+        return settings.systemNotificationsEnabled ?? true;
       default:
         return true;
     }

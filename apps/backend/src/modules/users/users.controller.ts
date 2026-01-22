@@ -12,10 +12,18 @@ import {
   HttpStatus,
   HttpCode,
   UseGuards,
+  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto';
+import {
+  CreateUserDto,
+  CreateUserValidationPipe,
+  UpdateUserDto,
+  UpdateUserValidationPipe,
+  UserQueryDto,
+  UserQueryValidationPipe,
+} from './dto';
 import { User, UserListResponse } from '../../types/models';
 import { RequirePermissions } from '../../decorators/require-permissions.decorator';
 import { Permission } from '../../types/enums';
@@ -26,6 +34,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @UsePipes(CreateUserValidationPipe)
   @ApiOperation({ summary: '사용자 생성', description: '새로운 사용자를 생성합니다.' })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: '사용자 생성 성공' })
@@ -35,6 +44,7 @@ export class UsersController {
   }
 
   @Get()
+  @UsePipes(UserQueryValidationPipe)
   @ApiOperation({
     summary: '사용자 목록 조회',
     description: '사용자 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다.',
@@ -61,6 +71,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @UsePipes(UpdateUserValidationPipe)
   @ApiOperation({
     summary: '사용자 정보 수정',
     description: '특정 ID를 가진 사용자의 정보를 수정합니다.',

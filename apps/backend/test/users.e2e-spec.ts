@@ -5,6 +5,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import * as crypto from 'crypto';
+import { getErrorMessage } from '../src/common/utils/error';
 
 describe('UsersController (e2e)', () => {
   let app: INestApplication;
@@ -115,7 +116,7 @@ describe('UsersController (e2e)', () => {
         }
       }
     } catch (error) {
-      console.log('Test user setup failed, using default test user:', error.message);
+      console.log('Test user setup failed, using default test user:', getErrorMessage(error));
       // 기본 테스트 사용자로 로그인 시도
       try {
         const userLoginResponse = await request(app.getHttpServer())

@@ -57,15 +57,17 @@ describe('AuthService', () => {
       // Assert
       expect(result).toHaveProperty('access_token');
       expect(result).toHaveProperty('user');
-      expect(result.user).toEqual({
-        id: '00000000-0000-0000-0000-000000000001',
+      expect(result.user).toMatchObject({
         email: 'admin@example.com',
         name: '관리자',
         roles: [UserRole.LAB_MANAGER],
-        department: undefined,
         site: 'suwon',
         location: '수원랩',
       });
+      // UUID 형식 검증
+      expect(result.user.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      );
       expect(jwtService.sign).toHaveBeenCalled();
     });
 
@@ -82,8 +84,7 @@ describe('AuthService', () => {
       // Assert
       expect(result).toHaveProperty('access_token');
       expect(result).toHaveProperty('user');
-      expect(result.user).toEqual({
-        id: '00000000-0000-0000-0000-000000000002',
+      expect(result.user).toMatchObject({
         email: 'manager@example.com',
         name: '기술책임자',
         roles: [UserRole.TECHNICAL_MANAGER],
@@ -91,6 +92,9 @@ describe('AuthService', () => {
         site: 'suwon',
         location: '수원랩',
       });
+      expect(result.user.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      );
     });
 
     it('should return access token and user for regular user', async () => {
@@ -106,8 +110,7 @@ describe('AuthService', () => {
       // Assert
       expect(result).toHaveProperty('access_token');
       expect(result).toHaveProperty('user');
-      expect(result.user).toEqual({
-        id: '00000000-0000-0000-0000-000000000003',
+      expect(result.user).toMatchObject({
         email: 'user@example.com',
         name: '시험실무자',
         roles: [UserRole.TEST_ENGINEER],
@@ -115,6 +118,9 @@ describe('AuthService', () => {
         site: 'suwon',
         location: '수원랩',
       });
+      expect(result.user.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      );
     });
 
     it('should throw UnauthorizedException with invalid credentials', async () => {

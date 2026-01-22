@@ -162,10 +162,19 @@ const equipmentApi = {
     return transformSingleResponse<Equipment>(response);
   },
 
+  // 장비 상세 조회 (별칭 - 하위 호환성)
+  getById: async (id: string): Promise<Equipment> => {
+    const response = await apiClient.get(`/api/equipment/${id}`);
+    return transformSingleResponse<Equipment>(response);
+  },
+
   // 장비 생성
   // ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
   // ✅ schemas 패키지의 CreateEquipmentInput 타입 사용
-  createEquipment: async (data: CreateEquipmentDto, files?: File[]): Promise<EquipmentMutationResponse> => {
+  createEquipment: async (
+    data: CreateEquipmentDto,
+    files?: File[]
+  ): Promise<EquipmentMutationResponse> => {
     let response;
 
     // 파일이 포함된 경우 FormData로 처리

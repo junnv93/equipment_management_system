@@ -162,20 +162,20 @@ export class CheckoutsService {
         const statusConditions = statusArray.map((status) =>
           eq(checkouts.status, status as CheckoutStatus)
         );
-        whereConditions.push(or(...statusConditions));
+        whereConditions.push(or(...statusConditions)!);
       }
     }
 
     // 날짜 범위 필터링
     if (checkoutFrom) {
       whereConditions.push(
-        or(gte(checkouts.checkoutDate, new Date(checkoutFrom)), isNull(checkouts.checkoutDate))
+        or(gte(checkouts.checkoutDate, new Date(checkoutFrom)), isNull(checkouts.checkoutDate))!
       );
     }
 
     if (checkoutTo) {
       whereConditions.push(
-        or(lte(checkouts.checkoutDate, new Date(checkoutTo)), isNull(checkouts.checkoutDate))
+        or(lte(checkouts.checkoutDate, new Date(checkoutTo)), isNull(checkouts.checkoutDate))!
       );
     }
 
@@ -194,7 +194,7 @@ export class CheckoutsService {
           like(checkouts.destination, `%${search}%`),
           like(checkouts.reason, `%${search}%`),
           like(checkouts.address, `%${search}%`)
-        )
+        )!
       );
     }
 

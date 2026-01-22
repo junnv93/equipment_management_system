@@ -3,6 +3,7 @@ import { Pool, PoolConfig } from 'pg';
 import * as dotenv from 'dotenv';
 import { Logger } from '@nestjs/common';
 import * as schema from './schema';
+import { getErrorMessage } from '../../common/utils/error';
 
 // 환경 변수 로드
 dotenv.config();
@@ -82,7 +83,7 @@ pgPool.on('error', (err) => {
         metrics.lastReconnectTime = new Date();
         logger.log('Successfully reconnected to PostgreSQL');
       } catch (error) {
-        logger.error(`Reconnection failed: ${error.message}`);
+        logger.error(`Reconnection failed: ${getErrorMessage(error)}`);
       }
     }, backoffTime);
   } else {
@@ -122,7 +123,7 @@ export async function testConnection(): Promise<boolean> {
 
     return false;
   } catch (error) {
-    logger.error(`PostgreSQL connection test failed: ${error.message}`);
+    logger.error(`PostgreSQL connection test failed: ${getErrorMessage(error)}`);
     return false;
   }
 }
@@ -157,7 +158,7 @@ export async function healthCheck(): Promise<{
     return {
       status: 'unhealthy',
       latency: Date.now() - startTime,
-      error: error.message,
+      error: getErrorMessage(error),
     };
   }
 }

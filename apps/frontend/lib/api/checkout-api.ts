@@ -233,6 +233,22 @@ const checkoutApi = {
   },
 
   /**
+   * 반출 1차 승인을 처리합니다.
+   * approveCheckout의 별칭 (하위 호환성)
+   */
+  async approveFirst(id: string, approverId: string): Promise<Checkout> {
+    return this.approveCheckout(id, approverId);
+  },
+
+  /**
+   * 반출 최종 승인을 처리합니다.
+   * approveCheckout의 별칭 (하위 호환성)
+   */
+  async approveFinal(id: string, approverId: string): Promise<Checkout> {
+    return this.approveCheckout(id, approverId);
+  },
+
+  /**
    * 반출 요청을 거부합니다.
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */

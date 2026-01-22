@@ -12,6 +12,8 @@ const users: User[] = [
     name: '관리자',
     role: 'lab_manager',
     isActive: true,
+    lastLogin: null,
+    deletedAt: null,
     equipmentCount: 0,
     rentalsCount: 0,
     createdAt: new Date('2023-01-01'),
@@ -27,6 +29,8 @@ const users: User[] = [
     position: '팀장',
     phoneNumber: '010-1234-5678',
     isActive: true,
+    lastLogin: null,
+    deletedAt: null,
     equipmentCount: 5,
     rentalsCount: 2,
     createdAt: new Date('2023-01-02'),
@@ -42,6 +46,8 @@ const users: User[] = [
     position: '연구원',
     phoneNumber: '010-2345-6789',
     isActive: true,
+    lastLogin: null,
+    deletedAt: null,
     equipmentCount: 3,
     rentalsCount: 1,
     createdAt: new Date('2023-01-03'),
@@ -57,6 +63,8 @@ const users: User[] = [
     position: '연구원',
     phoneNumber: '010-3456-7890',
     isActive: true,
+    lastLogin: null,
+    deletedAt: null,
     equipmentCount: 2,
     rentalsCount: 0,
     createdAt: new Date('2023-01-04'),
@@ -71,6 +79,8 @@ const users: User[] = [
     department: '연구개발부',
     position: '연구원',
     isActive: false,
+    lastLogin: null,
+    deletedAt: null,
     equipmentCount: 0,
     rentalsCount: 0,
     createdAt: new Date('2023-01-05'),
@@ -85,16 +95,16 @@ export class UsersService {
 
     // 이메일 필터링
     if (query.email) {
+      const emailFilter = query.email.toLowerCase();
       filteredUsers = filteredUsers.filter((user) =>
-        user.email.toLowerCase().includes(query.email.toLowerCase())
+        user.email.toLowerCase().includes(emailFilter)
       );
     }
 
     // 이름 필터링
     if (query.name) {
-      filteredUsers = filteredUsers.filter((user) =>
-        user.name.toLowerCase().includes(query.name.toLowerCase())
-      );
+      const nameFilter = query.name.toLowerCase();
+      filteredUsers = filteredUsers.filter((user) => user.name.toLowerCase().includes(nameFilter));
     }
 
     // 역할 필터링
@@ -111,9 +121,9 @@ export class UsersService {
 
     // 부서 필터링
     if (query.department) {
+      const departmentFilter = query.department.toLowerCase();
       filteredUsers = filteredUsers.filter(
-        (user) =>
-          user.department && user.department.toLowerCase().includes(query.department.toLowerCase())
+        (user) => user.department && user.department.toLowerCase().includes(departmentFilter)
       );
     }
 

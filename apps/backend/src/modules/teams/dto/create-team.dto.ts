@@ -1,9 +1,26 @@
-import { IsString, IsEnum, IsOptional, Length, MaxLength, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { TeamEnum, TeamId } from '@equipment-management/schemas';
 
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 팀 생성 스키마
+ */
+export const createTeamSchema = z.object({
+  id: TeamEnum,
+  name: z.string().min(1, '팀 이름을 입력해주세요').max(100),
+  description: z.string().max(500).optional(),
+  leaderId: z.string().uuid().optional(),
+});
+
+export type CreateTeamInput = z.infer<typeof createTeamSchema>;
+export const CreateTeamValidationPipe = new ZodValidationPipe(createTeamSchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
+
 export class CreateTeamDto {
-  @IsEnum(TeamEnum.enum)
   @ApiProperty({
     description: '팀 ID',
     enum: TeamEnum.enum,
@@ -11,17 +28,12 @@ export class CreateTeamDto {
   })
   id: TeamId;
 
-  @IsString()
-  @Length(1, 100)
   @ApiProperty({
     description: '팀 이름',
     example: 'RF 테스트팀',
   })
   name: string;
 
-  @IsString()
-  @IsOptional()
-  @MaxLength(500)
   @ApiProperty({
     description: '팀 설명',
     required: false,
@@ -29,8 +41,6 @@ export class CreateTeamDto {
   })
   description?: string;
 
-  @IsUUID()
-  @IsOptional()
   @ApiProperty({
     description: '팀장 ID',
     required: false,

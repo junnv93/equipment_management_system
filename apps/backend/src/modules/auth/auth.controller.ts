@@ -1,6 +1,16 @@
-import { Controller, Post, Body, UseGuards, Get, Req, Query, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Req,
+  Query,
+  ForbiddenException,
+  UsePipes,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
+import { LoginDto, LoginValidationPipe } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { AzureADAuthGuard } from './guards/azure-ad-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -11,6 +21,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @UsePipes(LoginValidationPipe)
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
@@ -55,7 +66,9 @@ export class AuthController {
   async testLogin(@Query('role') role: string) {
     // 개발 및 테스트 환경에서만 허용
     if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
-      throw new ForbiddenException('Test login is only available in development and test environments');
+      throw new ForbiddenException(
+        'Test login is only available in development and test environments'
+      );
     }
 
     if (!role) {
@@ -104,7 +117,9 @@ export class AuthController {
 
     const testUser = testUsers[role];
     if (!testUser) {
-      throw new ForbiddenException(`Invalid role: ${role}. Valid roles: test_engineer, technical_manager, lab_manager, system_admin`);
+      throw new ForbiddenException(
+        `Invalid role: ${role}. Valid roles: test_engineer, technical_manager, lab_manager, system_admin`
+      );
     }
 
     // AuthService의 login 메서드를 사용하여 JWT 토큰 생성

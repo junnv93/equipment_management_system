@@ -2,6 +2,7 @@ import { Pool, PoolClient, PoolConfig } from 'pg';
 import { Logger } from '@nestjs/common';
 import * as process from 'process';
 import postgres from 'postgres';
+import { getErrorMessage, toError } from '../common/utils/error';
 
 export type TransactionCallback<T> = (client: PoolClient) => Promise<T>;
 
@@ -114,10 +115,10 @@ export class DatabaseConnection {
           client.release();
         }
       } catch (error) {
-        this.logger.error(`헬스 체크 실패: ${error.message}`);
+        this.logger.error(`헬스 체크 실패: ${getErrorMessage(error)}`);
         this.metrics.connectionErrors++;
         this.metrics.lastErrorTime = new Date();
-        this.handleConnectionError(error);
+        this.handleConnectionError(toError(error));
       }
     }, this.healthCheckInterval);
   }
@@ -147,10 +148,10 @@ export class DatabaseConnection {
 
       return this.pool;
     } catch (error) {
-      this.logger.error(`데이터베이스 연결 실패: ${error.message}`);
+      this.logger.error(`데이터베이스 연결 실패: ${getErrorMessage(error)}`);
       this.metrics.connectionErrors++;
       this.metrics.lastErrorTime = new Date();
-      this.handleConnectionError(error);
+      this.handleConnectionError(toError(error));
       throw error;
     }
   }
@@ -215,7 +216,7 @@ export class DatabaseConnection {
         await this.connect();
         this.logger.log('데이터베이스에 성공적으로 재연결되었습니다.');
       } catch (error) {
-        this.logger.error(`재연결 실패: ${error.message}`);
+        this.logger.error(`재연결 실패: ${getErrorMessage(error)}`);
         this.metrics.connectionErrors++;
         this.metrics.lastErrorTime = new Date();
         this.scheduleReconnect();
@@ -249,7 +250,7 @@ export class DatabaseConnection {
       const endTime = Date.now();
       this.updateQueryMetrics(endTime - startTime, false);
 
-      this.logger.error(`쿼리 실행 오류: ${error.message}`);
+      this.logger.error(`쿼리 실행 오류: ${getErrorMessage(error)}`);
       this.metrics.queriesFailed++;
 
       throw error;
@@ -274,7 +275,7 @@ export class DatabaseConnection {
       return result;
     } catch (error) {
       await client.query('ROLLBACK');
-      this.logger.error(`트랜잭션 오류: ${error.message}`);
+      this.logger.error(`트랜잭션 오류: ${getErrorMessage(error)}`);
       throw error;
     } finally {
       client.release();

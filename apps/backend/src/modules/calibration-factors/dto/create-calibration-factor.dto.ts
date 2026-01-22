@@ -1,17 +1,9 @@
-import {
-  IsString,
-  IsOptional,
-  IsNotEmpty,
-  IsUUID,
-  IsEnum,
-  IsNumber,
-  IsObject,
-  MaxLength,
-  IsDateString,
-} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
-// 보정계수 타입 enum
+// ========== Enum 정의 ==========
+
 export enum CalibrationFactorType {
   ANTENNA_GAIN = 'antenna_gain',
   CABLE_LOSS = 'cable_loss',
@@ -20,13 +12,48 @@ export enum CalibrationFactorType {
   OTHER = 'other',
 }
 
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 보정계수 생성 스키마
+ */
+export const createCalibrationFactorSchema = z.object({
+  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }),
+  calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
+  factorType: z.nativeEnum(CalibrationFactorType, {
+    message: '유효하지 않은 보정계수 타입입니다',
+  }),
+  factorName: z
+    .string()
+    .min(1, '보정계수 이름을 입력해주세요')
+    .max(200, '보정계수 이름은 200자 이하여야 합니다'),
+  factorValue: z.number({ message: '보정계수 값은 숫자여야 합니다' }),
+  unit: z.string().min(1, '단위를 입력해주세요').max(20, '단위는 20자 이하여야 합니다'),
+  parameters: z.record(z.string(), z.unknown()).optional(),
+  effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
+  }),
+  expiryDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, {
+      message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
+    })
+    .optional(),
+  requestedBy: z.string().uuid({ message: '유효한 요청자 UUID가 아닙니다' }),
+});
+
+export type CreateCalibrationFactorInput = z.infer<typeof createCalibrationFactorSchema>;
+export const CreateCalibrationFactorValidationPipe = new ZodValidationPipe(
+  createCalibrationFactorSchema
+);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
+
 export class CreateCalibrationFactorDto {
   @ApiProperty({
     description: '장비 UUID',
     example: '550e8400-e29b-41d4-a716-446655440001',
   })
-  @IsUUID('4')
-  @IsNotEmpty()
   equipmentId: string;
 
   @ApiProperty({
@@ -34,8 +61,6 @@ export class CreateCalibrationFactorDto {
     example: '550e8400-e29b-41d4-a716-446655440002',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   calibrationId?: string;
 
   @ApiProperty({
@@ -43,34 +68,24 @@ export class CreateCalibrationFactorDto {
     enum: CalibrationFactorType,
     example: 'antenna_gain',
   })
-  @IsEnum(CalibrationFactorType)
-  @IsNotEmpty()
   factorType: CalibrationFactorType;
 
   @ApiProperty({
     description: '보정계수 이름 (사용자 정의)',
     example: '3GHz 안테나 이득',
   })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(200)
   factorName: string;
 
   @ApiProperty({
     description: '보정계수 값',
     example: 12.5,
   })
-  @IsNumber()
-  @IsNotEmpty()
   factorValue: number;
 
   @ApiProperty({
     description: '단위 (dB, dBi, dBm 등)',
     example: 'dBi',
   })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(20)
   unit: string;
 
   @ApiProperty({
@@ -78,16 +93,12 @@ export class CreateCalibrationFactorDto {
     example: { frequency: '3GHz', temperature: '25C', values: [1.2, 1.3, 1.4] },
     required: false,
   })
-  @IsObject()
-  @IsOptional()
   parameters?: Record<string, unknown>;
 
   @ApiProperty({
     description: '적용 시작일 (YYYY-MM-DD)',
     example: '2024-01-15',
   })
-  @IsDateString()
-  @IsNotEmpty()
   effectiveDate: string;
 
   @ApiProperty({
@@ -95,15 +106,11 @@ export class CreateCalibrationFactorDto {
     example: '2025-01-15',
     required: false,
   })
-  @IsDateString()
-  @IsOptional()
   expiryDate?: string;
 
   @ApiProperty({
     description: '요청자 UUID',
     example: '550e8400-e29b-41d4-a716-446655440003',
   })
-  @IsUUID('4')
-  @IsNotEmpty()
   requestedBy: string;
 }

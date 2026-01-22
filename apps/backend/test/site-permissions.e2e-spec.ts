@@ -348,7 +348,7 @@ describe('Site Permissions (e2e)', () => {
     let rfTeamId: string;
     let emcTeamId: string;
     let rfEquipmentUuid: string;
-    let emcUserToken: string;
+    let emcUserToken: string | undefined;
     let emcUserId: string;
 
     beforeAll(async () => {

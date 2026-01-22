@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as process from 'process';
 import { LoggerService } from '../../common/logger/logger.service';
 import { MetricsService } from '../../common/metrics/metrics.service';
+import { getErrorStack } from '../../common/utils/error';
 
 @Injectable()
 export class MonitoringService {
@@ -113,7 +114,7 @@ export class MonitoringService {
         memoryUsage: this.metrics.memory.percentage.toFixed(2) + '%',
       });
     } catch (error) {
-      this.logger.error('메트릭 업데이트 중 오류가 발생했습니다.', error.stack);
+      this.logger.error('메트릭 업데이트 중 오류가 발생했습니다.', getErrorStack(error));
     }
   }
 

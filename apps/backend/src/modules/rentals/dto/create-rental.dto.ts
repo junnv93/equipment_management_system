@@ -1,15 +1,36 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: schemas 패키지에서 import
 import { RentalTypeEnum, RentalType } from '@equipment-management/schemas';
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 대여 생성 스키마
+ */
+export const createRentalSchema = z.object({
+  equipmentId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
+  userId: z.string().uuid('유효한 UUID 형식이 아닙니다').optional(),
+  type: RentalTypeEnum.optional(),
+  startDate: z.string().datetime().optional(),
+  expectedEndDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  purpose: z.string().min(1, '대여 목적을 입력해주세요'),
+  location: z.string().optional(),
+  approverId: z.string().uuid('유효한 UUID 형식이 아닙니다').optional(),
+  notes: z.string().optional(),
+});
+
+export type CreateRentalInput = z.infer<typeof createRentalSchema>;
+export const CreateRentalValidationPipe = new ZodValidationPipe(createRentalSchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class CreateRentalDto {
   @ApiProperty({
     description: '대여할 장비 UUID',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  @IsUUID('4')
-  @IsNotEmpty()
   equipmentId: string;
 
   @ApiProperty({
@@ -17,8 +38,6 @@ export class CreateRentalDto {
     example: '550e8400-e29b-41d4-a716-446655440002',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   userId?: string;
 
   // Note: type 필드는 현재 loans 테이블에 없지만, 향후 확장을 위해 유지
@@ -29,7 +48,6 @@ export class CreateRentalDto {
     example: 'internal',
     required: false,
   })
-  @IsOptional()
   type?: RentalType;
 
   @ApiProperty({
@@ -37,24 +55,18 @@ export class CreateRentalDto {
     example: '2023-06-01T09:00:00Z',
     required: false,
   })
-  @IsDateString()
-  @IsOptional()
   startDate?: string;
 
   @ApiProperty({
     description: '예상 반납 일시 (ISO 형식)',
     example: '2023-06-15T18:00:00Z',
   })
-  @IsDateString()
-  @IsNotEmpty()
   expectedEndDate: string;
 
   @ApiProperty({
     description: '대여 목적',
     example: '프로젝트 A 테스트를 위한 장비 대여',
   })
-  @IsString()
-  @IsNotEmpty()
   purpose: string;
 
   @ApiProperty({
@@ -62,8 +74,6 @@ export class CreateRentalDto {
     example: '연구소 2층 테스트실',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   location?: string;
 
   @ApiProperty({
@@ -71,8 +81,6 @@ export class CreateRentalDto {
     example: '550e8400-e29b-41d4-a716-446655440001',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   approverId?: string;
 
   @ApiProperty({
@@ -80,7 +88,5 @@ export class CreateRentalDto {
     example: '테스트 완료 후 즉시 반납 예정',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   notes?: string;
 }

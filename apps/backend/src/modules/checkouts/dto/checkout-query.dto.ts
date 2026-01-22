@@ -1,8 +1,41 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsOptional, IsString, IsInt, Min, Max, IsISO8601, IsUUID, IsIn } from 'class-validator';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { CHECKOUT_PURPOSE_VALUES } from '@equipment-management/schemas';
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 반출 조회 쿼리 스키마
+ */
+export const checkoutQuerySchema = z.object({
+  equipmentId: z.string().uuid().optional(),
+  requesterId: z.string().uuid().optional(),
+  approverId: z.string().uuid().optional(),
+  purpose: z
+    .enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
+      message: '유효하지 않은 반출 목적입니다.',
+    })
+    .optional(),
+  statuses: z.string().optional(),
+  checkoutFrom: z.string().optional(),
+  checkoutTo: z.string().optional(),
+  returnFrom: z.string().optional(),
+  returnTo: z.string().optional(),
+  search: z.string().optional(),
+  sort: z.string().optional(),
+  page: z.preprocess((val) => (val ? Number(val) : undefined), z.number().int().min(1).optional()),
+  pageSize: z.preprocess(
+    (val) => (val ? Number(val) : undefined),
+    z.number().int().min(1).max(100).optional()
+  ),
+});
+
+export type CheckoutQueryInput = z.infer<typeof checkoutQuerySchema>;
+export const CheckoutQueryValidationPipe = new ZodValidationPipe(checkoutQuerySchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class CheckoutQueryDto {
   @ApiProperty({
@@ -10,8 +43,6 @@ export class CheckoutQueryDto {
     example: '550e8400-e29b-41d4-a716-446655440000',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   equipmentId?: string;
 
   @ApiProperty({
@@ -19,8 +50,6 @@ export class CheckoutQueryDto {
     example: '550e8400-e29b-41d4-a716-446655440002',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   requesterId?: string;
 
   @ApiProperty({
@@ -28,8 +57,6 @@ export class CheckoutQueryDto {
     example: '550e8400-e29b-41d4-a716-446655440001',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   approverId?: string;
 
   @ApiProperty({
@@ -37,8 +64,6 @@ export class CheckoutQueryDto {
     enum: CHECKOUT_PURPOSE_VALUES,
     required: false,
   })
-  @IsOptional()
-  @IsIn(CHECKOUT_PURPOSE_VALUES, { message: '유효하지 않은 반출 목적입니다.' })
   purpose?: string;
 
   @ApiProperty({
@@ -46,8 +71,6 @@ export class CheckoutQueryDto {
     example: 'pending,approved',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   statuses?: string;
 
   @ApiProperty({
@@ -55,8 +78,6 @@ export class CheckoutQueryDto {
     example: '2023-06-01',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   checkoutFrom?: string;
 
   @ApiProperty({
@@ -64,8 +85,6 @@ export class CheckoutQueryDto {
     example: '2023-07-01',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   checkoutTo?: string;
 
   @ApiProperty({
@@ -73,8 +92,6 @@ export class CheckoutQueryDto {
     example: '2023-06-15',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   returnFrom?: string;
 
   @ApiProperty({
@@ -82,8 +99,6 @@ export class CheckoutQueryDto {
     example: '2023-07-15',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   returnTo?: string;
 
   @ApiProperty({
@@ -91,8 +106,6 @@ export class CheckoutQueryDto {
     example: '교정',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   search?: string;
 
   @ApiProperty({
@@ -100,8 +113,6 @@ export class CheckoutQueryDto {
     example: 'checkoutDate.desc',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   sort?: string;
 
   @ApiProperty({
@@ -110,10 +121,6 @@ export class CheckoutQueryDto {
     default: 1,
     required: false,
   })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
   page?: number;
 
   @ApiProperty({
@@ -122,10 +129,5 @@ export class CheckoutQueryDto {
     default: 20,
     required: false,
   })
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  @IsOptional()
   pageSize?: number;
 }

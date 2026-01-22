@@ -1,57 +1,78 @@
-import {
-  IsString,
-  IsOptional,
-  IsEnum,
-  IsUUID,
-  Min,
-  Max,
-  IsInt,
-  IsBoolean,
-  IsDateString,
-} from 'class-validator';
-import { Type, Transform } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { NotificationTypeEnum, NotificationPriorityEnum } from './create-notification.dto';
 
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 문자열을 배열로 변환하는 헬퍼
+ */
+const toArray = <T extends string>(val: unknown): T[] | undefined => {
+  if (val === undefined || val === null) return undefined;
+  if (Array.isArray(val)) return val as T[];
+  return [val as T];
+};
+
+/**
+ * 알림 조회 쿼리 스키마
+ */
+export const notificationQuerySchema = z.object({
+  recipientId: z.string().uuid({ message: '유효한 수신자 UUID가 아닙니다' }).optional(),
+  teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
+  equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
+  calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
+  rentalId: z.string().uuid({ message: '유효한 대여 UUID가 아닙니다' }).optional(),
+  isRead: z.preprocess(
+    (val) => (val === 'true' ? true : val === 'false' ? false : undefined),
+    z.boolean().optional()
+  ),
+  search: z.string().optional(),
+  types: z.preprocess(
+    (val) => toArray<string>(val),
+    z.array(z.nativeEnum(NotificationTypeEnum)).optional()
+  ),
+  priorities: z.preprocess(
+    (val) => toArray<string>(val),
+    z.array(z.nativeEnum(NotificationPriorityEnum)).optional()
+  ),
+  fromDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
+  toDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
+  sort: z.string().default('createdAt.desc'),
+  page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
+  pageSize: z.preprocess(
+    (val) => (val ? Number(val) : 20),
+    z.number().int().min(1).max(100).default(20)
+  ),
+});
+
+export type NotificationQueryInput = z.infer<typeof notificationQuerySchema>;
+export const NotificationQueryValidationPipe = new ZodValidationPipe(notificationQuerySchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
+
 export class NotificationQueryDto {
-  @IsOptional()
-  @IsUUID()
   @ApiPropertyOptional({ description: '알림 수신자 ID' })
   recipientId?: string;
 
-  @IsOptional()
-  @IsUUID()
   @ApiPropertyOptional({ description: '팀 ID' })
   teamId?: string;
 
-  @IsOptional()
-  @IsUUID()
   @ApiPropertyOptional({ description: '장비 ID' })
   equipmentId?: string;
 
-  @IsOptional()
-  @IsUUID()
   @ApiPropertyOptional({ description: '교정 ID' })
   calibrationId?: string;
 
-  @IsOptional()
-  @IsUUID()
   @ApiPropertyOptional({ description: '대여 ID' })
   rentalId?: string;
 
-  @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => value === 'true')
   @ApiPropertyOptional({ description: '읽음 여부로 필터링' })
   isRead?: boolean;
 
-  @IsOptional()
-  @IsString()
   @ApiPropertyOptional({ description: '검색어 (제목, 내용)' })
   search?: string;
 
-  @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
   @ApiPropertyOptional({
     description: '알림 유형 (여러 개 선택 가능)',
     enum: NotificationTypeEnum,
@@ -59,8 +80,6 @@ export class NotificationQueryDto {
   })
   types?: NotificationTypeEnum[];
 
-  @IsOptional()
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
   @ApiPropertyOptional({
     description: '알림 우선순위 (여러 개 선택 가능)',
     enum: NotificationPriorityEnum,
@@ -68,25 +87,15 @@ export class NotificationQueryDto {
   })
   priorities?: NotificationPriorityEnum[];
 
-  @IsOptional()
-  @IsDateString()
   @ApiPropertyOptional({ description: '시작 날짜 (ISO 형식)' })
   fromDate?: string;
 
-  @IsOptional()
-  @IsDateString()
   @ApiPropertyOptional({ description: '종료 날짜 (ISO 형식)' })
   toDate?: string;
 
-  @IsOptional()
-  @IsString()
   @ApiPropertyOptional({ description: '정렬 기준 (예: createdAt.desc)' })
   sort?: string = 'createdAt.desc';
 
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Type(() => Number)
   @ApiPropertyOptional({
     description: '페이지 번호',
     type: Number,
@@ -95,11 +104,6 @@ export class NotificationQueryDto {
   })
   page?: number = 1;
 
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  @Type(() => Number)
   @ApiPropertyOptional({
     description: '페이지당 항목 수',
     type: Number,

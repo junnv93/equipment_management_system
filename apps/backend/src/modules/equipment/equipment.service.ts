@@ -173,7 +173,7 @@ export class EquipmentService {
         and(
           sql`${equipment.nextCalibrationDate} IS NOT NULL`,
           lte(equipment.nextCalibrationDate, dueDate)
-        )
+        )!
       );
     }
 
@@ -185,7 +185,7 @@ export class EquipmentService {
           like(equipment.managementNumber, `%${search}%`),
           like(equipment.serialNumber, `%${search}%`),
           sql`${equipment.description} IS NOT NULL AND ${equipment.description} LIKE ${`%${search}%`}`
-        )
+        )!
       );
     }
 

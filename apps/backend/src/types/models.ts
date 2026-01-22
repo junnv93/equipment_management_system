@@ -120,32 +120,32 @@ export interface TeamListResponse {
   totalPages: number;
 }
 
-// 사용자 인터페이스
+// 사용자 인터페이스 - @equipment-management/schemas의 User 타입과 호환
 export interface User {
-  id?: string;
-  email?: string;
-  name?: string;
-  role?: UserRoleEnum | string;
+  id: string;
+  email: string;
+  name: string;
+  role: UserRoleEnum | 'test_engineer' | 'technical_manager' | 'lab_manager';
   teamId?: 'rf' | 'sar' | 'emc' | 'auto' | string;
   department?: string;
   position?: string;
   phoneNumber?: string;
-  isActive?: boolean;
+  isActive: boolean;
   equipmentCount?: number;
   rentalsCount?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
-  deletedAt?: Date;
-  lastLogin?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  lastLogin: Date | null;
 }
 
 // 사용자 목록 응답 인터페이스
 export interface UserListResponse {
-  items?: User[];
-  total?: number;
-  page?: number;
-  pageSize?: number;
-  totalPages?: number;
+  items: User[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 // 반출 인터페이스

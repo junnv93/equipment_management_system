@@ -8,6 +8,7 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserQueryDto } from '../dto/user-query.dto';
 import { UserRoleEnum } from '../../../types/enums';
 import * as crypto from 'crypto';
+import { getErrorMessage } from '../../../common/utils/error';
 
 // 테스트용 비밀번호 필드 확장 (실제 DTO에 없지만 서비스에서 처리할 수 있음)
 interface CreateUserWithPasswordDto extends CreateUserDto {
@@ -46,7 +47,7 @@ describe('UsersService', () => {
       try {
         await service.remove(user.id);
       } catch (error) {
-        console.log(`Error cleaning up test user ${user.id}: ${error.message}`);
+        console.log(`Error cleaning up test user ${user.id}: ${getErrorMessage(error)}`);
       }
     }
     await moduleRef.close();
@@ -169,9 +170,9 @@ describe('UsersService', () => {
       const foundUser = await service.findOne(createdUser.id);
 
       expect(foundUser).toBeDefined();
-      expect(foundUser.id).toBe(createdUser.id);
-      expect(foundUser.email).toBe(createUserDto.email);
-      expect(foundUser.name).toBe(createUserDto.name);
+      expect(foundUser!.id).toBe(createdUser.id);
+      expect(foundUser!.email).toBe(createUserDto.email);
+      expect(foundUser!.name).toBe(createUserDto.name);
     });
 
     it('should return null for non-existent user', async () => {
@@ -210,11 +211,11 @@ describe('UsersService', () => {
       const updatedUser = await service.update(createdUser.id, updateUserDto);
 
       expect(updatedUser).toBeDefined();
-      expect(updatedUser.id).toBe(createdUser.id);
-      expect(updatedUser.name).toBe(updateUserDto.name);
-      expect(updatedUser.department).toBe(updateUserDto.department);
-      expect(updatedUser.position).toBe(updateUserDto.position);
-      expect(updatedUser.email).toBe(createdUser.email); // 이메일은 변경되지 않아야 함
+      expect(updatedUser!.id).toBe(createdUser.id);
+      expect(updatedUser!.name).toBe(updateUserDto.name);
+      expect(updatedUser!.department).toBe(updateUserDto.department);
+      expect(updatedUser!.position).toBe(updateUserDto.position);
+      expect(updatedUser!.email).toBe(createdUser.email); // 이메일은 변경되지 않아야 함
     });
   });
 
@@ -264,8 +265,8 @@ describe('UsersService', () => {
       const foundUser = await service.findByEmail(email);
 
       expect(foundUser).toBeDefined();
-      expect(foundUser.id).toBe(createdUser.id);
-      expect(foundUser.email).toBe(email);
+      expect(foundUser!.id).toBe(createdUser.id);
+      expect(foundUser!.email).toBe(email);
     });
 
     it('should return null for non-existent email', async () => {

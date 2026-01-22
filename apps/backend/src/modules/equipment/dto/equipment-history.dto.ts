@@ -1,23 +1,34 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsOptional,
-  IsDateString,
-  IsUUID,
-  IsEnum,
-  MinLength,
-  MaxLength,
-} from 'class-validator';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+
+// ========== Zod 스키마 정의 ==========
 
 /**
- * 장비 위치 변동 이력 생성 DTO
+ * 위치 변동 이력 생성 스키마
+ */
+export const createLocationHistorySchema = z.object({
+  changedAt: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  newLocation: z
+    .string()
+    .min(1, '위치를 입력해주세요')
+    .max(100, '위치는 최대 100자까지 입력 가능합니다'),
+  notes: z.string().optional(),
+});
+
+export type CreateLocationHistoryInput = z.infer<typeof createLocationHistorySchema>;
+export const CreateLocationHistoryValidationPipe = new ZodValidationPipe(
+  createLocationHistorySchema
+);
+
+/**
+ * 장비 위치 변동 이력 생성 DTO (Swagger 문서화용)
  */
 export class CreateLocationHistoryDto {
   @ApiProperty({
     description: '변동 일시',
     example: '2024-01-15T00:00:00.000Z',
   })
-  @IsDateString()
   changedAt: string;
 
   @ApiProperty({
@@ -25,17 +36,12 @@ export class CreateLocationHistoryDto {
     example: 'RF1 Room',
     maxLength: 100,
   })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(100)
   newLocation: string;
 
   @ApiPropertyOptional({
     description: '비고',
     example: '장비 이동 - 공간 확보를 위한 재배치',
   })
-  @IsOptional()
-  @IsString()
   notes?: string;
 }
 
@@ -69,14 +75,26 @@ export class LocationHistoryResponseDto {
 }
 
 /**
- * 장비 유지보수 내역 생성 DTO
+ * 유지보수 내역 생성 스키마
+ */
+export const createMaintenanceHistorySchema = z.object({
+  performedAt: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  content: z.string().min(1, '내용을 입력해주세요'),
+});
+
+export type CreateMaintenanceHistoryInput = z.infer<typeof createMaintenanceHistorySchema>;
+export const CreateMaintenanceHistoryValidationPipe = new ZodValidationPipe(
+  createMaintenanceHistorySchema
+);
+
+/**
+ * 장비 유지보수 내역 생성 DTO (Swagger 문서화용)
  */
 export class CreateMaintenanceHistoryDto {
   @ApiProperty({
     description: '수행 일시',
     example: '2024-01-15T00:00:00.000Z',
   })
-  @IsDateString()
   performedAt: string;
 
   @ApiProperty({
@@ -84,8 +102,6 @@ export class CreateMaintenanceHistoryDto {
     example: '분기별 정기 점검 - 정상 동작 확인',
     minLength: 1,
   })
-  @IsString()
-  @MinLength(1)
   content: string;
 }
 
@@ -126,14 +142,27 @@ export enum IncidentTypeEnum {
 }
 
 /**
- * 장비 손상/오작동/변경/수리 내역 생성 DTO
+ * 손상/오작동/변경/수리 내역 생성 스키마
+ */
+export const createIncidentHistorySchema = z.object({
+  occurredAt: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  incidentType: z.nativeEnum(IncidentTypeEnum, { message: '유효한 유형을 선택해주세요' }),
+  content: z.string().min(1, '내용을 입력해주세요'),
+});
+
+export type CreateIncidentHistoryInput = z.infer<typeof createIncidentHistorySchema>;
+export const CreateIncidentHistoryValidationPipe = new ZodValidationPipe(
+  createIncidentHistorySchema
+);
+
+/**
+ * 장비 손상/오작동/변경/수리 내역 생성 DTO (Swagger 문서화용)
  */
 export class CreateIncidentHistoryDto {
   @ApiProperty({
     description: '발생 일시',
     example: '2024-01-15T00:00:00.000Z',
   })
-  @IsDateString()
   occurredAt: string;
 
   @ApiProperty({
@@ -141,7 +170,6 @@ export class CreateIncidentHistoryDto {
     enum: IncidentTypeEnum,
     example: IncidentTypeEnum.DAMAGE,
   })
-  @IsEnum(IncidentTypeEnum)
   incidentType: IncidentTypeEnum;
 
   @ApiProperty({
@@ -149,8 +177,6 @@ export class CreateIncidentHistoryDto {
     example: '전원부 손상으로 인한 전원 보드 교체 필요',
     minLength: 1,
   })
-  @IsString()
-  @MinLength(1)
   content: string;
 }
 

@@ -1,17 +1,35 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import {
-  IsDate,
-  IsEnum,
-  IsISO8601,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Max,
-  Min,
-} from 'class-validator';
-import { RentalStatusEnum, RentalTypeEnum } from '@equipment-management/schemas';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 대여 조회 쿼리 스키마
+ */
+export const rentalQuerySchema = z.object({
+  equipmentId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  approverId: z.string().uuid().optional(),
+  types: z.string().optional(),
+  statuses: z.string().optional(),
+  startFrom: z.string().optional(),
+  startTo: z.string().optional(),
+  endFrom: z.string().optional(),
+  endTo: z.string().optional(),
+  search: z.string().optional(),
+  sort: z.string().optional(),
+  page: z.preprocess((val) => (val ? Number(val) : undefined), z.number().int().min(1).optional()),
+  pageSize: z.preprocess(
+    (val) => (val ? Number(val) : undefined),
+    z.number().int().min(1).max(100).optional()
+  ),
+});
+
+export type RentalQueryInput = z.infer<typeof rentalQuerySchema>;
+export const RentalQueryValidationPipe = new ZodValidationPipe(rentalQuerySchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class RentalQueryDto {
   @ApiProperty({
@@ -19,8 +37,6 @@ export class RentalQueryDto {
     example: '550e8400-e29b-41d4-a716-446655440000',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   equipmentId?: string;
 
   @ApiProperty({
@@ -28,8 +44,6 @@ export class RentalQueryDto {
     example: '550e8400-e29b-41d4-a716-446655440002',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   userId?: string;
 
   @ApiProperty({
@@ -37,8 +51,6 @@ export class RentalQueryDto {
     example: '550e8400-e29b-41d4-a716-446655440001',
     required: false,
   })
-  @IsUUID('4')
-  @IsOptional()
   approverId?: string;
 
   @ApiProperty({
@@ -46,8 +58,6 @@ export class RentalQueryDto {
     example: 'rental,checkout',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   types?: string;
 
   @ApiProperty({
@@ -55,8 +65,6 @@ export class RentalQueryDto {
     example: 'pending,approved',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   statuses?: string;
 
   @ApiProperty({
@@ -64,8 +72,6 @@ export class RentalQueryDto {
     example: '2023-06-01',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   startFrom?: string;
 
   @ApiProperty({
@@ -73,8 +79,6 @@ export class RentalQueryDto {
     example: '2023-07-01',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   startTo?: string;
 
   @ApiProperty({
@@ -82,8 +86,6 @@ export class RentalQueryDto {
     example: '2023-06-15',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   endFrom?: string;
 
   @ApiProperty({
@@ -91,8 +93,6 @@ export class RentalQueryDto {
     example: '2023-07-15',
     required: false,
   })
-  @IsISO8601()
-  @IsOptional()
   endTo?: string;
 
   @ApiProperty({
@@ -100,8 +100,6 @@ export class RentalQueryDto {
     example: '테스트',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   search?: string;
 
   @ApiProperty({
@@ -109,8 +107,6 @@ export class RentalQueryDto {
     example: 'startDate.desc',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   sort?: string;
 
   @ApiProperty({
@@ -119,10 +115,6 @@ export class RentalQueryDto {
     default: 1,
     required: false,
   })
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @IsOptional()
   page?: number;
 
   @ApiProperty({
@@ -131,10 +123,5 @@ export class RentalQueryDto {
     default: 20,
     required: false,
   })
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(100)
-  @IsOptional()
   pageSize?: number;
 }

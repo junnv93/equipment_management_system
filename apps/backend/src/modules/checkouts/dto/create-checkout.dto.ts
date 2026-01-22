@@ -1,16 +1,33 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsDateString,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  IsArray,
-  ArrayMinSize,
-  IsIn,
-} from 'class-validator';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { CheckoutPurpose, CHECKOUT_PURPOSE_VALUES } from '@equipment-management/schemas';
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 반출 생성 스키마
+ */
+export const createCheckoutSchema = z.object({
+  equipmentIds: z
+    .array(z.string().uuid('유효한 UUID 형식이 아닙니다'))
+    .min(1, '최소 1개의 장비를 선택해야 합니다'),
+  purpose: z.enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
+    message: '유효하지 않은 반출 목적입니다.',
+  }),
+  destination: z.string().min(1, '반출 장소를 입력해주세요'),
+  phoneNumber: z.string().optional(),
+  address: z.string().optional(),
+  reason: z.string().min(1, '반출 사유를 입력해주세요'),
+  expectedReturnDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  notes: z.string().optional(),
+});
+
+export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
+export const CreateCheckoutValidationPipe = new ZodValidationPipe(createCheckoutSchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class CreateCheckoutDto {
   @ApiProperty({
@@ -18,10 +35,6 @@ export class CreateCheckoutDto {
     example: ['550e8400-e29b-41d4-a716-446655440000'],
     type: [String],
   })
-  @IsArray()
-  @ArrayMinSize(1)
-  @IsUUID('4', { each: true })
-  @IsNotEmpty()
   equipmentIds: string[];
 
   @ApiProperty({
@@ -29,16 +42,12 @@ export class CreateCheckoutDto {
     enum: CHECKOUT_PURPOSE_VALUES,
     example: 'calibration',
   })
-  @IsNotEmpty()
-  @IsIn(CHECKOUT_PURPOSE_VALUES, { message: '유효하지 않은 반출 목적입니다.' })
   purpose: CheckoutPurpose;
 
   @ApiProperty({
     description: '반출 장소',
     example: '교정기관 ABC',
   })
-  @IsString()
-  @IsNotEmpty()
   destination: string;
 
   @ApiProperty({
@@ -46,8 +55,6 @@ export class CreateCheckoutDto {
     example: '02-1234-5678',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   phoneNumber?: string;
 
   @ApiProperty({
@@ -55,24 +62,18 @@ export class CreateCheckoutDto {
     example: '서울시 강남구 테헤란로 123',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   address?: string;
 
   @ApiProperty({
     description: '반출 사유',
     example: '정기 교정을 위해 반출합니다.',
   })
-  @IsString()
-  @IsNotEmpty()
   reason: string;
 
   @ApiProperty({
     description: '예상 반입 일시 (ISO 형식)',
     example: '2023-06-15T18:00:00Z',
   })
-  @IsDateString()
-  @IsNotEmpty()
   expectedReturnDate: string;
 
   @ApiProperty({
@@ -80,7 +81,5 @@ export class CreateCheckoutDto {
     example: '교정 완료 후 즉시 반입 예정',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   notes?: string;
 }

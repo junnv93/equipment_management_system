@@ -1,12 +1,27 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 반입 승인 스키마
+ */
+export const approveReturnSchema = z.object({
+  approverId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
+  comment: z.string().optional(),
+});
+
+export type ApproveReturnInput = z.infer<typeof approveReturnSchema>;
+export const ApproveReturnValidationPipe = new ZodValidationPipe(approveReturnSchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class ApproveReturnDto {
   @ApiProperty({
     description: '승인자 UUID (기술책임자)',
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
-  @IsUUID()
   approverId: string;
 
   @ApiProperty({
@@ -14,7 +29,5 @@ export class ApproveReturnDto {
     example: '검사 완료 확인, 정상 작동함',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   comment?: string;
 }

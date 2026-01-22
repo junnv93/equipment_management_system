@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpException } from '@nestjs/common';
+import { getErrorMessage } from '../utils/error';
 
 interface CacheItem<T> {
   value: T;
@@ -133,7 +134,9 @@ export class SimpleCacheService {
         }
       } else {
         // HTTP 예외가 아닌 경우: 예상치 못한 에러이므로 ERROR 레벨로 로깅
-        this.logger.error(`Unexpected error in cache factory for key ${key}: ${error.message}`);
+        this.logger.error(
+          `Unexpected error in cache factory for key ${key}: ${getErrorMessage(error)}`
+        );
       }
       throw error;
     }

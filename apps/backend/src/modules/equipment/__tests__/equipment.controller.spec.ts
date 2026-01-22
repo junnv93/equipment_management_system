@@ -347,7 +347,7 @@ describe('EquipmentController', () => {
 
       // 공용장비 체크를 위한 findOne mock
       jest.spyOn(equipmentService, 'findOne').mockResolvedValue(mockEquipment);
-      jest.spyOn(equipmentService, 'remove').mockResolvedValue(undefined);
+      jest.spyOn(equipmentService, 'remove').mockResolvedValue(mockEquipment);
 
       // Act - admin user로 직접 삭제
       const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } };

@@ -13,6 +13,7 @@ const teams: Team[] = [
     memberCount: 12,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-06-15'),
+    deletedAt: null,
   },
   {
     id: 'sar',
@@ -22,6 +23,7 @@ const teams: Team[] = [
     memberCount: 8,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-05-20'),
+    deletedAt: null,
   },
   {
     id: 'emc',
@@ -31,6 +33,7 @@ const teams: Team[] = [
     memberCount: 10,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-04-10'),
+    deletedAt: null,
   },
   {
     id: 'auto',
@@ -40,6 +43,7 @@ const teams: Team[] = [
     memberCount: 15,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-07-05'),
+    deletedAt: null,
   },
 ];
 
@@ -113,6 +117,7 @@ export class TeamsService {
       memberCount: 0,
       createdAt: now,
       updatedAt: now,
+      deletedAt: null,
     };
 
     teams.push(team);

@@ -13,6 +13,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { getErrorMessage } from '../../common/utils/error';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -97,7 +98,7 @@ export class TeamsController {
         error: {
           code: 'INVALID_REQUEST',
           message: '팀 생성 중 오류가 발생했습니다.',
-          details: { error: error.message },
+          details: { error: getErrorMessage(error) },
         },
         meta: {
           timestamp: new Date().toISOString(),

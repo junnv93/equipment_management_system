@@ -1,5 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { z } from 'zod';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+
+// ========== Zod 스키마 정의 ==========
+
+/**
+ * 반입 요청 스키마
+ */
+export const returnCheckoutSchema = z.object({
+  calibrationChecked: z.boolean().optional(),
+  repairChecked: z.boolean().optional(),
+  workingStatusChecked: z.boolean().optional(),
+  inspectionNotes: z.string().optional(),
+});
+
+export type ReturnCheckoutInput = z.infer<typeof returnCheckoutSchema>;
+export const ReturnCheckoutValidationPipe = new ZodValidationPipe(returnCheckoutSchema);
+
+// ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class ReturnCheckoutDto {
   @ApiProperty({
@@ -7,8 +25,6 @@ export class ReturnCheckoutDto {
     example: true,
     required: false,
   })
-  @IsBoolean()
-  @IsOptional()
   calibrationChecked?: boolean;
 
   @ApiProperty({
@@ -16,8 +32,6 @@ export class ReturnCheckoutDto {
     example: false,
     required: false,
   })
-  @IsBoolean()
-  @IsOptional()
   repairChecked?: boolean;
 
   @ApiProperty({
@@ -25,8 +39,6 @@ export class ReturnCheckoutDto {
     example: true,
     required: false,
   })
-  @IsBoolean()
-  @IsOptional()
   workingStatusChecked?: boolean;
 
   @ApiProperty({
@@ -34,7 +46,5 @@ export class ReturnCheckoutDto {
     example: '교정 완료, 정상 작동 확인',
     required: false,
   })
-  @IsString()
-  @IsOptional()
   inspectionNotes?: string;
 }

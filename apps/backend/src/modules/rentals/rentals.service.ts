@@ -150,17 +150,17 @@ export class RentalsService {
         const statusConditions = statusArray.map((status) =>
           eq(loans.status, status as LoanStatus)
         );
-        whereConditions.push(or(...statusConditions));
+        whereConditions.push(or(...statusConditions)!);
       }
     }
 
     // 날짜 범위 필터링
     if (startFrom) {
-      whereConditions.push(or(gte(loans.loanDate, new Date(startFrom)), isNull(loans.loanDate)));
+      whereConditions.push(or(gte(loans.loanDate, new Date(startFrom)), isNull(loans.loanDate))!);
     }
 
     if (startTo) {
-      whereConditions.push(or(lte(loans.loanDate, new Date(startTo)), isNull(loans.loanDate)));
+      whereConditions.push(or(lte(loans.loanDate, new Date(startTo)), isNull(loans.loanDate))!);
     }
 
     if (endFrom) {
@@ -173,7 +173,7 @@ export class RentalsService {
 
     // 검색어 조건은 마지막에 추가 (인덱스 활용도가 낮음)
     if (search) {
-      whereConditions.push(or(like(loans.notes, `%${search}%`)));
+      whereConditions.push(like(loans.notes, `%${search}%`));
     }
 
     // 정렬 설정
@@ -423,6 +423,9 @@ export class RentalsService {
     try {
       // ✅ UUID 형식 검증 (일관된 검증 로직)
       this.validateUuid(createRentalDto.equipmentId, '장비');
+      if (!createRentalDto.userId) {
+        throw new BadRequestException('사용자 ID는 필수입니다.');
+      }
       this.validateUuid(createRentalDto.userId, '사용자');
       if (createRentalDto.approverId) {
         this.validateUuid(createRentalDto.approverId, '승인자');
