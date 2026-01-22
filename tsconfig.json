@@ -21,9 +21,9 @@
   "exclude": ["node_modules", "dist", "**/dist", "**/node_modules", "**/build"],
   "references": [
     { "path": "./packages/schemas" },
-    { "path": "./packages/ui" },
+    { "path": "./packages/db" },
     { "path": "./packages/api-client" },
     { "path": "./apps/backend" },
     { "path": "./apps/frontend" }
   ]
-} 
+}
