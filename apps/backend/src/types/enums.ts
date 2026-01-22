@@ -8,22 +8,17 @@
  *
  * @deprecated Use @equipment-management/schemas instead
  */
-// 장비 상태 열거형 (하위 호환성 유지)
+// 장비 상태 열거형
 export enum EquipmentStatusEnum {
   AVAILABLE = 'available', // 사용 가능
-  IN_USE = 'in_use', // 사용 중 (대여 중 포함) - 기존 LOANED 대체
+  IN_USE = 'in_use', // 사용 중 (대여 중 포함)
   CHECKED_OUT = 'checked_out', // 반출 중
   CALIBRATION_SCHEDULED = 'calibration_scheduled', // 교정 예정
   CALIBRATION_OVERDUE = 'calibration_overdue', // 교정 기한 초과
-  UNDER_MAINTENANCE = 'under_maintenance', // 유지보수 중 - 기존 MAINTENANCE 대체
-  RETIRED = 'retired', // 사용 중지
+  NON_CONFORMING = 'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
+  SPARE = 'spare', // 여분
+  RETIRED = 'retired', // 폐기 (영구)
 }
-
-// 하위 호환성: 기존 코드를 위한 별칭
-/** @deprecated Use IN_USE instead */
-export const LOANED = EquipmentStatusEnum.IN_USE;
-/** @deprecated Use UNDER_MAINTENANCE instead */
-export const MAINTENANCE = EquipmentStatusEnum.UNDER_MAINTENANCE;
 
 // 교정 방법 열거형
 export enum CalibrationMethodEnum {
@@ -32,22 +27,22 @@ export enum CalibrationMethodEnum {
   NOT_APPLICABLE = 'not_applicable', // 비대상
 }
 
-// 사용자 역할 열거형
+// 사용자 역할 열거형 (UL-QP-18 절차서 영문 명칭 기준)
 // @deprecated 이 enum은 하위 호환성을 위해 유지됩니다.
 // 새로운 코드에서는 @equipment-management/schemas의 UserRoleEnum을 사용하세요.
 export enum UserRoleEnum {
-  TEST_OPERATOR = 'test_operator', // 시험실무자
-  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자
-  SITE_ADMIN = 'site_admin', // 시험소별 관리자
+  TEST_ENGINEER = 'test_engineer', // 시험실무자 (Test Engineer)
+  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자 (Technical Manager)
+  LAB_MANAGER = 'lab_manager', // 시험소장 (Lab Manager)
 }
 
 // 하위 호환성을 위한 별칭 (enum 외부에 정의)
-/** @deprecated Use UserRoleEnum.TEST_OPERATOR instead */
-export const USER = UserRoleEnum.TEST_OPERATOR;
+/** @deprecated Use UserRoleEnum.TEST_ENGINEER instead */
+export const USER = UserRoleEnum.TEST_ENGINEER;
 /** @deprecated Use UserRoleEnum.TECHNICAL_MANAGER instead */
 export const MANAGER = UserRoleEnum.TECHNICAL_MANAGER;
-/** @deprecated Use UserRoleEnum.SITE_ADMIN instead */
-export const ADMIN = UserRoleEnum.SITE_ADMIN;
+/** @deprecated Use UserRoleEnum.LAB_MANAGER instead */
+export const ADMIN = UserRoleEnum.LAB_MANAGER;
 
 // 팀 ID 열거형
 export enum TeamEnum {
@@ -93,8 +88,8 @@ export enum CalibrationApprovalStatusEnum {
 
 // 교정 등록자 역할 열거형
 export enum CalibrationRegisteredByRoleEnum {
-  TEST_OPERATOR = 'test_operator', // 시험실무자
-  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자
+  TEST_ENGINEER = 'test_engineer', // 시험실무자 (Test Engineer)
+  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자 (Technical Manager)
 }
 
 // 반출 상태 열거형

@@ -23,14 +23,29 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
   @ApiPropertyOptional({ description: '제조사' })
   manufacturer?: string;
 
+  @ApiPropertyOptional({ description: '제조사 연락처' })
+  manufacturerContact?: string;
+
   @ApiPropertyOptional({ description: '일련번호' })
   serialNumber?: string;
 
   @ApiPropertyOptional({ description: '위치' })
   location?: string;
 
-  @ApiPropertyOptional({ description: '설명' })
+  @ApiPropertyOptional({ description: '장비사양 (설명)' })
   description?: string;
+
+  @ApiPropertyOptional({
+    description: '시방일치 여부',
+    enum: ['match', 'mismatch'],
+  })
+  specMatch?: 'match' | 'mismatch';
+
+  @ApiPropertyOptional({
+    description: '교정필요 여부',
+    enum: ['required', 'not_required'],
+  })
+  calibrationRequired?: 'required' | 'not_required';
 
   @ApiPropertyOptional({ description: '교정 주기 (개월)' })
   calibrationCycle?: number;
@@ -47,17 +62,26 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
   @ApiPropertyOptional({ description: '중간 점검 필요 여부' })
   needsIntermediateCheck?: boolean;
 
-  @ApiPropertyOptional({ description: '교정 방법' })
+  @ApiPropertyOptional({
+    description: '관리 방법 (교정 방법)',
+    enum: ['external_calibration', 'self_inspection', 'not_applicable'],
+  })
   calibrationMethod?: 'external_calibration' | 'self_inspection' | 'not_applicable';
+
+  @ApiPropertyOptional({ description: '최종 중간 점검일' })
+  lastIntermediateCheckDate?: Date;
+
+  @ApiPropertyOptional({ description: '중간점검 주기 (개월)' })
+  intermediateCheckCycle?: number;
+
+  @ApiPropertyOptional({ description: '차기 중간 점검일' })
+  nextIntermediateCheckDate?: Date;
 
   @ApiPropertyOptional({ description: '구매 연도' })
   purchaseYear?: number;
 
   @ApiPropertyOptional({ description: '팀 ID (UUID)' })
   teamId?: string;
-
-  @ApiPropertyOptional({ description: '관리자 ID' })
-  managerId?: string;
 
   @ApiPropertyOptional({
     description: '사이트',
@@ -84,27 +108,20 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
   @ApiPropertyOptional({ description: '부속품' })
   accessories?: string;
 
-  @ApiPropertyOptional({ description: '주요 기능' })
-  mainFeatures?: string;
-
-  @ApiPropertyOptional({ description: '기술 책임자' })
+  @ApiPropertyOptional({ description: '기술 책임자 (사이트/팀 기준 필터링)' })
   technicalManager?: string;
 
-  // 추가 필수 필드 (프롬프트 3 요구사항)
-  @ApiPropertyOptional({ description: '장비 타입' })
-  equipmentType?: string;
+  @ApiPropertyOptional({ description: '최초 설치 위치' })
+  initialLocation?: string;
+
+  @ApiPropertyOptional({ description: '설치 일시' })
+  installationDate?: Date;
 
   @ApiPropertyOptional({ description: '교정 결과' })
   calibrationResult?: string;
 
   @ApiPropertyOptional({ description: '보정계수' })
   correctionFactor?: string;
-
-  @ApiPropertyOptional({ description: '중간점검일정' })
-  intermediateCheckSchedule?: Date;
-
-  @ApiPropertyOptional({ description: '장비 수리 내역' })
-  repairHistory?: string;
 
   @ApiPropertyOptional({
     description: '장비 상태',
@@ -114,7 +131,8 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
       'checked_out',
       'calibration_scheduled',
       'calibration_overdue',
-      'under_maintenance',
+      'non_conforming',
+      'spare',
       'retired',
     ],
     example: 'in_use',

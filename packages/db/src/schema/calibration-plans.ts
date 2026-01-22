@@ -27,7 +27,7 @@ export const calibrationPlanStatus = [
  * 교정계획서 테이블
  *
  * 연초에 작성되는 교정계획서로, 해당 연도의 외부교정 대상 장비 목록을 관리합니다.
- * 기술책임자가 작성하고 시험소장(site_admin)이 최종 승인합니다.
+ * 기술책임자가 작성하고 시험소장(lab_manager)이 최종 승인합니다.
  */
 export const calibrationPlans = pgTable(
   'calibration_plans',

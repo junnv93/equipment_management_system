@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 // 로그인이 필요하지 않은 경로
-const publicPaths = ['/login', '/api/auth', '/api/monitoring', '/_next', '/favicon.ico'];
+const publicPaths = ['/login', '/error', '/api/auth', '/api/monitoring', '/_next', '/favicon.ico'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -22,10 +22,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // JWT 토큰 확인
+  // JWT 토큰 확인 (Edge Runtime에서는 환경변수를 직접 참조해야 함)
+  const secret = process.env.NEXTAUTH_SECRET || 'your_super_secret_key_for_development_only_32chars';
   const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret,
   });
 
   // 인증되지 않은 사용자는 로그인 페이지로 리디렉션

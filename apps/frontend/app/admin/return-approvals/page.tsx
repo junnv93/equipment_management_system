@@ -25,19 +25,18 @@ import { useSession } from 'next-auth/react';
 const PURPOSE_LABELS: Record<string, string> = {
   calibration: '교정',
   repair: '수리',
-  external_rental: '외부 대여',
+  rental: '외부 대여',
 };
 
 const PURPOSE_COLORS: Record<string, string> = {
   calibration: 'bg-blue-100 text-blue-800',
   repair: 'bg-orange-100 text-orange-800',
-  external_rental: 'bg-purple-100 text-purple-800',
+  rental: 'bg-purple-100 text-purple-800',
 };
 
 const STATUS_LABELS: Record<string, string> = {
   pending: '승인 대기',
-  first_approved: '1차 승인됨',
-  final_approved: '최종 승인됨',
+  approved: '승인됨',
   rejected: '거절됨',
   checked_out: '반출 중',
   returned: '검사 완료 (승인 대기)',

@@ -11,7 +11,7 @@ describe('Type Guards', () => {
         id: '123e4567-e89b-12d3-a456-426614174000',
         email: 'test@example.com',
         name: 'Test User',
-        role: 'test_operator' as const,
+        role: 'test_engineer' as const,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),

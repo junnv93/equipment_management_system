@@ -16,7 +16,7 @@ import { Permission } from '../auth/rbac/permissions.enum';
 /**
  * 감사 로그 조회 컨트롤러
  *
- * - site_admin만 조회 가능
+ * - lab_manager만 조회 가능
  * - 페이지네이션 지원
  * - 필터링 지원 (userId, entityType, action, dateRange)
  */
@@ -30,7 +30,7 @@ export class AuditController {
   @Get()
   @ApiOperation({
     summary: '감사 로그 목록 조회',
-    description: '감사 로그 목록을 조회합니다. site_admin만 조회 가능합니다.',
+    description: '감사 로그 목록을 조회합니다. lab_manager만 조회 가능합니다.',
   })
   @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본값: 1)' })
   @ApiQuery({
@@ -67,7 +67,7 @@ export class AuditController {
   })
   @ApiResponse({ status: 200, description: '감사 로그 목록 조회 성공' })
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: 403, description: '권한 없음 (site_admin만 조회 가능)' })
+  @ApiResponse({ status: 403, description: '권한 없음 (lab_manager만 조회 가능)' })
   @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   async findAll(
     @Query('page') page?: string,

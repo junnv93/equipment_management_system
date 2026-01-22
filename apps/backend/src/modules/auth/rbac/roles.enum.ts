@@ -1,5 +1,5 @@
 export enum UserRole {
-  TEST_OPERATOR = 'test_operator', // 시험실무자
-  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자
-  SITE_ADMIN = 'site_admin', // 시험소별 관리자
+  TEST_ENGINEER = 'test_engineer', // 시험실무자 (Test Engineer)
+  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자 (Technical Manager)
+  LAB_MANAGER = 'lab_manager', // 시험소장 (Lab Manager)
 }

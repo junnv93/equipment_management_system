@@ -68,9 +68,9 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
 };
 
 const ROLE_LABELS: Record<string, string> = {
-  test_operator: '시험실무자',
+  test_engineer: '시험실무자',
   technical_manager: '기술책임자',
-  site_admin: '시험소 관리자',
+  lab_manager: '시험소 관리자',
 };
 
 export default function AuditLogsPage() {

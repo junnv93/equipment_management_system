@@ -291,7 +291,7 @@ export default function CalibrationApprovalsPage() {
                             <div>
                               <p className="text-muted-foreground">등록자</p>
                               <p className="font-medium">
-                                {request.registeredByRole === 'test_operator'
+                                {request.registeredByRole === 'test_engineer'
                                   ? '시험실무자'
                                   : '기술책임자'}
                               </p>

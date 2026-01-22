@@ -22,7 +22,7 @@ export const getEquipmentUsage = async (
   departmentId?: string
 ) => {
   try {
-    const response = await apiClient.get('/reports/equipment-usage', {
+    const response = await apiClient.get('/api/reports/equipment-usage', {
       params: { startDate, endDate, equipmentId, departmentId }
     });
     return response.data;
@@ -38,7 +38,7 @@ export const getCalibrationStatus = async (
   timeframe?: string
 ) => {
   try {
-    const response = await apiClient.get('/reports/calibration-status', {
+    const response = await apiClient.get('/api/reports/calibration-status', {
       params: { status, timeframe }
     });
     return response.data;
@@ -55,7 +55,7 @@ export const getRentalStatistics = async (
   departmentId?: string
 ) => {
   try {
-    const response = await apiClient.get('/reports/rental-statistics', {
+    const response = await apiClient.get('/api/reports/rental-statistics', {
       params: { startDate, endDate, departmentId }
     });
     return response.data;
@@ -72,7 +72,7 @@ export const getUtilizationRate = async (
   categoryId?: string
 ) => {
   try {
-    const response = await apiClient.get('/reports/utilization-rate', {
+    const response = await apiClient.get('/api/reports/utilization-rate', {
       params: { period, equipmentId, categoryId }
     });
     return response.data;
@@ -89,7 +89,7 @@ export const getEquipmentDowntime = async (
   equipmentId?: string
 ) => {
   try {
-    const response = await apiClient.get('/reports/equipment-downtime', {
+    const response = await apiClient.get('/api/reports/equipment-downtime', {
       params: { startDate, endDate, equipmentId }
     });
     return response.data;
@@ -106,7 +106,7 @@ export const exportEquipmentUsage = async (
   endDate?: string
 ) => {
   try {
-    const response = await apiClient.get('/reports/export/equipment-usage', {
+    const response = await apiClient.get('/api/reports/export/equipment-usage', {
       params: { format, startDate, endDate },
       responseType: 'blob' // 파일 다운로드를 위한 설정
     });
@@ -191,19 +191,19 @@ export const generateReport = async (
     let endpoint = '';
     switch (reportType) {
       case 'equipment_inventory':
-        endpoint = '/reports/export/equipment-inventory';
+        endpoint = '/api/reports/export/equipment-inventory';
         break;
       case 'calibration_status':
-        endpoint = '/reports/export/calibration-status';
+        endpoint = '/api/reports/export/calibration-status';
         break;
       case 'utilization_report':
-        endpoint = '/reports/export/utilization';
+        endpoint = '/api/reports/export/utilization';
         break;
       case 'team_equipment':
-        endpoint = '/reports/export/team-equipment';
+        endpoint = '/api/reports/export/team-equipment';
         break;
       case 'maintenance_report':
-        endpoint = '/reports/export/maintenance';
+        endpoint = '/api/reports/export/maintenance';
         break;
       default:
         throw new Error('지원하지 않는 보고서 유형입니다.');

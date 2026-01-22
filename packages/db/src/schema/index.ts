@@ -13,3 +13,8 @@ export * from './software-history';
 export * from './calibration-plans';
 export * from './repair-history';
 export * from './audit-logs';
+
+// 장비 이력 스키마
+export * from './equipment-location-history';
+export * from './equipment-maintenance-history';
+export * from './equipment-incident-history';

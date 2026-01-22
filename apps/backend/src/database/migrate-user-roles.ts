@@ -8,9 +8,9 @@ dotenv.config();
  * 사용자 역할 시스템 마이그레이션 스크립트
  *
  * 기존 역할을 새로운 역할 시스템으로 변환:
- * - 'admin' → 'site_admin'
+ * - 'admin' → 'lab_manager'
  * - 'manager' → 'technical_manager'
- * - 'user' → 'test_operator'
+ * - 'user' → 'test_engineer'
  * - 'approver' → 'technical_manager' (승인 권한이 있으므로)
  */
 async function migrateUserRoles() {
@@ -76,9 +76,9 @@ async function migrateUserRoles() {
     console.log('🔄 역할 변환 중...');
 
     const roleMapping = {
-      admin: 'site_admin',
+      admin: 'lab_manager',
       manager: 'technical_manager',
-      user: 'test_operator',
+      user: 'test_engineer',
       approver: 'technical_manager', // 승인자는 기술책임자로 매핑
     };
 
@@ -90,10 +90,10 @@ async function migrateUserRoles() {
       console.log(`  ✓ ${oldRole} → ${newRole}: ${result.rowCount}건 변환`);
     }
 
-    // 3. 기본값 업데이트 (기본 역할을 test_operator로 변경)
+    // 3. 기본값 업데이트 (기본 역할을 test_engineer로 변경)
     await client.query(`
       ALTER TABLE users 
-      ALTER COLUMN role SET DEFAULT 'test_operator';
+      ALTER COLUMN role SET DEFAULT 'test_engineer';
     `);
 
     // 4. 역할 제약 조건 업데이트 (CHECK 제약 조건이 있다면)

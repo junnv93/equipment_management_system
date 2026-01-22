@@ -1,83 +1,102 @@
+@import './accessibility.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
  
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
- 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
- 
+    /* UL Solutions Brand Colors - Light Mode */
+    --background: 0 0% 92%;           /* #EBEBEB - UL Background */
+    --foreground: 209 61% 18%;        /* #122C49 - Midnight Blue */
+
+    --card: 0 0% 100%;                /* #FFFFFF - White */
+    --card-foreground: 209 61% 18%;   /* #122C49 - Midnight Blue */
+
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
- 
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
- 
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
- 
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
- 
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
- 
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
- 
+    --popover-foreground: 209 61% 18%;
+
+    --primary: 209 61% 18%;           /* #122C49 - Midnight Blue */
+    --primary-foreground: 0 0% 100%;  /* White */
+
+    --secondary: 206 29% 48%;         /* #577E9E - Fog */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 2% 85%;              /* #D8D9DA - UL Gray 1 */
+    --muted-foreground: 206 29% 48%;  /* #577E9E - Fog */
+
+    --accent: 200 77% 85%;            /* #BCE4F7 - Info Light Blue */
+    --accent-foreground: 209 61% 18%;
+
+    --destructive: 354 98% 40%;       /* #CA0123 - UL Bright Red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 2% 85%;             /* #D8D9DA - UL Gray 1 */
+    --input: 210 2% 85%;
+    --ring: 209 61% 18%;              /* #122C49 - Midnight Blue */
+
     --radius: 0.5rem;
- 
-    --chart-1: 12 76% 61%;
- 
-    --chart-2: 173 58% 39%;
- 
-    --chart-3: 197 37% 24%;
- 
-    --chart-4: 43 74% 66%;
- 
-    --chart-5: 27 87% 67%;
+
+    /* Semantic Colors */
+    --success: 151 100% 32%;          /* #00A451 - UL Bright Green */
+    --success-foreground: 0 0% 100%;
+    --warning: 25 100% 67%;           /* #FF9D55 - UL Orange */
+    --warning-foreground: 209 61% 18%;
+    --info: 200 77% 85%;              /* #BCE4F7 - UL Light Blue */
+    --info-foreground: 209 61% 18%;
+
+    /* Chart Colors */
+    --chart-1: 209 61% 18%;           /* Midnight Blue */
+    --chart-2: 151 100% 32%;          /* Green */
+    --chart-3: 25 100% 67%;           /* Orange */
+    --chart-4: 354 98% 40%;           /* Red */
+    --chart-5: 206 29% 48%;           /* Fog */
   }
- 
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
- 
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
- 
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
- 
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
- 
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
- 
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
- 
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
- 
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* UL Solutions Brand Colors - Dark Mode */
+    --background: 209 66% 11%;        /* #0a1c30 - Dark Midnight */
+    --foreground: 0 0% 96%;           /* #F5F5F5 */
+
+    --card: 209 61% 18%;              /* #122C49 - Midnight Blue */
+    --card-foreground: 0 0% 96%;
+
+    --popover: 209 61% 18%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 200 77% 85%;           /* #BCE4F7 - Light Blue (inverted for dark) */
+    --primary-foreground: 209 66% 11%;
+
+    --secondary: 212 52% 25%;         /* #1e3a5f - Lighter Midnight */
+    --secondary-foreground: 0 0% 96%;
+
+    --muted: 212 52% 25%;
+    --muted-foreground: 206 29% 48%;  /* #577E9E - Fog */
+
+    --accent: 212 52% 25%;
+    --accent-foreground: 0 0% 96%;
+
+    --destructive: 354 98% 40%;       /* #CA0123 - UL Bright Red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 212 52% 25%;            /* #1e3a5f */
+    --input: 212 52% 25%;
+    --ring: 200 77% 85%;
+
+    /* Semantic Colors - Dark Mode */
+    --success: 151 100% 40%;          /* Brighter green for dark mode */
+    --success-foreground: 0 0% 100%;
+    --warning: 25 100% 60%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 77% 70%;
+    --info-foreground: 0 0% 100%;
+
+    /* Chart Colors - Dark Mode */
+    --chart-1: 200 77% 70%;
+    --chart-2: 151 100% 45%;
+    --chart-3: 25 100% 60%;
+    --chart-4: 354 98% 50%;
+    --chart-5: 206 50% 60%;
   }
 }
  
@@ -158,4 +177,62 @@
 
 .scale-in {
   animation: scaleIn 0.5s ease-out forwards;
-} 
+}
+
+/* 로그인 페이지 브랜딩 섹션 스타일 - UL Solutions Brand */
+.login-branding-bg {
+  background-color: #122C49; /* Midnight Blue */
+}
+
+/* UL Solutions 색상 클래스 */
+.bg-ul-midnight {
+  background-color: #122C49 !important;
+}
+
+.bg-ul-midnight-dark {
+  background-color: #0a1c30 !important;
+}
+
+.text-ul-red {
+  color: #CA0123 !important;
+}
+
+.border-ul-red {
+  border-color: #CA0123 !important;
+}
+
+/* 호버 상태 */
+.hover\:bg-ul-midnight-dark:hover {
+  background-color: #0a1c30 !important;
+}
+
+/* Auth 페이지 애니메이션 */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Animation delay utilities */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+.animation-delay-600 { animation-delay: 600ms; } 

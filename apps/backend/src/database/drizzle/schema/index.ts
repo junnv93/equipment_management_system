@@ -5,3 +5,8 @@ export * from './users';
 export * from './loans';
 export * from './checkouts';
 export * from './calibrations';
+
+// 장비 이력 스키마
+export * from './equipment-location-history';
+export * from './equipment-maintenance-history';
+export * from './equipment-incident-history';

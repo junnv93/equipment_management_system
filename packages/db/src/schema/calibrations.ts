@@ -18,7 +18,7 @@ export const calibrationApprovalStatus = [
 
 // 교정 등록자 역할 정의
 export const calibrationRegisteredByRole = [
-  'test_operator', // 시험실무자
+  'test_engineer', // 시험실무자
   'technical_manager', // 기술책임자
 ] as const;
 

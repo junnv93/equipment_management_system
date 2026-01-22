@@ -263,7 +263,7 @@ describe('CheckoutsController (e2e)', () => {
     });
   });
 
-  describe('PATCH /checkouts/:uuid/approve-first', () => {
+  describe('PATCH /checkouts/:uuid/approve', () => {
     it('should approve first (internal purpose - calibration)', async () => {
       // 반출 생성
       const createResponse = await request(app.getHttpServer())
@@ -281,29 +281,29 @@ describe('CheckoutsController (e2e)', () => {
         const checkoutUuid = createResponse.body.id;
         createdCheckoutIds.push(checkoutUuid);
 
-        // 1차 승인 (내부 목적은 1단계로 완료)
+        // 승인 (모든 목적 1단계 통합)
         const approveResponse = await request(app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve-first`)
+          .patch(`/checkouts/${checkoutUuid}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
           })
           .expect(200);
 
-        // 내부 목적(calibration)은 1차 승인으로 최종 승인됨
-        expect(approveResponse.body.status).toBe('final_approved');
-        expect(approveResponse.body.firstApproverId).toBe(testApproverId);
+        // 승인 완료
+        expect(approveResponse.body.status).toBe('approved');
+        expect(approveResponse.body.approverId).toBe(testApproverId);
       }
     });
 
-    it('should approve first (external rental - requires 2-step)', async () => {
+    it('should approve checkout (external rental)', async () => {
       // 반출 생성
       const createResponse = await request(app.getHttpServer())
         .post('/checkouts')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
-          purpose: 'external_rental',
+          purpose: 'rental',
           destination: 'E2E 테스트 외부 대여처',
           reason: 'E2E 2단계 승인 테스트',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -313,30 +313,30 @@ describe('CheckoutsController (e2e)', () => {
         const checkoutUuid = createResponse.body.id;
         createdCheckoutIds.push(checkoutUuid);
 
-        // 1차 승인 (외부 대여는 2단계 필요)
+        // 승인 (모든 목적 1단계 통합)
         const approveResponse = await request(app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve-first`)
+          .patch(`/checkouts/${checkoutUuid}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
           })
           .expect(200);
 
-        expect(approveResponse.body.status).toBe('first_approved');
-        expect(approveResponse.body.firstApproverId).toBe(testApproverId);
+        expect(approveResponse.body.status).toBe('approved');
+        expect(approveResponse.body.approverId).toBe(testApproverId);
       }
     });
   });
 
-  describe('PATCH /checkouts/:uuid/approve-final', () => {
-    it('should approve final (external rental only)', async () => {
+  describe('PATCH /checkouts/:uuid/approve', () => {
+    it('should approve checkout (unified approval)', async () => {
       // 반출 생성
       const createResponse = await request(app.getHttpServer())
         .post('/checkouts')
         .set('Authorization', `Bearer ${accessToken}`)
         .send({
           equipmentIds: [testEquipmentUuid],
-          purpose: 'external_rental',
+          purpose: 'rental',
           destination: 'E2E 테스트 외부 대여처',
           reason: 'E2E 최종 승인 테스트',
           expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -346,26 +346,26 @@ describe('CheckoutsController (e2e)', () => {
         const checkoutUuid = createResponse.body.id;
         createdCheckoutIds.push(checkoutUuid);
 
-        // 1차 승인
+        // 승인
         await request(app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve-first`)
+          .patch(`/checkouts/${checkoutUuid}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
           })
           .expect(200);
 
-        // 최종 승인
+        // 승인 (중복 테스트 - 제거 필요)
         const finalApproveResponse = await request(app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve-final`)
+          .patch(`/checkouts/${checkoutUuid}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,
           })
           .expect(200);
 
-        expect(finalApproveResponse.body.status).toBe('final_approved');
-        expect(finalApproveResponse.body.finalApproverId).toBe(testApproverId);
+        expect(finalApproveResponse.body.status).toBe('approved');
+        expect(finalApproveResponse.body.approverId).toBe(testApproverId);
       }
     });
   });
@@ -451,9 +451,9 @@ describe('CheckoutsController (e2e)', () => {
         const checkoutUuid = createResponse.body.id;
         createdCheckoutIds.push(checkoutUuid);
 
-        // 1차 승인 (내부 목적은 1단계로 완료)
+        // 승인 (모든 목적 1단계 통합)
         await request(app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve-first`)
+          .patch(`/checkouts/${checkoutUuid}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             approverId: testApproverId,

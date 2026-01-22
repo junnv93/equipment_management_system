@@ -61,7 +61,7 @@ export default function CreateCheckoutPage() {
   const [customDestination, setCustomDestination] = useState(''); // ✅ 필드명 변경
   const [phoneNumber, setPhoneNumber] = useState(''); // ✅ 필드명 변경 (contactNumber → phoneNumber)
   const [address, setAddress] = useState(''); // ✅ address 필드 추가
-  const [purpose, setPurpose] = useState<'calibration' | 'repair' | 'external_rental'>(
+  const [purpose, setPurpose] = useState<'calibration' | 'repair' | 'rental'>(
     'calibration'
   ); // ✅ CheckoutPurpose 타입
   const [reason, setReason] = useState(''); // ✅ 필수 필드 추가
@@ -161,7 +161,7 @@ export default function CreateCheckoutPage() {
       destination: destination === 'other' ? customDestination : destination, // ✅ 필드명 변경 (location → destination)
       phoneNumber: phoneNumber || undefined, // ✅ 필드명 변경 (contactNumber → phoneNumber), 선택 필드
       address: address || undefined, // ✅ address 필드 추가
-      purpose, // ✅ CheckoutPurpose (calibration, repair, external_rental)
+      purpose, // ✅ CheckoutPurpose (calibration, repair, rental)
       reason: reason.trim(), // ✅ 필수 필드
       expectedReturnDate: expectedReturnDate.toISOString(), // ISO 형식
       // startDate는 백엔드에서 자동 설정되므로 보내지 않음
@@ -295,7 +295,7 @@ export default function CreateCheckoutPage() {
                 <Select
                   value={purpose}
                   onValueChange={(value) =>
-                    setPurpose(value as 'calibration' | 'repair' | 'external_rental')
+                    setPurpose(value as 'calibration' | 'repair' | 'rental')
                   }
                 >
                   <SelectTrigger id="purpose">
@@ -304,7 +304,7 @@ export default function CreateCheckoutPage() {
                   <SelectContent>
                     <SelectItem value="calibration">교정</SelectItem>
                     <SelectItem value="repair">수리</SelectItem>
-                    <SelectItem value="external_rental">외부 대여</SelectItem>
+                    <SelectItem value="rental">외부 대여</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

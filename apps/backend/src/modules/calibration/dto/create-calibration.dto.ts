@@ -163,7 +163,7 @@ export class CreateCalibrationDto {
   @ApiProperty({
     description: '등록자 역할',
     enum: CalibrationRegisteredByRoleEnum,
-    example: 'test_operator',
+    example: 'test_engineer',
     required: false,
   })
   @IsEnum(CalibrationRegisteredByRoleEnum)

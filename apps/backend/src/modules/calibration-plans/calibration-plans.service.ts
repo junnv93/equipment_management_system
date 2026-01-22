@@ -266,7 +266,7 @@ export class CalibrationPlansService {
   }
 
   /**
-   * 승인 (pending_approval -> approved, site_admin만)
+   * 승인 (pending_approval -> approved, lab_manager만)
    */
   async approve(uuid: string, approveDto: ApproveCalibrationPlanDto) {
     const plan = await this.findOneBasic(uuid);
@@ -292,7 +292,7 @@ export class CalibrationPlansService {
   }
 
   /**
-   * 반려 (pending_approval -> rejected, site_admin만, reason 필수)
+   * 반려 (pending_approval -> rejected, lab_manager만, reason 필수)
    */
   async reject(uuid: string, rejectDto: RejectCalibrationPlanDto) {
     const plan = await this.findOneBasic(uuid);

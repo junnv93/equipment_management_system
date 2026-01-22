@@ -93,19 +93,34 @@ const status = 'loaned'; // 표준에 없는 값 사용 금지
 | ------------------- | --------------- |
 | `test_operator`     | 시험실무자      |
 | `technical_manager` | 기술책임자      |
-| `site_admin`        | 시험소별 관리자 |
+| `site_admin`        | 시험소 관리자   |
+| `system_admin`      | 시스템 관리자   |
 
 ### 역할 설명
 
-- **test_operator (시험실무자)**: 기본 조회 및 대여 신청 권한
-- **technical_manager (기술책임자)**: 장비 관리 및 승인 권한
-- **site_admin (시험소별 관리자)**: 해당 시험소 내 모든 권한
+- **test_operator (시험실무자)**: 장비 등록/수정 요청, 대여/반출 신청, 교정 등록 (승인 필요)
+- **technical_manager (기술책임자)**: 요청 승인/반려, 교정 직접 등록 (Comment 필수), 팀 내 관리
+- **site_admin (시험소 관리자)**: 시험소장 역할, 교정계획서 승인, 해당 시험소 전체 관리, 자체 승인 불가
+- **system_admin (시스템 관리자)**: 전체 시스템 관리, 모든 시험소 접근, 자체 승인 가능
+
+### 역할 계층
+
+역할은 계층 구조를 가지며, 상위 역할은 하위 역할의 모든 권한을 포함합니다:
+
+```
+system_admin (4) > site_admin (3) > technical_manager (2) > test_operator (1)
+```
+
+### 자체 승인 규칙
+
+- **system_admin만** 자체 승인 가능 (본인 요청 직접 승인)
+- site_admin, technical_manager, test_operator는 자체 승인 불가
 
 ### 하위 호환성
 
 기존 역할은 다음과 같이 매핑됩니다:
 
-- `admin` → `site_admin`
+- `admin` → `system_admin`
 - `manager` → `technical_manager`
 - `user` → `test_operator`
 - `approver` → `technical_manager`
@@ -174,8 +189,8 @@ const status = 'borrowed'; // 표준에 없는 값 사용 금지 (active 사용)
 | 값                | 설명                  | 사용 시나리오                                  |
 | ----------------- | --------------------- | ---------------------------------------------- |
 | `pending`         | 반출 신청 (승인 대기) | 사용자가 반출을 신청한 상태                    |
-| `first_approved`  | 1차 승인됨            | 외부 대여 목적 반출의 1차 승인 완료            |
-| `final_approved`  | 최종 승인됨           | 반출 가능한 상태                               |
+| `approved`  | 1차 승인됨            | 외부 대여 목적 반출의 1차 승인 완료            |
+| `approved`  | 최종 승인됨           | 반출 가능한 상태                               |
 | `rejected`        | 거절됨                | 반출이 거절된 상태                             |
 | `checked_out`     | 반출 중               | 실제로 반출된 상태                             |
 | `returned`        | 반입 완료             | 장비를 반입한 상태 (검사 완료)                 |
@@ -398,7 +413,9 @@ const status = 'borrowed'; // 표준에 없는 값 사용 금지 (active 사용)
 - **INSERT 전용**: 로그는 수정/삭제 불가
 - **5년 보관**: 규정에 따른 보관 기간
 - **비동기 기록**: 성능 영향 최소화를 위해 비동기로 기록
-- **site_admin 전용 조회**: 감사 로그는 site_admin만 조회 가능
+- **조회 권한**:
+  - `site_admin`: 해당 시험소의 감사 로그만 조회 가능
+  - `system_admin`: 모든 시험소의 감사 로그 조회 가능
 
 ### 교정계획서 테이블 구조
 
@@ -975,6 +992,62 @@ PATCH /rentals/:uuid/reject
 }
 ```
 
+## 프론트엔드 API 클라이언트 설정 표준
+
+### 환경 변수 설정
+
+프론트엔드 API 클라이언트 설정 시 다음 규칙을 준수해야 합니다.
+
+**환경 변수 (.env.local)**:
+```bash
+# ✅ 올바른 설정 (호스트만, /api 미포함)
+NEXT_PUBLIC_API_URL=http://localhost:3001
+
+# ❌ 잘못된 설정 (/api 포함 금지)
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+```
+
+### API 경로 규칙
+
+모든 API 호출 경로는 반드시 `/api/`로 시작해야 합니다.
+
+```typescript
+// ✅ 올바른 예시
+apiClient.get('/api/equipment');
+apiClient.post('/api/calibration', data);
+apiClient.patch('/api/rentals/:uuid/approve', data);
+
+// ❌ 잘못된 예시
+apiClient.get('/equipment');        // '/api' 접두사 누락 → 404 에러
+apiClient.get('api/equipment');     // 슬래시 누락 → 404 에러
+apiClient.get('/api/api/equipment'); // '/api' 중복 → 404 에러
+```
+
+### 오류 방지
+
+API 클라이언트에는 개발 모드에서 경로 검증 로직이 포함되어 있습니다:
+
+1. **경로가 `/api/`로 시작하지 않으면 경고**
+2. **`/api/api` 중복이 감지되면 에러**
+
+이 검증 기능은 개발 중 실수를 방지하고 빠른 디버깅을 돕습니다.
+
+### 흔한 실수와 해결 방법
+
+| 에러 메시지 | 원인 | 해결 방법 |
+|------------|------|----------|
+| `Cannot POST /api/api/equipment` | 환경변수에 `/api` 포함 | `.env.local`에서 `/api` 제거 |
+| `Cannot GET /equipment` | API 경로에 `/api` 누락 | 경로 앞에 `/api/` 추가 |
+| 404 Not Found | 경로 불일치 | 환경변수와 API 경로 모두 확인 |
+
+### 파일 위치
+
+- **API 클라이언트**: `apps/frontend/lib/api/api-client.ts`
+- **환경 변수**: `apps/frontend/.env.local`
+- **API 모듈들**: `apps/frontend/lib/api/*.ts`
+
+---
+
 ## 참고 파일
 
 - **표준 정의**:
@@ -996,11 +1069,16 @@ PATCH /rentals/:uuid/reject
 
 ---
 
-**마지막 업데이트**: 2026-01-20
-**버전**: 1.6.0
+**마지막 업데이트**: 2026-01-21
+**버전**: 1.7.0
 
 ### 변경 이력
 
+- **v1.7.0** (2026-01-21): 프론트엔드 API 클라이언트 설정 표준 추가
+  - 환경 변수 NEXT_PUBLIC_API_URL 설정 규칙 문서화 (호스트만, /api 미포함)
+  - API 경로 규칙 문서화 (모든 경로는 '/api/'로 시작)
+  - 개발 모드 경로 검증 기능 설명 추가
+  - 흔한 실수와 해결 방법 표 추가
 - **v1.6.0** (2026-01-20): 감사 로그 시스템 표준 추가
   - AuditActionEnum 추가 (create, update, delete, approve, reject, checkout, return, cancel, login, logout)
   - AuditEntityTypeEnum 추가 (equipment, calibration, checkout, rental, user, team, calibration_factor, non_conformance, software, calibration_plan, repair_history)

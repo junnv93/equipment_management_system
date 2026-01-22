@@ -2,11 +2,11 @@ import { pgTable, varchar, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 
-// 사용자 역할 정의
+// 사용자 역할 정의 (UL-QP-18 절차서 영문 명칭 기준)
 export const userRoles = [
-  'test_operator', // 시험실무자
-  'technical_manager', // 기술책임자
-  'site_admin', // 시험소별 관리자
+  'test_engineer', // 시험실무자 (Test Engineer)
+  'technical_manager', // 기술책임자 (Technical Manager)
+  'lab_manager', // 시험소장 (Lab Manager)
 ] as const;
 
 // 사이트 타입 정의
@@ -20,7 +20,7 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom().notNull(),
   email: varchar('email', { length: 255 }).unique().notNull(),
   name: varchar('name', { length: 100 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull().default('test_operator'),
+  role: varchar('role', { length: 50 }).notNull().default('test_engineer'),
   teamId: uuid('team_id'),
   azureAdId: varchar('azure_ad_id', { length: 255 }),
 

@@ -10,7 +10,17 @@ import {
   ExternalLink
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { dashboardApi, EquipmentSummary as EquipmentSummaryType } from "@/lib/api";
+import { dashboardApi, DashboardSummary } from "@/lib/api";
+
+// DashboardSummary를 확장한 로컬 타입
+type EquipmentSummaryType = {
+  total: number;
+  available: number;
+  loaned: number;
+  checkout: number;
+  calibrationDue: number;
+  calibrationOverdue: number;
+};
 
 interface StatsCardProps {
   title: string;
@@ -67,7 +77,16 @@ export default function EquipmentSummary() {
       try {
         setLoading(true);
         const data = await dashboardApi.getEquipmentSummary();
-        setStats(data);
+        // DashboardSummary를 EquipmentSummaryType으로 변환
+        const transformedStats: EquipmentSummaryType = {
+          total: data.totalEquipment,
+          available: data.availableEquipment,
+          loaned: data.activeRentals,
+          checkout: data.activeCheckouts,
+          calibrationDue: data.upcomingCalibrations,
+          calibrationOverdue: 0, // 별도 API 필요
+        };
+        setStats(transformedStats);
         setError(null);
       } catch (err) {
         console.error("장비 요약 데이터를 불러오는 중 오류 발생:", err);

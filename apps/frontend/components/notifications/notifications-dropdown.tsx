@@ -42,7 +42,7 @@ const dummyNotifications: Notification[] = [
   {
     id: "2",
     title: "장비 반납 승인",
-    content: "Multimeter(EQ-001) 장비 반납 요청이 승인되었습니다.",
+    content: "Multimeter(SUW-E0001) 장비 반납 요청이 승인되었습니다.",
     type: "return_approved",
     priority: "medium",
     isRead: false,

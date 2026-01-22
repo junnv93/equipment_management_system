@@ -1,73 +1,93 @@
-FROM node:18-alpine AS base
+# ==========================
+# Development Stage
+# ==========================
+FROM node:18-bullseye AS development
 
-# ----- 공통 베이스 -----
-FROM base AS deps
 WORKDIR /app
 
-# 패키지 매니저 설치
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
 
-# 의존성 설치를 위한 파일 복사
+# Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY .npmrc ./
+
+# Copy ALL workspace package.json files
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/schemas/package.json ./packages/schemas/
+COPY packages/db/package.json ./packages/db/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/ui/package.json ./packages/ui/
 
-# 의존성 설치
+# Install dependencies with proper hoisting
+RUN pnpm install --shamefully-hoist
+
+# Copy source code
+COPY . .
+
+# Build shared packages
+RUN pnpm --filter schemas build || echo "schemas build failed, continuing..."
+RUN pnpm --filter db build || echo "db build failed, continuing..."
+
+# Expose ports
+EXPOSE 3001 9229
+
+# Set working directory to root for pnpm workspace commands
+WORKDIR /app
+
+# Run backend development server
+CMD ["pnpm", "--filter", "backend", "run", "start:dev"]
+
+# ==========================
+# Production Builder
+# ==========================
+FROM node:18-bullseye AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9.12.3 --activate
+
+# Copy workspace files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy ALL workspace package.json files
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/schemas/package.json ./packages/schemas/
+COPY packages/db/package.json ./packages/db/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/ui/package.json ./packages/ui/
+
+# Install all dependencies
 RUN pnpm install --frozen-lockfile
 
-# ----- 개발 환경 -----
-FROM base AS development
-WORKDIR /app
-
-# 패키지 매니저 설정
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# 의존성 복사
-COPY --from=deps /app/node_modules ./node_modules
+# Copy source code
 COPY . .
 
-# 필수 패키지 추가 설치 - workspace 의존성 문제 해결
-RUN cd /app/apps/backend && pnpm add @nestjs/jwt@10.2.0 cookie-parser@1.4.6 compression@1.7.4 prom-client drizzle-zod
-
-# 개발 모드 실행 명령
-EXPOSE 3001
-CMD ["pnpm", "--filter", "backend", "run", "dev"]
-
-# ----- 빌드 환경 -----
-FROM base AS builder
-WORKDIR /app
-
-# 패키지 매니저 설정
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# 의존성 복사
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# 필수 패키지 추가 설치 - workspace 의존성 문제 해결
-RUN cd /app/apps/backend && pnpm add @nestjs/jwt@10.2.0 cookie-parser@1.4.6 compression@1.7.4 prom-client drizzle-zod
-
-# 스키마 및 백엔드 빌드
+# Build packages in correct order
 RUN pnpm --filter schemas build
+RUN pnpm --filter db build || echo "db build skipped"
 RUN pnpm --filter backend build
 
-# ----- 프로덕션 환경 -----
-FROM base AS production
+# ==========================
+# Production Stage
+# ==========================
+FROM node:18-alpine AS production
+
 WORKDIR /app
 
-# 패키지 매니저 설정
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# 필요한 파일만 복사
+# Copy built artifacts and dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/schemas/dist ./packages/schemas/dist
 COPY --from=builder /app/packages/schemas/package.json ./packages/schemas/
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 
-# 환경 변수 설정
+# Environment
 ENV NODE_ENV=production
 
-# 실행 명령
+# Expose port
 EXPOSE 3001
-CMD ["node", "apps/backend/dist/main.js"] 
+
+# Run production server
+CMD ["node", "apps/backend/dist/main.js"]

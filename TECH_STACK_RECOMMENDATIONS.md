@@ -396,7 +396,7 @@ export async function seedEquipment() {
     {
       uuid: randomUUID(),
       name: '테스트 장비 1',
-      managementNumber: 'EQ-001',
+      managementNumber: 'SUW-E0001',
       // ...
     },
   ]);

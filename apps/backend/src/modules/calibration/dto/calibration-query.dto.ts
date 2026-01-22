@@ -34,7 +34,7 @@ export class CalibrationQueryDto {
 
   @ApiPropertyOptional({
     description: '교정 방법 (여러 방법 가능, 쉼표로 구분)',
-    example: 'external_calibration,internal_calibration',
+    example: 'external_calibration,calibration',
   })
   @IsOptional()
   @IsString()

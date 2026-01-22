@@ -3,7 +3,7 @@ import { Permission } from './permissions.enum';
 
 export const ROLE_PERMISSIONS = {
   // 시험실무자: 기본 조회 및 대여 신청 권한
-  [UserRole.TEST_OPERATOR]: [
+  [UserRole.TEST_ENGINEER]: [
     Permission.VIEW_EQUIPMENT,
     Permission.VIEW_RENTALS,
     Permission.REQUEST_RENTAL,
@@ -31,7 +31,7 @@ export const ROLE_PERMISSIONS = {
     Permission.VIEW_USERS,
   ],
   // 시험소별 관리자: 모든 권한 (해당 시험소 내)
-  [UserRole.SITE_ADMIN]: [
+  [UserRole.LAB_MANAGER]: [
     // 모든 권한
     ...Object.values(Permission),
   ],

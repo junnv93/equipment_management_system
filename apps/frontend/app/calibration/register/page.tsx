@@ -23,7 +23,7 @@ import calibrationApi, { CreateCalibrationDto } from '@/lib/api/calibration-api'
 import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
 
-type UserRole = 'test_operator' | 'technical_manager' | 'site_admin';
+type UserRole = 'test_engineer' | 'technical_manager' | 'lab_manager';
 
 export default function CalibrationRegisterPage() {
   const router = useRouter();
@@ -35,9 +35,9 @@ export default function CalibrationRegisterPage() {
   // URL 파라미터에서 equipmentId 추출
   const equipmentIdFromUrl = searchParams.get('equipmentId');
 
-  // 사용자 역할 결정 (기본값: test_operator)
-  const userRole: UserRole = (session?.user as any)?.role || 'test_operator';
-  const isTechnicalManager = userRole === 'technical_manager' || userRole === 'site_admin';
+  // 사용자 역할 결정 (기본값: test_engineer)
+  const userRole: UserRole = (session?.user as any)?.role || 'test_engineer';
+  const isTechnicalManager = userRole === 'technical_manager' || userRole === 'lab_manager';
 
   // 상태 관리
   const [searchTerm, setSearchTerm] = useState('');
@@ -208,7 +208,7 @@ export default function CalibrationRegisterPage() {
       calibrationResult: formData.calibrationResult,
       notes: formData.notes,
       registeredBy: session?.user?.id as string,
-      registeredByRole: isTechnicalManager ? 'technical_manager' : 'test_operator',
+      registeredByRole: isTechnicalManager ? 'technical_manager' : 'test_engineer',
       registrarComment: formData.registrarComment,
       intermediateCheckDate: formData.intermediateCheckDate,
     };

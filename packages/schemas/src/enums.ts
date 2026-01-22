@@ -11,12 +11,12 @@ import { z } from 'zod';
  * 표준 상태값 (소문자 + 언더스코어):
  * - available: 사용 가능
  * - in_use: 사용 중 (대여 중 포함)
- * - checked_out: 반출 중
+ * - checked_out: 반출 중 (교정/수리/대여는 checkout_type으로 구분)
  * - calibration_scheduled: 교정 예정
  * - calibration_overdue: 교정 기한 초과
- * - under_maintenance: 유지보수 중
- * - non_conforming: 부적합
- * - retired: 사용 중지
+ * - non_conforming: 부적합 (임시적, 수리 후 복귀 가능)
+ * - spare: 여분 (보유하고 있지만 상시 관리하지 않음)
+ * - retired: 사용 중지 (영구 폐기)
  *
  * @see docs/development/API_STANDARDS.md
  */
@@ -26,9 +26,9 @@ export const EquipmentStatusEnum = z.enum([
   'checked_out', // 반출 중
   'calibration_scheduled', // 교정 예정
   'calibration_overdue', // 교정 기한 초과
-  'under_maintenance', // 유지보수 중
-  'non_conforming', // 부적합
-  'retired', // 사용 중지
+  'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
+  'spare', // 여분
+  'retired', // 사용 중지 (영구 폐기)
 ]);
 
 export type EquipmentStatus = z.infer<typeof EquipmentStatusEnum>;
@@ -42,11 +42,11 @@ export const CalibrationMethodEnum = z.enum([
 
 export type CalibrationMethod = z.infer<typeof CalibrationMethodEnum>;
 
-// 사용자 역할 열거형
+// 사용자 역할 열거형 (UL-QP-18 절차서 영문 명칭 기준)
 export const UserRoleEnum = z.enum([
-  'test_operator', // 시험실무자
-  'technical_manager', // 기술책임자
-  'site_admin', // 시험소별 관리자
+  'test_engineer', // 시험실무자 (Test Engineer)
+  'technical_manager', // 기술책임자 (Technical Manager)
+  'lab_manager', // 시험소장 (Lab Manager)
 ]);
 
 export type UserRole = z.infer<typeof UserRoleEnum>;
@@ -107,19 +107,18 @@ export type LoanStatus = z.infer<typeof LoanStatusEnum>;
  *
  * 표준 상태값 (소문자 + 언더스코어):
  * - pending: 반출 신청 (승인 대기)
- * - first_approved: 1차 승인됨 (외부 대여만, 2단계 승인 필요)
- * - final_approved: 최종 승인됨 (반출 가능)
+ * - approved: 승인됨 (반출 가능)
  * - rejected: 거절됨
  * - checked_out: 반출 중
  * - returned: 반입 완료
+ * - return_approved: 반입 최종 승인됨 (기술책임자 승인)
  * - overdue: 반입 기한 초과
  * - canceled: 취소됨
  */
 // 반출 상태값 배열 (Zod enum과 동기화)
 export const CHECKOUT_STATUS_VALUES = [
   'pending', // 반출 신청 (승인 대기)
-  'first_approved', // 1차 승인됨 (외부 대여만, 2단계 승인 필요)
-  'final_approved', // 최종 승인됨 (반출 가능)
+  'approved', // 승인됨 (반출 가능)
   'rejected', // 거절됨
   'checked_out', // 반출 중
   'returned', // 반입 완료 (검사 완료)
@@ -140,7 +139,7 @@ export type CheckoutStatus = z.infer<typeof CheckoutStatusEnum>;
 export const CHECKOUT_PURPOSE_VALUES = [
   'calibration', // 교정
   'repair', // 수리
-  'external_rental', // 외부 대여
+  'rental', // 대여
 ] as const;
 
 export const CheckoutPurposeEnum = z.enum(
@@ -171,8 +170,8 @@ export type CalibrationApprovalStatus = z.infer<typeof CalibrationApprovalStatus
  * SINGLE SOURCE OF TRUTH: 교정 등록자 역할 열거형
  */
 export const CALIBRATION_REGISTERED_BY_ROLE_VALUES = [
-  'test_operator', // 시험실무자
-  'technical_manager', // 기술책임자
+  'test_engineer', // 시험실무자 (Test Engineer)
+  'technical_manager', // 기술책임자 (Technical Manager)
 ] as const;
 
 export const CalibrationRegisteredByRoleEnum = z.enum(
@@ -183,15 +182,15 @@ export type CalibrationRegisteredByRole = z.infer<typeof CalibrationRegisteredBy
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH: 반출 유형 열거형
  *
- * 반출 유형에 따라 승인 단계가 자동으로 결정됩니다:
- * - internal_calibration: 내부 교정 목적 (기술책임자 1단계 승인)
- * - internal_repair: 내부 수리 목적 (기술책임자 1단계 승인)
- * - external_rental: 외부 대여 (2단계 승인: 빌려주는 측 시험실무자 → 기술책임자)
+ * 모든 반출 유형은 1단계 승인으로 통합됨 (기술책임자 승인):
+ * - calibration: 교정 목적 반출 (외부 교정기관)
+ * - repair: 수리 목적 반출 (외부 수리업체)
+ * - rental: 대여 목적 반출 (시험소 간 대여)
  */
 export const CHECKOUT_TYPE_VALUES = [
-  'internal_calibration', // 내부 교정 목적 반출
-  'internal_repair', // 내부 수리 목적 반출
-  'external_rental', // 외부 대여 목적 반출
+  'calibration', // 교정 목적 반출
+  'repair', // 수리 목적 반출
+  'rental', // 대여 목적 반출
 ] as const;
 
 export const CheckoutTypeEnum = z.enum(CHECKOUT_TYPE_VALUES as unknown as [string, ...string[]]);
@@ -405,3 +404,54 @@ export const AuditEntityTypeEnum = z.enum(
   AUDIT_ENTITY_TYPE_VALUES as unknown as [string, ...string[]]
 );
 export type AuditEntityType = z.infer<typeof AuditEntityTypeEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 장비 사고/이벤트 유형 열거형
+ *
+ * 표준 유형값 (소문자 + 언더스코어):
+ * - damage: 손상
+ * - malfunction: 오작동
+ * - change: 변경
+ * - repair: 수리
+ */
+export const INCIDENT_TYPE_VALUES = [
+  'damage', // 손상
+  'malfunction', // 오작동
+  'change', // 변경
+  'repair', // 수리
+] as const;
+
+export const IncidentTypeEnum = z.enum(INCIDENT_TYPE_VALUES as unknown as [string, ...string[]]);
+export type IncidentType = z.infer<typeof IncidentTypeEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 시방일치 여부 열거형
+ *
+ * 표준 값 (소문자):
+ * - match: 일치
+ * - mismatch: 불일치
+ */
+export const SPEC_MATCH_VALUES = [
+  'match', // 일치
+  'mismatch', // 불일치
+] as const;
+
+export const SpecMatchEnum = z.enum(SPEC_MATCH_VALUES as unknown as [string, ...string[]]);
+export type SpecMatch = z.infer<typeof SpecMatchEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 교정 필요 여부 열거형
+ *
+ * 표준 값 (소문자):
+ * - required: 필요
+ * - not_required: 불필요
+ */
+export const CALIBRATION_REQUIRED_VALUES = [
+  'required', // 필요
+  'not_required', // 불필요
+] as const;
+
+export const CalibrationRequiredEnum = z.enum(
+  CALIBRATION_REQUIRED_VALUES as unknown as [string, ...string[]]
+);
+export type CalibrationRequired = z.infer<typeof CalibrationRequiredEnum>;

@@ -75,7 +75,7 @@ export const auditApi = {
     if (filter.page) params.append('page', filter.page.toString());
     if (filter.limit) params.append('limit', filter.limit.toString());
 
-    const response = await apiClient.get(`/audit-logs?${params.toString()}`);
+    const response = await apiClient.get(`/api/audit-logs?${params.toString()}`);
     return {
       data: response.data.items || [],
       meta: {
@@ -93,7 +93,7 @@ export const auditApi = {
    * 특정 엔티티의 감사 로그 조회
    */
   async getEntityAuditLogs(entityType: string, entityId: string): Promise<EntityAuditLogsResponse> {
-    const response = await apiClient.get(`/audit-logs/entity/${entityType}/${entityId}`);
+    const response = await apiClient.get(`/api/audit-logs/entity/${entityType}/${entityId}`);
     return response.data;
   },
 
@@ -101,7 +101,7 @@ export const auditApi = {
    * 특정 사용자의 감사 로그 조회
    */
   async getUserAuditLogs(userId: string, limit = 100): Promise<EntityAuditLogsResponse> {
-    const response = await apiClient.get(`/audit-logs/user/${userId}?limit=${limit}`);
+    const response = await apiClient.get(`/api/audit-logs/user/${userId}?limit=${limit}`);
     return response.data;
   },
 };

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { dashboardApi, TeamEquipmentStat } from "@/lib/api";
+import { dashboardApi, EquipmentByTeam } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
 
 interface TeamStats {
@@ -23,19 +23,19 @@ export default function TeamEquipmentStats() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await dashboardApi.getTeamEquipmentStats();
-        
+        const data = await dashboardApi.getEquipmentByTeam();
+
         // 서버에서 가져온 데이터를 컴포넌트 형식에 맞게 변환
-        const transformedData: TeamStats[] = data.map(team => ({
-          id: team.teamId,
-          name: team.teamName,
-          totalEquipment: team.equipmentCount || 0,
+        const transformedData: TeamStats[] = data.map((team: EquipmentByTeam) => ({
+          id: team.id,
+          name: team.name,
+          totalEquipment: team.count || 0,
           // 아래 값들은 API 응답에 없으면 계산된 값 또는 기본값 사용
-          availableEquipment: team.availableCount || Math.floor(team.equipmentCount * 0.8),
-          loanedEquipment: team.loanedCount || Math.floor(team.equipmentCount * 0.15),
-          calibrationDue: team.calibrationDueCount || Math.floor(team.equipmentCount * 0.05)
+          availableEquipment: Math.floor(team.count * 0.8),
+          loanedEquipment: Math.floor(team.count * 0.15),
+          calibrationDue: Math.floor(team.count * 0.05)
         }));
-        
+
         setTeamStats(transformedData);
         setError(null);
       } catch (err) {
@@ -164,4 +164,19 @@ function StatItem({
       </p>
     </div>
   );
-} 
+}
+
+// Named export for simple inline usage in dashboard
+export function TeamEquipmentStatsItem({ team }: { team: EquipmentByTeam }) {
+  return (
+    <div className="flex items-center justify-between p-2.5 bg-card rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
+      <span className="font-medium text-sm">{team.name}</span>
+      <span className="text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded">
+        {team.count}대
+      </span>
+    </div>
+  );
+}
+
+// Re-export with alias for backwards compatibility
+export { TeamEquipmentStatsItem as TeamEquipmentStats }; 

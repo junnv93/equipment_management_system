@@ -117,7 +117,7 @@ export function CalibrationList({
                   <div className="space-y-1">
                     <p className="text-sm font-medium line-clamp-1">{item.equipmentName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDateTime("dueDate" in item ? item.dueDate : item.dueDate)}
+                      {formatDateTime(item.dueDate)}
                     </p>
                   </div>
                   <div className="flex items-center">

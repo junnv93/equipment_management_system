@@ -19,7 +19,7 @@ describe('AuthController', () => {
     id: 'test-user-id',
     email: 'test@example.com',
     name: 'Test User',
-    roles: [UserRole.TEST_OPERATOR],
+    roles: [UserRole.TEST_ENGINEER],
     department: 'Testing',
   };
 
@@ -147,7 +147,7 @@ describe('AuthController', () => {
           id: 'azure-id',
           email: 'azure@example.com',
           name: 'Azure User',
-          roles: [UserRole.SITE_ADMIN],
+          roles: [UserRole.LAB_MANAGER],
           department: 'IT',
         },
       };

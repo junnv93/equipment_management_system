@@ -18,7 +18,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 export class EquipmentQueryDto implements Partial<EquipmentFilter> {
   @ApiPropertyOptional({
     description: '검색어 (장비명, 관리번호, 일련번호 등)',
-    example: 'RF 분석기',
+    example: 'Receiver',
   })
   search?: string;
 
@@ -30,7 +30,8 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
       'checked_out',
       'calibration_scheduled',
       'calibration_overdue',
-      'under_maintenance',
+      'non_conforming',
+      'spare',
       'retired',
     ],
     example: 'available',

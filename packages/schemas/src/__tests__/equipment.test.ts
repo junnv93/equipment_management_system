@@ -9,7 +9,7 @@ describe('Equipment Type Guards and Schemas', () => {
       const validEquipment = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'Test Equipment',
-        managementNumber: 'EQ-001',
+        managementNumber: 'SUW-E0001',
         status: EquipmentStatusEnum.enum.available,
         calibrationMethod: CalibrationMethodEnum.enum.external_calibration,
         createdAt: new Date().toISOString(),
@@ -35,7 +35,7 @@ describe('Equipment Type Guards and Schemas', () => {
       const invalidDatesEquipment = {
         id: '123e4567-e89b-12d3-a456-426614174000',
         name: 'Test Equipment',
-        managementNumber: 'EQ-001',
+        managementNumber: 'SUW-E0001',
         status: EquipmentStatusEnum.enum.available,
         createdAt: 'invalid-date',
         updatedAt: 'invalid-date',

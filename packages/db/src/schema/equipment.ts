@@ -26,8 +26,9 @@ export const equipmentStatusEnum = pgEnum('equipment_status', [
   'checked_out', // 반출 중
   'calibration_scheduled', // 교정 예정
   'calibration_overdue', // 교정 기한 초과
-  'under_maintenance', // 유지보수 중
-  'retired', // 사용 중지
+  'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
+  'spare', // 여분
+  'retired', // 사용 중지 (영구 폐기)
 ]);
 
 // 교정 방법 정의
@@ -48,9 +49,18 @@ export const equipment = pgTable(
     assetNumber: varchar('asset_number', { length: 50 }),
     modelName: varchar('model_name', { length: 100 }),
     manufacturer: varchar('manufacturer', { length: 100 }),
-    serialNumber: varchar('serial_number', { length: 100 }),
-    description: text('description'),
+    manufacturerContact: varchar('manufacturer_contact', { length: 100 }), // 제조사 연락처
+    serialNumber: varchar('serial_number', { length: 100 }), // 일련번호
+    description: text('description'), // 장비사양
     location: varchar('location', { length: 100 }),
+
+    // 시방일치 여부 및 교정필요 여부
+    specMatch: varchar('spec_match', { length: 20 }), // 'match' | 'mismatch'
+    calibrationRequired: varchar('calibration_required', { length: 20 }), // 'required' | 'not_required'
+
+    // 위치 및 설치 정보
+    initialLocation: varchar('initial_location', { length: 100 }), // 최초 설치 위치
+    installationDate: timestamp('installation_date'), // 설치 일시
 
     // 교정 정보
     calibrationCycle: integer('calibration_cycle'), // 개월 단위
@@ -58,7 +68,12 @@ export const equipment = pgTable(
     nextCalibrationDate: timestamp('next_calibration_date'),
     calibrationAgency: varchar('calibration_agency', { length: 100 }),
     needsIntermediateCheck: boolean('needs_intermediate_check').default(false),
-    calibrationMethod: varchar('calibration_method', { length: 50 }),
+    calibrationMethod: varchar('calibration_method', { length: 50 }), // 관리 방법
+
+    // 중간점검 정보 (3개 필드로 분리)
+    lastIntermediateCheckDate: timestamp('last_intermediate_check_date'), // 최종 중간 점검일
+    intermediateCheckCycle: integer('intermediate_check_cycle'), // 중간점검 주기 (개월)
+    nextIntermediateCheckDate: timestamp('next_intermediate_check_date'), // 차기 중간 점검일
 
     // 관리 정보
     teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),

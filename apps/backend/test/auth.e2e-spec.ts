@@ -54,7 +54,7 @@ describe('AuthController (e2e)', () => {
       expect(response.body.user.name).toBe('관리자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
-      expect(response.body.user.roles).toContain('site_admin');
+      expect(response.body.user.roles).toContain('lab_manager');
       expect(response.body.user).not.toHaveProperty('password');
     });
 
@@ -92,7 +92,7 @@ describe('AuthController (e2e)', () => {
       expect(response.body.user.name).toBe('시험실무자');
       expect(response.body.user.site).toBe('suwon');
       expect(response.body.user.location).toBe('수원랩');
-      expect(response.body.user.roles).toContain('test_operator');
+      expect(response.body.user.roles).toContain('test_engineer');
       expect(response.body.user).not.toHaveProperty('password');
     });
 
@@ -130,7 +130,7 @@ describe('AuthController (e2e)', () => {
 
       expect(response.body).toHaveProperty('id');
       expect(response.body.email).toBe(adminEmail);
-      expect(response.body.roles).toContain('site_admin');
+      expect(response.body.roles).toContain('lab_manager');
     });
 
     it('should not get user profile without token', async () => {

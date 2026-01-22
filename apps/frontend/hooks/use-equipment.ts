@@ -16,6 +16,7 @@ import equipmentApi, {
   EquipmentQuery,
   CreateEquipmentDto,
   UpdateEquipmentDto,
+  EquipmentMutationResponse,
 } from '@/lib/api/equipment-api';
 
 /**

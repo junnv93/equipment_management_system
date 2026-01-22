@@ -4,9 +4,9 @@
  * 대신 apps/backend/src/modules/auth/rbac/roles.enum.ts의 UserRole을 사용하세요.
  */
 export enum UserRole {
-  TEST_OPERATOR = 'test_operator',
+  TEST_ENGINEER = 'test_engineer',
   TECHNICAL_MANAGER = 'technical_manager',
-  SITE_ADMIN = 'site_admin',
+  LAB_MANAGER = 'lab_manager',
 }
 
 /**

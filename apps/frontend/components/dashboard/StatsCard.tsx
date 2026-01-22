@@ -22,40 +22,44 @@ export const StatsCard = memo(function StatsCard({
   icon: Icon,
   variant = "default"
 }: StatsCardProps) {
-  // variant에 따른 색상 스타일 지정 - useMemo로 최적화
+  // variant에 따른 색상 스타일 지정 - UL Solutions 색상 시스템
   const variantClasses = useMemo(() => {
     switch (variant) {
       case "success":
-        return "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900"
+        // UL Bright Green (#00A451)
+        return "bg-ul-green/10 text-ul-green border-ul-green/20 dark:bg-ul-green/20 dark:text-ul-green dark:border-ul-green/30"
       case "warning":
-        return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900"
+        // UL Orange (#FF9D55)
+        return "bg-ul-orange/10 text-ul-orange border-ul-orange/20 dark:bg-ul-orange/20 dark:text-ul-orange dark:border-ul-orange/30"
       case "danger":
-        return "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900"
+        // UL Bright Red (#CA0123)
+        return "bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-ul-red/20 dark:text-ul-red dark:border-ul-red/30"
       case "primary":
-        return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900"
+        // UL Midnight Blue (#122C49)
+        return "bg-ul-midnight/10 text-ul-midnight border-ul-midnight/20 dark:bg-ul-info/20 dark:text-ul-info dark:border-ul-info/30"
       default:
         return "bg-card text-card-foreground border-border"
     }
   }, [variant]);
 
-  // 아이콘 색상 스타일 지정 - useMemo로 최적화
+  // 아이콘 색상 스타일 지정 - UL Solutions 색상 시스템
   const iconClasses = useMemo(() => {
     switch (variant) {
       case "success":
-        return "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+        return "bg-ul-green/20 text-ul-green dark:bg-ul-green/30 dark:text-ul-green"
       case "warning":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+        return "bg-ul-orange/20 text-ul-orange dark:bg-ul-orange/30 dark:text-ul-orange"
       case "danger":
-        return "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
+        return "bg-ul-red/20 text-ul-red dark:bg-ul-red/30 dark:text-ul-red"
       case "primary":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+        return "bg-ul-midnight/20 text-ul-midnight dark:bg-ul-info/30 dark:text-ul-info"
       default:
-        return "bg-muted text-muted-foreground dark:bg-gray-800 dark:text-gray-300"
+        return "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground"
     }
   }, [variant]);
 
   return (
-    <Card 
+    <Card
       className={`${variantClasses} border transition-all duration-300 hover:shadow-md dark:hover:shadow-lg dark:shadow-gray-900/10 hover:translate-y-[-2px]`}
       hoverable
     >
@@ -71,7 +75,7 @@ export const StatsCard = memo(function StatsCard({
               </p>
             )}
             {description && (
-              <CardDescription className="mt-2 dark:text-gray-400">{description}</CardDescription>
+              <CardDescription className="mt-2">{description}</CardDescription>
             )}
           </div>
           {Icon && (
@@ -83,4 +87,4 @@ export const StatsCard = memo(function StatsCard({
       </CardContent>
     </Card>
   )
-}); 
+});

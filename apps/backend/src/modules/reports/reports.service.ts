@@ -25,7 +25,7 @@ export class ReportsService {
         { departmentId: '3', departmentName: '생산', usageHours: 420, equipmentCount: 18 },
       ],
       topEquipment: [
-        { equipmentId: 'EQ-001', name: 'RF 분석기', usageHours: 120, usageCount: 35 },
+        { equipmentId: 'SUW-E0001', name: 'Receiver', usageHours: 120, usageCount: 35 },
         { equipmentId: 'EQ-002', name: '오실로스코프', usageHours: 105, usageCount: 28 },
         { equipmentId: 'EQ-003', name: '스펙트럼 분석기', usageHours: 95, usageCount: 20 },
       ],
@@ -118,7 +118,7 @@ export class ReportsService {
         { categoryId: '3', categoryName: '물리 계측', utilizationRate: 58.4, equipmentCount: 15 },
       ],
       topUtilized: [
-        { equipmentId: 'EQ-001', name: 'RF 분석기', utilizationRate: 92.5, department: '연구소' },
+        { equipmentId: 'SUW-E0001', name: 'Receiver', utilizationRate: 92.5, department: '연구소' },
         { equipmentId: 'EQ-005', name: 'HPLC', utilizationRate: 88.3, department: '품질관리' },
         {
           equipmentId: 'EQ-008',

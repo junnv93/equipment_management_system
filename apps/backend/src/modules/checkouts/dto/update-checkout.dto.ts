@@ -10,7 +10,7 @@ export class UpdateCheckoutDto extends PartialType(
   @ApiProperty({
     description: '반출 상태',
     enum: CHECKOUT_STATUS_VALUES,
-    example: 'first_approved',
+    example: 'approved',
     required: false,
   })
   @IsOptional()

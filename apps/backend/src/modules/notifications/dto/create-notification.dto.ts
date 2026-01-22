@@ -47,7 +47,7 @@ export class CreateNotificationDto {
 
   @ApiProperty({
     description: '알림 내용',
-    example: 'RF-Analyzer(EQ-001) 장비의 교정 일정이 2주 후로 예정되어 있습니다.',
+    example: 'RF-Analyzer(SUW-E0001) 장비의 교정 일정이 2주 후로 예정되어 있습니다.',
   })
   @IsString()
   @IsNotEmpty()

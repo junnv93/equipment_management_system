@@ -7,11 +7,12 @@ import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 
-// 백엔드 API URL
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// 백엔드 API 베이스 URL (호스트만 포함, /api는 각 엔드포인트에서 지정)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // 환경 변수 확인
 const isDevelopment = process.env.NODE_ENV === 'development';
+const isTest = process.env.NODE_ENV === 'test';
 const enableLocalAuth = process.env.ENABLE_LOCAL_AUTH === 'true' || isDevelopment;
 const hasAzureAD = !!(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET);
 
@@ -53,7 +54,7 @@ export const authOptions = {
 
               try {
                 // 백엔드 인증 API 호출
-                const response = await fetch(`${API_URL}/auth/login`, {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -88,6 +89,82 @@ export const authOptions = {
           }),
         ]
       : []),
+
+    /**
+     * E2E 테스트 전용 Provider
+     *
+     * ⚠️ 중요: E2E 테스트에서 인증을 처리하는 올바른 방법
+     *
+     * 문제: 백엔드 JWT를 직접 쿠키에 저장하면 NextAuth가 인식하지 못함
+     * - NextAuth는 자체 세션 토큰(next-auth.session-token)을 사용
+     * - 직접 저장한 쿠키(auth-token)는 NextAuth 인증 플로우를 우회
+     * - Middleware, Server Components가 인증 실패로 판단
+     *
+     * 해결: NextAuth의 정상적인 인증 플로우 사용
+     * - CredentialsProvider를 통해 백엔드 test-login 호출
+     * - NextAuth가 세션 생성 및 쿠키 관리
+     * - 모든 Next.js 컴포넌트에서 세션 인식
+     *
+     * 아키텍처 원칙:
+     * - NextAuth = 단일 인증 소스 (Single Source of Truth)
+     * - localStorage 토큰 사용 금지
+     * - 모든 인증은 NextAuth 세션을 통해서만 처리
+     *
+     * 참고: /equipment-management 스킬 - references/auth-architecture.md
+     */
+    ...(isTest || isDevelopment
+      ? [
+          CredentialsProvider({
+            id: 'test-login',
+            name: 'Test Login',
+            credentials: {
+              role: {
+                label: 'Role',
+                type: 'text',
+                placeholder: 'test_engineer | technical_manager | lab_manager | system_admin'
+              },
+            },
+            async authorize(credentials) {
+              if (!credentials?.role) {
+                console.error('[Test Auth] Role is required');
+                return null;
+              }
+
+              try {
+                // 백엔드 테스트 로그인 엔드포인트 호출
+                const response = await fetch(
+                  `${API_BASE_URL}/api/auth/test-login?role=${credentials.role}`
+                );
+
+                if (!response.ok) {
+                  const text = await response.text();
+                  console.error('[Test Auth] Backend test-login failed:', response.status, text);
+                  return null;
+                }
+
+                const data = await response.json();
+
+                // NextAuth 세션에 저장할 사용자 정보 반환
+                // 이 정보는 jwt 콜백에서 token에 저장되고, session 콜백에서 session에 전달됨
+                return {
+                  id: data.user.id || data.user.uuid,
+                  name: data.user.name,
+                  email: data.user.email,
+                  role: data.user.role,
+                  roles: [data.user.role],
+                  department: data.user.department,
+                  site: data.user.site,
+                  teamId: data.user.teamId,
+                  accessToken: data.access_token,
+                };
+              } catch (error) {
+                console.error('[Test Auth] Error during test login:', error);
+                return null;
+              }
+            },
+          }),
+        ]
+      : []),
   ],
   pages: {
     signIn: '/login',
@@ -112,12 +189,14 @@ export const authOptions = {
         }
       }
 
-      // 로컬 로그인 처리
-      if (account?.provider === 'credentials' && user) {
+      // 로컬 로그인 처리 (일반 Credentials + test-login Provider)
+      if ((account?.provider === 'credentials' || account?.provider === 'test-login') && user) {
         token.id = user.id;
         token.role = user.role;
         token.roles = user.roles;
         token.department = user.department;
+        token.site = (user as any).site;
+        token.teamId = (user as any).teamId;
         token.accessToken = (user as any).accessToken;
       }
       return token;
@@ -128,6 +207,8 @@ export const authOptions = {
         session.user.role = token.role as string;
         session.user.roles = token.roles as string[];
         session.user.department = token.department as string | undefined;
+        session.user.site = token.site as string | undefined;
+        session.user.teamId = token.teamId as string | undefined;
         (session as any).accessToken = token.accessToken as string;
       }
       return session;

@@ -63,8 +63,7 @@ export class CheckoutsService {
   private readonly INDEXED_FIELDS = [
     'status',
     'requesterId',
-    'firstApproverId',
-    'finalApproverId',
+    'approverId',
     'checkoutDate',
     'expectedReturnDate',
     'createdAt',
@@ -147,9 +146,7 @@ export class CheckoutsService {
     }
 
     if (approverId) {
-      whereConditions.push(
-        or(eq(checkouts.firstApproverId, approverId), eq(checkouts.finalApproverId, approverId))
-      );
+      whereConditions.push(eq(checkouts.approverId, approverId));
     }
 
     if (purpose) {
@@ -514,8 +511,8 @@ export class CheckoutsService {
         checkoutDate: null,
         actualReturnDate: null,
         status: 'pending' as CheckoutStatus,
-        firstApproverId: null,
-        finalApproverId: null,
+        approverId: null,
+        approvedAt: null,
         returnerId: null,
         rejectionReason: null,
         calibrationChecked: false,
@@ -557,12 +554,12 @@ export class CheckoutsService {
   }
 
   /**
-   * 1차 승인 (내부 목적: 교정/수리)
-   * 팀 매니저가 승인 (요구사항)
-   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
+   * 반출 승인 (모든 목적 통합 - 1단계 승인)
+   * 기술책임자가 승인 (요구사항)
+   * ✅ 승인 프로세스 단순화: 모든 반출 목적에 대해 1단계 승인으로 통합
    * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 반출 승인 불가
    */
-  async approveFirst(
+  async approve(
     uuid: string,
     approveDto: ApproveCheckoutDto,
     approverTeamId?: string
@@ -588,103 +585,11 @@ export class CheckoutsService {
         await this.checkTeamPermission(item.equipmentId, approverTeamId);
       }
 
-      // 내부 목적(교정/수리)은 1단계 승인으로 완료
-      if (checkout.purpose === 'calibration' || checkout.purpose === 'repair') {
-        // Equipment 모듈의 transformUpdateDtoToEntity 패턴과 동일하게 처리
-        const updateData: Partial<Checkout> = {
-          status: 'final_approved' as CheckoutStatus,
-          firstApproverId: approveDto.approverId,
-          updatedAt: new Date(),
-        };
-
-        const [updated] = await this.db
-          .update(checkouts)
-          .set(updateData as Record<string, unknown>)
-          .where(eq(checkouts.id, uuid))
-          .returning();
-
-        if (!updated) {
-          throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-        }
-
-        await this.invalidateCache();
-        return updated;
-      }
-
-      // 외부 대여 목적은 1차 승인만 수행
-      if (checkout.purpose === 'external_rental') {
-        // Equipment 모듈의 transformUpdateDtoToEntity 패턴과 동일하게 처리
-        const updateData: Partial<Checkout> = {
-          status: 'first_approved' as CheckoutStatus,
-          firstApproverId: approveDto.approverId,
-          updatedAt: new Date(),
-        };
-
-        const [updated] = await this.db
-          .update(checkouts)
-          .set(updateData as Record<string, unknown>)
-          .where(eq(checkouts.id, uuid))
-          .returning();
-
-        if (!updated) {
-          throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-        }
-
-        await this.invalidateCache();
-        return updated;
-      }
-
-      throw new BadRequestException(`알 수 없는 반출 목적: ${checkout.purpose}`);
-    } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
-        throw error;
-      }
-      this.logger.error(
-        `1차 승인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * 최종 승인 (외부 대여 목적만)
-   * 팀 매니저가 최종 승인 (요구사항)
-   * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
-   * ✅ 팀별 권한 체크 추가: EMC팀은 RF팀 장비 반출 승인 불가
-   */
-  async approveFinal(
-    uuid: string,
-    approveDto: ApproveCheckoutDto,
-    approverTeamId?: string
-  ): Promise<Checkout> {
-    try {
-      // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
-      this.validateUuid(approveDto.approverId, '승인자');
-
-      const checkout = await this.findOne(uuid);
-
-      if (checkout.status !== 'first_approved') {
-        throw new BadRequestException('1차 승인된 반출만 최종 승인할 수 있습니다.');
-      }
-
-      if (checkout.purpose !== 'external_rental') {
-        throw new BadRequestException('외부 대여 목적 반출만 최종 승인이 필요합니다.');
-      }
-
-      // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크
-      const items = await this.db
-        .select()
-        .from(checkoutItems)
-        .where(eq(checkoutItems.checkoutId, uuid));
-
-      for (const item of items) {
-        await this.checkTeamPermission(item.equipmentId, approverTeamId);
-      }
-
+      // 모든 목적(교정/수리/외부 대여)을 1단계 승인으로 통합
       const updateData: Partial<Checkout> = {
-        status: 'final_approved' as CheckoutStatus,
-        finalApproverId: approveDto.approverId,
+        status: 'approved' as CheckoutStatus,
+        approverId: approveDto.approverId,
+        approvedAt: new Date(),
         updatedAt: new Date(),
       };
 
@@ -705,7 +610,7 @@ export class CheckoutsService {
         throw error;
       }
       this.logger.error(
-        `최종 승인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+        `반출 승인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
     }
@@ -726,9 +631,9 @@ export class CheckoutsService {
 
       const checkout = await this.findOne(uuid);
 
-      // 대기 중이거나 1차 승인된 상태만 반려 가능
-      if (checkout.status !== 'pending' && checkout.status !== 'first_approved') {
-        throw new BadRequestException('대기 중이거나 1차 승인된 반출만 반려할 수 있습니다.');
+      // 대기 중인 상태만 반려 가능
+      if (checkout.status !== 'pending') {
+        throw new BadRequestException('대기 중인 반출만 반려할 수 있습니다.');
       }
 
       // 반려 사유 필수 검증
@@ -738,9 +643,7 @@ export class CheckoutsService {
 
       const updateData: Partial<Checkout> = {
         status: 'rejected' as CheckoutStatus,
-        firstApproverId:
-          checkout.status === 'pending' ? rejectDto.approverId : checkout.firstApproverId,
-        finalApproverId: checkout.status === 'first_approved' ? rejectDto.approverId : null,
+        approverId: rejectDto.approverId,
         rejectionReason: rejectDto.reason.trim(),
         updatedAt: new Date(),
       };
@@ -780,8 +683,8 @@ export class CheckoutsService {
 
       const checkout = await this.findOne(uuid);
 
-      if (checkout.status !== 'final_approved') {
-        throw new BadRequestException('최종 승인된 반출만 반출할 수 있습니다.');
+      if (checkout.status !== 'approved') {
+        throw new BadRequestException('승인된 반출만 반출할 수 있습니다.');
       }
 
       // 반출 처리

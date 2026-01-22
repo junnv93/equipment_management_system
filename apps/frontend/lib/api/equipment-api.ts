@@ -71,6 +71,68 @@ export type UpdateEquipmentDto = UpdateEquipmentInput & {
   image?: File | null; // 프론트엔드에서 파일 업로드용
 };
 
+/**
+ * 장비 생성/수정 응답 타입
+ *
+ * 승인 프로세스가 필요한 경우 requestUuid가 반환되고,
+ * 직접 승인되는 경우 Equipment가 반환됩니다.
+ */
+export type EquipmentMutationResponse = Equipment & {
+  requestUuid?: string; // 승인 요청이 생성된 경우 반환되는 UUID
+};
+
+// 이력 관리 타입
+export interface LocationHistoryItem {
+  id: string;
+  equipmentId: string;
+  changedAt: string | Date;
+  newLocation: string;
+  notes?: string;
+  changedBy?: string;
+  changedByName?: string;
+  createdAt: string | Date;
+}
+
+export interface MaintenanceHistoryItem {
+  id: string;
+  equipmentId: string;
+  performedAt: string | Date;
+  content: string;
+  performedBy?: string;
+  performedByName?: string;
+  createdAt: string | Date;
+}
+
+export type IncidentType = 'damage' | 'malfunction' | 'change' | 'repair';
+
+export interface IncidentHistoryItem {
+  id: string;
+  equipmentId: string;
+  occurredAt: string | Date;
+  incidentType: IncidentType;
+  content: string;
+  reportedBy?: string;
+  reportedByName?: string;
+  createdAt: string | Date;
+}
+
+export interface CreateLocationHistoryInput {
+  changedAt: string;
+  newLocation: string;
+  notes?: string;
+}
+
+export interface CreateMaintenanceHistoryInput {
+  performedAt: string;
+  content: string;
+}
+
+export interface CreateIncidentHistoryInput {
+  occurredAt: string;
+  incidentType: IncidentType;
+  content: string;
+}
+
 // 장비 API 객체
 const equipmentApi = {
   // 장비 목록 조회
@@ -103,7 +165,7 @@ const equipmentApi = {
   // 장비 생성
   // ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
   // ✅ schemas 패키지의 CreateEquipmentInput 타입 사용
-  createEquipment: async (data: CreateEquipmentDto, files?: File[]): Promise<Equipment | any> => {
+  createEquipment: async (data: CreateEquipmentDto, files?: File[]): Promise<EquipmentMutationResponse> => {
     let response;
 
     // 파일이 포함된 경우 FormData로 처리
@@ -140,7 +202,7 @@ const equipmentApi = {
       response = await apiClient.post('/api/equipment', equipmentData);
     }
 
-    return transformSingleResponse<Equipment>(response);
+    return transformSingleResponse<EquipmentMutationResponse>(response);
   },
 
   // 장비 수정
@@ -149,7 +211,7 @@ const equipmentApi = {
     id: string,
     data: UpdateEquipmentDto,
     files?: File[]
-  ): Promise<Equipment> => {
+  ): Promise<EquipmentMutationResponse> => {
     let response;
 
     // 파일이 포함된 경우 FormData로 처리
@@ -186,7 +248,7 @@ const equipmentApi = {
       response = await apiClient.patch(`/api/equipment/${id}`, equipmentData);
     }
 
-    return transformSingleResponse<Equipment>(response);
+    return transformSingleResponse<EquipmentMutationResponse>(response);
   },
 
   // 장비 삭제
@@ -315,6 +377,78 @@ const equipmentApi = {
     // 응답에서 equipment 객체 추출
     const responseData = response.data || response;
     return responseData.equipment || transformSingleResponse<Equipment>(response);
+  },
+
+  // ========== 이력 관리 API ==========
+
+  // 위치 변동 이력 조회
+  getLocationHistory: async (equipmentUuid: string): Promise<LocationHistoryItem[]> => {
+    const response = await apiClient.get(`/api/equipment/${equipmentUuid}/location-history`);
+    return response.data || response;
+  },
+
+  // 위치 변동 이력 추가
+  createLocationHistory: async (
+    equipmentUuid: string,
+    data: CreateLocationHistoryInput
+  ): Promise<LocationHistoryItem> => {
+    const response = await apiClient.post(`/api/equipment/${equipmentUuid}/location-history`, data);
+    return response.data || response;
+  },
+
+  // 위치 변동 이력 삭제
+  deleteLocationHistory: async (historyId: string): Promise<void> => {
+    return apiClient.delete(`/api/equipment/location-history/${historyId}`);
+  },
+
+  // 유지보수 내역 조회
+  getMaintenanceHistory: async (equipmentUuid: string): Promise<MaintenanceHistoryItem[]> => {
+    const response = await apiClient.get(`/api/equipment/${equipmentUuid}/maintenance-history`);
+    return response.data || response;
+  },
+
+  // 유지보수 내역 추가
+  createMaintenanceHistory: async (
+    equipmentUuid: string,
+    data: CreateMaintenanceHistoryInput
+  ): Promise<MaintenanceHistoryItem> => {
+    const response = await apiClient.post(
+      `/api/equipment/${equipmentUuid}/maintenance-history`,
+      data
+    );
+    return response.data || response;
+  },
+
+  // 유지보수 내역 삭제
+  deleteMaintenanceHistory: async (historyId: string): Promise<void> => {
+    return apiClient.delete(`/api/equipment/maintenance-history/${historyId}`);
+  },
+
+  // 손상/오작동/변경/수리 내역 조회
+  getIncidentHistory: async (equipmentUuid: string): Promise<IncidentHistoryItem[]> => {
+    const response = await apiClient.get(`/api/equipment/${equipmentUuid}/incident-history`);
+    return response.data || response;
+  },
+
+  // 손상/오작동/변경/수리 내역 추가
+  createIncidentHistory: async (
+    equipmentUuid: string,
+    data: CreateIncidentHistoryInput
+  ): Promise<IncidentHistoryItem> => {
+    const response = await apiClient.post(`/api/equipment/${equipmentUuid}/incident-history`, data);
+    return response.data || response;
+  },
+
+  // 손상/오작동/변경/수리 내역 삭제
+  deleteIncidentHistory: async (historyId: string): Promise<void> => {
+    return apiClient.delete(`/api/equipment/incident-history/${historyId}`);
+  },
+
+  // 교정 이력 조회 (기존 Calibrations API 활용)
+  getCalibrationHistory: async (equipmentUuid: string): Promise<any[]> => {
+    const response = await apiClient.get(`/api/calibrations?equipmentId=${equipmentUuid}`);
+    const responseData = response as any;
+    return responseData.data?.items || responseData.items || responseData.data || [];
   },
 };
 

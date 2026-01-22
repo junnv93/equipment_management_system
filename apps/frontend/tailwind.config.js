@@ -1,9 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  safelist: [
+    // 로그인 페이지 브랜딩 섹션 (UL Solutions)
+    'bg-ul-midnight',
+    'bg-ul-midnight-dark',
+    'text-white',
+    // 반응형 클래스
+    'hidden',
+    'md:flex',
+    'md:w-1/2',
+    'lg:w-1/2',
   ],
   theme: {
   	container: {
@@ -54,6 +66,39 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
+  			},
+  			// UL Solutions Brand Colors
+  			'ul-midnight': {
+  				DEFAULT: '#122C49',
+  				dark: '#0a1c30',
+  				light: '#1e3a5f'
+  			},
+  			'ul-fog': '#577E9E',
+  			'ul-red': {
+  				DEFAULT: '#CA0123',
+  				dark: '#5B0428'
+  			},
+  			'ul-green': '#00A451',
+  			'ul-orange': '#FF9D55',
+  			'ul-info': '#BCE4F7',
+  			'ul-gray': {
+  				bg: '#EBEBEB',
+  				'1': '#D8D9DA',
+  				'2': '#B5B7B9',
+  				'3': '#939698'
+  			},
+  			// Semantic colors
+  			success: {
+  				DEFAULT: 'hsl(var(--success))',
+  				foreground: 'hsl(var(--success-foreground))'
+  			},
+  			warning: {
+  				DEFAULT: 'hsl(var(--warning))',
+  				foreground: 'hsl(var(--warning-foreground))'
+  			},
+  			info: {
+  				DEFAULT: 'hsl(var(--info))',
+  				foreground: 'hsl(var(--info-foreground))'
   			}
   		},
   		borderRadius: {

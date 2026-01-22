@@ -78,7 +78,31 @@ import {
   SoftwareApprovalStatusEnum,
   SoftwareApprovalStatus,
   SOFTWARE_APPROVAL_STATUS_VALUES,
+  IncidentTypeEnum,
+  IncidentType,
+  INCIDENT_TYPE_VALUES,
+  SpecMatchEnum,
+  SpecMatch,
+  SPEC_MATCH_VALUES,
+  CalibrationRequiredEnum,
+  CalibrationRequired,
+  CALIBRATION_REQUIRED_VALUES,
 } from './enums';
+
+import {
+  LocationHistory,
+  CreateLocationHistoryInput,
+  locationHistorySchema,
+  createLocationHistorySchema,
+  MaintenanceHistory,
+  CreateMaintenanceHistoryInput,
+  maintenanceHistorySchema,
+  createMaintenanceHistorySchema,
+  IncidentHistory,
+  CreateIncidentHistoryInput,
+  incidentHistorySchema,
+  createIncidentHistorySchema,
+} from './equipment-history';
 
 import { Team, CreateTeamInput, UpdateTeamInput, isTeam, teamSchema } from './team';
 
@@ -203,6 +227,29 @@ export {
   SoftwareApprovalStatusEnum,
   SoftwareApprovalStatus,
   SOFTWARE_APPROVAL_STATUS_VALUES,
+  IncidentTypeEnum,
+  IncidentType,
+  INCIDENT_TYPE_VALUES,
+  SpecMatchEnum,
+  SpecMatch,
+  SPEC_MATCH_VALUES,
+  CalibrationRequiredEnum,
+  CalibrationRequired,
+  CALIBRATION_REQUIRED_VALUES,
+
+  // Equipment History (위치변동, 유지보수, 손상/수리 이력)
+  LocationHistory,
+  CreateLocationHistoryInput,
+  locationHistorySchema,
+  createLocationHistorySchema,
+  MaintenanceHistory,
+  CreateMaintenanceHistoryInput,
+  maintenanceHistorySchema,
+  createMaintenanceHistorySchema,
+  IncidentHistory,
+  CreateIncidentHistoryInput,
+  incidentHistorySchema,
+  createIncidentHistorySchema,
 
   // Team
   Team,

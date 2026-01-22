@@ -1,335 +1,289 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { useQuery } from '@tanstack/react-query';
-import equipmentApi, { Equipment, EquipmentQuery } from '@/lib/api/equipment-api';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import dayjs from 'dayjs';
-import { PageHeader } from '@/components/shared/PageHeader';
 import { useRouter } from 'next/navigation';
-import debounce from 'lodash/debounce';
-import VirtualizedEquipmentList from '@/components/equipment/VirtualizedEquipmentList';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Package, SearchX } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import equipmentApi from '@/lib/api/equipment-api';
+import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { useAuth } from '@/hooks/use-auth';
-import type { Site } from '@equipment-management/schemas';
-import { SharedEquipmentBadge } from '@/components/equipment/SharedEquipmentBadge';
+import { useEquipmentFilters, type ViewType } from '@/hooks/useEquipmentFilters';
+import { EquipmentFilters } from '@/components/equipment/EquipmentFilters';
+import { EquipmentSearchBar } from '@/components/equipment/EquipmentSearchBar';
+import { EquipmentTable } from '@/components/equipment/EquipmentTable';
+import { EquipmentCardGrid } from '@/components/equipment/EquipmentCardGrid';
+import { ViewToggle } from '@/components/equipment/ViewToggle';
+import { EquipmentPagination } from '@/components/equipment/EquipmentPagination';
+import type { Site, EquipmentStatus, CalibrationMethod } from '@equipment-management/schemas';
 
-// PaginationState 인터페이스 정의
-interface PaginationState {
-  pageIndex: number;
-  pageSize: number;
+/**
+ * 빈 상태 컴포넌트 (검색 결과 없음)
+ */
+function EmptySearchResults({
+  hasActiveFilters,
+  searchTerm,
+  onClearFilters,
+}: {
+  hasActiveFilters: boolean;
+  searchTerm?: string;
+  onClearFilters: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <SearchX className="h-12 w-12 text-muted-foreground mb-4" />
+      <h3 className="text-lg font-semibold">검색 결과가 없습니다</h3>
+      <p className="text-muted-foreground mt-1 max-w-md">
+        {searchTerm
+          ? `"${searchTerm}"에 대한 검색 결과가 없습니다.`
+          : '현재 필터 조건에 맞는 장비가 없습니다.'}
+      </p>
+      {hasActiveFilters && (
+        <Button variant="outline" className="mt-4" onClick={onClearFilters} type="button">
+          필터 초기화
+        </Button>
+      )}
+    </div>
+  );
 }
 
-export default function EquipmentPage() {
+/**
+ * 빈 상태 컴포넌트 (데이터 없음)
+ */
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Package className="h-12 w-12 text-muted-foreground mb-4" />
+      <h3 className="text-lg font-semibold">등록된 장비가 없습니다</h3>
+      <p className="text-muted-foreground mt-1">첫 번째 장비를 등록해보세요.</p>
+      <Button className="mt-4" asChild>
+        <Link href="/equipment/create">장비 등록</Link>
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * 스켈레톤 로딩 컴포넌트
+ */
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true" aria-live="polite">
+      {/* 필터 스켈레톤 */}
+      <Skeleton className="h-[120px] w-full rounded-lg" />
+
+      {/* 검색바 & 뷰 토글 스켈레톤 */}
+      <div className="flex gap-4">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-[120px]" />
+      </div>
+
+      {/* 테이블 스켈레톤 */}
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full" />
+        ))}
+      </div>
+
+      {/* 페이지네이션 스켈레톤 */}
+      <div className="flex justify-between">
+        <Skeleton className="h-8 w-[200px]" />
+        <Skeleton className="h-8 w-[300px]" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 장비 목록 컨텐츠 컴포넌트
+ */
+function EquipmentListContent() {
   const router = useRouter();
   const { user, isManager, isAdmin } = useAuth();
-  const userSite = (user as any)?.site as Site | undefined;
-  const userRoles = (user as any)?.roles || [];
-  const isTestOperator = userRoles.includes('test_operator') && !isManager() && !isAdmin();
-  const canViewAllSites = isManager() || isAdmin();
 
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-  const [siteFilter, setSiteFilter] = useState<string>(
-    isTestOperator && userSite ? userSite : 'ALL'
-  );
-  const [sharedFilter, setSharedFilter] = useState<string>('ALL');
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
+  // URL 상태 관리 훅
+  const {
+    filters,
+    view,
+    setSearch,
+    setSite,
+    setStatus,
+    setCalibrationMethod,
+    setIsShared,
+    setCalibrationDueFilter,
+    setTeamId,
+    setSort,
+    setPage,
+    setPageSize,
+    setView,
+    clearFilters,
+    activeFilterCount,
+    hasActiveFilters,
+    queryFilters,
+    isClient,
+  } = useEquipmentFilters();
+
+  // 장비 목록 쿼리
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['equipmentList', queryFilters],
+    queryFn: () => equipmentApi.getEquipmentList(queryFilters),
+    retry: 3,
+    staleTime: 30 * 1000, // 30초
   });
 
-  // useMemo를 사용하여 검색 조건 최적화
-  const queryOptions = useMemo(() => {
-    // 시험실무자는 자신의 사이트만 조회, 기술책임자/관리자는 선택 가능
-    const site =
-      isTestOperator && userSite
-        ? userSite
-        : siteFilter !== 'ALL'
-          ? (siteFilter as Site)
-          : undefined;
+  // 페이지네이션 정보 계산
+  const paginationInfo = useMemo(() => {
+    const totalItems = data?.meta?.pagination?.total || 0;
+    const totalPages = data?.meta?.pagination?.totalPages || 1;
+    const currentPage = data?.meta?.pagination?.currentPage || filters.page;
+    return { totalItems, totalPages, currentPage };
+  }, [data, filters.page]);
 
-    return {
-      search: searchTerm || undefined,
-      status: statusFilter !== 'ALL' ? (statusFilter as any) : undefined, // EquipmentStatus enum으로 변환
-      category: categoryFilter !== 'ALL' ? categoryFilter : undefined,
-      site,
-      isShared: sharedFilter === 'ALL' ? undefined : sharedFilter === 'SHARED' ? true : false,
-      page: pagination.pageIndex + 1,
-      pageSize: pagination.pageSize,
-    };
-  }, [
-    searchTerm,
-    statusFilter,
-    categoryFilter,
-    siteFilter,
-    sharedFilter,
-    pagination,
-    isTestOperator,
-    userSite,
-  ]);
+  // 장비 데이터
+  const items = data?.data || [];
 
-  // 장비 데이터 쿼리
-  const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['equipmentList', queryOptions],
-    queryFn: () => equipmentApi.getEquipmentList(queryOptions),
-  });
-
-  // 더 많은 데이터 로드 함수 정의
-  const loadMoreData = useCallback(() => {
-    setPagination((prev: PaginationState) => ({
-      ...prev,
-      pageIndex: prev.pageIndex + 1,
-    }));
-    return Promise.resolve();
-  }, []);
-
-  // 검색어 입력에 디바운스 적용
-  const debouncedSearch = useMemo(
-    () =>
-      debounce((value: string) => {
-        setSearchTerm(value);
-        setPagination((prev: PaginationState) => ({
-          ...prev,
-          pageIndex: 0, // 검색 시 첫 페이지로 리셋
-        }));
-      }, 500),
-    []
-  );
-
-  // 컴포넌트 언마운트 시 디바운스 취소
-  useEffect(() => {
-    return () => {
-      debouncedSearch.cancel();
-    };
-  }, [debouncedSearch]);
-
-  // 장비 상태 변경 핸들러
-  const handleStatusChange = useCallback((value: string) => {
-    setStatusFilter(value);
-    setPagination((prev: PaginationState) => ({
-      ...prev,
-      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
-    }));
-  }, []);
-
-  // 장비 카테고리 변경 핸들러
-  const handleCategoryChange = useCallback((value: string) => {
-    setCategoryFilter(value);
-    setPagination((prev: PaginationState) => ({
-      ...prev,
-      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
-    }));
-  }, []);
-
-  // 사이트 필터 변경 핸들러
-  const handleSiteChange = useCallback((value: string) => {
-    setSiteFilter(value);
-    setPagination((prev: PaginationState) => ({
-      ...prev,
-      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
-    }));
-  }, []);
-
-  // 공용장비 필터 변경 핸들러
-  const handleSharedChange = useCallback((value: string) => {
-    setSharedFilter(value);
-    setPagination((prev: PaginationState) => ({
-      ...prev,
-      pageIndex: 0, // 필터 변경 시 첫 페이지로 리셋
-    }));
-  }, []);
-
-  // 장비 상세 페이지로 이동하는 핸들러
-  const handleEquipmentClick = useCallback(
-    (equipment: Equipment) => {
-      router.push(`/equipment/${equipment.id}`);
-    },
-    [router]
-  );
-
-  // 상태에 따른 뱃지 컴포넌트
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { class: string; darkClass: string; label: string }> = {
-      AVAILABLE: {
-        class: 'bg-green-100 text-green-800',
-        darkClass: 'dark:bg-green-950 dark:text-green-300',
-        label: '사용 가능',
-      },
-      IN_USE: {
-        class: 'bg-blue-100 text-blue-800',
-        darkClass: 'dark:bg-blue-950 dark:text-blue-300',
-        label: '사용 중',
-      },
-      MAINTENANCE: {
-        class: 'bg-yellow-100 text-yellow-800',
-        darkClass: 'dark:bg-yellow-950 dark:text-yellow-300',
-        label: '유지보수 중',
-      },
-      CALIBRATION: {
-        class: 'bg-purple-100 text-purple-800',
-        darkClass: 'dark:bg-purple-950 dark:text-purple-300',
-        label: '교정 중',
-      },
-      DISPOSAL: {
-        class: 'bg-red-100 text-red-800',
-        darkClass: 'dark:bg-red-950 dark:text-red-300',
-        label: '폐기',
-      },
-    };
-
-    const config = statusConfig[status] || {
-      class: 'bg-gray-100 text-gray-800',
-      darkClass: 'dark:bg-gray-800 dark:text-gray-300',
-      label: '알 수 없음',
-    };
-
+  // 에러 상태 처리
+  if (error) {
     return (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${config.class} ${config.darkClass}`}
-      >
-        {config.label}
-      </span>
+      <ErrorAlert
+        error={error}
+        title="장비 목록 로드 실패"
+        onRetry={() => refetch()}
+      />
     );
-  };
+  }
 
-  // 날짜 포맷 함수
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '-';
-    try {
-      return dayjs(dateString).format('YYYY-MM-DD');
-    } catch (error) {
-      return dateString;
-    }
-  };
+  // 초기 로딩 상태
+  if (isLoading && items.length === 0) {
+    return <LoadingSkeleton />;
+  }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => router.push('/equipment/create-shared')}>
-            공용장비 등록
-          </Button>
-          <Button onClick={() => router.push('/equipment/create')}>장비 등록</Button>
+    <div className="space-y-6" aria-live="polite" aria-busy={isFetching}>
+      {/* 필터 패널 */}
+      <EquipmentFilters
+        filters={filters}
+        onSiteChange={setSite}
+        onStatusChange={setStatus}
+        onCalibrationMethodChange={setCalibrationMethod}
+        onIsSharedChange={setIsShared}
+        onCalibrationDueFilterChange={setCalibrationDueFilter}
+        onTeamIdChange={setTeamId}
+        onClearFilters={clearFilters}
+        activeFilterCount={activeFilterCount}
+        hasActiveFilters={hasActiveFilters}
+      />
+
+      {/* 검색바 & 정렬 & 뷰 전환 */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <EquipmentSearchBar
+          value={filters.search}
+          onChange={setSearch}
+          isLoading={isFetching}
+          className="w-full sm:max-w-md"
+        />
+
+        <div className="flex items-center gap-4">
+          {/* 정렬 표시 */}
+          {filters.sortBy && filters.sortBy !== 'createdAt' && (
+            <Badge variant="outline" className="text-xs">
+              정렬: {filters.sortBy === 'name' ? '이름순' : filters.sortBy === 'lastCalibrationDate' ? '교정일순' : filters.sortBy === 'status' ? '상태순' : filters.sortBy === 'managementNumber' ? '관리번호순' : ''}
+              ({filters.sortOrder === 'asc' ? '오름차순' : '내림차순'})
+            </Badge>
+          )}
+
+          {/* 뷰 전환 */}
+          {isClient && (
+            <ViewToggle view={view} onChange={setView} />
+          )}
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>장비 검색</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">검색어</Label>
-              <Input
-                id="search"
-                placeholder="장비명, 관리번호, 위치 등으로 검색"
-                onChange={(e) => debouncedSearch(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">상태</Label>
-              <Select defaultValue="ALL" onValueChange={handleStatusChange}>
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="모든 상태" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">모든 상태</SelectItem>
-                  <SelectItem value="AVAILABLE">사용 가능</SelectItem>
-                  <SelectItem value="IN_USE">사용 중</SelectItem>
-                  <SelectItem value="MAINTENANCE">유지보수 중</SelectItem>
-                  <SelectItem value="CALIBRATION">교정 중</SelectItem>
-                  <SelectItem value="DISPOSAL">폐기</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {canViewAllSites && (
-              <div className="space-y-2">
-                <Label htmlFor="site">사이트</Label>
-                <Select value={siteFilter} onValueChange={handleSiteChange}>
-                  <SelectTrigger id="site">
-                    <SelectValue placeholder="모든 사이트" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">모든 사이트</SelectItem>
-                    <SelectItem value="suwon">수원</SelectItem>
-                    <SelectItem value="uiwang">의왕</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="category">분류</Label>
-              <Select defaultValue="ALL" onValueChange={handleCategoryChange}>
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="모든 분류" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">모든 분류</SelectItem>
-                  <SelectItem value="MEASUREMENT">측정장비</SelectItem>
-                  <SelectItem value="TESTING">시험장비</SelectItem>
-                  <SelectItem value="ANALYSIS">분석장비</SelectItem>
-                  <SelectItem value="CALIBRATION">교정장비</SelectItem>
-                  <SelectItem value="SAFETY">안전장비</SelectItem>
-                  <SelectItem value="IT">IT장비</SelectItem>
-                  <SelectItem value="TOOL">공구</SelectItem>
-                  <SelectItem value="OTHER">기타</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="shared">장비 구분</Label>
-              <Select value={sharedFilter} onValueChange={handleSharedChange}>
-                <SelectTrigger id="shared">
-                  <SelectValue placeholder="모든 장비" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">모든 장비</SelectItem>
-                  <SelectItem value="NORMAL">일반 장비</SelectItem>
-                  <SelectItem value="SHARED">공용장비</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* 장비 목록 (테이블 또는 카드) */}
+      {items.length === 0 ? (
+        hasActiveFilters || filters.search ? (
+          <EmptySearchResults
+            hasActiveFilters={hasActiveFilters}
+            searchTerm={filters.search}
+            onClearFilters={clearFilters}
+          />
+        ) : (
+          <EmptyState />
+        )
+      ) : (
+        <>
+          {view === 'table' ? (
+            <EquipmentTable
+              items={items}
+              isLoading={isFetching}
+              sortBy={filters.sortBy}
+              sortOrder={filters.sortOrder}
+              onSort={setSort}
+              searchTerm={filters.search}
+            />
+          ) : (
+            <EquipmentCardGrid
+              items={items}
+              isLoading={isFetching}
+              searchTerm={filters.search}
+            />
+          )}
 
-      {/* 가상화된 장비 리스트로 교체 */}
-      <VirtualizedEquipmentList
-        items={data?.data || []}
-        isLoading={isLoading || isFetching}
-        hasNextPage={
-          data
-            ? (data.meta?.pagination?.currentPage || 1) < (data.meta?.pagination?.totalPages || 1)
-            : false
-        }
-        loadNextPage={loadMoreData}
-        onItemClick={handleEquipmentClick}
-      />
+          {/* 페이지네이션 */}
+          <EquipmentPagination
+            currentPage={paginationInfo.currentPage}
+            totalPages={paginationInfo.totalPages}
+            pageSize={filters.pageSize}
+            totalItems={paginationInfo.totalItems}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 장비 목록 페이지
+ */
+export default function EquipmentPage() {
+  const router = useRouter();
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* 페이지 헤더 */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
+          <p className="text-muted-foreground mt-1">
+            시험소 장비를 검색하고 관리합니다
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push('/equipment/create-shared')} type="button">
+            공용장비 등록
+          </Button>
+          <Button onClick={() => router.push('/equipment/create')} type="button">
+            <Plus className="h-4 w-4 mr-2" />
+            장비 등록
+          </Button>
+        </div>
+      </div>
+
+      {/* 메인 컨텐츠 */}
+      <Suspense fallback={<LoadingSkeleton />}>
+        <EquipmentListContent />
+      </Suspense>
     </div>
   );
 }

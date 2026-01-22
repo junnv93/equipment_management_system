@@ -8,9 +8,10 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "nest build",
+    "dev": "nest start --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "npx nest start",
-    "start:dev": "npx nest start --watch",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
     "start:debug": "npx nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
@@ -26,7 +27,10 @@
     "db:studio": "npx drizzle-kit studio",
     "db:test:migrate": "npx ts-node src/database/tests/migrate.test.ts",
     "db:verify": "npx ts-node scripts/verify-migration.ts",
-    "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts"
+    "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts",
+    "db:seed:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/equipment_management_test npx ts-node src/database/seed-test.ts",
+    "db:migrate:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/equipment_management_test npx drizzle-kit push",
+    "test:e2e:setup": "npm run db:migrate:test && npm run db:seed:test"
   },
   "dependencies": {
     "@equipment-management/db": "workspace:*",
@@ -63,7 +67,7 @@
     "@types/supertest": "^2.0.12",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "drizzle-kit": "^0.20.13",
+    "drizzle-kit": "^0.31.8",
     "drizzle-zod": "^0.7.1",
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^9.0.0",

@@ -225,7 +225,7 @@ export default function ManageCheckoutsPage() {
 
   // 연체 상태 확인
   const isOverdue = (checkout: Checkout) => {
-    if (checkout.status !== 'final_approved' && checkout.status !== 'checked_out') return false;
+    if (checkout.status !== 'approved' && checkout.status !== 'checked_out') return false;
 
     const expectedReturnDate = new Date(checkout.expectedReturnDate);
     const today = new Date();
@@ -248,12 +248,12 @@ export default function ManageCheckoutsPage() {
     }
 
     // 목적에 따라 다른 승인 처리
-    if (checkout.purpose === 'external_rental') {
+    if (checkout.purpose === 'rental') {
       // 외부 대여는 2단계 승인 필요
       if (checkout.status === 'pending') {
         // 1차 승인
         approveFirstMutation.mutate({ checkoutId: checkout.id, approverId });
-      } else if (checkout.status === 'first_approved') {
+      } else if (checkout.status === 'approved') {
         // 최종 승인
         approveFinalMutation.mutate({ checkoutId: checkout.id, approverId });
       }
@@ -426,7 +426,7 @@ export default function ManageCheckoutsPage() {
                               className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
                               <Check className="h-4 w-4 mr-1" />
-                              {checkout.purpose === 'external_rental' ? '1차 승인' : '승인'}
+                              {checkout.purpose === 'rental' ? '1차 승인' : '승인'}
                             </Button>
                             <Button
                               variant="ghost"
@@ -440,8 +440,8 @@ export default function ManageCheckoutsPage() {
                             </Button>
                           </>
                         )}
-                        {checkout.status === 'first_approved' &&
-                          checkout.purpose === 'external_rental' && (
+                        {checkout.status === 'approved' &&
+                          checkout.purpose === 'rental' && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -453,7 +453,7 @@ export default function ManageCheckoutsPage() {
                               최종 승인
                             </Button>
                           )}
-                        {(checkout.status === 'final_approved' ||
+                        {(checkout.status === 'approved' ||
                           checkout.status === 'checked_out') && (
                           <Button
                             variant="ghost"

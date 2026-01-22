@@ -25,7 +25,7 @@ export interface Checkout {
   phoneNumber?: string; // ✅ 백엔드 필드명
   contactNumber?: string; // 레거시 호환성
   address?: string;
-  purpose: string; // ✅ CheckoutPurpose (calibration, repair, external_rental)
+  purpose: string; // ✅ CheckoutPurpose (calibration, repair, rental)
   reason: string; // ✅ 백엔드 필수 필드
   checkoutDate?: string; // ✅ 백엔드 필드명
   startDate?: string; // 레거시 호환성
@@ -33,8 +33,7 @@ export interface Checkout {
   actualReturnDate?: string;
   status:
     | 'pending'
-    | 'first_approved'
-    | 'final_approved'
+    | 'approved'
     | 'rejected'
     | 'checked_out'
     | 'returned'
@@ -42,7 +41,7 @@ export interface Checkout {
     | 'overdue'
     | 'canceled'; // ✅ 백엔드 상태값
   // 반출 유형
-  checkoutType?: 'internal_calibration' | 'internal_repair' | 'external_rental';
+  checkoutType?: 'calibration' | 'repair' | 'rental';
   // 외부 대여 시 빌려주는 측 정보
   lenderTeamId?: string;
   lenderSiteId?: string;
@@ -54,8 +53,9 @@ export interface Checkout {
   // 반입 승인 정보
   returnApprovedBy?: string;
   returnApprovedAt?: string;
-  firstApproverId?: string; // ✅ 백엔드 필드명
-  finalApproverId?: string; // ✅ 백엔드 필드명
+  // 반출 승인 정보
+  approverId?: string; // ✅ 백엔드 필드명
+  approvedAt?: string; // ✅ 백엔드 필드명
   approvedById?: string; // 레거시 호환성
   approvedBy?: {
     id: string;
@@ -93,7 +93,7 @@ export interface CreateCheckoutDto {
   destination: string; // ✅ 백엔드 필드명에 맞게 수정 (location → destination)
   phoneNumber?: string; // ✅ 백엔드 필드명에 맞게 수정 (contactNumber → phoneNumber)
   address?: string;
-  purpose: string; // ✅ 백엔드: CheckoutPurpose (calibration, repair, external_rental)
+  purpose: string; // ✅ 백엔드: CheckoutPurpose (calibration, repair, rental)
   reason: string; // ✅ 백엔드 필수 필드 추가
   expectedReturnDate: string; // ISO 형식
   notes?: string; // ✅ 백엔드에는 notes 필드가 없지만, reason에 포함 가능
@@ -223,36 +223,13 @@ const checkoutApi = {
   },
 
   /**
-   * 반출 1차 승인을 처리합니다.
+   * 반출 승인을 처리합니다 (1단계 승인 통합).
+   * 모든 목적(교정/수리/외부 대여)에 대해 1단계 승인으로 통합되었습니다.
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async approveFirst(id: string, approverId: string): Promise<Checkout> {
-    const response = await axios.patch(`/api/checkouts/${id}/approve-first`, { approverId });
+  async approveCheckout(id: string, approverId: string): Promise<Checkout> {
+    const response = await axios.patch(`/api/checkouts/${id}/approve`, { approverId });
     return transformSingleResponse<Checkout>(response);
-  },
-
-  /**
-   * 반출 최종 승인을 처리합니다.
-   * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
-   */
-  async approveFinal(id: string, approverId: string): Promise<Checkout> {
-    const response = await axios.patch(`/api/checkouts/${id}/approve-final`, { approverId });
-    return transformSingleResponse<Checkout>(response);
-  },
-
-  /**
-   * @deprecated approveCheckout은 approveFirst 또는 approveFinal로 대체되었습니다.
-   * 반출 요청을 승인합니다. (레거시 호환성)
-   */
-  async approveCheckout(id: string, notes?: string): Promise<Checkout> {
-    // ✅ 백엔드는 2단계 승인 시스템이므로, 기본적으로 1차 승인으로 처리
-    // 실제로는 목적에 따라 approveFirst 또는 approveFinal을 호출해야 함
-    // 임시로 1차 승인으로 처리 (실제 사용 시에는 목적 확인 필요)
-    console.warn('approveCheckout is deprecated. Use approveFirst or approveFinal instead.');
-    // approverId는 JWT에서 가져와야 하므로, 이 메서드는 사용하지 않는 것이 좋음
-    throw new Error(
-      'approveCheckout is deprecated. Use approveFirst or approveFinal with approverId.'
-    );
   },
 
   /**

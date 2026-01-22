@@ -1,16 +1,20 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { X, Upload, File } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { X, Upload, File, FileImage, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface UploadedFile {
   file: File;
   uuid?: string; // 서버에서 반환된 UUID
   preview?: string; // 이미지 미리보기 URL
+  progress?: number; // 업로드 진행률 (0-100)
+  status?: 'pending' | 'uploading' | 'success' | 'error';
+  error?: string;
 }
 
 interface FileUploadProps {
@@ -23,6 +27,41 @@ interface FileUploadProps {
   label?: string;
   description?: string;
   attachmentType?: 'inspection_report' | 'history_card' | 'other';
+  showProgress?: boolean;
+}
+
+/**
+ * 파일 타입별 아이콘 반환
+ */
+function getFileIcon(fileName: string) {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')) {
+    return FileImage;
+  }
+  if (['pdf'].includes(ext || '')) {
+    return FileText;
+  }
+  return File;
+}
+
+/**
+ * 파일 타입별 색상 반환
+ */
+function getFileTypeColor(fileName: string) {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')) {
+    return 'text-green-600 dark:text-green-400';
+  }
+  if (['pdf'].includes(ext || '')) {
+    return 'text-red-600 dark:text-red-400';
+  }
+  if (['doc', 'docx'].includes(ext || '')) {
+    return 'text-blue-600 dark:text-blue-400';
+  }
+  if (['xls', 'xlsx'].includes(ext || '')) {
+    return 'text-emerald-600 dark:text-emerald-400';
+  }
+  return 'text-muted-foreground';
 }
 
 export function FileUpload({
@@ -35,65 +74,96 @@ export function FileUpload({
   label = '파일 첨부',
   description = 'PDF, 이미지, 문서 파일을 업로드할 수 있습니다. (최대 10MB)',
   attachmentType = 'other',
+  showProgress = true,
 }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     if (file.size > maxSize) {
       return `파일 크기는 ${Math.round(maxSize / 1024 / 1024)}MB를 초과할 수 없습니다.`;
     }
+
+    // 파일 확장자 검증
+    const allowedExtensions = accept.split(',').map((ext) => ext.trim().toLowerCase().replace('.', ''));
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+    if (fileExt && !allowedExtensions.includes(fileExt)) {
+      return `지원하지 않는 파일 형식입니다. (${accept})`;
+    }
+
     return null;
-  };
+  }, [accept, maxSize]);
 
-  const handleFileSelect = (selectedFiles: FileList | null) => {
-    if (!selectedFiles || selectedFiles.length === 0) return;
+  const handleFileSelect = useCallback(
+    (selectedFiles: FileList | null) => {
+      if (!selectedFiles || selectedFiles.length === 0) return;
 
-    const newFiles: UploadedFile[] = [];
-    const errors: string[] = [];
+      const newFiles: UploadedFile[] = [];
+      const newErrors: string[] = [];
 
-    Array.from(selectedFiles).forEach((file) => {
-      if (files.length + newFiles.length >= maxFiles) {
-        errors.push(`최대 ${maxFiles}개까지 업로드할 수 있습니다.`);
-        return;
-      }
+      Array.from(selectedFiles).forEach((file) => {
+        if (files.length + newFiles.length >= maxFiles) {
+          newErrors.push(`최대 ${maxFiles}개까지 업로드할 수 있습니다.`);
+          return;
+        }
 
-      const error = validateFile(file);
-      if (error) {
-        errors.push(`${file.name}: ${error}`);
-        return;
-      }
+        // 중복 파일 체크
+        const isDuplicate = files.some((f) => f.file.name === file.name && f.file.size === file.size);
+        if (isDuplicate) {
+          newErrors.push(`${file.name}: 이미 추가된 파일입니다.`);
+          return;
+        }
 
-      const uploadedFile: UploadedFile = { file };
+        const error = validateFile(file);
+        if (error) {
+          newErrors.push(`${file.name}: ${error}`);
+          return;
+        }
 
-      // 이미지 파일인 경우 미리보기 생성
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          uploadedFile.preview = e.target?.result as string;
+        const uploadedFile: UploadedFile = {
+          file,
+          status: 'pending',
+          progress: 0,
         };
-        reader.readAsDataURL(file);
+
+        // 이미지 파일인 경우 미리보기 생성
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            uploadedFile.preview = e.target?.result as string;
+            // 상태 업데이트를 위해 onChange 호출
+            onChange([...files, ...newFiles]);
+          };
+          reader.readAsDataURL(file);
+        }
+
+        newFiles.push(uploadedFile);
+      });
+
+      setErrors(newErrors);
+
+      if (newFiles.length > 0) {
+        onChange([...files, ...newFiles]);
       }
 
-      newFiles.push(uploadedFile);
-    });
+      // 파일 입력 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    [files, maxFiles, onChange, validateFile]
+  );
 
-    if (errors.length > 0) {
-      // TODO: toast로 에러 표시
-      console.error('File upload errors:', errors);
-    }
+  const handleRemove = useCallback(
+    (index: number) => {
+      const newFiles = files.filter((_, i) => i !== index);
+      onChange(newFiles);
+    },
+    [files, onChange]
+  );
 
-    if (newFiles.length > 0) {
-      onChange([...files, ...newFiles]);
-    }
-  };
-
-  const handleRemove = (index: number) => {
-    const newFiles = files.filter((_, i) => i !== index);
-    onChange(newFiles);
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -101,18 +171,21 @@ export function FileUpload({
     } else if (e.type === 'dragleave') {
       setDragActive(false);
     }
-  };
+  }, []);
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragActive(false);
 
-    if (disabled) return;
+      if (disabled) return;
 
-    const droppedFiles = e.dataTransfer.files;
-    handleFileSelect(droppedFiles);
-  };
+      const droppedFiles = e.dataTransfer.files;
+      handleFileSelect(droppedFiles);
+    },
+    [disabled, handleFileSelect]
+  );
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
@@ -120,20 +193,53 @@ export function FileUpload({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const renderFileStatus = (uploadedFile: UploadedFile) => {
+    switch (uploadedFile.status) {
+      case 'uploading':
+        return (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>업로드 중...</span>
+          </div>
+        );
+      case 'success':
+        return (
+          <div className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>완료</span>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+            <AlertCircle className="h-4 w-4" />
+            <span>{uploadedFile.error || '오류'}</span>
+          </div>
+        );
+      default:
+        return (
+          <span className="text-xs text-muted-foreground">
+            {formatFileSize(uploadedFile.file.size)}
+          </span>
+        );
+    }
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="space-y-1">
         <Label>{label}</Label>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
 
+      {/* 드래그 앤 드롭 영역 */}
       <div
         className={cn(
-          'border-2 border-dashed rounded-lg p-6 transition-colors',
+          'relative border-2 border-dashed rounded-lg p-8 transition-all duration-200',
           dragActive
-            ? 'border-primary bg-primary/5'
-            : 'border-muted-foreground/25 hover:border-muted-foreground/50',
-          disabled && 'opacity-50 cursor-not-allowed'
+            ? 'border-primary bg-primary/5 scale-[1.01]'
+            : 'border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/30',
+          disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
         )}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -141,11 +247,25 @@ export function FileUpload({
         onDrop={handleDrop}
       >
         <div className="flex flex-col items-center justify-center space-y-4">
-          <Upload className="h-8 w-8 text-muted-foreground" />
+          <div
+            className={cn(
+              'p-4 rounded-full transition-colors',
+              dragActive ? 'bg-primary/10' : 'bg-muted'
+            )}
+          >
+            <Upload
+              className={cn(
+                'h-8 w-8 transition-colors',
+                dragActive ? 'text-primary' : 'text-muted-foreground'
+              )}
+            />
+          </div>
           <div className="text-center">
-            <p className="text-sm font-medium">파일을 드래그하거나 클릭하여 업로드</p>
+            <p className="text-sm font-medium">
+              {dragActive ? '여기에 파일을 놓으세요' : '파일을 드래그하거나 클릭하여 업로드'}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {accept} (최대 {formatFileSize(maxSize)})
+              {accept.split(',').join(', ')} (최대 {formatFileSize(maxSize)}, {maxFiles}개)
             </p>
           </div>
           <Button
@@ -170,38 +290,97 @@ export function FileUpload({
         disabled={disabled}
       />
 
+      {/* 에러 메시지 */}
+      {errors.length > 0 && (
+        <div className="space-y-1">
+          {errors.map((error, index) => (
+            <p key={index} className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+              <AlertCircle className="h-4 w-4" />
+              {error}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* 업로드된 파일 목록 */}
       {files.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium">
-            업로드된 파일 ({files.length}/{maxFiles})
-          </p>
-          <div className="space-y-2">
-            {files.map((uploadedFile, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 border rounded-lg bg-muted/50"
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">
+              업로드된 파일 ({files.length}/{maxFiles})
+            </p>
+            {files.length > 1 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onChange([])}
+                disabled={disabled}
+                className="text-xs text-muted-foreground hover:text-destructive"
               >
-                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                  <File className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{uploadedFile.file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(uploadedFile.file.size)}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemove(index)}
-                  disabled={disabled}
-                  className="flex-shrink-0"
+                전체 삭제
+              </Button>
+            )}
+          </div>
+          <div className="space-y-2">
+            {files.map((uploadedFile, index) => {
+              const FileIcon = getFileIcon(uploadedFile.file.name);
+              const fileColor = getFileTypeColor(uploadedFile.file.name);
+
+              return (
+                <div
+                  key={`${uploadedFile.file.name}-${index}`}
+                  className="group relative flex items-center justify-between p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                 >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    {/* 이미지 미리보기 또는 아이콘 */}
+                    {uploadedFile.preview ? (
+                      <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden border bg-white">
+                        <img
+                          src={uploadedFile.preview}
+                          alt={uploadedFile.file.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded border bg-white dark:bg-muted">
+                        <FileIcon className={cn('h-6 w-6', fileColor)} />
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" title={uploadedFile.file.name}>
+                        {uploadedFile.file.name}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {renderFileStatus(uploadedFile)}
+                      </div>
+
+                      {/* 진행률 표시 */}
+                      {showProgress && uploadedFile.status === 'uploading' && (
+                        <Progress
+                          value={uploadedFile.progress || 0}
+                          className="h-1 mt-2"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 삭제 버튼 */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemove(index)}
+                    disabled={disabled || uploadedFile.status === 'uploading'}
+                    className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">파일 삭제</span>
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

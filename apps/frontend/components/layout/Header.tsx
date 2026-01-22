@@ -1,0 +1,57 @@
+'use client';
+
+import { ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+import { ResponsiveBreadcrumb } from './Breadcrumb';
+
+interface HeaderProps {
+  title?: string;
+  leftContent?: ReactNode;
+  rightContent?: ReactNode;
+  className?: string;
+  /** 브레드크럼 네비게이션 표시 여부 (기본값: true) */
+  showBreadcrumb?: boolean;
+  /** 동적 라우트의 커스텀 라벨 */
+  dynamicLabels?: Record<string, string>;
+}
+
+export function Header({
+  title = '장비 관리 시스템',
+  leftContent,
+  rightContent,
+  className,
+  showBreadcrumb = true,
+  dynamicLabels,
+}: HeaderProps) {
+  return (
+    <header
+      role="banner"
+      className={cn(
+        'flex h-14 items-center gap-4 border-b border-border bg-card px-4 md:px-6',
+        'sticky top-0 z-30',
+        className
+      )}
+    >
+      {/* 왼쪽 영역 (모바일 메뉴 등) */}
+      <div className="flex items-center gap-2">
+        {leftContent}
+      </div>
+
+      {/* 중앙: 브레드크럼 또는 제목 */}
+      {showBreadcrumb ? (
+        <div className="flex-1 min-w-0">
+          <ResponsiveBreadcrumb dynamicLabels={dynamicLabels} />
+        </div>
+      ) : (
+        <h1 className="text-lg font-semibold truncate hidden sm:block">
+          {title}
+        </h1>
+      )}
+
+      {/* 오른쪽 영역 */}
+      <div className="ml-auto flex items-center gap-2 md:gap-4">
+        {rightContent}
+      </div>
+    </header>
+  );
+}

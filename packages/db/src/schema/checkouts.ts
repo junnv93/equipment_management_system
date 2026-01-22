@@ -13,8 +13,7 @@ import { users } from './users';
  */
 export const checkoutStatus = [
   'pending', // 반출 신청 (승인 대기)
-  'first_approved', // 1차 승인됨 (외부 대여만, 2단계 승인 필요)
-  'final_approved', // 최종 승인됨 (반출 가능)
+  'approved', // 승인됨 (반출 가능)
   'rejected', // 거절됨
   'checked_out', // 반출 중
   'returned', // 반입 완료 (검사 완료)
@@ -30,7 +29,7 @@ export const checkoutStatus = [
 export const checkoutPurpose = [
   'calibration', // 교정
   'repair', // 수리
-  'external_rental', // 외부 대여
+  'rental', // 외부 대여
 ] as const;
 
 /**
@@ -38,9 +37,9 @@ export const checkoutPurpose = [
  * @see packages/schemas/src/enums.ts - CheckoutTypeEnum
  */
 export const checkoutType = [
-  'internal_calibration', // 내부 교정 목적 반출
-  'internal_repair', // 내부 수리 목적 반출
-  'external_rental', // 외부 대여 목적 반출
+  'calibration', // 내부 교정 목적 반출
+  'repair', // 내부 수리 목적 반출
+  'rental', // 외부 대여 목적 반출
 ] as const;
 
 // 장비 반출 테이블 스키마
@@ -51,13 +50,12 @@ export const checkouts = pgTable('checkouts', {
   requesterId: uuid('requester_id')
     .notNull()
     .references(() => users.id), // 신청자 (장비 담당자)
-  firstApproverId: uuid('first_approver_id').references(() => users.id), // 1차 승인자 (담당자 또는 팀 매니저)
-  finalApproverId: uuid('final_approver_id').references(() => users.id), // 최종 승인자 (팀 매니저, 외부 대여만)
+  approverId: uuid('approver_id').references(() => users.id), // 승인자 (기술책임자)
   returnerId: uuid('returner_id').references(() => users.id), // 반입 처리자
 
   // 반출 정보
-  purpose: varchar('purpose', { length: 50 }).notNull(), // 목적: calibration, repair, external_rental
-  checkoutType: varchar('checkout_type', { length: 50 }).notNull().default('internal_calibration'), // 반출 유형: internal_calibration, internal_repair, external_rental
+  purpose: varchar('purpose', { length: 50 }).notNull(), // 목적: calibration, repair, rental
+  checkoutType: varchar('checkout_type', { length: 50 }).notNull().default('calibration'), // 반출 유형: calibration, repair, rental
   destination: varchar('destination', { length: 255 }).notNull(), // 반출 장소
 
   // 외부 대여 시 빌려주는 측 정보
@@ -74,6 +72,7 @@ export const checkouts = pgTable('checkouts', {
 
   // 상태 및 승인 정보
   status: varchar('status', { length: 50 }).notNull().default('pending'),
+  approvedAt: timestamp('approved_at'), // 승인 시간
   rejectionReason: text('rejection_reason'), // 반려 사유 (반려 시 필수)
 
   // 반입 검사 정보
@@ -123,15 +122,10 @@ export const checkoutsRelations = relations(checkouts, ({ one, many }) => ({
     references: [users.id],
     relationName: 'checkout_requester',
   }),
-  firstApprover: one(users, {
-    fields: [checkouts.firstApproverId],
+  approver: one(users, {
+    fields: [checkouts.approverId],
     references: [users.id],
-    relationName: 'checkout_first_approver',
-  }),
-  finalApprover: one(users, {
-    fields: [checkouts.finalApproverId],
-    references: [users.id],
-    relationName: 'checkout_final_approver',
+    relationName: 'checkout_approver',
   }),
   returner: one(users, {
     fields: [checkouts.returnerId],

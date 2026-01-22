@@ -121,45 +121,25 @@ export class CheckoutsController {
     return this.checkoutsService.remove(uuid);
   }
 
-  @Patch(':uuid/approve-first')
+  @Patch(':uuid/approve')
   @RequirePermissions(Permission.APPROVE_CHECKOUT)
   @ApiOperation({
-    summary: '1차 승인',
+    summary: '반출 승인',
     description:
-      '반출을 1차 승인합니다. 내부 목적(교정/수리)은 1단계로 완료, 외부 대여 목적은 2단계 승인 필요합니다.',
+      '반출을 승인합니다. 모든 목적(교정/수리/외부 대여)에 대해 1단계 승인으로 통합되었습니다. 기술책임자만 승인 가능합니다.',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: ApproveCheckoutDto })
-  @ApiResponse({ status: HttpStatus.OK, description: '1차 승인 성공' })
+  @ApiResponse({ status: HttpStatus.OK, description: '승인 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '승인 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async approveFirst(
+  async approve(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveCheckoutDto,
     @Request() req: any
   ) {
     const approverTeamId = req.user?.teamId; // 승인자 팀 ID
-    return this.checkoutsService.approveFirst(uuid, approveDto, approverTeamId);
-  }
-
-  @Patch(':uuid/approve-final')
-  @RequirePermissions(Permission.APPROVE_CHECKOUT)
-  @ApiOperation({
-    summary: '최종 승인',
-    description: '외부 대여 목적 반출의 최종 승인을 수행합니다. 팀 매니저만 승인 가능합니다.',
-  })
-  @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
-  @ApiBody({ type: ApproveCheckoutDto })
-  @ApiResponse({ status: HttpStatus.OK, description: '최종 승인 성공' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '승인 불가능한 상태' })
-  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async approveFinal(
-    @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() approveDto: ApproveCheckoutDto,
-    @Request() req: any
-  ) {
-    const approverTeamId = req.user?.teamId; // 승인자 팀 ID
-    return this.checkoutsService.approveFinal(uuid, approveDto, approverTeamId);
+    return this.checkoutsService.approve(uuid, approveDto, approverTeamId);
   }
 
   @Patch(':uuid/reject')

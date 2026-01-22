@@ -7,11 +7,11 @@ dotenv.config();
 export default {
   schema: '../../packages/db/src/schema/*.ts',
   out: './drizzle',
-  driver: 'pg',
+  dialect: 'postgresql',
   dbCredentials: {
-    connectionString:
+    url:
       process.env.DATABASE_URL ||
-      'postgresql://postgres:postgres@localhost:5432/equipment_management',
+      'postgresql://postgres:postgres@localhost:5433/equipment_management',
   },
   // 기존 테이블에 새 인덱스 추가 시 필요한 설정
   verbose: true,

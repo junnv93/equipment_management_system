@@ -1,12 +1,11 @@
 'use client';
 
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
-import { List } from 'react-window';
-import { InfiniteLoader } from 'react-window-infinite-loader';
+import { memo, useCallback, useMemo } from 'react';
+import { List, RowComponentProps } from 'react-window';
+import { useInfiniteLoader } from 'react-window-infinite-loader';
 import { Button } from '@/components/ui/button';
 import {
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TableHeader,
@@ -16,7 +15,6 @@ import Link from 'next/link';
 import dayjs from 'dayjs';
 import { Equipment } from '@/lib/api/equipment-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AutoSizer } from 'react-virtualized-auto-sizer';
 
 // 아이템 높이 및 기타 상수 정의
 const ITEM_HEIGHT = 64; // 각 행의, 높이
@@ -96,10 +94,10 @@ const EquipmentRow = memo(
       <TableRow className="dark:border-gray-700 h-16">
         <TableCell className="font-medium">{equipment.managementNumber}</TableCell>
         <TableCell className="max-w-[150px] sm:max-w-none truncate">{equipment.name}</TableCell>
-        <TableCell className="hidden sm:table-cell">{equipment.category}</TableCell>
-        <TableCell>{getStatusBadge(equipment.status)}</TableCell>
+        <TableCell className="hidden sm:table-cell">{equipment.modelName || '-'}</TableCell>
+        <TableCell>{getStatusBadge(equipment.status || 'UNKNOWN')}</TableCell>
         <TableCell className="hidden md:table-cell">
-          {formatDate(equipment.lastCalibrationDate)}
+          {formatDate(equipment.lastCalibrationDate ? String(equipment.lastCalibrationDate) : undefined)}
         </TableCell>
         <TableCell className="hidden md:table-cell">{equipment.location}</TableCell>
         <TableCell className="text-right">
@@ -143,6 +141,31 @@ const SkeletonRow = memo(() => (
 ));
 SkeletonRow.displayName = 'SkeletonRow';
 
+// 행 Props 타입
+interface RowProps {
+  items: Equipment[];
+  isRowLoaded: (index: number) => boolean;
+  onItemClick?: (item: Equipment) => void;
+}
+
+// 행 렌더링 컴포넌트 (v2 API)
+function RowComponent({ index, style, items, isRowLoaded, onItemClick }: RowComponentProps<RowProps>) {
+  if (!isRowLoaded(index)) {
+    return (
+      <div style={style} className="w-full">
+        <SkeletonRow />
+      </div>
+    );
+  }
+
+  const equipment = items[index];
+  return (
+    <div style={style} className="w-full">
+      <EquipmentRow equipment={equipment} onClick={onItemClick} />
+    </div>
+  );
+}
+
 // 메인 컴포넌트
 const VirtualizedEquipmentList = ({
   items,
@@ -151,49 +174,43 @@ const VirtualizedEquipmentList = ({
   loadNextPage,
   onItemClick,
 }: VirtualizedEquipmentListProps) => {
-  const infiniteLoaderRef = useRef<any>(null);
-
   // 무한 스크롤 설정
-  const itemCount = useMemo(() => {
+  const rowCount = useMemo(() => {
     return hasNextPage ? items.length + 1 : items.length;
   }, [hasNextPage, items.length]);
 
-  // 아이템 로드 상태 확인
-  const isItemLoaded = useCallback(
+  // 행 로드 상태 확인 (v2 API: isRowLoaded)
+  const isRowLoaded = useCallback(
     (index: number) => {
       return !hasNextPage || index < items.length;
     },
     [hasNextPage, items.length]
   );
 
-  // 아이템 로드 함수
-  const loadMoreItems = useCallback(() => {
-    if (!isLoading) {
-      return loadNextPage();
-    }
-    return Promise.resolve();
-  }, [isLoading, loadNextPage]);
-
-  // 행 렌더링 함수
-  const rowRenderer = useCallback(
-    ({ index, style }: { index: number; style: React.CSSProperties }) => {
-      if (!isItemLoaded(index)) {
-        return (
-          <div style={style} className="w-full">
-            <SkeletonRow />
-          </div>
-        );
+  // 행 로드 함수 (v2 API: loadMoreRows)
+  const loadMoreRows = useCallback(
+    async (_startIndex: number, _stopIndex: number): Promise<void> => {
+      if (!isLoading) {
+        loadNextPage();
       }
-
-      const equipment = items[index];
-      return (
-        <div style={style} className="w-full">
-          <EquipmentRow equipment={equipment} onClick={onItemClick} />
-        </div>
-      );
     },
-    [items, isItemLoaded, onItemClick]
+    [isLoading, loadNextPage]
   );
+
+  // useInfiniteLoader 훅 사용 (v2 API)
+  const onRowsRendered = useInfiniteLoader({
+    isRowLoaded,
+    loadMoreRows,
+    rowCount,
+    threshold: ITEM_BUFFER,
+  });
+
+  // rowProps for v2 API
+  const rowProps: RowProps = useMemo(() => ({
+    items,
+    isRowLoaded,
+    onItemClick,
+  }), [items, isRowLoaded, onItemClick]);
 
   return (
     <div className="border rounded-lg overflow-hidden dark:border-gray-700 h-[600px]">
@@ -212,32 +229,15 @@ const VirtualizedEquipmentList = ({
       </Table>
 
       <div className="h-[calc(600px-48px)]">
-        {' '}
         {/* 테이블 헤더 높이(48px) 제외 */}
-        <AutoSizer>
-          {({ height, width }: { height: number; width: number }) => (
-            <InfiniteLoader
-              ref={infiniteLoaderRef}
-              isItemLoaded={isItemLoaded}
-              itemCount={itemCount}
-              loadMoreItems={loadMoreItems}
-              threshold={ITEM_BUFFER}
-            >
-              {({ onItemsRendered, ref }) => (
-                <List
-                  ref={ref}
-                  height={height}
-                  width={width}
-                  itemCount={itemCount}
-                  itemSize={ITEM_HEIGHT}
-                  onItemsRendered={onItemsRendered}
-                >
-                  {rowRenderer}
-                </List>
-              )}
-            </InfiniteLoader>
-          )}
-        </AutoSizer>
+        <List
+          style={{ height: '100%', width: '100%' }}
+          rowComponent={RowComponent}
+          rowCount={rowCount}
+          rowHeight={ITEM_HEIGHT}
+          rowProps={rowProps}
+          onRowsRendered={onRowsRendered}
+        />
       </div>
 
       {isLoading && items.length === 0 && (

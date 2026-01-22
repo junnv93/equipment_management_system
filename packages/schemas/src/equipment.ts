@@ -5,6 +5,8 @@ import {
   SiteEnum,
   SharedSourceEnum,
   SoftwareTypeEnum,
+  SpecMatchEnum,
+  CalibrationRequiredEnum,
 } from './enums';
 import { SoftDeleteEntity, PaginatedResponse } from './common/base';
 
@@ -41,23 +43,32 @@ export const baseEquipmentSchema = z.object({
   assetNumber: z.string().optional(),
   modelName: z.string().optional(),
   manufacturer: z.string().optional(),
-  serialNumber: z.string().optional(),
+  manufacturerContact: z.string().optional(), // 제조사 연락처 (신규)
+  serialNumber: z.string().optional(), // 라벨: 일련번호
   location: z.string().optional(),
-  description: z.string().optional(),
+  description: z.string().optional(), // 라벨: 장비사양
+
+  // 시방일치 여부 및 교정필요 여부 (신규)
+  specMatch: SpecMatchEnum.optional(), // 시방일치 여부: 'match' | 'mismatch'
+  calibrationRequired: CalibrationRequiredEnum.optional(), // 교정필요 여부: 'required' | 'not_required'
 
   // 교정 정보
   calibrationCycle: z.number().int().positive().optional(),
   lastCalibrationDate: z.coerce.date().optional(),
   nextCalibrationDate: z.coerce.date().optional(),
-  calibrationAgency: z.string().optional(),
+  calibrationAgency: z.string().optional(), // placeholder: HCT
   // 기본값이 있는 필드는 생성 시 선택적으로 처리 (서비스 레이어에서 기본값 적용)
   needsIntermediateCheck: z.boolean().optional(),
-  calibrationMethod: CalibrationMethodEnum.optional(),
+  calibrationMethod: CalibrationMethodEnum.optional(), // 라벨: 관리 방법
+
+  // 중간점검 정보 (신규: 3개 필드로 분리)
+  lastIntermediateCheckDate: z.coerce.date().optional(), // 최종 중간 점검일
+  intermediateCheckCycle: z.number().int().positive().optional(), // 중간점검 주기 (개월)
+  nextIntermediateCheckDate: z.coerce.date().optional(), // 차기 중간 점검일
 
   // 관리 정보
   purchaseYear: z.number().int().min(1990).max(2100).optional(),
   teamId: z.string().uuid().optional().nullable(), // ✅ 스키마 일치화: uuid 타입으로 변경
-  managerId: z.string().optional(),
   site: SiteEnum, // ✅ 사이트별 권한 관리: 필수 필드로 변경
 
   // 추가 정보
@@ -71,20 +82,20 @@ export const baseEquipmentSchema = z.object({
   softwareType: SoftwareTypeEnum.optional(), // 'measurement' | 'analysis' | 'control' | 'other'
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
-  mainFeatures: z.string().optional(),
-  technicalManager: z.string().optional(),
+  technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)
+
+  // 위치 및 설치 정보 (신규)
+  initialLocation: z.string().optional(), // 최초 설치 위치
+  installationDate: z.coerce.date().optional(), // 설치 일시
 
   // 승인 프로세스 필드
   approvalStatus: z.enum(['pending_approval', 'approved', 'rejected']).optional(),
   requestedBy: z.string().uuid().optional(),
   approvedBy: z.string().uuid().optional(),
 
-  // 추가 필수 필드 (프롬프트 3 요구사항)
-  equipmentType: z.string().optional(), // 장비 타입
+  // 추가 필드 (정리됨)
   calibrationResult: z.string().optional(), // 교정 결과
   correctionFactor: z.string().optional(), // 보정계수
-  intermediateCheckSchedule: z.coerce.date().optional(), // 중간점검일정
-  repairHistory: z.string().optional(), // 장비 수리 내역
 
   // 상태 정보 (기본값이 있지만 생성 시 선택적)
   status: EquipmentStatusEnum.optional(),

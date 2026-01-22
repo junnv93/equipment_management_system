@@ -2,7 +2,7 @@
 
 import { CalendarIcon, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { dashboardApi, CalibrationSchedule as CalibrationScheduleType } from "@/lib/api";
+import { dashboardApi, UpcomingCalibration } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 
 interface CalibrationItem {
@@ -19,7 +19,7 @@ interface CalibrationScheduleProps {
 }
 
 export default function CalibrationSchedule({ days = 30 }: CalibrationScheduleProps) {
-  const [calibrationData, setCalibrationData] = useState<CalibrationScheduleType[]>([]);
+  const [calibrationData, setCalibrationData] = useState<UpcomingCalibration[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +27,7 @@ export default function CalibrationSchedule({ days = 30 }: CalibrationSchedulePr
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await dashboardApi.getCalibrationSchedule(days);
+        const data = await dashboardApi.getCalibrationSchedule();
         setCalibrationData(data);
         setError(null);
       } catch (err) {
@@ -80,12 +80,12 @@ export default function CalibrationSchedule({ days = 30 }: CalibrationSchedulePr
   // API 응답 데이터를 컴포넌트 형식에 맞게 변환
   const calibrationItems: CalibrationItem[] = calibrationData.map(item => ({
     id: item.equipmentId,
-    equipmentName: item.name,
-    managementNumber: item.managementNumber || "-",
-    calibrationDueDate: new Date(item.calibrationDueDate).toLocaleDateString(),
-    daysRemaining: item.daysRemaining,
-    status: item.daysRemaining > 7 ? "upcoming" : 
-            item.daysRemaining > 0 ? "urgent" : "overdue"
+    equipmentName: item.equipmentName,
+    managementNumber: item.equipmentId || "-",
+    calibrationDueDate: new Date(item.dueDate).toLocaleDateString(),
+    daysRemaining: item.daysUntilDue,
+    status: item.daysUntilDue > 7 ? "upcoming" :
+            item.daysUntilDue > 0 ? "urgent" : "overdue"
   }));
 
   // 데이터가 없는 경우

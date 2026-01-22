@@ -206,9 +206,9 @@ export class EquipmentApprovalService {
       // 기술책임자 또는 관리자만 승인 대기 목록 조회 가능
       const canViewAll =
         userRoles.includes('technical_manager') ||
-        userRoles.includes('site_admin') ||
+        userRoles.includes('lab_manager') ||
         userRoles.includes('TECHNICAL_MANAGER') ||
-        userRoles.includes('SITE_ADMIN');
+        userRoles.includes('LAB_MANAGER');
 
       if (!canViewAll) {
         throw new ForbiddenException('승인 대기 목록을 조회할 권한이 없습니다.');
@@ -288,9 +288,9 @@ export class EquipmentApprovalService {
       // 권한 확인: 기술책임자 또는 관리자만 승인 가능
       const canApprove =
         userRoles.includes('technical_manager') ||
-        userRoles.includes('site_admin') ||
+        userRoles.includes('lab_manager') ||
         userRoles.includes('TECHNICAL_MANAGER') ||
-        userRoles.includes('SITE_ADMIN');
+        userRoles.includes('LAB_MANAGER');
 
       if (!canApprove) {
         throw new ForbiddenException('요청을 승인할 권한이 없습니다.');
@@ -378,9 +378,9 @@ export class EquipmentApprovalService {
       // 권한 확인
       const canReject =
         userRoles.includes('technical_manager') ||
-        userRoles.includes('site_admin') ||
+        userRoles.includes('lab_manager') ||
         userRoles.includes('TECHNICAL_MANAGER') ||
-        userRoles.includes('SITE_ADMIN');
+        userRoles.includes('LAB_MANAGER');
 
       if (!canReject) {
         throw new ForbiddenException('요청을 반려할 권한이 없습니다.');

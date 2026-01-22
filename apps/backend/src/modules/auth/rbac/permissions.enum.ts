@@ -76,10 +76,10 @@ export enum Permission {
   UPDATE_CALIBRATION_PLAN = 'update:calibration-plan', // 교정계획서 수정 (기술책임자)
   DELETE_CALIBRATION_PLAN = 'delete:calibration-plan', // 교정계획서 삭제 (기술책임자, draft만)
   SUBMIT_CALIBRATION_PLAN = 'submit:calibration-plan', // 교정계획서 승인 요청 (기술책임자)
-  APPROVE_CALIBRATION_PLAN = 'approve:calibration-plan', // 교정계획서 승인 (site_admin)
-  REJECT_CALIBRATION_PLAN = 'reject:calibration-plan', // 교정계획서 반려 (site_admin)
+  APPROVE_CALIBRATION_PLAN = 'approve:calibration-plan', // 교정계획서 승인 (lab_manager)
+  REJECT_CALIBRATION_PLAN = 'reject:calibration-plan', // 교정계획서 반려 (lab_manager)
   CONFIRM_CALIBRATION_PLAN_ITEM = 'confirm:calibration-plan-item', // 항목 확인 (기술책임자)
 
   // 감사 로그 관련 권한
-  VIEW_AUDIT_LOGS = 'view:audit-logs', // 감사 로그 조회 (site_admin만)
+  VIEW_AUDIT_LOGS = 'view:audit-logs', // 감사 로그 조회 (lab_manager만)
 }

@@ -5,7 +5,9 @@ import { EquipmentApprovalService } from './services/equipment-approval.service'
 import { EquipmentAttachmentService } from './services/equipment-attachment.service';
 import { FileUploadService } from './services/file-upload.service';
 import { RepairHistoryService } from './services/repair-history.service';
+import { EquipmentHistoryService } from './services/equipment-history.service';
 import { RepairHistoryController } from './repair-history.controller';
+import { EquipmentHistoryController } from './equipment-history.controller';
 import { CacheModule } from '../../common/cache/cache.module';
 
 @Module({
@@ -13,13 +15,14 @@ import { CacheModule } from '../../common/cache/cache.module';
     // Drizzle DB는 app.module에서 전역으로 제공됨
     CacheModule,
   ],
-  controllers: [EquipmentController, RepairHistoryController],
+  controllers: [EquipmentController, RepairHistoryController, EquipmentHistoryController],
   providers: [
     EquipmentService,
     EquipmentApprovalService,
     EquipmentAttachmentService,
     FileUploadService,
     RepairHistoryService,
+    EquipmentHistoryService,
   ],
   exports: [
     EquipmentService,
@@ -27,6 +30,7 @@ import { CacheModule } from '../../common/cache/cache.module';
     EquipmentAttachmentService,
     FileUploadService,
     RepairHistoryService,
+    EquipmentHistoryService,
   ],
 })
 export class EquipmentModule {}

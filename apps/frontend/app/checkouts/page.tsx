@@ -95,13 +95,13 @@ export default function CheckoutsPage() {
             승인 대기중
           </Badge>
         );
-      case 'first_approved':
+      case 'approved':
         return (
           <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
             1차 승인
           </Badge>
         );
-      case 'final_approved':
+      case 'approved_legacy':
         return (
           <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
             최종 승인
@@ -300,8 +300,8 @@ export default function CheckoutsPage() {
             <SelectContent>
               <SelectItem value="all">전체</SelectItem>
               <SelectItem value="pending">승인 대기중</SelectItem>
-              <SelectItem value="first_approved">1차 승인</SelectItem>
-              <SelectItem value="final_approved">최종 승인</SelectItem>
+              
+              
               <SelectItem value="checked_out">반출 중</SelectItem>
               <SelectItem value="rejected">거부됨</SelectItem>
               <SelectItem value="returned">반입됨</SelectItem>

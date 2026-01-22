@@ -16,7 +16,7 @@ export interface InspectionFormData {
 }
 
 interface ReturnInspectionFormProps {
-  purpose: string; // 반출 목적: calibration, repair, external_rental
+  purpose: string; // 반출 목적: calibration, repair, rental
   onSubmit: (data: InspectionFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -25,7 +25,7 @@ interface ReturnInspectionFormProps {
 const PURPOSE_LABELS: Record<string, string> = {
   calibration: '교정',
   repair: '수리',
-  external_rental: '외부 대여',
+  rental: '외부 대여',
 };
 
 export default function ReturnInspectionForm({

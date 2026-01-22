@@ -61,7 +61,7 @@ describe('AuthService', () => {
         id: '00000000-0000-0000-0000-000000000001',
         email: 'admin@example.com',
         name: '관리자',
-        roles: [UserRole.SITE_ADMIN],
+        roles: [UserRole.LAB_MANAGER],
         department: undefined,
         site: 'suwon',
         location: '수원랩',
@@ -110,7 +110,7 @@ describe('AuthService', () => {
         id: '00000000-0000-0000-0000-000000000003',
         email: 'user@example.com',
         name: '시험실무자',
-        roles: [UserRole.TEST_OPERATOR],
+        roles: [UserRole.TEST_ENGINEER],
         department: 'RF팀',
         site: 'suwon',
         location: '수원랩',
@@ -151,7 +151,7 @@ describe('AuthService', () => {
         id: 'azure-id',
         email: 'azure@example.com',
         name: 'Azure User',
-        roles: [UserRole.SITE_ADMIN],
+        roles: [UserRole.LAB_MANAGER],
         department: 'IT',
       });
       expect(jwtService.sign).toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe('AuthService', () => {
       expect(() => service.validateAzureADUser(null)).toThrow(UnauthorizedException);
     });
 
-    it('should default to TEST_OPERATOR role if no roles provided', () => {
+    it('should default to TEST_ENGINEER role if no roles provided', () => {
       // Arrange
       const azureUser = {
         oid: 'azure-id',
@@ -175,7 +175,7 @@ describe('AuthService', () => {
       const result = service.validateAzureADUser(azureUser);
 
       // Assert
-      expect(result.user.roles).toEqual([UserRole.TEST_OPERATOR]);
+      expect(result.user.roles).toEqual([UserRole.TEST_ENGINEER]);
     });
   });
 
@@ -191,10 +191,10 @@ describe('AuthService', () => {
       const result = service_any.mapAzureRolesToAppRoles(azureRoles);
 
       // Assert
-      expect(result).toEqual([UserRole.SITE_ADMIN, UserRole.TECHNICAL_MANAGER]);
+      expect(result).toEqual([UserRole.LAB_MANAGER, UserRole.TECHNICAL_MANAGER]);
     });
 
-    it('should return TEST_OPERATOR role if no mappable roles are found', () => {
+    it('should return TEST_ENGINEER role if no mappable roles are found', () => {
       // Arrange
       const azureRoles = ['Unknown'];
 
@@ -205,7 +205,7 @@ describe('AuthService', () => {
       const result = service_any.mapAzureRolesToAppRoles(azureRoles);
 
       // Assert
-      expect(result).toEqual([UserRole.TEST_OPERATOR]);
+      expect(result).toEqual([UserRole.TEST_ENGINEER]);
     });
 
     it('should map new Azure AD roles correctly', () => {
@@ -220,9 +220,9 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual([
-        UserRole.SITE_ADMIN,
+        UserRole.LAB_MANAGER,
         UserRole.TECHNICAL_MANAGER,
-        UserRole.TEST_OPERATOR,
+        UserRole.TEST_ENGINEER,
       ]);
     });
   });
@@ -317,7 +317,7 @@ describe('AuthService', () => {
         id: 'azure-id',
         email: 'azure@example.com',
         name: 'Azure User',
-        roles: [UserRole.SITE_ADMIN],
+        roles: [UserRole.LAB_MANAGER],
         site: 'suwon',
         location: '수원랩',
         teamId: 'rf',

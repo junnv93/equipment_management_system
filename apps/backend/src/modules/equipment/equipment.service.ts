@@ -274,30 +274,41 @@ export class EquipmentService {
       calibrationAgency: dto.calibrationAgency,
       needsIntermediateCheck: dto.needsIntermediateCheck ?? false,
       calibrationMethod: dto.calibrationMethod,
-      managerId: dto.managerId,
+      manufacturerContact: dto.manufacturerContact,
       supplier: dto.supplier,
       contactInfo: dto.contactInfo,
       softwareVersion: dto.softwareVersion,
       firmwareVersion: dto.firmwareVersion,
       manualLocation: dto.manualLocation,
       accessories: dto.accessories,
-      mainFeatures: dto.mainFeatures,
       technicalManager: dto.technicalManager,
       status: dto.status ?? 'available',
       isActive: true,
+
+      // 위치 및 설치 정보
+      initialLocation: dto.initialLocation,
+      installationDate: dto.installationDate ? new Date(dto.installationDate) : undefined,
+
+      // 중간점검 정보
+      lastIntermediateCheckDate: dto.lastIntermediateCheckDate
+        ? new Date(dto.lastIntermediateCheckDate)
+        : undefined,
+      intermediateCheckCycle: dto.intermediateCheckCycle,
+      nextIntermediateCheckDate: dto.nextIntermediateCheckDate
+        ? new Date(dto.nextIntermediateCheckDate)
+        : undefined,
+
+      // 시방일치 여부 및 교정필요 여부
+      specMatch: dto.specMatch,
+      calibrationRequired: dto.calibrationRequired,
 
       // 승인 프로세스 필드
       approvalStatus: dto.approvalStatus ?? 'approved', // 시스템 관리자는 직접 승인 가능
       // requestedBy와 approvedBy는 승인 프로세스에서 별도로 설정됨
 
-      // 추가 필수 필드 (프롬프트 3 요구사항)
-      equipmentType: dto.equipmentType,
+      // 교정 결과 및 보정계수
       calibrationResult: dto.calibrationResult,
       correctionFactor: dto.correctionFactor,
-      intermediateCheckSchedule: dto.intermediateCheckSchedule
-        ? new Date(dto.intermediateCheckSchedule)
-        : undefined,
-      repairHistory: dto.repairHistory,
 
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -352,32 +363,35 @@ export class EquipmentService {
       'assetNumber',
       'modelName',
       'manufacturer',
+      'manufacturerContact',
       'serialNumber',
       'location',
       'description',
+      'specMatch',
+      'calibrationRequired',
       'calibrationCycle',
       'lastCalibrationDate',
       'calibrationAgency',
       'needsIntermediateCheck',
       'calibrationMethod',
-      'managerId',
+      'lastIntermediateCheckDate',
+      'intermediateCheckCycle',
+      'nextIntermediateCheckDate',
       'supplier',
       'contactInfo',
       'softwareVersion',
       'firmwareVersion',
       'manualLocation',
       'accessories',
-      'mainFeatures',
       'technicalManager',
+      'initialLocation',
+      'installationDate',
       'status',
       'site',
       'approvalStatus',
       // 'requestedBy', 'approvedBy'는 승인 프로세스에서 별도로 관리됨
-      'equipmentType',
       'calibrationResult',
       'correctionFactor',
-      'intermediateCheckSchedule',
-      'repairHistory',
     ];
 
     for (const field of fields) {

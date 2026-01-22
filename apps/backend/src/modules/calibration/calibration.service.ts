@@ -89,7 +89,7 @@ const temporaryCalibrations: CalibrationRecord[] = [
     approvalStatus: 'pending_approval',
     registeredBy: '770a0600-a40c-63f6-c938-668877660222',
     approvedBy: null,
-    registeredByRole: 'test_operator',
+    registeredByRole: 'test_engineer',
     registrarComment: null,
     approverComment: null,
     rejectionReason: null,

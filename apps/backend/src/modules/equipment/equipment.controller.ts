@@ -123,7 +123,7 @@ export class EquipmentController {
   ) {
     const userRoles = req?.user?.roles || [];
     const userId = req?.user?.userId || req?.user?.id;
-    const isAdmin = userRoles.includes('site_admin') || userRoles.includes('SITE_ADMIN');
+    const isAdmin = userRoles.includes('lab_manager') || userRoles.includes('LAB_MANAGER');
 
     // 파일 업로드 처리
     let attachmentUuids: string[] = [];
@@ -219,9 +219,9 @@ export class EquipmentController {
     // 기술책임자/관리자는 모든 사이트 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_operator');
+    const isTestOperator = userRoles.includes('test_engineer');
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
 
     // 시험실무자이고 쿼리에 site가 없으면 자신의 사이트로 필터링
     const siteFilter = isTestOperator && !canViewAllSites && !query.site ? userSite : undefined;
@@ -243,9 +243,9 @@ export class EquipmentController {
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_operator');
+    const isTestOperator = userRoles.includes('test_engineer');
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
 
     // 시험실무자이고 자신의 사이트가 아닌 장비를 조회하려는 경우 거부
     if (isTestOperator && !canViewAllSites && userSite && equipment.site !== userSite) {
@@ -295,7 +295,7 @@ export class EquipmentController {
 
     const userRoles = req?.user?.roles || [];
     const userId = req?.user?.userId || req?.user?.id;
-    const isAdmin = userRoles.includes('site_admin') || userRoles.includes('SITE_ADMIN');
+    const isAdmin = userRoles.includes('lab_manager') || userRoles.includes('LAB_MANAGER');
 
     // 파일 업로드 처리
     let attachmentUuids: string[] = [];
@@ -354,7 +354,7 @@ export class EquipmentController {
 
     const userRoles = req?.user?.roles || [];
     const userId = req?.user?.userId || req?.user?.id;
-    const isAdmin = userRoles.includes('site_admin') || userRoles.includes('SITE_ADMIN');
+    const isAdmin = userRoles.includes('lab_manager') || userRoles.includes('LAB_MANAGER');
 
     // 시스템 관리자는 직접 삭제 가능
     if (isAdmin) {
@@ -402,9 +402,9 @@ export class EquipmentController {
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_operator');
+    const isTestOperator = userRoles.includes('test_engineer');
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
 
     // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
     if (isTestOperator && !canViewAllSites && userSite) {
@@ -429,9 +429,9 @@ export class EquipmentController {
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_operator');
+    const isTestOperator = userRoles.includes('test_engineer');
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('site_admin');
+      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
 
     // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
     if (isTestOperator && !canViewAllSites && userSite) {

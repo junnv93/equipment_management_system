@@ -41,7 +41,7 @@ export class AuthService {
         id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         email: 'admin@example.com',
         name: '관리자',
-        roles: [UserRole.SITE_ADMIN],
+        roles: [UserRole.LAB_MANAGER],
         department: undefined,
         site: 'suwon' as const,
         location: '수원랩' as const,
@@ -59,7 +59,7 @@ export class AuthService {
         id: '12345678-1234-4567-8901-234567890abc',
         email: 'user@example.com',
         name: '시험실무자',
-        roles: [UserRole.TEST_OPERATOR],
+        roles: [UserRole.TEST_ENGINEER],
         department: 'RF팀',
         site: 'suwon' as const,
         location: '수원랩' as const,
@@ -159,20 +159,43 @@ export class AuthService {
   // Azure AD 역할을 애플리케이션 역할로 매핑
   private mapAzureRolesToAppRoles(azureRoles: string[]): UserRole[] {
     const roleMap: Record<string, UserRole> = {
-      SiteAdmin: UserRole.SITE_ADMIN,
+      SiteAdmin: UserRole.LAB_MANAGER,
       TechnicalManager: UserRole.TECHNICAL_MANAGER,
-      TestOperator: UserRole.TEST_OPERATOR,
+      TestOperator: UserRole.TEST_ENGINEER,
       // 하위 호환성을 위한 기존 역할 매핑
-      Admin: UserRole.SITE_ADMIN,
+      Admin: UserRole.LAB_MANAGER,
       Manager: UserRole.TECHNICAL_MANAGER,
-      User: UserRole.TEST_OPERATOR,
+      User: UserRole.TEST_ENGINEER,
     };
 
     const mappedRoles = azureRoles
       .map((role) => roleMap[role])
       .filter((role) => role !== undefined);
 
-    return mappedRoles.length > 0 ? mappedRoles : [UserRole.TEST_OPERATOR]; // 기본값은 시험실무자
+    return mappedRoles.length > 0 ? mappedRoles : [UserRole.TEST_ENGINEER]; // 기본값은 시험실무자
+  }
+
+  /**
+   * 테스트 전용 토큰 생성
+   * E2E 테스트에서 사용됩니다.
+   *
+   * @param testUser - 테스트 사용자 정보
+   * @returns JWT 토큰을 포함한 인증 정보
+   */
+  generateTestToken(testUser: any): AuthResponse {
+    const user: UserDto = {
+      id: testUser.id || testUser.uuid,
+      email: testUser.email,
+      name: testUser.name,
+      roles: [testUser.role as UserRole],
+      department: testUser.department,
+      site: testUser.site,
+      location: testUser.location,
+      position: testUser.position,
+      teamId: testUser.teamId,
+    };
+
+    return this.generateToken(user);
   }
 
   // JWT 토큰 생성

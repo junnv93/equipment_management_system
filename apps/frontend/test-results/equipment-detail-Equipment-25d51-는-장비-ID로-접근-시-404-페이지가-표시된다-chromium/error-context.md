@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- dialog "Unhandled Runtime Error" [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - navigation [ref=e7]:
+          - button "previous" [disabled] [ref=e8]:
+            - img "previous" [ref=e9]
+          - button "next" [disabled] [ref=e11]:
+            - img "next" [ref=e12]
+          - generic [ref=e14]: 1 of 1 unhandled error
+          - generic [ref=e15]:
+            - text: Next.js (14.0.3) is outdated
+            - link "(learn more)" [ref=e17] [cursor=pointer]:
+              - /url: https://nextjs.org/docs/messages/version-staleness
+        - button "Close" [ref=e18] [cursor=pointer]:
+          - img [ref=e20]
+      - heading "Unhandled Runtime Error" [level=1] [ref=e23]
+      - paragraph [ref=e24]: "Error: Validation failed (uuid is expected)"
+    - generic [ref=e25]:
+      - heading "Source" [level=2] [ref=e26]
+      - generic [ref=e27]:
+        - link "lib/api/utils/response-transformers.ts (182:15) @ createApiError" [ref=e29] [cursor=pointer]:
+          - generic [ref=e30]: lib/api/utils/response-transformers.ts (182:15) @ createApiError
+          - img [ref=e31]
+        - generic [ref=e35]: "180 | const errorCode = status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR; 181 | > 182 | return new ApiError( | ^ 183 | message, 184 | errorCode, 185 | status,"
+      - heading "Call Stack" [level=2] [ref=e36]
+      - generic [ref=e37]:
+        - heading "error" [level=3] [ref=e38]
+        - link "lib/api/server-api-client.ts (102:38)" [ref=e39] [cursor=pointer]:
+          - generic [ref=e40]: lib/api/server-api-client.ts (102:38)
+          - img [ref=e41]
+      - generic [ref=e45]:
+        - heading "async Module.getEquipment" [level=3] [ref=e46]
+        - link "lib/api/equipment-api-server.ts (83:19)" [ref=e47] [cursor=pointer]:
+          - generic [ref=e48]: lib/api/equipment-api-server.ts (83:19)
+          - img [ref=e49]
+      - generic [ref=e53]:
+        - heading "async EquipmentDetailPage" [level=3] [ref=e54]
+        - link "app/equipment/[id]/page.tsx (29:16)" [ref=e55] [cursor=pointer]:
+          - generic [ref=e56]: app/equipment/[id]/page.tsx (29:16)
+          - img [ref=e57]
+      - button "Show collapsed frames" [ref=e61] [cursor=pointer]
+```

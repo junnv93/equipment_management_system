@@ -39,8 +39,8 @@ export class CreateUserDto {
   @IsEnum(UserRoleEnum)
   @ApiProperty({
     description: '사용자 역할',
-    enum: ['test_operator', 'technical_manager', 'site_admin'],
-    example: 'test_operator',
+    enum: ['test_engineer', 'technical_manager', 'lab_manager'],
+    example: 'test_engineer',
   })
   role: string;
 

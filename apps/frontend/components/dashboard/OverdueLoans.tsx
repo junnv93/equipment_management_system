@@ -2,7 +2,7 @@
 
 import { UserIcon, Clock, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { dashboardApi, OverdueLoan as OverdueLoanType } from "@/lib/api";
+import { dashboardApi, OverdueRental } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 
 interface OverdueLoan {
@@ -29,19 +29,19 @@ export default function OverdueLoans() {
       try {
         setLoading(true);
         const data = await dashboardApi.getOverdueLoans();
-        
+
         // API 응답 데이터를 컴포넌트 형식에 맞게 변환
-        const transformedData: OverdueLoan[] = data.map(loan => ({
+        const transformedData: OverdueLoan[] = data.map((loan: OverdueRental) => ({
           id: loan.id,
-          equipmentName: loan.equipmentName,
-          managementNumber: loan.equipmentId, // ID를 관리 번호로 사용
+          equipmentName: loan.equipment?.name || '알 수 없음',
+          managementNumber: loan.equipment?.managementNumber || loan.equipmentId,
           borrower: {
-            id: loan.borrowerId,
-            name: loan.borrowerName,
-            team: loan.borrowerTeam || '',
+            id: loan.userId,
+            name: loan.user?.name || '알 수 없음',
+            team: '',
           },
           loanDate: loan.startDate || '',
-          dueDate: loan.dueDate,
+          dueDate: loan.expectedReturnDate,
           daysOverdue: loan.daysOverdue
         }));
         

@@ -1,31 +1,178 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { EquipmentForm } from '@/components/equipment/EquipmentForm';
+import { EquipmentForm, type PendingHistoryData } from '@/components/equipment/EquipmentForm';
 import { useCreateEquipment } from '@/hooks/use-equipment';
 import { CreateEquipmentInput, UpdateEquipmentInput } from '@equipment-management/schemas';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import Link from 'next/link';
+import equipmentApi from '@/lib/api/equipment-api';
+import calibrationApi from '@/lib/api/calibration-api';
+import { ErrorAlert, PartialSuccessAlert } from '@/components/shared/ErrorAlert';
+import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 
 export default function CreateEquipmentPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const createEquipment = useCreateEquipment();
+
+  // 에러 상태 관리
+  const [submitError, setSubmitError] = useState<ApiError | Error | null>(null);
+  const [partialSuccessInfo, setPartialSuccessInfo] = useState<{
+    successMessage: string;
+    failedItems: Array<{ type: string; error: string }>;
+  } | null>(null);
 
   const handleSubmit = async (
     data: CreateEquipmentInput | UpdateEquipmentInput,
-    files?: Array<{ file: File }>
+    files?: Array<{ file: File }>,
+    pendingHistory?: PendingHistoryData
   ): Promise<void> => {
+    // 에러 상태 초기화
+    setSubmitError(null);
+    setPartialSuccessInfo(null);
+
     try {
       const fileList = files?.map((f) => f.file);
-      await createEquipment.mutateAsync({
+      const result = await createEquipment.mutateAsync({
         data: data as CreateEquipmentInput,
         files: fileList,
-      });
-      router.push('/equipment');
+      }) as { uuid?: string; requestUuid?: string };
+
+      // 승인 요청이 생성된 경우
+      if (result.requestUuid) {
+        toast({
+          title: '등록 요청 완료',
+          description: '장비 등록 요청이 제출되었습니다. 기술책임자의 승인을 기다려주세요.',
+        });
+        router.push('/equipment');
+      } else if (result.uuid) {
+        // 직접 승인된 경우 - 이력 일괄 저장
+        const equipmentUuid = result.uuid;
+
+        // 임시 이력 데이터가 있으면 일괄 저장
+        if (pendingHistory) {
+          const failedItems: Array<{ type: string; error: string }> = [];
+
+          // 위치 변동 이력 저장
+          for (let i = 0; i < pendingHistory.locationHistory.length; i++) {
+            try {
+              await equipmentApi.createLocationHistory(equipmentUuid, pendingHistory.locationHistory[i]);
+            } catch (err) {
+              const errorMessage = err instanceof ApiError ? err.getUserMessage() : '저장 실패';
+              failedItems.push({ type: 'location', error: `위치 변동 ${i + 1}: ${errorMessage}` });
+              console.error('Failed to save location history:', err);
+            }
+          }
+
+          // 유지보수 내역 저장
+          for (let i = 0; i < pendingHistory.maintenanceHistory.length; i++) {
+            try {
+              await equipmentApi.createMaintenanceHistory(equipmentUuid, pendingHistory.maintenanceHistory[i]);
+            } catch (err) {
+              const errorMessage = err instanceof ApiError ? err.getUserMessage() : '저장 실패';
+              failedItems.push({ type: 'maintenance', error: `유지보수 ${i + 1}: ${errorMessage}` });
+              console.error('Failed to save maintenance history:', err);
+            }
+          }
+
+          // 손상/수리 내역 저장
+          for (let i = 0; i < pendingHistory.incidentHistory.length; i++) {
+            try {
+              await equipmentApi.createIncidentHistory(equipmentUuid, pendingHistory.incidentHistory[i]);
+            } catch (err) {
+              const errorMessage = err instanceof ApiError ? err.getUserMessage() : '저장 실패';
+              failedItems.push({ type: 'incident', error: `손상/수리 ${i + 1}: ${errorMessage}` });
+              console.error('Failed to save incident history:', err);
+            }
+          }
+
+          // 교정 이력 저장
+          for (let i = 0; i < (pendingHistory.calibrationHistory?.length || 0); i++) {
+            const calibrationData = pendingHistory.calibrationHistory![i];
+            try {
+              await calibrationApi.createCalibration({
+                equipmentId: equipmentUuid,
+                calibrationDate: calibrationData.calibrationDate,
+                nextCalibrationDate: calibrationData.nextCalibrationDate,
+                calibrationAgency: calibrationData.calibrationAgency,
+                calibrationCycle: calibrationData.calibrationCycle,
+                calibrationResult: calibrationData.calibrationResult,
+                notes: calibrationData.notes,
+              });
+            } catch (err) {
+              const errorMessage = err instanceof ApiError ? err.getUserMessage() : '저장 실패';
+              failedItems.push({ type: 'calibration', error: `교정 ${i + 1}: ${errorMessage}` });
+              console.error('Failed to save calibration history:', err);
+            }
+          }
+
+          const totalHistory =
+            pendingHistory.locationHistory.length +
+            pendingHistory.maintenanceHistory.length +
+            pendingHistory.incidentHistory.length +
+            (pendingHistory.calibrationHistory?.length || 0);
+
+          const savedCount = totalHistory - failedItems.length;
+
+          if (failedItems.length > 0) {
+            // 일부 실패 시 부분 성공 알림 표시
+            setPartialSuccessInfo({
+              successMessage: `장비가 등록되었습니다. 이력 ${savedCount}/${totalHistory}건 저장 완료.`,
+              failedItems,
+            });
+            toast({
+              title: '장비 등록 완료 (일부 이력 저장 실패)',
+              description: `장비는 등록되었지만 이력 ${failedItems.length}건 저장에 실패했습니다.`,
+              variant: 'destructive',
+            });
+            // 부분 실패 시 페이지에서 알림 표시 후 5초 뒤 이동
+            setTimeout(() => {
+              router.push('/equipment');
+            }, 5000);
+          } else {
+            toast({
+              title: '장비 등록 완료',
+              description: `새 장비가 등록되었습니다. (이력 ${totalHistory}건 저장됨)`,
+            });
+            router.push('/equipment');
+          }
+        } else {
+          toast({
+            title: '장비 등록 완료',
+            description: '새 장비가 성공적으로 등록되었습니다.',
+          });
+          router.push('/equipment');
+        }
+      } else {
+        router.push('/equipment');
+      }
     } catch (error) {
-      // 에러는 훅에서 처리됨
       console.error('Failed to create equipment:', error);
+
+      // ApiError인 경우 상세 정보 유지
+      if (error instanceof ApiError) {
+        setSubmitError(error);
+      } else if (error instanceof Error) {
+        setSubmitError(error);
+      } else {
+        setSubmitError(new ApiError(
+          '장비 등록 중 알 수 없는 오류가 발생했습니다.',
+          EquipmentErrorCode.UNKNOWN_ERROR
+        ));
+      }
+
+      // 간단한 toast도 표시 (스크롤 위치와 관계없이 알림)
+      toast({
+        title: '등록 실패',
+        description: error instanceof ApiError
+          ? error.getUserMessage()
+          : '장비 등록 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -34,31 +181,63 @@ export default function CreateEquipmentPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={handleCancel}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">장비 등록</h1>
-          <p className="text-muted-foreground">새로운 장비를 시스템에 등록합니다</p>
+    <div className="container mx-auto py-6 space-y-6 max-w-5xl">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={handleCancel}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <PlusCircle className="h-6 w-6 text-primary" />
+              장비 등록
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              새로운 장비를 시스템에 등록합니다
+            </p>
+          </div>
         </div>
+
+        {/* 공용장비 등록 링크 */}
+        <Link href="/equipment/create-shared">
+          <Button variant="outline" size="sm" className="gap-2">
+            <Info className="h-4 w-4" />
+            공용장비 등록
+          </Button>
+        </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>장비 정보 입력</CardTitle>
-          <CardDescription>필수 항목(*)을 모두 입력한 후 등록 버튼을 클릭하세요</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EquipmentForm
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isEdit={false}
-            isLoading={createEquipment.isPending}
-          />
-        </CardContent>
-      </Card>
+      {/* 에러 알림 */}
+      {submitError && (
+        <ErrorAlert
+          error={submitError}
+          onRetry={() => setSubmitError(null)}
+          onDismiss={() => setSubmitError(null)}
+          showDetails={true}
+          showSolutions={true}
+        />
+      )}
+
+      {/* 부분 성공 알림 */}
+      {partialSuccessInfo && (
+        <PartialSuccessAlert
+          successMessage={partialSuccessInfo.successMessage}
+          failedItems={partialSuccessInfo.failedItems}
+          onDismiss={() => {
+            setPartialSuccessInfo(null);
+            router.push('/equipment');
+          }}
+        />
+      )}
+
+      {/* 폼 */}
+      <EquipmentForm
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        isEdit={false}
+        isLoading={createEquipment.isPending}
+      />
     </div>
   );
 }

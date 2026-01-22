@@ -231,7 +231,7 @@ describe('EquipmentSchema', () => {
   const validEquipment = {
     id: '550e8400-e29b-41d4-a716-446655440000',
     name: 'Test Equipment',
-    managementNumber: 'EQ-001',
+    managementNumber: 'SUW-E0001',
     status: EquipmentStatus.AVAILABLE,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -253,7 +253,7 @@ describe('EquipmentSchema', () => {
   it('should reject empty name', () => {
     const result = CreateEquipmentSchema.safeParse({
       name: '',
-      managementNumber: 'EQ-001',
+      managementNumber: 'SUW-E0001',
       status: EquipmentStatus.AVAILABLE,
     });
     expect(result.success).toBe(false);

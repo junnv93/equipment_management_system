@@ -13,7 +13,10 @@
 | ------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `test_operator`     | 시험실무자    | 장비 등록/수정 요청, 대여/반출 신청, 교정 등록 (승인 필요). 모든 시험실무자가 장비 관리 가능 (별도 장비 담당자 없음) |
 | `technical_manager` | 기술책임자    | 요청 승인/반려, 교정 직접 등록 (Comment 필수), 팀 내 관리                                                            |
-| `site_admin`        | 시험소 관리자 | 시험소장 역할 겸임, 전체 관리, 교정계획서 승인, 자체 승인 가능                                                       |
+| `site_admin`        | 시험소 관리자 | 시험소장 역할, 교정계획서 승인, 해당 시험소 전체 관리, 자체 승인 불가                                                |
+| `system_admin`      | 시스템 관리자 | 전체 시스템 관리, 모든 시험소 접근, 자체 승인 가능, 백업/복원 관리                                                   |
+
+**역할 계층**: `system_admin` > `site_admin` > `technical_manager` > `test_operator`
 
 **참고**: /home/kmjkd/equipment_management_system-1/docs/development/API_STANDARDS.md의 `UserRoleEnum` 정의 참조
 
@@ -566,20 +569,20 @@ AGENTS.md와 /home/kmjkd/equipment_management_system-1/docs/development/API_STAN
 
 1. 내부 목적 반출 (교정/수리):
    - 신청: 시험실무자
-   - 승인: 기술책임자 1단계 승인 (pending → final_approved)
+   - 승인: 기술책임자 1단계 승인 (pending → approved)
 
 2. 시험소간 대여 목적 반출:
    - 신청: 빌리는 측 시험실무자
-   - 1차 승인: 빌려주는 측 시험실무자 (pending → first_approved)
-   - 최종 승인: 빌려주는 측 기술책임자 (first_approved → final_approved)
+   - 승인: 빌려주는 측 시험실무자 (pending → approved)
+   - 승인: 빌려주는 측 기술책임자 (approved → approved)
 
 ## 반출 유형별 상태 흐름도
 
 ### 내부 목적 (교정/수리)
-pending → [기술책임자 승인] → final_approved → checked_out → returned → return_approved
+pending → [기술책임자 승인] → approved → checked_out → returned → return_approved
 
 ### 시험소간 대여
-pending → [빌려주는 측 시험실무자] → first_approved → [빌려주는 측 기술책임자] → final_approved → checked_out → returned → return_approved
+pending → [빌려주는 측 시험실무자] → approved → [빌려주는 측 기술책임자] → approved → checked_out → returned → return_approved
 
 요구사항:
 - checkoutType 필드 추가: 'internal_calibration' | 'internal_repair' | 'inter_site_rental'
@@ -627,8 +630,8 @@ pending → [빌려주는 측 시험실무자] → first_approved → [빌려주
   - repairChecked: 수리 완료 여부 확인 (boolean, 수리 목적 반출 시)
   - workingStatusChecked: 정상 작동 여부 확인 (boolean)
 - 검사 결과 기록 (inspectionNotes: text)
-- 반입 상태 흐름: checked_out → returned (검사 완료) → return_approved (최종 승인)
-- 기술책임자 최종 승인 필요
+- 반입 상태 흐름: checked_out → returned (검사 완료) → return_approved (승인)
+- 기술책임자 승인 필요
 
 ### 시험소간 대여 반입 시 상호 확인 프로세스 (inter_site_rental인 경우)
 - 반납 측(빌린 측): 반입 검사 등록 (calibrationChecked, workingStatusChecked, inspectionNotes)
@@ -684,7 +687,7 @@ pending → [빌려주는 측 시험실무자] → first_approved → [빌려주
 - PATCH /checkouts/:uuid/return: 반입 처리 (검사 항목 포함)
   - 상태: checked_out → returned
   - 검사 항목 검증 (반출 유형에 따른 필수 항목)
-- PATCH /checkouts/:uuid/approve-return: 기술책임자 반입 최종 승인
+- PATCH /checkouts/:uuid/approve-return: 기술책임자 반입 승인
   - 상태: returned → return_approved
   - 장비 상태 자동 복원: available
 
@@ -695,7 +698,7 @@ pending → [빌려주는 측 시험실무자] → first_approved → [빌려주
 - apps/backend/src/modules/checkouts/checkouts.controller.ts (반입 승인 엔드포인트)
 
 제약사항:
-- 기술책임자만 최종 승인 가능
+- 기술책임자만 승인 가능
 - 반입 승인 후 장비 상태 자동 복원
 - API_STANDARDS 준수
 - 기존 반입 기능과 호환성 유지
@@ -728,7 +731,7 @@ pending → [빌려주는 측 시험실무자] → first_approved → [빌려주
 요구사항:
 - 반입 검사 UI: 반출 유형에 따른 필수 검사 항목 표시
 - 검사 결과 입력 폼 (체크박스 + 메모)
-- 반입 승인 페이지: 검사 완료된 반입 건 목록, 최종 승인 버튼
+- 반입 승인 페이지: 검사 완료된 반입 건 목록, 승인 버튼
 
 파일:
 - apps/frontend/app/checkouts/manage/page.tsx (반입 검사 UI 개선)
@@ -739,7 +742,7 @@ pending → [빌려주는 측 시험실무자] → first_approved → [빌려주
 검증:
 - pnpm dev로 UI 확인
 - 반출 유형별 검사 항목 표시 테스트
-- 최종 승인 테스트
+- 승인 테스트
 
 완료 후 아래 체크리스트를 확인하고 [ ]를 [x]로 변경해주세요.
 ```
@@ -751,7 +754,7 @@ pending → [빌려주는 측 시험실무자] → first_approved → [빌려주
 - [x] 검사 결과 체크박스 및 메모 입력 폼 구현됨
 - [x] 반입 승인 페이지 생성됨
 - [x] 검사 완료된 반입 건 목록 표시됨
-- [x] 최종 승인 버튼 및 기능 구현됨
+- [x] 승인 버튼 및 기능 구현됨
 - [x] checkout-api.ts에 반입 API 함수 추가됨
 - [x] pnpm dev로 UI 정상 동작 확인됨
 
@@ -1312,7 +1315,7 @@ AGENTS.md와 /home/kmjkd/equipment_management_system-1/docs/development/API_STAN
 
 역할 참고:
 - technical_manager (기술책임자): 교정계획서 작성 및 항목별 확인
-- site_admin (시험소 관리자 = 시험소장): 교정계획서 최종 승인
+- site_admin (시험소 관리자 = 시험소장): 교정계획서 승인
 
 요구사항:
 1. 교정계획서 테이블 (calibration_plans)
@@ -1390,7 +1393,7 @@ AGENTS.md와 /home/kmjkd/equipment_management_system-1/docs/development/API_STAN
 
 역할 참고:
 - technical_manager (기술책임자): 계획서 작성, 항목 확인
-- site_admin (시험소장): 계획서 최종 승인
+- site_admin (시험소장): 계획서 승인
 
 요구사항:
 1. 계획서 CRUD API
@@ -2026,13 +2029,13 @@ describe('장비 승인 프로세스', () => {
 describe('반출 승인 프로세스', () => {
   describe('내부 목적 반출 (internal_calibration)', () => {
     it('신청 → pending 상태', async () => {});
-    it('기술책임자 승인 → final_approved → checked_out', async () => {});
+    it('기술책임자 승인 → approved → checked_out', async () => {});
   });
 
   describe('시험소간 대여 (inter_site_rental)', () => {
     it('신청 → pending 상태', async () => {});
-    it('빌려주는 측 시험실무자 1차 승인 → first_approved', async () => {});
-    it('빌려주는 측 기술책임자 최종 승인 → final_approved', async () => {});
+    it('빌려주는 측 시험실무자 승인 → approved', async () => {});
+    it('빌려주는 측 기술책임자 승인 → approved', async () => {});
     it('반출 → checked_out', async () => {});
     it('반입 및 상호 확인 → returned → return_approved', async () => {});
   });

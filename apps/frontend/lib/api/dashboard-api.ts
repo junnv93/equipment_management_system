@@ -65,6 +65,18 @@ export interface RecentActivity {
   entityName: string;
 }
 
+export interface PendingApprovalCounts {
+  equipment: number;
+  calibration: number;
+  rental: number;
+  checkout: number;
+  calibrationFactor: number;
+  software: number;
+  total: number;
+}
+
+export type UserRole = 'test_engineer' | 'technical_manager' | 'lab_manager' | 'system_admin';
+
 class DashboardApi {
   async getSummary(): Promise<DashboardSummary> {
     const response = await apiClient.get('/api/dashboard/summary');
@@ -121,6 +133,47 @@ class DashboardApi {
   async getEquipmentStatusStats(): Promise<Record<string, number>> {
     const response = await apiClient.get('/api/dashboard/equipment-status-stats');
     return response.data;
+  }
+
+  /**
+   * 승인 대기 카운트 조회
+   * 역할에 따라 다른 범위의 데이터 반환
+   */
+  async getPendingApprovalCounts(role?: string): Promise<PendingApprovalCounts> {
+    try {
+      const response = await apiClient.get('/api/dashboard/pending-approval-counts', {
+        params: role ? { role } : undefined,
+      });
+      return response.data;
+    } catch {
+      // API 실패 시 기본값 반환
+      return {
+        equipment: 0,
+        calibration: 0,
+        rental: 0,
+        checkout: 0,
+        calibrationFactor: 0,
+        software: 0,
+        total: 0,
+      };
+    }
+  }
+
+  /**
+   * 역할별 최근 활동 조회
+   * - test_engineer: 본인 활동만
+   * - technical_manager: 팀 내 활동
+   * - lab_manager/system_admin: 전체 활동
+   */
+  async getRecentActivitiesByRole(role?: string, limit = 20): Promise<RecentActivity[]> {
+    try {
+      const response = await apiClient.get('/api/dashboard/recent-activities', {
+        params: { role, limit },
+      });
+      return response.data;
+    } catch {
+      return [];
+    }
   }
 }
 

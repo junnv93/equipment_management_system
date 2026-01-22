@@ -58,7 +58,7 @@ describe('UsersController (e2e)', () => {
           .send({
             email: testUserEmail,
             name: 'Test User',
-            role: 'test_operator',
+            role: 'test_engineer',
             site: 'suwon',
             location: '수원랩',
           });
@@ -163,7 +163,7 @@ describe('UsersController (e2e)', () => {
     });
 
     it('should not allow non-admin to get users list', async () => {
-      // test_operator는 사용자 목록 조회 권한이 없어야 함
+      // test_engineer는 사용자 목록 조회 권한이 없어야 함
       // 하지만 현재 구현에서는 권한 체크가 없을 수 있으므로 200 또는 403 모두 허용
       const response = await request(app.getHttpServer())
         .get('/users')
@@ -305,7 +305,7 @@ describe('UsersController (e2e)', () => {
         const updatedName = `Admin Updated ${crypto.randomBytes(4).toString('hex')}`;
         const updateData = {
           name: updatedName,
-          role: 'test_operator',
+          role: 'test_engineer',
         };
 
         const response = await request(app.getHttpServer())

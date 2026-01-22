@@ -175,9 +175,9 @@ export class AuditService {
     const formattedDate = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate().toString().padStart(2, '0')}일 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
     const roleMap: Record<string, string> = {
-      test_operator: '시험실무자',
+      test_engineer: '시험실무자',
       technical_manager: '기술책임자',
-      site_admin: '시험소별 관리자',
+      lab_manager: '시험소별 관리자',
     };
 
     const actionMap: Record<string, string> = {

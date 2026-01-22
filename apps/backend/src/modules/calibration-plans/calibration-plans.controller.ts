@@ -163,7 +163,7 @@ export class CalibrationPlansController {
   @Patch(':uuid/approve')
   @ApiOperation({
     summary: '승인',
-    description: '교정계획서를 승인합니다 (pending_approval -> approved). site_admin만 가능.',
+    description: '교정계획서를 승인합니다 (pending_approval -> approved). lab_manager만 가능.',
   })
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '승인 성공' })
@@ -183,7 +183,7 @@ export class CalibrationPlansController {
   @ApiOperation({
     summary: '반려',
     description:
-      '교정계획서를 반려합니다 (pending_approval -> rejected). site_admin만 가능, 사유 필수.',
+      '교정계획서를 반려합니다 (pending_approval -> rejected). lab_manager만 가능, 사유 필수.',
   })
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '반려 성공' })

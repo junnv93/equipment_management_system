@@ -38,7 +38,7 @@ const temporaryNotifications = [
   {
     id: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
     title: '장비 교정 일정 알림',
-    content: 'RF-Analyzer(EQ-001) 장비의 교정 일정이 2주 후로 예정되어 있습니다.',
+    content: 'RF-Analyzer(SUW-E0001) 장비의 교정 일정이 2주 후로 예정되어 있습니다.',
     type: NotificationTypeEnum.CALIBRATION_DUE,
     priority: NotificationPriorityEnum.MEDIUM,
     recipientId: '550e8400-e29b-41d4-a716-446655440001',

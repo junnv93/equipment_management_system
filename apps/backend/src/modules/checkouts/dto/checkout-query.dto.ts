@@ -43,7 +43,7 @@ export class CheckoutQueryDto {
 
   @ApiProperty({
     description: '반출 상태로 필터링 (콤마로 구분하여 여러 값 지정 가능)',
-    example: 'pending,first_approved',
+    example: 'pending,approved',
     required: false,
   })
   @IsString()

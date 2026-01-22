@@ -16,7 +16,7 @@ export interface Calibration {
   approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
   registeredBy?: string;
   approvedBy?: string;
-  registeredByRole?: 'test_operator' | 'technical_manager';
+  registeredByRole?: 'test_engineer' | 'technical_manager';
   registrarComment?: string;
   approverComment?: string;
   rejectionReason?: string;
@@ -62,7 +62,7 @@ export interface CreateCalibrationDto {
   notes?: string;
   // 승인 프로세스 필드
   registeredBy?: string;
-  registeredByRole?: 'test_operator' | 'technical_manager';
+  registeredByRole?: 'test_engineer' | 'technical_manager';
   registrarComment?: string;
   intermediateCheckDate?: string;
 }
