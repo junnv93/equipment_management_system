@@ -152,8 +152,8 @@ git push -u origin feature/short-description
 **Q: 개발 환경에서 인증을 어떻게 테스트하나요?**  
 A: 개발 환경에서는 `apps/backend/src/auth/mocks/`에 있는 테스트 계정을 사용할 수 있습니다.
 
-**Q: 새로운 컴포넌트를 어디에 추가해야 하나요?**  
-A: `apps/frontend/components/` 아래에 도메인별로 구성된 폴더에 추가하세요. 재사용 가능한 컴포넌트는 `packages/ui/`에 추가하는 것을 고려하세요.
+**Q: 새로운 컴포넌트를 어디에 추가해야 하나요?**
+A: `apps/frontend/src/components/` 아래에 도메인별로 구성된 폴더에 추가하세요. 공유 타입이나 스키마는 `packages/schemas/`에 추가합니다.
 
 **Q: API 엔드포인트를 어떻게 테스트하나요?**  
 A: `rest-client` VS Code 확장을 설치하고 `docs/api-examples/`의 예제를 참조하세요.

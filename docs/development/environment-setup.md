@@ -14,9 +14,11 @@
 ### 1. Node.js 설치
 
 **Windows (권장)**:
+
 - Node.js 공식 사이트에서 LTS 버전 다운로드: https://nodejs.org/
 
 **Node Version Manager 사용(Linux/macOS)**:
+
 ```bash
 # nvm 설치
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
@@ -33,6 +35,7 @@ nvm use 18.19.0
 ### 2. pnpm 설치
 
 **전역 설치**:
+
 ```bash
 # npm을 사용하여 pnpm 전역 설치
 npm install -g pnpm@10.7.0
@@ -45,9 +48,11 @@ corepack prepare pnpm@10.7.0 --activate
 ### 3. Docker 설치
 
 **Windows**:
+
 - Docker Desktop 다운로드 및 설치: https://www.docker.com/products/docker-desktop/
 
 **Linux**:
+
 ```bash
 # Docker 설치
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -59,6 +64,7 @@ sudo apt-get install docker-compose-plugin
 ```
 
 **macOS**:
+
 - Docker Desktop 다운로드 및 설치: https://www.docker.com/products/docker-desktop/
 
 ## 프로젝트 설정
@@ -90,23 +96,19 @@ cp .env.example .env
 
 ### 4. 개발 환경 실행
 
-**Docker를 사용하는 방법 (권장)**:
+**하이브리드 방식 (권장)**:
+
+본 프로젝트는 Docker로 DB/Redis만 실행하고, 애플리케이션은 로컬에서 실행하는 하이브리드 방식을 권장합니다.
+
 ```bash
-# Docker 컨테이너 빌드 및 시작
-pnpm docker:dev:build
+# 1. PostgreSQL과 Redis 시작 (Docker)
+docker compose up -d
 
-# 컨테이너 로그 확인
-pnpm docker:logs
-```
-
-**Docker 없이 로컬에서 실행하는 방법**:
-```bash
-# 데이터베이스만 Docker로 실행
-docker-compose up -d postgres
-
-# 개발 서버 실행
+# 2. 개발 서버 실행 (로컬)
 pnpm dev
 ```
+
+> **참고**: 전체 Docker 컨테이너화는 지원하지 않습니다. 개발 시에는 항상 하이브리드 방식을 사용하세요.
 
 ## 개발 환경 구성
 
@@ -122,6 +124,7 @@ pnpm dev
 6. **Tailwind CSS IntelliSense**: Tailwind CSS 자동 완성
 
 **workspace 설정 (`.vscode/settings.json`)**:
+
 ```json
 {
   "editor.formatOnSave": true,
@@ -171,6 +174,7 @@ pnpm dev
 ### 백엔드 디버깅
 
 1. 디버그 모드로 백엔드 실행:
+
    ```bash
    pnpm backend dev:debug
    ```
@@ -180,6 +184,7 @@ pnpm dev
 ### 프론트엔드 디버깅
 
 1. 프론트엔드 개발 서버 실행:
+
    ```bash
    pnpm frontend dev
    ```
@@ -232,6 +237,7 @@ pnpm format:check
 1. **포트 충돌**
 
    이미 사용 중인 포트로 인한 충돌 시:
+
    ```bash
    # 사용 중인 포트 확인 (Windows)
    netstat -ano | findstr :3000
@@ -249,17 +255,19 @@ pnpm format:check
 2. **Docker 문제**
 
    Docker 컨테이너 문제 해결:
-   ```bash
-   # 모든 컨테이너 중지 및 삭제
-   pnpm docker:down
 
-   # 컨테이너 재빌드
-   pnpm docker:dev:build
+   ```bash
+   # 컨테이너 재시작
+   docker compose down && docker compose up -d
+
+   # 볼륨 포함 삭제 (데이터 초기화)
+   docker compose down -v
    ```
 
 3. **의존성 문제**
 
    의존성 관련 문제 해결:
+
    ```bash
    # node_modules 및 캐시 삭제
    pnpm clean
@@ -271,6 +279,7 @@ pnpm format:check
 4. **TypeScript 타입 오류**
 
    타입 문제 해결:
+
    ```bash
    # 프로젝트 전체 빌드
    pnpm build
@@ -284,6 +293,7 @@ pnpm format:check
 1. **Turborepo 캐시 활용**
 
    Turborepo는 빌드 캐시를 사용하여 빌드 시간을 단축합니다:
+
    ```bash
    # 원격 캐시 활성화 (선택 사항)
    npx turbo login
@@ -307,4 +317,4 @@ pnpm format:check
 5. 코드 리뷰 및 PR 병합
 6. 배포
 
-세부적인 개발 워크플로우는 프로젝트의 Git 워크플로우 문서를 참조하세요. 
+세부적인 개발 워크플로우는 프로젝트의 Git 워크플로우 문서를 참조하세요.

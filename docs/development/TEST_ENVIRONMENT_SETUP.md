@@ -2,29 +2,17 @@
 
 ## 개요
 
-E2E 테스트는 실제 데이터베이스 연결이 필요합니다. 이 문서는 E2E 테스트 환경을 설정하는 방법을 설명합니다.
+E2E 테스트는 실제 데이터베이스 연결이 필요합니다. 본 프로젝트는 **단일 DB 정책**을 사용하여 개발/테스트 DB를 분리하지 않습니다.
+
+> **정책**: 1인 개발 환경에서 개발 DB와 테스트 DB는 동일합니다. 별도의 테스트 DB를 생성하지 마세요.
 
 ## 사전 요구사항
 
-### 1. PostgreSQL 데이터베이스 실행
-
-Docker Compose를 사용하여 PostgreSQL을 실행합니다:
+### 1. PostgreSQL & Redis 실행
 
 ```bash
-# 프로젝트 루트에서
-docker-compose up -d postgres
-```
-
-또는 수동으로 PostgreSQL 컨테이너를 실행:
-
-```bash
-docker run -d \
-  --name postgres_equipment \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_DB=equipment_management \
-  -p 5433:5432 \
-  postgres:15
+# Docker Compose로 DB/Redis 시작
+docker compose up -d
 ```
 
 ### 2. 데이터베이스 연결 확인
@@ -34,20 +22,19 @@ docker run -d \
 docker exec postgres_equipment psql -U postgres -d equipment_management -c "SELECT 1;"
 
 # 호스트에서 직접 연결 확인
-psql -h localhost -p 5433 -U postgres -d equipment_management
+psql -h localhost -p 5432 -U postgres -d equipment_management
 ```
 
 ## 환경 변수 설정
 
-E2E 테스트는 다음 환경 변수를 사용합니다:
+E2E 테스트는 다음 환경 변수를 사용합니다 (`.env` 파일 참조):
 
 ```bash
-# 기본값 (테스트 파일에서 자동 설정)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/equipment_management
-REDIS_URL=redis://localhost:6380
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/equipment_management
+REDIS_URL=redis://localhost:6379
 NODE_ENV=test
-JWT_SECRET=test-jwt-secret-key-for-e2e-tests-minimum-32-characters-long
-NEXTAUTH_SECRET=test-nextauth-secret-key-for-e2e-tests-minimum-32-characters-long
+JWT_SECRET=your_jwt_secret_key
+NEXTAUTH_SECRET=your_nextauth_secret_key
 ```
 
 ## 테스트 실행
@@ -55,15 +42,13 @@ NEXTAUTH_SECRET=test-nextauth-secret-key-for-e2e-tests-minimum-32-characters-lon
 ### 전체 E2E 테스트 실행
 
 ```bash
-cd apps/backend
-pnpm test:e2e
+pnpm --filter backend run test:e2e
 ```
 
 ### 특정 테스트 파일 실행
 
 ```bash
-cd apps/backend
-pnpm test:e2e -- equipment.e2e-spec.ts
+pnpm --filter backend run test:e2e -- equipment.e2e-spec.ts
 ```
 
 ## 문제 해결
@@ -81,20 +66,20 @@ PostgreSQL connection test failed: password authentication failed for user "post
 1. PostgreSQL 컨테이너가 실행 중인지 확인:
 
    ```bash
-   docker ps | grep postgres
+   docker compose ps
    ```
 
 2. 연결 정보 확인:
 
    - 호스트: `localhost`
-   - 포트: `5433` (docker-compose.yml에서 설정)
+   - 포트: `5432`
    - 사용자: `postgres`
    - 비밀번호: `postgres`
    - 데이터베이스: `equipment_management`
 
 3. 컨테이너 재시작:
    ```bash
-   docker-compose restart postgres
+   docker compose restart postgres
    ```
 
 ### 테스트 환경에서 데이터베이스 연결 유연성
@@ -103,12 +88,6 @@ PostgreSQL connection test failed: password authentication failed for user "post
 
 - 경고 메시지만 출력하고 계속 진행
 - 실제 테스트 실행 시 데이터베이스가 필요하면 테스트가 실패함
-- 프로덕션/개발 환경에서는 연결 실패 시 예외 발생
-
-이렇게 하면:
-
-- 데이터베이스가 없는 환경에서도 코드 검증 가능
-- 실제 E2E 테스트는 데이터베이스가 필요함을 명확히 함
 
 ## 검증 아키텍처
 
@@ -122,6 +101,6 @@ E2E 테스트는 다음 검증 전략을 사용합니다:
 
 ## 참고
 
+- [DEV_SETUP.md](./DEV_SETUP.md) - 개발 환경 설정
 - [VALIDATION_ARCHITECTURE.md](./VALIDATION_ARCHITECTURE.md)
 - [API_STANDARDS.md](./API_STANDARDS.md)
-- [docker-compose.yml](../../docker-compose.yml)

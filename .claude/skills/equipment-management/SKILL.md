@@ -30,11 +30,13 @@ description: |
 **이 스킬을 사용하기 전에 반드시 읽으세요!**
 
 ### 프로젝트 특성
+
 - **개발 환경**: 1인 개발자 (개발 + 테스트 동일인)
 - **DB 구조**: **단일 DB 통합** (개발 DB = 테스트 DB)
 - **데이터 중요도**: 개발 데이터 중요하지 않음
 
 ### 🔴 절대 금지
+
 ```
 ❌ "테스트 DB와 개발 DB를 분리해야..."
 ❌ "두 DB를 동기화하려면..."
@@ -44,8 +46,9 @@ description: |
 ```
 
 ### ✅ 올바른 접근
+
 ```
-✅ 단일 DB 사용: postgres_equipment (포트 5433)
+✅ 단일 DB 사용: postgres_equipment (포트 5432)
 ✅ DB 명령어: pnpm db:push
 ✅ 테스트: 개발 DB에서 실행
 ✅ 환경: 개발 + 테스트 통합
@@ -83,31 +86,35 @@ make dev
 ```
 
 **접속 주소:**
+
 - 프론트엔드: http://localhost:3000
 - 백엔드 API: http://localhost:3001/api
-- PostgreSQL: localhost:5433
-- Redis: localhost:6380
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
 
 ### 개발 환경 원칙
 
 **Phase 1 (현재 - 1인 개발):**
+
 - ✅ **Docker**: PostgreSQL, Redis만
 - ✅ **로컬 실행**: 백엔드, 프론트엔드
 - ✅ 빠른 개발, hot-reload 지원
 
 ```bash
 # Docker 인프라만 시작
-make docker-up    # 또는 docker-compose up -d postgres redis
+docker compose up -d
 
 # 앱은 로컬에서
 pnpm dev
 ```
 
 **Phase 2 (팀 확장 준비):**
+
 - 하이브리드 접근 또는 계속 로컬
 - 온보딩 자동화 강화
 
 **Phase 3 (3인+ 팀):**
+
 - 완전 컨테이너화 (선택)
 - CI/CD 파이프라인
 
@@ -116,11 +123,11 @@ pnpm dev
 ### 주요 명령어
 
 ```bash
-# 개발
-make dev                # 전체 개발 서버 시작
-make docker-up          # PostgreSQL & Redis만
-make docker-down        # Docker 컨테이너 중지
+# Docker (DB/Redis만)
+docker compose up -d     # 시작
+docker compose down      # 중지
 
+# 개발
 pnpm dev                # 백엔드 + 프론트엔드
 pnpm --filter backend run dev      # 백엔드만
 pnpm --filter frontend run dev     # 프론트엔드만
@@ -137,12 +144,14 @@ pnpm test               # 테스트
 ### 트러블슈팅
 
 **dist 폴더 권한 문제:**
+
 ```bash
 sudo rm -rf apps/backend/dist
 pnpm --filter backend run start:dev
 ```
 
 **포트 충돌:**
+
 ```bash
 lsof -ti:3000 | xargs kill -9
 lsof -ti:3001 | xargs kill -9
@@ -154,16 +163,16 @@ lsof -ti:3001 | xargs kill -9
 
 ## 핵심 용어 (UL-QP-18 기준)
 
-| 용어 | 정의 |
-|------|------|
-| **장비(Equipment)** | 시험소에서 시험에 사용하는 설비와 장비 통칭 |
-| **점검(Inspection)** | 장비/측정시스템에 대한 측정 오차를 줄이기 위한 업무 |
-| **교정(Calibration)** | 외부/내부 교정기관을 통한 장비 정밀도 검증 |
-| **중간점검** | 교정 신뢰성 확인을 위한 교정 주기 사이 점검 |
-| **자체점검** | 비교정 대상 장비에 대한 주기적 점검 |
-| **소급성(Traceability)** | 국가/국제 표준과 연결되는 측정 결과 특성 |
-| **공용장비** | 안전인증 시험팀에서 관리, EMC-W 분야 시험에 사용 가능한 장비 |
-| **미관리 장비** | 상시 관리하지 않는 장비(여분 장비 등) |
+| 용어                     | 정의                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| **장비(Equipment)**      | 시험소에서 시험에 사용하는 설비와 장비 통칭                  |
+| **점검(Inspection)**     | 장비/측정시스템에 대한 측정 오차를 줄이기 위한 업무          |
+| **교정(Calibration)**    | 외부/내부 교정기관을 통한 장비 정밀도 검증                   |
+| **중간점검**             | 교정 신뢰성 확인을 위한 교정 주기 사이 점검                  |
+| **자체점검**             | 비교정 대상 장비에 대한 주기적 점검                          |
+| **소급성(Traceability)** | 국가/국제 표준과 연결되는 측정 결과 특성                     |
+| **공용장비**             | 안전인증 시험팀에서 관리, EMC-W 분야 시험에 사용 가능한 장비 |
+| **미관리 장비**          | 상시 관리하지 않는 장비(여분 장비 등)                        |
 
 **상세 용어**: [references/terminology.md](references/terminology.md)
 
@@ -171,12 +180,12 @@ lsof -ti:3001 | xargs kill -9
 
 ## 역할 체계 (UL-QP-18 Section 4)
 
-| 역할 코드 | 절차서 역할 | 영문 | 주요 권한 |
-|-----------|-------------|------|-----------|
-| `test_engineer` | 시험실무자 | Test Engineer | 장비 운영/관리, 점검 실시, 이력카드 작성, 반출입 확인서 작성 |
-| `technical_manager` | 기술책임자 | Technical Manager | 교정계획 수립, 점검 결과 확인, 반출입 승인, 보정인자 관리 |
-| `lab_manager` | 시험소장 | Lab Manager | 교정계획 승인, 장비 폐기 승인, 시험소 전체 관리 |
-| `system_admin` | 시스템 관리자 | System Admin | 전체 시스템 관리, 모든 시험소 접근 |
+| 역할 코드           | 절차서 역할   | 영문              | 주요 권한                                                    |
+| ------------------- | ------------- | ----------------- | ------------------------------------------------------------ |
+| `test_engineer`     | 시험실무자    | Test Engineer     | 장비 운영/관리, 점검 실시, 이력카드 작성, 반출입 확인서 작성 |
+| `technical_manager` | 기술책임자    | Technical Manager | 교정계획 수립, 점검 결과 확인, 반출입 승인, 보정인자 관리    |
+| `lab_manager`       | 시험소장      | Lab Manager       | 교정계획 승인, 장비 폐기 승인, 시험소 전체 관리              |
+| `system_admin`      | 시스템 관리자 | System Admin      | 전체 시스템 관리, 모든 시험소 접근                           |
 
 **상세 역할/권한**: [references/roles.md](references/roles.md)
 
@@ -211,18 +220,18 @@ XXX – X YYYY
 
 시험실무자가 작성/갱신해야 하는 필수 항목:
 
-| 항목 | 설명 |
-|------|------|
-| 장비명(모델명) | Equipment name (model name) |
-| 유형/고유 식별표시 | Type identification |
-| 제조업체/공급업체명 | Manufacturer, supplier |
-| 시방일치 여부 | Specification agreement |
-| 부속품/주요 기능 | Accessories and main functions |
-| 교정 필요 여부/주기 | Calibration necessity and period |
-| 관련 소프트웨어/매뉴얼 | Related software and manuals |
-| 운영책임자(정, 부) | Operating Officer |
-| 설치 위치/일자 | Installation location, date |
-| 이력(위치변동/교정/수리 등) | History records |
+| 항목                        | 설명                             |
+| --------------------------- | -------------------------------- |
+| 장비명(모델명)              | Equipment name (model name)      |
+| 유형/고유 식별표시          | Type identification              |
+| 제조업체/공급업체명         | Manufacturer, supplier           |
+| 시방일치 여부               | Specification agreement          |
+| 부속품/주요 기능            | Accessories and main functions   |
+| 교정 필요 여부/주기         | Calibration necessity and period |
+| 관련 소프트웨어/매뉴얼      | Related software and manuals     |
+| 운영책임자(정, 부)          | Operating Officer                |
+| 설치 위치/일자              | Installation location, date      |
+| 이력(위치변동/교정/수리 등) | History records                  |
 
 **상세 이력카드**: [references/equipment-history-card.md](references/equipment-history-card.md)
 
@@ -294,6 +303,7 @@ if (isTechnicalOrHigher && (!dto.registrarComment || dto.registrarComment.length
 ### 반출/반입 프로세스 (모든 목적 1단계 승인 통합)
 
 **모든 목적 (교정/수리/시험소간 대여)**:
+
 ```
 pending → [기술책임자 승인] → approved → checked_out → returned → return_approved
 ```
@@ -364,9 +374,9 @@ corrected (조치 완료)
 
 ```typescript
 enum CorrectionMethodEnum {
-  LINEAR_INTERPOLATION = 'linear_interpolation',  // 선형 보간법
-  HIGHER_VALUE = 'higher_value',                  // 큰 쪽 보정값
-  CALIBRATION_AGENCY = 'calibration_agency',      // 교정기관 제시
+  LINEAR_INTERPOLATION = 'linear_interpolation', // 선형 보간법
+  HIGHER_VALUE = 'higher_value', // 큰 쪽 보정값
+  CALIBRATION_AGENCY = 'calibration_agency', // 교정기관 제시
 }
 ```
 
@@ -374,15 +384,15 @@ enum CorrectionMethodEnum {
 
 ## 기록 보존 연한 (UL-QP-18 Section 15)
 
-| 양식 | 양식번호 | 보존연한 |
-|------|----------|----------|
-| 시험설비 관리대장 | UL-QP-18-01 | **영구** |
-| 시험설비 이력카드 | UL-QP-18-02 | **영구** |
-| 중간 점검표 | UL-QP-18-03 | 5년 |
-| 자체 점검표 | UL-QP-18-05 | 5년 |
-| 장비 반·출입 확인서 | UL-QP-18-06 | 5년 |
-| 소프트웨어 관리대장 | UL-QP-18-07 | 5년 |
-| 보정인자 관리대장 | UL-QP-18-11 | 5년 |
+| 양식                | 양식번호    | 보존연한 |
+| ------------------- | ----------- | -------- |
+| 시험설비 관리대장   | UL-QP-18-01 | **영구** |
+| 시험설비 이력카드   | UL-QP-18-02 | **영구** |
+| 중간 점검표         | UL-QP-18-03 | 5년      |
+| 자체 점검표         | UL-QP-18-05 | 5년      |
+| 장비 반·출입 확인서 | UL-QP-18-06 | 5년      |
+| 소프트웨어 관리대장 | UL-QP-18-07 | 5년      |
+| 보정인자 관리대장   | UL-QP-18-11 | 5년      |
 
 ---
 
@@ -436,14 +446,14 @@ enum CorrectionMethodEnum {
 
 ```typescript
 enum EquipmentStatusEnum {
-  AVAILABLE = 'available',              // 사용가능
-  IN_USE = 'in_use',                    // 사용중
-  CHECKED_OUT = 'checked_out',          // 반출중 (교정/수리 목적은 반출 레코드에서 관리)
-  CALIBRATION_SCHEDULED = 'calibration_scheduled',  // 교정예정
-  CALIBRATION_OVERDUE = 'calibration_overdue',      // 교정기한초과
-  NON_CONFORMING = 'non_conforming',    // 부적합 (임시, 수리 후 복귀 가능)
-  SPARE = 'spare',                      // 여분 (보유하고 있지만 상시 관리하지 않음)
-  RETIRED = 'retired',                  // 폐기 (영구)
+  AVAILABLE = 'available', // 사용가능
+  IN_USE = 'in_use', // 사용중
+  CHECKED_OUT = 'checked_out', // 반출중 (교정/수리 목적은 반출 레코드에서 관리)
+  CALIBRATION_SCHEDULED = 'calibration_scheduled', // 교정예정
+  CALIBRATION_OVERDUE = 'calibration_overdue', // 교정기한초과
+  NON_CONFORMING = 'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
+  SPARE = 'spare', // 여분 (보유하고 있지만 상시 관리하지 않음)
+  RETIRED = 'retired', // 폐기 (영구)
 }
 
 /**
@@ -489,11 +499,13 @@ export default async function Page(props: PageProps<'/equipment/[id]'>) {
 ### 핵심 원칙
 
 **절대 금지**:
+
 - ❌ 백엔드 JWT를 직접 쿠키에 저장
 - ❌ NextAuth를 우회하는 어떤 방법
 - ❌ `localStorage`에 토큰 저장
 
 **권장 사항**:
+
 - ✅ NextAuth Provider를 통한 인증 (test-login)
 - ✅ NextAuth callback API 직접 호출
 - ✅ "단일 인증 소스(SSOT)" 원칙 준수
@@ -565,6 +577,7 @@ pnpm dev            # 개발 서버
 ## 참조 문서
 
 ### 스킬 내 참조
+
 - **용어 정의**: [references/terminology.md](references/terminology.md)
 - **역할 체계 상세**: [references/roles.md](references/roles.md)
 - **관리번호/위치코드**: [references/management-numbers.md](references/management-numbers.md)
@@ -576,9 +589,11 @@ pnpm dev            # 개발 서버
 - **E2E 테스트 인증**: [references/e2e-test-auth.md](references/e2e-test-auth.md) - Playwright E2E 테스트에서 NextAuth 인증 처리, 잘못된 접근 vs 올바른 접근
 
 ### 연관 스킬
+
 - **Next.js 16 개발 가이드**: `/nextjs-16` - 프론트엔드 UI 개발 시 함께 사용
 
 ### 프로젝트 문서
+
 - **장비 관리 절차서**: `/docs/development/장비관리절차서.md` (UL-QP-18)
 - **API 표준**: `/docs/development/API_STANDARDS.md`
 - **인증 아키텍처 상세**: `/docs/development/AUTH_ARCHITECTURE.md`

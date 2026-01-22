@@ -8,10 +8,10 @@
 
 본 프로젝트는 다음 테스트 도구를 사용합니다:
 
-- **Jest**: 프레임워크, 백엔드 및 프론트엔드 테스트
+- **Jest/Vitest**: 백엔드 및 프론트엔드 단위 테스트
 - **React Testing Library**: 리액트 컴포넌트 테스트
 - **Supertest**: API 엔드포인트 테스트
-- **Cypress**: E2E 테스트 (선택 사항)
+- **Playwright**: E2E 테스트
 
 ## 테스트 설정
 
@@ -161,17 +161,17 @@ const mockEquipments = [
 describe('EquipmentList', () => {
   it('renders equipment items correctly', () => {
     render(<EquipmentList items={mockEquipments} />);
-    
+
     expect(screen.getByText('장비1')).toBeInTheDocument();
     expect(screen.getByText('장비2')).toBeInTheDocument();
   });
 
   it('shows correct status for each equipment', () => {
     render(<EquipmentList items={mockEquipments} />);
-    
+
     const availableStatus = screen.getByText('available');
     const inUseStatus = screen.getByText('in-use');
-    
+
     expect(availableStatus).toBeInTheDocument();
     expect(inUseStatus).toBeInTheDocument();
   });
@@ -236,29 +236,41 @@ describe('Equipment Controller (e2e)', () => {
 
 엔드투엔드 테스트는 사용자 시나리오를 시뮬레이션하여 전체 애플리케이션을 테스트합니다.
 
-#### Cypress를 사용한 E2E 테스트 예시
+#### Playwright를 사용한 E2E 테스트 예시
 
-```javascript
-// cypress/integration/equipment-management.spec.js
-describe('Equipment Management', () => {
-  beforeEach(() => {
-    cy.visit('/equipment');
+```typescript
+// apps/frontend/e2e/equipment-management.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('Equipment Management', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/equipment');
   });
 
-  it('should display the equipment list', () => {
-    cy.get('[data-testid="equipment-list"]').should('be.visible');
+  test('should display the equipment list', async ({ page }) => {
+    await expect(page.getByTestId('equipment-list')).toBeVisible();
   });
 
-  it('should be able to add new equipment', () => {
-    cy.get('[data-testid="add-equipment-button"]').click();
-    cy.get('[data-testid="equipment-name-input"]').type('새 장비');
-    cy.get('[data-testid="equipment-status-select"]').select('available');
-    cy.get('[data-testid="save-equipment-button"]').click();
-    cy.get('[data-testid="equipment-list"]').contains('새 장비');
+  test('should be able to add new equipment', async ({ page }) => {
+    await page.getByTestId('add-equipment-button').click();
+    await page.getByTestId('equipment-name-input').fill('새 장비');
+    await page.getByTestId('equipment-status-select').selectOption('available');
+    await page.getByTestId('save-equipment-button').click();
+    await expect(page.getByTestId('equipment-list')).toContainText('새 장비');
   });
 
   // 더 많은 테스트 케이스...
 });
+```
+
+#### E2E 테스트 실행
+
+```bash
+# E2E 테스트 실행
+pnpm test:e2e
+
+# UI 모드로 실행 (디버깅용)
+pnpm test:e2e:ui
 ```
 
 ## 목(Mock) 데이터 관리
@@ -301,11 +313,11 @@ import { mockEquipment, mockEquipmentArray } from './equipment.mock';
 
 export const mockEquipmentService = {
   findAll: jest.fn().mockResolvedValue(mockEquipmentArray),
-  findById: jest.fn().mockImplementation(id => {
+  findById: jest.fn().mockImplementation((id) => {
     if (id === 1) return Promise.resolve(mockEquipment);
     return Promise.resolve(null);
   }),
-  create: jest.fn().mockImplementation(dto => Promise.resolve({ id: 3, ...dto })),
+  create: jest.fn().mockImplementation((dto) => Promise.resolve({ id: 3, ...dto })),
   update: jest.fn().mockImplementation((id, dto) => Promise.resolve({ id, ...dto })),
   remove: jest.fn().mockResolvedValue({ affected: 1 }),
 };
@@ -354,38 +366,38 @@ name: Test
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        
-    - name: Install pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 10
-        
-    - name: Install dependencies
-      run: pnpm install
-      
-    - name: Run tests
-      run: pnpm test
-      
-    - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage-reports
-        path: '**/coverage'
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: '**/coverage'
 ```
 
 ## 문제 해결
@@ -425,17 +437,21 @@ jobs:
 ## 테스트 모범 사례
 
 1. **테스트의 독립성**
+
    - 각 테스트는 다른 테스트에 의존하지 않고 독립적으로 실행될 수 있어야 합니다.
 
 2. **테스트 가독성**
+
    - 테스트 이름은 명확하고 설명적이어야 합니다.
    - 각 테스트는 설정(Arrange), 실행(Act), 검증(Assert) 패턴을 따르는 것이 좋습니다.
 
 3. **테스트 데이터 관리**
+
    - 테스트 데이터는 코드에서 분리하여 관리하는 것이 좋습니다.
    - 필요한 경우 테스트 데이터베이스를 사용합니다.
 
 4. **반복 작업 줄이기**
+
    - `beforeEach`, `afterEach`, `beforeAll`, `afterAll` 훅을 활용하여 반복 작업을 줄입니다.
 
 5. **실제 사용 사례 테스트**
@@ -444,6 +460,7 @@ jobs:
 ## 추가 리소스
 
 - [Jest 공식 문서](https://jestjs.io/docs/getting-started)
+- [Vitest 공식 문서](https://vitest.dev/)
 - [React Testing Library 공식 문서](https://testing-library.com/docs/react-testing-library/intro/)
 - [NestJS 테스팅 가이드](https://docs.nestjs.com/fundamentals/testing)
-- [Cypress 공식 문서](https://docs.cypress.io/guides/overview/why-cypress) 
+- [Playwright 공식 문서](https://playwright.dev/docs/intro)
