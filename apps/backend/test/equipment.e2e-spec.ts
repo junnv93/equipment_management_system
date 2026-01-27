@@ -81,12 +81,12 @@ describe('EquipmentController (e2e)', () => {
           // createdEquipmentIds에 있는 id와 일치하는 장비를 찾아 삭제
           for (const id of createdEquipmentIds) {
             const equipment = listResponse.body.items.find(
-              (item: any) => item.id.toString() === id
+              (item: Record<string, unknown>) => String(item.id) === id
             );
-            if (equipment && equipment.uuid) {
+            if (equipment && equipment.id) {
               try {
                 await request(app.getHttpServer())
-                  .delete(`/equipment/${equipment.uuid}`)
+                  .delete(`/equipment/${equipment.id}`)
                   .set('Authorization', `Bearer ${accessToken}`);
               } catch (error) {
                 // 이미 삭제된 경우 무시
@@ -132,7 +132,7 @@ describe('EquipmentController (e2e)', () => {
       expect(response.status).toBe(201);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('uuid');
+      expect(response.body).toHaveProperty('id');
       expect(response.body.name).toBe(equipmentData.name);
       expect(response.body.managementNumber).toBe(equipmentData.managementNumber);
       expect(response.body.status).toBe(equipmentData.status);
@@ -293,7 +293,7 @@ describe('EquipmentController (e2e)', () => {
       expect(Array.isArray(response.body.items)).toBe(true);
 
       // 모든 결과가 available 상태인지 확인
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.status).toBe('available');
       });
     });
@@ -312,7 +312,7 @@ describe('EquipmentController (e2e)', () => {
 
       // 검색어가 이름에 포함된 결과가 있는지 확인
       if (response.body.items.length > 0) {
-        expect(response.body.items.some((item: any) => item.name.includes(equipmentName))).toBe(
+        expect(response.body.items.some((item: Record<string, unknown>) => (item.name as string).includes(equipmentName))).toBe(
           true
         );
       }
@@ -329,7 +329,7 @@ describe('EquipmentController (e2e)', () => {
       expect(response.body.meta.itemsPerPage).toBe(10);
 
       // 모든 결과가 available 상태인지 확인
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.status).toBe('available');
       });
     });
@@ -350,7 +350,7 @@ describe('EquipmentController (e2e)', () => {
         })
         .expect(201);
 
-      const equipmentUuid = createResponse.body.uuid;
+      const equipmentUuid = createResponse.body.id;
       createdEquipmentIds.push(createResponse.body.id.toString());
 
       // UUID로 장비 조회 (API 표준: uuid 사용)
@@ -360,8 +360,8 @@ describe('EquipmentController (e2e)', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('uuid');
-      expect(response.body.uuid).toBe(equipmentUuid);
+      expect(response.body).toHaveProperty('id');
+      expect(response.body.id).toBe(equipmentUuid);
       expect(response.body.name).toBe(createResponse.body.name);
     });
 
@@ -395,7 +395,7 @@ describe('EquipmentController (e2e)', () => {
         })
         .expect(201);
 
-      const equipmentUuid = createResponse.body.uuid;
+      const equipmentUuid = createResponse.body.id;
       createdEquipmentIds.push(createResponse.body.id.toString());
 
       // 장비 업데이트 (UUID 사용)
@@ -413,8 +413,8 @@ describe('EquipmentController (e2e)', () => {
         .send(updateData)
         .expect(200);
 
-      expect(response.body).toHaveProperty('uuid');
-      expect(response.body.uuid).toBe(equipmentUuid);
+      expect(response.body).toHaveProperty('id');
+      expect(response.body.id).toBe(equipmentUuid);
       expect(response.body.status).toBe(updateData.status);
       expect(response.body.description).toBe(updateData.description);
       expect(response.body.location).toBe(updateData.location);
@@ -434,7 +434,7 @@ describe('EquipmentController (e2e)', () => {
         })
         .expect(201);
 
-      const equipmentUuid = createResponse.body.uuid;
+      const equipmentUuid = createResponse.body.id;
       createdEquipmentIds.push(createResponse.body.id.toString());
 
       // 교정 정보 업데이트 (UUID 사용)
@@ -473,7 +473,7 @@ describe('EquipmentController (e2e)', () => {
         })
         .expect(201);
 
-      const equipmentUuid = createResponse.body.uuid;
+      const equipmentUuid = createResponse.body.id;
       createdEquipmentIds.push(createResponse.body.id.toString());
 
       const invalidUpdateData = {
@@ -528,7 +528,7 @@ describe('EquipmentController (e2e)', () => {
         })
         .expect(201);
 
-      const equipmentUuid = createResponse.body.uuid;
+      const equipmentUuid = createResponse.body.id;
 
       // 장비 삭제 (UUID 사용) - 관리자 직접 삭제는 202 Accepted 반환
       const deleteResponse = await request(app.getHttpServer())
@@ -579,7 +579,7 @@ describe('EquipmentController (e2e)', () => {
         .send(createData)
         .expect(201);
 
-      const equipmentUuid = createResponse.body.uuid;
+      const equipmentUuid = createResponse.body.id;
       createdEquipmentIds.push(createResponse.body.id.toString());
 
       expect(createResponse.body.name).toBe(createData.name);
@@ -591,7 +591,7 @@ describe('EquipmentController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(readResponse.body.uuid).toBe(equipmentUuid);
+      expect(readResponse.body.id).toBe(equipmentUuid);
       expect(readResponse.body.name).toBe(createData.name);
 
       // 3. UPDATE (UUID 사용)
@@ -620,7 +620,7 @@ describe('EquipmentController (e2e)', () => {
         .expect(200);
 
       const foundEquipment = listResponse.body.items.find(
-        (item: any) => item.uuid === equipmentUuid
+        (item: Record<string, unknown>) => item.id === equipmentUuid
       );
       expect(foundEquipment).toBeDefined();
       expect(foundEquipment.name).toBe(updateData.name);

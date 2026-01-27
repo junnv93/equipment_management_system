@@ -9,7 +9,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import equipmentApi, {
   Equipment,
@@ -18,6 +18,7 @@ import equipmentApi, {
   UpdateEquipmentDto,
   EquipmentMutationResponse,
 } from '@/lib/api/equipment-api';
+import { getErrorMessage } from '@/lib/api/error';
 
 /**
  * 장비 목록 조회 훅
@@ -69,10 +70,10 @@ export function useCreateEquipment() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: '오류',
-        description: error.response?.data?.message || '장비 등록 중 오류가 발생했습니다.',
+        description: getErrorMessage(error, '장비 등록 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
     },
@@ -107,10 +108,10 @@ export function useUpdateEquipment() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: '오류',
-        description: error.response?.data?.message || '장비 수정 중 오류가 발생했습니다.',
+        description: getErrorMessage(error, '장비 수정 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
     },
@@ -133,10 +134,10 @@ export function useDeleteEquipment() {
         description: '장비가 성공적으로 삭제되었습니다.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: '오류',
-        description: error.response?.data?.message || '장비 삭제 중 오류가 발생했습니다.',
+        description: getErrorMessage(error, '장비 삭제 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
     },
@@ -161,10 +162,10 @@ export function useUpdateEquipmentStatus() {
         description: '장비 상태가 성공적으로 변경되었습니다.',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: '오류',
-        description: error.response?.data?.message || '장비 상태 변경 중 오류가 발생했습니다.',
+        description: getErrorMessage(error, '장비 상태 변경 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
     },

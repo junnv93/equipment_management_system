@@ -14,7 +14,7 @@ process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-
 process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
@@ -53,7 +53,6 @@ describe('CalibrationFactorsController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
     // 로그인
@@ -88,8 +87,8 @@ describe('CalibrationFactorsController (e2e)', () => {
         approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
-    if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {
-      testEquipmentUuid = equipmentResponse.body.uuid;
+    if (equipmentResponse.status === 201 && equipmentResponse.body?.id) {
+      testEquipmentUuid = equipmentResponse.body.id;
     } else {
       console.error('Equipment creation failed:', {
         status: equipmentResponse.status,
@@ -239,7 +238,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.equipmentId).toBe(testEquipmentUuid);
       });
     });
@@ -250,7 +249,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.approvalStatus).toBe('pending');
       });
     });
@@ -264,7 +263,7 @@ describe('CalibrationFactorsController (e2e)', () => {
         .expect(200);
 
       expect(response.body).toHaveProperty('items');
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.approvalStatus).toBe('pending');
       });
     });

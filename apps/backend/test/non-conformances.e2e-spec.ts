@@ -14,7 +14,7 @@ process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-
 process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
@@ -53,7 +53,6 @@ describe('NonConformancesController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
     // 로그인
@@ -88,8 +87,8 @@ describe('NonConformancesController (e2e)', () => {
         approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
-    if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {
-      testEquipmentUuid = equipmentResponse.body.uuid;
+    if (equipmentResponse.status === 201 && equipmentResponse.body?.id) {
+      testEquipmentUuid = equipmentResponse.body.id;
     } else {
       console.error('Equipment creation failed:', {
         status: equipmentResponse.status,
@@ -145,6 +144,7 @@ describe('NonConformancesController (e2e)', () => {
         discoveryDate: new Date().toISOString().split('T')[0],
         discoveredBy: testUserId,
         cause: 'E2E 테스트 부적합 원인',
+        ncType: 'other',
         actionPlan: 'E2E 테스트 조치 계획',
       };
 
@@ -178,6 +178,7 @@ describe('NonConformancesController (e2e)', () => {
         discoveryDate: new Date().toISOString().split('T')[0],
         discoveredBy: testUserId,
         cause: '중복 부적합 시도',
+        ncType: 'other',
       };
 
       const response = await request(app.getHttpServer())
@@ -195,6 +196,7 @@ describe('NonConformancesController (e2e)', () => {
         discoveryDate: new Date().toISOString().split('T')[0],
         discoveredBy: testUserId,
         cause: '잘못된 장비 UUID',
+        ncType: 'other',
       };
 
       await request(app.getHttpServer())
@@ -225,7 +227,7 @@ describe('NonConformancesController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.equipmentId).toBe(testEquipmentUuid);
       });
     });
@@ -236,7 +238,7 @@ describe('NonConformancesController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.status).toBe('open');
       });
     });
@@ -273,7 +275,7 @@ describe('NonConformancesController (e2e)', () => {
         .expect(200);
 
       expect(Array.isArray(response.body)).toBe(true);
-      response.body.forEach((item: any) => {
+      response.body.forEach((item: Record<string, unknown>) => {
         expect(item.equipmentId).toBe(testEquipmentUuid);
         expect(item.status).toBe('open');
       });
@@ -381,8 +383,8 @@ describe('NonConformancesController (e2e)', () => {
           approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         });
 
-      if (newEquipmentResponse.status === 201 && newEquipmentResponse.body?.uuid) {
-        const deleteTestEquipmentUuid = newEquipmentResponse.body.uuid;
+      if (newEquipmentResponse.status === 201 && newEquipmentResponse.body?.id) {
+        const deleteTestEquipmentUuid = newEquipmentResponse.body.id;
 
         // 새 부적합 생성
         const createResponse = await request(app.getHttpServer())
@@ -393,6 +395,7 @@ describe('NonConformancesController (e2e)', () => {
             discoveryDate: new Date().toISOString().split('T')[0],
             discoveredBy: testUserId,
             cause: 'E2E 삭제 테스트 부적합',
+            ncType: 'other',
           });
 
         if (createResponse.status === 201 && createResponse.body.id) {
@@ -448,8 +451,8 @@ describe('NonConformancesController (e2e)', () => {
           approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
         });
 
-      if (newEquipmentResponse.status === 201 && newEquipmentResponse.body?.uuid) {
-        const blockTestEquipmentUuid = newEquipmentResponse.body.uuid;
+      if (newEquipmentResponse.status === 201 && newEquipmentResponse.body?.id) {
+        const blockTestEquipmentUuid = newEquipmentResponse.body.id;
 
         // 부적합 등록 (장비 상태가 non_conforming으로 변경됨)
         const ncResponse = await request(app.getHttpServer())
@@ -460,6 +463,7 @@ describe('NonConformancesController (e2e)', () => {
             discoveryDate: new Date().toISOString().split('T')[0],
             discoveredBy: testUserId,
             cause: 'E2E 차단 테스트용 부적합',
+            ncType: 'other',
           });
 
         if (ncResponse.status === 201) {
@@ -491,6 +495,353 @@ describe('NonConformancesController (e2e)', () => {
         await request(app.getHttpServer())
           .delete(`/equipment/${blockTestEquipmentUuid}`)
           .set('Authorization', `Bearer ${accessToken}`);
+      }
+    });
+  });
+
+  describe('Non-conformance and Repair Workflow Integration', () => {
+    let workflowTestEquipmentUuid: string;
+    let workflowTestNcId: string;
+    let workflowTestRepairId: string;
+
+    beforeAll(async () => {
+      // 워크플로우 테스트용 별도 장비 생성
+      const equipmentResponse = await request(app.getHttpServer())
+        .post('/equipment')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          name: 'E2E Test Equipment for Workflow',
+          managementNumber: `E2E-WF-${Date.now()}`,
+          modelName: 'Test Model',
+          manufacturer: 'Test Manufacturer',
+          serialNumber: `SN-WF-${Date.now()}`,
+          status: 'available',
+          location: 'Test Location',
+          site: 'suwon',
+          approvalStatus: 'approved',
+        });
+
+      if (equipmentResponse.status === 201 && equipmentResponse.body?.id) {
+        workflowTestEquipmentUuid = equipmentResponse.body.id;
+      } else {
+        throw new Error('Failed to create workflow test equipment');
+      }
+    });
+
+    afterAll(async () => {
+      // 정리: 테스트 장비 삭제
+      if (app && accessToken && workflowTestEquipmentUuid) {
+        try {
+          await request(app.getHttpServer())
+            .delete(`/equipment/${workflowTestEquipmentUuid}`)
+            .set('Authorization', `Bearer ${accessToken}`);
+        } catch (error) {
+          // 이미 삭제된 경우 무시
+        }
+      }
+    });
+
+    it('should require ncType when creating non-conformance', async () => {
+      const createDto = {
+        equipmentId: workflowTestEquipmentUuid,
+        discoveryDate: new Date().toISOString().split('T')[0],
+        discoveredBy: testUserId,
+        cause: '부적합 원인',
+        // ncType 누락
+      };
+
+      const response = await request(app.getHttpServer())
+        .post('/non-conformances')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(createDto);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should automatically mark non-conformance as corrected when repair is completed', async () => {
+      // 1. 부적합 생성 (ncType='damage')
+      const ncResponse = await request(app.getHttpServer())
+        .post('/non-conformances')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          equipmentId: workflowTestEquipmentUuid,
+          discoveryDate: new Date().toISOString().split('T')[0],
+          discoveredBy: testUserId,
+          cause: '센서 파손',
+          ncType: 'damage',
+        });
+
+      expect(ncResponse.status).toBe(201);
+      workflowTestNcId = ncResponse.body.id;
+      expect(ncResponse.body.status).toBe('open');
+
+      // 2. 장비 상태 확인: non_conforming
+      const equipmentCheck = await request(app.getHttpServer())
+        .get(`/equipment/${workflowTestEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(equipmentCheck.body.status).toBe('non_conforming');
+
+      // 3. 수리 등록 (nonConformanceId 연결, repairResult='completed')
+      const repairResponse = await request(app.getHttpServer())
+        .post(`/equipment/${workflowTestEquipmentUuid}/repair-history`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          repairDate: new Date().toISOString(),
+          repairDescription: '센서 교체 완료',
+          repairedBy: '홍길동',
+          repairResult: 'completed',
+          nonConformanceId: workflowTestNcId,
+        });
+
+      expect(repairResponse.status).toBe(201);
+      workflowTestRepairId = repairResponse.body.id;
+
+      // 4. 부적합 상태 확인: 자동으로 'corrected'로 변경되어야 함
+      const ncCheck = await request(app.getHttpServer())
+        .get(`/non-conformances/${workflowTestNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      expect(ncCheck.body.status).toBe('corrected');
+      expect(ncCheck.body.repairHistoryId).toBe(workflowTestRepairId);
+      expect(ncCheck.body.resolutionType).toBe('repair');
+    });
+
+    it('should prevent closing damage type non-conformance without repair', async () => {
+      // 새 장비 생성
+      const newEquipmentResponse = await request(app.getHttpServer())
+        .post('/equipment')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          name: 'E2E Test Equipment for No-Repair Test',
+          managementNumber: `E2E-NR-${Date.now()}`,
+          modelName: 'Test Model',
+          manufacturer: 'Test Manufacturer',
+          serialNumber: `SN-NR-${Date.now()}`,
+          status: 'available',
+          location: 'Test Location',
+          site: 'suwon',
+          approvalStatus: 'approved',
+        });
+
+      const noRepairEquipmentUuid = newEquipmentResponse.body.id;
+
+      // 부적합 생성 (ncType='damage')
+      const ncResponse = await request(app.getHttpServer())
+        .post('/non-conformances')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          equipmentId: noRepairEquipmentUuid,
+          discoveryDate: new Date().toISOString().split('T')[0],
+          discoveredBy: testUserId,
+          cause: '센서 파손 (수리 미등록)',
+          ncType: 'damage',
+        });
+
+      const noRepairNcId = ncResponse.body.id;
+
+      // 수리 없이 corrected 상태로 변경 시도
+      const updateResponse = await request(app.getHttpServer())
+        .patch(`/non-conformances/${noRepairNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          status: 'corrected',
+          correctionContent: '조치 완료',
+          correctionDate: new Date().toISOString().split('T')[0],
+          correctedBy: testUserId,
+        });
+
+      // corrected 상태로 변경은 성공할 수 있음 (서비스 레벨에서는 체크 안 함)
+      // 하지만 종결 시도 시 차단되어야 함
+      if (updateResponse.status === 200) {
+        const closeResponse = await request(app.getHttpServer())
+          .patch(`/non-conformances/${noRepairNcId}/close`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({
+            closedBy: testUserId,
+            closureNotes: '종료 시도',
+          });
+
+        // damage 유형은 수리 없이 종결 불가
+        expect(closeResponse.status).toBe(400);
+        expect(closeResponse.body.message).toContain('수리');
+      }
+
+      // 정리
+      await request(app.getHttpServer())
+        .delete(`/non-conformances/${noRepairNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      await request(app.getHttpServer())
+        .delete(`/equipment/${noRepairEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+    });
+
+    it('should prevent linking multiple repairs to one non-conformance (1:1 relationship)', async () => {
+      // 새 장비 생성
+      const newEquipmentResponse = await request(app.getHttpServer())
+        .post('/equipment')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          name: 'E2E Test Equipment for 1:1 Test',
+          managementNumber: `E2E-11-${Date.now()}`,
+          modelName: 'Test Model',
+          manufacturer: 'Test Manufacturer',
+          serialNumber: `SN-11-${Date.now()}`,
+          status: 'available',
+          location: 'Test Location',
+          site: 'suwon',
+          approvalStatus: 'approved',
+        });
+
+      const oneToOneEquipmentUuid = newEquipmentResponse.body.id;
+
+      // 부적합 생성
+      const ncResponse = await request(app.getHttpServer())
+        .post('/non-conformances')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          equipmentId: oneToOneEquipmentUuid,
+          discoveryDate: new Date().toISOString().split('T')[0],
+          discoveredBy: testUserId,
+          cause: '1:1 테스트용 부적합',
+          ncType: 'malfunction',
+        });
+
+      const oneToOneNcId = ncResponse.body.id;
+
+      // 첫 번째 수리 연결
+      const repair1Response = await request(app.getHttpServer())
+        .post(`/equipment/${oneToOneEquipmentUuid}/repair-history`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          repairDate: new Date().toISOString(),
+          repairDescription: '첫 번째 수리',
+          repairResult: 'partial',
+          nonConformanceId: oneToOneNcId,
+        });
+
+      expect(repair1Response.status).toBe(201);
+
+      // 두 번째 수리 연결 시도 (차단되어야 함)
+      const repair2Response = await request(app.getHttpServer())
+        .post(`/equipment/${oneToOneEquipmentUuid}/repair-history`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          repairDate: new Date().toISOString(),
+          repairDescription: '두 번째 수리 시도',
+          repairResult: 'completed',
+          nonConformanceId: oneToOneNcId,
+        });
+
+      // 이미 수리가 연결되어 있으므로 400 에러 예상
+      expect(repair2Response.status).toBe(400);
+
+      // 정리
+      await request(app.getHttpServer())
+        .delete(`/non-conformances/${oneToOneNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+      await request(app.getHttpServer())
+        .delete(`/equipment/${oneToOneEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+    });
+
+    it('should prevent linking repair to closed non-conformance', async () => {
+      // 새 장비 생성
+      const newEquipmentResponse = await request(app.getHttpServer())
+        .post('/equipment')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          name: 'E2E Test Equipment for Closed NC Test',
+          managementNumber: `E2E-CL-${Date.now()}`,
+          modelName: 'Test Model',
+          manufacturer: 'Test Manufacturer',
+          serialNumber: `SN-CL-${Date.now()}`,
+          status: 'available',
+          location: 'Test Location',
+          site: 'suwon',
+          approvalStatus: 'approved',
+        });
+
+      const closedNcEquipmentUuid = newEquipmentResponse.body.id;
+
+      // 부적합 생성 (other 타입은 수리 없이도 종결 가능)
+      const ncResponse = await request(app.getHttpServer())
+        .post('/non-conformances')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          equipmentId: closedNcEquipmentUuid,
+          discoveryDate: new Date().toISOString().split('T')[0],
+          discoveredBy: testUserId,
+          cause: '종료된 부적합 테스트',
+          ncType: 'other',
+        });
+
+      const closedTestNcId = ncResponse.body.id;
+
+      // corrected 상태로 변경
+      await request(app.getHttpServer())
+        .patch(`/non-conformances/${closedTestNcId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          status: 'corrected',
+          correctionContent: '조치 완료',
+          correctionDate: new Date().toISOString().split('T')[0],
+          correctedBy: testUserId,
+        });
+
+      // 부적합 종료
+      const closeResponse = await request(app.getHttpServer())
+        .patch(`/non-conformances/${closedTestNcId}/close`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          closedBy: testUserId,
+          closureNotes: '종료',
+        });
+
+      expect(closeResponse.status).toBe(200);
+
+      // 종료된 부적합에 수리 연결 시도 (차단되어야 함)
+      const repairResponse = await request(app.getHttpServer())
+        .post(`/equipment/${closedNcEquipmentUuid}/repair-history`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          repairDate: new Date().toISOString(),
+          repairDescription: '종료된 부적합에 수리 시도',
+          repairResult: 'completed',
+          nonConformanceId: closedTestNcId,
+        });
+
+      // 종료된 부적합에는 수리 연결 불가
+      expect(repairResponse.status).toBe(400);
+
+      // 정리
+      await request(app.getHttpServer())
+        .delete(`/equipment/${closedNcEquipmentUuid}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+    });
+
+    it('should restore equipment status to available after closing last non-conformance', async () => {
+      if (workflowTestNcId) {
+        // 부적합 종료 (corrected 상태에서 종료 가능)
+        const closeResponse = await request(app.getHttpServer())
+          .patch(`/non-conformances/${workflowTestNcId}/close`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({
+            closedBy: testUserId,
+            closureNotes: '워크플로우 테스트 완료',
+          });
+
+        expect(closeResponse.status).toBe(200);
+        expect(closeResponse.body.status).toBe('closed');
+
+        // 장비 상태 확인: available로 복원되어야 함
+        const equipmentCheck = await request(app.getHttpServer())
+          .get(`/equipment/${workflowTestEquipmentUuid}`)
+          .set('Authorization', `Bearer ${accessToken}`);
+
+        expect(equipmentCheck.body.status).toBe('available');
       }
     });
   });

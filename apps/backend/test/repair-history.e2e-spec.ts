@@ -14,7 +14,7 @@ process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-
 process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
@@ -36,7 +36,6 @@ describe('RepairHistoryController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
     // 로그인
@@ -71,8 +70,8 @@ describe('RepairHistoryController (e2e)', () => {
         approvalStatus: 'approved',
       });
 
-    if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {
-      testEquipmentUuid = equipmentResponse.body.uuid;
+    if (equipmentResponse.status === 201 && equipmentResponse.body?.id) {
+      testEquipmentUuid = equipmentResponse.body.id;
     } else {
       console.error('Equipment creation failed:', {
         status: equipmentResponse.status,
@@ -138,15 +137,15 @@ describe('RepairHistoryController (e2e)', () => {
       }
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('uuid');
+      expect(response.body).toHaveProperty('id');
       expect(response.body.repairDescription).toBe(createDto.repairDescription);
       expect(response.body.repairedBy).toBe(createDto.repairedBy);
       expect(response.body.repairCompany).toBe(createDto.repairCompany);
       expect(response.body.cost).toBe(createDto.cost);
       expect(response.body.repairResult).toBe(createDto.repairResult);
 
-      if (response.body.uuid) {
-        createdRepairHistoryIds.push(response.body.uuid);
+      if (response.body.id) {
+        createdRepairHistoryIds.push(response.body.id);
       }
     });
 
@@ -177,11 +176,11 @@ describe('RepairHistoryController (e2e)', () => {
         .send(createDto);
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('uuid');
+      expect(response.body).toHaveProperty('id');
       expect(response.body.repairDescription).toBe(createDto.repairDescription);
 
-      if (response.body.uuid) {
-        createdRepairHistoryIds.push(response.body.uuid);
+      if (response.body.id) {
+        createdRepairHistoryIds.push(response.body.id);
       }
     });
   });
@@ -217,7 +216,7 @@ describe('RepairHistoryController (e2e)', () => {
         .expect(200);
 
       if (response.body.items.length > 1) {
-        const dates = response.body.items.map((item: any) => new Date(item.repairDate).getTime());
+        const dates = response.body.items.map((item: Record<string, unknown>) => new Date(item.repairDate as string).getTime());
         for (let i = 0; i < dates.length - 1; i++) {
           expect(dates[i]).toBeGreaterThanOrEqual(dates[i + 1]);
         }
@@ -235,7 +234,7 @@ describe('RepairHistoryController (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
-        expect(response.body.uuid).toBe(repairId);
+        expect(response.body.id).toBe(repairId);
       }
     });
 
@@ -347,8 +346,8 @@ describe('RepairHistoryController (e2e)', () => {
           repairDescription: 'E2E 삭제 테스트용 수리 내용입니다',
         });
 
-      if (createResponse.status === 201 && createResponse.body.uuid) {
-        const repairId = createResponse.body.uuid;
+      if (createResponse.status === 201 && createResponse.body.id) {
+        const repairId = createResponse.body.id;
 
         // 삭제
         const deleteResponse = await request(app.getHttpServer())
@@ -356,7 +355,7 @@ describe('RepairHistoryController (e2e)', () => {
           .set('Authorization', `Bearer ${accessToken}`)
           .expect(200);
 
-        expect(deleteResponse.body.uuid).toBe(repairId);
+        expect(deleteResponse.body.id).toBe(repairId);
         expect(deleteResponse.body.deleted).toBe(true);
 
         // 삭제 후 조회 시 404 예상

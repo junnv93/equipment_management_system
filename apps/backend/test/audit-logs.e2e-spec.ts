@@ -14,7 +14,7 @@ process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-
 process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
@@ -38,7 +38,6 @@ describe('AuditLogsController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
     // 관리자 로그인
@@ -112,7 +111,7 @@ describe('AuditLogsController (e2e)', () => {
 
       if (response.status === 200) {
         // 모든 항목이 equipment 타입이어야 함
-        response.body.items.forEach((item: any) => {
+        response.body.items.forEach((item: Record<string, unknown>) => {
           expect(item.entityType).toBe('equipment');
         });
       }
@@ -125,7 +124,7 @@ describe('AuditLogsController (e2e)', () => {
 
       if (response.status === 200) {
         // 모든 항목이 create 액션이어야 함
-        response.body.items.forEach((item: any) => {
+        response.body.items.forEach((item: Record<string, unknown>) => {
           expect(item.action).toBe('create');
         });
       }
@@ -144,8 +143,8 @@ describe('AuditLogsController (e2e)', () => {
 
       if (response.status === 200) {
         // 모든 항목이 날짜 범위 내에 있어야 함
-        response.body.items.forEach((item: any) => {
-          const itemDate = new Date(item.timestamp);
+        response.body.items.forEach((item: Record<string, unknown>) => {
+          const itemDate = new Date(item.timestamp as string);
           expect(itemDate >= startDate && itemDate <= endDate).toBe(true);
         });
       }

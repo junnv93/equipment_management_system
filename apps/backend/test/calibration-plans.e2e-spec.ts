@@ -29,8 +29,8 @@ describe('CalibrationPlansController (e2e)', () => {
   const testUserEmail = 'admin@example.com';
   const testUserPassword = 'admin123';
 
-  // 테스트용 상수
-  const TEST_YEAR = 2030; // 미래 연도 사용하여 충돌 방지
+  // 테스트용 상수 - 동적 연도 사용으로 충돌 방지
+  const TEST_YEAR = 2030 + Math.floor(Date.now() / 1000000000) % 100;
   const TEST_SITE = 'suwon';
 
   beforeAll(async () => {
@@ -83,7 +83,7 @@ describe('CalibrationPlansController (e2e)', () => {
       .send(equipmentData);
 
     if (equipmentResponse.status === 201) {
-      createdEquipmentIds.push(equipmentResponse.body.uuid);
+      createdEquipmentIds.push(equipmentResponse.body.id);
     }
   });
 
@@ -122,7 +122,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const planData = {
         year: TEST_YEAR,
         siteId: TEST_SITE,
-        createdBy: 'test-user-id',
+        createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
       };
 
       const response = await request(app.getHttpServer())
@@ -140,13 +140,13 @@ describe('CalibrationPlansController (e2e)', () => {
       }
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('uuid');
+      expect(response.body).toHaveProperty('id');
       expect(response.body).toHaveProperty('year', TEST_YEAR);
       expect(response.body).toHaveProperty('siteId', TEST_SITE);
       expect(response.body).toHaveProperty('status', 'draft');
       expect(response.body).toHaveProperty('items');
 
-      createdPlanIds.push(response.body.uuid);
+      createdPlanIds.push(response.body.id);
     });
 
     it('should not create duplicate plan for same year and site', async () => {
@@ -154,7 +154,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const planData = {
         year: TEST_YEAR,
         siteId: TEST_SITE,
-        createdBy: 'test-user-id',
+        createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
       };
 
       await request(app.getHttpServer())
@@ -168,7 +168,7 @@ describe('CalibrationPlansController (e2e)', () => {
       const planData = {
         year: TEST_YEAR + 1,
         siteId: TEST_SITE,
-        createdBy: 'test-user-id',
+        createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
       };
 
       await request(app.getHttpServer())
@@ -204,7 +204,7 @@ describe('CalibrationPlansController (e2e)', () => {
       expect(Array.isArray(response.body.items)).toBe(true);
 
       // 모든 결과가 해당 연도인지 확인
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.year).toBe(TEST_YEAR);
       });
     });
@@ -219,7 +219,7 @@ describe('CalibrationPlansController (e2e)', () => {
       expect(Array.isArray(response.body.items)).toBe(true);
 
       // 모든 결과가 해당 시험소인지 확인
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.siteId).toBe(TEST_SITE);
       });
     });
@@ -234,7 +234,7 @@ describe('CalibrationPlansController (e2e)', () => {
       expect(Array.isArray(response.body.items)).toBe(true);
 
       // 모든 결과가 draft 상태인지 확인
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.status).toBe('draft');
       });
     });
@@ -255,7 +255,7 @@ describe('CalibrationPlansController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body).toHaveProperty('uuid', planUuid);
+      expect(response.body).toHaveProperty('id', planUuid);
       expect(response.body).toHaveProperty('year');
       expect(response.body).toHaveProperty('siteId');
       expect(response.body).toHaveProperty('status');
@@ -316,7 +316,7 @@ describe('CalibrationPlansController (e2e)', () => {
         const response = await request(app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({ approvedBy: 'test-admin-id' });
+          .send({ approvedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' });
 
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('status', 'approved');
@@ -334,11 +334,11 @@ describe('CalibrationPlansController (e2e)', () => {
         .send({
           year: newYear,
           siteId: 'uiwang',
-          createdBy: 'test-user-id',
+          createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         });
 
       if (createResponse.status === 201) {
-        const planUuid = createResponse.body.uuid;
+        const planUuid = createResponse.body.id;
         createdPlanIds.push(planUuid);
 
         // 승인 요청
@@ -351,7 +351,7 @@ describe('CalibrationPlansController (e2e)', () => {
         const rejectResponse = await request(app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({ rejectedBy: 'test-admin-id' });
+          .send({ rejectedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' });
 
         expect(rejectResponse.status).toBe(400);
       }
@@ -366,11 +366,11 @@ describe('CalibrationPlansController (e2e)', () => {
         .send({
           year: newYear,
           siteId: 'uiwang',
-          createdBy: 'test-user-id',
+          createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         });
 
       if (createResponse.status === 201) {
-        const planUuid = createResponse.body.uuid;
+        const planUuid = createResponse.body.id;
         createdPlanIds.push(planUuid);
 
         // 승인 요청
@@ -384,7 +384,7 @@ describe('CalibrationPlansController (e2e)', () => {
           .patch(`/calibration-plans/${planUuid}/reject`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
-            rejectedBy: 'test-admin-id',
+            rejectedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
             rejectionReason: '계획서 내용 수정 필요',
           });
 
@@ -405,11 +405,11 @@ describe('CalibrationPlansController (e2e)', () => {
         .send({
           year: newYear,
           siteId: 'suwon',
-          createdBy: 'test-user-id',
+          createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         });
 
       if (createResponse.status === 201) {
-        const planUuid = createResponse.body.uuid;
+        const planUuid = createResponse.body.id;
 
         // draft 상태에서 삭제
         const deleteResponse = await request(app.getHttpServer())
@@ -462,7 +462,7 @@ describe('CalibrationPlansController (e2e)', () => {
 
       // 모든 결과가 외부교정 장비인지 확인 (optional - 빈 배열일 수도 있음)
       if (response.body.length > 0) {
-        expect(response.body[0]).toHaveProperty('uuid');
+        expect(response.body[0]).toHaveProperty('id');
         expect(response.body[0]).toHaveProperty('name');
         expect(response.body[0]).toHaveProperty('managementNumber');
       }
@@ -477,7 +477,7 @@ describe('CalibrationPlansController (e2e)', () => {
       expect(Array.isArray(response.body)).toBe(true);
 
       // 모든 결과가 해당 시험소의 장비인지 확인
-      response.body.forEach((item: any) => {
+      response.body.forEach((item: Record<string, unknown>) => {
         expect(item.site).toBe(TEST_SITE);
       });
     });
@@ -499,12 +499,12 @@ describe('CalibrationPlansController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`);
 
       if (planResponse.body.status === 'approved' && planResponse.body.items?.length > 0) {
-        const itemUuid = planResponse.body.items[0].uuid;
+        const itemUuid = planResponse.body.items[0].id;
 
         const confirmResponse = await request(app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/items/${itemUuid}/confirm`)
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({ confirmedBy: 'test-manager-id' });
+          .send({ confirmedBy: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789' });
 
         expect(confirmResponse.status).toBe(200);
         expect(confirmResponse.body).toHaveProperty('confirmedBy');
@@ -521,19 +521,19 @@ describe('CalibrationPlansController (e2e)', () => {
         .send({
           year: newYear,
           siteId: 'suwon',
-          createdBy: 'test-user-id',
+          createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         });
 
       if (createResponse.status === 201 && createResponse.body.items?.length > 0) {
-        const planUuid = createResponse.body.uuid;
-        const itemUuid = createResponse.body.items[0].uuid;
+        const planUuid = createResponse.body.id;
+        const itemUuid = createResponse.body.items[0].id;
         createdPlanIds.push(planUuid);
 
         // draft 상태에서 확인 시도
         const confirmResponse = await request(app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/items/${itemUuid}/confirm`)
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({ confirmedBy: 'test-manager-id' });
+          .send({ confirmedBy: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789' });
 
         expect(confirmResponse.status).toBe(400);
       }
@@ -577,7 +577,7 @@ describe('CalibrationPlansController (e2e)', () => {
         .send({
           year: newYear,
           siteId: 'suwon',
-          createdBy: 'test-user-id',
+          createdBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         });
 
       if (createResponse.status !== 201) {
@@ -585,7 +585,7 @@ describe('CalibrationPlansController (e2e)', () => {
         return;
       }
 
-      const planUuid = createResponse.body.uuid;
+      const planUuid = createResponse.body.id;
       createdPlanIds.push(planUuid);
 
       expect(createResponse.body.status).toBe('draft');
@@ -596,7 +596,7 @@ describe('CalibrationPlansController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(readResponse.body.uuid).toBe(planUuid);
+      expect(readResponse.body.id).toBe(planUuid);
 
       // 3. SUBMIT
       const submitResponse = await request(app.getHttpServer())
@@ -612,19 +612,19 @@ describe('CalibrationPlansController (e2e)', () => {
       const approveResponse = await request(app.getHttpServer())
         .patch(`/calibration-plans/${planUuid}/approve`)
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ approvedBy: 'test-admin-id' });
+        .send({ approvedBy: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' });
 
       expect(approveResponse.status).toBe(200);
       expect(approveResponse.body.status).toBe('approved');
 
       // 5. CONFIRM ITEMS (if any)
       if (approveResponse.body.items?.length > 0) {
-        const itemUuid = approveResponse.body.items[0].uuid;
+        const itemUuid = approveResponse.body.items[0].id;
 
         const confirmResponse = await request(app.getHttpServer())
           .patch(`/calibration-plans/${planUuid}/items/${itemUuid}/confirm`)
           .set('Authorization', `Bearer ${accessToken}`)
-          .send({ confirmedBy: 'test-manager-id' });
+          .send({ confirmedBy: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789' });
 
         expect(confirmResponse.status).toBe(200);
         expect(confirmResponse.body).toHaveProperty('confirmedBy');

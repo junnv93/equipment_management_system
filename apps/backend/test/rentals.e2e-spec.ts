@@ -70,8 +70,8 @@ describe('RentalsController (e2e)', () => {
         approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
-    if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {
-      testEquipmentUuid = equipmentResponse.body.uuid;
+    if (equipmentResponse.status === 201 && equipmentResponse.body?.id) {
+      testEquipmentUuid = equipmentResponse.body.id;
     } else {
       console.error('Equipment creation failed:', {
         status: equipmentResponse.status,
@@ -211,7 +211,7 @@ describe('RentalsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body.items.every((item: any) => item.status === 'pending')).toBe(true);
+      expect(response.body.items.every((item: Record<string, unknown>) => item.status === 'pending')).toBe(true);
     });
   });
 

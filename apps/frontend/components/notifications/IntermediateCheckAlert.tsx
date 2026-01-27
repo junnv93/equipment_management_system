@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
+import { getErrorMessage } from '@/lib/api/error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -127,10 +128,10 @@ export function IntermediateCheckAlert({
       setCompletionNotes('');
       onComplete?.();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: '완료 처리 실패',
-        description: error.response?.data?.message || '중간점검 완료 처리 중 오류가 발생했습니다.',
+        description: getErrorMessage(error, '중간점검 완료 처리 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
     },

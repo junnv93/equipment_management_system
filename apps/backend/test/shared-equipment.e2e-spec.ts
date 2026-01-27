@@ -14,7 +14,7 @@ process.env.AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID || 'test-client-
 process.env.AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID || 'test-tenant-id-for-e2e-tests';
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 
@@ -44,7 +44,6 @@ describe('SharedEquipmentController (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
     await app.init();
 
     // 로그인
@@ -98,14 +97,14 @@ describe('SharedEquipmentController (e2e)', () => {
 
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('equipment');
-      expect(response.body.equipment).toHaveProperty('uuid');
+      expect(response.body.equipment).toHaveProperty('id');
       expect(response.body.equipment.isShared).toBe(true);
       expect(response.body.equipment.sharedSource).toBe('safety_lab');
       expect(response.body.equipment.name).toBe(createDto.name);
       expect(response.body.equipment.managementNumber).toBe(createDto.managementNumber);
 
-      if (response.body.equipment?.uuid) {
-        createdSharedEquipmentUuids.push(response.body.equipment.uuid);
+      if (response.body.equipment?.id) {
+        createdSharedEquipmentUuids.push(response.body.equipment.id);
       }
     });
 
@@ -135,8 +134,8 @@ describe('SharedEquipmentController (e2e)', () => {
       expect(response.body.equipment.manufacturer).toBe('Test Manufacturer');
       expect(response.body.equipment.calibrationCycle).toBe(12);
 
-      if (response.body.equipment?.uuid) {
-        createdSharedEquipmentUuids.push(response.body.equipment.uuid);
+      if (response.body.equipment?.id) {
+        createdSharedEquipmentUuids.push(response.body.equipment.id);
       }
     });
 
@@ -194,7 +193,7 @@ describe('SharedEquipmentController (e2e)', () => {
       expect(Array.isArray(response.body.items)).toBe(true);
 
       // 모든 반환된 장비가 공용장비인지 확인
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.isShared).toBe(true);
       });
     });
@@ -209,7 +208,7 @@ describe('SharedEquipmentController (e2e)', () => {
       expect(Array.isArray(response.body.items)).toBe(true);
 
       // 모든 반환된 장비가 일반장비인지 확인
-      response.body.items.forEach((item: any) => {
+      response.body.items.forEach((item: Record<string, unknown>) => {
         expect(item.isShared).toBe(false);
       });
     });
@@ -260,8 +259,8 @@ describe('SharedEquipmentController (e2e)', () => {
           status: 'available',
         });
 
-      if (normalEquipmentResponse.status === 201 && normalEquipmentResponse.body?.uuid) {
-        const normalEquipmentUuid = normalEquipmentResponse.body.uuid;
+      if (normalEquipmentResponse.status === 201 && normalEquipmentResponse.body?.id) {
+        const normalEquipmentUuid = normalEquipmentResponse.body.id;
 
         const updateDto = {
           name: '수정된 일반장비 이름',
@@ -314,8 +313,8 @@ describe('SharedEquipmentController (e2e)', () => {
           status: 'available',
         });
 
-      if (normalEquipmentResponse.status === 201 && normalEquipmentResponse.body?.uuid) {
-        const normalEquipmentUuid = normalEquipmentResponse.body.uuid;
+      if (normalEquipmentResponse.status === 201 && normalEquipmentResponse.body?.id) {
+        const normalEquipmentUuid = normalEquipmentResponse.body.id;
 
         const deleteResponse = await request(app.getHttpServer())
           .delete(`/equipment/${normalEquipmentUuid}`)
@@ -358,12 +357,12 @@ describe('SharedEquipmentController (e2e)', () => {
       // 공용장비도 대여 가능해야 함 (201) 또는 장비 상태에 따라 다를 수 있음
       // 대여가 가능하거나, 장비 상태가 available이 아닌 경우 400일 수 있음
       if (response.status === 201) {
-        expect(response.body).toHaveProperty('uuid');
+        expect(response.body).toHaveProperty('id');
 
         // 정리: 대여 반납
-        if (response.body.uuid) {
+        if (response.body.id) {
           await request(app.getHttpServer())
-            .patch(`/rentals/${response.body.uuid}/return`)
+            .patch(`/rentals/${response.body.id}/return`)
             .set('Authorization', `Bearer ${accessToken}`)
             .send({ returnDate: new Date().toISOString().split('T')[0] });
         }

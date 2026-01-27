@@ -70,8 +70,8 @@ describe('CheckoutsController (e2e)', () => {
         approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
-    if (equipmentResponse.status === 201 && equipmentResponse.body?.uuid) {
-      testEquipmentUuid = equipmentResponse.body.uuid;
+    if (equipmentResponse.status === 201 && equipmentResponse.body?.id) {
+      testEquipmentUuid = equipmentResponse.body.id;
     } else {
       console.error('Equipment creation failed:', {
         status: equipmentResponse.status,
@@ -212,7 +212,7 @@ describe('CheckoutsController (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(response.body.items.every((item: any) => item.purpose === 'calibration')).toBe(true);
+      expect(response.body.items.every((item: Record<string, unknown>) => item.purpose === 'calibration')).toBe(true);
     });
   });
 
@@ -347,7 +347,7 @@ describe('CheckoutsController (e2e)', () => {
         createdCheckoutIds.push(checkoutUuid);
 
         // 승인
-        await request(app.getHttpServer())
+        const approveResponse = await request(app.getHttpServer())
           .patch(`/checkouts/${checkoutUuid}/approve`)
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
@@ -355,17 +355,8 @@ describe('CheckoutsController (e2e)', () => {
           })
           .expect(200);
 
-        // 승인 (중복 테스트 - 제거 필요)
-        const finalApproveResponse = await request(app.getHttpServer())
-          .patch(`/checkouts/${checkoutUuid}/approve`)
-          .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            approverId: testApproverId,
-          })
-          .expect(200);
-
-        expect(finalApproveResponse.body.status).toBe('approved');
-        expect(finalApproveResponse.body.approverId).toBe(testApproverId);
+        expect(approveResponse.body.status).toBe('approved');
+        expect(approveResponse.body.approverId).toBe(testApproverId);
       }
     });
   });

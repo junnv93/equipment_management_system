@@ -96,8 +96,8 @@ describe('Site Permissions (e2e)', () => {
         approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
-    if (suwonEquipmentResponse.status === 201 && suwonEquipmentResponse.body?.uuid) {
-      suwonEquipmentUuid = suwonEquipmentResponse.body.uuid;
+    if (suwonEquipmentResponse.status === 201 && suwonEquipmentResponse.body?.id) {
+      suwonEquipmentUuid = suwonEquipmentResponse.body.id;
     }
 
     // 테스트용 장비 생성 (의왕 사이트)
@@ -116,8 +116,8 @@ describe('Site Permissions (e2e)', () => {
         approvalStatus: 'approved', // ✅ 관리자 직접 승인 (E2E 테스트용)
       });
 
-    if (uiwangEquipmentResponse.status === 201 && uiwangEquipmentResponse.body?.uuid) {
-      uiwangEquipmentUuid = uiwangEquipmentResponse.body.uuid;
+    if (uiwangEquipmentResponse.status === 201 && uiwangEquipmentResponse.body?.id) {
+      uiwangEquipmentUuid = uiwangEquipmentResponse.body.id;
     }
   });
 
@@ -159,7 +159,7 @@ describe('Site Permissions (e2e)', () => {
       
       // 시험실무자는 자신의 사이트(suwon) 장비만 조회 가능
       // (기술책임자/관리자가 아닌 경우)
-      items.forEach((item: any) => {
+      items.forEach((item: Record<string, unknown>) => {
         if (item.site) {
           // 시험실무자는 자신의 사이트만 조회 가능
           // 실제 구현에서는 user.site와 일치하는 장비만 반환되어야 함
@@ -200,7 +200,7 @@ describe('Site Permissions (e2e)', () => {
       expect(items).toBeDefined();
 
       // 모든 사이트 장비가 포함되어야 함 (수원, 의왕 모두)
-      const sites = items.map((item: any) => item.site).filter(Boolean);
+      const sites = items.map((item: Record<string, unknown>) => item.site).filter(Boolean);
       expect(sites.length).toBeGreaterThan(0);
       
       // 수원과 의왕 장비가 모두 포함되어야 함 (테스트 데이터가 있는 경우)
@@ -223,7 +223,7 @@ describe('Site Permissions (e2e)', () => {
         .expect(200);
 
       expect(response.body).toBeDefined();
-      expect(response.body.uuid || response.body.data?.uuid).toBe(uiwangEquipmentUuid);
+      expect(response.body.id || response.body.data?.id).toBe(uiwangEquipmentUuid);
     });
 
     it('사이트 필터로 특정 사이트 장비만 조회 가능해야 함', async () => {
@@ -238,7 +238,7 @@ describe('Site Permissions (e2e)', () => {
         .expect(200);
 
       const allItems = allResponse.body.items || allResponse.body.data?.items || [];
-      console.log('전체 장비 샘플:', allItems.map((item: any) => ({ name: item.name, site: item.site })));
+      console.log('전체 장비 샘플:', allItems.map((item: Record<string, unknown>) => ({ name: item.name, site: item.site })));
 
       // 수원 사이트 장비만 조회
       const suwonResponse = await request(app.getHttpServer())
@@ -250,11 +250,11 @@ describe('Site Permissions (e2e)', () => {
       
       // site 필터가 제대로 작동하는지 확인
       // site가 있는 항목만 필터링하여 확인
-      const itemsWithSite = suwonItems.filter((item: any) => item.site);
-      
+      const itemsWithSite = suwonItems.filter((item: Record<string, unknown>) => item.site);
+
       if (itemsWithSite.length > 0) {
         // site가 있는 모든 항목이 suwon이어야 함
-        itemsWithSite.forEach((item: any) => {
+        itemsWithSite.forEach((item: Record<string, unknown>) => {
           expect(item.site).toBe('suwon');
         });
       }
@@ -268,11 +268,11 @@ describe('Site Permissions (e2e)', () => {
       const uiwangItems = uiwangResponse.body.items || uiwangResponse.body.data?.items || [];
       
       // site 필터가 제대로 작동하는지 확인
-      const itemsWithSiteUiwang = uiwangItems.filter((item: any) => item.site);
-      
+      const itemsWithSiteUiwang = uiwangItems.filter((item: Record<string, unknown>) => item.site);
+
       if (itemsWithSiteUiwang.length > 0) {
         // site가 있는 모든 항목이 uiwang이어야 함
-        itemsWithSiteUiwang.forEach((item: any) => {
+        itemsWithSiteUiwang.forEach((item: Record<string, unknown>) => {
           expect(item.site).toBe('uiwang');
         });
       }
@@ -287,7 +287,7 @@ describe('Site Permissions (e2e)', () => {
         .expect(200);
 
       const allSitesItems = allSitesResponse.body.items || allSitesResponse.body.data?.items || [];
-      const allSitesList = allSitesItems.map((item: any) => item.site).filter(Boolean);
+      const allSitesList = allSitesItems.map((item: Record<string, unknown>) => item.site).filter(Boolean);
       const uniqueSites = [...new Set(allSitesList)];
       
       // 최소 1개 이상의 사이트 장비가 있어야 함
@@ -335,9 +335,9 @@ describe('Site Permissions (e2e)', () => {
       expect(response.body.site || response.body.data?.site).toBe('suwon');
 
       // 생성된 장비 삭제
-      if (response.body.uuid || response.body.data?.uuid) {
+      if (response.body.id || response.body.data?.id) {
         await request(app.getHttpServer())
-          .delete(`/equipment/${response.body.uuid || response.body.data?.uuid}`)
+          .delete(`/equipment/${response.body.id || response.body.data?.id}`)
           .set('Authorization', `Bearer ${adminToken}`)
           .expect(202); // ✅ 프롬프트 3에서 삭제는 202 Accepted 반환
       }
@@ -375,8 +375,8 @@ describe('Site Permissions (e2e)', () => {
             // teamId: rfTeamId,
           });
 
-        if (rfEquipmentResponse.status === 201 && rfEquipmentResponse.body?.uuid) {
-          rfEquipmentUuid = rfEquipmentResponse.body.uuid;
+        if (rfEquipmentResponse.status === 201 && rfEquipmentResponse.body?.id) {
+          rfEquipmentUuid = rfEquipmentResponse.body.id;
         }
       }
     });

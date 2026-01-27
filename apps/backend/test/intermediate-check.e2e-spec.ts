@@ -122,8 +122,8 @@ describe('IntermediateCheck (e2e)', () => {
       // 모든 결과가 기한 초과인지 확인 (과거 날짜)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      response.body.items.forEach((item: any) => {
-        const checkDate = new Date(item.intermediateCheckDate);
+      response.body.items.forEach((item: Record<string, unknown>) => {
+        const checkDate = new Date(item.intermediateCheckDate as string);
         checkDate.setHours(0, 0, 0, 0);
         expect(checkDate.getTime()).toBeLessThan(today.getTime());
       });
@@ -141,8 +141,8 @@ describe('IntermediateCheck (e2e)', () => {
       // 모든 결과가 예정된 것인지 확인 (미래 또는 오늘 날짜)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      response.body.items.forEach((item: any) => {
-        const checkDate = new Date(item.intermediateCheckDate);
+      response.body.items.forEach((item: Record<string, unknown>) => {
+        const checkDate = new Date(item.intermediateCheckDate as string);
         checkDate.setHours(0, 0, 0, 0);
         expect(checkDate.getTime()).toBeGreaterThanOrEqual(today.getTime());
       });
