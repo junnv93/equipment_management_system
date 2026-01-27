@@ -1,13 +1,12 @@
 import {
-  EquipmentStatusEnum,
-  CalibrationMethodEnum,
-  UserRoleEnum,
-  TeamEnum,
-  RentalStatusEnum,
-  RentalTypeEnum,
-  CalibrationStatusEnum,
-  CheckoutStatusEnum,
-} from './enums';
+  EquipmentStatus,
+  CalibrationMethod,
+  CalibrationStatus,
+  CheckoutStatus,
+  UserRole,
+  RentalStatus,
+  RentalType,
+} from '@equipment-management/schemas';
 
 // 장비 인터페이스
 export interface Equipment {
@@ -24,8 +23,8 @@ export interface Equipment {
   lastCalibrationDate: Date;
   nextCalibrationDate: Date;
   calibrationAgency: string;
-  calibrationMethod: CalibrationMethodEnum | string;
-  status: EquipmentStatusEnum | string;
+  calibrationMethod: CalibrationMethod | string;
+  status: EquipmentStatus | string;
   teamId: string;
   managerId: string;
   purchaseDate: Date;
@@ -53,8 +52,8 @@ export interface Rental {
   expectedEndDate: Date | string;
   actualEndDate?: Date | string;
   purpose: string;
-  status: RentalStatusEnum | string;
-  type: RentalTypeEnum | string;
+  status: RentalStatus | string;
+  type: RentalType | string;
   notes?: string;
   location?: string;
   createdAt: Date;
@@ -77,8 +76,8 @@ export interface Calibration {
   calibrationManagerId: string;
   calibrationDate: Date;
   nextCalibrationDate: Date;
-  calibrationMethod: CalibrationMethodEnum | string;
-  status: CalibrationStatusEnum | string;
+  calibrationMethod: CalibrationMethod | string;
+  status: CalibrationStatus | string;
   calibrationAgency: string;
   certificationNumber?: string;
   certificateFile?: string;
@@ -125,8 +124,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: UserRoleEnum | 'test_engineer' | 'technical_manager' | 'lab_manager';
-  teamId?: 'rf' | 'sar' | 'emc' | 'auto' | string;
+  role: UserRole | 'test_engineer' | 'technical_manager' | 'lab_manager';
+  teamId?: string; // UUID 형식
   department?: string;
   position?: string;
   phoneNumber?: string;
@@ -161,7 +160,7 @@ export interface Checkout {
   expectedEndDate: string | Date;
   actualEndDate?: string | Date;
   notes?: string;
-  status: CheckoutStatusEnum | string;
+  status: CheckoutStatus | string;
   createdAt: Date;
   updatedAt: Date;
 }

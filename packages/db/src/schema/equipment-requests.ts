@@ -1,8 +1,6 @@
 import {
-  integer,
   pgEnum,
   pgTable,
-  serial,
   text,
   timestamp,
   varchar,
@@ -28,23 +26,23 @@ export const requestTypeEnum = pgEnum('request_type', [
 ]);
 
 // 장비 요청 테이블 (승인 프로세스용)
+// ✅ UUID 통일: serial(integer) id를 uuid id로 변경
 export const equipmentRequests = pgTable(
   'equipment_requests',
   {
-    id: serial('id').primaryKey(),
-    uuid: varchar('uuid', { length: 36 }).notNull().unique(),
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 요청 정보
     requestType: requestTypeEnum('request_type').notNull(),
-    equipmentId: integer('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }), // 수정/삭제 시 기존 장비 ID
-    requestedBy: varchar('requested_by', { length: 36 })
+    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }), // 수정/삭제 시 기존 장비 ID
+    requestedBy: uuid('requested_by')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
     requestedAt: timestamp('requested_at').defaultNow().notNull(),
 
     // 승인 정보
     approvalStatus: approvalStatusEnum('approval_status').notNull().default('pending_approval'),
-    approvedBy: varchar('approved_by', { length: 36 }).references(() => users.id, {
+    approvedBy: uuid('approved_by').references(() => users.id, {
       onDelete: 'set null',
     }),
     approvedAt: timestamp('approved_at'),
@@ -59,8 +57,7 @@ export const equipmentRequests = pgTable(
   },
   (table) => {
     return {
-      // 인덱스 추가
-      uuidIdx: index('equipment_requests_uuid_idx').on(table.uuid),
+      // 인덱스 추가 (uuid를 PK로 사용하므로 별도 uuid 인덱스 불필요)
       requestTypeIdx: index('equipment_requests_request_type_idx').on(table.requestType),
       approvalStatusIdx: index('equipment_requests_approval_status_idx').on(table.approvalStatus),
       requestedByIdx: index('equipment_requests_requested_by_idx').on(table.requestedBy),

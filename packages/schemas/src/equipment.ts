@@ -3,6 +3,8 @@ import {
   CalibrationMethodEnum,
   EquipmentStatusEnum,
   SiteEnum,
+  SiteCodeEnum,
+  ClassificationEnum,
   SharedSourceEnum,
   SoftwareTypeEnum,
   SpecMatchEnum,
@@ -39,6 +41,13 @@ export const baseEquipmentSchema = z.object({
   name: z.string().min(2).max(100),
   managementNumber: z.string().min(2).max(50),
 
+  // 관리번호 컴포넌트 (선택적 - 서비스 레이어에서 파싱하여 자동 설정)
+  // 관리번호 형식: XXX-XYYYY (시험소코드 3자리 - 분류코드 1자리 + 일련번호 4자리)
+  siteCode: SiteCodeEnum.optional(), // 시험소코드: SUW, UIW, PYT
+  classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드
+  managementSerialNumber: z.number().int().min(1).max(9999).optional(), // 일련번호: 1~9999
+  classification: ClassificationEnum.optional(), // 분류 (프론트엔드 입력용)
+
   // 선택적 필드
   assetNumber: z.string().optional(),
   modelName: z.string().optional(),
@@ -67,7 +76,9 @@ export const baseEquipmentSchema = z.object({
   nextIntermediateCheckDate: z.coerce.date().optional(), // 차기 중간 점검일
 
   // 관리 정보
-  purchaseYear: z.number().int().min(1990).max(2100).optional(),
+  purchaseYear: z.number().int().min(1990).max(2100).optional(), // UI 입력용: 연도 (프론트엔드 호환)
+  purchaseDate: z.coerce.date().nullable().optional(), // DB와 동기화: purchaseDate (timestamp)
+  price: z.number().int().positive().nullable().optional(), // DB와 동기화: price (integer)
   teamId: z.string().uuid().optional().nullable(), // ✅ 스키마 일치화: uuid 타입으로 변경
   site: SiteEnum, // ✅ 사이트별 권한 관리: 필수 필드로 변경
 
@@ -82,7 +93,11 @@ export const baseEquipmentSchema = z.object({
   softwareType: SoftwareTypeEnum.optional(), // 'measurement' | 'analysis' | 'control' | 'other'
   manualLocation: z.string().optional(),
   accessories: z.string().optional(),
+  mainFeatures: z.string().optional(), // DB와 동기화: 주요 기능
   technicalManager: z.string().optional(), // 기술책임자 (사이트/팀 기준 필터링 Select)
+
+  // 장비 타입 (DB와 동기화)
+  equipmentType: z.string().optional(), // 장비 타입
 
   // 위치 및 설치 정보 (신규)
   initialLocation: z.string().optional(), // 최초 설치 위치
@@ -115,16 +130,17 @@ export const createEquipmentSchema = baseEquipmentSchema;
 export const updateEquipmentSchema = baseEquipmentSchema.partial();
 
 // 장비 조회용 스키마
+// DB 스키마 (packages/db/src/schema/equipment.ts)와 동기화
 export const equipmentSchema = baseEquipmentSchema.extend({
-  id: z.number().int().positive(),
-  uuid: z.string().uuid(),
+  id: z.string().uuid(), // DB와 동기화: uuid로 변경 (serial에서 변경됨)
   description: z.string().nullable().optional(),
-  price: z.number().int().positive().nullable().optional(),
-  purchaseDate: z.coerce.date().nullable().optional(),
   isActive: z.boolean().default(true),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  nextCalibrationDate: z.coerce.date().nullable().optional(),
+  // DB에 있는 추가 필드들
+  managerId: z.string().optional().nullable(), // 담당자 ID
+  intermediateCheckSchedule: z.coerce.date().optional().nullable(), // 중간점검 일정
+  repairHistory: z.string().optional().nullable(), // 수리 내역
 });
 
 // 장비 검색 필터 스키마
@@ -136,7 +152,11 @@ export const equipmentFilterSchema = z.object({
   location: z.string().optional(),
   manufacturer: z.string().optional(),
   site: SiteEnum.optional(),
-  calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환
+  classification: ClassificationEnum.optional(), // 분류 필터 (fcc_emc_rf, general_emc 등)
+  classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드 필터
+  calibrationMethod: CalibrationMethodEnum.optional(), // 교정 방법 필터 (외부교정/자체점검/비대상)
+  calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이내 교정 임박
+  calibrationDueAfter: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이후 교정 여유
   sort: z.string().optional(), // 정렬 기준 (예: 'name.asc')
   isShared: z
     .preprocess((val) => {
@@ -157,8 +177,29 @@ export type UpdateEquipmentInput = z.infer<typeof updateEquipmentSchema>;
 export type Equipment = z.infer<typeof equipmentSchema> & SoftDeleteEntity;
 export type EquipmentFilter = z.infer<typeof equipmentFilterSchema>;
 
-// 장비 목록 조회를 위한 응답 스키마
-export const equipmentListResponseSchema = PaginatedResponse(equipmentSchema);
+/**
+ * ✅ API 응답용 장비 타입 (팀 이름 포함)
+ *
+ * 백엔드 API 응답에서 팀 테이블과 조인하여 반환되는 데이터 형식입니다.
+ * 프론트엔드에서 추가 API 호출 없이 팀 이름을 표시할 수 있습니다.
+ *
+ * @example
+ * // API 응답
+ * {
+ *   id: "uuid-1234",
+ *   name: "Receiver",
+ *   teamId: "team-uuid-5678",
+ *   teamName: "RF팀(수원)",  // ← 조인된 팀 이름
+ *   ...
+ * }
+ */
+export const equipmentResponseSchema = equipmentSchema.extend({
+  teamName: z.string().nullable().optional(), // 팀 테이블에서 조인된 팀 이름
+});
+export type EquipmentResponse = z.infer<typeof equipmentResponseSchema>;
+
+// 장비 목록 조회를 위한 응답 스키마 (팀 이름 포함)
+export const equipmentListResponseSchema = PaginatedResponse(equipmentResponseSchema);
 export type EquipmentListResponse = z.infer<typeof equipmentListResponseSchema>;
 
 // 타입 가드

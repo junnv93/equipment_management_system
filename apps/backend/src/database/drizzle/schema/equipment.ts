@@ -2,12 +2,12 @@ import {
   integer,
   pgEnum,
   pgTable,
-  serial,
   text,
   timestamp,
   boolean,
   varchar,
   index,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 // 장비 상태 정의
@@ -31,11 +31,11 @@ export const calibrationMethods = [
 ] as const;
 
 // 장비 테이블 스키마
+// ✅ UUID 통일: serial(integer) id를 uuid id로 변경
 export const equipment = pgTable(
   'equipment',
   {
-    id: serial('id').primaryKey(),
-    uuid: varchar('uuid', { length: 36 }).notNull().unique(),
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
     name: varchar('name', { length: 100 }).notNull(),
     managementNumber: varchar('management_number', { length: 50 }).notNull().unique(),
     assetNumber: varchar('asset_number', { length: 50 }),
@@ -68,8 +68,9 @@ export const equipment = pgTable(
     nextIntermediateCheckDate: timestamp('next_intermediate_check_date'), // 차기 중간 점검일
 
     // 관리 정보
-    teamId: integer('team_id'),
+    teamId: uuid('team_id'),
     managerId: varchar('manager_id', { length: 36 }),
+    site: varchar('site', { length: 20 }).notNull(), // ✅ 사이트별 권한 관리: 필수 필드 'suwon' | 'uiwang'
     purchaseDate: timestamp('purchase_date'),
     price: integer('price'),
 
@@ -82,10 +83,28 @@ export const equipment = pgTable(
     accessories: text('accessories'),
     mainFeatures: text('main_features'),
     technicalManager: varchar('technical_manager', { length: 100 }),
+    softwareName: varchar('software_name', { length: 200 }),
+    softwareType: varchar('software_type', { length: 50 }),
 
     // 상태 정보
     status: varchar('status', { length: 50 }).notNull().default('available'),
     isActive: boolean('is_active').default(true),
+
+    // 승인 프로세스 필드
+    approvalStatus: varchar('approval_status', { length: 50 }).default('approved'),
+    requestedBy: varchar('requested_by', { length: 36 }),
+    approvedBy: varchar('approved_by', { length: 36 }),
+
+    // 추가 필드
+    equipmentType: varchar('equipment_type', { length: 50 }),
+    calibrationResult: text('calibration_result'),
+    correctionFactor: varchar('correction_factor', { length: 50 }),
+    intermediateCheckSchedule: timestamp('intermediate_check_schedule'),
+    repairHistory: text('repair_history'),
+
+    // 공용장비 필드
+    isShared: boolean('is_shared').default(false).notNull(),
+    sharedSource: varchar('shared_source', { length: 50 }),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow(),
@@ -112,6 +131,9 @@ export const equipment = pgTable(
         table.isActive,
         table.nextCalibrationDate
       ),
+      siteIdx: index('equipment_site_idx').on(table.site),
+      isSharedIdx: index('equipment_is_shared_idx').on(table.isShared),
+      softwareNameIdx: index('equipment_software_name_idx').on(table.softwareName),
     };
   }
 );

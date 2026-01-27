@@ -2,7 +2,7 @@
 
 import { isUser } from '../user';
 import { isTeam } from '../team';
-import { TeamEnum, UserRoleEnum } from '../enums';
+import { UserRoleEnum } from '../enums';
 
 describe('Type Guards', () => {
   describe('isUser', () => {
@@ -40,7 +40,7 @@ describe('Type Guards', () => {
   describe('isTeam', () => {
     it('should return true for valid team object', () => {
       const validTeam = {
-        id: TeamEnum.enum.rf,
+        id: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // UUID 형식
         name: 'RF Team',
         description: 'Radio Frequency Testing Team',
         equipmentCount: 10,
@@ -55,7 +55,7 @@ describe('Type Guards', () => {
 
     it('should return false for invalid team object', () => {
       const invalidTeam = {
-        id: 'INVALID_TEAM',
+        id: 'not-a-uuid', // 유효하지 않은 UUID
         name: '',
       };
 

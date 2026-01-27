@@ -2,12 +2,15 @@ import {
   EquipmentStatusEnum,
   CalibrationMethodEnum,
   UserRoleEnum,
-  TeamEnum,
   RentalStatusEnum,
   RentalTypeEnum,
   CalibrationStatusEnum,
   CheckoutStatusEnum,
-} from './enums';
+  ClassificationEnum,
+} from '@equipment-management/schemas';
+
+// TeamEnum is replaced by ClassificationEnum
+const TeamEnum = ClassificationEnum;
 
 // 장비 스키마
 export const equipmentSchema = {
@@ -24,8 +27,8 @@ export const equipmentSchema = {
   lastCalibrationDate: { type: 'date' },
   nextCalibrationDate: { type: 'date' },
   calibrationAgency: { type: 'string' },
-  calibrationMethod: { type: 'enum', values: Object.values(CalibrationMethodEnum) },
-  status: { type: 'enum', values: Object.values(EquipmentStatusEnum) },
+  calibrationMethod: { type: 'enum', values: CalibrationMethodEnum.options },
+  status: { type: 'enum', values: EquipmentStatusEnum.options },
   teamId: { type: 'string' },
   managerId: { type: 'string' },
   purchaseDate: { type: 'date' },
@@ -48,8 +51,8 @@ export const createEquipmentSchema = {
   lastCalibrationDate: { type: 'date' },
   nextCalibrationDate: { type: 'date' },
   calibrationAgency: { type: 'string' },
-  calibrationMethod: { type: 'enum', values: Object.values(CalibrationMethodEnum) },
-  status: { type: 'enum', values: Object.values(EquipmentStatusEnum) },
+  calibrationMethod: { type: 'enum', values: CalibrationMethodEnum.options },
+  status: { type: 'enum', values: EquipmentStatusEnum.options },
   teamId: { type: 'string' },
   managerId: { type: 'string' },
   purchaseDate: { type: 'date' },
@@ -70,8 +73,8 @@ export const updateEquipmentSchema = {
   lastCalibrationDate: { type: 'date', optional: true },
   nextCalibrationDate: { type: 'date', optional: true },
   calibrationAgency: { type: 'string', optional: true },
-  calibrationMethod: { type: 'enum', values: Object.values(CalibrationMethodEnum), optional: true },
-  status: { type: 'enum', values: Object.values(EquipmentStatusEnum), optional: true },
+  calibrationMethod: { type: 'enum', values: CalibrationMethodEnum.options, optional: true },
+  status: { type: 'enum', values: EquipmentStatusEnum.options, optional: true },
   teamId: { type: 'string', optional: true },
   managerId: { type: 'string', optional: true },
   purchaseDate: { type: 'date', optional: true },
@@ -88,8 +91,8 @@ export const rentalSchema = {
   expectedEndDate: { type: 'date' },
   actualEndDate: { type: 'date', optional: true },
   purpose: { type: 'string' },
-  status: { type: 'enum', values: Object.values(RentalStatusEnum) },
-  type: { type: 'enum', values: Object.values(RentalTypeEnum) },
+  status: { type: 'enum', values: RentalStatusEnum.options },
+  type: { type: 'enum', values: RentalTypeEnum.options },
   notes: { type: 'string', optional: true },
   location: { type: 'string', optional: true },
   createdAt: { type: 'date' },
@@ -103,7 +106,7 @@ export const createRentalSchema = {
   startDate: { type: 'date' },
   expectedEndDate: { type: 'date' },
   purpose: { type: 'string' },
-  type: { type: 'enum', values: Object.values(RentalTypeEnum) },
+  type: { type: 'enum', values: RentalTypeEnum.options },
   notes: { type: 'string', optional: true },
   location: { type: 'string', optional: true },
 };
@@ -115,8 +118,8 @@ export const updateRentalSchema = {
   expectedEndDate: { type: 'date', optional: true },
   actualEndDate: { type: 'date', optional: true },
   purpose: { type: 'string', optional: true },
-  status: { type: 'enum', values: Object.values(RentalStatusEnum), optional: true },
-  type: { type: 'enum', values: Object.values(RentalTypeEnum), optional: true },
+  status: { type: 'enum', values: RentalStatusEnum.options, optional: true },
+  type: { type: 'enum', values: RentalTypeEnum.options, optional: true },
   notes: { type: 'string', optional: true },
   location: { type: 'string', optional: true },
 };
@@ -128,8 +131,8 @@ export const calibrationSchema = {
   calibrationManagerId: { type: 'string' },
   calibrationDate: { type: 'date' },
   nextCalibrationDate: { type: 'date' },
-  calibrationMethod: { type: 'enum', values: Object.values(CalibrationMethodEnum) },
-  status: { type: 'enum', values: Object.values(CalibrationStatusEnum) },
+  calibrationMethod: { type: 'enum', values: CalibrationMethodEnum.options },
+  status: { type: 'enum', values: CalibrationStatusEnum.options },
   calibrationAgency: { type: 'string' },
   certificateNumber: { type: 'string', optional: true },
   certificateFile: { type: 'string', optional: true },
@@ -146,8 +149,8 @@ export const createCalibrationSchema = {
   calibrationManagerId: { type: 'string' },
   calibrationDate: { type: 'date' },
   nextCalibrationDate: { type: 'date' },
-  calibrationMethod: { type: 'enum', values: Object.values(CalibrationMethodEnum) },
-  status: { type: 'enum', values: Object.values(CalibrationStatusEnum) },
+  calibrationMethod: { type: 'enum', values: CalibrationMethodEnum.options },
+  status: { type: 'enum', values: CalibrationStatusEnum.options },
   calibrationAgency: { type: 'string' },
   certificateNumber: { type: 'string', optional: true },
   certificateFile: { type: 'string', optional: true },
@@ -161,8 +164,8 @@ export const updateCalibrationSchema = {
   calibrationManagerId: { type: 'string', optional: true },
   calibrationDate: { type: 'date', optional: true },
   nextCalibrationDate: { type: 'date', optional: true },
-  calibrationMethod: { type: 'enum', values: Object.values(CalibrationMethodEnum), optional: true },
-  status: { type: 'enum', values: Object.values(CalibrationStatusEnum), optional: true },
+  calibrationMethod: { type: 'enum', values: CalibrationMethodEnum.options, optional: true },
+  status: { type: 'enum', values: CalibrationStatusEnum.options, optional: true },
   calibrationAgency: { type: 'string', optional: true },
   certificateNumber: { type: 'string', optional: true },
   certificateFile: { type: 'string', optional: true },
@@ -176,7 +179,7 @@ export const userSchema = {
   id: { type: 'string' },
   email: { type: 'string' },
   name: { type: 'string' },
-  role: { type: 'enum', values: Object.values(UserRoleEnum) },
+  role: { type: 'enum', values: UserRoleEnum.options },
   teamId: { type: 'string', optional: true },
   department: { type: 'string', optional: true },
   position: { type: 'string', optional: true },
@@ -191,7 +194,7 @@ export const createUserSchema = {
   email: { type: 'string' },
   name: { type: 'string' },
   password: { type: 'string' },
-  role: { type: 'enum', values: Object.values(UserRoleEnum) },
+  role: { type: 'enum', values: UserRoleEnum.options },
   teamId: { type: 'string', optional: true },
   department: { type: 'string', optional: true },
   position: { type: 'string', optional: true },
@@ -201,7 +204,7 @@ export const createUserSchema = {
 // 사용자 업데이트 DTO 스키마
 export const updateUserSchema = {
   name: { type: 'string', optional: true },
-  role: { type: 'enum', values: Object.values(UserRoleEnum), optional: true },
+  role: { type: 'enum', values: UserRoleEnum.options, optional: true },
   teamId: { type: 'string', optional: true },
   department: { type: 'string', optional: true },
   position: { type: 'string', optional: true },
@@ -213,7 +216,7 @@ export const updateUserSchema = {
 export const teamSchema = {
   id: { type: 'string' },
   name: { type: 'string' },
-  code: { type: 'enum', values: Object.values(TeamEnum) },
+  code: { type: 'enum', values: TeamEnum.options },
   description: { type: 'string', optional: true },
   managerId: { type: 'string', optional: true },
   createdAt: { type: 'date' },
@@ -223,7 +226,7 @@ export const teamSchema = {
 // 팀 생성 DTO 스키마
 export const createTeamSchema = {
   name: { type: 'string' },
-  code: { type: 'enum', values: Object.values(TeamEnum) },
+  code: { type: 'enum', values: TeamEnum.options },
   description: { type: 'string', optional: true },
   managerId: { type: 'string', optional: true },
 };
@@ -231,7 +234,7 @@ export const createTeamSchema = {
 // 팀 업데이트 DTO 스키마
 export const updateTeamSchema = {
   name: { type: 'string', optional: true },
-  code: { type: 'enum', values: Object.values(TeamEnum), optional: true },
+  code: { type: 'enum', values: TeamEnum.options, optional: true },
   description: { type: 'string', optional: true },
   managerId: { type: 'string', optional: true },
 };
@@ -249,7 +252,7 @@ export const checkoutSchema = {
   expectedEndDate: { type: 'date' },
   actualEndDate: { type: 'date', optional: true },
   notes: { type: 'string', optional: true },
-  status: { type: 'enum', values: Object.values(CheckoutStatusEnum) },
+  status: { type: 'enum', values: CheckoutStatusEnum.options },
   createdAt: { type: 'date' },
   updatedAt: { type: 'date' },
 };
@@ -289,7 +292,7 @@ export const updateCheckoutSchema = {
   expectedEndDate: { type: 'date', optional: true },
   actualEndDate: { type: 'date', optional: true },
   notes: { type: 'string', optional: true },
-  status: { type: 'enum', values: Object.values(CheckoutStatusEnum), optional: true },
+  status: { type: 'enum', values: CheckoutStatusEnum.options, optional: true },
 };
 
 // 반출 장비 생성 DTO 스키마

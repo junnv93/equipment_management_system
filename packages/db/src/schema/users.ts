@@ -9,8 +9,8 @@ export const userRoles = [
   'lab_manager', // 시험소장 (Lab Manager)
 ] as const;
 
-// 사이트 타입 정의
-export const siteTypes = ['suwon', 'uiwang'] as const;
+// 사이트 타입 정의 (teams.ts에서 정의된 siteTypes 사용)
+// export const siteTypes = ['suwon', 'uiwang'] as const;
 
 // 위치 타입 정의
 export const locationTypes = ['수원랩', '의왕랩'] as const;

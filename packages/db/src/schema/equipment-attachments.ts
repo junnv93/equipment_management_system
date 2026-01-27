@@ -1,13 +1,12 @@
 import {
-  integer,
   pgEnum,
   pgTable,
-  serial,
   text,
   timestamp,
   varchar,
   index,
   bigint,
+  uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
@@ -21,15 +20,15 @@ export const attachmentTypeEnum = pgEnum('attachment_type', [
 ]);
 
 // 장비 첨부 파일 테이블
+// ✅ UUID 통일: serial(integer) id를 uuid id로 변경
 export const equipmentAttachments = pgTable(
   'equipment_attachments',
   {
-    id: serial('id').primaryKey(),
-    uuid: varchar('uuid', { length: 36 }).notNull().unique(),
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 연결 정보
-    equipmentId: integer('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }),
-    requestId: integer('request_id').references(() => equipmentRequests.id, {
+    equipmentId: uuid('equipment_id').references(() => equipment.id, { onDelete: 'cascade' }),
+    requestId: uuid('request_id').references(() => equipmentRequests.id, {
       onDelete: 'cascade',
     }), // 요청과 연결
 
@@ -51,8 +50,7 @@ export const equipmentAttachments = pgTable(
   },
   (table) => {
     return {
-      // 인덱스 추가
-      uuidIdx: index('equipment_attachments_uuid_idx').on(table.uuid),
+      // 인덱스 추가 (uuid를 PK로 사용하므로 별도 uuid 인덱스 불필요)
       equipmentIdIdx: index('equipment_attachments_equipment_id_idx').on(table.equipmentId),
       requestIdIdx: index('equipment_attachments_request_id_idx').on(table.requestId),
       attachmentTypeIdx: index('equipment_attachments_attachment_type_idx').on(

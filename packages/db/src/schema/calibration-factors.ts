@@ -109,10 +109,11 @@ export type CalibrationFactor = typeof calibrationFactors.$inferSelect;
 export type NewCalibrationFactor = typeof calibrationFactors.$inferInsert;
 
 // 보정계수 관계 정의
+// ✅ UUID 통일: equipment.uuid → equipment.id 참조로 변경
 export const calibrationFactorsRelations = relations(calibrationFactors, ({ one }) => ({
   equipment: one(equipment, {
     fields: [calibrationFactors.equipmentId],
-    references: [equipment.uuid],
+    references: [equipment.id],
   }),
   calibration: one(calibrations, {
     fields: [calibrationFactors.calibrationId],

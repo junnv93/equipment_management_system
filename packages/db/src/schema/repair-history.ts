@@ -1,31 +1,31 @@
 import {
   integer,
   pgTable,
-  serial,
   text,
   timestamp,
   boolean,
   varchar,
   index,
-  uuid as pgUuid,
+  uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
+import { nonConformances } from './non-conformances';
 
 /**
  * 장비 수리 이력 테이블
  *
  * 장비의 수리 이력을 기록합니다.
  * 수리 이력은 영구 보관됩니다 (소프트 삭제 지원).
+ * ✅ UUID 통일: serial(integer) id를 uuid id로 변경
  */
 export const repairHistory = pgTable(
   'repair_history',
   {
-    id: serial('id').primaryKey(),
-    uuid: varchar('uuid', { length: 36 }).notNull().unique(),
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 장비 연결
-    equipmentId: integer('equipment_id')
+    equipmentId: uuid('equipment_id')
       .notNull()
       .references(() => equipment.id, { onDelete: 'cascade' }),
 
@@ -44,10 +44,10 @@ export const repairHistory = pgTable(
     // 소프트 삭제
     isDeleted: boolean('is_deleted').default(false).notNull(),
     deletedAt: timestamp('deleted_at'),
-    deletedBy: varchar('deleted_by', { length: 36 }),
+    deletedBy: uuid('deleted_by'),
 
     // 시스템 필드
-    createdBy: varchar('created_by', { length: 36 }).notNull(),
+    createdBy: uuid('created_by').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
@@ -81,5 +81,11 @@ export const repairHistoryRelations = relations(repairHistory, ({ one }) => ({
   equipment: one(equipment, {
     fields: [repairHistory.equipmentId],
     references: [equipment.id],
+  }),
+  // 1:1 관계: 하나의 수리는 하나의 부적합에 연결될 수 있음
+  nonConformance: one(nonConformances, {
+    fields: [repairHistory.id],
+    references: [nonConformances.repairHistoryId],
+    relationName: 'nonConformanceRepair',
   }),
 }));

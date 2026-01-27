@@ -2,7 +2,6 @@ import {
   integer,
   pgEnum,
   pgTable,
-  serial,
   text,
   timestamp,
   boolean,
@@ -39,13 +38,21 @@ export const calibrationMethods = [
 ] as const;
 
 // 장비 테이블 스키마
+// ✅ UUID 통일: serial(integer) id를 uuid id로 변경하여 전체 스키마 일관성 확보
 export const equipment = pgTable(
   'equipment',
   {
-    id: serial('id').primaryKey(),
-    uuid: varchar('uuid', { length: 36 }).notNull().unique(),
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
     name: varchar('name', { length: 100 }).notNull(),
     managementNumber: varchar('management_number', { length: 50 }).notNull().unique(),
+
+    // 관리번호 컴포넌트 (검색/분석 최적화용)
+    // 관리번호 형식: XXX-XYYYY (시험소코드 3자리 - 분류코드 1자리 + 일련번호 4자리)
+    // @example 'SUW-E0001' → siteCode='SUW', classificationCode='E', managementSerialNumber=1
+    siteCode: varchar('site_code', { length: 3 }), // 시험소코드: SUW, UIW, PYT
+    classificationCode: varchar('classification_code', { length: 1 }), // 분류코드: E, R, W, S, A, P
+    managementSerialNumber: integer('management_serial_number'), // 일련번호: 1~9999
+
     assetNumber: varchar('asset_number', { length: 50 }),
     modelName: varchar('model_name', { length: 100 }),
     manufacturer: varchar('manufacturer', { length: 100 }),
@@ -148,6 +155,9 @@ export const equipment = pgTable(
       isSharedIdx: index('equipment_is_shared_idx').on(table.isShared),
       // 소프트웨어 검색 최적화
       softwareNameIdx: index('equipment_software_name_idx').on(table.softwareName),
+      // 관리번호 컴포넌트 검색 최적화
+      siteCodeIdx: index('equipment_site_code_idx').on(table.siteCode),
+      classificationCodeIdx: index('equipment_classification_code_idx').on(table.classificationCode),
     };
   }
 );

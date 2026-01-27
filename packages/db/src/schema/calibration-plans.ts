@@ -1,6 +1,5 @@
 import {
   pgTable,
-  serial,
   uuid,
   varchar,
   integer,
@@ -28,12 +27,12 @@ export const calibrationPlanStatus = [
  *
  * 연초에 작성되는 교정계획서로, 해당 연도의 외부교정 대상 장비 목록을 관리합니다.
  * 기술책임자가 작성하고 시험소장(lab_manager)이 최종 승인합니다.
+ * ✅ UUID 통일: serial(integer) id를 uuid id로 변경
  */
 export const calibrationPlans = pgTable(
   'calibration_plans',
   {
-    id: serial('id').primaryKey(),
-    uuid: uuid('uuid').defaultRandom().notNull().unique(),
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 기본 정보
     year: integer('year').notNull(), // 계획 연도
@@ -44,8 +43,8 @@ export const calibrationPlans = pgTable(
     status: varchar('status', { length: 20 }).notNull().default('draft'),
 
     // 작성자/승인자 정보
-    createdBy: varchar('created_by', { length: 36 }).notNull(), // 작성자 ID (기술책임자)
-    approvedBy: varchar('approved_by', { length: 36 }), // 승인자 ID (시험소장)
+    createdBy: uuid('created_by').notNull(), // 작성자 ID (기술책임자)
+    approvedBy: uuid('approved_by'), // 승인자 ID (시험소장)
     approvedAt: timestamp('approved_at'), // 승인일시
     rejectionReason: text('rejection_reason'), // 반려 사유
 
@@ -72,18 +71,18 @@ export const calibrationPlans = pgTable(
  * 교정계획서에 포함된 개별 장비 항목입니다.
  * 계획서 생성 시 장비 정보를 스냅샷으로 저장하며,
  * 실제 교정 완료 시 actualCalibrationDate가 자동으로 기록됩니다.
+ * ✅ UUID 통일: serial(integer) id를 uuid id로 변경
  */
 export const calibrationPlanItems = pgTable(
   'calibration_plan_items',
   {
-    id: serial('id').primaryKey(),
-    uuid: uuid('uuid').defaultRandom().notNull().unique(),
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
 
     // 관계
-    planId: integer('plan_id')
+    planId: uuid('plan_id')
       .notNull()
       .references(() => calibrationPlans.id, { onDelete: 'cascade' }),
-    equipmentId: integer('equipment_id')
+    equipmentId: uuid('equipment_id')
       .notNull()
       .references(() => equipment.id, { onDelete: 'cascade' }),
 
@@ -100,7 +99,7 @@ export const calibrationPlanItems = pgTable(
     plannedCalibrationAgency: varchar('planned_calibration_agency', { length: 100 }), // 계획된 교정기관
 
     // 확인 (기술책임자)
-    confirmedBy: varchar('confirmed_by', { length: 36 }), // 확인자 ID (기술책임자)
+    confirmedBy: uuid('confirmed_by'), // 확인자 ID (기술책임자)
     confirmedAt: timestamp('confirmed_at'), // 확인일시
 
     // 비고

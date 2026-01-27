@@ -10,13 +10,13 @@ export interface User {
   teamId?: string;
 }
 
-// 장비 타입
+// 장비 타입 (packages/schemas의 EquipmentStatus와 일치)
 export interface Equipment {
   id: string;
   name: string;
   managementNumber: string;
   description?: string;
-  status: 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'CALIBRATION' | 'DISPOSAL';
+  status: 'available' | 'in_use' | 'checked_out' | 'calibration_scheduled' | 'calibration_overdue' | 'non_conforming' | 'spare' | 'retired';
 }
 
 // 예약 타입

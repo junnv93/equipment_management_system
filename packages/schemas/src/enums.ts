@@ -51,23 +51,173 @@ export const UserRoleEnum = z.enum([
 
 export type UserRole = z.infer<typeof UserRoleEnum>;
 
-// 사이트 타입 열거형
-export const SiteEnum = z.enum(['suwon', 'uiwang']);
+// 사이트 타입 열거형 (확장: 평택 추가)
+export const SiteEnum = z.enum(['suwon', 'uiwang', 'pyeongtaek']);
 export type Site = z.infer<typeof SiteEnum>;
 
 // 위치 타입 열거형
-export const LocationEnum = z.enum(['수원랩', '의왕랩']);
+export const LocationEnum = z.enum(['수원랩', '의왕랩', '평택랩']);
 export type Location = z.infer<typeof LocationEnum>;
 
-// 팀 ID 열거형
-export const TeamEnum = z.enum([
-  'rf', // RF팀
-  'sar', // SAR팀
-  'emc', // EMC팀
-  'auto', // Automotive팀
-]);
+// ============================================================================
+// 관리번호 체계 관련 타입 및 상수 (UL-QP-18)
+// ============================================================================
 
-export type TeamId = z.infer<typeof TeamEnum>;
+/**
+ * 시험소 코드 (내부용 - 관리번호 프리픽스)
+ * 관리번호 형식: XXX-XYYYY (시험소코드 3자리 - 분류코드 1자리 + 일련번호 4자리)
+ */
+export const SiteCodeEnum = z.enum(['SUW', 'UIW', 'PYT']);
+export type SiteCode = z.infer<typeof SiteCodeEnum>;
+
+/**
+ * 장비 분류 (팀과 1:1 매핑)
+ * ✅ 팀이 분류를 결정함:
+ * - fcc_emc_rf: FCC EMC/RF (E)
+ * - general_emc: General EMC (R)
+ * - general_rf: General RF (W) - 의왕 사이트
+ * - sar: SAR (S)
+ * - automotive_emc: Automotive EMC (A)
+ * - software: Software Program (P)
+ */
+export const ClassificationEnum = z.enum([
+  'fcc_emc_rf', // FCC EMC/RF → E
+  'general_emc', // General EMC → R
+  'general_rf', // General RF → W (의왕)
+  'sar', // SAR → S
+  'automotive_emc', // Automotive EMC → A
+  'software', // Software Program → P
+]);
+export type Classification = z.infer<typeof ClassificationEnum>;
+
+/**
+ * 사이트명 → 시험소코드 매핑
+ * @example 'suwon' → 'SUW'
+ */
+export const SITE_TO_CODE: Record<Site, SiteCode> = {
+  suwon: 'SUW',
+  uiwang: 'UIW',
+  pyeongtaek: 'PYT',
+};
+
+/**
+ * 시험소코드 → 사이트명 역매핑
+ * @example 'SUW' → 'suwon'
+ */
+export const CODE_TO_SITE: Record<SiteCode, Site> = {
+  SUW: 'suwon',
+  UIW: 'uiwang',
+  PYT: 'pyeongtaek',
+};
+
+/**
+ * 분류 → 분류코드 매핑 (1자리)
+ * @example 'fcc_emc_rf' → 'E'
+ */
+export const CLASSIFICATION_TO_CODE: Record<Classification, string> = {
+  fcc_emc_rf: 'E',
+  general_emc: 'R',
+  general_rf: 'W',
+  sar: 'S',
+  automotive_emc: 'A',
+  software: 'P',
+};
+
+/**
+ * 분류코드 → 분류 역매핑
+ * @example 'E' → 'fcc_emc_rf'
+ */
+export const CODE_TO_CLASSIFICATION: Record<string, Classification> = {
+  E: 'fcc_emc_rf',
+  R: 'general_emc',
+  W: 'general_rf',
+  S: 'sar',
+  A: 'automotive_emc',
+  P: 'software',
+};
+
+/**
+ * 분류 라벨 (UI 표시용)
+ * @example 'fcc_emc_rf' → 'FCC EMC/RF'
+ */
+export const CLASSIFICATION_LABELS: Record<Classification, string> = {
+  fcc_emc_rf: 'FCC EMC/RF',
+  general_emc: 'General EMC',
+  general_rf: 'General RF',
+  sar: 'SAR',
+  automotive_emc: 'Automotive EMC',
+  software: 'Software Program',
+};
+
+/**
+ * 사이트 라벨 (UI 표시용)
+ * @example 'suwon' → '수원'
+ */
+export const SITE_LABELS: Record<Site, string> = {
+  suwon: '수원',
+  uiwang: '의왕',
+  pyeongtaek: '평택',
+};
+
+/**
+ * 관리번호 정규식 패턴
+ * 형식: XXX-XYYYY (예: SUW-E0001)
+ * 분류코드: E(FCC EMC/RF), R(General EMC), W(General RF), S(SAR), A(Automotive EMC), P(Software)
+ */
+export const MANAGEMENT_NUMBER_PATTERN = /^(SUW|UIW|PYT)-[ERWSAP]\d{4}$/;
+
+/**
+ * 관리번호 생성 헬퍼 함수
+ * @param site 사이트명 (suwon, uiwang, pyeongtaek)
+ * @param classification 분류 (fcc_emc_rf, general_emc 등)
+ * @param serialNumber 일련번호 (4자리 숫자 문자열, 예: '0001')
+ * @returns 관리번호 (예: 'SUW-E0001')
+ */
+export function generateManagementNumber(
+  site: Site,
+  classification: Classification,
+  serialNumber: string
+): string {
+  const siteCode = SITE_TO_CODE[site];
+  const classificationCode = CLASSIFICATION_TO_CODE[classification];
+  return `${siteCode}-${classificationCode}${serialNumber}`;
+}
+
+/**
+ * 관리번호 파싱 헬퍼 함수
+ * @param managementNumber 관리번호 (예: 'SUW-E0001')
+ * @returns 파싱된 컴포넌트 또는 null (유효하지 않은 경우)
+ */
+export function parseManagementNumber(managementNumber: string): {
+  siteCode: SiteCode;
+  site: Site;
+  classificationCode: string;
+  classification: Classification;
+  serialNumber: string;
+} | null {
+  const match = managementNumber.match(MANAGEMENT_NUMBER_PATTERN);
+  if (!match) {
+    return null;
+  }
+
+  const siteCode = managementNumber.substring(0, 3) as SiteCode;
+  const classificationCode = managementNumber.charAt(4);
+  const serialNumber = managementNumber.substring(5);
+
+  return {
+    siteCode,
+    site: CODE_TO_SITE[siteCode],
+    classificationCode,
+    classification: CODE_TO_CLASSIFICATION[classificationCode],
+    serialNumber,
+  };
+}
+
+// 팀 ID 스키마 (UUID 형식)
+// ✅ 팀 ID는 UUID 형식의 문자열
+export const TeamIdSchema = z.string().uuid().optional();
+
+export type TeamId = z.infer<typeof TeamIdSchema>;
 
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH: 대여 상태 열거형
@@ -455,3 +605,550 @@ export const CalibrationRequiredEnum = z.enum(
   CALIBRATION_REQUIRED_VALUES as unknown as [string, ...string[]]
 );
 export type CalibrationRequired = z.infer<typeof CalibrationRequiredEnum>;
+
+// ============================================================================
+// Phase 1: 추가 ENUM 정의 (SSOT 통합)
+// ============================================================================
+
+/**
+ * SINGLE SOURCE OF TRUTH: 부적합 유형 열거형
+ *
+ * 표준 유형값 (소문자 + 언더스코어):
+ * - damage: 손상
+ * - malfunction: 오작동
+ * - calibration_failure: 교정 실패
+ * - measurement_error: 측정 오류
+ * - other: 기타
+ */
+export const NON_CONFORMANCE_TYPE_VALUES = [
+  'damage', // 손상
+  'malfunction', // 오작동
+  'calibration_failure', // 교정 실패
+  'measurement_error', // 측정 오류
+  'other', // 기타
+] as const;
+
+export const NonConformanceTypeEnum = z.enum(
+  NON_CONFORMANCE_TYPE_VALUES as unknown as [string, ...string[]]
+);
+export type NonConformanceType = z.infer<typeof NonConformanceTypeEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 해결 유형 열거형
+ *
+ * 표준 유형값 (소문자 + 언더스코어):
+ * - repair: 수리
+ * - recalibration: 재교정
+ * - replacement: 교체
+ * - disposal: 폐기
+ * - other: 기타
+ */
+export const RESOLUTION_TYPE_VALUES = [
+  'repair', // 수리
+  'recalibration', // 재교정
+  'replacement', // 교체
+  'disposal', // 폐기
+  'other', // 기타
+] as const;
+
+export const ResolutionTypeEnum = z.enum(
+  RESOLUTION_TYPE_VALUES as unknown as [string, ...string[]]
+);
+export type ResolutionType = z.infer<typeof ResolutionTypeEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 사용자 상태 열거형
+ *
+ * 표준 상태값 (소문자):
+ * - active: 활성
+ * - inactive: 비활성
+ * - pending: 승인 대기
+ */
+export const USER_STATUS_VALUES = ['active', 'inactive', 'pending'] as const;
+
+export const UserStatusEnum = z.enum(USER_STATUS_VALUES as unknown as [string, ...string[]]);
+export type UserStatus = z.infer<typeof UserStatusEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 수리 결과 열거형
+ *
+ * 표준 결과값 (소문자):
+ * - completed: 완료
+ * - partial: 부분 완료
+ * - failed: 실패
+ */
+export const REPAIR_RESULT_VALUES = ['completed', 'partial', 'failed'] as const;
+
+export const RepairResultEnum = z.enum(REPAIR_RESULT_VALUES as unknown as [string, ...string[]]);
+export type RepairResult = z.infer<typeof RepairResultEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 알림 유형 열거형
+ *
+ * 표준 유형값 (소문자 + 언더스코어):
+ */
+export const NOTIFICATION_TYPE_VALUES = [
+  'calibration_due', // 교정 예정
+  'calibration_completed', // 교정 완료
+  'calibration_approval_pending', // 교정 승인 대기
+  'calibration_approved', // 교정 승인됨
+  'calibration_rejected', // 교정 반려됨
+  'intermediate_check_due', // 중간점검 예정
+  'rental_request', // 대여 요청
+  'rental_approved', // 대여 승인됨
+  'rental_rejected', // 대여 반려됨
+  'rental_completed', // 대여 완료
+  'return_requested', // 반납 요청
+  'return_approved', // 반납 승인됨
+  'return_rejected', // 반납 반려됨
+  'equipment_maintenance', // 장비 유지보수
+  'system', // 시스템
+  'checkout', // 반출
+  'maintenance', // 유지보수
+] as const;
+
+export const NotificationTypeEnum = z.enum(
+  NOTIFICATION_TYPE_VALUES as unknown as [string, ...string[]]
+);
+export type NotificationType = z.infer<typeof NotificationTypeEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 알림 우선순위 열거형
+ *
+ * 표준 우선순위값 (소문자):
+ * - low: 낮음
+ * - medium: 보통
+ * - high: 높음
+ */
+export const NOTIFICATION_PRIORITY_VALUES = ['low', 'medium', 'high'] as const;
+
+export const NotificationPriorityEnum = z.enum(
+  NOTIFICATION_PRIORITY_VALUES as unknown as [string, ...string[]]
+);
+export type NotificationPriority = z.infer<typeof NotificationPriorityEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 반납 상태 열거형
+ *
+ * 표준 상태값 (소문자 + 언더스코어):
+ * - good: 양호
+ * - damaged: 손상
+ * - lost: 분실
+ * - needs_repair: 수리 필요
+ * - needs_calibration: 교정 필요
+ */
+export const RETURN_CONDITION_VALUES = [
+  'good', // 양호
+  'damaged', // 손상
+  'lost', // 분실
+  'needs_repair', // 수리 필요
+  'needs_calibration', // 교정 필요
+] as const;
+
+export const ReturnConditionEnum = z.enum(
+  RETURN_CONDITION_VALUES as unknown as [string, ...string[]]
+);
+export type ReturnCondition = z.infer<typeof ReturnConditionEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 반납 승인 상태 열거형
+ *
+ * 표준 상태값 (소문자):
+ * - pending: 승인 대기
+ * - approved: 승인됨
+ * - rejected: 반려됨
+ */
+export const RETURN_APPROVAL_STATUS_VALUES = ['pending', 'approved', 'rejected'] as const;
+
+export const ReturnApprovalStatusEnum = z.enum(
+  RETURN_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type ReturnApprovalStatus = z.infer<typeof ReturnApprovalStatusEnum>;
+
+// ============================================================================
+// LABELS 맵 정의 (UI 표시용 한글 라벨)
+// ============================================================================
+
+/**
+ * 장비 상태 라벨 (UI 표시용)
+ */
+export const EQUIPMENT_STATUS_VALUES = EquipmentStatusEnum.options;
+export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
+  available: '사용 가능',
+  in_use: '사용 중',
+  checked_out: '반출 중',
+  calibration_scheduled: '교정 예정',
+  calibration_overdue: '교정 기한 초과',
+  non_conforming: '부적합',
+  spare: '여분',
+  retired: '폐기',
+};
+
+/**
+ * 교정 방법 라벨 (UI 표시용)
+ */
+export const CALIBRATION_METHOD_VALUES = CalibrationMethodEnum.options;
+export const CALIBRATION_METHOD_LABELS: Record<CalibrationMethod, string> = {
+  external_calibration: '외부 교정',
+  self_inspection: '자체 점검',
+  not_applicable: '비대상',
+};
+
+/**
+ * 사용자 역할 라벨 (UI 표시용)
+ */
+export const USER_ROLE_VALUES = UserRoleEnum.options;
+export const USER_ROLE_LABELS: Record<UserRole, string> = {
+  test_engineer: '시험실무자',
+  technical_manager: '기술책임자',
+  lab_manager: '시험소장',
+};
+
+/**
+ * 대여 상태 라벨 (UI 표시용)
+ */
+export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
+  pending: '승인 대기',
+  approved: '승인됨',
+  active: '대여 중',
+  returned: '반납 완료',
+  overdue: '기한 초과',
+  rejected: '거절됨',
+  canceled: '취소됨',
+};
+
+/**
+ * 반출 상태 라벨 (UI 표시용)
+ */
+export const CHECKOUT_STATUS_LABELS: Record<CheckoutStatus, string> = {
+  pending: '승인 대기',
+  approved: '승인됨',
+  rejected: '거절됨',
+  checked_out: '반출 중',
+  returned: '반입 완료',
+  return_approved: '반입 승인됨',
+  overdue: '기한 초과',
+  canceled: '취소됨',
+};
+
+/**
+ * 반출 목적 라벨 (UI 표시용)
+ */
+export const CHECKOUT_PURPOSE_LABELS: Record<CheckoutPurpose, string> = {
+  calibration: '교정',
+  repair: '수리',
+  rental: '대여',
+};
+
+/**
+ * 부적합 상태 라벨 (UI 표시용)
+ */
+export const NON_CONFORMANCE_STATUS_LABELS: Record<NonConformanceStatus, string> = {
+  open: '등록됨',
+  analyzing: '분석 중',
+  corrected: '조치 완료',
+  closed: '종료됨',
+};
+
+/**
+ * 부적합 유형 라벨 (UI 표시용)
+ */
+export const NON_CONFORMANCE_TYPE_LABELS: Record<NonConformanceType, string> = {
+  damage: '손상',
+  malfunction: '오작동',
+  calibration_failure: '교정 실패',
+  measurement_error: '측정 오류',
+  other: '기타',
+};
+
+/**
+ * 해결 유형 라벨 (UI 표시용)
+ */
+export const RESOLUTION_TYPE_LABELS: Record<ResolutionType, string> = {
+  repair: '수리',
+  recalibration: '재교정',
+  replacement: '교체',
+  disposal: '폐기',
+  other: '기타',
+};
+
+/**
+ * 수리 결과 라벨 (UI 표시용)
+ */
+export const REPAIR_RESULT_LABELS: Record<RepairResult, string> = {
+  completed: '완료',
+  partial: '부분 완료',
+  failed: '실패',
+};
+
+/**
+ * 사용자 상태 라벨 (UI 표시용)
+ */
+export const USER_STATUS_LABELS: Record<UserStatus, string> = {
+  active: '활성',
+  inactive: '비활성',
+  pending: '승인 대기',
+};
+
+/**
+ * 알림 우선순위 라벨 (UI 표시용)
+ */
+export const NOTIFICATION_PRIORITY_LABELS: Record<NotificationPriority, string> = {
+  low: '낮음',
+  medium: '보통',
+  high: '높음',
+};
+
+/**
+ * 반납 상태 라벨 (UI 표시용)
+ */
+export const RETURN_CONDITION_LABELS: Record<ReturnCondition, string> = {
+  good: '양호',
+  damaged: '손상',
+  lost: '분실',
+  needs_repair: '수리 필요',
+  needs_calibration: '교정 필요',
+};
+
+/**
+ * 보정계수 타입 라벨 (UI 표시용)
+ */
+export const CALIBRATION_FACTOR_TYPE_LABELS: Record<CalibrationFactorType, string> = {
+  antenna_gain: '안테나 이득',
+  cable_loss: '케이블 손실',
+  path_loss: '경로 손실',
+  amplifier_gain: '증폭기 이득',
+  other: '기타',
+};
+
+/**
+ * 소프트웨어 타입 라벨 (UI 표시용)
+ */
+export const SOFTWARE_TYPE_LABELS: Record<SoftwareType, string> = {
+  measurement: '측정 소프트웨어',
+  analysis: '분석 소프트웨어',
+  control: '제어 소프트웨어',
+  other: '기타',
+};
+
+/**
+ * 사고 유형 라벨 (UI 표시용)
+ */
+export const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
+  damage: '손상',
+  malfunction: '오작동',
+  change: '변경',
+  repair: '수리',
+};
+
+/**
+ * 교정계획서 상태 라벨 (UI 표시용)
+ */
+export const CALIBRATION_PLAN_STATUS_LABELS: Record<CalibrationPlanStatus, string> = {
+  draft: '작성 중',
+  pending_approval: '승인 대기',
+  approved: '승인됨',
+  rejected: '반려됨',
+};
+
+/**
+ * 교정 승인 상태 라벨 (UI 표시용)
+ */
+export const CALIBRATION_APPROVAL_STATUS_LABELS: Record<CalibrationApprovalStatus, string> = {
+  pending_approval: '승인 대기',
+  approved: '승인됨',
+  rejected: '반려됨',
+};
+
+/**
+ * 보정계수 승인 상태 라벨 (UI 표시용)
+ */
+export const CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS: Record<
+  CalibrationFactorApprovalStatus,
+  string
+> = {
+  pending: '승인 대기',
+  approved: '승인됨',
+  rejected: '반려됨',
+};
+
+/**
+ * 소프트웨어 승인 상태 라벨 (UI 표시용)
+ */
+export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, string> = {
+  pending: '승인 대기',
+  approved: '승인됨',
+  rejected: '반려됨',
+};
+
+// ============================================================================
+// CONST VALUE OBJECTS (TypeScript enum 스타일 접근용)
+// Zod enum은 .VALUE 형식 접근이 불가능하므로, 기존 코드 호환성을 위해 제공
+// ============================================================================
+
+/**
+ * 알림 우선순위 값 객체 (dot-notation 접근용)
+ * @example NotificationPriorityValues.MEDIUM // 'medium'
+ */
+export const NotificationPriorityValues = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
+} as const;
+
+/**
+ * 알림 유형 값 객체 (dot-notation 접근용)
+ * @example NotificationTypeValues.CALIBRATION_DUE // 'calibration_due'
+ */
+export const NotificationTypeValues = {
+  CALIBRATION_DUE: 'calibration_due',
+  CALIBRATION_COMPLETED: 'calibration_completed',
+  CALIBRATION_APPROVAL_PENDING: 'calibration_approval_pending',
+  CALIBRATION_APPROVED: 'calibration_approved',
+  CALIBRATION_REJECTED: 'calibration_rejected',
+  INTERMEDIATE_CHECK_DUE: 'intermediate_check_due',
+  RENTAL_REQUEST: 'rental_request',
+  RENTAL_APPROVED: 'rental_approved',
+  RENTAL_REJECTED: 'rental_rejected',
+  RENTAL_COMPLETED: 'rental_completed',
+  RETURN_REQUESTED: 'return_requested',
+  RETURN_APPROVED: 'return_approved',
+  RETURN_REJECTED: 'return_rejected',
+  EQUIPMENT_MAINTENANCE: 'equipment_maintenance',
+  SYSTEM: 'system',
+  CHECKOUT: 'checkout',
+  MAINTENANCE: 'maintenance',
+} as const;
+
+/**
+ * 반납 상태 값 객체 (dot-notation 접근용)
+ * @example ReturnConditionValues.GOOD // 'good'
+ */
+export const ReturnConditionValues = {
+  GOOD: 'good',
+  DAMAGED: 'damaged',
+  LOST: 'lost',
+  NEEDS_REPAIR: 'needs_repair',
+  NEEDS_CALIBRATION: 'needs_calibration',
+} as const;
+
+/**
+ * 반납 승인 상태 값 객체 (dot-notation 접근용)
+ * @example ReturnApprovalStatusValues.APPROVED // 'approved'
+ */
+export const ReturnApprovalStatusValues = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+/**
+ * 수리 결과 값 객체 (dot-notation 접근용)
+ * @example RepairResultValues.COMPLETED // 'completed'
+ */
+export const RepairResultValues = {
+  COMPLETED: 'completed',
+  PARTIAL: 'partial',
+  FAILED: 'failed',
+} as const;
+
+/**
+ * 소프트웨어 승인 상태 값 객체 (dot-notation 접근용)
+ * @example SoftwareApprovalStatusValues.PENDING // 'pending'
+ */
+export const SoftwareApprovalStatusValues = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+/**
+ * 보정계수 타입 값 객체 (dot-notation 접근용)
+ * @example CalibrationFactorTypeValues.ANTENNA_GAIN // 'antenna_gain'
+ */
+export const CalibrationFactorTypeValues = {
+  ANTENNA_GAIN: 'antenna_gain',
+  CABLE_LOSS: 'cable_loss',
+  PATH_LOSS: 'path_loss',
+  AMPLIFIER_GAIN: 'amplifier_gain',
+  OTHER: 'other',
+} as const;
+
+/**
+ * 사고 유형 값 객체 (dot-notation 접근용)
+ * @example IncidentTypeValues.DAMAGE // 'damage'
+ */
+export const IncidentTypeValues = {
+  DAMAGE: 'damage',
+  MALFUNCTION: 'malfunction',
+  CHANGE: 'change',
+  REPAIR: 'repair',
+} as const;
+
+/**
+ * 부적합 유형 값 객체 (dot-notation 접근용)
+ * @example NonConformanceTypeValues.DAMAGE // 'damage'
+ */
+export const NonConformanceTypeValues = {
+  DAMAGE: 'damage',
+  MALFUNCTION: 'malfunction',
+  CALIBRATION_FAILURE: 'calibration_failure',
+  MEASUREMENT_ERROR: 'measurement_error',
+  OTHER: 'other',
+} as const;
+
+/**
+ * 부적합 상태 값 객체 (dot-notation 접근용)
+ * @example NonConformanceStatusValues.OPEN // 'open'
+ */
+export const NonConformanceStatusValues = {
+  OPEN: 'open',
+  ANALYZING: 'analyzing',
+  CORRECTED: 'corrected',
+  CLOSED: 'closed',
+} as const;
+
+/**
+ * 장비 상태 값 객체 (dot-notation 접근용)
+ * @example EquipmentStatusValues.AVAILABLE // 'available'
+ */
+export const EquipmentStatusValues = {
+  AVAILABLE: 'available',
+  IN_USE: 'in_use',
+  CHECKED_OUT: 'checked_out',
+  CALIBRATION_SCHEDULED: 'calibration_scheduled',
+  CALIBRATION_OVERDUE: 'calibration_overdue',
+  NON_CONFORMING: 'non_conforming',
+  SPARE: 'spare',
+  RETIRED: 'retired',
+} as const;
+
+/**
+ * 사용자 역할 값 객체 (dot-notation 접근용)
+ * @example UserRoleValues.LAB_MANAGER // 'lab_manager'
+ */
+export const UserRoleValues = {
+  TEST_ENGINEER: 'test_engineer',
+  TECHNICAL_MANAGER: 'technical_manager',
+  LAB_MANAGER: 'lab_manager',
+} as const;
+
+/**
+ * 사용자 상태 값 객체 (dot-notation 접근용)
+ * @example UserStatusValues.ACTIVE // 'active'
+ */
+export const UserStatusValues = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  PENDING: 'pending',
+} as const;
+
+/**
+ * 보정계수 승인 상태 값 객체 (dot-notation 접근용)
+ * @example CalibrationFactorApprovalStatusValues.PENDING // 'pending'
+ */
+export const CalibrationFactorApprovalStatusValues = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;

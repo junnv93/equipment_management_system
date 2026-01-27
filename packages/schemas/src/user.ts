@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRoleEnum, TeamEnum } from './enums';
+import { UserRoleEnum, TeamIdSchema } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
 
 // 기본 사용자 스키마 (공통 필드)
@@ -7,7 +7,7 @@ export const baseUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
   role: UserRoleEnum,
-  teamId: TeamEnum.optional(),
+  teamId: TeamIdSchema, // UUID 형식의 팀 ID
   department: z.string().max(100).optional(),
   position: z.string().max(100).optional(),
   phoneNumber: z.string().max(20).optional(),

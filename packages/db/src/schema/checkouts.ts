@@ -96,6 +96,7 @@ export const checkouts = pgTable('checkouts', {
 });
 
 // 반출된 장비 목록 테이블 스키마
+// ✅ UUID 통일: equipmentId를 uuid로 변경 (equipment.id가 uuid로 변경됨)
 export const checkoutItems = pgTable('checkout_items', {
   id: uuid('id').primaryKey().defaultRandom().notNull(),
   checkoutId: uuid('checkout_id')

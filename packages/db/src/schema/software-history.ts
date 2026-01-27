@@ -91,10 +91,11 @@ export type SoftwareHistory = typeof softwareHistory.$inferSelect;
 export type NewSoftwareHistory = typeof softwareHistory.$inferInsert;
 
 // 소프트웨어 이력 관계 정의
+// ✅ UUID 통일: equipment.uuid → equipment.id 참조로 변경
 export const softwareHistoryRelations = relations(softwareHistory, ({ one }) => ({
   equipment: one(equipment, {
     fields: [softwareHistory.equipmentId],
-    references: [equipment.uuid],
+    references: [equipment.id],
   }),
   changer: one(users, {
     fields: [softwareHistory.changedBy],
