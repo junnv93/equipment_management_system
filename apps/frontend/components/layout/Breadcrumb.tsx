@@ -14,13 +14,9 @@
 import { Fragment } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  generateBreadcrumbs,
-  generateMobileBreadcrumbs,
-  getHomeBreadcrumb,
-} from '@/lib/navigation/generate-breadcrumbs';
+import { generateBreadcrumbs } from '@/lib/navigation/generate-breadcrumbs';
 
 /**
  * Breadcrumb Props
@@ -59,42 +55,31 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
   return (
     <nav
       aria-label="breadcrumb"
-      className={cn('flex items-center gap-2', className)}
+      className={cn('flex items-center gap-1.5', className)}
     >
-      {/* 홈 아이콘 - 항상 표시 */}
-      <Link
-        href="/"
-        className={cn(
-          'flex items-center justify-center w-8 h-8 rounded-lg',
-          'bg-ul-red hover:bg-ul-red/90 transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2',
-          'shrink-0' // 아이콘 크기 고정
-        )}
-        aria-label="홈으로 이동"
-      >
-        <Home className="h-4 w-4 text-white" aria-hidden="true" />
-      </Link>
-
       {/* 생략 표시 (maxItems로 인해 숨겨진 항목이 있는 경우) */}
       {hasMore && (
         <>
-          <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
           <span className="text-sm text-gray-500" aria-hidden="true">
             ...
           </span>
+          <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
         </>
       )}
 
-      {/* 브레드크럼 항목들 (홈 제외) */}
-      {displayItems.slice(1).map((item, index) => {
+      {/* 브레드크럼 항목들 (텍스트 기반) */}
+      {displayItems.map((item, index) => {
         const Icon = item.icon;
+        const isFirst = index === 0;
 
         return (
           <Fragment key={item.href}>
-            <ChevronRight
-              className="h-4 w-4 text-gray-400 shrink-0"
-              aria-hidden="true"
-            />
+            {!isFirst && (
+              <ChevronRight
+                className="h-4 w-4 text-gray-400 shrink-0"
+                aria-hidden="true"
+              />
+            )}
 
             {item.current ? (
               <span
@@ -111,12 +96,12 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
               <Link
                 href={item.href}
                 className={cn(
-                  'text-sm text-gray-600 dark:text-gray-400',
+                  'text-sm text-gray-500 dark:text-gray-400',
                   'hover:text-gray-900 dark:hover:text-gray-100',
-                  'hover:bg-gray-100 dark:hover:bg-gray-800',
-                  'px-2 py-1 rounded transition-colors',
+                  'hover:underline',
+                  'transition-colors',
                   'truncate max-w-[200px]',
-                  'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2'
+                  'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2 rounded'
                 )}
               >
                 {Icon && <Icon className="inline h-3.5 w-3.5 mr-1" aria-hidden="true" />}
@@ -141,64 +126,27 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
 export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) {
   const pathname = usePathname();
   const allItems = generateBreadcrumbs(pathname, dynamicLabels);
-  const items = generateMobileBreadcrumbs(allItems);
 
   // 브레드크럼이 없으면 렌더링하지 않음
   if (allItems.length === 0) {
     return null;
   }
 
-  // 홈만 있는 경우 (대시보드 페이지)
-  if (allItems.length === 1) {
-    return (
-      <nav aria-label="breadcrumb" className={cn('flex items-center gap-1', className)}>
-        <Link
-          href="/"
-          className={cn(
-            'flex items-center justify-center w-7 h-7 rounded-lg',
-            'bg-ul-red hover:bg-ul-red/90 transition-colors',
-            'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2'
-          )}
-          aria-label="홈으로 이동"
-        >
-          <Home className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-        </Link>
-      </nav>
-    );
-  }
+  // 현재 페이지 (마지막 항목)
+  const currentItem = allItems[allItems.length - 1];
 
   return (
     <nav aria-label="breadcrumb" className={cn('flex items-center gap-1', className)}>
-      {/* 홈 아이콘 */}
-      <Link
-        href="/"
+      <span
         className={cn(
-          'flex items-center justify-center w-7 h-7 rounded-lg',
-          'bg-ul-red hover:bg-ul-red/90 transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2',
-          'shrink-0'
+          'text-sm text-gray-900 dark:text-gray-100',
+          'truncate max-w-[180px]',
+          'font-medium'
         )}
-        aria-label="홈으로 이동"
+        aria-current="page"
       >
-        <Home className="h-3.5 w-3.5 text-white" aria-hidden="true" />
-      </Link>
-
-      {/* 마지막 항목만 표시 */}
-      {items.length > 0 && (
-        <>
-          <ChevronRight className="h-3 w-3 text-gray-400 shrink-0" aria-hidden="true" />
-          <span
-            className={cn(
-              'text-xs text-gray-700 dark:text-gray-300',
-              'truncate max-w-[120px]',
-              'font-medium'
-            )}
-            aria-current="page"
-          >
-            {items[items.length - 1].label}
-          </span>
-        </>
-      )}
+        {currentItem.label}
+      </span>
     </nav>
   );
 }
@@ -232,31 +180,6 @@ export function ResponsiveBreadcrumb({
 }
 
 /**
- * 컴팩트 브레드크럼 (아이콘만)
- *
- * 공간이 제한적인 경우 사용합니다.
- *
- * @example
- * <CompactBreadcrumb />
- */
-export function CompactBreadcrumb({ className }: { className?: string }) {
-  return (
-    <Link
-      href="/"
-      className={cn(
-        'flex items-center justify-center w-8 h-8 rounded-lg',
-        'bg-ul-red hover:bg-ul-red/90 transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2',
-        className
-      )}
-      aria-label="홈으로 이동"
-    >
-      <Home className="h-4 w-4 text-white" aria-hidden="true" />
-    </Link>
-  );
-}
-
-/**
  * 브레드크럼 스켈레톤 (로딩 상태)
  *
  * 브레드크럼 로딩 중 표시할 스켈레톤입니다.
@@ -264,18 +187,16 @@ export function CompactBreadcrumb({ className }: { className?: string }) {
 export function BreadcrumbSkeleton({ className }: { className?: string }) {
   return (
     <div
-      className={cn('flex items-center gap-2 animate-pulse', className)}
+      className={cn('flex items-center gap-1.5 animate-pulse', className)}
       aria-label="브레드크럼 로딩 중"
     >
-      {/* 홈 아이콘 스켈레톤 */}
-      <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg" />
-
       {/* 첫 번째 항목 */}
+      <div className="w-16 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
+
+      {/* 구분자 */}
       <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-      <div className="w-20 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
 
       {/* 두 번째 항목 */}
-      <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
       <div className="w-24 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
     </div>
   );

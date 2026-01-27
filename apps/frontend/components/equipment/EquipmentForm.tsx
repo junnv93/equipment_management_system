@@ -116,6 +116,21 @@ export interface PendingHistoryData {
   calibrationHistory: CreateCalibrationHistoryInput[];
 }
 
+/**
+ * ★ Best Practice: 임시 이력 항목 타입 (고유 ID 매핑용)
+ * - 기존 인덱스 기반 삭제는 동기화 문제 발생 가능
+ * - tempId를 키로 사용하여 안전하게 매핑
+ */
+interface PendingHistoryItem<T> {
+  tempId: string;
+  data: T;
+}
+
+type PendingLocationHistoryItem = PendingHistoryItem<CreateLocationHistoryInput>;
+type PendingMaintenanceHistoryItem = PendingHistoryItem<CreateMaintenanceHistoryInput>;
+type PendingIncidentHistoryItem = PendingHistoryItem<CreateIncidentHistoryInput>;
+type PendingCalibrationHistoryItem = PendingHistoryItem<CreateCalibrationHistoryInput>;
+
 interface EquipmentFormProps {
   initialData?: Partial<FormValues & { uuid?: string }>;
   onSubmit: (
@@ -219,11 +234,15 @@ export function EquipmentForm({
   const [calibrationHistory, setCalibrationHistory] = useState<any[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
-  // 등록 모드용 임시 이력 상태 (장비 생성 후 일괄 저장)
-  const [pendingLocationHistory, setPendingLocationHistory] = useState<CreateLocationHistoryInput[]>([]);
-  const [pendingMaintenanceHistory, setPendingMaintenanceHistory] = useState<CreateMaintenanceHistoryInput[]>([]);
-  const [pendingIncidentHistory, setPendingIncidentHistory] = useState<CreateIncidentHistoryInput[]>([]);
-  const [pendingCalibrationHistory, setPendingCalibrationHistory] = useState<CreateCalibrationHistoryInput[]>([]);
+  /**
+   * ★ Best Practice: Map 기반 임시 이력 관리
+   * - 기존: 배열 인덱스 기반 → 삭제 시 인덱스 불일치 버그
+   * - 개선: tempId를 키로 사용하는 Map 구조 → 안전한 삭제/조회
+   */
+  const [pendingLocationHistory, setPendingLocationHistory] = useState<PendingLocationHistoryItem[]>([]);
+  const [pendingMaintenanceHistory, setPendingMaintenanceHistory] = useState<PendingMaintenanceHistoryItem[]>([]);
+  const [pendingIncidentHistory, setPendingIncidentHistory] = useState<PendingIncidentHistoryItem[]>([]);
+  const [pendingCalibrationHistory, setPendingCalibrationHistory] = useState<PendingCalibrationHistoryItem[]>([]);
 
   // 기본 스키마로 폼 초기화
   const form = useForm<FormValues>({
@@ -325,6 +344,14 @@ export function EquipmentForm({
     });
   }, [toast]);
 
+  /**
+   * ★ Best Practice: tempId 생성 함수
+   * - crypto.randomUUID() 대신 호환성 높은 방식 사용
+   */
+  const generateTempId = useCallback(() => {
+    return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
+
   // 이력 추가/삭제 핸들러 (수정 모드: API 호출, 등록 모드: 임시 상태 업데이트)
   const handleAddLocationHistory = useCallback(async (data: CreateLocationHistoryInput) => {
     if (isEdit && initialData?.uuid) {
@@ -342,8 +369,9 @@ export function EquipmentForm({
       }
     } else {
       // 등록 모드: 임시 상태에 추가 (화면 표시용 + 나중에 일괄 저장)
+      const tempId = generateTempId();
       const tempItem: LocationHistoryItem = {
-        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: tempId,
         equipmentId: '',
         changedAt: new Date(data.changedAt),
         newLocation: data.newLocation,
@@ -351,9 +379,10 @@ export function EquipmentForm({
         createdAt: new Date(),
       };
       setLocationHistory((prev) => [tempItem, ...prev]);
-      setPendingLocationHistory((prev) => [...prev, data]);
+      // ★ Best Practice: tempId를 키로 저장하여 안전한 삭제 보장
+      setPendingLocationHistory((prev) => [...prev, { tempId, data }]);
     }
-  }, [isEdit, initialData?.uuid, toast, handleHistoryError]);
+  }, [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]);
 
   const handleDeleteLocationHistory = useCallback(async (historyId: string) => {
     try {
@@ -363,18 +392,19 @@ export function EquipmentForm({
       }
       // 둘 다 로컬 상태에서 제거
       setLocationHistory((prev) => prev.filter((item) => item.id !== historyId));
-      // 등록 모드인 경우 pending에서도 제거 (인덱스 기반)
+      /**
+       * ★ Best Practice: tempId 기반 삭제
+       * - 기존 인덱스 기반: locationHistory 상태와 동기화 문제 발생
+       * - 개선된 tempId 기반: historyId와 직접 매칭하여 정확한 삭제
+       */
       if (!isEdit && historyId.startsWith('temp-')) {
-        const index = locationHistory.findIndex((item) => item.id === historyId);
-        if (index !== -1) {
-          setPendingLocationHistory((prev) => prev.filter((_, i) => i !== index));
-        }
+        setPendingLocationHistory((prev) => prev.filter((item) => item.tempId !== historyId));
       }
     } catch (error) {
       handleHistoryError(error, '위치 변동 이력 삭제');
       throw error;
     }
-  }, [isEdit, locationHistory, handleHistoryError]);
+  }, [isEdit, handleHistoryError]);
 
   const handleAddMaintenanceHistory = useCallback(async (data: CreateMaintenanceHistoryInput) => {
     if (isEdit && initialData?.uuid) {
@@ -392,17 +422,18 @@ export function EquipmentForm({
       }
     } else {
       // 등록 모드: 임시 상태에 추가
+      const tempId = generateTempId();
       const tempItem: MaintenanceHistoryItem = {
-        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: tempId,
         equipmentId: '',
         performedAt: new Date(data.performedAt),
         content: data.content,
         createdAt: new Date(),
       };
       setMaintenanceHistory((prev) => [tempItem, ...prev]);
-      setPendingMaintenanceHistory((prev) => [...prev, data]);
+      setPendingMaintenanceHistory((prev) => [...prev, { tempId, data }]);
     }
-  }, [isEdit, initialData?.uuid, toast, handleHistoryError]);
+  }, [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]);
 
   const handleDeleteMaintenanceHistory = useCallback(async (historyId: string) => {
     try {
@@ -411,17 +442,15 @@ export function EquipmentForm({
         await equipmentApi.deleteMaintenanceHistory(historyId);
       }
       setMaintenanceHistory((prev) => prev.filter((item) => item.id !== historyId));
+      // ★ Best Practice: tempId 기반 삭제
       if (!isEdit && historyId.startsWith('temp-')) {
-        const index = maintenanceHistory.findIndex((item) => item.id === historyId);
-        if (index !== -1) {
-          setPendingMaintenanceHistory((prev) => prev.filter((_, i) => i !== index));
-        }
+        setPendingMaintenanceHistory((prev) => prev.filter((item) => item.tempId !== historyId));
       }
     } catch (error) {
       handleHistoryError(error, '유지보수 내역 삭제');
       throw error;
     }
-  }, [isEdit, maintenanceHistory, handleHistoryError]);
+  }, [isEdit, handleHistoryError]);
 
   const handleAddIncidentHistory = useCallback(async (data: CreateIncidentHistoryInput) => {
     if (isEdit && initialData?.uuid) {
@@ -439,8 +468,9 @@ export function EquipmentForm({
       }
     } else {
       // 등록 모드: 임시 상태에 추가
+      const tempId = generateTempId();
       const tempItem: IncidentHistoryItem = {
-        id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: tempId,
         equipmentId: '',
         occurredAt: new Date(data.occurredAt),
         incidentType: data.incidentType,
@@ -448,9 +478,9 @@ export function EquipmentForm({
         createdAt: new Date(),
       };
       setIncidentHistory((prev) => [tempItem, ...prev]);
-      setPendingIncidentHistory((prev) => [...prev, data]);
+      setPendingIncidentHistory((prev) => [...prev, { tempId, data }]);
     }
-  }, [isEdit, initialData?.uuid, toast, handleHistoryError]);
+  }, [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]);
 
   const handleDeleteIncidentHistory = useCallback(async (historyId: string) => {
     try {
@@ -459,23 +489,22 @@ export function EquipmentForm({
         await equipmentApi.deleteIncidentHistory(historyId);
       }
       setIncidentHistory((prev) => prev.filter((item) => item.id !== historyId));
+      // ★ Best Practice: tempId 기반 삭제
       if (!isEdit && historyId.startsWith('temp-')) {
-        const index = incidentHistory.findIndex((item) => item.id === historyId);
-        if (index !== -1) {
-          setPendingIncidentHistory((prev) => prev.filter((_, i) => i !== index));
-        }
+        setPendingIncidentHistory((prev) => prev.filter((item) => item.tempId !== historyId));
       }
     } catch (error) {
       handleHistoryError(error, '손상/수리 내역 삭제');
       throw error;
     }
-  }, [isEdit, incidentHistory, handleHistoryError]);
+  }, [isEdit, handleHistoryError]);
 
   // 교정 이력 추가/삭제 핸들러 (등록 모드용)
   const handleAddCalibrationHistory = useCallback(async (data: CreateCalibrationHistoryInput) => {
     // 등록 모드: 임시 상태에 추가
+    const tempId = generateTempId();
     const tempItem = {
-      id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: tempId,
       calibrationDate: data.calibrationDate,
       nextCalibrationDate: data.nextCalibrationDate,
       calibrationAgency: data.calibrationAgency,
@@ -484,22 +513,20 @@ export function EquipmentForm({
       approvalStatus: 'approved',
     };
     setCalibrationHistory((prev) => [tempItem, ...prev]);
-    setPendingCalibrationHistory((prev) => [...prev, data]);
+    setPendingCalibrationHistory((prev) => [...prev, { tempId, data }]);
     toast({
       title: '교정 이력 추가',
       description: '임시로 추가되었습니다. 장비 등록 시 함께 저장됩니다.',
     });
-  }, [toast]);
+  }, [toast, generateTempId]);
 
   const handleDeleteCalibrationHistory = useCallback(async (historyId: string) => {
     setCalibrationHistory((prev) => prev.filter((item) => item.id !== historyId));
+    // ★ Best Practice: tempId 기반 삭제
     if (historyId.startsWith('temp-')) {
-      const index = calibrationHistory.findIndex((item) => item.id === historyId);
-      if (index !== -1) {
-        setPendingCalibrationHistory((prev) => prev.filter((_, i) => i !== index));
-      }
+      setPendingCalibrationHistory((prev) => prev.filter((item) => item.tempId !== historyId));
     }
-  }, [calibrationHistory]);
+  }, []);
 
   // 폼 제출 핸들러
   const handleFormSubmit = async (data: FormValues) => {
@@ -571,17 +598,21 @@ export function EquipmentForm({
         data.correctionFactor && data.correctionFactor.trim() ? data.correctionFactor : undefined,
     };
 
-    // 등록 모드일 때 임시 이력 데이터 전달
+    /**
+     * ★ Best Practice: 임시 이력 데이터 변환
+     * - PendingHistoryItem[] → CreateXxxInput[] 변환
+     * - tempId는 내부 관리용이므로 API 전송 시 제거
+     */
     const pendingHistory: PendingHistoryData | undefined = !isEdit && (
       pendingLocationHistory.length > 0 ||
       pendingMaintenanceHistory.length > 0 ||
       pendingIncidentHistory.length > 0 ||
       pendingCalibrationHistory.length > 0
     ) ? {
-      locationHistory: pendingLocationHistory,
-      maintenanceHistory: pendingMaintenanceHistory,
-      incidentHistory: pendingIncidentHistory,
-      calibrationHistory: pendingCalibrationHistory,
+      locationHistory: pendingLocationHistory.map((item) => item.data),
+      maintenanceHistory: pendingMaintenanceHistory.map((item) => item.data),
+      incidentHistory: pendingIncidentHistory.map((item) => item.data),
+      calibrationHistory: pendingCalibrationHistory.map((item) => item.data),
     } : undefined;
 
     await onSubmit(

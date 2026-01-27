@@ -1,6 +1,21 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+/**
+ * MobileNav (Client Component)
+ *
+ * 모바일 환경에서 사용하는 네비게이션 드로어 컴포넌트
+ *
+ * 접근성 (WCAG 2.1 AA):
+ * - ESC 키로 닫기
+ * - 포커스 트랩 (드로어 내 포커스 유지)
+ * - aria-modal, aria-label 속성
+ * - prefers-reduced-motion 존중
+ *
+ * 성능 최적화 (vercel-react-best-practices):
+ * - useCallback으로 이벤트 핸들러 안정화
+ * - memo로 NavLink 컴포넌트 최적화
+ */
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { X, Menu } from 'lucide-react';
@@ -13,37 +28,108 @@ export interface NavItem {
   label: string;
 }
 
+// aria-live 영역에 스크린리더 알림 전송
+function announceToScreenReader(message: string) {
+  const liveRegion = document.getElementById('live-announcements');
+  if (liveRegion) {
+    liveRegion.textContent = message;
+    // 다음 알림을 위해 텍스트 초기화 (약간의 딜레이 필요)
+    setTimeout(() => {
+      liveRegion.textContent = '';
+    }, 1000);
+  }
+}
+
 interface MobileNavProps {
   navItems: NavItem[];
   brandName?: string;
   brandIcon?: React.ReactNode;
 }
 
+// 네비게이션 링크를 memo로 래핑 (rerender-memo)
+interface NavLinkProps {
+  item: NavItem;
+  isActive: boolean;
+  onClick: () => void;
+}
+
+const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps) {
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-3',
+        // prefers-reduced-motion 지원
+        'motion-safe:transition-all motion-reduce:transition-none',
+        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+        isActive
+          ? 'text-blue-600 bg-blue-50 font-medium dark:text-blue-400 dark:bg-blue-900/20'
+          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-gray-800'
+      )}
+      aria-current={isActive ? 'page' : undefined}
+      onClick={onClick}
+    >
+      <span aria-hidden="true">{item.icon}</span>
+      <span>{item.label}</span>
+    </Link>
+  );
+});
+
 export function MobileNav({ navItems, brandName = '장비 관리 시스템', brandIcon }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // 경로 변경 시 드로어 닫기
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
 
-  // ESC 키로 닫기
+  // ESC 키로 닫기 + 포커스 트랩
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         setIsOpen(false);
+        menuButtonRef.current?.focus(); // ESC 시 메뉴 버튼으로 포커스 복귀
+        return;
+      }
+
+      // 포커스 트랩: Tab 키가 드로어 내에서만 동작하도록
+      if (e.key === 'Tab' && drawerRef.current) {
+        const focusableElements = drawerRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
-  // 드로어 열릴 때 body 스크롤 방지
+  // 드로어 열릴 때 첫 번째 요소에 포커스 + body 스크롤 방지
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      // 약간의 딜레이 후 닫기 버튼에 포커스
+      requestAnimationFrame(() => {
+        closeButtonRef.current?.focus();
+      });
+      // aria-live 영역에 알림
+      announceToScreenReader('메뉴가 열렸습니다');
     } else {
       document.body.style.overflow = '';
     }
@@ -53,20 +139,35 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
   }, [isOpen]);
 
   const toggleMenu = useCallback(() => {
-    setIsOpen(prev => !prev);
+    setIsOpen((prev) => !prev);
   }, []);
 
   const closeMenu = useCallback(() => {
     setIsOpen(false);
+    menuButtonRef.current?.focus(); // 포커스 복귀
+    announceToScreenReader('메뉴가 닫혔습니다');
   }, []);
+
+  // isActive 판별 함수를 useCallback으로 안정화
+  const checkIsActive = useCallback(
+    (href: string) => {
+      if (href === '/') return pathname === '/';
+      return pathname === href || pathname?.startsWith(`${href}/`);
+    },
+    [pathname]
+  );
 
   return (
     <>
       {/* 햄버거 메뉴 버튼 */}
       <Button
+        ref={menuButtonRef}
         variant="ghost"
         size="icon"
-        className="md:hidden"
+        className={cn(
+          'md:hidden',
+          'focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+        )}
         onClick={toggleMenu}
         aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
         aria-expanded={isOpen}
@@ -75,38 +176,49 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         <Menu className="h-6 w-6" aria-hidden="true" />
       </Button>
 
-      {/* 오버레이 */}
+      {/* 오버레이 - prefers-reduced-motion 지원 */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity duration-300"
+          className={cn(
+            'fixed inset-0 z-40 bg-black/50 md:hidden',
+            'motion-safe:transition-opacity motion-safe:duration-300',
+            'motion-reduce:transition-none'
+          )}
           onClick={closeMenu}
           aria-hidden="true"
         />
       )}
 
-      {/* 모바일 드로어 */}
+      {/* 모바일 드로어 - prefers-reduced-motion 지원 */}
       <div
+        ref={drawerRef}
         id="mobile-nav-drawer"
         role="dialog"
         aria-modal="true"
         aria-label="메인 네비게이션"
+        aria-hidden={!isOpen}
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl md:hidden',
-          'transform transition-transform duration-300 ease-in-out',
+          'fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-gray-900 shadow-xl md:hidden',
+          'transform',
+          // prefers-reduced-motion 지원
+          'motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-in-out',
+          'motion-reduce:transition-none',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* 드로어 헤더 */}
-        <div className="flex h-14 items-center justify-between border-b px-4">
-          <div className="flex items-center gap-2 font-semibold">
+        <div className="flex h-14 items-center justify-between border-b dark:border-gray-700 px-4">
+          <div className="flex items-center gap-2 font-semibold dark:text-white">
             {brandIcon}
             <span>{brandName}</span>
           </div>
           <Button
+            ref={closeButtonRef}
             variant="ghost"
             size="icon"
             onClick={closeMenu}
             aria-label="메뉴 닫기"
+            className="focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </Button>
@@ -118,27 +230,14 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
           aria-label="메인 네비게이션"
           className="flex flex-col gap-1 p-4 overflow-y-auto max-h-[calc(100vh-3.5rem)]"
         >
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-3 transition-all',
-                  'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
-                  isActive
-                    ? 'text-blue-600 bg-blue-50 font-medium'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                )}
-                aria-current={isActive ? 'page' : undefined}
-                onClick={closeMenu}
-              >
-                <span aria-hidden="true">{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              isActive={checkIsActive(item.href)}
+              onClick={closeMenu}
+            />
+          ))}
         </nav>
       </div>
     </>

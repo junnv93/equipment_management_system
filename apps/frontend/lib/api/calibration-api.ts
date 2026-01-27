@@ -107,8 +107,17 @@ const calibrationApi = {
   },
 
   // 장비별 교정 이력 조회
+  // 백엔드는 페이지네이션 응답 { items: [...], meta: {...} }를 반환
+  // 여기서 items 배열만 추출하여 반환
   getEquipmentCalibrations: async (equipmentId: string): Promise<Calibration[]> => {
-    return apiClient.get(`/api/calibration/equipment/${equipmentId}`);
+    const response = await apiClient.get(`/api/calibration/equipment/${equipmentId}`);
+    const data = response.data || response;
+
+    // 배열이면 그대로 반환, 페이지네이션 객체면 items 추출
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.items || [];
   },
 
   // 교정 상세 조회

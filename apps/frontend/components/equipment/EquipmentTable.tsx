@@ -18,70 +18,15 @@ import {
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { EquipmentFilters } from '@/hooks/useEquipmentFilters';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
-
-/**
- * 장비 상태별 스타일 매핑
- */
-const STATUS_STYLES: Record<string, { className: string; label: string }> = {
-  available: {
-    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-    label: '사용 가능',
-  },
-  in_use: {
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-    label: '사용 중',
-  },
-  checked_out: {
-    className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300',
-    label: '반출 중',
-  },
-  calibration_scheduled: {
-    className: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
-    label: '교정 예정',
-  },
-  calibration_overdue: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: '교정 기한 초과',
-  },
-  non_conforming: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: '부적합',
-  },
-  spare: {
-    className: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
-    label: '여분',
-  },
-  retired: {
-    className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    label: '폐기',
-  },
-  // 레거시 상태값 지원
-  AVAILABLE: {
-    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-    label: '사용 가능',
-  },
-  IN_USE: {
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-    label: '사용 중',
-  },
-  MAINTENANCE: {
-    className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300',
-    label: '유지보수 중',
-  },
-  CALIBRATION: {
-    className: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
-    label: '교정 중',
-  },
-  DISPOSAL: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: '폐기',
-  },
-};
+import {
+  getEquipmentStatusStyle,
+  shouldDisplayCalibrationStatus,
+} from '@/lib/constants/equipment-status-styles';
 
 /**
  * 테이블 열 정의
  */
-type SortableColumn = 'managementNumber' | 'name' | 'status' | 'lastCalibrationDate' | 'createdAt';
+type SortableColumn = 'managementNumber' | 'name' | 'status' | 'lastCalibrationDate' | 'nextCalibrationDate' | 'createdAt';
 
 interface ColumnDef {
   key: SortableColumn | 'modelName' | 'location' | 'actions';
@@ -96,7 +41,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'name', label: '장비명', sortable: true },
   { key: 'modelName', label: '모델명', sortable: false, hideOnMobile: true },
   { key: 'status', label: '상태', sortable: true },
-  { key: 'lastCalibrationDate', label: '마지막 교정일', sortable: true, hideOnMobile: true },
+  { key: 'nextCalibrationDate', label: '교정 기한', sortable: true, hideOnMobile: true },
   { key: 'location', label: '위치', sortable: false, hideOnMobile: true },
   { key: 'actions', label: '상세', sortable: false, className: 'text-right' },
 ];
@@ -144,10 +89,7 @@ const HighlightText = memo(function HighlightText({
  * 상태 뱃지 컴포넌트
  */
 const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
-  const style = STATUS_STYLES[status] || {
-    className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    label: status,
-  };
+  const style = getEquipmentStatusStyle(status);
 
   return (
     <Badge variant="outline" className={`${style.className} border-0`}>
@@ -255,6 +197,68 @@ const EquipmentRow = memo(function EquipmentRow({
     return dayjs(date).format('YYYY-MM-DD');
   };
 
+  /**
+   * 교정 기한 표시 (D-day 형식)
+   *
+   * 폐기/부적합/여분 장비는 D-day 표시 안함:
+   * - 폐기: 더 이상 사용하지 않음
+   * - 부적합: 수리/보수 후 필수적으로 재교정 필요
+   * - 여분: 실제 사용 전에 교정 상태 재확인 필요
+   *
+   * 그 외 장비:
+   * - 기한 초과: 빨간색으로 "D+N"
+   * - 7일 이내: 주황색으로 "D-N" (긴급)
+   * - 30일 이내: 노란색으로 "D-N" (경고)
+   * - 정상: 기본 날짜 표시
+   */
+  const formatCalibrationDue = (date?: string | Date | null, status?: string) => {
+    if (!date) return '-';
+
+    // 폐기/부적합/여분 장비는 D-day 표시 안함 (SSOT: equipment-status-styles.ts)
+    if (!shouldDisplayCalibrationStatus(status)) {
+      return <span className="text-muted-foreground">-</span>;
+    }
+
+    const dueDate = dayjs(date);
+    const today = dayjs();
+    const diff = dueDate.diff(today, 'day');
+
+    if (diff < 0) {
+      // 기한 초과
+      return (
+        <span className="text-red-600 dark:text-red-400 font-semibold">
+          {dueDate.format('YYYY-MM-DD')}
+          <span className="ml-1 text-xs bg-red-100 dark:bg-red-900/50 px-1.5 py-0.5 rounded">
+            D+{Math.abs(diff)}
+          </span>
+        </span>
+      );
+    }
+    if (diff <= 7) {
+      // 7일 이내 (긴급)
+      return (
+        <span className="text-orange-600 dark:text-orange-400 font-semibold">
+          {dueDate.format('YYYY-MM-DD')}
+          <span className="ml-1 text-xs bg-orange-100 dark:bg-orange-900/50 px-1.5 py-0.5 rounded">
+            D-{diff}
+          </span>
+        </span>
+      );
+    }
+    if (diff <= 30) {
+      // 30일 이내 (경고)
+      return (
+        <span className="text-yellow-600 dark:text-yellow-400 font-medium">
+          {dueDate.format('YYYY-MM-DD')}
+          <span className="ml-1 text-xs bg-yellow-100 dark:bg-yellow-900/50 px-1.5 py-0.5 rounded">
+            D-{diff}
+          </span>
+        </span>
+      );
+    }
+    return dueDate.format('YYYY-MM-DD');
+  };
+
   return (
     <TableRow
       className="hover:bg-muted/50 transition-colors"
@@ -280,7 +284,7 @@ const EquipmentRow = memo(function EquipmentRow({
         <StatusBadge status={equipment.status || 'available'} />
       </TableCell>
       <TableCell role="gridcell" className="hidden md:table-cell">
-        {formatDate(equipment.lastCalibrationDate)}
+        {formatCalibrationDue(equipment.nextCalibrationDate, equipment.status)}
       </TableCell>
       <TableCell role="gridcell" className="hidden md:table-cell">
         {equipment.location || '-'}

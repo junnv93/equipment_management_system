@@ -1,7 +1,8 @@
 'use client';
 
-import { memo, useCallback } from 'react';
-import { Filter, X, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { memo, useCallback, useMemo } from 'react';
+import { X, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import type { Site, EquipmentStatus, CalibrationMethod } from '@equipment-management/schemas';
 import type { EquipmentFilters as FiltersType, CalibrationDueFilter } from '@/hooks/useEquipmentFilters';
 import { useAuth } from '@/hooks/use-auth';
+import teamsApi, { type Team } from '@/lib/api/teams-api';
 
 /**
  * 장비 상태 옵션
@@ -45,6 +47,7 @@ const SITE_OPTIONS: { value: Site | ''; label: string }[] = [
   { value: '', label: '모든 사이트' },
   { value: 'suwon', label: '수원랩' },
   { value: 'uiwang', label: '의왕랩' },
+  { value: 'pyeongtaek', label: '평택랩' },
 ];
 
 /**
@@ -77,16 +80,17 @@ const CALIBRATION_DUE_OPTIONS: { value: CalibrationDueFilter; label: string; des
 ];
 
 /**
- * 팀 옵션
- * TODO: 추후 API로 동적으로 가져오도록 개선
+ * 팀 데이터를 Select 옵션 형식으로 변환
  */
-const TEAM_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: '모든 팀' },
-  { value: 'rf', label: 'RF팀' },
-  { value: 'sar', label: 'SAR팀' },
-  { value: 'emc', label: 'EMC팀' },
-  { value: 'auto', label: 'Automotive팀' },
-];
+function transformTeamsToOptions(teams: Team[]): { value: string; label: string }[] {
+  return [
+    { value: '', label: '모든 팀' },
+    ...teams.map((team) => ({
+      value: team.id,  // UUID 사용
+      label: team.name,
+    })),
+  ];
+}
 
 interface EquipmentFiltersProps {
   filters: FiltersType;
@@ -148,8 +152,30 @@ function EquipmentFiltersComponent({
   hasActiveFilters,
   className = '',
 }: EquipmentFiltersProps) {
-  const { isManager, isAdmin } = useAuth();
+  const { isManager, isAdmin, user } = useAuth();
   const canViewAllSites = isManager() || isAdmin();
+
+  // ✅ 사이트 필터링: 사용자 사이트에 맞는 팀만 조회
+  // 관리자가 사이트 필터를 선택한 경우 해당 사이트의 팀만, 아니면 사용자 사이트의 팀만
+  const teamQuerySite = canViewAllSites && filters.site ? filters.site : user?.site;
+
+  // 팀 목록을 API에서 동적으로 가져오기
+  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
+    queryKey: ['teams', 'filter-options', teamQuerySite],
+    queryFn: () => teamsApi.getTeams({
+      site: teamQuerySite, // ✅ 사이트 필터 적용
+      pageSize: 100
+    }),
+    staleTime: 5 * 60 * 1000, // 5분간 캐시
+    gcTime: 10 * 60 * 1000,   // 10분간 가비지 컬렉션 방지
+    enabled: !!teamQuerySite, // 사이트 정보가 있을 때만 조회
+  });
+
+  // 팀 옵션 메모이제이션
+  const teamOptions = useMemo(() => {
+    const teams = teamsData?.data || [];
+    return transformTeamsToOptions(teams);
+  }, [teamsData?.data]);
 
   // 상태 라벨 가져오기
   const getStatusLabel = useCallback((status: EquipmentStatus) => {
@@ -173,8 +199,8 @@ function EquipmentFiltersComponent({
   }, []);
 
   const getTeamLabel = useCallback((teamId: string) => {
-    return TEAM_OPTIONS.find((opt) => opt.value === teamId)?.label || '알 수 없는 팀';
-  }, []);
+    return teamOptions.find((opt) => opt.value === teamId)?.label || '알 수 없는 팀';
+  }, [teamOptions]);
 
   return (
     <Collapsible defaultOpen className={className}>
@@ -375,12 +401,20 @@ function EquipmentFiltersComponent({
                 <Select
                   value={filters.teamId || 'all'}
                   onValueChange={(value) => onTeamIdChange(value === 'all' ? '' : value)}
+                  disabled={isLoadingTeams}
                 >
                   <SelectTrigger id="filter-team" aria-label="팀 필터 선택">
-                    <SelectValue placeholder="모든 팀" />
+                    {isLoadingTeams ? (
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        로딩 중...
+                      </span>
+                    ) : (
+                      <SelectValue placeholder="모든 팀" />
+                    )}
                   </SelectTrigger>
                   <SelectContent>
-                    {TEAM_OPTIONS.map((option) => (
+                    {teamOptions.map((option) => (
                       <SelectItem key={option.value || 'all'} value={option.value || 'all'}>
                         {option.label}
                       </SelectItem>

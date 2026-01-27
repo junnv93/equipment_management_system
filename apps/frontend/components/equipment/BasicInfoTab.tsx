@@ -87,7 +87,11 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           <div className="grid grid-cols-2 gap-4">
             <InfoField
               label="사이트"
-              value={equipment.site === 'suwon' ? '수원' : equipment.site === 'uiwang' ? '의왕' : '-'}
+              value={
+                equipment.site === 'suwon' ? '수원' :
+                equipment.site === 'uiwang' ? '의왕' :
+                equipment.site === 'pyeongtaek' ? '평택' : '-'
+              }
               icon={MapPin}
             />
             <InfoField label="팀" value={equipment.teamName} icon={Tag} />

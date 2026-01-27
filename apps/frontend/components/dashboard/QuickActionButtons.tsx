@@ -81,9 +81,9 @@ export function QuickActionButtons({ className }: QuickActionButtonsProps) {
             key={action.href}
             variant={action.variant || 'default'}
             asChild
-            className="gap-2"
+            className="gap-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
-            <Link href={action.href}>
+            <Link href={action.href} aria-label={action.label}>
               <Icon className="h-4 w-4" aria-hidden="true" />
               {action.label}
             </Link>

@@ -170,20 +170,31 @@ export function createApiError(error: unknown): ApiError {
       // NestJS ValidationPipe 에러 구조: { message: string | string[], error?: string, statusCode?: number }
       if ('message' in errorData) {
         const nestError = errorData as {
-          message: string | string[];
+          message: string | string[] | null | undefined;
           error?: string;
           statusCode?: number;
         };
-        const message = Array.isArray(nestError.message)
-          ? nestError.message.join(', ')
-          : String(nestError.message);
+
+        // 방어적 코드: message가 null/undefined일 수 있음
+        let message: string;
+        let details: string[] | undefined;
+
+        if (Array.isArray(nestError.message)) {
+          message = nestError.message.filter(Boolean).join(', ') || '알 수 없는 오류가 발생했습니다.';
+          details = nestError.message.filter(Boolean) as string[];
+        } else if (nestError.message) {
+          message = String(nestError.message);
+        } else {
+          message = nestError.error || '알 수 없는 오류가 발생했습니다.';
+        }
+
         const errorCode = status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR;
 
         return new ApiError(
           message,
           errorCode,
           status,
-          Array.isArray(nestError.message) ? nestError.message : undefined
+          details
         );
       }
     }

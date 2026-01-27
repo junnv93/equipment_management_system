@@ -1,8 +1,9 @@
 /* 접근성 스타일 (WCAG 2.1 AA 준수) */
 
 /* 포커스 스타일 - 모든 인터랙티브 요소에 적용 */
+/* UL Midnight Blue (#122C49) 기반 포커스 링 */
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid #122C49;
   outline-offset: 2px;
 }
 

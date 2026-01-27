@@ -10,6 +10,7 @@
 import { apiClient } from './api-client';
 import type {
   Equipment as SchemaEquipment,
+  EquipmentResponse as SchemaEquipmentResponse,
   CreateEquipmentInput,
   UpdateEquipmentInput,
   EquipmentFilter,
@@ -21,17 +22,17 @@ import type { PaginatedResponse } from './types';
 /**
  * 프론트엔드에서 사용하는 Equipment 타입
  *
- * schemas 패키지의 Equipment 타입을 기본으로 하되,
- * 프론트엔드에서 필요한 추가 필드만 확장합니다.
+ * ✅ schemas 패키지의 EquipmentResponse 타입을 기본으로 사용
+ * - teamName 필드가 포함되어 있음 (백엔드에서 팀 테이블 조인)
+ * - 프론트엔드에서 필요한 추가 필드만 확장
  *
- * 주의: id는 백엔드에서 number로 반환되지만, 프론트엔드에서는 string으로 처리합니다.
+ * @see packages/schemas/src/equipment.ts - EquipmentResponse
  */
-export type Equipment = Omit<SchemaEquipment, 'id' | 'createdAt' | 'updatedAt'> & {
-  id: string | number; // 백엔드에서 number로 반환되지만 string으로도 처리 가능
-  uuid: string; // 백엔드에서 반환하는 UUID (필수)
+export type Equipment = Omit<SchemaEquipmentResponse, 'id' | 'createdAt' | 'updatedAt'> & {
+  id: string | number; // 백엔드에서 UUID로 반환되지만 레거시 호환성 유지
+  uuid?: string; // 하위 호환성 (id가 이미 UUID)
   // 프론트엔드 전용 추가 필드
   model?: string; // 하위 호환성 (modelName의 별칭)
-  teamName?: string; // 팀 이름 (조회 시 조인된 데이터)
   image?: string; // 이미지 URL
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -114,6 +115,7 @@ export interface IncidentHistoryItem {
   reportedBy?: string;
   reportedByName?: string;
   createdAt: string | Date;
+  nonConformanceId?: string; // 연결된 부적합 ID (부적합 생성된 경우)
 }
 
 export interface CreateLocationHistoryInput {
@@ -131,6 +133,10 @@ export interface CreateIncidentHistoryInput {
   occurredAt: string;
   incidentType: IncidentType;
   content: string;
+  // 부적합 생성 관련 필드 (선택)
+  createNonConformance?: boolean;
+  changeEquipmentStatus?: boolean;
+  actionPlan?: string;
 }
 
 // 장비 API 객체

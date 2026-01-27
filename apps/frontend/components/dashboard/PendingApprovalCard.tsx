@@ -204,16 +204,28 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
   const cardDescription = getCardDescription(userRole);
 
   return (
-    <div className={className} data-testid="pending-approval-card">
+    <div
+      className={className}
+      data-testid="pending-approval-card"
+      role="region"
+      aria-labelledby="pending-approval-title"
+      aria-describedby="pending-approval-description"
+    >
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold">{cardTitle}</h2>
-          <p className="text-sm text-muted-foreground">{cardDescription}</p>
+          <h2 id="pending-approval-title" className="text-lg font-semibold">
+            {cardTitle}
+          </h2>
+          <p id="pending-approval-description" className="text-sm text-muted-foreground">
+            {cardDescription}
+          </p>
         </div>
         {totalPending > 0 && (
           <Badge
             variant="secondary"
             className="bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300 animate-pulse"
+            aria-live="polite"
+            aria-atomic="true"
           >
             총 {totalPending}건
           </Badge>

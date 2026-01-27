@@ -73,9 +73,11 @@ export function LoginForm({
       } else if (result?.ok) {
         setIsSuccess(true);
         onSuccess?.();
+        // 세션이 완전히 초기화될 시간을 주고 리다이렉트
+        // window.location.href는 새로운 세션 쿠키가 적용되도록 전체 페이지 새로고침
         setTimeout(() => {
-          window.location.href = callbackUrl;
-        }, 500);
+          window.location.href = callbackUrl.startsWith('/') ? callbackUrl : '/';
+        }, 300);
       }
     } catch (err) {
       const errorMessage = '로그인 중 오류가 발생했습니다.';
@@ -216,7 +218,7 @@ export function LoginForm({
             로그인 중...
           </>
         ) : (
-          '이메일로 로그인'
+          '로그인'
         )}
       </Button>
     </form>

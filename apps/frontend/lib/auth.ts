@@ -146,12 +146,14 @@ export const authOptions = {
 
                 // NextAuth 세션에 저장할 사용자 정보 반환
                 // 이 정보는 jwt 콜백에서 token에 저장되고, session 콜백에서 session에 전달됨
+                // 백엔드는 roles 배열을 반환하므로 roles[0]으로 role 설정
+                const userRole = data.user.roles?.[0] || data.user.role || 'user';
                 return {
                   id: data.user.id || data.user.uuid,
                   name: data.user.name,
                   email: data.user.email,
-                  role: data.user.role,
-                  roles: [data.user.role],
+                  role: userRole,
+                  roles: data.user.roles || [userRole],
                   department: data.user.department,
                   site: data.user.site,
                   teamId: data.user.teamId,
@@ -214,6 +216,8 @@ export const authOptions = {
       return session;
     },
   },
+  // NEXTAUTH_SECRET은 JWT 서명/검증에 필수
+  // 반드시 .env.local에 설정해야 함 (하드코딩 금지)
   secret: process.env.NEXTAUTH_SECRET,
 };
 

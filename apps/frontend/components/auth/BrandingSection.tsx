@@ -1,5 +1,3 @@
-'use client';
-
 import { Settings, Calendar, Shield, Wrench } from 'lucide-react';
 
 const features = [
@@ -20,9 +18,21 @@ const features = [
   },
 ];
 
+/**
+ * 브랜딩 섹션 (Server Component)
+ *
+ * 성능 최적화:
+ * - 'use client' 제거: 정적 콘텐츠이므로 서버에서 렌더링
+ * - CSS 애니메이션만 사용 (JavaScript 애니메이션 불필요)
+ * - 번들 크기 0 (서버 컴포넌트는 클라이언트 번들에 포함되지 않음)
+ *
+ * 접근성:
+ * - aria-hidden="true": 스크린 리더에서 제외 (장식 목적)
+ * - 로그인 폼에 집중할 수 있도록 보조
+ */
 export function BrandingSection() {
   return (
-    <div
+    <aside
       className="relative hidden lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-ul-midnight"
       aria-hidden="true"
     >
@@ -73,23 +83,26 @@ export function BrandingSection() {
 
           {/* 기능 하이라이트 */}
           <div className="mt-12 space-y-4">
-            {features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10
-                         hover:bg-white/10 hover:border-white/20 transition-all duration-300
-                         animate-fade-in-up"
-                style={{ animationDelay: `${300 + index * 100}ms` }}
-              >
-                <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-ul-info/20">
-                  <feature.icon className="w-5 h-5 text-ul-info" />
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10
+                           hover:bg-white/10 hover:border-white/20 transition-all duration-300
+                           animate-fade-in-up"
+                  style={{ animationDelay: `${300 + index * 100}ms` }}
+                >
+                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-ul-info/20">
+                    <Icon className="w-5 h-5 text-ul-info" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">{feature.title}</h3>
+                    <p className="text-sm text-white/50">{feature.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-white">{feature.title}</h3>
-                  <p className="text-sm text-white/50">{feature.description}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -98,13 +111,13 @@ export function BrandingSection() {
           <div className="flex items-center gap-2 mb-2">
             <span className="text-ul-red font-bold text-sm">UL Solutions</span>
             <span className="text-white/30">|</span>
-            <span className="text-white/50 text-sm">Quality & Safety</span>
+            <span className="text-white/50 text-sm italic">Working for a safer world.</span>
           </div>
           <p className="text-sm text-white/30">
             © 2025 Equipment Management System. All rights reserved.
           </p>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

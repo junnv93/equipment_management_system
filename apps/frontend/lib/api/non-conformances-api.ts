@@ -5,6 +5,12 @@ import { transformPaginatedResponse } from './utils/response-transformers';
 // 부적합 상태 타입
 export type NonConformanceStatus = 'open' | 'analyzing' | 'corrected' | 'closed';
 
+// 부적합 유형 타입
+export type NonConformanceType = 'damage' | 'malfunction' | 'calibration_failure' | 'measurement_error' | 'other';
+
+// 해결 방법 타입
+export type ResolutionType = 'repair' | 'recalibration' | 'replacement' | 'disposal' | 'other';
+
 // 부적합 인터페이스
 export interface NonConformance {
   id: string;
@@ -12,6 +18,10 @@ export interface NonConformance {
   discoveryDate: string;
   discoveredBy: string;
   cause: string;
+  ncType: NonConformanceType;
+  resolutionType: ResolutionType | null;
+  repairHistoryId: string | null;
+  calibrationId: string | null;
   actionPlan: string | null;
   analysisContent: string | null;
   correctionContent: string | null;
@@ -42,6 +52,7 @@ export interface CreateNonConformanceDto {
   discoveryDate: string;
   discoveredBy: string;
   cause: string;
+  ncType: NonConformanceType;
   actionPlan?: string;
 }
 
@@ -75,6 +86,24 @@ export const NON_CONFORMANCE_STATUS_COLORS: Record<NonConformanceStatus, string>
   analyzing: 'bg-yellow-100 text-yellow-800',
   corrected: 'bg-blue-100 text-blue-800',
   closed: 'bg-green-100 text-green-800',
+};
+
+// 부적합 유형 라벨
+export const NON_CONFORMANCE_TYPE_LABELS: Record<NonConformanceType, string> = {
+  damage: '손상',
+  malfunction: '오작동',
+  calibration_failure: '교정 실패',
+  measurement_error: '측정 오류',
+  other: '기타',
+};
+
+// 해결 방법 라벨
+export const RESOLUTION_TYPE_LABELS: Record<ResolutionType, string> = {
+  repair: '수리',
+  recalibration: '재교정',
+  replacement: '교체',
+  disposal: '폐기',
+  other: '기타',
 };
 
 // 부적합 API 객체

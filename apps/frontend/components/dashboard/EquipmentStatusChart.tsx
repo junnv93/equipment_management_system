@@ -2,26 +2,30 @@
 
 import { useCallback, useMemo, memo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts"
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
 
-// 상태별 색상 정의
+// 상태별 색상 정의 (UL-QP-18 equipment status enum 기준)
 const STATUS_COLORS: Record<string, string> = {
   available: "#16a34a", // 사용 가능 - 녹색
   in_use: "#2563eb",    // 사용 중 - 파란색
-  maintenance: "#f59e0b", // 유지보수 중 - 주황색
-  calibration: "#8b5cf6", // 교정 중 - 보라색
-  reserved: "#0ea5e9",  // 예약됨 - 하늘색
-  retired: "#6b7280",   // 폐기 - 회색
+  checked_out: "#f59e0b", // 반출 중 - 주황색
+  calibration_scheduled: "#8b5cf6", // 교정 예정 - 보라색
+  calibration_overdue: "#dc2626", // 교정 기한 초과 - 빨강
+  non_conforming: "#ef4444", // 부적합 - 진한 빨강
+  spare: "#94a3b8", // 여분 - 회색
+  retired: "#64748b", // 폐기 - 진한 회색
 }
 
-// 상태 한글 라벨
+// 상태 한글 라벨 (UL-QP-18 기준)
 const STATUS_LABELS: Record<string, string> = {
-  available: "사용 가능",
-  in_use: "사용 중",
-  maintenance: "유지보수 중",
-  calibration: "교정 중",
-  reserved: "예약됨",
+  available: "사용가능",
+  in_use: "사용중",
+  checked_out: "반출중",
+  calibration_scheduled: "교정예정",
+  calibration_overdue: "교정지연",
+  non_conforming: "부적합",
+  spare: "여분",
   retired: "폐기",
 }
 
@@ -51,33 +55,36 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
     };
   }, [data]);
 
-  // 렌더링 함수 - useCallback으로 최적화
-  const renderCustomizedLabel = useCallback(({ 
-    cx, 
-    cy, 
-    midAngle, 
-    innerRadius, 
-    outerRadius, 
-    percent 
+  // 파이 차트 라벨 렌더링 함수 - 퍼센트만 표시 (오버플로우 방지)
+  const renderCustomizedLabel = useCallback(({
+    cx,
+    cy,
+    midAngle,
+    innerRadius,
+    outerRadius,
+    percent
   }: any) => {
+    // 5% 이하의 작은 섹션은 라벨 생략
+    if (percent < 0.05) return null;
+
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
 
-    return percent > 0.05 ? (
+    return (
       <text
         x={x}
         y={y}
         fill="white"
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={12}
-        fontWeight="bold"
+        fontSize={14}
+        fontWeight="600"
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
-    ) : null
+    )
   }, []);
 
   // Tooltip formatter 함수도 useCallback으로 최적화
@@ -103,31 +110,62 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
             <p>데이터가 없습니다</p>
           </div>
         ) : (
-          <div className="flex flex-col items-center">
-            <div className="h-[200px] w-full" style={{ minHeight: "200px", minWidth: "200px" }}>
-              <ResponsiveContainer width="100%" height={300} minHeight={200}>
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={renderCustomizedLabel}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={tooltipFormatter} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+          <div className="space-y-6">
+            {/* 파이 차트 */}
+            <div className="flex justify-center">
+              <div className="h-[240px] w-[240px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={renderCustomizedLabel}
+                      outerRadius={90}
+                      innerRadius={45}
+                      fill="#8884d8"
+                      dataKey="value"
+                      paddingAngle={2}
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={tooltipFormatter} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="mt-4 text-sm text-center">
-              <p>총 <span className="font-medium">{totalEquipment}대</span>의 장비</p>
+
+            {/* 커스텀 범례 - 그리드 레이아웃으로 깔끔하게 정렬 */}
+            <div className="grid grid-cols-2 gap-3 px-4">
+              {chartData.map((entry) => (
+                <div
+                  key={entry.key}
+                  className="flex items-center gap-2 text-sm"
+                  role="listitem"
+                >
+                  <div
+                    className="w-3 h-3 rounded-sm shrink-0"
+                    style={{ backgroundColor: entry.color }}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate text-foreground font-medium">
+                    {entry.name}
+                  </span>
+                  <span className="text-muted-foreground ml-auto shrink-0">
+                    {entry.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* 총 장비 수 */}
+            <div className="text-center text-sm border-t pt-4">
+              <p className="text-muted-foreground">
+                총 <span className="font-semibold text-foreground text-lg">{totalEquipment}</span>대의 장비
+              </p>
             </div>
           </div>
         )}

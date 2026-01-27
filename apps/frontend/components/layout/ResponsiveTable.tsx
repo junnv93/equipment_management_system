@@ -1,6 +1,22 @@
 'use client';
 
-import { ReactNode, useState, useEffect } from 'react';
+/**
+ * ResponsiveTable (Client Component)
+ *
+ * 반응형 테이블 컴포넌트
+ * - 데스크톱: 일반 테이블 뷰
+ * - 모바일: 카드 뷰 또는 수평 스크롤
+ *
+ * 접근성 (WCAG 2.1 AA):
+ * - 키보드 네비게이션 지원
+ * - 적절한 ARIA 속성
+ * - prefers-reduced-motion 존중
+ *
+ * 성능 최적화 (vercel-react-best-practices):
+ * - React.memo로 불필요한 리렌더 방지
+ * - useCallback으로 이벤트 핸들러 안정화
+ */
+import { ReactNode, useState, useEffect, useCallback, memo } from 'react';
 import { cn } from '@/lib/utils';
 import {
   Table,
@@ -54,13 +70,25 @@ export function ResponsiveTable<T>({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const getCellValue = (item: T, column: Column<T>): ReactNode => {
+  // getCellValue를 useCallback으로 최적화 (rerender-functional-setstate)
+  const getCellValue = useCallback((item: T, column: Column<T>): ReactNode => {
     if (column.render) {
       return column.render(item);
     }
     const value = item[column.key as keyof T];
     return value as ReactNode;
-  };
+  }, []);
+
+  // 키보드 이벤트 핸들러 (rerender-functional-setstate)
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent, item: T) => {
+      if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        onRowClick(item);
+      }
+    },
+    [onRowClick]
+  );
 
   // 모바일에서 카드 뷰로 표시
   if (isMobile && mobileCardRender) {
@@ -77,22 +105,17 @@ export function ResponsiveTable<T>({
             <Card
               key={keyExtractor(item)}
               className={cn(
-                'transition-shadow',
-                onRowClick && 'cursor-pointer hover:shadow-md'
+                // prefers-reduced-motion 지원
+                'motion-safe:transition-shadow motion-reduce:transition-none',
+                onRowClick && 'cursor-pointer hover:shadow-md',
+                'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2'
               )}
               onClick={() => onRowClick?.(item)}
               role={onRowClick ? 'button' : undefined}
               tabIndex={onRowClick ? 0 : undefined}
-              onKeyDown={(e) => {
-                if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
-                  e.preventDefault();
-                  onRowClick(item);
-                }
-              }}
+              onKeyDown={(e) => handleKeyDown(e, item)}
             >
-              <CardContent className="p-4">
-                {mobileCardRender(item)}
-              </CardContent>
+              <CardContent className="p-4">{mobileCardRender(item)}</CardContent>
             </Card>
           ))
         )}
@@ -107,7 +130,9 @@ export function ResponsiveTable<T>({
       data-testid="responsive-table"
     >
       <Table>
-        <TableHeader className={stickyHeader ? 'sticky top-0 bg-white z-10' : ''}>
+        <TableHeader
+          className={cn(stickyHeader && 'sticky top-0 bg-white dark:bg-gray-900 z-10')}
+        >
           <TableRow>
             {columns.map((column) => (
               <TableHead
@@ -138,18 +163,15 @@ export function ResponsiveTable<T>({
               <TableRow
                 key={keyExtractor(item)}
                 className={cn(
-                  'transition-colors',
-                  onRowClick && 'cursor-pointer hover:bg-muted/50'
+                  // prefers-reduced-motion 지원
+                  'motion-safe:transition-colors motion-reduce:transition-none',
+                  onRowClick && 'cursor-pointer hover:bg-muted/50',
+                  'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2'
                 )}
                 onClick={() => onRowClick?.(item)}
                 role={onRowClick ? 'button' : undefined}
                 tabIndex={onRowClick ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault();
-                    onRowClick(item);
-                  }
-                }}
+                onKeyDown={(e) => handleKeyDown(e, item)}
               >
                 {columns.map((column) => (
                   <TableCell

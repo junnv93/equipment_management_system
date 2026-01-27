@@ -90,11 +90,23 @@ async function getAccessToken(): Promise<string | null> {
 
   try {
     const session = await getSession();
+
+    // 디버그 로깅 (개발 환경에서만)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[API Client] 세션 조회 결과:', {
+        hasSession: !!session,
+        hasAccessToken: !!session?.accessToken,
+        user: session?.user?.email,
+      });
+    }
+
     if (session?.accessToken) {
       cachedToken = session.accessToken as string;
       // 5분 캐시 (토큰 만료 전에 갱신)
       tokenExpiry = now + 5 * 60 * 1000;
       return cachedToken;
+    } else if (session) {
+      console.warn('[API Client] 세션은 있지만 accessToken이 없습니다:', Object.keys(session));
     }
   } catch (error) {
     console.error('[API Client] 세션 조회 실패:', error);

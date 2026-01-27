@@ -20,7 +20,7 @@ export interface EquipmentFilters {
   isShared: 'all' | 'shared' | 'normal';
   calibrationDueFilter: CalibrationDueFilter;
   teamId: string;
-  sortBy: 'name' | 'createdAt' | 'lastCalibrationDate' | 'status' | 'managementNumber';
+  sortBy: 'name' | 'createdAt' | 'lastCalibrationDate' | 'nextCalibrationDate' | 'status' | 'managementNumber';
   sortOrder: 'asc' | 'desc';
   page: number;
   pageSize: number;
@@ -260,14 +260,17 @@ export function useEquipmentFilters() {
   const queryFilters = useMemo(() => {
     // 교정 기한 필터를 백엔드 파라미터로 변환
     let calibrationDue: number | undefined;
+    let calibrationDueAfter: number | undefined;
     let statusOverride: EquipmentStatus | '' = filters.status;
 
     if (filters.calibrationDueFilter === 'due_soon') {
-      calibrationDue = 30; // 30일 이내 교정 예정
+      calibrationDue = 30; // 30일 이내 교정 예정 (오늘 <= nextCalibrationDate <= 오늘+30일)
     } else if (filters.calibrationDueFilter === 'overdue') {
       statusOverride = 'calibration_overdue'; // 교정 기한 초과 상태
+    } else if (filters.calibrationDueFilter === 'normal') {
+      calibrationDueAfter = 30; // 30일 이후 교정 예정 (nextCalibrationDate > 오늘+30일)
     }
-    // 'normal'과 'all'은 추가 필터 없음
+    // 'all'은 추가 필터 없음
 
     return {
       search: filters.search || undefined,
@@ -276,6 +279,7 @@ export function useEquipmentFilters() {
       calibrationMethod: filters.calibrationMethod || undefined,
       isShared: filters.isShared === 'shared' ? true : filters.isShared === 'normal' ? false : undefined,
       calibrationDue,
+      calibrationDueAfter,
       teamId: filters.teamId || undefined,
       sort: filters.sortBy ? `${filters.sortBy}.${filters.sortOrder}` : undefined,
       page: filters.page,

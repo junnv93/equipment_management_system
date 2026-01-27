@@ -282,15 +282,22 @@ export const RecentActivities = memo(function RecentActivities({
   );
 
   return (
-    <Card>
+    <Card role="region" aria-labelledby="recent-activities-title">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg font-medium">{getTitle()}</CardTitle>
+            <CardTitle id="recent-activities-title" className="text-lg font-medium">
+              {getTitle()}
+            </CardTitle>
             <CardDescription>{getDescription()}</CardDescription>
           </div>
           {filteredActivities.length > 0 && (
-            <Badge variant="outline" className="text-xs">
+            <Badge
+              variant="outline"
+              className="text-xs"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {filteredActivities.length}건
             </Badge>
           )}

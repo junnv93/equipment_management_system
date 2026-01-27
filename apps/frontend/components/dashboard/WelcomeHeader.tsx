@@ -112,7 +112,11 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   const today = formatDate(new Date());
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div
+      className={cn('space-y-2', className)}
+      role="banner"
+      aria-label="환영 메시지 및 사용자 정보"
+    >
       <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
         {greeting}, <span className="text-primary">{userName}</span>님
       </h1>
@@ -126,6 +130,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
             role.bgColor,
             role.color
           )}
+          aria-label={`현재 역할: ${role.label}`}
         >
           <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />
           <span>{role.label}</span>

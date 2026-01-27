@@ -15,6 +15,7 @@ import Link from 'next/link';
 import dayjs from 'dayjs';
 import { Equipment } from '@/lib/api/equipment-api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
 
 // 아이템 높이 및 기타 상수 정의
 const ITEM_HEIGHT = 64; // 각 행의, 높이
@@ -31,47 +32,14 @@ interface VirtualizedEquipmentListProps {
 // 각 장비 행을 표시하는 메모이제이션된 컴포넌트
 const EquipmentRow = memo(
   ({ equipment, onClick }: { equipment: Equipment; onClick?: (item: Equipment) => void }) => {
-    // 상태에 따른 뱃지 스타일 정의
+    // 상태에 따른 뱃지 스타일 (SSOT: equipment-status-styles.ts)
     const getStatusBadge = (status: string) => {
-      const statusConfig: Record<string, { class: string; darkClass: string; label: string }> = {
-        AVAILABLE: {
-          class: 'bg-green-100 text-green-800',
-          darkClass: 'dark:bg-green-950 dark:text-green-300',
-          label: '사용 가능',
-        },
-        IN_USE: {
-          class: 'bg-blue-100 text-blue-800',
-          darkClass: 'dark:bg-blue-950 dark:text-blue-300',
-          label: '사용 중',
-        },
-        MAINTENANCE: {
-          class: 'bg-yellow-100 text-yellow-800',
-          darkClass: 'dark:bg-yellow-950 dark:text-yellow-300',
-          label: '유지보수 중',
-        },
-        CALIBRATION: {
-          class: 'bg-purple-100 text-purple-800',
-          darkClass: 'dark:bg-purple-950 dark:text-purple-300',
-          label: '교정 중',
-        },
-        DISPOSAL: {
-          class: 'bg-red-100 text-red-800',
-          darkClass: 'dark:bg-red-950 dark:text-red-300',
-          label: '폐기',
-        },
-      };
-
-      const config = statusConfig[status] || {
-        class: 'bg-gray-100 text-gray-800',
-        darkClass: 'dark:bg-gray-800 dark:text-gray-300',
-        label: '알 수 없음',
-      };
-
+      const style = getEquipmentStatusStyle(status);
       return (
         <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${config.class} ${config.darkClass}`}
+          className={`px-2 py-1 rounded-full text-xs font-medium ${style.className}`}
         >
-          {config.label}
+          {style.label}
         </span>
       );
     };
@@ -95,7 +63,7 @@ const EquipmentRow = memo(
         <TableCell className="font-medium">{equipment.managementNumber}</TableCell>
         <TableCell className="max-w-[150px] sm:max-w-none truncate">{equipment.name}</TableCell>
         <TableCell className="hidden sm:table-cell">{equipment.modelName || '-'}</TableCell>
-        <TableCell>{getStatusBadge(equipment.status || 'UNKNOWN')}</TableCell>
+        <TableCell>{getStatusBadge(equipment.status || 'available')}</TableCell>
         <TableCell className="hidden md:table-cell">
           {formatDate(equipment.lastCalibrationDate ? String(equipment.lastCalibrationDate) : undefined)}
         </TableCell>

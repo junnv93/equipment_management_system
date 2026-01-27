@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import Link from 'next/link';
 import dayjs from 'dayjs';
 import {
@@ -10,6 +10,8 @@ import {
   Package,
   ArrowRight,
   Wrench,
+  AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,78 +19,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
-
-/**
- * 장비 상태별 스타일 매핑
- */
-const STATUS_STYLES: Record<string, { className: string; label: string; borderColor: string }> = {
-  available: {
-    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-    label: '사용 가능',
-    borderColor: 'border-l-green-500',
-  },
-  in_use: {
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-    label: '사용 중',
-    borderColor: 'border-l-blue-500',
-  },
-  checked_out: {
-    className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300',
-    label: '반출 중',
-    borderColor: 'border-l-orange-500',
-  },
-  calibration_scheduled: {
-    className: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
-    label: '교정 예정',
-    borderColor: 'border-l-purple-500',
-  },
-  calibration_overdue: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: '교정 기한 초과',
-    borderColor: 'border-l-red-500',
-  },
-  non_conforming: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: '부적합',
-    borderColor: 'border-l-red-600',
-  },
-  spare: {
-    className: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
-    label: '여분',
-    borderColor: 'border-l-slate-500',
-  },
-  retired: {
-    className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    label: '폐기',
-    borderColor: 'border-l-gray-500',
-  },
-  // 레거시 상태값 지원
-  AVAILABLE: {
-    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-    label: '사용 가능',
-    borderColor: 'border-l-green-500',
-  },
-  IN_USE: {
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-    label: '사용 중',
-    borderColor: 'border-l-blue-500',
-  },
-  MAINTENANCE: {
-    className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300',
-    label: '유지보수 중',
-    borderColor: 'border-l-yellow-500',
-  },
-  CALIBRATION: {
-    className: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
-    label: '교정 중',
-    borderColor: 'border-l-purple-500',
-  },
-  DISPOSAL: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: '폐기',
-    borderColor: 'border-l-red-500',
-  },
-};
+import { cn } from '@/lib/utils';
+import {
+  getEquipmentStatusStyle,
+  shouldDisplayCalibrationStatus,
+} from '@/lib/constants/equipment-status-styles';
 
 interface EquipmentCardGridProps {
   items: Equipment[];
@@ -174,17 +109,73 @@ const EquipmentCard = memo(function EquipmentCard({
   equipment: Equipment;
   searchTerm?: string;
 }) {
-  const status = equipment.status || 'available';
-  const style = STATUS_STYLES[status] || {
-    className: 'bg-gray-100 text-gray-800',
-    label: status,
-    borderColor: 'border-l-gray-500',
-  };
+  const style = getEquipmentStatusStyle(equipment.status);
 
   const formatDate = (date?: string | Date | null) => {
     if (!date) return '-';
     return dayjs(date).format('YYYY-MM-DD');
   };
+
+  /**
+   * 교정 상태 계산 (동적)
+   * - 폐기(retired), 부적합(non_conforming), 여분(spare) 상태는 표시 안함
+   * - 교정 불필요 장비는 표시 안함
+   * - 30일 이내 교정 만료 또는 기한 초과 시 D-day 형식으로 표시
+   */
+  const calibrationStatus = useMemo(() => {
+    // 교정 상태 표시가 의미 없는 장비 상태
+    if (!shouldDisplayCalibrationStatus(equipment.status)) {
+      return null;
+    }
+
+    // 교정 불필요 장비
+    if (!equipment.calibrationRequired || equipment.calibrationMethod === 'not_applicable') {
+      return null;
+    }
+
+    const nextCalibrationDate = equipment.nextCalibrationDate
+      ? new Date(equipment.nextCalibrationDate)
+      : null;
+
+    if (!nextCalibrationDate) {
+      return null;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    nextCalibrationDate.setHours(0, 0, 0, 0);
+
+    const diffTime = nextCalibrationDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      // 교정 기한 초과
+      return {
+        type: 'overdue' as const,
+        days: Math.abs(diffDays),
+        label: `D+${Math.abs(diffDays)}`,
+        fullLabel: `교정 기한 ${Math.abs(diffDays)}일 초과`,
+        className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
+        icon: AlertCircle,
+      };
+    } else if (diffDays <= 30) {
+      // 30일 이내 교정 만료
+      const isUrgent = diffDays <= 7;
+      return {
+        type: 'upcoming' as const,
+        days: diffDays,
+        label: diffDays === 0 ? 'D-Day' : `D-${diffDays}`,
+        fullLabel: diffDays === 0 ? '오늘 교정 만료' : `${diffDays}일 후 교정 만료`,
+        className: isUrgent
+          ? 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300'
+          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
+        icon: isUrgent ? AlertTriangle : Calendar,
+      };
+    }
+
+    // 30일 초과 - 정상
+    return null;
+  }, [equipment.status, equipment.calibrationRequired, equipment.calibrationMethod, equipment.nextCalibrationDate]);
 
   return (
     <Card
@@ -211,9 +202,24 @@ const EquipmentCard = memo(function EquipmentCard({
               />
             </p>
           </div>
-          <Badge variant="outline" className={`${style.className} border-0 shrink-0`}>
-            {style.label}
-          </Badge>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <Badge variant="outline" className={`${style.className} border-0`}>
+              {style.label}
+            </Badge>
+            {calibrationStatus && (
+              <Badge
+                variant="outline"
+                className={cn(
+                  'border-0 text-xs inline-flex items-center gap-1',
+                  calibrationStatus.className
+                )}
+                title={calibrationStatus.fullLabel}
+              >
+                <calibrationStatus.icon className="h-3 w-3" aria-hidden="true" />
+                {calibrationStatus.label}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
 

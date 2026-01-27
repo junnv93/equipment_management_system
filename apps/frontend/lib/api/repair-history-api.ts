@@ -35,6 +35,7 @@ export interface CreateRepairHistoryDto {
   repairResult?: RepairResult;
   notes?: string;
   attachmentPath?: string;
+  nonConformanceId?: string;
 }
 
 // 수리 이력 수정 DTO
