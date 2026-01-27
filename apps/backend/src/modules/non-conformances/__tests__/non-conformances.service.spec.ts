@@ -59,6 +59,7 @@ describe('NonConformancesService', () => {
       discoveryDate: '2024-01-15',
       discoveredBy: 'test-user-uuid',
       cause: '테스트 부적합 원인',
+      ncType: 'damage' as const,
       actionPlan: '테스트 조치 계획',
     };
 

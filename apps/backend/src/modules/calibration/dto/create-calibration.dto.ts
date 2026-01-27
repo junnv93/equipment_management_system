@@ -6,7 +6,7 @@ import {
   CalibrationStatusEnum,
   CalibrationApprovalStatusEnum,
   CalibrationRegisteredByRoleEnum,
-} from '../../../types';
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -18,10 +18,8 @@ export const calibrationBaseSchema = z.object({
   calibrationManagerId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
   calibrationDate: z.coerce.date({ message: '유효한 날짜 형식이 아닙니다' }),
   nextCalibrationDate: z.coerce.date({ message: '유효한 날짜 형식이 아닙니다' }),
-  calibrationMethod: z.nativeEnum(CalibrationMethodEnum, {
-    message: '유효한 교정 방법을 선택해주세요',
-  }),
-  status: z.nativeEnum(CalibrationStatusEnum).default(CalibrationStatusEnum.SCHEDULED),
+  calibrationMethod: CalibrationMethodEnum,
+  status: CalibrationStatusEnum.default(CalibrationStatusEnum.enum.scheduled),
   calibrationAgency: z.string().min(1, '교정 기관을 입력해주세요').max(100),
   certificationNumber: z.string().max(50).optional(),
   cost: z.number().min(0).optional(),
@@ -31,7 +29,7 @@ export const calibrationBaseSchema = z.object({
   additionalInfo: z.string().optional(),
   intermediateCheckDate: z.coerce.date().optional(),
   registeredBy: z.string().uuid().optional(),
-  registeredByRole: z.nativeEnum(CalibrationRegisteredByRoleEnum).optional(),
+  registeredByRole: CalibrationRegisteredByRoleEnum.optional(),
   registrarComment: z.string().optional(),
 });
 
@@ -41,7 +39,7 @@ export const calibrationBaseSchema = z.object({
 export const createCalibrationSchema = calibrationBaseSchema.refine(
   (data) => {
     // 기술책임자가 직접 등록할 경우 코멘트 필수
-    if (data.registeredByRole === CalibrationRegisteredByRoleEnum.TECHNICAL_MANAGER) {
+    if (data.registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager) {
       return !!data.registrarComment;
     }
     return true;
@@ -81,14 +79,14 @@ export class CreateCalibrationDto {
 
   @ApiProperty({
     description: '교정 방법',
-    enum: CalibrationMethodEnum,
+    enum: CalibrationMethodEnum.options,
     example: 'external_calibration',
   })
   calibrationMethod: string;
 
   @ApiProperty({
     description: '교정 상태',
-    enum: CalibrationStatusEnum,
+    enum: CalibrationStatusEnum.options,
     example: 'scheduled',
     default: 'scheduled',
   })
@@ -158,7 +156,7 @@ export class CreateCalibrationDto {
 
   @ApiProperty({
     description: '등록자 역할',
-    enum: CalibrationRegisteredByRoleEnum,
+    enum: CalibrationRegisteredByRoleEnum.options,
     example: 'test_engineer',
     required: false,
   })

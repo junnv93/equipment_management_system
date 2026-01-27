@@ -24,7 +24,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 
 @ApiTags('teams')
 @ApiBearerAuth()
-@Controller('api/v1/teams')
+@Controller('teams')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}

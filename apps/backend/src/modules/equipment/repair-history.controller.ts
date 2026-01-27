@@ -10,6 +10,7 @@ import {
   UseGuards,
   HttpStatus,
   Request,
+  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { RepairHistoryService, RepairHistoryRecord } from './services/repair-history.service';
@@ -17,11 +18,15 @@ import {
   CreateRepairHistoryDto,
   UpdateRepairHistoryDto,
   RepairHistoryQueryDto,
+  CreateRepairHistoryValidationPipe,
+  UpdateRepairHistoryValidationPipe,
+  RepairHistoryQueryValidationPipe,
 } from './dto/repair-history.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../guards/permissions.guard';
-import { RequirePermissions } from '../../decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
+import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('수리 이력')
 @ApiBearerAuth()
@@ -40,6 +45,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @UsePipes(RepairHistoryQueryValidationPipe)
   async findByEquipment(
     @Param('uuid') equipmentUuid: string,
     @Query() query: RepairHistoryQueryDto
@@ -66,10 +72,11 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @UsePipes(CreateRepairHistoryValidationPipe)
   async create(
     @Param('uuid') equipmentUuid: string,
     @Body() createDto: CreateRepairHistoryDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ): Promise<RepairHistoryRecord> {
     const createdBy = req.user?.id || 'unknown';
     return this.repairHistoryService.create(equipmentUuid, createDto, createdBy);
@@ -133,6 +140,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @UsePipes(UpdateRepairHistoryValidationPipe)
   async update(
     @Param('uuid') uuid: string,
     @Body() updateDto: UpdateRepairHistoryDto
@@ -151,7 +159,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
-  async remove(@Param('uuid') uuid: string, @Request() req: any) {
+  async remove(@Param('uuid') uuid: string, @Request() req: AuthenticatedRequest) {
     const deletedBy = req.user?.id || 'unknown';
     return this.repairHistoryService.remove(uuid, deletedBy);
   }

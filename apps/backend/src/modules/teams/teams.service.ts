@@ -2,13 +2,23 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { CreateTeamDto, UpdateTeamDto, TeamQueryDto } from './dto';
 import { Team, TeamListResponse } from '@equipment-management/schemas';
+import { parseSortString, sortByField } from '../../common/utils/sort';
 
 // 임시 데이터 저장소 (실제로는 DB를 사용)
+// ✅ Best Practice: 팀 이름 = 분류 이름 (통일)
+// ✅ 사이트별 팀 구성:
+//    - 수원(SUW): FCC EMC/RF(E), General EMC(R), SAR(S), Automotive EMC(A)
+//    - 의왕(UIW): General RF(W)
+//    - 평택(PYT): Automotive EMC(A)
 const teams: Team[] = [
+  // ========== 수원 사이트 (SUW) ==========
   {
-    id: 'rf',
-    name: 'RF 테스트팀',
-    description: 'RF 관련 장비 관리 및 테스트를 담당하는 팀',
+    id: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+    name: 'FCC EMC/RF', // 팀 이름 = 분류 이름
+    type: 'FCC_EMC_RF',
+    site: 'suwon',
+    classificationCode: 'E',
+    description: 'FCC EMC/RF 시험 장비 관리 - 수원',
     equipmentCount: 42,
     memberCount: 12,
     createdAt: new Date('2023-01-01'),
@@ -16,19 +26,12 @@ const teams: Team[] = [
     deletedAt: null,
   },
   {
-    id: 'sar',
-    name: 'SAR 테스트팀',
-    description: 'SAR 관련 장비 관리 및 테스트를 담당하는 팀',
-    equipmentCount: 35,
-    memberCount: 8,
-    createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-05-20'),
-    deletedAt: null,
-  },
-  {
-    id: 'emc',
-    name: 'EMC 테스트팀',
-    description: 'EMC 관련 장비 관리 및 테스트를 담당하는 팀',
+    id: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
+    name: 'General EMC', // 팀 이름 = 분류 이름
+    type: 'GENERAL_EMC',
+    site: 'suwon',
+    classificationCode: 'R',
+    description: 'General EMC 시험 장비 관리 - 수원',
     equipmentCount: 28,
     memberCount: 10,
     createdAt: new Date('2023-01-01'),
@@ -36,13 +39,57 @@ const teams: Team[] = [
     deletedAt: null,
   },
   {
-    id: 'auto',
-    name: 'Automotive 테스트팀',
-    description: 'Automotive 관련 장비 관리 및 테스트를 담당하는 팀',
+    id: '7fd28076-fd5e-4d36-b051-bbf8a97b82db',
+    name: 'SAR', // 팀 이름 = 분류 이름
+    type: 'SAR',
+    site: 'suwon',
+    classificationCode: 'S',
+    description: 'SAR(비흡수율) 시험 장비 관리 - 수원',
+    equipmentCount: 35,
+    memberCount: 8,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-05-20'),
+    deletedAt: null,
+  },
+  {
+    id: 'f0a32655-00f9-4ecd-b43c-af4faed499b6',
+    name: 'Automotive EMC', // 팀 이름 = 분류 이름
+    type: 'AUTOMOTIVE_EMC',
+    site: 'suwon',
+    classificationCode: 'A',
+    description: 'Automotive EMC 시험 장비 관리 - 수원',
     equipmentCount: 30,
     memberCount: 15,
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-07-05'),
+    deletedAt: null,
+  },
+  // ========== 의왕 사이트 (UIW) ==========
+  {
+    id: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
+    name: 'General RF', // 팀 이름 = 분류 이름
+    type: 'GENERAL_RF',
+    site: 'uiwang',
+    classificationCode: 'W',
+    description: 'General RF 시험 장비 관리 - 의왕',
+    equipmentCount: 20,
+    memberCount: 6,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-08-01'),
+    deletedAt: null,
+  },
+  // ========== 평택 사이트 (PYT) ==========
+  {
+    id: 'b2c3d4e5-f6a7-4890-bcde-f01234567890',
+    name: 'Automotive EMC', // 팀 이름 = 분류 이름 (평택)
+    type: 'AUTOMOTIVE_EMC',
+    site: 'pyeongtaek',
+    classificationCode: 'A',
+    description: 'Automotive EMC 시험 장비 관리 - 평택',
+    equipmentCount: 25,
+    memberCount: 10,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-09-01'),
     deletedAt: null,
   },
 ];
@@ -51,6 +98,11 @@ const teams: Team[] = [
 export class TeamsService {
   async findAll(query: TeamQueryDto): Promise<TeamListResponse> {
     let filteredTeams = [...teams];
+
+    // ✅ 사이트 필터링 추가: 사용자 사이트에 맞는 팀만 표시
+    if (query.site) {
+      filteredTeams = filteredTeams.filter((team) => team.site === query.site);
+    }
 
     // 팀 ID 필터링
     if (query.ids) {
@@ -69,15 +121,9 @@ export class TeamsService {
     }
 
     // 정렬
-    if (query.sort) {
-      const [field, direction] = query.sort.split('.');
-      const sortDir = direction === 'desc' ? -1 : 1;
-
-      filteredTeams.sort((a, b) => {
-        if (a[field] < b[field]) return -1 * sortDir;
-        if (a[field] > b[field]) return 1 * sortDir;
-        return 0;
-      });
+    const sortConfig = parseSortString(query.sort);
+    if (sortConfig) {
+      filteredTeams = sortByField(filteredTeams, sortConfig.field, sortConfig.direction);
     }
 
     // 페이지네이션
@@ -104,14 +150,15 @@ export class TeamsService {
   }
 
   async create(createTeamDto: CreateTeamDto): Promise<Team> {
-    // ID 중복 확인
-    const existingTeam = teams.find((team) => team.id === createTeamDto.id);
+    // 이름 중복 확인
+    const existingTeam = teams.find((team) => team.name === createTeamDto.name);
     if (existingTeam) {
-      throw new BadRequestException(`팀 ID '${createTeamDto.id}'는 이미 사용 중입니다.`);
+      throw new BadRequestException(`팀 이름 '${createTeamDto.name}'는 이미 사용 중입니다.`);
     }
 
     const now = new Date();
     const team: Team = {
+      id: randomUUID(), // ✅ UUID 자동 생성
       ...createTeamDto,
       equipmentCount: 0,
       memberCount: 0,

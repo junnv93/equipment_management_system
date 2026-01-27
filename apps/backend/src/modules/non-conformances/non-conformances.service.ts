@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
-import { eq, and, isNull, desc, asc, like, SQL } from 'drizzle-orm';
+import { eq, and, isNull, desc, asc, like, SQL, ne } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
@@ -20,11 +20,16 @@ export class NonConformancesService {
    * 부적합 등록 (장비 상태 자동 변경: non_conforming)
    */
   async create(createDto: CreateNonConformanceDto) {
+    // ncType 필수 검증
+    if (!createDto.ncType) {
+      throw new BadRequestException('부적합 유형(ncType)은 필수입니다');
+    }
+
     // 장비 존재 확인
     const equipmentResult = await this.db
       .select()
       .from(equipment)
-      .where(eq(equipment.uuid, createDto.equipmentId))
+      .where(eq(equipment.id, createDto.equipmentId))
       .limit(1);
 
     if (equipmentResult.length === 0) {
@@ -46,6 +51,7 @@ export class NonConformancesService {
           discoveryDate: createDto.discoveryDate,
           discoveredBy: createDto.discoveredBy,
           cause: createDto.cause,
+          ncType: createDto.ncType,
           actionPlan: createDto.actionPlan,
           status: NonConformanceStatus.OPEN,
         } as any)
@@ -58,7 +64,7 @@ export class NonConformancesService {
           status: 'non_conforming',
           updatedAt: new Date(),
         } as any)
-        .where(eq(equipment.uuid, createDto.equipmentId));
+        .where(eq(equipment.id, createDto.equipmentId));
 
       return nonConformance;
     });
@@ -238,6 +244,11 @@ export class NonConformancesService {
       throw new BadRequestException('조치 완료(corrected) 상태에서만 종료할 수 있습니다.');
     }
 
+    // damage/malfunction 유형은 수리 기록 필수 검증
+    if (this.requiresRepair(nonConformance.ncType as string) && !nonConformance.repairHistoryId) {
+      throw new BadRequestException('손상/오작동 유형은 수리 기록이 필요합니다');
+    }
+
     // 트랜잭션으로 부적합 종료 + 장비 상태 복원
     const result = await this.db.transaction(async (tx) => {
       // 1. 부적합 종료
@@ -253,7 +264,8 @@ export class NonConformancesService {
         .where(eq(nonConformances.id, id))
         .returning();
 
-      // 2. 해당 장비에 다른 열린 부적합이 있는지 확인
+      // 2. 해당 장비에 다른 열린 부적합(closed가 아닌 모든 상태)이 있는지 확인
+      // open, analyzing, corrected 상태 모두 "아직 종료되지 않은" 부적합임
       const otherOpenNonConformances = await tx
         .select()
         .from(nonConformances)
@@ -261,7 +273,8 @@ export class NonConformancesService {
           and(
             eq(nonConformances.equipmentId, nonConformance.equipmentId),
             isNull(nonConformances.deletedAt),
-            eq(nonConformances.status, NonConformanceStatus.OPEN)
+            ne(nonConformances.status, NonConformanceStatus.CLOSED),
+            ne(nonConformances.id, id) // 현재 종료하려는 부적합 제외
           )
         )
         .limit(1);
@@ -274,7 +287,7 @@ export class NonConformancesService {
             status: 'available',
             updatedAt: new Date(),
           } as any)
-          .where(eq(equipment.uuid, nonConformance.equipmentId));
+          .where(eq(equipment.id, nonConformance.equipmentId));
       }
 
       return updated;
@@ -298,5 +311,87 @@ export class NonConformancesService {
       .where(eq(nonConformances.id, id));
 
     return { id, deleted: true };
+  }
+
+  /**
+   * 수리 기록을 부적합에 연결 (1:1 관계)
+   * RepairHistoryService에서 호출됨
+   */
+  async linkRepair(ncId: string, repairId: string): Promise<void> {
+    // 부적합 존재 확인
+    const nc = await this.findOne(ncId);
+
+    if (nc.status === NonConformanceStatus.CLOSED) {
+      throw new BadRequestException('종료된 부적합에는 수리를 연결할 수 없습니다');
+    }
+
+    if (nc.repairHistoryId) {
+      throw new BadRequestException('이미 수리 기록이 연결되어 있습니다 (1:1 관계)');
+    }
+
+    // 연결
+    await this.db
+      .update(nonConformances)
+      .set({
+        repairHistoryId: repairId,
+        resolutionType: 'repair',
+        updatedAt: new Date(),
+      } as any)
+      .where(eq(nonConformances.id, ncId));
+  }
+
+  /**
+   * 부적합을 'corrected' 상태로 변경
+   * 수리 완료 시 자동 호출됨
+   */
+  async markCorrected(
+    id: string,
+    correctionData: {
+      correctionContent: string;
+      correctionDate: Date;
+      correctedBy: string;
+    }
+  ): Promise<void> {
+    const nc = await this.findOne(id);
+
+    if (nc.status === NonConformanceStatus.CLOSED) {
+      throw new BadRequestException('이미 종료된 부적합입니다');
+    }
+
+    // damage/malfunction 유형은 수리 연결 필수
+    if (this.requiresRepair(nc.ncType as string) && !nc.repairHistoryId) {
+      throw new BadRequestException(`${nc.ncType} 유형은 수리 기록이 필요합니다`);
+    }
+
+    await this.db
+      .update(nonConformances)
+      .set({
+        status: NonConformanceStatus.CORRECTED,
+        correctionContent: correctionData.correctionContent,
+        correctionDate: correctionData.correctionDate.toISOString().split('T')[0],
+        correctedBy: correctionData.correctedBy,
+        updatedAt: new Date(),
+      } as any)
+      .where(eq(nonConformances.id, id));
+  }
+
+  /**
+   * 수리 ID로 연결된 부적합 찾기
+   */
+  async findByRepairId(repairId: string) {
+    const results = await this.db
+      .select()
+      .from(nonConformances)
+      .where(and(eq(nonConformances.repairHistoryId, repairId), isNull(nonConformances.deletedAt)))
+      .limit(1);
+
+    return results[0] || null;
+  }
+
+  /**
+   * 부적합 유형이 수리를 필요로 하는지 확인
+   */
+  private requiresRepair(ncType: string): boolean {
+    return ['damage', 'malfunction'].includes(ncType);
   }
 }

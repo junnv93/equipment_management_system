@@ -5,11 +5,7 @@ import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { LoginDto } from '../dto/login.dto';
 import { UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '../rbac/roles.enum';
-
-// mock request 객체 타입
-type MockRequest = {
-  user?: any;
-} & Record<string, any>;
+import { AuthenticatedRequest } from '../../../types/auth';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -111,7 +107,7 @@ describe('AuthController', () => {
           roles: mockUser.roles,
           department: mockUser.department,
         },
-      };
+      } as unknown as AuthenticatedRequest;
 
       const expectedProfile = {
         id: mockUser.id,
@@ -139,7 +135,7 @@ describe('AuthController', () => {
         department: 'IT',
       };
 
-      const req = { user: azureUserData };
+      const req = { user: azureUserData } as unknown as AuthenticatedRequest;
 
       const expectedResult: AuthResponse = {
         access_token: 'azure-token',

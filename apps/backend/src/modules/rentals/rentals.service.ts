@@ -444,8 +444,7 @@ export class RentalsService {
         throw error;
       }
 
-      // ✅ Equipment 객체의 uuid 필드 사용 (equipment.id는 serial이므로 UUID가 아님)
-      // equipment.uuid는 이미 createRentalDto.equipmentId와 동일하므로 검증 완료
+      // ✅ UUID 통일: equipment.id가 이제 UUID이므로 createRentalDto.equipmentId와 직접 비교 가능
 
       // 부적합 장비 대여 차단
       if (equipment.status === 'non_conforming') {

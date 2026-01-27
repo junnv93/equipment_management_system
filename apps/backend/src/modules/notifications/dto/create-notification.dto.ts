@@ -1,34 +1,30 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  NotificationTypeEnum,
+  NotificationPriorityEnum,
+  NOTIFICATION_TYPE_VALUES,
+  NOTIFICATION_PRIORITY_VALUES,
+  NotificationType as NotificationTypeValues,
+  NotificationPriority as NotificationPriorityValues,
+  type NotificationType,
+  type NotificationPriority,
+} from '@equipment-management/schemas';
 
-// ========== Enum 정의 ==========
-
-export enum NotificationTypeEnum {
-  CALIBRATION_DUE = 'calibration_due',
-  CALIBRATION_COMPLETED = 'calibration_completed',
-  CALIBRATION_APPROVAL_PENDING = 'calibration_approval_pending',
-  CALIBRATION_APPROVED = 'calibration_approved',
-  CALIBRATION_REJECTED = 'calibration_rejected',
-  INTERMEDIATE_CHECK_DUE = 'intermediate_check_due',
-  RENTAL_REQUEST = 'rental_request',
-  RENTAL_APPROVED = 'rental_approved',
-  RENTAL_REJECTED = 'rental_rejected',
-  RENTAL_COMPLETED = 'rental_completed',
-  RETURN_REQUESTED = 'return_requested',
-  RETURN_APPROVED = 'return_approved',
-  RETURN_REJECTED = 'return_rejected',
-  EQUIPMENT_MAINTENANCE = 'equipment_maintenance',
-  SYSTEM = 'system',
-  CHECKOUT = 'checkout',
-  MAINTENANCE = 'maintenance',
-}
-
-export enum NotificationPriorityEnum {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-}
+// Re-export for backward compatibility
+// NotificationTypeEnum, NotificationPriorityEnum are Zod enums (for validation)
+// NotificationTypeValues, NotificationPriorityValues are const objects (for dot-notation access)
+export {
+  NotificationTypeEnum,
+  NotificationPriorityEnum,
+  NOTIFICATION_TYPE_VALUES,
+  NOTIFICATION_PRIORITY_VALUES,
+  NotificationTypeValues as NotificationTypeConst,
+  NotificationPriorityValues as NotificationPriorityConst,
+  type NotificationType,
+  type NotificationPriority,
+};
 
 // ========== Zod 스키마 정의 ==========
 
@@ -44,14 +40,8 @@ export const createNotificationSchema = z.object({
     .string()
     .min(1, '알림 내용을 입력해주세요')
     .max(500, '알림 내용은 500자 이하여야 합니다'),
-  type: z.nativeEnum(NotificationTypeEnum, {
-    message: '유효하지 않은 알림 유형입니다',
-  }),
-  priority: z
-    .nativeEnum(NotificationPriorityEnum, {
-      message: '유효하지 않은 우선순위입니다',
-    })
-    .default(NotificationPriorityEnum.MEDIUM),
+  type: NotificationTypeEnum,
+  priority: NotificationPriorityEnum.default('medium'),
   recipientId: z.string().uuid({ message: '유효한 수신자 UUID가 아닙니다' }),
   isTeamNotification: z.boolean().default(false),
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
@@ -80,18 +70,18 @@ export class CreateNotificationDto {
 
   @ApiProperty({
     description: '알림 유형',
-    enum: NotificationTypeEnum,
-    example: NotificationTypeEnum.CALIBRATION_DUE,
+    enum: NOTIFICATION_TYPE_VALUES,
+    example: 'calibration_due',
   })
-  type: NotificationTypeEnum;
+  type: NotificationType;
 
   @ApiProperty({
     description: '알림 우선순위',
-    enum: NotificationPriorityEnum,
-    example: NotificationPriorityEnum.MEDIUM,
-    default: NotificationPriorityEnum.MEDIUM,
+    enum: NOTIFICATION_PRIORITY_VALUES,
+    example: 'medium',
+    default: 'medium',
   })
-  priority?: NotificationPriorityEnum = NotificationPriorityEnum.MEDIUM;
+  priority?: NotificationPriority = 'medium';
 
   @ApiProperty({
     description: '수신자 ID (사용자 또는 팀)',

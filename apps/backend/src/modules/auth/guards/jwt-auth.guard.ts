@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { Observable } from 'rxjs';
+import { JwtUser } from '../../../types/auth';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -23,7 +24,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err, user, info) {
+  handleRequest<TUser = JwtUser>(
+    err: Error | null,
+    user: TUser | false,
+    _info: unknown,
+    _context: ExecutionContext,
+    _status?: unknown
+  ): TUser {
     // 오류가 있거나 사용자가 없는 경우
     if (err || !user) {
       throw err || new UnauthorizedException('인증에 실패했습니다.');

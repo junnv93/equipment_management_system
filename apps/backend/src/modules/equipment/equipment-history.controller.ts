@@ -9,16 +9,10 @@ import {
   Request,
   HttpStatus,
   UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthenticatedRequest } from '../../types/auth';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import {
   CreateLocationHistoryDto,
@@ -27,10 +21,13 @@ import {
   LocationHistoryResponseDto,
   MaintenanceHistoryResponseDto,
   IncidentHistoryResponseDto,
+  CreateLocationHistoryValidationPipe,
+  CreateMaintenanceHistoryValidationPipe,
+  CreateIncidentHistoryValidationPipe,
 } from './dto/equipment-history.dto';
 
 @ApiTags('Equipment History')
-@Controller('api/equipment')
+@Controller('equipment')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class EquipmentHistoryController {
@@ -64,13 +61,13 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  @UsePipes(CreateLocationHistoryValidationPipe)
   async createLocationHistory(
     @Param('uuid') equipmentUuid: string,
     @Body() dto: CreateLocationHistoryDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ): Promise<LocationHistoryResponseDto> {
-    const userId = req.user?.uuid || req.user?.id;
+    const userId = req.user?.userId || req.user?.uuid || req.user?.id;
     return this.equipmentHistoryService.createLocationHistory(equipmentUuid, dto, userId);
   }
 
@@ -110,13 +107,13 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  @UsePipes(CreateMaintenanceHistoryValidationPipe)
   async createMaintenanceHistory(
     @Param('uuid') equipmentUuid: string,
     @Body() dto: CreateMaintenanceHistoryDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ): Promise<MaintenanceHistoryResponseDto> {
-    const userId = req.user?.uuid || req.user?.id;
+    const userId = req.user?.userId || req.user?.uuid || req.user?.id;
     return this.equipmentHistoryService.createMaintenanceHistory(equipmentUuid, dto, userId);
   }
 
@@ -156,13 +153,13 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
-  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+  @UsePipes(CreateIncidentHistoryValidationPipe)
   async createIncidentHistory(
     @Param('uuid') equipmentUuid: string,
     @Body() dto: CreateIncidentHistoryDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ): Promise<IncidentHistoryResponseDto> {
-    const userId = req.user?.uuid || req.user?.id;
+    const userId = req.user?.userId || req.user?.uuid || req.user?.id;
     return this.equipmentHistoryService.createIncidentHistory(equipmentUuid, dto, userId);
   }
 

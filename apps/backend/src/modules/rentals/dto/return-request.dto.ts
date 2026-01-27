@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  ReturnConditionEnum,
+  RETURN_CONDITION_VALUES,
+  type ReturnCondition,
+} from '@equipment-management/schemas';
 
-// ========== Enum 정의 ==========
-
-export enum ReturnConditionEnum {
-  GOOD = 'good',
-  DAMAGED = 'damaged',
-  LOST = 'lost',
-}
+// Re-export for backward compatibility
+export { ReturnConditionEnum, RETURN_CONDITION_VALUES, type ReturnCondition };
 
 // ========== Zod 스키마 정의 ==========
 
@@ -16,9 +16,7 @@ export enum ReturnConditionEnum {
  * 반납 요청 스키마
  */
 export const returnRequestSchema = z.object({
-  returnCondition: z.nativeEnum(ReturnConditionEnum, {
-    message: '유효한 반납 상태를 선택해주세요',
-  }),
+  returnCondition: ReturnConditionEnum,
   returnNotes: z.string().optional(),
 });
 
@@ -29,11 +27,11 @@ export const ReturnRequestValidationPipe = new ZodValidationPipe(returnRequestSc
 
 export class ReturnRequestDto {
   @ApiProperty({
-    description: '장비 반납 상태 (양호함, 손상됨, 분실)',
-    enum: ReturnConditionEnum,
-    example: ReturnConditionEnum.GOOD,
+    description: '장비 반납 상태 (양호함, 손상됨, 분실 등)',
+    enum: RETURN_CONDITION_VALUES,
+    example: 'good',
   })
-  returnCondition: ReturnConditionEnum;
+  returnCondition: ReturnCondition;
 
   @ApiProperty({
     description: '반납 시 특이사항',

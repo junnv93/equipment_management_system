@@ -19,10 +19,9 @@ describe('EquipmentService', () => {
   let mockDb: any;
   let mockCacheService: any;
 
-  // 테스트용 mock 데이터
+  // 테스트용 mock 데이터 (id가 uuid 타입으로 변경됨)
   const mockEquipment = {
-    id: 1,
-    uuid: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     name: '테스트 장비',
     managementNumber: 'EQP-TEST-001',
     status: 'available' as EquipmentStatus,
@@ -224,11 +223,11 @@ describe('EquipmentService', () => {
       mockDb.query.equipment.findFirst.mockResolvedValue(mockEquipment);
 
       // Act
-      const result = await service.findOne(mockEquipment.uuid);
+      const result = await service.findOne(mockEquipment.id);
 
       // Assert
       expect(result).toBeDefined();
-      expect(result.uuid).toBe(mockEquipment.uuid);
+      expect(result.id).toBe(mockEquipment.id);
       expect(result.name).toBe(mockEquipment.name);
     });
 
@@ -259,7 +258,7 @@ describe('EquipmentService', () => {
       };
 
       // Act
-      const result = await service.update(mockEquipment.uuid, updateDto);
+      const result = await service.update(mockEquipment.id, updateDto);
 
       // Assert
       expect(result).toBeDefined();
@@ -286,7 +285,7 @@ describe('EquipmentService', () => {
       mockDb.returning.mockResolvedValue([softDeletedEquipment]);
 
       // Act
-      const result = await service.remove(mockEquipment.uuid);
+      const result = await service.remove(mockEquipment.id);
 
       // Assert
       expect(mockDb.update).toHaveBeenCalled();

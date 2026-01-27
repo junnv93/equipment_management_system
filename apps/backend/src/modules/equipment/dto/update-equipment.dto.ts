@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { UpdateEquipmentInput, EquipmentStatus } from '@equipment-management/schemas';
+import {
+  UpdateEquipmentInput,
+  EquipmentStatus,
+  Site,
+  Classification,
+  SiteCode,
+} from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { updateEquipmentSchema } from '@equipment-management/schemas';
 
@@ -85,10 +91,34 @@ export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
 
   @ApiPropertyOptional({
     description: '사이트',
-    enum: ['suwon', 'uiwang'],
+    enum: ['suwon', 'uiwang', 'pyeongtaek'],
     example: 'suwon',
   })
-  site?: 'suwon' | 'uiwang';
+  site?: Site;
+
+  @ApiPropertyOptional({
+    description: '장비 분류 (관리번호 자동 생성용)',
+    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+  })
+  classification?: Classification;
+
+  @ApiPropertyOptional({
+    description: '시험소코드',
+    enum: ['SUW', 'UIW', 'PYT'],
+  })
+  siteCode?: SiteCode;
+
+  @ApiPropertyOptional({
+    description: '분류코드',
+    enum: ['E', 'R', 'W', 'S', 'A', 'P'],
+  })
+  classificationCode?: 'E' | 'R' | 'W' | 'S' | 'A' | 'P';
+
+  @ApiPropertyOptional({
+    description: '관리번호 일련번호',
+    example: 1,
+  })
+  managementSerialNumber?: number;
 
   @ApiPropertyOptional({ description: '공급사' })
   supplier?: string;

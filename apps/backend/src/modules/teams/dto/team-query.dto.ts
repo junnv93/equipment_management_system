@@ -6,10 +6,12 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 /**
  * 팀 조회 쿼리 스키마
+ * ✅ 사이트 필터 추가: 사용자 사이트에 맞는 팀만 조회
  */
 export const teamQuerySchema = z.object({
   ids: z.string().optional(),
   search: z.string().optional(),
+  site: z.enum(['suwon', 'uiwang', 'pyeongtaek']).optional(), // ✅ 사이트 필터
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -35,6 +37,13 @@ export class TeamQueryDto {
     example: 'RF',
   })
   search?: string;
+
+  @ApiPropertyOptional({
+    description: '사이트 필터 (사용자 사이트에 맞는 팀만 조회)',
+    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    example: 'suwon',
+  })
+  site?: 'suwon' | 'uiwang' | 'pyeongtaek';
 
   @ApiPropertyOptional({
     description: '정렬 기준 (예: name.asc,createdAt.desc)',

@@ -10,9 +10,11 @@ import { CalibrationQueryDto } from './dto/calibration-query.dto';
 import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
 import {
   CalibrationStatusEnum,
+  CalibrationStatus,
   CalibrationApprovalStatusEnum,
   CalibrationRegisteredByRoleEnum,
-} from '../../types';
+} from '@equipment-management/schemas';
+import { getUtcStartOfDay, addDaysUtc } from '../../common/utils';
 
 // 교정 기록 인터페이스
 export interface CalibrationRecord {
@@ -135,7 +137,7 @@ export class CalibrationService {
 
     // 기술책임자는 등록자 코멘트 필수
     if (
-      registeredByRole === CalibrationRegisteredByRoleEnum.TECHNICAL_MANAGER &&
+      registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager &&
       !registrarComment
     ) {
       throw new BadRequestException('기술책임자는 등록자 코멘트를 반드시 입력해야 합니다.');
@@ -143,9 +145,9 @@ export class CalibrationService {
 
     // 승인 상태 결정: 기술책임자가 등록하면 바로 approved, 시험실무자는 pending_approval
     const approvalStatus =
-      registeredByRole === CalibrationRegisteredByRoleEnum.TECHNICAL_MANAGER
-        ? CalibrationApprovalStatusEnum.APPROVED
-        : CalibrationApprovalStatusEnum.PENDING_APPROVAL;
+      registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager
+        ? CalibrationApprovalStatusEnum.enum.approved
+        : CalibrationApprovalStatusEnum.enum.pending_approval;
 
     const newCalibration: CalibrationRecord = {
       id: `calibration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -165,7 +167,7 @@ export class CalibrationService {
       approvalStatus,
       registeredBy: registeredBy || null,
       approvedBy:
-        registeredByRole === CalibrationRegisteredByRoleEnum.TECHNICAL_MANAGER
+        registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager
           ? registeredBy || null
           : null,
       registeredByRole: registeredByRole || null,
@@ -372,7 +374,7 @@ export class CalibrationService {
   }
 
   // 교정 상태 변경
-  async updateStatus(id: string, status: CalibrationStatusEnum) {
+  async updateStatus(id: string, status: CalibrationStatus) {
     const calibration = await this.findOne(id);
     return this.update(id, { status });
   }
@@ -397,10 +399,10 @@ export class CalibrationService {
   }
 
   // 다음 교정 예정일이 다가오는 장비 교정 기록 조회
+  // ✅ UTC 기준 날짜 비교
   async findDueCalibrations(days: number) {
-    const today = new Date();
-    const dueDate = new Date();
-    dueDate.setDate(today.getDate() + days);
+    const today = getUtcStartOfDay();
+    const dueDate = addDaysUtc(today, days);
 
     return this.findAll({
       nextFromDate: today,
@@ -411,7 +413,7 @@ export class CalibrationService {
   // 승인 대기 중인 교정 목록 조회
   async findPendingApprovals() {
     return this.findAll({
-      approvalStatus: CalibrationApprovalStatusEnum.PENDING_APPROVAL,
+      approvalStatus: CalibrationApprovalStatusEnum.enum.pending_approval,
     });
   }
 
@@ -419,7 +421,7 @@ export class CalibrationService {
   async approveCalibration(id: string, approveDto: ApproveCalibrationDto) {
     const calibration = await this.findOne(id);
 
-    if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.PENDING_APPROVAL) {
+    if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
       throw new BadRequestException('승인 대기 상태인 교정만 승인할 수 있습니다.');
     }
 
@@ -432,7 +434,7 @@ export class CalibrationService {
 
     calibrations[index] = {
       ...calibrations[index],
-      approvalStatus: CalibrationApprovalStatusEnum.APPROVED,
+      approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
       approvedBy: approveDto.approverId,
       approverComment: approveDto.approverComment,
       updatedAt: now,
@@ -445,7 +447,7 @@ export class CalibrationService {
   async rejectCalibration(id: string, rejectDto: RejectCalibrationDto) {
     const calibration = await this.findOne(id);
 
-    if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.PENDING_APPROVAL) {
+    if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
       throw new BadRequestException('승인 대기 상태인 교정만 반려할 수 있습니다.');
     }
 
@@ -458,7 +460,7 @@ export class CalibrationService {
 
     calibrations[index] = {
       ...calibrations[index],
-      approvalStatus: CalibrationApprovalStatusEnum.REJECTED,
+      approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
       approvedBy: rejectDto.approverId,
       rejectionReason: rejectDto.rejectionReason,
       updatedAt: now,

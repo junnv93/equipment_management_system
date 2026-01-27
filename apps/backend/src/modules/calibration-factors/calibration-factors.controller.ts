@@ -9,18 +9,24 @@ import {
   Query,
   UseGuards,
   HttpStatus,
+  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { CalibrationFactorsService } from './calibration-factors.service';
-import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
+import {
+  CreateCalibrationFactorDto,
+  CreateCalibrationFactorValidationPipe,
+} from './dto/create-calibration-factor.dto';
 import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
 import {
   ApproveCalibrationFactorDto,
   RejectCalibrationFactorDto,
+  ApproveCalibrationFactorValidationPipe,
+  RejectCalibrationFactorValidationPipe,
 } from './dto/approve-calibration-factor.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../guards/permissions.guard';
-import { RequirePermissions } from '../../decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
 
 @ApiTags('보정계수 관리')
@@ -43,6 +49,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION_FACTOR)
+  @UsePipes(CreateCalibrationFactorValidationPipe)
   create(@Body() createDto: CreateCalibrationFactorDto) {
     return this.calibrationFactorsService.create(createDto);
   }
@@ -127,6 +134,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
+  @UsePipes(ApproveCalibrationFactorValidationPipe)
   approve(@Param('uuid') uuid: string, @Body() approveDto: ApproveCalibrationFactorDto) {
     return this.calibrationFactorsService.approve(uuid, approveDto);
   }
@@ -143,6 +151,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
+  @UsePipes(RejectCalibrationFactorValidationPipe)
   reject(@Param('uuid') uuid: string, @Body() rejectDto: RejectCalibrationFactorDto) {
     return this.calibrationFactorsService.reject(uuid, rejectDto);
   }

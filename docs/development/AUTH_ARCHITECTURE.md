@@ -181,12 +181,21 @@ apps/frontend/
 
 ### 역할 체계
 
-| 역할 코드 | 설명 | 권한 레벨 |
-|-----------|------|-----------|
-| `test_engineer` | 시험실무자 | 1 |
-| `technical_manager` | 기술책임자 | 2 |
-| `lab_manager` | 시험소 관리자 | 3 |
-| `system_admin` | 시스템 관리자 | 4 |
+> **참고**: 역할 코드는 `packages/schemas/src/enums.ts`의 `UserRoleEnum`을 Single Source of Truth로 사용
+
+| 역할 코드           | 설명            | 권한 레벨 |
+| ------------------- | --------------- | --------- |
+| `test_operator`     | 시험실무자      | 1         |
+| `technical_manager` | 기술책임자      | 2         |
+| `site_admin`        | 시험소 관리자   | 3         |
+| `system_admin`      | 시스템 관리자   | 4         |
+
+### 역할별 권한
+
+- **test_operator (시험실무자)**: 장비 등록/수정 요청, 대여/반출 신청, 교정 등록 (승인 필요)
+- **technical_manager (기술책임자)**: 요청 승인/반려, 교정 직접 등록 (Comment 필수), 팀 내 관리
+- **site_admin (시험소 관리자)**: 교정계획서 승인, 해당 시험소 전체 관리, 자체 승인 불가
+- **system_admin (시스템 관리자)**: 전체 시스템 관리, 모든 시험소 접근, 자체 승인 가능
 
 ### 역할 확인 방법
 
@@ -202,7 +211,7 @@ if (hasRole('technical_manager')) {
 import { hasRole } from '@/lib/auth/auth-utils';
 
 const session = await getServerSession(authOptions);
-if (hasRole(session?.user?.roles, 'lab_manager')) {
+if (hasRole(session?.user?.roles, 'site_admin')) {
   // 시험소 관리자 이상 접근 가능
 }
 ```

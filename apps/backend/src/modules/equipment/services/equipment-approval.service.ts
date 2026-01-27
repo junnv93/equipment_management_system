@@ -56,11 +56,10 @@ export class EquipmentApprovalService {
       // 요청 데이터를 JSON으로 직렬화
       const requestData = JSON.stringify(createDto);
 
-      // 요청 생성
+      // 요청 생성 (id는 자동 생성됨)
       const [request] = await this.db
         .insert(equipmentRequests)
         .values({
-          uuid: uuidv4(),
           requestType: 'create' as const,
           requestedBy: validRequestedBy,
           approvalStatus: 'pending_approval' as const,
@@ -72,7 +71,7 @@ export class EquipmentApprovalService {
       if (attachmentUuids && attachmentUuids.length > 0) {
         // 여러 UUID를 처리하기 위해 IN 연산자 사용
         const attachmentRecords = await this.db.query.equipmentAttachments.findMany({
-          where: sql`${equipmentAttachments.uuid} = ANY(${attachmentUuids})`,
+          where: sql`${equipmentAttachments.id} = ANY(${attachmentUuids})`,
         });
 
         for (const attachment of attachmentRecords) {
@@ -83,7 +82,7 @@ export class EquipmentApprovalService {
         }
       }
 
-      this.logger.log(`Equipment create request created: ${request.uuid}`);
+      this.logger.log(`Equipment create request created: ${request.id}`);
       return request;
     } catch (error) {
       this.logger.error(`Failed to create equipment request: ${error}`);
@@ -120,7 +119,6 @@ export class EquipmentApprovalService {
       const [request] = await this.db
         .insert(equipmentRequests)
         .values({
-          uuid: uuidv4(),
           requestType: 'update' as const,
           equipmentId: existingEquipment.id,
           requestedBy: validRequestedBy,
@@ -133,7 +131,7 @@ export class EquipmentApprovalService {
       if (attachmentUuids && attachmentUuids.length > 0) {
         // 여러 UUID를 처리하기 위해 IN 연산자 사용
         const attachmentRecords = await this.db.query.equipmentAttachments.findMany({
-          where: sql`${equipmentAttachments.uuid} = ANY(${attachmentUuids})`,
+          where: sql`${equipmentAttachments.id} = ANY(${attachmentUuids})`,
         });
 
         for (const attachment of attachmentRecords) {
@@ -144,7 +142,7 @@ export class EquipmentApprovalService {
         }
       }
 
-      this.logger.log(`Equipment update request created: ${request.uuid}`);
+      this.logger.log(`Equipment update request created: ${request.id}`);
       return request;
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -179,7 +177,6 @@ export class EquipmentApprovalService {
       const [request] = await this.db
         .insert(equipmentRequests)
         .values({
-          uuid: uuidv4(),
           requestType: 'delete' as const,
           equipmentId: existingEquipment.id,
           requestedBy: validRequestedBy,
@@ -187,7 +184,7 @@ export class EquipmentApprovalService {
         } as any)
         .returning();
 
-      this.logger.log(`Equipment delete request created: ${request.uuid}`);
+      this.logger.log(`Equipment delete request created: ${request.id}`);
       return request;
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -246,7 +243,7 @@ export class EquipmentApprovalService {
   > {
     try {
       const request = await this.db.query.equipmentRequests.findFirst({
-        where: eq(equipmentRequests.uuid, requestUuid),
+        where: eq(equipmentRequests.id, requestUuid),
         with: {
           requester: true,
           approver: true,
@@ -319,7 +316,7 @@ export class EquipmentApprovalService {
           throw new NotFoundException('장비를 찾을 수 없습니다.');
         }
         const requestData = JSON.parse(request.requestData || '{}') as UpdateEquipmentDto;
-        await this.equipmentService.update(equipmentData.uuid, requestData);
+        await this.equipmentService.update(equipmentData.id, requestData);
       } else if (request.requestType === 'delete') {
         if (!request.equipmentId) {
           throw new BadRequestException('장비 ID가 없습니다.');
@@ -330,7 +327,7 @@ export class EquipmentApprovalService {
         if (!equipmentData) {
           throw new NotFoundException('장비를 찾을 수 없습니다.');
         }
-        await this.equipmentService.remove(equipmentData.uuid);
+        await this.equipmentService.remove(equipmentData.id);
       }
 
       // 승인자 존재 여부 확인
@@ -347,7 +344,7 @@ export class EquipmentApprovalService {
           approvedBy: validApprovedBy,
           approvedAt: new Date(),
         } as any)
-        .where(eq(equipmentRequests.uuid, requestUuid))
+        .where(eq(equipmentRequests.id, requestUuid))
         .returning();
 
       this.logger.log(`Request approved: ${requestUuid}`);
@@ -414,7 +411,7 @@ export class EquipmentApprovalService {
           approvedAt: new Date(),
           rejectionReason,
         } as any)
-        .where(eq(equipmentRequests.uuid, requestUuid))
+        .where(eq(equipmentRequests.id, requestUuid))
         .returning();
 
       this.logger.log(`Request rejected: ${requestUuid}`);

@@ -247,10 +247,10 @@ describe('Equipment Approval Process (e2e)', () => {
       // 요청인 경우 requestUuid가 있을 수 있음
       if (response.body.requestUuid) {
         createdRequestUuids.push(response.body.requestUuid);
-      } else if (response.body.uuid) {
-        createdEquipmentUuids.push(response.body.uuid);
-      } else if (response.body.data?.uuid) {
-        createdEquipmentUuids.push(response.body.data.uuid);
+      } else if (response.body.id) {
+        createdEquipmentUuids.push(response.body.id);
+      } else if (response.body.data?.id) {
+        createdEquipmentUuids.push(response.body.data.id);
       }
     });
 
@@ -274,11 +274,11 @@ describe('Equipment Approval Process (e2e)', () => {
         .send(equipmentData);
 
       expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('uuid');
+      expect(response.body).toHaveProperty('id');
       expect(response.body.approvalStatus).toBe('approved');
       
-      if (response.body.uuid) {
-        createdEquipmentUuids.push(response.body.uuid);
+      if (response.body.id) {
+        createdEquipmentUuids.push(response.body.id);
       }
     });
   });
@@ -347,7 +347,7 @@ describe('Equipment Approval Process (e2e)', () => {
           .set('Authorization', `Bearer ${technicalManagerToken || siteAdminToken}`);
 
         if (listResponse.body && listResponse.body.length > 0) {
-          testRequestUuid = listResponse.body[0].uuid;
+          testRequestUuid = listResponse.body[0].id;
         }
       }
     });
@@ -413,7 +413,7 @@ describe('Equipment Approval Process (e2e)', () => {
       expect(response.status).toBe(201);
       // 응답 구조: { message, attachment: { uuid, fileName, ... } }
       expect(response.body).toHaveProperty('attachment');
-      expect(response.body.attachment).toHaveProperty('uuid');
+      expect(response.body.attachment).toHaveProperty('id');
       expect(response.body.attachment).toHaveProperty('fileName');
 
       // 테스트 파일 삭제
@@ -482,8 +482,8 @@ describe('Equipment Approval Process (e2e)', () => {
         .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
         .send(equipmentData);
 
-      if (createResponse.body.uuid) {
-        testEquipmentUuid = createResponse.body.uuid;
+      if (createResponse.body.id) {
+        testEquipmentUuid = createResponse.body.id;
         createdEquipmentUuids.push(testEquipmentUuid);
       }
     });
@@ -537,8 +537,8 @@ describe('Equipment Approval Process (e2e)', () => {
         .set('Authorization', `Bearer ${siteAdminToken || testOperatorToken}`)
         .send(equipmentData);
 
-      if (createResponse.body.uuid) {
-        testEquipmentUuid = createResponse.body.uuid;
+      if (createResponse.body.id) {
+        testEquipmentUuid = createResponse.body.id;
         createdEquipmentUuids.push(testEquipmentUuid);
       }
     });
@@ -627,10 +627,10 @@ describe('Equipment Approval Process (e2e)', () => {
       if (response.status === 201 || response.status === 200) {
         const equipment = response.body.data || response.body;
         // 직접 생성된 경우 uuid, 요청인 경우 requestUuid
-        const hasUuid = equipment.uuid || response.body.requestUuid;
+        const hasUuid = equipment.id || response.body.requestUuid;
         expect(hasUuid).toBeDefined();
         // 직접 생성된 경우에만 equipmentType과 calibrationResult 확인
-        if (equipment.uuid && equipment.equipmentType) {
+        if (equipment.id && equipment.equipmentType) {
           expect(equipment.equipmentType).toBe('분석기');
           expect(equipment.calibrationResult).toBe('합격');
         }
@@ -639,8 +639,8 @@ describe('Equipment Approval Process (e2e)', () => {
         return;
       }
 
-      if (response.body.uuid) {
-        createdEquipmentUuids.push(response.body.uuid);
+      if (response.body.id) {
+        createdEquipmentUuids.push(response.body.id);
       }
     });
   });

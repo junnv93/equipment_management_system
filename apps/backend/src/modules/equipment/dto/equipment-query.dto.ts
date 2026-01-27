@@ -4,6 +4,7 @@ import {
   EquipmentFilter,
   equipmentFilterSchema,
   EquipmentStatus,
+  CalibrationMethod,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -64,10 +65,23 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
   site?: 'suwon' | 'uiwang';
 
   @ApiPropertyOptional({
-    description: '교정 예정일 기준 필터링 (일)',
+    description: '교정 방법 (외부교정/자체점검/비대상)',
+    enum: ['external_calibration', 'self_inspection', 'not_applicable'],
+    example: 'external_calibration',
+  })
+  calibrationMethod?: CalibrationMethod;
+
+  @ApiPropertyOptional({
+    description: '교정 임박 필터 - N일 이내 교정 예정 (오늘 <= nextCalibrationDate <= 오늘+N일)',
     example: 30,
   })
   calibrationDue?: number;
+
+  @ApiPropertyOptional({
+    description: '교정 여유 필터 - N일 이후 교정 예정 (nextCalibrationDate > 오늘+N일)',
+    example: 30,
+  })
+  calibrationDueAfter?: number;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',

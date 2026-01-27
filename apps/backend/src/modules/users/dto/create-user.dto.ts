@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRoleEnum, TeamEnum, SiteEnum } from '@equipment-management/schemas';
+import { UserRoleEnum, SiteEnum } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 /**
@@ -18,7 +18,7 @@ export const createUserSchema = z.object({
   role: UserRoleEnum,
   site: SiteEnum.optional(),
   location: z.enum(['수원랩', '의왕랩']).optional(),
-  teamId: TeamEnum.optional(),
+  teamId: z.string().uuid().optional(), // UUID 형식
   department: z.string().max(100).optional(),
   position: z.string().max(100).optional(),
   phoneNumber: z.string().max(20).optional(),
@@ -73,11 +73,10 @@ export class CreateUserDto {
   location?: '수원랩' | '의왕랩';
 
   @ApiPropertyOptional({
-    description: '소속 팀 ID',
-    enum: ['rf', 'sar', 'emc', 'auto'],
-    example: 'rf',
+    description: '소속 팀 ID (UUID)',
+    example: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
   })
-  teamId?: 'rf' | 'sar' | 'emc' | 'auto';
+  teamId?: string;
 
   @ApiPropertyOptional({
     description: '부서명',

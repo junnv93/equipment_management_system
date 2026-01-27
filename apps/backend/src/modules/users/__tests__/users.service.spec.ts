@@ -6,7 +6,7 @@ import { CacheModule } from '../../../common/cache/cache.module';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserQueryDto } from '../dto/user-query.dto';
-import { UserRoleEnum } from '../../../types/enums';
+import { UserRoleEnum } from '@equipment-management/schemas';
 import * as crypto from 'crypto';
 import { getErrorMessage } from '../../../common/utils/error';
 
@@ -63,7 +63,7 @@ describe('UsersService', () => {
         email: `test.user.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Test User',
-        role: UserRoleEnum.TEST_ENGINEER,
+        role: UserRoleEnum.enum.test_engineer,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -85,7 +85,7 @@ describe('UsersService', () => {
         email: `test.user.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Duplicate User',
-        role: UserRoleEnum.TEST_ENGINEER,
+        role: UserRoleEnum.enum.test_engineer,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -127,7 +127,7 @@ describe('UsersService', () => {
         email: `unique.${uniqueString}@example.com`,
         password: 'Password123!',
         name: `Unique User ${uniqueString}`,
-        role: UserRoleEnum.TEST_ENGINEER,
+        role: UserRoleEnum.enum.test_engineer,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -157,7 +157,7 @@ describe('UsersService', () => {
         email: `findone.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'FindOne Test User',
-        role: UserRoleEnum.TEST_ENGINEER,
+        role: UserRoleEnum.enum.test_engineer,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -192,7 +192,7 @@ describe('UsersService', () => {
         email: `update.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Update Test User',
-        role: UserRoleEnum.TEST_ENGINEER,
+        role: UserRoleEnum.enum.test_engineer,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -226,7 +226,7 @@ describe('UsersService', () => {
         email: `remove.${generateRandomString()}@example.com`,
         password: 'Password123!',
         name: 'Remove Test User',
-        role: UserRoleEnum.TEST_ENGINEER,
+        role: UserRoleEnum.enum.test_engineer,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',
@@ -252,7 +252,7 @@ describe('UsersService', () => {
         email,
         password: 'Password123!',
         name: 'FindEmail Test User',
-        role: UserRoleEnum.TEST_ENGINEER,
+        role: UserRoleEnum.enum.test_engineer,
         department: '개발팀',
         position: '주니어 개발자',
         phoneNumber: '010-1234-5678',

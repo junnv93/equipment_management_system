@@ -5,7 +5,7 @@ import {
   CalibrationMethodEnum,
   CalibrationStatusEnum,
   CalibrationApprovalStatusEnum,
-} from '../../../types';
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -24,7 +24,7 @@ export const calibrationQuerySchema = z.object({
   nextToDate: z.coerce.date().optional(),
   isPassed: z.string().optional(),
   search: z.string().optional(),
-  approvalStatus: z.nativeEnum(CalibrationApprovalStatusEnum).optional(),
+  approvalStatus: CalibrationApprovalStatusEnum.optional(),
   sort: z.string().default('calibrationDate.desc'),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -107,7 +107,7 @@ export class CalibrationQueryDto {
 
   @ApiPropertyOptional({
     description: '승인 상태',
-    enum: CalibrationApprovalStatusEnum,
+    enum: CalibrationApprovalStatusEnum.options,
     example: 'pending_approval',
   })
   approvalStatus?: string;

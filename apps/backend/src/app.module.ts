@@ -17,6 +17,7 @@ import { SoftwareModule } from './modules/software/software.module';
 import { CalibrationPlansModule } from './modules/calibration-plans/calibration-plans.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DrizzleModule } from './database/drizzle.module';
 import { CacheModule } from './common/cache/cache.module';
 import { MetricsModule } from './common/metrics/metrics.module';
@@ -58,6 +59,7 @@ import { AuditModule } from './modules/audit/audit.module';
     NotificationsModule,
     ReportsModule,
     MonitoringModule,
+    DashboardModule,
   ],
   controllers: [],
   providers: [

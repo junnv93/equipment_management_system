@@ -11,10 +11,10 @@ echo ""
 # 프로젝트 루트 디렉토리로 이동
 cd "$(dirname "$0")/.."
 
-echo "📦 DB 동기화 (localhost:5433)"
+echo "📦 DB 동기화 (localhost:5432)"
 echo "-------------------------------------------"
 cd apps/backend
-DATABASE_URL="postgresql://postgres:postgres@localhost:5433/equipment_management" npx drizzle-kit push
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/equipment_management" npx drizzle-kit push
 echo "✅ DB 동기화 완료"
 echo ""
 

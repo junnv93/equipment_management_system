@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import {
   CreateRepairHistoryDto,
   UpdateRepairHistoryDto,
@@ -6,12 +6,17 @@ import {
   RepairHistoryResponseDto,
 } from '../dto/repair-history.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { NonConformancesService } from '../../non-conformances/non-conformances.service';
+import { NonConformanceStatus } from '../../non-conformances/dto/non-conformance-query.dto';
+import { RepairResultValues } from '@equipment-management/schemas';
 
-// 수리 이력 인터페이스
+// Backward compatibility alias
+const RepairResultEnum = RepairResultValues;
+
+// 수리 이력 인터페이스 (UUID PK로 통일됨)
 export interface RepairHistoryRecord {
-  id: number;
-  uuid: string;
-  equipmentId: number;
+  id: string; // UUID
+  equipmentId: string; // UUID
   repairDate: Date;
   repairDescription: string;
   repairedBy: string | null;
@@ -28,12 +33,11 @@ export interface RepairHistoryRecord {
   updatedAt: Date;
 }
 
-// 임시 인메모리 저장소
+// 임시 인메모리 저장소 (UUID PK)
 const repairHistoryStore: RepairHistoryRecord[] = [
   {
-    id: 1,
-    uuid: '11111111-1111-1111-1111-111111111111',
-    equipmentId: 1,
+    id: '11111111-1111-1111-1111-111111111111',
+    equipmentId: '550e8400-e29b-41d4-a716-446655440001',
     repairDate: new Date('2024-01-15'),
     repairDescription: '전원부 고장으로 인한 전원 보드 교체',
     repairedBy: '홍길동',
@@ -50,9 +54,8 @@ const repairHistoryStore: RepairHistoryRecord[] = [
     updatedAt: new Date('2024-01-15'),
   },
   {
-    id: 2,
-    uuid: '22222222-2222-2222-2222-222222222222',
-    equipmentId: 1,
+    id: '22222222-2222-2222-2222-222222222222',
+    equipmentId: '550e8400-e29b-41d4-a716-446655440001',
     repairDate: new Date('2024-06-20'),
     repairDescription: '프로브 커넥터 불량으로 커넥터 교체',
     repairedBy: '김기사',
@@ -70,10 +73,13 @@ const repairHistoryStore: RepairHistoryRecord[] = [
   },
 ];
 
-let nextId = 3;
-
 @Injectable()
 export class RepairHistoryService {
+  constructor(
+    @Inject(forwardRef(() => NonConformancesService))
+    private nonConformancesService: NonConformancesService,
+  ) {}
+
   /**
    * 장비별 수리 이력 목록 조회
    */
@@ -96,9 +102,11 @@ export class RepairHistoryService {
       repairCompany,
       includeDeleted = false,
       sort = 'repairDate.desc',
-      page = 1,
-      pageSize = 20,
     } = query;
+
+    // 쿼리 파라미터를 숫자로 변환 (문자열로 전달될 수 있음)
+    const page = query.page ? Number(query.page) : 1;
+    const pageSize = query.pageSize ? Number(query.pageSize) : 20;
 
     // 임시: equipmentUuid를 equipmentId로 매핑 (실제로는 DB 조회 필요)
     // 여기서는 모든 레코드를 필터링
@@ -165,7 +173,7 @@ export class RepairHistoryService {
    * 수리 이력 상세 조회
    */
   async findOne(uuid: string): Promise<RepairHistoryRecord> {
-    const record = repairHistoryStore.find((r) => r.uuid === uuid && !r.isDeleted);
+    const record = repairHistoryStore.find((r) => r.id === uuid && !r.isDeleted);
     if (!record) {
       throw new NotFoundException(`수리 이력을 찾을 수 없습니다: ${uuid}`);
     }
@@ -174,20 +182,17 @@ export class RepairHistoryService {
 
   /**
    * 수리 이력 생성
+   * 부적합 ID가 제공되면 자동으로 연결하고, 수리 완료 시 부적합 상태 업데이트
    */
   async create(
     equipmentUuid: string,
     dto: CreateRepairHistoryDto,
     createdBy: string
   ): Promise<RepairHistoryRecord> {
-    // 임시: equipmentUuid를 equipmentId로 변환 (실제로는 DB 조회 필요)
-    const equipmentId = 1; // 임시 값
-
     const now = new Date();
     const newRecord: RepairHistoryRecord = {
-      id: nextId++,
-      uuid: uuidv4(),
-      equipmentId,
+      id: uuidv4(),
+      equipmentId: equipmentUuid,
       repairDate: new Date(dto.repairDate),
       repairDescription: dto.repairDescription,
       repairedBy: dto.repairedBy || null,
@@ -205,17 +210,36 @@ export class RepairHistoryService {
     };
 
     repairHistoryStore.push(newRecord);
+
+    // 부적합 ID가 제공된 경우 연결
+    if (dto.nonConformanceId) {
+      await this.nonConformancesService.linkRepair(dto.nonConformanceId, newRecord.id);
+
+      // 수리가 완료 상태면 자동으로 부적합을 'corrected'로 변경
+      if (dto.repairResult === RepairResultEnum.COMPLETED) {
+        await this.nonConformancesService.markCorrected(dto.nonConformanceId, {
+          correctionContent: `수리 완료: ${dto.repairDescription}`,
+          correctionDate: new Date(dto.repairDate),
+          correctedBy: createdBy,
+        });
+      }
+    }
+
     return newRecord;
   }
 
   /**
    * 수리 이력 수정
+   * repairResult가 'completed'로 변경되면 연결된 부적합 상태 자동 업데이트
    */
   async update(uuid: string, dto: UpdateRepairHistoryDto): Promise<RepairHistoryRecord> {
-    const index = repairHistoryStore.findIndex((r) => r.uuid === uuid && !r.isDeleted);
+    const index = repairHistoryStore.findIndex((r) => r.id === uuid && !r.isDeleted);
     if (index === -1) {
       throw new NotFoundException(`수리 이력을 찾을 수 없습니다: ${uuid}`);
     }
+
+    const previousRecord = repairHistoryStore[index];
+    const previousResult = previousRecord.repairResult;
 
     const now = new Date();
     const updatedRecord: RepairHistoryRecord = {
@@ -232,14 +256,31 @@ export class RepairHistoryService {
     };
 
     repairHistoryStore[index] = updatedRecord;
+
+    // repairResult가 'completed'로 변경되면 연결된 부적합 자동 업데이트
+    if (
+      dto.repairResult === RepairResultEnum.COMPLETED &&
+      previousResult !== RepairResultEnum.COMPLETED
+    ) {
+      const linkedNC = await this.nonConformancesService.findByRepairId(uuid);
+
+      if (linkedNC && linkedNC.status !== NonConformanceStatus.CORRECTED) {
+        await this.nonConformancesService.markCorrected(linkedNC.id, {
+          correctionContent: `수리 완료: ${updatedRecord.repairDescription}`,
+          correctionDate: updatedRecord.repairDate,
+          correctedBy: updatedRecord.createdBy,
+        });
+      }
+    }
+
     return updatedRecord;
   }
 
   /**
    * 수리 이력 삭제 (소프트 삭제)
    */
-  async remove(uuid: string, deletedBy: string): Promise<{ deleted: boolean; uuid: string }> {
-    const index = repairHistoryStore.findIndex((r) => r.uuid === uuid && !r.isDeleted);
+  async remove(uuid: string, deletedBy: string): Promise<{ deleted: boolean; id: string }> {
+    const index = repairHistoryStore.findIndex((r) => r.id === uuid && !r.isDeleted);
     if (index === -1) {
       throw new NotFoundException(`수리 이력을 찾을 수 없습니다: ${uuid}`);
     }
@@ -253,7 +294,7 @@ export class RepairHistoryService {
       updatedAt: now,
     };
 
-    return { deleted: true, uuid };
+    return { deleted: true, id: uuid };
   }
 
   /**

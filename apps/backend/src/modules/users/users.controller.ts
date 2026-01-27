@@ -25,8 +25,8 @@ import {
   UserQueryValidationPipe,
 } from './dto';
 import { User, UserListResponse } from '../../types/models';
-import { RequirePermissions } from '../../decorators/require-permissions.decorator';
-import { Permission } from '../../types/enums';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/rbac/permissions.enum';
 
 @ApiTags('users')
 @Controller('users')

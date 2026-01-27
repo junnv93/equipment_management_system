@@ -1,8 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { CalibrationFactorsService } from '../calibration-factors.service';
-import { CalibrationFactorApprovalStatus } from '../dto/calibration-factor-query.dto';
-import { CalibrationFactorType } from '../dto/create-calibration-factor.dto';
+import {
+  CalibrationFactorTypeValues,
+  CalibrationFactorApprovalStatusValues,
+} from '@equipment-management/schemas';
+
+// Backward compatibility aliases
+const CalibrationFactorType = CalibrationFactorTypeValues;
+const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
 describe('CalibrationFactorsService', () => {
   let service: CalibrationFactorsService;

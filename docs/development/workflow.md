@@ -242,6 +242,65 @@ git push origin feature/이슈번호-기능명
 2. 관련 이슈 종료
 3. 작업 브랜치 삭제 (선택사항)
 
+## 프론트엔드 개발 워크플로우 (Next.js 16)
+
+### Server vs Client 컴포넌트 결정
+
+1. **Server Component 사용 (기본)**
+   - 데이터 페칭이 필요한 경우
+   - 정적 콘텐츠 렌더링
+   - SEO가 중요한 페이지
+
+2. **Client Component 사용 (`'use client'` 필요)**
+   - 이벤트 핸들러 (onClick, onChange 등)
+   - React hooks (useState, useEffect 등)
+   - 브라우저 API 사용
+
+### Next.js 16 필수 체크리스트
+
+```markdown
+새 페이지/컴포넌트 작성 전 확인:
+- [ ] params/searchParams는 Promise (await 필수)
+- [ ] useFormState 대신 useActionState 사용
+- [ ] Form action은 void 반환 (데이터 반환 시 useActionState 사용)
+- [ ] any 타입 절대 금지
+- [ ] Server Component 기본, Client Component는 최소화
+- [ ] 동적 라우트에 loading.tsx 추가
+- [ ] 에러 처리를 위한 error.tsx 추가
+```
+
+### 페이지 생성 워크플로우
+
+```
+1. 라우트 유형 결정 (정적/동적)
+2. app/ 디렉토리에 page.tsx 생성
+3. 동적 라우트면 params를 Promise로 처리
+4. Server Component에서 데이터 페칭
+5. Client Component로 인터랙션 분리
+6. loading.tsx, error.tsx 추가
+7. metadata export로 SEO 설정
+```
+
+### 예시: 동적 페이지 패턴
+
+```typescript
+// app/equipment/[id]/page.tsx
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function Page(props: PageProps) {
+  // ✅ params는 반드시 await
+  const { id } = await props.params;
+
+  // ✅ Server Component에서 데이터 페칭
+  const equipment = await equipmentApi.getEquipment(id);
+
+  // ✅ Client Component로 UI 위임
+  return <EquipmentDetailClient equipment={equipment} />;
+}
+```
+
 ## 테스트 및 품질 보증
 
 ### 테스트 수준

@@ -1,24 +1,31 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 // import { v4 as uuidv4 } from 'uuid';
+import { CreateNotificationDto } from './dto/create-notification.dto';
 import {
-  CreateNotificationDto,
-  NotificationTypeEnum,
-  NotificationPriorityEnum,
-} from './dto/create-notification.dto';
+  NotificationTypeValues,
+  NotificationPriorityValues,
+  type NotificationType,
+  type NotificationPriority,
+} from '@equipment-management/schemas';
+
+// Backward compatibility aliases for dot-notation access
+const NotificationTypeEnum = NotificationTypeValues;
+const NotificationPriorityEnum = NotificationPriorityValues;
 import {
   NotificationFrequencyEnum,
   NotificationSettingsDto,
 } from './dto/notification-settings.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { parseSortString, sortByField } from '../../common/utils/sort';
 
 // 알림 인터페이스 정의
 export interface Notification {
   id: string;
   title: string;
   content: string;
-  type: NotificationTypeEnum;
-  priority: NotificationPriorityEnum;
+  type: NotificationType;
+  priority: NotificationPriority;
   recipientId: string | null;
   isRead: boolean;
   isTeamNotification?: boolean;
@@ -254,15 +261,13 @@ export class NotificationsService {
     }
 
     // 정렬
-    if (sort) {
-      const [field, direction] = sort.split('.');
-      const isAsc = direction === 'asc';
-
-      filteredNotifications.sort((a, b) => {
-        if (a[field] < b[field]) return isAsc ? -1 : 1;
-        if (a[field] > b[field]) return isAsc ? 1 : -1;
-        return 0;
-      });
+    const sortConfig = parseSortString(sort);
+    if (sortConfig) {
+      filteredNotifications = sortByField(
+        filteredNotifications,
+        sortConfig.field,
+        sortConfig.direction
+      );
     }
 
     // 페이지네이션
@@ -639,7 +644,7 @@ export class NotificationsService {
   async createSystemNotification(
     title: string,
     content: string,
-    priority: NotificationPriorityEnum = NotificationPriorityEnum.MEDIUM
+    priority: NotificationPriority = NotificationPriorityEnum.MEDIUM
   ): Promise<Notification> {
     // 시스템 알림 생성 로직
     const systemNotification: Notification = {
@@ -708,7 +713,7 @@ export class NotificationsService {
   /**
    * 사용자의 특정 알림 유형이 활성화되어 있는지 확인
    */
-  isNotificationEnabled(userId: string, notificationType: NotificationTypeEnum): boolean {
+  isNotificationEnabled(userId: string, notificationType: NotificationType): boolean {
     const settings = this.getUserNotificationSettings(userId);
 
     if (!settings.inAppEnabled) {
@@ -751,7 +756,7 @@ export class NotificationsService {
   }
 
   // 이메일 발송 여부 확인
-  shouldSendEmail(userId: string, notificationType: NotificationTypeEnum): boolean {
+  shouldSendEmail(userId: string, notificationType: NotificationType): boolean {
     const settings = this.getUserNotificationSettings(userId);
     return settings.emailEnabled === true && this.isNotificationEnabled(userId, notificationType);
   }

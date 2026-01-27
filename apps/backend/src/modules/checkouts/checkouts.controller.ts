@@ -36,6 +36,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
+import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('반출 관리')
 @ApiBearerAuth()
@@ -52,7 +53,7 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  async create(@Body() createCheckoutDto: CreateCheckoutDto, @Request() req: any) {
+  async create(@Body() createCheckoutDto: CreateCheckoutDto, @Request() req: AuthenticatedRequest) {
     const requesterId = req.user?.userId || req.user?.sub;
     if (!requesterId) {
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
@@ -136,7 +137,7 @@ export class CheckoutsController {
   async approve(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveCheckoutDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ) {
     const approverTeamId = req.user?.teamId; // 승인자 팀 ID
     return this.checkoutsService.approve(uuid, approveDto, approverTeamId);
@@ -192,7 +193,7 @@ export class CheckoutsController {
   async returnCheckout(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() returnDto: ReturnCheckoutDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ) {
     const returnerId = req.user?.userId || req.user?.sub;
     if (!returnerId) {
@@ -224,16 +225,14 @@ export class CheckoutsController {
   async approveReturn(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveReturnDto: ApproveReturnDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ) {
     // 승인자 ID가 없으면 현재 로그인한 사용자 ID 사용
-    if (!approveReturnDto.approverId) {
-      approveReturnDto.approverId = req.user?.userId || req.user?.sub;
-    }
-    if (!approveReturnDto.approverId) {
+    const approverId = approveReturnDto.approverId || req.user.userId;
+    if (!approverId) {
       throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
     }
-    return this.checkoutsService.approveReturn(uuid, approveReturnDto);
+    return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId });
   }
 
   @Patch(':uuid/cancel')

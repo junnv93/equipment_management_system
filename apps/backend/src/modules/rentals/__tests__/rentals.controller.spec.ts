@@ -3,11 +3,20 @@ import { RentalsController } from '../rentals.controller';
 import { RentalsService } from '../rentals.service';
 import { CreateRentalDto } from '../dto/create-rental.dto';
 import { UpdateRentalDto } from '../dto/update-rental.dto';
-import { ReturnRequestDto, ReturnConditionEnum } from '../dto/return-request.dto';
-import { ApproveReturnDto, ReturnApprovalStatusEnum } from '../dto/approve-return.dto';
+import { ReturnRequestDto } from '../dto/return-request.dto';
+import { ApproveReturnDto } from '../dto/approve-return.dto';
 import { ApproveRentalDto } from '../dto/approve-rental.dto';
-import { RentalStatusEnum } from '../../../types/enums';
+import {
+  RentalStatusEnum,
+  ReturnConditionValues,
+  ReturnApprovalStatusValues,
+} from '@equipment-management/schemas';
 import { NotFoundException } from '@nestjs/common';
+import { AuthenticatedRequest } from '../../../types/auth';
+
+// Backward compatibility aliases
+const ReturnConditionEnum = ReturnConditionValues;
+const ReturnApprovalStatusEnum = ReturnApprovalStatusValues;
 
 describe('RentalsController', () => {
   let controller: RentalsController;
@@ -64,7 +73,7 @@ describe('RentalsController', () => {
       const expectedResult = {
         id: 'test-rental-id',
         ...createRentalDto,
-        status: RentalStatusEnum.PENDING,
+        status: RentalStatusEnum.enum.pending,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -77,7 +86,7 @@ describe('RentalsController', () => {
           userId: 'test-user-id',
           teamId: 'test-team-id',
         },
-      };
+      } as unknown as AuthenticatedRequest;
 
       // Execute controller method
       const result = await controller.create(createRentalDto, mockRequest);
@@ -85,7 +94,7 @@ describe('RentalsController', () => {
       // Verify results
       expect(result).toBeDefined();
       expect(result.id).toBe('test-rental-id');
-      expect(result.status).toBe(RentalStatusEnum.PENDING);
+      expect(result.status).toBe(RentalStatusEnum.enum.pending);
       expect(mockRentalsService.create).toHaveBeenCalled();
     });
   });
@@ -98,13 +107,13 @@ describe('RentalsController', () => {
           id: 'test-rental-id-1',
           equipmentId: 'test-equipment-id-1',
           userId: 'test-user-id-1',
-          status: RentalStatusEnum.APPROVED,
+          status: RentalStatusEnum.enum.approved,
         },
         {
           id: 'test-rental-id-2',
           equipmentId: 'test-equipment-id-2',
           userId: 'test-user-id-2',
-          status: RentalStatusEnum.PENDING,
+          status: RentalStatusEnum.enum.pending,
         },
       ];
 
@@ -146,7 +155,7 @@ describe('RentalsController', () => {
         id: 'test-rental-id',
         equipmentId: 'test-equipment-id',
         userId: 'test-user-id',
-        status: RentalStatusEnum.APPROVED,
+        status: RentalStatusEnum.enum.approved,
       };
 
       mockRentalsService.findOne.mockResolvedValue(rental);
@@ -175,7 +184,7 @@ describe('RentalsController', () => {
     it('should update a rental', async () => {
       // Mock data
       const updateRentalDto: UpdateRentalDto = {
-        status: RentalStatusEnum.APPROVED,
+        status: RentalStatusEnum.enum.approved,
         notes: '관리자 승인',
       };
 
@@ -183,7 +192,7 @@ describe('RentalsController', () => {
         id: 'test-rental-id',
         equipmentId: 'test-equipment-id',
         userId: 'test-user-id',
-        status: RentalStatusEnum.APPROVED,
+        status: RentalStatusEnum.enum.approved,
         notes: '관리자 승인',
       };
 
@@ -194,7 +203,7 @@ describe('RentalsController', () => {
 
       // Verify results
       expect(result).toBeDefined();
-      expect(result.status).toBe(RentalStatusEnum.APPROVED);
+      expect(result.status).toBe(RentalStatusEnum.enum.approved);
       expect(result.notes).toBe('관리자 승인');
       expect(mockRentalsService.update).toHaveBeenCalledWith('test-rental-id', updateRentalDto);
     });
@@ -208,7 +217,7 @@ describe('RentalsController', () => {
 
       const approvedRental = {
         id: 'test-rental-id',
-        status: RentalStatusEnum.APPROVED,
+        status: RentalStatusEnum.enum.approved,
         approverId: 'test-approver-id',
         approverComment: '승인합니다',
         autoApproved: false,
@@ -221,12 +230,12 @@ describe('RentalsController', () => {
           userId: 'test-approver-id',
           teamId: 'test-team-id',
         },
-      };
+      } as unknown as AuthenticatedRequest;
 
       const result = await controller.approve('test-rental-id', approveDto, mockRequest);
 
       expect(result).toBeDefined();
-      expect(result.status).toBe(RentalStatusEnum.APPROVED);
+      expect(result.status).toBe(RentalStatusEnum.enum.approved);
       expect(mockRentalsService.approve).toHaveBeenCalled();
     });
   });
@@ -243,7 +252,7 @@ describe('RentalsController', () => {
         id: 'test-rental-id',
         equipmentId: 'test-equipment-id',
         userId: 'test-user-id',
-        status: RentalStatusEnum.RETURN_REQUESTED,
+        status: RentalStatusEnum.enum.return_requested,
         notes: '정상 반납',
       };
 
@@ -254,7 +263,7 @@ describe('RentalsController', () => {
 
       // Verify results
       expect(result).toBeDefined();
-      expect(result.status).toBe(RentalStatusEnum.RETURN_REQUESTED);
+      expect(result.status).toBe(RentalStatusEnum.enum.return_requested);
       expect(mockRentalsService.requestReturn).toHaveBeenCalledWith(
         'test-rental-id',
         returnRequestDto
@@ -268,7 +277,7 @@ describe('RentalsController', () => {
         id: 'test-rental-id',
         equipmentId: 'test-equipment-id',
         userId: 'test-user-id',
-        status: RentalStatusEnum.RETURNED,
+        status: RentalStatusEnum.enum.returned,
         notes: '반납 승인',
         approverId: 'test-admin-id',
         actualReturnDate: new Date(),
@@ -281,7 +290,7 @@ describe('RentalsController', () => {
 
       // Verify results
       expect(result).toBeDefined();
-      expect(result.status).toBe(RentalStatusEnum.RETURNED);
+      expect(result.status).toBe(RentalStatusEnum.enum.returned);
       expect(result.approverId).toBe('test-admin-id');
       expect(result.actualReturnDate).toBeDefined();
       expect(mockRentalsService.approveReturn).toHaveBeenCalledWith('test-rental-id');

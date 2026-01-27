@@ -14,6 +14,7 @@ import { LoginDto, LoginValidationPipe } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { AzureADAuthGuard } from './guards/azure-ad-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthenticatedRequest } from '../../types/auth';
 
 @Controller('auth')
 export class AuthController {
@@ -29,13 +30,13 @@ export class AuthController {
   @Public()
   @UseGuards(AzureADAuthGuard)
   @Get('azure-login')
-  async azureLogin(@Req() req) {
+  async azureLogin(@Req() req: AuthenticatedRequest) {
     return this.authService.validateAzureADUser(req.user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Req() req) {
+  getProfile(@Req() req: AuthenticatedRequest) {
     return {
       id: req.user.userId,
       email: req.user.email,
@@ -76,42 +77,43 @@ export class AuthController {
     }
 
     // 역할별 테스트 사용자 정보
+    // 주의: id, uuid, teamId는 반드시 유효한 UUID 형식이어야 함 (DB 저장 시 UUID 타입 검증)
     const testUsers: Record<string, any> = {
       test_engineer: {
-        id: 'test-engineer-id',
-        uuid: 'test-engineer-uuid',
+        id: '00000000-0000-0000-0000-000000000001',
+        uuid: '00000000-0000-0000-0000-000000000001',
         email: 'test.engineer@example.com',
         name: '테스트 시험실무자',
         role: 'test_engineer',
         site: 'suwon',
-        teamId: 'test-team-id',
+        teamId: '00000000-0000-0000-0000-000000000099',
       },
       technical_manager: {
-        id: 'test-tech-manager-id',
-        uuid: 'test-tech-manager-uuid',
+        id: '00000000-0000-0000-0000-000000000002',
+        uuid: '00000000-0000-0000-0000-000000000002',
         email: 'tech.manager@example.com',
         name: '테스트 기술책임자',
         role: 'technical_manager',
         site: 'suwon',
-        teamId: 'test-team-id',
+        teamId: '00000000-0000-0000-0000-000000000099',
       },
       lab_manager: {
-        id: 'test-lab-manager-id',
-        uuid: 'test-lab-manager-uuid',
+        id: '00000000-0000-0000-0000-000000000003',
+        uuid: '00000000-0000-0000-0000-000000000003',
         email: 'lab.manager@example.com',
         name: '테스트 시험소장',
         role: 'lab_manager',
         site: 'suwon',
-        teamId: 'test-team-id',
+        teamId: '00000000-0000-0000-0000-000000000099',
       },
       system_admin: {
-        id: 'test-system-admin-id',
-        uuid: 'test-system-admin-uuid',
+        id: '00000000-0000-0000-0000-000000000004',
+        uuid: '00000000-0000-0000-0000-000000000004',
         email: 'system.admin@example.com',
         name: '테스트 시스템 관리자',
         role: 'system_admin',
         site: 'suwon',
-        teamId: 'test-team-id',
+        teamId: '00000000-0000-0000-0000-000000000099',
       },
     };
 

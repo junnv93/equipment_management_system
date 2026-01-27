@@ -7,7 +7,7 @@
  * 3. 시드 실행: npx ts-node src/database/seed-test.ts
  *
  * 데이터 커버리지:
- * - Teams: 4개 (RF팀, EMC팀, SAR팀, 환경시험팀)
+ * - Teams: 6개 (수원 4개: FCC EMC/RF, General EMC, SAR, Automotive EMC / 의왕 1개: General RF / 평택 1개: Automotive EMC)
  * - Users: 6명 (관리자 2명, 기술책임자 2명, 시험실무자 2명)
  * - Equipment: 16개 (다양한 상태, 사이트, 교정방법)
  * - Equipment History: 위치 변동 12건, 유지보수 10건, 사고 10건
@@ -47,11 +47,33 @@ console.log(`📍 DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]+@/, ':****@')}`);
 // 고정 UUID 정의 (테스트 안정성을 위해)
 // =============================================================================
 
-// Teams UUID
-const TEAM_RF_ID = '11111111-1111-1111-1111-111111111111';
-const TEAM_EMC_ID = '22222222-2222-2222-2222-222222222222';
-const TEAM_SAR_ID = '33333333-3333-3333-3333-333333333333';
-const TEAM_ENV_ID = '44444444-4444-4444-4444-444444444444';
+// Teams UUID (사이트별 팀 구성)
+// ✅ Best Practice: 팀 이름 = 분류 이름 (통일)
+// ✅ Azure AD 그룹 Object ID 기반 UUID
+// ✅ 분류코드: E(FCC EMC/RF), R(General EMC), W(General RF), S(SAR), A(Automotive EMC), P(Software)
+
+// === 수원 사이트 (SUW) - 4개 팀 ===
+const TEAM_FCC_EMC_RF_SUWON_ID = '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1'; // FCC EMC/RF (E)
+const TEAM_GENERAL_EMC_SUWON_ID = 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289'; // General EMC (R)
+const TEAM_SAR_SUWON_ID = '7fd28076-fd5e-4d36-b051-bbf8a97b82db'; // SAR (S)
+const TEAM_AUTOMOTIVE_EMC_SUWON_ID = 'f0a32655-00f9-4ecd-b43c-af4faed499b6'; // Automotive EMC (A)
+
+// === 의왕 사이트 (UIW) - 1개 팀 ===
+const TEAM_GENERAL_RF_UIWANG_ID = 'a1b2c3d4-e5f6-4789-abcd-ef0123456789'; // General RF (W) - 의왕 전용
+
+// === 평택 사이트 (PYT) - 1개 팀 ===
+const TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID = 'b2c3d4e5-f6a7-4890-bcde-f01234567890'; // Automotive EMC (A)
+
+// Legacy aliases (기존 변수명 호환)
+const TEAM_RF_SUWON_ID = TEAM_FCC_EMC_RF_SUWON_ID;
+const TEAM_EMC_SUWON_ID = TEAM_GENERAL_EMC_SUWON_ID;
+const TEAM_AUTO_SUWON_ID = TEAM_AUTOMOTIVE_EMC_SUWON_ID;
+const TEAM_RF_UIWANG_ID = TEAM_GENERAL_RF_UIWANG_ID; // 의왕은 General RF만
+const TEAM_SAR_UIWANG_ID = TEAM_GENERAL_RF_UIWANG_ID; // fallback to General RF
+const TEAM_EMC_UIWANG_ID = TEAM_GENERAL_RF_UIWANG_ID; // fallback to General RF
+const TEAM_ENV_UIWANG_ID = TEAM_GENERAL_RF_UIWANG_ID; // fallback to General RF
+const TEAM_AUTO_PYEONGTAEK_ID = TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID;
+const TEAM_RF_PYEONGTAEK_ID = TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID; // 평택은 Automotive만
 
 // Users UUID
 const USER_ADMIN_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
@@ -72,61 +94,68 @@ const EQUIP_NETWORK_ANALYZER_ID = 'eeee7777-7777-7777-7777-777777777777';
 const EQUIP_POWER_METER_RETIRED_ID = 'eeee8888-8888-8888-8888-888888888888';
 const EQUIP_POWER_METER_NEW_ID = 'eeee9999-9999-9999-9999-999999999999';
 const EQUIP_AMPLIFIER_ID = 'eeeeaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-const EQUIP_ATTENUATOR_ID = 'eeeebbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+const EQUIP_ATTENUATOR_ID = 'eeeebbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const EQUIP_TEMP_CHAMBER_ID = 'eeeecccc-cccc-cccc-cccc-cccccccccccc';
 const EQUIP_HUMIDITY_TESTER_ID = 'eeeedddd-dddd-dddd-dddd-dddddddddddd';
 const EQUIP_CABLE_ANALYZER_ID = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
 const EQUIP_SAR_PROBE_ID = 'eeeeffff-ffff-ffff-ffff-ffffffffffff';
 const EQUIP_SPARE_OSCILLOSCOPE_ID = 'eeee0000-0000-0000-0000-000000000000';
+// 추가 장비 (누락된 분류코드 커버: W-General RF, A-Automotive, P-Software)
+const EQUIP_RF_ANTENNA_METER_ID = 'eeee1234-1234-1234-1234-123412341234'; // SUW-W0001 General RF
+const EQUIP_AUTO_EMC_TESTER_ID = 'eeee5678-5678-5678-5678-567856785678'; // PYT-A0001 Automotive EMC
+const EQUIP_EMC_SOFTWARE_ID = 'eeee9012-9012-9012-9012-901290129012'; // SUW-P0001 Software
+// 평택 사이트 장비 (신규)
+const EQUIP_PYT_FCC_ANALYZER_ID = 'eeeefcc1-fcc1-fcc1-fcc1-fcc1fcc1fcc1'; // PYT-E0001 FCC EMC/RF
+const EQUIP_PYT_EMC_RECEIVER_ID = 'eeeefcc2-fcc2-fcc2-fcc2-fcc2fcc2fcc2'; // PYT-R0001 General EMC
 
 // Calibration UUID
-const CALIB_001_ID = 'calib001-0001-0001-0001-000000000001';
-const CALIB_002_ID = 'calib002-0002-0002-0002-000000000002';
-const CALIB_003_ID = 'calib003-0003-0003-0003-000000000003';
-const CALIB_004_ID = 'calib004-0004-0004-0004-000000000004';
-const CALIB_005_ID = 'calib005-0005-0005-0005-000000000005';
-const CALIB_006_ID = 'calib006-0006-0006-0006-000000000006';
-const CALIB_007_ID = 'calib007-0007-0007-0007-000000000007';
-const CALIB_008_ID = 'calib008-0008-0008-0008-000000000008';
-const CALIB_009_ID = 'calib009-0009-0009-0009-000000000009';
-const CALIB_010_ID = 'calib010-0010-0010-0010-000000000010';
+const CALIB_001_ID = 'dddd0001-0001-0001-0001-000000000001';
+const CALIB_002_ID = 'dddd0002-0002-0002-0002-000000000002';
+const CALIB_003_ID = 'dddd0003-0003-0003-0003-000000000003';
+const CALIB_004_ID = 'dddd0004-0004-0004-0004-000000000004';
+const CALIB_005_ID = 'dddd0005-0005-0005-0005-000000000005';
+const CALIB_006_ID = 'dddd0006-0006-0006-0006-000000000006';
+const CALIB_007_ID = 'dddd0007-0007-0007-0007-000000000007';
+const CALIB_008_ID = 'dddd0008-0008-0008-0008-000000000008';
+const CALIB_009_ID = 'dddd0009-0009-0009-0009-000000000009';
+const CALIB_010_ID = 'dddd0010-0010-0010-0010-000000000010';
 
 // Loan UUID
-const LOAN_001_ID = 'loan0001-0001-0001-0001-000000000001';
-const LOAN_002_ID = 'loan0002-0002-0002-0002-000000000002';
-const LOAN_003_ID = 'loan0003-0003-0003-0003-000000000003';
-const LOAN_004_ID = 'loan0004-0004-0004-0004-000000000004';
-const LOAN_005_ID = 'loan0005-0005-0005-0005-000000000005';
-const LOAN_006_ID = 'loan0006-0006-0006-0006-000000000006';
-const LOAN_007_ID = 'loan0007-0007-0007-0007-000000000007';
-const LOAN_008_ID = 'loan0008-0008-0008-0008-000000000008';
+const LOAN_001_ID = 'eeee0001-0001-0001-0001-000000000001';
+const LOAN_002_ID = 'eeee0002-0002-0002-0002-000000000002';
+const LOAN_003_ID = 'eeee0003-0003-0003-0003-000000000003';
+const LOAN_004_ID = 'eeee0004-0004-0004-0004-000000000004';
+const LOAN_005_ID = 'eeee0005-0005-0005-0005-000000000005';
+const LOAN_006_ID = 'eeee0006-0006-0006-0006-000000000006';
+const LOAN_007_ID = 'eeee0007-0007-0007-0007-000000000007';
+const LOAN_008_ID = 'eeee0008-0008-0008-0008-000000000008';
 
 // Checkout UUID
-const CHECKOUT_001_ID = 'chkout01-0001-0001-0001-000000000001';
-const CHECKOUT_002_ID = 'chkout02-0002-0002-0002-000000000002';
-const CHECKOUT_003_ID = 'chkout03-0003-0003-0003-000000000003';
-const CHECKOUT_004_ID = 'chkout04-0004-0004-0004-000000000004';
-const CHECKOUT_005_ID = 'chkout05-0005-0005-0005-000000000005';
-const CHECKOUT_006_ID = 'chkout06-0006-0006-0006-000000000006';
-const CHECKOUT_007_ID = 'chkout07-0007-0007-0007-000000000007';
-const CHECKOUT_008_ID = 'chkout08-0008-0008-0008-000000000008';
-const CHECKOUT_009_ID = 'chkout09-0009-0009-0009-000000000009';
-const CHECKOUT_010_ID = 'chkout10-0010-0010-0010-000000000010';
+const CHECKOUT_001_ID = 'ffff0001-0001-0001-0001-000000000001';
+const CHECKOUT_002_ID = 'ffff0002-0002-0002-0002-000000000002';
+const CHECKOUT_003_ID = 'ffff0003-0003-0003-0003-000000000003';
+const CHECKOUT_004_ID = 'ffff0004-0004-0004-0004-000000000004';
+const CHECKOUT_005_ID = 'ffff0005-0005-0005-0005-000000000005';
+const CHECKOUT_006_ID = 'ffff0006-0006-0006-0006-000000000006';
+const CHECKOUT_007_ID = 'ffff0007-0007-0007-0007-000000000007';
+const CHECKOUT_008_ID = 'ffff0008-0008-0008-0008-000000000008';
+const CHECKOUT_009_ID = 'ffff0009-0009-0009-0009-000000000009';
+const CHECKOUT_010_ID = 'ffff0010-0010-0010-0010-000000000010';
 
 // Calibration Factor UUID
-const CF_001_ID = 'cfact001-0001-0001-0001-000000000001';
-const CF_002_ID = 'cfact002-0002-0002-0002-000000000002';
-const CF_003_ID = 'cfact003-0003-0003-0003-000000000003';
-const CF_004_ID = 'cfact004-0004-0004-0004-000000000004';
-const CF_005_ID = 'cfact005-0005-0005-0005-000000000005';
-const CF_006_ID = 'cfact006-0006-0006-0006-000000000006';
+const CF_001_ID = 'cafe0001-0001-0001-0001-000000000001';
+const CF_002_ID = 'cafe0002-0002-0002-0002-000000000002';
+const CF_003_ID = 'cafe0003-0003-0003-0003-000000000003';
+const CF_004_ID = 'cafe0004-0004-0004-0004-000000000004';
+const CF_005_ID = 'cafe0005-0005-0005-0005-000000000005';
+const CF_006_ID = 'cafe0006-0006-0006-0006-000000000006';
 
 // Non-Conformance UUID
-const NC_001_ID = 'ncfrm001-0001-0001-0001-000000000001';
-const NC_002_ID = 'ncfrm002-0002-0002-0002-000000000002';
-const NC_003_ID = 'ncfrm003-0003-0003-0003-000000000003';
-const NC_004_ID = 'ncfrm004-0004-0004-0004-000000000004';
-const NC_005_ID = 'ncfrm005-0005-0005-0005-000000000005';
+const NC_001_ID = 'beef0001-0001-0001-0001-000000000001';
+const NC_002_ID = 'beef0002-0002-0002-0002-000000000002';
+const NC_003_ID = 'beef0003-0003-0003-0003-000000000003';
+const NC_004_ID = 'beef0004-0004-0004-0004-000000000004';
+const NC_005_ID = 'beef0005-0005-0005-0005-000000000005';
 
 // =============================================================================
 // 날짜 헬퍼 함수
@@ -166,6 +195,7 @@ async function seed() {
     // Raw SQL로 삭제 (스키마에 없는 테이블 포함)
     await db.execute(sql`DELETE FROM calibration_factors`);
     await db.execute(sql`DELETE FROM non_conformances`);
+    await db.execute(sql`DELETE FROM equipment_requests`);
     await db.delete(checkoutItems);
     await db.delete(checkouts);
     await db.delete(loans);
@@ -180,40 +210,65 @@ async function seed() {
     console.log('  ✅ 기존 데이터 삭제 완료');
 
     // =========================================================================
-    // Phase 1: Teams (4개)
+    // Phase 1: Teams (6개)
     // =========================================================================
     console.log('\n👥 팀 생성 중...');
+    // ✅ Best Practice: 팀 이름 = 분류 이름 (통일)
+    // ✅ 분류코드: E(FCC EMC/RF), R(General EMC), W(General RF), S(SAR), A(Automotive EMC)
     const testTeams = await db.insert(teams).values([
+      // === 수원 사이트 팀 (4개) - Azure AD 그룹 Object ID 기반 ===
       {
-        id: TEAM_RF_ID,
-        name: 'RF팀',
-        type: 'RF',
-        description: 'RF 시험 팀 - 무선 주파수 관련 시험',
+        id: TEAM_FCC_EMC_RF_SUWON_ID,
+        name: 'FCC EMC/RF', // ✅ 팀 이름 = 분류 이름
+        type: 'FCC_EMC_RF',
         site: 'suwon',
+        classificationCode: 'E',
+        description: 'FCC EMC/RF 시험 장비 관리',
       },
       {
-        id: TEAM_EMC_ID,
-        name: 'EMC팀',
-        type: 'EMC',
-        description: 'EMC 시험 팀 - 전자기 호환성 시험',
+        id: TEAM_GENERAL_EMC_SUWON_ID,
+        name: 'General EMC', // ✅ 팀 이름 = 분류 이름
+        type: 'GENERAL_EMC',
         site: 'suwon',
+        classificationCode: 'R',
+        description: 'General EMC 시험 장비 관리',
       },
       {
-        id: TEAM_SAR_ID,
-        name: 'SAR팀',
+        id: TEAM_SAR_SUWON_ID,
+        name: 'SAR', // ✅ 팀 이름 = 분류 이름
         type: 'SAR',
-        description: 'SAR 시험 팀 - 전자파 흡수율 시험',
-        site: 'uiwang',
+        site: 'suwon',
+        classificationCode: 'S',
+        description: 'SAR(전자파 흡수율) 시험 장비 관리',
       },
       {
-        id: TEAM_ENV_ID,
-        name: '환경시험팀',
-        type: 'ENVIRONMENTAL',
-        description: '환경시험팀 - 온도/습도 환경 시험',
+        id: TEAM_AUTOMOTIVE_EMC_SUWON_ID,
+        name: 'Automotive EMC', // ✅ 팀 이름 = 분류 이름
+        type: 'AUTOMOTIVE_EMC',
+        site: 'suwon',
+        classificationCode: 'A',
+        description: 'Automotive EMC 시험 장비 관리',
+      },
+      // === 의왕 사이트 팀 (1개) - General RF 전용 ===
+      {
+        id: TEAM_GENERAL_RF_UIWANG_ID,
+        name: 'General RF', // ✅ 팀 이름 = 분류 이름
+        type: 'GENERAL_RF',
         site: 'uiwang',
+        classificationCode: 'W',
+        description: 'General RF 시험 장비 관리 (의왕)',
+      },
+      // === 평택 사이트 팀 (1개) - Automotive EMC 전용 ===
+      {
+        id: TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID,
+        name: 'Automotive EMC', // ✅ 팀 이름 = 분류 이름
+        type: 'AUTOMOTIVE_EMC',
+        site: 'pyeongtaek',
+        classificationCode: 'A',
+        description: 'Automotive EMC 시험 장비 관리 (평택)',
       },
     ]).returning();
-    console.log(`  ✅ ${testTeams.length}개 팀 생성됨`);
+    console.log(`  ✅ ${testTeams.length}개 팀 생성됨 (수원: 4개, 의왕: 1개, 평택: 1개)`);
 
     // =========================================================================
     // Phase 2: Users (6명)
@@ -221,12 +276,13 @@ async function seed() {
     console.log('\n👤 테스트 사용자 생성 중...');
     const testUsers = await db.insert(users).values([
       // 수원 사이트 사용자
+      // === 수원 사이트 사용자 (3명) ===
       {
         id: USER_ADMIN_ID,
         email: 'admin@example.com',
-        name: '관리자',
+        name: '수원관리자',
         role: 'lab_manager',
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID, // ✅ 수원 RF팀
         site: 'suwon',
         location: '수원랩 관리동',
         position: '시험소장',
@@ -234,9 +290,9 @@ async function seed() {
       {
         id: USER_MANAGER_ID,
         email: 'manager@example.com',
-        name: '기술책임자',
+        name: '수원기술책임자',
         role: 'technical_manager',
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID, // ✅ 수원 RF팀
         site: 'suwon',
         location: '수원랩 RF동',
         position: '기술책임자',
@@ -244,22 +300,22 @@ async function seed() {
       {
         id: USER_ENGINEER_ID,
         email: 'user@example.com',
-        name: '시험실무자',
+        name: '수원시험실무자',
         role: 'test_engineer',
-        teamId: TEAM_EMC_ID,
+        teamId: TEAM_EMC_SUWON_ID, // ✅ 수원 EMC팀
         site: 'suwon',
         location: '수원랩 EMC동',
         position: '시험원',
       },
-      // 의왕 사이트 사용자
+      // === 의왕 사이트 사용자 (3명) - 모두 General RF 팀 소속 ===
       {
         id: USER_ENGINEER2_ID,
         email: 'user1@example.com',
-        name: '시험실무자2',
+        name: '의왕시험실무자',
         role: 'test_engineer',
-        teamId: TEAM_SAR_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ 의왕 General RF팀
         site: 'uiwang',
-        location: '의왕랩 SAR동',
+        location: '의왕랩 RF동',
         position: '시험원',
       },
       {
@@ -267,9 +323,9 @@ async function seed() {
         email: 'manager2@example.com',
         name: '의왕기술책임자',
         role: 'technical_manager',
-        teamId: TEAM_SAR_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ 의왕 General RF팀
         site: 'uiwang',
-        location: '의왕랩 SAR동',
+        location: '의왕랩 RF동',
         position: '기술책임자',
       },
       {
@@ -277,7 +333,7 @@ async function seed() {
         email: 'admin2@example.com',
         name: '의왕관리자',
         role: 'lab_manager',
-        teamId: TEAM_ENV_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ 의왕 General RF팀
         site: 'uiwang',
         location: '의왕랩 관리동',
         position: '시험소장',
@@ -294,7 +350,7 @@ async function seed() {
 
       // 1. 스펙트럼 분석기 (available, external_calibration)
       {
-        uuid: EQUIP_SPECTRUM_ANALYZER_ID,
+        id: EQUIP_SPECTRUM_ANALYZER_ID,
         name: '스펙트럼 분석기',
         managementNumber: 'SUW-E0001',
         assetNumber: 'AST-2023-001',
@@ -307,7 +363,7 @@ async function seed() {
         location: 'RF시험실 A동',
         initialLocation: 'RF시험실 A동',
         installationDate: monthsAgo(24),
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         managerId: USER_MANAGER_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -325,7 +381,7 @@ async function seed() {
 
       // 2. 신호 발생기 (in_use, external_calibration)
       {
-        uuid: EQUIP_SIGNAL_GENERATOR_ID,
+        id: EQUIP_SIGNAL_GENERATOR_ID,
         name: '신호 발생기',
         managementNumber: 'SUW-E0002',
         assetNumber: 'AST-2023-002',
@@ -338,7 +394,7 @@ async function seed() {
         location: 'RF시험실 B동',
         initialLocation: 'RF시험실 B동',
         installationDate: monthsAgo(18),
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         managerId: USER_MANAGER_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -353,7 +409,7 @@ async function seed() {
 
       // 3. EMC 수신기 (available, external_calibration)
       {
-        uuid: EQUIP_EMC_RECEIVER_ID,
+        id: EQUIP_EMC_RECEIVER_ID,
         name: 'EMC 수신기',
         managementNumber: 'SUW-R0001',
         assetNumber: 'AST-2022-005',
@@ -366,7 +422,7 @@ async function seed() {
         location: 'EMC시험실',
         initialLocation: 'EMC시험실',
         installationDate: monthsAgo(36),
-        teamId: TEAM_EMC_ID,
+        teamId: TEAM_EMC_SUWON_ID,
         managerId: USER_ENGINEER_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -381,7 +437,7 @@ async function seed() {
 
       // 4. 공용 오실로스코프 (available, shared)
       {
-        uuid: EQUIP_OSCILLOSCOPE_SHARED_ID,
+        id: EQUIP_OSCILLOSCOPE_SHARED_ID,
         name: '공용 오실로스코프',
         managementNumber: 'SUW-E0003',
         assetNumber: 'AST-2023-003',
@@ -393,7 +449,7 @@ async function seed() {
         location: '공용장비실',
         initialLocation: '공용장비실',
         installationDate: monthsAgo(12),
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         managerId: USER_MANAGER_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -409,7 +465,7 @@ async function seed() {
 
       // 5. 네트워크 분석기 (non_conforming)
       {
-        uuid: EQUIP_NETWORK_ANALYZER_ID,
+        id: EQUIP_NETWORK_ANALYZER_ID,
         name: '네트워크 분석기',
         managementNumber: 'SUW-E0004',
         assetNumber: 'AST-2021-010',
@@ -421,7 +477,7 @@ async function seed() {
         location: 'RF시험실 A동',
         initialLocation: 'RF시험실 A동',
         installationDate: monthsAgo(48),
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         managerId: USER_MANAGER_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -436,7 +492,7 @@ async function seed() {
 
       // 6. 파워미터 (retired)
       {
-        uuid: EQUIP_POWER_METER_RETIRED_ID,
+        id: EQUIP_POWER_METER_RETIRED_ID,
         name: '파워미터 (폐기)',
         managementNumber: 'SUW-E0005',
         assetNumber: 'AST-2018-015',
@@ -448,7 +504,7 @@ async function seed() {
         location: '폐기장비실',
         initialLocation: 'RF시험실 A동',
         installationDate: monthsAgo(72),
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         calibrationMethod: 'not_applicable',
         isShared: false,
         isActive: false,
@@ -457,7 +513,7 @@ async function seed() {
 
       // 7. 파워미터 신규 (pending_approval)
       {
-        uuid: EQUIP_POWER_METER_NEW_ID,
+        id: EQUIP_POWER_METER_NEW_ID,
         name: '파워미터 신규',
         managementNumber: 'SUW-E0006',
         assetNumber: 'AST-2025-001',
@@ -467,7 +523,7 @@ async function seed() {
         manufacturer: 'Keysight',
         serialNumber: 'MY90123456',
         location: 'RF시험실 A동',
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         managerId: USER_MANAGER_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -480,7 +536,7 @@ async function seed() {
 
       // 8. 증폭기 (checked_out for repair)
       {
-        uuid: EQUIP_AMPLIFIER_ID,
+        id: EQUIP_AMPLIFIER_ID,
         name: '증폭기',
         managementNumber: 'SUW-E0007',
         assetNumber: 'AST-2022-008',
@@ -492,7 +548,7 @@ async function seed() {
         location: '외부 수리 중',
         initialLocation: 'RF시험실 B동',
         installationDate: monthsAgo(30),
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         managerId: USER_MANAGER_ID,
         calibrationMethod: 'self_inspection',
         calibrationCycle: 6,
@@ -506,7 +562,7 @@ async function seed() {
 
       // 9. 감쇠기 (calibration_scheduled)
       {
-        uuid: EQUIP_ATTENUATOR_ID,
+        id: EQUIP_ATTENUATOR_ID,
         name: '가변감쇠기',
         managementNumber: 'SUW-E0008',
         assetNumber: 'AST-2021-012',
@@ -518,7 +574,7 @@ async function seed() {
         location: 'RF시험실 A동',
         initialLocation: 'RF시험실 A동',
         installationDate: monthsAgo(40),
-        teamId: TEAM_RF_ID,
+        teamId: TEAM_RF_SUWON_ID,
         managerId: USER_MANAGER_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -533,7 +589,7 @@ async function seed() {
 
       // 10. 케이블 분석기 (self_inspection, available)
       {
-        uuid: EQUIP_CABLE_ANALYZER_ID,
+        id: EQUIP_CABLE_ANALYZER_ID,
         name: '케이블 분석기',
         managementNumber: 'SUW-E0009',
         assetNumber: 'AST-2022-020',
@@ -545,7 +601,7 @@ async function seed() {
         location: 'EMC시험실',
         initialLocation: 'EMC시험실',
         installationDate: monthsAgo(20),
-        teamId: TEAM_EMC_ID,
+        teamId: TEAM_EMC_SUWON_ID,
         managerId: USER_ENGINEER_ID,
         calibrationMethod: 'self_inspection',
         calibrationCycle: 6,
@@ -557,13 +613,13 @@ async function seed() {
         approvalStatus: 'approved',
       },
 
-      // === 의왕 사이트 장비 (6개) ===
+      // === 의왕 사이트 장비 (6개) - 모두 General RF(W) 팀 소속 ===
 
-      // 11. SAR 시스템 (checked_out for calibration)
+      // 11. RF 시스템 (checked_out for calibration)
       {
-        uuid: EQUIP_SAR_SYSTEM_ID,
-        name: 'SAR 시스템',
-        managementNumber: 'UIW-S0001',
+        id: EQUIP_SAR_SYSTEM_ID,
+        name: 'RF 측정 시스템',
+        managementNumber: 'UIW-W0001', // ✅ 의왕은 General RF(W)만
         assetNumber: 'AST-2020-030',
         site: 'uiwang',
         status: 'checked_out',
@@ -572,9 +628,9 @@ async function seed() {
         manufacturerContact: '+41-44-245-9700',
         serialNumber: 'SP45678901',
         location: '외부 교정 중',
-        initialLocation: 'SAR시험실',
+        initialLocation: 'RF시험실',
         installationDate: monthsAgo(60),
-        teamId: TEAM_SAR_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ General RF 팀
         managerId: USER_MANAGER2_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -589,9 +645,9 @@ async function seed() {
 
       // 12. 안테나 측정 시스템 (calibration_overdue)
       {
-        uuid: EQUIP_ANTENNA_SYSTEM_ID,
+        id: EQUIP_ANTENNA_SYSTEM_ID,
         name: '안테나 측정 시스템',
-        managementNumber: 'UIW-W0001',
+        managementNumber: 'UIW-W0002', // ✅ 의왕은 General RF(W)만
         assetNumber: 'AST-2019-025',
         site: 'uiwang',
         status: 'calibration_overdue',
@@ -601,7 +657,7 @@ async function seed() {
         location: 'RF무반향실',
         initialLocation: 'RF무반향실',
         installationDate: monthsAgo(72),
-        teamId: TEAM_SAR_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ General RF 팀
         managerId: USER_MANAGER2_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -614,21 +670,21 @@ async function seed() {
         approvalStatus: 'approved',
       },
 
-      // 13. SAR Probe (in_use)
+      // 13. RF Probe (in_use)
       {
-        uuid: EQUIP_SAR_PROBE_ID,
-        name: 'SAR 프로브',
-        managementNumber: 'UIW-S0002',
+        id: EQUIP_SAR_PROBE_ID,
+        name: 'RF 프로브',
+        managementNumber: 'UIW-W0003', // ✅ 의왕은 General RF(W)만
         assetNumber: 'AST-2021-035',
         site: 'uiwang',
         status: 'in_use',
         modelName: 'EX3DV4',
         manufacturer: 'SPEAG',
         serialNumber: 'SP56789012',
-        location: 'SAR시험실',
-        initialLocation: 'SAR시험실',
+        location: 'RF시험실',
+        initialLocation: 'RF시험실',
         installationDate: monthsAgo(48),
-        teamId: TEAM_SAR_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ General RF 팀
         managerId: USER_MANAGER2_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -641,21 +697,21 @@ async function seed() {
         approvalStatus: 'approved',
       },
 
-      // 14. 온도 챔버 (available, not_applicable)
+      // 14. RF 챔버 (available, not_applicable)
       {
-        uuid: EQUIP_TEMP_CHAMBER_ID,
-        name: '온도 챔버',
-        managementNumber: 'UIW-C0001',
+        id: EQUIP_TEMP_CHAMBER_ID,
+        name: 'RF 챔버',
+        managementNumber: 'UIW-W0004', // ✅ 의왕은 General RF(W)만
         assetNumber: 'AST-2018-040',
         site: 'uiwang',
         status: 'available',
         modelName: 'TH-G-180',
         manufacturer: 'ESPEC',
         serialNumber: 'ESP12345678',
-        location: '환경시험실 A',
-        initialLocation: '환경시험실 A',
+        location: 'RF시험실 A',
+        initialLocation: 'RF시험실 A',
         installationDate: monthsAgo(84),
-        teamId: TEAM_ENV_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ General RF 팀
         managerId: USER_ADMIN2_ID,
         calibrationMethod: 'not_applicable',
         specMatch: 'match',
@@ -664,21 +720,21 @@ async function seed() {
         approvalStatus: 'approved',
       },
 
-      // 15. 습도 시험기 (available)
+      // 15. RF 테스터 (available)
       {
-        uuid: EQUIP_HUMIDITY_TESTER_ID,
-        name: '습도 시험기',
-        managementNumber: 'UIW-C0002',
+        id: EQUIP_HUMIDITY_TESTER_ID,
+        name: 'RF 테스터',
+        managementNumber: 'UIW-W0005', // ✅ 의왕은 General RF(W)만
         assetNumber: 'AST-2019-045',
         site: 'uiwang',
         status: 'available',
         modelName: 'PR-4KPH',
         manufacturer: 'ESPEC',
         serialNumber: 'ESP23456789',
-        location: '환경시험실 B',
-        initialLocation: '환경시험실 B',
+        location: 'RF시험실 B',
+        initialLocation: 'RF시험실 B',
         installationDate: monthsAgo(60),
-        teamId: TEAM_ENV_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ General RF 팀
         managerId: USER_ADMIN2_ID,
         calibrationMethod: 'self_inspection',
         calibrationCycle: 6,
@@ -692,9 +748,9 @@ async function seed() {
 
       // 16. 여분 오실로스코프 (spare)
       {
-        uuid: EQUIP_SPARE_OSCILLOSCOPE_ID,
+        id: EQUIP_SPARE_OSCILLOSCOPE_ID,
         name: '여분 오실로스코프',
-        managementNumber: 'UIW-E0001',
+        managementNumber: 'UIW-W0006', // ✅ 의왕은 General RF(W)만
         assetNumber: 'AST-2020-050',
         site: 'uiwang',
         status: 'spare',
@@ -702,9 +758,9 @@ async function seed() {
         manufacturer: 'Keysight',
         serialNumber: 'MY34567890',
         location: '예비장비 보관실',
-        initialLocation: 'SAR시험실',
+        initialLocation: 'RF시험실',
         installationDate: monthsAgo(48),
-        teamId: TEAM_SAR_ID,
+        teamId: TEAM_GENERAL_RF_UIWANG_ID, // ✅ General RF 팀
         managerId: USER_MANAGER2_ID,
         calibrationMethod: 'external_calibration',
         calibrationCycle: 12,
@@ -715,6 +771,162 @@ async function seed() {
         calibrationRequired: 'required',
         isShared: false,
         approvalStatus: 'approved',
+        // 관리번호 컴포넌트
+        siteCode: 'UIW',
+        classificationCode: 'W', // ✅ General RF
+        managementSerialNumber: 6,
+      },
+
+      // === 추가 장비 ===
+
+      // 17. RF 안테나 측정기 (SUW-E0010: FCC EMC/RF)
+      {
+        id: EQUIP_RF_ANTENNA_METER_ID,
+        name: 'RF 안테나 측정기',
+        managementNumber: 'SUW-E0010', // ✅ 수원은 E, R, S, A만 (W 없음)
+        assetNumber: 'AST-2024-001',
+        site: 'suwon',
+        status: 'available',
+        modelName: 'MS2024B',
+        manufacturer: 'Anritsu',
+        serialNumber: 'AN12345678',
+        location: 'RF시험실 A동',
+        initialLocation: 'RF시험실 A동',
+        installationDate: monthsAgo(6),
+        teamId: TEAM_FCC_EMC_RF_SUWON_ID, // ✅ FCC EMC/RF 팀
+        managerId: USER_MANAGER_ID,
+        calibrationMethod: 'external_calibration',
+        calibrationCycle: 12,
+        lastCalibrationDate: monthsAgo(2),
+        nextCalibrationDate: monthsLater(10),
+        calibrationAgency: 'HCT',
+        specMatch: 'match',
+        calibrationRequired: 'required',
+        isShared: false,
+        approvalStatus: 'approved',
+        // 관리번호 컴포넌트
+        siteCode: 'SUW',
+        classificationCode: 'E', // ✅ FCC EMC/RF
+        managementSerialNumber: 10,
+      },
+
+      // 18. Automotive EMC 테스터 (PYT-A0001: Automotive EMC)
+      {
+        id: EQUIP_AUTO_EMC_TESTER_ID,
+        name: '차량용 EMC 시험기',
+        managementNumber: 'PYT-A0001',
+        assetNumber: 'AST-2024-002',
+        site: 'pyeongtaek',
+        status: 'available',
+        modelName: 'CISPR25-100',
+        manufacturer: 'ETS-Lindgren',
+        serialNumber: 'ETS98765432',
+        location: '차량 EMC 시험실',
+        initialLocation: '차량 EMC 시험실',
+        installationDate: monthsAgo(3),
+        teamId: TEAM_AUTO_PYEONGTAEK_ID,
+        calibrationMethod: 'external_calibration',
+        calibrationCycle: 12,
+        lastCalibrationDate: monthsAgo(1),
+        nextCalibrationDate: monthsLater(11),
+        calibrationAgency: 'KATRI',
+        specMatch: 'match',
+        calibrationRequired: 'required',
+        isShared: false,
+        approvalStatus: 'approved',
+        // 관리번호 컴포넌트
+        siteCode: 'PYT',
+        classificationCode: 'A',
+        managementSerialNumber: 1,
+      },
+
+      // 19. EMC 분석 소프트웨어 (SUW-P0001: Software Program)
+      {
+        id: EQUIP_EMC_SOFTWARE_ID,
+        name: 'EMC 분석 소프트웨어',
+        managementNumber: 'SUW-P0001',
+        assetNumber: 'AST-2024-003',
+        site: 'suwon',
+        status: 'available',
+        modelName: 'EMC32',
+        manufacturer: 'R&S',
+        location: 'EMC시험실 서버',
+        teamId: TEAM_EMC_SUWON_ID,
+        managerId: USER_ENGINEER_ID,
+        calibrationMethod: 'not_applicable',
+        specMatch: 'match',
+        calibrationRequired: 'not_required',
+        isShared: false,
+        approvalStatus: 'approved',
+        softwareName: 'EMC32',
+        softwareType: 'measurement',
+        softwareVersion: 'v10.50',
+        // 관리번호 컴포넌트
+        siteCode: 'SUW',
+        classificationCode: 'P',
+        managementSerialNumber: 1,
+      },
+
+      // === 평택 사이트 장비 (모두 Automotive EMC) ===
+
+      // 20. 차량용 RF 분석기 (PYT-A0002: Automotive EMC)
+      {
+        id: EQUIP_PYT_FCC_ANALYZER_ID,
+        name: '차량용 RF 분석기',
+        managementNumber: 'PYT-A0002', // ✅ 평택은 Automotive EMC(A)만
+        assetNumber: 'AST-2024-004',
+        site: 'pyeongtaek',
+        status: 'available',
+        modelName: 'FSVA3030',
+        manufacturer: 'R&S',
+        serialNumber: 'RS12309876',
+        location: '차량 EMC 시험실',
+        initialLocation: '차량 EMC 시험실',
+        installationDate: monthsAgo(2),
+        teamId: TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID, // ✅ Automotive EMC 팀
+        calibrationMethod: 'external_calibration',
+        calibrationCycle: 12,
+        lastCalibrationDate: monthsAgo(1),
+        nextCalibrationDate: monthsLater(11),
+        calibrationAgency: 'HCT',
+        specMatch: 'match',
+        calibrationRequired: 'required',
+        isShared: false,
+        approvalStatus: 'approved',
+        // 관리번호 컴포넌트
+        siteCode: 'PYT',
+        classificationCode: 'A', // ✅ Automotive EMC
+        managementSerialNumber: 2,
+      },
+
+      // 21. 차량용 EMC 수신기 (PYT-A0003: Automotive EMC)
+      {
+        id: EQUIP_PYT_EMC_RECEIVER_ID,
+        name: '차량용 EMC 수신기',
+        managementNumber: 'PYT-A0003', // ✅ 평택은 Automotive EMC(A)만
+        assetNumber: 'AST-2024-005',
+        site: 'pyeongtaek',
+        status: 'in_use',
+        modelName: 'ESRP3',
+        manufacturer: 'R&S',
+        serialNumber: 'RS45678901',
+        location: '차량 EMC 시험실',
+        initialLocation: '차량 EMC 시험실',
+        installationDate: monthsAgo(4),
+        teamId: TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID, // ✅ Automotive EMC 팀
+        calibrationMethod: 'external_calibration',
+        calibrationCycle: 12,
+        lastCalibrationDate: monthsAgo(2),
+        nextCalibrationDate: monthsLater(10),
+        calibrationAgency: 'KATRI',
+        specMatch: 'match',
+        calibrationRequired: 'required',
+        isShared: false,
+        approvalStatus: 'approved',
+        // 관리번호 컴포넌트
+        siteCode: 'PYT',
+        classificationCode: 'A', // ✅ Automotive EMC
+        managementSerialNumber: 3,
       },
     ]).returning();
     console.log(`  ✅ ${testEquipments.length}개 장비 생성됨`);
@@ -1340,7 +1552,7 @@ async function seed() {
         purpose: 'rental',
         checkoutType: 'rental',
         destination: '협력 업체 B',
-        lenderTeamId: TEAM_RF_ID,
+        lenderTeamId: TEAM_RF_SUWON_ID,
         phoneNumber: '02-9876-5432',
         reason: '신제품 시험 지원 (단기)',
         expectedReturnDate: daysLater(7),
@@ -1524,9 +1736,9 @@ async function seed() {
     console.log('='.repeat(60));
 
     console.log('\n📋 시드 데이터 요약:');
-    console.log(`  ├─ 팀: ${testTeams.length}개 (수원 2, 의왕 2)`);
+    console.log(`  ├─ 팀: ${testTeams.length}개 (수원 3, 의왕 4, 평택 2)`);
     console.log(`  ├─ 사용자: ${testUsers.length}명 (관리자 2, 기술책임자 2, 실무자 2)`);
-    console.log(`  ├─ 장비: ${testEquipments.length}개 (수원 10, 의왕 6)`);
+    console.log(`  ├─ 장비: ${testEquipments.length}개 (수원 11, 의왕 6, 평택 4)`);
     console.log(`  ├─ 위치 변동 이력: ${locationHistoryData.length}건`);
     console.log(`  ├─ 유지보수 이력: ${maintenanceHistoryData.length}건`);
     console.log(`  ├─ 사고/손상 이력: ${incidentHistoryData.length}건`);
@@ -1536,6 +1748,14 @@ async function seed() {
     console.log(`  ├─ 반출 항목: ${checkoutItemsData.length}건`);
     console.log(`  ├─ 보정계수: ${calibrationFactorsCount}건`);
     console.log(`  └─ 부적합 기록: ${nonConformancesCount}건`);
+
+    console.log('\n📊 분류코드별 장비 분포:');
+    console.log('  - E (FCC EMC/RF): SUW-E0001~E0009, PYT-E0001');
+    console.log('  - R (General EMC): SUW-R0001, PYT-R0001');
+    console.log('  - W (General RF): SUW-W0001');
+    console.log('  - S (SAR): UIW-S0001~S0002');
+    console.log('  - A (Automotive EMC): PYT-A0001');
+    console.log('  - P (Software): SUW-P0001');
 
     console.log('\n📋 테스트 계정:');
     console.log('  - admin@example.com / admin123 (시험소 관리자, 수원)');

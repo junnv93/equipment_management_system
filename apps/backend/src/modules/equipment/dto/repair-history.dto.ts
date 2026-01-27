@@ -1,28 +1,44 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  RepairResultEnum,
+  REPAIR_RESULT_VALUES,
+  type RepairResult,
+} from '@equipment-management/schemas';
 
-// 수리 결과 enum
-export enum RepairResultEnum {
-  COMPLETED = 'completed',
-  PARTIAL = 'partial',
-  FAILED = 'failed',
-}
+// Re-export for backward compatibility
+export { RepairResultEnum, REPAIR_RESULT_VALUES, type RepairResult };
 
 // ========== Zod 스키마 정의 ==========
+
+/**
+ * 날짜 문자열 검증 스키마
+ * - ISO 8601 datetime 형식 ('2024-01-15T00:00:00.000Z')
+ * - 또는 날짜 전용 형식 ('2024-01-15')
+ */
+const dateStringSchema = z.string().refine(
+  (val) => {
+    // ISO 8601 datetime 또는 날짜 전용 형식 허용
+    const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
+    return isoDateTimeRegex.test(val) && !isNaN(Date.parse(val));
+  },
+  { message: '유효한 날짜 형식이 아닙니다 (YYYY-MM-DD 또는 ISO 8601)' }
+);
 
 /**
  * 수리 이력 생성 스키마
  */
 export const createRepairHistorySchema = z.object({
-  repairDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  repairDate: dateStringSchema,
   repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
   repairedBy: z.string().optional(),
   repairCompany: z.string().optional(),
   cost: z.number().min(0, '수리 비용은 0 이상이어야 합니다').optional(),
-  repairResult: z.nativeEnum(RepairResultEnum).optional(),
+  repairResult: RepairResultEnum.optional(),
   notes: z.string().optional(),
   attachmentPath: z.string().optional(),
+  nonConformanceId: z.string().uuid({ message: '유효한 부적합 UUID가 아닙니다' }).optional(),
 });
 
 export type CreateRepairHistoryInput = z.infer<typeof createRepairHistorySchema>;
@@ -41,7 +57,7 @@ export const UpdateRepairHistoryValidationPipe = new ZodValidationPipe(updateRep
 export const repairHistoryQuerySchema = z.object({
   fromDate: z.string().optional(),
   toDate: z.string().optional(),
-  repairResult: z.nativeEnum(RepairResultEnum).optional(),
+  repairResult: RepairResultEnum.optional(),
   repairCompany: z.string().optional(),
   includeDeleted: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
   sort: z.string().optional(),
@@ -92,10 +108,10 @@ export class CreateRepairHistoryDto {
 
   @ApiPropertyOptional({
     description: '수리 결과',
-    enum: RepairResultEnum,
-    example: RepairResultEnum.COMPLETED,
+    enum: REPAIR_RESULT_VALUES,
+    example: 'completed',
   })
-  repairResult?: RepairResultEnum;
+  repairResult?: RepairResult;
 
   @ApiPropertyOptional({
     description: '비고',
@@ -108,6 +124,12 @@ export class CreateRepairHistoryDto {
     example: '/uploads/repair/2024/repair-report.pdf',
   })
   attachmentPath?: string;
+
+  @ApiPropertyOptional({
+    description: '연결된 부적합 ID (이 수리로 해결하는 부적합)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  nonConformanceId?: string;
 }
 
 /**
@@ -133,9 +155,9 @@ export class RepairHistoryQueryDto {
 
   @ApiPropertyOptional({
     description: '수리 결과 필터',
-    enum: RepairResultEnum,
+    enum: REPAIR_RESULT_VALUES,
   })
-  repairResult?: RepairResultEnum;
+  repairResult?: RepairResult;
 
   @ApiPropertyOptional({
     description: '수리 업체 필터',

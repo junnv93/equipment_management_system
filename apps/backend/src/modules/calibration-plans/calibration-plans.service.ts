@@ -108,7 +108,7 @@ export class CalibrationPlansService {
     });
 
     // 생성된 계획서와 항목 조회해서 반환
-    return this.findOne(result.uuid);
+    return this.findOne(result.id);
   }
 
   /**
@@ -168,7 +168,7 @@ export class CalibrationPlansService {
     const [plan] = await this.db
       .select()
       .from(calibrationPlans)
-      .where(eq(calibrationPlans.uuid, uuid));
+      .where(eq(calibrationPlans.id, uuid));
 
     if (!plan) {
       throw new NotFoundException(`교정계획서 UUID ${uuid}를 찾을 수 없습니다.`);
@@ -179,7 +179,7 @@ export class CalibrationPlansService {
       .select({
         item: calibrationPlanItems,
         equipment: {
-          uuid: equipment.uuid,
+          id: equipment.id,
           name: equipment.name,
           managementNumber: equipment.managementNumber,
           modelName: equipment.modelName,
@@ -221,7 +221,7 @@ export class CalibrationPlansService {
         ...updateDto,
         updatedAt: new Date(),
       } as any)
-      .where(eq(calibrationPlans.uuid, uuid))
+      .where(eq(calibrationPlans.id, uuid))
       .returning();
 
     return this.findOne(uuid);
@@ -238,7 +238,7 @@ export class CalibrationPlansService {
     }
 
     // 항목도 CASCADE로 함께 삭제됨
-    await this.db.delete(calibrationPlans).where(eq(calibrationPlans.uuid, uuid));
+    await this.db.delete(calibrationPlans).where(eq(calibrationPlans.id, uuid));
 
     return { uuid, deleted: true };
   }
@@ -259,7 +259,7 @@ export class CalibrationPlansService {
         status: 'pending_approval',
         updatedAt: new Date(),
       } as any)
-      .where(eq(calibrationPlans.uuid, uuid))
+      .where(eq(calibrationPlans.id, uuid))
       .returning();
 
     return this.findOne(uuid);
@@ -285,7 +285,7 @@ export class CalibrationPlansService {
         approvedAt: new Date(),
         updatedAt: new Date(),
       } as any)
-      .where(eq(calibrationPlans.uuid, uuid))
+      .where(eq(calibrationPlans.id, uuid))
       .returning();
 
     return this.findOne(uuid);
@@ -315,7 +315,7 @@ export class CalibrationPlansService {
         rejectionReason: rejectDto.rejectionReason,
         updatedAt: new Date(),
       } as any)
-      .where(eq(calibrationPlans.uuid, uuid))
+      .where(eq(calibrationPlans.id, uuid))
       .returning();
 
     return this.findOne(uuid);
@@ -335,9 +335,7 @@ export class CalibrationPlansService {
     const [item] = await this.db
       .select()
       .from(calibrationPlanItems)
-      .where(
-        and(eq(calibrationPlanItems.uuid, itemUuid), eq(calibrationPlanItems.planId, plan.id))
-      );
+      .where(and(eq(calibrationPlanItems.id, itemUuid), eq(calibrationPlanItems.planId, plan.id)));
 
     if (!item) {
       throw new NotFoundException(`항목 UUID ${itemUuid}를 찾을 수 없습니다.`);
@@ -350,7 +348,7 @@ export class CalibrationPlansService {
         confirmedAt: new Date(),
         updatedAt: new Date(),
       } as any)
-      .where(eq(calibrationPlanItems.uuid, itemUuid))
+      .where(eq(calibrationPlanItems.id, itemUuid))
       .returning();
 
     return updated;
@@ -369,9 +367,7 @@ export class CalibrationPlansService {
     const [item] = await this.db
       .select()
       .from(calibrationPlanItems)
-      .where(
-        and(eq(calibrationPlanItems.uuid, itemUuid), eq(calibrationPlanItems.planId, plan.id))
-      );
+      .where(and(eq(calibrationPlanItems.id, itemUuid), eq(calibrationPlanItems.planId, plan.id)));
 
     if (!item) {
       throw new NotFoundException(`항목 UUID ${itemUuid}를 찾을 수 없습니다.`);
@@ -383,7 +379,7 @@ export class CalibrationPlansService {
         ...updateDto,
         updatedAt: new Date(),
       } as any)
-      .where(eq(calibrationPlanItems.uuid, itemUuid))
+      .where(eq(calibrationPlanItems.id, itemUuid))
       .returning();
 
     return updated;
@@ -406,7 +402,7 @@ export class CalibrationPlansService {
 
     let result = await this.db
       .select({
-        uuid: equipment.uuid,
+        id: equipment.id,
         name: equipment.name,
         managementNumber: equipment.managementNumber,
         modelName: equipment.modelName,
@@ -440,7 +436,7 @@ export class CalibrationPlansService {
    * 실제 교정일 자동 기록 (장비 lastCalibrationDate 변경 시 호출)
    * CalibrationService에서 교정 완료 시 호출됨
    */
-  async recordActualCalibrationDate(equipmentId: number, calibrationDate: Date) {
+  async recordActualCalibrationDate(equipmentId: string, calibrationDate: Date) {
     const currentYear = calibrationDate.getFullYear();
 
     // 해당 연도의 승인된 교정계획서 항목 조회
@@ -480,7 +476,7 @@ export class CalibrationPlansService {
     const [plan] = await this.db
       .select()
       .from(calibrationPlans)
-      .where(eq(calibrationPlans.uuid, uuid));
+      .where(eq(calibrationPlans.id, uuid));
 
     if (!plan) {
       throw new NotFoundException(`교정계획서 UUID ${uuid}를 찾을 수 없습니다.`);

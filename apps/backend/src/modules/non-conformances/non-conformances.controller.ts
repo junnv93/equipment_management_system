@@ -9,16 +9,20 @@ import {
   Query,
   UseGuards,
   HttpStatus,
+  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { NonConformancesService } from './non-conformances.service';
-import { CreateNonConformanceDto } from './dto/create-non-conformance.dto';
+import {
+  CreateNonConformanceDto,
+  CreateNonConformanceValidationPipe,
+} from './dto/create-non-conformance.dto';
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
 import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
 import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../guards/permissions.guard';
-import { RequirePermissions } from '../../decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
 
 @ApiTags('부적합 관리')
@@ -42,6 +46,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_NON_CONFORMANCE)
+  @UsePipes(CreateNonConformanceValidationPipe)
   create(@Body() createDto: CreateNonConformanceDto) {
     return this.nonConformancesService.create(createDto);
   }

@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CreateEquipmentInput, EquipmentStatus } from '@equipment-management/schemas';
+import {
+  CreateEquipmentInput,
+  EquipmentStatus,
+  Classification,
+  Site,
+  SiteCode,
+} from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { createEquipmentSchema } from '@equipment-management/schemas';
 
@@ -86,10 +92,42 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiProperty({
     description: '사이트 (필수)',
-    enum: ['suwon', 'uiwang'],
+    enum: ['suwon', 'uiwang', 'pyeongtaek'],
     example: 'suwon',
   })
-  site: 'suwon' | 'uiwang';
+  site: Site;
+
+  @ApiPropertyOptional({
+    description: '장비 분류 (관리번호 자동 생성용)',
+    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+    example: 'fcc_emc_rf',
+  })
+  classification?: Classification;
+
+  @ApiPropertyOptional({
+    description: '관리번호 일련번호 (4자리 문자열, 예: 0001)',
+    example: '0001',
+  })
+  managementSerialNumberStr?: string;
+
+  // 관리번호 컴포넌트 (서비스에서 자동 파싱)
+  @ApiPropertyOptional({
+    description: '시험소코드 (자동 파싱)',
+    enum: ['SUW', 'UIW', 'PYT'],
+  })
+  siteCode?: SiteCode;
+
+  @ApiPropertyOptional({
+    description: '분류코드 (자동 파싱)',
+    enum: ['E', 'R', 'W', 'S', 'A', 'P'],
+  })
+  classificationCode?: 'E' | 'R' | 'W' | 'S' | 'A' | 'P';
+
+  @ApiPropertyOptional({
+    description: '관리번호 일련번호 (정수, 자동 파싱)',
+    example: 1,
+  })
+  managementSerialNumber?: number;
 
   @ApiPropertyOptional({ description: '공급사' })
   supplier?: string;

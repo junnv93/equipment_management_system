@@ -1,7 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { NotificationPriorityEnum } from './create-notification.dto';
+import {
+  NotificationPriorityEnum,
+  NOTIFICATION_PRIORITY_VALUES,
+  type NotificationPriority,
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -20,11 +24,7 @@ export const updateNotificationSchema = z.object({
     .min(1, '알림 내용을 입력해주세요')
     .max(500, '알림 내용은 500자 이하여야 합니다')
     .optional(),
-  priority: z
-    .nativeEnum(NotificationPriorityEnum, {
-      message: '유효하지 않은 우선순위입니다',
-    })
-    .optional(),
+  priority: NotificationPriorityEnum.optional(),
   isTeamNotification: z.boolean().optional(),
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
   calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
@@ -53,9 +53,9 @@ export class UpdateNotificationDto {
 
   @ApiPropertyOptional({
     description: '알림 우선순위',
-    enum: NotificationPriorityEnum,
+    enum: NOTIFICATION_PRIORITY_VALUES,
   })
-  priority?: NotificationPriorityEnum;
+  priority?: NotificationPriority;
 
   @ApiPropertyOptional({
     description: '팀 알림 여부',

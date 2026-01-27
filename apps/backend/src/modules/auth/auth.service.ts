@@ -11,8 +11,8 @@ export interface UserDto {
   name: string;
   roles: UserRole[];
   department?: string;
-  site?: 'suwon' | 'uiwang';
-  location?: '수원랩' | '의왕랩';
+  site?: 'suwon' | 'uiwang' | 'pyeongtaek';
+  location?: '수원랩' | '의왕랩' | '평택랩';
   position?: string;
   teamId?: string;
 }
@@ -29,13 +29,14 @@ export class AuthService {
     private configService: ConfigService
   ) {}
 
-  // 로컬 로그인 (개발 환경용, 프로덕션에서는 Azure AD만 사용)
-  // ✅ 개선: UUID 형식의 사용자 ID 사용 (데이터베이스 스키마와 일치)
+  // 로컬 로그인 (개발/테스트 환경 전용, 프로덕션에서는 Azure AD만 사용)
   async login(loginDto: LoginDto): Promise<AuthResponse> {
-    // 개발 편의를 위한 하드코딩된 사용자 (실제로는 데이터베이스에서 조회해야 함)
-    // ✅ UUID 형식의 ID 사용 (users 테이블의 id는 uuid 타입)
-    // 일관된 UUID 형식 사용으로 다른 모듈과의 호환성 확보
-    // ✅ UUID v4 형식 사용 (DTO @IsUUID('4') 검증 호환)
+    // 프로덕션 환경에서는 로컬 로그인 비활성화
+    if (process.env.NODE_ENV === 'production') {
+      throw new UnauthorizedException('프로덕션 환경에서는 Azure AD 인증만 사용할 수 있습니다.');
+    }
+
+    // 개발/테스트 환경용 테스트 사용자 (UUID v4 형식)
     const testUsers = {
       'admin@example.com': {
         id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
@@ -66,16 +67,17 @@ export class AuthService {
       },
     };
 
+    // 환경 변수에서 테스트 비밀번호 가져오기 (기본값은 개발용)
+    const testPasswords: Record<string, string> = {
+      'admin@example.com': process.env.DEV_ADMIN_PASSWORD || 'admin123',
+      'manager@example.com': process.env.DEV_MANAGER_PASSWORD || 'manager123',
+      'user@example.com': process.env.DEV_USER_PASSWORD || 'user123',
+    };
+
     const user = testUsers[loginDto.email as keyof typeof testUsers];
-    if (user && loginDto.password === 'admin123' && loginDto.email === 'admin@example.com') {
-      return this.generateToken(user);
-    } else if (
-      user &&
-      loginDto.password === 'manager123' &&
-      loginDto.email === 'manager@example.com'
-    ) {
-      return this.generateToken(user);
-    } else if (user && loginDto.password === 'user123' && loginDto.email === 'user@example.com') {
+    const expectedPassword = testPasswords[loginDto.email];
+
+    if (user && expectedPassword && loginDto.password === expectedPassword) {
       return this.generateToken(user);
     }
 
@@ -110,49 +112,73 @@ export class AuthService {
   }
 
   // Azure AD 그룹을 팀과 위치로 매핑
-  // 예: LST.SUW.RF → RF팀 + 수원랩
+  // ✅ Best Practice: 팀 이름 = 분류 이름 (통일)
+  // ✅ 사이트별 팀 구성:
+  //    - 수원(SUW): FCC EMC/RF(E), General EMC(R), SAR(S), Automotive EMC(A)
+  //    - 의왕(UIW): General RF(W)
+  //    - 평택(PYT): Automotive EMC(A)
   private mapAzureGroupsToTeamAndLocation(azureGroups: string[]): {
     teamId?: string;
-    site?: 'suwon' | 'uiwang';
-    location?: '수원랩' | '의왕랩';
+    site?: 'suwon' | 'uiwang' | 'pyeongtaek';
+    location?: '수원랩' | '의왕랩' | '평택랩';
   } {
     // Azure AD 그룹 패턴: LST.{SITE}.{TEAM}
-    // 예: LST.SUW.RF, LST.SUW.SAR, LST.UIW.RF 등
+    // 예: LST.SUW.RF (수원 FCC EMC/RF팀)
 
-    const teamMapping: Record<string, string> = {
-      RF: 'rf',
-      SAR: 'sar',
-      EMC: 'emc',
-      AUTO: 'auto',
+    // ✅ Azure AD 그룹 → 팀 UUID 매핑
+    // 팀 이름은 분류 이름과 동일: FCC EMC/RF, General EMC, General RF, SAR, Automotive EMC
+    const teamMapping: Record<'suwon' | 'uiwang' | 'pyeongtaek', Record<string, string>> = {
+      suwon: {
+        // 수원 사이트 팀 (Azure AD 그룹 Object ID 기반)
+        RF: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // LST.SUW.RF → FCC EMC/RF (E)
+        SAR: '7fd28076-fd5e-4d36-b051-bbf8a97b82db', // LST.SUW.SAR → SAR (S)
+        EMC: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289', // LST.SUW.EMC → General EMC (R)
+        Automotive: 'f0a32655-00f9-4ecd-b43c-af4faed499b6', // LST.SUW.Automotive → Automotive EMC (A)
+      },
+      uiwang: {
+        // 의왕 사이트 팀 - General RF만 존재
+        RF: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', // LST.UIW.RF → General RF (W)
+      },
+      pyeongtaek: {
+        // 평택 사이트 팀 - Automotive EMC만 존재
+        Automotive: 'b2c3d4e5-f6a7-4890-bcde-f01234567890', // LST.PYT.Automotive → Automotive EMC (A)
+      },
     };
 
-    const siteMapping: Record<string, { site: 'suwon' | 'uiwang'; location: '수원랩' | '의왕랩' }> =
-      {
-        SUW: { site: 'suwon', location: '수원랩' },
-        UIW: { site: 'uiwang', location: '의왕랩' },
-      };
+    const siteMapping: Record<string, {
+      site: 'suwon' | 'uiwang' | 'pyeongtaek';
+      location: '수원랩' | '의왕랩' | '평택랩';
+    }> = {
+      SUW: { site: 'suwon', location: '수원랩' },
+      UIW: { site: 'uiwang', location: '의왕랩' },
+      PYT: { site: 'pyeongtaek', location: '평택랩' },
+    };
 
     for (const group of azureGroups) {
       // 그룹 이름 패턴 파싱: LST.SUW.RF
       const parts = group.split('.');
       if (parts.length >= 3 && parts[0] === 'LST') {
-        const siteCode = parts[1]; // SUW, UIW
-        const teamCode = parts[2]; // RF, SAR, EMC, AUTO
+        const siteCode = parts[1]; // SUW, UIW, PYT
+        const teamCode = parts[2]; // RF, SAR, EMC, Automotive
 
         const siteInfo = siteMapping[siteCode];
-        const teamId = teamMapping[teamCode];
+        if (siteInfo) {
+          const siteTeams = teamMapping[siteInfo.site];
+          const teamId = siteTeams ? siteTeams[teamCode] : undefined;
 
-        if (siteInfo && teamId) {
-          return {
-            teamId,
-            site: siteInfo.site,
-            location: siteInfo.location,
-          };
+          // ✅ 사이트별 팀 매핑 성공
+          if (teamId) {
+            return {
+              teamId,
+              site: siteInfo.site,
+              location: siteInfo.location,
+            };
+          }
         }
       }
     }
 
-    // 매핑 실패 시 기본값 반환
+    // 매핑 실패 시 기본값 반환 (Azure 그룹 없음)
     return {};
   }
 

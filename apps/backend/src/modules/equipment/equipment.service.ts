@@ -4,14 +4,25 @@ import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
-import { EquipmentStatus, SharedSource } from '@equipment-management/schemas';
+import {
+  EquipmentStatus,
+  SharedSource,
+  parseManagementNumber,
+  generateManagementNumber,
+  SITE_TO_CODE,
+  CLASSIFICATION_TO_CODE,
+  Classification,
+  Site,
+} from '@equipment-management/schemas';
 import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
-import { eq, and, like, lte, or, desc, asc, sql, SQL } from 'drizzle-orm';
+import { eq, and, like, lt, lte, gte, or, desc, asc, sql, SQL } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
+import { teams } from '@equipment-management/db/schema/teams';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
+import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc, addMonthsUtc } from '../../common/utils';
 
 /**
  * 쿼리 조건 빌더 인터페이스
@@ -68,6 +79,7 @@ export class EquipmentService {
   /**
    * 교정일 계산 헬퍼 메서드
    * 다음 교정일 = 최종 교정일 + 교정 주기(개월)
+   * ✅ UTC 기준 계산으로 타임존 문제 방지
    */
   private calculateNextCalibrationDate(
     lastCalibrationDate?: Date | string,
@@ -80,9 +92,8 @@ export class EquipmentService {
     const lastDate =
       typeof lastCalibrationDate === 'string' ? new Date(lastCalibrationDate) : lastCalibrationDate;
 
-    const nextDate = new Date(lastDate);
-    nextDate.setMonth(nextDate.getMonth() + calibrationCycle);
-    return nextDate;
+    // UTC 기준으로 개월수 더하기
+    return addMonthsUtc(lastDate, calibrationCycle);
   }
 
   /**
@@ -127,7 +138,7 @@ export class EquipmentService {
    * findAll 메서드의 복잡한 쿼리 로직을 분리
    */
   private buildQueryConditions(queryParams: EquipmentQueryDto, userSite?: string): QueryConditions {
-    const { search, status, location, manufacturer, teamId, calibrationDue, sort, site, isShared } =
+    const { search, status, location, manufacturer, teamId, calibrationDue, calibrationDueAfter, sort, site, isShared, calibrationMethod } =
       queryParams;
 
     const whereConditions: SQL<unknown>[] = [eq(equipment.isActive, true)];
@@ -163,16 +174,69 @@ export class EquipmentService {
       whereConditions.push(eq(equipment.manufacturer, manufacturer));
     }
 
+    // 교정 방법 필터
+    if (calibrationMethod) {
+      whereConditions.push(eq(equipment.calibrationMethod, calibrationMethod));
+    }
+
     // 교정 예정일 필터 (복합 인덱스 활용)
+    // ✅ 비즈니스 규칙: 반출 상태와 무관하게 교정일 기준으로 필터링
+    // calibrationDue > 0: "교정 임박" - 오늘부터 N일 이내에 교정 예정
+    // calibrationDue < 0: "교정 기한 초과" - 과거 날짜까지 포함
+    // 반출 중인 장비도 포함 (타시험소에 반입 요청 또는 일정 관리 목적)
+    // ✅ UTC 기준 날짜 비교로 타임존 문제 방지
     if (calibrationDue !== undefined) {
-      const today = new Date();
-      const dueDate = new Date();
-      dueDate.setDate(today.getDate() + calibrationDue);
+      // ✅ 쿼리 파라미터는 문자열로 전달되므로 명시적 숫자 변환
+      const days = Number(calibrationDue);
+
+      if (isNaN(days)) {
+        throw new BadRequestException(`calibrationDue는 숫자여야 합니다: ${calibrationDue}`);
+      }
+
+      const today = getUtcStartOfDay(); // UTC 기준 오늘 00:00:00
+
+      if (days >= 0) {
+        // 양수: 오늘부터 N일 이내 (교정 임박)
+        // 예: calibrationDue=30 → 오늘 00:00 <= nextCalibrationDate <= 오늘+30일 23:59:59
+        const dueDate = getUtcEndOfDay(addDaysUtc(today, days));
+
+        // ✅ Drizzle ORM의 Date 객체 처리 문제 해결: sql 템플릿으로 명시적 타임스탬프 변환
+        whereConditions.push(
+          and(
+            sql`${equipment.nextCalibrationDate} IS NOT NULL`,
+            sql`${equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp`,
+            sql`${equipment.nextCalibrationDate} <= ${dueDate.toISOString()}::timestamp`
+          )!
+        );
+      } else {
+        // 음수: 오늘 이전 (교정 기한 초과)
+        // 예: calibrationDue=-1 → nextCalibrationDate < 오늘 00:00
+        whereConditions.push(
+          and(
+            sql`${equipment.nextCalibrationDate} IS NOT NULL`,
+            sql`${equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`
+          )!
+        );
+      }
+    }
+
+    // "교정 여유": calibrationDueAfter일 이후에 교정이 예정된 장비
+    // 예: calibrationDueAfter=30 → nextCalibrationDate > 오늘+30일 23:59:59
+    // ✅ UTC 기준 날짜 비교
+    if (calibrationDueAfter !== undefined) {
+      // ✅ 쿼리 파라미터는 문자열로 전달되므로 명시적 숫자 변환
+      const afterDays = Number(calibrationDueAfter);
+
+      if (isNaN(afterDays)) {
+        throw new BadRequestException(`calibrationDueAfter는 숫자여야 합니다: ${calibrationDueAfter}`);
+      }
+
+      const afterDate = getUtcEndOfDay(addDaysUtc(getUtcStartOfDay(), afterDays));
 
       whereConditions.push(
         and(
           sql`${equipment.nextCalibrationDate} IS NOT NULL`,
-          lte(equipment.nextCalibrationDate, dueDate)
+          sql`${equipment.nextCalibrationDate} > ${afterDate.toISOString()}::timestamp` // calibrationDueAfter일 이후
         )!
       );
     }
@@ -248,6 +312,26 @@ export class EquipmentService {
   }
 
   /**
+   * 관리번호 컴포넌트 파싱 헬퍼 메서드
+   * 관리번호에서 시험소코드, 분류코드, 일련번호를 추출하여 개별 필드에 설정
+   */
+  private parseManagementNumberComponents(managementNumber: string): {
+    siteCode?: string;
+    classificationCode?: string;
+    managementSerialNumber?: number;
+  } {
+    const parsed = parseManagementNumber(managementNumber);
+    if (!parsed) {
+      return {};
+    }
+    return {
+      siteCode: parsed.siteCode,
+      classificationCode: parsed.classificationCode,
+      managementSerialNumber: parseInt(parsed.serialNumber, 10),
+    };
+  }
+
+  /**
    * DTO를 DB 엔티티로 변환 (생성용)
    */
   private transformCreateDtoToEntity(dto: CreateEquipmentDto): Partial<Equipment> {
@@ -257,10 +341,18 @@ export class EquipmentService {
       dto.calibrationCycle
     );
 
+    // 관리번호 컴포넌트 파싱
+    const managementNumberComponents = this.parseManagementNumberComponents(dto.managementNumber);
+
+    // id (uuid)는 자동 생성됨
     const entity: Partial<Equipment> = {
-      uuid: uuidv4(),
       name: dto.name,
       managementNumber: dto.managementNumber,
+      // 관리번호 컴포넌트 (파싱된 값 또는 DTO에서 직접 전달된 값)
+      siteCode: dto.siteCode || managementNumberComponents.siteCode,
+      classificationCode: dto.classificationCode || managementNumberComponents.classificationCode,
+      managementSerialNumber:
+        dto.managementSerialNumber || managementNumberComponents.managementSerialNumber,
       assetNumber: dto.assetNumber,
       modelName: dto.modelName,
       manufacturer: dto.manufacturer,
@@ -356,6 +448,15 @@ export class EquipmentService {
       updateData.teamId = this.normalizeTeamId(dto.teamId);
     }
 
+    // 관리번호 변경 시 컴포넌트도 재파싱
+    if (dto.managementNumber && dto.managementNumber !== existingEquipment.managementNumber) {
+      const components = this.parseManagementNumberComponents(dto.managementNumber);
+      if (components.siteCode) updateData.siteCode = components.siteCode;
+      if (components.classificationCode) updateData.classificationCode = components.classificationCode;
+      if (components.managementSerialNumber)
+        updateData.managementSerialNumber = components.managementSerialNumber;
+    }
+
     // 나머지 필드 업데이트 (undefined가 아닌 경우만)
     const fields: Array<keyof UpdateEquipmentDto> = [
       'name',
@@ -389,6 +490,10 @@ export class EquipmentService {
       'status',
       'site',
       'approvalStatus',
+      // 관리번호 컴포넌트 필드 (개별 업데이트 허용)
+      'siteCode',
+      'classificationCode',
+      'managementSerialNumber',
       // 'requestedBy', 'approvedBy'는 승인 프로세스에서 별도로 관리됨
       'calibrationResult',
       'correctionFactor',
@@ -473,9 +578,8 @@ export class EquipmentService {
         createSharedEquipmentDto.calibrationCycle
       );
 
-      // 공용장비 데이터 구성
+      // 공용장비 데이터 구성 (id는 자동 생성됨)
       const insertData: Partial<Equipment> = {
-        uuid: uuidv4(),
         name: createSharedEquipmentDto.name,
         managementNumber: createSharedEquipmentDto.managementNumber,
         site: createSharedEquipmentDto.site,
@@ -532,13 +636,14 @@ export class EquipmentService {
   async findAll(queryParams: EquipmentQueryDto, userSite?: string): Promise<EquipmentListResponse> {
     const { page = 1, pageSize = 20 } = queryParams;
 
-    // 캐시 키 생성
+    // 캐시 키 생성 - 모든 필터 조건을 포함해야 정확한 캐시 히트
     const cacheKey = this.buildCacheKey('list', {
       search: queryParams.search,
       status: queryParams.status,
       location: queryParams.location,
       manufacturer: queryParams.manufacturer,
       teamId: queryParams.teamId,
+      calibrationMethod: queryParams.calibrationMethod, // ✅ 교정방법 필터 캐시 키에 포함
       calibrationDue: queryParams.calibrationDue,
       site: queryParams.site, // ✅ 사이트 필터 캐시 키에 포함
       isShared: queryParams.isShared, // ✅ 공용장비 필터 캐시 키에 포함
@@ -554,14 +659,17 @@ export class EquipmentService {
           // 쿼리 조건 빌드
           const { whereConditions, orderBy } = this.buildQueryConditions(queryParams, userSite);
 
-          // 총 아이템 수 계산
+          // 총 아이템 수 계산 - 필터 조건 모두 포함
           const countCacheKey = this.buildCacheKey('count', {
             search: queryParams.search,
             status: queryParams.status,
             location: queryParams.location,
             manufacturer: queryParams.manufacturer,
             teamId: queryParams.teamId,
+            calibrationMethod: queryParams.calibrationMethod,
             calibrationDue: queryParams.calibrationDue,
+            site: queryParams.site,
+            isShared: queryParams.isShared,
           });
 
           const totalItems = await this.cacheService.getOrSet(
@@ -589,15 +697,36 @@ export class EquipmentService {
             );
           }
 
-          // 데이터 조회
+          // 데이터 조회 (팀 이름 포함을 위해 LEFT JOIN 사용)
           const finalOrderBy = orderBy.length > 0 ? orderBy : [asc(equipment.name)];
-          const items = await this.db
+
+          // ✅ 장비 목록 조회 후 팀 이름 추가
+          const rawItems = await this.db
             .select()
             .from(equipment)
             .where(and(...whereConditions))
             .orderBy(...finalOrderBy)
             .limit(numericPageSize)
             .offset(numericOffset);
+
+          // 팀 ID 목록 추출 (중복 제거)
+          const teamIds = [...new Set(rawItems.filter(item => item.teamId).map(item => item.teamId as string))];
+
+          // 팀 정보 일괄 조회 (N+1 쿼리 방지)
+          let teamMap: Map<string, string> = new Map();
+          if (teamIds.length > 0) {
+            const teamData = await this.db
+              .select({ id: teams.id, name: teams.name })
+              .from(teams)
+              .where(sql`${teams.id} IN (${sql.join(teamIds.map(id => sql`${id}`), sql`, `)})`);
+            teamMap = new Map(teamData.map(t => [t.id, t.name]));
+          }
+
+          // 장비 데이터에 팀 이름 추가
+          const items = rawItems.map(item => ({
+            ...item,
+            teamName: item.teamId ? teamMap.get(item.teamId) || null : null,
+          }));
 
           // 디버깅: 테스트 환경에서 실제 반환된 아이템 수 로깅
           if (process.env.NODE_ENV === 'test') {
@@ -643,7 +772,7 @@ export class EquipmentService {
           // 소프트 삭제된 항목은 제외 (isActive = true만 조회)
           // ✅ Drizzle relations 사용 (CAST 불필요)
           const equipmentData = await this.db.query.equipment.findFirst({
-            where: and(eq(equipment.uuid, uuid), eq(equipment.isActive, true)),
+            where: and(eq(equipment.id, uuid), eq(equipment.isActive, true)),
             with: includeTeam ? { team: true } : undefined,
           });
 
@@ -692,6 +821,11 @@ export class EquipmentService {
         }
       }
 
+      // 상태 변경 시 교정 기한 검증 (UL-QP-18)
+      if (updateEquipmentDto.status) {
+        this.validateCalibrationStatusChange(existingEquipment, updateEquipmentDto.status);
+      }
+
       // DTO를 DB 엔티티로 변환
       const updateData = this.transformUpdateDtoToEntity(updateEquipmentDto, existingEquipment);
 
@@ -699,7 +833,7 @@ export class EquipmentService {
       const [updated] = await this.db
         .update(equipment)
         .set(updateData)
-        .where(eq(equipment.uuid, uuid))
+        .where(eq(equipment.id, uuid))
         .returning();
 
       if (!updated) {
@@ -729,6 +863,56 @@ export class EquipmentService {
   }
 
   /**
+   * 교정 기한 초과 장비의 "사용 가능" 상태 변경 검증
+   *
+   * UL-QP-18 비즈니스 규칙:
+   * - 교정 필요 장비가 교정 기한이 초과된 경우, "사용 가능" 상태로 변경 불가
+   * - 교정 기록을 등록하여 차기 교정일을 갱신해야만 "사용 가능" 상태로 변경 가능
+   *
+   * @param existingEquipment 기존 장비 정보
+   * @param newStatus 변경하려는 상태
+   * @throws BadRequestException 교정 기한 초과 장비를 "사용 가능"으로 변경 시도할 때
+   */
+  private validateCalibrationStatusChange(
+    existingEquipment: Equipment,
+    newStatus: EquipmentStatus
+  ): void {
+    // "사용 가능"으로 변경하는 경우에만 검증
+    if (newStatus !== 'available') {
+      return;
+    }
+
+    // 교정 필요 장비가 아니면 검증 불필요
+    if (!existingEquipment.calibrationRequired) {
+      return;
+    }
+
+    // 교정 방법이 "해당 없음"이면 검증 불필요
+    if (existingEquipment.calibrationMethod === 'not_applicable') {
+      return;
+    }
+
+    // 차기 교정일이 없으면 검증 불필요 (아직 교정 계획이 없는 신규 장비)
+    if (!existingEquipment.nextCalibrationDate) {
+      return;
+    }
+
+    // 교정 기한 초과 여부 확인 (UTC 기준)
+    const today = getUtcStartOfDay();
+    const nextCalibrationDate = getUtcStartOfDay(new Date(existingEquipment.nextCalibrationDate));
+
+    if (nextCalibrationDate < today) {
+      const diffTime = today.getTime() - nextCalibrationDate.getTime();
+      const overdueDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      throw new BadRequestException(
+        `교정 기한이 ${overdueDays}일 초과된 장비는 "사용 가능" 상태로 변경할 수 없습니다. ` +
+          `교정 기록을 등록하여 차기 교정일을 갱신해주세요.`
+      );
+    }
+  }
+
+  /**
    * UUID로 장비 삭제 (소프트 삭제)
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    */
@@ -744,7 +928,7 @@ export class EquipmentService {
       const [updated] = await this.db
         .update(equipment)
         .set(updateData as Record<string, unknown>)
-        .where(eq(equipment.uuid, uuid))
+        .where(eq(equipment.id, uuid))
         .returning();
 
       if (!updated) {
@@ -772,6 +956,12 @@ export class EquipmentService {
    */
   async updateStatus(uuid: string, status: EquipmentStatus): Promise<Equipment> {
     try {
+      // 기존 장비 조회 (교정 상태 검증을 위해)
+      const existingEquipment = await this.findOne(uuid);
+
+      // 상태 변경 시 교정 기한 검증 (UL-QP-18)
+      this.validateCalibrationStatusChange(existingEquipment, status);
+
       // Equipment 모듈의 transformUpdateDtoToEntity 패턴과 동일하게 처리
       const updateData: Partial<Equipment> = {
         status,
@@ -781,7 +971,7 @@ export class EquipmentService {
       const [updated] = await this.db
         .update(equipment)
         .set(updateData as Record<string, unknown>)
-        .where(eq(equipment.uuid, uuid))
+        .where(eq(equipment.id, uuid))
         .returning();
 
       if (!updated) {
@@ -793,7 +983,7 @@ export class EquipmentService {
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
         throw error;
       }
       this.logger.error(
@@ -834,6 +1024,7 @@ export class EquipmentService {
 
   /**
    * 교정 예정 장비 조회
+   * ✅ UTC 기준 날짜 비교
    */
   async findCalibrationDue(days: number): Promise<Equipment[]> {
     const cacheKey = this.buildCacheKey('calibration', { days });
@@ -842,9 +1033,8 @@ export class EquipmentService {
       cacheKey,
       async () => {
         try {
-          const today = new Date();
-          const dueDate = new Date();
-          dueDate.setDate(today.getDate() + days);
+          const today = getUtcStartOfDay();
+          const dueDate = getUtcEndOfDay(addDaysUtc(today, days));
 
           return await this.db.query.equipment.findMany({
             where: and(
@@ -895,7 +1085,7 @@ export class EquipmentService {
       async () => {
         try {
           const result = await this.db
-            .select({ id: equipment.uuid })
+            .select({ id: equipment.id })
             .from(equipment)
             .where(eq(equipment.isActive, true));
 

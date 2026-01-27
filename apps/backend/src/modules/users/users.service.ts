@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { randomUUID } from 'crypto';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto';
 import { User, UserListResponse, UserRoleEnum } from '@equipment-management/schemas';
+import { parseSortString, sortByField } from '../../common/utils/sort';
 
 // 임시 데이터 저장소 (실제로는 DB를 사용)
 // ✅ AuthService의 테스트 사용자 ID와 동기화 (UUID v4 형식)
@@ -24,7 +25,7 @@ const users: User[] = [
     email: 'manager@example.com',
     name: 'RF팀 관리자',
     role: 'technical_manager',
-    teamId: 'rf',
+    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
     department: '연구개발부',
     position: '팀장',
     phoneNumber: '010-1234-5678',
@@ -41,7 +42,7 @@ const users: User[] = [
     email: 'user@example.com',
     name: '시험실무자',
     role: 'test_engineer',
-    teamId: 'rf',
+    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
     department: '연구개발부',
     position: '연구원',
     phoneNumber: '010-2345-6789',
@@ -58,7 +59,7 @@ const users: User[] = [
     email: 'user1@example.com',
     name: '김사용',
     role: 'test_engineer',
-    teamId: 'rf',
+    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
     department: '연구개발부',
     position: '연구원',
     phoneNumber: '010-3456-7890',
@@ -75,7 +76,7 @@ const users: User[] = [
     email: 'inactive@example.com',
     name: '퇴사자',
     role: 'test_engineer',
-    teamId: 'emc',
+    teamId: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
     department: '연구개발부',
     position: '연구원',
     isActive: false,
@@ -145,18 +146,12 @@ export class UsersService {
     }
 
     // 정렬
-    if (query.sort) {
-      const [field, direction] = query.sort.split('.');
-      const sortDir = direction === 'desc' ? -1 : 1;
-
-      filteredUsers.sort((a, b) => {
-        if (a[field] < b[field]) return -1 * sortDir;
-        if (a[field] > b[field]) return 1 * sortDir;
-        return 0;
-      });
+    const sortConfig = parseSortString(query.sort);
+    if (sortConfig) {
+      filteredUsers = sortByField(filteredUsers, sortConfig.field, sortConfig.direction);
     } else {
       // 기본 정렬: 이름 오름차순
-      filteredUsers.sort((a, b) => a.name.localeCompare(b.name));
+      filteredUsers = sortByField(filteredUsers, 'name', 'asc');
     }
 
     // 페이지네이션
@@ -307,13 +302,14 @@ export class UsersService {
     // 실제로는 비밀번호 해싱 후 저장
     // await this.update(id, { password: hashedPassword });
 
-    // 이메일로 임시 비밀번호 발송 로직 (실제 구현 필요)
-    console.log(`사용자 ${user.name}의 임시 비밀번호: ${tempPassword}`);
+    // TODO: 이메일로 임시 비밀번호 발송 로직 구현 필요
+    // 프로덕션에서는 이메일 서비스를 통해 전송해야 함
 
     return {
       success: true,
       message: '임시 비밀번호가 생성되어 이메일로 발송되었습니다.',
-      tempPassword, // 실제 프로덕션에서는 클라이언트에 반환하지 말고 이메일로만 전송해야 함
+      // 개발 환경에서만 반환 (프로덕션에서는 제거 필요)
+      ...(process.env.NODE_ENV === 'development' && { tempPassword }),
     };
   }
 }

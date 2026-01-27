@@ -55,9 +55,9 @@ import {
   CreateSharedEquipmentDto,
   CreateSharedEquipmentValidationPipe,
 } from './dto/create-shared-equipment.dto';
-import { RequirePermissions } from '../../decorators/require-permissions.decorator';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
-import { PermissionsGuard } from '../../guards/permissions.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 // 표준 상태값은 schemas 패키지에서 import
 import { EquipmentStatus } from '@equipment-management/schemas';
@@ -130,7 +130,7 @@ export class EquipmentController {
     if (files && files.length > 0) {
       const attachmentType = 'inspection_report'; // 신규 등록은 검수보고서
       const attachments = await this.attachmentService.createAttachments(files, attachmentType);
-      attachmentUuids = attachments.map((a) => a.uuid);
+      attachmentUuids = attachments.map((a) => a.id);
     }
 
     // 시스템 관리자는 직접 승인 가능
@@ -146,7 +146,7 @@ export class EquipmentController {
     );
     return {
       message: '장비 등록 요청이 생성되었습니다.',
-      requestUuid: request.uuid,
+      requestUuid: request.id,
       request,
     };
   }
@@ -238,7 +238,8 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async findOne(@Param('uuid', ParseUUIDPipe) uuid: string, @Req() req: any) {
-    const equipment = await this.equipmentService.findOne(uuid);
+    // ✅ includeTeam=true로 팀 정보 포함 조회
+    const equipmentWithTeam = await this.equipmentService.findOne(uuid, true);
 
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
     const userSite = req.user?.site;
@@ -248,11 +249,16 @@ export class EquipmentController {
       userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
 
     // 시험실무자이고 자신의 사이트가 아닌 장비를 조회하려는 경우 거부
-    if (isTestOperator && !canViewAllSites && userSite && equipment.site !== userSite) {
+    if (isTestOperator && !canViewAllSites && userSite && equipmentWithTeam.site !== userSite) {
       throw new ForbiddenException('다른 사이트의 장비를 조회할 권한이 없습니다.');
     }
 
-    return equipment;
+    // ✅ 응답에 teamName 필드 추가 (프론트엔드에서 사용)
+    const { team, ...equipmentData } = equipmentWithTeam;
+    return {
+      ...equipmentData,
+      teamName: team?.name || null,
+    };
   }
 
   @Patch(':uuid')
@@ -302,7 +308,7 @@ export class EquipmentController {
     if (files && files.length > 0) {
       const attachmentType = 'history_card'; // 기존 수정은 이력카드
       const attachments = await this.attachmentService.createAttachments(files, attachmentType);
-      attachmentUuids = attachments.map((a) => a.uuid);
+      attachmentUuids = attachments.map((a) => a.id);
     }
 
     // 시스템 관리자는 직접 승인 가능
@@ -319,7 +325,7 @@ export class EquipmentController {
     );
     return {
       message: '장비 수정 요청이 생성되었습니다.',
-      requestUuid: request.uuid,
+      requestUuid: request.id,
       request,
     };
   }
@@ -366,7 +372,7 @@ export class EquipmentController {
     const request = await this.approvalService.deleteEquipmentRequest(uuid, userId);
     return {
       message: '장비 삭제 요청이 생성되었습니다.',
-      requestUuid: request.uuid,
+      requestUuid: request.id,
     };
   }
 
@@ -575,7 +581,7 @@ export class EquipmentController {
     return {
       message: '파일이 업로드되었습니다.',
       attachment: {
-        uuid: attachment.uuid,
+        id: attachment.id,
         fileName: attachment.fileName,
         originalFileName: attachment.originalFileName,
         fileSize: attachment.fileSize,

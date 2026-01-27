@@ -12,16 +12,13 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
-import {
-  CreateNotificationDto,
-  NotificationTypeEnum,
-  NotificationPriorityEnum,
-} from './dto/create-notification.dto';
+import { CreateNotificationDto } from './dto/create-notification.dto';
+import { type NotificationPriority } from '@equipment-management/schemas';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../guards/permissions.guard';
-import { RequirePermissions } from '../../decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
 import { NotificationSettingsDto } from './dto/notification-settings.dto';
 
@@ -136,7 +133,7 @@ export class NotificationsController {
   createSystemNotification(
     @Body('title') title: string,
     @Body('content') content: string,
-    @Body('priority') priority?: NotificationPriorityEnum
+    @Body('priority') priority?: NotificationPriority
   ) {
     return this.notificationsService.createSystemNotification(title, content, priority);
   }

@@ -154,7 +154,6 @@ async function pushSchema() {
 
     console.log('✅ 인덱스 생성 완료');
     console.log('✅ 스키마 적용이 완료되었습니다.');
-
   } catch (error) {
     console.error('🚨 스키마 적용 중 오류 발생:', error);
     process.exit(1);

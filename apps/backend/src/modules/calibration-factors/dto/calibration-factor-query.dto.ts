@@ -1,15 +1,22 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { CalibrationFactorType } from './create-calibration-factor.dto';
+import {
+  CalibrationFactorTypeEnum,
+  CalibrationFactorApprovalStatusEnum,
+  CalibrationFactorApprovalStatusValues,
+  CALIBRATION_FACTOR_TYPE_VALUES,
+  CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
+  type CalibrationFactorType,
+  type CalibrationFactorApprovalStatus,
+} from '@equipment-management/schemas';
 
-// ========== Enum 정의 ==========
-
-export enum CalibrationFactorApprovalStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-}
+// Re-export for backward compatibility
+export {
+  CalibrationFactorApprovalStatusEnum,
+  CalibrationFactorApprovalStatusValues,
+  type CalibrationFactorApprovalStatus,
+};
 
 // ========== Zod 스키마 정의 ==========
 
@@ -18,16 +25,8 @@ export enum CalibrationFactorApprovalStatus {
  */
 export const calibrationFactorQuerySchema = z.object({
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
-  approvalStatus: z
-    .nativeEnum(CalibrationFactorApprovalStatus, {
-      message: '유효하지 않은 승인 상태입니다',
-    })
-    .optional(),
-  factorType: z
-    .nativeEnum(CalibrationFactorType, {
-      message: '유효하지 않은 보정계수 타입입니다',
-    })
-    .optional(),
+  approvalStatus: CalibrationFactorApprovalStatusEnum.optional(),
+  factorType: CalibrationFactorTypeEnum.optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
@@ -53,14 +52,14 @@ export class CalibrationFactorQueryDto {
 
   @ApiProperty({
     description: '승인 상태로 필터',
-    enum: CalibrationFactorApprovalStatus,
+    enum: CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
     required: false,
   })
   approvalStatus?: CalibrationFactorApprovalStatus;
 
   @ApiProperty({
     description: '보정계수 타입으로 필터',
-    enum: CalibrationFactorType,
+    enum: CALIBRATION_FACTOR_TYPE_VALUES,
     required: false,
   })
   factorType?: CalibrationFactorType;

@@ -161,17 +161,26 @@ export const authOptions = {
 ```typescript
 import { test as base, Page } from '@playwright/test';
 
+/**
+ * ⚠️ 중요: Playwright의 page.request.post()는 Set-Cookie 헤더를 자동으로
+ * 브라우저 컨텍스트에 저장하지 않습니다. 수동으로 쿠키를 파싱하여 추가해야 합니다.
+ */
 async function loginAs(page: Page, role: string) {
   try {
     console.log(`[Auth Fixture] Logging in as ${role}...`);
 
     // 1. CSRF 토큰 획득
-    const csrfResponse = await page.request.get('http://localhost:3000/api/auth/csrf');
+    const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+    const csrfResponse = await page.request.get(`${baseURL}/api/auth/csrf`);
     const { csrfToken } = await csrfResponse.json();
+
+    if (!csrfToken) {
+      throw new Error('Failed to get CSRF token');
+    }
 
     // 2. NextAuth callback API로 POST 요청
     const loginResponse = await page.request.post(
-      'http://localhost:3000/api/auth/callback/test-login?callbackUrl=/',
+      `${baseURL}/api/auth/callback/test-login?callbackUrl=/`,
       {
         form: {
           role: role,
@@ -183,6 +192,39 @@ async function loginAs(page: Page, role: string) {
 
     if (!loginResponse.ok()) {
       throw new Error(`Login callback failed: ${loginResponse.status()}`);
+    }
+
+    // ⚠️ 핵심: Set-Cookie 헤더를 수동으로 파싱하여 브라우저 컨텍스트에 추가
+    // Playwright는 API 요청의 Set-Cookie를 자동으로 브라우저에 저장하지 않음
+    const setCookieHeaders = loginResponse.headers()['set-cookie'];
+    if (setCookieHeaders) {
+      const cookies = setCookieHeaders.split('\n').map((cookieStr: string) => {
+        const parts = cookieStr.split(';');
+        const [name, ...valueParts] = parts[0].split('=');
+        const value = valueParts.join('=');
+
+        // Parse cookie attributes
+        const attributes: Record<string, string> = {};
+        for (let i = 1; i < parts.length; i++) {
+          const attr = parts[i].trim();
+          if (attr.includes('=')) {
+            const [key, val] = attr.split('=');
+            attributes[key.toLowerCase()] = val;
+          }
+        }
+
+        return {
+          name: name.trim(),
+          value,
+          domain: 'localhost',
+          path: attributes['path'] || '/',
+          httpOnly: parts.some(p => p.trim().toLowerCase() === 'httponly'),
+          sameSite: (attributes['samesite'] || 'Lax') as 'Lax' | 'Strict' | 'None',
+          expires: attributes['expires'] ? new Date(attributes['expires']).getTime() / 1000 : undefined,
+        };
+      });
+      await page.context().addCookies(cookies);
+      console.log(`[Auth Fixture] Added ${cookies.length} cookies`);
     }
 
     // 3. 메인 페이지로 이동하여 세션 확인
@@ -231,15 +273,18 @@ export { expect } from '@playwright/test';
 NODE_ENV=test
 
 # NextAuth.js 설정
-NEXTAUTH_URL=http://localhost:3000
+# 프론트엔드 URL (E2E 테스트 서버 - Playwright 전용 포트)
+NEXTAUTH_URL=http://localhost:3002
 NEXTAUTH_SECRET=test_super_secret_key_for_e2e_testing_32chars
 
-# 백엔드 API URL
+# 백엔드 API URL (개발 서버)
 NEXT_PUBLIC_API_URL=http://localhost:3001
 
 # 로컬 인증 활성화 (테스트 환경)
 ENABLE_LOCAL_AUTH=true
 ```
+
+**참고**: E2E 테스트는 포트 3002에서 실행되므로 `NEXTAUTH_URL`도 3002로 설정해야 합니다.
 
 ### 4단계: 백엔드 테스트 로그인 엔드포인트
 
@@ -257,17 +302,44 @@ async testLogin(@Query('role') role: string) {
     throw new ForbiddenException('Test login is only available in development and test environments');
   }
 
+  // 주의: id, uuid, teamId는 반드시 유효한 UUID 형식이어야 함 (DB 저장 시 UUID 타입 검증)
   const testUsers: Record<string, any> = {
     test_engineer: {
-      id: 'test-engineer-id',
-      uuid: 'test-engineer-uuid',
+      id: '00000000-0000-0000-0000-000000000001',
+      uuid: '00000000-0000-0000-0000-000000000001',
       email: 'test.engineer@example.com',
       name: '테스트 시험실무자',
       role: 'test_engineer',
       site: 'suwon',
-      teamId: 'test-team-id',
+      teamId: '00000000-0000-0000-0000-000000000099',
     },
-    // ... 다른 역할
+    technical_manager: {
+      id: '00000000-0000-0000-0000-000000000002',
+      uuid: '00000000-0000-0000-0000-000000000002',
+      email: 'tech.manager@example.com',
+      name: '테스트 기술책임자',
+      role: 'technical_manager',
+      site: 'suwon',
+      teamId: '00000000-0000-0000-0000-000000000099',
+    },
+    lab_manager: {
+      id: '00000000-0000-0000-0000-000000000003',
+      uuid: '00000000-0000-0000-0000-000000000003',
+      email: 'lab.manager@example.com',
+      name: '테스트 시험소장',
+      role: 'lab_manager',
+      site: 'suwon',
+      teamId: '00000000-0000-0000-0000-000000000099',
+    },
+    system_admin: {
+      id: '00000000-0000-0000-0000-000000000004',
+      uuid: '00000000-0000-0000-0000-000000000004',
+      email: 'system.admin@example.com',
+      name: '테스트 시스템관리자',
+      role: 'system_admin',
+      site: 'suwon',
+      teamId: '00000000-0000-0000-0000-000000000099',
+    },
   };
 
   const testUser = testUsers[role];
@@ -480,6 +552,13 @@ E2E 테스트에서 NextAuth 인증을 올바르게 처리하려면:
 
 ---
 
-**최종 수정일**: 2026-01-22
+**최종 수정일**: 2026-01-27
 **작성자**: Claude Sonnet 4.5
-**버전**: 1.0.0
+**버전**: 1.1.0
+
+### 변경 이력
+
+| 버전 | 날짜 | 변경 내용 |
+|------|------|----------|
+| 1.1.0 | 2026-01-27 | loginAs 함수에 쿠키 파싱 로직 추가, 테스트 사용자 ID를 UUID 형식으로 수정, .env.test 포트 설정 반영 |
+| 1.0.0 | 2026-01-22 | 최초 작성 |

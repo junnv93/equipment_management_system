@@ -53,11 +53,10 @@ export class UpdateUserDto {
   location?: '수원랩' | '의왕랩';
 
   @ApiPropertyOptional({
-    description: '소속 팀 ID',
-    enum: ['rf', 'sar', 'emc', 'auto'],
-    example: 'rf',
+    description: '소속 팀 ID (UUID)',
+    example: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
   })
-  teamId?: 'rf' | 'sar' | 'emc' | 'auto';
+  teamId?: string;
 
   @ApiPropertyOptional({
     description: '부서명',

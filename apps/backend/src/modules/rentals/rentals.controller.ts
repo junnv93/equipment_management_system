@@ -34,6 +34,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
+import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('대여 관리')
 @ApiBearerAuth()
@@ -54,7 +55,7 @@ export class RentalsController {
   @ApiResponse({ status: HttpStatus.CONFLICT, description: '대여 기간 충돌' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  async create(@Body() createRentalDto: CreateRentalDto, @Request() req: any) {
+  async create(@Body() createRentalDto: CreateRentalDto, @Request() req: AuthenticatedRequest) {
     // ✅ 일관성: Checkouts와 동일한 패턴 - JWT에서 userId 가져오기
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
@@ -141,7 +142,7 @@ export class RentalsController {
   async approve(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveRentalDto,
-    @Request() req: any
+    @Request() req: AuthenticatedRequest
   ) {
     // ✅ 일관성: JWT에서 approverId를 가져오거나 Body에서 받기
     // Body에서 approverId를 받되, 없으면 JWT에서 가져오기
@@ -175,15 +176,15 @@ export class RentalsController {
   async reject(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body('reason') reason: string,
-    @Body('approverId') approverId?: string,
-    @Request() req?: any
+    @Request() req: AuthenticatedRequest,
+    @Body('approverId') approverId?: string
   ) {
     // 반려 사유 필수 검증 (요구사항)
     if (!reason || reason.trim().length === 0) {
       throw new BadRequestException('반려 사유는 필수입니다.');
     }
     // ✅ 일관성: JWT에서 approverId를 가져오거나 Body에서 받기
-    const finalApproverId = approverId || req?.user?.userId || req?.user?.sub;
+    const finalApproverId = approverId || req.user?.userId;
     if (!finalApproverId) {
       throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
     }

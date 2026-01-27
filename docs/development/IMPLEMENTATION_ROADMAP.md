@@ -145,6 +145,35 @@
 
 ---
 
+## Next.js 16 필수 준수 사항
+
+모든 프론트엔드 관련 프롬프트에 아래 규칙을 포함해야 합니다:
+
+```markdown
+Next.js 16 필수 준수:
+- params/searchParams는 Promise (await 필수)
+  예: const { id } = await props.params;
+- useFormState 대신 useActionState 사용
+  import { useActionState } from 'react';
+- Form action은 void 반환 (데이터 반환 시 useActionState 사용)
+- any 타입 절대 금지 (unknown + 타입 가드 사용)
+- Server Component 기본, Client Component는 최소화
+- 동적 라우트에 loading.tsx, error.tsx 추가
+- React.FC 사용 지양 (직접 타입 정의)
+```
+
+### 프론트엔드 개발 패턴 참조
+
+| 패턴                 | 참조 문서                           |
+| -------------------- | ----------------------------------- |
+| 페이지 구조          | `workflow.md` 프론트엔드 섹션       |
+| 컴포넌트 스타일      | `code-style-guide.md` React 섹션    |
+| 인증 처리            | `AUTH_ARCHITECTURE.md`              |
+| API 호출             | `API_STANDARDS.md` 프론트엔드 섹션  |
+| 성능 최적화          | `PERFORMANCE_GUIDE.md`              |
+
+---
+
 ## 기능별 프롬프트
 
 ### 프롬프트 1: 사용자 역할 시스템 개선

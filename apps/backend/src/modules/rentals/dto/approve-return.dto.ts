@@ -1,13 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  ReturnApprovalStatusEnum,
+  RETURN_APPROVAL_STATUS_VALUES,
+  type ReturnApprovalStatus,
+} from '@equipment-management/schemas';
 
-// ========== Enum 정의 ==========
-
-export enum ReturnApprovalStatusEnum {
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-}
+// Re-export for backward compatibility
+export { ReturnApprovalStatusEnum, RETURN_APPROVAL_STATUS_VALUES, type ReturnApprovalStatus };
 
 // ========== Zod 스키마 정의 ==========
 
@@ -15,7 +16,7 @@ export enum ReturnApprovalStatusEnum {
  * 반납 승인 스키마
  */
 export const approveReturnSchema = z.object({
-  status: z.nativeEnum(ReturnApprovalStatusEnum, { message: '유효한 승인 상태를 선택해주세요' }),
+  status: z.enum(['approved', 'rejected'], { message: '유효한 승인 상태를 선택해주세요' }),
   notes: z.string().optional(),
   approverId: z.string().min(1, '승인자 ID를 입력해주세요'),
 });
@@ -28,10 +29,10 @@ export const ApproveReturnValidationPipe = new ZodValidationPipe(approveReturnSc
 export class ApproveReturnDto {
   @ApiProperty({
     description: '반납 승인 상태',
-    enum: ReturnApprovalStatusEnum,
-    example: ReturnApprovalStatusEnum.APPROVED,
+    enum: ['approved', 'rejected'],
+    example: 'approved',
   })
-  status: ReturnApprovalStatusEnum;
+  status: 'approved' | 'rejected';
 
   @ApiProperty({
     description: '반납 승인/거절 메모',

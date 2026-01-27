@@ -1,5 +1,4 @@
 import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
 import { equipmentAttachments } from '@equipment-management/db/schema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -27,19 +26,18 @@ export class EquipmentAttachmentService {
   async createAttachment(
     file: any,
     attachmentType: 'inspection_report' | 'history_card' | 'other',
-    equipmentId?: number,
-    requestId?: number,
+    equipmentId?: string,
+    requestId?: string,
     description?: string
   ): Promise<EquipmentAttachment> {
     try {
       // 파일 저장
       const savedFile = await this.fileUploadService.saveFile(file, 'equipment');
 
-      // 데이터베이스에 메타데이터 저장
+      // 데이터베이스에 메타데이터 저장 (id는 자동 생성됨)
       const [attachment] = await this.db
         .insert(equipmentAttachments)
         .values({
-          uuid: uuidv4(),
           equipmentId,
           requestId,
           attachmentType,
@@ -52,7 +50,7 @@ export class EquipmentAttachmentService {
         } as any)
         .returning();
 
-      this.logger.log(`Attachment created: ${attachment.uuid}`);
+      this.logger.log(`Attachment created: ${attachment.id}`);
       return attachment;
     } catch (error) {
       this.logger.error(`Failed to create attachment: ${error}`);
@@ -66,8 +64,8 @@ export class EquipmentAttachmentService {
   async createAttachments(
     files: any[],
     attachmentType: 'inspection_report' | 'history_card' | 'other',
-    equipmentId?: number,
-    requestId?: number
+    equipmentId?: string,
+    requestId?: string
   ): Promise<EquipmentAttachment[]> {
     const attachments: EquipmentAttachment[] = [];
 
@@ -84,7 +82,7 @@ export class EquipmentAttachmentService {
    */
   async findByUuid(uuid: string): Promise<EquipmentAttachment> {
     const attachment = await this.db.query.equipmentAttachments.findFirst({
-      where: eq(equipmentAttachments.uuid, uuid),
+      where: eq(equipmentAttachments.id, uuid),
     });
 
     if (!attachment) {
@@ -97,7 +95,7 @@ export class EquipmentAttachmentService {
   /**
    * 장비별 첨부 파일 조회
    */
-  async findByEquipmentId(equipmentId: number): Promise<EquipmentAttachment[]> {
+  async findByEquipmentId(equipmentId: string): Promise<EquipmentAttachment[]> {
     return this.db.query.equipmentAttachments.findMany({
       where: eq(equipmentAttachments.equipmentId, equipmentId),
     });
@@ -106,7 +104,7 @@ export class EquipmentAttachmentService {
   /**
    * 요청별 첨부 파일 조회
    */
-  async findByRequestId(requestId: number): Promise<EquipmentAttachment[]> {
+  async findByRequestId(requestId: string): Promise<EquipmentAttachment[]> {
     return this.db.query.equipmentAttachments.findMany({
       where: eq(equipmentAttachments.requestId, requestId),
     });
@@ -123,7 +121,7 @@ export class EquipmentAttachmentService {
       await this.fileUploadService.deleteFile(attachment.filePath);
 
       // 데이터베이스에서 레코드 삭제
-      await this.db.delete(equipmentAttachments).where(eq(equipmentAttachments.uuid, uuid));
+      await this.db.delete(equipmentAttachments).where(eq(equipmentAttachments.id, uuid));
 
       this.logger.log(`Attachment deleted: ${uuid}`);
     } catch (error) {

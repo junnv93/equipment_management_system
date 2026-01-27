@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { BearerStrategy } from 'passport-azure-ad';
+import { BearerStrategy, IProfile } from 'passport-azure-ad';
 import { ConfigService } from '@nestjs/config';
+import { JwtUser } from '../../../types/auth';
 
 @Injectable()
 export class AzureADStrategy extends PassportStrategy(BearerStrategy, 'azure-ad') {
@@ -37,11 +38,11 @@ export class AzureADStrategy extends PassportStrategy(BearerStrategy, 'azure-ad'
     });
   }
 
-  async validate(payload: any) {
+  async validate(payload: IProfile): Promise<JwtUser> {
     // Azure AD의 claims에서 필요한 정보 추출
     return {
-      userId: payload.oid,
-      email: payload.preferred_username,
+      userId: payload.oid || '',
+      email: payload.preferred_username || '',
       name: payload.name,
       roles: payload.roles || [],
       department: payload.department,

@@ -1,14 +1,37 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  IncidentTypeEnum,
+  INCIDENT_TYPE_VALUES,
+  INCIDENT_TYPE_LABELS,
+  type IncidentType,
+} from '@equipment-management/schemas';
+
+// Re-export for backward compatibility
+export { IncidentTypeEnum, INCIDENT_TYPE_VALUES, type IncidentType };
 
 // ========== Zod 스키마 정의 ==========
+
+/**
+ * 날짜 문자열 검증 스키마
+ * - ISO 8601 datetime 형식 ('2024-01-15T00:00:00.000Z')
+ * - 또는 날짜 전용 형식 ('2024-01-15')
+ */
+const dateStringSchema = z.string().refine(
+  (val) => {
+    // ISO 8601 datetime 또는 날짜 전용 형식 허용
+    const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
+    return isoDateTimeRegex.test(val) && !isNaN(Date.parse(val));
+  },
+  { message: '유효한 날짜 형식이 아닙니다 (YYYY-MM-DD 또는 ISO 8601)' }
+);
 
 /**
  * 위치 변동 이력 생성 스키마
  */
 export const createLocationHistorySchema = z.object({
-  changedAt: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  changedAt: dateStringSchema,
   newLocation: z
     .string()
     .min(1, '위치를 입력해주세요')
@@ -78,7 +101,7 @@ export class LocationHistoryResponseDto {
  * 유지보수 내역 생성 스키마
  */
 export const createMaintenanceHistorySchema = z.object({
-  performedAt: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
+  performedAt: dateStringSchema,
   content: z.string().min(1, '내용을 입력해주세요'),
 });
 
@@ -132,22 +155,17 @@ export class MaintenanceHistoryResponseDto {
 }
 
 /**
- * 장비 손상/오작동/변경/수리 내역 유형
- */
-export enum IncidentTypeEnum {
-  DAMAGE = 'damage',
-  MALFUNCTION = 'malfunction',
-  CHANGE = 'change',
-  REPAIR = 'repair',
-}
-
-/**
  * 손상/오작동/변경/수리 내역 생성 스키마
  */
 export const createIncidentHistorySchema = z.object({
-  occurredAt: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
-  incidentType: z.nativeEnum(IncidentTypeEnum, { message: '유효한 유형을 선택해주세요' }),
-  content: z.string().min(1, '내용을 입력해주세요'),
+  occurredAt: dateStringSchema,
+  incidentType: IncidentTypeEnum,
+  content: z.string().min(1, '내용을 입력해주세요').max(500, '내용은 500자 이하로 입력해주세요'),
+
+  // 부적합 생성 관련 필드 (선택)
+  createNonConformance: z.boolean().optional(),
+  changeEquipmentStatus: z.boolean().optional(),
+  actionPlan: z.string().max(500, '조치 계획은 500자 이하로 입력해주세요').optional(),
 });
 
 export type CreateIncidentHistoryInput = z.infer<typeof createIncidentHistorySchema>;
@@ -167,17 +185,37 @@ export class CreateIncidentHistoryDto {
 
   @ApiProperty({
     description: '유형',
-    enum: IncidentTypeEnum,
-    example: IncidentTypeEnum.DAMAGE,
+    enum: INCIDENT_TYPE_VALUES,
+    example: 'damage',
   })
-  incidentType: IncidentTypeEnum;
+  incidentType: IncidentType;
 
   @ApiProperty({
     description: '주요 내용',
     example: '전원부 손상으로 인한 전원 보드 교체 필요',
     minLength: 1,
+    maxLength: 500,
   })
   content: string;
+
+  @ApiPropertyOptional({
+    description: '부적합으로 등록 여부 (damage/malfunction 유형만 가능)',
+    example: true,
+  })
+  createNonConformance?: boolean;
+
+  @ApiPropertyOptional({
+    description: '장비 상태를 non_conforming으로 변경 여부',
+    example: false,
+  })
+  changeEquipmentStatus?: boolean;
+
+  @ApiPropertyOptional({
+    description: '조치 계획 (부적합 생성 시)',
+    example: '외부 수리 예정',
+    maxLength: 500,
+  })
+  actionPlan?: string;
 }
 
 /**
@@ -195,9 +233,9 @@ export class IncidentHistoryResponseDto {
 
   @ApiProperty({
     description: '유형',
-    enum: IncidentTypeEnum,
+    enum: INCIDENT_TYPE_VALUES,
   })
-  incidentType: IncidentTypeEnum;
+  incidentType: IncidentType;
 
   @ApiProperty({ description: '주요 내용' })
   content: string;
@@ -210,14 +248,8 @@ export class IncidentHistoryResponseDto {
 
   @ApiProperty({ description: '생성 일시' })
   createdAt: Date;
+
+  @ApiPropertyOptional({ description: '연결된 부적합 ID (부적합 생성된 경우)' })
+  nonConformanceId?: string;
 }
 
-/**
- * 유형별 한글 라벨
- */
-export const INCIDENT_TYPE_LABELS: Record<IncidentTypeEnum, string> = {
-  [IncidentTypeEnum.DAMAGE]: '손상',
-  [IncidentTypeEnum.MALFUNCTION]: '오작동',
-  [IncidentTypeEnum.CHANGE]: '변경',
-  [IncidentTypeEnum.REPAIR]: '수리',
-};

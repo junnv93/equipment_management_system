@@ -246,7 +246,7 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual({
-        teamId: 'rf',
+        teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // 수원 RF팀 UUID
         site: 'suwon',
         location: '수원랩',
       });
@@ -264,7 +264,7 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual({
-        teamId: 'sar',
+        teamId: '77777777-7777-7777-7777-777777777777', // 의왕 SAR팀 UUID
         site: 'uiwang',
         location: '의왕랩',
       });
@@ -296,7 +296,7 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual({
-        teamId: 'rf',
+        teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // 수원 RF팀 UUID
         site: 'suwon',
         location: '수원랩',
       });
@@ -326,7 +326,7 @@ describe('AuthService', () => {
         roles: [UserRole.LAB_MANAGER],
         site: 'suwon',
         location: '수원랩',
-        teamId: 'rf',
+        teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // 수원 RF팀 UUID
       });
     });
   });

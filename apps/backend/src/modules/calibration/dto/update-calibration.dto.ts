@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { CreateCalibrationDto, calibrationBaseSchema } from './create-calibration.dto';
-import { CalibrationStatusEnum } from '../../../types';
+import { CalibrationStatusEnum } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -14,7 +14,7 @@ export const updateCalibrationSchema = calibrationBaseSchema
   .omit({ equipmentId: true })
   .partial()
   .extend({
-    status: z.nativeEnum(CalibrationStatusEnum).optional(),
+    status: CalibrationStatusEnum.optional(),
     isPassed: z.boolean().optional(),
     resultNotes: z.string().optional(),
   });
@@ -29,7 +29,7 @@ export class UpdateCalibrationDto extends PartialType(
 ) {
   @ApiProperty({
     description: '교정 상태',
-    enum: CalibrationStatusEnum,
+    enum: CalibrationStatusEnum.options,
     example: 'completed',
     required: false,
   })

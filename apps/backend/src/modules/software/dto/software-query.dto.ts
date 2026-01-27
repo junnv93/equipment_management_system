@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  SoftwareApprovalStatusEnum,
+  SOFTWARE_APPROVAL_STATUS_VALUES,
+  type SoftwareApprovalStatus,
+} from '@equipment-management/schemas';
 
-// ========== Enum 정의 ==========
-
-export enum SoftwareApprovalStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-}
+// Re-export for backward compatibility
+export { SoftwareApprovalStatusEnum, SOFTWARE_APPROVAL_STATUS_VALUES, type SoftwareApprovalStatus };
 
 // ========== Zod 스키마 정의 ==========
 
@@ -18,11 +18,7 @@ export enum SoftwareApprovalStatus {
 export const softwareHistoryQuerySchema = z.object({
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
   softwareName: z.string().optional(),
-  approvalStatus: z
-    .nativeEnum(SoftwareApprovalStatus, {
-      message: '유효하지 않은 승인 상태입니다',
-    })
-    .optional(),
+  approvalStatus: SoftwareApprovalStatusEnum.optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
@@ -52,7 +48,7 @@ export class SoftwareHistoryQueryDto {
 
   @ApiProperty({
     description: '승인 상태로 필터',
-    enum: SoftwareApprovalStatus,
+    enum: SOFTWARE_APPROVAL_STATUS_VALUES,
     required: false,
   })
   approvalStatus?: SoftwareApprovalStatus;

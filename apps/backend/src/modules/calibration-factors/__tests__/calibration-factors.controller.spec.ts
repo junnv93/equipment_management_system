@@ -1,8 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CalibrationFactorsController } from '../calibration-factors.controller';
 import { CalibrationFactorsService } from '../calibration-factors.service';
-import { CalibrationFactorType } from '../dto/create-calibration-factor.dto';
-import { CalibrationFactorApprovalStatus } from '../dto/calibration-factor-query.dto';
+import { CalibrationFactorTypeValues } from '../dto/create-calibration-factor.dto';
+import { CalibrationFactorApprovalStatusValues } from '../dto/calibration-factor-query.dto';
+
+// Backward compatibility aliases for test
+const CalibrationFactorType = CalibrationFactorTypeValues;
+const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
 describe('CalibrationFactorsController', () => {
   let controller: CalibrationFactorsController;

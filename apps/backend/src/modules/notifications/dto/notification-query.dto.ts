@@ -1,7 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { NotificationTypeEnum, NotificationPriorityEnum } from './create-notification.dto';
+import {
+  NotificationTypeEnum,
+  NotificationPriorityEnum,
+  NOTIFICATION_TYPE_VALUES,
+  NOTIFICATION_PRIORITY_VALUES,
+  type NotificationType,
+  type NotificationPriority,
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -30,11 +37,11 @@ export const notificationQuerySchema = z.object({
   search: z.string().optional(),
   types: z.preprocess(
     (val) => toArray<string>(val),
-    z.array(z.nativeEnum(NotificationTypeEnum)).optional()
+    z.array(NotificationTypeEnum).optional()
   ),
   priorities: z.preprocess(
     (val) => toArray<string>(val),
-    z.array(z.nativeEnum(NotificationPriorityEnum)).optional()
+    z.array(NotificationPriorityEnum).optional()
   ),
   fromDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
   toDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
@@ -75,17 +82,17 @@ export class NotificationQueryDto {
 
   @ApiPropertyOptional({
     description: '알림 유형 (여러 개 선택 가능)',
-    enum: NotificationTypeEnum,
+    enum: NOTIFICATION_TYPE_VALUES,
     isArray: true,
   })
-  types?: NotificationTypeEnum[];
+  types?: NotificationType[];
 
   @ApiPropertyOptional({
     description: '알림 우선순위 (여러 개 선택 가능)',
-    enum: NotificationPriorityEnum,
+    enum: NOTIFICATION_PRIORITY_VALUES,
     isArray: true,
   })
-  priorities?: NotificationPriorityEnum[];
+  priorities?: NotificationPriority[];
 
   @ApiPropertyOptional({ description: '시작 날짜 (ISO 형식)' })
   fromDate?: string;

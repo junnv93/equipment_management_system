@@ -1,16 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  CalibrationFactorTypeEnum,
+  CalibrationFactorTypeValues,
+  CALIBRATION_FACTOR_TYPE_VALUES,
+  type CalibrationFactorType,
+} from '@equipment-management/schemas';
 
-// ========== Enum 정의 ==========
-
-export enum CalibrationFactorType {
-  ANTENNA_GAIN = 'antenna_gain',
-  CABLE_LOSS = 'cable_loss',
-  PATH_LOSS = 'path_loss',
-  AMPLIFIER_GAIN = 'amplifier_gain',
-  OTHER = 'other',
-}
+// Re-export for backward compatibility
+export {
+  CalibrationFactorTypeEnum,
+  CalibrationFactorTypeValues,
+  CALIBRATION_FACTOR_TYPE_VALUES,
+  type CalibrationFactorType,
+};
 
 // ========== Zod 스키마 정의 ==========
 
@@ -20,9 +24,7 @@ export enum CalibrationFactorType {
 export const createCalibrationFactorSchema = z.object({
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }),
   calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
-  factorType: z.nativeEnum(CalibrationFactorType, {
-    message: '유효하지 않은 보정계수 타입입니다',
-  }),
+  factorType: CalibrationFactorTypeEnum,
   factorName: z
     .string()
     .min(1, '보정계수 이름을 입력해주세요')
@@ -65,7 +67,7 @@ export class CreateCalibrationFactorDto {
 
   @ApiProperty({
     description: '보정계수 타입',
-    enum: CalibrationFactorType,
+    enum: CALIBRATION_FACTOR_TYPE_VALUES,
     example: 'antenna_gain',
   })
   factorType: CalibrationFactorType;

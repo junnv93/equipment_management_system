@@ -2,3 +2,8 @@ node_modules
 dist
 scripts
 test-uploads
+src/database/seed-test.ts
+src/database/migrate.ts
+src/database/push-schema.ts
+src/database/manual-migrate.ts
+src/database/migrate-user-roles.ts

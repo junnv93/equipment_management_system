@@ -170,69 +170,82 @@ function isEquipment(obj: any): obj is Equipment {
 ### 컴포넌트 구조
 
 - **함수형 컴포넌트**: 클래스 컴포넌트 대신 함수형 컴포넌트와 훅 사용
+- **React.FC 사용 지양**: 암시적 children 타입 문제로 인해 직접 타입 정의 권장
 - **디렉토리 구조**: 각 컴포넌트는 자체 디렉토리에 포함 (예: 컴포넌트, 테스트, 스타일 파일)
 - **컴포넌트 크기**: 한 컴포넌트는 300줄을 넘지 않도록 함
 - **Props 인터페이스**: 모든 컴포넌트는 명시적 Props 인터페이스 정의
 
+### Server vs Client 컴포넌트 (Next.js 16)
+
+| 기능                        | 컴포넌트 타입    |
+| --------------------------- | ---------------- |
+| 데이터 페칭                 | Server           |
+| 이벤트 핸들러 (onClick 등)  | Client           |
+| hooks (useState, useEffect) | Client           |
+| 정적 콘텐츠                 | Server           |
+
 ### 컴포넌트 예시
 
 ```tsx
+// ✅ 권장: React.FC 없이 직접 타입 정의
 // EquipmentItem.tsx
-import React from 'react';
-import { formatDate } from 'utils/dateUtils';
+'use client';
+
+import { formatDate } from '@/lib/utils/dateUtils';
 
 interface EquipmentItemProps {
   id: string;
   name: string;
-  status: 'available' | 'in-use' | 'maintenance';
+  status: 'available' | 'in_use' | 'under_maintenance';
   category: string;
   purchaseDate: Date;
   onStatusChange?: (id: string, status: string) => void;
 }
 
-export const EquipmentItem: React.FC<EquipmentItemProps> = ({
+export function EquipmentItem({
   id,
   name,
   status,
   category,
   purchaseDate,
   onStatusChange,
-}) => {
+}: EquipmentItemProps) {
   const handleStatusChange = (newStatus: string) => {
-    if (onStatusChange) {
-      onStatusChange(id, newStatus);
-    }
+    onStatusChange?.(id, newStatus);
   };
 
   return (
-    <div className="equipment-item">
-      <h3 className="equipment-item__name">{name}</h3>
-      <div className="equipment-item__details">
-        <span className={`equipment-item__status equipment-item__status--${status}`}>
-          {status}
-        </span>
-        <span className="equipment-item__category">{category}</span>
-        <span className="equipment-item__date">{formatDate(purchaseDate)}</span>
+    <div className="rounded-lg border p-4">
+      <h3 className="font-semibold">{name}</h3>
+      <div className="mt-2 flex gap-2 text-sm text-muted-foreground">
+        <span className={`badge badge-${status}`}>{status}</span>
+        <span>{category}</span>
+        <span>{formatDate(purchaseDate)}</span>
       </div>
       {onStatusChange && (
-        <div className="equipment-item__actions">
+        <div className="mt-4 flex gap-2">
           <button
             onClick={() => handleStatusChange('available')}
             disabled={status === 'available'}
+            className="btn btn-sm"
           >
-            Mark Available
+            사용 가능
           </button>
           <button
-            onClick={() => handleStatusChange('maintenance')}
-            disabled={status === 'maintenance'}
+            onClick={() => handleStatusChange('under_maintenance')}
+            disabled={status === 'under_maintenance'}
+            className="btn btn-sm"
           >
-            Mark Maintenance
+            유지보수
           </button>
         </div>
       )}
     </div>
   );
-};
+}
+
+// ❌ 지양: React.FC 사용
+// export const EquipmentItem: React.FC<EquipmentItemProps> = ({...}) => {...}
 ```
 
 ## NestJS 백엔드
@@ -242,71 +255,68 @@ export const EquipmentItem: React.FC<EquipmentItemProps> = ({
 - **모듈 구조**: 기능별 모듈 분리
 - **컨트롤러**: API 엔드포인트 정의
 - **서비스**: 비즈니스 로직 처리
-- **리포지토리**: 데이터 액세스 로직
-- **DTO**: 데이터 전송 객체 명시적 정의
-- **엔티티**: 데이터베이스 스키마 정의
+- **리포지토리**: 데이터 액세스 로직 (Drizzle ORM 사용)
+- **DTO**: Zod 스키마 기반 데이터 전송 객체 정의
+- **스키마**: Drizzle ORM으로 데이터베이스 스키마 정의
 
-### NestJS 예시
+### Drizzle ORM 스키마 예시
 
 ```typescript
-// equipment.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+// packages/db/src/schema/equipment.ts
+import { pgTable, serial, varchar, text, timestamp, boolean, integer, pgEnum } from 'drizzle-orm/pg-core';
 
-@Entity('equipment')
-export class Equipment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+// 상태 enum (packages/schemas/src/enums.ts에서 Single Source of Truth)
+export const equipmentStatusEnum = pgEnum('equipment_status', [
+  'available',
+  'in_use',
+  'checked_out',
+  'calibration_scheduled',
+  'calibration_overdue',
+  'under_maintenance',
+  'non_conforming',
+  'retired',
+]);
 
-  @Column({ length: 100 })
-  name: string;
+export const equipment = pgTable('equipment', {
+  id: serial('id').primaryKey(),
+  uuid: varchar('uuid', { length: 36 }).unique().notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  managementNumber: varchar('management_number', { length: 50 }).unique().notNull(),
+  description: text('description'),
+  status: equipmentStatusEnum('status').default('available').notNull(),
+  site: varchar('site', { length: 20 }).notNull(), // 'suwon' | 'uiwang'
+  teamId: varchar('team_id', { length: 36 }),
+  calibrationCycle: integer('calibration_cycle'), // 개월 단위
+  lastCalibrationDate: timestamp('last_calibration_date'),
+  nextCalibrationDate: timestamp('next_calibration_date'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
-  @Column({ length: 500, nullable: true })
-  description: string;
+export type Equipment = typeof equipment.$inferSelect;
+export type NewEquipment = typeof equipment.$inferInsert;
+```
 
-  @Column({
-    type: 'enum',
-    enum: ['available', 'in-use', 'maintenance'],
-    default: 'available',
-  })
-  status: string;
+### Zod 기반 DTO 예시
 
-  @Column()
-  category: string;
+```typescript
+// apps/backend/src/modules/equipment/dto/create-equipment.dto.ts
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+import { EquipmentStatusEnum, SiteEnum } from '@equipment-management/schemas';
 
-  @Column({ type: 'date' })
-  purchaseDate: Date;
+export const CreateEquipmentSchema = z.object({
+  name: z.string().min(1).max(100),
+  managementNumber: z.string().min(1).max(50),
+  description: z.string().optional(),
+  status: EquipmentStatusEnum.default('available'),
+  site: SiteEnum,
+  teamId: z.string().uuid().optional(),
+  calibrationCycle: z.number().int().positive().optional(),
+});
 
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-}
-
-// equipment.dto.ts
-import { IsNotEmpty, IsEnum, IsDate, IsString, IsOptional } from 'class-validator';
-
-export class CreateEquipmentDto {
-  @IsNotEmpty()
-  @IsString()
-  name: string;
-
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsNotEmpty()
-  @IsEnum(['available', 'in-use', 'maintenance'])
-  status: string;
-
-  @IsNotEmpty()
-  @IsString()
-  category: string;
-
-  @IsNotEmpty()
-  @IsDate()
-  purchaseDate: Date;
-}
+export class CreateEquipmentDto extends createZodDto(CreateEquipmentSchema) {}
 ```
 
 ## 주석 규칙

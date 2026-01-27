@@ -11,15 +11,14 @@ import { EquipmentQueryDto } from '../dto/equipment-query.dto';
 import { EquipmentStatusEnum, EquipmentStatus } from '@equipment-management/schemas';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../../guards/permissions.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
 
 describe('EquipmentController', () => {
   let controller: EquipmentController;
   let equipmentService: EquipmentService;
 
   const mockEquipment = {
-    id: 1,
-    uuid: 'test-uuid',
+    id: 'test-uuid',
     name: '테스트 장비',
     managementNumber: 'EQP-TEST-001',
     assetNumber: null,
@@ -172,7 +171,7 @@ describe('EquipmentController', () => {
       };
 
       const mockRequest = {
-        uuid: 'request-uuid',
+        id: 'request-uuid',
         requestType: 'create',
         requestedBy: 'user-uuid',
         approvalStatus: 'pending_approval',

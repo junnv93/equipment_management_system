@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import {
+  NonConformanceTypeEnum,
+  NON_CONFORMANCE_TYPE_VALUES,
+  type NonConformanceType,
+} from '@equipment-management/schemas';
+
+// Re-export for backward compatibility
+export { NonConformanceTypeEnum, NON_CONFORMANCE_TYPE_VALUES, type NonConformanceType };
 
 // ========== Zod 스키마 정의 ==========
 
@@ -14,6 +22,7 @@ export const createNonConformanceSchema = z.object({
   }),
   discoveredBy: z.string().uuid({ message: '유효한 발견자 UUID가 아닙니다' }),
   cause: z.string().min(1, '부적합 원인을 입력해주세요'),
+  ncType: NonConformanceTypeEnum,
   actionPlan: z.string().optional(),
 });
 
@@ -34,6 +43,13 @@ export class CreateNonConformanceDto {
 
   @ApiProperty({ description: '부적합 원인' })
   cause: string;
+
+  @ApiProperty({
+    description: '부적합 유형',
+    enum: NON_CONFORMANCE_TYPE_VALUES,
+    example: 'damage',
+  })
+  ncType: NonConformanceType;
 
   @ApiPropertyOptional({ description: '조치 계획' })
   actionPlan?: string;

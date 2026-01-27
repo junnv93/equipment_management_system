@@ -1,7 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateSoftwareChangeDto } from './dto/create-software-change.dto';
-import { SoftwareHistoryQueryDto, SoftwareApprovalStatus } from './dto/software-query.dto';
+import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
 import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve-software.dto';
+import {
+  SoftwareApprovalStatusValues,
+  type SoftwareApprovalStatus as SoftwareApprovalStatusType,
+} from '@equipment-management/schemas';
+
+// Backward compatibility alias
+const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
 
 // 소프트웨어 변경 이력 인터페이스
 export interface SoftwareHistoryRecord {

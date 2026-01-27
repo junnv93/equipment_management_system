@@ -5,14 +5,15 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
-import {
-  CalibrationFactorQueryDto,
-  CalibrationFactorApprovalStatus,
-} from './dto/calibration-factor-query.dto';
+import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
 import {
   ApproveCalibrationFactorDto,
   RejectCalibrationFactorDto,
 } from './dto/approve-calibration-factor.dto';
+import { CalibrationFactorApprovalStatusValues } from '@equipment-management/schemas';
+
+// Backward compatibility alias
+const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
 // 보정계수 기록 인터페이스
 export interface CalibrationFactorRecord {

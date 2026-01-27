@@ -18,10 +18,10 @@ import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
 import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../guards/permissions.guard';
-import { RequirePermissions } from '../../decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
-import { CalibrationStatusEnum } from '../../types';
+import { CalibrationStatusEnum, CalibrationStatus } from '@equipment-management/schemas';
 
 @ApiTags('교정 관리')
 @ApiBearerAuth()
@@ -233,7 +233,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
-  updateStatus(@Param('uuid') uuid: string, @Body('status') status: CalibrationStatusEnum) {
+  updateStatus(@Param('uuid') uuid: string, @Body('status') status: CalibrationStatus) {
     return this.calibrationService.updateStatus(uuid, status);
   }
 
