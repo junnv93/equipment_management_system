@@ -30,6 +30,15 @@ pnpm-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.test
+
+# test uploads (generated during E2E tests)
+test-uploads/
+**/test-uploads/
+
+# Playwright test results
+apps/frontend/test-results/
+apps/frontend/playwright-report/data/
 
 # turbo
 .turbo

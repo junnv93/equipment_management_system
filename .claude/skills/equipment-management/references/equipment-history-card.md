@@ -1,5 +1,9 @@
 # 시험설비 이력카드 (UL-QP-18-02)
 
+> ⚠️ **문서 성격**: 이 문서는 UL-QP-18 절차서 기반의 **요구사항 정의서**입니다.
+> 데이터 스키마와 구현 가이드는 절차서 요구사항을 반영한 설계 방향을 제시합니다.
+> 실제 구현 시 `packages/db/src/schema/` 및 관련 서비스 코드를 참조하세요.
+
 ## 목차
 
 1. [개요](#개요)
@@ -22,18 +26,18 @@
 
 ## 필수 항목 (UL-QP-18 Section 7.7)
 
-| No | 항목 (한글) | 항목 (영문) | 필수 |
-|----|------------|------------|:----:|
-| 1 | 장비 명(모델명) | Equipment name (model name) | ✅ |
-| 2 | 유형 구분 또는 기타 고유 식별표시 | Type identification | ✅ |
-| 3 | 제조업체명, 공급업체명 | Manufacturer, supplier name | ✅ |
-| 4 | 시방일치 여부 | Specification agreement | ✅ |
-| 5 | 부속품 및 주요 기능 | Accessories and main functions | ⬜ |
-| 6 | 교정 필요 여부 및 교정 주기 | Calibration necessity and period | ✅ |
-| 7 | 관련 소프트웨어(펌웨어) 및 매뉴얼 | Related software and manuals | ⬜ |
-| 8 | 운영책임자(정, 부) | Operating Officer (Main, Deputy) | ✅ |
-| 9 | 설치 위치, 설치 일자 | Installation location, date | ✅ |
-| 10 | 이력 기록 | History records | ✅ |
+| No  | 항목 (한글)                       | 항목 (영문)                      | 필수 |
+| --- | --------------------------------- | -------------------------------- | :--: |
+| 1   | 장비 명(모델명)                   | Equipment name (model name)      |  ✅  |
+| 2   | 유형 구분 또는 기타 고유 식별표시 | Type identification              |  ✅  |
+| 3   | 제조업체명, 공급업체명            | Manufacturer, supplier name      |  ✅  |
+| 4   | 시방일치 여부                     | Specification agreement          |  ✅  |
+| 5   | 부속품 및 주요 기능               | Accessories and main functions   |  ⬜  |
+| 6   | 교정 필요 여부 및 교정 주기       | Calibration necessity and period |  ✅  |
+| 7   | 관련 소프트웨어(펌웨어) 및 매뉴얼 | Related software and manuals     |  ⬜  |
+| 8   | 운영책임자(정, 부)                | Operating Officer (Main, Deputy) |  ✅  |
+| 9   | 설치 위치, 설치 일자              | Installation location, date      |  ✅  |
+| 10  | 이력 기록                         | History records                  |  ✅  |
 
 ---
 
@@ -42,6 +46,7 @@
 이력 기록(항목 10)에 포함되어야 하는 내용:
 
 ### 위치 변동 (Location Change)
+
 ```typescript
 {
   type: 'location_change';
@@ -54,6 +59,7 @@
 ```
 
 ### 교정 이력 (Calibration)
+
 ```typescript
 {
   type: 'calibration';
@@ -68,6 +74,7 @@
 ```
 
 ### 유지보수/수리 (Maintenance/Repair)
+
 ```typescript
 {
   type: 'maintenance' | 'repair';
@@ -81,6 +88,7 @@
 ```
 
 ### 파손/오작동 (Breakage/Malfunction)
+
 ```typescript
 {
   type: 'breakage' | 'malfunction';
@@ -93,14 +101,15 @@
 ```
 
 ### 부품 변동 (Parts Change)
+
 ```typescript
 {
   type: 'parts_change';
-  changedAt: Date;             // 변경일
-  previousPart: string;        // 이전 부품
-  newPart: string;             // 새 부품
-  reason: string;              // 변경 사유
-  changedBy: string;           // 변경 처리자
+  changedAt: Date; // 변경일
+  previousPart: string; // 이전 부품
+  newPart: string; // 새 부품
+  reason: string; // 변경 사유
+  changedBy: string; // 변경 처리자
 }
 ```
 
@@ -162,10 +171,16 @@
 {
   uuid: string;
   equipmentId: string;
-  historyType: 'location_change' | 'calibration' | 'maintenance' | 'repair' | 'breakage' | 'malfunction' | 'parts_change';
+  historyType: 'location_change' |
+    'calibration' |
+    'maintenance' |
+    'repair' |
+    'breakage' |
+    'malfunction' |
+    'parts_change';
   occurredAt: Date;
   description: string;
-  details: Record<string, any>;  // JSON 상세 정보
+  details: Record<string, any>; // JSON 상세 정보
   recordedBy: string;
   recordedAt: Date;
 }
@@ -270,6 +285,7 @@ GET /equipment/:uuid/history?type=calibration&from=2025-01-01&to=2025-12-31
 ### 이력카드 PDF 출력
 
 이력카드 출력 시 포함 항목:
+
 1. 장비 기본 정보 (항목 1-9)
 2. 이력 목록 (최신순, 유형별 필터 가능)
 3. QR 코드 (장비 상세 페이지 링크)

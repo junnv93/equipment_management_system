@@ -1,5 +1,9 @@
 # 승인 프로세스 상세
 
+> ⚠️ **문서 성격**: 이 문서는 UL-QP-18 절차서 기반의 **설계 가이드**입니다.
+> 코드 예시는 개념적인 참고용이며, 실제 구현과 세부 사항이 다를 수 있습니다.
+> 정확한 구현 내용은 해당 서비스 코드를 직접 확인하세요.
+
 ## 목차
 
 1. [공통 규칙](#공통-규칙)
@@ -98,10 +102,10 @@ pending_approval
 
 ### 필수 첨부 파일
 
-| 등록 유형 | 필수 첨부       |
-|-----------|-----------------|
-| 신규 장비 | 검수보고서      |
-| 기존 장비 | 장비 이력카드   |
+| 등록 유형 | 필수 첨부     |
+| --------- | ------------- |
+| 신규 장비 | 검수보고서    |
+| 기존 장비 | 장비 이력카드 |
 
 ### 필수 필드 (장비 등록)
 
@@ -154,6 +158,7 @@ async create(dto: CreateEquipmentDto, user: User) {
 ### 상태 흐름 (역할별)
 
 **기술책임자/시험소 관리자 직접 등록**:
+
 ```
 [기술책임자 등록 (registrarComment 필수)]
     ↓
@@ -161,6 +166,7 @@ approved (즉시)
 ```
 
 **시험실무자 등록**:
+
 ```
 [시험실무자 등록]
     ↓
@@ -279,11 +285,11 @@ async create(dto: CreateRentalDto, user: User) {
 
 ### 반출 유형
 
-| 유형 코드              | 설명                     | 승인 단계 |
-|------------------------|--------------------------|-----------|
-| `internal_calibration` | 내부 교정 목적           | 1단계     |
-| `internal_repair`      | 내부 수리 목적           | 1단계     |
-| `inter_site_rental`    | 시험소간 대여            | 2단계     |
+| 유형 코드              | 설명           | 승인 단계 |
+| ---------------------- | -------------- | --------- |
+| `internal_calibration` | 내부 교정 목적 | 1단계     |
+| `internal_repair`      | 내부 수리 목적 | 1단계     |
+| `inter_site_rental`    | 시험소간 대여  | 2단계     |
 
 ### 내부 목적 반출 (1단계)
 
@@ -326,10 +332,10 @@ return_approved
 ### 반입 검사 필수 항목
 
 | 반출 유형              | calibrationChecked | repairChecked | workingStatusChecked |
-|------------------------|:------------------:|:-------------:|:--------------------:|
-| `internal_calibration` | ✅ 필수            | ❌            | ✅ 필수              |
-| `internal_repair`      | ❌                 | ✅ 필수       | ✅ 필수              |
-| `inter_site_rental`    | ✅ 필수            | ❌            | ✅ 필수              |
+| ---------------------- | :----------------: | :-----------: | :------------------: |
+| `internal_calibration` |      ✅ 필수       |      ❌       |       ✅ 필수        |
+| `internal_repair`      |         ❌         |    ✅ 필수    |       ✅ 필수        |
+| `inter_site_rental`    |      ✅ 필수       |      ❌       |       ✅ 필수        |
 
 ### 시험소간 대여 반입 양측 확인
 
@@ -409,11 +415,11 @@ approved (이전 보정계수 만료, 새 보정계수 적용)
 
 ```typescript
 enum CalibrationFactorTypeEnum {
-  ANTENNA_GAIN = 'antenna_gain',      // 안테나 이득
-  CABLE_LOSS = 'cable_loss',          // 케이블 손실
-  PATH_LOSS = 'path_loss',            // 경로 손실
-  AMPLIFIER_GAIN = 'amplifier_gain',  // 증폭기 이득
-  OTHER = 'other',                    // 기타
+  ANTENNA_GAIN = 'antenna_gain', // 안테나 이득
+  CABLE_LOSS = 'cable_loss', // 케이블 손실
+  PATH_LOSS = 'path_loss', // 경로 손실
+  AMPLIFIER_GAIN = 'amplifier_gain', // 증폭기 이득
+  OTHER = 'other', // 기타
 }
 ```
 
@@ -488,7 +494,7 @@ approved
   softwareName: string;
   previousVersion: string;
   newVersion: string;
-  verificationRecord: string;  // 검증 기록 필수
+  verificationRecord: string; // 검증 기록 필수
 }
 ```
 

@@ -19,11 +19,8 @@ module.exports = {
       files: ['apps/backend/**/*.ts'],
       extends: ['./apps/backend/.eslintrc.js'],
     },
-    // Frontend (Next.js) files
-    {
-      files: ['apps/frontend/**/*.{ts,tsx}'],
-      extends: ['./apps/frontend/.eslintrc.json'],
-    },
+    // Frontend (Next.js) files - uses its own eslint.config.mjs (ESLint 9 flat config)
+    // Run frontend lint separately: pnpm --filter frontend run lint
     // Shared packages TypeScript files
     {
       files: ['packages/**/*.ts'],

@@ -49,7 +49,7 @@ description: |
 
 ```
 ✅ 단일 DB 사용: postgres_equipment (포트 5432)
-✅ DB 명령어: pnpm db:push
+✅ DB 명령어: pnpm db:migrate
 ✅ 테스트: 개발 DB에서 실행
 ✅ 환경: 개발 + 테스트 통합
 ```
@@ -61,7 +61,7 @@ description: |
 ## 기술 스택
 
 - **Backend**: NestJS, Drizzle ORM, PostgreSQL
-- **Frontend**: Next.js 16 (App Router), React, TailwindCSS
+- **Frontend**: Next.js 16 (App Router), React 19, TailwindCSS
 - **인증**: NextAuth.js (Azure AD + Credentials), JWT
 - **Monorepo**: pnpm workspace
 - **개발 환경**: Docker (PostgreSQL, Redis만) + 로컬 실행 (앱)
@@ -133,7 +133,7 @@ pnpm --filter backend run dev      # 백엔드만
 pnpm --filter frontend run dev     # 프론트엔드만
 
 # DB
-pnpm --filter backend run db:push      # 스키마 변경 적용
+pnpm --filter backend run db:migrate   # 스키마 변경 적용
 pnpm --filter backend run db:studio    # Drizzle Studio
 
 # 빌드 & 테스트
@@ -180,12 +180,11 @@ lsof -ti:3001 | xargs kill -9
 
 ## 역할 체계 (UL-QP-18 Section 4)
 
-| 역할 코드           | 절차서 역할   | 영문              | 주요 권한                                                    |
-| ------------------- | ------------- | ----------------- | ------------------------------------------------------------ |
-| `test_engineer`     | 시험실무자    | Test Engineer     | 장비 운영/관리, 점검 실시, 이력카드 작성, 반출입 확인서 작성 |
-| `technical_manager` | 기술책임자    | Technical Manager | 교정계획 수립, 점검 결과 확인, 반출입 승인, 보정인자 관리    |
-| `lab_manager`       | 시험소장      | Lab Manager       | 교정계획 승인, 장비 폐기 승인, 시험소 전체 관리              |
-| `system_admin`      | 시스템 관리자 | System Admin      | 전체 시스템 관리, 모든 시험소 접근                           |
+| 역할 코드           | 절차서 역할 | 영문              | 주요 권한                                                    |
+| ------------------- | ----------- | ----------------- | ------------------------------------------------------------ |
+| `test_engineer`     | 시험실무자  | Test Engineer     | 장비 운영/관리, 점검 실시, 이력카드 작성, 반출입 확인서 작성 |
+| `technical_manager` | 기술책임자  | Technical Manager | 교정계획 수립, 점검 결과 확인, 반출입 승인, 보정인자 관리    |
+| `lab_manager`       | 시험소장    | Lab Manager       | 교정계획 승인, 장비 폐기 승인, 시험소 전체 관리 (모든 권한)  |
 
 **상세 역할/권한**: [references/roles.md](references/roles.md)
 
@@ -195,24 +194,62 @@ lsof -ti:3001 | xargs kill -9
 
 ```
 XXX – X YYYY
- │    │  └── 일련번호
- │    └───── 분류코드 (E/R/W/S/A/P)
+ │    │  └── 일련번호 (4자리, 0001~9999)
+ │    └───── 분류코드 (E/R/S/A/P) - 팀에서 결정
  └────────── 시험소코드 (SUW/UIW/PYT)
 ```
 
 **시험소코드**: SUW(수원), UIW(의왕), PYT(평택)
 
-**분류코드**:
-| 코드 | 분류 |
-|------|------|
-| E | FCC EMC/RF |
-| R | General EMC |
-| W | General RF |
-| S | SAR |
-| A | Automotive EMC |
-| P | Software Program |
+**분류코드 (팀 이름 = 분류 이름)**:
+| 코드 | 분류 (= 팀 이름) | 사이트 |
+|------|------------------|--------|
+| E | FCC EMC/RF | 수원 |
+| R | General EMC | 수원 |
+| W | General RF | 의왕 |
+| S | SAR | 수원 |
+| A | Automotive EMC | 수원, 평택 |
+| P | Software Program | - |
+
+> ✅ **팀 이름 = 분류 이름**: 팀 선택 시 분류 이름(FCC EMC/RF 등)으로 표시됩니다.
 
 **상세 관리번호 및 위치코드**: [references/management-numbers.md](references/management-numbers.md)
+
+---
+
+## 팀-분류코드 매핑 및 Azure AD 그룹
+
+**팀 이름 = 분류 이름 (통일):**
+
+- 장비 등록/필터에서 팀 선택 시 분류 이름으로 표시
+- 사이트 선택 시 해당 사이트의 팀만 드롭다운에 표시
+
+### 사이트별 팀 구성
+
+| 사이트     | 팀(분류)       | 분류코드 |
+| ---------- | -------------- | -------- |
+| 수원 (SUW) | FCC EMC/RF     | E        |
+| 수원 (SUW) | General EMC    | R        |
+| 수원 (SUW) | SAR            | S        |
+| 수원 (SUW) | Automotive EMC | A        |
+| 의왕 (UIW) | General RF     | W        |
+| 평택 (PYT) | Automotive EMC | A        |
+
+### Azure AD 그룹 매핑 (수원)
+
+| Azure AD 그룹        | 팀 UUID                                | 팀 이름 (분류)     |
+| -------------------- | -------------------------------------- | ------------------ |
+| `LST.SUW.RF`         | `7dc3b94c-82b8-488e-9ea5-4fe71bb086e1` | FCC EMC/RF (E)     |
+| `LST.SUW.EMC`        | `bb6c860d-9d7c-4e2d-b289-2b2e416ec289` | General EMC (R)    |
+| `LST.SUW.SAR`        | `7fd28076-fd5e-4d36-b051-bbf8a97b82db` | SAR (S)            |
+| `LST.SUW.Automotive` | `f0a32655-00f9-4ecd-b43c-af4faed499b6` | Automotive EMC (A) |
+
+### Azure AD 그룹 매핑 (의왕/평택)
+
+| Azure AD 그룹        | 팀 UUID                                | 팀 이름 (분류)     |
+| -------------------- | -------------------------------------- | ------------------ |
+| `LST.UIW.RF`         | `a1b2c3d4-e5f6-4789-abcd-ef0123456789` | General RF (W)     |
+| `LST.PYT.Automotive` | `b2c3d4e5-f6a7-4890-bcde-f01234567890` | Automotive EMC (A) |
 
 ---
 
@@ -402,7 +439,7 @@ enum CorrectionMethodEnum {
 
 ```typescript
 {
-  uuid: string;
+  id: string;                         // uuid 타입 기본 키 (Drizzle ORM 표준)
   name: string;
   managementNumber: string;           // 관리번호 (XXX-XYYYY)
   site: 'suwon' | 'uiwang' | 'pyeongtaek';
@@ -442,53 +479,158 @@ enum CorrectionMethodEnum {
 }
 ```
 
-### 장비 상태 Enum
+### 장비 상태 Enum (SSOT)
+
+> **⚠️ 중요**: 장비 상태 enum과 라벨은 `packages/schemas/src/enums.ts`에서 **단일 소스로 관리**됩니다.
+> 프론트엔드 스타일은 `apps/frontend/lib/constants/equipment-status-styles.ts`에서 정의합니다.
 
 ```typescript
-enum EquipmentStatusEnum {
-  AVAILABLE = 'available', // 사용가능
-  IN_USE = 'in_use', // 사용중
-  CHECKED_OUT = 'checked_out', // 반출중 (교정/수리 목적은 반출 레코드에서 관리)
-  CALIBRATION_SCHEDULED = 'calibration_scheduled', // 교정예정
-  CALIBRATION_OVERDUE = 'calibration_overdue', // 교정기한초과
-  NON_CONFORMING = 'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
-  SPARE = 'spare', // 여분 (보유하고 있지만 상시 관리하지 않음)
-  RETIRED = 'retired', // 폐기 (영구)
-}
+// packages/schemas/src/enums.ts (SSOT - Single Source of Truth)
+type EquipmentStatus =
+  | 'available' // 사용 가능
+  | 'in_use' // 사용 중
+  | 'checked_out' // 반출 중
+  | 'calibration_scheduled' // 교정 예정
+  | 'calibration_overdue' // 교정 기한 초과
+  | 'non_conforming' // 부적합
+  | 'spare' // 여분
+  | 'retired'; // 폐기
 
-/**
- * 상태 표시 규칙:
- * - checked_out: 반출 레코드(checkouts 테이블)의 purpose 필드로 구분
- *   - internal_calibration → UI에서 "교정중"으로 표시 (향후 개선)
- *   - internal_repair → UI에서 "수리중"으로 표시 (향후 개선)
- *   - external_rental → UI에서 "대여중"으로 표시 (향후 개선)
- * - spare: 여분 장비로 따로 관리하지 않는 상태
- */
+// 한글 라벨 (packages/schemas)
+const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
+  available: '사용 가능',
+  in_use: '사용 중',
+  checked_out: '반출 중',
+  calibration_scheduled: '교정 예정',
+  calibration_overdue: '교정 기한 초과',
+  non_conforming: '부적합',
+  spare: '여분',
+  retired: '폐기',
+};
 ```
+
+**상태 표시 규칙:**
+
+- `calibration_scheduled`, `calibration_overdue`: 기본 상태 배지는 **"사용 가능"**으로 표시, 교정 상태는 **별도 D-day 배지**로 표시
+- `checked_out`: 반출 레코드(checkouts 테이블)의 purpose 필드로 구분
+- `spare`: 여분 장비로 따로 관리하지 않는 상태
 
 ---
 
 ## 프론트엔드 개발 패턴
 
-> **중요**: Next.js 16 상세 패턴은 `/nextjs-16` 스킬 참조
+> **상세 패턴**: [references/frontend-patterns.md](references/frontend-patterns.md)
 
-### 필수 규칙
+### 핵심 원칙
 
-1. **params는 Promise** - 반드시 await 사용
-2. **useActionState** 사용 (useFormState 아님)
-3. **Form action은 void 반환**
-4. **any 타입 금지**
+#### 1. Server Component 우선
+
+| 상황               | Server  | Client  |
+| ------------------ | ------- | ------- |
+| 데이터 fetching    | ✅ 권장 | 가능    |
+| 정적 UI 렌더링     | ✅ 권장 | 가능    |
+| 이벤트 핸들러      | ❌ 불가 | ✅ 필수 |
+| useState/useEffect | ❌ 불가 | ✅ 필수 |
+
+#### 2. Server/Client 분리 패턴
 
 ```typescript
-// 올바른 패턴
-export default async function Page(props: PageProps<'/equipment/[id]'>) {
-  const { id } = await props.params;
-  const equipment = await getEquipment(id);
-  return <EquipmentDetail equipment={equipment} />;
+// ✅ 권장: Server에서 데이터 fetch → Client로 전달
+// app/equipment/page.tsx (Server Component)
+export default async function EquipmentPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const initialData = await equipmentApiServer.getEquipmentList(searchParams);
+
+  return <EquipmentListClient initialData={initialData} />;
+}
+
+// components/equipment/EquipmentListClient.tsx ('use client')
+export function EquipmentListClient({ initialData }) {
+  const { data } = useQuery({
+    queryKey: ['equipmentList'],
+    initialData,  // ← Server 데이터로 hydration
+  });
 }
 ```
 
-**상세 UI 패턴**: [references/frontend-patterns.md](references/frontend-patterns.md)
+### 필수 규칙
+
+1. **params/searchParams는 Promise** - 반드시 await 사용
+2. **useActionState** 사용 (useFormState 아님)
+3. **Form action은 void 반환** - revalidatePath 사용
+4. **any 타입 금지**
+
+```typescript
+// ✅ Next.js 16 올바른 패턴
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+};
+
+export default async function Page(props: PageProps) {
+  const { id } = await props.params;
+  const equipment = await equipmentApiServer.getEquipment(id);
+  return <EquipmentDetailClient equipment={equipment} />;
+}
+```
+
+### 장비 상태 스타일 SSOT
+
+프론트엔드에서 장비 상태 표시 시 **반드시** 중앙화된 스타일을 사용합니다.
+
+#### 스타일 조회 (권장)
+
+```typescript
+import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
+
+// 컴포넌트에서 사용
+const style = getEquipmentStatusStyle(equipment.status);
+<Badge className={style.className}>{style.label}</Badge>
+```
+
+#### 교정 상태 표시 여부 확인
+
+```typescript
+import { shouldDisplayCalibrationStatus } from '@/lib/constants/equipment-status-styles';
+
+// 폐기/부적합/여분 장비는 D-day 배지 표시 안함
+if (shouldDisplayCalibrationStatus(equipment.status)) {
+  // D-day 배지 렌더링
+}
+```
+
+#### SSOT 파일 구조
+
+| 파일                                                     | 용도                                    |
+| -------------------------------------------------------- | --------------------------------------- |
+| `packages/schemas/src/enums.ts`                          | Enum 값 + 한글 라벨 정의 (SSOT)         |
+| `apps/frontend/lib/constants/equipment-status-styles.ts` | UI 스타일 정의 (className, borderColor) |
+
+> **❌ 금지**: 컴포넌트 내에서 상태별 라벨/스타일을 인라인으로 정의하지 마세요.
+> **✅ 권장**: 항상 `getEquipmentStatusStyle()` 헬퍼 함수를 사용하세요.
+
+### 라우트 파일 패턴
+
+| 파일            | 용도                                     | 예시 위치                          |
+| --------------- | ---------------------------------------- | ---------------------------------- |
+| `loading.tsx`   | 라우트 전환 시 로딩 UI                   | `app/equipment/loading.tsx`        |
+| `error.tsx`     | 라우트별 에러 처리 (`'use client'` 필수) | `app/equipment/error.tsx`          |
+| `not-found.tsx` | 404 처리 (`notFound()` 호출 시)          | `app/equipment/[id]/not-found.tsx` |
+| `layout.tsx`    | 공통 레이아웃 + 메타데이터 템플릿        | `app/equipment/layout.tsx`         |
+
+### generateMetadata 패턴
+
+```typescript
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const { id } = await props.params;
+  try {
+    const equipment = await equipmentApiServer.getEquipment(id);
+    return { title: `${equipment.name} - 장비 상세` };
+  } catch {
+    return { title: '장비 상세' }; // 폴백
+  }
+}
+```
 
 ---
 

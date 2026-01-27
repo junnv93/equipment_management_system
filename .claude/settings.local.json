@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": ["WebSearch", "Bash", "WebFetch"],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/kmjkds/equipment_management_system/.claude/hooks/notification-hook.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/kmjkds/equipment_management_system/.claude/hooks/stop-hook.sh"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/kmjkds/equipment_management_system/.claude/hooks/notification-hook.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,5 +1,9 @@
 # 점검 및 교정 프로세스 (UL-QP-18 Section 8, 10)
 
+> ⚠️ **문서 성격**: 이 문서는 UL-QP-18 절차서 기반의 **요구사항 정의서**입니다.
+> 중간점검(Intermediate Check), 자체점검(Self Check), 교정 프로세스의 설계 방향을 제시합니다.
+> 실제 구현 상태는 관련 모듈(`apps/backend/src/modules/calibration/`)을 확인하세요.
+
 ## 목차
 
 1. [점검 유형](#점검-유형)
@@ -14,23 +18,27 @@
 
 ## 점검 유형
 
-| 유형 | 대상 | 목적 | 양식 |
-|------|------|------|------|
-| **중간점검** | 교정 대상 장비 | 교정 신뢰성 확인 | UL-QP-18-03 |
-| **자체점검** | 비교정 대상 장비 | 기능/상태 확인 | UL-QP-18-05 |
+| 유형         | 대상             | 목적             | 양식        |
+| ------------ | ---------------- | ---------------- | ----------- |
+| **중간점검** | 교정 대상 장비   | 교정 신뢰성 확인 | UL-QP-18-03 |
+| **자체점검** | 비교정 대상 장비 | 기능/상태 확인   | UL-QP-18-05 |
 
 ---
 
 ## 중간점검 (Intermediate Check)
 
 ### 목적
+
 교정검사의 신뢰성을 확인하기 위해 교정 주기 사이에 실시하는 점검
 
 ### 대상 선정
+
 기술책임자가 중간점검 필요 장비를 별도 선정
 
 ### 점검 주기
+
 각 부서(팀)별 운용장비의 특성에 따라 결정:
+
 - 사용빈도
 - 내용 연수
 - 장비 상태
@@ -50,7 +58,7 @@ interface IntermediateCheck {
   // 점검 결과
   result: 'pass' | 'fail' | 'conditional';
   measuredValues?: Record<string, any>;
-  deviation?: string;  // 편차
+  deviation?: string; // 편차
 
   // 합격 기준
   acceptanceCriteria: string;
@@ -60,8 +68,8 @@ interface IntermediateCheck {
   notes?: string;
 
   // 점검자/확인자
-  checkedBy: string;      // 시험실무자
-  confirmedBy?: string;   // 기술책임자
+  checkedBy: string; // 시험실무자
+  confirmedBy?: string; // 기술책임자
 
   // 상태
   status: 'pending' | 'confirmed';
@@ -85,15 +93,19 @@ confirmed
 ## 자체점검 (Self Check)
 
 ### 목적
+
 비교정 대상 장비의 기능 및 상태를 주기적으로 확인
 
 ### 대상
+
 - 비교정 대상 장비
 - 시험에 사용하는 설비
 - 측정기기
 
 ### 점검 주기
+
 각 부서(팀)별 운용 장비 특성에 따라 결정:
+
 - 사용 빈도
 - 내용 연수
 - 장비 상태
@@ -138,13 +150,14 @@ interface SelfCheckItem {
 
 장비 속성으로, 해당 장비의 교정/점검 방법을 정의합니다.
 
-| 값 | 설명 | 교정계획서 |
-|----|------|-----------|
+| 값                     | 설명                      | 교정계획서                    |
+| ---------------------- | ------------------------- | ----------------------------- |
 | `external_calibration` | 외부 공인 교정기관에 의뢰 | **포함** (시험소장 승인 필요) |
-| `self_inspection` | 자체 점검 (내부 수행) | 미포함 |
-| `not_applicable` | 비교정 대상 | 미포함 |
+| `self_inspection`      | 자체 점검 (내부 수행)     | 미포함                        |
+| `not_applicable`       | 비교정 대상               | 미포함                        |
 
 ### 교정 주기 결정 요소
+
 - 장비 매뉴얼 권장 주기
 - 시험 품질에 미치는 영향
 - 사용 빈도
@@ -160,12 +173,12 @@ interface Calibration {
   // 기본 정보
   calibrationDate: Date;
   calibrationMethod: 'external_calibration' | 'self_inspection' | 'not_applicable';
-  calibrationAgency?: string;  // 교정기관
+  calibrationAgency?: string; // 교정기관
 
   // 결과
   result: 'pass' | 'fail' | 'conditional';
-  certificateNumber?: string;  // 교정성적서 번호
-  certificateFile?: string;    // 성적서 파일 경로
+  certificateNumber?: string; // 교정성적서 번호
+  certificateFile?: string; // 성적서 파일 경로
 
   // 보정계수
   hasCalibrationFactor: boolean;
@@ -178,21 +191,23 @@ interface Calibration {
   approvalStatus: ApprovalStatusEnum;
   registeredBy: string;
   registeredByRole: UserRoleEnum;
-  registrarComment?: string;   // 기술책임자 등록 시 필수
+  registrarComment?: string; // 기술책임자 등록 시 필수
   approvedBy?: string;
-  approverComment?: string;    // 승인 시 필수
+  approverComment?: string; // 승인 시 필수
 }
 ```
 
 ### 교정 후 조치
 
 **이상 발견 시**:
+
 1. 장비 사용 금지
 2. 부적합 시험 발생 여부 확인
 3. 필요시 재시험 실시
 4. 사용 가능 범위 내 제한적 사용 또는 폐기/교체
 
 **보정계수 발급 시**:
+
 1. 보정값(보정계수)을 측정값에 반영
 2. 관련 장비 소프트웨어 갱신 (가능한 경우)
 3. 보정인자 및 파라미터 관리대장 최신화
@@ -202,6 +217,7 @@ interface Calibration {
 ## 장기 미사용 장비
 
 ### 정의
+
 일정기간 동안 시험업무에 사용하지 않은 장비
 
 ### 재사용 전 필수 확인 사항
@@ -255,11 +271,13 @@ interface LongTermUnusedCheck {
 ## 교정계획서
 
 ### 작성 권한
+
 - **작성**: 기술책임자
 - **항목 확인**: 기술책임자
 - **최종 승인**: 시험소장(lab_manager)
 
 ### 대상 장비
+
 `calibrationMethod = 'external_calibration'` 인 장비
 
 ### 교정계획서 스키마
@@ -267,15 +285,15 @@ interface LongTermUnusedCheck {
 ```typescript
 interface CalibrationPlan {
   uuid: string;
-  year: number;             // 대상 연도
+  year: number; // 대상 연도
   site: string;
 
   // 상태
   status: 'draft' | 'pending_approval' | 'approved';
 
   // 작성/승인
-  createdBy: string;        // 기술책임자
-  approvedBy?: string;      // 시험소장
+  createdBy: string; // 기술책임자
+  approvedBy?: string; // 시험소장
   approvedAt?: Date;
 
   // 항목
@@ -288,7 +306,7 @@ interface CalibrationPlanItem {
   equipmentId: string;
 
   // 계획
-  plannedMonth: number;     // 계획 월 (1-12)
+  plannedMonth: number; // 계획 월 (1-12)
   plannedCalibrationDate?: Date;
   calibrationAgency?: string;
   estimatedCost?: number;
@@ -298,7 +316,7 @@ interface CalibrationPlanItem {
   actualCost?: number;
 
   // 확인
-  confirmedBy?: string;     // 기술책임자 확인
+  confirmedBy?: string; // 기술책임자 확인
   confirmedAt?: Date;
 }
 ```
@@ -341,10 +359,7 @@ async function getUpcomingChecks(daysAhead: number = 30) {
   const targetDate = addDays(new Date(), daysAhead);
 
   return this.db.query.equipment.findMany({
-    where: and(
-      eq(equipment.status, 'available'),
-      lte(equipment.nextCheckDate, targetDate)
-    ),
+    where: and(eq(equipment.status, 'available'), lte(equipment.nextCheckDate, targetDate)),
   });
 }
 ```

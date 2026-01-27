@@ -21,18 +21,23 @@ E2E 테스트에서 백엔드 JWT를 직접 쿠키에 저장하는 방식:
 
 ```typescript
 // ❌ 이렇게 하지 마세요!
-const response = await page.request.get('http://localhost:3001/api/auth/test-login?role=test_engineer');
+const response = await page.request.get(
+  'http://localhost:3001/api/auth/test-login?role=test_engineer'
+);
 const data = await response.json();
 
-await page.context().addCookies([{
-  name: 'auth-token',
-  value: data.access_token,
-  domain: 'localhost',
-  path: '/',
-}]);
+await page.context().addCookies([
+  {
+    name: 'auth-token',
+    value: data.access_token,
+    domain: 'localhost',
+    path: '/',
+  },
+]);
 ```
 
 **문제점**:
+
 1. NextAuth의 인증 플로우를 완전히 우회
 2. NextAuth는 자체 세션 토큰(`next-auth.session-token`)을 사용
 3. 백엔드 JWT(`auth-token`)를 NextAuth가 인식하지 못함
@@ -74,6 +79,7 @@ async function loginAs(page: Page, role: string) {
 ```
 
 **장점**:
+
 1. ✅ NextAuth의 정상적인 인증 플로우 사용
 2. ✅ NextAuth가 세션 생성 및 쿠키 관리 (`next-auth.session-token`)
 3. ✅ Middleware, Server Components, Client Components 모두에서 세션 인식
@@ -108,7 +114,7 @@ export const authOptions = {
               role: {
                 label: 'Role',
                 type: 'text',
-                placeholder: 'test_engineer | technical_manager | lab_manager | system_admin'
+                placeholder: 'test_engineer | technical_manager | lab_manager | system_admin',
               },
             },
             async authorize(credentials) {
@@ -121,7 +127,7 @@ export const authOptions = {
                 `${API_BASE_URL}/api/auth/test-login?role=${credentials.role}`
               );
 
-              if (!response.ok()) {
+              if (!response.ok) {
                 return null;
               }
 
@@ -149,6 +155,7 @@ export const authOptions = {
 ```
 
 **중요 사항**:
+
 - `test-login` provider는 테스트/개발 환경에서만 활성화
 - 백엔드 `/api/auth/test-login` 엔드포인트를 호출
 - `authorize` 함수에서 백엔드 JWT를 받아서 NextAuth 사용자 객체로 변환
@@ -185,6 +192,23 @@ async function loginAs(page: Page, role: string) {
       throw new Error(`Login callback failed: ${loginResponse.status()}`);
     }
 
+    // 2-1. Set-Cookie 헤더 파싱 및 쿠키 수동 설정
+    // Playwright의 page.request는 API 요청의 Set-Cookie를 브라우저에 자동 저장하지 않음
+    const setCookieHeaders = loginResponse.headers()['set-cookie'];
+    if (setCookieHeaders) {
+      const cookies = setCookieHeaders.split('\n').map((cookieStr: string) => {
+        const parts = cookieStr.split(';');
+        const [name, ...valueParts] = parts[0].split('=');
+        return {
+          name: name.trim(),
+          value: valueParts.join('='),
+          domain: 'localhost',
+          path: '/',
+        };
+      });
+      await page.context().addCookies(cookies);
+    }
+
     // 3. 메인 페이지로 이동하여 세션 확인
     await page.goto('/');
     await page.waitForTimeout(1000);
@@ -216,6 +240,7 @@ export { expect } from '@playwright/test';
 ```
 
 **플로우**:
+
 1. `/api/auth/csrf`에서 CSRF 토큰 획득
 2. `/api/auth/callback/test-login`으로 POST 요청 (form data로 role + csrfToken 전달)
 3. NextAuth가 `authorize` 함수 실행 → 백엔드 호출 → 세션 생성
@@ -231,7 +256,7 @@ export { expect } from '@playwright/test';
 NODE_ENV=test
 
 # NextAuth.js 설정
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:3002
 NEXTAUTH_SECRET=test_super_secret_key_for_e2e_testing_32chars
 
 # 백엔드 API URL
@@ -257,17 +282,44 @@ async testLogin(@Query('role') role: string) {
     throw new ForbiddenException('Test login is only available in development and test environments');
   }
 
+  // 주의: id, uuid, teamId는 반드시 유효한 UUID 형식이어야 함
   const testUsers: Record<string, any> = {
     test_engineer: {
-      id: 'test-engineer-id',
-      uuid: 'test-engineer-uuid',
+      id: '00000000-0000-0000-0000-000000000001',
+      uuid: '00000000-0000-0000-0000-000000000001',
       email: 'test.engineer@example.com',
       name: '테스트 시험실무자',
       role: 'test_engineer',
       site: 'suwon',
-      teamId: 'test-team-id',
+      teamId: '00000000-0000-0000-0000-000000000099',
     },
-    // ... 다른 역할
+    technical_manager: {
+      id: '00000000-0000-0000-0000-000000000002',
+      uuid: '00000000-0000-0000-0000-000000000002',
+      email: 'tech.manager@example.com',
+      name: '테스트 기술책임자',
+      role: 'technical_manager',
+      site: 'suwon',
+      teamId: '00000000-0000-0000-0000-000000000099',
+    },
+    lab_manager: {
+      id: '00000000-0000-0000-0000-000000000003',
+      uuid: '00000000-0000-0000-0000-000000000003',
+      email: 'lab.manager@example.com',
+      name: '테스트 시험소장',
+      role: 'lab_manager',
+      site: 'suwon',
+      teamId: '00000000-0000-0000-0000-000000000099',
+    },
+    system_admin: {
+      id: '00000000-0000-0000-0000-000000000004',
+      uuid: '00000000-0000-0000-0000-000000000004',
+      email: 'system.admin@example.com',
+      name: '테스트 시스템 관리자',
+      role: 'system_admin',
+      site: 'suwon',
+      teamId: '00000000-0000-0000-0000-000000000099',
+    },
   };
 
   const testUser = testUsers[role];
@@ -360,11 +412,13 @@ generateTestToken(testUser: any): AuthResponse {
 ```
 
 **절대 금지 사항**:
+
 - ❌ `localStorage.getItem('token')` - NextAuth 세션과 동기화 불가
 - ❌ `localStorage.setItem('token')` - 이중 인증 소스 발생
 - ❌ 쿠키 직접 설정 - NextAuth 우회
 
 **권장 사항**:
+
 - ✅ `getSession().accessToken` - NextAuth 세션과 동기화
 - ✅ `getServerSession().accessToken` - 서버 사이드에서 안전
 - ✅ NextAuth Provider를 통한 인증 - 정상적인 플로우
@@ -374,6 +428,7 @@ generateTestToken(testUser: any): AuthResponse {
 E2E 테스트는 실제 프로덕션 환경과 동일한 인증 플로우를 사용해야 합니다.
 
 **이유**:
+
 - 실제 사용자가 경험하는 인증 플로우를 테스트
 - Middleware, Server/Client Components가 모두 정상 작동 확인
 - 인증 관련 버그를 조기에 발견
@@ -389,6 +444,7 @@ E2E 테스트는 실제 프로덕션 환경과 동일한 인증 플로우를 사
 **원인**: NextAuth 세션이 생성되지 않음
 
 **해결 방법**:
+
 1. CSRF 토큰이 올바르게 전달되었는지 확인
 2. NextAuth Provider ID가 올바른지 확인 (`test-login`)
 3. 백엔드 test-login 엔드포인트가 작동하는지 확인
@@ -490,6 +546,7 @@ E2E 테스트에서 NextAuth 인증을 올바르게 처리하려면:
 5. ✅ "단일 인증 소스(SSOT)" 원칙 준수
 
 **절대 금지**:
+
 - ❌ 백엔드 JWT를 직접 쿠키에 저장
 - ❌ NextAuth를 우회하는 어떤 방법도 사용하지 않음
 - ❌ `localStorage`에 토큰 저장
