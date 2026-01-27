@@ -30,8 +30,8 @@ test.describe('Equipment Create Form', () => {
   });
 
   test('필수 필드 검증 - 장비명', async ({ page }) => {
-    // 등록 버튼 클릭 (submit 버튼 찾기)
-    await page.getByRole('button', { name: /등록.*승인/i }).click();
+    // 등록 버튼 클릭 (submit 버튼 찾기 - admin은 승인 불필요하므로 "등록"만 표시)
+    await page.getByRole('button', { name: /^등록/ }).click();
 
     // 에러 메시지 확인 (zod 유효성 검증)
     await expect(page.getByText(/장비명.*필수/i).first()).toBeVisible({ timeout: 5000 }).catch(() => {
@@ -43,8 +43,8 @@ test.describe('Equipment Create Form', () => {
     // 장비명만 입력
     await page.getByLabel('장비명').fill('테스트 장비');
 
-    // 등록 버튼 클릭
-    await page.getByRole('button', { name: /등록.*승인/i }).click();
+    // 등록 버튼 클릭 (admin은 승인 불필요하므로 "등록"만 표시)
+    await page.getByRole('button', { name: /^등록/ }).click();
 
     // 관리번호 에러 메시지 확인
     await expect(page.getByText(/관리번호.*필수/i).first()).toBeVisible({ timeout: 5000 }).catch(() => {

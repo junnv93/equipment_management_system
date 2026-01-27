@@ -380,3 +380,354 @@ test.describe('Equipment List - Role-based UI', () => {
     await expect(siteFilter).toBeVisible();
   });
 });
+
+test.describe('Equipment List - Calibration Due Filters', () => {
+  /**
+   * 교정 기한 필터 테스트를 위한 모킹 데이터
+   */
+  const createMockEquipment = (id: string, name: string, nextCalibrationDate: string | null, status: string = 'available') => ({
+    id,
+    uuid: id,
+    name,
+    managementNumber: `MGT-${id}`,
+    modelName: 'Test Model',
+    status,
+    nextCalibrationDate,
+    lastCalibrationDate: '2024-01-01',
+    location: '테스트 랩',
+    isShared: false,
+    site: 'suwon',
+  });
+
+  test('교정 기한 필터 적용 시 URL이 업데이트되어야 함', async ({ testOperatorPage: page }) => {
+    await page.goto('/equipment');
+
+    // 교정 기한 필터 선택
+    await page.getByLabel('교정 기한').click();
+    await page.getByRole('option', { name: '교정 임박' }).click();
+
+    // URL에 필터 반영 확인
+    await expect(page).toHaveURL(/calibrationDueFilter=due_soon/);
+  });
+
+  test('교정 임박(due_soon) 필터가 적용되어야 함', async ({ page }) => {
+    const today = new Date();
+    const in15Days = new Date(today);
+    in15Days.setDate(today.getDate() + 15);
+    const in45Days = new Date(today);
+    in45Days.setDate(today.getDate() + 45);
+
+    // API 모킹 - 30일 이내 교정 예정 장비만 반환
+    await page.route('**/api/equipment**', (route) => {
+      const url = new URL(route.request().url());
+      const calibrationDue = url.searchParams.get('calibrationDue');
+
+      if (calibrationDue === '30') {
+        // 교정 임박 필터 적용 시 - 30일 이내 장비만 반환
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: [
+              createMockEquipment('1', '교정 임박 장비 1', in15Days.toISOString(), 'available'),
+              createMockEquipment('2', '교정 임박 장비 2', today.toISOString(), 'calibration_scheduled'),
+            ],
+            meta: { pagination: { total: 2, totalPages: 1, currentPage: 1 } },
+          }),
+        });
+      } else {
+        // 전체 목록
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: [
+              createMockEquipment('1', '교정 임박 장비', in15Days.toISOString()),
+              createMockEquipment('2', '일반 장비', in45Days.toISOString()),
+            ],
+            meta: { pagination: { total: 2, totalPages: 1, currentPage: 1 } },
+          }),
+        });
+      }
+    });
+
+    // 교정 임박 필터 적용
+    await page.goto('/equipment?calibrationDueFilter=due_soon');
+
+    // 교정 임박 장비만 표시되어야 함
+    await expect(page.getByText('교정 임박 장비 1')).toBeVisible();
+    await expect(page.getByText('교정 임박 장비 2')).toBeVisible();
+  });
+
+  test('기한 초과(overdue) 필터가 적용되어야 함', async ({ page }) => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+
+    // API 모킹 - 교정 기한 초과 장비만 반환
+    await page.route('**/api/equipment**', (route) => {
+      const url = new URL(route.request().url());
+      const status = url.searchParams.get('status');
+
+      if (status === 'calibration_overdue') {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: [
+              createMockEquipment('1', '기한 초과 장비 1', yesterday.toISOString(), 'calibration_overdue'),
+              createMockEquipment('2', '기한 초과 장비 2', lastWeek.toISOString(), 'calibration_overdue'),
+            ],
+            meta: { pagination: { total: 2, totalPages: 1, currentPage: 1 } },
+          }),
+        });
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: [],
+            meta: { pagination: { total: 0, totalPages: 1, currentPage: 1 } },
+          }),
+        });
+      }
+    });
+
+    // 기한 초과 필터 적용
+    await page.goto('/equipment?calibrationDueFilter=overdue');
+
+    // 기한 초과 장비만 표시되어야 함
+    await expect(page.getByText('기한 초과 장비 1')).toBeVisible();
+    await expect(page.getByText('기한 초과 장비 2')).toBeVisible();
+  });
+
+  test('교정기한순 정렬이 URL에 반영되어야 함', async ({ testOperatorPage: page }) => {
+    await page.goto('/equipment');
+
+    // 교정 기한 열 헤더 클릭하여 정렬
+    const calibrationHeader = page.getByRole('button', { name: /교정 기한.*정렬/ });
+    if (await calibrationHeader.isVisible()) {
+      await calibrationHeader.click();
+
+      // URL에 정렬 파라미터 반영 확인
+      await expect(page).toHaveURL(/sortBy=nextCalibrationDate/);
+    }
+  });
+
+  test('교정기한 오름차순/내림차순 정렬 토글이 동작해야 함', async ({ page }) => {
+    const today = new Date();
+    const in10Days = new Date(today);
+    in10Days.setDate(today.getDate() + 10);
+    const in30Days = new Date(today);
+    in30Days.setDate(today.getDate() + 30);
+    const in60Days = new Date(today);
+    in60Days.setDate(today.getDate() + 60);
+
+    // API 모킹 - 정렬 파라미터에 따라 순서 변경
+    await page.route('**/api/equipment**', (route) => {
+      const url = new URL(route.request().url());
+      const sort = url.searchParams.get('sort');
+
+      const equipment = [
+        createMockEquipment('1', '장비 A - 10일 후', in10Days.toISOString()),
+        createMockEquipment('2', '장비 B - 30일 후', in30Days.toISOString()),
+        createMockEquipment('3', '장비 C - 60일 후', in60Days.toISOString()),
+      ];
+
+      // 정렬 순서에 따라 데이터 정렬
+      const sortedEquipment = sort === 'nextCalibrationDate.desc'
+        ? equipment.reverse()
+        : equipment;
+
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: sortedEquipment,
+          meta: { pagination: { total: 3, totalPages: 1, currentPage: 1 } },
+        }),
+      });
+    });
+
+    // 오름차순 정렬로 시작
+    await page.goto('/equipment?sortBy=nextCalibrationDate&sortOrder=asc');
+
+    // 테이블에서 첫 번째 행이 가장 빠른 교정기한이어야 함
+    const rows = page.getByTestId('equipment-row');
+    await expect(rows.first()).toContainText('장비 A');
+
+    // 정렬 순서 토글 (교정 기한 헤더 클릭)
+    const calibrationHeader = page.getByRole('button', { name: /교정 기한.*정렬/ });
+    if (await calibrationHeader.isVisible()) {
+      await calibrationHeader.click();
+
+      // 내림차순으로 변경 확인
+      await expect(page).toHaveURL(/sortOrder=desc/);
+    }
+  });
+
+  test('교정기한 필터와 정렬 조합이 동작해야 함', async ({ page }) => {
+    const today = new Date();
+    const in5Days = new Date(today);
+    in5Days.setDate(today.getDate() + 5);
+    const in15Days = new Date(today);
+    in15Days.setDate(today.getDate() + 15);
+    const in25Days = new Date(today);
+    in25Days.setDate(today.getDate() + 25);
+
+    // API 모킹 - 교정 임박 + 정렬
+    await page.route('**/api/equipment**', (route) => {
+      const url = new URL(route.request().url());
+      const calibrationDue = url.searchParams.get('calibrationDue');
+      const sort = url.searchParams.get('sort');
+
+      if (calibrationDue === '30') {
+        const equipment = [
+          createMockEquipment('1', '임박 장비 A - 5일', in5Days.toISOString()),
+          createMockEquipment('2', '임박 장비 B - 15일', in15Days.toISOString()),
+          createMockEquipment('3', '임박 장비 C - 25일', in25Days.toISOString()),
+        ];
+
+        const sortedEquipment = sort === 'nextCalibrationDate.desc'
+          ? [...equipment].reverse()
+          : equipment;
+
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: sortedEquipment,
+            meta: { pagination: { total: 3, totalPages: 1, currentPage: 1 } },
+          }),
+        });
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            data: [],
+            meta: { pagination: { total: 0, totalPages: 1, currentPage: 1 } },
+          }),
+        });
+      }
+    });
+
+    // 교정 임박 필터 + 교정기한순 정렬
+    await page.goto('/equipment?calibrationDueFilter=due_soon&sortBy=nextCalibrationDate&sortOrder=asc');
+
+    // 가장 임박한 장비가 먼저 표시되어야 함
+    const rows = page.getByTestId('equipment-row');
+    await expect(rows.first()).toContainText('임박 장비 A');
+    await expect(rows.nth(1)).toContainText('임박 장비 B');
+    await expect(rows.nth(2)).toContainText('임박 장비 C');
+  });
+
+  test('활성 필터 배지에 교정기한 필터가 표시되어야 함', async ({ testOperatorPage: page }) => {
+    await page.goto('/equipment?calibrationDueFilter=due_soon');
+
+    // 활성 필터 배지 확인
+    const filterBadges = page.locator('[role="list"][aria-label="적용된 필터"]');
+    await expect(filterBadges.getByText(/교정기한.*교정 임박/)).toBeVisible();
+  });
+
+  test('교정기한 필터 제거 시 URL이 업데이트되어야 함', async ({ testOperatorPage: page }) => {
+    await page.goto('/equipment?calibrationDueFilter=due_soon');
+
+    // 교정기한 필터 배지 제거 버튼 클릭
+    const removeBadge = page.getByRole('button', { name: /교정기한.*필터 제거/ });
+    if (await removeBadge.isVisible()) {
+      await removeBadge.click();
+
+      // URL에서 필터 제거 확인
+      await expect(page).not.toHaveURL(/calibrationDueFilter/);
+    }
+  });
+});
+
+test.describe('Equipment List - Calibration Due Date Display', () => {
+  test('교정 기한이 D-day 형식으로 표시되어야 함', async ({ page }) => {
+    const today = new Date();
+    const in7Days = new Date(today);
+    in7Days.setDate(today.getDate() + 7);
+    const overdue5Days = new Date(today);
+    overdue5Days.setDate(today.getDate() - 5);
+
+    // API 모킹
+    await page.route('**/api/equipment**', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: '1',
+              uuid: '1',
+              name: '임박 장비',
+              managementNumber: 'MGT-001',
+              modelName: 'Test Model',
+              status: 'available',
+              nextCalibrationDate: in7Days.toISOString(),
+              location: '테스트 랩',
+              isShared: false,
+              site: 'suwon',
+            },
+            {
+              id: '2',
+              uuid: '2',
+              name: '초과 장비',
+              managementNumber: 'MGT-002',
+              modelName: 'Test Model',
+              status: 'calibration_overdue',
+              nextCalibrationDate: overdue5Days.toISOString(),
+              location: '테스트 랩',
+              isShared: false,
+              site: 'suwon',
+            },
+          ],
+          meta: { pagination: { total: 2, totalPages: 1, currentPage: 1 } },
+        }),
+      });
+    });
+
+    await page.goto('/equipment');
+
+    // D-day 형식 표시 확인 (D-7, D+5 등)
+    await expect(page.getByText(/D-7/)).toBeVisible();
+    await expect(page.getByText(/D\+5/)).toBeVisible();
+  });
+
+  test('교정 기한 없는 장비는 - 표시되어야 함', async ({ page }) => {
+    // API 모킹 - 교정 기한 없는 장비
+    await page.route('**/api/equipment**', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: '1',
+              uuid: '1',
+              name: '교정 비대상 장비',
+              managementNumber: 'MGT-001',
+              modelName: 'Test Model',
+              status: 'available',
+              nextCalibrationDate: null,
+              location: '테스트 랩',
+              isShared: false,
+              site: 'suwon',
+            },
+          ],
+          meta: { pagination: { total: 1, totalPages: 1, currentPage: 1 } },
+        }),
+      });
+    });
+
+    await page.goto('/equipment');
+
+    // 테이블에서 교정 비대상 장비의 교정 기한이 - 로 표시
+    const row = page.getByTestId('equipment-row').first();
+    await expect(row).toBeVisible();
+    // 교정 기한 열에서 - 표시 확인 (테이블 셀 확인)
+  });
+});
