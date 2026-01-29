@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react';
 import {
   Package,
   FileSpreadsheet,
-  ClipboardList,
   ArrowRightLeft,
   Calculator,
   Monitor,
@@ -48,22 +47,13 @@ const categories: ApprovalCategory[] = [
     description: '교정 기록 승인',
   },
   {
-    key: 'rental',
-    label: '대여',
-    icon: ClipboardList,
-    href: '/rentals?status=pending',
-    color: 'text-purple-700 dark:text-purple-300',
-    bgColor: 'bg-purple-100 dark:bg-purple-900/30',
-    description: '시험소 내 대여 승인',
-  },
-  {
     key: 'checkout',
     label: '반출',
     icon: ArrowRightLeft,
     href: '/checkouts?status=pending',
     color: 'text-orange-700 dark:text-orange-300',
     bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-    description: '반출/반입 승인',
+    description: '반출/반입 승인 (교정, 수리, 대여 포함)',
   },
   {
     key: 'calibrationFactor',
@@ -92,26 +82,27 @@ interface PendingApprovalCardProps {
 /**
  * 역할별 표시 카테고리 필터링
  * - test_engineer: 자신의 요청만 표시 (장비, 교정, 대여, 반출)
- * - technical_manager: 팀 내 대기 항목 (장비, 교정, 대여, 보정계수)
+ * - technical_manager: 팀 내 대기 항목 (장비, 교정, 반출, 보정계수)
  * - lab_manager: 시험소 전체 대기 항목
  * - system_admin: 전체 시스템 대기 항목
+ * ✅ 대여(rental)는 반출(checkout)로 통합됨
  */
 function getVisibleCategories(role: string): Array<keyof Omit<PendingApprovalCounts, 'total'>> {
   switch (role.toLowerCase()) {
     case 'test_engineer':
       // 시험실무자: 본인이 신청한 항목의 상태 확인
-      return ['equipment', 'calibration', 'rental', 'checkout'];
+      return ['equipment', 'calibration', 'checkout'];
     case 'technical_manager':
       // 기술책임자: 팀 내 승인 대기 항목
-      return ['equipment', 'calibration', 'rental', 'calibrationFactor'];
+      return ['equipment', 'calibration', 'checkout', 'calibrationFactor'];
     case 'lab_manager':
       // 시험소 관리자: 해당 시험소 전체 승인 대기
-      return ['equipment', 'calibration', 'rental', 'checkout', 'calibrationFactor', 'software'];
+      return ['equipment', 'calibration', 'checkout', 'calibrationFactor', 'software'];
     case 'system_admin':
       // 시스템 관리자: 전체 시스템 승인 대기
-      return ['equipment', 'calibration', 'rental', 'checkout', 'calibrationFactor', 'software'];
+      return ['equipment', 'calibration', 'checkout', 'calibrationFactor', 'software'];
     default:
-      return ['equipment', 'rental'];
+      return ['equipment', 'checkout'];
   }
 }
 

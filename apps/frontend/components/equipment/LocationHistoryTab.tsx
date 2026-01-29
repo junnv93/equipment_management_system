@@ -30,10 +30,7 @@ import {
 } from '@/components/ui/form';
 import { Plus, MapPin, Calendar, User, FileText } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import equipmentApi, {
-  type LocationHistoryItem,
-  type CreateLocationHistoryInput,
-} from '@/lib/api/equipment-api';
+import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipment-api';
 import dayjs from 'dayjs';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';

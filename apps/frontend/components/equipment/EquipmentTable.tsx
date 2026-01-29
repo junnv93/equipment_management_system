@@ -18,6 +18,7 @@ import {
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { EquipmentFilters } from '@/hooks/useEquipmentFilters';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
+import { HighlightText } from '@/components/shared/HighlightText';
 import {
   getEquipmentStatusStyle,
   shouldDisplayCalibrationStatus,
@@ -54,36 +55,6 @@ interface EquipmentTableProps {
   onSort: (column: EquipmentFilters['sortBy'], order: 'asc' | 'desc') => void;
   searchTerm?: string;
 }
-
-/**
- * 검색어 하이라이팅 컴포넌트
- */
-const HighlightText = memo(function HighlightText({
-  text,
-  search,
-}: {
-  text: string;
-  search?: string;
-}) {
-  if (!search || !text) return <>{text}</>;
-
-  const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
-
-  return (
-    <>
-      {parts.map((part, i) =>
-        regex.test(part) ? (
-          <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">
-            {part}
-          </mark>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-});
 
 /**
  * 상태 뱃지 컴포넌트
@@ -192,7 +163,7 @@ const EquipmentRow = memo(function EquipmentRow({
   equipment: Equipment;
   searchTerm?: string;
 }) {
-  const formatDate = (date?: string | Date | null) => {
+  const _formatDate = (date?: string | Date | null) => {
     if (!date) return '-';
     return dayjs(date).format('YYYY-MM-DD');
   };
@@ -318,7 +289,7 @@ function EquipmentTableComponent({
   onSort,
   searchTerm,
 }: EquipmentTableProps) {
-  const getSortDirection = (column: string): 'ascending' | 'descending' | 'none' => {
+  const _getSortDirection = (column: string): 'ascending' | 'descending' | 'none' => {
     if (sortBy === column) {
       return sortOrder === 'asc' ? 'ascending' : 'descending';
     }

@@ -35,7 +35,7 @@ import dayjs from 'dayjs';
 import Link from 'next/link';
 import { ApiError } from '@/lib/errors/equipment-errors';
 
-interface CalibrationRecord {
+export interface CalibrationRecord {
   id: string;
   calibrationDate: string | Date;
   completionDate?: string | Date;
@@ -133,7 +133,7 @@ export function CalibrationHistorySection({
   history,
   onAdd,
   onDelete,
-  isLoading = false,
+  isLoading: _isLoading = false,
   disabled = false,
   isCreateMode = false,
 }: CalibrationHistorySectionProps) {
@@ -369,15 +369,16 @@ export function CalibrationHistorySection({
                             size="icon"
                             onClick={() => handleDeleteClick(item.id)}
                             disabled={disabled}
+                            aria-label="교정 기록 삭제"
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                           </Button>
                         )}
                         {/* 실제 저장된 항목은 상세 페이지 링크 */}
                         {!isTempItem && (
-                          <Button variant="ghost" size="icon" asChild>
+                          <Button variant="ghost" size="icon" asChild aria-label="교정 상세 보기">
                             <Link href={`/calibrations/${item.id}`}>
-                              <ExternalLink className="h-4 w-4" />
+                              <ExternalLink className="h-4 w-4" aria-hidden="true" />
                             </Link>
                           </Button>
                         )}

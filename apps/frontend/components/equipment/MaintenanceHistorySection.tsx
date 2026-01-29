@@ -52,11 +52,11 @@ interface MaintenanceHistorySectionProps {
 }
 
 export function MaintenanceHistorySection({
-  equipmentUuid,
+  equipmentUuid: _equipmentUuid,
   history,
   onAdd,
   onDelete,
-  isLoading = false,
+  isLoading: _isLoading = false,
   disabled = false,
 }: MaintenanceHistorySectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

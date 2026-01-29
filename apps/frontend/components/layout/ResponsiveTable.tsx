@@ -16,7 +16,7 @@
  * - React.memo로 불필요한 리렌더 방지
  * - useCallback으로 이벤트 핸들러 안정화
  */
-import { ReactNode, useState, useEffect, useCallback, memo } from 'react';
+import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import {
   Table,

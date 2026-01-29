@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Wrench, CheckCircle, AlertTriangle, Clock, Trash2, Edit, Plus } from 'lucide-react';
-import type { RepairHistory, RepairResult } from '@/lib/api/repair-history-api';
+import type { RepairHistory } from '@/lib/api/repair-history-api';
 
 interface RepairHistoryTimelineProps {
   repairs: RepairHistory[];

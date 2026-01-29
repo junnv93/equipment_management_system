@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { X, Upload, File, FileImage, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -73,7 +72,7 @@ export function FileUpload({
   disabled = false,
   label = '파일 첨부',
   description = 'PDF, 이미지, 문서 파일을 업로드할 수 있습니다. (최대 10MB)',
-  attachmentType = 'other',
+  attachmentType: _attachmentType = 'other',
   showProgress = true,
 }: FileUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -336,6 +335,7 @@ export function FileUpload({
                     {/* 이미지 미리보기 또는 아이콘 */}
                     {uploadedFile.preview ? (
                       <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden border bg-white">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- blob URL 미리보기는 next/image 미지원 */}
                         <img
                           src={uploadedFile.preview}
                           alt={uploadedFile.file.name}

@@ -11,6 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -46,7 +51,16 @@ import {
   AlertCircle,
   FileText,
   Download,
+  Circle,
+  XCircle,
+  ClipboardCheck,
+  UserCheck,
+  Loader2,
+  Plus,
+  ChevronUp,
+  Check,
 } from 'lucide-react';
+import type { UserRole } from '@equipment-management/schemas';
 
 interface CalibrationPlanDetailClientProps {
   /**
@@ -73,6 +87,11 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   const [editingNotes, setEditingNotes] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [reviewComment, setReviewComment] = useState('');
+  const [showReviewComment, setShowReviewComment] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   // 계획서 상세 조회
   const {
@@ -85,21 +104,97 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
     enabled: !!planUuid,
   });
 
-  // 승인 요청 뮤테이션
-  const submitMutation = useMutation({
-    mutationFn: () => calibrationPlansApi.submitCalibrationPlan(planUuid),
+  // 검토 요청 뮤테이션 (기술책임자 → 품질책임자)
+  const submitForReviewMutation = useMutation({
+    mutationFn: () =>
+      calibrationPlansApi.submitForReview(planUuid, {
+        submittedBy: session?.user?.id as string,
+      }),
     onSuccess: () => {
       toast({
-        title: '승인 요청 완료',
-        description: '교정계획서가 승인 요청되었습니다.',
+        title: '검토 요청 완료',
+        description: '교정계획서가 품질책임자에게 검토 요청되었습니다.',
       });
       queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
       setIsSubmitDialogOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '승인 요청 실패',
-        description: error.response?.data?.message || '승인 요청 중 오류가 발생했습니다.',
+        title: '검토 요청 실패',
+        description: error.response?.data?.message || '검토 요청 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 확인 완료 뮤테이션 (품질책임자)
+  const reviewMutation = useMutation({
+    mutationFn: () =>
+      calibrationPlansApi.reviewCalibrationPlan(planUuid, {
+        reviewedBy: session?.user?.id as string,
+        reviewComment: reviewComment || undefined,
+      }),
+    onSuccess: () => {
+      toast({
+        title: '확인 완료',
+        description: '품질책임자 확인이 완료되어 시험소장에게 승인 요청되었습니다.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      setShowReviewComment(false);
+      setReviewComment('');
+    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+      toast({
+        title: '확인 완료 실패',
+        description: error.response?.data?.message || '확인 처리 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 최종 승인 뮤테이션 (시험소장)
+  const approveMutation = useMutation({
+    mutationFn: () =>
+      calibrationPlansApi.approveCalibrationPlan(planUuid, {
+        approvedBy: session?.user?.id as string,
+      }),
+    onSuccess: () => {
+      toast({
+        title: '승인 완료',
+        description: '교정계획서가 최종 승인되었습니다.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      setIsApproveDialogOpen(false);
+    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+      toast({
+        title: '승인 실패',
+        description: error.response?.data?.message || '승인 처리 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // 반려 뮤테이션 (품질책임자 또는 시험소장)
+  const rejectMutation = useMutation({
+    mutationFn: () =>
+      calibrationPlansApi.rejectCalibrationPlan(planUuid, {
+        rejectedBy: session?.user?.id as string,
+        rejectionReason,
+      }),
+    onSuccess: () => {
+      toast({
+        title: '반려 완료',
+        description: '교정계획서가 반려되었습니다.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      setIsRejectDialogOpen(false);
+      setRejectionReason('');
+    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+      toast({
+        title: '반려 실패',
+        description: error.response?.data?.message || '반려 처리 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     },
@@ -231,8 +326,22 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   }
 
   const isDraft = plan.status === 'draft';
+  const isRejected = plan.status === 'rejected';
+  const isPendingReview = plan.status === 'pending_review';
+  const isPendingApproval = plan.status === 'pending_approval';
   const isApproved = plan.status === 'approved';
   const items = plan.items || [];
+
+  // 사용자 역할 확인
+  const userRole = session?.user?.role as UserRole | undefined;
+  const isTechnicalManager = userRole === 'technical_manager';
+  const isQualityManager = userRole === 'quality_manager';
+  const isLabManager = userRole === 'lab_manager';
+
+  // 역할별 액션 가능 여부
+  const canSubmitForReview = (isDraft || isRejected) && (isTechnicalManager || isLabManager);
+  const canReview = isPendingReview && (isQualityManager || isLabManager);
+  const canApprove = isPendingApproval && isLabManager;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -265,34 +374,249 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
               인쇄/PDF
             </Button>
           )}
-          {isDraft && (
+          {/* 작성 중/반려됨 상태: 삭제 및 검토 요청 (기술책임자/시험소장) */}
+          {(isDraft || isRejected) && (
+            <>
+              {isDraft && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  삭제
+                </Button>
+              )}
+              {canSubmitForReview && (
+                <Button
+                  onClick={() => setIsSubmitDialogOpen(true)}
+                  disabled={submitForReviewMutation.isPending}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  검토 요청
+                </Button>
+              )}
+            </>
+          )}
+          {/* 확인 대기 상태: 품질책임자는 타임라인에서 원클릭 확인 */}
+          {/* 승인 대기 상태: 최종 승인/반려 (시험소장) */}
+          {canApprove && (
             <>
               <Button
                 variant="outline"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={deleteMutation.isPending}
+                onClick={() => setIsRejectDialogOpen(true)}
+                disabled={rejectMutation.isPending}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                삭제
+                <XCircle className="h-4 w-4 mr-2" />
+                반려
               </Button>
               <Button
-                onClick={() => setIsSubmitDialogOpen(true)}
-                disabled={submitMutation.isPending}
+                onClick={() => setIsApproveDialogOpen(true)}
+                disabled={approveMutation.isPending}
               >
-                <Send className="h-4 w-4 mr-2" />
-                승인 요청
+                <UserCheck className="h-4 w-4 mr-2" />
+                최종 승인
               </Button>
             </>
+          )}
+          {/* 승인 대기 상태에서 품질책임자도 반려 가능 */}
+          {isPendingApproval && isQualityManager && !isLabManager && (
+            <Button
+              variant="outline"
+              onClick={() => setIsRejectDialogOpen(true)}
+              disabled={rejectMutation.isPending}
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              반려
+            </Button>
           )}
         </div>
       </div>
 
+      {/* 3단계 승인 타임라인 */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            {/* 1단계: 작성 */}
+            <div className="flex flex-col items-center flex-1">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isDraft
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-green-500 text-white'
+                }`}
+              >
+                {isDraft ? (
+                  <Circle className="h-5 w-5" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5" />
+                )}
+              </div>
+              <span className="mt-2 text-sm font-medium">1. 작성</span>
+              <span className="text-xs text-muted-foreground">기술책임자</span>
+              {plan.submittedAt && (
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(plan.submittedAt), 'MM/dd HH:mm')}
+                </span>
+              )}
+            </div>
+
+            {/* 연결선 1-2 */}
+            <div
+              className={`h-0.5 flex-1 ${
+                isPendingReview || isPendingApproval || isApproved
+                  ? 'bg-green-500'
+                  : 'bg-gray-300'
+              }`}
+            />
+
+            {/* 2단계: 확인 */}
+            <div className="flex flex-col items-center flex-1">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isPendingReview
+                    ? 'bg-yellow-500 text-white animate-pulse'
+                    : isPendingApproval || isApproved
+                      ? 'bg-green-500 text-white'
+                      : isRejected && plan.rejectionStage === 'review'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-300 text-gray-500'
+                }`}
+              >
+                {isPendingReview ? (
+                  <Circle className="h-5 w-5" />
+                ) : isPendingApproval || isApproved ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : isRejected && plan.rejectionStage === 'review' ? (
+                  <XCircle className="h-5 w-5" />
+                ) : (
+                  <Circle className="h-5 w-5" />
+                )}
+              </div>
+              <span className="mt-2 text-sm font-medium">2. 확인</span>
+              <span className="text-xs text-muted-foreground">품질책임자</span>
+              {plan.reviewedAt && (
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(plan.reviewedAt), 'MM/dd HH:mm')}
+                </span>
+              )}
+
+              {/* 품질책임자용 인라인 확인 버튼 */}
+              {canReview && (
+                <div className="mt-3 flex flex-col items-center gap-1">
+                  <Button
+                    size="sm"
+                    onClick={() => reviewMutation.mutate()}
+                    disabled={reviewMutation.isPending}
+                    className="w-24"
+                    aria-label="교정계획서 확인 완료"
+                  >
+                    {reviewMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="h-4 w-4 mr-1" />
+                        확인 완료
+                      </>
+                    )}
+                  </Button>
+
+                  {/* 확장 가능한 의견란 */}
+                  <Collapsible open={showReviewComment} onOpenChange={setShowReviewComment}>
+                    <CollapsibleTrigger className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mt-1">
+                      {showReviewComment ? (
+                        <>
+                          <ChevronUp className="h-3 w-3" />
+                          의견 접기
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-3 w-3" />
+                          의견 추가
+                        </>
+                      )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <Input
+                        placeholder="간단한 의견 (선택)"
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        className="w-32 text-xs h-8"
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsRejectDialogOpen(true)}
+                    className="text-xs text-muted-foreground hover:text-destructive underline mt-1"
+                    disabled={rejectMutation.isPending}
+                  >
+                    반려
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 연결선 2-3 */}
+            <div
+              className={`h-0.5 flex-1 ${
+                isPendingApproval || isApproved ? 'bg-green-500' : 'bg-gray-300'
+              }`}
+            />
+
+            {/* 3단계: 승인 */}
+            <div className="flex flex-col items-center flex-1">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  isPendingApproval
+                    ? 'bg-blue-500 text-white'
+                    : isApproved
+                      ? 'bg-green-500 text-white'
+                      : isRejected && plan.rejectionStage === 'approval'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-300 text-gray-500'
+                }`}
+              >
+                {isPendingApproval ? (
+                  <Circle className="h-5 w-5" />
+                ) : isApproved ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : isRejected && plan.rejectionStage === 'approval' ? (
+                  <XCircle className="h-5 w-5" />
+                ) : (
+                  <Circle className="h-5 w-5" />
+                )}
+              </div>
+              <span className="mt-2 text-sm font-medium">3. 승인</span>
+              <span className="text-xs text-muted-foreground">시험소장</span>
+              {plan.approvedAt && (
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(plan.approvedAt), 'MM/dd HH:mm')}
+                </span>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* 반려 사유 표시 */}
-      {plan.status === 'rejected' && plan.rejectionReason && (
+      {isRejected && plan.rejectionReason && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>반려됨</AlertTitle>
+          <AlertTitle>
+            반려됨 ({plan.rejectionStage === 'review' ? '확인 단계' : '승인 단계'})
+          </AlertTitle>
           <AlertDescription>{plan.rejectionReason}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* 확인 의견 표시 */}
+      {plan.reviewComment && (isPendingApproval || isApproved) && (
+        <Alert>
+          <ClipboardCheck className="h-4 w-4" />
+          <AlertTitle>확인 의견</AlertTitle>
+          <AlertDescription>{plan.reviewComment}</AlertDescription>
         </Alert>
       )}
 
@@ -487,21 +811,81 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         </DialogContent>
       </Dialog>
 
-      {/* 승인 요청 확인 다이얼로그 */}
+      {/* 검토 요청 확인 다이얼로그 (기술책임자 → 품질책임자) */}
       <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>승인 요청</DialogTitle>
+            <DialogTitle>검토 요청</DialogTitle>
             <DialogDescription>
-              교정계획서를 시험소장에게 승인 요청하시겠습니까? 승인 요청 후에는 수정이 불가합니다.
+              교정계획서를 품질책임자에게 검토 요청하시겠습니까? 검토 요청 후에는 수정이 불가합니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
               취소
             </Button>
-            <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}>
-              승인 요청
+            <Button
+              onClick={() => submitForReviewMutation.mutate()}
+              disabled={submitForReviewMutation.isPending}
+            >
+              검토 요청
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 최종 승인 다이얼로그 (시험소장) */}
+      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>최종 승인</DialogTitle>
+            <DialogDescription>
+              교정계획서를 최종 승인하시겠습니까? 승인 후에는 계획에 따라 교정이 진행됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
+              취소
+            </Button>
+            <Button
+              onClick={() => approveMutation.mutate()}
+              disabled={approveMutation.isPending}
+            >
+              최종 승인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 반려 다이얼로그 (품질책임자/시험소장) */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>반려</DialogTitle>
+            <DialogDescription>
+              교정계획서를 반려하시겠습니까? 반려 사유를 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium">반려 사유 (필수)</label>
+            <textarea
+              className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              rows={3}
+              placeholder="반려 사유를 입력하세요"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => rejectMutation.mutate()}
+              disabled={rejectMutation.isPending || !rejectionReason.trim()}
+            >
+              반려
             </Button>
           </DialogFooter>
         </DialogContent>

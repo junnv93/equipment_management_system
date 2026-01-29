@@ -45,19 +45,26 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import calibrationApi, { type CreateCalibrationDto } from '@/lib/api/calibration-api';
+import calibrationApi, { type CreateCalibrationDto, type Calibration } from '@/lib/api/calibration-api';
 import dayjs from 'dayjs';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import {
+  CalibrationResultEnum,
+  CALIBRATION_RESULT_LABELS,
+  CALIBRATION_APPROVAL_STATUS_LABELS,
+  type CalibrationResult,
+} from '@equipment-management/schemas';
 
 // 교정 등록 스키마
 const calibrationSchema = z.object({
   calibrationDate: z.string().min(1, '교정일을 입력하세요'),
   nextCalibrationDate: z.string().min(1, '다음 교정일을 입력하세요'),
   calibrationAgency: z.string().min(1, '교정 기관을 입력하세요').max(100),
+  certificateNumber: z.string().min(1, '교정성적서 번호를 입력하세요').max(100),
   calibrationCycle: z.coerce.number().min(1, '교정 주기를 입력하세요 (최소 1개월)'),
-  calibrationResult: z.enum(['PASS', 'FAIL', 'CONDITIONAL']),
+  calibrationResult: CalibrationResultEnum, // SSOT 적용
   notes: z.string().optional(),
 });
 
@@ -67,16 +74,18 @@ interface CalibrationHistoryTabProps {
   equipment: Equipment;
 }
 
-const RESULT_LABELS: Record<string, string> = {
-  PASS: '적합',
-  FAIL: '부적합',
-  CONDITIONAL: '조건부 적합',
+// SSOT에서 import한 CALIBRATION_RESULT_LABELS, CALIBRATION_APPROVAL_STATUS_LABELS 사용
+// 기존 대문자 값과의 호환성을 위한 매핑 (레거시 데이터 지원)
+const LEGACY_RESULT_MAP: Record<string, CalibrationResult> = {
+  PASS: 'pass',
+  FAIL: 'fail',
+  CONDITIONAL: 'conditional',
 };
 
-const APPROVAL_STATUS_LABELS: Record<string, string> = {
-  pending_approval: '승인 대기',
-  approved: '승인됨',
-  rejected: '반려됨',
+// 결과값 라벨 가져오기 (레거시 대문자 값 호환)
+const getResultLabel = (result: string): string => {
+  const normalizedResult = LEGACY_RESULT_MAP[result] || result;
+  return CALIBRATION_RESULT_LABELS[normalizedResult as CalibrationResult] || result;
 };
 
 /**
@@ -87,10 +96,13 @@ const APPROVAL_STATUS_LABELS: Record<string, string> = {
  * - 승인 프로세스 포함 (시험실무자 등록 → 기술책임자 승인)
  */
 export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps) {
-  const { hasRole, user } = useAuth();
+  const { hasRole, user: _user } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // 파일 업로드 상태
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
 
   // 폼 설정
   const form = useForm<CalibrationFormData>({
@@ -99,6 +111,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
       calibrationDate: dayjs().format('YYYY-MM-DD'),
       nextCalibrationDate: dayjs().add(12, 'month').format('YYYY-MM-DD'),
       calibrationAgency: '',
+      certificateNumber: '',
       calibrationCycle: 12,
       calibrationResult: undefined,
       notes: '',
@@ -116,16 +129,59 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     enabled: !!equipmentId,
   });
 
-  // 교정 등록
+  // 교정 등록 mutation
   const createMutation = useMutation({
     mutationFn: (data: CreateCalibrationDto) => calibrationApi.createCalibration(data),
-    onSuccess: () => {
+  });
+
+  // 파일 업로드 mutation
+  const uploadMutation = useMutation({
+    mutationFn: ({ calibrationId, file }: { calibrationId: string; file: File }) =>
+      calibrationApi.uploadCertificate(calibrationId, file),
+  });
+
+  // 폼 제출 핸들러: 교정 등록 → 파일 업로드 순차 실행
+  const handleSubmit = async (data: CalibrationFormData) => {
+    // 파일 업로드 검증
+    if (!certificateFile) {
+      toast({
+        title: '파일 필요',
+        description: '교정성적서 파일을 첨부해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // 1. 교정 기록 생성
+      const calibration = await createMutation.mutateAsync({
+        equipmentId: equipmentId,
+        calibrationDate: data.calibrationDate,
+        nextCalibrationDate: data.nextCalibrationDate,
+        calibrationAgency: data.calibrationAgency,
+        certificateNumber: data.certificateNumber,
+        calibrationCycle: data.calibrationCycle,
+        calibrationResult: data.calibrationResult,
+        notes: data.notes || undefined,
+      });
+
+      // 2. 교정성적서 파일 업로드
+      if (calibration?.id) {
+        await uploadMutation.mutateAsync({
+          calibrationId: calibration.id,
+          file: certificateFile,
+        });
+      }
+
+      // 3. 성공 처리
       queryClient.invalidateQueries({ queryKey: ['calibrations', 'equipment', equipmentId] });
       setIsDialogOpen(false);
+      setCertificateFile(null);
       form.reset({
         calibrationDate: dayjs().format('YYYY-MM-DD'),
         nextCalibrationDate: dayjs().add(12, 'month').format('YYYY-MM-DD'),
         calibrationAgency: '',
+        certificateNumber: '',
         calibrationCycle: 12,
         calibrationResult: undefined,
         notes: '',
@@ -134,28 +190,18 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
         title: '교정 이력 등록 완료',
         description: '교정 이력이 성공적으로 등록되었습니다. 승인을 기다리고 있습니다.',
       });
-    },
-    onError: (error: unknown) => {
+    } catch (error: unknown) {
       console.error('교정 이력 등록 실패:', error);
       toast({
         title: '등록 실패',
         description: getErrorMessage(error, '교정 이력 등록 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
-    },
-  });
-
-  const handleSubmit = (data: CalibrationFormData) => {
-    createMutation.mutate({
-      equipmentId: equipmentId,
-      calibrationDate: data.calibrationDate,
-      nextCalibrationDate: data.nextCalibrationDate,
-      calibrationAgency: data.calibrationAgency,
-      calibrationCycle: data.calibrationCycle,
-      calibrationResult: data.calibrationResult,
-      notes: data.notes || undefined,
-    });
+    }
   };
+
+  // 전체 로딩 상태 (교정 등록 또는 파일 업로드 중)
+  const isSubmitting = createMutation.isPending || uploadMutation.isPending;
 
   // 교정일 변경 시 다음 교정일 자동 계산
   const handleCalibrationDateChange = (date: string) => {
@@ -173,8 +219,8 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     }
   };
 
-  // 등록 권한 확인 (시험실무자 이상)
-  const canCreate = hasRole(['test_engineer', 'technical_manager', 'lab_manager', 'system_admin']);
+  // 등록 권한 확인: UL-QP-18에 따라 시험실무자만 등록 가능 (lab_manager/system_admin은 모든 권한)
+  const canCreate = hasRole(['test_engineer', 'lab_manager', 'system_admin']);
 
   // 등록 Dialog
   const RegisterDialog = (
@@ -265,6 +311,19 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
             />
             <FormField
               control={form.control}
+              name="certificateNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>교정성적서 번호 *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="예: CAL-2026-0001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="calibrationResult"
               render={({ field }) => (
                 <FormItem>
@@ -276,15 +335,31 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="PASS">적합 (PASS)</SelectItem>
-                      <SelectItem value="CONDITIONAL">조건부 적합 (CONDITIONAL)</SelectItem>
-                      <SelectItem value="FAIL">부적합 (FAIL)</SelectItem>
+                      {CalibrationResultEnum.options.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {CALIBRATION_RESULT_LABELS[value]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            <FormItem>
+              <FormLabel>교정성적서 파일 *</FormLabel>
+              <FormControl>
+                <Input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => setCertificateFile(e.target.files?.[0] || null)}
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">PDF 또는 이미지 파일 (최대 10MB)</p>
+              {!certificateFile && (
+                <p className="text-xs text-destructive">교정성적서 파일을 첨부해주세요</p>
+              )}
+            </FormItem>
             <FormField
               control={form.control}
               name="notes"
@@ -302,8 +377,8 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 취소
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '저장 중...' : '등록 (승인 요청)'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? '저장 중...' : '등록 (승인 요청)'}
               </Button>
             </DialogFooter>
           </form>
@@ -369,7 +444,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {calibrations.map((cal: any) => (
+            {calibrations.map((cal: Calibration) => (
               <TableRow key={cal.id}>
                 <TableCell>{dayjs(cal.calibrationDate).format('YYYY-MM-DD')}</TableCell>
                 <TableCell>{dayjs(cal.nextCalibrationDate).format('YYYY-MM-DD')}</TableCell>
@@ -377,14 +452,14 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 <TableCell>
                   <Badge
                     variant={
-                      cal.calibrationResult === 'PASS'
+                      cal.calibrationResult === 'pass' || cal.calibrationResult === 'PASS'
                         ? 'default'
-                        : cal.calibrationResult === 'CONDITIONAL'
+                        : cal.calibrationResult === 'conditional' || cal.calibrationResult === 'CONDITIONAL'
                           ? 'secondary'
                           : 'destructive'
                     }
                   >
-                    {RESULT_LABELS[cal.calibrationResult] || cal.calibrationResult}
+                    {getResultLabel(cal.calibrationResult)}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -398,7 +473,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                             : 'outline'
                       }
                     >
-                      {APPROVAL_STATUS_LABELS[cal.approvalStatus] || cal.approvalStatus}
+                      {CALIBRATION_APPROVAL_STATUS_LABELS[cal.approvalStatus as keyof typeof CALIBRATION_APPROVAL_STATUS_LABELS] || cal.approvalStatus}
                     </Badge>
                   )}
                 </TableCell>

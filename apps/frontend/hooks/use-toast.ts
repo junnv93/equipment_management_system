@@ -4,8 +4,6 @@
 import * as React from "react"
 
 import type {
-  ToastActionElement,
-  ToastProps,
   ToasterToast
 } from "@/components/ui/toast"
 
@@ -20,6 +18,7 @@ const TOAST_REMOVE_DELAY = 1000000
 //   action?: ToastActionElement
 // }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Used for ActionType type inference
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
   UPDATE_TOAST: "UPDATE_TOAST",

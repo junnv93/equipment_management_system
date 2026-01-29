@@ -9,7 +9,6 @@ import {
   Package,
   CheckCircle,
   Play,
-  Clock,
   AlertCircle,
   AlertTriangle,
   XCircle,
@@ -42,7 +41,7 @@ interface EquipmentHeaderProps {
  */
 export function EquipmentHeader({ equipment }: EquipmentHeaderProps) {
   const router = useRouter();
-  const { user, hasRole } = useAuth();
+  const { hasRole } = useAuth();
 
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장
   const equipmentId = String(equipment.id);

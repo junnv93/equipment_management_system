@@ -53,11 +53,11 @@ interface LocationHistorySectionProps {
 }
 
 export function LocationHistorySection({
-  equipmentUuid,
+  equipmentUuid: _equipmentUuid,
   history,
   onAdd,
   onDelete,
-  isLoading = false,
+  isLoading: _isLoading = false,
   disabled = false,
 }: LocationHistorySectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

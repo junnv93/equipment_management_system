@@ -2,7 +2,9 @@
 
 import { CalendarIcon, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { dashboardApi, UpcomingCalibration } from "@/lib/api";
+// ✅ 직접 import (barrel import 제거)
+import dashboardApi from "@/lib/api/dashboard-api";
+import type { UpcomingCalibration } from "@/lib/api/dashboard-api";
 import { Card } from "@/components/ui/card";
 
 interface CalibrationItem {

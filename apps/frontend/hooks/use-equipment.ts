@@ -12,11 +12,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import equipmentApi, {
-  Equipment,
   EquipmentQuery,
   CreateEquipmentDto,
   UpdateEquipmentDto,
-  EquipmentMutationResponse,
 } from '@/lib/api/equipment-api';
 import { getErrorMessage } from '@/lib/api/error';
 

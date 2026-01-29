@@ -32,51 +32,53 @@ function TabSkeleton() {
   );
 }
 
-// 동적 import로 탭 컴포넌트 지연 로딩 (Vercel Best Practice: bundle-dynamic-imports)
-// 사용자가 해당 탭을 클릭할 때만 번들이 로드됨
+// 동적 import로 탭 컴포넌트 지연 로딩
+// ✅ Vercel Best Practice: bundle-dynamic-imports + ssr: false
+// - 사용자가 해당 탭을 클릭할 때만 번들이 로드됨
+// - ssr: false로 서버 번들 크기 감소 (탭은 클라이언트 상호작용 후에만 필요)
 const BasicInfoTab = dynamic(
   () => import('./BasicInfoTab').then((mod) => ({ default: mod.BasicInfoTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const CalibrationHistoryTab = dynamic(
   () => import('./CalibrationHistoryTab').then((mod) => ({ default: mod.CalibrationHistoryTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const CalibrationFactorsTab = dynamic(
   () => import('./CalibrationFactorsTab').then((mod) => ({ default: mod.CalibrationFactorsTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const CheckoutHistoryTab = dynamic(
   () => import('./CheckoutHistoryTab').then((mod) => ({ default: mod.CheckoutHistoryTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const LocationHistoryTab = dynamic(
   () => import('./LocationHistoryTab').then((mod) => ({ default: mod.LocationHistoryTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const MaintenanceHistoryTab = dynamic(
   () => import('./MaintenanceHistoryTab').then((mod) => ({ default: mod.MaintenanceHistoryTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const IncidentHistoryTab = dynamic(
   () => import('./IncidentHistoryTab').then((mod) => ({ default: mod.IncidentHistoryTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const SoftwareTab = dynamic(
   () => import('./SoftwareTab').then((mod) => ({ default: mod.SoftwareTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 const AttachmentsTab = dynamic(
   () => import('./AttachmentsTab').then((mod) => ({ default: mod.AttachmentsTab })),
-  { loading: () => <TabSkeleton />, ssr: true }
+  { loading: () => <TabSkeleton />, ssr: false }
 );
 
 interface EquipmentTabsProps {

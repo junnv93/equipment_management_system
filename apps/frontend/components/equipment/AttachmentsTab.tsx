@@ -8,7 +8,7 @@ interface AttachmentsTabProps {
   equipment: Equipment;
 }
 
-export function AttachmentsTab({ equipment }: AttachmentsTabProps) {
+export function AttachmentsTab({ equipment: _equipment }: AttachmentsTabProps) {
   return (
     <Card>
       <CardHeader>

@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useMemo } from 'react';
-import { List, RowComponentProps } from 'react-window';
+import { List, type RowComponentProps } from 'react-window';
 import { useInfiniteLoader } from 'react-window-infinite-loader';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,12 +49,12 @@ const EquipmentRow = memo(
       if (!dateString) return '-';
       try {
         return dayjs(dateString).format('YYYY-MM-DD');
-      } catch (error) {
+      } catch {
         return dateString;
       }
     };
 
-    const handleClick = useCallback(() => {
+    const _handleClick = useCallback(() => {
       if (onClick) onClick(equipment);
     }, [equipment, onClick]);
 

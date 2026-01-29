@@ -19,6 +19,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
+import { HighlightText } from '@/components/shared/HighlightText';
 import { cn } from '@/lib/utils';
 import {
   getEquipmentStatusStyle,
@@ -30,36 +31,6 @@ interface EquipmentCardGridProps {
   isLoading: boolean;
   searchTerm?: string;
 }
-
-/**
- * 검색어 하이라이팅 컴포넌트
- */
-const HighlightText = memo(function HighlightText({
-  text,
-  search,
-}: {
-  text: string;
-  search?: string;
-}) {
-  if (!search || !text) return <>{text}</>;
-
-  const regex = new RegExp(`(${search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
-
-  return (
-    <>
-      {parts.map((part, i) =>
-        regex.test(part) ? (
-          <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 rounded px-0.5">
-            {part}
-          </mark>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-});
 
 /**
  * 스켈레톤 카드

@@ -9,7 +9,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
-import { transformErrorResponse } from '@/lib/api/utils/response-transformers';
+import { createApiError } from '@/lib/api/utils/response-transformers';
 
 export interface UseFormSubmissionOptions<TData, TVariables> {
   /** Mutation 함수 */
@@ -68,11 +68,11 @@ export function useFormSubmission<TData, TVariables>({
     },
     onError: (error: unknown) => {
       // 에러 변환 (API_STANDARDS 준수)
-      const transformedError = transformErrorResponse(error);
+      const apiError = createApiError(error);
 
       toast({
         title: errorMessage.title,
-        description: transformedError.message || errorMessage.description,
+        description: apiError.message || errorMessage.description,
         variant: 'destructive',
       });
 

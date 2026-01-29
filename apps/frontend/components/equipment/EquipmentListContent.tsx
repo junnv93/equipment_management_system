@@ -136,6 +136,9 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   } = useEquipmentFilters();
 
   // 장비 목록 쿼리
+  // ✅ Vercel Best Practice: Query Key 객체 사용
+  // - React Query v5는 queryKey 객체를 deep comparison으로 비교
+  // - useEquipmentFilters가 queryFilters를 useMemo로 안정화하므로 캐시 히트율 최적
   const {
     data,
     isLoading,

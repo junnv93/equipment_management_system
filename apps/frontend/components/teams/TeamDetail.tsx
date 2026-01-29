@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
@@ -23,7 +22,6 @@ import { SITE_CONFIG } from '@/lib/api/teams-api';
 import { TeamTypeIcon, TeamTypeBadge } from './TeamTypeIcon';
 import { TeamMemberList } from './TeamMemberList';
 import { TeamEquipmentList } from './TeamEquipmentList';
-import { cn } from '@/lib/utils';
 
 // 삭제 모달은 dynamic import로 지연 로딩
 const DeleteTeamModal = dynamic(
@@ -53,7 +51,7 @@ interface TeamDetailProps {
  */
 export function TeamDetail({ team, members = [] }: TeamDetailProps) {
   const router = useRouter();
-  const { hasRole, user } = useAuth();
+  const { hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState('members');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 

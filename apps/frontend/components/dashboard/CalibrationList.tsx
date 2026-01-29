@@ -58,10 +58,6 @@ export function CalibrationList({
     }
   }
 
-  const handleViewEquipment = (id: string) => {
-    router.push(`/equipment/${id}`)
-  }
-
   const handleViewCalibration = (id: string) => {
     router.push(`/calibration/${id}`)
   }

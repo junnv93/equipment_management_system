@@ -63,7 +63,14 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
     innerRadius,
     outerRadius,
     percent
-  }: any) => {
+  }: {
+    cx: number;
+    cy: number;
+    midAngle: number;
+    innerRadius: number;
+    outerRadius: number;
+    percent: number;
+  }) => {
     // 5% 이하의 작은 섹션은 라벨 생략
     if (percent < 0.05) return null;
 

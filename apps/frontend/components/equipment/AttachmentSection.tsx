@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';

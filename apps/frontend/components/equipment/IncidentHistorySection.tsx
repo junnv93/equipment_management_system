@@ -75,11 +75,11 @@ interface IncidentHistorySectionProps {
 }
 
 export function IncidentHistorySection({
-  equipmentUuid,
+  equipmentUuid: _equipmentUuid,
   history,
   onAdd,
   onDelete,
-  isLoading = false,
+  isLoading: _isLoading = false,
   disabled = false,
 }: IncidentHistorySectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

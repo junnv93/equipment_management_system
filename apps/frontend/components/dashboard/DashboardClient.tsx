@@ -129,6 +129,12 @@ export interface DashboardClientProps {
 
 /**
  * 대시보드 클라이언트 컴포넌트
+ *
+ * ✅ Vercel Best Practice: async-parallel
+ * - React Query는 독립적인 useQuery 훅을 자동으로 병렬 실행합니다
+ * - 아래 7개 쿼리는 동시에 시작되어 waterfall 없이 데이터를 가져옵니다
+ * - initialData로 Server Component에서 받은 데이터를 hydration하여 FCP 최적화
+ * - useQueries는 동적 쿼리 수에 유용하지만, 정적 쿼리에서는 현재 패턴이 최적입니다
  */
 function DashboardClientComponent({
   initialSummary,
@@ -198,7 +204,7 @@ function DashboardClientComponent({
   const { data: overdueRentals = initialOverdueRentals || [], isLoading: rentalLoading } =
     useQuery({
       queryKey: ['overdue-rentals', userRole],
-      queryFn: () => dashboardApi.getOverdueRentals(),
+      queryFn: () => dashboardApi.getOverdueCheckouts(),
       initialData: initialOverdueRentals,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
@@ -321,9 +327,9 @@ function DashboardClientComponent({
           variant: 'warning' as const,
         },
         {
-          key: 'rentals',
-          title: '대여 중',
-          value: summary?.activeRentals || 0,
+          key: 'checkouts',
+          title: '반출 중',
+          value: summary?.activeCheckouts || 0,
           icon: FiClock,
           variant: 'primary' as const,
         },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Control, useWatch, useFormContext } from 'react-hook-form';
+import { Control, useFormContext } from 'react-hook-form';
 import {
   type EquipmentStatus,
   type CalibrationMethod,
@@ -37,7 +37,6 @@ import {
   CLASSIFICATION_TO_CODE,
   generateManagementNumber,
   formatSerialNumber,
-  isValidManagementNumber,
 } from '@/lib/constants/management-number';
 
 /**
@@ -149,7 +148,7 @@ export function BasicInfoSection({
   // 관리번호 자동 생성용 상태
   const [selectedClassification, setSelectedClassification] = useState<Classification | undefined>();
   const [serialNumberInput, setSerialNumberInput] = useState('');
-  const { setValue, watch } = useFormContext<FormValues>();
+  const { setValue } = useFormContext<FormValues>();
 
   /**
    * 팀 선택 시 분류코드 자동 설정 핸들러

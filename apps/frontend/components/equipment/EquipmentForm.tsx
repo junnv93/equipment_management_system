@@ -2,14 +2,11 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
   type EquipmentStatus,
   type CalibrationMethod,
   type Site,
-  type SpecMatch,
-  type CalibrationRequired,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -31,7 +28,7 @@ import { AttachmentSection } from './AttachmentSection';
 import { LocationHistorySection } from './LocationHistorySection';
 import { MaintenanceHistorySection } from './MaintenanceHistorySection';
 import { IncidentHistorySection } from './IncidentHistorySection';
-import { CalibrationHistorySection, type CreateCalibrationHistoryInput } from './CalibrationHistorySection';
+import { CalibrationHistorySection, type CreateCalibrationHistoryInput, type CalibrationRecord } from './CalibrationHistorySection';
 import { AlertCircle, CheckCircle2, Clock, Shield } from 'lucide-react';
 import dayjs from 'dayjs';
 import equipmentApi, {
@@ -45,8 +42,8 @@ import equipmentApi, {
 import { useToast } from '@/components/ui/use-toast';
 import { ApiError } from '@/lib/errors/equipment-errors';
 
-// 동적 Zod 스키마 생성 함수
-const createDynamicSchema = (
+// 동적 Zod 스키마 생성 함수 (향후 폼 검증 강화용으로 유지)
+const _createDynamicSchema = (
   calibrationMethod?: CalibrationMethod,
   needsIntermediateCheck?: boolean
 ) => {
@@ -134,7 +131,7 @@ type PendingCalibrationHistoryItem = PendingHistoryItem<CreateCalibrationHistory
 interface EquipmentFormProps {
   initialData?: Partial<FormValues & { uuid?: string }>;
   onSubmit: (
-    data: any,
+    data: Record<string, unknown>,
     files?: UploadedFile[],
     pendingHistory?: PendingHistoryData
   ) => Promise<void>;
@@ -193,24 +190,24 @@ export function EquipmentForm({
   existingAttachments = [],
 }: EquipmentFormProps) {
   // 사용자 정보 가져오기
-  const { user, isManager, isAdmin } = useAuth();
+  const { user, isManager: _isManager, isAdmin: _isAdmin } = useAuth();
   const { toast } = useToast();
   const userSite = (user as { site?: Site })?.site;
-  const userRoles = (user as { roles?: string[] })?.roles || [];
 
-  // 사용자 역할 결정
+  // 사용자 역할 결정 - useMemo 내부에서 직접 roles 접근하여 의존성 안정화
   const userRole = useMemo(() => {
-    if (userRoles.some((r) => ['system_admin', 'SYSTEM_ADMIN'].includes(r))) return 'system_admin';
-    if (userRoles.some((r) => ['lab_manager', 'LAB_MANAGER', 'admin', 'ADMIN'].includes(r)))
+    const roles = (user as { roles?: string[] })?.roles || [];
+    if (roles.some((r) => ['system_admin', 'SYSTEM_ADMIN'].includes(r))) return 'system_admin';
+    if (roles.some((r) => ['lab_manager', 'LAB_MANAGER', 'admin', 'ADMIN'].includes(r)))
       return 'lab_manager';
     if (
-      userRoles.some((r) =>
+      roles.some((r) =>
         ['technical_manager', 'TECHNICAL_MANAGER', 'manager', 'MANAGER'].includes(r)
       )
     )
       return 'technical_manager';
     return 'test_engineer';
-  }, [userRoles]);
+  }, [user]);
 
   const roleInfo = ROLE_INFO[userRole];
   const needsApproval = roleInfo.needsApproval;
@@ -231,7 +228,7 @@ export function EquipmentForm({
   const [locationHistory, setLocationHistory] = useState<LocationHistoryItem[]>([]);
   const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceHistoryItem[]>([]);
   const [incidentHistory, setIncidentHistory] = useState<IncidentHistoryItem[]>([]);
-  const [calibrationHistory, setCalibrationHistory] = useState<any[]>([]);
+  const [calibrationHistory, setCalibrationHistory] = useState<CalibrationRecord[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   /**
@@ -252,12 +249,12 @@ export function EquipmentForm({
       assetNumber: initialData?.assetNumber || '',
       modelName: initialData?.modelName || '',
       manufacturer: initialData?.manufacturer || '',
-      manufacturerContact: (initialData as any)?.manufacturerContact || '',
+      manufacturerContact: initialData?.manufacturerContact || '',
       serialNumber: initialData?.serialNumber || '',
       location: initialData?.location || '',
       description: initialData?.description || '',
-      specMatch: (initialData as any)?.specMatch || undefined,
-      calibrationRequired: (initialData as any)?.calibrationRequired || undefined,
+      specMatch: initialData?.specMatch || undefined,
+      calibrationRequired: initialData?.calibrationRequired || undefined,
       calibrationCycle: initialData?.calibrationCycle,
       lastCalibrationDate: initialData?.lastCalibrationDate
         ? dayjs(initialData.lastCalibrationDate).format('YYYY-MM-DD')
@@ -268,12 +265,12 @@ export function EquipmentForm({
       calibrationAgency: initialData?.calibrationAgency || '',
       needsIntermediateCheck: initialData?.needsIntermediateCheck || false,
       calibrationMethod: initialData?.calibrationMethod,
-      lastIntermediateCheckDate: (initialData as any)?.lastIntermediateCheckDate
-        ? dayjs((initialData as any).lastIntermediateCheckDate).format('YYYY-MM-DD')
+      lastIntermediateCheckDate: initialData?.lastIntermediateCheckDate
+        ? dayjs(initialData.lastIntermediateCheckDate).format('YYYY-MM-DD')
         : '',
-      intermediateCheckCycle: (initialData as any)?.intermediateCheckCycle,
-      nextIntermediateCheckDate: (initialData as any)?.nextIntermediateCheckDate
-        ? dayjs((initialData as any).nextIntermediateCheckDate).format('YYYY-MM-DD')
+      intermediateCheckCycle: initialData?.intermediateCheckCycle,
+      nextIntermediateCheckDate: initialData?.nextIntermediateCheckDate
+        ? dayjs(initialData.nextIntermediateCheckDate).format('YYYY-MM-DD')
         : '',
       purchaseYear:
         initialData?.purchaseYear !== undefined && initialData?.purchaseYear !== null
@@ -291,9 +288,9 @@ export function EquipmentForm({
       manualLocation: initialData?.manualLocation || '',
       accessories: initialData?.accessories || '',
       technicalManager: initialData?.technicalManager || '',
-      initialLocation: (initialData as any)?.initialLocation || '',
-      installationDate: (initialData as any)?.installationDate
-        ? dayjs((initialData as any).installationDate).format('YYYY-MM-DD')
+      initialLocation: initialData?.initialLocation || '',
+      installationDate: initialData?.installationDate
+        ? dayjs(initialData.installationDate).format('YYYY-MM-DD')
         : '',
       status: (initialData?.status || 'available') as EquipmentStatus,
       calibrationResult: initialData?.calibrationResult || '',
@@ -316,7 +313,17 @@ export function EquipmentForm({
           setLocationHistory(locations);
           setMaintenanceHistory(maintenance);
           setIncidentHistory(incidents);
-          setCalibrationHistory(calibrations);
+          // CalibrationHistoryItem → CalibrationRecord 변환
+          const calibrationRecords: CalibrationRecord[] = calibrations.map((item) => ({
+            id: item.id,
+            calibrationDate: item.calibrationDate,
+            nextCalibrationDate: item.nextCalibrationDate,
+            calibrationAgency: item.calibrationAgency,
+            result: item.result,
+            approvalStatus: item.approvalStatus,
+            status: 'completed', // API 응답에서는 완료된 이력만 반환
+          }));
+          setCalibrationHistory(calibrationRecords);
         } catch (error) {
           console.error('Failed to load history:', error);
         } finally {
@@ -503,7 +510,7 @@ export function EquipmentForm({
   const handleAddCalibrationHistory = useCallback(async (data: CreateCalibrationHistoryInput) => {
     // 등록 모드: 임시 상태에 추가
     const tempId = generateTempId();
-    const tempItem = {
+    const tempItem: CalibrationRecord = {
       id: tempId,
       calibrationDate: data.calibrationDate,
       nextCalibrationDate: data.nextCalibrationDate,

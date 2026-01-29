@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, FileOutput, Calendar, ArrowRight, User } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import checkoutApi, { type CreateCheckoutDto } from '@/lib/api/checkout-api';
+import checkoutApi, { type CreateCheckoutDto, type Checkout } from '@/lib/api/checkout-api';
 import dayjs from 'dayjs';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
@@ -96,7 +96,7 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 
  * - 반출 신청 (교정/수리/외부대여)
  */
 export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
-  const { hasRole, user } = useAuth();
+  const { hasRole, user: _user } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -429,7 +429,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
           {/* 타임라인 세로선 */}
           <div className="absolute left-6 top-3 bottom-3 w-0.5 bg-gray-200 dark:bg-gray-800" />
 
-          {checkouts.map((checkout: any, index: number) => (
+          {checkouts.map((checkout: Checkout, index: number) => (
             <div key={checkout.id} className="relative flex gap-4">
               {/* 타임라인 점 */}
               <div className="relative flex-shrink-0">

@@ -8,7 +8,7 @@ interface CalibrationFactorsTabProps {
   equipment: Equipment;
 }
 
-export function CalibrationFactorsTab({ equipment }: CalibrationFactorsTabProps) {
+export function CalibrationFactorsTab({ equipment: _equipment }: CalibrationFactorsTabProps) {
   return (
     <Card>
       <CardHeader>

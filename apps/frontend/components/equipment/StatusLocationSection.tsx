@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { Control, useWatch } from 'react-hook-form';
-import { type EquipmentStatus, type Site } from '@equipment-management/schemas';
+import {
+  type EquipmentStatus,
+  type Site,
+  EQUIPMENT_STATUS_LABELS,
+} from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -25,19 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { FormValues } from './BasicInfoSection';
 import { apiClient } from '@/lib/api/api-client';
 
-/**
- * 장비 상태값 한글 라벨 매핑
- */
-const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
-  available: '사용 가능',
-  in_use: '사용 중',
-  checked_out: '반출 중',
-  calibration_scheduled: '교정 예정',
-  calibration_overdue: '교정 기한 초과',
-  non_conforming: '부적합',
-  spare: '여분',
-  retired: '폐기',
-};
+// EQUIPMENT_STATUS_LABELS는 @equipment-management/schemas에서 import (SSOT)
 
 /**
  * 장비 상태별 색상 매핑
@@ -72,8 +64,8 @@ interface StatusLocationSectionProps {
 
 export function StatusLocationSection({
   control,
-  isEdit = false,
-  showSharedOptions = false,
+  isEdit: _isEdit = false,
+  showSharedOptions: _showSharedOptions = false,
   selectedSite,
   selectedTeamId,
 }: StatusLocationSectionProps) {
@@ -103,8 +95,9 @@ export function StatusLocationSection({
         }
 
         const response = await apiClient.get(`/api/users?${params.toString()}`);
-        const responseData = response as any;
-        const userData = responseData.data?.items || responseData.items || responseData.data || responseData;
+        type UserResponse = { data?: { items?: TechnicalManager[] }; items?: TechnicalManager[] };
+        const responseData = response as UserResponse;
+        const userData = responseData.data?.items || responseData.items || [];
         setTechnicalManagers(Array.isArray(userData) ? userData : []);
       } catch (error) {
         console.error('Failed to fetch technical managers:', error);

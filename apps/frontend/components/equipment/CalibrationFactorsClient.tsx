@@ -177,9 +177,9 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
+          <Button variant="ghost" size="icon" asChild aria-label="장비 상세로 돌아가기">
             <Link href={`/equipment/${equipmentId}`}>
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
             </Link>
           </Button>
           <div>

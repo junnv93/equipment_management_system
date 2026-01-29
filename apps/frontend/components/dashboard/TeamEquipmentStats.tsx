@@ -2,7 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { dashboardApi, EquipmentByTeam } from "@/lib/api";
+// ✅ 직접 import (barrel import 제거)
+import dashboardApi from "@/lib/api/dashboard-api";
+import type { EquipmentByTeam } from "@/lib/api/dashboard-api";
 import { AlertTriangle } from "lucide-react";
 
 interface TeamStats {

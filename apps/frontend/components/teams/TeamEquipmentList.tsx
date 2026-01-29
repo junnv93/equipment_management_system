@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
+import equipmentApi from '@/lib/api/equipment-api';
 import { cn } from '@/lib/utils';
 
 interface TeamEquipmentListProps {
