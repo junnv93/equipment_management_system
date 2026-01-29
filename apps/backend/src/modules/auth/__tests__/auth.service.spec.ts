@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth.service';
+import { AuthService, AzureADUser } from '../auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { UserRole } from '../rbac/roles.enum';
 
@@ -165,7 +165,10 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException if no Azure user is provided', () => {
       // Act & Assert
-      expect(() => service.validateAzureADUser(null)).toThrow(UnauthorizedException);
+      // 테스트 목적: null이 전달될 때 예외 발생 확인 (런타임에서 발생 가능한 케이스)
+      expect(() => service.validateAzureADUser(null as unknown as AzureADUser)).toThrow(
+        UnauthorizedException
+      );
     });
 
     it('should default to TEST_ENGINEER role if no roles provided', () => {

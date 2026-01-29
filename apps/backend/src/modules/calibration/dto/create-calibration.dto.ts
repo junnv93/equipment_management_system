@@ -6,6 +6,7 @@ import {
   CalibrationStatusEnum,
   CalibrationApprovalStatusEnum,
   CalibrationRegisteredByRoleEnum,
+  CalibrationResultEnum,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -21,7 +22,9 @@ export const calibrationBaseSchema = z.object({
   calibrationMethod: CalibrationMethodEnum,
   status: CalibrationStatusEnum.default(CalibrationStatusEnum.enum.scheduled),
   calibrationAgency: z.string().min(1, '교정 기관을 입력해주세요').max(100),
-  certificationNumber: z.string().max(50).optional(),
+  certificationNumber: z.string().max(100).optional(),
+  certificatePath: z.string().max(500).optional(), // 교정성적서 파일 경로
+  result: CalibrationResultEnum.optional(), // 교정 결과 (SSOT)
   cost: z.number().min(0).optional(),
   isPassed: z.boolean().optional(),
   resultNotes: z.string().optional(),
@@ -104,6 +107,21 @@ export class CreateCalibrationDto {
     required: false,
   })
   certificationNumber?: string;
+
+  @ApiProperty({
+    description: '교정성적서 파일 경로',
+    example: '/uploads/calibration/cert-2023-12345.pdf',
+    required: false,
+  })
+  certificatePath?: string;
+
+  @ApiProperty({
+    description: '교정 결과',
+    enum: ['pass', 'fail', 'conditional'],
+    example: 'pass',
+    required: false,
+  })
+  result?: string;
 
   @ApiProperty({
     description: '교정 비용',

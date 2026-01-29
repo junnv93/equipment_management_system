@@ -2,17 +2,22 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
+// SSOT: schemas 패키지에서 enum 값 import
+import { SiteEnum, CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+
 // ========== Zod 스키마 정의 ==========
 
 /**
- * 시험소 ID 값
+ * 시험소 ID 값 (SSOT: SiteEnum에서 파생)
+ * - suwon, uiwang, pyeongtaek
  */
-const siteIdValues = ['suwon', 'uiwang'] as const;
+const siteIdValues = SiteEnum.options;
 
 /**
- * 교정계획서 상태 값
+ * 교정계획서 상태 값 (SSOT: CALIBRATION_PLAN_STATUS_VALUES)
+ * - draft, pending_review, pending_approval, approved, rejected
  */
-const calibrationPlanStatusValues = ['draft', 'pending_approval', 'approved', 'rejected'] as const;
+const calibrationPlanStatusValues = CALIBRATION_PLAN_STATUS_VALUES;
 
 /**
  * 교정계획서 조회 쿼리 스키마
@@ -24,7 +29,7 @@ export const calibrationPlanQuerySchema = z.object({
   ),
   siteId: z
     .enum(siteIdValues, {
-      message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang)',
+      message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang, pyeongtaek)',
     })
     .optional(),
   status: z
@@ -52,7 +57,7 @@ export const externalEquipmentQuerySchema = z.object({
   ),
   siteId: z
     .enum(siteIdValues, {
-      message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang)',
+      message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang, pyeongtaek)',
     })
     .optional(),
 });
@@ -74,14 +79,14 @@ export class CalibrationPlanQueryDto {
   @ApiPropertyOptional({
     description: '시험소 ID',
     example: 'suwon',
-    enum: ['suwon', 'uiwang'],
+    enum: ['suwon', 'uiwang', 'pyeongtaek'],
   })
   siteId?: string;
 
   @ApiPropertyOptional({
-    description: '상태',
+    description: '상태 (3단계 승인)',
     example: 'draft',
-    enum: ['draft', 'pending_approval', 'approved', 'rejected'],
+    enum: CALIBRATION_PLAN_STATUS_VALUES,
   })
   status?: string;
 
@@ -108,7 +113,7 @@ export class ExternalEquipmentQueryDto {
   @ApiPropertyOptional({
     description: '시험소 ID',
     example: 'suwon',
-    enum: ['suwon', 'uiwang'],
+    enum: ['suwon', 'uiwang', 'pyeongtaek'],
   })
   siteId?: string;
 }

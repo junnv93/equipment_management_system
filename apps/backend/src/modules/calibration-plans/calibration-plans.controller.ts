@@ -33,6 +33,8 @@ import {
   RejectCalibrationPlanDto,
   SubmitCalibrationPlanDto,
   ConfirmPlanItemDto,
+  SubmitForReviewDto,
+  ReviewCalibrationPlanDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -143,8 +145,8 @@ export class CalibrationPlansController {
 
   @Post(':uuid/submit')
   @ApiOperation({
-    summary: '승인 요청',
-    description: '교정계획서의 승인을 요청합니다 (draft -> pending_approval).',
+    summary: '승인 요청 (레거시)',
+    description: '교정계획서의 승인을 요청합니다. submit-for-review 사용 권장.',
   })
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '승인 요청 성공' })
@@ -160,10 +162,47 @@ export class CalibrationPlansController {
     return this.calibrationPlansService.submit(uuid);
   }
 
+  @Post(':uuid/submit-for-review')
+  @ApiOperation({
+    summary: '검토 요청',
+    description:
+      '교정계획서의 검토를 요청합니다 (draft/rejected -> pending_review). 기술책임자가 품질책임자에게 요청.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
+  @ApiResponse({ status: HttpStatus.OK, description: '검토 요청 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.SUBMIT_CALIBRATION_PLAN)
+  submitForReview(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() submitDto: SubmitForReviewDto
+  ) {
+    return this.calibrationPlansService.submitForReview(uuid, submitDto);
+  }
+
+  @Patch(':uuid/review')
+  @ApiOperation({
+    summary: '검토 완료',
+    description:
+      '교정계획서 검토를 완료합니다 (pending_review -> pending_approval). 품질책임자만 가능.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
+  @ApiResponse({ status: HttpStatus.OK, description: '검토 완료 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.REVIEW_CALIBRATION_PLAN)
+  review(@Param('uuid', ParseUUIDPipe) uuid: string, @Body() reviewDto: ReviewCalibrationPlanDto) {
+    return this.calibrationPlansService.review(uuid, reviewDto);
+  }
+
   @Patch(':uuid/approve')
   @ApiOperation({
-    summary: '승인',
-    description: '교정계획서를 승인합니다 (pending_approval -> approved). lab_manager만 가능.',
+    summary: '최종 승인',
+    description: '교정계획서를 최종 승인합니다 (pending_approval -> approved). 시험소장만 가능.',
   })
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '승인 성공' })
@@ -183,7 +222,7 @@ export class CalibrationPlansController {
   @ApiOperation({
     summary: '반려',
     description:
-      '교정계획서를 반려합니다 (pending_approval -> rejected). lab_manager만 가능, 사유 필수.',
+      '교정계획서를 반려합니다 (pending_review/pending_approval -> rejected). 품질책임자 또는 시험소장, 사유 필수.',
   })
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '반려 성공' })

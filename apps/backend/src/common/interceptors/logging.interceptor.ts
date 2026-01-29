@@ -1,8 +1,25 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { Request } from 'express';
 import { LoggerService } from '../logger/logger.service';
 import { MonitoringService } from '../../modules/monitoring/monitoring.service';
+
+// 인증된 사용자 정보 타입
+interface AuthUser {
+  id?: string;
+  userId?: string;
+}
+
+// Express Request에 user 추가
+interface AuthenticatedRequest extends Request {
+  user?: AuthUser;
+}
+
+// 에러 타입
+interface HttpError extends Error {
+  status?: number;
+}
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -15,8 +32,8 @@ export class LoggingInterceptor implements NestInterceptor {
     this.loggerService.setContext('HTTP');
   }
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const { method, url, body, headers, params, query } = request;
     const userAgent = headers['user-agent'] || '';
     const userId = request.user?.id || 'anonymous';
@@ -38,7 +55,7 @@ export class LoggingInterceptor implements NestInterceptor {
     // 응답 처리 및 로깅
     return next.handle().pipe(
       tap({
-        next: (data: any) => {
+        next: (data: unknown) => {
           const responseTime = Date.now() - startTime;
 
           // 응답 로깅
@@ -54,12 +71,12 @@ export class LoggingInterceptor implements NestInterceptor {
           // info 레벨 로그 카운트 증가
           this.monitoringService.incrementLogCount('info');
         },
-        error: (error: any) => {
+        error: (error: HttpError) => {
           const responseTime = Date.now() - startTime;
 
           // 오류 로깅
           this.loggerService.error(
-            `Error ${method} ${url} ${responseTime}ms ${error.status || 500} ${error.message}`,
+            `Error ${method} ${url} ${responseTime}ms ${error.status ?? 500} ${error.message}`,
             error.stack,
             {
               userId,
@@ -81,7 +98,9 @@ export class LoggingInterceptor implements NestInterceptor {
   /**
    * 민감한 정보를 마스킹 처리하여 로깅
    */
-  private sanitizeBody(body: any): any {
+  private sanitizeBody(
+    body: Record<string, unknown> | null | undefined
+  ): Record<string, unknown> | null | undefined {
     if (!body) return body;
 
     // 객체 복사

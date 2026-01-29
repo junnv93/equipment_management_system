@@ -59,7 +59,7 @@ export class AuthController {
    * 테스트 전용 로그인 엔드포인트
    * E2E 테스트에서 사용됩니다.
    *
-   * @param role - 테스트 사용자의 역할 (test_engineer, technical_manager, lab_manager, system_admin)
+   * @param role - 테스트 사용자의 역할 (test_engineer, technical_manager, quality_manager, lab_manager, system_admin)
    * @returns JWT 토큰을 포함한 인증 정보
    */
   @Get('test-login')
@@ -97,6 +97,15 @@ export class AuthController {
         site: 'suwon',
         teamId: '00000000-0000-0000-0000-000000000099',
       },
+      quality_manager: {
+        id: '00000000-0000-0000-0000-000000000005',
+        uuid: '00000000-0000-0000-0000-000000000005',
+        email: 'quality.manager@example.com',
+        name: '테스트 품질책임자',
+        role: 'quality_manager',
+        site: 'suwon',
+        teamId: '00000000-0000-0000-0000-000000000099',
+      },
       lab_manager: {
         id: '00000000-0000-0000-0000-000000000003',
         uuid: '00000000-0000-0000-0000-000000000003',
@@ -120,7 +129,7 @@ export class AuthController {
     const testUser = testUsers[role];
     if (!testUser) {
       throw new ForbiddenException(
-        `Invalid role: ${role}. Valid roles: test_engineer, technical_manager, lab_manager, system_admin`
+        `Invalid role: ${role}. Valid roles: test_engineer, technical_manager, quality_manager, lab_manager, system_admin`
       );
     }
 

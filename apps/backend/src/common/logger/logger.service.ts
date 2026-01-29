@@ -66,11 +66,11 @@ export class LoggerService implements NestLoggerService {
     return this;
   }
 
-  log(message: string, ...optionalParams: any[]) {
+  log(message: string, ...optionalParams: unknown[]) {
     this.logger.info(message, { context: this.context, ...this.extractMetadata(optionalParams) });
   }
 
-  error(message: string, trace?: string, ...optionalParams: any[]) {
+  error(message: string, trace?: string, ...optionalParams: unknown[]) {
     this.logger.error(message, {
       context: this.context,
       trace,
@@ -78,28 +78,28 @@ export class LoggerService implements NestLoggerService {
     });
   }
 
-  warn(message: string, ...optionalParams: any[]) {
+  warn(message: string, ...optionalParams: unknown[]) {
     this.logger.warn(message, { context: this.context, ...this.extractMetadata(optionalParams) });
   }
 
-  debug(message: string, ...optionalParams: any[]) {
+  debug(message: string, ...optionalParams: unknown[]) {
     this.logger.debug(message, { context: this.context, ...this.extractMetadata(optionalParams) });
   }
 
-  verbose(message: string, ...optionalParams: any[]) {
+  verbose(message: string, ...optionalParams: unknown[]) {
     this.logger.verbose(message, {
       context: this.context,
       ...this.extractMetadata(optionalParams),
     });
   }
 
-  private extractMetadata(params: any[]) {
+  private extractMetadata(params: unknown[]): Record<string, unknown> {
     if (params.length === 0) {
       return {};
     }
 
-    if (params.length === 1 && typeof params[0] === 'object') {
-      return params[0];
+    if (params.length === 1 && typeof params[0] === 'object' && params[0] !== null) {
+      return params[0] as Record<string, unknown>;
     }
 
     return { additionalParams: params };

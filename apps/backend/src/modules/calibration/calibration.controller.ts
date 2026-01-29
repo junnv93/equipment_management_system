@@ -10,8 +10,20 @@ import {
   UseGuards,
   HttpStatus,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { CalibrationService } from './calibration.service';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
@@ -22,13 +34,18 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
 import { CalibrationStatusEnum, CalibrationStatus } from '@equipment-management/schemas';
+import { FileUploadService } from '../equipment/services/file-upload.service';
+import type { MulterFile } from '../../types/common.types';
 
 @ApiTags('교정 관리')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('calibration')
 export class CalibrationController {
-  constructor(private readonly calibrationService: CalibrationService) {}
+  constructor(
+    private readonly calibrationService: CalibrationService,
+    private readonly fileUploadService: FileUploadService
+  ) {}
 
   @Post()
   @ApiOperation({ summary: '교정 일정 등록', description: '새로운 교정 일정을 등록합니다.' })
@@ -197,6 +214,58 @@ export class CalibrationController {
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findOne(@Param('uuid') uuid: string) {
     return this.calibrationService.findOne(uuid);
+  }
+
+  @Post(':uuid/certificate')
+  @ApiOperation({
+    summary: '교정성적서 파일 업로드',
+    description: '특정 교정의 교정성적서 파일을 업로드합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정 ID (UUID)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: '교정성적서 파일 (PDF, JPG, PNG)',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '파일 업로드 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정 일정을 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 파일 형식' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @UseInterceptors(FileInterceptor('file'))
+  @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  async uploadCertificate(
+    @Param('uuid') uuid: string,
+    @UploadedFile() file: MulterFile
+  ) {
+    // 교정 존재 여부 확인
+    await this.calibrationService.findOne(uuid);
+
+    if (!file) {
+      throw new BadRequestException('파일이 업로드되지 않았습니다.');
+    }
+
+    // 파일 저장 (calibration/[uuid] 디렉토리에 저장)
+    const savedFile = await this.fileUploadService.saveFile(file, `calibration/${uuid}`);
+
+    // 교정 정보에 파일 경로 업데이트
+    await this.calibrationService.update(uuid, { certificatePath: savedFile.filePath } as any);
+
+    return {
+      filePath: savedFile.filePath,
+      fileName: savedFile.fileName,
+      originalFileName: savedFile.originalFileName,
+      fileSize: savedFile.fileSize,
+      message: '교정성적서 파일이 업로드되었습니다.',
+    };
   }
 
   @Patch(':uuid')

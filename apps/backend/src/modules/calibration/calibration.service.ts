@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
@@ -15,6 +16,9 @@ import {
   CalibrationRegisteredByRoleEnum,
 } from '@equipment-management/schemas';
 import { getUtcStartOfDay, addDaysUtc } from '../../common/utils';
+import { db } from '../../database/drizzle';
+import { equipment } from '@equipment-management/db/schema';
+import { eq } from 'drizzle-orm';
 
 // 교정 기록 인터페이스
 export interface CalibrationRecord {
@@ -27,6 +31,8 @@ export interface CalibrationRecord {
   status: string;
   calibrationAgency: string;
   certificationNumber: string | null;
+  certificatePath: string | null; // 교정성적서 파일 경로
+  result: string | null; // 교정 결과 (pass, fail, conditional)
   cost: number | null;
   isPassed: boolean | null;
   resultNotes: string | null;
@@ -57,6 +63,8 @@ const temporaryCalibrations: CalibrationRecord[] = [
     status: 'completed',
     calibrationAgency: '한국계측기술원',
     certificationNumber: 'CERT-2023-0001',
+    certificatePath: '/uploads/calibration/CERT-2023-0001.pdf',
+    result: 'pass',
     cost: 500000,
     isPassed: true,
     resultNotes: '모든 파라미터가 허용 오차 범위 내에 있습니다.',
@@ -83,6 +91,8 @@ const temporaryCalibrations: CalibrationRecord[] = [
     status: 'completed',
     calibrationAgency: '테크원 계측',
     certificationNumber: 'CERT-2023-0002',
+    certificatePath: null,
+    result: 'pass',
     cost: 350000,
     isPassed: true,
     resultNotes: '모든 테스트 통과.',
@@ -109,6 +119,8 @@ const temporaryCalibrations: CalibrationRecord[] = [
     status: 'scheduled',
     calibrationAgency: '키사이트 코리아',
     certificationNumber: null,
+    certificatePath: null,
+    result: null,
     cost: null,
     isPassed: null,
     resultNotes: null,
@@ -132,6 +144,8 @@ const calibrations: CalibrationRecord[] = [...temporaryCalibrations];
 
 @Injectable()
 export class CalibrationService {
+  private readonly logger = new Logger(CalibrationService.name);
+
   create(createCalibrationDto: CreateCalibrationDto) {
     const { registeredBy, registeredByRole, registrarComment, ...rest } = createCalibrationDto;
 
@@ -159,6 +173,8 @@ export class CalibrationService {
       status: rest.status || 'scheduled',
       calibrationAgency: rest.calibrationAgency,
       certificationNumber: rest.certificationNumber || null,
+      certificatePath: (rest as any).certificatePath || null,
+      result: (rest as any).result || null,
       cost: rest.cost || null,
       isPassed: rest.isPassed ?? null,
       resultNotes: rest.resultNotes || null,
@@ -440,7 +456,44 @@ export class CalibrationService {
       updatedAt: now,
     };
 
+    // 장비 교정일 자동 업데이트
+    await this.updateEquipmentCalibrationDates(
+      calibration.equipmentId,
+      calibration.calibrationDate,
+      calibration.nextCalibrationDate
+    );
+
     return calibrations[index];
+  }
+
+  /**
+   * 장비의 교정일자를 자동 업데이트합니다.
+   * 교정 승인 시 호출되어 장비의 lastCalibrationDate, nextCalibrationDate를 갱신합니다.
+   */
+  private async updateEquipmentCalibrationDates(
+    equipmentId: string,
+    calibrationDate: Date,
+    nextCalibrationDate: Date
+  ) {
+    try {
+      await db
+        .update(equipment)
+        .set({
+          lastCalibrationDate: calibrationDate,
+          nextCalibrationDate: nextCalibrationDate,
+          updatedAt: new Date(),
+        })
+        .where(eq(equipment.id, equipmentId));
+
+      this.logger.log(
+        `장비 교정일 업데이트 완료: ${equipmentId}, ` +
+          `lastCalibrationDate: ${calibrationDate}, ` +
+          `nextCalibrationDate: ${nextCalibrationDate}`
+      );
+    } catch (error) {
+      this.logger.error(`장비 교정일 업데이트 실패: ${equipmentId}`, error);
+      // 장비 업데이트 실패는 교정 승인을 차단하지 않음 (best effort)
+    }
   }
 
   // 교정 반려

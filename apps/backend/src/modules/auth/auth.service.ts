@@ -22,6 +22,51 @@ export interface AuthResponse {
   user: UserDto;
 }
 
+/**
+ * Azure AD 사용자 정보 인터페이스
+ * Microsoft Identity Platform에서 받는 JWT 클레임 기반
+ * 다양한 인증 소스와 호환되도록 optional 필드로 정의
+ */
+export interface AzureADUser {
+  // Object ID (Azure AD) 또는 다른 인증 소스의 ID
+  oid?: string;
+  sub?: string;
+  userId?: string;
+  id?: string;
+  // 이메일/사용자명
+  preferred_username?: string;
+  email?: string;
+  upn?: string;
+  // 이름
+  name?: string;
+  // 권한 관련
+  roles?: string[];
+  groups?: string[];
+  // 추가 정보
+  department?: string;
+  jobTitle?: string;
+  position?: string;
+  site?: string;
+  teamId?: string;
+}
+
+/**
+ * 테스트 사용자 정보 인터페이스
+ * E2E 테스트에서 사용되는 사용자 정보
+ */
+export interface TestUser {
+  id?: string;
+  uuid?: string;
+  email: string;
+  name: string;
+  role: string;
+  department?: string;
+  site?: 'suwon' | 'uiwang' | 'pyeongtaek';
+  location?: '수원랩' | '의왕랩' | '평택랩';
+  position?: string;
+  teamId?: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -86,7 +131,7 @@ export class AuthService {
   }
 
   // Azure AD 인증 처리 (프로덕션 환경)
-  validateAzureADUser(azureUser: any): AuthResponse {
+  validateAzureADUser(azureUser: AzureADUser): AuthResponse {
     if (!azureUser) {
       throw new UnauthorizedException('Azure AD 인증에 실패했습니다.');
     }
@@ -95,16 +140,21 @@ export class AuthService {
     const { teamId, site, location } = this.mapAzureGroupsToTeamAndLocation(azureUser.groups || []);
 
     // Azure AD에서 받은 정보로 사용자 객체 생성
+    // 다양한 인증 소스 호환을 위해 fallback 처리
+    const userId = azureUser.oid ?? azureUser.sub ?? azureUser.userId ?? azureUser.id ?? '';
+    const userEmail = azureUser.preferred_username ?? azureUser.email ?? azureUser.upn ?? '';
+    const userName = azureUser.name ?? '';
+
     const user: UserDto = {
-      id: azureUser.oid,
-      email: azureUser.preferred_username,
-      name: azureUser.name,
+      id: userId,
+      email: userEmail,
+      name: userName,
       roles: this.mapAzureRolesToAppRoles(azureUser.roles || []),
       department: azureUser.department,
       site,
       location,
-      position: azureUser.jobTitle || azureUser.position,
-      teamId,
+      position: azureUser.jobTitle ?? azureUser.position,
+      teamId: teamId ?? azureUser.teamId,
     };
 
     // 토큰 생성
@@ -145,10 +195,13 @@ export class AuthService {
       },
     };
 
-    const siteMapping: Record<string, {
-      site: 'suwon' | 'uiwang' | 'pyeongtaek';
-      location: '수원랩' | '의왕랩' | '평택랩';
-    }> = {
+    const siteMapping: Record<
+      string,
+      {
+        site: 'suwon' | 'uiwang' | 'pyeongtaek';
+        location: '수원랩' | '의왕랩' | '평택랩';
+      }
+    > = {
       SUW: { site: 'suwon', location: '수원랩' },
       UIW: { site: 'uiwang', location: '의왕랩' },
       PYT: { site: 'pyeongtaek', location: '평택랩' },
@@ -208,9 +261,9 @@ export class AuthService {
    * @param testUser - 테스트 사용자 정보
    * @returns JWT 토큰을 포함한 인증 정보
    */
-  generateTestToken(testUser: any): AuthResponse {
+  generateTestToken(testUser: TestUser): AuthResponse {
     const user: UserDto = {
-      id: testUser.id || testUser.uuid,
+      id: testUser.id ?? testUser.uuid ?? '',
       email: testUser.email,
       name: testUser.name,
       roles: [testUser.role as UserRole],

@@ -1,6 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { CalibrationPlansService } from './calibration-plans.service';
 
+/**
+ * 교정계획 아이템 (PDF 생성용 간소화 타입)
+ * CalibrationPlansService.findOne()의 반환 타입에 맞춤
+ */
+interface PlanItemForPdf {
+  sequenceNumber: number;
+  snapshotValidityDate: Date | null;
+  snapshotCalibrationCycle: number | null;
+  snapshotCalibrationAgency: string | null;
+  plannedCalibrationDate: Date | null;
+  plannedCalibrationAgency: string | null;
+  confirmedBy: string | null;
+  actualCalibrationDate: Date | null;
+  notes: string | null;
+  equipment: {
+    id: string;
+    name: string;
+    managementNumber: string;
+  };
+}
+
 // 시험소 라벨
 const SITE_LABELS: Record<string, string> = {
   suwon: '수원',
@@ -122,9 +143,9 @@ export class CalibrationPlansPdfService {
       </tr>
     </thead>
     <tbody>
-      ${items
+      ${(items as PlanItemForPdf[])
         .map(
-          (item: any) => `
+          (item) => `
         <tr>
           <td>${item.sequenceNumber}</td>
           <td>${item.equipment?.managementNumber || '-'}</td>

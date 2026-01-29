@@ -1,5 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '@equipment-management/db/schema';
 import { auditLogs, NewAuditLog, AuditLog, AuditLogDetails } from '@equipment-management/db/schema';
 
 /**
@@ -37,11 +39,22 @@ export interface PaginationOptions {
   limit: number;
 }
 
+/**
+ * 페이지네이션 메타데이터
+ */
+export interface PaginationMeta {
+  totalItems: number;
+  itemCount: number;
+  itemsPerPage: number;
+  totalPages: number;
+  currentPage: number;
+}
+
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(@Inject('DRIZZLE_INSTANCE') private db: any) {}
+  constructor(@Inject('DRIZZLE_INSTANCE') private db: PostgresJsDatabase<typeof schema>) {}
 
   /**
    * 감사 로그 생성 (비동기)
@@ -83,7 +96,7 @@ export class AuditService {
   async findAll(
     filter: AuditLogFilter,
     pagination: PaginationOptions
-  ): Promise<{ items: AuditLog[]; meta: any }> {
+  ): Promise<{ items: AuditLog[]; meta: PaginationMeta }> {
     const conditions: SQL[] = [];
 
     if (filter.userId) {

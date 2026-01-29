@@ -2,7 +2,43 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import type { JwtUser } from '../../../types/auth';
 
+/**
+ * JWT 토큰 페이로드 타입
+ *
+ * JWT 토큰에 포함되는 클레임(claims)을 정의합니다.
+ * - sub: Subject - 사용자 ID (JWT 표준 클레임)
+ * - iat: Issued At - 토큰 발급 시간 (자동 추가)
+ * - exp: Expiration - 토큰 만료 시간 (자동 추가)
+ */
+interface JwtPayload {
+  /** Subject - 사용자 ID (JWT 표준 클레임) */
+  sub: string;
+  /** 사용자 이메일 */
+  email: string;
+  /** 사용자 이름 */
+  name?: string;
+  /** 사용자 역할 목록 */
+  roles: string[];
+  /** 부서 */
+  department?: string;
+  /** 사이트 코드 (suwon | uiwang) */
+  site?: string;
+  /** 팀 ID */
+  teamId?: string;
+  /** 토큰 발급 시간 (Unix timestamp) */
+  iat?: number;
+  /** 토큰 만료 시간 (Unix timestamp) */
+  exp?: number;
+}
+
+/**
+ * JWT 인증 전략
+ *
+ * Authorization: Bearer <token> 헤더에서 JWT를 추출하고 검증합니다.
+ * 검증 성공 시 validate() 메서드가 호출되어 req.user에 사용자 정보를 설정합니다.
+ */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private configService: ConfigService) {
@@ -14,14 +50,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
+  /**
+   * JWT 페이로드 검증 및 사용자 객체 반환
+   *
+   * @param payload - 디코딩된 JWT 페이로드
+   * @returns req.user에 설정될 사용자 정보
+   */
+  async validate(payload: JwtPayload): Promise<JwtUser> {
     return {
       userId: payload.sub,
       email: payload.email,
+      name: payload.name,
       roles: payload.roles,
       department: payload.department,
-      site: payload.site, // 사이트 정보 추가
-      teamId: payload.teamId, // 팀 ID 추가
+      site: payload.site,
+      teamId: payload.teamId,
     };
   }
 }

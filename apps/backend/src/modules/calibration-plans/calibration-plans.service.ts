@@ -5,12 +5,14 @@ import {
   ConflictException,
   Inject,
 } from '@nestjs/common';
-import { eq, and, desc, SQL, gte, lt, inArray } from 'drizzle-orm';
+import { eq, and, desc, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import {
   calibrationPlans,
   calibrationPlanItems,
+  type NewCalibrationPlan,
+  type NewCalibrationPlanItem,
 } from '@equipment-management/db/schema/calibration-plans';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import {
@@ -22,6 +24,8 @@ import {
   ApproveCalibrationPlanDto,
   RejectCalibrationPlanDto,
   ConfirmPlanItemDto,
+  SubmitForReviewDto,
+  ReviewCalibrationPlanDto,
 } from './dto';
 
 @Injectable()
@@ -51,16 +55,14 @@ export class CalibrationPlansService {
     // 트랜잭션으로 계획서 생성 + 항목 자동 생성
     const result = await this.db.transaction(async (tx) => {
       // 1. 계획서 생성
-      const [plan] = await tx
-        .insert(calibrationPlans)
-        .values({
-          year,
-          siteId,
-          teamId,
-          createdBy,
-          status: 'draft',
-        } as any)
-        .returning();
+      const planData: NewCalibrationPlan = {
+        year,
+        siteId,
+        teamId,
+        createdBy,
+        status: 'draft',
+      };
+      const [plan] = await tx.insert(calibrationPlans).values(planData).returning();
 
       // 2. 해당 연도 교정 예정인 외부교정 대상 장비 조회
       const startOfYear = new Date(year, 0, 1);
@@ -88,7 +90,7 @@ export class CalibrationPlansService {
 
       // 3. 항목 생성 (스냅샷 저장)
       if (filteredEquipments.length > 0) {
-        const items = filteredEquipments.map((eq, index) => ({
+        const items: NewCalibrationPlanItem[] = filteredEquipments.map((eq, index) => ({
           planId: plan.id,
           equipmentId: eq.id,
           sequenceNumber: index + 1,
@@ -101,7 +103,7 @@ export class CalibrationPlansService {
           plannedCalibrationAgency: eq.calibrationAgency, // 기본값: 현재 교정기관
         }));
 
-        await tx.insert(calibrationPlanItems).values(items as any);
+        await tx.insert(calibrationPlanItems).values(items);
       }
 
       return plan;
@@ -215,14 +217,13 @@ export class CalibrationPlansService {
       throw new BadRequestException('작성 중(draft) 상태의 계획서만 수정할 수 있습니다.');
     }
 
-    const [updated] = await this.db
+    await this.db
       .update(calibrationPlans)
       .set({
         ...updateDto,
         updatedAt: new Date(),
-      } as any)
-      .where(eq(calibrationPlans.id, uuid))
-      .returning();
+      })
+      .where(eq(calibrationPlans.id, uuid));
 
     return this.findOne(uuid);
   }
@@ -244,62 +245,107 @@ export class CalibrationPlansService {
   }
 
   /**
-   * 승인 요청 (draft -> pending_approval)
+   * 승인 요청 (draft -> pending_approval) - 기존 호환성 유지
+   * @deprecated submitForReview() 사용 권장
    */
   async submit(uuid: string) {
+    return this.submitForReview(uuid, { submittedBy: '' });
+  }
+
+  /**
+   * 검토 요청 (draft/rejected -> pending_review, 기술책임자)
+   * 3단계 승인 워크플로우의 첫 번째 단계
+   */
+  async submitForReview(uuid: string, submitDto: SubmitForReviewDto) {
     const plan = await this.findOneBasic(uuid);
 
-    if (plan.status !== 'draft') {
-      throw new BadRequestException('작성 중(draft) 상태의 계획서만 승인 요청할 수 있습니다.');
+    if (plan.status !== 'draft' && plan.status !== 'rejected') {
+      throw new BadRequestException(
+        '작성 중(draft) 또는 반려됨(rejected) 상태의 계획서만 검토 요청할 수 있습니다.'
+      );
     }
 
-    const [updated] = await this.db
+    await this.db
       .update(calibrationPlans)
       .set({
-        status: 'pending_approval',
+        status: 'pending_review',
+        submittedAt: new Date(),
+        // 반려 후 재제출 시 반려 정보 초기화
+        rejectedBy: null,
+        rejectedAt: null,
+        rejectionReason: null,
+        rejectionStage: null,
         updatedAt: new Date(),
-      } as any)
-      .where(eq(calibrationPlans.id, uuid))
-      .returning();
+      })
+      .where(eq(calibrationPlans.id, uuid));
 
     return this.findOne(uuid);
   }
 
   /**
-   * 승인 (pending_approval -> approved, lab_manager만)
+   * 검토 완료 (pending_review -> pending_approval, 품질책임자)
+   * 3단계 승인 워크플로우의 두 번째 단계
+   */
+  async review(uuid: string, reviewDto: ReviewCalibrationPlanDto) {
+    const plan = await this.findOneBasic(uuid);
+
+    if (plan.status !== 'pending_review') {
+      throw new BadRequestException(
+        '검토 대기(pending_review) 상태의 계획서만 검토할 수 있습니다.'
+      );
+    }
+
+    await this.db
+      .update(calibrationPlans)
+      .set({
+        status: 'pending_approval',
+        reviewedBy: reviewDto.reviewedBy,
+        reviewedAt: new Date(),
+        reviewComment: reviewDto.reviewComment || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(calibrationPlans.id, uuid));
+
+    return this.findOne(uuid);
+  }
+
+  /**
+   * 최종 승인 (pending_approval -> approved, 시험소장)
+   * 3단계 승인 워크플로우의 세 번째 단계
    */
   async approve(uuid: string, approveDto: ApproveCalibrationPlanDto) {
     const plan = await this.findOneBasic(uuid);
 
     if (plan.status !== 'pending_approval') {
       throw new BadRequestException(
-        '승인 대기(pending_approval) 상태의 계획서만 승인할 수 있습니다.'
+        '승인 대기(pending_approval) 상태의 계획서만 최종 승인할 수 있습니다.'
       );
     }
 
-    const [updated] = await this.db
+    await this.db
       .update(calibrationPlans)
       .set({
         status: 'approved',
         approvedBy: approveDto.approvedBy,
         approvedAt: new Date(),
         updatedAt: new Date(),
-      } as any)
-      .where(eq(calibrationPlans.id, uuid))
-      .returning();
+      })
+      .where(eq(calibrationPlans.id, uuid));
 
     return this.findOne(uuid);
   }
 
   /**
-   * 반려 (pending_approval -> rejected, lab_manager만, reason 필수)
+   * 반려 (pending_review/pending_approval -> rejected)
+   * 품질책임자(검토 단계) 또는 시험소장(승인 단계)이 반려
    */
   async reject(uuid: string, rejectDto: RejectCalibrationPlanDto) {
     const plan = await this.findOneBasic(uuid);
 
-    if (plan.status !== 'pending_approval') {
+    // 검토 대기 또는 승인 대기 상태에서만 반려 가능
+    if (plan.status !== 'pending_review' && plan.status !== 'pending_approval') {
       throw new BadRequestException(
-        '승인 대기(pending_approval) 상태의 계획서만 반려할 수 있습니다.'
+        '검토 대기(pending_review) 또는 승인 대기(pending_approval) 상태의 계획서만 반려할 수 있습니다.'
       );
     }
 
@@ -307,16 +353,20 @@ export class CalibrationPlansService {
       throw new BadRequestException('반려 사유는 필수입니다.');
     }
 
-    const [updated] = await this.db
+    // 반려 단계 결정
+    const rejectionStage = plan.status === 'pending_review' ? 'review' : 'approval';
+
+    await this.db
       .update(calibrationPlans)
       .set({
         status: 'rejected',
-        approvedBy: rejectDto.rejectedBy, // 반려자도 approvedBy에 기록
+        rejectedBy: rejectDto.rejectedBy,
+        rejectedAt: new Date(),
         rejectionReason: rejectDto.rejectionReason,
+        rejectionStage,
         updatedAt: new Date(),
-      } as any)
-      .where(eq(calibrationPlans.id, uuid))
-      .returning();
+      })
+      .where(eq(calibrationPlans.id, uuid));
 
     return this.findOne(uuid);
   }
@@ -347,7 +397,7 @@ export class CalibrationPlansService {
         confirmedBy: confirmDto.confirmedBy,
         confirmedAt: new Date(),
         updatedAt: new Date(),
-      } as any)
+      })
       .where(eq(calibrationPlanItems.id, itemUuid))
       .returning();
 
@@ -378,7 +428,7 @@ export class CalibrationPlansService {
       .set({
         ...updateDto,
         updatedAt: new Date(),
-      } as any)
+      })
       .where(eq(calibrationPlanItems.id, itemUuid))
       .returning();
 
@@ -462,7 +512,7 @@ export class CalibrationPlansService {
         .set({
           actualCalibrationDate: calibrationDate,
           updatedAt: new Date(),
-        } as any)
+        })
         .where(eq(calibrationPlanItems.id, row.item.id));
     }
 

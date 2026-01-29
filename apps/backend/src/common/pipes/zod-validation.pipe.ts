@@ -31,7 +31,7 @@ import { getErrorMessage } from '../utils/error';
 export class ZodValidationPipe implements PipeTransform {
   constructor(private schema: ZodSchema) {}
 
-  transform(value: any, metadata: ArgumentMetadata) {
+  transform(value: unknown, metadata: ArgumentMetadata) {
     // ⚠️ 중요: ZodValidationPipe는 body에만 적용되어야 합니다
     // @Param, @Query 등은 다른 파이프(ParseUUIDPipe 등)로 처리됩니다
     if (metadata.type !== 'body') {

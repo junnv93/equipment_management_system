@@ -2,9 +2,24 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } fr
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { Request } from 'express';
 import { AUDIT_LOG_KEY, AuditLogMetadata } from '../decorators/audit-log.decorator';
 import { AuditService, CreateAuditLogDto } from '../../modules/audit/audit.service';
 import { AuditLogDetails } from '@equipment-management/db/schema';
+
+// 인증된 사용자 정보 타입
+interface AuthUser {
+  id?: string;
+  userId?: string;
+  name?: string;
+  role?: string;
+  roles?: string[];
+}
+
+// Express Request에 user 추가
+interface AuthenticatedRequest extends Request {
+  user?: AuthUser;
+}
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -41,10 +56,13 @@ export class AuditInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap({
-        next: (response: any) => {
+        next: (response: unknown) => {
           // 비동기로 감사 로그 기록 (성능 영향 최소화)
           this.logAuditAsync(auditMetadata, request, response, previousValue).catch((error) => {
-            this.logger.error(`Audit log failed: ${error.message}`, error.stack);
+            this.logger.error(
+              `Audit log failed: ${error instanceof Error ? error.message : String(error)}`,
+              error instanceof Error ? error.stack : undefined
+            );
           });
         },
         error: () => {
@@ -60,8 +78,8 @@ export class AuditInterceptor implements NestInterceptor {
    */
   private async logAuditAsync(
     metadata: AuditLogMetadata,
-    request: any,
-    response: any,
+    request: AuthenticatedRequest,
+    response: unknown,
     previousValue?: Record<string, unknown>
   ): Promise<void> {
     const user = request.user;
@@ -109,11 +127,15 @@ export class AuditInterceptor implements NestInterceptor {
    * 경로에서 값 추출
    * 예: 'params.uuid', 'body.id', 'response.uuid', 'response.data.id'
    */
-  private extractValue(path: string | undefined, request: any, response: any): string | undefined {
+  private extractValue(
+    path: string | undefined,
+    request: AuthenticatedRequest,
+    response: unknown
+  ): string | undefined {
     if (!path) return undefined;
 
     const parts = path.split('.');
-    let value: any;
+    let value: unknown;
 
     // 첫 번째 부분에 따라 시작 객체 결정
     const source = parts[0];
@@ -136,31 +158,33 @@ export class AuditInterceptor implements NestInterceptor {
 
     // 나머지 경로 따라가기
     for (const part of parts) {
-      if (value && typeof value === 'object' && part in value) {
-        value = value[part];
+      if (value && typeof value === 'object' && part in (value as Record<string, unknown>)) {
+        value = (value as Record<string, unknown>)[part];
       } else {
         return undefined;
       }
     }
 
-    return typeof value === 'string' ? value : value?.toString();
+    return typeof value === 'string' ? value : (value as { toString?: () => string })?.toString?.();
   }
 
   /**
    * 클라이언트 IP 주소 가져오기
    */
-  private getClientIp(request: any): string | undefined {
+  private getClientIp(request: AuthenticatedRequest): string | undefined {
     const forwarded = request.headers['x-forwarded-for'];
     if (forwarded) {
-      return forwarded.split(',')[0].trim();
+      // x-forwarded-for는 string 또는 string[] 일 수 있음
+      const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+      return forwardedValue?.split(',')[0].trim();
     }
-    return request.ip || request.connection?.remoteAddress;
+    return request.ip || request.socket?.remoteAddress;
   }
 
   /**
    * 민감한 데이터 제거
    */
-  private sanitizeData(data: any): Record<string, unknown> {
+  private sanitizeData(data: unknown): Record<string, unknown> {
     if (!data || typeof data !== 'object') {
       return {};
     }
