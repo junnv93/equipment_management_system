@@ -237,7 +237,7 @@ XXX – X YYYY
 
 ### Azure AD 그룹 매핑 (수원)
 
-| Azure AD 그룹        | 테넌트 ID                               | 팀 이름 (분류)     |
+| Azure AD 그룹        | 테넌트 ID                              | 팀 이름 (분류)     |
 | -------------------- | -------------------------------------- | ------------------ |
 | `LST.SUW.RF`         | `7dc3b94c-82b8-488e-9ea5-4fe71bb086e1` | FCC EMC/RF (E)     |
 | `LST.SUW.EMC`        | `bb6c860d-9d7c-4e2d-b289-2b2e416ec289` | General EMC (R)    |
@@ -246,9 +246,9 @@ XXX – X YYYY
 
 ### Azure AD 그룹 매핑 (의왕/평택)
 
-| Azure AD 그룹        | 테넌트 ID                               | 팀 이름 (분류)     |
+| Azure AD 그룹        | 테넌트 ID                              | 팀 이름 (분류)     |
 | -------------------- | -------------------------------------- | ------------------ |
-| `LST.UIW.RF`         | `없음` | General RF (W)     |
+| `LST.UIW.RF`         | `없음`                                 | General RF (W)     |
 | `LST.PYT.Automotive` | `70115954-0ccd-45f0-87bd-03b2a3587569` | Automotive EMC (A) |
 
 ---
@@ -281,6 +281,7 @@ XXX – X YYYY
 ### 필수 (MUST)
 
 1. **`any` 타입 사용 금지** - `unknown` 또는 구체적 타입 사용
+
    ```typescript
    // ❌ 금지
    const data: any = await fetch(...);
@@ -290,9 +291,10 @@ XXX – X YYYY
    ```
 
 2. **모든 타입은 SSOT에서 import**
+
    ```typescript
    // ❌ 금지: 로컬 타입 정의
-   type UserRole = 'ADMIN' | 'USER';  // 잘못된 값!
+   type UserRole = 'ADMIN' | 'USER'; // 잘못된 값!
 
    // ✅ 권장: schemas 패키지에서 import
    import { UserRole } from '@equipment-management/schemas';
@@ -300,6 +302,7 @@ XXX – X YYYY
    ```
 
 3. **API 파일에서 barrel import 금지** - 직접 import 사용
+
    ```typescript
    // ❌ 피해야 함 (bundle size 증가)
    import { equipmentApi, dashboardApi } from '@/lib/api';
@@ -321,6 +324,7 @@ XXX – X YYYY
 ### 권장 (SHOULD)
 
 1. **무거운 컴포넌트는 dynamic import 사용**
+
    ```typescript
    const HeavyChart = dynamic(() => import('./HeavyChart'), {
      loading: () => <ChartSkeleton />,
@@ -333,12 +337,12 @@ XXX – X YYYY
 
 ### ESLint로 강제되는 규칙
 
-| 규칙 | 레벨 | 설명 |
-|------|------|------|
-| `@typescript-eslint/no-explicit-any` | error | any 타입 금지 |
-| `@typescript-eslint/no-unused-vars` | error | 미사용 변수 금지 |
-| `react-hooks/exhaustive-deps` | error | useEffect 의존성 누락 금지 |
-| `no-restricted-imports` | error | SSOT 위반 import 차단 |
+| 규칙                                 | 레벨  | 설명                       |
+| ------------------------------------ | ----- | -------------------------- |
+| `@typescript-eslint/no-explicit-any` | error | any 타입 금지              |
+| `@typescript-eslint/no-unused-vars`  | error | 미사용 변수 금지           |
+| `react-hooks/exhaustive-deps`        | error | useEffect 의존성 누락 금지 |
+| `no-restricted-imports`              | error | SSOT 위반 import 차단      |
 
 ### lint-staged 설정
 
@@ -361,20 +365,16 @@ const posts = await getPosts();
 const comments = await getComments();
 
 // ✅ 병렬 실행
-const [user, posts, comments] = await Promise.all([
-  getUser(),
-  getPosts(),
-  getComments(),
-]);
+const [user, posts, comments] = await Promise.all([getUser(), getPosts(), getComments()]);
 ```
 
 ### 🔴 CRITICAL: Bundle Size 최적화
 
-| 규칙 | 설명 |
-|------|------|
-| **Barrel import 금지** | `from '@/lib/api'` 대신 `from '@/lib/api/equipment-api'` |
-| **Dynamic import 사용** | 무거운 컴포넌트는 `next/dynamic`으로 지연 로딩 |
-| **ssr: false** | 클라이언트 전용 탭/모달 컴포넌트에 적용 |
+| 규칙                    | 설명                                                     |
+| ----------------------- | -------------------------------------------------------- |
+| **Barrel import 금지**  | `from '@/lib/api'` 대신 `from '@/lib/api/equipment-api'` |
+| **Dynamic import 사용** | 무거운 컴포넌트는 `next/dynamic`으로 지연 로딩           |
+| **ssr: false**          | 클라이언트 전용 탭/모달 컴포넌트에 적용                  |
 
 ```typescript
 // ✅ 탭 컴포넌트는 ssr: false (사용자 상호작용 후에만 로드)
@@ -386,11 +386,11 @@ const CalibrationHistoryTab = dynamic(
 
 ### 🟠 HIGH: Server-Side 성능
 
-| 규칙 | 설명 |
-|------|------|
-| **React.cache()** | generateMetadata와 Page에서 동일 데이터 중복 fetch 방지 |
-| **Server Component 우선** | 데이터 fetch는 Server Component에서 |
-| **initialData 패턴** | Server에서 fetch → Client의 useQuery에 전달 |
+| 규칙                      | 설명                                                    |
+| ------------------------- | ------------------------------------------------------- |
+| **React.cache()**         | generateMetadata와 Page에서 동일 데이터 중복 fetch 방지 |
+| **Server Component 우선** | 데이터 fetch는 Server Component에서                     |
+| **initialData 패턴**      | Server에서 fetch → Client의 useQuery에 전달             |
 
 ```typescript
 // ✅ Server Component에서 초기 데이터 fetch
@@ -402,11 +402,11 @@ export default async function EquipmentPage(props: PageProps) {
 
 ### 🟡 MEDIUM: Re-render 최적화
 
-| 규칙 | 설명 |
-|------|------|
-| **useState 통합** | 관련 상태는 하나의 객체로 관리 (또는 useQuery 사용) |
-| **useMemo 사용** | 복잡한 계산은 메모이제이션 |
-| **useCallback 사용** | 자식에 전달하는 콜백 함수 안정화 |
+| 규칙                 | 설명                                                |
+| -------------------- | --------------------------------------------------- |
+| **useState 통합**    | 관련 상태는 하나의 객체로 관리 (또는 useQuery 사용) |
+| **useMemo 사용**     | 복잡한 계산은 메모이제이션                          |
+| **useCallback 사용** | 자식에 전달하는 콜백 함수 안정화                    |
 
 ```typescript
 // ❌ 여러 useState로 다중 리렌더링
@@ -423,12 +423,12 @@ const { data, isLoading, error } = useQuery({
 
 ### 🟢 LOW: 접근성 (Accessibility)
 
-| 규칙 | 설명 |
-|------|------|
+| 규칙            | 설명                                             |
+| --------------- | ------------------------------------------------ |
 | **아이콘 버튼** | `aria-label` 필수, 아이콘에 `aria-hidden="true"` |
-| **폼 입력** | `htmlFor` + `id` 매칭 |
-| **포커스** | `:focus-visible` 스타일 적용 |
-| **SR-only** | 스크린 리더 전용 안내 텍스트 |
+| **폼 입력**     | `htmlFor` + `id` 매칭                            |
+| **포커스**      | `:focus-visible` 스타일 적용                     |
+| **SR-only**     | 스크린 리더 전용 안내 텍스트                     |
 
 ```typescript
 // ✅ 접근성 있는 아이콘 버튼
@@ -527,23 +527,29 @@ export default async function Page(props: PageProps) {
 
 ```typescript
 // ❌ 금지 - as any로 타입 체크 우회
-const [record] = await db.insert(table).values({
-  name: 'test',
-  status: 'active',
-} as any).returning();
+const [record] = await db
+  .insert(table)
+  .values({
+    name: 'test',
+    status: 'active',
+  } as any)
+  .returning();
 
 // ✅ 권장 - 올바른 타입으로 값 전달
-const [record] = await db.insert(table).values({
-  name: 'test',
-  status: 'active',  // enum 타입이면 스키마에서 추론됨
-}).returning();
+const [record] = await db
+  .insert(table)
+  .values({
+    name: 'test',
+    status: 'active', // enum 타입이면 스키마에서 추론됨
+  })
+  .returning();
 ```
 
 ### 5. 로컬에서 타입/Enum 재정의
 
 ```typescript
 // ❌ 금지 - 로컬에서 enum 재정의 (SSOT 위반)
-type UserRole = 'ADMIN' | 'USER' | 'MANAGER';  // 잘못된 값!
+type UserRole = 'ADMIN' | 'USER' | 'MANAGER'; // 잘못된 값!
 
 // ✅ 권장 - 중앙 패키지에서 import
 import { UserRole } from '@equipment-management/schemas';
@@ -592,15 +598,26 @@ if (updated.rowCount === 0) {
 - 장비 등록 시 관리 팀(teamId) 및 시험소(site) 필수
 - 조회는 전체 가능, 수정/승인은 권한 범위 내에서만
 
-### 3. 교정 기록 등록/승인 분리 원칙
+### 3. 교정 기록 등록/승인 분리 원칙 (엄격한 정책)
 
-```
-교정 기록 등록: 시험실무자(test_engineer)만 가능
-교정 기록 승인: 기술책임자(technical_manager)만 가능
-시험소장(lab_manager): 모든 권한 (자체 승인 포함)
-```
+**등록 권한:**
 
-> **원칙**: 등록자와 승인자를 분리하여 견제 구조 유지 (UL-QP-18)
+- ✓ 시험실무자(test_engineer): 교정 기록 등록 가능 → 기술책임자 승인 필요
+- ❌ 기술책임자(technical_manager): 등록 불가, 승인만 가능
+- ❌ 시험소장(lab_manager): 등록 불가 (교정만 예외적으로 제한)
+
+**승인 권한:**
+
+- ✓ 기술책임자(technical_manager): 교정 기록 승인
+- ✓ 시험소장(lab_manager): 교정 기록 승인
+
+**정책 배경:**
+
+- **등록/승인 완전 분리**: 견제 구조를 통한 품질 보증 (UL-QP-18)
+- **시험소장 제한**: 교정 관리는 다른 기능과 달리 시험소장도 등록 불가
+- **이중 검증**: 실무자가 등록, 책임자가 검증하는 2단계 프로세스 강제
+
+> **원칙**: 교정 기록은 등록자와 승인자를 완전히 분리하여 견제 구조 유지 (UL-QP-18)
 
 ---
 
@@ -615,12 +632,13 @@ if (updated.rowCount === 0) {
 
 **예외**: 시험소 관리자(lab_manager)는 자체 승인 가능
 
-### 교정 기록 등록
+### 교정 기록 등록 (엄격한 정책)
 
 ```
-시험실무자 등록: pending_approval → 기술책임자 승인 (approverComment 필수)
-시험소장 등록: 자체 승인 가능 (approved 상태로 직접 등록)
+시험실무자 등록: pending_approval → 기술책임자/시험소장 승인 (approverComment 필수)
 ```
+
+> ⚠️ **주의**: 교정 기록은 시험실무자만 등록 가능. 시험소장도 등록 불가 (등록/승인 완전 분리)
 
 ### 점검 프로세스 (UL-QP-18 Section 8)
 

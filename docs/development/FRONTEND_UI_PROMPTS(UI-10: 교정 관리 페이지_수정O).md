@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > 📖 **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -19,41 +20,48 @@
 
 #### 4.1 교정 관리 권한
 
-| 기능 | 시험실무자 | 기술책임자 | 품질책임자 | 시험소장 | 시스템관리자 |
-|------|-----------|-----------|-----------|---------|-------------|
-| 교정 기록 등록 | ✓ | - | - | - | - |
-| 교정 기록 승인 | - | ✓ | - | - | - |
-| 중간점검 기록 등록 | ✓ | - | - | - | - |
-| 중간점검 기록 승인 | - | ✓ | - | - | - |
-| 자체점검 기록 등록 | ✓ | ✓ | - | - | - |
-| 연간 교정계획 작성 | - | ✓ | - | - | - |
-| 연간 교정계획 검토 | - | - | ✓ | - | - |
-| 연간 교정계획 승인 | - | - | - | ✓ | - |
+| 기능               | 시험실무자 | 기술책임자 | 품질책임자 | 시험소장 | 시스템관리자 |
+| ------------------ | ---------- | ---------- | ---------- | -------- | ------------ |
+| 교정 기록 등록     | ✓          | -          | -          | -        | -            |
+| 교정 기록 승인     | -          | ✓          | -          | -        | -            |
+| 중간점검 기록 등록 | ✓          | -          | -          | -        | -            |
+| 중간점검 기록 승인 | -          | ✓          | -          | -        | -            |
+| 자체점검 기록 등록 | ✓          | ✓          | -          | -        | -            |
+| 연간 교정계획 작성 | -          | ✓          | -          | -        | -            |
+| 연간 교정계획 검토 | -          | -          | ✓          | -        | -            |
+| 연간 교정계획 승인 | -          | -          | -          | ✓        | -            |
+
+> ⚠️ **교정 관리 특수 정책:**
+>
+> - 교정 기록 등록은 **시험실무자만** 가능합니다
+> - 시험소장(lab_manager)도 교정 기록은 등록할 수 없습니다 (다른 기능과 다름)
+> - 이는 등록/승인 분리 원칙을 엄격히 적용하기 위한 정책입니다
+> - 모든 교정 기록은 기술책임자 이상의 승인이 필요합니다
 
 **교정 관련 정보**
 
-| 항목 | 필수 | 설명 |
-|------|------|------|
-| 교정 필요 여부 | ✓ | Y/N |
-| 교정 주기 | 조건부 | 교정 필요 시 필수 (개월) |
-| 최근 교정일자 | 조건부 | 교정 필요 시 |
-| 차기 교정일 | 조건부 | 자동 계산 또는 수동 입력 |
-| 교정 결과 | 조건부 | 적합/부적합/조건부 |
+| 항목           | 필수   | 설명                     |
+| -------------- | ------ | ------------------------ |
+| 교정 필요 여부 | ✓      | Y/N                      |
+| 교정 주기      | 조건부 | 교정 필요 시 필수 (개월) |
+| 최근 교정일자  | 조건부 | 교정 필요 시             |
+| 차기 교정일    | 조건부 | 자동 계산 또는 수동 입력 |
+| 교정 결과      | 조건부 | 적합/부적합/조건부       |
 
 #### 4.2 교정 기록 등록
 
 ##### 4.2.1 교정 기록 필수 항목
 
-| 항목 | 필수 | 설명 | SSOT |
-|------|------|------|------|
-| 대상 장비 | ✓ | 장비 선택 (equipmentId) | - |
-| 교정일자 | ✓ | 교정 수행일 (calibrationDate) | - |
-| 교정기관 | ✓ | 교정 수행 기관명 (calibrationAgency) | - |
-| 교정성적서 번호 | ✓ | 성적서 고유번호 (certificateNumber) | - |
-| 교정 결과 | ✓ | 적합/부적합/조건부 (calibrationResult) | `CalibrationResultEnum` |
-| 차기 교정일 | ✓ | 다음 교정 예정일 (nextCalibrationDate) | - |
-| 교정성적서 파일 | ✓ | PDF 등 파일 첨부 (certificatePath) | - |
-| 비고 | - | 추가 사항 (notes) | - |
+| 항목            | 필수 | 설명                                   | SSOT                    |
+| --------------- | ---- | -------------------------------------- | ----------------------- |
+| 대상 장비       | ✓    | 장비 선택 (equipmentId)                | -                       |
+| 교정일자        | ✓    | 교정 수행일 (calibrationDate)          | -                       |
+| 교정기관        | ✓    | 교정 수행 기관명 (calibrationAgency)   | -                       |
+| 교정성적서 번호 | ✓    | 성적서 고유번호 (certificateNumber)    | -                       |
+| 교정 결과       | ✓    | 적합/부적합/조건부 (calibrationResult) | `CalibrationResultEnum` |
+| 차기 교정일     | ✓    | 다음 교정 예정일 (nextCalibrationDate) | -                       |
+| 교정성적서 파일 | ✓    | PDF 등 파일 첨부 (certificatePath)     | -                       |
+| 비고            | -    | 추가 사항 (notes)                      | -                       |
 
 > ⚠️ **SSOT 필수**: 교정 결과는 반드시 `@equipment-management/schemas`의 `CalibrationResultEnum`을 사용합니다.
 
@@ -97,7 +105,7 @@
 
 ### 프롬프트
 
-```
+````
 스킬 로드:
 /equipment-management
 /nextjs-16
@@ -168,9 +176,10 @@ Next.js 16 필수 패턴:
      const calibration = await getCalibration(id);
      return <CalibrationDetailClient calibration={calibration} />;
    }
-   ```
+````
 
 2. searchParams Promise 패턴 (목록 페이지):
+
    ```typescript
    // apps/frontend/app/calibration/page.tsx
    export default async function CalibrationListPage(props: {
@@ -190,6 +199,7 @@ Next.js 16 필수 패턴:
    ```
 
 3. useActionState 폼 처리:
+
    ```typescript
    'use client';
    import { useActionState } from 'react';
@@ -213,7 +223,9 @@ Next.js 16 필수 패턴:
    ```
 
 성능 최적화 요구사항 (/vercel-react-best-practices):
+
 1. **bundle-dynamic-imports**: EquipmentSelector 동적 로딩
+
    ```typescript
    const EquipmentSelector = dynamic(() => import('./EquipmentSelector'), {
      loading: () => <Skeleton className="h-10 w-full" />,
@@ -222,15 +234,17 @@ Next.js 16 필수 패턴:
    ```
 
 2. **async-parallel**: 초기 데이터 병렬 로딩
+
    ```typescript
    const [equipment, methods, statuses] = await Promise.all([
      getEquipmentList(),
      getCalibrationMethods(),
-     getCalibrationStatuses()
+     getCalibrationStatuses(),
    ]);
    ```
 
 3. **rerender-memo**: 목록 아이템 컴포넌트 메모이제이션
+
    ```typescript
    const MemoizedCalibrationRow = memo(CalibrationRow);
    ```
@@ -240,6 +254,7 @@ Next.js 16 필수 패턴:
    - Date 객체는 ISO 문자열로 직렬화
 
 디자인 요구사항 (/frontend-design 스킬 활용):
+
 - 결과별 색상 (UL Solutions 브랜드):
   - 합격: UL Green (#00A451) 배경
   - 부적합: Brand Red (#CA0123) 배경
@@ -257,6 +272,7 @@ Next.js 16 필수 패턴:
   - 정렬 가능 컬럼 표시 (화살표 아이콘)
 
 접근성 요구사항 (/web-design-guidelines):
+
 - 테이블에 role="grid" 및 aria-label 추가
 - 결과 라디오 그룹에 role="radiogroup" + aria-labelledby 추가
 - 장비 선택에 role="combobox" + aria-expanded 추가
@@ -266,21 +282,25 @@ Next.js 16 필수 패턴:
 - 키보드로 테이블 행 탐색 가능 (Arrow keys)
 
 제약사항:
+
 - 기술책임자 등록 시 registrarComment 필수
 - 결과가 '부적합'인 경우 장비 상태 자동 변경 안내
 
 검증:
+
 - 역할별 등록 플로우 테스트
 - 필수 필드 검증 테스트
 - pnpm tsc --noEmit
 
 Playwright 테스트:
+
 - 역할별 UI 분기 확인
 - 교정 등록 성공/실패 확인
 - 목록 필터 동작 확인
 
 완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
-```
+
+````
 
 ---
 
@@ -319,7 +339,7 @@ PATCH /api/calibration/:uuid/reject
 POST /api/calibration/:uuid/certificate
 // Body: FormData with 'file' field
 // Response: { filePath: string }
-```
+````
 
 ---
 
@@ -382,7 +402,7 @@ export function CalibrationForm() {
 import {
   CalibrationResultEnum,
   CALIBRATION_RESULT_LABELS,
-  type CalibrationResult
+  type CalibrationResult,
 } from '@equipment-management/schemas';
 
 // CalibrationResultEnum.options = ['pass', 'fail', 'conditional']
@@ -473,9 +493,9 @@ const calibrationSchema = z.object({
   calibrationDate: z.string().min(1, '교정일을 입력하세요'),
   nextCalibrationDate: z.string().min(1, '다음 교정일을 입력하세요'),
   calibrationAgency: z.string().min(1, '교정 기관을 입력하세요').max(100),
-  certificateNumber: z.string().min(1, '교정성적서 번호를 입력하세요'),  // ⭐ 신규 필수
+  certificateNumber: z.string().min(1, '교정성적서 번호를 입력하세요'), // ⭐ 신규 필수
   calibrationCycle: z.coerce.number().min(1, '교정 주기를 입력하세요 (최소 1개월)'),
-  calibrationResult: CalibrationResultEnum,  // ✅ SSOT 사용
+  calibrationResult: CalibrationResultEnum, // ✅ SSOT 사용
   notes: z.string().optional(),
 });
 ```
@@ -565,6 +585,7 @@ async approveCalibration(id: string, approveDto: ApproveCalibrationDto) {
 ```
 
 **프론트엔드 처리**:
+
 - 승인 후 equipment 쿼리 무효화하여 최신 상태 반영
 - 장비 상세 페이지에서 업데이트된 교정일 표시
 
