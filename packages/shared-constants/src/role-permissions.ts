@@ -8,7 +8,9 @@
  * - 시험실무자: 장비 조회, 장비 등록/수정/삭제 요청, 반출 신청, 교정 등록 요청
  * - 기술책임자: 장비 승인, 반출 승인, 교정 승인, 팀 관리, 교정계획서 작성/검토요청
  * - 품질책임자: 교정계획서 검토 (신규)
- * - 시험소장: 모든 권한 (해당 시험소 내), 교정계획서 최종 승인
+ * - 시험소장: 모든 권한 (해당 시험소 내, 단 교정 등록 제외), 교정계획서 최종 승인
+ *
+ * ⚠️ 교정 등록 특수 정책: 시험실무자만 교정 기록 등록 가능 (등록/승인 완전 분리)
  *
  * 참고: 대여(Rentals)는 제거되었으며, 반출(Checkouts)이 교정/수리/시험소간 대여 모두 포함
  */
@@ -134,8 +136,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.EXPORT_REPORTS,
   ],
 
-  // 시험소장: 모든 권한 (해당 시험소 내)
-  lab_manager: [...Object.values(Permission)],
+  // 시험소장: 모든 권한 (단, 교정 기록 등록 제외)
+  // 교정 기록은 시험실무자만 등록 가능 (UL-QP-18 등록/승인 완전 분리 정책)
+  lab_manager: Object.values(Permission).filter((p) => p !== Permission.CREATE_CALIBRATION),
 };
 
 /**

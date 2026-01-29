@@ -9,12 +9,7 @@ import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
 import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
-import {
-  CalibrationStatusEnum,
-  CalibrationStatus,
-  CalibrationApprovalStatusEnum,
-  CalibrationRegisteredByRoleEnum,
-} from '@equipment-management/schemas';
+import { CalibrationStatus, CalibrationApprovalStatusEnum } from '@equipment-management/schemas';
 import { getUtcStartOfDay, addDaysUtc } from '../../common/utils';
 import { db } from '../../database/drizzle';
 import { equipment } from '@equipment-management/db/schema';
@@ -149,19 +144,9 @@ export class CalibrationService {
   create(createCalibrationDto: CreateCalibrationDto) {
     const { registeredBy, registeredByRole, registrarComment, ...rest } = createCalibrationDto;
 
-    // 기술책임자는 등록자 코멘트 필수
-    if (
-      registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager &&
-      !registrarComment
-    ) {
-      throw new BadRequestException('기술책임자는 등록자 코멘트를 반드시 입력해야 합니다.');
-    }
-
-    // 승인 상태 결정: 기술책임자가 등록하면 바로 approved, 시험실무자는 pending_approval
-    const approvalStatus =
-      registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager
-        ? CalibrationApprovalStatusEnum.enum.approved
-        : CalibrationApprovalStatusEnum.enum.pending_approval;
+    // 교정 기록은 시험실무자만 등록 가능 (UL-QP-18 등록/승인 완전 분리 정책)
+    // 모든 교정 기록은 기술책임자 이상의 승인 필요
+    const approvalStatus = CalibrationApprovalStatusEnum.enum.pending_approval;
 
     const newCalibration: CalibrationRecord = {
       id: `calibration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -182,10 +167,7 @@ export class CalibrationService {
       additionalInfo: rest.additionalInfo || null,
       approvalStatus,
       registeredBy: registeredBy || null,
-      approvedBy:
-        registeredByRole === CalibrationRegisteredByRoleEnum.enum.technical_manager
-          ? registeredBy || null
-          : null,
+      approvedBy: null, // 모든 교정 기록은 승인 대기 상태로 시작
       registeredByRole: registeredByRole || null,
       registrarComment: registrarComment || null,
       approverComment: null,

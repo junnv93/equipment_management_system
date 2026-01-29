@@ -242,10 +242,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @UseInterceptors(FileInterceptor('file'))
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
-  async uploadCertificate(
-    @Param('uuid') uuid: string,
-    @UploadedFile() file: MulterFile
-  ) {
+  async uploadCertificate(@Param('uuid') uuid: string, @UploadedFile() file: MulterFile) {
     // 교정 존재 여부 확인
     await this.calibrationService.findOne(uuid);
 
