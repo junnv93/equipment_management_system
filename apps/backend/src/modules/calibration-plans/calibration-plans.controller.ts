@@ -300,4 +300,42 @@ export class CalibrationPlansController {
 
     res.send(htmlBuffer);
   }
+
+  @Post(':uuid/new-version')
+  @ApiOperation({
+    summary: '새 버전 생성',
+    description:
+      '승인된 교정계획서의 새 버전을 생성합니다. 기존 항목이 복사되며, 새 버전은 draft 상태로 시작합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정계획서 UUID (승인된 계획서)' })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '새 버전 생성 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: '승인된 계획서만 새 버전 생성 가능',
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.CREATE_CALIBRATION_PLAN)
+  createNewVersion(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() body: { createdBy: string }
+  ) {
+    return this.calibrationPlansService.createNewVersion(uuid, body.createdBy);
+  }
+
+  @Get(':uuid/versions')
+  @ApiOperation({
+    summary: '버전 히스토리 조회',
+    description: '교정계획서의 모든 버전 히스토리를 조회합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
+  @ApiResponse({ status: HttpStatus.OK, description: '버전 히스토리 조회 성공' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
+  getVersionHistory(@Param('uuid', ParseUUIDPipe) uuid: string) {
+    return this.calibrationPlansService.getVersionHistory(uuid);
+  }
 }

@@ -5,7 +5,7 @@ import {
   ConflictException,
   Inject,
 } from '@nestjs/common';
-import { eq, and, desc, SQL } from 'drizzle-orm';
+import { eq, and, desc, or, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -41,15 +41,23 @@ export class CalibrationPlansService {
   async create(createDto: CreateCalibrationPlanDto) {
     const { year, siteId, teamId, createdBy } = createDto;
 
-    // 이미 해당 연도/시험소에 계획서가 있는지 확인
+    // 이미 해당 연도/시험소에 최신 버전 계획서가 있는지 확인
     const existing = await this.db
       .select()
       .from(calibrationPlans)
-      .where(and(eq(calibrationPlans.year, year), eq(calibrationPlans.siteId, siteId)))
+      .where(
+        and(
+          eq(calibrationPlans.year, year),
+          eq(calibrationPlans.siteId, siteId),
+          eq(calibrationPlans.isLatestVersion, true)
+        )
+      )
       .limit(1);
 
     if (existing.length > 0) {
-      throw new ConflictException(`${year}년 ${siteId} 시험소의 교정계획서가 이미 존재합니다.`);
+      throw new ConflictException(
+        `${year}년 ${siteId} 시험소의 교정계획서가 이미 존재합니다. (버전 ${existing[0].version})`
+      );
     }
 
     // 트랜잭션으로 계획서 생성 + 항목 자동 생성
@@ -517,6 +525,107 @@ export class CalibrationPlansService {
     }
 
     return items.length;
+  }
+
+  /**
+   * 새 버전 생성 (승인된 계획서만)
+   *
+   * 승인된 교정계획서를 수정해야 할 경우 새 버전을 생성합니다.
+   * - 기존 계획서는 isLatestVersion=false로 변경
+   * - 새 계획서는 version+1, status='draft', isLatestVersion=true
+   * - 기존 항목들을 새 계획서로 복사
+   */
+  async createNewVersion(uuid: string, userId: string) {
+    const parent = await this.findOneBasic(uuid);
+
+    if (parent.status !== 'approved') {
+      throw new BadRequestException('승인된 계획서만 새 버전을 생성할 수 있습니다.');
+    }
+
+    // 트랜잭션으로 버전 생성
+    const result = await this.db.transaction(async (tx) => {
+      // 1. 기존 계획서를 최신 버전 아님으로 표시
+      await tx
+        .update(calibrationPlans)
+        .set({ isLatestVersion: false, updatedAt: new Date() })
+        .where(eq(calibrationPlans.id, uuid));
+
+      // 2. 새 버전 생성
+      const [newPlan] = await tx
+        .insert(calibrationPlans)
+        .values({
+          year: parent.year,
+          siteId: parent.siteId,
+          teamId: parent.teamId,
+          status: 'draft',
+          createdBy: userId,
+          version: parent.version + 1,
+          parentPlanId: parent.id,
+          isLatestVersion: true,
+        })
+        .returning();
+
+      // 3. 기존 항목 조회
+      const existingItems = await tx
+        .select()
+        .from(calibrationPlanItems)
+        .where(eq(calibrationPlanItems.planId, parent.id))
+        .orderBy(calibrationPlanItems.sequenceNumber);
+
+      // 4. 항목 복사
+      if (existingItems.length > 0) {
+        const newItems: NewCalibrationPlanItem[] = existingItems.map((item) => ({
+          planId: newPlan.id,
+          equipmentId: item.equipmentId,
+          sequenceNumber: item.sequenceNumber,
+          snapshotValidityDate: item.snapshotValidityDate,
+          snapshotCalibrationCycle: item.snapshotCalibrationCycle,
+          snapshotCalibrationAgency: item.snapshotCalibrationAgency,
+          plannedCalibrationDate: item.plannedCalibrationDate,
+          plannedCalibrationAgency: item.plannedCalibrationAgency,
+          notes: item.notes,
+        }));
+
+        await tx.insert(calibrationPlanItems).values(newItems);
+      }
+
+      return newPlan;
+    });
+
+    return this.findOne(result.id);
+  }
+
+  /**
+   * 버전 히스토리 조회
+   *
+   * 특정 계획서의 모든 버전을 조회합니다.
+   * - 같은 year + siteId를 가진 모든 버전
+   * - 버전 번호 내림차순 정렬
+   */
+  async getVersionHistory(uuid: string) {
+    const current = await this.findOneBasic(uuid);
+
+    // 같은 연도+시험소의 모든 버전 조회
+    const versions = await this.db
+      .select({
+        id: calibrationPlans.id,
+        year: calibrationPlans.year,
+        siteId: calibrationPlans.siteId,
+        status: calibrationPlans.status,
+        version: calibrationPlans.version,
+        isLatestVersion: calibrationPlans.isLatestVersion,
+        createdBy: calibrationPlans.createdBy,
+        createdAt: calibrationPlans.createdAt,
+        approvedBy: calibrationPlans.approvedBy,
+        approvedAt: calibrationPlans.approvedAt,
+      })
+      .from(calibrationPlans)
+      .where(
+        and(eq(calibrationPlans.year, current.year), eq(calibrationPlans.siteId, current.siteId))
+      )
+      .orderBy(desc(calibrationPlans.version));
+
+    return versions;
   }
 
   /**
