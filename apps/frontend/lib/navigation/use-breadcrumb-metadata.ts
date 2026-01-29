@@ -26,7 +26,7 @@ import { extractDynamicParams, normalizeDynamicRoute } from './route-metadata';
  */
 export function useDynamicBreadcrumbLabels(): Record<string, string> | undefined {
   const pathname = usePathname();
-  const params = useParams();
+  const _params = useParams();
 
   const normalizedRoute = normalizeDynamicRoute(pathname);
   const dynamicParams = extractDynamicParams(pathname);

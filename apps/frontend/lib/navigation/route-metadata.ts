@@ -150,32 +150,6 @@ export const routeMap: Record<string, RouteMetadata> = {
   },
 
   // ========================================
-  // 시험소간 대여 (Rentals)
-  // ========================================
-  '/rentals': {
-    label: '시험소간 대여',
-    parent: '/',
-    icon: FileText,
-  },
-  '/rentals/create': {
-    label: '대여 등록',
-    parent: '/rentals',
-  },
-  '/rentals/manage': {
-    label: '대여 관리',
-    parent: '/rentals',
-  },
-
-  // ========================================
-  // 대출 관리 (Loans)
-  // ========================================
-  '/loans': {
-    label: '대출 관리',
-    parent: '/',
-    icon: FileText,
-  },
-
-  // ========================================
   // 유지보수
   // ========================================
   '/maintenance': {

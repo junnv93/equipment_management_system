@@ -1,7 +1,22 @@
+/**
+ * ⚠️ DEPRECATED: Barrel import 패턴은 트리쉐이킹을 방해합니다.
+ *
+ * 직접 import를 사용하세요:
+ * ```typescript
+ * // ❌ AVOID: Barrel import
+ * import { dashboardApi, equipmentApi } from '@/lib/api';
+ *
+ * // ✅ CORRECT: Direct import
+ * import dashboardApi from '@/lib/api/dashboard-api';
+ * import equipmentApi from '@/lib/api/equipment-api';
+ * ```
+ *
+ * @see https://vercel.com/blog/how-we-optimized-package-imports-in-next-js
+ * @deprecated Use direct imports instead for better tree-shaking
+ */
 import { apiClient } from './api-client';
 import dashboardApi from './dashboard-api';
 import equipmentApi from './equipment-api';
-import rentalApi from './rental-api';
 import calibrationApi from './calibration-api';
 import calibrationFactorsApi from './calibration-factors-api';
 import calibrationPlansApi from './calibration-plans-api';
@@ -9,12 +24,11 @@ import nonConformancesApi from './non-conformances-api';
 import softwareApi from './software-api';
 import * as repairHistoryApi from './repair-history-api';
 
-// API 객체 통합 내보내기
+// API 객체 통합 내보내기 (호환성 유지, 새 코드에서는 직접 import 권장)
 export {
   apiClient,
   dashboardApi,
   equipmentApi,
-  rentalApi,
   calibrationApi,
   calibrationFactorsApi,
   calibrationPlansApi,
@@ -44,11 +58,8 @@ export type {
 export type {
   PaginatedResponse,
   PaginatedResponse as EquipmentPaginatedResponse,
-  PaginatedResponse as RentalPaginatedResponse,
   PaginatedResponse as CalibrationPaginatedResponse,
 } from './types';
-
-export type { Rental, RentalQuery, CreateRentalDto, UpdateRentalDto } from './rental-api';
 
 export type {
   Calibration as CalibrationRecord,

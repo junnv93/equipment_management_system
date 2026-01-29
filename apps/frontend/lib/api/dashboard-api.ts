@@ -1,9 +1,10 @@
 import { apiClient } from './api-client';
+import type { UserRole } from '@equipment-management/schemas';
+import { transformArrayResponse } from './utils/response-transformers';
 
 export interface DashboardSummary {
   totalEquipment: number;
   availableEquipment: number;
-  activeRentals: number;
   activeCheckouts: number;
   upcomingCalibrations: number;
 }
@@ -31,7 +32,7 @@ export interface UpcomingCalibration {
   daysUntilDue: number;
 }
 
-// ✅ Rental 타입과 일관성 유지: 중첩 객체 구조 사용
+// 반출 지연 (대여 포함) - 레거시 호환성을 위해 타입명 유지
 export interface OverdueRental {
   id: string;
   equipmentId: string;
@@ -68,14 +69,14 @@ export interface RecentActivity {
 export interface PendingApprovalCounts {
   equipment: number;
   calibration: number;
-  rental: number;
   checkout: number;
   calibrationFactor: number;
   software: number;
   total: number;
 }
 
-export type UserRole = 'test_engineer' | 'technical_manager' | 'lab_manager' | 'system_admin';
+// UserRole은 @equipment-management/schemas에서 import (SSOT)
+export type { UserRole };
 
 class DashboardApi {
   async getSummary(): Promise<DashboardSummary> {
@@ -94,25 +95,21 @@ class DashboardApi {
 
   async getEquipmentList(): Promise<unknown[]> {
     const response = await apiClient.get('/api/equipment?limit=10');
-    return response.data?.items || [];
+    return transformArrayResponse<unknown>(response);
   }
 
   async getCalibrationSchedule(): Promise<UpcomingCalibration[]> {
     return this.getUpcomingCalibrations(30);
   }
 
-  async getOverdueLoans(): Promise<OverdueRental[]> {
-    return this.getOverdueRentals();
-  }
-
   async getEquipmentByTeam(): Promise<EquipmentByTeam[]> {
     const response = await apiClient.get('/api/dashboard/equipment-by-team');
-    return response.data;
+    return transformArrayResponse<EquipmentByTeam>(response);
   }
 
   async getOverdueCalibrations(): Promise<OverdueCalibration[]> {
     const response = await apiClient.get('/api/dashboard/overdue-calibrations');
-    return response.data;
+    return transformArrayResponse<OverdueCalibration>(response);
   }
 
   async getUpcomingCalibrations(days: number): Promise<UpcomingCalibration[]> {
@@ -120,7 +117,10 @@ class DashboardApi {
     return response.data;
   }
 
-  async getOverdueRentals(): Promise<OverdueRental[]> {
+  /**
+   * 반출 지연 목록 조회 (대여 포함)
+   */
+  async getOverdueCheckouts(): Promise<OverdueRental[]> {
     const response = await apiClient.get('/api/dashboard/overdue-rentals');
     return response.data;
   }
@@ -150,7 +150,6 @@ class DashboardApi {
       return {
         equipment: 0,
         calibration: 0,
-        rental: 0,
         checkout: 0,
         calibrationFactor: 0,
         software: 0,

@@ -1,22 +1,31 @@
 // 예약 상태 타입
 export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | 'COMPLETED';
 
+// ✅ SSOT: @equipment-management/schemas에서 타입 import
+import type {
+  UserRole as SchemaUserRole,
+  EquipmentStatus,
+} from '@equipment-management/schemas';
+
+// Re-export for convenience
+export type { SchemaUserRole as UserRole };
+
 // 사용자 타입
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'USER' | 'MANAGER';
+  role: SchemaUserRole;
   teamId?: string;
 }
 
-// 장비 타입 (packages/schemas의 EquipmentStatus와 일치)
+// ✅ SSOT: 장비 타입 (packages/schemas의 EquipmentStatus 사용)
 export interface Equipment {
   id: string;
   name: string;
   managementNumber: string;
   description?: string;
-  status: 'available' | 'in_use' | 'checked_out' | 'calibration_scheduled' | 'calibration_overdue' | 'non_conforming' | 'spare' | 'retired';
+  status: EquipmentStatus;
 }
 
 // 예약 타입
@@ -83,13 +92,9 @@ export interface Team {
   updatedAt: string;
 }
 
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
+// ✅ SSOT: PaginatedResponse는 api/types.ts에서 정의 (schemas 패키지 기반)
+// Re-export for backward compatibility
+export type { PaginatedResponse } from '../api/types';
 
 export interface ApiResponse<T> {
   data: T;
@@ -102,7 +107,7 @@ export interface ApiErrorResponse {
   error: {
     code: string;
     message: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
   };
   meta: {
     timestamp: string;
@@ -153,7 +158,7 @@ export interface ReportData {
   type: 'excel' | 'csv' | 'pdf';
   generatedAt: string;
   url: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
 }
 
 // UI 컴포넌트 타입

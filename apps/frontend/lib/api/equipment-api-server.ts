@@ -9,6 +9,7 @@
  * - getServerSession()을 통한 인증
  * - async/await 직접 사용 가능
  * - React Query 불필요
+ * - React.cache()로 동일 요청 내 중복 fetch 방지
  *
  * 사용 예시:
  *   // app/equipment/[id]/page.tsx
@@ -24,10 +25,15 @@
  * ============================================================================
  */
 
+import { cache } from 'react';
 import { createServerApiClient } from './server-api-client';
-import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
-import type { PaginatedResponse } from './types';
-import type {
+import {
+  createEquipmentApiMethods,
+  type EquipmentApiMethods,
+} from './shared/equipment-api.shared';
+
+// Re-export types for convenience
+export type {
   Equipment,
   EquipmentQuery,
   CreateEquipmentDto,
@@ -40,213 +46,207 @@ import type {
   CreateMaintenanceHistoryInput,
   CreateIncidentHistoryInput,
 } from './equipment-api';
-import type { EquipmentStatus } from '@equipment-management/schemas';
 
 /**
- * 장비 목록 조회 (Server Component)
+ * Server Component용 Equipment API 메서드들
+ *
+ * 각 함수 호출 시 새로운 apiClient를 생성하여 세션을 가져옵니다.
+ * 이는 Server Component에서 매 요청마다 새로운 세션을 사용해야 하기 때문입니다.
+ *
+ * ✅ React.cache() 적용: 읽기 전용 함수들에 cache를 적용하여
+ * generateMetadata와 Page에서 동일 데이터 중복 fetch 방지
+ */
+
+// Helper: API 메서드를 async wrapper로 감싸기
+async function getApi(): Promise<EquipmentApiMethods> {
+  const apiClient = await createServerApiClient();
+  return createEquipmentApiMethods(apiClient);
+}
+
+// ========== Cached Internal Functions ==========
+// 동일 요청 내에서 여러 번 호출되는 함수들에 cache 적용
+
+const getEquipmentCached = cache(async (id: string | number) => {
+  const api = await getApi();
+  return api.getEquipment(id);
+});
+
+const getEquipmentListCached = cache(
+  async (query: Parameters<EquipmentApiMethods['getEquipmentList']>[0]) => {
+    const api = await getApi();
+    return api.getEquipmentList(query);
+  }
+);
+
+const getPendingRequestsCached = cache(async () => {
+  const api = await getApi();
+  return api.getPendingRequests();
+});
+
+// ========== 기본 CRUD ==========
+
+/**
+ * 장비 목록 조회 (React.cache 적용)
+ * 동일 쿼리 파라미터로 요청 시 캐시된 결과 반환
  */
 export async function getEquipmentList(
-  query: EquipmentQuery = {} as EquipmentQuery
-): Promise<PaginatedResponse<Equipment>> {
-  const apiClient = await createServerApiClient();
-
-  const params = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      params.append(key, String(value));
-    }
-  });
-
-  const url = `/api/equipment${params.toString() ? `?${params.toString()}` : ''}`;
-  const response = await apiClient.get(url);
-  return transformPaginatedResponse<Equipment>(response);
+  ...args: Parameters<EquipmentApiMethods['getEquipmentList']>
+) {
+  return getEquipmentListCached(args[0]);
 }
 
 /**
- * 장비 상세 조회 (Server Component)
- *
- * @param id - 장비 ID (string 또는 number)
- * @returns Promise<Equipment>
- *
- * @example
- * ```typescript
- * // Server Component
- * export default async function EquipmentDetailPage(props: PageProps) {
- *   const { id } = await props.params;
- *   const equipment = await getEquipment(id);
- *   return <EquipmentDetail equipment={equipment} />;
- * }
- * ```
+ * 장비 상세 조회 (React.cache 적용)
+ * generateMetadata와 Page에서 동일 ID로 호출 시 한 번만 fetch
  */
-export async function getEquipment(id: string | number): Promise<Equipment> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/${id}`);
-  return transformSingleResponse<Equipment>(response);
+export async function getEquipment(
+  ...args: Parameters<EquipmentApiMethods['getEquipment']>
+) {
+  return getEquipmentCached(args[0]);
 }
 
-/**
- * 장비 생성 (Server Component)
- *
- * ⚠️ 주의: 파일 업로드는 Server Component에서 직접 처리하기 어려우므로
- * 파일 업로드가 필요한 경우 Server Action을 사용하거나
- * Client Component에서 처리하세요.
- */
-export async function createEquipment(data: CreateEquipmentDto): Promise<EquipmentMutationResponse> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.post('/api/equipment', data);
-  return transformSingleResponse<EquipmentMutationResponse>(response);
+export async function createEquipment(
+  ...args: Parameters<EquipmentApiMethods['createEquipment']>
+) {
+  const api = await getApi();
+  return api.createEquipment(...args);
 }
 
-/**
- * 장비 수정 (Server Component)
- *
- * ⚠️ 주의: 파일 업로드는 Server Component에서 직접 처리하기 어려우므로
- * 파일 업로드가 필요한 경우 Server Action을 사용하거나
- * Client Component에서 처리하세요.
- */
 export async function updateEquipment(
-  id: string | number,
-  data: UpdateEquipmentDto
-): Promise<EquipmentMutationResponse> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.patch(`/api/equipment/${id}`, data);
-  return transformSingleResponse<EquipmentMutationResponse>(response);
+  ...args: Parameters<EquipmentApiMethods['updateEquipment']>
+) {
+  const api = await getApi();
+  return api.updateEquipment(...args);
 }
 
-/**
- * 장비 삭제 (Server Component)
- */
-export async function deleteEquipment(id: string | number): Promise<void> {
-  const apiClient = await createServerApiClient();
-  await apiClient.delete(`/api/equipment/${id}`);
+export async function deleteEquipment(
+  ...args: Parameters<EquipmentApiMethods['deleteEquipment']>
+) {
+  const api = await getApi();
+  return api.deleteEquipment(...args);
 }
 
-/**
- * 장비 상태 변경 (Server Component)
- */
 export async function updateEquipmentStatus(
-  id: string | number,
-  status: EquipmentStatus
-): Promise<Equipment> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.patch(`/api/equipment/${id}/status`, { status });
-  return transformSingleResponse<Equipment>(response);
+  ...args: Parameters<EquipmentApiMethods['updateEquipmentStatus']>
+) {
+  const api = await getApi();
+  return api.updateEquipmentStatus(...args);
 }
+
+// ========== 특수 조회 ==========
+
+export async function getCalibrationDueEquipment(
+  ...args: Parameters<EquipmentApiMethods['getCalibrationDueEquipment']>
+) {
+  const api = await getApi();
+  return api.getCalibrationDueEquipment(...args);
+}
+
+export async function getTeamEquipment(
+  ...args: Parameters<EquipmentApiMethods['getTeamEquipment']>
+) {
+  const api = await getApi();
+  return api.getTeamEquipment(...args);
+}
+
+// ========== 승인 프로세스 ==========
 
 /**
- * 교정 예정 장비 조회 (Server Component)
+ * 승인 대기 요청 목록 (React.cache 적용)
  */
-export async function getCalibrationDueEquipment(days: number = 30): Promise<Equipment[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/calibration/due?days=${days}`);
-  return response.data;
+export async function getPendingRequests() {
+  return getPendingRequestsCached();
 }
 
-/**
- * 팀별 장비 조회 (Server Component)
- */
-export async function getTeamEquipment(teamId: string): Promise<Equipment[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/team/${teamId}`);
-  return response.data;
+export async function getRequestByUuid(
+  ...args: Parameters<EquipmentApiMethods['getRequestByUuid']>
+) {
+  const api = await getApi();
+  return api.getRequestByUuid(...args);
 }
 
-// ========== 승인 프로세스 API ==========
-
-export async function getPendingRequests(): Promise<any[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get('/api/equipment/requests/pending');
-  return response.data || [];
+export async function approveRequest(
+  ...args: Parameters<EquipmentApiMethods['approveRequest']>
+) {
+  const api = await getApi();
+  return api.approveRequest(...args);
 }
 
-export async function getRequestByUuid(requestUuid: string): Promise<any> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/requests/${requestUuid}`);
-  return response.data;
+export async function rejectRequest(
+  ...args: Parameters<EquipmentApiMethods['rejectRequest']>
+) {
+  const api = await getApi();
+  return api.rejectRequest(...args);
 }
 
-export async function approveRequest(requestUuid: string): Promise<any> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/approve`);
-  return response.data;
-}
+// ========== 이력 관리 ==========
 
-export async function rejectRequest(requestUuid: string, rejectionReason: string): Promise<any> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/reject`, {
-    rejectionReason,
-  });
-  return response.data;
-}
-
-// ========== 이력 관리 API ==========
-
-export async function getLocationHistory(equipmentUuid: string): Promise<LocationHistoryItem[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/${equipmentUuid}/location-history`);
-  return response.data || response;
+export async function getLocationHistory(
+  ...args: Parameters<EquipmentApiMethods['getLocationHistory']>
+) {
+  const api = await getApi();
+  return api.getLocationHistory(...args);
 }
 
 export async function createLocationHistory(
-  equipmentUuid: string,
-  data: CreateLocationHistoryInput
-): Promise<LocationHistoryItem> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.post(`/api/equipment/${equipmentUuid}/location-history`, data);
-  return response.data || response;
+  ...args: Parameters<EquipmentApiMethods['createLocationHistory']>
+) {
+  const api = await getApi();
+  return api.createLocationHistory(...args);
 }
 
-export async function deleteLocationHistory(historyId: string): Promise<void> {
-  const apiClient = await createServerApiClient();
-  await apiClient.delete(`/api/equipment/location-history/${historyId}`);
+export async function deleteLocationHistory(
+  ...args: Parameters<EquipmentApiMethods['deleteLocationHistory']>
+) {
+  const api = await getApi();
+  return api.deleteLocationHistory(...args);
 }
 
-export async function getMaintenanceHistory(equipmentUuid: string): Promise<MaintenanceHistoryItem[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/${equipmentUuid}/maintenance-history`);
-  return response.data || response;
+export async function getMaintenanceHistory(
+  ...args: Parameters<EquipmentApiMethods['getMaintenanceHistory']>
+) {
+  const api = await getApi();
+  return api.getMaintenanceHistory(...args);
 }
 
 export async function createMaintenanceHistory(
-  equipmentUuid: string,
-  data: CreateMaintenanceHistoryInput
-): Promise<MaintenanceHistoryItem> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.post(
-    `/api/equipment/${equipmentUuid}/maintenance-history`,
-    data
-  );
-  return response.data || response;
+  ...args: Parameters<EquipmentApiMethods['createMaintenanceHistory']>
+) {
+  const api = await getApi();
+  return api.createMaintenanceHistory(...args);
 }
 
-export async function deleteMaintenanceHistory(historyId: string): Promise<void> {
-  const apiClient = await createServerApiClient();
-  await apiClient.delete(`/api/equipment/maintenance-history/${historyId}`);
+export async function deleteMaintenanceHistory(
+  ...args: Parameters<EquipmentApiMethods['deleteMaintenanceHistory']>
+) {
+  const api = await getApi();
+  return api.deleteMaintenanceHistory(...args);
 }
 
-export async function getIncidentHistory(equipmentUuid: string): Promise<IncidentHistoryItem[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/${equipmentUuid}/incident-history`);
-  return response.data || response;
+export async function getIncidentHistory(
+  ...args: Parameters<EquipmentApiMethods['getIncidentHistory']>
+) {
+  const api = await getApi();
+  return api.getIncidentHistory(...args);
 }
 
 export async function createIncidentHistory(
-  equipmentUuid: string,
-  data: CreateIncidentHistoryInput
-): Promise<IncidentHistoryItem> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.post(`/api/equipment/${equipmentUuid}/incident-history`, data);
-  return response.data || response;
+  ...args: Parameters<EquipmentApiMethods['createIncidentHistory']>
+) {
+  const api = await getApi();
+  return api.createIncidentHistory(...args);
 }
 
-export async function deleteIncidentHistory(historyId: string): Promise<void> {
-  const apiClient = await createServerApiClient();
-  await apiClient.delete(`/api/equipment/incident-history/${historyId}`);
+export async function deleteIncidentHistory(
+  ...args: Parameters<EquipmentApiMethods['deleteIncidentHistory']>
+) {
+  const api = await getApi();
+  return api.deleteIncidentHistory(...args);
 }
 
-export async function getCalibrationHistory(equipmentUuid: string): Promise<any[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/calibrations?equipmentId=${equipmentUuid}`);
-  const responseData = response as any;
-  return responseData.data?.items || responseData.items || responseData.data || [];
+export async function getCalibrationHistory(
+  ...args: Parameters<EquipmentApiMethods['getCalibrationHistory']>
+) {
+  const api = await getApi();
+  return api.getCalibrationHistory(...args);
 }

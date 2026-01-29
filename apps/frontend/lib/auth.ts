@@ -1,11 +1,39 @@
 /**
  * 인증 관련 유틸리티 함수 및 설정
+ *
+ * NextAuth Best Practice:
+ * - 모든 콜백에 적절한 타입 정의 사용
+ * - 모듈 확장(types/next-auth.d.ts)과 일관성 유지
+ * - any 타입 사용 금지
  */
 
 import { getSession } from 'next-auth/react';
-import NextAuth from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
+import type { Account, Profile, User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import AzureADProvider from 'next-auth/providers/azure-ad';
+
+/**
+ * Azure AD 프로필 확장 타입
+ * Azure AD에서 반환하는 추가 필드 정의
+ */
+interface AzureADProfile extends Profile {
+  roles?: string[];
+  department?: string;
+}
+
+/**
+ * 인증된 사용자 정보 (Credentials Provider 반환값)
+ * authorize 함수에서 반환하는 사용자 객체 타입
+ */
+interface AuthorizedUser extends User {
+  role: string;
+  roles: string[];
+  department?: string;
+  site?: 'suwon' | 'uiwang';
+  teamId?: string;
+  accessToken?: string;
+}
 
 // 백엔드 API 베이스 URL (호스트만 포함, /api는 각 엔드포인트에서 지정)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -177,41 +205,74 @@ export const authOptions = {
     maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
-    async jwt({ token, user, account, profile }: any) {
+    /**
+     * JWT 콜백 - 토큰에 사용자 정보 저장
+     *
+     * @param token - 기존 JWT 토큰
+     * @param user - 최초 로그인 시 authorize에서 반환된 사용자 정보
+     * @param account - OAuth 계정 정보 (provider, access_token 등)
+     * @param profile - OAuth 프로필 정보 (Azure AD 등)
+     */
+    async jwt({
+      token,
+      user,
+      account,
+      profile,
+    }: {
+      token: JWT;
+      user?: User;
+      account?: Account | null;
+      profile?: Profile;
+    }): Promise<JWT> {
       // Azure AD 로그인 처리
       if (account?.provider === 'azure-ad') {
         if (user) {
+          const azureProfile = profile as AzureADProfile | undefined;
           token.id = user.id;
-          token.email = user.email;
-          token.name = user.name;
-          token.roles = (profile as any)?.roles || ['USER'];
+          token.email = user.email ?? undefined;
+          token.name = user.name ?? undefined;
+          token.roles = azureProfile?.roles || ['USER'];
           token.role = token.roles[0] || 'USER';
-          token.department = (profile as any)?.department;
-          token.accessToken = account.access_token;
+          token.department = azureProfile?.department;
+          token.accessToken = account.access_token ?? undefined;
         }
       }
 
       // 로컬 로그인 처리 (일반 Credentials + test-login Provider)
       if ((account?.provider === 'credentials' || account?.provider === 'test-login') && user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.roles = user.roles;
-        token.department = user.department;
-        token.site = (user as any).site;
-        token.teamId = (user as any).teamId;
-        token.accessToken = (user as any).accessToken;
+        const authUser = user as AuthorizedUser;
+        token.id = authUser.id;
+        token.role = authUser.role;
+        token.roles = authUser.roles;
+        token.department = authUser.department;
+        token.site = authUser.site;
+        token.teamId = authUser.teamId;
+        token.accessToken = authUser.accessToken;
       }
       return token;
     },
-    async session({ session, token }: any) {
+
+    /**
+     * Session 콜백 - 클라이언트에 전달할 세션 정보 구성
+     *
+     * @param session - 세션 객체
+     * @param token - JWT 토큰 (strategy: 'jwt' 사용 시)
+     */
+    async session({
+      session,
+      token,
+    }: {
+      session: Session;
+      token: JWT;
+    }): Promise<Session> {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.roles = token.roles as string[];
-        session.user.department = token.department as string | undefined;
-        session.user.site = token.site as string | undefined;
-        session.user.teamId = token.teamId as string | undefined;
-        (session as any).accessToken = token.accessToken as string;
+        session.user.id = token.id ?? '';
+        session.user.role = token.role ?? 'USER';
+        session.user.roles = token.roles ?? ['USER'];
+        session.user.department = token.department;
+        session.user.site = token.site;
+        session.user.teamId = token.teamId;
+        session.accessToken = token.accessToken;
       }
       return session;
     },

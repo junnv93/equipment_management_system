@@ -1,5 +1,4 @@
 import axios from 'axios';
-import type { SingleResourceResponse } from '@equipment-management/schemas';
 import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 

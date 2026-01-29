@@ -1,15 +1,21 @@
 import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
+// ✅ SSOT: schemas 패키지에서 타입 import
+import type {
+  NonConformanceStatus,
+  NonConformanceType,
+  ResolutionType,
+} from '@equipment-management/schemas';
+// ✅ SSOT: schemas 패키지에서 라벨 import
+import {
+  NON_CONFORMANCE_STATUS_LABELS,
+  NON_CONFORMANCE_TYPE_LABELS,
+  RESOLUTION_TYPE_LABELS,
+} from '@equipment-management/schemas';
 
-// 부적합 상태 타입
-export type NonConformanceStatus = 'open' | 'analyzing' | 'corrected' | 'closed';
-
-// 부적합 유형 타입
-export type NonConformanceType = 'damage' | 'malfunction' | 'calibration_failure' | 'measurement_error' | 'other';
-
-// 해결 방법 타입
-export type ResolutionType = 'repair' | 'recalibration' | 'replacement' | 'disposal' | 'other';
+// Re-export for backward compatibility
+export type { NonConformanceStatus, NonConformanceType, ResolutionType };
 
 // 부적합 인터페이스
 export interface NonConformance {
@@ -72,38 +78,15 @@ export interface CloseNonConformanceDto {
   closureNotes?: string;
 }
 
-// 상태 라벨
-export const NON_CONFORMANCE_STATUS_LABELS: Record<NonConformanceStatus, string> = {
-  open: '발견됨',
-  analyzing: '분석 중',
-  corrected: '조치 완료',
-  closed: '종료됨',
-};
+// ✅ Re-export labels from SSOT for backward compatibility
+export { NON_CONFORMANCE_STATUS_LABELS, NON_CONFORMANCE_TYPE_LABELS, RESOLUTION_TYPE_LABELS };
 
-// 상태 색상
+// 상태 색상 (UI 전용 - 프론트엔드에서만 사용)
 export const NON_CONFORMANCE_STATUS_COLORS: Record<NonConformanceStatus, string> = {
   open: 'bg-red-100 text-red-800',
   analyzing: 'bg-yellow-100 text-yellow-800',
   corrected: 'bg-blue-100 text-blue-800',
   closed: 'bg-green-100 text-green-800',
-};
-
-// 부적합 유형 라벨
-export const NON_CONFORMANCE_TYPE_LABELS: Record<NonConformanceType, string> = {
-  damage: '손상',
-  malfunction: '오작동',
-  calibration_failure: '교정 실패',
-  measurement_error: '측정 오류',
-  other: '기타',
-};
-
-// 해결 방법 라벨
-export const RESOLUTION_TYPE_LABELS: Record<ResolutionType, string> = {
-  repair: '수리',
-  recalibration: '재교정',
-  replacement: '교체',
-  disposal: '폐기',
-  other: '기타',
 };
 
 // 부적합 API 객체

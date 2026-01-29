@@ -29,10 +29,13 @@
  * ============================================================================
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import axios, { AxiosInstance } from 'axios';
 import { createApiError } from './utils/response-transformers';
+import {
+  getServerAuthSession,
+  getAccessToken,
+  getServerAuthHeaders as getAuthHeaders,
+} from '@/lib/auth/server-session';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -57,9 +60,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
  * ```
  */
 export async function createServerApiClient(): Promise<AxiosInstance> {
-  // ✅ Server Component에서 NextAuth 세션 가져오기
-  const session = await getServerSession(authOptions);
-  const accessToken = (session as any)?.accessToken;
+  // ✅ 중앙화된 세션 유틸리티 사용
+  const session = await getServerAuthSession();
+  const accessToken = await getAccessToken();
 
   // Axios 인스턴스 생성
   const client = axios.create({
@@ -124,45 +127,13 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
  *
  * Axios 대신 native fetch를 사용하고 싶을 때 사용
  *
- * @example
- * ```typescript
- * export default async function Page() {
- *   const headers = await getServerAuthHeaders();
- *   const response = await fetch(`${API_BASE_URL}/api/equipment`, {
- *     headers,
- *     cache: 'no-store',
- *   });
- *   const data = await response.json();
- *   return <EquipmentList data={data} />;
- * }
- * ```
+ * @deprecated '@/lib/auth/server-session'의 getServerAuthHeaders를 사용하세요
  */
-export async function getServerAuthHeaders(): Promise<HeadersInit> {
-  const session = await getServerSession(authOptions);
-  const accessToken = (session as any)?.accessToken;
-
-  return {
-    'Content-Type': 'application/json',
-    ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
-  };
-}
+export const getServerAuthHeaders = getAuthHeaders;
 
 /**
  * Server Component에서 현재 세션 정보 가져오기
  *
- * @returns Promise<Session | null>
- *
- * @example
- * ```typescript
- * export default async function Page() {
- *   const session = await getServerAuthSession();
- *   if (!session) {
- *     redirect('/login');
- *   }
- *   return <div>Welcome, {session.user?.name}</div>;
- * }
- * ```
+ * @deprecated '@/lib/auth/server-session'의 getServerAuthSession을 직접 import하세요
  */
-export async function getServerAuthSession() {
-  return getServerSession(authOptions);
-}
+export { getServerAuthSession };

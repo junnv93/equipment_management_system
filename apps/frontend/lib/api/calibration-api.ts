@@ -1,7 +1,7 @@
 import { apiClient } from './api-client';
-import type { SingleResourceResponse } from '@equipment-management/schemas';
-import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
+import { transformArrayResponse } from './utils/response-transformers';
+import type { CalibrationResult, CalibrationApprovalStatus, CalibrationRegisteredByRole } from '@equipment-management/schemas';
 
 export interface Calibration {
   id: string;
@@ -10,13 +10,15 @@ export interface Calibration {
   nextCalibrationDate: string;
   calibrationAgency: string;
   calibrationCycle: number;
-  calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
+  certificateNumber?: string; // 교정성적서 번호
+  certificatePath?: string; // 교정성적서 파일 경로
+  calibrationResult: CalibrationResult | 'PASS' | 'FAIL' | 'CONDITIONAL'; // SSOT + 레거시 지원
   notes?: string;
   // 승인 프로세스 필드
-  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
+  approvalStatus?: CalibrationApprovalStatus;
   registeredBy?: string;
   approvedBy?: string;
-  registeredByRole?: 'test_engineer' | 'technical_manager';
+  registeredByRole?: CalibrationRegisteredByRole;
   registrarComment?: string;
   approverComment?: string;
   rejectionReason?: string;
@@ -33,10 +35,11 @@ export interface CalibrationHistory {
   calibrationDate: string;
   nextCalibrationDate: string;
   calibrationAgency: string;
-  calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
+  certificateNumber?: string;
+  calibrationResult: CalibrationResult | 'PASS' | 'FAIL' | 'CONDITIONAL';
   team?: string;
-  approvalStatus?: string;
-  registeredByRole?: string;
+  approvalStatus?: CalibrationApprovalStatus;
+  registeredByRole?: CalibrationRegisteredByRole;
   createdAt: string;
 }
 
@@ -57,12 +60,13 @@ export interface CreateCalibrationDto {
   calibrationDate: string;
   nextCalibrationDate: string;
   calibrationAgency: string;
+  certificateNumber?: string; // 교정성적서 번호
   calibrationCycle: number;
-  calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
+  calibrationResult: CalibrationResult;
   notes?: string;
   // 승인 프로세스 필드
   registeredBy?: string;
-  registeredByRole?: 'test_engineer' | 'technical_manager';
+  registeredByRole?: CalibrationRegisteredByRole;
   registrarComment?: string;
   intermediateCheckDate?: string;
 }
@@ -107,17 +111,10 @@ const calibrationApi = {
   },
 
   // 장비별 교정 이력 조회
-  // 백엔드는 페이지네이션 응답 { items: [...], meta: {...} }를 반환
-  // 여기서 items 배열만 추출하여 반환
+  // ✅ transformArrayResponse: 다양한 백엔드 응답 형태 자동 처리
   getEquipmentCalibrations: async (equipmentId: string): Promise<Calibration[]> => {
     const response = await apiClient.get(`/api/calibration/equipment/${equipmentId}`);
-    const data = response.data || response;
-
-    // 배열이면 그대로 반환, 페이지네이션 객체면 items 추출
-    if (Array.isArray(data)) {
-      return data;
-    }
-    return data.items || [];
+    return transformArrayResponse<Calibration>(response);
   },
 
   // 교정 상세 조회
@@ -173,6 +170,16 @@ const calibrationApi = {
   // 중간점검 예정 조회
   getUpcomingIntermediateChecks: async (days: number = 7): Promise<Calibration[]> => {
     return apiClient.get(`/api/calibration/intermediate-checks?days=${days}`);
+  },
+
+  // 교정성적서 파일 업로드
+  uploadCertificate: async (
+    calibrationId: string,
+    file: File
+  ): Promise<{ filePath: string; message: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post(`/api/calibration/${calibrationId}/certificate`, formData);
   },
 };
 

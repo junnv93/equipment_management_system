@@ -1,19 +1,15 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
+// Re-export date utilities for compatibility
+export { formatDate, formatDateTime, formatShortDate } from './utils/date';
+
 /**
  * Tailwind CSS 클래스를 병합하기 위한 유틸리티 함수
  * clsx로 클래스 조건부 적용 후 tailwind-merge로 중복 스타일 해결
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
-}
-
-/**
- * 날짜를 YYYY-MM-DD 형식의 문자열로 변환
- */
-export function formatDate(date: Date): string {
-  return date.toISOString().split("T")[0];
 }
 
 /**

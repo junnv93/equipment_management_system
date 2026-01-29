@@ -1,18 +1,9 @@
 /**
  * 서버 사이드 인증 세션 유틸리티
  *
- * 서버 컴포넌트에서 사용하는 인증 관련 함수들
+ * @deprecated 이 파일은 호환성을 위해 유지됩니다.
+ * 대신 '@/lib/auth/server-session'을 사용하세요.
  */
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth';
-
-/**
- * 서버 컴포넌트에서 현재 사용자 정보 가져오기
- *
- * @returns 현재 사용자 정보 또는 null
- */
-export async function getCurrentUser() {
-  const session = await getServerSession(authOptions);
-  return session?.user || null;
-}
+// Re-export from canonical source
+export { getCurrentUser } from './server-session';

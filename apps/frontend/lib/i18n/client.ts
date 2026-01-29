@@ -18,10 +18,10 @@ export function useTranslation(namespace: string) {
   const t = useTranslations(namespace);
 
   return {
-    t: (key: string, values?: Record<string, any>) => {
+    t: (key: string, values?: Record<string, string | number | Date>) => {
       try {
         return t(key, values);
-      } catch (error) {
+      } catch {
         // 번역 키가 없는 경우 키를 그대로 반환
         console.warn(`Translation key not found: ${namespace}.${key}`);
         return key;

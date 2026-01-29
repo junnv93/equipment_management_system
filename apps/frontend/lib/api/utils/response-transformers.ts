@@ -91,23 +91,40 @@ export function transformSingleResponse<T>(
 }
 
 /**
- * 에러 응답 변환 (레거시 호환용)
+ * 백엔드 배열 응답을 프론트엔드 형식으로 변환
  *
- * @param error Axios 에러
- * @returns 표준화된 에러 객체
- * @deprecated createApiError를 사용하세요
+ * 백엔드 응답 형태:
+ * - { data: [...] } (감싸진 형태)
+ * - { items: [...] } (페이지네이션 없는 목록)
+ * - [...] (직접 배열)
+ *
+ * @param response 백엔드 응답
+ * @returns 배열 데이터
  */
-export function transformErrorResponse(error: unknown): {
-  message: string;
-  code?: string;
-  details?: unknown;
-} {
-  const apiError = createApiError(error);
-  return {
-    message: apiError.message,
-    code: apiError.code,
-    details: apiError.details,
-  };
+export function transformArrayResponse<T>(
+  response: AxiosResponse<T[] | { data: T[] } | { items: T[] }>
+): T[] {
+  const backendData = response.data;
+
+  // 배열이 직접 반환된 경우
+  if (Array.isArray(backendData)) {
+    return backendData;
+  }
+
+  // { data: [...] } 형태
+  if (backendData && typeof backendData === 'object' && 'data' in backendData) {
+    const wrapped = backendData as { data: T[] };
+    return Array.isArray(wrapped.data) ? wrapped.data : [];
+  }
+
+  // { items: [...] } 형태 (페이지네이션 없는 목록)
+  if (backendData && typeof backendData === 'object' && 'items' in backendData) {
+    const wrapped = backendData as { items: T[] };
+    return Array.isArray(wrapped.items) ? wrapped.items : [];
+  }
+
+  // 기본값: 빈 배열
+  return [];
 }
 
 /**

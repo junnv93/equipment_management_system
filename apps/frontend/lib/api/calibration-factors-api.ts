@@ -1,17 +1,18 @@
 import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
+// ✅ SSOT: packages/schemas에서 import
+import type {
+  CalibrationFactorType,
+  CalibrationFactorApprovalStatus,
+} from '@equipment-management/schemas';
+import {
+  CALIBRATION_FACTOR_TYPE_LABELS,
+  CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS,
+} from '@equipment-management/schemas';
 
-// 보정계수 타입
-export type CalibrationFactorType =
-  | 'antenna_gain'
-  | 'cable_loss'
-  | 'path_loss'
-  | 'amplifier_gain'
-  | 'other';
-
-// 보정계수 승인 상태
-export type CalibrationFactorApprovalStatus = 'pending' | 'approved' | 'rejected';
+// Re-export for backward compatibility
+export type { CalibrationFactorType, CalibrationFactorApprovalStatus };
 
 export interface CalibrationFactor {
   id: string;
@@ -85,21 +86,9 @@ export interface CalibrationFactorRegistry {
   generatedAt: string;
 }
 
-// 보정계수 타입 라벨
-export const FACTOR_TYPE_LABELS: Record<CalibrationFactorType, string> = {
-  antenna_gain: '안테나 이득',
-  cable_loss: '케이블 손실',
-  path_loss: '경로 손실',
-  amplifier_gain: '증폭기 이득',
-  other: '기타',
-};
-
-// 승인 상태 라벨
-export const APPROVAL_STATUS_LABELS: Record<CalibrationFactorApprovalStatus, string> = {
-  pending: '승인 대기',
-  approved: '승인됨',
-  rejected: '반려됨',
-};
+// ✅ SSOT: packages/schemas의 라벨 재사용 (로컬 별칭)
+export const FACTOR_TYPE_LABELS = CALIBRATION_FACTOR_TYPE_LABELS;
+export const APPROVAL_STATUS_LABELS = CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS;
 
 // 승인 상태 색상
 export const APPROVAL_STATUS_COLORS: Record<CalibrationFactorApprovalStatus, string> = {

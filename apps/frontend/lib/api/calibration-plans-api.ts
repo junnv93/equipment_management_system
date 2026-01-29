@@ -1,9 +1,15 @@
 import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
+// ✅ SSOT: packages/schemas에서 import
+import type { CalibrationPlanStatus, Site } from '@equipment-management/schemas';
+import {
+  CALIBRATION_PLAN_STATUS_LABELS as SSOT_STATUS_LABELS,
+  SITE_LABELS as SSOT_SITE_LABELS,
+} from '@equipment-management/schemas';
 
-// 교정계획서 상태 타입
-export type CalibrationPlanStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected';
+// Re-export for backward compatibility
+export type { CalibrationPlanStatus, Site };
 
 // 장비 정보 (항목에 포함)
 export interface EquipmentInfo {
@@ -46,25 +52,38 @@ export interface CalibrationPlanItem {
   equipment?: EquipmentInfo;
 }
 
-// 교정계획서 인터페이스
+// 교정계획서 인터페이스 (3단계 승인 워크플로우)
 export interface CalibrationPlan {
   id: number;
   uuid: string;
   year: number;
-  siteId: string;
+  siteId: Site;  // ✅ SSOT: Site 타입 사용
   teamId: string | null;
   status: CalibrationPlanStatus;
+  // 작성자 정보
   createdBy: string;
+  // 검토 요청 단계
+  submittedAt: string | null;
+  // 검토 단계 (품질책임자)
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewComment: string | null;
+  // 승인 단계 (시험소장)
   approvedBy: string | null;
   approvedAt: string | null;
+  // 반려 정보
+  rejectedBy: string | null;
+  rejectedAt: string | null;
   rejectionReason: string | null;
+  rejectionStage: 'review' | 'approval' | null;
+  // 시스템 필드
   createdAt: string;
   updatedAt: string;
   // 항목 (상세 조회 시)
   items?: CalibrationPlanItem[];
 }
 
-// 쿼리 인터페이스
+// 쿼리 인터페이스 (API 요청용 - string 허용)
 export interface CalibrationPlanQuery {
   year?: number;
   siteId?: string;
@@ -73,7 +92,7 @@ export interface CalibrationPlanQuery {
   pageSize?: number;
 }
 
-// 외부교정 장비 쿼리
+// 외부교정 장비 쿼리 (API 요청용 - string 허용)
 export interface ExternalEquipmentQuery {
   year?: number;
   siteId?: string;
@@ -129,27 +148,33 @@ export interface ConfirmPlanItemDto {
   confirmedBy: string;
 }
 
-// 상태 라벨
-export const CALIBRATION_PLAN_STATUS_LABELS: Record<CalibrationPlanStatus, string> = {
-  draft: '작성 중',
-  pending_approval: '승인 대기',
-  approved: '승인됨',
-  rejected: '반려됨',
-};
+// 검토 요청 DTO (기술책임자 → 품질책임자)
+export interface SubmitForReviewDto {
+  submittedBy: string;
+  memo?: string;
+}
 
-// 상태 색상
+// 검토 완료 DTO (품질책임자)
+export interface ReviewCalibrationPlanDto {
+  reviewedBy: string;
+  reviewComment?: string;
+}
+
+// ✅ SSOT: packages/schemas의 라벨 재사용
+export const CALIBRATION_PLAN_STATUS_LABELS = SSOT_STATUS_LABELS;
+
+// 상태 색상 (UI 전용 - 프론트엔드 로컬 정의)
 export const CALIBRATION_PLAN_STATUS_COLORS: Record<CalibrationPlanStatus, string> = {
   draft: 'bg-gray-100 text-gray-800',
-  pending_approval: 'bg-yellow-100 text-yellow-800',
+  pending_review: 'bg-yellow-100 text-yellow-800',
+  pending_approval: 'bg-blue-100 text-blue-800',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
 };
 
-// 시험소 라벨
-export const SITE_LABELS: Record<string, string> = {
-  suwon: '수원',
-  uiwang: '의왕',
-};
+// ✅ SSOT: packages/schemas의 라벨 재사용
+// 타입 확장: API 응답의 siteId가 string이므로 Record<string, string>으로 캐스팅
+export const SITE_LABELS: Record<string, string> = SSOT_SITE_LABELS;
 
 // 교정계획서 API 객체
 const calibrationPlansApi = {
@@ -192,12 +217,31 @@ const calibrationPlansApi = {
     return apiClient.delete(`/api/calibration-plans/${uuid}`).then((res) => res.data);
   },
 
-  // 승인 요청
+  // 승인 요청 (레거시)
+  /** @deprecated submitForReview 사용 권장 */
   submitCalibrationPlan: async (uuid: string): Promise<CalibrationPlan> => {
     return apiClient.post(`/api/calibration-plans/${uuid}/submit`).then((res) => res.data);
   },
 
-  // 승인
+  // 검토 요청 (기술책임자 → 품질책임자)
+  submitForReview: async (
+    uuid: string,
+    data: SubmitForReviewDto
+  ): Promise<CalibrationPlan> => {
+    return apiClient
+      .post(`/api/calibration-plans/${uuid}/submit-for-review`, data)
+      .then((res) => res.data);
+  },
+
+  // 검토 완료 (품질책임자)
+  reviewCalibrationPlan: async (
+    uuid: string,
+    data: ReviewCalibrationPlanDto
+  ): Promise<CalibrationPlan> => {
+    return apiClient.patch(`/api/calibration-plans/${uuid}/review`, data).then((res) => res.data);
+  },
+
+  // 최종 승인 (시험소장)
   approveCalibrationPlan: async (
     uuid: string,
     data: ApproveCalibrationPlanDto
@@ -205,7 +249,7 @@ const calibrationPlansApi = {
     return apiClient.patch(`/api/calibration-plans/${uuid}/approve`, data).then((res) => res.data);
   },
 
-  // 반려
+  // 반려 (품질책임자 또는 시험소장)
   rejectCalibrationPlan: async (
     uuid: string,
     data: RejectCalibrationPlanDto
@@ -251,7 +295,14 @@ const calibrationPlansApi = {
     return apiClient.get(url).then((res) => res.data);
   },
 
-  // 승인 대기 계획서 목록
+  // 검토 대기 계획서 목록 (품질책임자용)
+  getPendingReviewPlans: async (): Promise<PaginatedResponse<CalibrationPlan>> => {
+    return apiClient
+      .get('/api/calibration-plans?status=pending_review')
+      .then((res) => transformPaginatedResponse<CalibrationPlan>(res));
+  },
+
+  // 승인 대기 계획서 목록 (시험소장용)
   getPendingApprovalPlans: async (): Promise<PaginatedResponse<CalibrationPlan>> => {
     return apiClient
       .get('/api/calibration-plans?status=pending_approval')

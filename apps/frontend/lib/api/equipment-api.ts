@@ -9,14 +9,19 @@
  */
 import { apiClient } from './api-client';
 import type {
-  Equipment as SchemaEquipment,
   EquipmentResponse as SchemaEquipmentResponse,
   CreateEquipmentInput,
   UpdateEquipmentInput,
   EquipmentFilter,
   EquipmentStatus,
+  EquipmentRequest,
+  EquipmentAttachment,
 } from '@equipment-management/schemas';
-import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
+import {
+  transformPaginatedResponse,
+  transformSingleResponse,
+  transformArrayResponse,
+} from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 
 /**
@@ -291,26 +296,29 @@ const equipmentApi = {
 
   // ========== 승인 프로세스 API ==========
 
+  /**
+   * 장비 요청 타입 (승인 대기 목록, 요청 상세 등)
+   */
   // 승인 대기 요청 목록 조회
-  getPendingRequests: async (): Promise<any[]> => {
+  getPendingRequests: async (): Promise<EquipmentRequest[]> => {
     const response = await apiClient.get('/api/equipment/requests/pending');
     return response.data || [];
   },
 
   // 요청 상세 조회
-  getRequestByUuid: async (requestUuid: string): Promise<any> => {
+  getRequestByUuid: async (requestUuid: string): Promise<EquipmentRequest> => {
     const response = await apiClient.get(`/api/equipment/requests/${requestUuid}`);
     return response.data;
   },
 
   // 요청 승인
-  approveRequest: async (requestUuid: string): Promise<any> => {
+  approveRequest: async (requestUuid: string): Promise<EquipmentRequest> => {
     const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/approve`);
     return response.data;
   },
 
   // 요청 반려
-  rejectRequest: async (requestUuid: string, rejectionReason: string): Promise<any> => {
+  rejectRequest: async (requestUuid: string, rejectionReason: string): Promise<EquipmentRequest> => {
     const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/reject`, {
       rejectionReason,
     });
@@ -322,7 +330,7 @@ const equipmentApi = {
     file: File,
     attachmentType: 'inspection_report' | 'history_card' | 'other',
     description?: string
-  ): Promise<any> => {
+  ): Promise<EquipmentAttachment> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('attachmentType', attachmentType);
@@ -389,9 +397,12 @@ const equipmentApi = {
       response = await apiClient.post('/api/equipment/shared', data);
     }
 
-    // 응답에서 equipment 객체 추출
-    const responseData = response.data || response;
-    return responseData.equipment || transformSingleResponse<Equipment>(response);
+    // 응답에서 equipment 객체 추출 (백엔드가 { equipment: {...} } 형태로 반환하는 경우 처리)
+    const responseData = response.data as { equipment?: Equipment } | Equipment | undefined;
+    if (responseData && typeof responseData === 'object' && 'equipment' in responseData) {
+      return responseData.equipment as Equipment;
+    }
+    return transformSingleResponse<Equipment>(response);
   },
 
   // ========== 이력 관리 API ==========
@@ -399,7 +410,7 @@ const equipmentApi = {
   // 위치 변동 이력 조회
   getLocationHistory: async (equipmentUuid: string): Promise<LocationHistoryItem[]> => {
     const response = await apiClient.get(`/api/equipment/${equipmentUuid}/location-history`);
-    return response.data || response;
+    return transformArrayResponse<LocationHistoryItem>(response);
   },
 
   // 위치 변동 이력 추가
@@ -408,7 +419,7 @@ const equipmentApi = {
     data: CreateLocationHistoryInput
   ): Promise<LocationHistoryItem> => {
     const response = await apiClient.post(`/api/equipment/${equipmentUuid}/location-history`, data);
-    return response.data || response;
+    return transformSingleResponse<LocationHistoryItem>(response);
   },
 
   // 위치 변동 이력 삭제
@@ -419,7 +430,7 @@ const equipmentApi = {
   // 유지보수 내역 조회
   getMaintenanceHistory: async (equipmentUuid: string): Promise<MaintenanceHistoryItem[]> => {
     const response = await apiClient.get(`/api/equipment/${equipmentUuid}/maintenance-history`);
-    return response.data || response;
+    return transformArrayResponse<MaintenanceHistoryItem>(response);
   },
 
   // 유지보수 내역 추가
@@ -431,7 +442,7 @@ const equipmentApi = {
       `/api/equipment/${equipmentUuid}/maintenance-history`,
       data
     );
-    return response.data || response;
+    return transformSingleResponse<MaintenanceHistoryItem>(response);
   },
 
   // 유지보수 내역 삭제
@@ -442,7 +453,7 @@ const equipmentApi = {
   // 손상/오작동/변경/수리 내역 조회
   getIncidentHistory: async (equipmentUuid: string): Promise<IncidentHistoryItem[]> => {
     const response = await apiClient.get(`/api/equipment/${equipmentUuid}/incident-history`);
-    return response.data || response;
+    return transformArrayResponse<IncidentHistoryItem>(response);
   },
 
   // 손상/오작동/변경/수리 내역 추가
@@ -451,7 +462,7 @@ const equipmentApi = {
     data: CreateIncidentHistoryInput
   ): Promise<IncidentHistoryItem> => {
     const response = await apiClient.post(`/api/equipment/${equipmentUuid}/incident-history`, data);
-    return response.data || response;
+    return transformSingleResponse<IncidentHistoryItem>(response);
   },
 
   // 손상/오작동/변경/수리 내역 삭제
@@ -460,11 +471,27 @@ const equipmentApi = {
   },
 
   // 교정 이력 조회 (기존 Calibrations API 활용)
-  getCalibrationHistory: async (equipmentUuid: string): Promise<any[]> => {
+  getCalibrationHistory: async (equipmentUuid: string): Promise<CalibrationHistoryItem[]> => {
     const response = await apiClient.get(`/api/calibrations?equipmentId=${equipmentUuid}`);
-    const responseData = response as any;
-    return responseData.data?.items || responseData.items || responseData.data || [];
+    return transformArrayResponse<CalibrationHistoryItem>(response);
   },
 };
+
+// 교정 이력 항목 타입 (calibrations API 응답)
+export interface CalibrationHistoryItem {
+  id: string;
+  equipmentId: string;
+  calibrationDate: string | Date;
+  nextCalibrationDate: string | Date;
+  calibrationAgency?: string;
+  calibrationMethod?: string;
+  result?: string;
+  notes?: string;
+  performedBy?: string;
+  performedByName?: string;
+  approvalStatus?: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
 
 export default equipmentApi;

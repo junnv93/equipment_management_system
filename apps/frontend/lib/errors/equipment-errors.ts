@@ -1,11 +1,19 @@
 /**
  * 장비 관리 시스템 에러 정의
  *
+ * ⚠️ SSOT 관계:
+ * - @equipment-management/schemas의 ErrorCode: 백엔드/API 레벨 에러 코드
+ * - EquipmentErrorCode: 프론트엔드 UI 레벨 에러 코드 (더 세분화된 분류)
+ *
  * 에러 코드, 메시지, 해결 방법을 정의합니다.
  */
 
+// schemas ErrorCode를 re-export하여 프론트엔드에서도 사용 가능하게 함
+export { ErrorCode } from '@equipment-management/schemas';
+
 /**
- * 에러 코드 정의
+ * 프론트엔드 에러 코드 정의
+ * schemas의 ErrorCode보다 더 세분화된 UI 레벨 에러 분류
  */
 export enum EquipmentErrorCode {
   // 검증 에러
