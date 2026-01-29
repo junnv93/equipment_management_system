@@ -252,4 +252,3 @@ export class IncidentHistoryResponseDto {
   @ApiPropertyOptional({ description: '연결된 부적합 ID (부적합 생성된 경우)' })
   nonConformanceId?: string;
 }
-

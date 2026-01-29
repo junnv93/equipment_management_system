@@ -1,13 +1,12 @@
 import { equipment, equipmentStatusEnum } from '@equipment-management/db/schema/equipment';
 import { teams, teamTypes } from '@equipment-management/db/schema/teams';
 import { users, userRoles } from '@equipment-management/db/schema/users';
-import { loans, loanStatus } from '@equipment-management/db/schema/loans';
 import { checkouts, checkoutStatus } from '@equipment-management/db/schema/checkouts';
 import { calibrations, calibrationStatus } from '@equipment-management/db/schema/calibrations';
 import { equipmentRelations } from '@equipment-management/db/schema/equipment';
 import { teamsRelations } from '@equipment-management/db/schema/teams';
 import { usersRelations } from '@equipment-management/db/schema/users';
-// Note: loans, checkouts, calibrations relations may not be exported yet
+// Note: checkouts, calibrations relations may not be exported yet
 // These will be added as needed
 
 describe('Database Schema', () => {
@@ -49,21 +48,6 @@ describe('Database Schema', () => {
     it('사용자 관계가 설정되어 있어야 합니다', () => {
       expect(usersRelations).toBeDefined();
     });
-  });
-
-  describe('Loan Schema', () => {
-    it('대여 스키마가 올바르게 정의되어 있어야 합니다', () => {
-      expect(loans).toBeDefined();
-      expect(loans.borrowerId).toBeDefined();
-      expect(loans.equipmentId).toBeDefined();
-      expect(loanStatus).toBeDefined();
-      expect(loanStatus.length).toBeGreaterThan(0);
-    });
-
-    // Note: loansRelations will be added when relations are defined
-    // it('대여 관계가 설정되어 있어야 합니다', () => {
-    //   expect(loansRelations).toBeDefined();
-    // });
   });
 
   describe('Checkout Schema', () => {

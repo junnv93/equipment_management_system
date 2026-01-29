@@ -24,16 +24,20 @@ import { sql } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// 상대 경로로 백엔드 스키마 import (로컬 스키마 사용)
-import { teams } from './drizzle/schema/teams';
-import { users } from './drizzle/schema/users';
-import { equipment } from './drizzle/schema/equipment';
-import { equipmentLocationHistory } from './drizzle/schema/equipment-location-history';
-import { equipmentMaintenanceHistory } from './drizzle/schema/equipment-maintenance-history';
-import { equipmentIncidentHistory } from './drizzle/schema/equipment-incident-history';
-import { calibrations } from './drizzle/schema/calibrations';
-import { loans } from './drizzle/schema/loans';
-import { checkouts, checkoutItems } from './drizzle/schema/checkouts';
+// SSOT: packages/db에서 스키마 import
+import {
+  teams,
+  users,
+  equipment,
+  equipmentLocationHistory,
+  equipmentMaintenanceHistory,
+  equipmentIncidentHistory,
+  calibrations,
+  checkouts,
+  checkoutItems,
+  calibrationPlans,
+  calibrationPlanItems,
+} from '@equipment-management/db/schema';
 
 // .env.test 파일 로드
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env.test') });
@@ -120,16 +124,6 @@ const CALIB_008_ID = 'dddd0008-0008-0008-0008-000000000008';
 const CALIB_009_ID = 'dddd0009-0009-0009-0009-000000000009';
 const CALIB_010_ID = 'dddd0010-0010-0010-0010-000000000010';
 
-// Loan UUID
-const LOAN_001_ID = 'eeee0001-0001-0001-0001-000000000001';
-const LOAN_002_ID = 'eeee0002-0002-0002-0002-000000000002';
-const LOAN_003_ID = 'eeee0003-0003-0003-0003-000000000003';
-const LOAN_004_ID = 'eeee0004-0004-0004-0004-000000000004';
-const LOAN_005_ID = 'eeee0005-0005-0005-0005-000000000005';
-const LOAN_006_ID = 'eeee0006-0006-0006-0006-000000000006';
-const LOAN_007_ID = 'eeee0007-0007-0007-0007-000000000007';
-const LOAN_008_ID = 'eeee0008-0008-0008-0008-000000000008';
-
 // Checkout UUID
 const CHECKOUT_001_ID = 'ffff0001-0001-0001-0001-000000000001';
 const CHECKOUT_002_ID = 'ffff0002-0002-0002-0002-000000000002';
@@ -156,6 +150,28 @@ const NC_002_ID = 'beef0002-0002-0002-0002-000000000002';
 const NC_003_ID = 'beef0003-0003-0003-0003-000000000003';
 const NC_004_ID = 'beef0004-0004-0004-0004-000000000004';
 const NC_005_ID = 'beef0005-0005-0005-0005-000000000005';
+
+// Calibration Plan UUID (E2E 테스트용 - ca1b 패턴, 16진수만 허용)
+const CPLAN_001_ID = 'ca1b0001-0001-0001-0001-000000000001'; // draft
+const CPLAN_002_ID = 'ca1b0002-0002-0002-0002-000000000002'; // pending_review
+const CPLAN_003_ID = 'ca1b0003-0003-0003-0003-000000000003'; // pending_approval
+const CPLAN_004_ID = 'ca1b0004-0004-0004-0004-000000000004'; // approved
+const CPLAN_005_ID = 'ca1b0005-0005-0005-0005-000000000005'; // rejected
+
+// Calibration Plan Item UUID (ca1b + item 패턴)
+const CPLAN_ITEM_001_ID = 'ca1b1001-0001-0001-0001-000000000001';
+const CPLAN_ITEM_002_ID = 'ca1b1002-0002-0002-0002-000000000002';
+const CPLAN_ITEM_003_ID = 'ca1b1003-0003-0003-0003-000000000003';
+const CPLAN_ITEM_004_ID = 'ca1b1004-0004-0004-0004-000000000004';
+const CPLAN_ITEM_005_ID = 'ca1b1005-0005-0005-0005-000000000005';
+const CPLAN_ITEM_006_ID = 'ca1b1006-0006-0006-0006-000000000006';
+const CPLAN_ITEM_007_ID = 'ca1b1007-0007-0007-0007-000000000007';
+const CPLAN_ITEM_008_ID = 'ca1b1008-0008-0008-0008-000000000008';
+const CPLAN_ITEM_009_ID = 'ca1b1009-0009-0009-0009-000000000009';
+const CPLAN_ITEM_010_ID = 'ca1b1010-0010-0010-0010-000000000010';
+
+// 품질책임자 UUID (auth.controller.ts와 동일)
+const QUALITY_MANAGER_ID = '00000000-0000-0000-0000-000000000005';
 
 // =============================================================================
 // 날짜 헬퍼 함수
@@ -196,9 +212,10 @@ async function seed() {
     await db.execute(sql`DELETE FROM calibration_factors`);
     await db.execute(sql`DELETE FROM non_conformances`);
     await db.execute(sql`DELETE FROM equipment_requests`);
+    await db.delete(calibrationPlanItems);
+    await db.delete(calibrationPlans);
     await db.delete(checkoutItems);
     await db.delete(checkouts);
-    await db.delete(loans);
     await db.delete(calibrations);
     await db.delete(equipmentIncidentHistory);
     await db.delete(equipmentMaintenanceHistory);
@@ -1366,106 +1383,7 @@ async function seed() {
     console.log(`  ✅ ${calibrationsData.length}건 교정 기록 생성됨`);
 
     // =========================================================================
-    // Phase 8: Loans (8건)
-    // =========================================================================
-    console.log('\n📦 대여 기록 생성 중...');
-    const loansData = await db.insert(loans).values([
-      // pending (승인 대기) - 2건
-      {
-        id: LOAN_001_ID,
-        equipmentId: EQUIP_OSCILLOSCOPE_SHARED_ID,
-        borrowerId: USER_ENGINEER2_ID,
-        status: 'pending',
-        expectedReturnDate: daysLater(14),
-        notes: 'SAR 시험 지원 목적 대여 신청',
-      },
-      {
-        id: LOAN_002_ID,
-        equipmentId: EQUIP_CABLE_ANALYZER_ID,
-        borrowerId: USER_ENGINEER2_ID,
-        status: 'pending',
-        expectedReturnDate: daysLater(7),
-        notes: '케이블 점검 목적 대여 신청',
-      },
-      // approved (승인됨) - 2건
-      {
-        id: LOAN_003_ID,
-        equipmentId: EQUIP_SPECTRUM_ANALYZER_ID,
-        borrowerId: USER_ENGINEER_ID,
-        approverId: USER_MANAGER_ID,
-        status: 'approved',
-        loanDate: daysLater(3),
-        expectedReturnDate: daysLater(10),
-        notes: 'EMC 시험 지원',
-        approverComment: '승인 - 시험 일정 확인됨',
-      },
-      {
-        id: LOAN_004_ID,
-        equipmentId: EQUIP_SPARE_OSCILLOSCOPE_ID,
-        borrowerId: USER_ENGINEER_ID,
-        approverId: USER_MANAGER2_ID,
-        status: 'approved',
-        loanDate: daysLater(5),
-        expectedReturnDate: daysLater(12),
-        notes: '수원 RF팀 지원',
-        approverComment: '여분 장비 사용 승인',
-        autoApproved: false,
-      },
-      // active (대여 중) - 2건
-      {
-        id: LOAN_005_ID,
-        equipmentId: EQUIP_SIGNAL_GENERATOR_ID,
-        borrowerId: USER_ENGINEER_ID,
-        approverId: USER_MANAGER_ID,
-        status: 'active',
-        loanDate: daysAgo(3),
-        expectedReturnDate: daysLater(4),
-        notes: 'EMC 시험용 신호 발생기 대여',
-        approverComment: '승인',
-        autoApproved: true, // 동일 팀 자동 승인
-      },
-      {
-        id: LOAN_006_ID,
-        equipmentId: EQUIP_SAR_PROBE_ID,
-        borrowerId: USER_ADMIN2_ID,
-        approverId: USER_MANAGER2_ID,
-        status: 'active',
-        loanDate: daysAgo(5),
-        expectedReturnDate: daysLater(2),
-        notes: '환경시험팀 특수 측정 지원',
-        approverComment: '타팀 지원 승인',
-      },
-      // returned (반납 완료) - 2건
-      {
-        id: LOAN_007_ID,
-        equipmentId: EQUIP_EMC_RECEIVER_ID,
-        borrowerId: USER_ENGINEER2_ID,
-        approverId: USER_MANAGER_ID,
-        status: 'returned',
-        loanDate: daysAgo(14),
-        expectedReturnDate: daysAgo(7),
-        actualReturnDate: daysAgo(8),
-        notes: '의왕 SAR팀 EMC 측정 지원',
-        approverComment: '타사이트 지원 승인',
-      },
-      {
-        id: LOAN_008_ID,
-        equipmentId: EQUIP_OSCILLOSCOPE_SHARED_ID,
-        borrowerId: USER_ENGINEER_ID,
-        approverId: USER_MANAGER_ID,
-        status: 'returned',
-        loanDate: daysAgo(21),
-        expectedReturnDate: daysAgo(14),
-        actualReturnDate: daysAgo(15),
-        notes: '공용 오실로스코프 대여',
-        approverComment: '공용장비 대여 승인',
-        autoApproved: true,
-      },
-    ]).returning();
-    console.log(`  ✅ ${loansData.length}건 대여 기록 생성됨`);
-
-    // =========================================================================
-    // Phase 9: Checkouts (10건)
+    // Phase 8: Checkouts (10건)
     // =========================================================================
     console.log('\n🚚 반출 기록 생성 중...');
     const checkoutsData = await db.insert(checkouts).values([
@@ -1715,18 +1633,222 @@ async function seed() {
     // =========================================================================
     console.log('\n⛔ 부적합 기록 생성 중...');
 
-    // Raw SQL로 부적합 기록 삽입
+    // Raw SQL로 부적합 기록 삽입 (nc_type 필수)
     await db.execute(sql`
-      INSERT INTO non_conformances (id, equipment_id, discovery_date, discovered_by, cause, action_plan, analysis_content, correction_content, correction_date, corrected_by, status, closed_by, closed_at, closure_notes)
+      INSERT INTO non_conformances (id, equipment_id, nc_type, discovery_date, discovered_by, cause, action_plan, analysis_content, correction_content, correction_date, corrected_by, status, closed_by, closed_at, closure_notes)
       VALUES
-        (${NC_001_ID}::uuid, ${EQUIP_NETWORK_ANALYZER_ID}::uuid, ${daysAgo(10).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, '교정 기한 초과 및 측정 불확도 규격 초과로 인한 부적합', '외부 교정 및 필요시 수리 진행 예정', NULL, NULL, NULL, NULL, 'open', NULL, NULL, NULL),
-        (${NC_002_ID}::uuid, ${EQUIP_ANTENNA_SYSTEM_ID}::uuid, ${daysAgo(7).toISOString().split('T')[0]}, ${USER_ENGINEER2_ID}::uuid, '포지셔너 정밀도 저하로 인한 측정 재현성 문제', '포지셔너 정렬 및 구동부 점검', '모터 백래시 증가로 인한 위치 정밀도 저하 확인', NULL, NULL, NULL, 'analyzing', NULL, NULL, NULL),
-        (${NC_003_ID}::uuid, ${EQUIP_AMPLIFIER_ID}::uuid, ${daysAgo(20).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '출력 전력 정격 대비 30% 저하', '내부 증폭 소자 교체 필요', '내부 FET 소자 열화로 판단', '제조사 수리 의뢰 완료 (반출 상태)', ${daysAgo(7).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, 'corrected', NULL, NULL, NULL),
-        (${NC_004_ID}::uuid, ${EQUIP_EMC_RECEIVER_ID}::uuid, ${daysAgo(60).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'RF 입력 커넥터 핀 휨으로 인한 접촉 불량', '커넥터 교체', '잦은 케이블 연결/분리로 인한 핀 마모', '커넥터 어셈블리 교체 완료', ${daysAgo(55).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'closed', ${USER_MANAGER_ID}::uuid, ${daysAgo(54).toISOString()}, '교체 후 측정 정상 동작 확인'),
-        (${NC_005_ID}::uuid, ${EQUIP_POWER_METER_RETIRED_ID}::uuid, ${daysAgo(90).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '센서 소자 불량으로 측정 불가', '수리 가능 여부 검토', '센서 모듈 내부 회로 손상, 부품 단종으로 수리 불가', '폐기 처리', ${daysAgo(85).toISOString().split('T')[0]}, ${USER_ADMIN_ID}::uuid, 'closed', ${USER_ADMIN_ID}::uuid, ${daysAgo(84).toISOString()}, '수리 불가 판정으로 폐기 처리 완료')
+        (${NC_001_ID}::uuid, ${EQUIP_NETWORK_ANALYZER_ID}::uuid, 'calibration_failure', ${daysAgo(10).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, '교정 기한 초과 및 측정 불확도 규격 초과로 인한 부적합', '외부 교정 및 필요시 수리 진행 예정', NULL, NULL, NULL, NULL, 'open', NULL, NULL, NULL),
+        (${NC_002_ID}::uuid, ${EQUIP_ANTENNA_SYSTEM_ID}::uuid, 'malfunction', ${daysAgo(7).toISOString().split('T')[0]}, ${USER_ENGINEER2_ID}::uuid, '포지셔너 정밀도 저하로 인한 측정 재현성 문제', '포지셔너 정렬 및 구동부 점검', '모터 백래시 증가로 인한 위치 정밀도 저하 확인', NULL, NULL, NULL, 'analyzing', NULL, NULL, NULL),
+        (${NC_003_ID}::uuid, ${EQUIP_AMPLIFIER_ID}::uuid, 'malfunction', ${daysAgo(20).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '출력 전력 정격 대비 30% 저하', '내부 증폭 소자 교체 필요', '내부 FET 소자 열화로 판단', '제조사 수리 의뢰 완료 (반출 상태)', ${daysAgo(7).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, 'corrected', NULL, NULL, NULL),
+        (${NC_004_ID}::uuid, ${EQUIP_EMC_RECEIVER_ID}::uuid, 'damage', ${daysAgo(60).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'RF 입력 커넥터 핀 휨으로 인한 접촉 불량', '커넥터 교체', '잦은 케이블 연결/분리로 인한 핀 마모', '커넥터 어셈블리 교체 완료', ${daysAgo(55).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'closed', ${USER_MANAGER_ID}::uuid, ${daysAgo(54).toISOString()}, '교체 후 측정 정상 동작 확인'),
+        (${NC_005_ID}::uuid, ${EQUIP_POWER_METER_RETIRED_ID}::uuid, 'malfunction', ${daysAgo(90).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '센서 소자 불량으로 측정 불가', '수리 가능 여부 검토', '센서 모듈 내부 회로 손상, 부품 단종으로 수리 불가', '폐기 처리', ${daysAgo(85).toISOString().split('T')[0]}, ${USER_ADMIN_ID}::uuid, 'closed', ${USER_ADMIN_ID}::uuid, ${daysAgo(84).toISOString()}, '수리 불가 판정으로 폐기 처리 완료')
     `);
     const nonConformancesCount = 5;
     console.log(`  ✅ ${nonConformancesCount}건 부적합 기록 생성됨`);
+
+    // =========================================================================
+    // Phase 13: Calibration Plans (5건) - E2E 테스트용
+    // =========================================================================
+    console.log('\n📋 교정계획서 생성 중...');
+
+    const calibrationPlansData = await db.insert(calibrationPlans).values([
+      // 1. draft - 작성 중 (2026년, 수원)
+      {
+        id: CPLAN_001_ID,
+        year: 2026,
+        siteId: 'suwon',
+        status: 'draft',
+        createdBy: USER_MANAGER_ID, // 기술책임자
+        createdAt: daysAgo(5),
+        updatedAt: daysAgo(5),
+      },
+      // 2. pending_review - 검토 대기 (2026년, 수원)
+      {
+        id: CPLAN_002_ID,
+        year: 2026,
+        siteId: 'uiwang', // 의왕으로 변경 (수원 2026년 중복 방지)
+        status: 'pending_review',
+        createdBy: USER_MANAGER2_ID, // 의왕 기술책임자
+        submittedAt: new Date('2026-01-20'),
+        createdAt: daysAgo(10),
+        updatedAt: daysAgo(9),
+      },
+      // 3. pending_approval - 승인 대기 (2026년, 평택)
+      {
+        id: CPLAN_003_ID,
+        year: 2026,
+        siteId: 'pyeongtaek',
+        status: 'pending_approval',
+        createdBy: USER_MANAGER_ID, // 작성자
+        submittedAt: new Date('2026-01-15'),
+        reviewedBy: QUALITY_MANAGER_ID, // 품질책임자
+        reviewedAt: new Date('2026-01-18'),
+        reviewComment: '검토 완료, 승인 요청합니다.',
+        createdAt: daysAgo(15),
+        updatedAt: daysAgo(11),
+      },
+      // 4. approved - 승인됨 (2025년, 수원)
+      {
+        id: CPLAN_004_ID,
+        year: 2025,
+        siteId: 'suwon',
+        status: 'approved',
+        createdBy: USER_MANAGER_ID, // 기술책임자
+        submittedAt: new Date('2025-01-10'),
+        reviewedBy: QUALITY_MANAGER_ID, // 품질책임자
+        reviewedAt: new Date('2025-01-12'),
+        reviewComment: '적합',
+        approvedBy: USER_ADMIN_ID, // 시험소장
+        approvedAt: new Date('2025-01-15'),
+        createdAt: new Date('2025-01-05'),
+        updatedAt: new Date('2025-01-15'),
+      },
+      // 5. rejected - 반려됨 (2024년, 수원 - 검토 단계에서 반려)
+      {
+        id: CPLAN_005_ID,
+        year: 2024,
+        siteId: 'suwon',
+        status: 'rejected',
+        createdBy: USER_MANAGER_ID, // 기술책임자
+        submittedAt: new Date('2024-01-05'),
+        rejectedBy: QUALITY_MANAGER_ID, // 품질책임자가 반려
+        rejectedAt: new Date('2024-01-08'),
+        rejectionReason: '교정 일자 재검토 필요. 3월 예정 장비가 2월로 잘못 입력되었습니다.',
+        rejectionStage: 'review',
+        createdAt: new Date('2024-01-03'),
+        updatedAt: new Date('2024-01-08'),
+      },
+    ]).returning();
+    console.log(`  ✅ ${calibrationPlansData.length}건 교정계획서 생성됨`);
+
+    // =========================================================================
+    // Phase 14: Calibration Plan Items (10건)
+    // =========================================================================
+    console.log('\n📦 교정계획서 항목 생성 중...');
+
+    const calibrationPlanItemsData = await db.insert(calibrationPlanItems).values([
+      // CPLAN_001 (draft) - 2개 항목
+      {
+        id: CPLAN_ITEM_001_ID,
+        planId: CPLAN_001_ID,
+        equipmentId: EQUIP_SPECTRUM_ANALYZER_ID,
+        sequenceNumber: 1,
+        snapshotValidityDate: monthsAgo(3),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'HCT',
+        plannedCalibrationDate: monthsLater(9),
+        plannedCalibrationAgency: 'HCT',
+      },
+      {
+        id: CPLAN_ITEM_002_ID,
+        planId: CPLAN_001_ID,
+        equipmentId: EQUIP_SIGNAL_GENERATOR_ID,
+        sequenceNumber: 2,
+        snapshotValidityDate: monthsAgo(2),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'HCT',
+        plannedCalibrationDate: monthsLater(10),
+        plannedCalibrationAgency: 'HCT',
+      },
+      // CPLAN_002 (pending_review) - 2개 항목
+      {
+        id: CPLAN_ITEM_003_ID,
+        planId: CPLAN_002_ID,
+        equipmentId: EQUIP_SAR_SYSTEM_ID,
+        sequenceNumber: 1,
+        snapshotValidityDate: monthsAgo(11),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'SPEAG',
+        plannedCalibrationDate: monthsLater(1),
+        plannedCalibrationAgency: 'SPEAG',
+      },
+      {
+        id: CPLAN_ITEM_004_ID,
+        planId: CPLAN_002_ID,
+        equipmentId: EQUIP_SAR_PROBE_ID,
+        sequenceNumber: 2,
+        snapshotValidityDate: monthsAgo(6),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'SPEAG',
+        plannedCalibrationDate: monthsLater(6),
+        plannedCalibrationAgency: 'SPEAG',
+      },
+      // CPLAN_003 (pending_approval) - 2개 항목
+      {
+        id: CPLAN_ITEM_005_ID,
+        planId: CPLAN_003_ID,
+        equipmentId: EQUIP_AUTO_EMC_TESTER_ID,
+        sequenceNumber: 1,
+        snapshotValidityDate: monthsAgo(1),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'KATRI',
+        plannedCalibrationDate: monthsLater(11),
+        plannedCalibrationAgency: 'KATRI',
+      },
+      {
+        id: CPLAN_ITEM_006_ID,
+        planId: CPLAN_003_ID,
+        equipmentId: EQUIP_PYT_FCC_ANALYZER_ID,
+        sequenceNumber: 2,
+        snapshotValidityDate: monthsAgo(1),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'HCT',
+        plannedCalibrationDate: monthsLater(11),
+        plannedCalibrationAgency: 'HCT',
+      },
+      // CPLAN_004 (approved) - 2개 항목 (교정 완료 기록 포함)
+      {
+        id: CPLAN_ITEM_007_ID,
+        planId: CPLAN_004_ID,
+        equipmentId: EQUIP_EMC_RECEIVER_ID,
+        sequenceNumber: 1,
+        snapshotValidityDate: new Date('2024-09-01'),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'KTC',
+        plannedCalibrationDate: new Date('2025-09-01'),
+        plannedCalibrationAgency: 'KTC',
+        actualCalibrationDate: new Date('2025-08-28'), // 실제 교정 완료
+        confirmedBy: USER_MANAGER_ID,
+        confirmedAt: new Date('2025-01-12'),
+      },
+      {
+        id: CPLAN_ITEM_008_ID,
+        planId: CPLAN_004_ID,
+        equipmentId: EQUIP_OSCILLOSCOPE_SHARED_ID,
+        sequenceNumber: 2,
+        snapshotValidityDate: new Date('2024-07-01'),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'HCT',
+        plannedCalibrationDate: new Date('2025-07-01'),
+        plannedCalibrationAgency: 'HCT',
+        actualCalibrationDate: new Date('2025-06-25'), // 실제 교정 완료
+        confirmedBy: USER_MANAGER_ID,
+        confirmedAt: new Date('2025-01-12'),
+      },
+      // CPLAN_005 (rejected) - 2개 항목
+      {
+        id: CPLAN_ITEM_009_ID,
+        planId: CPLAN_005_ID,
+        equipmentId: EQUIP_NETWORK_ANALYZER_ID,
+        sequenceNumber: 1,
+        snapshotValidityDate: new Date('2023-12-01'),
+        snapshotCalibrationCycle: 12,
+        snapshotCalibrationAgency: 'HCT',
+        plannedCalibrationDate: new Date('2024-02-01'), // 잘못된 날짜 (반려 사유)
+        plannedCalibrationAgency: 'HCT',
+        notes: '교정일 재검토 필요 (3월 예정)',
+      },
+      {
+        id: CPLAN_ITEM_010_ID,
+        planId: CPLAN_005_ID,
+        equipmentId: EQUIP_CABLE_ANALYZER_ID,
+        sequenceNumber: 2,
+        snapshotValidityDate: new Date('2023-10-01'),
+        snapshotCalibrationCycle: 6,
+        plannedCalibrationDate: new Date('2024-04-01'),
+      },
+    ]).returning();
+    console.log(`  ✅ ${calibrationPlanItemsData.length}건 교정계획서 항목 생성됨`);
 
     // =========================================================================
     // 완료 메시지
@@ -1743,11 +1865,19 @@ async function seed() {
     console.log(`  ├─ 유지보수 이력: ${maintenanceHistoryData.length}건`);
     console.log(`  ├─ 사고/손상 이력: ${incidentHistoryData.length}건`);
     console.log(`  ├─ 교정 기록: ${calibrationsData.length}건`);
-    console.log(`  ├─ 대여 기록: ${loansData.length}건`);
     console.log(`  ├─ 반출 기록: ${checkoutsData.length}건`);
     console.log(`  ├─ 반출 항목: ${checkoutItemsData.length}건`);
     console.log(`  ├─ 보정계수: ${calibrationFactorsCount}건`);
-    console.log(`  └─ 부적합 기록: ${nonConformancesCount}건`);
+    console.log(`  ├─ 부적합 기록: ${nonConformancesCount}건`);
+    console.log(`  ├─ 교정계획서: ${calibrationPlansData.length}건`);
+    console.log(`  └─ 교정계획서 항목: ${calibrationPlanItemsData.length}건`);
+
+    console.log('\n📊 교정계획서 상태별 분포:');
+    console.log('  - draft (작성 중): 1건 - 2026년 수원');
+    console.log('  - pending_review (검토 대기): 1건 - 2026년 의왕');
+    console.log('  - pending_approval (승인 대기): 1건 - 2026년 평택');
+    console.log('  - approved (승인됨): 1건 - 2025년 수원');
+    console.log('  - rejected (반려됨): 1건 - 2024년 수원');
 
     console.log('\n📊 분류코드별 장비 분포:');
     console.log('  - E (FCC EMC/RF): SUW-E0001~E0009, PYT-E0001');

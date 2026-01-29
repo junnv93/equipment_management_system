@@ -3,7 +3,7 @@ import { DrizzleModule } from '../drizzle.module';
 import { ConfigModule } from '@nestjs/config';
 import * as pg from 'pg';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { equipment, teams, users, loans, calibrations } from '@equipment-management/db/schema';
+import { equipment, teams, users, calibrations, checkouts } from '@equipment-management/db/schema';
 
 describe('Database Performance', () => {
   let pool: pg.Pool;
@@ -47,11 +47,11 @@ describe('Database Performance', () => {
         WHERE id = '00000000-0000-0000-0000-000000000001'
       `);
 
-      // 2. 대여 상태별 검색 성능 테스트 (인덱스 활용)
-      const loanStatusQuery = await client.query(`
-        EXPLAIN ANALYZE 
-        SELECT * FROM ${loans._.name}
-        WHERE status = 'ACTIVE'
+      // 2. 반출 상태별 검색 성능 테스트 (인덱스 활용)
+      const checkoutStatusQuery = await client.query(`
+        EXPLAIN ANALYZE
+        SELECT * FROM ${checkouts._.name}
+        WHERE status = 'checked_out'
       `);
 
       // 3. 교정 날짜별 검색 성능 테스트 (인덱스 활용)
@@ -64,7 +64,7 @@ describe('Database Performance', () => {
       // 각 쿼리 결과에서 인덱스 사용 여부 확인
       // 참고: 실제 데이터가 없거나 테스트 환경에 따라 인덱스가 사용되지 않을 수 있음
       expect(equipmentIdQuery.rows.length).toBeGreaterThan(0);
-      expect(loanStatusQuery.rows.length).toBeGreaterThan(0);
+      expect(checkoutStatusQuery.rows.length).toBeGreaterThan(0);
       expect(calibrationDateQuery.rows.length).toBeGreaterThan(0);
     } finally {
       client.release();

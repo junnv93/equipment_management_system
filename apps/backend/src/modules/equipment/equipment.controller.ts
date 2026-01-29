@@ -21,19 +21,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { FormDataParserInterceptor } from './interceptors/form-data-parser.interceptor';
-
-// Multer 타입 정의
-interface MulterFile {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  destination: string;
-  filename: string;
-  path: string;
-  buffer: Buffer;
-}
+import { AuthenticatedRequest, MulterFile } from '../../types/common.types';
 import {
   ApiTags,
   ApiOperation,
@@ -59,8 +47,8 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-// 표준 상태값은 schemas 패키지에서 import
-import { EquipmentStatus } from '@equipment-management/schemas';
+// 표준 상태값은 schemas 패키지에서 import (SSOT)
+import { EquipmentStatus, UserRoleValues } from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
@@ -119,11 +107,11 @@ export class EquipmentController {
   async create(
     @Body() createEquipmentDto: CreateEquipmentDto,
     @UploadedFiles() files?: MulterFile[],
-    @Req() req?: any
+    @Req() req?: AuthenticatedRequest
   ) {
-    const userRoles = req?.user?.roles || [];
-    const userId = req?.user?.userId || req?.user?.id;
-    const isAdmin = userRoles.includes('lab_manager') || userRoles.includes('LAB_MANAGER');
+    const userRoles = req?.user?.roles ?? [];
+    const userId = req?.user?.userId ?? req?.user?.id ?? '';
+    const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 파일 업로드 처리
     let attachmentUuids: string[] = [];
@@ -214,14 +202,15 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @UsePipes(EquipmentQueryValidationPipe)
-  findAll(@Query() query: EquipmentQueryDto, @Req() req: any) {
+  findAll(@Query() query: EquipmentQueryDto, @Req() req: AuthenticatedRequest) {
     // 시험실무자는 자신의 사이트 장비만 조회 가능
     // 기술책임자/관리자는 모든 사이트 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_engineer');
+    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
+      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
+      userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 시험실무자이고 쿼리에 site가 없으면 자신의 사이트로 필터링
     const siteFilter = isTestOperator && !canViewAllSites && !query.site ? userSite : undefined;
@@ -237,16 +226,17 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string, @Req() req: any) {
+  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string, @Req() req: AuthenticatedRequest) {
     // ✅ includeTeam=true로 팀 정보 포함 조회
     const equipmentWithTeam = await this.equipmentService.findOne(uuid, true);
 
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_engineer');
+    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
+      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
+      userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 시험실무자이고 자신의 사이트가 아닌 장비를 조회하려는 경우 거부
     if (isTestOperator && !canViewAllSites && userSite && equipmentWithTeam.site !== userSite) {
@@ -291,7 +281,7 @@ export class EquipmentController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateEquipmentDto: UpdateEquipmentDto,
     @UploadedFiles() files?: MulterFile[],
-    @Req() req?: any
+    @Req() req?: AuthenticatedRequest
   ) {
     // 공용장비 수정 차단
     const existingEquipment = await this.equipmentService.findOne(uuid);
@@ -299,9 +289,9 @@ export class EquipmentController {
       throw new ForbiddenException('공용장비는 수정할 수 없습니다.');
     }
 
-    const userRoles = req?.user?.roles || [];
-    const userId = req?.user?.userId || req?.user?.id;
-    const isAdmin = userRoles.includes('lab_manager') || userRoles.includes('LAB_MANAGER');
+    const userRoles = req?.user?.roles ?? [];
+    const userId = req?.user?.userId ?? req?.user?.id ?? '';
+    const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 파일 업로드 처리
     let attachmentUuids: string[] = [];
@@ -350,7 +340,7 @@ export class EquipmentController {
   })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Req() req?: any
+    @Req() req?: AuthenticatedRequest
   ): Promise<{ message: string; requestUuid?: string }> {
     // 공용장비 삭제 차단
     const existingEquipment = await this.equipmentService.findOne(uuid);
@@ -358,9 +348,9 @@ export class EquipmentController {
       throw new ForbiddenException('공용장비는 삭제할 수 없습니다.');
     }
 
-    const userRoles = req?.user?.roles || [];
-    const userId = req?.user?.userId || req?.user?.id;
-    const isAdmin = userRoles.includes('lab_manager') || userRoles.includes('LAB_MANAGER');
+    const userRoles = req?.user?.roles ?? [];
+    const userId = req?.user?.userId ?? req?.user?.id ?? '';
+    const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 시스템 관리자는 직접 삭제 가능
     if (isAdmin) {
@@ -402,15 +392,16 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findByTeam(@Param('teamId') teamId: string, @Req() req: any) {
+  async findByTeam(@Param('teamId') teamId: string, @Req() req: AuthenticatedRequest) {
     const equipmentList = await this.equipmentService.findByTeam(teamId);
 
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_engineer');
+    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
+      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
+      userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
     if (isTestOperator && !canViewAllSites && userSite) {
@@ -429,15 +420,16 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findCalibrationDue(@Query('days') days: number = 30, @Req() req: any) {
+  async findCalibrationDue(@Query('days') days: number = 30, @Req() req: AuthenticatedRequest) {
     const equipmentList = await this.equipmentService.findCalibrationDue(days);
 
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
     const userSite = req.user?.site;
     const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes('test_engineer');
+    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
     const canViewAllSites =
-      userRoles.includes('technical_manager') || userRoles.includes('lab_manager');
+      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
+      userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
     if (isTestOperator && !canViewAllSites && userSite) {
@@ -458,7 +450,7 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT_REQUESTS)
-  async findPendingRequests(@Req() req: any) {
+  async findPendingRequests(@Req() req: AuthenticatedRequest) {
     const userRoles = req.user?.roles || [];
     const userSite = req.user?.site;
     return this.approvalService.findPendingRequests(userRoles, userSite);
@@ -495,9 +487,12 @@ export class EquipmentController {
     entityType: 'equipment',
     entityIdPath: 'params.requestUuid',
   })
-  async approveRequest(@Param('requestUuid', ParseUUIDPipe) requestUuid: string, @Req() req: any) {
-    const userRoles = req.user?.roles || [];
-    const userId = req.user?.userId || req.user?.id;
+  async approveRequest(
+    @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
+    @Req() req: AuthenticatedRequest
+  ) {
+    const userRoles = req.user?.roles ?? [];
+    const userId = req.user?.userId ?? req.user?.id ?? '';
     return this.approvalService.approveRequest(requestUuid, userId, userRoles);
   }
 
@@ -522,10 +517,10 @@ export class EquipmentController {
   async rejectRequest(
     @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
     @Body() body: { rejectionReason?: string },
-    @Req() req: any
+    @Req() req: AuthenticatedRequest
   ) {
-    const userRoles = req.user?.roles || [];
-    const userId = req.user?.userId || req.user?.id;
+    const userRoles = req.user?.roles ?? [];
+    const userId = req.user?.userId ?? req.user?.id ?? '';
 
     if (!body.rejectionReason) {
       throw new BadRequestException('반려 사유는 필수입니다.');

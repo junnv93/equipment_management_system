@@ -22,6 +22,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
+import type { Team } from '@equipment-management/db/schema/teams';
 import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc, addMonthsUtc } from '../../common/utils';
 
 /**
@@ -138,8 +139,19 @@ export class EquipmentService {
    * findAll 메서드의 복잡한 쿼리 로직을 분리
    */
   private buildQueryConditions(queryParams: EquipmentQueryDto, userSite?: string): QueryConditions {
-    const { search, status, location, manufacturer, teamId, calibrationDue, calibrationDueAfter, sort, site, isShared, calibrationMethod } =
-      queryParams;
+    const {
+      search,
+      status,
+      location,
+      manufacturer,
+      teamId,
+      calibrationDue,
+      calibrationDueAfter,
+      sort,
+      site,
+      isShared,
+      calibrationMethod,
+    } = queryParams;
 
     const whereConditions: SQL<unknown>[] = [eq(equipment.isActive, true)];
 
@@ -228,7 +240,9 @@ export class EquipmentService {
       const afterDays = Number(calibrationDueAfter);
 
       if (isNaN(afterDays)) {
-        throw new BadRequestException(`calibrationDueAfter는 숫자여야 합니다: ${calibrationDueAfter}`);
+        throw new BadRequestException(
+          `calibrationDueAfter는 숫자여야 합니다: ${calibrationDueAfter}`
+        );
       }
 
       const afterDate = getUtcEndOfDay(addDaysUtc(getUtcStartOfDay(), afterDays));
@@ -452,7 +466,8 @@ export class EquipmentService {
     if (dto.managementNumber && dto.managementNumber !== existingEquipment.managementNumber) {
       const components = this.parseManagementNumberComponents(dto.managementNumber);
       if (components.siteCode) updateData.siteCode = components.siteCode;
-      if (components.classificationCode) updateData.classificationCode = components.classificationCode;
+      if (components.classificationCode)
+        updateData.classificationCode = components.classificationCode;
       if (components.managementSerialNumber)
         updateData.managementSerialNumber = components.managementSerialNumber;
     }
@@ -710,7 +725,9 @@ export class EquipmentService {
             .offset(numericOffset);
 
           // 팀 ID 목록 추출 (중복 제거)
-          const teamIds = [...new Set(rawItems.filter(item => item.teamId).map(item => item.teamId as string))];
+          const teamIds = [
+            ...new Set(rawItems.filter((item) => item.teamId).map((item) => item.teamId as string)),
+          ];
 
           // 팀 정보 일괄 조회 (N+1 쿼리 방지)
           let teamMap: Map<string, string> = new Map();
@@ -718,12 +735,17 @@ export class EquipmentService {
             const teamData = await this.db
               .select({ id: teams.id, name: teams.name })
               .from(teams)
-              .where(sql`${teams.id} IN (${sql.join(teamIds.map(id => sql`${id}`), sql`, `)})`);
-            teamMap = new Map(teamData.map(t => [t.id, t.name]));
+              .where(
+                sql`${teams.id} IN (${sql.join(
+                  teamIds.map((id) => sql`${id}`),
+                  sql`, `
+                )})`
+              );
+            teamMap = new Map(teamData.map((t) => [t.id, t.name]));
           }
 
           // 장비 데이터에 팀 이름 추가
-          const items = rawItems.map(item => ({
+          const items = rawItems.map((item) => ({
             ...item,
             teamName: item.teamId ? teamMap.get(item.teamId) || null : null,
           }));
@@ -762,7 +784,7 @@ export class EquipmentService {
    * 내부 id는 데이터베이스 내부에서만 사용
    * ✅ 스키마 일치화: Drizzle relations를 사용하여 타입 안전한 조인
    */
-  async findOne(uuid: string, includeTeam = false): Promise<Equipment & { team?: any }> {
+  async findOne(uuid: string, includeTeam = false): Promise<Equipment & { team?: Team | null }> {
     const cacheKey = this.buildCacheKey('detail', { uuid, includeTeam });
 
     return this.cacheService.getOrSet(

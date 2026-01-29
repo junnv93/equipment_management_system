@@ -7,7 +7,6 @@ import { EquipmentModule } from './modules/equipment/equipment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { TeamsModule } from './modules/teams/teams.module';
-import { RentalsModule } from './modules/rentals/rentals.module';
 import { CheckoutsModule } from './modules/checkouts/checkouts.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { CalibrationModule } from './modules/calibration/calibration.module';
@@ -49,7 +48,6 @@ import { AuditModule } from './modules/audit/audit.module';
     EquipmentModule,
     TeamsModule,
     UsersModule,
-    RentalsModule,
     CheckoutsModule,
     CalibrationModule,
     CalibrationFactorsModule,

@@ -1,17 +1,23 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto';
-import { User, UserListResponse, UserRoleEnum } from '@equipment-management/schemas';
+import {
+  User,
+  UserListResponse,
+  UserRoleEnum,
+  UserRoleValues,
+} from '@equipment-management/schemas';
 import { parseSortString, sortByField } from '../../common/utils/sort';
 
 // 임시 데이터 저장소 (실제로는 DB를 사용)
 // ✅ AuthService의 테스트 사용자 ID와 동기화 (UUID v4 형식)
+// ✅ SSOT: UserRoleValues 사용
 const users: User[] = [
   {
     id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', // AuthService admin과 동일
     email: 'admin@example.com',
     name: '관리자',
-    role: 'lab_manager',
+    role: UserRoleValues.LAB_MANAGER,
     isActive: true,
     lastLogin: null,
     deletedAt: null,
@@ -24,7 +30,7 @@ const users: User[] = [
     id: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', // AuthService manager와 동일
     email: 'manager@example.com',
     name: 'RF팀 관리자',
-    role: 'technical_manager',
+    role: UserRoleValues.TECHNICAL_MANAGER,
     teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
     department: '연구개발부',
     position: '팀장',
@@ -41,7 +47,7 @@ const users: User[] = [
     id: '12345678-1234-4567-8901-234567890abc', // AuthService user와 동일
     email: 'user@example.com',
     name: '시험실무자',
-    role: 'test_engineer',
+    role: UserRoleValues.TEST_ENGINEER,
     teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
     department: '연구개발부',
     position: '연구원',
@@ -58,7 +64,7 @@ const users: User[] = [
     id: '550e8400-e29b-41d4-a716-446655440003',
     email: 'user1@example.com',
     name: '김사용',
-    role: 'test_engineer',
+    role: UserRoleValues.TEST_ENGINEER,
     teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
     department: '연구개발부',
     position: '연구원',
@@ -75,7 +81,7 @@ const users: User[] = [
     id: '550e8400-e29b-41d4-a716-446655440004',
     email: 'inactive@example.com',
     name: '퇴사자',
-    role: 'test_engineer',
+    role: UserRoleValues.TEST_ENGINEER,
     teamId: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
     department: '연구개발부',
     position: '연구원',

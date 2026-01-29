@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import type { MulterFile } from '../../../types/common.types';
 
 /**
  * 파일 업로드 서비스
@@ -47,7 +48,7 @@ export class FileUploadService {
   /**
    * 파일 유효성 검사
    */
-  private validateFile(file: any): void {
+  private validateFile(file: MulterFile): void {
     // 파일 크기 검증
     if (file.size > this.maxFileSize) {
       throw new BadRequestException(
@@ -70,7 +71,7 @@ export class FileUploadService {
    * @returns 파일 메타데이터
    */
   async saveFile(
-    file: any,
+    file: MulterFile,
     subdirectory: string = 'equipment'
   ): Promise<{
     uuid: string;
@@ -120,7 +121,7 @@ export class FileUploadService {
    * 여러 파일 저장
    */
   async saveFiles(
-    files: any[],
+    files: MulterFile[],
     subdirectory: string = 'equipment'
   ): Promise<
     Array<{

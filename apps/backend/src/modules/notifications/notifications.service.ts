@@ -8,7 +8,7 @@ import {
   type NotificationPriority,
 } from '@equipment-management/schemas';
 
-// Backward compatibility aliases for dot-notation access
+// Alias for backward compatibility (dot-notation access)
 const NotificationTypeEnum = NotificationTypeValues;
 const NotificationPriorityEnum = NotificationPriorityValues;
 import {

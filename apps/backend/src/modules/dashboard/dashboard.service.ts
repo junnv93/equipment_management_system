@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and, count, gte, lte, sql } from 'drizzle-orm';
-import * as schema from '../../database/drizzle/schema';
+import * as schema from '@equipment-management/db/schema';
 import { UserRole } from '../auth/rbac/roles.enum';
 import {
   DashboardSummaryDto,
@@ -25,18 +25,19 @@ import {
  */
 @Injectable()
 export class DashboardService {
-  constructor(
-    @Inject('DRIZZLE_INSTANCE') private readonly db: NodePgDatabase<typeof schema>
-  ) {}
+  constructor(@Inject('DRIZZLE_INSTANCE') private readonly db: NodePgDatabase<typeof schema>) {}
 
   /**
    * 대시보드 요약 정보 조회
    */
-  async getSummary(userId: string, userRole: UserRole, teamId?: string, site?: string): Promise<DashboardSummaryDto> {
+  async getSummary(
+    userId: string,
+    userRole: UserRole,
+    teamId?: string,
+    site?: string
+  ): Promise<DashboardSummaryDto> {
     // 전체 장비 수
-    const [totalResult] = await this.db
-      .select({ count: count() })
-      .from(schema.equipment);
+    const [totalResult] = await this.db.select({ count: count() }).from(schema.equipment);
 
     const totalEquipment = totalResult?.count || 0;
 
@@ -48,15 +49,7 @@ export class DashboardService {
 
     const availableEquipment = availableResult?.count || 0;
 
-    // 활성 대여 수 (loans 테이블)
-    const [loanResult] = await this.db
-      .select({ count: count() })
-      .from(schema.loans)
-      .where(eq(schema.loans.status, 'active'));
-
-    const activeRentals = loanResult?.count || 0;
-
-    // 활성 반출 수 (checkouts 테이블)
+    // 활성 반출 수 (checkouts 테이블 - 대여 포함)
     const [checkoutResult] = await this.db
       .select({ count: count() })
       .from(schema.checkouts)
@@ -85,7 +78,6 @@ export class DashboardService {
     return {
       totalEquipment,
       availableEquipment,
-      activeRentals,
       activeCheckouts,
       upcomingCalibrations,
     };
@@ -94,7 +86,12 @@ export class DashboardService {
   /**
    * 팀별 장비 현황 조회
    */
-  async getEquipmentByTeam(userId: string, userRole: UserRole, teamId?: string, site?: string): Promise<EquipmentByTeamDto[]> {
+  async getEquipmentByTeam(
+    userId: string,
+    userRole: UserRole,
+    teamId?: string,
+    site?: string
+  ): Promise<EquipmentByTeamDto[]> {
     const results = await this.db
       .select({
         teamId: schema.equipment.teamId,
@@ -115,7 +112,12 @@ export class DashboardService {
   /**
    * 교정 지연 장비 조회
    */
-  async getOverdueCalibrations(userId: string, userRole: UserRole, teamId?: string, site?: string): Promise<OverdueCalibrationDto[]> {
+  async getOverdueCalibrations(
+    userId: string,
+    userRole: UserRole,
+    teamId?: string,
+    site?: string
+  ): Promise<OverdueCalibrationDto[]> {
     const today = new Date();
 
     const results = await this.db
@@ -186,7 +188,9 @@ export class DashboardService {
 
     return results.map((r) => {
       const dueDate = r.nextCalibrationDate ? new Date(r.nextCalibrationDate) : today;
-      const daysUntilDue = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const daysUntilDue = Math.floor(
+        (dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
       return {
         id: r.id,
@@ -200,39 +204,49 @@ export class DashboardService {
   }
 
   /**
-   * 대여 지연 조회 (loans 테이블 사용)
+   * 반출 지연 조회 (checkouts + checkout_items 테이블 사용 - 대여 포함)
    */
-  async getOverdueRentals(userId: string, userRole: UserRole, teamId?: string, site?: string): Promise<OverdueRentalDto[]> {
+  async getOverdueRentals(
+    userId: string,
+    userRole: UserRole,
+    teamId?: string,
+    site?: string
+  ): Promise<OverdueRentalDto[]> {
     const today = new Date();
 
+    // checkout_items를 통해 장비 정보 조회
     const results = await this.db
       .select({
-        id: schema.loans.id,
-        equipmentId: schema.loans.equipmentId,
+        id: schema.checkouts.id,
+        equipmentId: schema.checkoutItems.equipmentId,
         equipmentName: schema.equipment.name,
         equipmentManagementNumber: schema.equipment.managementNumber,
-        userId: schema.loans.borrowerId,
+        userId: schema.checkouts.requesterId,
         userName: schema.users.name,
         userEmail: schema.users.email,
-        expectedReturnDate: schema.loans.expectedReturnDate,
-        loanDate: schema.loans.loanDate,
-        status: schema.loans.status,
+        expectedReturnDate: schema.checkouts.expectedReturnDate,
+        checkoutDate: schema.checkouts.checkoutDate,
+        status: schema.checkouts.status,
+        purpose: schema.checkouts.purpose,
       })
-      .from(schema.loans)
-      .leftJoin(schema.equipment, eq(schema.loans.equipmentId, schema.equipment.id))
-      .leftJoin(schema.users, eq(schema.loans.borrowerId, schema.users.id))
+      .from(schema.checkouts)
+      .innerJoin(schema.checkoutItems, eq(schema.checkouts.id, schema.checkoutItems.checkoutId))
+      .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+      .leftJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
       .where(
         and(
-          eq(schema.loans.status, 'active'),
-          lte(schema.loans.expectedReturnDate, today)
+          eq(schema.checkouts.status, 'checked_out'),
+          lte(schema.checkouts.expectedReturnDate, today)
         )
       )
-      .orderBy(schema.loans.expectedReturnDate)
+      .orderBy(schema.checkouts.expectedReturnDate)
       .limit(50);
 
     return results.map((r) => {
       const expectedDate = r.expectedReturnDate ? new Date(r.expectedReturnDate) : today;
-      const daysOverdue = Math.floor((today.getTime() - expectedDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysOverdue = Math.floor(
+        (today.getTime() - expectedDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
       return {
         id: r.id,
@@ -249,7 +263,7 @@ export class DashboardService {
           email: r.userEmail || '',
         },
         expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',
-        startDate: r.loanDate ? r.loanDate.toISOString() : '',
+        startDate: r.checkoutDate ? r.checkoutDate.toISOString() : '',
         status: r.status || '',
         daysOverdue,
       };
@@ -273,7 +287,12 @@ export class DashboardService {
   /**
    * 승인 대기 카운트 조회
    */
-  async getPendingApprovalCounts(userId: string, userRole: UserRole, teamId?: string, site?: string): Promise<PendingApprovalCountsDto> {
+  async getPendingApprovalCounts(
+    userId: string,
+    userRole: UserRole,
+    teamId?: string,
+    site?: string
+  ): Promise<PendingApprovalCountsDto> {
     // 장비 승인 대기
     const [equipmentCount] = await this.db
       .select({ count: count() })
@@ -283,13 +302,7 @@ export class DashboardService {
     // 교정 승인 대기 (calibrations 테이블 조회 - 추후 approvalStatus 컬럼 추가 필요)
     const calibration = 0;
 
-    // 대여 승인 대기 (loans)
-    const [loanCount] = await this.db
-      .select({ count: count() })
-      .from(schema.loans)
-      .where(eq(schema.loans.status, 'pending'));
-
-    // 반출 승인 대기 (checkouts)
+    // 반출 승인 대기 (checkouts - 대여 포함)
     const [checkoutCount] = await this.db
       .select({ count: count() })
       .from(schema.checkouts)
@@ -300,24 +313,27 @@ export class DashboardService {
     const software = 0;
 
     const equipment = equipmentCount?.count || 0;
-    const rental = loanCount?.count || 0;
     const checkout = checkoutCount?.count || 0;
 
     return {
       equipment,
       calibration,
-      rental,
       checkout,
       calibrationFactor,
       software,
-      total: equipment + calibration + rental + checkout + calibrationFactor + software,
+      total: equipment + calibration + checkout + calibrationFactor + software,
     };
   }
 
   /**
    * 장비 상태별 통계 조회
    */
-  async getEquipmentStatusStats(userId: string, userRole: UserRole, teamId?: string, site?: string): Promise<EquipmentStatusStatsDto> {
+  async getEquipmentStatusStats(
+    userId: string,
+    userRole: UserRole,
+    teamId?: string,
+    site?: string
+  ): Promise<EquipmentStatusStatsDto> {
     const results = await this.db
       .select({
         status: schema.equipment.status,

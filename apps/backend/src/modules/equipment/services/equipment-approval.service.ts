@@ -14,6 +14,7 @@ import {
   equipment,
   users,
 } from '@equipment-management/db/schema';
+import { UserRoleValues } from '@equipment-management/schemas';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { EquipmentService } from '../equipment.service';
@@ -21,6 +22,14 @@ import { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
 import type { EquipmentRequest } from '@equipment-management/db/schema/equipment-requests';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
+import type {
+  users as UsersTable,
+  equipment as EquipmentTable,
+} from '@equipment-management/db/schema';
+
+// 관계 타입 정의 (Drizzle query with relations)
+type UserSelect = typeof UsersTable.$inferSelect;
+type EquipmentSelect = typeof EquipmentTable.$inferSelect;
 
 /**
  * 장비 승인 서비스
@@ -60,11 +69,11 @@ export class EquipmentApprovalService {
       const [request] = await this.db
         .insert(equipmentRequests)
         .values({
-          requestType: 'create' as const,
+          requestType: 'create',
           requestedBy: validRequestedBy,
-          approvalStatus: 'pending_approval' as const,
+          approvalStatus: 'pending_approval',
           requestData,
-        } as any)
+        })
         .returning();
 
       // 첨부 파일 연결 (요청 ID 업데이트)
@@ -77,7 +86,7 @@ export class EquipmentApprovalService {
         for (const attachment of attachmentRecords) {
           await this.db
             .update(equipmentAttachments)
-            .set({ requestId: request.id } as any)
+            .set({ requestId: request.id })
             .where(eq(equipmentAttachments.id, attachment.id));
         }
       }
@@ -119,12 +128,12 @@ export class EquipmentApprovalService {
       const [request] = await this.db
         .insert(equipmentRequests)
         .values({
-          requestType: 'update' as const,
+          requestType: 'update',
           equipmentId: existingEquipment.id,
           requestedBy: validRequestedBy,
-          approvalStatus: 'pending_approval' as const,
+          approvalStatus: 'pending_approval',
           requestData,
-        } as any)
+        })
         .returning();
 
       // 첨부 파일 연결
@@ -137,7 +146,7 @@ export class EquipmentApprovalService {
         for (const attachment of attachmentRecords) {
           await this.db
             .update(equipmentAttachments)
-            .set({ requestId: request.id } as any)
+            .set({ requestId: request.id })
             .where(eq(equipmentAttachments.id, attachment.id));
         }
       }
@@ -177,11 +186,11 @@ export class EquipmentApprovalService {
       const [request] = await this.db
         .insert(equipmentRequests)
         .values({
-          requestType: 'delete' as const,
+          requestType: 'delete',
           equipmentId: existingEquipment.id,
           requestedBy: validRequestedBy,
-          approvalStatus: 'pending_approval' as const,
-        } as any)
+          approvalStatus: 'pending_approval',
+        })
         .returning();
 
       this.logger.log(`Equipment delete request created: ${request.id}`);
@@ -202,10 +211,8 @@ export class EquipmentApprovalService {
     try {
       // 기술책임자 또는 관리자만 승인 대기 목록 조회 가능
       const canViewAll =
-        userRoles.includes('technical_manager') ||
-        userRoles.includes('lab_manager') ||
-        userRoles.includes('TECHNICAL_MANAGER') ||
-        userRoles.includes('LAB_MANAGER');
+        userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
+        userRoles.includes(UserRoleValues.LAB_MANAGER);
 
       if (!canViewAll) {
         throw new ForbiddenException('승인 대기 목록을 조회할 권한이 없습니다.');
@@ -235,9 +242,9 @@ export class EquipmentApprovalService {
    */
   async findRequestByUuid(requestUuid: string): Promise<
     EquipmentRequest & {
-      requester?: any;
-      approver?: any;
-      equipment?: any;
+      requester?: UserSelect | null;
+      approver?: UserSelect | null;
+      equipment?: EquipmentSelect | null;
       attachments?: EquipmentAttachment[];
     }
   > {
@@ -284,10 +291,8 @@ export class EquipmentApprovalService {
     try {
       // 권한 확인: 기술책임자 또는 관리자만 승인 가능
       const canApprove =
-        userRoles.includes('technical_manager') ||
-        userRoles.includes('lab_manager') ||
-        userRoles.includes('TECHNICAL_MANAGER') ||
-        userRoles.includes('LAB_MANAGER');
+        userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
+        userRoles.includes(UserRoleValues.LAB_MANAGER);
 
       if (!canApprove) {
         throw new ForbiddenException('요청을 승인할 권한이 없습니다.');
@@ -340,10 +345,10 @@ export class EquipmentApprovalService {
       const [updated] = await this.db
         .update(equipmentRequests)
         .set({
-          approvalStatus: 'approved' as const,
+          approvalStatus: 'approved',
           approvedBy: validApprovedBy,
           approvedAt: new Date(),
-        } as any)
+        })
         .where(eq(equipmentRequests.id, requestUuid))
         .returning();
 
@@ -374,10 +379,8 @@ export class EquipmentApprovalService {
     try {
       // 권한 확인
       const canReject =
-        userRoles.includes('technical_manager') ||
-        userRoles.includes('lab_manager') ||
-        userRoles.includes('TECHNICAL_MANAGER') ||
-        userRoles.includes('LAB_MANAGER');
+        userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
+        userRoles.includes(UserRoleValues.LAB_MANAGER);
 
       if (!canReject) {
         throw new ForbiddenException('요청을 반려할 권한이 없습니다.');
@@ -406,11 +409,11 @@ export class EquipmentApprovalService {
       const [updated] = await this.db
         .update(equipmentRequests)
         .set({
-          approvalStatus: 'rejected' as const,
+          approvalStatus: 'rejected',
           approvedBy: validApprovedBy,
           approvedAt: new Date(),
           rejectionReason,
-        } as any)
+        })
         .where(eq(equipmentRequests.id, requestUuid))
         .returning();
 

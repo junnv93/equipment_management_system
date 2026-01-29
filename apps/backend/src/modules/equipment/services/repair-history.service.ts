@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import {
   CreateRepairHistoryDto,
   UpdateRepairHistoryDto,
@@ -77,7 +83,7 @@ const repairHistoryStore: RepairHistoryRecord[] = [
 export class RepairHistoryService {
   constructor(
     @Inject(forwardRef(() => NonConformancesService))
-    private nonConformancesService: NonConformancesService,
+    private nonConformancesService: NonConformancesService
   ) {}
 
   /**

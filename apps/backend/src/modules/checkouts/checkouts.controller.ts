@@ -90,7 +90,7 @@ export class CheckoutsController {
   }
 
   @Patch(':uuid')
-  @RequirePermissions(Permission.CREATE_CHECKOUT) // TODO: 반출 수정 권한 별도 정의 필요
+  @RequirePermissions(Permission.UPDATE_CHECKOUT)
   @ApiOperation({
     summary: '반출 정보 수정',
     description: '특정 UUID를 가진 반출의 정보를 수정합니다. 승인 전만 수정 가능합니다.',
@@ -108,7 +108,7 @@ export class CheckoutsController {
   }
 
   @Delete(':uuid')
-  @RequirePermissions(Permission.CREATE_CHECKOUT) // TODO: 반출 삭제 권한 별도 정의 필요
+  @RequirePermissions(Permission.DELETE_CHECKOUT)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: '반출 취소',
@@ -144,7 +144,7 @@ export class CheckoutsController {
   }
 
   @Patch(':uuid/reject')
-  @RequirePermissions(Permission.APPROVE_CHECKOUT) // TODO: 반출 반려 권한 별도 정의 필요
+  @RequirePermissions(Permission.REJECT_CHECKOUT)
   @ApiOperation({ summary: '반출 반려', description: '반출을 반려합니다. 반려 사유는 필수입니다.' })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: RejectCheckoutDto })
@@ -160,7 +160,7 @@ export class CheckoutsController {
   }
 
   @Post(':uuid/start')
-  @RequirePermissions(Permission.VIEW_CHECKOUTS) // TODO: 반출 시작 권한 별도 정의 필요
+  @RequirePermissions(Permission.START_CHECKOUT)
   @ApiOperation({ summary: '반출 시작', description: '최종 승인된 반출을 실제로 반출 처리합니다.' })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 시작 성공' })
@@ -171,7 +171,7 @@ export class CheckoutsController {
   }
 
   @Post(':uuid/return')
-  @RequirePermissions(Permission.VIEW_CHECKOUTS) // TODO: 반입 권한 별도 정의 필요
+  @RequirePermissions(Permission.COMPLETE_CHECKOUT)
   @ApiOperation({
     summary: '반입 처리',
     description:
@@ -236,7 +236,7 @@ export class CheckoutsController {
   }
 
   @Patch(':uuid/cancel')
-  @RequirePermissions(Permission.CREATE_CHECKOUT) // TODO: 반출 취소 권한 별도 정의 필요
+  @RequirePermissions(Permission.CANCEL_CHECKOUT)
   @ApiOperation({
     summary: '반출 취소',
     description: '승인 전 반출을 취소합니다. 신청자만 취소 가능합니다.',

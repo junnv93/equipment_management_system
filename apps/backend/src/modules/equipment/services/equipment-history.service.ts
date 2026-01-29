@@ -1,13 +1,19 @@
-import { Injectable, Inject, NotFoundException, BadRequestException, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+  forwardRef,
+} from '@nestjs/common';
 import { eq, desc } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from '../../../database/drizzle/schema';
+import * as schema from '@equipment-management/db/schema';
 import {
   equipmentLocationHistory,
   equipmentMaintenanceHistory,
   equipmentIncidentHistory,
   equipment,
-} from '../../../database/drizzle/schema';
+} from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
   CreateLocationHistoryDto,
@@ -40,13 +46,13 @@ export class EquipmentHistoryService {
       .where(eq(equipmentLocationHistory.equipmentId, equipmentUuid))
       .orderBy(desc(equipmentLocationHistory.changedAt));
 
-    return records.map((record: any) => ({
+    return records.map((record) => ({
       id: record.id,
       equipmentId: record.equipmentId,
       changedAt: record.changedAt,
       newLocation: record.newLocation,
-      notes: record.notes || undefined,
-      changedBy: record.changedBy || undefined,
+      notes: record.notes ?? undefined,
+      changedBy: record.changedBy ?? undefined,
       createdAt: record.createdAt,
     }));
   }
@@ -65,9 +71,9 @@ export class EquipmentHistoryService {
         equipmentId: equipmentUuid,
         changedAt: new Date(dto.changedAt),
         newLocation: dto.newLocation,
-        notes: dto.notes || null,
-        changedBy: userId || null,
-      } as any)
+        notes: dto.notes ?? null,
+        changedBy: userId ?? null,
+      })
       .returning();
 
     return {
@@ -75,8 +81,8 @@ export class EquipmentHistoryService {
       equipmentId: record.equipmentId,
       changedAt: record.changedAt,
       newLocation: record.newLocation,
-      notes: (record as any).notes || undefined,
-      changedBy: (record as any).changedBy || undefined,
+      notes: record.notes ?? undefined,
+      changedBy: record.changedBy ?? undefined,
       createdAt: record.createdAt,
     };
   }
@@ -107,12 +113,12 @@ export class EquipmentHistoryService {
       .where(eq(equipmentMaintenanceHistory.equipmentId, equipmentUuid))
       .orderBy(desc(equipmentMaintenanceHistory.performedAt));
 
-    return records.map((record: any) => ({
+    return records.map((record) => ({
       id: record.id,
       equipmentId: record.equipmentId,
       performedAt: record.performedAt,
       content: record.content,
-      performedBy: record.performedBy || undefined,
+      performedBy: record.performedBy ?? undefined,
       createdAt: record.createdAt,
     }));
   }
@@ -131,8 +137,8 @@ export class EquipmentHistoryService {
         equipmentId: equipmentUuid,
         performedAt: new Date(dto.performedAt),
         content: dto.content,
-        performedBy: userId || null,
-      } as any)
+        performedBy: userId ?? null,
+      })
       .returning();
 
     return {
@@ -140,7 +146,7 @@ export class EquipmentHistoryService {
       equipmentId: record.equipmentId,
       performedAt: record.performedAt,
       content: record.content,
-      performedBy: (record as any).performedBy || undefined,
+      performedBy: record.performedBy ?? undefined,
       createdAt: record.createdAt,
     };
   }
@@ -171,13 +177,13 @@ export class EquipmentHistoryService {
       .where(eq(equipmentIncidentHistory.equipmentId, equipmentUuid))
       .orderBy(desc(equipmentIncidentHistory.occurredAt));
 
-    return records.map((record: any) => ({
+    return records.map((record) => ({
       id: record.id,
       equipmentId: record.equipmentId,
       occurredAt: record.occurredAt,
       incidentType: record.incidentType,
       content: record.content,
-      reportedBy: record.reportedBy || undefined,
+      reportedBy: record.reportedBy ?? undefined,
       createdAt: record.createdAt,
     }));
   }
@@ -200,8 +206,8 @@ export class EquipmentHistoryService {
           occurredAt: new Date(dto.occurredAt),
           incidentType: dto.incidentType,
           content: dto.content,
-          reportedBy: userId || null,
-        } as any)
+          reportedBy: userId ?? null,
+        })
         .returning();
 
       let nonConformanceId: string | undefined;
@@ -210,9 +216,7 @@ export class EquipmentHistoryService {
       if (dto.createNonConformance === true) {
         // damage/malfunction만 부적합 생성 가능 (검증)
         if (!['damage', 'malfunction'].includes(dto.incidentType)) {
-          throw new BadRequestException(
-            '부적합은 손상 또는 오작동 유형에서만 생성할 수 있습니다'
-          );
+          throw new BadRequestException('부적합은 손상 또는 오작동 유형에서만 생성할 수 있습니다');
         }
 
         // userId 검증 (부적합 생성 시 필수)
@@ -231,9 +235,9 @@ export class EquipmentHistoryService {
             discoveredBy: userId,
             cause: dto.content,
             ncType: dto.incidentType as 'damage' | 'malfunction',
-            actionPlan: dto.actionPlan || null,
+            actionPlan: dto.actionPlan ?? null,
             status: 'open',
-          } as any)
+          })
           .returning();
 
         nonConformanceId = nc.id;
@@ -245,7 +249,7 @@ export class EquipmentHistoryService {
             .set({
               status: 'non_conforming',
               updatedAt: new Date(),
-            } as any)
+            })
             .where(eq(equipment.id, equipmentUuid));
         }
       }
@@ -255,9 +259,9 @@ export class EquipmentHistoryService {
         id: record.id,
         equipmentId: record.equipmentId,
         occurredAt: record.occurredAt,
-        incidentType: (record as any).incidentType,
+        incidentType: record.incidentType,
         content: record.content,
-        reportedBy: (record as any).reportedBy || undefined,
+        reportedBy: record.reportedBy ?? undefined,
         createdAt: record.createdAt,
         nonConformanceId, // 부적합 생성된 경우 ID 포함
       };
@@ -288,7 +292,8 @@ export class EquipmentHistoryService {
         throw error;
       }
       console.error(`[deleteIncidentHistory] Error deleting incident history ${historyId}:`, error);
-      throw new BadRequestException(`Failed to delete incident history: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new BadRequestException(`Failed to delete incident history: ${errorMessage}`);
     }
   }
 }

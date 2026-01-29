@@ -35,10 +35,7 @@ export const notificationQuerySchema = z.object({
     z.boolean().optional()
   ),
   search: z.string().optional(),
-  types: z.preprocess(
-    (val) => toArray<string>(val),
-    z.array(NotificationTypeEnum).optional()
-  ),
+  types: z.preprocess((val) => toArray<string>(val), z.array(NotificationTypeEnum).optional()),
   priorities: z.preprocess(
     (val) => toArray<string>(val),
     z.array(NotificationPriorityEnum).optional()

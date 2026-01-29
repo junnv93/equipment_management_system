@@ -12,6 +12,12 @@ import { EquipmentStatusEnum, EquipmentStatus } from '@equipment-management/sche
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { AuthenticatedRequest } from '../../../types/common.types';
+
+// 테스트용 mock request 타입 (AuthenticatedRequest의 부분 구현)
+type MockRequest = Partial<AuthenticatedRequest> & {
+  user: { roles: string[]; userId: string };
+};
 
 describe('EquipmentController', () => {
   let controller: EquipmentController;
@@ -153,8 +159,12 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'create').mockResolvedValue(mockEquipment);
 
       // Act - admin user로 직접 승인
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } };
-      const result = await controller.create(createEquipmentDto, undefined, mockReq);
+      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      const result = await controller.create(
+        createEquipmentDto,
+        undefined,
+        mockReq as AuthenticatedRequest
+      );
 
       // Assert
       expect(result).toEqual(mockEquipment);
@@ -180,8 +190,12 @@ describe('EquipmentController', () => {
       jest.spyOn(approvalService, 'createEquipmentRequest').mockResolvedValue(mockRequest as any);
 
       // Act - 일반 사용자로 승인 요청 생성
-      const mockReq = { user: { roles: ['test_engineer'], userId: 'user-uuid' } };
-      const result = await controller.create(createEquipmentDto, undefined, mockReq);
+      const mockReq = { user: { roles: ['test_engineer'], userId: 'user-uuid' } } as MockRequest;
+      const result = await controller.create(
+        createEquipmentDto,
+        undefined,
+        mockReq as AuthenticatedRequest
+      );
 
       // Assert
       expect(result).toEqual({
@@ -213,10 +227,10 @@ describe('EquipmentController', () => {
         );
 
       // Act & Assert - admin user
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } };
-      await expect(controller.create(createEquipmentDto, undefined, mockReq)).rejects.toThrow(
-        BadRequestException
-      );
+      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      await expect(
+        controller.create(createEquipmentDto, undefined, mockReq as AuthenticatedRequest)
+      ).rejects.toThrow(BadRequestException);
       expect(equipmentService.create).toHaveBeenCalledWith(createEquipmentDto);
     });
   });
@@ -312,8 +326,13 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'update').mockResolvedValue(updatedEquipment);
 
       // Act - admin user로 직접 승인
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } };
-      const result = await controller.update(uuid, updateEquipmentDto, undefined, mockReq);
+      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      const result = await controller.update(
+        uuid,
+        updateEquipmentDto,
+        undefined,
+        mockReq as AuthenticatedRequest
+      );
 
       // Assert
       expect(result).toEqual(updatedEquipment);
@@ -349,8 +368,8 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'remove').mockResolvedValue(mockEquipment);
 
       // Act - admin user로 직접 삭제
-      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } };
-      const result = await controller.remove(uuid, mockReq);
+      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      const result = await controller.remove(uuid, mockReq as AuthenticatedRequest);
 
       // Assert
       expect(result).toEqual({ message: '장비가 삭제되었습니다.' });

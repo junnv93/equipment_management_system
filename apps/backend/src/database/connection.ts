@@ -228,7 +228,7 @@ export class DatabaseConnection {
 
   public async executeQuery<T>(
     queryText: string,
-    params: any[] = [],
+    params: unknown[] = [],
     transactionClient?: PoolClient
   ): Promise<T> {
     if (!this.pool && !transactionClient) {

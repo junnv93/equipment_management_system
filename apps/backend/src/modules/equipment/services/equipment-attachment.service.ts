@@ -5,6 +5,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { FileUploadService } from './file-upload.service';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
+import type { MulterFile } from '../../../types/common.types';
 
 /**
  * 장비 첨부 파일 서비스
@@ -24,7 +25,7 @@ export class EquipmentAttachmentService {
    * 파일 업로드 및 데이터베이스 저장
    */
   async createAttachment(
-    file: any,
+    file: MulterFile,
     attachmentType: 'inspection_report' | 'history_card' | 'other',
     equipmentId?: string,
     requestId?: string,
@@ -62,7 +63,7 @@ export class EquipmentAttachmentService {
    * 여러 파일 업로드 및 저장
    */
   async createAttachments(
-    files: any[],
+    files: MulterFile[],
     attachmentType: 'inspection_report' | 'history_card' | 'other',
     equipmentId?: string,
     requestId?: string

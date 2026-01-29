@@ -10,10 +10,7 @@ export class DashboardSummaryDto {
   @ApiProperty({ description: '사용 가능 장비 수' })
   availableEquipment: number;
 
-  @ApiProperty({ description: '활성 대여 수' })
-  activeRentals: number;
-
-  @ApiProperty({ description: '활성 반출 수' })
+  @ApiProperty({ description: '활성 반출 수 (대여 포함)' })
   activeCheckouts: number;
 
   @ApiProperty({ description: '교정 예정 장비 수' })
@@ -165,10 +162,7 @@ export class PendingApprovalCountsDto {
   @ApiProperty({ description: '교정 승인 대기 수' })
   calibration: number;
 
-  @ApiProperty({ description: '대여 승인 대기 수' })
-  rental: number;
-
-  @ApiProperty({ description: '반출 승인 대기 수' })
+  @ApiProperty({ description: '반출 승인 대기 수 (대여 포함)' })
   checkout: number;
 
   @ApiProperty({ description: '보정계수 승인 대기 수' })

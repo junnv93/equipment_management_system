@@ -14,6 +14,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
 import { UserRole } from '../auth/rbac/roles.enum';
+import type { AuthenticatedRequest } from '../../types/auth';
 import {
   DashboardSummaryDto,
   EquipmentByTeamDto,
@@ -43,18 +44,19 @@ export class DashboardController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @ApiOperation({
     summary: '대시보드 요약 정보 조회',
-    description: '전체 장비 수, 사용 가능 장비 수, 활성 대여/반출 수, 교정 예정 장비 수를 조회합니다.',
+    description:
+      '전체 장비 수, 사용 가능 장비 수, 활성 대여/반출 수, 교정 예정 장비 수를 조회합니다.',
   })
   @ApiResponse({
     status: 200,
     description: '대시보드 요약 정보',
     type: DashboardSummaryDto,
   })
-  async getSummary(@Req() req: any): Promise<DashboardSummaryDto> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+  async getSummary(@Req() req: AuthenticatedRequest): Promise<DashboardSummaryDto> {
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getSummary(userId, userRole, teamId, site);
   }
@@ -70,11 +72,11 @@ export class DashboardController {
     description: '팀별 장비 현황',
     type: [EquipmentByTeamDto],
   })
-  async getEquipmentByTeam(@Req() req: any): Promise<EquipmentByTeamDto[]> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+  async getEquipmentByTeam(@Req() req: AuthenticatedRequest): Promise<EquipmentByTeamDto[]> {
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getEquipmentByTeam(userId, userRole, teamId, site);
   }
@@ -90,11 +92,11 @@ export class DashboardController {
     description: '교정 지연 장비 목록',
     type: [OverdueCalibrationDto],
   })
-  async getOverdueCalibrations(@Req() req: any): Promise<OverdueCalibrationDto[]> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+  async getOverdueCalibrations(@Req() req: AuthenticatedRequest): Promise<OverdueCalibrationDto[]> {
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getOverdueCalibrations(userId, userRole, teamId, site);
   }
@@ -117,33 +119,33 @@ export class DashboardController {
     type: [UpcomingCalibrationDto],
   })
   async getUpcomingCalibrations(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number
   ): Promise<UpcomingCalibrationDto[]> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getUpcomingCalibrations(userId, userRole, days, teamId, site);
   }
 
   @Get('overdue-rentals')
-  @RequirePermissions(Permission.VIEW_RENTALS)
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @ApiOperation({
-    summary: '대여 지연 조회',
-    description: '반납 예정일이 지난 대여 목록을 조회합니다.',
+    summary: '반출 지연 조회',
+    description: '반납 예정일이 지난 반출(대여 포함) 목록을 조회합니다.',
   })
   @ApiResponse({
     status: 200,
     description: '대여 지연 목록',
     type: [OverdueRentalDto],
   })
-  async getOverdueRentals(@Req() req: any): Promise<OverdueRentalDto[]> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+  async getOverdueRentals(@Req() req: AuthenticatedRequest): Promise<OverdueRentalDto[]> {
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getOverdueRentals(userId, userRole, teamId, site);
   }
@@ -166,13 +168,13 @@ export class DashboardController {
     type: [RecentActivityDto],
   })
   async getRecentActivities(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number
   ): Promise<RecentActivityDto[]> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getRecentActivities(userId, userRole, limit, teamId, site);
   }
@@ -188,11 +190,13 @@ export class DashboardController {
     description: '승인 대기 카운트',
     type: PendingApprovalCountsDto,
   })
-  async getPendingApprovalCounts(@Req() req: any): Promise<PendingApprovalCountsDto> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+  async getPendingApprovalCounts(
+    @Req() req: AuthenticatedRequest
+  ): Promise<PendingApprovalCountsDto> {
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getPendingApprovalCounts(userId, userRole, teamId, site);
   }
@@ -212,11 +216,13 @@ export class DashboardController {
       example: { available: 10, in_use: 5, checked_out: 2 },
     },
   })
-  async getEquipmentStatusStats(@Req() req: any): Promise<EquipmentStatusStatsDto> {
-    const userId = req.user?.id;
-    const userRole = req.user?.role as UserRole;
-    const teamId = req.user?.teamId;
-    const site = req.user?.site;
+  async getEquipmentStatusStats(
+    @Req() req: AuthenticatedRequest
+  ): Promise<EquipmentStatusStatsDto> {
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const teamId = req.user.teamId;
+    const site = req.user.site;
 
     return this.dashboardService.getEquipmentStatusStats(userId, userRole, teamId, site);
   }
