@@ -1,0 +1,203 @@
+/**
+ * 권한 상수 정의
+ *
+ * ⚠️ SSOT: 이 파일이 권한의 단일 소스
+ * 백엔드/프론트엔드 모두 이 파일에서 import
+ *
+ * 권한 명명 규칙: action:resource[:sub-resource]
+ * - view: 조회
+ * - create: 생성
+ * - update: 수정
+ * - delete: 삭제
+ * - approve: 승인
+ * - reject: 반려
+ */
+
+export enum Permission {
+  // ============================================================================
+  // 장비 관련 권한
+  // ============================================================================
+  VIEW_EQUIPMENT = 'view:equipment',
+  CREATE_EQUIPMENT = 'create:equipment',
+  UPDATE_EQUIPMENT = 'update:equipment',
+  DELETE_EQUIPMENT = 'delete:equipment',
+  APPROVE_EQUIPMENT = 'approve:equipment',
+  REJECT_EQUIPMENT = 'reject:equipment',
+  VIEW_EQUIPMENT_REQUESTS = 'view:equipment:requests',
+
+  // ============================================================================
+  // 반출 관련 권한 (교정/수리/시험소간 대여 모두 포함)
+  // ============================================================================
+  VIEW_CHECKOUTS = 'view:checkouts',
+  CREATE_CHECKOUT = 'create:checkout',
+  UPDATE_CHECKOUT = 'update:checkout',
+  DELETE_CHECKOUT = 'delete:checkout',
+  APPROVE_CHECKOUT = 'approve:checkout',
+  REJECT_CHECKOUT = 'reject:checkout',
+  START_CHECKOUT = 'start:checkout',
+  COMPLETE_CHECKOUT = 'complete:checkout',
+  CANCEL_CHECKOUT = 'cancel:checkout',
+
+  // ============================================================================
+  // 교정 관련 권한
+  // ============================================================================
+  VIEW_CALIBRATIONS = 'view:calibrations',
+  CREATE_CALIBRATION = 'create:calibration',
+  UPDATE_CALIBRATION = 'update:calibration',
+  DELETE_CALIBRATION = 'delete:calibration',
+  APPROVE_CALIBRATION = 'approve:calibration',
+  VIEW_CALIBRATION_REQUESTS = 'view:calibration:requests',
+
+  // ============================================================================
+  // 보정계수 관련 권한
+  // ============================================================================
+  VIEW_CALIBRATION_FACTORS = 'view:calibration-factors',
+  CREATE_CALIBRATION_FACTOR = 'create:calibration-factor',
+  APPROVE_CALIBRATION_FACTOR = 'approve:calibration-factor',
+  VIEW_CALIBRATION_FACTOR_REQUESTS = 'view:calibration-factor:requests',
+
+  // ============================================================================
+  // 부적합 관련 권한
+  // ============================================================================
+  VIEW_NON_CONFORMANCES = 'view:non-conformances',
+  CREATE_NON_CONFORMANCE = 'create:non-conformance',
+  UPDATE_NON_CONFORMANCE = 'update:non-conformance',
+  CLOSE_NON_CONFORMANCE = 'close:non-conformance',
+
+  // ============================================================================
+  // 소프트웨어 관련 권한
+  // ============================================================================
+  VIEW_SOFTWARE = 'view:software',
+  CREATE_SOFTWARE_CHANGE = 'create:software-change',
+  APPROVE_SOFTWARE_CHANGE = 'approve:software-change',
+  VIEW_SOFTWARE_REQUESTS = 'view:software:requests',
+
+  // ============================================================================
+  // 팀 관련 권한
+  // ============================================================================
+  VIEW_TEAMS = 'view:teams',
+  CREATE_TEAMS = 'create:teams',
+  UPDATE_TEAMS = 'update:teams',
+  DELETE_TEAMS = 'delete:teams',
+
+  // ============================================================================
+  // 사용자 관리 권한
+  // ============================================================================
+  VIEW_USERS = 'view:users',
+  UPDATE_USERS = 'update:users',
+  MANAGE_ROLES = 'manage:roles',
+
+  // ============================================================================
+  // 알림 관련 권한
+  // ============================================================================
+  VIEW_NOTIFICATIONS = 'view:notifications',
+  CREATE_NOTIFICATION = 'create:notification',
+  UPDATE_NOTIFICATION = 'update:notification',
+  DELETE_NOTIFICATION = 'delete:notification',
+  CREATE_SYSTEM_NOTIFICATION = 'create:system:notification',
+  MANAGE_NOTIFICATION_SETTINGS = 'manage:notification:settings',
+
+  // ============================================================================
+  // 통계 및 보고서 관련 권한
+  // ============================================================================
+  VIEW_STATISTICS = 'view:statistics',
+  EXPORT_REPORTS = 'export:reports',
+  CREATE_DASHBOARD = 'create:dashboard',
+  MANAGE_REPORTS = 'manage:reports',
+
+  // ============================================================================
+  // 교정계획서 관련 권한 (3단계 승인 워크플로우)
+  // ============================================================================
+  VIEW_CALIBRATION_PLANS = 'view:calibration-plans',
+  CREATE_CALIBRATION_PLAN = 'create:calibration-plan',
+  UPDATE_CALIBRATION_PLAN = 'update:calibration-plan',
+  DELETE_CALIBRATION_PLAN = 'delete:calibration-plan',
+  SUBMIT_CALIBRATION_PLAN = 'submit:calibration-plan', // 검토 요청 (기술책임자 → 품질책임자)
+  REVIEW_CALIBRATION_PLAN = 'review:calibration-plan', // 검토 완료 (품질책임자) - 신규
+  APPROVE_CALIBRATION_PLAN = 'approve:calibration-plan', // 최종 승인 (시험소장)
+  REJECT_CALIBRATION_PLAN = 'reject:calibration-plan', // 반려 (품질책임자/시험소장)
+  CONFIRM_CALIBRATION_PLAN_ITEM = 'confirm:calibration-plan-item',
+
+  // ============================================================================
+  // 감사 로그 관련 권한
+  // ============================================================================
+  VIEW_AUDIT_LOGS = 'view:audit-logs',
+}
+
+/**
+ * 권한 라벨 (UI 표시용)
+ */
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  [Permission.VIEW_EQUIPMENT]: '장비 조회',
+  [Permission.CREATE_EQUIPMENT]: '장비 등록',
+  [Permission.UPDATE_EQUIPMENT]: '장비 수정',
+  [Permission.DELETE_EQUIPMENT]: '장비 삭제',
+  [Permission.APPROVE_EQUIPMENT]: '장비 승인',
+  [Permission.REJECT_EQUIPMENT]: '장비 반려',
+  [Permission.VIEW_EQUIPMENT_REQUESTS]: '장비 요청 조회',
+
+  [Permission.VIEW_CHECKOUTS]: '반출 조회',
+  [Permission.CREATE_CHECKOUT]: '반출 신청',
+  [Permission.UPDATE_CHECKOUT]: '반출 수정',
+  [Permission.DELETE_CHECKOUT]: '반출 삭제',
+  [Permission.APPROVE_CHECKOUT]: '반출 승인',
+  [Permission.REJECT_CHECKOUT]: '반출 반려',
+  [Permission.START_CHECKOUT]: '반출 시작',
+  [Permission.COMPLETE_CHECKOUT]: '반입 완료',
+  [Permission.CANCEL_CHECKOUT]: '반출 취소',
+
+  [Permission.VIEW_CALIBRATIONS]: '교정 조회',
+  [Permission.CREATE_CALIBRATION]: '교정 등록',
+  [Permission.UPDATE_CALIBRATION]: '교정 수정',
+  [Permission.DELETE_CALIBRATION]: '교정 삭제',
+  [Permission.APPROVE_CALIBRATION]: '교정 승인',
+  [Permission.VIEW_CALIBRATION_REQUESTS]: '교정 요청 조회',
+
+  [Permission.VIEW_CALIBRATION_FACTORS]: '보정계수 조회',
+  [Permission.CREATE_CALIBRATION_FACTOR]: '보정계수 등록',
+  [Permission.APPROVE_CALIBRATION_FACTOR]: '보정계수 승인',
+  [Permission.VIEW_CALIBRATION_FACTOR_REQUESTS]: '보정계수 요청 조회',
+
+  [Permission.VIEW_NON_CONFORMANCES]: '부적합 조회',
+  [Permission.CREATE_NON_CONFORMANCE]: '부적합 등록',
+  [Permission.UPDATE_NON_CONFORMANCE]: '부적합 수정',
+  [Permission.CLOSE_NON_CONFORMANCE]: '부적합 종료',
+
+  [Permission.VIEW_SOFTWARE]: '소프트웨어 조회',
+  [Permission.CREATE_SOFTWARE_CHANGE]: '소프트웨어 변경 요청',
+  [Permission.APPROVE_SOFTWARE_CHANGE]: '소프트웨어 변경 승인',
+  [Permission.VIEW_SOFTWARE_REQUESTS]: '소프트웨어 요청 조회',
+
+  [Permission.VIEW_TEAMS]: '팀 조회',
+  [Permission.CREATE_TEAMS]: '팀 생성',
+  [Permission.UPDATE_TEAMS]: '팀 수정',
+  [Permission.DELETE_TEAMS]: '팀 삭제',
+
+  [Permission.VIEW_USERS]: '사용자 조회',
+  [Permission.UPDATE_USERS]: '사용자 수정',
+  [Permission.MANAGE_ROLES]: '역할 관리',
+
+  [Permission.VIEW_NOTIFICATIONS]: '알림 조회',
+  [Permission.CREATE_NOTIFICATION]: '알림 생성',
+  [Permission.UPDATE_NOTIFICATION]: '알림 수정',
+  [Permission.DELETE_NOTIFICATION]: '알림 삭제',
+  [Permission.CREATE_SYSTEM_NOTIFICATION]: '시스템 알림 생성',
+  [Permission.MANAGE_NOTIFICATION_SETTINGS]: '알림 설정 관리',
+
+  [Permission.VIEW_STATISTICS]: '통계 조회',
+  [Permission.EXPORT_REPORTS]: '보고서 내보내기',
+  [Permission.CREATE_DASHBOARD]: '대시보드 생성',
+  [Permission.MANAGE_REPORTS]: '보고서 관리',
+
+  [Permission.VIEW_CALIBRATION_PLANS]: '교정계획서 조회',
+  [Permission.CREATE_CALIBRATION_PLAN]: '교정계획서 작성',
+  [Permission.UPDATE_CALIBRATION_PLAN]: '교정계획서 수정',
+  [Permission.DELETE_CALIBRATION_PLAN]: '교정계획서 삭제',
+  [Permission.SUBMIT_CALIBRATION_PLAN]: '교정계획서 검토 요청',
+  [Permission.REVIEW_CALIBRATION_PLAN]: '교정계획서 검토',
+  [Permission.APPROVE_CALIBRATION_PLAN]: '교정계획서 최종 승인',
+  [Permission.REJECT_CALIBRATION_PLAN]: '교정계획서 반려',
+  [Permission.CONFIRM_CALIBRATION_PLAN_ITEM]: '교정계획 항목 확인',
+
+  [Permission.VIEW_AUDIT_LOGS]: '감사 로그 조회',
+};
