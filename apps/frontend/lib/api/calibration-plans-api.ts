@@ -57,7 +57,7 @@ export interface CalibrationPlan {
   id: number;
   uuid: string;
   year: number;
-  siteId: Site;  // ✅ SSOT: Site 타입 사용
+  siteId: Site; // ✅ SSOT: Site 타입 사용
   teamId: string | null;
   status: CalibrationPlanStatus;
   // 작성자 정보
@@ -76,11 +76,29 @@ export interface CalibrationPlan {
   rejectedAt: string | null;
   rejectionReason: string | null;
   rejectionStage: 'review' | 'approval' | null;
+  // 버전 관리
+  version: number;
+  parentPlanId: string | null;
+  isLatestVersion: boolean;
   // 시스템 필드
   createdAt: string;
   updatedAt: string;
   // 항목 (상세 조회 시)
   items?: CalibrationPlanItem[];
+}
+
+// 버전 히스토리 항목 인터페이스
+export interface CalibrationPlanVersion {
+  id: string;
+  year: number;
+  siteId: Site;
+  status: CalibrationPlanStatus;
+  version: number;
+  isLatestVersion: boolean;
+  createdBy: string;
+  createdAt: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
 }
 
 // 쿼리 인터페이스 (API 요청용 - string 허용)
@@ -163,13 +181,13 @@ export interface ReviewCalibrationPlanDto {
 // ✅ SSOT: packages/schemas의 라벨 재사용
 export const CALIBRATION_PLAN_STATUS_LABELS = SSOT_STATUS_LABELS;
 
-// 상태 색상 (UI 전용 - 프론트엔드 로컬 정의)
+// 상태 색상 (UI 전용 - UL Solutions 브랜드 색상 적용)
 export const CALIBRATION_PLAN_STATUS_COLORS: Record<CalibrationPlanStatus, string> = {
   draft: 'bg-gray-100 text-gray-800',
-  pending_review: 'bg-yellow-100 text-yellow-800',
-  pending_approval: 'bg-blue-100 text-blue-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
+  pending_review: 'bg-ul-orange/10 text-ul-orange border border-ul-orange/20',
+  pending_approval: 'bg-ul-fog/10 text-ul-fog border border-ul-fog/20',
+  approved: 'bg-ul-green/10 text-ul-green border border-ul-green/20',
+  rejected: 'bg-ul-red/10 text-ul-red border border-ul-red/20',
 };
 
 // ✅ SSOT: packages/schemas의 라벨 재사용
@@ -224,10 +242,7 @@ const calibrationPlansApi = {
   },
 
   // 검토 요청 (기술책임자 → 품질책임자)
-  submitForReview: async (
-    uuid: string,
-    data: SubmitForReviewDto
-  ): Promise<CalibrationPlan> => {
+  submitForReview: async (uuid: string, data: SubmitForReviewDto): Promise<CalibrationPlan> => {
     return apiClient
       .post(`/api/calibration-plans/${uuid}/submit-for-review`, data)
       .then((res) => res.data);
@@ -313,6 +328,18 @@ const calibrationPlansApi = {
   openPrintView: (uuid: string): void => {
     const url = `/api/calibration-plans/${uuid}/pdf`;
     window.open(url, '_blank');
+  },
+
+  // 새 버전 생성 (승인된 계획서만)
+  createNewVersion: async (uuid: string, createdBy: string): Promise<CalibrationPlan> => {
+    return apiClient
+      .post(`/api/calibration-plans/${uuid}/new-version`, { createdBy })
+      .then((res) => res.data);
+  },
+
+  // 버전 히스토리 조회
+  getVersionHistory: async (uuid: string): Promise<CalibrationPlanVersion[]> => {
+    return apiClient.get(`/api/calibration-plans/${uuid}/versions`).then((res) => res.data);
   },
 };
 
