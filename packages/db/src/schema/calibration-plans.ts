@@ -5,8 +5,8 @@ import {
   integer,
   timestamp,
   text,
+  boolean,
   index,
-  unique,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
@@ -69,19 +69,34 @@ export const calibrationPlans = pgTable(
     rejectionReason: text('rejection_reason'), // 반려 사유
     rejectionStage: varchar('rejection_stage', { length: 20 }), // 'review' | 'approval'
 
+    // 버전 관리
+    version: integer('version').default(1).notNull(), // 버전 번호
+    parentPlanId: uuid('parent_plan_id'), // 부모 계획서 (이전 버전) - self-reference
+    isLatestVersion: boolean('is_latest_version').default(true).notNull(), // 최신 버전 여부
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => {
     return {
-      // 연도 + 시험소 복합 unique 제약
-      yearSiteUnique: unique('calibration_plans_year_site_unique').on(table.year, table.siteId),
+      // 연도 + 시험소 + 최신버전 복합 unique 제약
+      // 주의: PostgreSQL은 partial unique index를 지원하지만 Drizzle에서는 직접 지원하지 않음
+      // 따라서 서비스 레이어에서 최신 버전 유일성을 검증
+      yearSiteVersionIdx: index('calibration_plans_year_site_version_idx').on(
+        table.year,
+        table.siteId,
+        table.isLatestVersion
+      ),
       // 인덱스
       yearIdx: index('calibration_plans_year_idx').on(table.year),
       siteIdIdx: index('calibration_plans_site_id_idx').on(table.siteId),
       statusIdx: index('calibration_plans_status_idx').on(table.status),
       createdByIdx: index('calibration_plans_created_by_idx').on(table.createdBy),
+      parentPlanIdIdx: index('calibration_plans_parent_plan_id_idx').on(table.parentPlanId),
+      isLatestVersionIdx: index('calibration_plans_is_latest_version_idx').on(
+        table.isLatestVersion
+      ),
     };
   }
 );
@@ -156,8 +171,17 @@ export type CalibrationPlanItem = typeof calibrationPlanItems.$inferSelect;
 export type NewCalibrationPlanItem = typeof calibrationPlanItems.$inferInsert;
 
 // Relations 정의
-export const calibrationPlansRelations = relations(calibrationPlans, ({ many }) => ({
+export const calibrationPlansRelations = relations(calibrationPlans, ({ one, many }) => ({
   items: many(calibrationPlanItems),
+  // 버전 관리 관계
+  parentPlan: one(calibrationPlans, {
+    fields: [calibrationPlans.parentPlanId],
+    references: [calibrationPlans.id],
+    relationName: 'planVersions',
+  }),
+  childVersions: many(calibrationPlans, {
+    relationName: 'planVersions',
+  }),
 }));
 
 export const calibrationPlanItemsRelations = relations(calibrationPlanItems, ({ one }) => ({
