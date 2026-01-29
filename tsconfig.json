@@ -22,7 +22,6 @@
   "references": [
     { "path": "./packages/schemas" },
     { "path": "./packages/db" },
-    { "path": "./packages/api-client" },
     { "path": "./apps/backend" },
     { "path": "./apps/frontend" }
   ]

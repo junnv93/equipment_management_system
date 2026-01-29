@@ -47,7 +47,6 @@ pnpm frontend <명령>  # 프론트엔드 앱에서 명령 실행
 pnpm backend <명령>   # 백엔드 앱에서 명령 실행
 pnpm schemas <명령>   # schemas 패키지에서 명령 실행
 pnpm db <명령>        # DB 패키지에서 명령 실행
-pnpm api-client <명령> # API 클라이언트 패키지에서 명령 실행
 
 # 예시
 pnpm frontend dev     # 프론트엔드 개발 서버 실행
@@ -72,7 +71,6 @@ pnpm --filter <패키지명> add <워크스페이스패키지명>
 # 예시
 pnpm --filter frontend add @equipment-management/schemas      # 프론트엔드에 schemas 패키지 추가
 pnpm --filter backend add -D @types/node                      # 백엔드에 개발 의존성 추가
-pnpm --filter @equipment-management/api-client add axios      # API 클라이언트에 axios 추가
 ```
 
 ### 의존성 업데이트
@@ -94,8 +92,7 @@ pnpm update-deps
 │   └── frontend/            # Next.js 프론트엔드 앱
 ├── packages/                # 공유 패키지
 │   ├── schemas/             # 공유 스키마 및 타입 (Zod)
-│   ├── db/                  # Drizzle ORM 스키마
-│   └── api-client/          # API 클라이언트
+│   └── db/                  # Drizzle ORM 스키마
 ```
 
 ## 워크스페이스 패키지 의존성 주의사항

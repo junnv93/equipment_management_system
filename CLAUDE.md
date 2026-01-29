@@ -65,7 +65,8 @@ equipment_management_system/
 │
 ├── packages/
 │   ├── db/                      # Shared Drizzle schema
-│   ├── schemas/                 # Shared Zod validation schemas
+│   ├── schemas/                 # Shared Zod validation schemas (SSOT)
+│   ├── shared-constants/        # Shared constants (permissions, API endpoints)
 │   └── api-client/              # Generated API client types
 │
 └── docs/
@@ -90,6 +91,30 @@ equipment_management_system/
 | Redis      | 6379 |
 
 ## Critical Development Rules
+
+### 0. SSOT (Single Source of Truth) Principle
+
+**Shared types and constants MUST be imported from packages, not redefined.**
+
+```typescript
+// ✅ CORRECT - Import from SSOT packages
+import { UserRole, EquipmentStatus } from '@equipment-management/schemas';
+import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
+
+// ❌ WRONG - Redefining types locally
+type UserRole = 'ADMIN' | 'USER' | 'MANAGER'; // Wrong values!
+const API_URL = '/api/equipment'; // Hardcoded string
+```
+
+| Data Type | SSOT Package | Example |
+|-----------|--------------|---------|
+| Enums (Status, Role) | `@equipment-management/schemas` | `EquipmentStatus`, `UserRole` |
+| Permissions | `@equipment-management/shared-constants` | `Permission.VIEW_EQUIPMENT` |
+| API Endpoints | `@equipment-management/shared-constants` | `API_ENDPOINTS.EQUIPMENT.LIST` |
+| Management Number | `@equipment-management/schemas` | `generateManagementNumber()` |
+| Error Codes | `@equipment-management/schemas` | `ErrorCode.NotFound` |
+
+**Frontend-specific UI options (SITE_OPTIONS, CLASSIFICATION_OPTIONS) are allowed locally.**
 
 ### 1. Single Database Architecture
 

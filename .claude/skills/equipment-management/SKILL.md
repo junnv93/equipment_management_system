@@ -237,7 +237,7 @@ XXX – X YYYY
 
 ### Azure AD 그룹 매핑 (수원)
 
-| Azure AD 그룹        | 팀 UUID                                | 팀 이름 (분류)     |
+| Azure AD 그룹        | 테넌트 ID                               | 팀 이름 (분류)     |
 | -------------------- | -------------------------------------- | ------------------ |
 | `LST.SUW.RF`         | `7dc3b94c-82b8-488e-9ea5-4fe71bb086e1` | FCC EMC/RF (E)     |
 | `LST.SUW.EMC`        | `bb6c860d-9d7c-4e2d-b289-2b2e416ec289` | General EMC (R)    |
@@ -246,10 +246,10 @@ XXX – X YYYY
 
 ### Azure AD 그룹 매핑 (의왕/평택)
 
-| Azure AD 그룹        | 팀 UUID                                | 팀 이름 (분류)     |
+| Azure AD 그룹        | 테넌트 ID                               | 팀 이름 (분류)     |
 | -------------------- | -------------------------------------- | ------------------ |
-| `LST.UIW.RF`         | `a1b2c3d4-e5f6-4789-abcd-ef0123456789` | General RF (W)     |
-| `LST.PYT.Automotive` | `b2c3d4e5-f6a7-4890-bcde-f01234567890` | Automotive EMC (A) |
+| `LST.UIW.RF`         | `없음` | General RF (W)     |
+| `LST.PYT.Automotive` | `70115954-0ccd-45f0-87bd-03b2a3587569` | Automotive EMC (A) |
 
 ---
 
@@ -271,6 +271,297 @@ XXX – X YYYY
 | 이력(위치변동/교정/수리 등) | History records                  |
 
 **상세 이력카드**: [references/equipment-history-card.md](references/equipment-history-card.md)
+
+---
+
+## 코드 품질 규칙
+
+> **목표**: 컴파일 타임에 실수를 방지하고, 코드 품질을 자동으로 강제
+
+### 필수 (MUST)
+
+1. **`any` 타입 사용 금지** - `unknown` 또는 구체적 타입 사용
+   ```typescript
+   // ❌ 금지
+   const data: any = await fetch(...);
+
+   // ✅ 권장
+   const data: Equipment = await fetch(...).then(r => r.json());
+   ```
+
+2. **모든 타입은 SSOT에서 import**
+   ```typescript
+   // ❌ 금지: 로컬 타입 정의
+   type UserRole = 'ADMIN' | 'USER';  // 잘못된 값!
+
+   // ✅ 권장: schemas 패키지에서 import
+   import { UserRole } from '@equipment-management/schemas';
+   import { Permission } from '@equipment-management/shared-constants';
+   ```
+
+3. **API 파일에서 barrel import 금지** - 직접 import 사용
+   ```typescript
+   // ❌ 피해야 함 (bundle size 증가)
+   import { equipmentApi, dashboardApi } from '@/lib/api';
+
+   // ✅ 권장 (tree-shaking 가능)
+   import equipmentApi from '@/lib/api/equipment-api';
+   ```
+
+4. **Server Component에서 같은 데이터 중복 fetch 금지** - React.cache() 사용
+   ```typescript
+   // ❌ Page()와 generateMetadata()에서 각각 호출
+   // ✅ 권장: cache() 래핑
+   import { cache } from 'react';
+   const getEquipmentCached = cache(async (id: string) => {
+     return equipmentApiServer.getEquipment(id);
+   });
+   ```
+
+### 권장 (SHOULD)
+
+1. **무거운 컴포넌트는 dynamic import 사용**
+   ```typescript
+   const HeavyChart = dynamic(() => import('./HeavyChart'), {
+     loading: () => <ChartSkeleton />,
+   });
+   ```
+
+2. **useQuery 훅은 관련 컴포넌트 내부에서 호출** (탭별 데이터 분리)
+
+3. **복잡한 계산은 useMemo로 메모이제이션**
+
+### ESLint로 강제되는 규칙
+
+| 규칙 | 레벨 | 설명 |
+|------|------|------|
+| `@typescript-eslint/no-explicit-any` | error | any 타입 금지 |
+| `@typescript-eslint/no-unused-vars` | error | 미사용 변수 금지 |
+| `react-hooks/exhaustive-deps` | error | useEffect 의존성 누락 금지 |
+| `no-restricted-imports` | error | SSOT 위반 import 차단 |
+
+### lint-staged 설정
+
+- **max-warnings=0**: 모든 warning이 커밋을 차단
+- pre-commit hook에서 자동 실행
+
+---
+
+## ✅ Vercel/React Best Practices 체크리스트
+
+> **참조**: Vercel Engineering 팀의 React 성능 최적화 가이드라인
+> **스킬**: `/vercel-react-best-practices` 스킬에서 상세 규칙 확인 가능
+
+### 🔴 CRITICAL: Request Waterfall 제거
+
+```typescript
+// ❌ 순차 실행 (Waterfall)
+const user = await getUser();
+const posts = await getPosts();
+const comments = await getComments();
+
+// ✅ 병렬 실행
+const [user, posts, comments] = await Promise.all([
+  getUser(),
+  getPosts(),
+  getComments(),
+]);
+```
+
+### 🔴 CRITICAL: Bundle Size 최적화
+
+| 규칙 | 설명 |
+|------|------|
+| **Barrel import 금지** | `from '@/lib/api'` 대신 `from '@/lib/api/equipment-api'` |
+| **Dynamic import 사용** | 무거운 컴포넌트는 `next/dynamic`으로 지연 로딩 |
+| **ssr: false** | 클라이언트 전용 탭/모달 컴포넌트에 적용 |
+
+```typescript
+// ✅ 탭 컴포넌트는 ssr: false (사용자 상호작용 후에만 로드)
+const CalibrationHistoryTab = dynamic(
+  () => import('./CalibrationHistoryTab'),
+  { loading: () => <TabSkeleton />, ssr: false }
+);
+```
+
+### 🟠 HIGH: Server-Side 성능
+
+| 규칙 | 설명 |
+|------|------|
+| **React.cache()** | generateMetadata와 Page에서 동일 데이터 중복 fetch 방지 |
+| **Server Component 우선** | 데이터 fetch는 Server Component에서 |
+| **initialData 패턴** | Server에서 fetch → Client의 useQuery에 전달 |
+
+```typescript
+// ✅ Server Component에서 초기 데이터 fetch
+export default async function EquipmentPage(props: PageProps) {
+  const initialData = await equipmentApiServer.getEquipmentList();
+  return <EquipmentListContent initialData={initialData} />;
+}
+```
+
+### 🟡 MEDIUM: Re-render 최적화
+
+| 규칙 | 설명 |
+|------|------|
+| **useState 통합** | 관련 상태는 하나의 객체로 관리 (또는 useQuery 사용) |
+| **useMemo 사용** | 복잡한 계산은 메모이제이션 |
+| **useCallback 사용** | 자식에 전달하는 콜백 함수 안정화 |
+
+```typescript
+// ❌ 여러 useState로 다중 리렌더링
+const [data, setData] = useState(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState(null);
+
+// ✅ React Query로 상태 통합 (단일 리렌더링)
+const { data, isLoading, error } = useQuery({
+  queryKey: ['data'],
+  queryFn: fetchData,
+});
+```
+
+### 🟢 LOW: 접근성 (Accessibility)
+
+| 규칙 | 설명 |
+|------|------|
+| **아이콘 버튼** | `aria-label` 필수, 아이콘에 `aria-hidden="true"` |
+| **폼 입력** | `htmlFor` + `id` 매칭 |
+| **포커스** | `:focus-visible` 스타일 적용 |
+| **SR-only** | 스크린 리더 전용 안내 텍스트 |
+
+```typescript
+// ✅ 접근성 있는 아이콘 버튼
+<Button variant="ghost" size="icon" aria-label="장비 상세로 돌아가기">
+  <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+</Button>
+
+// ✅ 스크린 리더 전용 안내
+<span className="sr-only">Enter를 눌러 검색하세요</span>
+```
+
+### 커밋 전 체크리스트
+
+```
+□ any 타입 사용하지 않음
+□ Barrel import 사용하지 않음 (직접 import)
+□ Server Component에서 데이터 fetch
+□ 독립적 Promise는 Promise.all()로 병렬화
+□ 무거운 컴포넌트는 dynamic import 사용
+□ 탭/모달 컴포넌트에 ssr: false 적용
+□ 아이콘 버튼에 aria-label 추가
+□ ESLint/TypeScript 오류 0개
+```
+
+---
+
+## ❌ 반복되는 실수 패턴 (절대 금지)
+
+> **목표**: Claude Code가 같은 실수를 반복하지 않도록 명시적으로 금지 패턴 정의
+
+### 1. NestJS Controller에서 `@Req() req: any` 사용
+
+```typescript
+// ❌ 금지 - any 타입 사용
+@Get(':uuid')
+async findOne(@Param('uuid') uuid: string, @Req() req: any) {
+  const userId = req.user?.userId; // 타입 안전하지 않음
+}
+
+// ✅ 권장 - AuthenticatedRequest 타입 사용
+import { AuthenticatedRequest } from '../../types/common.types';
+
+@Get(':uuid')
+async findOne(@Param('uuid') uuid: string, @Req() req: AuthenticatedRequest) {
+  const userId = req.user.userId; // 타입 안전
+}
+```
+
+### 2. Multer 파일에 `file: any` 사용
+
+```typescript
+// ❌ 금지 - any 타입 사용
+async uploadFile(file: any) {
+  const buffer = file.buffer;  // 타입 안전하지 않음
+}
+
+// ✅ 권장 - Express.Multer.File 타입 사용
+async uploadFile(file: Express.Multer.File) {
+  const buffer = file.buffer;  // 타입 안전
+}
+```
+
+### 3. generateMetadata와 Page에서 중복 fetch
+
+```typescript
+// ❌ 금지 - 동일 API 2번 호출 (네트워크 낭비)
+export async function generateMetadata(props: PageProps) {
+  const equipment = await getEquipment(id);  // 1번째 호출
+  return { title: equipment.name };
+}
+
+export default async function Page(props: PageProps) {
+  const equipment = await getEquipment(id);  // 2번째 호출 (중복!)
+  return <Client equipment={equipment} />;
+}
+
+// ✅ 권장 - React.cache()로 메모이제이션
+import { cache } from 'react';
+
+const getEquipmentCached = cache(async (id: string) => {
+  return getEquipment(id);
+});
+
+export async function generateMetadata(props: PageProps) {
+  const equipment = await getEquipmentCached(id);  // 캐시
+  return { title: equipment.name };
+}
+
+export default async function Page(props: PageProps) {
+  const equipment = await getEquipmentCached(id);  // 재사용 (호출 안함)
+  return <Client equipment={equipment} />;
+}
+```
+
+### 4. Drizzle ORM에서 `as any` 캐스팅
+
+```typescript
+// ❌ 금지 - as any로 타입 체크 우회
+const [record] = await db.insert(table).values({
+  name: 'test',
+  status: 'active',
+} as any).returning();
+
+// ✅ 권장 - 올바른 타입으로 값 전달
+const [record] = await db.insert(table).values({
+  name: 'test',
+  status: 'active',  // enum 타입이면 스키마에서 추론됨
+}).returning();
+```
+
+### 5. 로컬에서 타입/Enum 재정의
+
+```typescript
+// ❌ 금지 - 로컬에서 enum 재정의 (SSOT 위반)
+type UserRole = 'ADMIN' | 'USER' | 'MANAGER';  // 잘못된 값!
+
+// ✅ 권장 - 중앙 패키지에서 import
+import { UserRole } from '@equipment-management/schemas';
+```
+
+### 6. optional 파라미터에 `| undefined` 누락
+
+```typescript
+// ❌ 금지 - req가 optional인데 타입에 반영 안됨
+async update(@Req() req?: any) {
+  const userId = req.user?.userId;  // req가 undefined일 수 있음
+}
+
+// ✅ 권장 - optional 파라미터 명시
+async update(@Req() req?: AuthenticatedRequest) {
+  const userId = req?.user?.userId;  // null 안전 체인
+}
+```
 
 ---
 
@@ -301,14 +592,15 @@ if (updated.rowCount === 0) {
 - 장비 등록 시 관리 팀(teamId) 및 시험소(site) 필수
 - 조회는 전체 가능, 수정/승인은 권한 범위 내에서만
 
-### 3. 기술책임자 직접 등록 규칙 (교정 기록)
+### 3. 교정 기록 등록/승인 분리 원칙
 
-```typescript
-// 기술책임자/시험소관리자 직접 등록 시 registrarComment 필수
-if (isTechnicalOrHigher && (!dto.registrarComment || dto.registrarComment.length < 5)) {
-  throw new BadRequestException('기술책임자 등록 시 코멘트는 필수입니다');
-}
 ```
+교정 기록 등록: 시험실무자(test_engineer)만 가능
+교정 기록 승인: 기술책임자(technical_manager)만 가능
+시험소장(lab_manager): 모든 권한 (자체 승인 포함)
+```
+
+> **원칙**: 등록자와 승인자를 분리하여 견제 구조 유지 (UL-QP-18)
 
 ---
 
@@ -326,8 +618,8 @@ if (isTechnicalOrHigher && (!dto.registrarComment || dto.registrarComment.length
 ### 교정 기록 등록
 
 ```
-기술책임자 직접 등록: approved (registrarComment 필수)
 시험실무자 등록: pending_approval → 기술책임자 승인 (approverComment 필수)
+시험소장 등록: 자체 승인 가능 (approved 상태로 직접 등록)
 ```
 
 ### 점검 프로세스 (UL-QP-18 Section 8)

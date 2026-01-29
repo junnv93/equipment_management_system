@@ -13,8 +13,7 @@
 │   └── frontend/            # Next.js 프론트엔드 앱
 ├── packages/                # 공유 패키지
 │   ├── schemas/             # 공유 스키마 및 타입 (Zod)
-│   ├── db/                  # Drizzle ORM 스키마
-│   └── api-client/          # API 클라이언트
+│   └── db/                  # Drizzle ORM 스키마
 ```
 
 ## 각 워크스페이스 역할
@@ -46,10 +45,8 @@
    - 데이터베이스 마이그레이션 관리
    - 백엔드에서 활용
 
-3. **api-client**
-   - 백엔드 API 호출을 위한 클라이언트
-   - 타입 안전한 API 요청 구현
-   - HTTP 요청 추상화 및 에러 처리
+> **Note**: API 클라이언트는 `apps/frontend/lib/api/`에서 직접 구현됩니다.
+> NextAuth 세션 기반 인증을 사용하므로 별도 패키지로 분리하지 않습니다.
 
 ## 워크스페이스 간 의존성 관리
 
@@ -58,15 +55,13 @@
    ```
    frontend → schemas
         ↓
-   api-client → schemas
-        ↓
    backend → db → schemas
    ```
 
 2. **잘못된 의존성 방향(금지)**
 
    ```
-   schemas → db/api-client/frontend/backend
+   schemas → db/frontend/backend
    backend → frontend
    db → frontend
    ```
@@ -79,8 +74,7 @@
    {
      "dependencies": {
        "@equipment-management/schemas": "workspace:*",
-       "@equipment-management/db": "workspace:*",
-       "@equipment-management/api-client": "workspace:*"
+       "@equipment-management/db": "workspace:*"
      }
    }
    ```
