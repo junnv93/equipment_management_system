@@ -1,8 +1,19 @@
 import { z } from 'zod';
 
-// 에러 코드 타입 정의
+/**
+ * 에러 코드 정의
+ *
+ * ⚠️ SSOT: 이 파일이 에러 코드의 단일 소스
+ * 백엔드/프론트엔드 모두 이 코드를 기준으로 에러 처리
+ *
+ * 명명 규칙:
+ * - PascalCase (JavaScript enum 컨벤션)
+ * - 값은 SCREAMING_SNAKE_CASE
+ */
 export enum ErrorCode {
-  // 일반 오류
+  // ============================================================================
+  // 일반 HTTP 에러
+  // ============================================================================
   BadRequest = 'BAD_REQUEST',
   Unauthorized = 'UNAUTHORIZED',
   Forbidden = 'FORBIDDEN',
@@ -10,24 +21,62 @@ export enum ErrorCode {
   Conflict = 'CONFLICT',
   TooManyRequests = 'TOO_MANY_REQUESTS',
   InternalServerError = 'INTERNAL_SERVER_ERROR',
-  
-  // 장비 관련 오류
+
+  // ============================================================================
+  // 장비 관련 에러
+  // ============================================================================
   EquipmentNotAvailable = 'EQUIPMENT_NOT_AVAILABLE',
   EquipmentAlreadyAssigned = 'EQUIPMENT_ALREADY_ASSIGNED',
   EquipmentMaintenance = 'EQUIPMENT_MAINTENANCE',
-  
-  // 사용자 관련 오류
+  EquipmentNotFound = 'EQUIPMENT_NOT_FOUND',
+  DuplicateManagementNumber = 'DUPLICATE_MANAGEMENT_NUMBER',
+  DuplicateSerialNumber = 'DUPLICATE_SERIAL_NUMBER',
+
+  // ============================================================================
+  // 사용자/인증 관련 에러
+  // ============================================================================
   InvalidCredentials = 'INVALID_CREDENTIALS',
   UserNotFound = 'USER_NOT_FOUND',
   EmailAlreadyExists = 'EMAIL_ALREADY_EXISTS',
-  
-  // 데이터 유효성 오류
+  SessionExpired = 'SESSION_EXPIRED',
+  PermissionDenied = 'PERMISSION_DENIED',
+
+  // ============================================================================
+  // 데이터 유효성 에러
+  // ============================================================================
   InvalidData = 'INVALID_DATA',
   ValidationError = 'VALIDATION_ERROR',
+  RequiredFieldMissing = 'REQUIRED_FIELD_MISSING',
+  InvalidFormat = 'INVALID_FORMAT',
+  InvalidDate = 'INVALID_DATE',
+
+  // ============================================================================
+  // 파일 관련 에러
+  // ============================================================================
+  FileTooLarge = 'FILE_TOO_LARGE',
+  InvalidFileType = 'INVALID_FILE_TYPE',
+  FileUploadFailed = 'FILE_UPLOAD_FAILED',
+
+  // ============================================================================
+  // 비즈니스 로직 에러
+  // ============================================================================
+  CheckoutAlreadyApproved = 'CHECKOUT_ALREADY_APPROVED',
+  CheckoutNotPending = 'CHECKOUT_NOT_PENDING',
+  CalibrationOverdue = 'CALIBRATION_OVERDUE',
+  NonConformanceNotOpen = 'NON_CONFORMANCE_NOT_OPEN',
+  CannotSelfApprove = 'CANNOT_SELF_APPROVE',
+
+  // ============================================================================
+  // 네트워크/시스템 에러
+  // ============================================================================
+  NetworkError = 'NETWORK_ERROR',
+  TimeoutError = 'TIMEOUT_ERROR',
+  ServiceUnavailable = 'SERVICE_UNAVAILABLE',
 }
 
 // HTTP 상태 코드와 에러 코드 매핑
 export const errorCodeToStatusCode: Record<ErrorCode, number> = {
+  // 일반 HTTP 에러
   [ErrorCode.BadRequest]: 400,
   [ErrorCode.Unauthorized]: 401,
   [ErrorCode.Forbidden]: 403,
@@ -35,47 +84,83 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.Conflict]: 409,
   [ErrorCode.TooManyRequests]: 429,
   [ErrorCode.InternalServerError]: 500,
-  
+
+  // 장비 관련 에러
   [ErrorCode.EquipmentNotAvailable]: 400,
   [ErrorCode.EquipmentAlreadyAssigned]: 409,
   [ErrorCode.EquipmentMaintenance]: 400,
-  
+  [ErrorCode.EquipmentNotFound]: 404,
+  [ErrorCode.DuplicateManagementNumber]: 409,
+  [ErrorCode.DuplicateSerialNumber]: 409,
+
+  // 사용자/인증 관련 에러
   [ErrorCode.InvalidCredentials]: 401,
   [ErrorCode.UserNotFound]: 404,
   [ErrorCode.EmailAlreadyExists]: 409,
-  
+  [ErrorCode.SessionExpired]: 401,
+  [ErrorCode.PermissionDenied]: 403,
+
+  // 데이터 유효성 에러
   [ErrorCode.InvalidData]: 400,
   [ErrorCode.ValidationError]: 400,
+  [ErrorCode.RequiredFieldMissing]: 400,
+  [ErrorCode.InvalidFormat]: 400,
+  [ErrorCode.InvalidDate]: 400,
+
+  // 파일 관련 에러
+  [ErrorCode.FileTooLarge]: 413,
+  [ErrorCode.InvalidFileType]: 415,
+  [ErrorCode.FileUploadFailed]: 500,
+
+  // 비즈니스 로직 에러
+  [ErrorCode.CheckoutAlreadyApproved]: 409,
+  [ErrorCode.CheckoutNotPending]: 400,
+  [ErrorCode.CalibrationOverdue]: 400,
+  [ErrorCode.NonConformanceNotOpen]: 400,
+  [ErrorCode.CannotSelfApprove]: 403,
+
+  // 네트워크/시스템 에러
+  [ErrorCode.NetworkError]: 503,
+  [ErrorCode.TimeoutError]: 504,
+  [ErrorCode.ServiceUnavailable]: 503,
 };
 
 // 에러 응답 스키마
 export const ErrorResponseSchema = z.object({
   code: z.nativeEnum(ErrorCode),
   message: z.string(),
-  details: z.any().optional(),
+  details: z.unknown().optional(),
   timestamp: z.string().datetime(),
 });
 
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 
+// V8 엔진의 captureStackTrace 타입 정의
+interface ErrorConstructorWithCaptureStackTrace {
+  new (message?: string): Error;
+  (message?: string): Error;
+  readonly prototype: Error;
+  captureStackTrace?(targetObject: object, constructorOpt?: NewableFunction): void;
+}
+
 // 애플리케이션 에러 클래스
 export class AppError extends Error {
   code: ErrorCode;
-  details?: any;
+  details?: unknown;
   statusCode: number;
-  
-  constructor(code: ErrorCode, message: string, details?: any) {
+
+  constructor(code: ErrorCode, message: string, details?: unknown) {
     super(message);
     this.code = code;
     this.details = details;
     this.statusCode = errorCodeToStatusCode[code];
     this.name = 'AppError';
-    
+
     // 스택 트레이스 유지를 위한 설정
-    // TS2339 오류 회피
-    const captureStackTrace = (Error as any).captureStackTrace;
-    if (captureStackTrace) {
-      captureStackTrace(this, AppError);
+    // V8 엔진 전용 API (Node.js)
+    const ErrorConstructor = Error as ErrorConstructorWithCaptureStackTrace;
+    if (ErrorConstructor.captureStackTrace) {
+      ErrorConstructor.captureStackTrace(this, AppError);
     }
   }
   
@@ -90,31 +175,31 @@ export class AppError extends Error {
   }
   
   // 특정 에러 타입 생성을 위한 팩토리 메서드들
-  static badRequest(message: string, details?: any): AppError {
+  static badRequest(message: string, details?: unknown): AppError {
     return new AppError(ErrorCode.BadRequest, message, details);
   }
-  
-  static unauthorized(message: string = '인증이 필요합니다', details?: any): AppError {
+
+  static unauthorized(message: string = '인증이 필요합니다', details?: unknown): AppError {
     return new AppError(ErrorCode.Unauthorized, message, details);
   }
-  
-  static forbidden(message: string = '권한이 없습니다', details?: any): AppError {
+
+  static forbidden(message: string = '권한이 없습니다', details?: unknown): AppError {
     return new AppError(ErrorCode.Forbidden, message, details);
   }
-  
-  static notFound(message: string = '리소스를 찾을 수 없습니다', details?: any): AppError {
+
+  static notFound(message: string = '리소스를 찾을 수 없습니다', details?: unknown): AppError {
     return new AppError(ErrorCode.NotFound, message, details);
   }
-  
-  static conflict(message: string, details?: any): AppError {
+
+  static conflict(message: string, details?: unknown): AppError {
     return new AppError(ErrorCode.Conflict, message, details);
   }
-  
-  static internalServerError(message: string = '서버 오류가 발생했습니다', details?: any): AppError {
+
+  static internalServerError(message: string = '서버 오류가 발생했습니다', details?: unknown): AppError {
     return new AppError(ErrorCode.InternalServerError, message, details);
   }
-  
-  static validationError(message: string = '유효성 검사 오류', details?: any): AppError {
+
+  static validationError(message: string = '유효성 검사 오류', details?: unknown): AppError {
     return new AppError(ErrorCode.ValidationError, message, details);
   }
 }

@@ -2,8 +2,6 @@ import {
   EquipmentStatusEnum,
   CalibrationMethodEnum,
   UserRoleEnum,
-  RentalStatusEnum,
-  RentalTypeEnum,
   CalibrationStatusEnum,
   CheckoutStatusEnum,
   ClassificationEnum,
@@ -79,49 +77,6 @@ export const updateEquipmentSchema = {
   managerId: { type: 'string', optional: true },
   purchaseDate: { type: 'date', optional: true },
   price: { type: 'number', optional: true },
-};
-
-// 대여 스키마
-export const rentalSchema = {
-  id: { type: 'string' },
-  equipmentId: { type: 'string' },
-  userId: { type: 'string' },
-  approverId: { type: 'string', optional: true },
-  startDate: { type: 'date' },
-  expectedEndDate: { type: 'date' },
-  actualEndDate: { type: 'date', optional: true },
-  purpose: { type: 'string' },
-  status: { type: 'enum', values: RentalStatusEnum.options },
-  type: { type: 'enum', values: RentalTypeEnum.options },
-  notes: { type: 'string', optional: true },
-  location: { type: 'string', optional: true },
-  createdAt: { type: 'date' },
-  updatedAt: { type: 'date' },
-};
-
-// 대여 생성 DTO 스키마
-export const createRentalSchema = {
-  equipmentId: { type: 'string' },
-  userId: { type: 'string' },
-  startDate: { type: 'date' },
-  expectedEndDate: { type: 'date' },
-  purpose: { type: 'string' },
-  type: { type: 'enum', values: RentalTypeEnum.options },
-  notes: { type: 'string', optional: true },
-  location: { type: 'string', optional: true },
-};
-
-// 대여 업데이트 DTO 스키마
-export const updateRentalSchema = {
-  approverId: { type: 'string', optional: true },
-  startDate: { type: 'date', optional: true },
-  expectedEndDate: { type: 'date', optional: true },
-  actualEndDate: { type: 'date', optional: true },
-  purpose: { type: 'string', optional: true },
-  status: { type: 'enum', values: RentalStatusEnum.options, optional: true },
-  type: { type: 'enum', values: RentalTypeEnum.options, optional: true },
-  notes: { type: 'string', optional: true },
-  location: { type: 'string', optional: true },
 };
 
 // 교정 스키마

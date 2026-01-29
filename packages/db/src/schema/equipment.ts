@@ -176,19 +176,24 @@ export type NewEquipment = typeof equipment.$inferInsert;
 
 // 관계 타입 (다른 스키마 파일과의 순환 참조 방지를 위해 타입만 정의)
 import type { users } from './users';
-import type { loans } from './loans';
+import type { checkouts } from './checkouts';
 
+/**
+ * 장비와 관련 엔티티를 포함한 확장 타입
+ *
+ * 참고: 대여(loans)는 제거되었으며, 반출(checkouts)이 교정/수리/시험소간 대여 모두 포함
+ */
 export type EquipmentWithRelations = Equipment & {
   team?: typeof teams.$inferSelect;
   manager?: typeof users.$inferSelect;
-  loans?: Array<typeof loans.$inferSelect>;
+  checkouts?: Array<typeof checkouts.$inferSelect>;
 };
 
 // ✅ Drizzle relations 설정 (타입 안전한 조인)
-export const equipmentRelations = relations(equipment, ({ one, many }) => ({
+export const equipmentRelations = relations(equipment, ({ one }) => ({
   team: one(teams, {
     fields: [equipment.teamId],
     references: [teams.id],
   }),
-  // manager와 loans relations는 향후 필요시 추가
+  // manager와 checkouts relations는 향후 필요시 추가
 }));

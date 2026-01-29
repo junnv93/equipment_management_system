@@ -1,505 +1,53 @@
-// 모듈의 일부만 선택적으로 내보내기
-import { z } from 'zod';
-import {
-  Equipment,
-  EquipmentResponse,
-  CreateEquipmentInput,
-  UpdateEquipmentInput,
-  EquipmentFilter,
-  isEquipment,
-  equipmentSchema,
-  equipmentResponseSchema,
-  equipmentFilterSchema,
-  createEquipmentSchema,
-  updateEquipmentSchema,
-  baseEquipmentSchema,
-} from './equipment';
+/**
+ * @equipment-management/schemas
+ *
+ * 공유 타입, Zod 스키마, enum 정의의 Single Source of Truth
+ *
+ * Best Practice: 각 모듈별 `export * from` 패턴으로 자동 동기화
+ */
 
-import {
-  EquipmentRequest,
-  CreateEquipmentRequestInput,
-  ApproveEquipmentRequestInput,
-  isEquipmentRequest,
-  equipmentRequestSchema,
-  createEquipmentRequestSchema,
-  approveEquipmentRequestSchema,
-  ApprovalStatus,
-  ApprovalStatusEnum,
-  RequestType,
-  RequestTypeEnum,
-} from './equipment-request';
+// ============================================================
+// Core Domain Schemas
+// ============================================================
 
-import {
-  EquipmentAttachment,
-  CreateEquipmentAttachmentInput,
-  isEquipmentAttachment,
-  equipmentAttachmentSchema,
-  createEquipmentAttachmentSchema,
-  AttachmentType,
-  AttachmentTypeEnum,
-} from './equipment-attachment';
+export * from './equipment';
+export * from './equipment-request';
+export * from './equipment-attachment';
+export * from './equipment-history';
+export * from './user';
+export * from './team';
+export * from './checkout';
+export * from './calibration';
 
-import {
-  User,
-  CreateUserInput,
-  UpdateUserInput,
-  isUser,
-  userSchema,
-  userListResponseSchema,
-} from './user';
+// ============================================================
+// Enums - Single Source of Truth
+// ============================================================
 
-// enums.ts에서 모든 enum 타입과 관련 타입 가져오기
+export * from './enums';
+
+// Enums 네임스페이스 (선택적 사용을 위해)
 import * as Enums from './enums';
-// 직접 타입을 가져오기
-import {
-  EquipmentStatusEnum,
-  EquipmentStatus,
-  CalibrationMethodEnum,
-  CalibrationMethod,
-  UserRoleEnum,
-  UserRole,
-  TeamIdSchema,
-  TeamId,
-  LoanStatusEnum,
-  LoanStatus,
-  LOAN_STATUS_VALUES,
-  CheckoutStatusEnum,
-  CheckoutStatus,
-  CHECKOUT_STATUS_VALUES,
-  CheckoutPurposeEnum,
-  CheckoutPurpose,
-  CHECKOUT_PURPOSE_VALUES,
-  SharedSourceEnum,
-  SharedSource,
-  SHARED_SOURCE_VALUES,
-  SiteEnum,
-  Site,
-  SoftwareTypeEnum,
-  SoftwareType,
-  SOFTWARE_TYPE_VALUES,
-  SoftwareApprovalStatusEnum,
-  SoftwareApprovalStatus,
-  SOFTWARE_APPROVAL_STATUS_VALUES,
-  IncidentTypeEnum,
-  IncidentType,
-  INCIDENT_TYPE_VALUES,
-  SpecMatchEnum,
-  SpecMatch,
-  SPEC_MATCH_VALUES,
-  CalibrationRequiredEnum,
-  CalibrationRequired,
-  CALIBRATION_REQUIRED_VALUES,
-  CalibrationApprovalStatusEnum,
-  CalibrationApprovalStatus,
-  CalibrationRegisteredByRoleEnum,
-  CalibrationRegisteredByRole,
-  // 관리번호 체계 관련
-  SiteCodeEnum,
-  SiteCode,
-  ClassificationEnum,
-  Classification,
-  SITE_TO_CODE,
-  CODE_TO_SITE,
-  CLASSIFICATION_TO_CODE,
-  CODE_TO_CLASSIFICATION,
-  CLASSIFICATION_LABELS,
-  SITE_LABELS,
-  MANAGEMENT_NUMBER_PATTERN,
-  generateManagementNumber,
-  parseManagementNumber,
-  // 추가된 enum
-  NonConformanceTypeEnum,
-  NonConformanceType,
-  NON_CONFORMANCE_TYPE_VALUES,
-  NonConformanceStatusEnum,
-  NonConformanceStatus,
-  NON_CONFORMANCE_STATUS_VALUES,
-  ResolutionTypeEnum,
-  ResolutionType,
-  RESOLUTION_TYPE_VALUES,
-  UserStatusEnum,
-  UserStatus,
-  USER_STATUS_VALUES,
-  RepairResultEnum,
-  RepairResult,
-  REPAIR_RESULT_VALUES,
-  NotificationTypeEnum,
-  NotificationType,
-  NOTIFICATION_TYPE_VALUES,
-  NotificationPriorityEnum,
-  NotificationPriority,
-  NOTIFICATION_PRIORITY_VALUES,
-  ReturnConditionEnum,
-  ReturnCondition,
-  RETURN_CONDITION_VALUES,
-  ReturnApprovalStatusEnum,
-  ReturnApprovalStatus,
-  RETURN_APPROVAL_STATUS_VALUES,
-  CalibrationFactorTypeEnum,
-  CalibrationFactorType,
-  CALIBRATION_FACTOR_TYPE_VALUES,
-  CalibrationFactorApprovalStatusEnum,
-  CalibrationFactorApprovalStatus,
-  CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
-  CalibrationPlanStatusEnum,
-  CalibrationPlanStatus,
-  CALIBRATION_PLAN_STATUS_VALUES,
-  CheckoutTypeEnum,
-  CheckoutType,
-  CHECKOUT_TYPE_VALUES,
-  LocationEnum,
-  Location,
-  AuditActionEnum,
-  AuditAction,
-  AUDIT_ACTION_VALUES,
-  AuditEntityTypeEnum,
-  AuditEntityType,
-  AUDIT_ENTITY_TYPE_VALUES,
-  // LABELS (UI 표시용 한글)
-  EQUIPMENT_STATUS_VALUES,
-  EQUIPMENT_STATUS_LABELS,
-  CALIBRATION_METHOD_VALUES,
-  CALIBRATION_METHOD_LABELS,
-  USER_ROLE_VALUES,
-  USER_ROLE_LABELS,
-  LOAN_STATUS_LABELS,
-  CHECKOUT_STATUS_LABELS,
-  CHECKOUT_PURPOSE_LABELS,
-  NON_CONFORMANCE_STATUS_LABELS,
-  NON_CONFORMANCE_TYPE_LABELS,
-  RESOLUTION_TYPE_LABELS,
-  REPAIR_RESULT_LABELS,
-  USER_STATUS_LABELS,
-  NOTIFICATION_PRIORITY_LABELS,
-  RETURN_CONDITION_LABELS,
-  CALIBRATION_FACTOR_TYPE_LABELS,
-  SOFTWARE_TYPE_LABELS,
-  INCIDENT_TYPE_LABELS,
-  CALIBRATION_PLAN_STATUS_LABELS,
-  CALIBRATION_APPROVAL_STATUS_LABELS,
-  CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS,
-  SOFTWARE_APPROVAL_STATUS_LABELS,
-  // Const value objects (dot-notation access)
-  NotificationPriorityValues,
-  NotificationTypeValues,
-  ReturnConditionValues,
-  ReturnApprovalStatusValues,
-  RepairResultValues,
-  SoftwareApprovalStatusValues,
-  CalibrationFactorTypeValues,
-  CalibrationFactorApprovalStatusValues,
-  IncidentTypeValues,
-  NonConformanceTypeValues,
-  NonConformanceStatusValues,
-  EquipmentStatusValues,
-  UserRoleValues,
-  UserStatusValues,
-} from './enums';
+export { Enums };
 
-import {
-  LocationHistory,
-  CreateLocationHistoryInput,
-  locationHistorySchema,
-  createLocationHistorySchema,
-  MaintenanceHistory,
-  CreateMaintenanceHistoryInput,
-  maintenanceHistorySchema,
-  createMaintenanceHistorySchema,
-  IncidentHistory,
-  CreateIncidentHistoryInput,
-  incidentHistorySchema,
-  createIncidentHistorySchema,
-} from './equipment-history';
+// ============================================================
+// Error Handling
+// ============================================================
 
-import { Team, CreateTeamInput, UpdateTeamInput, isTeam, teamSchema } from './team';
+export * from './errors';
 
-import {
-  Rental,
-  RentalSchema,
-  RentalStatusEnum,
-  RentalTypeEnum,
-  RentalStatus,
-  RentalType,
-  RentalListResponse,
-} from './loan';
+// ============================================================
+// API Response Types
+// ============================================================
 
-import * as Checkout from './checkout';
+export * from './api-response';
 
-import {
-  Calibration,
-  CreateCalibrationInput,
-  UpdateCalibrationInput,
-  isCalibration,
-  calibrationSchema,
-  calibrationListResponseSchema,
-  CalibrationStatusEnum,
-  CalibrationStatus,
-} from './calibration';
+// ============================================================
+// Legacy Compatibility Types (TODO: 점진적 제거 예정)
+// ============================================================
 
-import { AppError, ErrorCode, ErrorResponse, ErrorResponseSchema, handleZodError } from './errors';
+import type { User } from './user';
+import type { Team } from './team';
 
-// API 응답 타입
-import {
-  PaginatedListResponse,
-  FrontendPaginatedResponse,
-  SingleResourceResponse,
-  PaginationMeta,
-  paginationMetaSchema,
-  createPaginatedResponseSchema,
-} from './api-response';
-
-// 각 모듈에서 가져온 객체 및 타입 내보내기
-export {
-  // Equipment
-  Equipment,
-  EquipmentResponse,
-  CreateEquipmentInput,
-  UpdateEquipmentInput,
-  EquipmentFilter,
-  isEquipment,
-  equipmentSchema,
-  equipmentResponseSchema,
-  equipmentFilterSchema,
-  createEquipmentSchema,
-  updateEquipmentSchema,
-  baseEquipmentSchema,
-
-  // Equipment Request
-  EquipmentRequest,
-  CreateEquipmentRequestInput,
-  ApproveEquipmentRequestInput,
-  isEquipmentRequest,
-  equipmentRequestSchema,
-  createEquipmentRequestSchema,
-  approveEquipmentRequestSchema,
-  ApprovalStatus,
-  ApprovalStatusEnum,
-  RequestType,
-  RequestTypeEnum,
-
-  // Equipment Attachment
-  EquipmentAttachment,
-  CreateEquipmentAttachmentInput,
-  isEquipmentAttachment,
-  equipmentAttachmentSchema,
-  createEquipmentAttachmentSchema,
-  AttachmentType,
-  AttachmentTypeEnum,
-
-  // User
-  User,
-  CreateUserInput,
-  UpdateUserInput,
-  isUser,
-  userSchema,
-  userListResponseSchema,
-
-  // Enums - 네임스페이스로 내보내기
-  Enums,
-  // Enums - 직접 내보내기
-  EquipmentStatusEnum,
-  EquipmentStatus,
-  CalibrationMethodEnum,
-  CalibrationMethod,
-  UserRoleEnum,
-  UserRole,
-  TeamIdSchema,
-  TeamId,
-  LoanStatusEnum,
-  LoanStatus,
-  LOAN_STATUS_VALUES,
-  CheckoutStatusEnum,
-  CheckoutStatus,
-  CHECKOUT_STATUS_VALUES,
-  CheckoutPurposeEnum,
-  CheckoutPurpose,
-  CHECKOUT_PURPOSE_VALUES,
-  SharedSourceEnum,
-  SharedSource,
-  SHARED_SOURCE_VALUES,
-  SiteEnum,
-  Site,
-  SoftwareTypeEnum,
-  SoftwareType,
-  SOFTWARE_TYPE_VALUES,
-  SoftwareApprovalStatusEnum,
-  SoftwareApprovalStatus,
-  SOFTWARE_APPROVAL_STATUS_VALUES,
-  IncidentTypeEnum,
-  IncidentType,
-  INCIDENT_TYPE_VALUES,
-  SpecMatchEnum,
-  SpecMatch,
-  SPEC_MATCH_VALUES,
-  CalibrationRequiredEnum,
-  CalibrationRequired,
-  CALIBRATION_REQUIRED_VALUES,
-  CalibrationApprovalStatusEnum,
-  CalibrationApprovalStatus,
-  CalibrationRegisteredByRoleEnum,
-  CalibrationRegisteredByRole,
-  // 관리번호 체계 관련
-  SiteCodeEnum,
-  SiteCode,
-  ClassificationEnum,
-  Classification,
-  SITE_TO_CODE,
-  CODE_TO_SITE,
-  CLASSIFICATION_TO_CODE,
-  CODE_TO_CLASSIFICATION,
-  CLASSIFICATION_LABELS,
-  SITE_LABELS,
-  MANAGEMENT_NUMBER_PATTERN,
-  generateManagementNumber,
-  parseManagementNumber,
-  // 추가된 enum (Phase 1 SSOT 통합)
-  NonConformanceTypeEnum,
-  NonConformanceType,
-  NON_CONFORMANCE_TYPE_VALUES,
-  NonConformanceStatusEnum,
-  NonConformanceStatus,
-  NON_CONFORMANCE_STATUS_VALUES,
-  ResolutionTypeEnum,
-  ResolutionType,
-  RESOLUTION_TYPE_VALUES,
-  UserStatusEnum,
-  UserStatus,
-  USER_STATUS_VALUES,
-  RepairResultEnum,
-  RepairResult,
-  REPAIR_RESULT_VALUES,
-  NotificationTypeEnum,
-  NotificationType,
-  NOTIFICATION_TYPE_VALUES,
-  NotificationPriorityEnum,
-  NotificationPriority,
-  NOTIFICATION_PRIORITY_VALUES,
-  ReturnConditionEnum,
-  ReturnCondition,
-  RETURN_CONDITION_VALUES,
-  ReturnApprovalStatusEnum,
-  ReturnApprovalStatus,
-  RETURN_APPROVAL_STATUS_VALUES,
-  CalibrationFactorTypeEnum,
-  CalibrationFactorType,
-  CALIBRATION_FACTOR_TYPE_VALUES,
-  CalibrationFactorApprovalStatusEnum,
-  CalibrationFactorApprovalStatus,
-  CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
-  CalibrationPlanStatusEnum,
-  CalibrationPlanStatus,
-  CALIBRATION_PLAN_STATUS_VALUES,
-  CheckoutTypeEnum,
-  CheckoutType,
-  CHECKOUT_TYPE_VALUES,
-  LocationEnum,
-  Location,
-  AuditActionEnum,
-  AuditAction,
-  AUDIT_ACTION_VALUES,
-  AuditEntityTypeEnum,
-  AuditEntityType,
-  AUDIT_ENTITY_TYPE_VALUES,
-  // LABELS (UI 표시용 한글)
-  EQUIPMENT_STATUS_VALUES,
-  EQUIPMENT_STATUS_LABELS,
-  CALIBRATION_METHOD_VALUES,
-  CALIBRATION_METHOD_LABELS,
-  USER_ROLE_VALUES,
-  USER_ROLE_LABELS,
-  LOAN_STATUS_LABELS,
-  CHECKOUT_STATUS_LABELS,
-  CHECKOUT_PURPOSE_LABELS,
-  NON_CONFORMANCE_STATUS_LABELS,
-  NON_CONFORMANCE_TYPE_LABELS,
-  RESOLUTION_TYPE_LABELS,
-  REPAIR_RESULT_LABELS,
-  USER_STATUS_LABELS,
-  NOTIFICATION_PRIORITY_LABELS,
-  RETURN_CONDITION_LABELS,
-  CALIBRATION_FACTOR_TYPE_LABELS,
-  SOFTWARE_TYPE_LABELS,
-  INCIDENT_TYPE_LABELS,
-  CALIBRATION_PLAN_STATUS_LABELS,
-  CALIBRATION_APPROVAL_STATUS_LABELS,
-  CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS,
-  SOFTWARE_APPROVAL_STATUS_LABELS,
-  // Const value objects (dot-notation access)
-  NotificationPriorityValues,
-  NotificationTypeValues,
-  ReturnConditionValues,
-  ReturnApprovalStatusValues,
-  RepairResultValues,
-  SoftwareApprovalStatusValues,
-  CalibrationFactorTypeValues,
-  CalibrationFactorApprovalStatusValues,
-  IncidentTypeValues,
-  NonConformanceTypeValues,
-  NonConformanceStatusValues,
-  EquipmentStatusValues,
-  UserRoleValues,
-  UserStatusValues,
-
-  // Equipment History (위치변동, 유지보수, 손상/수리 이력)
-  LocationHistory,
-  CreateLocationHistoryInput,
-  locationHistorySchema,
-  createLocationHistorySchema,
-  MaintenanceHistory,
-  CreateMaintenanceHistoryInput,
-  maintenanceHistorySchema,
-  createMaintenanceHistorySchema,
-  IncidentHistory,
-  CreateIncidentHistoryInput,
-  incidentHistorySchema,
-  createIncidentHistorySchema,
-
-  // Team
-  Team,
-  CreateTeamInput,
-  UpdateTeamInput,
-  isTeam,
-  teamSchema,
-
-  // Rental (Loan)
-  Rental,
-  RentalSchema,
-  RentalStatusEnum,
-  RentalTypeEnum,
-  RentalStatus,
-  RentalType,
-  RentalListResponse,
-
-  // Checkout - 전체 모듈 내보내기
-  Checkout,
-
-  // Calibration
-  Calibration,
-  CreateCalibrationInput,
-  UpdateCalibrationInput,
-  isCalibration,
-  calibrationSchema,
-  calibrationListResponseSchema,
-  CalibrationStatusEnum,
-  CalibrationStatus,
-
-  // Errors
-  AppError,
-  ErrorCode,
-  ErrorResponse,
-  ErrorResponseSchema,
-  handleZodError,
-
-  // API Response Types
-  PaginatedListResponse,
-  FrontendPaginatedResponse,
-  SingleResourceResponse,
-  PaginationMeta,
-  paginationMetaSchema,
-  createPaginatedResponseSchema,
-};
-
-// ListResponse 타입 임시 선언 - 백엔드와 일치시키기 위함
 export type UserListResponse = {
   items: User[];
   total: number;
@@ -515,4 +63,3 @@ export type TeamListResponse = {
   pageSize: number;
   totalPages: number;
 };
-

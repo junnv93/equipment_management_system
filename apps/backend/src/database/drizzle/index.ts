@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool, PoolConfig } from 'pg';
 import * as dotenv from 'dotenv';
 import { Logger } from '@nestjs/common';
-import * as schema from './schema';
+import * as schema from '@equipment-management/db/schema';
 import { getErrorMessage } from '../../common/utils/error';
 
 // 환경 변수 로드

@@ -1,12 +1,9 @@
-// 스키마 모듈 내보내기
-export * from './equipment';
-export * from './teams';
-export * from './users';
-export * from './loans';
-export * from './checkouts';
-export * from './calibrations';
-
-// 장비 이력 스키마
-export * from './equipment-location-history';
-export * from './equipment-maintenance-history';
-export * from './equipment-incident-history';
+/**
+ * SSOT (Single Source of Truth)
+ *
+ * 모든 스키마는 packages/db에서 정의되고 여기서 re-export됩니다.
+ * 스키마 변경이 필요한 경우 packages/db/src/schema/를 수정하세요.
+ *
+ * @see packages/db/src/schema/
+ */
+export * from '@equipment-management/db/schema';

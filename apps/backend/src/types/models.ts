@@ -4,8 +4,6 @@ import {
   CalibrationStatus,
   CheckoutStatus,
   UserRole,
-  RentalStatus,
-  RentalType,
 } from '@equipment-management/schemas';
 
 // 장비 인터페이스
@@ -36,33 +34,6 @@ export interface Equipment {
 // 장비 목록 응답 인터페이스
 export interface EquipmentListResponse {
   items: Equipment[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-// 대여 인터페이스
-export interface Rental {
-  id: string;
-  equipmentId: string;
-  userId: string;
-  approverId?: string;
-  startDate: Date | string;
-  expectedEndDate: Date | string;
-  actualEndDate?: Date | string;
-  purpose: string;
-  status: RentalStatus | string;
-  type: RentalType | string;
-  notes?: string;
-  location?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// 대여 목록 응답 인터페이스
-export interface RentalListResponse {
-  items: Rental[];
   total: number;
   page: number;
   pageSize: number;

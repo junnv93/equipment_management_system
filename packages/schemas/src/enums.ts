@@ -43,9 +43,11 @@ export const CalibrationMethodEnum = z.enum([
 export type CalibrationMethod = z.infer<typeof CalibrationMethodEnum>;
 
 // 사용자 역할 열거형 (UL-QP-18 절차서 영문 명칭 기준)
+// 역할 계층: test_engineer(1) < technical_manager(2) < quality_manager(3) < lab_manager(4)
 export const UserRoleEnum = z.enum([
   'test_engineer', // 시험실무자 (Test Engineer)
   'technical_manager', // 기술책임자 (Technical Manager)
+  'quality_manager', // 품질책임자 (Quality Manager) - 교정계획서 검토
   'lab_manager', // 시험소장 (Lab Manager)
 ]);
 
@@ -220,39 +222,6 @@ export const TeamIdSchema = z.string().uuid().optional();
 export type TeamId = z.infer<typeof TeamIdSchema>;
 
 /**
- * ⚠️ SINGLE SOURCE OF TRUTH: 대여 상태 열거형
- *
- * 이 파일이 모든 대여 상태값의 기준입니다.
- * - 데이터베이스 스키마는 이 값과 반드시 일치해야 함
- * - 백엔드/프론트엔드는 이 파일에서 import하여 사용
- * - 새로운 상태값 추가 시 이 파일만 수정하고 마이그레이션 필요
- *
- * 표준 상태값 (소문자, snake_case 아님 - 단일 단어):
- * - pending: 대여 신청 (승인 대기)
- * - approved: 승인됨 (아직 대여 시작 전)
- * - active: 대여 중 (실제 사용 중)
- * - returned: 반납 완료
- * - overdue: 반납 기한 초과
- * - rejected: 거절됨
- * - canceled: 취소됨
- *
- * @see docs/development/API_STANDARDS.md
- */
-// 대여 상태값 배열 (Zod enum과 동기화)
-export const LOAN_STATUS_VALUES = [
-  'pending', // 대여 신청 (승인 대기)
-  'approved', // 승인됨 (아직 대여 시작 전)
-  'active', // 대여 중 (실제 사용 중)
-  'returned', // 반납 완료
-  'overdue', // 반납 기한 초과
-  'rejected', // 거절됨
-  'canceled', // 취소됨
-] as const;
-
-export const LoanStatusEnum = z.enum(LOAN_STATUS_VALUES as unknown as [string, ...string[]]);
-export type LoanStatus = z.infer<typeof LoanStatusEnum>;
-
-/**
  * ⚠️ SINGLE SOURCE OF TRUTH: 반출 상태 열거형
  *
  * 표준 상태값 (소문자 + 언더스코어):
@@ -328,6 +297,31 @@ export const CalibrationRegisteredByRoleEnum = z.enum(
   CALIBRATION_REGISTERED_BY_ROLE_VALUES as unknown as [string, ...string[]]
 );
 export type CalibrationRegisteredByRole = z.infer<typeof CalibrationRegisteredByRoleEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 교정 결과 열거형
+ *
+ * 표준 결과값 (소문자):
+ * - pass: 적합 (PASS)
+ * - fail: 부적합 (FAIL)
+ * - conditional: 조건부 적합 (CONDITIONAL)
+ */
+export const CALIBRATION_RESULT_VALUES = [
+  'pass', // 적합
+  'fail', // 부적합
+  'conditional', // 조건부 적합
+] as const;
+
+export const CalibrationResultEnum = z.enum(
+  CALIBRATION_RESULT_VALUES as unknown as [string, ...string[]]
+);
+export type CalibrationResult = z.infer<typeof CalibrationResultEnum>;
+
+export const CALIBRATION_RESULT_LABELS: Record<CalibrationResult, string> = {
+  pass: '적합',
+  fail: '부적합',
+  conditional: '조건부 적합',
+};
 
 /**
  * ⚠️ SINGLE SOURCE OF TRUTH: 반출 유형 열거형
@@ -465,17 +459,24 @@ export type SoftwareApprovalStatus = z.infer<typeof SoftwareApprovalStatusEnum>;
 /**
  * SINGLE SOURCE OF TRUTH: 교정계획서 상태 열거형
  *
- * 표준 상태값 (소문자 + 언더스코어):
+ * 3단계 승인 워크플로우:
  * - draft: 작성 중 (기술책임자가 계획서 작성 중)
+ * - pending_review: 검토 대기 (품질책임자에게 검토 요청됨) ← 신규
  * - pending_approval: 승인 대기 (시험소장에게 승인 요청됨)
  * - approved: 승인됨 (시험소장이 승인 완료)
- * - rejected: 반려됨 (시험소장이 반려, 사유 필수)
+ * - rejected: 반려됨 (품질책임자 또는 시험소장이 반려, 사유 필수)
+ *
+ * 상태 전이:
+ * draft → pending_review → pending_approval → approved
+ *    ↑__________________________|__________________|
+ *                    rejected
  *
  * @see docs/development/API_STANDARDS.md
  */
 export const CALIBRATION_PLAN_STATUS_VALUES = [
   'draft', // 작성 중
-  'pending_approval', // 승인 대기
+  'pending_review', // 검토 대기 (품질책임자)
+  'pending_approval', // 승인 대기 (시험소장)
   'approved', // 승인됨
   'rejected', // 반려됨
 ] as const;
@@ -801,20 +802,8 @@ export const USER_ROLE_VALUES = UserRoleEnum.options;
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   test_engineer: '시험실무자',
   technical_manager: '기술책임자',
+  quality_manager: '품질책임자',
   lab_manager: '시험소장',
-};
-
-/**
- * 대여 상태 라벨 (UI 표시용)
- */
-export const LOAN_STATUS_LABELS: Record<LoanStatus, string> = {
-  pending: '승인 대기',
-  approved: '승인됨',
-  active: '대여 중',
-  returned: '반납 완료',
-  overdue: '기한 초과',
-  rejected: '거절됨',
-  canceled: '취소됨',
 };
 
 /**
@@ -943,9 +932,14 @@ export const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
 
 /**
  * 교정계획서 상태 라벨 (UI 표시용)
+ *
+ * 참고: pending_review 상태의 라벨이 "확인 대기"로 변경됨 (UX 단순화)
+ * - 품질책임자의 "검토" 단계가 "확인" 단계로 단순화됨
+ * - 다이얼로그 기반 3클릭 → 타임라인 내 원클릭 확인으로 개선
  */
 export const CALIBRATION_PLAN_STATUS_LABELS: Record<CalibrationPlanStatus, string> = {
   draft: '작성 중',
+  pending_review: '확인 대기',
   pending_approval: '승인 대기',
   approved: '승인됨',
   rejected: '반려됨',
@@ -1130,6 +1124,7 @@ export const EquipmentStatusValues = {
 export const UserRoleValues = {
   TEST_ENGINEER: 'test_engineer',
   TECHNICAL_MANAGER: 'technical_manager',
+  QUALITY_MANAGER: 'quality_manager',
   LAB_MANAGER: 'lab_manager',
 } as const;
 

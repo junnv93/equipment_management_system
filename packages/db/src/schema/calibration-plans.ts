@@ -12,15 +12,21 @@ import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 
 /**
- * 교정계획서 상태 정의
+ * 교정계획서 상태 정의 (3단계 승인 워크플로우)
  * @see packages/schemas/src/enums.ts - CalibrationPlanStatusEnum
  */
 export const calibrationPlanStatus = [
   'draft', // 작성 중
-  'pending_approval', // 승인 대기
+  'pending_review', // 검토 대기 (품질책임자)
+  'pending_approval', // 승인 대기 (시험소장)
   'approved', // 승인됨
   'rejected', // 반려됨
 ] as const;
+
+/**
+ * 반려 단계 정의
+ */
+export const rejectionStage = ['review', 'approval'] as const;
 
 /**
  * 교정계획서 테이블
@@ -42,11 +48,26 @@ export const calibrationPlans = pgTable(
     // 상태 관리
     status: varchar('status', { length: 20 }).notNull().default('draft'),
 
-    // 작성자/승인자 정보
-    createdBy: uuid('created_by').notNull(), // 작성자 ID (기술책임자)
+    // 작성자 정보 (기술책임자)
+    createdBy: uuid('created_by').notNull(), // 작성자 ID
+
+    // 검토 요청 단계 (기술책임자 → 품질책임자)
+    submittedAt: timestamp('submitted_at'), // 검토 요청 일시
+
+    // 검토 단계 (품질책임자)
+    reviewedBy: uuid('reviewed_by'), // 검토자 ID (품질책임자)
+    reviewedAt: timestamp('reviewed_at'), // 검토 완료 일시
+    reviewComment: text('review_comment'), // 검토 의견
+
+    // 승인 단계 (시험소장)
     approvedBy: uuid('approved_by'), // 승인자 ID (시험소장)
-    approvedAt: timestamp('approved_at'), // 승인일시
+    approvedAt: timestamp('approved_at'), // 승인 일시
+
+    // 반려 정보 (품질책임자 또는 시험소장)
+    rejectedBy: uuid('rejected_by'), // 반려자 ID
+    rejectedAt: timestamp('rejected_at'), // 반려 일시
     rejectionReason: text('rejection_reason'), // 반려 사유
+    rejectionStage: varchar('rejection_stage', { length: 20 }), // 'review' | 'approval'
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

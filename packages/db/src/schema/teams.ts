@@ -57,3 +57,7 @@ export const teams = pgTable('teams', {
 export const teamsRelations = relations(teams, ({ many }) => ({
   equipments: many(equipment),
 }));
+
+// 타입 정의
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
