@@ -23,8 +23,7 @@ import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import calibrationApi, { CreateCalibrationDto } from '@/lib/api/calibration-api';
 import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
-
-type UserRole = 'test_engineer' | 'technical_manager' | 'lab_manager';
+import type { UserRole } from '@equipment-management/schemas';
 
 export function CalibrationRegisterContent() {
   const router = useRouter();
@@ -37,7 +36,7 @@ export function CalibrationRegisterContent() {
   const equipmentIdFromUrl = searchParams.get('equipmentId');
 
   // 사용자 역할 결정 (기본값: test_engineer)
-  const userRole: UserRole = (session?.user as any)?.role || 'test_engineer';
+  const userRole: UserRole = (session?.user as { role?: UserRole } | undefined)?.role || 'test_engineer';
   const isTechnicalManager = userRole === 'technical_manager' || userRole === 'lab_manager';
 
   // 상태 관리
@@ -97,6 +96,7 @@ export function CalibrationRegisterContent() {
       );
       updateFormData('intermediateCheckDate', format(intermediateDate, 'yyyy-MM-dd'));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 장비 선택 시에만 초기값 설정, formData 변경 시 재실행 방지
   }, [selectedEquipmentId, selectedEquipment]);
 
   // 필터링된 장비 목록
@@ -144,7 +144,7 @@ export function CalibrationRegisterContent() {
   };
 
   // 폼 데이터 업데이트
-  const updateFormData = (field: string, value: any) => {
+  const updateFormData = (field: keyof typeof formData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

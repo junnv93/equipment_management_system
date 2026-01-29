@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { apiClient } from '@/lib/api/api-client';
 import { format } from 'date-fns';
-import { CheckCircle2, XCircle, Clock, FileText, User } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface EquipmentRequest {
@@ -69,7 +69,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function EquipmentApprovalsPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedRequest, setSelectedRequest] = useState<EquipmentRequest | null>(null);

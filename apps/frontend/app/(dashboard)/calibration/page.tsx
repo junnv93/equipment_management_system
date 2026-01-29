@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -53,10 +52,10 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
-import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
+import equipmentApi from '@/lib/api/equipment-api';
 import calibrationApi from '@/lib/api/calibration-api';
 import { apiClient } from '@/lib/api/api-client';
-import { format, addDays, differenceInDays, isBefore } from 'date-fns';
+import { format, differenceInDays, isBefore } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 // 중간점검 데이터 타입

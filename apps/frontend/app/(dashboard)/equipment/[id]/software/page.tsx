@@ -33,12 +33,12 @@ import softwareApi, {
   SOFTWARE_APPROVAL_STATUS_COLORS,
   SoftwareApprovalStatus,
 } from '@/lib/api/software-api';
-import { equipmentApi } from '@/lib/api';
+// ✅ 직접 import (barrel import 제거)
+import equipmentApi from '@/lib/api/equipment-api';
 import { format } from 'date-fns';
 import { ArrowLeft, Plus, History, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
 
 export default function EquipmentSoftwareHistoryPage() {
   const params = useParams();

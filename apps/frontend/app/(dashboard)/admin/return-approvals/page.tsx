@@ -54,7 +54,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function ReturnApprovalsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const { data: _session } = useSession();
   const [selectedCheckout, setSelectedCheckout] = useState<Checkout | null>(null);
   const [comment, setComment] = useState('');
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);

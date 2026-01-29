@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { CheckCircle, XCircle, AlertTriangle, Clock, ExternalLink } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Clock, ExternalLink } from 'lucide-react';
 import nonConformancesApi, {
   NonConformance,
   NON_CONFORMANCE_STATUS_LABELS,
@@ -10,11 +11,15 @@ import nonConformancesApi, {
 } from '@/lib/api/non-conformances-api';
 
 export default function NonConformanceApprovalsPage() {
+  const { data: session } = useSession();
   const [nonConformances, setNonConformances] = useState<NonConformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
   const [closureNotes, setClosureNotes] = useState<Record<string, string>>({});
+
+  // 현재 로그인한 사용자 ID
+  const currentUserId = session?.user?.id ?? '';
 
   useEffect(() => {
     loadData();
@@ -38,7 +43,7 @@ export default function NonConformanceApprovalsPage() {
     try {
       setClosingId(id);
       await nonConformancesApi.closeNonConformance(id, {
-        closedBy: 'current-user-id', // TODO: 실제 사용자 ID로 교체
+        closedBy: currentUserId,
         closureNotes: closureNotes[id] || undefined,
       });
       await loadData();

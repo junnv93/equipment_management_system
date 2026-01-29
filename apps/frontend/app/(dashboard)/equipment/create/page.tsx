@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { EquipmentForm, type PendingHistoryData } from '@/components/equipment/EquipmentForm';
 import { useCreateEquipment } from '@/hooks/use-equipment';
@@ -34,8 +34,6 @@ async function saveHistoryInParallel(
   equipmentUuid: string,
   pendingHistory: PendingHistoryData
 ): Promise<HistorySaveResult[]> {
-  const results: HistorySaveResult[] = [];
-
   // 모든 이력 저장 Promise 생성
   const locationPromises = pendingHistory.locationHistory.map((item, index) =>
     equipmentApi.createLocationHistory(equipmentUuid, item)

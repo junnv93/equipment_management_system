@@ -1,209 +1,70 @@
-'use client';
+/**
+ * 교정계획서 목록 페이지 (Server Component)
+ *
+ * ✅ Next.js 16 Best Practice:
+ * - Server Component에서 초기 데이터 fetch
+ * - Client Component에 initialData 전달
+ * - FCP 개선 및 SEO 최적화
+ *
+ * 비즈니스 로직:
+ * - 연간 외부교정 대상 장비의 교정 계획을 관리
+ * - 연도/시험소/상태별 필터링 지원
+ */
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import calibrationPlansApi, {
-  CalibrationPlan,
-  CalibrationPlanStatus,
-  CALIBRATION_PLAN_STATUS_LABELS,
-  CALIBRATION_PLAN_STATUS_COLORS,
-  SITE_LABELS,
-} from '@/lib/api/calibration-plans-api';
-import { format } from 'date-fns';
-import { Plus, FileText, Calendar, Building2, Eye } from 'lucide-react';
+import { createServerApiClient } from '@/lib/api/server-api-client';
+import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
+import CalibrationPlansContent from './CalibrationPlansContent';
+import type { CalibrationPlan } from '@/lib/api/calibration-plans-api';
 
-export default function CalibrationPlansPage() {
-  const router = useRouter();
+// Next.js 16 PageProps 타입 정의
+type PageProps = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+export default async function CalibrationPlansPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+
+  // URL 쿼리 파라미터에서 필터 값 추출
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<string>(String(currentYear));
-  const [selectedSite, setSelectedSite] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const year = typeof searchParams?.year === 'string' ? searchParams.year : String(currentYear);
+  const siteId = typeof searchParams?.siteId === 'string' ? searchParams.siteId : undefined;
+  const status = typeof searchParams?.status === 'string' ? searchParams.status : undefined;
 
-  // 교정계획서 목록 조회
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['calibration-plans', selectedYear, selectedSite, selectedStatus],
-    queryFn: () =>
-      calibrationPlansApi.getCalibrationPlans({
-        year: selectedYear !== 'all' ? Number(selectedYear) : undefined,
-        siteId: selectedSite !== 'all' ? selectedSite : undefined,
-        status: selectedStatus !== 'all' ? (selectedStatus as CalibrationPlanStatus) : undefined,
-      }),
-  });
+  // ✅ Server-side 데이터 fetch
+  const apiClient = await createServerApiClient();
 
-  const plans = data?.data || [];
+  // 쿼리 파라미터 구성
+  const params = new URLSearchParams();
+  if (year && year !== 'all') params.append('year', year);
+  if (siteId && siteId !== 'all') params.append('siteId', siteId);
+  if (status && status !== 'all') params.append('status', status);
 
-  // 연도 옵션 생성 (현재 연도 기준 +-2년)
-  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+  let initialData;
+  try {
+    const response = await apiClient.get(`/api/calibration-plans?${params.toString()}`);
+    initialData = transformPaginatedResponse<CalibrationPlan>(response);
+  } catch (error) {
+    // 에러 발생 시 빈 데이터로 시작 (Client에서 재시도)
+    console.error('[CalibrationPlansPage] Initial fetch error:', error);
+    initialData = {
+      data: [],
+      meta: {
+        pagination: {
+          total: 0,
+          pageSize: 20,
+          currentPage: 1,
+          totalPages: 0,
+        },
+      },
+    };
+  }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">교정계획서</h1>
-          <p className="text-muted-foreground">연간 외부교정 대상 장비의 교정 계획을 관리합니다</p>
-        </div>
-        <Button asChild>
-          <Link href="/calibration-plans/create">
-            <Plus className="h-4 w-4 mr-2" />새 계획서 작성
-          </Link>
-        </Button>
-      </div>
-
-      {/* 필터 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">필터</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="w-[150px]">
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger>
-                  <SelectValue placeholder="연도 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체 연도</SelectItem>
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={String(year)}>
-                      {year}년
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-[150px]">
-              <Select value={selectedSite} onValueChange={setSelectedSite}>
-                <SelectTrigger>
-                  <SelectValue placeholder="시험소 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체 시험소</SelectItem>
-                  <SelectItem value="suwon">수원</SelectItem>
-                  <SelectItem value="uiwang">의왕</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="w-[180px]">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="상태 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체 상태</SelectItem>
-                  <SelectItem value="draft">작성 중</SelectItem>
-                  <SelectItem value="pending_approval">승인 대기</SelectItem>
-                  <SelectItem value="approved">승인됨</SelectItem>
-                  <SelectItem value="rejected">반려됨</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 계획서 목록 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>계획서 목록</CardTitle>
-          <CardDescription>총 {plans.length}개의 교정계획서가 있습니다</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : isError ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>계획서 목록을 불러오는 중 오류가 발생했습니다.</p>
-            </div>
-          ) : plans.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>등록된 교정계획서가 없습니다</p>
-              <Button asChild className="mt-4">
-                <Link href="/calibration-plans/create">
-                  <Plus className="h-4 w-4 mr-2" />새 계획서 작성
-                </Link>
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>연도</TableHead>
-                  <TableHead>시험소</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead>작성자</TableHead>
-                  <TableHead>작성일</TableHead>
-                  <TableHead>승인일</TableHead>
-                  <TableHead className="text-right">액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plans.map((plan: CalibrationPlan) => (
-                  <TableRow key={plan.uuid}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {plan.year}년
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {SITE_LABELS[plan.siteId] || plan.siteId}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={CALIBRATION_PLAN_STATUS_COLORS[plan.status]}>
-                        {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{plan.createdBy}</TableCell>
-                    <TableCell>{format(new Date(plan.createdAt), 'yyyy-MM-dd')}</TableCell>
-                    <TableCell>
-                      {plan.approvedAt ? format(new Date(plan.approvedAt), 'yyyy-MM-dd') : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/calibration-plans/${plan.uuid}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        상세
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <CalibrationPlansContent
+      initialData={initialData}
+      initialYear={year}
+      initialSite={siteId ?? 'all'}
+      initialStatus={status ?? 'all'}
+    />
   );
 }

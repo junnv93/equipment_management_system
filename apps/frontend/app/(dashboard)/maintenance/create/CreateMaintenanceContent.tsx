@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast, type Toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,15 +28,27 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { format, addMonths } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Calendar, Wrench, Clock, User, DollarSign, ClipboardCheck } from 'lucide-react';
+import { Search, Wrench, Clock, User, DollarSign, ClipboardCheck } from 'lucide-react';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
+
+/**
+ * 점검 정보가 포함된 장비 타입
+ *
+ * 일부 장비는 정기 점검 주기(maintenancePeriod)를 가지고 있습니다.
+ * 이 필드는 DB에 아직 추가되지 않았으나, 점검 등록 시 사용됩니다.
+ *
+ * TODO: maintenancePeriod 필드를 DB 스키마에 추가하고 이 타입을 제거
+ */
+interface EquipmentWithMaintenance extends Equipment {
+  maintenancePeriod?: number;
+}
 import maintenanceApi, {
   CreateMaintenanceDto,
   MaintenanceType,
   MaintenanceStatus,
   MaintenanceResult,
 } from '@/lib/api/maintenance-api';
-import { ToastAction } from '@/components/ui/toast';
+// ToastAction import removed - not currently used
 
 export function CreateMaintenanceContent() {
   const router = useRouter();
@@ -86,7 +98,10 @@ export function CreateMaintenanceContent() {
   // 선택된 장비 정보 조회
   const { data: selectedEquipment, isLoading: selectedEquipmentLoading } = useQuery({
     queryKey: ['equipment', equipmentId],
-    queryFn: () => equipmentApi.getEquipment(equipmentId),
+    queryFn: async (): Promise<EquipmentWithMaintenance> => {
+      const equipment = await equipmentApi.getEquipment(equipmentId);
+      return equipment as EquipmentWithMaintenance;
+    },
     enabled: !!equipmentId && equipmentId !== '',
   });
 
@@ -102,7 +117,7 @@ export function CreateMaintenanceContent() {
   // 선택된 장비의 정기 점검 주기 가져오기
   useEffect(() => {
     if (selectedEquipment && useRegularPeriod && maintenanceType === 'regular') {
-      const period = (selectedEquipment as any).maintenancePeriod || 0;
+      const period = selectedEquipment.maintenancePeriod ?? 0;
       setMaintenancePeriod(period.toString());
     }
   }, [selectedEquipment, useRegularPeriod, maintenanceType]);
@@ -283,12 +298,12 @@ export function CreateMaintenanceContent() {
                       <p className="text-sm text-muted-foreground">제조사</p>
                       <p className="font-medium">{selectedEquipment.manufacturer}</p>
                     </div>
-                    {(selectedEquipment as any).maintenancePeriod &&
+                    {selectedEquipment.maintenancePeriod &&
                       maintenanceType === 'regular' && (
                         <div className="md:col-span-2">
                           <p className="text-sm text-muted-foreground">정기 점검 주기</p>
                           <p className="font-medium">
-                            {(selectedEquipment as any).maintenancePeriod}개월
+                            {selectedEquipment.maintenancePeriod}개월
                           </p>
                           <div className="flex items-center mt-2">
                             <Checkbox
@@ -369,7 +384,7 @@ export function CreateMaintenanceContent() {
                 <div className="flex justify-between items-center">
                   <Label htmlFor="maintenancePeriod">점검 주기 (개월)</Label>
                   {maintenanceType === 'regular' &&
-                    (selectedEquipment as any)?.maintenancePeriod &&
+                    selectedEquipment?.maintenancePeriod &&
                     !useRegularPeriod && (
                       <Button
                         type="button"
@@ -377,7 +392,7 @@ export function CreateMaintenanceContent() {
                         size="sm"
                         onClick={() => {
                           setMaintenancePeriod(
-                            (selectedEquipment as any).maintenancePeriod?.toString() || '0'
+                            selectedEquipment.maintenancePeriod?.toString() ?? '0'
                           );
                         }}
                         className="text-xs"
@@ -396,7 +411,7 @@ export function CreateMaintenanceContent() {
                   disabled={
                     maintenanceType === 'regular' &&
                     useRegularPeriod &&
-                    !!(selectedEquipment as any)?.maintenancePeriod
+                    !!selectedEquipment?.maintenancePeriod
                   }
                 />
                 {calculatedNextDate && (

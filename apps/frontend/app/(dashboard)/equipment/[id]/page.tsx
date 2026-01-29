@@ -1,9 +1,19 @@
-import { Suspense } from 'react';
+import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import { EquipmentDetailClient } from '@/components/equipment/EquipmentDetailClient';
 import { EquipmentDetailSkeleton } from '@/components/equipment/EquipmentDetailSkeleton';
 import * as equipmentApiServer from '@/lib/api/equipment-api-server';
 import { isNotFoundError } from '@/lib/api/error';
+
+/**
+ * ✅ React.cache()로 같은 render pass에서 중복 호출 방지
+ *
+ * generateMetadata()와 Page()에서 각각 호출해도 한 번만 fetch됩니다.
+ * 이 패턴은 Next.js 공식 권장 방식입니다.
+ */
+const getEquipmentCached = cache(async (id: string) => {
+  return equipmentApiServer.getEquipment(id);
+});
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -25,9 +35,9 @@ export default async function EquipmentDetailPage(props: PageProps) {
 
   let equipment;
   try {
-    // ✅ Server Component에서 데이터 fetching
-    // ✅ equipmentApiServer는 getServerSession()을 통해 자동으로 인증 토큰 주입
-    equipment = await equipmentApiServer.getEquipment(id);
+    // ✅ Server Component에서 데이터 fetching (React.cache로 메모이제이션)
+    // ✅ generateMetadata와 동일한 함수를 호출하지만 캐시되어 1회만 fetch
+    equipment = await getEquipmentCached(id);
   } catch (error: unknown) {
     // ✅ Next.js 16 Best Practice: any 타입 대신 타입 안전한 에러 처리
     // 404 에러인 경우 not-found 페이지로
@@ -52,8 +62,8 @@ export async function generateMetadata(props: PageProps) {
   const { id } = await props.params;
 
   try {
-    // ✅ Server-side API 사용
-    const equipment = await equipmentApiServer.getEquipment(id);
+    // ✅ React.cache()로 메모이제이션된 함수 사용 (Page와 동일 함수)
+    const equipment = await getEquipmentCached(id);
     return {
       title: `${equipment.name} - 장비 상세`,
       description: `${equipment.name} (${equipment.managementNumber})의 상세 정보, 교정 이력, 반출 이력 등을 확인하세요.`,

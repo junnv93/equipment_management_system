@@ -4,16 +4,46 @@ import { Plus } from 'lucide-react';
 import type { Metadata } from 'next';
 import { Button } from '@/components/ui/button';
 import { EquipmentListContent, EquipmentListSkeleton } from '@/components/equipment/EquipmentListContent';
+import * as equipmentApiServer from '@/lib/api/equipment-api-server';
+
+// Next.js 16 PageProps 타입 정의
+type PageProps = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 /**
  * 장비 목록 페이지 (Server Component)
  *
  * Next.js 16 패턴:
- * - Server Component로 메타데이터 및 정적 UI 처리
- * - Client Component(EquipmentListContent)에 인터랙션 위임
- * - Link 컴포넌트로 prefetch 최적화
+ * - Server Component로 초기 데이터 fetch (FCP 최적화)
+ * - Client Component(EquipmentListContent)에 initialData 전달
+ * - Suspense로 스트리밍 지원
  */
-export default function EquipmentPage() {
+export default async function EquipmentPage(props: PageProps) {
+  // searchParams는 Promise이므로 await 필요
+  const searchParams = await props.searchParams;
+
+  // searchParams에서 초기 쿼리 파라미터 추출
+  // EquipmentQuery 타입에 맞게 캐스팅
+  const initialQuery: equipmentApiServer.EquipmentQuery = {
+    page: Number(searchParams.page) || 1,
+    pageSize: Number(searchParams.pageSize) || 20,
+    search: (searchParams.search as string) || undefined,
+    status: searchParams.status as equipmentApiServer.EquipmentQuery['status'],
+    site: searchParams.site as equipmentApiServer.EquipmentQuery['site'],
+    sortBy: (searchParams.sortBy as string) || 'createdAt',
+    sortOrder: (searchParams.sortOrder as 'asc' | 'desc') || 'desc',
+  };
+
+  // Server에서 초기 데이터 fetch
+  let initialData;
+  try {
+    initialData = await equipmentApiServer.getEquipmentList(initialQuery);
+  } catch (error) {
+    // 에러 시 클라이언트에서 fetch하도록 initialData 없이 렌더링
+    console.error('Failed to fetch initial equipment list:', error);
+  }
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* 페이지 헤더 */}
@@ -41,7 +71,7 @@ export default function EquipmentPage() {
 
       {/* 메인 컨텐츠 */}
       <Suspense fallback={<EquipmentListSkeleton />}>
-        <EquipmentListContent />
+        <EquipmentListContent initialData={initialData} />
       </Suspense>
     </div>
   );

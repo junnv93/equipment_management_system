@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
@@ -16,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -34,19 +33,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import {
   Search,
   Plus,
   Trash2,
-  Building,
-  Calendar,
-  Phone,
-  ClipboardList,
-  MapPin,
 } from 'lucide-react';
-import { format, addDays } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { addDays } from 'date-fns';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 
@@ -59,7 +51,7 @@ export default function CreateCheckoutPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipments, setSelectedEquipments] = useState<Equipment[]>([]);
   const [destination, setDestination] = useState(''); // ✅ 필드명 변경 (location → destination)
-  const [customDestination, setCustomDestination] = useState(''); // ✅ 필드명 변경
+  const [customDestination, _setCustomDestination] = useState(''); // ✅ 필드명 변경 - setter는 미래 사용 예정
   const [phoneNumber, setPhoneNumber] = useState(''); // ✅ 필드명 변경 (contactNumber → phoneNumber)
   const [address, setAddress] = useState(''); // ✅ address 필드 추가
   const [purpose, setPurpose] = useState<'calibration' | 'repair' | 'rental'>('calibration'); // ✅ CheckoutPurpose 타입
@@ -88,7 +80,7 @@ export default function CreateCheckoutPage() {
         title: '반출 신청 완료',
         description: '반출 신청이 성공적으로 접수되었습니다.',
         variant: 'default',
-      } as any);
+      });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.push('/checkouts');
     },
@@ -123,7 +115,7 @@ export default function CreateCheckoutPage() {
         title: '장비를 선택해주세요',
         description: '최소 1개 이상의 장비를 선택해야 합니다.',
         variant: 'destructive',
-      } as any);
+      });
       return;
     }
 
@@ -132,7 +124,7 @@ export default function CreateCheckoutPage() {
         title: '반출지를 입력해주세요',
         description: '장비가 반출될 장소를 입력해주세요.',
         variant: 'destructive',
-      } as any);
+      });
       return;
     }
 
@@ -141,7 +133,7 @@ export default function CreateCheckoutPage() {
         title: '반출 사유를 입력해주세요',
         description: '반출 사유는 필수입니다.',
         variant: 'destructive',
-      } as any);
+      });
       return;
     }
 
@@ -150,7 +142,7 @@ export default function CreateCheckoutPage() {
         title: '반출 목적을 선택해주세요',
         description: '장비 반출 목적을 선택해주세요.',
         variant: 'destructive',
-      } as any);
+      });
       return;
     }
 

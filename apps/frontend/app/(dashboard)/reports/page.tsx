@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ import { ReportType, ReportFormat, ReportPeriod } from '@/lib/api/reports-api';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// Tabs components removed - not currently used in this version
 import {
   FileText,
   Download,
@@ -31,7 +31,6 @@ import {
   FileText as FileCSV,
   File,
   CheckCircle2,
-  AlertCircle,
 } from 'lucide-react';
 
 export default function ReportsPage() {

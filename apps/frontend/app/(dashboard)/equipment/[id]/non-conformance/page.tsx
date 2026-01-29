@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, AlertTriangle, FileText, CheckCircle, Clock, Send } from 'lucide-react';
+import { ArrowLeft, Plus, AlertTriangle, FileText, CheckCircle, Clock } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import nonConformancesApi, {
   NonConformance,
@@ -13,13 +14,18 @@ import nonConformancesApi, {
   NON_CONFORMANCE_TYPE_LABELS,
   RESOLUTION_TYPE_LABELS,
 } from '@/lib/api/non-conformances-api';
-import { equipmentApi } from '@/lib/api';
+// ✅ 직접 import (barrel import 제거)
+import equipmentApi from '@/lib/api/equipment-api';
 
 export default function NonConformanceManagementPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
   const equipmentId = params.id as string;
+
+  // 현재 로그인한 사용자 ID (세션에서 가져옴)
+  const currentUserId = session?.user?.id ?? '';
 
   const [equipment, setEquipment] = useState<{
     id: string;
@@ -51,6 +57,7 @@ export default function NonConformanceManagementPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [equipmentId]);
 
   const loadData = async () => {
@@ -86,7 +93,7 @@ export default function NonConformanceManagementPage() {
       await nonConformancesApi.createNonConformance({
         equipmentId,
         discoveryDate: new Date().toISOString().split('T')[0],
-        discoveredBy: 'current-user-id', // TODO: 실제 사용자 ID로 교체
+        discoveredBy: currentUserId,
         cause: createForm.cause,
         ncType: createForm.ncType,
         actionPlan: createForm.actionPlan || undefined,
@@ -124,7 +131,7 @@ export default function NonConformanceManagementPage() {
       if (updateForm.correctionContent) {
         updateData.correctionContent = updateForm.correctionContent;
         updateData.correctionDate = new Date().toISOString().split('T')[0];
-        updateData.correctedBy = 'current-user-id'; // TODO: 실제 사용자 ID로 교체
+        updateData.correctedBy = currentUserId;
       }
       if (updateForm.status) updateData.status = updateForm.status;
 

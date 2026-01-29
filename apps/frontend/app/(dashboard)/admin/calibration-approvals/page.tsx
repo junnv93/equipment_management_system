@@ -18,40 +18,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import calibrationApi from '@/lib/api/calibration-api';
+import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Clock, Calendar, User, Building2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from 'next-auth/react';
+import {
+  CALIBRATION_RESULT_LABELS,
+  type CalibrationResult,
+} from '@equipment-management/schemas';
 
-interface CalibrationRequest {
-  id: string;
-  equipmentId: string;
-  calibrationDate: string;
-  nextCalibrationDate: string;
-  calibrationAgency: string;
-  calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
-  notes?: string;
-  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
-  registeredBy?: string;
-  approvedBy?: string;
-  registeredByRole?: string;
-  registrarComment?: string;
-  approverComment?: string;
-  rejectionReason?: string;
-  intermediateCheckDate?: string;
-  createdAt: string;
-}
+// Calibration 타입을 직접 사용 (CalibrationRequest는 Calibration의 별칭)
+type CalibrationRequest = Calibration;
 
-const RESULT_LABELS: Record<string, string> = {
-  PASS: '적합',
-  FAIL: '부적합',
-  CONDITIONAL: '조건부 적합',
+// 레거시 대문자 값 호환을 위한 매핑
+const LEGACY_RESULT_MAP: Record<string, CalibrationResult> = {
+  PASS: 'pass',
+  FAIL: 'fail',
+  CONDITIONAL: 'conditional',
 };
 
+const getResultLabel = (result: string): string => {
+  const normalizedResult = LEGACY_RESULT_MAP[result] || result;
+  return CALIBRATION_RESULT_LABELS[normalizedResult as CalibrationResult] || result;
+};
+
+// 결과 색상 (소문자 + 대문자 모두 지원)
 const RESULT_COLORS: Record<string, string> = {
+  pass: 'bg-green-100 text-green-800',
   PASS: 'bg-green-100 text-green-800',
+  fail: 'bg-red-100 text-red-800',
   FAIL: 'bg-red-100 text-red-800',
+  conditional: 'bg-yellow-100 text-yellow-800',
   CONDITIONAL: 'bg-yellow-100 text-yellow-800',
 };
 
@@ -68,7 +66,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function CalibrationApprovalsPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -253,8 +251,8 @@ export default function CalibrationApprovalsPage() {
                               ? STATUS_LABELS[request.approvalStatus]
                               : '상태 없음'}
                           </Badge>
-                          <Badge className={RESULT_COLORS[request.calibrationResult]}>
-                            {RESULT_LABELS[request.calibrationResult]}
+                          <Badge className={RESULT_COLORS[request.calibrationResult] || 'bg-gray-100 text-gray-800'}>
+                            {getResultLabel(request.calibrationResult)}
                           </Badge>
                           <span className="text-sm font-medium">
                             장비 ID: {request.equipmentId}

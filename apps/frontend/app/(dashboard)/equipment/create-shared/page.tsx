@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Upload, Building2, ExternalLink, Share2 } from 'lucide-react';
+import { ArrowLeft, Building2, ExternalLink, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,7 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 import equipmentApi from '@/lib/api/equipment-api';
-import { type Site, type CalibrationMethod } from '@equipment-management/schemas';
+import { type CalibrationMethod } from '@equipment-management/schemas';
 
 // 공용장비 등록 스키마
 const sharedEquipmentSchema = z.object({
@@ -140,7 +140,7 @@ export default function CreateSharedEquipmentPage() {
   };
 
   const selectedSite = form.watch('site');
-  const sharedSites = form.watch('sharedSites') || [];
+  const _sharedSites = form.watch('sharedSites') || []; // UI에서 사용 예정
 
   return (
     <div className="container mx-auto py-6 space-y-6 max-w-4xl">

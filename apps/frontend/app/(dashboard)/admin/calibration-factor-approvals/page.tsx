@@ -24,7 +24,7 @@ import calibrationFactorsApi, {
   APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
 import { format } from 'date-fns';
-import { CheckCircle2, XCircle, Clock, Calculator, User, Calendar } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Calculator, Calendar } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSession } from 'next-auth/react';
 

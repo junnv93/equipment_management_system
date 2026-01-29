@@ -30,7 +30,7 @@ import calibrationPlansApi, {
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
 import { format } from 'date-fns';
-import { ArrowLeft, Save, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 

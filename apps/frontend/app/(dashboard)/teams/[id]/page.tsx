@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { TeamDetail } from '@/components/teams/TeamDetail';
+// TeamDetail import removed - using TeamDetailWrapper instead
 import TeamDetailLoading from './loading';
 
 /**

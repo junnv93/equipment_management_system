@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -44,14 +44,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Filter, Check, X, RotateCcw, Building, CalendarClock, Clock } from 'lucide-react';
+import { Search, Check, X, RotateCcw, Building, CalendarClock } from 'lucide-react';
 import { format, isAfter } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import checkoutApi, { Checkout, ReturnCheckoutDto } from '@/lib/api/checkout-api';
+import checkoutApi, { Checkout, ReturnCheckoutDto, CheckoutQuery } from '@/lib/api/checkout-api';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function ManageCheckoutsPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const { user } = useAuth(); // ✅ JWT에서 사용자 ID 가져오기
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -68,7 +68,7 @@ export default function ManageCheckoutsPage() {
   const { data: checkoutsData, isLoading } = useQuery({
     queryKey: ['checkouts', 'manage', currentTab, searchTerm],
     queryFn: async () => {
-      const query: any = {
+      const query: CheckoutQuery = {
         pageSize: 100,
         search: searchTerm || undefined,
       };

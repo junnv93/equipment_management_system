@@ -12,7 +12,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw, ArrowLeft, List } from 'lucide-react';
+import { AlertCircle, RefreshCw, List } from 'lucide-react';
 
 interface ErrorProps {
   error: Error & { digest?: string };
