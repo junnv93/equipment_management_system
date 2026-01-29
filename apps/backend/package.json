@@ -37,6 +37,7 @@
   "dependencies": {
     "@equipment-management/db": "workspace:*",
     "@equipment-management/schemas": "workspace:*",
+    "@equipment-management/shared-constants": "workspace:*",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^10.0.0",
@@ -115,6 +116,9 @@
               ],
               "@equipment-management/db/*": [
                 "../../packages/db/src/*"
+              ],
+              "@equipment-management/shared-constants": [
+                "../../packages/shared-constants/src"
               ]
             }
           }
@@ -127,7 +131,9 @@
       "^@equipment-management/db$": "<rootDir>/../../../packages/db/src/index.ts",
       "^@equipment-management/db/schema$": "<rootDir>/../../../packages/db/src/schema/index.ts",
       "^@equipment-management/db/schema/(.*)$": "<rootDir>/../../../packages/db/src/schema/$1",
-      "^@equipment-management/db/(.*)$": "<rootDir>/../../../packages/db/src/$1"
+      "^@equipment-management/db/(.*)$": "<rootDir>/../../../packages/db/src/$1",
+      "^@equipment-management/shared-constants$": "<rootDir>/../../../packages/shared-constants/src/index.ts",
+      "^@equipment-management/shared-constants/(.*)$": "<rootDir>/../../../packages/shared-constants/src/$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

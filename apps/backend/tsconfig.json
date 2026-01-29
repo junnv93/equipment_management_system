@@ -13,12 +13,14 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "strictNullChecks": true,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
+    // NestJS DTO 클래스는 class-transformer가 런타임에 초기화하므로 이 옵션 비활성화
+    // (다른 모든 strict 옵션은 활성화 유지)
     "strictPropertyInitialization": false,
     "moduleResolution": "node",
     "paths": {
