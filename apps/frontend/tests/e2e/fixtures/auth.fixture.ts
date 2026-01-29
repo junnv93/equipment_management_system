@@ -56,6 +56,7 @@ import { test as base, Page } from '@playwright/test';
 interface AuthFixtures {
   testOperatorPage: Page;      // 시험실무자
   techManagerPage: Page;        // 기술책임자
+  qualityManagerPage: Page;     // 품질책임자 (3단계 승인 - 검토)
   siteAdminPage: Page;          // 시험소 관리자
   systemAdminPage: Page;        // 시스템 관리자
 }
@@ -211,6 +212,19 @@ export const test = base.extend<AuthFixtures>({
     const context = await browser.newContext();
     const page = await context.newPage();
     await loginAs(page, 'technical_manager');
+    await use(page);
+    await context.close();
+  },
+
+  /**
+   * 품질책임자 (Quality Manager) 픽스처
+   * - 교정계획서 검토 (3단계 승인 워크플로우)
+   * - 품질 관리 업무
+   */
+  qualityManagerPage: async ({ browser }, use) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await loginAs(page, 'quality_manager');
     await use(page);
     await context.close();
   },

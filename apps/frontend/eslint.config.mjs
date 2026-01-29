@@ -42,25 +42,42 @@ const eslintConfig = [
       'react-hooks': reactHooksPlugin,
     },
     rules: {
-      // TypeScript rules
+      // TypeScript rules - error로 강화하여 컴파일 타임에 강제
       '@typescript-eslint/no-unused-vars': [
-        'warn',
+        'error',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
           ignoreRestSiblings: true,
         },
       ],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
 
-      // React rules
+      // React rules - error로 강화하여 런타임 버그 방지
       'react/react-in-jsx-scope': 'off',
       'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/exhaustive-deps': 'error',
 
       // Next.js rules
       '@next/next/no-html-link-for-pages': 'error',
       '@next/next/no-img-element': 'warn',
+
+      // SSOT 회귀 방지: 잘못된 import 경로 차단 (error로 강화)
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/auth/rbac/roles.enum'],
+              message: 'Import UserRole from @equipment-management/schemas instead.',
+            },
+            {
+              group: ['**/auth/rbac/permissions.enum'],
+              message: 'Import Permission from @equipment-management/shared-constants instead.',
+            },
+          ],
+        },
+      ],
     },
     settings: {
       react: {

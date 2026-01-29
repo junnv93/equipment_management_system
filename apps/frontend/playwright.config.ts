@@ -7,6 +7,11 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
+  // 기본 타임아웃 설정 (안정성 향상)
+  timeout: 60000, // 60초
+  expect: {
+    timeout: 15000, // expect 타임아웃 15초
+  },
 
   // 글로벌 설정 - 테스트 전 환경 확인
   globalSetup: './tests/e2e/global-setup.ts',
