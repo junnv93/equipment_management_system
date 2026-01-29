@@ -10,11 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +57,7 @@ import {
   Check,
 } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
+import { VersionHistory } from './VersionHistory';
 
 interface CalibrationPlanDetailClientProps {
   /**
@@ -441,16 +438,10 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
             <div className="flex flex-col items-center flex-1">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  isDraft
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-green-500 text-white'
+                  isDraft ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'
                 }`}
               >
-                {isDraft ? (
-                  <Circle className="h-5 w-5" />
-                ) : (
-                  <CheckCircle2 className="h-5 w-5" />
-                )}
+                {isDraft ? <Circle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
               </div>
               <span className="mt-2 text-sm font-medium">1. 작성</span>
               <span className="text-xs text-muted-foreground">기술책임자</span>
@@ -464,9 +455,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
             {/* 연결선 1-2 */}
             <div
               className={`h-0.5 flex-1 ${
-                isPendingReview || isPendingApproval || isApproved
-                  ? 'bg-green-500'
-                  : 'bg-gray-300'
+                isPendingReview || isPendingApproval || isApproved ? 'bg-green-500' : 'bg-gray-300'
               }`}
             />
 
@@ -847,10 +836,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
             <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
               취소
             </Button>
-            <Button
-              onClick={() => approveMutation.mutate()}
-              disabled={approveMutation.isPending}
-            >
+            <Button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>
               최종 승인
             </Button>
           </DialogFooter>

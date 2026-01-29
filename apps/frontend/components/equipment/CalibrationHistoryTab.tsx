@@ -45,7 +45,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import calibrationApi, { type CreateCalibrationDto, type Calibration } from '@/lib/api/calibration-api';
+import calibrationApi, {
+  type CreateCalibrationDto,
+  type Calibration,
+} from '@/lib/api/calibration-api';
 import dayjs from 'dayjs';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
@@ -219,8 +222,9 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     }
   };
 
-  // 등록 권한 확인: UL-QP-18에 따라 시험실무자만 등록 가능 (lab_manager/system_admin은 모든 권한)
-  const canCreate = hasRole(['test_engineer', 'lab_manager', 'system_admin']);
+  // 등록 권한 확인: UL-QP-18에 따라 시험실무자만 교정 기록 등록 가능
+  // 교정 관리는 다른 기능과 달리 lab_manager도 등록 불가 (등록/승인 완전 분리 정책)
+  const canCreate = hasRole(['test_engineer']);
 
   // 등록 Dialog
   const RegisterDialog = (
@@ -454,7 +458,8 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                     variant={
                       cal.calibrationResult === 'pass' || cal.calibrationResult === 'PASS'
                         ? 'default'
-                        : cal.calibrationResult === 'conditional' || cal.calibrationResult === 'CONDITIONAL'
+                        : cal.calibrationResult === 'conditional' ||
+                            cal.calibrationResult === 'CONDITIONAL'
                           ? 'secondary'
                           : 'destructive'
                     }
@@ -473,7 +478,9 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                             : 'outline'
                       }
                     >
-                      {CALIBRATION_APPROVAL_STATUS_LABELS[cal.approvalStatus as keyof typeof CALIBRATION_APPROVAL_STATUS_LABELS] || cal.approvalStatus}
+                      {CALIBRATION_APPROVAL_STATUS_LABELS[
+                        cal.approvalStatus as keyof typeof CALIBRATION_APPROVAL_STATUS_LABELS
+                      ] || cal.approvalStatus}
                     </Badge>
                   )}
                 </TableCell>
