@@ -27,6 +27,7 @@ import {
 import { User, UserListResponse } from '../../types/models';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '../auth/rbac/permissions.enum';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('users')
 @Controller('users')
@@ -43,6 +44,7 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
+  @Public()
   @Post('sync')
   @ApiOperation({
     summary: '사용자 동기화 (Upsert)',
