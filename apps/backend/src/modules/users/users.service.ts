@@ -164,6 +164,73 @@ export class UsersService {
     } as User;
   }
 
+  /**
+   * 사용자 Upsert (생성 또는 업데이트)
+   *
+   * NextAuth 로그인 시 호출되며, 사용자가 DB에 없으면 생성하고
+   * 이미 있으면 정보를 업데이트합니다.
+   *
+   * @param createUserDto - 사용자 정보 (email 필수)
+   * @returns 생성 또는 업데이트된 사용자
+   */
+  async upsert(createUserDto: CreateUserDto): Promise<User> {
+    // 기존 사용자 확인 (이메일 기준)
+    const existingUser = await this.findByEmail(createUserDto.email);
+
+    if (existingUser) {
+      // 기존 사용자 업데이트 (제공된 값만 업데이트)
+      const updateData: Record<string, any> = {
+        updatedAt: new Date(),
+      };
+
+      if (createUserDto.name) updateData.name = createUserDto.name;
+      if (createUserDto.role) updateData.role = createUserDto.role;
+      if (createUserDto.teamId) updateData.teamId = createUserDto.teamId;
+      if (createUserDto.site) updateData.site = createUserDto.site;
+      if (createUserDto.location) updateData.location = createUserDto.location;
+      if (createUserDto.position) updateData.position = createUserDto.position;
+
+      const [updatedUser] = await this.db
+        .update(usersTable)
+        .set(updateData)
+        .where(eq(usersTable.email, createUserDto.email))
+        .returning();
+
+      return {
+        ...updatedUser,
+        isActive: true,
+        lastLogin: null,
+        deletedAt: null,
+        equipmentCount: 0,
+        rentalsCount: 0,
+      } as User;
+    } else {
+      // 신규 사용자 생성
+      const [createdUser] = await this.db
+        .insert(usersTable)
+        .values({
+          id: createUserDto.id,
+          email: createUserDto.email,
+          name: createUserDto.name,
+          role: createUserDto.role || 'test_engineer',
+          teamId: createUserDto.teamId,
+          site: createUserDto.site,
+          location: createUserDto.location,
+          position: createUserDto.position,
+        })
+        .returning();
+
+      return {
+        ...createdUser,
+        isActive: true,
+        lastLogin: null,
+        deletedAt: null,
+        equipmentCount: 0,
+        rentalsCount: 0,
+      } as User;
+    }
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
     const user = await this.findOne(id);
     if (!user) {

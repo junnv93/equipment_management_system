@@ -43,6 +43,19 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
+  @Post('sync')
+  @ApiOperation({
+    summary: '사용자 동기화 (Upsert)',
+    description:
+      'NextAuth 로그인 시 사용자를 DB에 생성 또는 업데이트합니다. (Azure AD/Credentials)',
+  })
+  @ApiBody({ type: CreateUserDto })
+  @ApiResponse({ status: 200, description: '사용자 동기화 성공 (생성 또는 업데이트)' })
+  @ApiResponse({ status: 400, description: '잘못된 요청' })
+  async syncUser(@Body() createUserDto: CreateUserDto): Promise<User> {
+    return this.usersService.upsert(createUserDto);
+  }
+
   @Get()
   @UsePipes(UserQueryValidationPipe)
   @ApiOperation({

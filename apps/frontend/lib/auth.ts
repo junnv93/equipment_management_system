@@ -149,7 +149,7 @@ export const authOptions = {
               role: {
                 label: 'Role',
                 type: 'text',
-                placeholder: 'test_engineer | technical_manager | lab_manager | system_admin'
+                placeholder: 'test_engineer | technical_manager | lab_manager | system_admin',
               },
             },
             async authorize(credentials) {
@@ -206,6 +206,76 @@ export const authOptions = {
   },
   callbacks: {
     /**
+     * SignIn 콜백 - 로그인 성공 시 사용자 DB 동기화
+     *
+     * Azure AD 또는 Credentials 로그인 시 호출되며,
+     * 사용자가 DB에 없으면 자동으로 생성합니다.
+     *
+     * @param user - authorize에서 반환된 사용자 정보
+     * @param account - OAuth 계정 정보
+     * @param profile - OAuth 프로필 정보
+     * @returns 로그인 허용 여부 (true/false)
+     */
+    async signIn({
+      user,
+      account,
+      profile,
+    }: {
+      user: User;
+      account: Account | null;
+      profile?: Profile;
+    }): Promise<boolean> {
+      try {
+        // 사용자 정보가 없으면 차단
+        if (!user?.email) {
+          console.error('[SignIn] No user email provided');
+          return false;
+        }
+
+        // 백엔드에 사용자 존재 여부 확인 및 생성/업데이트
+        const azureProfile = profile as AzureADProfile | undefined;
+        const authUser = user as AuthorizedUser;
+
+        // 사용자 정보 구성
+        const userData = {
+          id: user.id,
+          email: user.email,
+          name: user.name || user.email.split('@')[0],
+          role: authUser.role || (azureProfile?.roles && azureProfile.roles[0]) || 'test_engineer',
+          site: authUser.site || 'suwon',
+          location: authUser.site === 'uiwang' ? '의왕랩' : '수원랩',
+          teamId: authUser.teamId,
+          position: azureProfile?.department,
+        };
+
+        // 백엔드 API 호출: 사용자 생성/업데이트 (upsert)
+        const response = await fetch(`${API_BASE_URL}/api/users/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(userData),
+        });
+
+        if (!response.ok) {
+          // 사용자 동기화 실패 시에도 로그인은 허용 (기존 동작 유지)
+          console.warn(
+            `[SignIn] Failed to sync user to DB: ${response.status}`,
+            await response.text()
+          );
+        } else {
+          console.log(`[SignIn] User synced successfully: ${user.email}`);
+        }
+
+        return true;
+      } catch (error) {
+        console.error('[SignIn] Error during user sync:', error);
+        // 동기화 실패해도 로그인은 허용 (가용성 우선)
+        return true;
+      }
+    },
+
+    /**
      * JWT 콜백 - 토큰에 사용자 정보 저장
      *
      * @param token - 기존 JWT 토큰
@@ -258,13 +328,7 @@ export const authOptions = {
      * @param session - 세션 객체
      * @param token - JWT 토큰 (strategy: 'jwt' 사용 시)
      */
-    async session({
-      session,
-      token,
-    }: {
-      session: Session;
-      token: JWT;
-    }): Promise<Session> {
+    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       if (session.user) {
         session.user.id = token.id ?? '';
         session.user.role = token.role ?? 'USER';
