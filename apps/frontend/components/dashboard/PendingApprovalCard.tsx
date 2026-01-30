@@ -10,9 +10,11 @@ import {
   Calculator,
   Monitor,
   AlertCircle,
+  ArrowRight,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { dashboardApi, type PendingApprovalCounts } from '@/lib/api/dashboard-api';
@@ -29,12 +31,13 @@ interface ApprovalCategory {
 }
 
 // SSOT: FRONTEND_ROUTES 사용
+// ✅ 모든 승인 링크를 통합 승인 페이지로 변경 (탭 파라미터로 구분)
 const categories: ApprovalCategory[] = [
   {
     key: 'equipment',
     label: '장비',
     icon: Package,
-    href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
+    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=equipment`,
     color: 'text-blue-700 dark:text-blue-300',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     description: '장비 등록/수정/삭제 승인',
@@ -43,7 +46,7 @@ const categories: ApprovalCategory[] = [
     key: 'calibration',
     label: '교정',
     icon: FileSpreadsheet,
-    href: '/admin/calibration-approvals',
+    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=calibration`,
     color: 'text-green-700 dark:text-green-300',
     bgColor: 'bg-green-100 dark:bg-green-900/30',
     description: '교정 기록 승인',
@@ -52,7 +55,7 @@ const categories: ApprovalCategory[] = [
     key: 'checkout',
     label: '반출',
     icon: ArrowRightLeft,
-    href: `${FRONTEND_ROUTES.CHECKOUTS.LIST}?status=pending`,
+    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=checkout`,
     color: 'text-orange-700 dark:text-orange-300',
     bgColor: 'bg-orange-100 dark:bg-orange-900/30',
     description: '반출/반입 승인 (교정, 수리, 대여 포함)',
@@ -61,7 +64,7 @@ const categories: ApprovalCategory[] = [
     key: 'calibrationFactor',
     label: '보정계수',
     icon: Calculator,
-    href: '/admin/calibration-factor-approvals',
+    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=calibrationFactor`,
     color: 'text-teal-700 dark:text-teal-300',
     bgColor: 'bg-teal-100 dark:bg-teal-900/30',
     description: '보정계수 변경 승인',
@@ -70,7 +73,7 @@ const categories: ApprovalCategory[] = [
     key: 'software',
     label: '소프트웨어',
     icon: Monitor,
-    href: '/admin/software-approvals',
+    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=software`,
     color: 'text-pink-700 dark:text-pink-300',
     bgColor: 'bg-pink-100 dark:bg-pink-900/30',
     description: '소프트웨어 등록/변경 승인',
@@ -212,16 +215,31 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
             {cardDescription}
           </p>
         </div>
-        {totalPending > 0 && (
-          <Badge
-            variant="secondary"
-            className="bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300 animate-pulse"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            총 {totalPending}건
-          </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          {totalPending > 0 && (
+            <>
+              <Badge
+                variant="secondary"
+                className="bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300 animate-pulse"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                총 {totalPending}건
+              </Badge>
+              <Link href={FRONTEND_ROUTES.ADMIN.APPROVALS}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  aria-label="전체 승인 관리 페이지로 이동"
+                >
+                  전체 보기
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

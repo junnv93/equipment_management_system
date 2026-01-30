@@ -26,6 +26,7 @@ export interface NavItem {
   icon: React.ReactNode;
   href: string;
   label: string;
+  badge?: number; // 선택적: 알림 배지 (승인 대기 건수 등)
 }
 
 // aria-live 영역에 스크린리더 알림 전송
@@ -58,7 +59,7 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
     <Link
       href={item.href}
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-3',
+        'flex items-center gap-3 rounded-lg px-3 py-3 relative',
         // prefers-reduced-motion 지원
         'motion-safe:transition-all motion-reduce:transition-none',
         'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
@@ -70,7 +71,15 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
       onClick={onClick}
     >
       <span aria-hidden="true">{item.icon}</span>
-      <span>{item.label}</span>
+      <span className="flex-1">{item.label}</span>
+      {item.badge !== undefined && item.badge > 0 && (
+        <span
+          className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+          aria-label={`${item.badge}건의 알림`}
+        >
+          {item.badge}
+        </span>
+      )}
     </Link>
   );
 });
@@ -164,10 +173,7 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         ref={menuButtonRef}
         variant="ghost"
         size="icon"
-        className={cn(
-          'md:hidden',
-          'focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-        )}
+        className={cn('md:hidden', 'focus:ring-2 focus:ring-blue-500 focus:ring-offset-2')}
         onClick={toggleMenu}
         aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
         aria-expanded={isOpen}

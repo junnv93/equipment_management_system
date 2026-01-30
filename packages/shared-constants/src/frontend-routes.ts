@@ -32,6 +32,10 @@ export const FRONTEND_ROUTES = {
   CHECKOUTS: {
     LIST: '/checkouts',
     CREATE: '/checkouts/create',
+    /**
+     * @deprecated Use ADMIN.APPROVALS instead (통합 승인 페이지 사용)
+     * Redirects to /admin/approvals?tab=checkout
+     */
     MANAGE: '/checkouts/manage',
     DETAIL: (id: string) => `/checkouts/${id}`,
     CHECK: (id: string) => `/checkouts/${id}/check`,

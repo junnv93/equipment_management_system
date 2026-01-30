@@ -19,12 +19,15 @@ import {
   Package2,
   FileSpreadsheet,
   ClipboardCheck,
+  CheckSquare,
   Users,
   Bell,
   Settings,
   Wrench,
 } from 'lucide-react';
 import { ReactNode, memo, useCallback, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { NavItem } from '@/components/layout/MobileNav';
@@ -32,6 +35,8 @@ import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
+import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
+import { dashboardApi, type PendingApprovalCounts } from '@/lib/api/dashboard-api';
 
 // MobileNav는 모바일 뷰포트에서만 필요하므로 지연 로딩 (bundle-dynamic-imports)
 const MobileNav = dynamic(
@@ -49,15 +54,22 @@ interface SidebarItemProps {
   href: string;
   label: string;
   isActive?: boolean;
+  badge?: number; // 선택적: 알림 배지 (승인 대기 건수 등)
 }
 
 // SidebarItem을 memo로 래핑하여 불필요한 리렌더 방지 (rerender-memo)
-const SidebarItem = memo(function SidebarItem({ icon, href, label, isActive }: SidebarItemProps) {
+const SidebarItem = memo(function SidebarItem({
+  icon,
+  href,
+  label,
+  isActive,
+  badge,
+}: SidebarItemProps) {
   return (
     <Link
       href={href}
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2',
+        'flex items-center gap-3 rounded-lg px-3 py-2 relative',
         // prefers-reduced-motion 지원: transition-all 대신 조건부 transition
         'motion-safe:transition-all motion-reduce:transition-none',
         'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2 focus:ring-offset-ul-midnight',
@@ -68,7 +80,15 @@ const SidebarItem = memo(function SidebarItem({ icon, href, label, isActive }: S
       aria-current={isActive ? 'page' : undefined}
     >
       <span aria-hidden="true">{icon}</span>
-      <span>{label}</span>
+      <span className="flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span
+          className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-ul-red text-white animate-pulse"
+          aria-label={`${badge}건의 알림`}
+        >
+          {badge}
+        </span>
+      )}
     </Link>
   );
 });
@@ -79,11 +99,22 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
+
+  // 승인 대기 카운트 조회 (권한이 있는 경우에만)
+  const { data: pendingCounts } = useQuery<PendingApprovalCounts>({
+    queryKey: ['pending-approval-counts', userRole],
+    queryFn: () => dashboardApi.getPendingApprovalCounts(userRole || ''),
+    enabled: !!userRole && hasApprovalPermissions(userRole), // 권한이 있을 때만 실행
+    staleTime: 30000, // 30초
+    refetchInterval: 60000, // 1분마다 자동 새로고침
+  });
 
   // navItems를 useMemo로 메모이제이션하여 불필요한 재생성 방지 (rerender-memo)
   // SSOT: FRONTEND_ROUTES 사용
-  const navItems: NavItem[] = useMemo(
-    () => [
+  const navItems: NavItem[] = useMemo(() => {
+    const baseItems: NavItem[] = [
       {
         icon: <LayoutDashboard className="h-5 w-5" />,
         href: FRONTEND_ROUTES.DASHBOARD,
@@ -104,6 +135,20 @@ export function DashboardShell({ children }: DashboardShellProps) {
         href: FRONTEND_ROUTES.CALIBRATION.LIST,
         label: '교정 관리',
       },
+    ];
+
+    // ✅ 승인 권한이 있는 경우에만 "승인 관리" 메뉴 추가
+    if (userRole && hasApprovalPermissions(userRole)) {
+      const totalPending = pendingCounts?.total || 0;
+      baseItems.push({
+        icon: <CheckSquare className="h-5 w-5" />,
+        href: FRONTEND_ROUTES.ADMIN.APPROVALS,
+        label: '승인 관리',
+        badge: totalPending > 0 ? totalPending : undefined, // 대기 건수가 있을 때만 배지 표시
+      });
+    }
+
+    baseItems.push(
       {
         icon: <Users className="h-5 w-5" />,
         href: '/teams',
@@ -118,10 +163,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
         icon: <Settings className="h-5 w-5" />,
         href: '/settings',
         label: '설정',
-      },
-    ],
-    []
-  );
+      }
+    );
+
+    return baseItems;
+  }, [userRole, pendingCounts?.total]);
 
   // isActive를 useCallback으로 안정화 (rerender-functional-setstate)
   const isActive = useCallback(
@@ -179,6 +225,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               href={item.href}
               label={item.label}
               isActive={isActive(item.href)}
+              badge={item.badge}
             />
           ))}
         </nav>

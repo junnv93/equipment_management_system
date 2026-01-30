@@ -13,6 +13,7 @@ import {
   equipmentMaintenanceHistory,
   equipmentIncidentHistory,
   equipment,
+  users,
 } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
@@ -33,6 +34,26 @@ export class EquipmentHistoryService {
     @Inject(forwardRef(() => NonConformancesService))
     private readonly nonConformancesService: NonConformancesService
   ) {}
+
+  /**
+   * 사용자가 데이터베이스에 존재하는지 확인
+   * 사용자가 존재하면 userId를 반환하고, 존재하지 않으면 null을 반환합니다.
+   */
+  private async validateAndGetUserId(userId?: string): Promise<string | null> {
+    if (!userId) {
+      return null;
+    }
+
+    try {
+      const user = await this.db.query.users.findFirst({
+        where: eq(users.id, userId),
+      });
+      return user ? userId : null;
+    } catch {
+      // 사용자 검증 실패 시 null 반환 (로그인한 사용자가 DB에 없을 수 있음)
+      return null;
+    }
+  }
 
   // ===================== 위치 변동 이력 =====================
 
@@ -65,6 +86,9 @@ export class EquipmentHistoryService {
     dto: CreateLocationHistoryDto,
     userId?: string
   ): Promise<LocationHistoryResponseDto> {
+    // 사용자 ID 검증 (DB에 존재하지 않으면 null 설정)
+    const validatedUserId = await this.validateAndGetUserId(userId);
+
     const [record] = await this.db
       .insert(equipmentLocationHistory)
       .values({
@@ -72,7 +96,7 @@ export class EquipmentHistoryService {
         changedAt: new Date(dto.changedAt),
         newLocation: dto.newLocation,
         notes: dto.notes ?? null,
-        changedBy: userId ?? null,
+        changedBy: validatedUserId,
       })
       .returning();
 
@@ -131,13 +155,16 @@ export class EquipmentHistoryService {
     dto: CreateMaintenanceHistoryDto,
     userId?: string
   ): Promise<MaintenanceHistoryResponseDto> {
+    // 사용자 ID 검증 (DB에 존재하지 않으면 null 설정)
+    const validatedUserId = await this.validateAndGetUserId(userId);
+
     const [record] = await this.db
       .insert(equipmentMaintenanceHistory)
       .values({
         equipmentId: equipmentUuid,
         performedAt: new Date(dto.performedAt),
         content: dto.content,
-        performedBy: userId ?? null,
+        performedBy: validatedUserId,
       })
       .returning();
 
@@ -196,6 +223,9 @@ export class EquipmentHistoryService {
     dto: CreateIncidentHistoryDto,
     userId?: string
   ): Promise<IncidentHistoryResponseDto> {
+    // 사용자 ID 검증 (DB에 존재하지 않으면 null 설정)
+    const validatedUserId = await this.validateAndGetUserId(userId);
+
     // 트랜잭션으로 원자성 보장
     return await this.db.transaction(async (tx) => {
       // 1. 사고이력 생성 (항상 수행)
@@ -206,7 +236,7 @@ export class EquipmentHistoryService {
           occurredAt: new Date(dto.occurredAt),
           incidentType: dto.incidentType,
           content: dto.content,
-          reportedBy: userId ?? null,
+          reportedBy: validatedUserId,
         })
         .returning();
 
@@ -220,7 +250,7 @@ export class EquipmentHistoryService {
         }
 
         // userId 검증 (부적합 생성 시 필수)
-        if (!userId) {
+        if (!validatedUserId) {
           throw new BadRequestException(
             '부적합 생성 시 사용자 인증이 필요합니다. 로그인 후 다시 시도해주세요.'
           );
@@ -232,7 +262,7 @@ export class EquipmentHistoryService {
           .values({
             equipmentId: equipmentUuid,
             discoveryDate: new Date(dto.occurredAt).toISOString().split('T')[0], // timestamp → date
-            discoveredBy: userId,
+            discoveredBy: validatedUserId,
             cause: dto.content,
             ncType: dto.incidentType as 'damage' | 'malfunction',
             actionPlan: dto.actionPlan ?? null,

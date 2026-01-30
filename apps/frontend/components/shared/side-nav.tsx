@@ -69,10 +69,6 @@ export function SideNav() {
           href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
         },
         {
-          title: '승인 관리',
-          href: FRONTEND_ROUTES.CHECKOUTS.MANAGE,
-        },
-        {
           title: '확인 대기 목록',
           href: FRONTEND_ROUTES.CHECKOUTS.PENDING_CHECKS,
         },

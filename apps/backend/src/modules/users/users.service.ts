@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { eq, ilike, inArray, and } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '@equipment-management/db/schema';
+import { users as usersTable } from '@equipment-management/db/schema';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto';
 import {
   User,
@@ -9,147 +12,61 @@ import {
 } from '@equipment-management/schemas';
 import { parseSortString, sortByField } from '../../common/utils/sort';
 
-// 임시 데이터 저장소 (실제로는 DB를 사용)
-// ✅ AuthService의 테스트 사용자 ID와 동기화 (UUID v4 형식)
-// ✅ SSOT: UserRoleValues 사용
-const users: User[] = [
-  {
-    id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', // AuthService admin과 동일
-    email: 'admin@example.com',
-    name: '관리자',
-    role: UserRoleValues.LAB_MANAGER,
-    isActive: true,
-    lastLogin: null,
-    deletedAt: null,
-    equipmentCount: 0,
-    rentalsCount: 0,
-    createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-01-01'),
-  },
-  {
-    id: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', // AuthService manager와 동일
-    email: 'manager@example.com',
-    name: 'RF팀 관리자',
-    role: UserRoleValues.TECHNICAL_MANAGER,
-    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
-    department: '연구개발부',
-    position: '팀장',
-    phoneNumber: '010-1234-5678',
-    isActive: true,
-    lastLogin: null,
-    deletedAt: null,
-    equipmentCount: 5,
-    rentalsCount: 2,
-    createdAt: new Date('2023-01-02'),
-    updatedAt: new Date('2023-02-15'),
-  },
-  {
-    id: '12345678-1234-4567-8901-234567890abc', // AuthService user와 동일
-    email: 'user@example.com',
-    name: '시험실무자',
-    role: UserRoleValues.TEST_ENGINEER,
-    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
-    department: '연구개발부',
-    position: '연구원',
-    phoneNumber: '010-2345-6789',
-    isActive: true,
-    lastLogin: null,
-    deletedAt: null,
-    equipmentCount: 3,
-    rentalsCount: 1,
-    createdAt: new Date('2023-01-03'),
-    updatedAt: new Date('2023-03-10'),
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440003',
-    email: 'user1@example.com',
-    name: '김사용',
-    role: UserRoleValues.TEST_ENGINEER,
-    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
-    department: '연구개발부',
-    position: '연구원',
-    phoneNumber: '010-3456-7890',
-    isActive: true,
-    lastLogin: null,
-    deletedAt: null,
-    equipmentCount: 2,
-    rentalsCount: 0,
-    createdAt: new Date('2023-01-04'),
-    updatedAt: new Date('2023-02-20'),
-  },
-  {
-    id: '550e8400-e29b-41d4-a716-446655440004',
-    email: 'inactive@example.com',
-    name: '퇴사자',
-    role: UserRoleValues.TEST_ENGINEER,
-    teamId: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
-    department: '연구개발부',
-    position: '연구원',
-    isActive: false,
-    lastLogin: null,
-    deletedAt: null,
-    equipmentCount: 0,
-    rentalsCount: 0,
-    createdAt: new Date('2023-01-05'),
-    updatedAt: new Date('2023-04-15'),
-  },
-];
-
 @Injectable()
 export class UsersService {
+  constructor(
+    @Inject('DRIZZLE_INSTANCE')
+    private readonly db: PostgresJsDatabase<typeof schema>
+  ) {}
+
   async findAll(query: UserQueryDto): Promise<UserListResponse> {
-    let filteredUsers = [...users];
+    // 필터 조건들을 수집
+    const conditions = [];
 
-    // 이메일 필터링
+    // 이메일 필터
     if (query.email) {
-      const emailFilter = query.email.toLowerCase();
-      filteredUsers = filteredUsers.filter((user) =>
-        user.email.toLowerCase().includes(emailFilter)
-      );
+      conditions.push(ilike(usersTable.email, `%${query.email}%`));
     }
 
-    // 이름 필터링
+    // 이름 필터
     if (query.name) {
-      const nameFilter = query.name.toLowerCase();
-      filteredUsers = filteredUsers.filter((user) => user.name.toLowerCase().includes(nameFilter));
+      conditions.push(ilike(usersTable.name, `%${query.name}%`));
     }
 
-    // 역할 필터링
+    // 역할 필터
     if (query.roles) {
-      const roles = query.roles.split(',');
-      filteredUsers = filteredUsers.filter((user) => roles.includes(user.role));
+      const roleList = query.roles.split(',');
+      conditions.push(inArray(usersTable.role, roleList));
     }
 
-    // 팀 필터링
+    // 팀 필터
     if (query.teams) {
-      const teams = query.teams.split(',');
-      filteredUsers = filteredUsers.filter((user) => user.teamId && teams.includes(user.teamId));
+      const teamList = query.teams.split(',');
+      conditions.push(inArray(usersTable.teamId, teamList));
     }
 
-    // 부서 필터링
-    if (query.department) {
-      const departmentFilter = query.department.toLowerCase();
-      filteredUsers = filteredUsers.filter(
-        (user) => user.department && user.department.toLowerCase().includes(departmentFilter)
-      );
+    // 쿼리 빌드
+    let dbQuery = this.db.select().from(usersTable);
+
+    // 조건이 있으면 and()로 결합
+    if (conditions.length > 0) {
+      dbQuery = dbQuery.where(and(...conditions)) as any;
     }
 
-    // 활성 상태 필터링
-    if (query.isActive !== undefined) {
-      filteredUsers = filteredUsers.filter((user) => user.isActive === query.isActive);
-    }
+    // 전체 데이터 조회
+    const allUsers = await dbQuery;
 
-    // 검색어 필터링
-    if (query.search) {
-      const searchLowerCase = query.search.toLowerCase();
-      filteredUsers = filteredUsers.filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchLowerCase) ||
-          user.email.toLowerCase().includes(searchLowerCase) ||
-          (user.position && user.position.toLowerCase().includes(searchLowerCase)) ||
-          (user.department && user.department.toLowerCase().includes(searchLowerCase))
-      );
-    }
+    let filteredUsers = allUsers.map(
+      (user) =>
+        ({
+          ...user,
+          isActive: true, // DB 스키마에 isActive 필드가 없으므로 기본값 사용
+          lastLogin: null,
+          deletedAt: null,
+          equipmentCount: 0,
+          rentalsCount: 0,
+        }) as User
+    );
 
     // 정렬
     const sortConfig = parseSortString(query.sort);
@@ -179,13 +96,41 @@ export class UsersService {
   }
 
   async findOne(id: string): Promise<User | null> {
-    const user = users.find((user) => user.id === id);
-    return user || null;
+    const user = await this.db.query.users.findFirst({
+      where: eq(usersTable.id, id),
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      ...user,
+      isActive: true,
+      lastLogin: null,
+      deletedAt: null,
+      equipmentCount: 0,
+      rentalsCount: 0,
+    } as User;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    const user = users.find((user) => user.email.toLowerCase() === email.toLowerCase());
-    return user || null;
+    const user = await this.db.query.users.findFirst({
+      where: eq(usersTable.email, email),
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      ...user,
+      isActive: true,
+      lastLogin: null,
+      deletedAt: null,
+      equipmentCount: 0,
+      rentalsCount: 0,
+    } as User;
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -195,63 +140,71 @@ export class UsersService {
       throw new BadRequestException(`이메일 '${createUserDto.email}'는 이미 사용 중입니다.`);
     }
 
-    const now = new Date();
-    const user = {
-      id: createUserDto.id || randomUUID(),
-      ...createUserDto,
+    const [createdUser] = await this.db
+      .insert(usersTable)
+      .values({
+        id: createUserDto.id,
+        email: createUserDto.email,
+        name: createUserDto.name,
+        role: createUserDto.role || 'test_engineer',
+        teamId: createUserDto.teamId,
+        site: createUserDto.site,
+        location: createUserDto.location,
+        position: createUserDto.position,
+      })
+      .returning();
+
+    return {
+      ...createdUser,
+      isActive: true,
+      lastLogin: null,
+      deletedAt: null,
       equipmentCount: 0,
       rentalsCount: 0,
-      createdAt: now,
-      updatedAt: now,
     } as User;
-
-    users.push(user);
-    return user;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
-    const userIndex = users.findIndex((user) => user.id === id);
-    if (userIndex === -1) {
+    const user = await this.findOne(id);
+    if (!user) {
       return null;
     }
 
-    const updatedUser = {
-      ...users[userIndex],
-      ...updateUserDto,
-      updatedAt: new Date(),
-    } as User;
+    const [updatedUser] = await this.db
+      .update(usersTable)
+      .set({
+        ...updateUserDto,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, id))
+      .returning();
 
-    users[userIndex] = updatedUser;
-    return updatedUser;
+    return {
+      ...updatedUser,
+      isActive: true,
+      lastLogin: null,
+      deletedAt: null,
+      equipmentCount: 0,
+      rentalsCount: 0,
+    } as User;
   }
 
   async remove(id: string): Promise<boolean> {
-    const userIndex = users.findIndex((user) => user.id === id);
-    if (userIndex === -1) {
-      return false;
-    }
+    const result = await this.db.delete(usersTable).where(eq(usersTable.id, id)).returning();
 
-    // 실제 시스템에서는 사용자가 소유한 장비나 대여 기록이 있는지 확인 필요
-    // 여기서는 임시로 삭제만 수행
-    users.splice(userIndex, 1);
-    return true;
+    return result.length > 0;
   }
 
-  // 사용자 활성/비활성화
+  // 사용자 활성/비활성화 (향후 isActive 필드 추가 시 구현)
   async toggleActive(id: string, isActive: boolean): Promise<User | null> {
-    const userIndex = users.findIndex((user) => user.id === id);
-    if (userIndex === -1) {
+    const user = await this.findOne(id);
+    if (!user) {
       return null;
     }
 
-    const updatedUser = {
-      ...users[userIndex],
-      isActive,
-      updatedAt: new Date(),
-    } as User;
-
-    users[userIndex] = updatedUser;
-    return updatedUser;
+    // TODO: DB 스키마에 isActive 필드 추가 후 구현
+    // 현재는 조회만 수행
+    return user;
   }
 
   // 사용자 권한 조회
