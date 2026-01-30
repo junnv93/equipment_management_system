@@ -1,4 +1,7 @@
 import { pgTable, uuid, varchar, timestamp, text } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { equipment } from './equipment';
+import { users } from './users';
 
 /**
  * 장비 위치 변동 이력 테이블
@@ -7,13 +10,27 @@ import { pgTable, uuid, varchar, timestamp, text } from 'drizzle-orm/pg-core';
  */
 export const equipmentLocationHistory = pgTable('equipment_location_history', {
   id: uuid('id').primaryKey().defaultRandom().notNull(),
-  equipmentId: varchar('equipment_id', { length: 36 }).notNull(),
+  equipmentId: uuid('equipment_id')
+    .notNull()
+    .references(() => equipment.id, { onDelete: 'cascade' }),
   changedAt: timestamp('changed_at').notNull(),
   newLocation: varchar('new_location', { length: 100 }).notNull(),
   notes: text('notes'),
-  changedBy: varchar('changed_by', { length: 36 }), // 변경자 (users 테이블 참조)
+  changedBy: uuid('changed_by').references(() => users.id), // 변경자 (users 테이블 참조)
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+// Relations 정의
+export const equipmentLocationHistoryRelations = relations(equipmentLocationHistory, ({ one }) => ({
+  equipment: one(equipment, {
+    fields: [equipmentLocationHistory.equipmentId],
+    references: [equipment.id],
+  }),
+  changer: one(users, {
+    fields: [equipmentLocationHistory.changedBy],
+    references: [users.id],
+  }),
+}));
 
 export type EquipmentLocationHistory = typeof equipmentLocationHistory.$inferSelect;
 export type NewEquipmentLocationHistory = typeof equipmentLocationHistory.$inferInsert;

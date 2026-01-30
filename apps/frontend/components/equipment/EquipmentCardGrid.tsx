@@ -19,12 +19,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
+import { UsagePeriodBadge } from './UsagePeriodBadge';
 import { HighlightText } from '@/components/shared/HighlightText';
 import { cn } from '@/lib/utils';
 import {
   getEquipmentStatusStyle,
   shouldDisplayCalibrationStatus,
 } from '@/lib/constants/equipment-status-styles';
+import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
   items: Equipment[];
@@ -146,7 +148,12 @@ const EquipmentCard = memo(function EquipmentCard({
 
     // 30일 초과 - 정상
     return null;
-  }, [equipment.status, equipment.calibrationRequired, equipment.calibrationMethod, equipment.nextCalibrationDate]);
+  }, [
+    equipment.status,
+    equipment.calibrationRequired,
+    equipment.calibrationMethod,
+    equipment.nextCalibrationDate,
+  ]);
 
   return (
     <Card
@@ -167,10 +174,7 @@ const EquipmentCard = memo(function EquipmentCard({
               )}
             </CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              <HighlightText
-                text={equipment.managementNumber || '-'}
-                search={searchTerm}
-              />
+              <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
@@ -190,6 +194,16 @@ const EquipmentCard = memo(function EquipmentCard({
                 {calibrationStatus.label}
               </Badge>
             )}
+            {/* 임시등록 장비 사용 기간 표시 */}
+            {equipment.status === 'temporary' &&
+              equipment.usagePeriodStart &&
+              equipment.usagePeriodEnd && (
+                <UsagePeriodBadge
+                  startDate={equipment.usagePeriodStart}
+                  endDate={equipment.usagePeriodEnd}
+                  className="text-xs"
+                />
+              )}
           </div>
         </div>
       </CardHeader>
@@ -214,6 +228,17 @@ const EquipmentCard = memo(function EquipmentCard({
             </div>
           )}
 
+          {/* 소유처 원본 번호 (공용/렌탈 장비) */}
+          {equipment.isShared && equipment.externalIdentifier && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <dt className="sr-only">소유처 번호</dt>
+              <Package className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <dd className="truncate" title={`소유처 번호: ${equipment.externalIdentifier}`}>
+                {equipment.externalIdentifier}
+              </dd>
+            </div>
+          )}
+
           {equipment.lastCalibrationDate && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <dt className="sr-only">마지막 교정일</dt>
@@ -227,11 +252,8 @@ const EquipmentCard = memo(function EquipmentCard({
               <dt className="sr-only">교정 방법</dt>
               <Wrench className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <dd>
-                {equipment.calibrationMethod === 'external_calibration'
-                  ? '외부 교정'
-                  : equipment.calibrationMethod === 'self_inspection'
-                    ? '자체 점검'
-                    : '비대상'}
+                {CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod] ||
+                  equipment.calibrationMethod}
               </dd>
             </div>
           )}
@@ -240,10 +262,7 @@ const EquipmentCard = memo(function EquipmentCard({
 
       <CardFooter className="pt-2">
         <Button variant="outline" size="sm" className="w-full group" asChild>
-          <Link
-            href={`/equipment/${equipment.id}`}
-            aria-label={`${equipment.name} 상세 보기`}
-          >
+          <Link href={`/equipment/${equipment.id}`} aria-label={`${equipment.name} 상세 보기`}>
             상세 보기
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
@@ -261,11 +280,7 @@ const EquipmentCard = memo(function EquipmentCard({
  * - 검색어 하이라이팅
  * - 스켈레톤 로딩
  */
-function EquipmentCardGridComponent({
-  items,
-  isLoading,
-  searchTerm,
-}: EquipmentCardGridProps) {
+function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentCardGridProps) {
   if (isLoading) {
     return (
       <div
@@ -289,9 +304,7 @@ function EquipmentCardGridComponent({
       >
         <Package className="h-12 w-12 text-muted-foreground mb-4" />
         <p className="text-lg font-medium">표시할 장비가 없습니다</p>
-        <p className="text-muted-foreground text-sm mt-1">
-          다른 필터를 적용해보세요
-        </p>
+        <p className="text-muted-foreground text-sm mt-1">다른 필터를 적용해보세요</p>
       </div>
     );
   }

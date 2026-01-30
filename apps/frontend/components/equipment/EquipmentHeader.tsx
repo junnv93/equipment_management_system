@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { useAuth } from '@/hooks/use-auth';
+import { useEquipmentWithInitialData } from '@/hooks/use-equipment';
 import { cn } from '@/lib/utils';
 import { shouldDisplayCalibrationStatus } from '@/lib/constants/equipment-status-styles';
 
@@ -38,10 +39,19 @@ interface EquipmentHeaderProps {
  * - 텍스트: 흰색
  * - 상태 뱃지: UL 색상 팔레트
  * - 액션 버튼: 권한별 표시/숨김
+ *
+ * Client-Side Cache 구독:
+ * - Server Component에서 받은 초기 데이터를 initialData로 사용
+ * - mutation 후 React Query 캐시가 갱신되면 즉시 UI 반영 (예: 부적합 등록)
  */
-export function EquipmentHeader({ equipment }: EquipmentHeaderProps) {
+export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeaderProps) {
   const router = useRouter();
   const { hasRole } = useAuth();
+
+  // ✅ SSOT: Client-side 캐시 구독 훅 사용
+  // Server Component에서 받은 초기 데이터를 initialData로 사용하고,
+  // mutation 후 캐시가 갱신되면 즉시 UI에 반영됨
+  const { data: equipment } = useEquipmentWithInitialData(initialEquipment);
 
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장
   const equipmentId = String(equipment.id);
@@ -59,9 +69,7 @@ export function EquipmentHeader({ equipment }: EquipmentHeaderProps) {
    * - 공용장비(isShared)는 삭제 불가
    * - 승인 전(pending_approval) 또는 반려(rejected) 상태만 삭제 가능
    */
-  const canEdit =
-    !equipment.isShared &&
-    equipment.status !== 'retired';
+  const canEdit = !equipment.isShared && equipment.status !== 'retired';
   const canDelete =
     hasRole(['lab_manager', 'system_admin']) &&
     !equipment.isShared &&
@@ -127,14 +135,22 @@ export function EquipmentHeader({ equipment }: EquipmentHeaderProps) {
         days: diffDays,
         label: diffDays === 0 ? '오늘 교정 만료' : `${diffDays}일 후 교정 만료`,
         color: diffDays <= 7 ? 'text-orange-100' : 'text-yellow-100',
-        bg: diffDays <= 7 ? 'bg-orange-500/90 border-orange-400' : 'bg-yellow-600/90 border-yellow-400',
+        bg:
+          diffDays <= 7
+            ? 'bg-orange-500/90 border-orange-400'
+            : 'bg-yellow-600/90 border-yellow-400',
         icon: diffDays <= 7 ? AlertTriangle : Calendar,
       };
     }
 
     // 30일 초과 - 정상
     return null;
-  }, [equipment.status, equipment.calibrationRequired, equipment.calibrationMethod, equipment.nextCalibrationDate]);
+  }, [
+    equipment.status,
+    equipment.calibrationRequired,
+    equipment.calibrationMethod,
+    equipment.nextCalibrationDate,
+  ]);
 
   /**
    * 기본 상태 설정 (가용성 기준)
@@ -229,9 +245,7 @@ export function EquipmentHeader({ equipment }: EquipmentHeaderProps) {
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
               {/* 왼쪽: 장비명, 모델명, 관리번호 */}
               <div className="space-y-3 flex-1">
-                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">
-                  {equipment.name}
-                </h1>
+                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{equipment.name}</h1>
                 <div className="flex flex-wrap items-center gap-3 text-white/80">
                   <span className="text-base">
                     모델: <span className="font-medium text-white">{equipment.modelName}</span>
@@ -247,7 +261,10 @@ export function EquipmentHeader({ equipment }: EquipmentHeaderProps) {
                     <>
                       <span className="text-white/40">•</span>
                       <span className="text-base">
-                        S/N: <span className="font-mono font-medium text-white">{equipment.serialNumber}</span>
+                        S/N:{' '}
+                        <span className="font-mono font-medium text-white">
+                          {equipment.serialNumber}
+                        </span>
                       </span>
                     </>
                   )}
@@ -336,10 +353,7 @@ export function EquipmentHeader({ equipment }: EquipmentHeaderProps) {
 
               {/* 공용장비 배지 */}
               {equipment.isShared && (
-                <SharedEquipmentBadge
-                  sharedSource={equipment.sharedSource}
-                  size="default"
-                />
+                <SharedEquipmentBadge sharedSource={equipment.sharedSource} size="default" />
               )}
             </div>
           </div>

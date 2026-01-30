@@ -1,5 +1,7 @@
 import { pgTable, varchar, timestamp, text, decimal, uuid, date } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { equipment } from './equipment';
+import { teams } from './teams';
 
 // 교정 상태 정의
 export const calibrationStatus = [
@@ -60,3 +62,11 @@ export const calibrations = pgTable('calibrations', {
 // 교정 타입
 export type Calibration = typeof calibrations.$inferSelect;
 export type NewCalibration = typeof calibrations.$inferInsert;
+
+// Drizzle relations for joins
+export const calibrationsRelations = relations(calibrations, ({ one }) => ({
+  equipment: one(equipment, {
+    fields: [calibrations.equipmentId],
+    references: [equipment.id],
+  }),
+}));

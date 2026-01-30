@@ -15,7 +15,13 @@ export const checkoutStatus = [
   'pending', // 반출 신청 (승인 대기)
   'approved', // 승인됨 (반출 가능)
   'rejected', // 거절됨
-  'checked_out', // 반출 중
+  'checked_out', // 반출 중 (교정/수리)
+  // 대여 목적 양측 확인 상태 (시험소간 대여)
+  'lender_checked', // ① 반출 전 확인 완료 (빌려주는 측)
+  'borrower_received', // ② 인수 확인 완료 (빌리는 측)
+  'in_use', // 사용 중 (대여)
+  'borrower_returned', // ③ 반납 전 확인 완료 (빌린 측)
+  'lender_received', // ④ 반입 확인 완료 (빌려준 측)
   'returned', // 반입 완료 (검사 완료)
   'return_approved', // 반입 최종 승인됨 (기술책임자 승인)
   'overdue', // 반입 기한 초과

@@ -16,7 +16,11 @@ import { z } from 'zod';
  * - calibration_overdue: 교정 기한 초과
  * - non_conforming: 부적합 (임시적, 수리 후 복귀 가능)
  * - spare: 여분 (보유하고 있지만 상시 관리하지 않음)
- * - retired: 사용 중지 (영구 폐기)
+ * - retired: 사용 중지 (영구 폐기) - deprecated, disposed 사용 권장
+ * - pending_disposal: 폐기 대기 (시험소장 승인 전)
+ * - disposed: 폐기 완료 (retired 대체)
+ * - temporary: 임시 등록 (공용/렌탈장비)
+ * - inactive: 비활성 (임시등록 장비 사용 완료)
  *
  * @see docs/development/API_STANDARDS.md
  */
@@ -28,7 +32,11 @@ export const EquipmentStatusEnum = z.enum([
   'calibration_overdue', // 교정 기한 초과
   'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
   'spare', // 여분
-  'retired', // 사용 중지 (영구 폐기)
+  'retired', // 사용 중지 (영구 폐기) - deprecated
+  'pending_disposal', // 폐기 대기 (시험소장 승인 전)
+  'disposed', // 폐기 완료
+  'temporary', // 임시 등록 (공용/렌탈장비)
+  'inactive', // 비활성 (임시등록 장비 사용 완료)
 ]);
 
 export type EquipmentStatus = z.infer<typeof EquipmentStatusEnum>;
@@ -169,6 +177,22 @@ export const SITE_LABELS: Record<Site, string> = {
 export const MANAGEMENT_NUMBER_PATTERN = /^(SUW|UIW|PYT)-[ERWSAP]\d{4}$/;
 
 /**
+ * 임시 관리번호 프리픽스 (공용/렌탈 장비용)
+ *
+ * 임시 장비(공용/렌탈)는 별도 관리번호 체계를 사용하여:
+ * - 정규 장비와 명확히 구분
+ * - 정규 일련번호 소진 방지
+ * - 반납 후 번호 재사용 가능
+ */
+export const TEMPORARY_EQUIPMENT_PREFIX = 'TEMP-' as const;
+
+/**
+ * 임시 관리번호 정규식 패턴
+ * 형식: TEMP-XXX-XYYYY (예: TEMP-SUW-E0001)
+ */
+export const TEMPORARY_MANAGEMENT_NUMBER_PATTERN = /^TEMP-(SUW|UIW|PYT)-[ERWSAP]\d{4}$/;
+
+/**
  * 관리번호 생성 헬퍼 함수
  * @param site 사이트명 (suwon, uiwang, pyeongtaek)
  * @param classification 분류 (fcc_emc_rf, general_emc 등)
@@ -215,6 +239,68 @@ export function parseManagementNumber(managementNumber: string): {
   };
 }
 
+/**
+ * 임시 관리번호 생성 헬퍼 함수 (공용/렌탈 장비용)
+ * @param site 사이트명 (suwon, uiwang, pyeongtaek)
+ * @param classification 분류 (fcc_emc_rf, general_emc 등)
+ * @param serialNumber 일련번호 (4자리 숫자 문자열, 예: '0001')
+ * @returns 임시 관리번호 (예: 'TEMP-SUW-E0001')
+ *
+ * @example
+ * generateTemporaryManagementNumber('suwon', 'fcc_emc_rf', '0001')
+ * // returns 'TEMP-SUW-E0001'
+ */
+export function generateTemporaryManagementNumber(
+  site: Site,
+  classification: Classification,
+  serialNumber: string
+): string {
+  const siteCode = SITE_TO_CODE[site];
+  const classificationCode = CLASSIFICATION_TO_CODE[classification];
+  return `${TEMPORARY_EQUIPMENT_PREFIX}${siteCode}-${classificationCode}${serialNumber}`;
+}
+
+/**
+ * 임시 관리번호 파싱 헬퍼 함수
+ * @param managementNumber 임시 관리번호 (예: 'TEMP-SUW-E0001')
+ * @returns 파싱된 컴포넌트 또는 null (유효하지 않은 경우)
+ */
+export function parseTemporaryManagementNumber(managementNumber: string): {
+  siteCode: SiteCode;
+  site: Site;
+  classificationCode: string;
+  classification: Classification;
+  serialNumber: string;
+} | null {
+  const match = managementNumber.match(TEMPORARY_MANAGEMENT_NUMBER_PATTERN);
+  if (!match) {
+    return null;
+  }
+
+  // "TEMP-SUW-E0001" → substring(5) = "SUW-E0001"
+  const withoutPrefix = managementNumber.substring(5);
+  const siteCode = withoutPrefix.substring(0, 3) as SiteCode;
+  const classificationCode = withoutPrefix.charAt(4);
+  const serialNumber = withoutPrefix.substring(5);
+
+  return {
+    siteCode,
+    site: CODE_TO_SITE[siteCode],
+    classificationCode,
+    classification: CODE_TO_CLASSIFICATION[classificationCode],
+    serialNumber,
+  };
+}
+
+/**
+ * 관리번호가 임시 관리번호인지 확인
+ * @param managementNumber 관리번호
+ * @returns 임시 관리번호 여부
+ */
+export function isTemporaryManagementNumber(managementNumber: string): boolean {
+  return managementNumber.startsWith(TEMPORARY_EQUIPMENT_PREFIX);
+}
+
 // 팀 ID 스키마 (UUID 형식)
 // ✅ 팀 ID는 UUID 형식의 문자열
 export const TeamIdSchema = z.string().uuid().optional();
@@ -239,7 +325,13 @@ export const CHECKOUT_STATUS_VALUES = [
   'pending', // 반출 신청 (승인 대기)
   'approved', // 승인됨 (반출 가능)
   'rejected', // 거절됨
-  'checked_out', // 반출 중
+  'checked_out', // 반출 중 (교정/수리)
+  // 대여 목적 양측 확인 상태 (시험소간 대여)
+  'lender_checked', // ① 반출 전 확인 완료 (빌려주는 측)
+  'borrower_received', // ② 인수 확인 완료 (빌리는 측)
+  'in_use', // 사용 중 (대여)
+  'borrower_returned', // ③ 반납 전 확인 완료 (빌린 측)
+  'lender_received', // ④ 반입 확인 완료 (빌려준 측)
   'returned', // 반입 완료 (검사 완료)
   'return_approved', // 반입 최종 승인됨 (기술책임자 승인)
   'overdue', // 반입 기한 초과
@@ -767,6 +859,59 @@ export const ReturnApprovalStatusEnum = z.enum(
 export type ReturnApprovalStatus = z.infer<typeof ReturnApprovalStatusEnum>;
 
 // ============================================================================
+// 대여 목적 양측 4단계 확인 관련 ENUM (시험소간 대여)
+// ============================================================================
+
+/**
+ * SINGLE SOURCE OF TRUTH: 상태 확인 단계 열거형 (대여 목적)
+ *
+ * 대여 목적 반출 시 양측 4단계 확인을 위한 단계 구분:
+ * - lender_checkout: ① 반출 전 확인 (빌려주는 측)
+ * - borrower_receive: ② 인수 시 확인 (빌리는 측)
+ * - borrower_return: ③ 반납 전 확인 (빌린 측)
+ * - lender_return: ④ 반입 시 확인 (빌려준 측)
+ */
+export const CONDITION_CHECK_STEP_VALUES = [
+  'lender_checkout', // ① 반출 전 (빌려주는 측)
+  'borrower_receive', // ② 인수 시 (빌리는 측)
+  'borrower_return', // ③ 반납 전 (빌린 측)
+  'lender_return', // ④ 반입 시 (빌려준 측)
+] as const;
+
+export const ConditionCheckStepEnum = z.enum(
+  CONDITION_CHECK_STEP_VALUES as unknown as [string, ...string[]]
+);
+export type ConditionCheckStep = z.infer<typeof ConditionCheckStepEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 외관/작동 상태 열거형
+ *
+ * 상태 확인 시 외관 및 작동 상태를 기록하기 위한 열거형:
+ * - normal: 정상
+ * - abnormal: 이상
+ */
+export const CONDITION_STATUS_VALUES = ['normal', 'abnormal'] as const;
+
+export const ConditionStatusEnum = z.enum(
+  CONDITION_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type ConditionStatus = z.infer<typeof ConditionStatusEnum>;
+
+/**
+ * SINGLE SOURCE OF TRUTH: 부속품 상태 열거형
+ *
+ * 상태 확인 시 부속품 상태를 기록하기 위한 열거형:
+ * - complete: 완전 (모든 부속품 확인)
+ * - incomplete: 불완전 (일부 부속품 누락)
+ */
+export const ACCESSORIES_STATUS_VALUES = ['complete', 'incomplete'] as const;
+
+export const AccessoriesStatusEnum = z.enum(
+  ACCESSORIES_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type AccessoriesStatus = z.infer<typeof AccessoriesStatusEnum>;
+
+// ============================================================================
 // LABELS 맵 정의 (UI 표시용 한글 라벨)
 // ============================================================================
 
@@ -782,8 +927,30 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
   calibration_overdue: '교정 기한 초과',
   non_conforming: '부적합',
   spare: '여분',
-  retired: '폐기',
+  retired: '폐기', // deprecated - disposed 사용 권장
+  pending_disposal: '폐기대기',
+  disposed: '폐기완료',
+  temporary: '임시등록',
+  inactive: '비활성',
 };
+
+/**
+ * UI 필터에 표시할 장비 상태 목록
+ * - deprecated, 시스템 생성, 내부 전용 상태는 제외
+ * - retired: deprecated (disposed로 대체)
+ * - calibration_scheduled: 시스템이 자동으로 생성하는 상태
+ * - temporary, inactive: 내부 공용/렌탈 장비 워크플로 전용
+ */
+export const EQUIPMENT_STATUS_FILTER_OPTIONS: EquipmentStatus[] = [
+  'available',
+  'in_use',
+  'checked_out',
+  'calibration_overdue',
+  'non_conforming',
+  'spare',
+  'pending_disposal',
+  'disposed',
+];
 
 /**
  * 교정 방법 라벨 (UI 표시용)
@@ -814,6 +981,12 @@ export const CHECKOUT_STATUS_LABELS: Record<CheckoutStatus, string> = {
   approved: '승인됨',
   rejected: '거절됨',
   checked_out: '반출 중',
+  // 대여 목적 양측 확인 상태 라벨
+  lender_checked: '반출 전 확인 완료',
+  borrower_received: '인수 확인 완료',
+  in_use: '사용 중',
+  borrower_returned: '반납 전 확인 완료',
+  lender_received: '반입 확인 완료',
   returned: '반입 완료',
   return_approved: '반입 승인됨',
   overdue: '기한 초과',
@@ -975,6 +1148,32 @@ export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, str
   rejected: '반려됨',
 };
 
+/**
+ * 상태 확인 단계 라벨 (UI 표시용)
+ */
+export const CONDITION_CHECK_STEP_LABELS: Record<ConditionCheckStep, string> = {
+  lender_checkout: '① 반출 전 확인 (빌려주는 측)',
+  borrower_receive: '② 인수 시 확인 (빌리는 측)',
+  borrower_return: '③ 반납 전 확인 (빌린 측)',
+  lender_return: '④ 반입 시 확인 (빌려준 측)',
+};
+
+/**
+ * 외관/작동 상태 라벨 (UI 표시용)
+ */
+export const CONDITION_STATUS_LABELS: Record<ConditionStatus, string> = {
+  normal: '정상',
+  abnormal: '이상',
+};
+
+/**
+ * 부속품 상태 라벨 (UI 표시용)
+ */
+export const ACCESSORIES_STATUS_LABELS: Record<AccessoriesStatus, string> = {
+  complete: '완전',
+  incomplete: '불완전',
+};
+
 // ============================================================================
 // CONST VALUE OBJECTS (TypeScript enum 스타일 접근용)
 // Zod enum은 .VALUE 형식 접근이 불가능하므로, 기존 코드 호환성을 위해 제공
@@ -1114,7 +1313,11 @@ export const EquipmentStatusValues = {
   CALIBRATION_OVERDUE: 'calibration_overdue',
   NON_CONFORMING: 'non_conforming',
   SPARE: 'spare',
-  RETIRED: 'retired',
+  RETIRED: 'retired', // deprecated - DISPOSED 사용 권장
+  PENDING_DISPOSAL: 'pending_disposal',
+  DISPOSED: 'disposed',
+  TEMPORARY: 'temporary',
+  INACTIVE: 'inactive',
 } as const;
 
 /**
@@ -1144,6 +1347,118 @@ export const UserStatusValues = {
  */
 export const CalibrationFactorApprovalStatusValues = {
   PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+/**
+ * 반출 상태 값 객체 (dot-notation 접근용)
+ * @example CheckoutStatusValues.PENDING // 'pending'
+ */
+export const CheckoutStatusValues = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  CHECKED_OUT: 'checked_out',
+  LENDER_CHECKED: 'lender_checked',
+  BORROWER_RECEIVED: 'borrower_received',
+  IN_USE: 'in_use',
+  BORROWER_RETURNED: 'borrower_returned',
+  LENDER_RECEIVED: 'lender_received',
+  RETURNED: 'returned',
+  RETURN_APPROVED: 'return_approved',
+  OVERDUE: 'overdue',
+  CANCELED: 'canceled',
+} as const;
+
+/**
+ * 상태 확인 단계 값 객체 (dot-notation 접근용)
+ * @example ConditionCheckStepValues.LENDER_CHECKOUT // 'lender_checkout'
+ */
+export const ConditionCheckStepValues = {
+  LENDER_CHECKOUT: 'lender_checkout',
+  BORROWER_RECEIVE: 'borrower_receive',
+  BORROWER_RETURN: 'borrower_return',
+  LENDER_RETURN: 'lender_return',
+} as const;
+
+/**
+ * 외관/작동 상태 값 객체 (dot-notation 접근용)
+ * @example ConditionStatusValues.NORMAL // 'normal'
+ */
+export const ConditionStatusValues = {
+  NORMAL: 'normal',
+  ABNORMAL: 'abnormal',
+} as const;
+
+/**
+ * 부속품 상태 값 객체 (dot-notation 접근용)
+ * @example AccessoriesStatusValues.COMPLETE // 'complete'
+ */
+export const AccessoriesStatusValues = {
+  COMPLETE: 'complete',
+  INCOMPLETE: 'incomplete',
+} as const;
+
+// ============================================================================
+// 통합 승인 상태 (승인 관리 통합 페이지용)
+// ============================================================================
+
+/**
+ * SINGLE SOURCE OF TRUTH: 통합 승인 상태 열거형
+ *
+ * 승인 관리 통합 페이지에서 사용하는 표준 승인 상태입니다.
+ * 다단계 승인 프로세스를 지원합니다.
+ *
+ * ⚠️ 주의: equipment-request.ts의 ApprovalStatus와 구분하기 위해
+ * "UnifiedApprovalStatus"로 명명합니다.
+ *
+ * 표준 상태값 (소문자 + 언더스코어):
+ * - pending: 대기 (1단계 승인용)
+ * - pending_review: 검토 대기 (다단계 1단계)
+ * - reviewed: 검토 완료 (다단계 2단계 대기)
+ * - approved: 승인 완료
+ * - rejected: 반려
+ *
+ * 상태 전이 예시:
+ * - 1단계 승인: pending → approved/rejected
+ * - 2단계 승인 (폐기): pending_review → reviewed → approved/rejected
+ * - 3단계 승인 (교정계획서): pending_review → reviewed → approved/rejected
+ *
+ * @see docs/development/FRONTEND_UI_PROMPTS(UI-3: 승인 관리 통합 페이지_수정O).md
+ */
+export const UNIFIED_APPROVAL_STATUS_VALUES = [
+  'pending', // 대기 (1단계 승인용)
+  'pending_review', // 검토 대기 (다단계 1단계)
+  'reviewed', // 검토 완료 (다단계 2단계 대기)
+  'approved', // 승인 완료
+  'rejected', // 반려
+] as const;
+
+export const UnifiedApprovalStatusEnum = z.enum(
+  UNIFIED_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type UnifiedApprovalStatus = z.infer<typeof UnifiedApprovalStatusEnum>;
+
+/**
+ * 통합 승인 상태 라벨 (UI 표시용)
+ */
+export const UNIFIED_APPROVAL_STATUS_LABELS: Record<UnifiedApprovalStatus, string> = {
+  pending: '대기',
+  pending_review: '검토 대기',
+  reviewed: '검토 완료',
+  approved: '승인 완료',
+  rejected: '반려',
+};
+
+/**
+ * 통합 승인 상태 값 객체 (dot-notation 접근용)
+ * @example UnifiedApprovalStatusValues.PENDING // 'pending'
+ */
+export const UnifiedApprovalStatusValues = {
+  PENDING: 'pending',
+  PENDING_REVIEW: 'pending_review',
+  REVIEWED: 'reviewed',
   APPROVED: 'approved',
   REJECTED: 'rejected',
 } as const;

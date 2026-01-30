@@ -112,7 +112,7 @@
 /vercel-react-best-practices
 /web-design-guidelines
 /frontend-design
-
+/playwright-skill
 AGENTS.md와 /docs/development/API_STANDARDS.md를 참조하여 교정 관리 페이지를 구현해줘.
 
 ⚠️ SSOT 필수:

@@ -41,6 +41,9 @@ export type Equipment = Omit<SchemaEquipmentResponse, 'id' | 'createdAt' | 'upda
   image?: string; // 이미지 URL
   createdAt: string | Date;
   updatedAt: string | Date;
+  // 임시등록 장비 전용 필드 (공용/렌탈)
+  usagePeriodStart?: string | Date;
+  usagePeriodEnd?: string | Date;
 };
 
 /**
@@ -318,7 +321,10 @@ const equipmentApi = {
   },
 
   // 요청 반려
-  rejectRequest: async (requestUuid: string, rejectionReason: string): Promise<EquipmentRequest> => {
+  rejectRequest: async (
+    requestUuid: string,
+    rejectionReason: string
+  ): Promise<EquipmentRequest> => {
     const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/reject`, {
       rejectionReason,
     });

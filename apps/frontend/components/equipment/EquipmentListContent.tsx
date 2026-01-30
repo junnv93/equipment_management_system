@@ -121,6 +121,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
     setSite,
     setStatus,
     setCalibrationMethod,
+    setClassification,
     setIsShared,
     setCalibrationDueFilter,
     setTeamId,
@@ -139,16 +140,10 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   // ✅ Vercel Best Practice: Query Key 객체 사용
   // - React Query v5는 queryKey 객체를 deep comparison으로 비교
   // - useEquipmentFilters가 queryFilters를 useMemo로 안정화하므로 캐시 히트율 최적
-  const {
-    data,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['equipmentList', queryFilters],
     queryFn: () => equipmentApi.getEquipmentList(queryFilters),
-    initialData,  // Server에서 전달받은 초기 데이터
+    initialData, // Server에서 전달받은 초기 데이터
     retry: 3,
     staleTime: 30 * 1000, // 30초
   });
@@ -166,13 +161,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
 
   // 에러 상태 처리
   if (error) {
-    return (
-      <ErrorAlert
-        error={error}
-        title="장비 목록 로드 실패"
-        onRetry={() => refetch()}
-      />
-    );
+    return <ErrorAlert error={error} title="장비 목록 로드 실패" onRetry={() => refetch()} />;
   }
 
   // 초기 로딩 상태 (initialData가 없는 경우에만)
@@ -188,6 +177,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         onSiteChange={setSite}
         onStatusChange={setStatus}
         onCalibrationMethodChange={setCalibrationMethod}
+        onClassificationChange={setClassification}
         onIsSharedChange={setIsShared}
         onCalibrationDueFilterChange={setCalibrationDueFilter}
         onTeamIdChange={setTeamId}
@@ -209,15 +199,24 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
           {/* 정렬 표시 */}
           {filters.sortBy && filters.sortBy !== 'createdAt' && (
             <Badge variant="outline" className="text-xs">
-              정렬: {filters.sortBy === 'name' ? '이름순' : filters.sortBy === 'lastCalibrationDate' ? '교정일순' : filters.sortBy === 'nextCalibrationDate' ? '교정기한순' : filters.sortBy === 'status' ? '상태순' : filters.sortBy === 'managementNumber' ? '관리번호순' : ''}
+              정렬:{' '}
+              {filters.sortBy === 'name'
+                ? '이름순'
+                : filters.sortBy === 'lastCalibrationDate'
+                  ? '교정일순'
+                  : filters.sortBy === 'nextCalibrationDate'
+                    ? '교정기한순'
+                    : filters.sortBy === 'status'
+                      ? '상태순'
+                      : filters.sortBy === 'managementNumber'
+                        ? '관리번호순'
+                        : ''}
               ({filters.sortOrder === 'asc' ? '오름차순' : '내림차순'})
             </Badge>
           )}
 
           {/* 뷰 전환 */}
-          {isClient && (
-            <ViewToggle view={view} onChange={setView} />
-          )}
+          {isClient && <ViewToggle view={view} onChange={setView} />}
         </div>
       </div>
 
@@ -244,11 +243,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
               searchTerm={filters.search}
             />
           ) : (
-            <EquipmentCardGrid
-              items={items}
-              isLoading={isFetching}
-              searchTerm={filters.search}
-            />
+            <EquipmentCardGrid items={items} isLoading={isFetching} searchTerm={filters.search} />
           )}
 
           {/* 페이지네이션 */}

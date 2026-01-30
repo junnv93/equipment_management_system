@@ -23,16 +23,10 @@ import { useEffect, useCallback, useMemo, memo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardDescription,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardDescription, CardTitle } from '@/components/ui/card';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { CalibrationList } from '@/components/dashboard/CalibrationList';
-import { OverdueRentalsList } from '@/components/dashboard/OverdueRentalsList';
+import { OverdueCheckoutsList } from '@/components/dashboard/OverdueCheckoutsList';
 import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader';
 import { QuickActionButtons } from '@/components/dashboard/QuickActionButtons';
@@ -46,7 +40,7 @@ import type {
   EquipmentByTeam,
   OverdueCalibration,
   UpcomingCalibration,
-  OverdueRental,
+  OverdueCheckout,
   RecentActivity,
 } from '@/lib/api/dashboard-api';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,9 +56,7 @@ import {
 // 큰 컴포넌트는 dynamic import로 지연 로딩
 const EquipmentStatusChart = dynamic(
   () =>
-    import('@/components/dashboard/EquipmentStatusChart').then(
-      (mod) => mod.EquipmentStatusChart
-    ),
+    import('@/components/dashboard/EquipmentStatusChart').then((mod) => mod.EquipmentStatusChart),
   {
     loading: () => <Skeleton className="h-48 w-full" />,
     ssr: false,
@@ -111,7 +103,7 @@ interface DashboardUpdateEvent {
   equipmentByTeam: EquipmentByTeam[];
   overdueCalibrations: OverdueCalibration[];
   upcomingCalibrations: UpcomingCalibration[];
-  overdueRentals: OverdueRental[];
+  overdueCheckouts: OverdueCheckout[];
   recentActivities: RecentActivity[];
   equipmentStatusStats: Record<string, number>;
 }
@@ -122,7 +114,7 @@ export interface DashboardClientProps {
   initialEquipmentByTeam?: EquipmentByTeam[];
   initialOverdueCalibrations?: OverdueCalibration[];
   initialUpcomingCalibrations?: UpcomingCalibration[];
-  initialOverdueRentals?: OverdueRental[];
+  initialOverdueCheckouts?: OverdueCheckout[];
   initialRecentActivities?: RecentActivity[];
   initialEquipmentStatusStats?: Record<string, number>;
 }
@@ -141,7 +133,7 @@ function DashboardClientComponent({
   initialEquipmentByTeam,
   initialOverdueCalibrations,
   initialUpcomingCalibrations,
-  initialOverdueRentals,
+  initialOverdueCheckouts,
   initialRecentActivities,
   initialEquipmentStatusStats,
 }: DashboardClientProps) {
@@ -170,14 +162,15 @@ function DashboardClientComponent({
     staleTime: STALE_TIME,
   });
 
-  const { data: equipmentByTeam = initialEquipmentByTeam || [], isLoading: teamLoading } =
-    useQuery({
+  const { data: equipmentByTeam = initialEquipmentByTeam || [], isLoading: teamLoading } = useQuery(
+    {
       queryKey: ['equipment-by-team', userRole],
       queryFn: () => dashboardApi.getEquipmentByTeam(),
       initialData: initialEquipmentByTeam,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
-    });
+    }
+  );
 
   const {
     data: overdueCalibrations = initialOverdueCalibrations || [],
@@ -201,25 +194,23 @@ function DashboardClientComponent({
     staleTime: STALE_TIME,
   });
 
-  const { data: overdueRentals = initialOverdueRentals || [], isLoading: rentalLoading } =
+  const { data: overdueCheckouts = initialOverdueCheckouts || [], isLoading: checkoutsLoading } =
     useQuery({
-      queryKey: ['overdue-rentals', userRole],
+      queryKey: ['overdue-checkouts', userRole],
       queryFn: () => dashboardApi.getOverdueCheckouts(),
-      initialData: initialOverdueRentals,
+      initialData: initialOverdueCheckouts,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
     });
 
-  const {
-    data: recentActivities = initialRecentActivities || [],
-    isLoading: activitiesLoading,
-  } = useQuery({
-    queryKey: ['recent-activities', userRole],
-    queryFn: () => dashboardApi.getRecentActivitiesByRole(userRole),
-    initialData: initialRecentActivities,
-    gcTime: GC_TIME,
-    staleTime: STALE_TIME,
-  });
+  const { data: recentActivities = initialRecentActivities || [], isLoading: activitiesLoading } =
+    useQuery({
+      queryKey: ['recent-activities', userRole],
+      queryFn: () => dashboardApi.getRecentActivitiesByRole(userRole),
+      initialData: initialRecentActivities,
+      gcTime: GC_TIME,
+      staleTime: STALE_TIME,
+    });
 
   const {
     data: equipmentStatusStats = initialEquipmentStatusStats || {},
@@ -237,20 +228,11 @@ function DashboardClientComponent({
     (data: DashboardUpdateEvent) => {
       queryClient.setQueryData(['dashboard-summary', userRole], data.summary);
       queryClient.setQueryData(['equipment-by-team', userRole], data.equipmentByTeam);
-      queryClient.setQueryData(
-        ['overdue-calibrations', userRole],
-        data.overdueCalibrations
-      );
-      queryClient.setQueryData(
-        ['upcoming-calibrations', userRole],
-        data.upcomingCalibrations
-      );
-      queryClient.setQueryData(['overdue-rentals', userRole], data.overdueRentals);
+      queryClient.setQueryData(['overdue-calibrations', userRole], data.overdueCalibrations);
+      queryClient.setQueryData(['upcoming-calibrations', userRole], data.upcomingCalibrations);
+      queryClient.setQueryData(['overdue-checkouts', userRole], data.overdueCheckouts);
       queryClient.setQueryData(['recent-activities', userRole], data.recentActivities);
-      queryClient.setQueryData(
-        ['equipment-status-stats', userRole],
-        data.equipmentStatusStats
-      );
+      queryClient.setQueryData(['equipment-status-stats', userRole], data.equipmentStatusStats);
 
       setUpdateCount((prev) => prev + 1);
 
@@ -358,12 +340,7 @@ function DashboardClientComponent({
   return (
     <div className="space-y-6 p-4 md:p-6">
       {/* 실시간 업데이트 알림 (스크린 리더용) */}
-      <div
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-        role="status"
-      >
+      <div aria-live="polite" aria-atomic="true" className="sr-only" role="status">
         {updateCount > 0 && `대시보드가 ${updateCount}회 업데이트되었습니다.`}
       </div>
 
@@ -406,10 +383,7 @@ function DashboardClientComponent({
           대시보드 상세 정보
         </h2>
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList
-            className="w-full justify-start overflow-x-auto"
-            aria-label="대시보드 탭"
-          >
+          <TabsList className="w-full justify-start overflow-x-auto" aria-label="대시보드 탭">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.value}
@@ -424,10 +398,7 @@ function DashboardClientComponent({
           {/* 개요 탭 */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <EquipmentStatusChart
-                data={equipmentStatusStats || {}}
-                loading={statsLoading}
-              />
+              <EquipmentStatusChart data={equipmentStatusStats || {}} loading={statsLoading} />
               <CalibrationList
                 title="교정 예정 장비"
                 description="다음 30일 이내 교정 예정인 장비"
@@ -435,7 +406,7 @@ function DashboardClientComponent({
                 loading={upcomingLoading}
                 type="upcoming"
               />
-              <OverdueRentalsList data={overdueRentals} loading={rentalLoading} />
+              <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
             </div>
 
             <RecentActivities data={recentActivities} loading={activitiesLoading} />
@@ -510,7 +481,7 @@ function DashboardClientComponent({
           {/* 대여/반출 탭 (관리자용) */}
           <TabsContent value="rental" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <OverdueRentalsList data={overdueRentals} loading={rentalLoading} />
+              <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">반출 현황</CardTitle>

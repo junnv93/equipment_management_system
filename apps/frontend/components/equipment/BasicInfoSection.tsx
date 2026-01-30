@@ -44,12 +44,12 @@ import {
  * ✅ 팀 이름 = 분류 이름 (통일)
  */
 const TEAM_TYPE_TO_CLASSIFICATION: Record<string, Classification> = {
-  FCC_EMC_RF: 'fcc_emc_rf',     // E
-  GENERAL_EMC: 'general_emc',   // R
-  GENERAL_RF: 'general_rf',     // W
-  SAR: 'sar',                   // S
+  FCC_EMC_RF: 'fcc_emc_rf', // E
+  GENERAL_EMC: 'general_emc', // R
+  GENERAL_RF: 'general_rf', // W
+  SAR: 'sar', // S
   AUTOMOTIVE_EMC: 'automotive_emc', // A
-  SOFTWARE: 'software',         // P
+  SOFTWARE: 'software', // P
   // 레거시 호환성
   RF: 'fcc_emc_rf',
   EMC: 'general_emc',
@@ -68,13 +68,21 @@ const SITE_TEAMS: Record<Site, Array<{ value: string; label: string; type: strin
     { value: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', label: 'FCC EMC/RF', type: 'FCC_EMC_RF' },
     { value: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289', label: 'General EMC', type: 'GENERAL_EMC' },
     { value: '7fd28076-fd5e-4d36-b051-bbf8a97b82db', label: 'SAR', type: 'SAR' },
-    { value: 'f0a32655-00f9-4ecd-b43c-af4faed499b6', label: 'Automotive EMC', type: 'AUTOMOTIVE_EMC' },
+    {
+      value: 'f0a32655-00f9-4ecd-b43c-af4faed499b6',
+      label: 'Automotive EMC',
+      type: 'AUTOMOTIVE_EMC',
+    },
   ],
   uiwang: [
     { value: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', label: 'General RF', type: 'GENERAL_RF' },
   ],
   pyeongtaek: [
-    { value: 'b2c3d4e5-f6a7-4890-bcde-f01234567890', label: 'Automotive EMC', type: 'AUTOMOTIVE_EMC' },
+    {
+      value: 'b2c3d4e5-f6a7-4890-bcde-f01234567890',
+      label: 'Automotive EMC',
+      type: 'AUTOMOTIVE_EMC',
+    },
   ],
 };
 
@@ -117,15 +125,16 @@ export interface FormValues {
   status?: EquipmentStatus;
   calibrationResult?: string;
   correctionFactor?: string;
+  externalIdentifier?: string; // 소유처 원본 식별번호 (공용/렌탈 장비)
 }
 
 interface Team {
-  id: string;  // UUID 형식
-  uuid?: string;  // 하위 호환성
+  id: string; // UUID 형식
+  uuid?: string; // 하위 호환성
   name: string;
-  type: string;  // RF, SAR, EMC, AUTO, SOFTWARE
+  type: string; // RF, SAR, EMC, AUTO, SOFTWARE
   site: Site;
-  classificationCode?: string;  // E, R, S, A, P
+  classificationCode?: string; // E, R, S, A, P
 }
 
 interface BasicInfoSectionProps {
@@ -143,10 +152,14 @@ export function BasicInfoSection({
 }: BasicInfoSectionProps) {
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
-  const [filteredTeams, setFilteredTeams] = useState<Array<{ value: string; label: string; type: string }>>([]);
+  const [filteredTeams, setFilteredTeams] = useState<
+    Array<{ value: string; label: string; type: string }>
+  >([]);
 
   // 관리번호 자동 생성용 상태
-  const [selectedClassification, setSelectedClassification] = useState<Classification | undefined>();
+  const [selectedClassification, setSelectedClassification] = useState<
+    Classification | undefined
+  >();
   const [serialNumberInput, setSerialNumberInput] = useState('');
   const { setValue } = useFormContext<FormValues>();
 
@@ -154,30 +167,33 @@ export function BasicInfoSection({
    * 팀 선택 시 분류코드 자동 설정 핸들러
    * 팀이 분류코드를 결정하므로, 팀 선택 시 자동으로 분류 설정
    */
-  const handleTeamChange = useCallback((teamId: string) => {
-    // API에서 가져온 팀 목록에서 찾기
-    const selectedTeam = teams.find((t) => t.id === teamId);
-    if (selectedTeam) {
-      const classification = TEAM_TYPE_TO_CLASSIFICATION[selectedTeam.type];
-      if (classification) {
-        setSelectedClassification(classification);
-        setValue('classification', classification);
-      }
-      return;
-    }
-
-    // 폴백: SITE_TEAMS에서 찾기
-    if (selectedSite) {
-      const fallbackTeam = SITE_TEAMS[selectedSite]?.find((t) => t.value === teamId);
-      if (fallbackTeam) {
-        const classification = TEAM_TYPE_TO_CLASSIFICATION[fallbackTeam.type];
+  const handleTeamChange = useCallback(
+    (teamId: string) => {
+      // API에서 가져온 팀 목록에서 찾기
+      const selectedTeam = teams.find((t) => t.id === teamId);
+      if (selectedTeam) {
+        const classification = TEAM_TYPE_TO_CLASSIFICATION[selectedTeam.type];
         if (classification) {
           setSelectedClassification(classification);
           setValue('classification', classification);
         }
+        return;
       }
-    }
-  }, [teams, selectedSite, setValue]);
+
+      // 폴백: SITE_TEAMS에서 찾기
+      if (selectedSite) {
+        const fallbackTeam = SITE_TEAMS[selectedSite]?.find((t) => t.value === teamId);
+        if (fallbackTeam) {
+          const classification = TEAM_TYPE_TO_CLASSIFICATION[fallbackTeam.type];
+          if (classification) {
+            setSelectedClassification(classification);
+            setValue('classification', classification);
+          }
+        }
+      }
+    },
+    [teams, selectedSite, setValue]
+  );
 
   // 현재 관리번호 미리보기
   const managementNumberPreview = useMemo(() => {
@@ -302,7 +318,7 @@ export function BasicInfoSection({
                   {selectedClassification ? CLASSIFICATION_TO_CODE[selectedClassification] : 'X'}
                 </Badge>
                 <Badge variant="outline" className="font-mono text-sm">
-                  {serialNumberInput ? formatSerialNumber(serialNumberInput) || '????'  : '????'}
+                  {serialNumberInput ? formatSerialNumber(serialNumberInput) || '????' : '????'}
                 </Badge>
                 {managementNumberPreview && (
                   <span className="ml-auto text-sm font-semibold text-green-600">
@@ -314,9 +330,7 @@ export function BasicInfoSection({
               <FormField
                 control={control}
                 name="managementNumber"
-                render={({ field }) => (
-                  <input type="hidden" {...field} />
-                )}
+                render={({ field }) => <input type="hidden" {...field} />}
               />
             </div>
           )}
@@ -372,11 +386,16 @@ export function BasicInfoSection({
                           {CLASSIFICATION_TO_CODE[selectedClassification]}
                         </Badge>
                         <span className="text-sm">
-                          {CLASSIFICATION_OPTIONS.find((o) => o.value === selectedClassification)?.label}
+                          {
+                            CLASSIFICATION_OPTIONS.find((o) => o.value === selectedClassification)
+                              ?.label
+                          }
                         </span>
                       </>
                     ) : (
-                      <span className="text-sm text-muted-foreground">팀을 선택하면 자동 설정됩니다</span>
+                      <span className="text-sm text-muted-foreground">
+                        팀을 선택하면 자동 설정됩니다
+                      </span>
                     )}
                   </div>
                   <input type="hidden" {...field} />
@@ -438,8 +457,8 @@ export function BasicInfoSection({
                 </FormLabel>
                 <Select
                   onValueChange={(value) => {
-                    field.onChange(value);  // UUID 문자열로 저장
-                    handleTeamChange(value);  // 분류코드 자동 설정
+                    field.onChange(value); // UUID 문자열로 저장
+                    handleTeamChange(value); // 분류코드 자동 설정
                   }}
                   value={field.value ? String(field.value) : undefined}
                   disabled={!selectedSite || isLoadingTeams}
@@ -460,7 +479,8 @@ export function BasicInfoSection({
                   <SelectContent>
                     {filteredTeams.map((team) => (
                       <SelectItem key={team.value} value={team.value}>
-                        {team.label} ({CLASSIFICATION_TO_CODE[TEAM_TYPE_TO_CLASSIFICATION[team.type]] || '?'})
+                        {team.label} (
+                        {CLASSIFICATION_TO_CODE[TEAM_TYPE_TO_CLASSIFICATION[team.type]] || '?'})
                       </SelectItem>
                     ))}
                   </SelectContent>

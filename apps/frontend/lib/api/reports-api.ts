@@ -1,6 +1,6 @@
 import { apiClient } from './api-client';
 
-export type ReportType = 
+export type ReportType =
   | 'equipment_inventory'
   | 'calibration_status'
   | 'utilization_report'
@@ -22,7 +22,7 @@ export const getEquipmentUsage = async (
 ) => {
   try {
     const response = await apiClient.get('/api/reports/equipment-usage', {
-      params: { startDate, endDate, equipmentId, departmentId }
+      params: { startDate, endDate, equipmentId, departmentId },
     });
     return response.data;
   } catch (error) {
@@ -32,13 +32,10 @@ export const getEquipmentUsage = async (
 };
 
 // 교정 상태 보고서 조회
-export const getCalibrationStatus = async (
-  status?: string,
-  timeframe?: string
-) => {
+export const getCalibrationStatus = async (status?: string, timeframe?: string) => {
   try {
     const response = await apiClient.get('/api/reports/calibration-status', {
-      params: { status, timeframe }
+      params: { status, timeframe },
     });
     return response.data;
   } catch (error) {
@@ -47,22 +44,30 @@ export const getCalibrationStatus = async (
   }
 };
 
-// 대여 통계 보고서 조회
-export const getRentalStatistics = async (
+/**
+ * 반출 통계 보고서 조회 (대여/교정/수리 포함)
+ */
+export const getCheckoutStatistics = async (
   startDate?: string,
   endDate?: string,
   departmentId?: string
 ) => {
   try {
+    // 백엔드 API 엔드포인트는 유지 (백엔드 호환성)
     const response = await apiClient.get('/api/reports/rental-statistics', {
-      params: { startDate, endDate, departmentId }
+      params: { startDate, endDate, departmentId },
     });
     return response.data;
   } catch (error) {
-    console.error('대여 통계 보고서 조회 실패:', error);
+    console.error('반출 통계 보고서 조회 실패:', error);
     throw error;
   }
 };
+
+/**
+ * @deprecated Use getCheckoutStatistics instead
+ */
+export const getRentalStatistics = getCheckoutStatistics;
 
 // 장비 활용률 보고서 조회
 export const getUtilizationRate = async (
@@ -72,7 +77,7 @@ export const getUtilizationRate = async (
 ) => {
   try {
     const response = await apiClient.get('/api/reports/utilization-rate', {
-      params: { period, equipmentId, categoryId }
+      params: { period, equipmentId, categoryId },
     });
     return response.data;
   } catch (error) {
@@ -89,7 +94,7 @@ export const getEquipmentDowntime = async (
 ) => {
   try {
     const response = await apiClient.get('/api/reports/equipment-downtime', {
-      params: { startDate, endDate, equipmentId }
+      params: { startDate, endDate, equipmentId },
     });
     return response.data;
   } catch (error) {
@@ -107,9 +112,9 @@ export const exportEquipmentUsage = async (
   try {
     const response = await apiClient.get('/api/reports/export/equipment-usage', {
       params: { format, startDate, endDate },
-      responseType: 'blob' // 파일 다운로드를 위한 설정
+      responseType: 'blob', // 파일 다운로드를 위한 설정
     });
-    
+
     // 파일 다운로드 처리
     const filename = `equipment-usage-report-${new Date().toISOString().split('T')[0]}.${format}`;
     const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -119,7 +124,7 @@ export const exportEquipmentUsage = async (
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     return {
       success: true,
       format,
@@ -141,7 +146,7 @@ const getReportFileName = (reportType: ReportType, format: ReportFormat): string
     calibration_status: '교정_상태',
     utilization_report: '활용률_보고서',
     team_equipment: '팀별_장비_현황',
-    maintenance_report: '유지보수_보고서'
+    maintenance_report: '유지보수_보고서',
   };
 
   return `${reportNames[reportType]}_${dateStr}.${format}`;
@@ -161,7 +166,7 @@ export const generateReport = async (
     if (dateRange !== 'custom') {
       const now = new Date();
       endDate = now.toISOString().split('T')[0];
-      
+
       switch (dateRange) {
         case 'last_week':
           const lastWeek = new Date(now);
@@ -185,7 +190,7 @@ export const generateReport = async (
           break;
       }
     }
-    
+
     // 보고서 유형에 따라 다른 API 호출
     let endpoint = '';
     switch (reportType) {
@@ -207,13 +212,13 @@ export const generateReport = async (
       default:
         throw new Error('지원하지 않는 보고서 유형입니다.');
     }
-    
+
     // API 호출
     const response = await apiClient.get(endpoint, {
       params: { format, startDate, endDate, ...additionalParams },
-      responseType: 'blob'
+      responseType: 'blob',
     });
-    
+
     // 응답 MIME 타입 처리
     let mimeType: string;
     switch (format) {
@@ -229,7 +234,7 @@ export const generateReport = async (
       default:
         mimeType = 'application/octet-stream';
     }
-    
+
     // 파일 다운로드 처리
     const filename = getReportFileName(reportType, format);
     const url = window.URL.createObjectURL(new Blob([response.data], { type: mimeType }));
@@ -238,13 +243,13 @@ export const generateReport = async (
     link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
-    
+
     // 브라우저 메모리 해제
     setTimeout(() => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     }, 100);
-    
+
     return {
       success: true,
       reportType,
@@ -255,10 +260,10 @@ export const generateReport = async (
       dateRange,
       startDate,
       endDate,
-      additionalParams
+      additionalParams,
     };
   } catch (error) {
     console.error('보고서 생성 실패:', error);
     throw error;
   }
-}; 
+};

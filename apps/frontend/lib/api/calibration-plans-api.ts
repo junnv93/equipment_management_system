@@ -7,6 +7,7 @@ import {
   CALIBRATION_PLAN_STATUS_LABELS as SSOT_STATUS_LABELS,
   SITE_LABELS as SSOT_SITE_LABELS,
 } from '@equipment-management/schemas';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export type { CalibrationPlanStatus, Site };
@@ -208,18 +209,18 @@ const calibrationPlansApi = {
       }
     });
 
-    const url = `/api/calibration-plans${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.CALIBRATION_PLANS.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get(url).then((res) => transformPaginatedResponse<CalibrationPlan>(res));
   },
 
   // 계획서 상세 조회 (항목 포함)
   getCalibrationPlan: async (uuid: string): Promise<CalibrationPlan> => {
-    return apiClient.get(`/api/calibration-plans/${uuid}`).then((res) => res.data);
+    return apiClient.get(API_ENDPOINTS.CALIBRATION_PLANS.GET(uuid)).then((res) => res.data);
   },
 
   // 계획서 생성
   createCalibrationPlan: async (data: CreateCalibrationPlanDto): Promise<CalibrationPlan> => {
-    return apiClient.post('/api/calibration-plans', data).then((res) => res.data);
+    return apiClient.post(API_ENDPOINTS.CALIBRATION_PLANS.CREATE, data).then((res) => res.data);
   },
 
   // 계획서 수정
@@ -227,24 +228,26 @@ const calibrationPlansApi = {
     uuid: string,
     data: UpdateCalibrationPlanDto
   ): Promise<CalibrationPlan> => {
-    return apiClient.patch(`/api/calibration-plans/${uuid}`, data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.CALIBRATION_PLANS.UPDATE(uuid), data)
+      .then((res) => res.data);
   },
 
   // 계획서 삭제
   deleteCalibrationPlan: async (uuid: string): Promise<{ uuid: string; deleted: boolean }> => {
-    return apiClient.delete(`/api/calibration-plans/${uuid}`).then((res) => res.data);
+    return apiClient.delete(API_ENDPOINTS.CALIBRATION_PLANS.DELETE(uuid)).then((res) => res.data);
   },
 
   // 승인 요청 (레거시)
   /** @deprecated submitForReview 사용 권장 */
   submitCalibrationPlan: async (uuid: string): Promise<CalibrationPlan> => {
-    return apiClient.post(`/api/calibration-plans/${uuid}/submit`).then((res) => res.data);
+    return apiClient.post(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT(uuid)).then((res) => res.data);
   },
 
   // 검토 요청 (기술책임자 → 품질책임자)
   submitForReview: async (uuid: string, data: SubmitForReviewDto): Promise<CalibrationPlan> => {
     return apiClient
-      .post(`/api/calibration-plans/${uuid}/submit-for-review`, data)
+      .post(API_ENDPOINTS.CALIBRATION_PLANS.SUBMIT_FOR_REVIEW(uuid), data)
       .then((res) => res.data);
   },
 
@@ -253,7 +256,9 @@ const calibrationPlansApi = {
     uuid: string,
     data: ReviewCalibrationPlanDto
   ): Promise<CalibrationPlan> => {
-    return apiClient.patch(`/api/calibration-plans/${uuid}/review`, data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.CALIBRATION_PLANS.REVIEW(uuid), data)
+      .then((res) => res.data);
   },
 
   // 최종 승인 (시험소장)
@@ -261,7 +266,9 @@ const calibrationPlansApi = {
     uuid: string,
     data: ApproveCalibrationPlanDto
   ): Promise<CalibrationPlan> => {
-    return apiClient.patch(`/api/calibration-plans/${uuid}/approve`, data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.CALIBRATION_PLANS.APPROVE(uuid), data)
+      .then((res) => res.data);
   },
 
   // 반려 (품질책임자 또는 시험소장)
@@ -269,7 +276,9 @@ const calibrationPlansApi = {
     uuid: string,
     data: RejectCalibrationPlanDto
   ): Promise<CalibrationPlan> => {
-    return apiClient.patch(`/api/calibration-plans/${uuid}/reject`, data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.CALIBRATION_PLANS.REJECT(uuid), data)
+      .then((res) => res.data);
   },
 
   // 항목 확인
@@ -279,7 +288,7 @@ const calibrationPlansApi = {
     data: ConfirmPlanItemDto
   ): Promise<CalibrationPlanItem> => {
     return apiClient
-      .patch(`/api/calibration-plans/${planUuid}/items/${itemUuid}/confirm`, data)
+      .patch(API_ENDPOINTS.CALIBRATION_PLANS.CONFIRM_ITEM(planUuid, itemUuid), data)
       .then((res) => res.data);
   },
 
@@ -313,14 +322,14 @@ const calibrationPlansApi = {
   // 검토 대기 계획서 목록 (품질책임자용)
   getPendingReviewPlans: async (): Promise<PaginatedResponse<CalibrationPlan>> => {
     return apiClient
-      .get('/api/calibration-plans?status=pending_review')
+      .get(API_ENDPOINTS.CALIBRATION_PLANS.PENDING_REVIEW)
       .then((res) => transformPaginatedResponse<CalibrationPlan>(res));
   },
 
   // 승인 대기 계획서 목록 (시험소장용)
   getPendingApprovalPlans: async (): Promise<PaginatedResponse<CalibrationPlan>> => {
     return apiClient
-      .get('/api/calibration-plans?status=pending_approval')
+      .get(API_ENDPOINTS.CALIBRATION_PLANS.PENDING_APPROVAL)
       .then((res) => transformPaginatedResponse<CalibrationPlan>(res));
   },
 

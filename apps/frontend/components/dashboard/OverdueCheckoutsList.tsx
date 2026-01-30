@@ -3,26 +3,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/utils/date';
-import { OverdueRental } from '@/lib/api/dashboard-api';
+import { OverdueCheckout } from '@/lib/api/dashboard-api';
 import { AlertCircle, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
-interface OverdueRentalsListProps {
-  data: OverdueRental[];
+/**
+ * 반납 기한 초과 반출 목록 컴포넌트
+ *
+ * 대여/교정/수리 등 반출된 장비 중 반납 기한이 초과된 항목을 표시합니다.
+ */
+interface OverdueCheckoutsListProps {
+  data: OverdueCheckout[];
   loading?: boolean;
 }
 
-export function OverdueRentalsList({ data, loading = false }: OverdueRentalsListProps) {
+export function OverdueCheckoutsList({ data, loading = false }: OverdueCheckoutsListProps) {
   const router = useRouter();
 
-  // 대여 상세 페이지로 이동
-  const handleViewRental = (id: string) => {
-    router.push(`/rentals/${id}`);
+  // 반출 상세 페이지로 이동
+  const handleViewCheckout = (id: string) => {
+    router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id));
   };
 
-  // 모든 연체 대여 목록 페이지로 이동
+  // 모든 연체 반출 목록 페이지로 이동
   const handleViewAll = () => {
-    router.push('/rentals?status=overdue');
+    router.push(`${FRONTEND_ROUTES.CHECKOUTS.LIST}?status=overdue`);
   };
 
   return (
@@ -38,7 +44,7 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
                 </Badge>
               )}
             </CardTitle>
-            <CardDescription>대여 기한이 지난 장비 목록입니다</CardDescription>
+            <CardDescription>반출 기한이 지난 장비 목록입니다</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -56,31 +62,31 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
           </div>
         ) : data.length === 0 ? (
           <div className="py-6 text-center text-muted-foreground">
-            <p>기한이 초과된 대여가 없습니다</p>
+            <p>기한이 초과된 반출이 없습니다</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {data.slice(0, 3).map((rental) => (
-              <div key={rental.id} className="flex justify-between items-center">
+            {data.slice(0, 3).map((checkout) => (
+              <div key={checkout.id} className="flex justify-between items-center">
                 <div className="space-y-1">
                   <p className="text-sm font-medium line-clamp-1">
-                    {rental.equipment?.name || '알 수 없음'}
+                    {checkout.equipment?.name || '알 수 없음'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {rental.user?.name || '알 수 없음'} ·{' '}
-                    {formatDateTime(rental.expectedReturnDate)}
+                    {checkout.user?.name || '알 수 없음'} ·{' '}
+                    {formatDateTime(checkout.expectedReturnDate)}
                   </p>
                 </div>
                 <div className="flex items-center">
                   <Badge variant="destructive" className="text-xs flex items-center">
                     <AlertCircle className="h-3 w-3 mr-1" />
-                    {rental.daysOverdue}일 초과
+                    {checkout.daysOverdue}일 초과
                   </Badge>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 ml-1"
-                    onClick={() => handleViewRental(rental.id)}
+                    onClick={() => handleViewCheckout(checkout.id)}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -90,7 +96,7 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
 
             {data.length > 3 && (
               <Button variant="link" size="sm" className="w-full mt-2" onClick={handleViewAll}>
-                모든 기한 초과 대여 보기 ({data.length})
+                모든 기한 초과 반출 보기 ({data.length})
               </Button>
             )}
           </div>
@@ -99,3 +105,8 @@ export function OverdueRentalsList({ data, loading = false }: OverdueRentalsList
     </Card>
   );
 }
+
+/**
+ * @deprecated Use OverdueCheckoutsList instead
+ */
+export const OverdueRentalsList = OverdueCheckoutsList;

@@ -7,10 +7,14 @@ import {
   type EquipmentStatus,
   type CalibrationMethod,
   type Site,
+  CalibrationMethodEnum,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +32,12 @@ import { AttachmentSection } from './AttachmentSection';
 import { LocationHistorySection } from './LocationHistorySection';
 import { MaintenanceHistorySection } from './MaintenanceHistorySection';
 import { IncidentHistorySection } from './IncidentHistorySection';
-import { CalibrationHistorySection, type CreateCalibrationHistoryInput, type CalibrationRecord } from './CalibrationHistorySection';
+import {
+  CalibrationHistorySection,
+  type CreateCalibrationHistoryInput,
+  type CalibrationRecord,
+} from './CalibrationHistorySection';
+import { CalibrationValidityChecker } from './CalibrationValidityChecker';
 import { AlertCircle, CheckCircle2, Clock, Shield } from 'lucide-react';
 import dayjs from 'dayjs';
 import equipmentApi, {
@@ -59,7 +68,7 @@ const _createDynamicSchema = (
     serialNumber: z.string().min(1, '일련번호를 입력하세요').optional(),
     location: z.string().min(1, '현재 위치를 입력하세요').optional(),
     technicalManager: z.string().min(1, '기술책임자를 입력하세요').optional(),
-    calibrationMethod: z.enum(['external_calibration', 'self_inspection', 'not_applicable']).optional(),
+    calibrationMethod: CalibrationMethodEnum.optional(),
 
     // 조건부 필수 필드 - 외부 교정일 때
     ...(calibrationMethod === 'external_calibration' && {
@@ -96,10 +105,18 @@ const _createDynamicSchema = (
     accessories: z.string().optional(),
     initialLocation: z.string().optional(),
     installationDate: z.string().optional(),
-    status: z.enum([
-      'available', 'in_use', 'checked_out', 'calibration_scheduled',
-      'calibration_overdue', 'non_conforming', 'spare', 'retired'
-    ]).optional(),
+    status: z
+      .enum([
+        'available',
+        'in_use',
+        'checked_out',
+        'calibration_scheduled',
+        'calibration_overdue',
+        'non_conforming',
+        'spare',
+        'retired',
+      ])
+      .optional(),
     calibrationResult: z.string().optional(),
     correctionFactor: z.string().optional(),
   });
@@ -138,6 +155,7 @@ interface EquipmentFormProps {
   onCancel?: () => void;
   isEdit?: boolean;
   isLoading?: boolean;
+  mode?: 'normal' | 'temporary'; // 임시등록 모드 추가 (공용/렌탈 장비)
   existingAttachments?: Array<{
     uuid: string;
     fileName: string;
@@ -187,8 +205,11 @@ export function EquipmentForm({
   onCancel,
   isEdit = false,
   isLoading = false,
+  mode = 'normal',
   existingAttachments = [],
 }: EquipmentFormProps) {
+  // 임시등록 모드 여부
+  const isTemporary = mode === 'temporary';
   // 사용자 정보 가져오기
   const { user, isManager: _isManager, isAdmin: _isAdmin } = useAuth();
   const { toast } = useToast();
@@ -236,10 +257,25 @@ export function EquipmentForm({
    * - 기존: 배열 인덱스 기반 → 삭제 시 인덱스 불일치 버그
    * - 개선: tempId를 키로 사용하는 Map 구조 → 안전한 삭제/조회
    */
-  const [pendingLocationHistory, setPendingLocationHistory] = useState<PendingLocationHistoryItem[]>([]);
-  const [pendingMaintenanceHistory, setPendingMaintenanceHistory] = useState<PendingMaintenanceHistoryItem[]>([]);
-  const [pendingIncidentHistory, setPendingIncidentHistory] = useState<PendingIncidentHistoryItem[]>([]);
-  const [pendingCalibrationHistory, setPendingCalibrationHistory] = useState<PendingCalibrationHistoryItem[]>([]);
+  const [pendingLocationHistory, setPendingLocationHistory] = useState<
+    PendingLocationHistoryItem[]
+  >([]);
+  const [pendingMaintenanceHistory, setPendingMaintenanceHistory] = useState<
+    PendingMaintenanceHistoryItem[]
+  >([]);
+  const [pendingIncidentHistory, setPendingIncidentHistory] = useState<
+    PendingIncidentHistoryItem[]
+  >([]);
+  const [pendingCalibrationHistory, setPendingCalibrationHistory] = useState<
+    PendingCalibrationHistoryItem[]
+  >([]);
+
+  // 임시등록 모드 전용 상태
+  const [equipmentType, setEquipmentType] = useState<'common' | 'rental'>('common');
+  const [owner, setOwner] = useState('');
+  const [usagePeriodStart, setUsagePeriodStart] = useState('');
+  const [usagePeriodEnd, setUsagePeriodEnd] = useState('');
+  const [calibrationCertificateFile, setCalibrationCertificateFile] = useState<File | null>(null);
 
   // 기본 스키마로 폼 초기화
   const form = useForm<FormValues>({
@@ -295,6 +331,7 @@ export function EquipmentForm({
       status: (initialData?.status || 'available') as EquipmentStatus,
       calibrationResult: initialData?.calibrationResult || '',
       correctionFactor: initialData?.correctionFactor || '',
+      externalIdentifier: initialData?.externalIdentifier || '',
     },
   });
 
@@ -337,19 +374,23 @@ export function EquipmentForm({
   /**
    * 이력 저장 에러 핸들러
    */
-  const handleHistoryError = useCallback((error: unknown, historyType: string) => {
-    const errorMessage = error instanceof ApiError
-      ? error.getUserMessage()
-      : error instanceof Error
-        ? error.message
-        : '알 수 없는 오류가 발생했습니다.';
+  const handleHistoryError = useCallback(
+    (error: unknown, historyType: string) => {
+      const errorMessage =
+        error instanceof ApiError
+          ? error.getUserMessage()
+          : error instanceof Error
+            ? error.message
+            : '알 수 없는 오류가 발생했습니다.';
 
-    toast({
-      title: `${historyType} 저장 실패`,
-      description: errorMessage,
-      variant: 'destructive',
-    });
-  }, [toast]);
+      toast({
+        title: `${historyType} 저장 실패`,
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    },
+    [toast]
+  );
 
   /**
    * ★ Best Practice: tempId 생성 함수
@@ -360,172 +401,193 @@ export function EquipmentForm({
   }, []);
 
   // 이력 추가/삭제 핸들러 (수정 모드: API 호출, 등록 모드: 임시 상태 업데이트)
-  const handleAddLocationHistory = useCallback(async (data: CreateLocationHistoryInput) => {
-    if (isEdit && initialData?.uuid) {
-      // 수정 모드: API 호출
-      try {
-        const newItem = await equipmentApi.createLocationHistory(initialData.uuid, data);
-        setLocationHistory((prev) => [newItem, ...prev]);
-        toast({
-          title: '위치 변동 이력 추가',
-          description: '이력이 저장되었습니다.',
-        });
-      } catch (error) {
-        handleHistoryError(error, '위치 변동 이력');
-        throw error; // 상위 컴포넌트에서 처리할 수 있도록 재throw
-      }
-    } else {
-      // 등록 모드: 임시 상태에 추가 (화면 표시용 + 나중에 일괄 저장)
-      const tempId = generateTempId();
-      const tempItem: LocationHistoryItem = {
-        id: tempId,
-        equipmentId: '',
-        changedAt: new Date(data.changedAt),
-        newLocation: data.newLocation,
-        notes: data.notes,
-        createdAt: new Date(),
-      };
-      setLocationHistory((prev) => [tempItem, ...prev]);
-      // ★ Best Practice: tempId를 키로 저장하여 안전한 삭제 보장
-      setPendingLocationHistory((prev) => [...prev, { tempId, data }]);
-    }
-  }, [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]);
-
-  const handleDeleteLocationHistory = useCallback(async (historyId: string) => {
-    try {
-      if (isEdit) {
+  const handleAddLocationHistory = useCallback(
+    async (data: CreateLocationHistoryInput) => {
+      if (isEdit && initialData?.uuid) {
         // 수정 모드: API 호출
-        await equipmentApi.deleteLocationHistory(historyId);
+        try {
+          const newItem = await equipmentApi.createLocationHistory(initialData.uuid, data);
+          setLocationHistory((prev) => [newItem, ...prev]);
+          toast({
+            title: '위치 변동 이력 추가',
+            description: '이력이 저장되었습니다.',
+          });
+        } catch (error) {
+          handleHistoryError(error, '위치 변동 이력');
+          throw error; // 상위 컴포넌트에서 처리할 수 있도록 재throw
+        }
+      } else {
+        // 등록 모드: 임시 상태에 추가 (화면 표시용 + 나중에 일괄 저장)
+        const tempId = generateTempId();
+        const tempItem: LocationHistoryItem = {
+          id: tempId,
+          equipmentId: '',
+          changedAt: new Date(data.changedAt),
+          newLocation: data.newLocation,
+          notes: data.notes,
+          createdAt: new Date(),
+        };
+        setLocationHistory((prev) => [tempItem, ...prev]);
+        // ★ Best Practice: tempId를 키로 저장하여 안전한 삭제 보장
+        setPendingLocationHistory((prev) => [...prev, { tempId, data }]);
       }
-      // 둘 다 로컬 상태에서 제거
-      setLocationHistory((prev) => prev.filter((item) => item.id !== historyId));
-      /**
-       * ★ Best Practice: tempId 기반 삭제
-       * - 기존 인덱스 기반: locationHistory 상태와 동기화 문제 발생
-       * - 개선된 tempId 기반: historyId와 직접 매칭하여 정확한 삭제
-       */
-      if (!isEdit && historyId.startsWith('temp-')) {
-        setPendingLocationHistory((prev) => prev.filter((item) => item.tempId !== historyId));
-      }
-    } catch (error) {
-      handleHistoryError(error, '위치 변동 이력 삭제');
-      throw error;
-    }
-  }, [isEdit, handleHistoryError]);
+    },
+    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]
+  );
 
-  const handleAddMaintenanceHistory = useCallback(async (data: CreateMaintenanceHistoryInput) => {
-    if (isEdit && initialData?.uuid) {
-      // 수정 모드: API 호출
+  const handleDeleteLocationHistory = useCallback(
+    async (historyId: string) => {
       try {
-        const newItem = await equipmentApi.createMaintenanceHistory(initialData.uuid, data);
-        setMaintenanceHistory((prev) => [newItem, ...prev]);
-        toast({
-          title: '유지보수 내역 추가',
-          description: '이력이 저장되었습니다.',
-        });
+        if (isEdit) {
+          // 수정 모드: API 호출
+          await equipmentApi.deleteLocationHistory(historyId);
+        }
+        // 둘 다 로컬 상태에서 제거
+        setLocationHistory((prev) => prev.filter((item) => item.id !== historyId));
+        /**
+         * ★ Best Practice: tempId 기반 삭제
+         * - 기존 인덱스 기반: locationHistory 상태와 동기화 문제 발생
+         * - 개선된 tempId 기반: historyId와 직접 매칭하여 정확한 삭제
+         */
+        if (!isEdit && historyId.startsWith('temp-')) {
+          setPendingLocationHistory((prev) => prev.filter((item) => item.tempId !== historyId));
+        }
       } catch (error) {
-        handleHistoryError(error, '유지보수 내역');
+        handleHistoryError(error, '위치 변동 이력 삭제');
         throw error;
       }
-    } else {
-      // 등록 모드: 임시 상태에 추가
-      const tempId = generateTempId();
-      const tempItem: MaintenanceHistoryItem = {
-        id: tempId,
-        equipmentId: '',
-        performedAt: new Date(data.performedAt),
-        content: data.content,
-        createdAt: new Date(),
-      };
-      setMaintenanceHistory((prev) => [tempItem, ...prev]);
-      setPendingMaintenanceHistory((prev) => [...prev, { tempId, data }]);
-    }
-  }, [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]);
+    },
+    [isEdit, handleHistoryError]
+  );
 
-  const handleDeleteMaintenanceHistory = useCallback(async (historyId: string) => {
-    try {
-      if (isEdit) {
+  const handleAddMaintenanceHistory = useCallback(
+    async (data: CreateMaintenanceHistoryInput) => {
+      if (isEdit && initialData?.uuid) {
         // 수정 모드: API 호출
-        await equipmentApi.deleteMaintenanceHistory(historyId);
+        try {
+          const newItem = await equipmentApi.createMaintenanceHistory(initialData.uuid, data);
+          setMaintenanceHistory((prev) => [newItem, ...prev]);
+          toast({
+            title: '유지보수 내역 추가',
+            description: '이력이 저장되었습니다.',
+          });
+        } catch (error) {
+          handleHistoryError(error, '유지보수 내역');
+          throw error;
+        }
+      } else {
+        // 등록 모드: 임시 상태에 추가
+        const tempId = generateTempId();
+        const tempItem: MaintenanceHistoryItem = {
+          id: tempId,
+          equipmentId: '',
+          performedAt: new Date(data.performedAt),
+          content: data.content,
+          createdAt: new Date(),
+        };
+        setMaintenanceHistory((prev) => [tempItem, ...prev]);
+        setPendingMaintenanceHistory((prev) => [...prev, { tempId, data }]);
       }
-      setMaintenanceHistory((prev) => prev.filter((item) => item.id !== historyId));
-      // ★ Best Practice: tempId 기반 삭제
-      if (!isEdit && historyId.startsWith('temp-')) {
-        setPendingMaintenanceHistory((prev) => prev.filter((item) => item.tempId !== historyId));
-      }
-    } catch (error) {
-      handleHistoryError(error, '유지보수 내역 삭제');
-      throw error;
-    }
-  }, [isEdit, handleHistoryError]);
+    },
+    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]
+  );
 
-  const handleAddIncidentHistory = useCallback(async (data: CreateIncidentHistoryInput) => {
-    if (isEdit && initialData?.uuid) {
-      // 수정 모드: API 호출
+  const handleDeleteMaintenanceHistory = useCallback(
+    async (historyId: string) => {
       try {
-        const newItem = await equipmentApi.createIncidentHistory(initialData.uuid, data);
-        setIncidentHistory((prev) => [newItem, ...prev]);
-        toast({
-          title: '손상/수리 내역 추가',
-          description: '이력이 저장되었습니다.',
-        });
+        if (isEdit) {
+          // 수정 모드: API 호출
+          await equipmentApi.deleteMaintenanceHistory(historyId);
+        }
+        setMaintenanceHistory((prev) => prev.filter((item) => item.id !== historyId));
+        // ★ Best Practice: tempId 기반 삭제
+        if (!isEdit && historyId.startsWith('temp-')) {
+          setPendingMaintenanceHistory((prev) => prev.filter((item) => item.tempId !== historyId));
+        }
       } catch (error) {
-        handleHistoryError(error, '손상/수리 내역');
+        handleHistoryError(error, '유지보수 내역 삭제');
         throw error;
       }
-    } else {
-      // 등록 모드: 임시 상태에 추가
-      const tempId = generateTempId();
-      const tempItem: IncidentHistoryItem = {
-        id: tempId,
-        equipmentId: '',
-        occurredAt: new Date(data.occurredAt),
-        incidentType: data.incidentType,
-        content: data.content,
-        createdAt: new Date(),
-      };
-      setIncidentHistory((prev) => [tempItem, ...prev]);
-      setPendingIncidentHistory((prev) => [...prev, { tempId, data }]);
-    }
-  }, [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]);
+    },
+    [isEdit, handleHistoryError]
+  );
 
-  const handleDeleteIncidentHistory = useCallback(async (historyId: string) => {
-    try {
-      if (isEdit) {
+  const handleAddIncidentHistory = useCallback(
+    async (data: CreateIncidentHistoryInput) => {
+      if (isEdit && initialData?.uuid) {
         // 수정 모드: API 호출
-        await equipmentApi.deleteIncidentHistory(historyId);
+        try {
+          const newItem = await equipmentApi.createIncidentHistory(initialData.uuid, data);
+          setIncidentHistory((prev) => [newItem, ...prev]);
+          toast({
+            title: '손상/수리 내역 추가',
+            description: '이력이 저장되었습니다.',
+          });
+        } catch (error) {
+          handleHistoryError(error, '손상/수리 내역');
+          throw error;
+        }
+      } else {
+        // 등록 모드: 임시 상태에 추가
+        const tempId = generateTempId();
+        const tempItem: IncidentHistoryItem = {
+          id: tempId,
+          equipmentId: '',
+          occurredAt: new Date(data.occurredAt),
+          incidentType: data.incidentType,
+          content: data.content,
+          createdAt: new Date(),
+        };
+        setIncidentHistory((prev) => [tempItem, ...prev]);
+        setPendingIncidentHistory((prev) => [...prev, { tempId, data }]);
       }
-      setIncidentHistory((prev) => prev.filter((item) => item.id !== historyId));
-      // ★ Best Practice: tempId 기반 삭제
-      if (!isEdit && historyId.startsWith('temp-')) {
-        setPendingIncidentHistory((prev) => prev.filter((item) => item.tempId !== historyId));
+    },
+    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]
+  );
+
+  const handleDeleteIncidentHistory = useCallback(
+    async (historyId: string) => {
+      try {
+        if (isEdit) {
+          // 수정 모드: API 호출
+          await equipmentApi.deleteIncidentHistory(historyId);
+        }
+        setIncidentHistory((prev) => prev.filter((item) => item.id !== historyId));
+        // ★ Best Practice: tempId 기반 삭제
+        if (!isEdit && historyId.startsWith('temp-')) {
+          setPendingIncidentHistory((prev) => prev.filter((item) => item.tempId !== historyId));
+        }
+      } catch (error) {
+        handleHistoryError(error, '손상/수리 내역 삭제');
+        throw error;
       }
-    } catch (error) {
-      handleHistoryError(error, '손상/수리 내역 삭제');
-      throw error;
-    }
-  }, [isEdit, handleHistoryError]);
+    },
+    [isEdit, handleHistoryError]
+  );
 
   // 교정 이력 추가/삭제 핸들러 (등록 모드용)
-  const handleAddCalibrationHistory = useCallback(async (data: CreateCalibrationHistoryInput) => {
-    // 등록 모드: 임시 상태에 추가
-    const tempId = generateTempId();
-    const tempItem: CalibrationRecord = {
-      id: tempId,
-      calibrationDate: data.calibrationDate,
-      nextCalibrationDate: data.nextCalibrationDate,
-      calibrationAgency: data.calibrationAgency,
-      calibrationResult: data.calibrationResult,
-      status: 'completed',
-      approvalStatus: 'approved',
-    };
-    setCalibrationHistory((prev) => [tempItem, ...prev]);
-    setPendingCalibrationHistory((prev) => [...prev, { tempId, data }]);
-    toast({
-      title: '교정 이력 추가',
-      description: '임시로 추가되었습니다. 장비 등록 시 함께 저장됩니다.',
-    });
-  }, [toast, generateTempId]);
+  const handleAddCalibrationHistory = useCallback(
+    async (data: CreateCalibrationHistoryInput) => {
+      // 등록 모드: 임시 상태에 추가
+      const tempId = generateTempId();
+      const tempItem: CalibrationRecord = {
+        id: tempId,
+        calibrationDate: data.calibrationDate,
+        nextCalibrationDate: data.nextCalibrationDate,
+        calibrationAgency: data.calibrationAgency,
+        calibrationResult: data.calibrationResult,
+        status: 'completed',
+        approvalStatus: 'approved',
+      };
+      setCalibrationHistory((prev) => [tempItem, ...prev]);
+      setPendingCalibrationHistory((prev) => [...prev, { tempId, data }]);
+      toast({
+        title: '교정 이력 추가',
+        description: '임시로 추가되었습니다. 장비 등록 시 함께 저장됩니다.',
+      });
+    },
+    [toast, generateTempId]
+  );
 
   const handleDeleteCalibrationHistory = useCallback(async (historyId: string) => {
     setCalibrationHistory((prev) => prev.filter((item) => item.id !== historyId));
@@ -595,14 +657,26 @@ export function EquipmentForm({
         data.technicalManager && data.technicalManager.trim() ? data.technicalManager : undefined,
       initialLocation:
         data.initialLocation && data.initialLocation.trim() ? data.initialLocation : undefined,
-      installationDate: data.installationDate
-        ? dayjs(data.installationDate).toDate()
-        : undefined,
-      status: data.status || undefined,
+      installationDate: data.installationDate ? dayjs(data.installationDate).toDate() : undefined,
+      status: isTemporary ? 'temporary' : data.status || undefined,
       calibrationResult:
-        data.calibrationResult && data.calibrationResult.trim() ? data.calibrationResult : undefined,
+        data.calibrationResult && data.calibrationResult.trim()
+          ? data.calibrationResult
+          : undefined,
       correctionFactor:
         data.correctionFactor && data.correctionFactor.trim() ? data.correctionFactor : undefined,
+      externalIdentifier:
+        data.externalIdentifier && data.externalIdentifier.trim()
+          ? data.externalIdentifier
+          : undefined,
+      // 임시등록 모드 전용 필드
+      ...(isTemporary && {
+        isShared: true,
+        sharedSource: equipmentType === 'common' ? 'safety_lab' : 'external',
+        owner: owner || undefined,
+        usagePeriodStart: usagePeriodStart ? dayjs(usagePeriodStart).toDate() : undefined,
+        usagePeriodEnd: usagePeriodEnd ? dayjs(usagePeriodEnd).toDate() : undefined,
+      }),
     };
 
     /**
@@ -610,17 +684,19 @@ export function EquipmentForm({
      * - PendingHistoryItem[] → CreateXxxInput[] 변환
      * - tempId는 내부 관리용이므로 API 전송 시 제거
      */
-    const pendingHistory: PendingHistoryData | undefined = !isEdit && (
-      pendingLocationHistory.length > 0 ||
-      pendingMaintenanceHistory.length > 0 ||
-      pendingIncidentHistory.length > 0 ||
-      pendingCalibrationHistory.length > 0
-    ) ? {
-      locationHistory: pendingLocationHistory.map((item) => item.data),
-      maintenanceHistory: pendingMaintenanceHistory.map((item) => item.data),
-      incidentHistory: pendingIncidentHistory.map((item) => item.data),
-      calibrationHistory: pendingCalibrationHistory.map((item) => item.data),
-    } : undefined;
+    const pendingHistory: PendingHistoryData | undefined =
+      !isEdit &&
+      (pendingLocationHistory.length > 0 ||
+        pendingMaintenanceHistory.length > 0 ||
+        pendingIncidentHistory.length > 0 ||
+        pendingCalibrationHistory.length > 0)
+        ? {
+            locationHistory: pendingLocationHistory.map((item) => item.data),
+            maintenanceHistory: pendingMaintenanceHistory.map((item) => item.data),
+            incidentHistory: pendingIncidentHistory.map((item) => item.data),
+            calibrationHistory: pendingCalibrationHistory.map((item) => item.data),
+          }
+        : undefined;
 
     await onSubmit(
       processedData,
@@ -672,6 +748,157 @@ export function EquipmentForm({
 
         {/* 섹션 2: 교정 정보 */}
         <CalibrationInfoSection control={form.control} />
+
+        {/* 섹션 2.5: 임시등록 전용 필드 (공용/렌탈 장비) */}
+        {isTemporary && !isEdit && (
+          <Card>
+            <CardHeader>
+              <CardTitle>임시등록 장비 정보</CardTitle>
+              <CardDescription>공용/렌탈 장비의 임시등록 정보를 입력하세요.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* 1. 장비 유형 선택 */}
+              <div className="space-y-2">
+                <Label htmlFor="equipmentType">
+                  장비 유형 <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="type-common"
+                      name="equipmentType"
+                      value="common"
+                      checked={equipmentType === 'common'}
+                      onChange={(e) => setEquipmentType(e.target.value as 'common' | 'rental')}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="type-common" className="font-normal cursor-pointer">
+                      공용장비 (타 팀)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="type-rental"
+                      name="equipmentType"
+                      value="rental"
+                      checked={equipmentType === 'rental'}
+                      onChange={(e) => setEquipmentType(e.target.value as 'common' | 'rental')}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="type-rental" className="font-normal cursor-pointer">
+                      렌탈장비 (외부)
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. 소유처 */}
+              <div className="space-y-2">
+                <Label htmlFor="owner">
+                  소유처 <span className="text-red-500">*</span>
+                </Label>
+                {equipmentType === 'common' ? (
+                  <select
+                    id="owner"
+                    value={owner}
+                    onChange={(e) => setOwner(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  >
+                    <option value="">선택하세요</option>
+                    <option value="Safety팀">Safety팀</option>
+                    <option value="Battery팀">Battery팀</option>
+                    <option value="기타">기타</option>
+                  </select>
+                ) : (
+                  <Input
+                    id="owner"
+                    placeholder="렌탈업체명을 입력하세요"
+                    value={owner}
+                    onChange={(e) => setOwner(e.target.value)}
+                    required
+                  />
+                )}
+              </div>
+
+              {/* 2-1. 소유처 원본 식별번호 (선택) */}
+              <div className="space-y-2">
+                <Label htmlFor="externalIdentifier">소유처 원본 식별번호 (선택)</Label>
+                <Input
+                  id="externalIdentifier"
+                  name="externalIdentifier"
+                  placeholder={
+                    equipmentType === 'common'
+                      ? '예: SAF-EQ-1234 (Safety팀 장비번호)'
+                      : '예: RNT-2024-001 (렌탈업체 번호)'
+                  }
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {equipmentType === 'common'
+                    ? '소유 팀에서 사용하는 장비 식별번호를 입력하세요.'
+                    : '렌탈업체에서 부여한 장비 식별번호를 입력하세요.'}
+                </p>
+              </div>
+
+              {/* 3. 사용 예정 기간 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="usagePeriodStart">
+                    사용 시작일 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    id="usagePeriodStart"
+                    value={usagePeriodStart}
+                    onChange={(e) => setUsagePeriodStart(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="usagePeriodEnd">
+                    사용 종료일 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    id="usagePeriodEnd"
+                    value={usagePeriodEnd}
+                    onChange={(e) => setUsagePeriodEnd(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* 4. 교정성적서 업로드 */}
+              <div className="space-y-2">
+                <Label htmlFor="calibrationCertificate">
+                  교정성적서 <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="file"
+                  id="calibrationCertificate"
+                  accept=".pdf"
+                  onChange={(e) => setCalibrationCertificateFile(e.target.files?.[0] || null)}
+                  required
+                  className="cursor-pointer"
+                />
+                <p className="text-xs text-muted-foreground">
+                  PDF 파일만 업로드 가능합니다. (필수)
+                </p>
+              </div>
+
+              {/* 5. 교정 유효성 자동 검증 */}
+              {form.watch('nextCalibrationDate') && usagePeriodEnd && (
+                <CalibrationValidityChecker
+                  nextCalibrationDate={form.watch('nextCalibrationDate') || ''}
+                  usagePeriodEnd={usagePeriodEnd}
+                />
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* 섹션 3: 상태 및 위치 */}
         <StatusLocationSection
@@ -766,9 +993,7 @@ export function EquipmentForm({
               {isEdit ? '수정 요청 확인' : '등록 요청 확인'}
             </DialogTitle>
             <DialogDescription>
-              {isEdit
-                ? '장비 정보 수정을 요청하시겠습니까?'
-                : '새 장비 등록을 요청하시겠습니까?'}
+              {isEdit ? '장비 정보 수정을 요청하시겠습니까?' : '새 장비 등록을 요청하시겠습니까?'}
             </DialogDescription>
           </DialogHeader>
 

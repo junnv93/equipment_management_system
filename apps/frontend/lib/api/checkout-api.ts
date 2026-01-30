@@ -2,6 +2,14 @@ import axios from 'axios';
 import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 
+// ✅ SSOT: 반출 상태 타입 import
+import type {
+  CheckoutStatus,
+  ConditionCheckStep,
+  ConditionStatus,
+  AccessoriesStatus,
+} from '@equipment-management/schemas';
+
 export interface Checkout {
   id: string;
   equipmentIds?: string[]; // ✅ 백엔드 응답에 따라 조정
@@ -30,15 +38,7 @@ export interface Checkout {
   startDate?: string; // 레거시 호환성
   expectedReturnDate: string;
   actualReturnDate?: string;
-  status:
-    | 'pending'
-    | 'approved'
-    | 'rejected'
-    | 'checked_out'
-    | 'returned'
-    | 'return_approved'
-    | 'overdue'
-    | 'canceled'; // ✅ 백엔드 상태값
+  status: CheckoutStatus; // ✅ SSOT에서 import한 타입
   // 반출 유형
   checkoutType?: 'calibration' | 'repair' | 'rental';
   // 외부 대여 시 빌려주는 측 정보
@@ -63,8 +63,47 @@ export interface Checkout {
   };
   rejectionReason?: string; // ✅ 백엔드 필드명
   notes?: string; // 레거시 호환성
+  // 상태 확인 기록 (대여 목적)
+  conditionChecks?: ConditionCheck[];
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * 상태 확인 기록 (대여 목적 양측 4단계 확인)
+ */
+export interface ConditionCheck {
+  id: string;
+  checkoutId: string;
+  step: ConditionCheckStep;
+  checkedBy: string;
+  checkedAt: string;
+  checker?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  appearanceStatus: ConditionStatus;
+  operationStatus: ConditionStatus;
+  accessoriesStatus?: AccessoriesStatus;
+  abnormalDetails?: string;
+  comparisonWithPrevious?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 상태 확인 등록 DTO
+ */
+export interface CreateConditionCheckDto {
+  step: ConditionCheckStep;
+  appearanceStatus: ConditionStatus;
+  operationStatus: ConditionStatus;
+  accessoriesStatus?: AccessoriesStatus;
+  abnormalDetails?: string;
+  comparisonWithPrevious?: string;
+  notes?: string;
 }
 
 export interface CheckoutHistory extends Checkout {
@@ -320,6 +359,58 @@ const checkoutApi = {
     const today = new Date().toISOString().split('T')[0];
     return this.getCheckouts({ ...query, endDate: today });
   },
+
+  // ============================================================================
+  // 대여 목적 양측 4단계 확인 API
+  // ============================================================================
+
+  /**
+   * 상태 확인을 등록합니다 (대여 목적).
+   * 대여 목적 반출 시 양측 4단계 확인을 위한 API입니다.
+   * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
+   */
+  async submitConditionCheck(
+    checkoutId: string,
+    data: CreateConditionCheckDto
+  ): Promise<ConditionCheck> {
+    const response = await axios.post(`/api/checkouts/${checkoutId}/condition-check`, data);
+    return transformSingleResponse<ConditionCheck>(response);
+  },
+
+  /**
+   * 특정 반출의 상태 확인 기록을 조회합니다.
+   * 대여 목적 반출의 양측 4단계 확인 이력을 조회합니다.
+   */
+  async getConditionChecks(checkoutId: string): Promise<ConditionCheck[]> {
+    const response = await axios.get(`/api/checkouts/${checkoutId}/condition-checks`);
+    return response.data?.data || response.data || [];
+  },
+
+  /**
+   * 확인 필요 목록을 조회합니다.
+   * 현재 사용자가 확인해야 할 대여 건 목록을 조회합니다.
+   * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
+   */
+  async getPendingChecks(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
+    const queryParams = new URLSearchParams();
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const url = `/api/checkouts/pending-checks${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await axios.get(url);
+    return transformPaginatedResponse<Checkout>(response);
+  },
 };
 
 export default checkoutApi;
+
+// Re-export types for convenience
+export type {
+  ConditionCheckStep,
+  ConditionStatus,
+  AccessoriesStatus,
+} from '@equipment-management/schemas';

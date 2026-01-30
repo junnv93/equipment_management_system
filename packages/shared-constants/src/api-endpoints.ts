@@ -41,6 +41,11 @@ export const API_ENDPOINTS = {
     CANCEL: (id: string) => `/api/checkouts/${id}/cancel`,
     RETURN: (id: string) => `/api/checkouts/${id}/return`,
     APPROVE_RETURN: (id: string) => `/api/checkouts/${id}/approve-return`,
+    // 대여 목적 양측 확인 (상태 확인 기록)
+    CONDITION_CHECK: (id: string) => `/api/checkouts/${id}/condition-check`,
+    CONDITION_CHECKS: (id: string) => `/api/checkouts/${id}/condition-checks`,
+    // 확인 필요 목록 조회
+    PENDING_CHECKS: '/api/checkouts/pending-checks',
   },
 
   // ============================================================================
@@ -55,6 +60,17 @@ export const API_ENDPOINTS = {
     APPROVE: (id: string) => `/api/calibrations/${id}/approve`,
     REJECT: (id: string) => `/api/calibrations/${id}/reject`,
     PENDING: '/api/calibrations/pending',
+    SUMMARY: '/api/calibration/summary',
+    OVERDUE: '/api/calibration/overdue',
+    UPCOMING: (days?: number) => `/api/calibration/upcoming${days ? `?days=${days}` : ''}`,
+    HISTORY: (equipmentId: string) => `/api/calibration/equipment/${equipmentId}`,
+    HISTORY_LIST: '/api/calibration',
+    INTERMEDIATE_CHECKS: {
+      ALL: '/api/calibration/intermediate-checks/all',
+      LIST: (days?: number) => `/api/calibration/intermediate-checks${days ? `?days=${days}` : ''}`,
+      COMPLETE: (id: string) => `/api/calibration/${id}/intermediate-check/complete`,
+    },
+    CERTIFICATE: (id: string) => `/api/calibration/${id}/certificate`,
   },
 
   // ============================================================================
@@ -67,11 +83,17 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/api/calibration-plans/${id}`,
     DELETE: (id: string) => `/api/calibration-plans/${id}`,
     SUBMIT: (id: string) => `/api/calibration-plans/${id}/submit`,
+    SUBMIT_FOR_REVIEW: (id: string) => `/api/calibration-plans/${id}/submit-for-review`,
+    REVIEW: (id: string) => `/api/calibration-plans/${id}/review`,
     APPROVE: (id: string) => `/api/calibration-plans/${id}/approve`,
     REJECT: (id: string) => `/api/calibration-plans/${id}/reject`,
     ITEMS: (id: string) => `/api/calibration-plans/${id}/items`,
     CONFIRM_ITEM: (planId: string, itemId: string) =>
       `/api/calibration-plans/${planId}/items/${itemId}/confirm`,
+    PENDING_REVIEW: '/api/calibration-plans?status=pending_review',
+    PENDING_APPROVAL: '/api/calibration-plans?status=pending_approval',
+    VERSIONS: (year?: number, siteId?: string) =>
+      `/api/calibration-plans/versions${year || siteId ? '?' : ''}${year ? `year=${year}` : ''}${year && siteId ? '&' : ''}${siteId ? `siteId=${siteId}` : ''}`,
   },
 
   // ============================================================================
@@ -86,6 +108,8 @@ export const API_ENDPOINTS = {
     APPROVE: (id: string) => `/api/calibration-factors/${id}/approve`,
     REJECT: (id: string) => `/api/calibration-factors/${id}/reject`,
     PENDING: '/api/calibration-factors/pending',
+    EQUIPMENT: (equipmentId: string) => `/api/calibration-factors/equipment/${equipmentId}`,
+    REGISTRY: '/api/calibration-factors/registry',
   },
 
   // ============================================================================

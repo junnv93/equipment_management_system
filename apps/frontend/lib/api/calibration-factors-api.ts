@@ -10,6 +10,7 @@ import {
   CALIBRATION_FACTOR_TYPE_LABELS,
   CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS,
 } from '@equipment-management/schemas';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 // Re-export for backward compatibility
 export type { CalibrationFactorType, CalibrationFactorApprovalStatus };
@@ -111,37 +112,37 @@ const calibrationFactorsApi = {
       }
     });
 
-    const url = `/api/calibration-factors${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.CALIBRATION_FACTORS.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get(url).then((res) => transformPaginatedResponse<CalibrationFactor>(res));
   },
 
   // 장비별 현재 보정계수 조회
   getEquipmentFactors: async (equipmentUuid: string): Promise<EquipmentFactors> => {
     return apiClient
-      .get(`/api/calibration-factors/equipment/${equipmentUuid}`)
+      .get(API_ENDPOINTS.CALIBRATION_FACTORS.EQUIPMENT(equipmentUuid))
       .then((res) => res.data);
   },
 
   // 보정계수 상세 조회
   getCalibrationFactor: async (id: string): Promise<CalibrationFactor> => {
-    return apiClient.get(`/api/calibration-factors/${id}`).then((res) => res.data);
+    return apiClient.get(API_ENDPOINTS.CALIBRATION_FACTORS.GET(id)).then((res) => res.data);
   },
 
   // 보정계수 변경 요청
   createCalibrationFactor: async (data: CreateCalibrationFactorDto): Promise<CalibrationFactor> => {
-    return apiClient.post('/api/calibration-factors', data).then((res) => res.data);
+    return apiClient.post(API_ENDPOINTS.CALIBRATION_FACTORS.CREATE, data).then((res) => res.data);
   },
 
   // 승인 대기 목록 조회
   getPendingCalibrationFactors: async (): Promise<PaginatedResponse<CalibrationFactor>> => {
     return apiClient
-      .get('/api/calibration-factors/pending')
+      .get(API_ENDPOINTS.CALIBRATION_FACTORS.PENDING)
       .then((res) => transformPaginatedResponse<CalibrationFactor>(res));
   },
 
   // 보정계수 대장 조회
   getCalibrationFactorRegistry: async (): Promise<CalibrationFactorRegistry> => {
-    return apiClient.get('/api/calibration-factors/registry').then((res) => res.data);
+    return apiClient.get(API_ENDPOINTS.CALIBRATION_FACTORS.REGISTRY).then((res) => res.data);
   },
 
   // 보정계수 승인

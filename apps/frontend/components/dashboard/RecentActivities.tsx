@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState, useCallback, useMemo, memo } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RecentActivity } from "@/lib/api/dashboard-api";
-import { formatDateTime } from "@/lib/utils/date";
+import { useState, useCallback, useMemo, memo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RecentActivity } from '@/lib/api/dashboard-api';
+import { formatDateTime } from '@/lib/utils/date';
 import {
   Clock,
   Package,
@@ -22,9 +22,9 @@ import {
   CheckCircle,
   XCircle,
   Filter,
-} from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+} from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface RecentActivitiesProps {
   data: RecentActivity[];
@@ -34,80 +34,85 @@ interface RecentActivitiesProps {
 // 활동 타입에 따른 정보 정의
 const ACTIVITY_TYPES: Record<
   string,
-  { icon: React.ReactNode; label: string; variant: "default" | "secondary" | "outline" | "destructive"; category: string }
+  {
+    icon: React.ReactNode;
+    label: string;
+    variant: 'default' | 'secondary' | 'outline' | 'destructive';
+    category: string;
+  }
 > = {
   equipment_added: {
     icon: <PlusCircle className="h-4 w-4" />,
-    label: "장비 등록",
-    variant: "default",
-    category: "equipment"
+    label: '장비 등록',
+    variant: 'default',
+    category: 'equipment',
   },
   equipment_updated: {
     icon: <Pen className="h-4 w-4" />,
-    label: "장비 수정",
-    variant: "secondary",
-    category: "equipment"
+    label: '장비 수정',
+    variant: 'secondary',
+    category: 'equipment',
   },
   equipment_approved: {
     icon: <CheckCircle className="h-4 w-4" />,
-    label: "장비 승인",
-    variant: "default",
-    category: "equipment"
+    label: '장비 승인',
+    variant: 'default',
+    category: 'equipment',
   },
   equipment_rejected: {
     icon: <XCircle className="h-4 w-4" />,
-    label: "장비 반려",
-    variant: "destructive",
-    category: "equipment"
+    label: '장비 반려',
+    variant: 'destructive',
+    category: 'equipment',
   },
   calibration_created: {
     icon: <Wrench className="h-4 w-4" />,
-    label: "교정 등록",
-    variant: "default",
-    category: "calibration"
+    label: '교정 등록',
+    variant: 'default',
+    category: 'calibration',
   },
   calibration_approved: {
     icon: <CheckCircle className="h-4 w-4" />,
-    label: "교정 승인",
-    variant: "default",
-    category: "calibration"
+    label: '교정 승인',
+    variant: 'default',
+    category: 'calibration',
   },
   rental_created: {
     icon: <Send className="h-4 w-4" />,
-    label: "대여 신청",
-    variant: "outline",
-    category: "rental"
+    label: '대여 신청',
+    variant: 'outline',
+    category: 'rental',
   },
   rental_approved: {
     icon: <CheckCircle className="h-4 w-4" />,
-    label: "대여 승인",
-    variant: "default",
-    category: "rental"
+    label: '대여 승인',
+    variant: 'default',
+    category: 'rental',
   },
   rental_returned: {
     icon: <RotateCcw className="h-4 w-4" />,
-    label: "대여 반납",
-    variant: "outline",
-    category: "rental"
+    label: '대여 반납',
+    variant: 'outline',
+    category: 'rental',
   },
   checkout_created: {
     icon: <Truck className="h-4 w-4" />,
-    label: "반출 신청",
-    variant: "outline",
-    category: "checkout"
+    label: '반출 신청',
+    variant: 'outline',
+    category: 'checkout',
   },
   checkout_approved: {
     icon: <CheckCircle className="h-4 w-4" />,
-    label: "반출 승인",
-    variant: "default",
-    category: "checkout"
+    label: '반출 승인',
+    variant: 'default',
+    category: 'checkout',
   },
   checkout_returned: {
     icon: <Package className="h-4 w-4" />,
-    label: "반출 반납",
-    variant: "outline",
-    category: "checkout"
-  }
+    label: '반출 반납',
+    variant: 'outline',
+    category: 'checkout',
+  },
 };
 
 // 라우트 정보 타입 정의
@@ -118,12 +123,12 @@ const ROUTES: Record<string, string> = {
   equipment_rejected: `/equipment/`,
   calibration_created: `/calibration/`,
   calibration_approved: `/calibration/`,
-  rental_created: `/rentals/`,
-  rental_approved: `/rentals/`,
-  rental_returned: `/rentals/`,
+  rental_created: `/checkouts/`,
+  rental_approved: `/checkouts/`,
+  rental_returned: `/checkouts/`,
   checkout_created: `/checkouts/`,
   checkout_approved: `/checkouts/`,
-  checkout_returned: `/checkouts/`
+  checkout_returned: `/checkouts/`,
 };
 
 // 역할별 표시 카테고리 정의
@@ -146,16 +151,16 @@ const CATEGORY_TABS = [
 // 개별 활동 항목 컴포넌트
 const ActivityItem = memo(function ActivityItem({
   activity,
-  onNavigate
+  onNavigate,
 }: {
   activity: RecentActivity;
   onNavigate: (activity: RecentActivity) => void;
 }) {
   const activityInfo = ACTIVITY_TYPES[activity.type] || {
     icon: <FileCheck className="h-4 w-4" />,
-    label: "기타 활동",
-    variant: "default" as const,
-    category: "other"
+    label: '기타 활동',
+    variant: 'default' as const,
+    category: 'other',
   };
 
   const isApproval = activity.type.includes('approved');
@@ -164,18 +169,20 @@ const ActivityItem = memo(function ActivityItem({
   return (
     <div
       className={cn(
-        "flex items-start space-x-4 p-3 rounded-lg transition-colors",
-        "hover:bg-muted/50",
-        isApproval && "bg-green-50/50 dark:bg-green-900/10",
-        isRejection && "bg-red-50/50 dark:bg-red-900/10"
+        'flex items-start space-x-4 p-3 rounded-lg transition-colors',
+        'hover:bg-muted/50',
+        isApproval && 'bg-green-50/50 dark:bg-green-900/10',
+        isRejection && 'bg-red-50/50 dark:bg-red-900/10'
       )}
     >
-      <div className={cn(
-        "mt-1 rounded-full p-2",
-        isApproval && "bg-green-100 dark:bg-green-900/30",
-        isRejection && "bg-red-100 dark:bg-red-900/30",
-        !isApproval && !isRejection && "bg-muted"
-      )}>
+      <div
+        className={cn(
+          'mt-1 rounded-full p-2',
+          isApproval && 'bg-green-100 dark:bg-green-900/30',
+          isRejection && 'bg-red-100 dark:bg-red-900/30',
+          !isApproval && !isRejection && 'bg-muted'
+        )}
+      >
         {activityInfo.icon}
       </div>
       <div className="flex-1 space-y-1 min-w-0">
@@ -189,9 +196,9 @@ const ActivityItem = memo(function ActivityItem({
           </span>
         </div>
         <p className="text-sm truncate">
-          <span className="font-medium">{activity.userName}</span>님이{" "}
+          <span className="font-medium">{activity.userName}</span>님이{' '}
           <span className="font-medium text-primary">{activity.entityName}</span>
-          {activity.details ? ` ${activity.details}` : ""}
+          {activity.details ? ` ${activity.details}` : ''}
         </p>
         <Button
           variant="link"
@@ -208,11 +215,11 @@ const ActivityItem = memo(function ActivityItem({
 
 export const RecentActivities = memo(function RecentActivities({
   data,
-  loading = false
+  loading = false,
 }: RecentActivitiesProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>('all');
 
   const userRole = session?.user?.role?.toLowerCase() || 'test_engineer';
 
@@ -220,25 +227,28 @@ export const RecentActivities = memo(function RecentActivities({
   const allowedCategories = ROLE_CATEGORIES[userRole] || ROLE_CATEGORIES['test_engineer'];
 
   // 활동 상세 페이지 이동 함수
-  const handleNavigateToDetail = useCallback((activity: RecentActivity) => {
-    const route = ROUTES[activity.type];
-    if (route) {
-      router.push(`${route}${activity.entityId}`);
-    }
-  }, [router]);
+  const handleNavigateToDetail = useCallback(
+    (activity: RecentActivity) => {
+      const route = ROUTES[activity.type];
+      if (route) {
+        router.push(`${route}${activity.entityId}`);
+      }
+    },
+    [router]
+  );
 
   // 필터링된 활동 데이터
   const filteredActivities = useMemo(() => {
     // 먼저 역할에 따라 허용된 카테고리만 필터링
-    const roleFiltered = data.filter(activity => {
+    const roleFiltered = data.filter((activity) => {
       const activityInfo = ACTIVITY_TYPES[activity.type];
       if (!activityInfo) return false;
       return allowedCategories.includes(activityInfo.category);
     });
 
     // 그 다음 탭 필터 적용
-    if (activeTab === "all") return roleFiltered;
-    return roleFiltered.filter(activity => {
+    if (activeTab === 'all') return roleFiltered;
+    return roleFiltered.filter((activity) => {
       const activityInfo = ACTIVITY_TYPES[activity.type];
       return activityInfo?.category === activeTab;
     });
@@ -278,7 +288,7 @@ export const RecentActivities = memo(function RecentActivities({
 
   // 역할에 따른 표시 탭 필터링
   const visibleTabs = CATEGORY_TABS.filter(
-    tab => tab.key === 'all' || allowedCategories.includes(tab.key)
+    (tab) => tab.key === 'all' || allowedCategories.includes(tab.key)
   );
 
   return (
@@ -292,12 +302,7 @@ export const RecentActivities = memo(function RecentActivities({
             <CardDescription>{getDescription()}</CardDescription>
           </div>
           {filteredActivities.length > 0 && (
-            <Badge
-              variant="outline"
-              className="text-xs"
-              aria-live="polite"
-              aria-atomic="true"
-            >
+            <Badge variant="outline" className="text-xs" aria-live="polite" aria-atomic="true">
               {filteredActivities.length}건
             </Badge>
           )}
@@ -306,15 +311,17 @@ export const RecentActivities = memo(function RecentActivities({
       <CardContent>
         {loading ? (
           <div className="space-y-4">
-            {Array(5).fill(0).map((_, i) => (
-              <div key={i} className="flex items-start gap-4 p-3">
-                <Skeleton className="h-9 w-9 rounded-full" />
-                <div className="space-y-2 flex-1">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-3 w-4/5" />
+            {Array(5)
+              .fill(0)
+              .map((_, i) => (
+                <div key={i} className="flex items-start gap-4 p-3">
+                  <Skeleton className="h-9 w-9 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-3 w-4/5" />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         ) : data.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
@@ -325,12 +332,8 @@ export const RecentActivities = memo(function RecentActivities({
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="w-full justify-start overflow-x-auto">
-              {visibleTabs.map(tab => (
-                <TabsTrigger
-                  key={tab.key}
-                  value={tab.key}
-                  className="text-xs sm:text-sm"
-                >
+              {visibleTabs.map((tab) => (
+                <TabsTrigger key={tab.key} value={tab.key} className="text-xs sm:text-sm">
                   {tab.label}
                 </TabsTrigger>
               ))}

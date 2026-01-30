@@ -13,10 +13,7 @@
  * <Badge className={style.className}>{style.label}</Badge>
  * ```
  */
-import {
-  EQUIPMENT_STATUS_LABELS,
-  type EquipmentStatus,
-} from '@equipment-management/schemas';
+import { EQUIPMENT_STATUS_LABELS, type EquipmentStatus } from '@equipment-management/schemas';
 
 /**
  * 장비 상태별 스타일 정의
@@ -73,6 +70,27 @@ export const EQUIPMENT_STATUS_STYLES: Record<EquipmentStatus, EquipmentStatusSty
     label: EQUIPMENT_STATUS_LABELS.retired,
     borderColor: 'border-l-gray-500',
   },
+  // 새 상태들
+  pending_disposal: {
+    className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    label: EQUIPMENT_STATUS_LABELS.pending_disposal,
+    borderColor: 'border-l-orange-500',
+  },
+  disposed: {
+    className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+    label: EQUIPMENT_STATUS_LABELS.disposed,
+    borderColor: 'border-l-gray-500',
+  },
+  temporary: {
+    className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
+    label: EQUIPMENT_STATUS_LABELS.temporary,
+    borderColor: 'border-l-cyan-500',
+  },
+  inactive: {
+    className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+    label: EQUIPMENT_STATUS_LABELS.inactive,
+    borderColor: 'border-l-slate-400',
+  },
 };
 
 /**
@@ -99,10 +117,12 @@ export function getEquipmentStatusStyle(status: string | undefined | null): Equi
     return EQUIPMENT_STATUS_STYLES.available;
   }
 
-  return EQUIPMENT_STATUS_STYLES[status as EquipmentStatus] || {
-    ...DEFAULT_STATUS_STYLE,
-    label: status, // 알 수 없는 상태는 원본 값 표시
-  };
+  return (
+    EQUIPMENT_STATUS_STYLES[status as EquipmentStatus] || {
+      ...DEFAULT_STATUS_STYLE,
+      label: status, // 알 수 없는 상태는 원본 값 표시
+    }
+  );
 }
 
 /**
@@ -112,11 +132,19 @@ export function getEquipmentStatusStyle(status: string | undefined | null): Equi
  * - retired: 더 이상 사용하지 않음
  * - non_conforming: 수리/보수 후 필수적으로 재교정 필요
  * - spare: 실제 사용 전에 교정 상태 재확인 필요
+ * - pending_disposal: 폐기 대기 중
+ * - disposed: 폐기 완료
+ * - temporary: 임시 등록 장비
+ * - inactive: 비활성 상태
  */
 export const STATUS_SKIP_CALIBRATION_DISPLAY: EquipmentStatus[] = [
   'retired',
   'non_conforming',
   'spare',
+  'pending_disposal',
+  'disposed',
+  'temporary',
+  'inactive',
 ];
 
 /**

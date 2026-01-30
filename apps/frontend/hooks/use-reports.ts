@@ -9,7 +9,7 @@ import {
   UtilizationRatePeriod,
   getEquipmentUsage,
   getCalibrationStatus,
-  getRentalStatistics,
+  getCheckoutStatistics,
   getUtilizationRate,
   getEquipmentDowntime,
   exportEquipmentUsage,
@@ -53,18 +53,25 @@ export const useCalibrationStatus = (status?: string, timeframe?: string) => {
   });
 };
 
-// 대여 통계 보고서 조회 hook
-export const useRentalStatistics = (
+/**
+ * 반출 통계 보고서 조회 hook (대여/교정/수리 포함)
+ */
+export const useCheckoutStatistics = (
   startDate?: string,
   endDate?: string,
   departmentId?: string
 ) => {
   return useQuery({
-    queryKey: ['reports', 'rental-statistics', startDate, endDate, departmentId],
-    queryFn: () => getRentalStatistics(startDate, endDate, departmentId),
+    queryKey: ['reports', 'checkout-statistics', startDate, endDate, departmentId],
+    queryFn: () => getCheckoutStatistics(startDate, endDate, departmentId),
     enabled: !!startDate && !!endDate,
   });
 };
+
+/**
+ * @deprecated Use useCheckoutStatistics instead
+ */
+export const useRentalStatistics = useCheckoutStatistics;
 
 // 장비 활용률 보고서 조회 hook
 export const useUtilizationRate = (

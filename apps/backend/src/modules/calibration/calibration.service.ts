@@ -4,16 +4,18 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Inject,
 } from '@nestjs/common';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
 import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
 import { CalibrationStatus, CalibrationApprovalStatusEnum } from '@equipment-management/schemas';
-import { getUtcStartOfDay, addDaysUtc } from '../../common/utils';
+import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc } from '../../common/utils';
 import { db } from '../../database/drizzle';
-import { equipment } from '@equipment-management/db/schema';
-import { eq } from 'drizzle-orm';
+import * as schema from '@equipment-management/db/schema';
+import { and, eq, gte, lte, count, sql, like, or, desc, asc, SQL } from 'drizzle-orm';
 
 // 교정 기록 인터페이스
 export interface CalibrationRecord {
@@ -141,6 +143,184 @@ const calibrations: CalibrationRecord[] = [...temporaryCalibrations];
 export class CalibrationService {
   private readonly logger = new Logger(CalibrationService.name);
 
+  constructor(
+    @Inject('DRIZZLE_INSTANCE')
+    private readonly drizzleDb: NodePgDatabase<typeof schema>
+  ) {}
+
+  /**
+   * 교정 요약 통계 조회
+   * GET /api/calibration/summary
+   *
+   * ✅ UTC 기준 날짜 비교로 타임존 문제 방지
+   * ✅ SSOT: EquipmentService와 동일한 날짜 계산 로직 사용
+   *
+   * @deprecated 향후 리팩토링 시 EquipmentService로 통합 예정
+   *   - CalibrationService는 교정 기록 관리에만 집중
+   *   - 장비 필터링/통계는 EquipmentService가 담당
+   */
+  async getSummary() {
+    const today = getUtcStartOfDay(); // ✅ UTC 기준 오늘 00:00:00
+    const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, 30)); // ✅ UTC 기준 30일 후 23:59:59
+
+    // Count total equipment requiring calibration
+    const [totalResult] = await this.drizzleDb
+      .select({ count: count() })
+      .from(schema.equipment)
+      .where(
+        and(
+          eq(schema.equipment.isActive, true), // ✅ 활성 장비만
+          eq(schema.equipment.calibrationRequired, 'required')
+        )
+      );
+
+    // Count overdue (nextCalibrationDate < today)
+    // ✅ sql 템플릿으로 명시적 타임스탬프 변환 (Drizzle ORM Date 처리 이슈 방지)
+    const [overdueResult] = await this.drizzleDb
+      .select({ count: count() })
+      .from(schema.equipment)
+      .where(
+        and(
+          eq(schema.equipment.isActive, true),
+          eq(schema.equipment.calibrationRequired, 'required'),
+          sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
+          sql`${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`
+        )
+      );
+
+    // Count upcoming (within 30 days)
+    // ✅ EquipmentService의 calibrationDue 필터와 동일한 로직
+    const [upcomingResult] = await this.drizzleDb
+      .select({ count: count() })
+      .from(schema.equipment)
+      .where(
+        and(
+          eq(schema.equipment.isActive, true),
+          eq(schema.equipment.calibrationRequired, 'required'),
+          sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
+          sql`${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp`,
+          sql`${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater.toISOString()}::timestamp`
+        )
+      );
+
+    return {
+      total: totalResult?.count || 0,
+      overdueCount: overdueResult?.count || 0,
+      dueInMonthCount: upcomingResult?.count || 0,
+    };
+  }
+
+  /**
+   * 교정 기한 초과 장비 조회
+   * GET /api/calibration/overdue
+   *
+   * ✅ UTC 기준 날짜 비교로 타임존 문제 방지
+   * ✅ SSOT: EquipmentService의 calibrationDue=-1 필터와 동일한 로직
+   *
+   * @deprecated 향후 리팩토링 시 EquipmentService.findAll({ calibrationOverdue: true })로 대체 예정
+   *   - 장비 필터링은 EquipmentService에서 담당
+   *   - CalibrationService는 교정 기록 관리에만 집중
+   */
+  async getOverdueCalibrations() {
+    const today = getUtcStartOfDay(); // ✅ UTC 기준 오늘 00:00:00
+
+    // ✅ sql 템플릿으로 명시적 타임스탬프 변환
+    const results = await this.drizzleDb
+      .select({
+        id: schema.equipment.id,
+        equipmentId: schema.equipment.id,
+        equipmentName: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        nextCalibrationDate: schema.equipment.nextCalibrationDate,
+        teamId: schema.equipment.teamId,
+        teamName: schema.teams.name,
+        calibrationAgency: schema.equipment.calibrationAgency,
+        lastCalibrationDate: schema.equipment.lastCalibrationDate,
+      })
+      .from(schema.equipment)
+      .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+      .where(
+        and(
+          eq(schema.equipment.isActive, true), // ✅ 활성 장비만
+          eq(schema.equipment.calibrationRequired, 'required'),
+          sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
+          sql`${schema.equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp` // ✅ UTC 기준 비교
+        )
+      )
+      .orderBy(schema.equipment.nextCalibrationDate)
+      .limit(100);
+
+    return results.map((r) => ({
+      id: r.id,
+      equipmentId: r.equipmentId,
+      equipmentName: r.equipmentName,
+      managementNumber: r.managementNumber,
+      calibrationDate: r.lastCalibrationDate?.toISOString() || '',
+      nextCalibrationDate: r.nextCalibrationDate?.toISOString() || '',
+      team: r.teamName || undefined,
+      teamId: r.teamId || undefined,
+      calibrationAgency: r.calibrationAgency || '',
+    }));
+  }
+
+  /**
+   * 교정 예정 장비 조회 (N일 이내)
+   * GET /api/calibration/upcoming?days=N
+   *
+   * ✅ UTC 기준 날짜 비교로 타임존 문제 방지
+   * ✅ SSOT: EquipmentService의 calibrationDue 필터와 동일한 로직
+   *
+   * @deprecated 향후 리팩토링 시 EquipmentService.findAll({ calibrationDue: days })로 대체 예정
+   *   - 장비 필터링은 EquipmentService에서 담당
+   *   - CalibrationService는 교정 기록 관리에만 집중
+   *
+   * @param days - 오늘부터 N일 이내에 교정이 예정된 장비 조회 (기본값: 30)
+   */
+  async getUpcomingCalibrations(days: number = 30) {
+    const today = getUtcStartOfDay(); // ✅ UTC 기준 오늘 00:00:00
+    const futureDate = getUtcEndOfDay(addDaysUtc(today, days)); // ✅ UTC 기준 N일 후 23:59:59
+
+    // ✅ sql 템플릿으로 명시적 타임스탬프 변환 (Drizzle ORM Date 처리 이슈 방지)
+    const results = await this.drizzleDb
+      .select({
+        id: schema.equipment.id,
+        equipmentId: schema.equipment.id,
+        equipmentName: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        nextCalibrationDate: schema.equipment.nextCalibrationDate,
+        teamId: schema.equipment.teamId,
+        teamName: schema.teams.name,
+        calibrationAgency: schema.equipment.calibrationAgency,
+        lastCalibrationDate: schema.equipment.lastCalibrationDate,
+      })
+      .from(schema.equipment)
+      .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+      .where(
+        and(
+          eq(schema.equipment.isActive, true), // ✅ 활성 장비만
+          eq(schema.equipment.calibrationRequired, 'required'),
+          sql`${schema.equipment.nextCalibrationDate} IS NOT NULL`,
+          // ✅ EquipmentService와 동일한 조건: 오늘 <= nextCalibrationDate <= 오늘+N일
+          sql`${schema.equipment.nextCalibrationDate} >= ${today.toISOString()}::timestamp`,
+          sql`${schema.equipment.nextCalibrationDate} <= ${futureDate.toISOString()}::timestamp`
+        )
+      )
+      .orderBy(schema.equipment.nextCalibrationDate)
+      .limit(100);
+
+    return results.map((r) => ({
+      id: r.id,
+      equipmentId: r.equipmentId,
+      equipmentName: r.equipmentName,
+      managementNumber: r.managementNumber,
+      calibrationDate: r.lastCalibrationDate?.toISOString() || '',
+      nextCalibrationDate: r.nextCalibrationDate?.toISOString() || '',
+      team: r.teamName || undefined,
+      teamId: r.teamId || undefined,
+      calibrationAgency: r.calibrationAgency || '',
+    }));
+  }
+
   create(createCalibrationDto: CreateCalibrationDto) {
     const { registeredBy, registeredByRole, registrarComment, ...rest } = createCalibrationDto;
 
@@ -158,8 +338,8 @@ export class CalibrationService {
       status: rest.status || 'scheduled',
       calibrationAgency: rest.calibrationAgency,
       certificationNumber: rest.certificationNumber || null,
-      certificatePath: (rest as any).certificatePath || null,
-      result: (rest as any).result || null,
+      certificatePath: rest.certificatePath || null,
+      result: rest.result || null,
       cost: rest.cost || null,
       isPassed: rest.isPassed ?? null,
       resultNotes: rest.resultNotes || null,
@@ -172,7 +352,7 @@ export class CalibrationService {
       registrarComment: registrarComment || null,
       approverComment: null,
       rejectionReason: null,
-      intermediateCheckDate: (rest as any).intermediateCheckDate || null,
+      intermediateCheckDate: rest.intermediateCheckDate || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -200,118 +380,159 @@ export class CalibrationService {
       approvalStatus,
     } = query;
 
-    // 필터링
-    let filteredCalibrations = [...calibrations];
+    // ========== 1. Build WHERE conditions ==========
+    const whereConditions: SQL<unknown>[] = [];
 
+    // equipmentId filter
     if (equipmentId) {
-      filteredCalibrations = filteredCalibrations.filter((cal) => cal.equipmentId === equipmentId);
+      whereConditions.push(eq(schema.calibrations.equipmentId, equipmentId));
     }
 
+    // calibrationManagerId filter
     if (calibrationManagerId) {
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) => cal.calibrationManagerId === calibrationManagerId
-      );
+      whereConditions.push(eq(schema.calibrations.technicianId, calibrationManagerId));
     }
 
+    // statuses filter (comma-separated string)
     if (statuses) {
       const statusArray = statuses.split(',').map((s) => s.trim());
-      filteredCalibrations = filteredCalibrations.filter((cal) => statusArray.includes(cal.status));
-    }
-
-    if (methods) {
-      const methodArray = methods.split(',').map((m) => m.trim());
-      filteredCalibrations = filteredCalibrations.filter((cal) =>
-        methodArray.includes(cal.calibrationMethod)
+      whereConditions.push(
+        sql`${schema.calibrations.status} IN (${sql.join(
+          statusArray.map((s) => sql`${s}`),
+          sql`, `
+        )})`
       );
     }
 
+    // calibrationAgency filter (LIKE query)
     if (calibrationAgency) {
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) =>
-          cal.calibrationAgency &&
-          cal.calibrationAgency.toLowerCase().includes(calibrationAgency.toLowerCase())
+      whereConditions.push(
+        sql`LOWER(${schema.calibrations.agencyName}) LIKE LOWER(${'%' + calibrationAgency + '%'})`
       );
     }
 
+    // Date range filters
     if (fromDate) {
-      const fromDateObj = new Date(fromDate);
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) => cal.calibrationDate && new Date(cal.calibrationDate) >= fromDateObj
-      );
+      whereConditions.push(gte(schema.calibrations.calibrationDate, new Date(fromDate)));
     }
-
     if (toDate) {
-      const toDateObj = new Date(toDate);
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) => cal.calibrationDate && new Date(cal.calibrationDate) <= toDateObj
-      );
+      whereConditions.push(lte(schema.calibrations.calibrationDate, new Date(toDate)));
     }
-
     if (nextFromDate) {
-      const nextFromDateObj = new Date(nextFromDate);
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) => cal.nextCalibrationDate && new Date(cal.nextCalibrationDate) >= nextFromDateObj
-      );
+      whereConditions.push(gte(schema.calibrations.nextCalibrationDate, new Date(nextFromDate)));
     }
-
     if (nextToDate) {
-      const nextToDateObj = new Date(nextToDate);
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) => cal.nextCalibrationDate && new Date(cal.nextCalibrationDate) <= nextToDateObj
-      );
+      whereConditions.push(lte(schema.calibrations.nextCalibrationDate, new Date(nextToDate)));
     }
 
+    // isPassed filter
     if (isPassed !== undefined) {
       const isParsedPassed = isPassed === 'true';
-      filteredCalibrations = filteredCalibrations.filter((cal) => cal.isPassed === isParsedPassed);
+      whereConditions.push(eq(schema.calibrations.result, isParsedPassed ? 'passed' : 'failed'));
     }
 
-    // 승인 상태 필터
+    // approvalStatus filter
     if (approvalStatus) {
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) => cal.approvalStatus === approvalStatus
-      );
+      whereConditions.push(eq(schema.calibrations.approvalStatus, approvalStatus));
     }
 
+    // search filter (multiple fields)
     if (search) {
-      const searchLower = search.toLowerCase();
-      filteredCalibrations = filteredCalibrations.filter(
-        (cal) =>
-          (cal.certificationNumber &&
-            cal.certificationNumber.toLowerCase().includes(searchLower)) ||
-          (cal.resultNotes && cal.resultNotes.toLowerCase().includes(searchLower)) ||
-          (cal.additionalInfo && cal.additionalInfo.toLowerCase().includes(searchLower)) ||
-          (cal.calibrationAgency && cal.calibrationAgency.toLowerCase().includes(searchLower))
+      const searchCondition = or(
+        sql`LOWER(${schema.calibrations.certificateNumber}) LIKE LOWER(${'%' + search + '%'})`,
+        sql`LOWER(${schema.calibrations.notes}) LIKE LOWER(${'%' + search + '%'})`,
+        sql`LOWER(${schema.calibrations.agencyName}) LIKE LOWER(${'%' + search + '%'})`,
+        sql`LOWER(${schema.equipment.name}) LIKE LOWER(${'%' + search + '%'})`,
+        sql`LOWER(${schema.equipment.managementNumber}) LIKE LOWER(${'%' + search + '%'})`
       );
+      if (searchCondition) {
+        whereConditions.push(searchCondition);
+      }
     }
 
-    // 정렬
+    // ========== 2. Count total items ==========
+    const countResult = await this.drizzleDb
+      .select({ count: count() })
+      .from(schema.calibrations)
+      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+      .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+    const totalItems = Number(countResult[0]?.count || 0);
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const offset = (page - 1) * pageSize;
+
+    // ========== 3. Build ORDER BY ==========
+    let orderByClause;
     if (sort) {
       const [field, direction] = sort.split('.');
       const isAsc = direction === 'asc';
 
-      filteredCalibrations.sort((a, b) => {
-        const aVal = a[field as keyof CalibrationRecord];
-        const bVal = b[field as keyof CalibrationRecord];
-        if (aVal === null) return isAsc ? 1 : -1;
-        if (bVal === null) return isAsc ? -1 : 1;
-        if (aVal < bVal) return isAsc ? -1 : 1;
-        if (aVal > bVal) return isAsc ? 1 : -1;
-        return 0;
-      });
+      // Map sort field to Drizzle column
+      const sortColumn =
+        {
+          calibrationDate: schema.calibrations.calibrationDate,
+          nextCalibrationDate: schema.calibrations.nextCalibrationDate,
+          status: schema.calibrations.status,
+          agencyName: schema.calibrations.agencyName,
+          equipmentName: schema.equipment.name,
+        }[field] || schema.calibrations.calibrationDate;
+
+      orderByClause = isAsc ? asc(sortColumn) : desc(sortColumn);
+    } else {
+      orderByClause = desc(schema.calibrations.calibrationDate);
     }
 
-    // 페이지네이션
-    const totalItems = filteredCalibrations.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-    const offset = (page - 1) * pageSize;
-    const paginatedCalibrations = filteredCalibrations.slice(offset, offset + pageSize);
+    // ========== 4. Fetch data with JOINs ==========
+    const items = await this.drizzleDb
+      .select({
+        // Calibration fields
+        id: schema.calibrations.id,
+        equipmentId: schema.calibrations.equipmentId,
+        technicianId: schema.calibrations.technicianId,
+        status: schema.calibrations.status,
+        calibrationDate: schema.calibrations.calibrationDate,
+        completionDate: schema.calibrations.completionDate,
+        nextCalibrationDate: schema.calibrations.nextCalibrationDate,
+        agencyName: schema.calibrations.agencyName,
+        certificateNumber: schema.calibrations.certificateNumber,
+        certificatePath: schema.calibrations.certificatePath,
+        result: schema.calibrations.result,
+        cost: schema.calibrations.cost,
+        notes: schema.calibrations.notes,
+        intermediateCheckDate: schema.calibrations.intermediateCheckDate,
+        approvalStatus: schema.calibrations.approvalStatus,
+        registeredBy: schema.calibrations.registeredBy,
+        approvedBy: schema.calibrations.approvedBy,
+        registeredByRole: schema.calibrations.registeredByRole,
+        registrarComment: schema.calibrations.registrarComment,
+        approverComment: schema.calibrations.approverComment,
+        rejectionReason: schema.calibrations.rejectionReason,
+        createdAt: schema.calibrations.createdAt,
+        updatedAt: schema.calibrations.updatedAt,
 
+        // ✅ Joined equipment fields (CRITICAL for frontend)
+        equipmentName: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        teamId: schema.equipment.teamId,
+
+        // ✅ Joined team fields
+        teamName: schema.teams.name,
+      })
+      .from(schema.calibrations)
+      .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+      .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+      .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+      .orderBy(orderByClause)
+      .limit(pageSize)
+      .offset(offset);
+
+    // ========== 5. Return paginated response ==========
     return {
-      items: paginatedCalibrations,
+      items,
       meta: {
         totalItems,
-        itemCount: paginatedCalibrations.length,
+        itemCount: items.length,
         itemsPerPage: pageSize,
         totalPages,
         currentPage: page,
@@ -459,13 +680,13 @@ export class CalibrationService {
   ) {
     try {
       await db
-        .update(equipment)
+        .update(schema.equipment)
         .set({
           lastCalibrationDate: calibrationDate,
           nextCalibrationDate: nextCalibrationDate,
           updatedAt: new Date(),
         })
-        .where(eq(equipment.id, equipmentId));
+        .where(eq(schema.equipment.id, equipmentId));
 
       this.logger.log(
         `장비 교정일 업데이트 완료: ${equipmentId}, ` +

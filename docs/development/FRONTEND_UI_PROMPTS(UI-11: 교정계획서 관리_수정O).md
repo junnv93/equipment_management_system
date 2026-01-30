@@ -23,6 +23,7 @@
 /vercel-react-best-practices
 /web-design-guidelines
 /frontend-design
+/playwright-skill
 
 역할 참고:
 

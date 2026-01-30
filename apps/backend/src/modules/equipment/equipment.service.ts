@@ -147,10 +147,12 @@ export class EquipmentService {
       teamId,
       calibrationDue,
       calibrationDueAfter,
+      calibrationOverdue,
       sort,
       site,
       isShared,
       calibrationMethod,
+      classification,
     } = queryParams;
 
     const whereConditions: SQL<unknown>[] = [eq(equipment.isActive, true)];
@@ -189,6 +191,12 @@ export class EquipmentService {
     // 교정 방법 필터
     if (calibrationMethod) {
       whereConditions.push(eq(equipment.calibrationMethod, calibrationMethod));
+    }
+
+    // 장비 분류 필터 (관리번호 분류코드 기준)
+    if (classification) {
+      const classificationCode = CLASSIFICATION_TO_CODE[classification];
+      whereConditions.push(eq(equipment.classificationCode, classificationCode));
     }
 
     // 교정 예정일 필터 (복합 인덱스 활용)
@@ -251,6 +259,17 @@ export class EquipmentService {
         and(
           sql`${equipment.nextCalibrationDate} IS NOT NULL`,
           sql`${equipment.nextCalibrationDate} > ${afterDate.toISOString()}::timestamp` // calibrationDueAfter일 이후
+        )!
+      );
+    }
+
+    // 교정 기한 초과 필터 (독립적 필터 - status와 조합 가능)
+    if (calibrationOverdue !== undefined && calibrationOverdue === true) {
+      const today = getUtcStartOfDay();
+      whereConditions.push(
+        and(
+          sql`${equipment.nextCalibrationDate} IS NOT NULL`,
+          sql`${equipment.nextCalibrationDate} < ${today.toISOString()}::timestamp`
         )!
       );
     }
@@ -659,7 +678,9 @@ export class EquipmentService {
       manufacturer: queryParams.manufacturer,
       teamId: queryParams.teamId,
       calibrationMethod: queryParams.calibrationMethod, // ✅ 교정방법 필터 캐시 키에 포함
+      classification: queryParams.classification, // ✅ 장비분류 필터 캐시 키에 포함
       calibrationDue: queryParams.calibrationDue,
+      calibrationOverdue: queryParams.calibrationOverdue, // ✅ 교정기한초과 필터 캐시 키에 포함
       site: queryParams.site, // ✅ 사이트 필터 캐시 키에 포함
       isShared: queryParams.isShared, // ✅ 공용장비 필터 캐시 키에 포함
       sort: queryParams.sort,
@@ -682,7 +703,9 @@ export class EquipmentService {
             manufacturer: queryParams.manufacturer,
             teamId: queryParams.teamId,
             calibrationMethod: queryParams.calibrationMethod,
+            classification: queryParams.classification,
             calibrationDue: queryParams.calibrationDue,
+            calibrationOverdue: queryParams.calibrationOverdue,
             site: queryParams.site,
             isShared: queryParams.isShared,
           });

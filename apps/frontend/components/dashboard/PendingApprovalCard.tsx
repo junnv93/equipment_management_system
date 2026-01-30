@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { dashboardApi, type PendingApprovalCounts } from '@/lib/api/dashboard-api';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 interface ApprovalCategory {
   key: keyof Omit<PendingApprovalCounts, 'total'>;
@@ -27,12 +28,13 @@ interface ApprovalCategory {
   description: string;
 }
 
+// SSOT: FRONTEND_ROUTES 사용
 const categories: ApprovalCategory[] = [
   {
     key: 'equipment',
     label: '장비',
     icon: Package,
-    href: '/admin/equipment-approvals',
+    href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
     color: 'text-blue-700 dark:text-blue-300',
     bgColor: 'bg-blue-100 dark:bg-blue-900/30',
     description: '장비 등록/수정/삭제 승인',
@@ -50,7 +52,7 @@ const categories: ApprovalCategory[] = [
     key: 'checkout',
     label: '반출',
     icon: ArrowRightLeft,
-    href: '/checkouts?status=pending',
+    href: `${FRONTEND_ROUTES.CHECKOUTS.LIST}?status=pending`,
     color: 'text-orange-700 dark:text-orange-300',
     bgColor: 'bg-orange-100 dark:bg-orange-900/30',
     description: '반출/반입 승인 (교정, 수리, 대여 포함)',
@@ -147,7 +149,11 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
   const userRole = session?.user?.role || 'user';
 
   // 승인 대기 카운트 조회 - 실제 API 호출
-  const { data: counts, isLoading, error } = useQuery<PendingApprovalCounts>({
+  const {
+    data: counts,
+    isLoading,
+    error,
+  } = useQuery<PendingApprovalCounts>({
     queryKey: ['pending-approval-counts', userRole],
     queryFn: () => dashboardApi.getPendingApprovalCounts(userRole),
     staleTime: 30000, // 30초
@@ -155,9 +161,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
   });
 
   const visibleCategories = getVisibleCategories(userRole);
-  const filteredCategories = categories.filter((cat) =>
-    visibleCategories.includes(cat.key)
-  );
+  const filteredCategories = categories.filter((cat) => visibleCategories.includes(cat.key));
 
   if (isLoading) {
     return (
@@ -186,10 +190,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
     );
   }
 
-  const totalPending = filteredCategories.reduce(
-    (sum, cat) => sum + (counts?.[cat.key] || 0),
-    0
-  );
+  const totalPending = filteredCategories.reduce((sum, cat) => sum + (counts?.[cat.key] || 0), 0);
 
   const cardTitle = getCardTitle(userRole);
   const cardDescription = getCardDescription(userRole);
@@ -256,24 +257,18 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
                   >
                     <Icon className={cn('h-6 w-6', category.color)} aria-hidden="true" />
                   </div>
-                  <span className="text-sm font-medium text-foreground">
-                    {category.label}
-                  </span>
+                  <span className="text-sm font-medium text-foreground">{category.label}</span>
                   <span
                     className={cn(
                       'text-2xl font-bold mt-1',
                       'transition-colors duration-200',
-                      hasItems
-                        ? 'text-ul-red dark:text-red-400'
-                        : 'text-muted-foreground'
+                      hasItems ? 'text-ul-red dark:text-red-400' : 'text-muted-foreground'
                     )}
                   >
                     {count}
                   </span>
                   {hasItems && (
-                    <span className="text-xs text-muted-foreground mt-1">
-                      클릭하여 확인
-                    </span>
+                    <span className="text-xs text-muted-foreground mt-1">클릭하여 확인</span>
                   )}
                 </CardContent>
               </Card>

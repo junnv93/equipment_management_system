@@ -1,7 +1,12 @@
 import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
 import { transformArrayResponse } from './utils/response-transformers';
-import type { CalibrationResult, CalibrationApprovalStatus, CalibrationRegisteredByRole } from '@equipment-management/schemas';
+import type {
+  CalibrationResult,
+  CalibrationApprovalStatus,
+  CalibrationRegisteredByRole,
+} from '@equipment-management/schemas';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 export interface Calibration {
   id: string;
@@ -38,6 +43,7 @@ export interface CalibrationHistory {
   certificateNumber?: string;
   calibrationResult: CalibrationResult | 'PASS' | 'FAIL' | 'CONDITIONAL';
   team?: string;
+  teamId?: string; // ✅ Team ID for filtering
   approvalStatus?: CalibrationApprovalStatus;
   registeredByRole?: CalibrationRegisteredByRole;
   createdAt: string;
@@ -106,70 +112,101 @@ const calibrationApi = {
       }
     });
 
-    const url = `/api/calibration${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url);
+    const url = `${API_ENDPOINTS.CALIBRATIONS.HISTORY_LIST}${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await apiClient.get(url);
+
+    // ✅ CRITICAL FIX: axios returns AxiosResponse, need to access response.data
+    // Transform backend format { items, meta } to frontend format { data, meta.pagination }
+    const responseData = response.data;
+
+    if (responseData && 'items' in responseData) {
+      return {
+        data: responseData.items,
+        meta: {
+          pagination: {
+            total: responseData.meta?.totalItems || 0,
+            pageSize: responseData.meta?.itemsPerPage || 20,
+            currentPage: responseData.meta?.currentPage || 1,
+            totalPages: responseData.meta?.totalPages || 1,
+          },
+        },
+      };
+    }
+
+    return responseData;
   },
 
   // 장비별 교정 이력 조회
   // ✅ transformArrayResponse: 다양한 백엔드 응답 형태 자동 처리
   getEquipmentCalibrations: async (equipmentId: string): Promise<Calibration[]> => {
-    const response = await apiClient.get(`/api/calibration/equipment/${equipmentId}`);
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.HISTORY(equipmentId));
     return transformArrayResponse<Calibration>(response);
   },
 
   // 교정 상세 조회
   getCalibration: async (id: string): Promise<Calibration> => {
-    return apiClient.get(`/api/calibration/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.GET(id));
+    return response.data;
   },
 
   // 교정 정보 등록
   createCalibration: async (data: CreateCalibrationDto): Promise<Calibration> => {
-    return apiClient.post('/api/calibration', data);
+    const response = await apiClient.post(API_ENDPOINTS.CALIBRATIONS.CREATE, data);
+    return response.data;
   },
 
   // 교정 정보 수정
   updateCalibration: async (id: string, data: UpdateCalibrationDto): Promise<Calibration> => {
-    return apiClient.patch(`/api/calibration/${id}`, data);
+    const response = await apiClient.patch(API_ENDPOINTS.CALIBRATIONS.UPDATE(id), data);
+    return response.data;
   },
 
   // 교정 정보 삭제
   deleteCalibration: async (id: string): Promise<void> => {
-    return apiClient.delete(`/api/calibration/${id}`);
+    const response = await apiClient.delete(API_ENDPOINTS.CALIBRATIONS.DELETE(id));
+    return response.data;
   },
 
   // 교정 요약 통계
   getCalibrationSummary: async (): Promise<CalibrationSummary> => {
-    return apiClient.get('/api/calibration/summary');
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.SUMMARY);
+    return response.data;
   },
 
   // 교정 기한 초과 장비
   getOverdueCalibrations: async (): Promise<CalibrationHistory[]> => {
-    return apiClient.get('/api/calibration/overdue');
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.OVERDUE);
+    return response.data;
   },
 
   // 곧 교정이 필요한 장비
   getUpcomingCalibrations: async (days: number = 30): Promise<CalibrationHistory[]> => {
-    return apiClient.get(`/api/calibration/upcoming?days=${days}`);
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.UPCOMING(days));
+    return response.data;
   },
 
   // 승인 대기 교정 목록 조회
   getPendingCalibrations: async (): Promise<{ items: Calibration[] }> => {
-    return apiClient.get('/api/calibration/pending');
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.PENDING);
+    return response.data;
   },
 
   // 교정 승인
   approveCalibration: async (id: string, data: ApproveCalibrationDto): Promise<Calibration> => {
-    return apiClient.patch(`/api/calibration/${id}/approve`, data);
+    const response = await apiClient.patch(API_ENDPOINTS.CALIBRATIONS.APPROVE(id), data);
+    return response.data;
   },
 
   // 교정 반려
   rejectCalibration: async (id: string, data: RejectCalibrationDto): Promise<Calibration> => {
-    return apiClient.patch(`/api/calibration/${id}/reject`, data);
+    const response = await apiClient.patch(API_ENDPOINTS.CALIBRATIONS.REJECT(id), data);
+    return response.data;
   },
 
   // 중간점검 예정 조회
   getUpcomingIntermediateChecks: async (days: number = 7): Promise<Calibration[]> => {
-    return apiClient.get(`/api/calibration/intermediate-checks?days=${days}`);
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.LIST(days));
+    return response.data;
   },
 
   // 교정성적서 파일 업로드
@@ -179,7 +216,7 @@ const calibrationApi = {
   ): Promise<{ filePath: string; message: string }> => {
     const formData = new FormData();
     formData.append('file', file);
-    return apiClient.post(`/api/calibration/${calibrationId}/certificate`, formData);
+    return apiClient.post(API_ENDPOINTS.CALIBRATIONS.CERTIFICATE(calibrationId), formData);
   },
 };
 

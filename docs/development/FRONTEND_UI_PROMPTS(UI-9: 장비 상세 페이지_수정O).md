@@ -1,6 +1,7 @@
 # 프론트엔드 UI 개발 프롬프트
 
 > 📖 **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
 > - API 호출 규칙, 에러 처리, 디자인 요구사항
@@ -28,36 +29,66 @@
 .claude/skills/equipment-management/references/terminology.md와 /docs/development/API_STANDARDS.md를 참조하여 장비 상세 페이지를 구현해줘.
 
 역할 참고:
-- test_engineer (시험실무자): 장비 조회, 이력 등록 요청
-- technical_manager (기술책임자): 교정 등록, 이력 승인, 보정계수 관리
-- lab_manager, system_admin: 전체 권한
+- test_engineer (시험실무자): 장비 조회, 이력 등록 요청, 폐기 요청
+- technical_manager (기술책임자): 교정 등록, 이력 승인, 보정계수 관리, 폐기 검토, 임시장비 비활성화
+- quality_manager (품질관리자): 품질 관련 조회/승인
+- lab_manager (시험소장): 전체 권한, 폐기 최종 승인
+- system_admin: 시스템 관리
+
+권한 매트릭스:
+| 기능 | test_engineer | technical_manager | quality_manager | lab_manager |
+|------|---------------|-------------------|-----------------|-------------|
+| 장비 조회 | ✓ | ✓ | ✓ | ✓ |
+| 장비 등록 요청 | ✓ | ✓ | - | - |
+| 장비 수정 요청 | ✓ | ✓ | - | - |
+| 장비 등록/수정 승인 | - | ✓ (담당 팀) | - | - |
+| 장비 삭제 요청 | ✓ | ✓ | - | - |
+| 장비 삭제 승인 | - | ✓ (담당 팀) | - | - |
+| 장비 폐기 요청 | ✓ | ✓ | - | - |
+| 장비 폐기 검토 | - | ✓ | - | - |
+| 장비 폐기 최종 승인 | - | - | - | ✓ |
+| 임시장비 비활성화 | - | ✓ | - | ✓ |
+| 임시장비 재활성화 | - | ✓ | - | ✓ |
 
 요구사항:
 1. 장비 헤더 (UL Solutions 브랜딩)
    - 장비명, 모델명, 시리얼넘버, 관리번호
    - 상태 뱃지 (색상 구분 - UL 색상 팔레트 사용)
-     - available: UL Green (#00A451)
-     - checked_out: UL Midnight Blue (#122C49)
-     - calibration_scheduled: UL Info (#BCE4F7)
-     - calibration_overdue: UL Red (#CA0123)
-     - non_conforming: UL Red (#CA0123)
-     - spare: UL Fog (#577E9E)
-     - retired: UL Gray (#EBEBEB)
-   - 공용장비 뱃지 (해당 시)
+     - available: UL Green (#00A451) - 사용가능
+     - checked_out: UL Midnight Blue (#122C49) - 반출중
+     - calibration_scheduled: UL Info (#BCE4F7) - 교정예정
+     - calibration_overdue: UL Red (#CA0123) - 교정기한초과
+     - non_conforming: UL Red (#CA0123) - 부적합
+     - spare: UL Fog (#577E9E) - 여분
+     - retired: UL Gray (#EBEBEB) - 폐기
+     - pending_disposal: UL Orange (#FF9D55) - 폐기대기 (신규)
+     - disposed: UL Dark Gray (#666666) - 폐기완료 (신규)
+     - temporary: UL Teal (#00B5AD) - 임시등록 (신규)
+     - inactive: UL Slate (#6B7280) - 비활성 (신규)
+   - 장비 등록 유형 뱃지 (내부장비/공용장비/렌탈장비)
    - 부적합 경고 배너 (해당 시)
-   - 액션 버튼 (수정, 삭제, 대여, 반출)
+   - 임시등록 장비 정보 배너 (temporary 상태: 소유처, 사용 예정 기간 표시)
+   - 액션 버튼:
+     - 기본: 수정, 삭제, 대여, 반출
+     - 폐기 요청 (test_engineer/technical_manager, available 상태)
+     - 폐기 검토 (technical_manager, pending_disposal 상태)
+     - 폐기 최종 승인 (lab_manager, 검토 완료 상태)
+     - 비활성화 (technical_manager+, temporary 상태)
+     - 재활성화 (technical_manager+, inactive 상태)
    - 운영책임자 정보 (정/부)
 
 2. 탭 기반 정보 표시 (URL 쿼리 파라미터로 상태 관리)
-   - 기본 정보: 장비 속성, 사이트/팀, 위치, 제조사, 모델명
+   - 기본 정보: 장비 속성, 사이트/팀, 위치, 제조사, 모델명, 장비 등록 유형 (내부/공용/렌탈)
    - 교정 이력: 교정 기록 목록, 교정 결과, 교정 방법
    - 보정계수: 현재 적용 중인 보정계수, 이력, 보정 방법
    - 반출/반입 이력: 반출 기록 (목적별 구분: calibration/repair/rental)
    - 위치 변동 이력: 장비 위치 이동 기록 타임라인
    - 유지보수 이력: 수리, 점검 기록 타임라인
    - 사고 이력: 장비 사고/고장 기록
+   - 폐기 이력: 폐기 요청/검토/승인/반려 히스토리 타임라인 (신규)
    - 소프트웨어: 설치된 소프트웨어/펌웨어
    - 첨부파일: 이력카드, 검수보고서 등
+   - 임시등록 정보 (temporary/inactive 상태): 소유처, 사용 예정 기간 표시
 
 3. 관련 액션
    - 반출 신청 버튼 (교정/수리/대여 목적 선택)
@@ -66,6 +97,13 @@
    - 유지보수 등록 버튼 (시험실무자)
    - 수정/삭제 버튼 (권한에 따라)
    - PDF 이력카드 출력
+   - 폐기 관련 버튼:
+     - 폐기 요청 버튼 (test_engineer/technical_manager, available 상태)
+     - 폐기 검토 버튼 (technical_manager, pending_disposal 상태)
+     - 폐기 최종 승인 버튼 (lab_manager, 검토 완료 상태)
+   - 임시등록 장비 관련 버튼:
+     - 비활성화 버튼 (technical_manager+, temporary 상태)
+     - 재활성화 버튼 (technical_manager+, inactive 상태)
 
 4. 실시간 상태 표시
    - 현재 반출 상태 (checked_out인 경우)
@@ -74,12 +112,53 @@
      - repair → "수리중"
      - rental → "대여중"
    - 반출 중인 경우: 담당자, 반입 예정일, 목적지
+   - 신규 상태 표시:
+     - pending_disposal → "폐기 대기" (폐기 요청 후 승인 대기 중)
+     - disposed → "폐기 완료" (폐기 승인 완료)
+     - temporary → "임시 등록" (공용/렌탈 장비 임시 사용)
+     - inactive → "비활성" (임시등록 장비 사용 완료)
 
 5. 부적합 장비 처리
    - 부적합 등록된 경우 경고 배너 (UL Red)
    - 부적합 사유 및 조치 내용 표시
    - 상태 흐름: open → analyzing → corrected → closed
    - 상태 복원 기능 (기술책임자 승인)
+
+6. 장비 등록 유형 정의
+   | 유형 | 설명 | 필수 첨부파일 | 초기 상태 |
+   |------|------|--------------|----------|
+   | 내부장비 (신규) | 신규 구매/도입 장비 | 검수보고서 | available |
+   | 내부장비 (기존) | 기존 운영 중인 장비 | 이력카드 | available |
+   | 공용장비 | 타 팀 장비 임시 사용 | 교정성적서 | temporary |
+   | 렌탈장비 | 외부 대여 장비 | 교정성적서 | temporary |
+
+7. 폐기 프로세스 (3단계 승인)
+```
+
+[시험실무자/기술책임자] → [기술책임자] → [시험소장]
+폐기 요청 폐기 검토 최종 승인
+(pending_disposal) (reviewStatus) (disposed)
+
+```
+- 1단계: 폐기 요청 (pending_disposal 상태 전환)
+- 2단계: 폐기 검토 (기술책임자 승인/반려)
+- 3단계: 최종 승인 (시험소장 승인 → disposed 상태 전환)
+
+8. 임시등록 장비 요구사항
+- 필수 필드:
+  - 장비명, 모델명, 시리얼넘버
+  - 소유처 (Safety Lab / 외부 기관)
+  - 교정성적서 (파일 첨부)
+  - 교정일자, 차기교정일
+  - 사용 예정 기간 (시작일 ~ 종료일)
+- UI 표시 요소:
+  - 임시등록 장비 정보 배너 (Teal 색상)
+  - 사용 기간 D-day 카운트다운 표시
+  - 만료 임박 경고 (D-7 이내)
+- 비활성화 시:
+  - 사유 입력 필수
+  - 타임스탬프 기록
+  - inactive 상태로 전환
 
 파일:
 - apps/frontend/app/equipment/[id]/page.tsx (⚠️ Next.js 16: params는 Promise)
@@ -95,7 +174,15 @@
 - apps/frontend/components/equipment/SoftwareTab.tsx
 - apps/frontend/components/equipment/AttachmentsTab.tsx
 - apps/frontend/components/equipment/NonConformanceBanner.tsx
+- apps/frontend/components/equipment/DisposalRequestDialog.tsx (신규) - 폐기 요청 다이얼로그
+- apps/frontend/components/equipment/DisposalReviewDialog.tsx (신규) - 폐기 검토 다이얼로그
+- apps/frontend/components/equipment/DisposalTimeline.tsx (신규) - 폐기 프로세스 타임라인
+- apps/frontend/components/equipment/DisposalHistoryTab.tsx (신규) - 폐기 이력 탭
+- apps/frontend/components/equipment/TemporaryEquipmentInfo.tsx (신규) - 임시등록 장비 정보 배너
+- apps/frontend/components/equipment/DeactivateTemporaryDialog.tsx (신규) - 비활성화 다이얼로그
+- apps/frontend/components/equipment/EquipmentRegistrationTypeBadge.tsx (신규) - 등록 유형 뱃지
 - apps/frontend/lib/api/equipment-api.ts
+- apps/frontend/lib/constants/equipment-status-styles.ts (신규 상태 스타일 추가)
 
 디자인 요구사항 (/frontend-design, /web-design-guidelines 스킬 활용):
 - 헤더: UL Midnight Blue (#122C49) 배경, 흰색 텍스트
@@ -105,10 +192,10 @@
 - 부적합 경고 배너: UL Red 배경, 경고 아이콘
 - 액션 버튼: Primary(UL Midnight Blue), Secondary(Outline)
 - 애니메이션:
-  - 탭 전환 시 fade 트랜지션
-  - 타임라인 아이템 stagger 애니메이션 (순차 등장)
-  - 부적합 배너 pulse 효과 (주의 환기)
-  - 버튼 hover 시 subtle scale 효과
+- 탭 전환 시 fade 트랜지션
+- 타임라인 아이템 stagger 애니메이션 (순차 등장)
+- 부적합 배너 pulse 효과 (주의 환기)
+- 버튼 hover 시 subtle scale 효과
 
 제약사항:
 - Next.js 16: params는 Promise, await 필수
@@ -116,6 +203,10 @@
 - 권한별 액션 버튼 표시/숨김 (useAuth 사용)
 - 부적합 장비는 반출 신청 불가
 - 반출 목적(checkout_type)에 따라 상태 텍스트 동적 표시
+- 폐기 대기(pending_disposal) 상태에서는 수정/반출 불가
+- disposed 상태 장비는 읽기 전용 (모든 액션 비활성화)
+- temporary 상태 장비는 폐기 요청 불가 (비활성화만 가능)
+- inactive 상태 장비는 재활성화만 가능
 
 성능 최적화 (Vercel Best Practices):
 - 탭 콘텐츠는 next/dynamic으로 동적 import (탭 전환 시 로드)
@@ -283,9 +374,135 @@ export function getEquipmentStatusLabel(equipment: Equipment, currentCheckout?: 
     non_conforming: '부적합',
     spare: '여분',
     retired: '폐기',
+    // 신규 상태 추가
+    pending_disposal: '폐기 대기',
+    disposed: '폐기 완료',
+    temporary: '임시 등록',
+    inactive: '비활성',
   };
 
   return statusLabels[equipment.status] || equipment.status;
+}
+```
+
+---
+
+#### 5. 신규 상태 스타일 정의
+
+```typescript
+// lib/constants/equipment-status-styles.ts
+// 기존 상태 + 신규 상태 스타일 정의
+
+export const equipmentStatusStyles = {
+  // 기존 상태
+  available: {
+    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
+    label: '사용 가능',
+  },
+  checked_out: {
+    className: 'bg-blue-900 text-white dark:bg-blue-950 dark:text-blue-300',
+    label: '반출 중',
+  },
+  calibration_scheduled: {
+    className: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300',
+    label: '교정 예정',
+  },
+  calibration_overdue: {
+    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
+    label: '교정 기한 초과',
+  },
+  non_conforming: {
+    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
+    label: '부적합',
+  },
+  spare: {
+    className: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    label: '여분',
+  },
+  retired: {
+    className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+    label: '폐기',
+  },
+
+  // 신규 상태 (4개)
+  pending_disposal: {
+    className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300',
+    label: '폐기 대기',
+  },
+  disposed: {
+    className: 'bg-gray-300 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    label: '폐기 완료',
+  },
+  temporary: {
+    className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300',
+    label: '임시 등록',
+  },
+  inactive: {
+    className: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+    label: '비활성',
+  },
+};
+```
+
+---
+
+#### 6. 권한 확인 패턴 (폐기/임시등록)
+
+```typescript
+'use client'
+import { useAuth } from '@/hooks/use-auth';
+
+export function EquipmentDisposalActions({ equipment }: { equipment: Equipment }) {
+  const { hasRole } = useAuth();
+
+  // 폐기 관련 권한
+  const canRequestDisposal = hasRole(['test_engineer', 'technical_manager']) &&
+    equipment.status === 'available';
+  const canReviewDisposal = hasRole(['technical_manager']) &&
+    equipment.status === 'pending_disposal';
+  const canApproveDisposal = hasRole(['lab_manager']) &&
+    equipment.status === 'pending_disposal' &&
+    equipment.disposalReviewStatus === 'reviewed';
+
+  // 임시 등록 장비 관리 권한
+  const canDeactivateTemporary = hasRole(['technical_manager', 'lab_manager']) &&
+    equipment.status === 'temporary';
+  const canReactivateTemporary = hasRole(['technical_manager', 'lab_manager']) &&
+    equipment.status === 'inactive';
+
+  return (
+    <div className="flex gap-2">
+      {canRequestDisposal && (
+        <Button variant="destructive" onClick={() => openDisposalRequestDialog()}>
+          폐기 요청
+        </Button>
+      )}
+
+      {canReviewDisposal && (
+        <Button variant="outline" onClick={() => openDisposalReviewDialog()}>
+          폐기 검토
+        </Button>
+      )}
+
+      {canApproveDisposal && (
+        <Button variant="default" onClick={() => handleDisposalApproval()}>
+          폐기 최종 승인
+        </Button>
+      )}
+
+      {canDeactivateTemporary && (
+        <Button variant="outline" onClick={() => openDeactivateDialog()}>
+          비활성화
+        </Button>
+      )}
+
+      {canReactivateTemporary && (
+        <Button variant="outline" onClick={() => handleReactivate()}>
+          재활성화
+        </Button>
+      )}
+    </div>
+  );
 }
 ```
 
@@ -319,6 +536,30 @@ export function getEquipmentStatusLabel(equipment: Equipment, currentCheckout?: 
 - [x] 부적합 장비 경고 구현됨 (NonConformanceBanner)
 - [x] 장비 이력 조회 구현됨 (위치/유지보수/사고)
 
+#### 신규 상태 관련 (추가)
+
+- [ ] pending_disposal 상태 스타일 추가 (UL Orange)
+- [ ] disposed 상태 스타일 추가 (UL Dark Gray)
+- [ ] temporary 상태 스타일 추가 (UL Teal)
+- [ ] inactive 상태 스타일 추가 (UL Slate)
+- [ ] 상태별 액션 버튼 분기 로직 구현
+
+#### 폐기 프로세스 관련 (추가)
+
+- [ ] DisposalRequestDialog.tsx 구현 (폐기 요청 다이얼로그)
+- [ ] DisposalReviewDialog.tsx 구현 (폐기 검토 다이얼로그)
+- [ ] DisposalTimeline.tsx 구현 (폐기 타임라인 컴포넌트)
+- [ ] DisposalHistoryTab.tsx 구현 (폐기 이력 탭)
+- [ ] 폐기 3단계 승인 플로우 구현
+
+#### 임시등록 장비 관련 (추가)
+
+- [ ] TemporaryEquipmentInfo.tsx 구현 (임시등록 장비 정보 배너)
+- [ ] 사용 기간 D-day 표시 구현
+- [ ] DeactivateTemporaryDialog.tsx 구현 (비활성화 다이얼로그)
+- [ ] 비활성화/재활성화 기능 구현
+- [ ] EquipmentRegistrationTypeBadge.tsx 구현 (등록 유형 뱃지)
+
 #### 디자인 관련
 
 - [x] UL 색상 팔레트 사용됨 (상태별 색상)
@@ -348,6 +589,15 @@ export function getEquipmentStatusLabel(equipment: Equipment, currentCheckout?: 
 - [x] Playwright 테스트 작성됨 (equipment-detail.spec.ts)
 - [x] 테스트 ID 추가됨 (data-testid="equipment-item")
 - [x] Chromium 브라우저 테스트 15개 모두 통과
+
+#### 신규 테스트 (추가)
+
+- [ ] 폐기 프로세스 테스트 - 시험실무자 폐기 요청 플로우
+- [ ] 폐기 프로세스 테스트 - 기술책임자 폐기 검토 플로우
+- [ ] 폐기 프로세스 테스트 - 시험소장 폐기 최종 승인 플로우
+- [ ] 임시 등록 테스트 - 임시 등록 장비 정보 배너 표시
+- [ ] 임시 등록 테스트 - 임시 등록 장비 비활성화 플로우
+- [ ] 비활성 장비 테스트 - 재활성화 플로우
 
 ---
 
@@ -418,6 +668,114 @@ test.describe('Equipment Detail - Accessibility', () => {
     await expect(focusedElement).toBeVisible();
   });
 });
+
+// ===== 신규 테스트 케이스 (폐기 프로세스) =====
+test.describe('Equipment Detail - Disposal Process', () => {
+  test('시험실무자 폐기 요청 플로우', async ({ testOperatorPage }) => {
+    await testOperatorPage.goto('/equipment/eq-available');
+
+    // 폐기 요청 버튼 확인
+    const disposalButton = testOperatorPage.getByRole('button', { name: '폐기 요청' });
+    await expect(disposalButton).toBeVisible();
+
+    // 폐기 요청 다이얼로그 열기
+    await disposalButton.click();
+    await expect(testOperatorPage.getByRole('dialog')).toBeVisible();
+    await expect(testOperatorPage.getByText(/폐기 사유/)).toBeVisible();
+
+    // 폐기 사유 입력 및 요청
+    await testOperatorPage
+      .getByRole('textbox', { name: '폐기 사유' })
+      .fill('장비 노후화로 인한 폐기');
+    await testOperatorPage.getByRole('button', { name: '요청 제출' }).click();
+
+    // 상태 변경 확인
+    await expect(testOperatorPage.getByTestId('equipment-status-badge')).toContainText('폐기 대기');
+  });
+
+  test('기술책임자 폐기 검토 플로우', async ({ techManagerPage }) => {
+    await techManagerPage.goto('/equipment/eq-pending-disposal');
+
+    // 폐기 검토 버튼 확인
+    const reviewButton = techManagerPage.getByRole('button', { name: '폐기 검토' });
+    await expect(reviewButton).toBeVisible();
+
+    // 폐기 검토 다이얼로그 열기
+    await reviewButton.click();
+    await expect(techManagerPage.getByRole('dialog')).toBeVisible();
+
+    // 검토 의견 입력 및 승인
+    await techManagerPage.getByRole('textbox', { name: '검토 의견' }).fill('폐기 적정');
+    await techManagerPage.getByRole('button', { name: '검토 승인' }).click();
+
+    // 검토 상태 변경 확인
+    await expect(techManagerPage.getByText(/검토 완료/)).toBeVisible();
+  });
+
+  test('시험소장 폐기 최종 승인 플로우', async ({ labManagerPage }) => {
+    await labManagerPage.goto('/equipment/eq-disposal-reviewed');
+
+    // 최종 승인 버튼 확인
+    const approveButton = labManagerPage.getByRole('button', { name: '폐기 최종 승인' });
+    await expect(approveButton).toBeVisible();
+
+    // 최종 승인
+    await approveButton.click();
+    await labManagerPage.getByRole('button', { name: '승인 확인' }).click();
+
+    // 상태 변경 확인
+    await expect(labManagerPage.getByTestId('equipment-status-badge')).toContainText('폐기 완료');
+  });
+});
+
+// ===== 신규 테스트 케이스 (임시 등록 장비) =====
+test.describe('Equipment Detail - Temporary Equipment', () => {
+  test('임시 등록 장비 정보 배너 표시', async ({ testOperatorPage }) => {
+    await testOperatorPage.goto('/equipment/eq-temporary');
+
+    // 임시 등록 배너 확인
+    await expect(testOperatorPage.getByTestId('temporary-equipment-banner')).toBeVisible();
+    await expect(testOperatorPage.getByText(/소유처/)).toBeVisible();
+    await expect(testOperatorPage.getByText(/사용 예정 기간/)).toBeVisible();
+
+    // D-day 표시 확인
+    await expect(testOperatorPage.getByTestId('usage-period-dday')).toBeVisible();
+  });
+
+  test('임시 등록 장비 비활성화 플로우', async ({ techManagerPage }) => {
+    await techManagerPage.goto('/equipment/eq-temporary');
+
+    // 비활성화 버튼 확인
+    const deactivateButton = techManagerPage.getByRole('button', { name: '비활성화' });
+    await expect(deactivateButton).toBeVisible();
+
+    // 비활성화 다이얼로그 열기
+    await deactivateButton.click();
+    await expect(techManagerPage.getByRole('dialog')).toBeVisible();
+
+    // 비활성화 사유 입력 및 확인
+    await techManagerPage.getByRole('textbox', { name: '비활성화 사유' }).fill('사용 기간 종료');
+    await techManagerPage.getByRole('button', { name: '비활성화 확인' }).click();
+
+    // 상태 변경 확인
+    await expect(techManagerPage.getByTestId('equipment-status-badge')).toContainText('비활성');
+  });
+
+  test('비활성 장비 재활성화 플로우', async ({ techManagerPage }) => {
+    await techManagerPage.goto('/equipment/eq-inactive');
+
+    // 재활성화 버튼 확인
+    const reactivateButton = techManagerPage.getByRole('button', { name: '재활성화' });
+    await expect(reactivateButton).toBeVisible();
+
+    // 재활성화 실행
+    await reactivateButton.click();
+    await techManagerPage.getByRole('button', { name: '재활성화 확인' }).click();
+
+    // 상태 변경 확인
+    await expect(techManagerPage.getByTestId('equipment-status-badge')).toContainText('임시 등록');
+  });
+});
 ```
 
 ---
@@ -445,3 +803,18 @@ test.describe('Equipment Detail - Accessibility', () => {
 1. **가상화 적용**: 이력 목록이 많을 경우 content-visibility 적용 검토
 2. **next/image 적용**: 첨부파일 썸네일에 next/image 사용
 3. **CalibrationFactorsTab, CheckoutHistoryTab**: 실제 데이터 연동 필요
+
+---
+
+### 업데이트 이력
+
+| 날짜       | 내용                                                                      |
+| ---------- | ------------------------------------------------------------------------- |
+| 2026-01-24 | 초기 구현 완료 (15개 테스트 통과)                                         |
+| 2026-01-29 | 신규 장비 상태 4개 추가 (pending_disposal, disposed, temporary, inactive) |
+| 2026-01-29 | 권한 매트릭스 추가 (역할별 기능 권한 상세화)                              |
+| 2026-01-29 | 폐기 프로세스 3단계 승인 흐름 정의                                        |
+| 2026-01-29 | 장비 등록 유형 정의 (내부/공용/렌탈)                                      |
+| 2026-01-29 | 임시등록 장비 UI 요구사항 추가                                            |
+| 2026-01-29 | 신규 컴포넌트 7개 정의 (폐기/임시등록 관련)                               |
+| 2026-01-29 | Playwright 테스트 케이스 확장 (폐기/임시등록 테스트)                      |

@@ -12,9 +12,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import equipmentApi, {
-  EquipmentQuery,
-  CreateEquipmentDto,
-  UpdateEquipmentDto,
+  type Equipment,
+  type EquipmentQuery,
+  type CreateEquipmentDto,
+  type UpdateEquipmentDto,
 } from '@/lib/api/equipment-api';
 import { getErrorMessage } from '@/lib/api/error';
 
@@ -38,6 +39,48 @@ export function useEquipment(id: string) {
     queryFn: () => equipmentApi.getEquipment(id),
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5분
+  });
+}
+
+/**
+ * ✅ SSOT: Server Component 초기 데이터와 Client-Side 캐시 연동 훅
+ *
+ * @description
+ * Server Component에서 props로 받은 초기 데이터를 React Query 캐시의 initialData로 사용하고,
+ * 이후 클라이언트에서 mutation 후 캐시가 갱신되면 **즉시 UI에 반영**됩니다.
+ *
+ * 이 패턴은 다음 문제를 해결합니다:
+ * - Server Component props는 정적이므로 mutation 후에도 이전 값 유지
+ * - router.refresh()가 완료되기 전까지 UI가 stale 데이터 표시
+ * - React Query 캐시와 Server Component props 간 불일치
+ *
+ * @example
+ * ```tsx
+ * // Server Component (page.tsx)
+ * const equipment = await getEquipmentCached(id);
+ * return <EquipmentDetailClient equipment={equipment} />;
+ *
+ * // Client Component (EquipmentHeader.tsx)
+ * export function EquipmentHeader({ equipment: initialEquipment }: Props) {
+ *   const { data: equipment } = useEquipmentWithInitialData(initialEquipment);
+ *   // equipment.status가 mutation 후 즉시 반영됨
+ * }
+ * ```
+ *
+ * @param initialData - Server Component에서 받은 초기 장비 데이터 (Equipment 타입)
+ * @returns React Query의 useQuery 반환값 (data는 항상 정의됨)
+ *
+ * @see IncidentHistoryTab - 부적합 등록 시 상태 변경 반영
+ * @see packages/schemas/src/equipment.ts - Equipment 타입 정의
+ */
+export function useEquipmentWithInitialData(initialData: Equipment) {
+  const equipmentId = String(initialData.id);
+
+  return useQuery({
+    queryKey: ['equipment', equipmentId],
+    queryFn: () => equipmentApi.getEquipment(equipmentId),
+    initialData,
+    staleTime: 0, // 항상 fresh하게 유지하여 캐시 갱신 즉시 반영
   });
 }
 

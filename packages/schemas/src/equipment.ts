@@ -119,6 +119,10 @@ export const baseEquipmentSchema = z.object({
   // 기본값은 서비스 레이어에서 처리 (DB 기본값: false)
   isShared: z.boolean().optional(), // 공용장비 여부
   sharedSource: SharedSourceEnum.optional().nullable(), // 공용장비 출처: 'safety_lab' | 'external' | null
+  owner: z.string().optional().nullable(), // 소유처 (공용장비: 팀명, 렌탈장비: 업체명)
+  externalIdentifier: z.string().optional().nullable(), // 소유처 원본 식별번호 (예: SAF-EQ-1234)
+  usagePeriodStart: z.coerce.date().optional().nullable(), // 사용 시작일 (임시등록 전용)
+  usagePeriodEnd: z.coerce.date().optional().nullable(), // 사용 종료일 (임시등록 전용)
 });
 
 // 장비 생성 스키마
@@ -157,6 +161,13 @@ export const equipmentFilterSchema = z.object({
   calibrationMethod: CalibrationMethodEnum.optional(), // 교정 방법 필터 (외부교정/자체점검/비대상)
   calibrationDue: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이내 교정 임박
   calibrationDueAfter: z.coerce.number().int().positive().optional(), // 숫자(일)로 변환 - N일 이후 교정 여유
+  calibrationOverdue: z
+    .preprocess((val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return val;
+    }, z.boolean())
+    .optional(), // 교정 기한 초과 필터 (true: 기한 초과된 장비만) - status와 독립적으로 작동
   sort: z.string().optional(), // 정렬 기준 (예: 'name.asc')
   isShared: z
     .preprocess((val) => {

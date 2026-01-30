@@ -131,25 +131,34 @@ export const queryKeys = {
     list: (filters: Record<string, unknown>) => [...queryKeys.equipment.lists(), filters] as const,
     details: () => [...queryKeys.equipment.all, 'detail'] as const,
     detail: (id: string | number) => [...queryKeys.equipment.details(), id] as const,
-    history: (id: string, type: string) => [...queryKeys.equipment.detail(id), 'history', type] as const,
+    history: (id: string, type: string) =>
+      [...queryKeys.equipment.detail(id), 'history', type] as const,
   },
   calibrationPlans: {
     all: ['calibrationPlans'] as const,
     lists: () => [...queryKeys.calibrationPlans.all, 'list'] as const,
-    list: (filters: Record<string, unknown>) => [...queryKeys.calibrationPlans.lists(), filters] as const,
+    list: (filters: Record<string, unknown>) =>
+      [...queryKeys.calibrationPlans.lists(), filters] as const,
     details: () => [...queryKeys.calibrationPlans.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.calibrationPlans.details(), id] as const,
   },
   dashboard: {
     all: ['dashboard'] as const,
     summary: (role?: string) => [...queryKeys.dashboard.all, 'summary', role] as const,
-    equipmentByTeam: (role?: string) => [...queryKeys.dashboard.all, 'equipmentByTeam', role] as const,
-    overdueCalibrations: (role?: string) => [...queryKeys.dashboard.all, 'overdueCalibrations', role] as const,
-    upcomingCalibrations: (role?: string, days?: number) => [...queryKeys.dashboard.all, 'upcomingCalibrations', role, days] as const,
-    overdueRentals: (role?: string) => [...queryKeys.dashboard.all, 'overdueRentals', role] as const,
-    recentActivities: (role?: string) => [...queryKeys.dashboard.all, 'recentActivities', role] as const,
-    equipmentStatusStats: (role?: string) => [...queryKeys.dashboard.all, 'equipmentStatusStats', role] as const,
-    pendingApprovalCounts: (role?: string) => [...queryKeys.dashboard.all, 'pendingApprovalCounts', role] as const,
+    equipmentByTeam: (role?: string) =>
+      [...queryKeys.dashboard.all, 'equipmentByTeam', role] as const,
+    overdueCalibrations: (role?: string) =>
+      [...queryKeys.dashboard.all, 'overdueCalibrations', role] as const,
+    upcomingCalibrations: (role?: string, days?: number) =>
+      [...queryKeys.dashboard.all, 'upcomingCalibrations', role, days] as const,
+    overdueCheckouts: (role?: string) =>
+      [...queryKeys.dashboard.all, 'overdueCheckouts', role] as const,
+    recentActivities: (role?: string) =>
+      [...queryKeys.dashboard.all, 'recentActivities', role] as const,
+    equipmentStatusStats: (role?: string) =>
+      [...queryKeys.dashboard.all, 'equipmentStatusStats', role] as const,
+    pendingApprovalCounts: (role?: string) =>
+      [...queryKeys.dashboard.all, 'pendingApprovalCounts', role] as const,
   },
   teams: {
     all: ['teams'] as const,
@@ -163,7 +172,8 @@ export const queryKeys = {
   },
   notifications: {
     all: ['notifications'] as const,
-    list: (filters?: Record<string, unknown>) => [...queryKeys.notifications.all, 'list', filters] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.notifications.all, 'list', filters] as const,
     unreadCount: () => [...queryKeys.notifications.all, 'unreadCount'] as const,
   },
 } as const;

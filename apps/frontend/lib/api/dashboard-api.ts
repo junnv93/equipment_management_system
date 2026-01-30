@@ -32,8 +32,10 @@ export interface UpcomingCalibration {
   daysUntilDue: number;
 }
 
-// 반출 지연 (대여 포함) - 레거시 호환성을 위해 타입명 유지
-export interface OverdueRental {
+/**
+ * 반출 지연 데이터 (대여/교정/수리 포함)
+ */
+export interface OverdueCheckout {
   id: string;
   equipmentId: string;
   equipment?: {
@@ -52,6 +54,11 @@ export interface OverdueRental {
   startDate: string;
   status: string;
 }
+
+/**
+ * @deprecated Use OverdueCheckout instead
+ */
+export type OverdueRental = OverdueCheckout;
 
 export interface RecentActivity {
   id: string;
@@ -118,9 +125,9 @@ class DashboardApi {
   }
 
   /**
-   * 반출 지연 목록 조회 (대여 포함)
+   * 반출 지연 목록 조회 (대여/교정/수리 포함)
    */
-  async getOverdueCheckouts(): Promise<OverdueRental[]> {
+  async getOverdueCheckouts(): Promise<OverdueCheckout[]> {
     const response = await apiClient.get('/api/dashboard/overdue-rentals');
     return response.data;
   }

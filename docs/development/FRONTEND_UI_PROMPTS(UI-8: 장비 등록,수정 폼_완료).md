@@ -1,6 +1,6 @@
 # 프론트엔드 UI 개발 프롬프트
 
-> 📖 **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+> **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
 >
 > - 스킬 참조, 역할 체계, Playwright 테스트 가이드
 > - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
@@ -12,7 +12,159 @@
 
 ### 목적
 
-장비 등록 및 수정을 위한 통합 폼 컴포넌트를 구현합니다.
+장비 등록 및 수정을 위한 통합 폼 컴포넌트를 구현합니다. UL-QP-18 장비 관리 절차서 기반의 역할별 권한 체계와 승인 워크플로우를 반영합니다.
+
+---
+
+### 역할 체계 (UL-QP-18 기준)
+
+| 역할         | 영문 코드           | 주요 권한                                     |
+| ------------ | ------------------- | --------------------------------------------- |
+| 시험실무자   | `test_engineer`     | 장비 등록/수정/삭제/폐기 요청 (승인 필요)     |
+| 기술책임자   | `technical_manager` | 장비 승인, 담당 팀 관리, 폐기 검토            |
+| 품질책임자   | `quality_manager`   | 조회, 교정계획서 검토, 소프트웨어 유효성 검토 |
+| 시험소장     | `lab_manager`       | 전체 권한, 폐기 최종 승인                     |
+| 시스템관리자 | `system_admin`      | 전체 권한 (시스템 레벨)                       |
+
+---
+
+### 장비 상태 정의 (EquipmentStatus)
+
+#### 기본 상태 (현재 구현)
+
+| 상태           | 영문 코드               | 설명                                   |
+| -------------- | ----------------------- | -------------------------------------- |
+| 사용 가능      | `available`             | 정상 사용 가능한 상태                  |
+| 사용 중        | `in_use`                | 대여 중인 상태 포함                    |
+| 반출 중        | `checked_out`           | 외부 교정/수리/대여를 위해 반출된 상태 |
+| 교정 예정      | `calibration_scheduled` | 교정 일정이 임박한 상태 (D-day 표시)   |
+| 교정 기한 초과 | `calibration_overdue`   | 교정 기한이 지난 상태 (D+day 표시)     |
+| 부적합         | `non_conforming`        | 임시적 부적합 (수리 후 복귀 가능)      |
+| 여분           | `spare`                 | 보유하고 있지만 상시 관리하지 않음     |
+| 폐기           | `retired`               | 사용 중지 (영구 폐기)                  |
+
+#### 확장 상태 (향후 구현 예정)
+
+| 상태      | 영문 코드          | 설명                    |
+| --------- | ------------------ | ----------------------- |
+| 폐기 대기 | `pending_disposal` | 폐기 승인 대기 중       |
+| 폐기 완료 | `disposed`         | 폐기 완료               |
+| 임시 등록 | `temporary`        | 공용/렌탈장비 임시 등록 |
+| 비활성    | `inactive`         | 임시등록 장비 사용 완료 |
+
+---
+
+### 장비 유형별 등록 방식
+
+| 유형            | 설명                 | 등록 방식 | 필수 첨부파일 |
+| --------------- | -------------------- | --------- | ------------- |
+| 내부장비 (신규) | 신규 구매/도입 장비  | 정식 등록 | 검수보고서    |
+| 내부장비 (기존) | 기존 운영 중인 장비  | 정식 등록 | 이력카드      |
+| 공용장비        | 타 팀 장비 임시 사용 | 임시 등록 | 교정성적서    |
+| 렌탈장비        | 외부 대여 장비       | 임시 등록 | 교정성적서    |
+
+---
+
+### 필수 입력 항목
+
+#### 내부장비 필수 항목
+
+**기본 정보:**
+
+- 관리번호 (자동 생성): `{시험소코드}-{분류코드}{일련번호}` (예: SUW-E0001)
+- 장비명 (필수)
+- 모델명 (필수)
+- 제조사 (필수)
+- 시리얼넘버 (필수)
+- 장비타입 (필수): 측정기, 보조장비 등
+- 소속 시험소 (필수): 수원, 의왕, 평택
+- 관리 팀 (필수): 시험소별 팀 필터링
+- 현재 위치 (필수)
+- 운영책임자(정) (필수)
+- 설치일자 (필수)
+
+**교정 정보 (조건부 필수):**
+
+- 교정 필요 여부 (필수)
+- 교정 주기 (교정 필요 시 필수)
+- 최근 교정일자 (교정 필요 시 필수)
+- 차기 교정일 (자동 계산)
+- 교정 방법: 외부교정, 자체점검, 비대상
+
+**점검 정보 (조건부 필수):**
+
+- 중간점검 필요 여부 (필수)
+- 중간점검 주기 (중간점검 필요 시 필수)
+
+#### 공용장비/렌탈장비 필수 항목
+
+- 장비명 (필수)
+- 모델명 (필수)
+- 시리얼넘버 (필수)
+- 소유처 (필수): Safety Lab, 외부 기관 등
+- 교정성적서 (필수 첨부)
+- 교정일자 (필수)
+- 차기교정일 (필수)
+- 사용 예정 기간 (필수)
+
+---
+
+### 승인 워크플로우
+
+#### 장비 등록/수정 프로세스
+
+```
+시험실무자          기술책임자
+    │                   │
+    ├─── 등록 요청 ────→│
+    │   (pending)       │
+    │                   ├─── 승인 ──→ [등록 완료]
+    │                   │   (approved)
+    │                   └─── 반려 ──→ [반려됨]
+    │                       (rejected)
+```
+
+#### 장비 삭제 프로세스
+
+- **삭제 대상**: 잘못 등록된 장비, 중복 등록, 테스트 데이터
+- **승인**: 시험실무자 요청 → 기술책임자 승인 (1단계)
+
+#### 장비 폐기 프로세스 (2단계 승인)
+
+```
+시험실무자          기술책임자          시험소장
+    │                   │                 │
+    ├─── 폐기 요청 ────→│                 │
+    │   (pending)       │                 │
+    │                   ├─── 검토 ───────→│
+    │                   │   (reviewed)    │
+    │                   │                 ├─── 최종 승인 ──→ [폐기 완료]
+    │                   │                 │   (approved)     (retired)
+    │                   │                 └─── 반려 ────────→ [반려됨]
+    │                   │                     (rejected)
+```
+
+- **폐기 대상**: 노후화, 고장(수리 불가), 정밀도/정확도 미보장
+
+---
+
+### 전체 승인 매트릭스 (부록 B)
+
+| 업무              | 요청자     | 1차 처리                 | 2차 처리        |
+| ----------------- | ---------- | ------------------------ | --------------- |
+| 장비 등록/수정    | 시험실무자 | 기술책임자 (승인)        | -               |
+| 장비 삭제         | 시험실무자 | 기술책임자 (승인)        | -               |
+| 장비 폐기         | 시험실무자 | 기술책임자 (검토)        | 시험소장 (승인) |
+| 교정 기록         | 시험실무자 | 기술책임자 (승인)        | -               |
+| 중간점검          | 시험실무자 | 기술책임자 (승인)        | -               |
+| 교정계획서        | 기술책임자 | 품질책임자 (검토)        | 시험소장 (승인) |
+| 대여              | 시험실무자 | 소유팀 기술책임자 (승인) | -               |
+| 반출              | 시험실무자 | 소유팀 기술책임자 (승인) | -               |
+| 반입              | 시험실무자 | 기술책임자 (승인)        | -               |
+| 공용장비 사용     | 시험실무자 | 기술책임자 (승인)        | -               |
+| 소프트웨어 유효성 | 기술책임자 | 품질책임자 (검토)        | -               |
+
+---
 
 ### 프롬프트
 
@@ -27,52 +179,73 @@
 AGENTS.md와 /docs/development/API_STANDARDS.md를 참조하여 장비 등록/수정 폼을 구현해줘.
 
 역할 참고:
-- test_engineer (시험실무자): 장비 등록/수정 요청 (승인 필요)
-- technical_manager (기술책임자): 직접 등록/수정 (승인 불필요)
-- lab_manager, system_admin: 전체 권한
+- test_engineer (시험실무자): 장비 등록/수정/삭제/폐기 요청 (모두 승인 필요)
+- technical_manager (기술책임자): 장비 승인, 담당 팀 관리, 폐기 검토
+- quality_manager (품질책임자): 조회 전용, 교정계획서/소프트웨어 유효성 검토
+- lab_manager, system_admin: 전체 권한, 폐기 최종 승인
 
 요구사항:
-1. 장비 기본 정보 입력
+
+1. 장비 유형별 등록 폼 분기
+   - 내부장비 등록 (정식): create/page.tsx
+   - 공용장비/렌탈장비 등록 (임시): create-shared/page.tsx
+   - 등록 유형 선택 UI 제공
+
+2. 장비 기본 정보 입력 (내부장비)
    - 장비명 (필수)
-   - 모델명, 제조사, 시리얼넘버
-   - 관리번호 (자동 생성 또는 수동 입력)
-   - 사이트 선택 (suwon/uiwang)
+   - 모델명, 제조사, 시리얼넘버 (필수)
+   - 관리번호 (자동 생성: {시험소코드}-{분류코드}{일련번호})
+   - 사이트 선택 (suwon/uiwang/pyeongtaek)
    - 팀 선택 (사이트별 팀 필터링)
    - 장비 타입 (측정기, 보조장비 등)
+   - 운영책임자(정) (필수)
+   - 설치일자 (필수)
 
-2. 교정 관련 정보
-   - 교정 방법 (자체교정/외부교정)
-   - 교정 주기
-   - 최근 교정일, 차기 교정일
-   - 중간점검일정
+3. 교정 관련 정보 (조건부 필수)
+   - 교정 필요 여부 (required/not_required)
+   - 교정 방법 (external_calibration/self_inspection/not_applicable)
+   - 교정 주기 (교정 필요 시 필수)
+   - 최근 교정일, 차기 교정일 (교정 필요 시 필수)
 
-3. 상태 및 위치
-   - 장비 상태 (사용가능, 교정중, 수리중 등)
-   - 현재 위치
-   - 공용장비 여부
+4. 점검 정보 (조건부 필수)
+   - 중간점검 필요 여부 (필수)
+   - 중간점검 주기 (점검 필요 시 필수)
 
-4. 파일 첨부
-   - 이력카드 (기존 장비)
-   - 검수보고서 (신규 장비)
+5. 공용장비/렌탈장비 입력 (임시 등록)
+   - 장비명, 모델명, 시리얼넘버 (필수)
+   - 소유처 (safety_lab/external) (필수)
+   - 교정성적서 첨부 (필수)
+   - 교정일자, 차기교정일 (필수)
+   - 사용 예정 기간 (필수)
+
+6. 상태 및 위치
+   - 장비 상태 선택 (역할별 선택 가능 상태 제한)
+   - 현재 위치 (필수)
+   - isShared 플래그 (공용장비 여부)
+
+7. 파일 첨부
+   - 이력카드 (기존 내부장비)
+   - 검수보고서 (신규 내부장비)
+   - 교정성적서 (공용/렌탈장비 필수)
    - 드래그앤드롭 지원
    - 파일 미리보기
    - 파일 삭제
 
-5. 폼 상태 관리
+8. 폼 상태 관리
    - 실시간 유효성 검증
+   - 조건부 필수 필드 동적 표시
    - 변경사항 감지 (수정 모드)
    - 저장 전 확인 모달
    - 역할별 안내 메시지 (승인 필요 여부)
 
-6. 공용장비 등록 (별도 페이지)
-   - 공유 사이트 선택 (다중)
-   - 공유 팀 선택
-   - 공용 장비 배지 표시
+9. 승인 워크플로우 표시
+   - 시험실무자: "등록 요청 시 기술책임자 승인이 필요합니다" 배너
+   - 기술책임자+: "직접 등록됩니다" 안내
 
 파일:
-- apps/frontend/app/equipment/create/page.tsx
+- apps/frontend/app/equipment/create/page.tsx (내부장비)
 - apps/frontend/app/equipment/[id]/edit/page.tsx
-- apps/frontend/app/equipment/create-shared/page.tsx
+- apps/frontend/app/equipment/create-shared/page.tsx (공용/렌탈장비)
 - apps/frontend/components/equipment/EquipmentForm.tsx (통합 폼)
 - apps/frontend/components/equipment/BasicInfoSection.tsx
 - apps/frontend/components/equipment/CalibrationInfoSection.tsx
@@ -91,7 +264,7 @@ Next.js 16 필수 패턴:
    export default async function EquipmentEditPage(
      props: PageProps<'/equipment/[id]/edit'>
    ) {
-     const { id } = await props.params;  // ✅ params는 Promise
+     const { id } = await props.params;  // params는 Promise
      const equipment = await getEquipment(id);
      return <EquipmentForm mode="edit" equipment={equipment} />;
    }
@@ -156,6 +329,7 @@ Next.js 16 필수 패턴:
 
 - 섹션별 카드 분리 (UL Solutions 브랜드 색상 적용)
 - 필수 필드 별표(\*) 표시 (Brand Red #CA0123)
+- 조건부 필수 필드 동적 표시 (교정 필요 → 교정 주기 필수)
 - 파일 업로드 드래그 영역:
   - 점선 테두리 (border-dashed, UL Gray 1 #D8D9DA)
   - 드래그 오버 시 배경색 변경 (UL Info #BCE4F7)
@@ -180,10 +354,16 @@ Next.js 16 필수 패턴:
 - 파일 크기 제한 (10MB)
 - 파일 형식 제한 (PDF, 이미지, 문서)
 - 수정 모드에서 변경된 필드만 전송
+- SSOT 패키지 import 필수:
+  ```typescript
+  import { EquipmentStatus, CalibrationMethod } from '@equipment-management/schemas';
+  import { Permission, API_ENDPOINTS } from '@equipment-management/shared-constants';
+  ```
 
 검증:
 
 - 필수 필드 검증 테스트
+- 조건부 필수 필드 검증 테스트
 - 파일 업로드 테스트
 - 역할별 동작 테스트
 - pnpm tsc --noEmit
@@ -191,8 +371,10 @@ Next.js 16 필수 패턴:
 Playwright 테스트:
 
 - 필수 필드 미입력 시 에러 표시
+- 조건부 필수 필드 동적 표시/숨김
 - 파일 업로드 및 삭제 동작
 - 폼 제출 성공/실패 처리
+- 역할별 승인 안내 메시지 확인
 
 완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
 
@@ -311,14 +493,15 @@ export function EquipmentForm() {
   if (isLoading) return <FormSkeleton />;
   if (!isAuthenticated) return <Redirect to="/login" />;
 
-  // 역할 기반 UI 분기
+  // 역할 기반 UI 분기 (5개 역할 체계)
   const needsApproval = hasRole('test_engineer');
-  const canDirectSubmit = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
+  const canDirectSubmit = hasRole(['technical_manager', 'quality_manager', 'lab_manager', 'system_admin']);
+  const canApproveDisposal = hasRole('lab_manager'); // 폐기 최종 승인
 
   return (
     <>
       {needsApproval && (
-        <Alert>
+        <Alert variant="warning">
           <AlertDescription>
             시험실무자는 장비 등록 시 기술책임자의 승인이 필요합니다.
           </AlertDescription>
@@ -369,6 +552,14 @@ export function EquipmentForm() {
 - [x] 파일 업로드/삭제 구현됨
 - [x] 역할별 안내 메시지 구현됨
 - [x] 변경사항 감지 구현됨 (수정 모드)
+- [ ] 조건부 필수 필드 동적 표시 (교정 필요 여부에 따른 교정 주기 필수화)
+- [ ] 장비 유형별 등록 폼 분기 (내부장비 vs 공용/렌탈장비)
+
+#### 승인 워크플로우
+
+- [ ] 장비 등록 시 승인 상태(pending_approval) 자동 설정 (시험실무자)
+- [ ] 기술책임자+ 역할 시 직접 등록(approved) 처리
+- [ ] 폐기 2단계 승인 프로세스 구현
 
 #### 에러 처리 관련
 
@@ -401,6 +592,8 @@ export function EquipmentForm() {
 - [x] Playwright 테스트 작성됨 (equipment-form.spec.ts)
 - [x] 에러 시나리오 테스트 작성됨 (equipment-form-errors.spec.ts)
 - [x] 모든 테스트 통과됨 (22/22 tests passed)
+- [ ] 조건부 필수 필드 테스트 추가
+- [ ] 역할별 승인 워크플로우 테스트 추가
 
 ---
 
@@ -464,6 +657,32 @@ test.describe('Equipment Form - Basic', () => {
     // 성공 후 목록 페이지로 이동 확인
     await expect(techManagerPage).toHaveURL('/equipment');
     await expect(techManagerPage.getByText('장비가 등록되었습니다')).toBeVisible();
+  });
+});
+
+test.describe('Equipment Form - Conditional Fields', () => {
+  test('교정 필요 선택 시 교정 주기 필수화', async ({ testOperatorPage }) => {
+    await testOperatorPage.goto('/equipment/create');
+
+    // 교정 필요 선택
+    await testOperatorPage.getByLabel('교정 필요 여부').selectOption('required');
+
+    // 교정 주기 필드가 필수로 표시되는지 확인
+    await expect(testOperatorPage.getByLabel('교정 주기 *')).toBeVisible();
+
+    // 교정 주기 미입력 시 에러
+    await testOperatorPage.getByRole('button', { name: '저장' }).click();
+    await expect(testOperatorPage.getByText('교정 주기는 필수입니다')).toBeVisible();
+  });
+
+  test('교정 불필요 선택 시 교정 주기 숨김', async ({ testOperatorPage }) => {
+    await testOperatorPage.goto('/equipment/create');
+
+    // 교정 불필요 선택
+    await testOperatorPage.getByLabel('교정 필요 여부').selectOption('not_required');
+
+    // 교정 주기 필드가 숨겨지는지 확인
+    await expect(testOperatorPage.getByLabel('교정 주기')).not.toBeVisible();
   });
 });
 

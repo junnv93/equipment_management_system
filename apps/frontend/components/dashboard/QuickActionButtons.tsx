@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 interface QuickAction {
   label: string;
@@ -25,31 +26,71 @@ interface QuickActionButtonsProps {
   className?: string;
 }
 
-// 역할별 빠른 액션 정의
+// 역할별 빠른 액션 정의 (SSOT: FRONTEND_ROUTES 사용)
 const actionsByRole: Record<string, QuickAction[]> = {
   test_engineer: [
-    { label: '장비 등록', href: '/equipment/create', icon: Plus, variant: 'default' },
-    { label: '대여 신청', href: '/rentals/create', icon: ClipboardList, variant: 'outline' },
-    { label: '반출 신청', href: '/checkouts/create', icon: ArrowRightLeft, variant: 'outline' },
+    { label: '장비 등록', href: FRONTEND_ROUTES.EQUIPMENT.CREATE, icon: Plus, variant: 'default' },
+    {
+      label: '반출 신청',
+      href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
+      icon: ArrowRightLeft,
+      variant: 'outline',
+    },
+    {
+      label: '대여/반출 현황',
+      href: FRONTEND_ROUTES.CHECKOUTS.LIST,
+      icon: ClipboardList,
+      variant: 'outline',
+    },
   ],
   technical_manager: [
-    { label: '승인 관리', href: '/admin/equipment-approvals', icon: CheckSquare, variant: 'default' },
-    { label: '교정 등록', href: '/calibration/register', icon: FileSpreadsheet, variant: 'outline' },
-    { label: '장비 등록', href: '/equipment/create', icon: Plus, variant: 'outline' },
+    {
+      label: '승인 관리',
+      href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
+      icon: CheckSquare,
+      variant: 'default',
+    },
+    {
+      label: '교정 등록',
+      href: FRONTEND_ROUTES.CALIBRATION.REGISTER,
+      icon: FileSpreadsheet,
+      variant: 'outline',
+    },
+    { label: '장비 등록', href: FRONTEND_ROUTES.EQUIPMENT.CREATE, icon: Plus, variant: 'outline' },
   ],
   lab_manager: [
-    { label: '승인 관리', href: '/admin/equipment-approvals', icon: CheckSquare, variant: 'default' },
-    { label: '사용자 관리', href: '/admin/users', icon: Users, variant: 'outline' },
+    {
+      label: '승인 관리',
+      href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
+      icon: CheckSquare,
+      variant: 'default',
+    },
+    { label: '사용자 관리', href: FRONTEND_ROUTES.ADMIN.USERS, icon: Users, variant: 'outline' },
     { label: '시스템 설정', href: '/settings', icon: Settings, variant: 'outline' },
   ],
   system_admin: [
-    { label: '승인 관리', href: '/admin/equipment-approvals', icon: CheckSquare, variant: 'default' },
-    { label: '사용자 관리', href: '/admin/users', icon: Users, variant: 'outline' },
+    {
+      label: '승인 관리',
+      href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
+      icon: CheckSquare,
+      variant: 'default',
+    },
+    { label: '사용자 관리', href: FRONTEND_ROUTES.ADMIN.USERS, icon: Users, variant: 'outline' },
     { label: '시스템 설정', href: '/settings', icon: Settings, variant: 'outline' },
   ],
   default: [
-    { label: '장비 목록', href: '/equipment', icon: ClipboardList, variant: 'default' },
-    { label: '대여 현황', href: '/loans', icon: ArrowRightLeft, variant: 'outline' },
+    {
+      label: '장비 목록',
+      href: FRONTEND_ROUTES.EQUIPMENT.LIST,
+      icon: ClipboardList,
+      variant: 'default',
+    },
+    {
+      label: '대여/반출 현황',
+      href: FRONTEND_ROUTES.CHECKOUTS.LIST,
+      icon: ArrowRightLeft,
+      variant: 'outline',
+    },
   ],
 };
 
@@ -70,10 +111,7 @@ export function QuickActionButtons({ className }: QuickActionButtonsProps) {
   const actions = actionsByRole[userRole] || actionsByRole['default'];
 
   return (
-    <nav
-      className={`flex flex-wrap gap-2 ${className || ''}`}
-      aria-label="빠른 액션"
-    >
+    <nav className={`flex flex-wrap gap-2 ${className || ''}`} aria-label="빠른 액션">
       {actions.map((action) => {
         const Icon = action.icon;
         return (

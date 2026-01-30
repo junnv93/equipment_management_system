@@ -8,6 +8,7 @@ import { UserRole } from '../rbac/roles.enum';
 export const userRoleSchema = z.enum([
   UserRole.TEST_ENGINEER,
   UserRole.TECHNICAL_MANAGER,
+  UserRole.QUALITY_MANAGER,
   UserRole.LAB_MANAGER,
 ]);
 

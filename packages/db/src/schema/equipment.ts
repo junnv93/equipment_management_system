@@ -27,7 +27,11 @@ export const equipmentStatusEnum = pgEnum('equipment_status', [
   'calibration_overdue', // 교정 기한 초과
   'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
   'spare', // 여분
-  'retired', // 사용 중지 (영구 폐기)
+  'retired', // 사용 중지 (영구 폐기) - deprecated, disposed 사용 권장
+  'pending_disposal', // 폐기 대기 (시험소장 승인 전)
+  'disposed', // 폐기 완료
+  'temporary', // 임시 등록 (공용/렌탈장비)
+  'inactive', // 비활성 (임시등록 장비 사용 완료)
 ]);
 
 // 교정 방법 정의
@@ -124,6 +128,10 @@ export const equipment = pgTable(
     // @see packages/schemas/src/enums.ts - SharedSourceEnum
     isShared: boolean('is_shared').default(false).notNull(), // 공용장비 여부
     sharedSource: varchar('shared_source', { length: 50 }), // 공용장비 출처: 'safety_lab' | 'external' | null
+    owner: varchar('owner', { length: 100 }), // 소유처 (공용장비: 팀명, 렌탈장비: 업체명)
+    externalIdentifier: varchar('external_identifier', { length: 100 }), // 소유처 원본 식별번호 (예: SAF-EQ-1234)
+    usagePeriodStart: timestamp('usage_period_start'), // 사용 시작일 (임시등록 전용)
+    usagePeriodEnd: timestamp('usage_period_end'), // 사용 종료일 (임시등록 전용)
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow(),
@@ -157,7 +165,9 @@ export const equipment = pgTable(
       softwareNameIdx: index('equipment_software_name_idx').on(table.softwareName),
       // 관리번호 컴포넌트 검색 최적화
       siteCodeIdx: index('equipment_site_code_idx').on(table.siteCode),
-      classificationCodeIdx: index('equipment_classification_code_idx').on(table.classificationCode),
+      classificationCodeIdx: index('equipment_classification_code_idx').on(
+        table.classificationCode
+      ),
     };
   }
 );

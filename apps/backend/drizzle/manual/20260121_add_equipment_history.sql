@@ -1,5 +1,6 @@
 -- 장비 등록/수정 페이지 대대적 수정 마이그레이션
 -- 작성일: 2026-01-21
+-- 수정일: 2026-01-30 (UUID 타입 통일)
 
 -- ============================================
 -- 1. Equipment 테이블 필드 추가
@@ -25,16 +26,20 @@ ALTER TABLE equipment ADD COLUMN IF NOT EXISTS next_intermediate_check_date TIME
 
 CREATE TABLE IF NOT EXISTS equipment_location_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  equipment_id VARCHAR(36) NOT NULL,
+  equipment_id UUID NOT NULL,
   changed_at TIMESTAMP NOT NULL,
   new_location VARCHAR(100) NOT NULL,
   notes TEXT,
-  changed_by VARCHAR(36),
+  changed_by UUID,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_location_history_equipment
     FOREIGN KEY (equipment_id)
-    REFERENCES equipment(uuid)
-    ON DELETE CASCADE
+    REFERENCES equipment(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_location_history_user
+    FOREIGN KEY (changed_by)
+    REFERENCES users(id)
+    ON DELETE SET NULL
 );
 
 -- 인덱스 생성
@@ -47,15 +52,19 @@ CREATE INDEX IF NOT EXISTS idx_location_history_changed_at ON equipment_location
 
 CREATE TABLE IF NOT EXISTS equipment_maintenance_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  equipment_id VARCHAR(36) NOT NULL,
+  equipment_id UUID NOT NULL,
   performed_at TIMESTAMP NOT NULL,
   content TEXT NOT NULL,
-  performed_by VARCHAR(36),
+  performed_by UUID,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_maintenance_history_equipment
     FOREIGN KEY (equipment_id)
-    REFERENCES equipment(uuid)
-    ON DELETE CASCADE
+    REFERENCES equipment(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_maintenance_history_user
+    FOREIGN KEY (performed_by)
+    REFERENCES users(id)
+    ON DELETE SET NULL
 );
 
 -- 인덱스 생성
@@ -68,16 +77,20 @@ CREATE INDEX IF NOT EXISTS idx_maintenance_history_performed_at ON equipment_mai
 
 CREATE TABLE IF NOT EXISTS equipment_incident_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  equipment_id VARCHAR(36) NOT NULL,
+  equipment_id UUID NOT NULL,
   occurred_at TIMESTAMP NOT NULL,
   incident_type VARCHAR(50) NOT NULL, -- damage, malfunction, change, repair
   content TEXT NOT NULL,
-  reported_by VARCHAR(36),
+  reported_by UUID,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_incident_history_equipment
     FOREIGN KEY (equipment_id)
-    REFERENCES equipment(uuid)
-    ON DELETE CASCADE
+    REFERENCES equipment(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_incident_history_user
+    FOREIGN KEY (reported_by)
+    REFERENCES users(id)
+    ON DELETE SET NULL
 );
 
 -- 인덱스 생성

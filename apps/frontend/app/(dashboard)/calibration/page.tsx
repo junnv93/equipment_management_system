@@ -14,13 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -55,6 +49,7 @@ import { getErrorMessage } from '@/lib/api/error';
 import equipmentApi from '@/lib/api/equipment-api';
 import calibrationApi from '@/lib/api/calibration-api';
 import { apiClient } from '@/lib/api/api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { format, differenceInDays, isBefore } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -173,17 +168,31 @@ export default function CalibrationPage() {
     useQuery<IntermediateChecksResponse>({
       queryKey: ['intermediate-checks', 'all'],
       queryFn: async () => {
-        return apiClient.get('/api/calibration/intermediate-checks/all');
+        const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL);
+        return response.data;
       },
     });
+
+  // 팀 목록 조회 (동적 로딩)
+  const { data: teamsData, isLoading: isTeamsLoading } = useQuery({
+    queryKey: ['teams'],
+    queryFn: async () => {
+      const response = await apiClient.get(API_ENDPOINTS.TEAMS.LIST);
+      return response.data;
+    },
+  });
 
   // 중간점검 완료 뮤테이션
   const completeIntermediateCheckMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
-      return apiClient.post(`/api/calibration/${id}/intermediate-check/complete`, {
-        completedBy: session?.user?.id,
-        notes: notes || undefined,
-      });
+      const response = await apiClient.post(
+        API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(id),
+        {
+          completedBy: session?.user?.id,
+          notes: notes || undefined,
+        }
+      );
+      return response.data;
     },
     onSuccess: () => {
       toast({
@@ -226,7 +235,8 @@ export default function CalibrationPage() {
     isUpcomingLoading ||
     isEquipmentLoading ||
     isHistoryLoading ||
-    isIntermediateChecksLoading;
+    isIntermediateChecksLoading ||
+    isTeamsLoading;
 
   // 데이터 연결 상태 확인
   const isError =
@@ -240,7 +250,7 @@ export default function CalibrationPage() {
           (!searchTerm ||
             item.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.managementNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (teamFilter === 'all' || item.team === teamFilter)
+          (teamFilter === 'all' || item.teamId === teamFilter)
       );
     }
 
@@ -250,7 +260,7 @@ export default function CalibrationPage() {
           (!searchTerm ||
             item.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.managementNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (teamFilter === 'all' || item.team === teamFilter)
+          (teamFilter === 'all' || item.teamId === teamFilter)
       );
     }
 
@@ -261,7 +271,7 @@ export default function CalibrationPage() {
           (!searchTerm ||
             item.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.managementNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (teamFilter === 'all' || item.team === teamFilter)
+          (teamFilter === 'all' || item.teamId === teamFilter)
       );
     }
 
@@ -400,10 +410,12 @@ export default function CalibrationPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">모든 팀</SelectItem>
-              <SelectItem value="lab1">Lab 1</SelectItem>
-              <SelectItem value="lab2">Lab 2</SelectItem>
-              <SelectItem value="research">연구팀</SelectItem>
-              <SelectItem value="development">개발팀</SelectItem>
+              {/* ✅ 동적으로 로드된 팀 데이터 사용 */}
+              {teamsData?.data?.map((team: { id: string; name: string }) => (
+                <SelectItem key={team.id} value={team.id}>
+                  {team.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 interface MainNavItem {
   title: string;
@@ -13,26 +14,27 @@ interface MainNavItem {
 export function MainNav() {
   const pathname = usePathname();
 
+  // SSOT: FRONTEND_ROUTES 사용
   const navItems: MainNavItem[] = [
     {
-      title: "대시보드",
-      href: "/dashboard",
+      title: '대시보드',
+      href: '/dashboard',
     },
     {
-      title: "장비 목록",
-      href: "/dashboard/equipment",
+      title: '장비 목록',
+      href: '/dashboard/equipment',
     },
     {
-      title: "대여/반출",
-      href: "/dashboard/rentals",
+      title: '대여/반출',
+      href: FRONTEND_ROUTES.CHECKOUTS.LIST,
     },
     {
-      title: "교정 관리",
-      href: "/dashboard/calibrations",
+      title: '교정 관리',
+      href: '/dashboard/calibrations',
     },
     {
-      title: "보고서",
-      href: "/dashboard/reports",
+      title: '보고서',
+      href: '/dashboard/reports',
     },
   ];
 
@@ -43,10 +45,8 @@ export function MainNav() {
           key={item.href}
           href={item.href}
           className={cn(
-            "text-sm font-medium transition-colors hover:text-primary",
-            pathname === item.href
-              ? "text-foreground"
-              : "text-muted-foreground"
+            'text-sm font-medium transition-colors hover:text-primary',
+            pathname === item.href ? 'text-foreground' : 'text-muted-foreground'
           )}
         >
           {item.title}
@@ -54,4 +54,4 @@ export function MainNav() {
       ))}
     </nav>
   );
-} 
+}

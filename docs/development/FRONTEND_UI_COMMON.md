@@ -1,4 +1,4 @@
- # 프론트엔드 UI 개발 공통 가이드
+# 프론트엔드 UI 개발 공통 가이드
 
 > 이 문서는 모든 FRONTEND_UI_PROMPTS 문서에서 참조하는 공통 가이드라인입니다.
 
@@ -8,14 +8,14 @@
 
 각 프롬프트 실행 전 아래 스킬을 로드하세요:
 
-| 스킬 명령어                    | 설명                                                   | 사용 시점                      |
-| ------------------------------ | ------------------------------------------------------ | ------------------------------ |
-| `/equipment-management`        | 역할 체계, 승인 프로세스, 장비 관리 도메인 지식        | 모든 UI 개발 시                |
-| `/nextjs-16`                   | Next.js 16 App Router, PageProps, useActionState 패턴  | 페이지/레이아웃 개발 시        |
-| `/vercel-react-best-practices` | React/Next.js 성능 최적화, 번들 크기, Core Web Vitals  | React 컴포넌트 작성/리뷰 시    |
-| `/web-design-guidelines`       | UI 접근성(WCAG), UX best practices, 디자인 품질 검토   | UI 접근성 및 UX 검토 시        |
-| `/frontend-design`             | 고품질 프론트엔드 인터페이스 디자인, 컴포넌트 스타일링 | UI 컴포넌트 디자인 시          |
-| `/playwright-skill`            | Playwright 브라우저 자동화 및 테스트                   | E2E 테스트 작성 시             |
+| 스킬 명령어                    | 설명                                                   | 사용 시점                   |
+| ------------------------------ | ------------------------------------------------------ | --------------------------- |
+| `/equipment-management`        | 역할 체계, 승인 프로세스, 장비 관리 도메인 지식        | 모든 UI 개발 시             |
+| `/nextjs-16`                   | Next.js 16 App Router, PageProps, useActionState 패턴  | 페이지/레이아웃 개발 시     |
+| `/vercel-react-best-practices` | React/Next.js 성능 최적화, 번들 크기, Core Web Vitals  | React 컴포넌트 작성/리뷰 시 |
+| `/web-design-guidelines`       | UI 접근성(WCAG), UX best practices, 디자인 품질 검토   | UI 접근성 및 UX 검토 시     |
+| `/frontend-design`             | 고품질 프론트엔드 인터페이스 디자인, 컴포넌트 스타일링 | UI 컴포넌트 디자인 시       |
+| `/playwright-skill`            | Playwright 브라우저 자동화 및 테스트                   | E2E 테스트 작성 시          |
 
 ### 스킬 로드 예시
 
@@ -40,19 +40,23 @@
 
 ## 역할 체계
 
-| 역할명              | 한국어          | 권한 수준 |
-| ------------------- | --------------- | --------- |
-| `test_engineer`     | 시험실무자      | 1         |
-| `technical_manager` | 기술책임자      | 2         |
-| `lab_manager`       | 시험소 관리자   | 3         |
-| `system_admin`      | 시스템 관리자   | 4         |
+> ⚠️ **SSOT 참조**: 역할 enum 값은 `packages/schemas/src/enums.ts`의 `UserRoleEnum`에서 정의됩니다.
+
+| 역할명              | 한국어        | 권한 수준 | 주요 업무                         |
+| ------------------- | ------------- | --------- | --------------------------------- |
+| `test_engineer`     | 시험실무자    | 1         | 기본 조작, 승인 요청              |
+| `technical_manager` | 기술책임자    | 2         | 소유 팀 승인, 교정 관리           |
+| `quality_manager`   | 품질책임자    | 3         | 교정계획서 검토, 소프트웨어 검토  |
+| `lab_manager`       | 시험소장      | 4         | 최종 승인, 시험소 전체 관리       |
+| `system_admin`      | 시스템 관리자 | 5         | 사용자/역할 관리 (승인 권한 없음) |
 
 ### 역할별 주요 권한
 
 - **test_engineer**: 장비 조회, 이력 등록 요청, 반출 신청
-- **technical_manager**: 교정 등록, 이력 승인, 보정계수 관리
-- **lab_manager**: 교정계획서 승인, 해당 시험소 전체 관리
-- **system_admin**: 전체 시스템 관리, 사용자 관리
+- **technical_manager**: 교정 등록, 이력 승인, 보정계수 관리, 폐기 검토
+- **quality_manager**: 교정계획서 검토, 소프트웨어 유효성 검토
+- **lab_manager**: 폐기 최종 승인, 교정계획서 최종 승인, 해당 시험소 전체 관리
+- **system_admin**: 전체 시스템 관리, 사용자 관리 (승인 권한 없음)
 
 ---
 
@@ -224,9 +228,11 @@ async function loginAs(page: Page, role: string) {
           value,
           domain: 'localhost',
           path: attributes['path'] || '/',
-          httpOnly: parts.some(p => p.trim().toLowerCase() === 'httponly'),
+          httpOnly: parts.some((p) => p.trim().toLowerCase() === 'httponly'),
           sameSite: (attributes['samesite'] || 'Lax') as 'Lax' | 'Strict' | 'None',
-          expires: attributes['expires'] ? new Date(attributes['expires']).getTime() / 1000 : undefined,
+          expires: attributes['expires']
+            ? new Date(attributes['expires']).getTime() / 1000
+            : undefined,
         };
       });
       await page.context().addCookies(cookies);
@@ -418,43 +424,43 @@ import { Card } from '@/components/ui/card';
 
 ### 색상 팔레트
 
-| 용도           | 색상 코드   | 색상명          |
-| -------------- | ----------- | --------------- |
-| Primary        | `#122C49`   | Midnight Blue   |
-| Primary Hover  | `#0a1c30`   | Darker Midnight |
-| Secondary      | `#577E9E`   | Fog             |
-| Brand Accent   | `#CA0123`   | Bright Red      |
-| Error          | `#CA0123`   | Bright Red      |
-| Success        | `#00A451`   | Bright Green    |
-| Warning        | `#FF9D55`   | Orange          |
-| Info           | `#BCE4F7`   | Light Blue      |
-| Background     | `#EBEBEB`   | UL Gray         |
-| Surface        | `#FFFFFF`   | White           |
-| Border         | `#D8D9DA`   | UL Gray 1       |
-| Text Primary   | `#122C49`   | Midnight Blue   |
-| Text Muted     | `#577E9E`   | Fog             |
+| 용도          | 색상 코드 | 색상명          |
+| ------------- | --------- | --------------- |
+| Primary       | `#122C49` | Midnight Blue   |
+| Primary Hover | `#0a1c30` | Darker Midnight |
+| Secondary     | `#577E9E` | Fog             |
+| Brand Accent  | `#CA0123` | Bright Red      |
+| Error         | `#CA0123` | Bright Red      |
+| Success       | `#00A451` | Bright Green    |
+| Warning       | `#FF9D55` | Orange          |
+| Info          | `#BCE4F7` | Light Blue      |
+| Background    | `#EBEBEB` | UL Gray         |
+| Surface       | `#FFFFFF` | White           |
+| Border        | `#D8D9DA` | UL Gray 1       |
+| Text Primary  | `#122C49` | Midnight Blue   |
+| Text Muted    | `#577E9E` | Fog             |
 
 ### 장비 상태별 색상
 
-| 상태                   | 색상                       | 설명             |
-| ---------------------- | -------------------------- | ---------------- |
-| `available`            | UL Green (`#00A451`)       | 사용 가능        |
-| `in_use`               | UL Blue (`#577E9E`)        | 사용 중          |
-| `checked_out`          | UL Midnight Blue (`#122C49`) | 반출 중        |
-| `calibration_scheduled`| UL Info (`#BCE4F7`)        | 교정 예정        |
-| `calibration_overdue`  | UL Red (`#CA0123`)         | 교정 기한 초과   |
-| `non_conforming`       | UL Red (`#CA0123`)         | 부적합           |
-| `spare`                | UL Fog (`#577E9E`)         | 여분             |
-| `retired`              | UL Gray (`#EBEBEB`)        | 폐기             |
+| 상태                    | 색상                         | 설명           |
+| ----------------------- | ---------------------------- | -------------- |
+| `available`             | UL Green (`#00A451`)         | 사용 가능      |
+| `in_use`                | UL Blue (`#577E9E`)          | 사용 중        |
+| `checked_out`           | UL Midnight Blue (`#122C49`) | 반출 중        |
+| `calibration_scheduled` | UL Info (`#BCE4F7`)          | 교정 예정      |
+| `calibration_overdue`   | UL Red (`#CA0123`)           | 교정 기한 초과 |
+| `non_conforming`        | UL Red (`#CA0123`)           | 부적합         |
+| `spare`                 | UL Fog (`#577E9E`)           | 여분           |
+| `retired`               | UL Gray (`#EBEBEB`)          | 폐기           |
 
 ### 반응형 브레이크포인트
 
-| 브레이크포인트 | 크기      | 용도         |
-| -------------- | --------- | ------------ |
-| `sm`           | 640px     | 모바일       |
-| `md`           | 768px     | 태블릿       |
-| `lg`           | 1024px    | 데스크톱     |
-| `xl`           | 1280px    | 대형 모니터  |
+| 브레이크포인트 | 크기   | 용도        |
+| -------------- | ------ | ----------- |
+| `sm`           | 640px  | 모바일      |
+| `md`           | 768px  | 태블릿      |
+| `lg`           | 1024px | 데스크톱    |
+| `xl`           | 1280px | 대형 모니터 |
 
 ---
 
@@ -498,13 +504,13 @@ axios.get('/api/equipment/123', { headers: { Authorization: `Bearer ${token}` } 
 
 ### HTTP 상태별 처리
 
-| HTTP 상태 | 에러 유형      | 처리 방법                                    |
-| --------- | -------------- | -------------------------------------------- |
-| 400       | 유효성 검증    | 필드별 에러 메시지 표시, 해당 필드 포커스    |
-| 401       | 인증 만료      | 로그인 페이지로 리다이렉트                   |
-| 403       | 권한 없음      | "접근 권한이 없습니다" 메시지 표시           |
-| 404       | 리소스 없음    | "찾을 수 없습니다" + 목록으로 돌아가기 버튼  |
-| 500       | 서버 에러      | "서버 오류가 발생했습니다" + 재시도 버튼     |
+| HTTP 상태 | 에러 유형   | 처리 방법                                   |
+| --------- | ----------- | ------------------------------------------- |
+| 400       | 유효성 검증 | 필드별 에러 메시지 표시, 해당 필드 포커스   |
+| 401       | 인증 만료   | 로그인 페이지로 리다이렉트                  |
+| 403       | 권한 없음   | "접근 권한이 없습니다" 메시지 표시          |
+| 404       | 리소스 없음 | "찾을 수 없습니다" + 목록으로 돌아가기 버튼 |
+| 500       | 서버 에러   | "서버 오류가 발생했습니다" + 재시도 버튼    |
 
 ### 에러 표시 예시
 

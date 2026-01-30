@@ -201,6 +201,36 @@ export class CalibrationController {
     return this.calibrationService.findScheduled(fromDateObj, toDateObj);
   }
 
+  @Get('summary')
+  @ApiOperation({ summary: '교정 요약 통계 조회' })
+  @ApiResponse({ status: HttpStatus.OK, description: '통계 조회 성공' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  getSummary() {
+    return this.calibrationService.getSummary();
+  }
+
+  @Get('overdue')
+  @ApiOperation({ summary: '교정 기한 초과 장비 조회' })
+  @ApiResponse({ status: HttpStatus.OK, description: '기한 초과 장비 조회 성공' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  getOverdueCalibrations() {
+    return this.calibrationService.getOverdueCalibrations();
+  }
+
+  @Get('upcoming')
+  @ApiOperation({ summary: '교정 예정 장비 조회' })
+  @ApiResponse({ status: HttpStatus.OK, description: '교정 예정 장비 조회 성공' })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  getUpcomingCalibrations(@Query('days') days: number = 30) {
+    return this.calibrationService.getUpcomingCalibrations(days);
+  }
+
   @Get(':uuid')
   @ApiOperation({
     summary: '교정 상세 조회',

@@ -63,8 +63,18 @@ export class ReportsService {
     };
   }
 
-  // 대여 통계 보고서
+  /**
+   * 반출 통계 보고서 (대여/교정/수리 포함)
+   * @deprecated 메서드 이름은 getCheckoutStatistics로 변경됨, API 엔드포인트 URL은 유지
+   */
   async getRentalStatistics(startDate?: string, endDate?: string, departmentId?: string) {
+    return this.getCheckoutStatistics(startDate, endDate, departmentId);
+  }
+
+  /**
+   * 반출 통계 보고서 (대여/교정/수리 포함)
+   */
+  async getCheckoutStatistics(startDate?: string, endDate?: string, departmentId?: string) {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
       timeframe: {
@@ -73,26 +83,26 @@ export class ReportsService {
         endDate: endDate || new Date().toISOString(),
       },
       summary: {
-        totalRentals: 285,
-        activeRentals: 45,
-        avgRentalDuration: 4.5, // 일 단위
+        totalCheckouts: 285,
+        activeCheckouts: 45,
+        avgCheckoutDuration: 4.5, // 일 단위
         returnRate: 97.5, // 정시 반납율 (%)
       },
-      rentalsByDepartment: [
+      checkoutsByDepartment: [
         { departmentId: '1', departmentName: '연구소', count: 120, percentage: 42.1 },
         { departmentId: '2', departmentName: '품질관리', count: 95, percentage: 33.3 },
         { departmentId: '3', departmentName: '생산', count: 70, percentage: 24.6 },
       ],
-      rentalStatus: [
+      checkoutStatus: [
         { status: '승인됨', count: 260, percentage: 91.2 },
         { status: '대기 중', count: 15, percentage: 5.3 },
         { status: '거부됨', count: 10, percentage: 3.5 },
       ],
       monthlyTrend: [
-        { month: '1월', rentals: 65, returns: 60 },
-        { month: '2월', rentals: 70, returns: 65 },
-        { month: '3월', rentals: 75, returns: 72 },
-        { month: '4월', rentals: 80, returns: 75 },
+        { month: '1월', checkouts: 65, returns: 60 },
+        { month: '2월', checkouts: 70, returns: 65 },
+        { month: '3월', checkouts: 75, returns: 72 },
+        { month: '4월', checkouts: 80, returns: 75 },
       ],
     };
   }

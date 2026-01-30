@@ -201,6 +201,11 @@ export class IntermediateCheckScheduler {
       let skippedCount = 0;
 
       for (const calibration of dueCalibrations) {
+        // Skip if nextCalibrationDate is null
+        if (!calibration.nextCalibrationDate) {
+          continue;
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const nextCalibrationDate = new Date(calibration.nextCalibrationDate);
@@ -225,11 +230,11 @@ export class IntermediateCheckScheduler {
         }
 
         // 교정 예정 알림 발송
-        if (calibration.calibrationManagerId) {
+        if (calibration.technicianId) {
           try {
             await this.notificationsService.createCalibrationDueNotification(
               calibration.equipmentId,
-              calibration.calibrationManagerId,
+              calibration.technicianId,
               daysUntilCalibration,
               `장비 ${calibration.equipmentId}`
             );

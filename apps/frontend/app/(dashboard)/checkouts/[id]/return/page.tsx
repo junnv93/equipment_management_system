@@ -1,0 +1,154 @@
+import { Suspense, cache } from 'react';
+import { notFound } from 'next/navigation';
+import ReturnCheckoutClient from './ReturnCheckoutClient';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import checkoutApi from '@/lib/api/checkout-api';
+
+/**
+ * React.cache()로 같은 render pass에서 중복 호출 방지
+ */
+const getCheckoutCached = cache(async (id: string) => {
+  return checkoutApi.getCheckout(id);
+});
+
+const getConditionChecksCached = cache(async (id: string) => {
+  try {
+    return await checkoutApi.getConditionChecks(id);
+  } catch {
+    return [];
+  }
+});
+
+// Next.js 16 PageProps 타입 정의
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+/**
+ * 반입 허용 상태 확인
+ */
+function canReturn(status: string, purpose: string): boolean {
+  // 교정/수리: checked_out 상태에서 반입 가능
+  if (purpose === 'calibration' || purpose === 'repair') {
+    return status === 'checked_out';
+  }
+
+  // 대여: lender_received 상태에서 반입 가능 (4단계 확인 완료 후)
+  if (purpose === 'rental') {
+    return status === 'lender_received';
+  }
+
+  return false;
+}
+
+/**
+ * 반입 처리 페이지 - Server Component
+ *
+ * 비즈니스 로직 (UL-QP-18):
+ * - 교정/수리: 반출 중 상태에서 직접 반입 처리
+ * - 대여: 양측 4단계 확인 완료 후 반입 처리
+ * - 반입 시 검사 항목 확인 (교정확인, 수리확인, 작동여부)
+ *
+ * Next.js 16 패턴:
+ * - params는 Promise 타입
+ * - Server Component에서 데이터 fetching
+ * - Client Component로 UI 렌더링 위임
+ */
+export default async function ReturnCheckoutPage(props: PageProps) {
+  const { id } = await props.params;
+
+  let checkout;
+  let conditionChecks;
+
+  try {
+    checkout = await getCheckoutCached(id);
+
+    // 대여 목적인 경우 상태 확인 기록도 조회
+    if (checkout.purpose === 'rental') {
+      conditionChecks = await getConditionChecksCached(id);
+    }
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('404') || error.message.includes('찾을 수 없'))
+    ) {
+      notFound();
+    }
+    throw error;
+  }
+
+  // 반입 가능 상태가 아닌 경우
+  if (!canReturn(checkout.status, checkout.purpose)) {
+    notFound();
+  }
+
+  return (
+    <Suspense fallback={<ReturnSkeleton />}>
+      <ReturnCheckoutClient checkout={checkout} conditionChecks={conditionChecks || []} />
+    </Suspense>
+  );
+}
+
+/**
+ * 메타데이터 생성
+ */
+export async function generateMetadata(props: PageProps) {
+  const { id } = await props.params;
+
+  try {
+    const checkout = await getCheckoutCached(id);
+    const purposeLabels: Record<string, string> = {
+      calibration: '교정',
+      repair: '수리',
+      rental: '대여',
+    };
+    const purposeLabel = purposeLabels[checkout.purpose] || checkout.purpose;
+
+    return {
+      title: `반입 처리 - ${purposeLabel}`,
+      description: `${checkout.destination}에서 ${purposeLabel} 반출된 장비의 반입 처리`,
+    };
+  } catch {
+    return {
+      title: '반입 처리',
+      description: '장비 반입 처리',
+    };
+  }
+}
+
+/**
+ * 로딩 스켈레톤
+ */
+function ReturnSkeleton() {
+  return (
+    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-4 w-48" />
+      </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-5 w-5" />
+              <div className="space-y-1 flex-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+            </div>
+          ))}
+          <Skeleton className="h-24 w-full" />
+          <div className="flex justify-end gap-2">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

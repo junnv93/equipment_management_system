@@ -44,7 +44,8 @@ export type {
   OverdueCalibration,
   EquipmentByTeam,
   RecentActivity,
-  OverdueRental,
+  OverdueCheckout,
+  OverdueRental, // @deprecated Use OverdueCheckout instead
 } from './dashboard-api';
 
 export type {

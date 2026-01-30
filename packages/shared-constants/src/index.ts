@@ -31,3 +31,6 @@ export { ROLE_PERMISSIONS, hasPermission, getPermissions } from './role-permissi
 
 // API 엔드포인트
 export { API_ENDPOINTS, type ApiEndpoints } from './api-endpoints';
+
+// 프론트엔드 라우트
+export { FRONTEND_ROUTES, type FrontendRoutes } from './frontend-routes';

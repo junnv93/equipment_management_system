@@ -8,7 +8,7 @@ import {
   EquipmentByTeamDto,
   OverdueCalibrationDto,
   UpcomingCalibrationDto,
-  OverdueRentalDto,
+  OverdueCheckoutDto,
   RecentActivityDto,
   PendingApprovalCountsDto,
   EquipmentStatusStatsDto,
@@ -204,14 +204,14 @@ export class DashboardService {
   }
 
   /**
-   * 반출 지연 조회 (checkouts + checkout_items 테이블 사용 - 대여 포함)
+   * 반출 지연 조회 (checkouts + checkout_items 테이블 사용 - 대여/교정/수리 포함)
    */
-  async getOverdueRentals(
+  async getOverdueCheckouts(
     userId: string,
     userRole: UserRole,
     teamId?: string,
     site?: string
-  ): Promise<OverdueRentalDto[]> {
+  ): Promise<OverdueCheckoutDto[]> {
     const today = new Date();
 
     // checkout_items를 통해 장비 정보 조회

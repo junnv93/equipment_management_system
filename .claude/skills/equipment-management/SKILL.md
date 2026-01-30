@@ -827,6 +827,81 @@ const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
 
 ---
 
+## 장비 필터 관리 (SSOT)
+
+### ⚠️ 중요: 과거 발생한 버그
+
+**2026-01-30 발생한 버그**: 서버 컴포넌트(page.tsx)에서 URL searchParams를 파싱할 때 새 필터 파라미터를 누락하여 필터가 작동하지 않는 문제 발생.
+
+**원인**: 클라이언트 훅과 서버 컴포넌트가 각각 다른 파싱 로직을 사용
+
+**해결책**: `equipment-filter-utils.ts` 공유 유틸리티 생성
+
+장비 목록 필터는 **공유 유틸리티**를 사용하여 클라이언트와 서버 간 일관성을 유지합니다.
+
+### 🔴 절대 금지
+
+```
+❌ page.tsx에서 직접 searchParams 파싱하지 말 것
+❌ useEquipmentFilters.ts에서 직접 필터 변환 로직 작성하지 말 것
+❌ 새 필터 추가 시 equipment-filter-utils.ts 수정 없이 다른 파일만 수정하지 말 것
+```
+
+### ✅ 올바른 방법
+
+```
+✅ 항상 equipment-filter-utils.ts의 공유 함수 사용
+✅ parseEquipmentFiltersFromSearchParams() - URL → UI 필터
+✅ convertFiltersToApiParams() - UI 필터 → API 파라미터
+✅ 새 필터 추가 시 equipment-filter-utils.ts 먼저 수정
+```
+
+### 🔴 필터 추가 시 체크리스트
+
+**새로운 필터를 추가할 때 아래 파일들을 순서대로 수정하세요:**
+
+| 순서 | 파일                                                       | 설명                                                                     |
+| ---- | ---------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1    | `lib/utils/equipment-filter-utils.ts`                      | **SSOT** - `UIEquipmentFilters`, `ApiEquipmentFilters` 타입 및 변환 함수 |
+| 2    | `hooks/useEquipmentFilters.ts`                             | `EquipmentFilters` 타입 (필요시)                                         |
+| 3    | `components/equipment/EquipmentFilters.tsx`                | UI 컴포넌트 (Select, 옵션 등)                                            |
+| 4    | `packages/schemas/src/equipment.ts`                        | 백엔드 Zod 스키마 (필요시)                                               |
+| 5    | `backend/src/modules/equipment/dto/equipment-query.dto.ts` | 백엔드 DTO                                                               |
+| 6    | `backend/src/modules/equipment/equipment.service.ts`       | 백엔드 쿼리 로직                                                         |
+
+### 핵심 파일: `equipment-filter-utils.ts`
+
+```typescript
+// ✅ SSOT: 클라이언트 훅과 서버 컴포넌트가 동일한 변환 로직 사용
+import {
+  parseEquipmentFiltersFromSearchParams,
+  convertFiltersToApiParams,
+} from '@/lib/utils/equipment-filter-utils';
+
+// Server Component (page.tsx)
+const uiFilters = parseEquipmentFiltersFromSearchParams(searchParams);
+const apiQuery = convertFiltersToApiParams(uiFilters);
+
+// Client Hook (useEquipmentFilters.ts)
+const queryFilters = useMemo(() => {
+  return convertFiltersToApiParams(filters);
+}, [filters]);
+```
+
+### 필터 변환 흐름
+
+```
+URL 파라미터 (사용자 친화적)     API 파라미터 (백엔드)
+─────────────────────────────   ─────────────────────
+isShared=shared            →    isShared=true
+isShared=normal            →    isShared=false
+calibrationDueFilter=due_soon →  calibrationDue=30
+calibrationDueFilter=overdue  →  calibrationOverdue=true
+calibrationDueFilter=normal   →  calibrationDueAfter=30
+```
+
+---
+
 ## 프론트엔드 개발 패턴
 
 > **상세 패턴**: [references/frontend-patterns.md](references/frontend-patterns.md)
@@ -941,6 +1016,97 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   }
 }
 ```
+
+---
+
+## Server Component Props vs Client Cache 패턴 (SSOT)
+
+### ⚠️ 중요: 과거 발생한 버그
+
+**2026-01-30 발생한 버그**: 사고이력 탭에서 "부적합으로 등록" 후 상태 뱃지가 즉시 반영되지 않음 (새로고침 후에야 반영)
+
+**원인**: Server Component에서 props로 받은 데이터는 정적이어서, mutation 후에도 `router.refresh()`가 완료될 때까지 이전 값 유지
+
+**해결책**: `useEquipmentWithInitialData` 훅으로 Server Component 초기 데이터와 React Query 캐시 연동
+
+### 문제 패턴
+
+```
+Server Component → props → Client Component
+                           └─ mutation 후 props는 변하지 않음!
+
+React Query Cache → refetchQueries() → 캐시 갱신됨
+                                        └─ 하지만 props를 구독하지 않는 컴포넌트는 반영 안됨
+```
+
+### 🔴 절대 금지
+
+```
+❌ Server Component props를 그대로 렌더링에 사용 (mutation이 있는 페이지에서)
+❌ mutation 후 router.refresh()만 의존 (비동기 완료 전까지 stale UI)
+❌ 각 컴포넌트에서 useQuery 직접 작성 (SSOT 위반)
+```
+
+### ✅ 올바른 방법
+
+```typescript
+// ✅ SSOT: hooks/use-equipment.ts의 공유 훅 사용
+import { useEquipmentWithInitialData } from '@/hooks/use-equipment';
+
+export function EquipmentHeader({ equipment: initialEquipment }: Props) {
+  // Server Component 초기 데이터를 initialData로, 이후 캐시 구독
+  const { data: equipment } = useEquipmentWithInitialData(initialEquipment);
+
+  // equipment.status는 mutation 후 즉시 반영됨
+  const statusConfig = getStatusConfig(equipment.status);
+}
+```
+
+### SSOT 훅 사용 가이드
+
+**파일 위치**: `apps/frontend/hooks/use-equipment.ts`
+
+```typescript
+/**
+ * useEquipmentWithInitialData
+ *
+ * Server Component 초기 데이터와 Client-Side React Query 캐시를 연동합니다.
+ * - initialData: SSR 데이터 → 초기 렌더링에 사용, SEO 최적화
+ * - staleTime: 0 → 캐시 갱신 시 즉시 UI 반영
+ * - queryKey: ['equipment', id] → mutation의 refetchQueries와 일치 필수
+ */
+export function useEquipmentWithInitialData(initialData: Equipment) {
+  const equipmentId = String(initialData.id);
+  return useQuery({
+    queryKey: ['equipment', equipmentId],
+    queryFn: () => equipmentApi.getEquipment(equipmentId),
+    initialData,
+    staleTime: 0,
+  });
+}
+```
+
+### 적용 대상 컴포넌트
+
+| 컴포넌트                | 적용 여부 | 이유                                       |
+| ----------------------- | --------- | ------------------------------------------ |
+| `EquipmentHeader`       | ✅ 적용   | 상태 뱃지가 mutation 후 즉시 반영되어야 함 |
+| `EquipmentDetailClient` | ⚠️ 검토   | 하위 탭에서 mutation이 있으면 적용 필요    |
+| `EquipmentTable` (목록) | ❌ 불필요 | 목록은 별도 쿼리 키 사용                   |
+
+### Mutation 측에서의 쿼리 키 일치
+
+```typescript
+// IncidentHistoryTab.tsx - mutation onSuccess
+onSuccess: async () => {
+  await queryClient.refetchQueries({
+    queryKey: ['equipment', equipmentId], // ← 이 키가 일치해야 함
+    type: 'active',
+  });
+};
+```
+
+> **중요**: `queryKey`가 `useEquipmentWithInitialData`의 키와 **정확히 일치**해야 캐시가 갱신됩니다.
 
 ---
 

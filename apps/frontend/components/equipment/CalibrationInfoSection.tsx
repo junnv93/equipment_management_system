@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
-import { type CalibrationMethod } from '@equipment-management/schemas';
+import { CALIBRATION_METHOD_LABELS } from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -24,15 +24,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import dayjs from 'dayjs';
 import { FormValues } from './BasicInfoSection';
 
-/**
- * 관리 방법 한글 라벨 매핑 (교정 방법 → 관리 방법)
- */
-const CALIBRATION_METHOD_LABELS: Record<CalibrationMethod, string> = {
-  external_calibration: '외부 교정',
-  self_inspection: '자체 점검',
-  not_applicable: '비대상',
-};
-
 interface CalibrationInfoSectionProps {
   control: Control<FormValues>;
 }
@@ -53,15 +44,23 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
   // 교정 주기 변경 시 다음 교정일 자동 계산
   useEffect(() => {
     if (calibrationCycle && lastCalibrationDate && typeof lastCalibrationDate === 'string') {
-      const nextDate = dayjs(lastCalibrationDate).add(calibrationCycle, 'month').format('YYYY-MM-DD');
+      const nextDate = dayjs(lastCalibrationDate)
+        .add(calibrationCycle, 'month')
+        .format('YYYY-MM-DD');
       setValue('nextCalibrationDate', nextDate);
     }
   }, [calibrationCycle, lastCalibrationDate, setValue]);
 
   // 중간점검 주기 변경 시 차기 중간점검일 자동 계산
   useEffect(() => {
-    if (intermediateCheckCycle && lastIntermediateCheckDate && typeof lastIntermediateCheckDate === 'string') {
-      const nextDate = dayjs(lastIntermediateCheckDate).add(intermediateCheckCycle, 'month').format('YYYY-MM-DD');
+    if (
+      intermediateCheckCycle &&
+      lastIntermediateCheckDate &&
+      typeof lastIntermediateCheckDate === 'string'
+    ) {
+      const nextDate = dayjs(lastIntermediateCheckDate)
+        .add(intermediateCheckCycle, 'month')
+        .format('YYYY-MM-DD');
       setValue('nextIntermediateCheckDate', nextDate);
     }
   }, [intermediateCheckCycle, lastIntermediateCheckDate, setValue]);
@@ -91,7 +90,11 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                 <FormLabel>
                   관리 방법 <span className="text-destructive">*</span>
                 </FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || undefined}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  value={field.value || undefined}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="관리 방법을 선택하세요" />
@@ -150,7 +153,9 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                 <FormControl>
                   <Input type="date" {...field} value={field.value || ''} />
                 </FormControl>
-                <FormDescription>교정 주기와 함께 입력하면 차기 교정일이 자동 계산됩니다</FormDescription>
+                <FormDescription>
+                  교정 주기와 함께 입력하면 차기 교정일이 자동 계산됩니다
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -202,7 +207,9 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>중간점검 대상</FormLabel>
-                <FormDescription>교정 주기 중간에 점검이 필요한 장비인지 선택하세요</FormDescription>
+                <FormDescription>
+                  교정 주기 중간에 점검이 필요한 장비인지 선택하세요
+                </FormDescription>
               </div>
             </FormItem>
           )}

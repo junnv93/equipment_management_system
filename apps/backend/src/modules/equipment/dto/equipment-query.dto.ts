@@ -5,6 +5,7 @@ import {
   equipmentFilterSchema,
   EquipmentStatus,
   CalibrationMethod,
+  Classification,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -72,6 +73,13 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
   calibrationMethod?: CalibrationMethod;
 
   @ApiPropertyOptional({
+    description: '장비 분류',
+    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+    example: 'fcc_emc_rf',
+  })
+  classification?: Classification;
+
+  @ApiPropertyOptional({
     description: '교정 임박 필터 - N일 이내 교정 예정 (오늘 <= nextCalibrationDate <= 오늘+N일)',
     example: 30,
   })
@@ -82,6 +90,12 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
     example: 30,
   })
   calibrationDueAfter?: number;
+
+  @ApiPropertyOptional({
+    description: '교정 기한 초과 필터 (true: 기한 초과된 장비만)',
+    example: true,
+  })
+  calibrationOverdue?: boolean;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',

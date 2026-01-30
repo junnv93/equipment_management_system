@@ -2,7 +2,19 @@
 
 import { useCallback, useMemo, useEffect, useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import type { Site, EquipmentStatus, CalibrationMethod } from '@equipment-management/schemas';
+import type {
+  Site,
+  EquipmentStatus,
+  CalibrationMethod,
+  Classification,
+} from '@equipment-management/schemas';
+import {
+  parseEquipmentFiltersFromSearchParams,
+  convertFiltersToApiParams,
+  countActiveFilters,
+  DEFAULT_UI_FILTERS,
+  type UIEquipmentFilters,
+} from '@/lib/utils/equipment-filter-utils';
 
 /**
  * 교정 기한 필터 타입
@@ -11,16 +23,26 @@ export type CalibrationDueFilter = 'all' | 'due_soon' | 'overdue' | 'normal';
 
 /**
  * 장비 필터 상태 타입
+ *
+ * ✅ SSOT: UIEquipmentFilters와 동일한 구조 (sortBy 타입만 더 제한적)
+ * @see lib/utils/equipment-filter-utils.ts
  */
 export interface EquipmentFilters {
   search: string;
   site: Site | '';
   status: EquipmentStatus | '';
   calibrationMethod: CalibrationMethod | '';
+  classification: Classification | '';
   isShared: 'all' | 'shared' | 'normal';
   calibrationDueFilter: CalibrationDueFilter;
   teamId: string;
-  sortBy: 'name' | 'createdAt' | 'lastCalibrationDate' | 'nextCalibrationDate' | 'status' | 'managementNumber';
+  sortBy:
+    | 'name'
+    | 'createdAt'
+    | 'lastCalibrationDate'
+    | 'nextCalibrationDate'
+    | 'status'
+    | 'managementNumber';
   sortOrder: 'asc' | 'desc';
   page: number;
   pageSize: number;
@@ -28,20 +50,14 @@ export interface EquipmentFilters {
 
 /**
  * 필터 기본값
+ *
+ * ✅ SSOT: DEFAULT_UI_FILTERS 사용
+ * @see lib/utils/equipment-filter-utils.ts
  */
 const DEFAULT_FILTERS: EquipmentFilters = {
-  search: '',
-  site: '',
-  status: '',
-  calibrationMethod: '',
-  isShared: 'all',
-  calibrationDueFilter: 'all',
-  teamId: '',
-  sortBy: 'createdAt',
-  sortOrder: 'desc',
-  page: 1,
-  pageSize: 20,
-};
+  ...DEFAULT_UI_FILTERS,
+  sortBy: 'createdAt', // 타입 호환을 위해 명시
+} as EquipmentFilters;
 
 /**
  * 뷰 타입
@@ -61,6 +77,15 @@ const PAGE_SIZE_STORAGE_KEY = 'equipment-list-page-size';
  * - 뷰 타입은 localStorage에 저장
  * - 뒤로가기/새로고침 시 상태 유지
  * - 공유 가능한 URL 생성
+ *
+ * ============================================================================
+ * 🔴 SSOT 주의사항
+ * ============================================================================
+ * - 필터 파싱/변환 로직은 equipment-filter-utils.ts에서 관리
+ * - 이 파일에서 직접 파싱 로직을 작성하지 마세요!
+ * - 새 필터 추가 시 equipment-filter-utils.ts 먼저 수정
+ * @see lib/utils/equipment-filter-utils.ts
+ * ============================================================================
  */
 export function useEquipmentFilters() {
   const searchParams = useSearchParams();
@@ -81,33 +106,14 @@ export function useEquipmentFilters() {
   }, []);
 
   // URL에서 필터 파싱
+  // ✅ SSOT: parseEquipmentFiltersFromSearchParams 유틸리티 사용
+  // @see lib/utils/equipment-filter-utils.ts
   const filters = useMemo<EquipmentFilters>(() => {
-    const search = searchParams.get('search') || DEFAULT_FILTERS.search;
-    const site = (searchParams.get('site') || DEFAULT_FILTERS.site) as Site | '';
-    const status = (searchParams.get('status') || DEFAULT_FILTERS.status) as EquipmentStatus | '';
-    const calibrationMethod = (searchParams.get('calibrationMethod') || DEFAULT_FILTERS.calibrationMethod) as CalibrationMethod | '';
-    const isSharedParam = searchParams.get('isShared');
-    const isShared = isSharedParam === 'shared' || isSharedParam === 'normal' ? isSharedParam : 'all';
-    const calibrationDueFilterParam = searchParams.get('calibrationDueFilter');
-    const calibrationDueFilter = (calibrationDueFilterParam === 'due_soon' || calibrationDueFilterParam === 'overdue' || calibrationDueFilterParam === 'normal' ? calibrationDueFilterParam : 'all') as CalibrationDueFilter;
-    const teamId = searchParams.get('teamId') || DEFAULT_FILTERS.teamId;
-    const sortBy = (searchParams.get('sortBy') || DEFAULT_FILTERS.sortBy) as EquipmentFilters['sortBy'];
-    const sortOrder = (searchParams.get('sortOrder') || DEFAULT_FILTERS.sortOrder) as 'asc' | 'desc';
-    const page = parseInt(searchParams.get('page') || String(DEFAULT_FILTERS.page), 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || String(DEFAULT_FILTERS.pageSize), 10);
-
+    const parsed = parseEquipmentFiltersFromSearchParams(searchParams);
+    // sortBy 타입을 EquipmentFilters['sortBy']로 캐스팅 (더 제한적인 타입)
     return {
-      search,
-      site,
-      status,
-      calibrationMethod,
-      isShared,
-      calibrationDueFilter,
-      teamId,
-      sortBy,
-      sortOrder,
-      page: isNaN(page) || page < 1 ? DEFAULT_FILTERS.page : page,
-      pageSize: isNaN(pageSize) || pageSize < 1 ? DEFAULT_FILTERS.pageSize : pageSize,
+      ...parsed,
+      sortBy: (parsed.sortBy || 'createdAt') as EquipmentFilters['sortBy'],
     };
   }, [searchParams]);
 
@@ -157,6 +163,13 @@ export function useEquipmentFilters() {
   const setCalibrationMethod = useCallback(
     (calibrationMethod: CalibrationMethod | '') => {
       updateURL({ calibrationMethod, page: 1 });
+    },
+    [updateURL]
+  );
+
+  const setClassification = useCallback(
+    (classification: Classification | '') => {
+      updateURL({ classification, page: 1 });
     },
     [updateURL]
   );
@@ -241,50 +254,19 @@ export function useEquipmentFilters() {
   }, [router, pathname]);
 
   // 활성 필터 개수
+  // ✅ SSOT: countActiveFilters 유틸리티 사용
   const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filters.search) count++;
-    if (filters.site) count++;
-    if (filters.status) count++;
-    if (filters.calibrationMethod) count++;
-    if (filters.isShared !== 'all') count++;
-    if (filters.calibrationDueFilter !== 'all') count++;
-    if (filters.teamId) count++;
-    return count;
+    return countActiveFilters(filters as UIEquipmentFilters);
   }, [filters]);
 
   // 활성 필터 여부
   const hasActiveFilters = activeFilterCount > 0;
 
   // API 쿼리용 필터 객체 생성
+  // ✅ SSOT: convertFiltersToApiParams 유틸리티 사용
+  // @see lib/utils/equipment-filter-utils.ts
   const queryFilters = useMemo(() => {
-    // 교정 기한 필터를 백엔드 파라미터로 변환
-    let calibrationDue: number | undefined;
-    let calibrationDueAfter: number | undefined;
-    let statusOverride: EquipmentStatus | '' = filters.status;
-
-    if (filters.calibrationDueFilter === 'due_soon') {
-      calibrationDue = 30; // 30일 이내 교정 예정 (오늘 <= nextCalibrationDate <= 오늘+30일)
-    } else if (filters.calibrationDueFilter === 'overdue') {
-      statusOverride = 'calibration_overdue'; // 교정 기한 초과 상태
-    } else if (filters.calibrationDueFilter === 'normal') {
-      calibrationDueAfter = 30; // 30일 이후 교정 예정 (nextCalibrationDate > 오늘+30일)
-    }
-    // 'all'은 추가 필터 없음
-
-    return {
-      search: filters.search || undefined,
-      site: filters.site || undefined,
-      status: statusOverride || undefined,
-      calibrationMethod: filters.calibrationMethod || undefined,
-      isShared: filters.isShared === 'shared' ? true : filters.isShared === 'normal' ? false : undefined,
-      calibrationDue,
-      calibrationDueAfter,
-      teamId: filters.teamId || undefined,
-      sort: filters.sortBy ? `${filters.sortBy}.${filters.sortOrder}` : undefined,
-      page: filters.page,
-      pageSize: filters.pageSize,
-    };
+    return convertFiltersToApiParams(filters as UIEquipmentFilters);
   }, [filters]);
 
   return {
@@ -298,6 +280,7 @@ export function useEquipmentFilters() {
     setSite,
     setStatus,
     setCalibrationMethod,
+    setClassification,
     setIsShared,
     setCalibrationDueFilter,
     setTeamId,

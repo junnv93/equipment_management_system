@@ -106,15 +106,18 @@ type UserRole = 'ADMIN' | 'USER' | 'MANAGER'; // Wrong values!
 const API_URL = '/api/equipment'; // Hardcoded string
 ```
 
-| Data Type | SSOT Package | Example |
-|-----------|--------------|---------|
-| Enums (Status, Role) | `@equipment-management/schemas` | `EquipmentStatus`, `UserRole` |
-| Permissions | `@equipment-management/shared-constants` | `Permission.VIEW_EQUIPMENT` |
-| API Endpoints | `@equipment-management/shared-constants` | `API_ENDPOINTS.EQUIPMENT.LIST` |
-| Management Number | `@equipment-management/schemas` | `generateManagementNumber()` |
-| Error Codes | `@equipment-management/schemas` | `ErrorCode.NotFound` |
+| Data Type             | SSOT Package                             | Example                                   |
+| --------------------- | ---------------------------------------- | ----------------------------------------- |
+| Enums (Status, Role)  | `@equipment-management/schemas`          | `EquipmentStatus`, `UserRole`             |
+| Permissions           | `@equipment-management/shared-constants` | `Permission.VIEW_EQUIPMENT`               |
+| API Endpoints         | `@equipment-management/shared-constants` | `API_ENDPOINTS.EQUIPMENT.LIST`            |
+| Management Number     | `@equipment-management/schemas`          | `generateManagementNumber()`              |
+| Error Codes           | `@equipment-management/schemas`          | `ErrorCode.NotFound`                      |
+| **Equipment Filters** | `lib/utils/equipment-filter-utils.ts`    | `parseEquipmentFiltersFromSearchParams()` |
 
 **Frontend-specific UI options (SITE_OPTIONS, CLASSIFICATION_OPTIONS) are allowed locally.**
+
+> **🔴 장비 필터 SSOT**: 장비 목록 필터 파싱/변환은 반드시 `equipment-filter-utils.ts` 사용. 자세한 내용은 `.claude/skills/equipment-management/SKILL.md` 참조.
 
 ### 1. Single Database Architecture
 

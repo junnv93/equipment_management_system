@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { EquipmentHeader } from './EquipmentHeader';
 import { EquipmentTabs } from './EquipmentTabs';
 import { NonConformanceBanner } from './NonConformanceBanner';
+import { UsagePeriodBadge } from './UsagePeriodBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
@@ -57,8 +58,7 @@ export function EquipmentDetailClient({ equipment: initialEquipment }: Equipment
   });
 
   // 열린 부적합 확인
-  const openNonConformances =
-    nonConformances?.filter((nc) => nc.status !== 'closed') || [];
+  const openNonConformances = nonConformances?.filter((nc) => nc.status !== 'closed') || [];
 
   return (
     <div className="min-h-screen bg-ul-gray-bg dark:bg-gray-950">
@@ -74,12 +74,31 @@ export function EquipmentDetailClient({ equipment: initialEquipment }: Equipment
             className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/50"
           >
             <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-800 dark:text-blue-200">
+            <AlertTitle className="text-blue-800 dark:text-blue-200 flex items-center gap-2">
               공용장비 안내
+              {/* 임시등록 장비이고 사용 기간이 있는 경우 D-day 표시 */}
+              {equipment.status === 'temporary' &&
+                equipment.usagePeriodStart &&
+                equipment.usagePeriodEnd && (
+                  <UsagePeriodBadge
+                    startDate={equipment.usagePeriodStart}
+                    endDate={equipment.usagePeriodEnd}
+                  />
+                )}
             </AlertTitle>
             <AlertDescription className="text-blue-700 dark:text-blue-300">
-              이 장비는 공용장비로 등록되어 있어 수정 및 삭제가 불가능합니다. 대여 및
-              반출은 가능합니다.
+              {equipment.status === 'temporary' ? (
+                <>
+                  이 장비는 임시등록된 {equipment.sharedSource === 'safety_lab' ? '공용' : '렌탈'}
+                  장비입니다.
+                  {equipment.usagePeriodEnd && <> 사용 기간이 종료되면 자동으로 비활성화됩니다.</>}
+                </>
+              ) : (
+                <>
+                  이 장비는 공용장비로 등록되어 있어 수정 및 삭제가 불가능합니다. 대여 및 반출은
+                  가능합니다.
+                </>
+              )}
             </AlertDescription>
           </Alert>
         )}

@@ -20,7 +20,7 @@ import {
   EquipmentByTeamDto,
   OverdueCalibrationDto,
   UpcomingCalibrationDto,
-  OverdueRentalDto,
+  OverdueCheckoutDto,
   RecentActivityDto,
   PendingApprovalCountsDto,
   EquipmentStatusStatsDto,
@@ -134,20 +134,20 @@ export class DashboardController {
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @ApiOperation({
     summary: '반출 지연 조회',
-    description: '반납 예정일이 지난 반출(대여 포함) 목록을 조회합니다.',
+    description: '반납 예정일이 지난 반출(대여/교정/수리 포함) 목록을 조회합니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '대여 지연 목록',
-    type: [OverdueRentalDto],
+    description: '반출 지연 목록',
+    type: [OverdueCheckoutDto],
   })
-  async getOverdueRentals(@Req() req: AuthenticatedRequest): Promise<OverdueRentalDto[]> {
+  async getOverdueCheckouts(@Req() req: AuthenticatedRequest): Promise<OverdueCheckoutDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
     const teamId = req.user.teamId;
     const site = req.user.site;
 
-    return this.dashboardService.getOverdueRentals(userId, userRole, teamId, site);
+    return this.dashboardService.getOverdueCheckouts(userId, userRole, teamId, site);
   }
 
   @Get('recent-activities')

@@ -78,10 +78,10 @@ export class UpcomingCalibrationDto {
 }
 
 /**
- * 대여 지연 DTO
+ * 반출 지연 DTO (대여/교정/수리 포함)
  */
-export class OverdueRentalDto {
-  @ApiProperty({ description: '대여 ID' })
+export class OverdueCheckoutDto {
+  @ApiProperty({ description: '반출 ID' })
   id: string;
 
   @ApiProperty({ description: '장비 ID' })
@@ -110,12 +110,17 @@ export class OverdueRentalDto {
   @ApiProperty({ description: '지연 일수' })
   daysOverdue: number;
 
-  @ApiProperty({ description: '대여 시작일' })
+  @ApiProperty({ description: '반출 시작일' })
   startDate: string;
 
   @ApiProperty({ description: '상태' })
   status: string;
 }
+
+/**
+ * @deprecated Use OverdueCheckoutDto instead
+ */
+export const OverdueRentalDto = OverdueCheckoutDto;
 
 /**
  * 최근 활동 내역 DTO

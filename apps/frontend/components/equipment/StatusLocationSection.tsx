@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Control, useWatch } from 'react-hook-form';
-import {
-  type EquipmentStatus,
-  type Site,
-  EQUIPMENT_STATUS_LABELS,
-} from '@equipment-management/schemas';
+import { type Site, EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -28,22 +24,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { FormValues } from './BasicInfoSection';
 import { apiClient } from '@/lib/api/api-client';
+import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
 
 // EQUIPMENT_STATUS_LABELS는 @equipment-management/schemas에서 import (SSOT)
-
-/**
- * 장비 상태별 색상 매핑
- */
-const EQUIPMENT_STATUS_COLORS: Record<EquipmentStatus, string> = {
-  available: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  in_use: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  checked_out: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  calibration_scheduled: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-  calibration_overdue: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  non_conforming: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  spare: 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200',
-  retired: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-};
+// 색상 스타일은 @/lib/constants/equipment-status-styles에서 import (SSOT)
 
 interface TechnicalManager {
   id: number;
@@ -130,7 +114,11 @@ export function StatusLocationSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>장비 상태</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || undefined}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  value={field.value || undefined}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="상태를 선택하세요">
@@ -138,9 +126,9 @@ export function StatusLocationSection({
                           <div className="flex items-center gap-2">
                             <Badge
                               variant="outline"
-                              className={EQUIPMENT_STATUS_COLORS[field.value as EquipmentStatus]}
+                              className={getEquipmentStatusStyle(field.value).className}
                             >
-                              {EQUIPMENT_STATUS_LABELS[field.value as EquipmentStatus]}
+                              {getEquipmentStatusStyle(field.value).label}
                             </Badge>
                           </div>
                         )}
@@ -148,18 +136,18 @@ export function StatusLocationSection({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {Object.entries(EQUIPMENT_STATUS_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant="outline"
-                            className={EQUIPMENT_STATUS_COLORS[value as EquipmentStatus]}
-                          >
-                            {label}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {Object.entries(EQUIPMENT_STATUS_LABELS).map(([value, label]) => {
+                      const style = getEquipmentStatusStyle(value);
+                      return (
+                        <SelectItem key={value} value={value}>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={style.className}>
+                              {label}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -341,7 +329,10 @@ export function StatusLocationSection({
             <FormItem>
               <FormLabel>메뉴얼 위치</FormLabel>
               <FormControl>
-                <Input placeholder="예: /docs/manuals/equipment-001.pdf 또는 서버 경로" {...field} />
+                <Input
+                  placeholder="예: /docs/manuals/equipment-001.pdf 또는 서버 경로"
+                  {...field}
+                />
               </FormControl>
               <FormDescription>메뉴얼 파일의 저장 경로를 입력하세요</FormDescription>
               <FormMessage />

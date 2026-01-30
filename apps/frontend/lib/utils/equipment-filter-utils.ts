@@ -1,0 +1,222 @@
+/**
+ * ============================================================================
+ * 🔴 SSOT: 장비 필터 변환 유틸리티 (Single Source of Truth)
+ * ============================================================================
+ *
+ * ⚠️ 이 파일은 장비 필터 파싱/변환의 유일한 소스입니다.
+ * 다른 파일에서 직접 필터 파싱 로직을 작성하지 마세요!
+ *
+ * 이 파일이 존재하는 이유:
+ * - 2026-01-30 버그: page.tsx와 useEquipmentFilters.ts가 각각 다른 파싱 로직을
+ *   사용하여 새 필터(classification, calibrationMethod, isShared 등)가
+ *   서버 컴포넌트에서 누락되는 문제 발생
+ *
+ * 사용처:
+ * - app/(dashboard)/equipment/page.tsx (Server Component)
+ * - hooks/useEquipmentFilters.ts (Client Hook)
+ *
+ * ============================================================================
+ * 🔴 새로운 필터 추가 시 체크리스트
+ * ============================================================================
+ *
+ * 1. [이 파일] UIEquipmentFilters 인터페이스에 필드 추가
+ * 2. [이 파일] ApiEquipmentFilters 인터페이스에 필드 추가 (필요시)
+ * 3. [이 파일] DEFAULT_UI_FILTERS에 기본값 추가
+ * 4. [이 파일] parseEquipmentFiltersFromSearchParams() 함수 업데이트
+ * 5. [이 파일] convertFiltersToApiParams() 함수 업데이트
+ * 6. [이 파일] countActiveFilters() 함수 업데이트
+ * 7. hooks/useEquipmentFilters.ts - EquipmentFilters 타입 (필요시)
+ * 8. components/equipment/EquipmentFilters.tsx - UI 컴포넌트
+ * 9. packages/schemas/src/equipment.ts - 백엔드 Zod 스키마 (필요시)
+ * 10. backend/.../equipment.service.ts - 백엔드 쿼리 로직
+ *
+ * ============================================================================
+ */
+
+import type {
+  Site,
+  EquipmentStatus,
+  CalibrationMethod,
+  Classification,
+} from '@equipment-management/schemas';
+
+/**
+ * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
+ */
+export interface UIEquipmentFilters {
+  search: string;
+  site: Site | '';
+  status: EquipmentStatus | '';
+  calibrationMethod: CalibrationMethod | '';
+  classification: Classification | '';
+  isShared: 'all' | 'shared' | 'normal';
+  calibrationDueFilter: 'all' | 'due_soon' | 'overdue' | 'normal';
+  teamId: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * API에서 사용하는 필터 타입 (백엔드 쿼리 파라미터)
+ */
+export interface ApiEquipmentFilters {
+  search?: string;
+  site?: Site;
+  status?: EquipmentStatus;
+  calibrationMethod?: CalibrationMethod;
+  classification?: Classification;
+  isShared?: boolean;
+  calibrationDue?: number;
+  calibrationDueAfter?: number;
+  calibrationOverdue?: boolean;
+  teamId?: string;
+  sort?: string;
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * UI 필터 기본값
+ */
+export const DEFAULT_UI_FILTERS: UIEquipmentFilters = {
+  search: '',
+  site: '',
+  status: '',
+  calibrationMethod: '',
+  classification: '',
+  isShared: 'all',
+  calibrationDueFilter: 'all',
+  teamId: '',
+  sortBy: 'createdAt',
+  sortOrder: 'desc',
+  page: 1,
+  pageSize: 20,
+};
+
+/**
+ * URLSearchParams에서 UI 필터 객체로 변환
+ *
+ * 서버 컴포넌트와 클라이언트 훅에서 동일하게 사용
+ *
+ * @param searchParams - URL 쿼리 파라미터 (URLSearchParams 또는 Record<string, string | string[] | undefined>)
+ * @returns UI 필터 객체
+ */
+export function parseEquipmentFiltersFromSearchParams(
+  searchParams: URLSearchParams | Record<string, string | string[] | undefined>
+): UIEquipmentFilters {
+  // URLSearchParams와 일반 객체 모두 지원
+  const get = (key: string): string | null => {
+    if (searchParams instanceof URLSearchParams) {
+      return searchParams.get(key);
+    }
+    const value = searchParams[key];
+    return typeof value === 'string' ? value : null;
+  };
+
+  const search = get('search') || DEFAULT_UI_FILTERS.search;
+  const site = (get('site') || DEFAULT_UI_FILTERS.site) as Site | '';
+  const status = (get('status') || DEFAULT_UI_FILTERS.status) as EquipmentStatus | '';
+  const calibrationMethod = (get('calibrationMethod') || DEFAULT_UI_FILTERS.calibrationMethod) as
+    | CalibrationMethod
+    | '';
+  const classification = (get('classification') || DEFAULT_UI_FILTERS.classification) as
+    | Classification
+    | '';
+
+  const isSharedParam = get('isShared');
+  const isShared = isSharedParam === 'shared' || isSharedParam === 'normal' ? isSharedParam : 'all';
+
+  const calibrationDueFilterParam = get('calibrationDueFilter');
+  const calibrationDueFilter = (
+    calibrationDueFilterParam === 'due_soon' ||
+    calibrationDueFilterParam === 'overdue' ||
+    calibrationDueFilterParam === 'normal'
+      ? calibrationDueFilterParam
+      : 'all'
+  ) as UIEquipmentFilters['calibrationDueFilter'];
+
+  const teamId = get('teamId') || DEFAULT_UI_FILTERS.teamId;
+  const sortBy = get('sortBy') || DEFAULT_UI_FILTERS.sortBy;
+  const sortOrder = (get('sortOrder') || DEFAULT_UI_FILTERS.sortOrder) as 'asc' | 'desc';
+  const page = parseInt(get('page') || String(DEFAULT_UI_FILTERS.page), 10);
+  const pageSize = parseInt(get('pageSize') || String(DEFAULT_UI_FILTERS.pageSize), 10);
+
+  return {
+    search,
+    site,
+    status,
+    calibrationMethod,
+    classification,
+    isShared,
+    calibrationDueFilter,
+    teamId,
+    sortBy,
+    sortOrder,
+    page: isNaN(page) || page < 1 ? DEFAULT_UI_FILTERS.page : page,
+    pageSize: isNaN(pageSize) || pageSize < 1 ? DEFAULT_UI_FILTERS.pageSize : pageSize,
+  };
+}
+
+/**
+ * UI 필터를 API 쿼리 파라미터로 변환
+ *
+ * calibrationDueFilter, isShared 등 UI 전용 값을 백엔드 API 파라미터로 변환
+ *
+ * @param filters - UI 필터 객체
+ * @returns API 쿼리 파라미터 객체
+ */
+export function convertFiltersToApiParams(filters: UIEquipmentFilters): ApiEquipmentFilters {
+  // calibrationDueFilter → API 파라미터 변환
+  let calibrationDue: number | undefined;
+  let calibrationDueAfter: number | undefined;
+  let calibrationOverdue: boolean | undefined;
+
+  if (filters.calibrationDueFilter === 'due_soon') {
+    calibrationDue = 30; // 30일 이내 교정 예정
+  } else if (filters.calibrationDueFilter === 'overdue') {
+    calibrationOverdue = true; // 교정 기한 초과
+  } else if (filters.calibrationDueFilter === 'normal') {
+    calibrationDueAfter = 30; // 30일 이후 교정 예정
+  }
+
+  // isShared → boolean 변환
+  const isShared =
+    filters.isShared === 'shared' ? true : filters.isShared === 'normal' ? false : undefined;
+
+  return {
+    search: filters.search || undefined,
+    site: filters.site || undefined,
+    status: filters.status || undefined,
+    calibrationMethod: filters.calibrationMethod || undefined,
+    classification: filters.classification || undefined,
+    isShared,
+    calibrationDue,
+    calibrationDueAfter,
+    calibrationOverdue,
+    teamId: filters.teamId || undefined,
+    sort: filters.sortBy ? `${filters.sortBy}.${filters.sortOrder}` : undefined,
+    page: filters.page,
+    pageSize: filters.pageSize,
+  };
+}
+
+/**
+ * 활성 필터 개수 계산
+ *
+ * @param filters - UI 필터 객체
+ * @returns 활성 필터 개수
+ */
+export function countActiveFilters(filters: UIEquipmentFilters): number {
+  let count = 0;
+  if (filters.search) count++;
+  if (filters.site) count++;
+  if (filters.status) count++;
+  if (filters.calibrationMethod) count++;
+  if (filters.classification) count++;
+  if (filters.isShared !== 'all') count++;
+  if (filters.calibrationDueFilter !== 'all') count++;
+  if (filters.teamId) count++;
+  return count;
+}

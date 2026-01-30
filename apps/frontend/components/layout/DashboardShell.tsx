@@ -19,7 +19,6 @@ import {
   Package2,
   FileSpreadsheet,
   ClipboardCheck,
-  ClipboardList,
   Users,
   Bell,
   Settings,
@@ -27,6 +26,7 @@ import {
 } from 'lucide-react';
 import { ReactNode, memo, useCallback, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { NavItem } from '@/components/layout/MobileNav';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
@@ -35,7 +35,7 @@ import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
 
 // MobileNav는 모바일 뷰포트에서만 필요하므로 지연 로딩 (bundle-dynamic-imports)
 const MobileNav = dynamic(
-  () => import('@/components/layout/MobileNav').then(mod => mod.MobileNav),
+  () => import('@/components/layout/MobileNav').then((mod) => mod.MobileNav),
   {
     ssr: false,
     loading: () => (
@@ -81,31 +81,27 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
 
   // navItems를 useMemo로 메모이제이션하여 불필요한 재생성 방지 (rerender-memo)
+  // SSOT: FRONTEND_ROUTES 사용
   const navItems: NavItem[] = useMemo(
     () => [
       {
         icon: <LayoutDashboard className="h-5 w-5" />,
-        href: '/',
+        href: FRONTEND_ROUTES.DASHBOARD,
         label: '대시보드',
       },
       {
         icon: <Package2 className="h-5 w-5" />,
-        href: '/equipment',
+        href: FRONTEND_ROUTES.EQUIPMENT.LIST,
         label: '장비 관리',
       },
       {
         icon: <ClipboardCheck className="h-5 w-5" />,
-        href: '/rentals',
+        href: FRONTEND_ROUTES.CHECKOUTS.LIST,
         label: '대여/반출 관리',
       },
       {
-        icon: <ClipboardList className="h-5 w-5" />,
-        href: '/loans',
-        label: '내 대여 현황',
-      },
-      {
         icon: <FileSpreadsheet className="h-5 w-5" />,
-        href: '/calibration',
+        href: FRONTEND_ROUTES.CALIBRATION.LIST,
         label: '교정 관리',
       },
       {
@@ -115,7 +111,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       },
       {
         icon: <Bell className="h-5 w-5" />,
-        href: '/notifications',
+        href: FRONTEND_ROUTES.NOTIFICATIONS.LIST,
         label: '알림',
       },
       {

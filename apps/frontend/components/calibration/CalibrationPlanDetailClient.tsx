@@ -57,7 +57,6 @@ import {
   Check,
 } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
-import { VersionHistory } from './VersionHistory';
 
 interface CalibrationPlanDetailClientProps {
   /**

@@ -20,6 +20,7 @@ import { ROLE_PERMISSIONS as SHARED_ROLE_PERMISSIONS } from '@equipment-manageme
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.TEST_ENGINEER]: SHARED_ROLE_PERMISSIONS.test_engineer,
   [UserRole.TECHNICAL_MANAGER]: SHARED_ROLE_PERMISSIONS.technical_manager,
+  [UserRole.QUALITY_MANAGER]: SHARED_ROLE_PERMISSIONS.quality_manager,
   [UserRole.LAB_MANAGER]: SHARED_ROLE_PERMISSIONS.lab_manager,
 };
 

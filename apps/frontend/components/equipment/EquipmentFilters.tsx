@@ -13,31 +13,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import type { Site, EquipmentStatus, CalibrationMethod } from '@equipment-management/schemas';
-import type { EquipmentFilters as FiltersType, CalibrationDueFilter } from '@/hooks/useEquipmentFilters';
+import {
+  type Site,
+  type EquipmentStatus,
+  type CalibrationMethod,
+  type Classification,
+  EQUIPMENT_STATUS_LABELS,
+  EQUIPMENT_STATUS_FILTER_OPTIONS,
+  CALIBRATION_METHOD_LABELS,
+  CLASSIFICATION_LABELS,
+} from '@equipment-management/schemas';
+import type {
+  EquipmentFilters as FiltersType,
+  CalibrationDueFilter,
+} from '@/hooks/useEquipmentFilters';
 import { useAuth } from '@/hooks/use-auth';
 import teamsApi, { type Team } from '@/lib/api/teams-api';
 
 /**
- * 장비 상태 옵션
+ * 장비 상태 옵션 (SSOT 기반 - 사용자에게 표시할 옵션만)
  */
 const STATUS_OPTIONS: { value: EquipmentStatus | ''; label: string }[] = [
   { value: '', label: '모든 상태' },
-  { value: 'available', label: '사용 가능' },
-  { value: 'in_use', label: '사용 중' },
-  { value: 'checked_out', label: '반출 중' },
-  { value: 'calibration_scheduled', label: '교정 예정' },
-  { value: 'calibration_overdue', label: '교정 기한 초과' },
-  { value: 'non_conforming', label: '부적합' },
-  { value: 'spare', label: '여분' },
-  { value: 'retired', label: '폐기' },
+  ...EQUIPMENT_STATUS_FILTER_OPTIONS.map((value) => ({
+    value,
+    label: EQUIPMENT_STATUS_LABELS[value],
+  })),
 ];
 
 /**
@@ -51,13 +55,25 @@ const SITE_OPTIONS: { value: Site | ''; label: string }[] = [
 ];
 
 /**
- * 교정 방법 옵션
+ * 교정 방법 옵션 (SSOT 기반)
  */
 const CALIBRATION_METHOD_OPTIONS: { value: CalibrationMethod | ''; label: string }[] = [
   { value: '', label: '모든 교정 방법' },
-  { value: 'external_calibration', label: '외부 교정' },
-  { value: 'self_inspection', label: '자체 점검' },
-  { value: 'not_applicable', label: '비대상' },
+  ...Object.entries(CALIBRATION_METHOD_LABELS).map(([value, label]) => ({
+    value: value as CalibrationMethod,
+    label,
+  })),
+];
+
+/**
+ * 장비 분류 옵션 (SSOT 기반)
+ */
+const CLASSIFICATION_OPTIONS: { value: Classification | ''; label: string }[] = [
+  { value: '', label: '모든 분류' },
+  ...Object.entries(CLASSIFICATION_LABELS).map(([value, label]) => ({
+    value: value as Classification,
+    label,
+  })),
 ];
 
 /**
@@ -72,7 +88,11 @@ const SHARED_OPTIONS: { value: 'all' | 'shared' | 'normal'; label: string }[] = 
 /**
  * 교정 기한 필터 옵션
  */
-const CALIBRATION_DUE_OPTIONS: { value: CalibrationDueFilter; label: string; description: string }[] = [
+const CALIBRATION_DUE_OPTIONS: {
+  value: CalibrationDueFilter;
+  label: string;
+  description: string;
+}[] = [
   { value: 'all', label: '전체', description: '모든 장비' },
   { value: 'due_soon', label: '교정 임박', description: '30일 이내 교정 예정' },
   { value: 'overdue', label: '기한 초과', description: '교정 기한이 지남' },
@@ -86,7 +106,7 @@ function transformTeamsToOptions(teams: Team[]): { value: string; label: string 
   return [
     { value: '', label: '모든 팀' },
     ...teams.map((team) => ({
-      value: team.id,  // UUID 사용
+      value: team.id, // UUID 사용
       label: team.name,
     })),
   ];
@@ -97,6 +117,7 @@ interface EquipmentFiltersProps {
   onSiteChange: (site: Site | '') => void;
   onStatusChange: (status: EquipmentStatus | '') => void;
   onCalibrationMethodChange: (method: CalibrationMethod | '') => void;
+  onClassificationChange: (classification: Classification | '') => void;
   onIsSharedChange: (isShared: 'all' | 'shared' | 'normal') => void;
   onCalibrationDueFilterChange: (filter: CalibrationDueFilter) => void;
   onTeamIdChange: (teamId: string) => void;
@@ -144,6 +165,7 @@ function EquipmentFiltersComponent({
   onSiteChange,
   onStatusChange,
   onCalibrationMethodChange,
+  onClassificationChange,
   onIsSharedChange,
   onCalibrationDueFilterChange,
   onTeamIdChange,
@@ -162,12 +184,13 @@ function EquipmentFiltersComponent({
   // 팀 목록을 API에서 동적으로 가져오기
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
     queryKey: ['teams', 'filter-options', teamQuerySite],
-    queryFn: () => teamsApi.getTeams({
-      site: teamQuerySite, // ✅ 사이트 필터 적용
-      pageSize: 100
-    }),
+    queryFn: () =>
+      teamsApi.getTeams({
+        site: teamQuerySite, // ✅ 사이트 필터 적용
+        pageSize: 100,
+      }),
     staleTime: 5 * 60 * 1000, // 5분간 캐시
-    gcTime: 10 * 60 * 1000,   // 10분간 가비지 컬렉션 방지
+    gcTime: 10 * 60 * 1000, // 10분간 가비지 컬렉션 방지
     enabled: !!teamQuerySite, // 사이트 정보가 있을 때만 조회
   });
 
@@ -190,6 +213,12 @@ function EquipmentFiltersComponent({
     return CALIBRATION_METHOD_OPTIONS.find((opt) => opt.value === method)?.label || method;
   }, []);
 
+  const getClassificationLabel = useCallback((classification: Classification) => {
+    return (
+      CLASSIFICATION_OPTIONS.find((opt) => opt.value === classification)?.label || classification
+    );
+  }, []);
+
   const getSharedLabel = useCallback((isShared: 'all' | 'shared' | 'normal') => {
     return SHARED_OPTIONS.find((opt) => opt.value === isShared)?.label || isShared;
   }, []);
@@ -198,9 +227,12 @@ function EquipmentFiltersComponent({
     return CALIBRATION_DUE_OPTIONS.find((opt) => opt.value === filter)?.label || filter;
   }, []);
 
-  const getTeamLabel = useCallback((teamId: string) => {
-    return teamOptions.find((opt) => opt.value === teamId)?.label || '알 수 없는 팀';
-  }, [teamOptions]);
+  const getTeamLabel = useCallback(
+    (teamId: string) => {
+      return teamOptions.find((opt) => opt.value === teamId)?.label || '알 수 없는 팀';
+    },
+    [teamOptions]
+  );
 
   return (
     <Collapsible defaultOpen className={className}>
@@ -251,6 +283,12 @@ function EquipmentFiltersComponent({
                 <ActiveFilterBadge
                   label={`교정: ${getCalibrationMethodLabel(filters.calibrationMethod)}`}
                   onRemove={() => onCalibrationMethodChange('')}
+                />
+              )}
+              {filters.classification && (
+                <ActiveFilterBadge
+                  label={`분류: ${getClassificationLabel(filters.classification)}`}
+                  onRemove={() => onClassificationChange('')}
                 />
               )}
               {filters.isShared !== 'all' && (
@@ -311,7 +349,9 @@ function EquipmentFiltersComponent({
                 <Label htmlFor="filter-status">상태</Label>
                 <Select
                   value={filters.status || 'all'}
-                  onValueChange={(value) => onStatusChange(value === 'all' ? '' : (value as EquipmentStatus))}
+                  onValueChange={(value) =>
+                    onStatusChange(value === 'all' ? '' : (value as EquipmentStatus))
+                  }
                 >
                   <SelectTrigger id="filter-status" aria-label="장비 상태 필터 선택">
                     <SelectValue placeholder="모든 상태" />
@@ -350,6 +390,29 @@ function EquipmentFiltersComponent({
                 </Select>
               </div>
 
+              {/* 장비 분류 필터 */}
+              <div className="space-y-2">
+                <Label htmlFor="filter-classification">장비 분류</Label>
+                <Select
+                  value={filters.classification || 'all'}
+                  onValueChange={(value) =>
+                    onClassificationChange(value === 'all' ? '' : (value as Classification))
+                  }
+                >
+                  <SelectTrigger id="filter-classification" aria-label="장비 분류 필터 선택">
+                    <SelectValue placeholder="모든 분류" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">모든 분류</SelectItem>
+                    {CLASSIFICATION_OPTIONS.filter((opt) => opt.value).map((option) => (
+                      <SelectItem key={option.value} value={option.value || 'all'}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* 공용장비 필터 */}
               <div className="space-y-2">
                 <Label htmlFor="filter-shared">장비 구분</Label>
@@ -375,7 +438,9 @@ function EquipmentFiltersComponent({
                 <Label htmlFor="filter-calibration-due">교정 기한</Label>
                 <Select
                   value={filters.calibrationDueFilter}
-                  onValueChange={(value) => onCalibrationDueFilterChange(value as CalibrationDueFilter)}
+                  onValueChange={(value) =>
+                    onCalibrationDueFilterChange(value as CalibrationDueFilter)
+                  }
                 >
                   <SelectTrigger id="filter-calibration-due" aria-label="교정 기한 필터 선택">
                     <SelectValue placeholder="전체" />
@@ -386,7 +451,9 @@ function EquipmentFiltersComponent({
                         <div className="flex flex-col">
                           <span>{option.label}</span>
                           {option.description && (
-                            <span className="text-xs text-muted-foreground">{option.description}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {option.description}
+                            </span>
                           )}
                         </div>
                       </SelectItem>
