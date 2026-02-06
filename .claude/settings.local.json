@@ -16,10 +16,11 @@
     "deny": [],
     "ask": []
   },
+  "env": {
+    "ENABLE_TOOL_SEARCH": "AUTO:5"
+  },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "playwright"
-  ],
+  "enabledMcpjsonServers": ["playwright"],
   "hooks": {
     "Notification": [
       {
