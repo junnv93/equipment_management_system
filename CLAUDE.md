@@ -258,11 +258,18 @@ enum EquipmentStatus {
 
 ### Calibration Display Logic
 
-Calibration status is shown as a **separate D-day badge** alongside the primary status:
+**교정 기한 초과 자동 처리 (CalibrationOverdueScheduler):**
 
-- Equipment with `calibration_scheduled` or `calibration_overdue` shows primary status as "사용 가능"
-- D-day badge shows countdown (D-7, D-Day) or overdue days (D+5)
-- Statuses `retired`, `non_conforming`, `spare` skip calibration badge display
+- 백엔드 스케줄러가 **매시간** 교정기한 초과 장비를 자동으로 `non_conforming` 상태로 전환
+- 앱 시작 시 `onModuleInit`에서 즉시 점검하여 기존 초과 장비 처리
+- 부적합 기록(non-conformance) 자동 생성 및 사고 이력 등록
+- 관리자 수동 트리거: `POST /api/notifications/trigger-overdue-check`
+
+**프론트엔드 상태 표시:**
+
+- `calibration_overdue` 상태는 **"부적합"**으로 표시 (빨간색 배지)
+- `calibration_scheduled` 상태는 "사용 가능"으로 표시 + D-day 배지 (D-7, D-3 등)
+- D-day 배지는 `retired`, `non_conforming`, `spare`, `disposed` 등에서 숨김
 
 ### Management Number Format
 

@@ -1,0 +1,1702 @@
+# UI-09: 장비 상세 페이지 (폐기 프로세스 통합)
+
+> 📖 **공통 가이드라인**: [FRONTEND_UI_COMMON.md](./FRONTEND_UI_COMMON.md)를 먼저 참조하세요.
+>
+> - 스킬 참조, 역할 체계, Playwright 테스트 가이드
+> - Next.js 16 패턴, 성능 최적화, 접근성 요구사항
+> - API 호출 규칙, 에러 처리, 디자인 요구사항
+
+---
+
+## 목적
+
+장비의 상세 정보와 관련 이력을 표시하고, **폐기 프로세스(2단계 승인)**를 장비 상세 페이지 내에서 통합 처리합니다.
+
+**핵심 원칙:**
+- 별도 폐기 페이지/탭 없음 → **헤더 영역 버튼으로 통합 처리**
+- 2단계 승인: 기술책임자 검토 → 시험소장 최종 승인
+- 폐기 완료 후에도 **원본 데이터 보관** (추적성)
+
+---
+
+## 프롬프트
+
+```
+스킬 로드:
+/equipment-management
+/nextjs-16
+/vercel-react-best-practices
+/web-design-guidelines
+/frontend-design
+
+⚠️ E2E 테스트 작성 시 /docs/development/E2E_TEST_AUTH_GUIDE.md를 반드시 참조하세요!
+
+.claude/skills/equipment-management/references/terminology.md와 /docs/development/API_STANDARDS.md를 참조하여 장비 상세 페이지를 구현해줘.
+
+역할별 폐기 권한:
+- test_engineer: 폐기 요청 (available 상태 장비)
+- technical_manager: 폐기 요청 + 폐기 검토 (1단계, 담당 팀)
+- lab_manager: 폐기 최종 승인 (2단계, 검토 완료 건)
+
+권한 매트릭스:
+| 기능 | test_engineer | technical_manager | quality_manager | lab_manager |
+|------|---------------|-------------------|-----------------|-------------|
+| 장비 조회 | ✓ | ✓ | ✓ | ✓ |
+| 장비 등록 요청 | ✓ | ✓ | - | - |
+| 장비 수정 요청 | ✓ | ✓ | - | - |
+| 장비 등록/수정 승인 | - | ✓ (담당 팀) | - | - |
+| 장비 삭제 요청 | ✓ | ✓ | - | - |
+| 장비 삭제 승인 | - | ✓ (담당 팀) | - | - |
+| **장비 폐기 요청** | ✓ | ✓ | - | - |
+| **장비 폐기 검토** | - | ✓ (담당 팀) | - | - |
+| **장비 폐기 최종 승인** | - | - | - | ✓ |
+| 임시장비 비활성화 | - | ✓ | - | ✓ |
+
+요구사항:
+
+1. 장비 헤더 (EquipmentHeader)
+   - 장비명, 모델명, 시리얼넘버, 관리번호
+   - 상태 뱃지 (UL 색상 팔레트)
+     - available: UL Green (#00A451)
+     - checked_out: UL Midnight Blue (#122C49)
+     - calibration_overdue: UL Red (#CA0123)
+     - non_conforming: UL Red (#CA0123)
+     - **pending_disposal: UL Orange (#FF9D55) - 폐기대기**
+     - **disposed: UL Dark Gray (#666666) - 폐기완료**
+     - temporary: UL Teal (#00B5AD)
+     - inactive: UL Slate (#6B7280)
+   - 액션 버튼 그룹: [수정] [폐기 버튼] [더보기 ⋮]
+
+2. 폐기 버튼 (DisposalButton) - 상태별 동작
+   - **available 상태**: [폐기 요청] 버튼 (빨간 outline)
+     → 클릭 시 DisposalRequestDialog 열림
+   - **pending_disposal 상태**: [폐기 진행 중 ▼] 버튼 (주황색)
+     → 클릭 시 드롭다운 메뉴 (진행 상태 + 역할별 액션)
+   - **disposed 상태**: [폐기 완료] 버튼 (비활성화)
+
+3. 폐기 버튼 드롭다운 메뉴 (pending_disposal 상태)
+   - 상단: 진행 스텝퍼 [요청 ✓] — [검토 ○] — [승인 ○]
+   - 현재 단계 안내 텍스트
+   - 역할별 액션 버튼:
+     - 기술책임자 + reviewStatus='pending': [폐기 검토하기]
+     - 시험소장 + reviewStatus='reviewed': [최종 승인하기]
+     - 요청자 본인 + reviewStatus='pending': [요청 취소]
+
+4. 탭 기반 정보 표시 (URL 쿼리 파라미터)
+   - 기본 정보
+   - 교정 이력
+   - 보정계수
+   - 반출/반입 이력
+   - 위치 변동 이력
+   - 유지보수 이력
+   - 소프트웨어
+   - 첨부파일
+   - ~~폐기 이력~~ (제거됨 - 버튼 드롭다운으로 통합)
+
+5. 폐기 진행 상태 카드 (DisposalProgressCard)
+   - pending_disposal 상태일 때 장비 헤더 **위에** 표시
+   - 현재 단계 + 다음 액션 안내
+   - 진행 스텝퍼: [요청] → [검토] → [승인]
+   - 검토 완료 시 기술책임자 검토 의견 표시
+   - [상세 보기] 링크 → DisposalDetailDialog 열림
+
+6. 폐기 완료 배너 (DisposedBanner)
+   - disposed 상태일 때 장비 헤더 **위에** 표시
+   - 읽기 전용 안내
+   - 폐기 정보 표시 (폐기일, 사유, 승인자)
+   - 모든 액션 버튼 비활성화
+
+7. 폐기 요청 다이얼로그 (DisposalRequestDialog)
+   - 폐기 사유 선택 (노후화/고장/정밀도미보장/기타)
+   - 상세 설명 (필수, 10자 이상)
+   - 파일 첨부 (선택)
+   - 제출 시: 상태 → 'pending_disposal', reviewStatus → 'pending'
+
+8. 폐기 검토 다이얼로그 (DisposalReviewDialog)
+   - 폐기 요청 내용 표시
+   - 장비 이력 요약 (교정/수리/부적합 이력)
+   - 검토 의견 (필수, 10자 이상)
+   - [검토완료]: reviewStatus → 'reviewed'
+   - [반려]: 상태 → 'available', reviewStatus → 'rejected'
+
+9. 폐기 최종 승인 다이얼로그 (DisposalApprovalDialog)
+   - 폐기 요청 내용 + 검토 의견 표시
+   - 승인 의견 (선택)
+   - [최종 승인]: 상태 → 'disposed'
+   - [반려]: 상태 → 'available', reviewStatus → 'rejected'
+
+10. 폐기 상세 다이얼로그 (DisposalDetailDialog)
+    - 폐기 진행 타임라인 표시
+    - 요청/검토/승인 각 단계 정보
+    - 첨부파일 다운로드 링크
+
+파일 구조:
+
+기존 파일 수정:
+- apps/frontend/app/(dashboard)/equipment/[id]/page.tsx
+- apps/frontend/components/equipment/EquipmentHeader.tsx (폐기 버튼 추가)
+- apps/frontend/lib/constants/equipment-status-styles.ts (pending_disposal, disposed)
+
+신규 파일 (폐기 관련):
+- apps/frontend/components/equipment/disposal/DisposalButton.tsx ('use client')
+- apps/frontend/components/equipment/disposal/DisposalDropdownMenu.tsx ('use client')
+- apps/frontend/components/equipment/disposal/DisposalProgressCard.tsx
+- apps/frontend/components/equipment/disposal/DisposalProgressStepper.tsx
+- apps/frontend/components/equipment/disposal/DisposalRequestDialog.tsx ('use client')
+- apps/frontend/components/equipment/disposal/DisposalReviewDialog.tsx ('use client')
+- apps/frontend/components/equipment/disposal/DisposalApprovalDialog.tsx ('use client')
+- apps/frontend/components/equipment/disposal/DisposalDetailDialog.tsx ('use client')
+- apps/frontend/components/equipment/disposal/DisposedBanner.tsx
+- apps/frontend/components/equipment/disposal/DisposalReasonSelector.tsx ('use client')
+- apps/frontend/components/equipment/disposal/EquipmentHistorySummary.tsx
+- apps/frontend/components/equipment/disposal/ReviewOpinionCard.tsx
+- apps/frontend/lib/api/disposal-api.ts
+- apps/frontend/hooks/use-disposal-permissions.ts
+
+타입 정의 (SSOT - @equipment-management/schemas):
+
+⚠️ 아래 타입들을 먼저 packages/schemas/src/enums.ts에 추가 후 import하세요:
+
+// === packages/schemas/src/enums.ts에 추가 ===
+
+// 폐기 사유 열거형
+export const DISPOSAL_REASON_VALUES = ['obsolete', 'broken', 'inaccurate', 'other'] as const;
+export const DisposalReasonEnum = z.enum(DISPOSAL_REASON_VALUES as unknown as [string, ...string[]]);
+export type DisposalReason = z.infer<typeof DisposalReasonEnum>;
+
+export const DISPOSAL_REASON_LABELS: Record<DisposalReason, string> = {
+  obsolete: '노후화',
+  broken: '고장 (수리 불가)',
+  inaccurate: '정밀도/정확도 미보장',
+  other: '기타',
+};
+
+// 폐기 검토 상태 열거형
+export const DISPOSAL_REVIEW_STATUS_VALUES = ['pending', 'reviewed', 'approved', 'rejected'] as const;
+export const DisposalReviewStatusEnum = z.enum(DISPOSAL_REVIEW_STATUS_VALUES as unknown as [string, ...string[]]);
+export type DisposalReviewStatus = z.infer<typeof DisposalReviewStatusEnum>;
+
+// === packages/schemas/src/types/disposal.ts 신규 생성 ===
+
+import { z } from 'zod';
+import { DisposalReasonEnum, DisposalReviewStatusEnum } from '../enums';
+
+// 폐기 요청 스키마
+export const DisposalRequestSchema = z.object({
+  id: z.string().uuid(),
+  equipmentId: z.string().uuid(),
+  reason: DisposalReasonEnum,
+  reasonDetail: z.string().min(10, '10자 이상 입력해주세요'),
+  attachments: z.array(z.object({
+    id: z.string(),
+    filename: z.string(),
+    url: z.string(),
+  })).optional(),
+  requestedBy: z.string().uuid(),
+  requestedAt: z.string().datetime(),
+  reviewStatus: DisposalReviewStatusEnum,
+  reviewedBy: z.string().uuid().optional(),
+  reviewedAt: z.string().datetime().optional(),
+  reviewOpinion: z.string().optional(),
+  approvedBy: z.string().uuid().optional(),
+  approvedAt: z.string().datetime().optional(),
+  approvalComment: z.string().optional(),
+  rejectedBy: z.string().uuid().optional(),
+  rejectedAt: z.string().datetime().optional(),
+  rejectionReason: z.string().optional(),
+  rejectionStep: z.enum(['review', 'approval']).optional(),
+});
+
+export type DisposalRequest = z.infer<typeof DisposalRequestSchema>;
+
+// === 프론트엔드에서 import ===
+
+import {
+  DisposalReason,
+  DisposalReviewStatus,
+  DISPOSAL_REASON_LABELS,
+} from '@equipment-management/schemas';
+import type { DisposalRequest } from '@equipment-management/schemas';
+
+API 명세:
+
+// 폐기 요청
+POST /api/equipment/:id/disposal/request
+Body: { reason, reasonDetail, attachments? }
+Response: { success, disposalRequest }
+Effect: equipment.status → 'pending_disposal'
+
+// 폐기 검토
+POST /api/equipment/:id/disposal/review
+Body: { decision: 'approve' | 'reject', opinion }
+Response: { success }
+Effect: approve → reviewStatus='reviewed', reject → status='available'
+
+// 폐기 최종 승인
+POST /api/equipment/:id/disposal/approve
+Body: { decision: 'approve' | 'reject', comment? }
+Response: { success }
+Effect: approve → status='disposed', reject → status='available'
+
+// 폐기 요청 취소
+DELETE /api/equipment/:id/disposal/request
+Response: { success }
+Effect: status → 'available'
+
+// 현재 폐기 요청 조회
+GET /api/equipment/:id/disposal/current
+Response: { disposalRequest: DisposalRequest | null }
+
+접근성 요구사항:
+- 다이얼로그: role="dialog", aria-modal="true", 포커스 트랩
+- 드롭다운 메뉴: role="menu", aria-expanded
+- 사유 선택: role="radiogroup", aria-required="true"
+- 진행 스텝퍼: aria-current="step"
+- 반려 알림: role="alert"
+- 폐기 완료 배너: role="status"
+
+디자인 요구사항:
+- 폐기 요청 버튼: border-2 border-red-500 text-red-600 (outline)
+- 폐기 진행 중 버튼: bg-orange-500 text-white
+- 폐기 완료 버튼: bg-gray-200 text-gray-500 cursor-not-allowed
+- 진행 카드: bg-orange-50 border-orange-200
+- 폐기 완료 배너: bg-gray-100 border-gray-300
+- 스텝퍼 완료: bg-green-500, 현재: bg-orange-500, 대기: bg-gray-200
+
+제약사항:
+- 폐기 요청: available 상태에서만 가능
+- temporary 상태 장비는 폐기 불가 (비활성화만)
+- pending_disposal 상태: 수정/반출 불가
+- disposed 상태: 완전 읽기 전용
+- 검토 의견 필수 (10자 이상)
+
+검증:
+- 폐기 요청 → 검토 → 최종 승인 전체 플로우
+- 검토/승인 단계 반려 테스트
+- disposed 상태 읽기 전용 확인
+- 권한별 버튼 표시 확인
+- 드롭다운 메뉴 역할별 액션 확인
+- pnpm tsc --noEmit
+
+완료 후 체크리스트의 [ ]를 [x]로 변경해주세요.
+```
+
+---
+
+## 폐기 프로세스 상세 구현 가이드
+
+### 비즈니스 로직
+
+#### 폐기 vs 삭제 구분
+
+| 구분 | 폐기 | 삭제 |
+|------|------|------|
+| 대상 | 정상 운영 중이던 장비 | 잘못/중복 등록된 장비 |
+| 승인 | 기술책임자 검토 → 시험소장 승인 | 기술책임자 승인 |
+| 데이터 | **보존** (추적성) | 삭제 또는 삭제 플래그 |
+| 이력카드 | 폐기일자 기록 | - |
+
+#### 2단계 승인 프로세스
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    장비 폐기 프로세스 (2단계)                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  [시험실무자/기술책임자]                                      │
+│       │                                                     │
+│       ▼                                                     │
+│  ┌─────────────┐                                           │
+│  │ 폐기 요청    │  - 폐기 사유 선택                          │
+│  │ (Dialog)    │  - 상세 설명 입력 (10자↑)                  │
+│  │             │  - 관련 문서 첨부                          │
+│  └──────┬──────┘                                           │
+│         │ status: 'pending_disposal'                        │
+│         │ reviewStatus: 'pending'                           │
+│         ▼                                                   │
+│  ┌─────────────────────────────────────────┐               │
+│  │           1단계: 기술책임자 검토          │               │
+│  ├─────────────────────────────────────────┤               │
+│  │                                         │               │
+│  │  검토 내용:                              │               │
+│  │  - 폐기 타당성 검토                       │               │
+│  │  - 장비 이력 확인 (교정/수리/부적합)       │               │
+│  │  - 검토 의견 작성 (10자↑)                │               │
+│  │                                         │               │
+│  │         ┌────────┴────────┐             │               │
+│  │         ▼                 ▼             │               │
+│  │    [검토완료]          [반려]            │               │
+│  │         │                 │             │               │
+│  │         │            reviewStatus:      │               │
+│  │         │            'rejected'         │               │
+│  │         │            status: 'available'│               │
+│  │         │                               │               │
+│  └─────────┼───────────────────────────────┘               │
+│            │ reviewStatus: 'reviewed'                       │
+│            ▼                                                │
+│  ┌─────────────────────────────────────────┐               │
+│  │           2단계: 시험소장 승인           │               │
+│  ├─────────────────────────────────────────┤               │
+│  │                                         │               │
+│  │  확인 내용:                              │               │
+│  │  - 폐기 요청 내용                        │               │
+│  │  - 기술책임자 검토 의견                   │               │
+│  │  - 승인 의견 (선택)                      │               │
+│  │                                         │               │
+│  │         ┌────────┴────────┐             │               │
+│  │         ▼                 ▼             │               │
+│  │    [최종 승인]         [반려]            │               │
+│  │         │                 │             │               │
+│  │         │            reviewStatus:      │               │
+│  │         │            'rejected'         │               │
+│  │         │            status: 'available'│               │
+│  │         │                               │               │
+│  └─────────┼───────────────────────────────┘               │
+│            │                                                │
+│            ▼                                                │
+│  ┌─────────────────────────────────────────┐               │
+│  │           폐기 처리 완료                 │               │
+│  ├─────────────────────────────────────────┤               │
+│  │  - status: 'disposed'                   │               │
+│  │  - reviewStatus: 'approved'             │               │
+│  │  - 이력카드에 폐기일자 기록              │               │
+│  │  - 원본 데이터 보관 (추적성)             │               │
+│  │  - 장비 상세 페이지: 읽기 전용           │               │
+│  └─────────────────────────────────────────┘               │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 상태 전이
+
+```
+[available] ─폐기요청─> [pending_disposal] ─검토완료─> [pending_disposal] ─최종승인─> [disposed]
+                │         (reviewStatus:       (reviewStatus:
+                │          'pending')           'reviewed')
+                │              │                     │
+                │              └──반려──> [available] └──반려──> [available]
+                │
+                └──취소──> [available]
+```
+
+---
+
+### UI 레이아웃
+
+#### 장비 상세 페이지 전체 구조
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 📍 장비 > SUW-E0045                                          [breadcrumb]│
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ ⚠️ 폐기 진행 중                                                      │ │
+│ │ [● 요청] ─── [○ 검토] ─── [○ 승인]                                  │ │
+│ │ 현재 단계: 기술책임자 검토 대기                                       │ │
+│ │ 요청자: 김철수 (RF팀) | 2025-01-26                    [상세 보기]     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                          ↑ DisposalProgressCard         │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │                                                                     │ │
+│ │  오실로스코프                              [수정] [폐기 진행 중 ▼] [⋮]│ │
+│ │  ┌──────────┐                                                       │ │
+│ │  │ 폐기 대기 │  ← StatusBadge (주황색)                              │ │
+│ │  └──────────┘                                                       │ │
+│ │  모델: MSO5104 | 시리얼: SN-2024-0045 | 관리번호: SUW-E0045         │ │
+│ │                                                                     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                          ↑ EquipmentHeader              │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ [기본 정보] [교정 이력] [보정계수] [반출/반입] [유지보수] [첨부파일]   │ │
+│ ├─────────────────────────────────────────────────────────────────────┤ │
+│ │                                                                     │ │
+│ │                        탭 컨텐츠 영역                                │ │
+│ │                                                                     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                          ↑ EquipmentTabs                │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 폐기 버튼 상태별 UI
+
+**1. available 상태 (폐기 요청 가능)**
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│  오실로스코프                                   [수정] [폐기 요청] [⋮]   │
+│  ┌──────────┐                                         ↑                │
+│  │ 사용 가능 │                              빨간색 outline 버튼         │
+│  └──────────┘                                                          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**2. pending_disposal 상태 (폐기 진행 중)**
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│  오실로스코프                           [수정] [폐기 진행 중 ▼] [⋮]      │
+│  ┌──────────┐                                   ↑                       │
+│  │ 폐기 대기 │                          주황색 버튼 + 드롭다운           │
+│  └──────────┘                                   │                       │
+│                           ┌─────────────────────┴─────────────────────┐ │
+│                           │ [● 요청] ─── [○ 검토] ─── [○ 승인]        │ │
+│                           │ 기술책임자 검토 대기                        │ │
+│                           ├───────────────────────────────────────────┤ │
+│                           │ 📄 폐기 검토하기      ← 기술책임자만 표시   │ │
+│                           │ ✕ 요청 취소           ← 요청자만 표시       │ │
+│                           └───────────────────────────────────────────┘ │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**3. disposed 상태 (폐기 완료)**
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │ 🗑️ 폐기된 장비입니다                                                 │ │
+│ │ 폐기일: 2025-01-28 | 사유: 노후화 | 승인자: 이영희 (시험소장)        │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+│                                          ↑ DisposedBanner               │
+│ ┌─────────────────────────────────────────────────────────────────────┐ │
+│ │                                                                     │ │
+│ │  오실로스코프                                         [폐기 완료]    │ │
+│ │  ┌──────────┐                                             ↑         │ │
+│ │  │ 폐기 완료 │                                    비활성화 버튼      │ │
+│ │  └──────────┘                                                       │ │
+│ │                                                                     │ │
+│ └─────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 컴포넌트 상세 명세
+
+#### 1. DisposalButton (폐기 버튼)
+
+```typescript
+// components/equipment/disposal/DisposalButton.tsx
+'use client';
+
+interface DisposalButtonProps {
+  equipment: Equipment;
+  disposalRequest: DisposalRequest | null;
+  onRequestDisposal: () => void;
+  onReviewDisposal: () => void;
+  onApproveDisposal: () => void;
+  onCancelDisposal: () => void;
+}
+```
+
+**상태별 렌더링 로직**:
+```typescript
+// available 상태 + 폐기 권한 있음
+if (status === 'available' && canRequestDisposal) {
+  return (
+    <Button variant="outline" className="border-2 border-red-500 text-red-600">
+      <Trash2 /> 폐기 요청
+    </Button>
+  );
+}
+
+// pending_disposal 상태
+if (status === 'pending_disposal') {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button className="bg-orange-500 hover:bg-orange-600">
+          <Clock /> 폐기 진행 중 <ChevronDown />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DisposalDropdownMenu ... />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// disposed 상태
+if (status === 'disposed') {
+  return (
+    <Button disabled className="bg-gray-200 text-gray-500">
+      <Trash2 /> 폐기 완료
+    </Button>
+  );
+}
+```
+
+---
+
+#### 2. DisposalDropdownMenu (드롭다운 메뉴)
+
+```typescript
+// components/equipment/disposal/DisposalDropdownMenu.tsx
+'use client';
+
+interface DisposalDropdownMenuProps {
+  disposalRequest: DisposalRequest;
+  canReview: boolean;
+  canApprove: boolean;
+  canCancel: boolean;
+  onReview: () => void;
+  onApprove: () => void;
+  onCancel: () => void;
+  onViewDetails: () => void;
+}
+```
+
+**UI 구조**:
+```
+┌────────────────────────────────────────────────────┐
+│  [● 요청] ─── [○ 검토] ─── [○ 승인]               │  ← DisposalProgressStepper
+│  기술책임자 검토 대기                              │
+├────────────────────────────────────────────────────┤
+│  📄 폐기 검토하기              ← canReview 시      │
+│  ✓ 최종 승인하기               ← canApprove 시    │
+│  ✕ 요청 취소                   ← canCancel 시     │
+├────────────────────────────────────────────────────┤
+│  🔍 상세 보기                                      │
+└────────────────────────────────────────────────────┘
+```
+
+**구현 포인트**:
+- `role="menu"` 접근성
+- 역할에 따라 액션 버튼 조건부 렌더링
+- 액션이 없는 경우 "처리 권한이 없습니다" 메시지
+
+---
+
+#### 3. DisposalProgressStepper (진행 스텝퍼)
+
+```typescript
+// components/equipment/disposal/DisposalProgressStepper.tsx
+
+interface DisposalProgressStepperProps {
+  currentStep: 1 | 2 | 3;  // 1: 요청, 2: 검토, 3: 승인
+  size?: 'sm' | 'md';
+}
+```
+
+**UI 구조**:
+```
+[● 요청] ─── [○ 검토] ─── [○ 승인]
+
+● = 완료 (green-500)
+◉ = 현재 (orange-500)  
+○ = 대기 (gray-200)
+```
+
+**구현 포인트**:
+- `aria-current="step"` 현재 단계 표시
+- 완료된 단계는 체크 아이콘
+
+---
+
+#### 4. DisposalProgressCard (폐기 진행 상태 카드)
+
+```typescript
+// components/equipment/disposal/DisposalProgressCard.tsx
+
+interface DisposalProgressCardProps {
+  disposalRequest: DisposalRequest;
+  onViewDetails: () => void;
+  onCancel?: () => void;  // 요청자만
+}
+```
+
+**UI 구조**:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ⚠️ 폐기 진행 중                                           [요청 취소]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  [● 요청] ─── [○ 검토] ─── [○ 승인]                                    │
+│                                                                         │
+│  현재 단계: 기술책임자 검토 대기                                         │
+│  요청자: 김철수 (RF팀) | 2025-01-26                                     │
+│  폐기 사유: 노후화                                                       │
+│                                                                         │
+│  💡 RF팀 기술책임자의 검토가 필요합니다.                                 │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 💬 기술책임자 검토 의견 (reviewStatus='reviewed' 일 때만 표시)     │ │
+│  │ "폐기 타당합니다. 대체 장비가 이미 도입되어..."                    │ │
+│  │ 홍석환 (기술책임자) · 2025-01-27 09:00                            │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│                                                         [상세 보기]     │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**표시 조건**: `equipment.status === 'pending_disposal'`
+
+**구현 포인트**:
+- 주황색 배경 (`bg-orange-50 border-orange-200`)
+- 요청자 본인이고 `reviewStatus === 'pending'`일 때만 취소 버튼 표시
+- 검토 완료 시 ReviewOpinionCard 표시
+
+---
+
+#### 5. DisposedBanner (폐기 완료 배너)
+
+```typescript
+// components/equipment/disposal/DisposedBanner.tsx
+
+interface DisposedBannerProps {
+  disposalRequest: DisposalRequest;
+}
+```
+
+**UI 구조**:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 🗑️ 폐기된 장비입니다                                                    │
+├─────────────────────────────────────────────────────────────────────────┤
+│  폐기일: 2025-01-28                                                     │
+│  폐기 사유: 노후화 - 10년 사용으로 측정 오차 증가                        │
+│  승인자: 이영희 (시험소장)                                               │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**표시 조건**: `equipment.status === 'disposed'`
+
+**구현 포인트**:
+- `role="status"` 접근성
+- 회색 배경 (`bg-gray-100 border-gray-300`)
+- 페이지 전체 읽기 전용 상태 트리거
+
+---
+
+#### 6. DisposalRequestDialog (폐기 요청 다이얼로그)
+
+```typescript
+// components/equipment/disposal/DisposalRequestDialog.tsx
+'use client';
+
+interface DisposalRequestDialogProps {
+  equipment: Equipment;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+```
+
+**UI 구조**:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  폐기 요청                                                        [X]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  장비: SUW-E0045 | 오실로스코프 MSO5104                                 │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 폐기 사유 *                                                        │ │
+│  │ ○ 노후화                                                          │ │
+│  │ ○ 고장 (수리 불가)                                                 │ │
+│  │ ○ 정밀도/정확도 미보장                                             │ │
+│  │ ○ 기타                                                            │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 상세 설명 * (최소 10자)                                            │ │
+│  │ ┌───────────────────────────────────────────────────────────────┐ │ │
+│  │ │                                                               │ │ │
+│  │ └───────────────────────────────────────────────────────────────┘ │ │
+│  │ ⚠️ 10자 이상 입력해주세요 (현재: 5자)                             │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 첨부파일 (선택)                                                    │ │
+│  │ [파일 선택] 수리견적서.pdf ✕                                      │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│                                              [취소] [폐기 요청]          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**구현 포인트**:
+- `role="radiogroup"` 폐기 사유 선택
+- `aria-invalid`, `aria-describedby` 유효성 검증 메시지
+- 10자 미만 시 제출 버튼 비활성화
+- 제출 시 optimistic update
+- 성공 시 `onSuccess` 콜백 + 토스트 알림
+
+---
+
+#### 7. DisposalReviewDialog (폐기 검토 다이얼로그)
+
+```typescript
+// components/equipment/disposal/DisposalReviewDialog.tsx
+'use client';
+
+interface DisposalReviewDialogProps {
+  equipment: Equipment;
+  disposalRequest: DisposalRequest;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+```
+
+**UI 구조**:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  폐기 검토                                                        [X]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 폐기 요청 정보                                                     │ │
+│  │ 요청자: 김철수 (RF팀) | 2025-01-26 11:00                          │ │
+│  │ 폐기 사유: 노후화                                                  │ │
+│  │ 상세: 10년 사용으로 측정 오차 증가, 부품 단종으로 수리 불가        │ │
+│  │ 첨부: 📎 수리견적서.pdf                                           │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 장비 이력 요약                                            [상세 ▼] │ │
+│  │ • 마지막 교정: 2024-06-15 (7개월 전)                              │ │
+│  │ • 수리 이력: 3회 (최근 2024-08-20)                                │ │
+│  │ • 부적합 이력: 1회                                                │ │
+│  │ • 사용 기간: 10년 2개월                                           │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 검토 의견 * (최소 10자)                                            │ │
+│  │ ┌───────────────────────────────────────────────────────────────┐ │ │
+│  │ │ 폐기 타당합니다. 대체 장비가 이미 도입되어 있어 업무 영향 없음. │ │ │
+│  │ └───────────────────────────────────────────────────────────────┘ │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│                                              [반려] [검토 완료]          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**구현 포인트**:
+- `EquipmentHistorySummary` 컴포넌트로 이력 요약 표시
+- 반려 시 반려 사유 입력 모달 추가 표시
+- 검토 의견 10자 미만 시 검토 완료 버튼 비활성화
+
+---
+
+#### 8. DisposalApprovalDialog (폐기 최종 승인 다이얼로그)
+
+```typescript
+// components/equipment/disposal/DisposalApprovalDialog.tsx
+'use client';
+
+interface DisposalApprovalDialogProps {
+  equipment: Equipment;
+  disposalRequest: DisposalRequest;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+```
+
+**UI 구조**:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  폐기 최종 승인                                                   [X]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 진행 상태                                                          │ │
+│  │ [요청 ✓] ──── [검토 ✓] ──── [승인 ●]                              │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 장비 정보                                                          │ │
+│  │ 관리번호: SUW-E0045 | 장비명: 오실로스코프 MSO5104                 │ │
+│  │ 폐기 사유: 노후화                                                  │ │
+│  │ 상세: 10년 사용으로 측정 오차 증가...                             │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 기술책임자 검토 의견                                                │ │
+│  │ ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐ │ │
+│  │   "폐기 타당합니다. 대체 장비(SUW-E0123)가 이미 도입되어 있어      │ │
+│  │    업무 영향 없음. 폐기 승인 권고."                                │ │
+│  │ └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘ │ │
+│  │ 검토자: 홍석환 (기술책임자) | 2025-01-27 09:00                    │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────┐ │
+│  │ 승인 의견 (선택)                                                   │ │
+│  │ ┌───────────────────────────────────────────────────────────────┐ │ │
+│  │ │                                                               │ │ │
+│  │ └───────────────────────────────────────────────────────────────┘ │ │
+│  └───────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│                                              [반려] [최종 승인]          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**구현 포인트**:
+- `ReviewOpinionCard` 컴포넌트로 검토 의견 인용 스타일 표시
+- 진행 상태 스텝퍼 (`aria-current="step"`)
+- 최종 승인 시 확인 다이얼로그 한 번 더 표시 (되돌릴 수 없음 경고)
+
+---
+
+#### 9. DisposalDetailDialog (폐기 상세 다이얼로그)
+
+```typescript
+// components/equipment/disposal/DisposalDetailDialog.tsx
+'use client';
+
+interface DisposalDetailDialogProps {
+  disposalRequest: DisposalRequest;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+```
+
+**UI 구조**: 세로 타임라인
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  폐기 상세 정보                                                   [X]   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ● 2025-01-28 14:30                                                    │
+│  │ ✓ 최종 승인                                                         │
+│  │   이영희 (시험소장)                                                  │
+│  │   "승인합니다."                                                      │
+│  │                                                                     │
+│  ● 2025-01-27 09:00                                                    │
+│  │ ✓ 검토 완료                                                         │
+│  │   홍석환 (기술책임자)                                                │
+│  │   "폐기 타당합니다. 대체 장비가 이미 도입되어 있어 업무 영향 없음."  │
+│  │                                                                     │
+│  ● 2025-01-26 11:00                                                    │
+│    📄 폐기 요청                                                         │
+│       김철수 (시험실무자)                                                │
+│       사유: 노후화                                                      │
+│       상세: 10년 사용으로 측정 오차 증가, 부품 단종으로 수리 불가       │
+│       첨부: 📎 수리견적서.pdf                                          │
+│                                                                         │
+│                                                              [닫기]     │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**구현 포인트**:
+- 반려 항목은 빨간색 강조 + XCircle 아이콘
+- 첨부파일 다운로드 링크
+- 진행 중인 경우 마지막 단계에 "대기 중" 표시
+
+---
+
+### 상태 스타일 정의
+
+✅ **이미 정의됨** - `lib/constants/equipment-status-styles.ts`에 폐기 관련 상태가 이미 포함되어 있습니다:
+
+```typescript
+// lib/constants/equipment-status-styles.ts (기존 파일 - 수정 불필요)
+
+export const EQUIPMENT_STATUS_STYLES: Record<EquipmentStatus, EquipmentStatusStyle> = {
+  // ... 기존 상태들 ...
+
+  // ✅ 폐기 관련 상태 (이미 정의됨)
+  pending_disposal: {
+    className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    label: EQUIPMENT_STATUS_LABELS.pending_disposal, // '폐기대기'
+    borderColor: 'border-l-orange-500',
+  },
+  disposed: {
+    className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+    label: EQUIPMENT_STATUS_LABELS.disposed, // '폐기완료'
+    borderColor: 'border-l-gray-500',
+  },
+};
+
+// ✅ 교정 배지 표시 제외 목록 (이미 포함됨)
+export const STATUS_SKIP_CALIBRATION_DISPLAY: EquipmentStatus[] = [
+  'retired',
+  'non_conforming',
+  'spare',
+  'pending_disposal', // ✅ 이미 포함
+  'disposed',         // ✅ 이미 포함
+  'temporary',
+  'inactive',
+];
+```
+
+**신규 추가 필요** - 폐기 검토 상태 정보 (별도 파일로 생성 권장):
+
+```typescript
+// lib/constants/disposal-status-styles.ts (신규 생성)
+
+import type { DisposalReviewStatus } from '@equipment-management/schemas';
+
+export interface DisposalReviewStatusInfo {
+  label: string;
+  step: number; // 0: 반려, 1: 요청, 2: 검토, 3: 승인
+  description: string;
+}
+
+export const DISPOSAL_REVIEW_STATUS_INFO: Record<DisposalReviewStatus, DisposalReviewStatusInfo> = {
+  pending: {
+    label: '기술책임자 검토 대기',
+    step: 1,
+    description: '담당 팀 기술책임자의 검토가 필요합니다.',
+  },
+  reviewed: {
+    label: '시험소장 승인 대기',
+    step: 2,
+    description: '시험소장의 최종 승인이 필요합니다.',
+  },
+  approved: {
+    label: '폐기 완료',
+    step: 3,
+    description: '폐기 처리가 완료되었습니다.',
+  },
+  rejected: {
+    label: '반려됨',
+    step: 0,
+    description: '폐기 요청이 반려되었습니다.',
+  },
+};
+```
+
+---
+
+### API 클라이언트 구현
+
+⚠️ **중요**: 이 프로젝트는 `apiClient` (Axios 기반)를 사용합니다. `fetchWithAuth`는 존재하지 않습니다.
+
+```typescript
+// lib/api/disposal-api.ts
+
+import apiClient from './api-client';
+import type { DisposalRequest, DisposalReason } from '@equipment-management/schemas';
+
+interface DisposalRequestResponse {
+  success: boolean;
+  disposalRequest: DisposalRequest;
+}
+
+interface DisposalActionResponse {
+  success: boolean;
+}
+
+// 폐기 요청 (파일 첨부 포함)
+export async function requestDisposal(
+  equipmentId: string,
+  data: { reason: DisposalReason; reasonDetail: string; attachments?: File[] }
+): Promise<DisposalRequestResponse> {
+  // 파일 첨부가 있는 경우 FormData 사용
+  if (data.attachments && data.attachments.length > 0) {
+    const formData = new FormData();
+    formData.append('reason', data.reason);
+    formData.append('reasonDetail', data.reasonDetail);
+    data.attachments.forEach(file => formData.append('attachments', file));
+
+    const response = await apiClient.post<DisposalRequestResponse>(
+      `/api/equipment/${equipmentId}/disposal/request`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return response.data;
+  }
+
+  // 파일 첨부가 없는 경우 JSON body
+  const response = await apiClient.post<DisposalRequestResponse>(
+    `/api/equipment/${equipmentId}/disposal/request`,
+    { reason: data.reason, reasonDetail: data.reasonDetail }
+  );
+  return response.data;
+}
+
+// 폐기 검토 (기술책임자)
+export async function reviewDisposal(
+  equipmentId: string,
+  data: { decision: 'approve' | 'reject'; opinion: string }
+): Promise<DisposalActionResponse> {
+  const response = await apiClient.post<DisposalActionResponse>(
+    `/api/equipment/${equipmentId}/disposal/review`,
+    data
+  );
+  return response.data;
+}
+
+// 폐기 최종 승인 (시험소장)
+export async function approveDisposal(
+  equipmentId: string,
+  data: { decision: 'approve' | 'reject'; comment?: string }
+): Promise<DisposalActionResponse> {
+  const response = await apiClient.post<DisposalActionResponse>(
+    `/api/equipment/${equipmentId}/disposal/approve`,
+    data
+  );
+  return response.data;
+}
+
+// 폐기 요청 취소
+export async function cancelDisposalRequest(
+  equipmentId: string
+): Promise<DisposalActionResponse> {
+  const response = await apiClient.delete<DisposalActionResponse>(
+    `/api/equipment/${equipmentId}/disposal/request`
+  );
+  return response.data;
+}
+
+// 현재 폐기 요청 조회
+export async function getCurrentDisposalRequest(
+  equipmentId: string
+): Promise<{ disposalRequest: DisposalRequest | null }> {
+  const response = await apiClient.get<{ disposalRequest: DisposalRequest | null }>(
+    `/api/equipment/${equipmentId}/disposal/current`
+  );
+  return response.data;
+}
+```
+
+**React Query 캐시 동기화 패턴 (권장)**:
+
+```typescript
+// hooks/use-disposal-mutations.ts
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { requestDisposal, reviewDisposal, approveDisposal, cancelDisposalRequest } from '@/lib/api/disposal-api';
+import { toast } from 'sonner';
+
+export function useRequestDisposal(equipmentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: { reason: DisposalReason; reasonDetail: string; attachments?: File[] }) =>
+      requestDisposal(equipmentId, data),
+    onSuccess: async () => {
+      // 캐시 무효화 및 리프레시
+      await queryClient.invalidateQueries({ queryKey: ['equipment', equipmentId] });
+      await queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] });
+      toast.success('폐기 요청이 등록되었습니다.');
+    },
+    onError: (error) => {
+      toast.error('폐기 요청에 실패했습니다.');
+    },
+  });
+}
+
+// 동일한 패턴으로 useReviewDisposal, useApproveDisposal, useCancelDisposal 구현
+```
+
+---
+
+### 권한 확인 훅
+
+⚠️ **중요**: `useAuth` 훅의 실제 시그니처를 확인하세요.
+
+```typescript
+// hooks/use-disposal-permissions.ts
+
+import { useAuth } from '@/hooks/use-auth';
+import type { Equipment } from '@equipment-management/schemas';
+import type { DisposalRequest } from '@equipment-management/schemas';
+
+/**
+ * useAuth 훅 반환값:
+ * - session: NextAuth 세션 객체
+ * - user: session?.user (id, email, name, roles, teamId 포함)
+ * - hasRole: (role: string | string[]) => boolean
+ * - isAdmin: () => boolean (lab_manager 권한)
+ * - isManager: () => boolean (technical_manager 이상 권한)
+ * - isTestOperator: () => boolean (test_engineer 권한)
+ */
+
+export function useDisposalPermissions(
+  equipment: Equipment,
+  disposalRequest?: DisposalRequest | null
+) {
+  const { user, hasRole, isManager, isAdmin } = useAuth();
+
+  // 폐기 요청 가능 여부 (시험실무자, 기술책임자 - available 상태 장비만)
+  const canRequestDisposal =
+    hasRole(['test_engineer', 'technical_manager']) &&
+    equipment.status === 'available' &&
+    equipment.status !== 'temporary'; // 임시장비는 폐기 불가
+
+  // 폐기 검토 가능 여부 (기술책임자, 담당 팀, pending 상태)
+  const canReviewDisposal =
+    hasRole(['technical_manager']) &&
+    equipment.status === 'pending_disposal' &&
+    disposalRequest?.reviewStatus === 'pending' &&
+    user?.teamId === equipment.teamId; // 담당 팀 장비만 검토 가능
+
+  // 폐기 최종 승인 가능 여부 (시험소장, 검토 완료 건)
+  const canApproveDisposal =
+    isAdmin() && // lab_manager 권한
+    equipment.status === 'pending_disposal' &&
+    disposalRequest?.reviewStatus === 'reviewed';
+
+  // 폐기 요청 취소 가능 여부 (요청자 본인, pending 상태)
+  const canCancelDisposal =
+    disposalRequest?.requestedBy === user?.id &&
+    disposalRequest?.reviewStatus === 'pending';
+
+  // 읽기 전용 여부 (폐기 완료 시)
+  const isReadOnly = equipment.status === 'disposed';
+
+  // 폐기 불가 장비 (임시 등록 장비)
+  const cannotDispose = equipment.status === 'temporary';
+
+  // 폐기 관련 액션 표시 여부 (버튼 표시 조건)
+  const showDisposalButton =
+    !cannotDispose &&
+    (equipment.status === 'available' ||
+     equipment.status === 'pending_disposal' ||
+     equipment.status === 'disposed');
+
+  return {
+    canRequestDisposal,
+    canReviewDisposal,
+    canApproveDisposal,
+    canCancelDisposal,
+    isReadOnly,
+    cannotDispose,
+    showDisposalButton,
+  };
+}
+```
+
+**참고: useAuth 훅 실제 시그니처** (`hooks/use-auth.ts`):
+
+```typescript
+function useAuth() {
+  return {
+    session,             // NextAuth 세션
+    user: session?.user, // { id, email, name, roles, teamId }
+    isAuthenticated,     // 인증 여부
+    isLoading,          // 로딩 중
+    hasRole,            // (role: string | string[]) => boolean
+    isAdmin,            // () => boolean (lab_manager)
+    isManager,          // () => boolean (technical_manager 이상)
+    isTestOperator,     // () => boolean (test_engineer)
+    logout,             // () => Promise<void>
+  };
+}
+```
+
+---
+
+## 이행 체크리스트 UI-09 (폐기 프로세스)
+
+### 컴포넌트 생성
+
+- [ ] disposal/DisposalButton.tsx 구현됨 ('use client')
+- [ ] disposal/DisposalDropdownMenu.tsx 구현됨 ('use client')
+- [ ] disposal/DisposalProgressStepper.tsx 구현됨
+- [ ] disposal/DisposalProgressCard.tsx 구현됨
+- [ ] disposal/DisposalRequestDialog.tsx 구현됨 ('use client')
+- [ ] disposal/DisposalReviewDialog.tsx 구현됨 ('use client')
+- [ ] disposal/DisposalApprovalDialog.tsx 구현됨 ('use client')
+- [ ] disposal/DisposalDetailDialog.tsx 구현됨 ('use client')
+- [ ] disposal/DisposedBanner.tsx 구현됨
+- [ ] disposal/DisposalReasonSelector.tsx 구현됨 ('use client')
+- [ ] disposal/EquipmentHistorySummary.tsx 구현됨
+- [ ] disposal/ReviewOpinionCard.tsx 구현됨
+
+### 기존 파일 수정
+
+- [ ] EquipmentHeader.tsx에 DisposalButton 통합됨
+- [ ] equipment-status-styles.ts에 pending_disposal, disposed 스타일 추가됨
+
+### API 및 훅 구현
+
+- [ ] disposal-api.ts 구현됨
+- [ ] use-disposal-permissions.ts 구현됨
+- [ ] 폐기 요청 API 연동됨
+- [ ] 폐기 검토 API 연동됨
+- [ ] 폐기 최종 승인 API 연동됨
+- [ ] 폐기 요청 취소 API 연동됨
+- [ ] 현재 폐기 요청 조회 API 연동됨
+
+### 기능 구현
+
+- [ ] 폐기 요청 폼 구현됨 (사유 선택 + 상세 입력 + 첨부)
+- [ ] 2단계 승인 프로세스 구현됨 (검토 → 승인)
+- [ ] 기술책임자 검토 폼 구현됨 (장비 이력 표시 + 검토 의견)
+- [ ] 시험소장 최종 승인 폼 구현됨 (검토 의견 표시)
+- [ ] 반려 처리 구현됨 (양 단계)
+- [ ] 폐기 요청 취소 구현됨
+- [ ] 폐기 버튼 상태별 렌더링 구현됨
+- [ ] 폐기 드롭다운 메뉴 역할별 액션 구현됨
+- [ ] 폐기 진행 상태 카드 구현됨 (DisposalProgressCard)
+- [ ] 폐기 완료 시 읽기 전용 처리 구현됨
+- [ ] 폐기 상세 타임라인 구현됨
+
+### 접근성
+
+- [ ] 다이얼로그 role="dialog", aria-modal 적용됨
+- [ ] 드롭다운 메뉴 role="menu", aria-expanded 적용됨
+- [ ] 사유 선택 role="radiogroup" 적용됨
+- [ ] 진행 스텝퍼 aria-current="step" 적용됨
+- [ ] 반려 알림 role="alert" 적용됨
+- [ ] 폐기 완료 배너 role="status" 적용됨
+- [ ] 다이얼로그 포커스 트랩 구현됨
+- [ ] 키보드 탐색 가능 확인됨
+
+### 테스트
+
+- [ ] 폐기 요청 플로우 테스트됨
+- [ ] 기술책임자 검토 플로우 테스트됨
+- [ ] 시험소장 최종 승인 플로우 테스트됨
+- [ ] 검토 단계 반려 테스트됨
+- [ ] 승인 단계 반려 테스트됨
+- [ ] 폐기 요청 취소 테스트됨
+- [ ] 폐기 완료 후 읽기 전용 테스트됨
+- [ ] 권한별 버튼 표시 테스트됨
+- [ ] 드롭다운 메뉴 역할별 액션 테스트됨
+- [ ] axe-core 접근성 테스트됨
+- [ ] pnpm tsc --noEmit 성공
+
+---
+
+## Playwright 테스트 (폐기 프로세스)
+
+⚠️ **중요**: E2E 테스트 작성 전 `/docs/development/E2E_TEST_AUTH_GUIDE.md`를 반드시 참조하세요.
+
+### 테스트 Fixture 패턴
+
+```typescript
+// tests/e2e/fixtures/auth.fixture.ts (기존 파일 활용)
+
+// 역할별 로그인된 페이지를 제공하는 fixture
+// - testEngineerPage: 시험실무자로 로그인된 페이지
+// - technicalManagerPage: 기술책임자로 로그인된 페이지
+// - labManagerPage: 시험소장으로 로그인된 페이지
+
+import { test as base, expect } from '@playwright/test';
+
+export const test = base.extend<{
+  testEngineerPage: Page;
+  technicalManagerPage: Page;
+  labManagerPage: Page;
+}>({
+  // ... fixture 구현 (E2E_TEST_AUTH_GUIDE.md 참조)
+});
+
+export { expect };
+```
+
+### 테스트 데이터 시드 (선행 조건)
+
+폐기 프로세스 테스트에 필요한 장비 데이터:
+
+| 장비 ID | 상태 | reviewStatus | 설명 |
+|---------|------|--------------|------|
+| `eq-available-1` | available | - | 폐기 요청 가능 장비 |
+| `eq-pending-disposal-1` | pending_disposal | pending | 검토 대기 장비 |
+| `eq-pending-disposal-mine` | pending_disposal | pending | 내가 요청한 폐기 대기 장비 |
+| `eq-pending-disposal-other-team` | pending_disposal | pending | 다른 팀 폐기 대기 장비 |
+| `eq-disposal-reviewed-1` | pending_disposal | reviewed | 검토 완료 승인 대기 장비 |
+| `eq-disposed-1` | disposed | approved | 폐기 완료 장비 |
+| `eq-temporary-1` | temporary | - | 임시 등록 장비 (폐기 불가) |
+
+```typescript
+// tests/e2e/equipment-disposal.spec.ts
+import { test, expect } from './fixtures/auth.fixture';
+
+test.describe('장비 폐기 - 버튼 상태별 UI', () => {
+
+  test('available 상태: 폐기 요청 버튼 표시', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-available-1');
+
+    // 폐기 요청 버튼 확인 (빨간 outline)
+    const disposalButton = page.getByRole('button', { name: '폐기 요청' });
+    await expect(disposalButton).toBeVisible();
+    await expect(disposalButton).toHaveClass(/border-red-500/);
+  });
+
+  test('pending_disposal 상태: 폐기 진행 중 드롭다운 표시', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-1');
+
+    // 폐기 진행 중 버튼 확인 (주황색)
+    const disposalButton = page.getByRole('button', { name: /폐기 진행 중/ });
+    await expect(disposalButton).toBeVisible();
+    await expect(disposalButton).toHaveClass(/bg-orange-500/);
+
+    // 드롭다운 열기
+    await disposalButton.click();
+    const menu = page.getByRole('menu');
+    await expect(menu).toBeVisible();
+
+    // 진행 스텝퍼 확인
+    await expect(menu.getByText('기술책임자 검토 대기')).toBeVisible();
+  });
+
+  test('disposed 상태: 폐기 완료 버튼 비활성화', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-disposed-1');
+
+    // 폐기 완료 버튼 확인 (비활성화)
+    const disposalButton = page.getByRole('button', { name: '폐기 완료' });
+    await expect(disposalButton).toBeVisible();
+    await expect(disposalButton).toBeDisabled();
+  });
+});
+
+test.describe('장비 폐기 - 전체 플로우', () => {
+
+  test('1단계: 시험실무자 폐기 요청', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-available-1');
+
+    // 폐기 요청 버튼 클릭
+    await page.getByRole('button', { name: '폐기 요청' }).click();
+
+    // 다이얼로그 확인
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+    // 폐기 사유 선택
+    await dialog.getByRole('radio', { name: '노후화' }).check();
+
+    // 상세 설명 입력 (10자 미만 → 에러)
+    await dialog.getByLabel(/상세 설명/).fill('짧은설명');
+    await expect(dialog.getByRole('button', { name: '폐기 요청' })).toBeDisabled();
+
+    // 상세 설명 수정 (10자 이상)
+    await dialog.getByLabel(/상세 설명/).fill('10년 사용으로 측정 오차 증가, 부품 단종으로 수리 불가');
+    await expect(dialog.getByRole('button', { name: '폐기 요청' })).toBeEnabled();
+
+    // 제출
+    await dialog.getByRole('button', { name: '폐기 요청' }).click();
+
+    // 상태 변경 확인
+    await expect(page.getByTestId('equipment-status-badge')).toContainText('폐기 대기');
+
+    // 폐기 진행 카드 표시 확인
+    await expect(page.getByTestId('disposal-progress-card')).toBeVisible();
+    await expect(page.getByText('기술책임자 검토 대기')).toBeVisible();
+
+    // 버튼 상태 변경 확인
+    await expect(page.getByRole('button', { name: /폐기 진행 중/ })).toBeVisible();
+  });
+
+  test('2단계: 기술책임자 폐기 검토 승인', async ({ technicalManagerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-1');
+
+    // 드롭다운 열기
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+
+    // 폐기 검토 버튼 클릭
+    await page.getByRole('menuitem', { name: '폐기 검토하기' }).click();
+
+    // 다이얼로그 확인
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // 장비 이력 요약 표시 확인
+    await expect(dialog.getByTestId('equipment-history-summary')).toBeVisible();
+
+    // 검토 의견 입력
+    await dialog.getByLabel(/검토 의견/).fill('폐기 타당합니다. 대체 장비가 이미 도입되어 있어 업무 영향 없음.');
+
+    // 검토 완료
+    await dialog.getByRole('button', { name: '검토 완료' }).click();
+
+    // 상태 변경 확인
+    await expect(page.getByText('시험소장 승인 대기')).toBeVisible();
+  });
+
+  test('3단계: 시험소장 폐기 최종 승인', async ({ labManagerPage: page }) => {
+    await page.goto('/equipment/eq-disposal-reviewed-1');
+
+    // 드롭다운 열기
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+
+    // 최종 승인 버튼 클릭
+    await page.getByRole('menuitem', { name: '최종 승인하기' }).click();
+
+    // 다이얼로그 확인
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // 검토 의견 카드 확인
+    await expect(dialog.getByTestId('review-opinion-card')).toBeVisible();
+
+    // 최종 승인
+    await dialog.getByRole('button', { name: '최종 승인' }).click();
+
+    // 확인 다이얼로그
+    await page.getByRole('alertdialog').getByRole('button', { name: '확인' }).click();
+
+    // 상태 변경 확인
+    await expect(page.getByTestId('equipment-status-badge')).toContainText('폐기 완료');
+    await expect(page.getByTestId('disposed-banner')).toBeVisible();
+    await expect(page.getByRole('button', { name: '폐기 완료' })).toBeDisabled();
+  });
+});
+
+test.describe('장비 폐기 - 반려 플로우', () => {
+
+  test('기술책임자 검토 반려', async ({ technicalManagerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-1');
+
+    // 드롭다운 → 검토
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+    await page.getByRole('menuitem', { name: '폐기 검토하기' }).click();
+
+    const dialog = page.getByRole('dialog');
+
+    // 검토 의견 입력
+    await dialog.getByLabel(/검토 의견/).fill('수리 가능 여부 재확인 필요. 제조사에 문의 후 재신청 바랍니다.');
+
+    // 반려
+    await dialog.getByRole('button', { name: '반려' }).click();
+
+    // 상태 복원 확인
+    await expect(page.getByTestId('equipment-status-badge')).toContainText('사용 가능');
+    await expect(page.getByTestId('disposal-progress-card')).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '폐기 요청' })).toBeVisible();
+  });
+
+  test('시험소장 최종 반려', async ({ labManagerPage: page }) => {
+    await page.goto('/equipment/eq-disposal-reviewed-1');
+
+    // 드롭다운 → 승인
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+    await page.getByRole('menuitem', { name: '최종 승인하기' }).click();
+
+    const dialog = page.getByRole('dialog');
+
+    // 반려
+    await dialog.getByRole('button', { name: '반려' }).click();
+
+    // 반려 사유 입력
+    const rejectDialog = page.getByRole('alertdialog');
+    await rejectDialog.getByLabel(/반려 사유/).fill('추가 검토 필요');
+    await rejectDialog.getByRole('button', { name: '반려 확인' }).click();
+
+    // 상태 복원 확인
+    await expect(page.getByTestId('equipment-status-badge')).toContainText('사용 가능');
+  });
+
+  test('요청자 폐기 취소', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-mine');
+
+    // 드롭다운 → 취소
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+    await page.getByRole('menuitem', { name: '요청 취소' }).click();
+
+    // 확인 다이얼로그
+    await page.getByRole('alertdialog').getByRole('button', { name: '취소 확인' }).click();
+
+    // 상태 복원 확인
+    await expect(page.getByTestId('equipment-status-badge')).toContainText('사용 가능');
+  });
+});
+
+test.describe('장비 폐기 - 권한 검증', () => {
+
+  test('temporary 상태 장비는 폐기 버튼 미표시', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-temporary-1');
+    await expect(page.getByRole('button', { name: '폐기 요청' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /폐기 진행 중/ })).not.toBeVisible();
+  });
+
+  test('다른 팀 장비: 드롭다운에 검토 버튼 미표시', async ({ technicalManagerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-other-team');
+
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+    const menu = page.getByRole('menu');
+
+    await expect(menu.getByRole('menuitem', { name: '폐기 검토하기' })).not.toBeVisible();
+    await expect(menu.getByText('처리 권한이 없습니다')).toBeVisible();
+  });
+
+  test('검토 미완료 건: 드롭다운에 승인 버튼 미표시', async ({ labManagerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-1');
+
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+    const menu = page.getByRole('menu');
+
+    await expect(menu.getByRole('menuitem', { name: '최종 승인하기' })).not.toBeVisible();
+  });
+
+  test('disposed 상태 장비는 모든 액션 비활성화', async ({ technicalManagerPage: page }) => {
+    await page.goto('/equipment/eq-disposed-1');
+
+    // 폐기 완료 배너 확인
+    await expect(page.getByTestId('disposed-banner')).toBeVisible();
+
+    // 모든 액션 버튼 미표시/비활성화
+    await expect(page.getByRole('button', { name: '수정' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '반출 신청' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: '폐기 완료' })).toBeDisabled();
+  });
+});
+
+test.describe('장비 폐기 - 접근성', () => {
+
+  test('폐기 요청 다이얼로그 접근성', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-available-1');
+
+    await page.getByRole('button', { name: '폐기 요청' }).click();
+    const dialog = page.getByRole('dialog');
+
+    // aria-modal 확인
+    await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+    // 라디오 그룹 확인
+    await expect(dialog.getByRole('radiogroup')).toBeVisible();
+
+    // Escape로 닫기
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test('드롭다운 메뉴 접근성', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-mine');
+
+    const trigger = page.getByRole('button', { name: /폐기 진행 중/ });
+
+    // aria-expanded 확인
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+
+    // menu role 확인
+    await expect(page.getByRole('menu')).toBeVisible();
+
+    // Escape로 닫기
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).not.toBeVisible();
+  });
+
+  test('폐기 진행 스텝퍼 aria-current', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-1');
+
+    const currentStep = page.locator('[aria-current="step"]');
+    await expect(currentStep).toBeVisible();
+  });
+
+  test('axe-core 접근성 검사', async ({ testEngineerPage: page }) => {
+    const AxeBuilder = (await import('@axe-core/playwright')).default;
+
+    await page.goto('/equipment/eq-available-1');
+    await page.getByRole('button', { name: '폐기 요청' }).click();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+
+    expect(results.violations).toEqual([]);
+  });
+});
+
+test.describe('장비 폐기 - 상세 보기', () => {
+
+  test('폐기 진행 카드에서 상세 보기', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-pending-disposal-1');
+
+    // 상세 보기 클릭
+    await page.getByTestId('disposal-progress-card').getByRole('button', { name: '상세 보기' }).click();
+
+    // 상세 다이얼로그 확인
+    const dialog = page.getByRole('dialog', { name: '폐기 상세 정보' });
+    await expect(dialog).toBeVisible();
+
+    // 타임라인 확인
+    await expect(dialog.getByText('폐기 요청')).toBeVisible();
+  });
+
+  test('드롭다운에서 상세 보기', async ({ testEngineerPage: page }) => {
+    await page.goto('/equipment/eq-disposal-reviewed-1');
+
+    // 드롭다운 → 상세 보기
+    await page.getByRole('button', { name: /폐기 진행 중/ }).click();
+    await page.getByRole('menuitem', { name: '상세 보기' }).click();
+
+    // 상세 다이얼로그에서 검토 의견 확인
+    const dialog = page.getByRole('dialog', { name: '폐기 상세 정보' });
+    await expect(dialog.getByText('검토 완료')).toBeVisible();
+  });
+});
+```
+
+---
+
+---
+
+## 설계 고려사항
+
+### UnifiedApprovalStatus 통합 검토
+
+`packages/schemas/src/enums.ts`에 이미 정의된 `UnifiedApprovalStatus`와 폐기 프로세스의 `DisposalReviewStatus`는 유사한 구조를 가집니다:
+
+```typescript
+// 기존 UnifiedApprovalStatus
+export const UNIFIED_APPROVAL_STATUS_VALUES = [
+  'pending',         // 대기
+  'pending_review',  // 검토 대기 (다단계 1단계)
+  'reviewed',        // 검토 완료 (다단계 2단계 대기)
+  'approved',        // 승인 완료
+  'rejected',        // 반려
+] as const;
+
+// 폐기 프로세스 DisposalReviewStatus
+export const DISPOSAL_REVIEW_STATUS_VALUES = [
+  'pending',   // 검토 대기
+  'reviewed',  // 검토 완료 (승인 대기)
+  'approved',  // 승인 완료
+  'rejected',  // 반려
+] as const;
+```
+
+**통합 권장 여부**: 폐기 프로세스가 2단계 승인(검토→승인)을 사용하므로, `UnifiedApprovalStatus`를 재사용하거나 확장하는 것을 고려할 수 있습니다. 단, 현재 구현에서는 폐기 프로세스의 명확한 분리를 위해 별도 타입을 사용합니다.
+
+### 서버/클라이언트 컴포넌트 분리 패턴
+
+이 프로젝트는 Next.js 16 패턴을 따릅니다:
+
+```typescript
+// Server Component (page.tsx) - 데이터 페칭
+export default async function EquipmentDetailPage(props: PageProps<'/equipment/[id]'>) {
+  const { id } = await props.params;
+  const equipment = await getEquipmentCached(id);
+  const disposalRequest = await getCurrentDisposalRequestCached(id);
+
+  return (
+    <EquipmentDetailClient
+      equipment={equipment}
+      initialDisposalRequest={disposalRequest}
+    />
+  );
+}
+
+// Client Component - 인터랙티브 UI
+'use client';
+export function EquipmentHeader({ equipment: initialEquipment, ... }) {
+  // useEquipmentWithInitialData 훅으로 실시간 동기화
+  const { data: equipment } = useEquipmentWithInitialData(initialEquipment);
+  // ...
+}
+```
+
+---
+
+## 업데이트 이력
+
+| 날짜       | 내용                                                     |
+| ---------- | -------------------------------------------------------- |
+| 2026-01-24 | 초기 구현 완료 (15개 테스트 통과)                         |
+| 2026-01-29 | 신규 장비 상태 4개 추가                                   |
+| 2026-01-30 | **폐기 프로세스 버튼 기반 UI로 전면 재설계**               |
+| 2026-01-30 | 폐기 이력 탭 제거 → DisposalButton 드롭다운으로 통합      |
+| 2026-01-30 | DisposalButton, DisposalDropdownMenu 컴포넌트 추가        |
+| 2026-01-30 | DisposalDetailDialog (타임라인) 추가                      |
+| 2026-01-30 | 파일 구조 간소화 (12개 → 12개, 구성 변경)                 |
+| 2026-01-30 | Playwright 테스트 케이스 확장 (17개)                      |
+| 2026-01-30 | **SSOT 검토 반영**: 타입 정의 위치 명시 (packages/schemas)|
+| 2026-01-30 | **API 패턴 수정**: fetchWithAuth → apiClient (Axios) 변경 |
+| 2026-01-30 | **useAuth 훅 시그니처 수정**: 실제 코드베이스 패턴 반영   |
+| 2026-01-30 | **스타일 정의 확인**: 이미 존재하는 스타일 중복 제거      |
+| 2026-01-30 | **React Query 캐시 동기화 패턴 추가**                     |
+| 2026-01-30 | **E2E 테스트 fixture 패턴 및 시드 데이터 가이드 추가**    |

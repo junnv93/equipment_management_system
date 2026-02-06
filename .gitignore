@@ -38,7 +38,52 @@ test-uploads/
 
 # Playwright test results
 apps/frontend/test-results/
-apps/frontend/playwright-report/data/
+apps/frontend/playwright-report/
+test-results/
+
+# Debug screenshots
+*.png
+!apps/frontend/public/**/*.png
+!docs/**/*.png
+
+# Temporary shell scripts at root
+/*.sh
+
+# Development summary/report files at root
+/*_SUMMARY.md
+/*_COMPLETE.md
+/*_REPORT.md
+/*_STATUS.md
+/*_PROGRESS.md
+/*_IMPLEMENTATION.md
+/*_FINAL.md
+/*_FIX.md
+/*_ANALYSIS.md
+IMPLEMENTATION_SUMMARY.md
+UI_MOCKUPS.md
+HYDRATION_FIX_SUMMARY.md
+INCIDENT_HISTORY_PAST_FIX.md
+INCIDENT_VALIDATION_FIX.md
+VALIDATION_PIPE_PATTERN_FIX.md
+
+# Temp plan/spec files at root
+/*.plan.md
+/*-test-groups.md
+
+# Backend temp files
+apps/backend/test-*.sh
+apps/backend/TEST_SUMMARY.md
+apps/backend/uploads/
+apps/backend/test-results/
+apps/backend/apps/
+
+# Frontend temp files
+apps/frontend/test-disposal-request.spec.ts
+apps/frontend/run-rejection-tests.sh
+apps/frontend/*.png
+
+# Temp seed file
+seed.spec.ts
 
 # turbo
 .turbo

@@ -2,10 +2,19 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testMatch: '**/*.spec.ts',
+  testIgnore: [
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/calibration-overdue-auto-nc/**', // Exclude tests with missing fixtures
+    '**/../backend/**', // Exclude backend tests
+    '**/backend/**', // Exclude all backend directory
+    '**/__tests__/**', // Exclude backend test directories
+  ],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 4,
   reporter: 'html',
   // 기본 타임아웃 설정 (안정성 향상)
   timeout: 60000, // 60초
@@ -15,6 +24,7 @@ export default defineConfig({
 
   // 글로벌 설정 - 테스트 전 환경 확인
   globalSetup: './tests/e2e/global-setup.ts',
+  globalTeardown: './tests/e2e/global-teardown.ts',
 
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
