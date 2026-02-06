@@ -115,7 +115,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
     mutationFn: (data: TeamFormValues) =>
       teamsApi.updateTeam(team!.id, {
         name: data.name,
-        type: data.type,  // UpdateTeamInput은 partial이므로 undefined도 허용
+        type: data.type, // UpdateTeamInput은 partial이므로 undefined도 허용
         description: data.description,
         site: data.site,
         leaderId: data.leaderId || undefined,
@@ -166,6 +166,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                   <FormControl>
                     <Input
                       {...field}
+                      value={field.value || ''}
                       placeholder="예: rf, emc, sar"
                       disabled={isEditMode}
                       aria-describedby="id-description"
@@ -189,13 +190,12 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                   <FormControl>
                     <Input
                       {...field}
+                      value={field.value || ''}
                       placeholder="예: RF 테스트팀"
                       aria-describedby="name-description"
                     />
                   </FormControl>
-                  <FormDescription id="name-description">
-                    팀의 표시 이름입니다.
-                  </FormDescription>
+                  <FormDescription id="name-description">팀의 표시 이름입니다.</FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>
               )}
@@ -269,6 +269,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                   <FormControl>
                     <Textarea
                       {...field}
+                      value={field.value || ''}
                       placeholder="팀의 역할과 담당 업무를 설명해주세요"
                       rows={3}
                       aria-describedby="description-description"
@@ -300,8 +301,10 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 {isEditMode ? '수정 중...' : '생성 중...'}
               </>
+            ) : isEditMode ? (
+              '수정'
             ) : (
-              isEditMode ? '수정' : '생성'
+              '생성'
             )}
           </Button>
         </div>

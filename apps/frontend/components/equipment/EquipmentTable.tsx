@@ -27,7 +27,13 @@ import {
 /**
  * 테이블 열 정의
  */
-type SortableColumn = 'managementNumber' | 'name' | 'status' | 'lastCalibrationDate' | 'nextCalibrationDate' | 'createdAt';
+type SortableColumn =
+  | 'managementNumber'
+  | 'name'
+  | 'status'
+  | 'lastCalibrationDate'
+  | 'nextCalibrationDate'
+  | 'createdAt';
 
 interface ColumnDef {
   key: SortableColumn | 'modelName' | 'location' | 'actions';
@@ -57,10 +63,19 @@ interface EquipmentTableProps {
 }
 
 /**
- * 상태 뱃지 컴포넌트
+ * 상태 뱃지 컴포넌트 (테이블형 - 상태만 표시)
+ *
+ * @param status - 장비 상태
+ * @param nextCalibrationDate - 차기 교정일 (실시간 교정기한 초과 체크용)
  */
-const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
-  const style = getEquipmentStatusStyle(status);
+const StatusBadge = memo(function StatusBadge({
+  status,
+  nextCalibrationDate,
+}: {
+  status: string;
+  nextCalibrationDate?: string | Date | null;
+}) {
+  const style = getEquipmentStatusStyle(status, nextCalibrationDate);
 
   return (
     <Badge variant="outline" className={`${style.className} border-0`}>
@@ -169,23 +184,22 @@ const EquipmentRow = memo(function EquipmentRow({
   };
 
   /**
-   * 교정 기한 표시 (D-day 형식)
+   * 교정 기한 표시 (D-day 형식) - 테이블형 전용
    *
-   * 폐기/부적합/여분 장비는 D-day 표시 안함:
-   * - 폐기: 더 이상 사용하지 않음
-   * - 부적합: 수리/보수 후 필수적으로 재교정 필요
-   * - 여분: 실제 사용 전에 교정 상태 재확인 필요
-   *
-   * 그 외 장비:
-   * - 기한 초과: 빨간색으로 "D+N"
-   * - 7일 이내: 주황색으로 "D-N" (긴급)
-   * - 30일 이내: 노란색으로 "D-N" (경고)
+   * 모든 장비의 차기 교정일을 표시하되, 색상과 D-day 배지로 상태 구분:
+   * - 기한 초과: 빨간색 + "D+N" 배지
+   * - 7일 이내: 주황색 + "D-N" 배지 (긴급)
+   * - 30일 이내: 노란색 + "D-N" 배지 (경고)
    * - 정상: 기본 날짜 표시
+   *
+   * 예외 상태 (교정 불필요):
+   * - 폐기(retired), 여분(spare), 비활성 등: "-" 표시
    */
   const formatCalibrationDue = (date?: string | Date | null, status?: string) => {
     if (!date) return '-';
 
-    // 폐기/부적합/여분 장비는 D-day 표시 안함 (SSOT: equipment-status-styles.ts)
+    // 교정 상태 표시가 의미 없는 장비 (폐기, 여분 등)
+    // calibration_overdue는 항상 D+N 형식으로 표시해야 함
     if (!shouldDisplayCalibrationStatus(status)) {
       return <span className="text-muted-foreground">-</span>;
     }
@@ -195,39 +209,46 @@ const EquipmentRow = memo(function EquipmentRow({
     const diff = dueDate.diff(today, 'day');
 
     if (diff < 0) {
-      // 기한 초과
+      // 기한 초과 - 빨간색 강조
       return (
-        <span className="text-red-600 dark:text-red-400 font-semibold">
-          {dueDate.format('YYYY-MM-DD')}
-          <span className="ml-1 text-xs bg-red-100 dark:bg-red-900/50 px-1.5 py-0.5 rounded">
-            D+{Math.abs(diff)}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-red-700 dark:text-red-400 font-semibold text-sm">
+            {dueDate.format('YYYY-MM-DD')}
           </span>
-        </span>
+          <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 px-1.5 py-0.5 rounded w-fit font-semibold">
+            D+{Math.abs(diff)} (초과)
+          </span>
+        </div>
       );
     }
     if (diff <= 7) {
-      // 7일 이내 (긴급)
+      // 7일 이내 (긴급) - 주황색 강조
       return (
-        <span className="text-orange-600 dark:text-orange-400 font-semibold">
-          {dueDate.format('YYYY-MM-DD')}
-          <span className="ml-1 text-xs bg-orange-100 dark:bg-orange-900/50 px-1.5 py-0.5 rounded">
-            D-{diff}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-orange-700 dark:text-orange-400 font-semibold text-sm">
+            {dueDate.format('YYYY-MM-DD')}
           </span>
-        </span>
+          <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 px-1.5 py-0.5 rounded w-fit font-medium">
+            D-{diff} (긴급)
+          </span>
+        </div>
       );
     }
     if (diff <= 30) {
-      // 30일 이내 (경고)
+      // 30일 이내 (경고) - 노란색 강조
       return (
-        <span className="text-yellow-600 dark:text-yellow-400 font-medium">
-          {dueDate.format('YYYY-MM-DD')}
-          <span className="ml-1 text-xs bg-yellow-100 dark:bg-yellow-900/50 px-1.5 py-0.5 rounded">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-yellow-700 dark:text-yellow-400 font-medium text-sm">
+            {dueDate.format('YYYY-MM-DD')}
+          </span>
+          <span className="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 px-1.5 py-0.5 rounded w-fit">
             D-{diff}
           </span>
-        </span>
+        </div>
       );
     }
-    return dueDate.format('YYYY-MM-DD');
+    // 정상 (30일 초과)
+    return <span className="text-sm">{dueDate.format('YYYY-MM-DD')}</span>;
   };
 
   return (
@@ -252,7 +273,10 @@ const EquipmentRow = memo(function EquipmentRow({
         <HighlightText text={equipment.modelName || '-'} search={searchTerm} />
       </TableCell>
       <TableCell role="gridcell">
-        <StatusBadge status={equipment.status || 'available'} />
+        <StatusBadge
+          status={equipment.status || 'available'}
+          nextCalibrationDate={equipment.nextCalibrationDate}
+        />
       </TableCell>
       <TableCell role="gridcell" className="hidden md:table-cell">
         {formatCalibrationDue(equipment.nextCalibrationDate, equipment.status)}

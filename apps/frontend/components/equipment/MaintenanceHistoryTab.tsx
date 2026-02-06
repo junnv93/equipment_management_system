@@ -162,7 +162,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                 <FormItem>
                   <FormLabel>수행 일시 *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,7 +175,12 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                 <FormItem>
                   <FormLabel>내용 *</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="예: 정기 점검, 부품 교체, 청소 등" rows={4} {...field} />
+                    <Textarea
+                      placeholder="예: 정기 점검, 부품 교체, 청소 등"
+                      rows={4}
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

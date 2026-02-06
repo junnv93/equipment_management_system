@@ -117,9 +117,7 @@ export function LocationHistorySection({
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>위치 변동 이력 추가</DialogTitle>
-                <DialogDescription>
-                  장비의 위치 변동 정보를 입력하세요.
-                </DialogDescription>
+                <DialogDescription>장비의 위치 변동 정보를 입력하세요.</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -130,7 +128,7 @@ export function LocationHistorySection({
                       <FormItem>
                         <FormLabel>변동 일시 *</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -143,7 +141,7 @@ export function LocationHistorySection({
                       <FormItem>
                         <FormLabel>설치 위치 *</FormLabel>
                         <FormControl>
-                          <Input placeholder="예: RF1 Room" {...field} />
+                          <Input placeholder="예: RF1 Room" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -156,18 +154,18 @@ export function LocationHistorySection({
                       <FormItem>
                         <FormLabel>비고</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="변동 사유나 특이사항" {...field} />
+                          <Textarea
+                            placeholder="변동 사유나 특이사항"
+                            {...field}
+                            value={field.value || ''}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                   <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                    >
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       취소
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
@@ -183,9 +181,7 @@ export function LocationHistorySection({
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            위치 변동 이력이 없습니다.
-          </div>
+          <div className="text-center text-muted-foreground py-8">위치 변동 이력이 없습니다.</div>
         ) : (
           <Table>
             <TableHeader>
@@ -199,13 +195,9 @@ export function LocationHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>
-                    {dayjs(item.changedAt).format('YYYY-MM-DD')}
-                  </TableCell>
+                  <TableCell>{dayjs(item.changedAt).format('YYYY-MM-DD')}</TableCell>
                   <TableCell>{item.newLocation}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {item.notes || '-'}
-                  </TableCell>
+                  <TableCell className="text-muted-foreground">{item.notes || '-'}</TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"

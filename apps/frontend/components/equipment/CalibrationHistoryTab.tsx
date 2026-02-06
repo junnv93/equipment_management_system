@@ -255,6 +255,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                       <Input
                         type="date"
                         {...field}
+                        value={field.value || ''}
                         onChange={(e) => {
                           field.onChange(e);
                           handleCalibrationDateChange(e.target.value);
@@ -276,6 +277,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                         type="number"
                         min={1}
                         {...field}
+                        value={field.value ?? ''}
                         onChange={(e) => {
                           field.onChange(e);
                           handleCycleChange(parseInt(e.target.value) || 12);
@@ -294,7 +296,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 <FormItem>
                   <FormLabel>다음 교정일 *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -307,7 +309,11 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 <FormItem>
                   <FormLabel>교정 기관 *</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: 한국표준과학연구원(KRISS)" {...field} />
+                    <Input
+                      placeholder="예: 한국표준과학연구원(KRISS)"
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -320,7 +326,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 <FormItem>
                   <FormLabel>교정성적서 번호 *</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: CAL-2026-0001" {...field} />
+                    <Input placeholder="예: CAL-2026-0001" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -371,7 +377,12 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 <FormItem>
                   <FormLabel>비고</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="교정 관련 특이사항" rows={3} {...field} />
+                    <Textarea
+                      placeholder="교정 관련 특이사항"
+                      rows={3}
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

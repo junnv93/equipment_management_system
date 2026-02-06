@@ -3,7 +3,13 @@ import { notFound } from 'next/navigation';
 import { EquipmentDetailClient } from '@/components/equipment/EquipmentDetailClient';
 import { EquipmentDetailSkeleton } from '@/components/equipment/EquipmentDetailSkeleton';
 import * as equipmentApiServer from '@/lib/api/equipment-api-server';
+import * as disposalApiServer from '@/lib/api/disposal-api-server';
 import { isNotFoundError } from '@/lib/api/error';
+import { getServerAuthSession } from '@/lib/auth/server-session';
+
+// ✅ Force dynamic rendering to prevent caching stale data
+// This is critical for E2E tests that modify equipment state
+export const dynamic = 'force-dynamic';
 
 /**
  * ✅ React.cache()로 같은 render pass에서 중복 호출 방지
@@ -13,6 +19,31 @@ import { isNotFoundError } from '@/lib/api/error';
  */
 const getEquipmentCached = cache(async (id: string) => {
   return equipmentApiServer.getEquipment(id);
+});
+
+/**
+ * 폐기 요청 조회 (인증된 사용자만)
+ *
+ * ✅ SSOT: Server Component는 getServerAuthSession() 사용
+ * ✅ Best Practice: 조건부 조회로 불필요한 401 에러 방지
+ */
+const getDisposalRequestCached = cache(async (id: string) => {
+  try {
+    // ✅ NextAuth 세션 확인 (SSOT)
+    const session = await getServerAuthSession();
+
+    // 로그인하지 않은 사용자는 폐기 정보 조회 불필요
+    if (!session) {
+      return null;
+    }
+
+    // ✅ Server Component용 API 사용
+    return await disposalApiServer.getCurrentDisposalRequest(id);
+  } catch (error) {
+    // 폐기 정보 조회 실패 시 null 반환 (선택적 데이터)
+    console.error(`[Equipment Detail] Failed to fetch disposal request for ${id}:`, error);
+    return null;
+  }
 });
 
 // Next.js 16 PageProps 타입 정의
@@ -48,9 +79,12 @@ export default async function EquipmentDetailPage(props: PageProps) {
     throw error;
   }
 
+  // ✅ 폐기 요청 정보 가져오기 (병렬 fetch 가능하지만 equipment가 필요하므로 순차 실행)
+  const disposalRequest = await getDisposalRequestCached(id);
+
   return (
     <Suspense fallback={<EquipmentDetailSkeleton />}>
-      <EquipmentDetailClient equipment={equipment} />
+      <EquipmentDetailClient equipment={equipment} disposalRequest={disposalRequest} />
     </Suspense>
   );
 }

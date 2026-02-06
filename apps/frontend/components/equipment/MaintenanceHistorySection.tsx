@@ -35,7 +35,10 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Wrench } from 'lucide-react';
 import dayjs from 'dayjs';
-import type { MaintenanceHistoryItem, CreateMaintenanceHistoryInput } from '@/lib/api/equipment-api';
+import type {
+  MaintenanceHistoryItem,
+  CreateMaintenanceHistoryInput,
+} from '@/lib/api/equipment-api';
 
 const maintenanceHistorySchema = z.object({
   performedAt: z.string().min(1, '수행 일시를 입력하세요'),
@@ -114,9 +117,7 @@ export function MaintenanceHistorySection({
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>유지보수 내역 추가</DialogTitle>
-                <DialogDescription>
-                  유지보수 수행 정보를 입력하세요.
-                </DialogDescription>
+                <DialogDescription>유지보수 수행 정보를 입력하세요.</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -127,7 +128,7 @@ export function MaintenanceHistorySection({
                       <FormItem>
                         <FormLabel>수행 일시 *</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -144,6 +145,7 @@ export function MaintenanceHistorySection({
                             placeholder="예: 분기별 정기 점검 - 정상 동작 확인"
                             className="min-h-[100px]"
                             {...field}
+                            value={field.value || ''}
                           />
                         </FormControl>
                         <FormMessage />
@@ -151,11 +153,7 @@ export function MaintenanceHistorySection({
                     )}
                   />
                   <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                    >
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       취소
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
@@ -171,9 +169,7 @@ export function MaintenanceHistorySection({
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            유지보수 내역이 없습니다.
-          </div>
+          <div className="text-center text-muted-foreground py-8">유지보수 내역이 없습니다.</div>
         ) : (
           <Table>
             <TableHeader>
@@ -187,12 +183,8 @@ export function MaintenanceHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>
-                    {dayjs(item.performedAt).format('YYYY-MM-DD')}
-                  </TableCell>
-                  <TableCell className="max-w-[300px] truncate">
-                    {item.content}
-                  </TableCell>
+                  <TableCell>{dayjs(item.performedAt).format('YYYY-MM-DD')}</TableCell>
+                  <TableCell className="max-w-[300px] truncate">{item.content}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.performedByName || '-'}
                   </TableCell>

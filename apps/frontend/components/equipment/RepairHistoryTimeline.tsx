@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Wrench, CheckCircle, AlertTriangle, Clock, Trash2, Edit, Plus } from 'lucide-react';
+import { Wrench, CheckCircle, AlertTriangle, Clock, Trash2, Edit } from 'lucide-react';
 import type { RepairHistory } from '@/lib/api/repair-history-api';
 
 interface RepairHistoryTimelineProps {
   repairs: RepairHistory[];
   onEdit?: (repair: RepairHistory) => void;
   onDelete?: (repair: RepairHistory) => void;
-  onAdd?: () => void;
   isLoading?: boolean;
   canEdit?: boolean;
 }
@@ -31,7 +30,6 @@ export default function RepairHistoryTimeline({
   repairs,
   onEdit,
   onDelete,
-  onAdd,
   isLoading = false,
   canEdit = false,
 }: RepairHistoryTimelineProps) {
@@ -58,14 +56,6 @@ export default function RepairHistoryTimeline({
       default:
         return <Wrench className="h-5 w-5 text-gray-500" />;
     }
-  };
-
-  const formatCurrency = (amount?: number) => {
-    if (amount === undefined || amount === null) return '-';
-    return new Intl.NumberFormat('ko-KR', {
-      style: 'currency',
-      currency: 'KRW',
-    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
@@ -98,34 +88,12 @@ export default function RepairHistoryTimeline({
         <Wrench className="mx-auto h-12 w-12 text-gray-400" />
         <h3 className="mt-4 text-lg font-medium text-gray-900">수리 이력 없음</h3>
         <p className="mt-2 text-sm text-gray-500">이 장비의 수리 이력이 없습니다.</p>
-        {canEdit && onAdd && (
-          <button
-            onClick={onAdd}
-            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            수리 이력 추가
-          </button>
-        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* 상단 액션 버튼 */}
-      {canEdit && onAdd && (
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={onAdd}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            수리 이력 추가
-          </button>
-        </div>
-      )}
-
       {/* 타임라인 */}
       <div className="flow-root">
         <ul className="-mb-8">
@@ -166,11 +134,6 @@ export default function RepairHistoryTimeline({
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          {repair.cost !== undefined && repair.cost !== null && (
-                            <span className="text-sm font-semibold text-blue-600">
-                              {formatCurrency(repair.cost)}
-                            </span>
-                          )}
                           {canEdit && (
                             <div className="flex gap-1">
                               {onEdit && (
@@ -212,22 +175,6 @@ export default function RepairHistoryTimeline({
                           {expandedItems.has(repair.uuid) ? '간략히' : '더 보기'}
                         </button>
                       )}
-
-                      {/* 상세 정보 */}
-                      <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-500">
-                        {repair.repairedBy && (
-                          <span className="flex items-center gap-1">
-                            <span className="font-medium">담당자:</span>
-                            {repair.repairedBy}
-                          </span>
-                        )}
-                        {repair.repairCompany && (
-                          <span className="flex items-center gap-1">
-                            <span className="font-medium">수리업체:</span>
-                            {repair.repairCompany}
-                          </span>
-                        )}
-                      </div>
 
                       {/* 비고 */}
                       {repair.notes && (

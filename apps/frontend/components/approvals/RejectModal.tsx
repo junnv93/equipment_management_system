@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,18 @@ const REJECT_TEMPLATES = [
 ];
 
 export default function RejectModal({ item, isOpen, onClose, onConfirm }: RejectModalProps) {
+  // Local state for real-time validation
+  const [reasonValue, setReasonValue] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setReasonValue('');
+      setValidationError(null);
+    }
+  }, [isOpen]);
+
   // useActionState 패턴 사용 (Next.js 16)
   const [state, formAction, isPending] = useActionState<RejectFormState, FormData>(
     async (prevState, formData) => {
@@ -63,8 +75,10 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
 
       // 반려 사유 10자 이상 검증
       if (!reason || reason.trim().length < 10) {
+        // Set local validation error state instead
+        setValidationError('반려 사유는 10자 이상 입력해주세요.');
         return {
-          error: '반려 사유는 10자 이상 입력해주세요.',
+          error: null, // Don't set error in state
           success: false,
         };
       }
@@ -82,12 +96,27 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
     { error: null, success: false }
   );
 
-  const handleTemplateSelect = (value: string) => {
-    const textarea = document.getElementById('reject-reason') as HTMLTextAreaElement;
-    if (textarea && value) {
-      textarea.value = value;
+  // Real-time validation on input change
+  const handleReasonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setReasonValue(value);
+
+    // Clear validation error if user enters valid input
+    if (value.trim().length >= 10) {
+      setValidationError(null);
     }
   };
+
+  const handleTemplateSelect = (value: string) => {
+    if (value) {
+      setReasonValue(value);
+      // Clear validation error when template is selected (all templates are > 10 chars)
+      setValidationError(null);
+    }
+  };
+
+  // Use validation error from real-time validation or form submission
+  const displayError = validationError || state.error;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -128,18 +157,20 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
             <Textarea
               id="reject-reason"
               name="reason"
+              value={reasonValue}
+              onChange={handleReasonChange}
               placeholder="반려 사유를 입력하세요"
               className="min-h-[120px]"
-              aria-describedby={state.error ? 'reject-error' : undefined}
+              aria-describedby={displayError ? 'reject-error' : undefined}
             />
-            {state.error && (
+            {displayError && (
               <p
                 id="reject-error"
                 className="text-sm text-destructive"
                 role="alert"
                 aria-live="assertive"
               >
-                {state.error}
+                {displayError}
               </p>
             )}
           </div>

@@ -18,6 +18,7 @@ import { ViewToggle } from '@/components/equipment/ViewToggle';
 import { EquipmentPagination } from '@/components/equipment/EquipmentPagination';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
+import { queryKeys } from '@/lib/api/query-config';
 
 /**
  * 빈 상태 컴포넌트 (검색 결과 없음)
@@ -111,6 +112,11 @@ interface EquipmentListContentProps {
  * - Server Component(page.tsx)에서 초기 데이터를 fetch하여 전달 가능
  * - 클라이언트에서 필터/검색/정렬 등 인터랙션 처리
  * - useQuery의 initialData로 hydration 최적화
+ *
+ * ⚠️ Hydration 처리:
+ * - 이 컴포넌트는 ClientOnly wrapper로 감싸서 사용해야 함
+ * - Radix UI 컴포넌트(Select, Collapsible)의 ID mismatch 방지
+ * - page.tsx에서 <ClientOnly> wrapper 적용
  */
 export function EquipmentListContent({ initialData }: EquipmentListContentProps) {
   // URL 상태 관리 훅
@@ -140,12 +146,27 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   // ✅ Vercel Best Practice: Query Key 객체 사용
   // - React Query v5는 queryKey 객체를 deep comparison으로 비교
   // - useEquipmentFilters가 queryFilters를 useMemo로 안정화하므로 캐시 히트율 최적
+  //
+  // ⚠️ staleTime: 0 is intentional for real-time accuracy
+  //
+  // Equipment status changes from:
+  // - 부적합 등록 (Non-conformance registration)
+  // - 사고이력 등록 (Incident history with status change)
+  // - 교정기한 초과 자동 처리 (Calibration overdue auto-processing)
+  // - 폐기 신청 (Disposal workflows)
+  //
+  // Users expect immediate status badge updates after these operations.
+  //
+  // ✅ refetchOnMount: 'always' - 항상 최신 데이터 확인
+  // - 목록 페이지는 상태 변경에 민감 (상세 페이지에서 NC 등록 등)
+  // - 새 페이지 컨텍스트에서도 최신 상태 보장
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ['equipmentList', queryFilters],
+    queryKey: queryKeys.equipment.list(queryFilters), // ✅ 표준화된 키
     queryFn: () => equipmentApi.getEquipmentList(queryFilters),
     initialData, // Server에서 전달받은 초기 데이터
     retry: 3,
-    staleTime: 30 * 1000, // 30초
+    staleTime: 0, // 장비 상태는 실시간 정확성이 중요 (부적합, 교정기한초과 등)
+    refetchOnMount: 'always', // ✅ 항상 최신 데이터 확인 (상태 변경 민감)
   });
 
   // 페이지네이션 정보 계산
@@ -197,7 +218,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
 
         <div className="flex items-center gap-4">
           {/* 정렬 표시 */}
-          {filters.sortBy && filters.sortBy !== 'createdAt' && (
+          {filters.sortBy && filters.sortBy !== 'managementNumber' && (
             <Badge variant="outline" className="text-xs">
               정렬:{' '}
               {filters.sortBy === 'name'
@@ -208,8 +229,8 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
                     ? '교정기한순'
                     : filters.sortBy === 'status'
                       ? '상태순'
-                      : filters.sortBy === 'managementNumber'
-                        ? '관리번호순'
+                      : filters.sortBy === 'createdAt'
+                        ? '등록일순'
                         : ''}
               ({filters.sortOrder === 'asc' ? '오름차순' : '내림차순'})
             </Badge>

@@ -7,6 +7,7 @@ import {
   EquipmentListContent,
   EquipmentListSkeleton,
 } from '@/components/equipment/EquipmentListContent';
+import { ClientOnly } from '@/components/shared/ClientOnly';
 import * as equipmentApiServer from '@/lib/api/equipment-api-server';
 import {
   parseEquipmentFiltersFromSearchParams,
@@ -24,7 +25,12 @@ type PageProps = {
  * Next.js 16 패턴:
  * - Server Component로 초기 데이터 fetch (FCP 최적화)
  * - Client Component(EquipmentListContent)에 initialData 전달
+ * - ClientOnly wrapper로 hydration mismatch 방지
  * - Suspense로 스트리밍 지원
+ *
+ * Hydration 최적화:
+ * - ClientOnly: Radix UI 컴포넌트의 자동 ID 생성으로 인한 mismatch 방지
+ * - fallback: 서버 렌더링 시 skeleton 제공 (SEO 유지)
  */
 export default async function EquipmentPage(props: PageProps) {
   // searchParams는 Promise이므로 await 필요
@@ -45,8 +51,22 @@ export default async function EquipmentPage(props: PageProps) {
   try {
     initialData = await equipmentApiServer.getEquipmentList(initialQuery);
   } catch (error) {
-    // 에러 시 클라이언트에서 fetch하도록 initialData 없이 렌더링
-    console.error('Failed to fetch initial equipment list:', error);
+    // 🔴 에러 시 클라이언트에서 fetch하도록 initialData 없이 렌더링
+    // 개발 모드에서는 상세한 에러 정보 로깅
+    if (process.env.NODE_ENV === 'development') {
+      console.error(
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+          '[Equipment Page] Server-side fetch 실패\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+          `📍 Query: ${JSON.stringify(initialQuery, null, 2)}\n` +
+          `❌ Error: ${error instanceof Error ? error.message : String(error)}\n` +
+          '💡 Fallback: Client-side fetch will be attempted\n' +
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+      );
+    } else {
+      console.error('Failed to fetch initial equipment list:', error);
+    }
+    // initialData를 undefined로 유지하여 클라이언트에서 재시도
   }
 
   return (
@@ -71,8 +91,11 @@ export default async function EquipmentPage(props: PageProps) {
       </div>
 
       {/* 메인 컨텐츠 */}
+      {/* ✅ ClientOnly: Radix UI hydration mismatch 방지 */}
       <Suspense fallback={<EquipmentListSkeleton />}>
-        <EquipmentListContent initialData={initialData} />
+        <ClientOnly fallback={<EquipmentListSkeleton />}>
+          <EquipmentListContent initialData={initialData} />
+        </ClientOnly>
       </Suspense>
     </div>
   );

@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import {
   Select,
   SelectContent,
@@ -35,18 +45,17 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   getRepairHistoryByEquipment,
-  getRepairSummary,
   createRepairHistory,
   updateRepairHistory,
   deleteRepairHistory,
   RepairHistory,
-  RepairResult,
   CreateRepairHistoryDto,
 } from '@/lib/api/repair-history-api';
 import RepairHistoryTimeline from '@/components/equipment/RepairHistoryTimeline';
 import { format } from 'date-fns';
-import { ArrowLeft, Plus, Wrench, DollarSign, Hash } from 'lucide-react';
+import { ArrowLeft, Plus, Wrench, Hash, Info } from 'lucide-react';
 import Link from 'next/link';
+import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
 
 const REPAIR_RESULT_OPTIONS = [
   { value: 'completed', label: '수리 완료' },
@@ -54,11 +63,33 @@ const REPAIR_RESULT_OPTIONS = [
   { value: 'failed', label: '수리 실패' },
 ];
 
+/**
+ * 수리 이력 폼 검증 스키마
+ * 백엔드 createRepairHistorySchema와 일치
+ */
+const repairHistoryFormSchema = z.object({
+  repairDate: z.string().min(1, '수리 일자를 입력하세요'),
+  repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
+  repairResult: z.enum(['completed', 'partial', 'failed']).optional(),
+  notes: z.string().optional(),
+  nonConformanceId: z.string().uuid().optional(),
+});
+
+type RepairHistoryFormValues = z.infer<typeof repairHistoryFormSchema>;
+
 interface RepairHistoryClientProps {
   /**
    * Server Component에서 전달받은 장비 ID
    */
   equipmentId: string;
+  /**
+   * 부적합 페이지에서 전달된 NC ID (자동 선택용)
+   */
+  initialNcId?: string;
+  /**
+   * 다이얼로그 자동 오픈 여부
+   */
+  autoOpen?: boolean;
 }
 
 /**
@@ -67,8 +98,13 @@ interface RepairHistoryClientProps {
  * Next.js 16 패턴:
  * - Server Component(page.tsx)에서 equipmentId를 전달받음
  * - 모든 인터랙티브 로직(useState, useMutation)을 담당
+ * - 부적합 페이지에서 넘어올 때 자동으로 NC 선택 및 다이얼로그 오픈
  */
-export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
+export function RepairHistoryClient({
+  equipmentId,
+  initialNcId,
+  autoOpen,
+}: RepairHistoryClientProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -76,14 +112,17 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedRepair, setSelectedRepair] = useState<RepairHistory | null>(null);
-  const [formData, setFormData] = useState<CreateRepairHistoryDto>({
-    repairDate: '',
-    repairDescription: '',
-    repairedBy: '',
-    repairCompany: '',
-    cost: undefined,
-    repairResult: undefined,
-    notes: '',
+
+  // ✅ React Hook Form으로 폼 상태 관리
+  const form = useForm<RepairHistoryFormValues>({
+    resolver: zodResolver(repairHistoryFormSchema),
+    defaultValues: {
+      repairDate: format(new Date(), 'yyyy-MM-dd'),
+      repairDescription: '',
+      repairResult: undefined,
+      notes: '',
+      nonConformanceId: undefined,
+    },
   });
 
   // 수리 이력 조회
@@ -93,10 +132,40 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
     enabled: !!equipmentId,
   });
 
-  // 수리 비용 요약 조회
-  const { data: summary } = useQuery({
-    queryKey: ['repair-summary', equipmentId],
-    queryFn: () => getRepairSummary(equipmentId),
+  // ✅ 수리 비용 요약 조회 제거 (비용 필드 제거됨)
+
+  // Context-aware navigation: 부적합 페이지에서 자동 다이얼로그 오픈
+  useEffect(() => {
+    if (autoOpen && initialNcId) {
+      form.reset({
+        repairDate: format(new Date(), 'yyyy-MM-dd'),
+        repairDescription: '',
+        repairResult: undefined,
+        notes: '',
+        nonConformanceId: initialNcId, // ✅ Pre-fill NC ID
+      });
+      setIsCreateDialogOpen(true);
+
+      // Clean URL (remove query params)
+      window.history.replaceState({}, '', `/equipment/${equipmentId}/repair-history`);
+    }
+  }, [autoOpen, initialNcId, equipmentId, form]);
+
+  // 열린 부적합 목록 조회 (수리 이력 연결용)
+  const { data: openNonConformances } = useQuery({
+    queryKey: ['open-non-conformances', equipmentId],
+    queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
+    select: (data) => {
+      // ✅ 방어적 코드: data가 undefined이거나 data.data가 없을 경우 빈 배열 반환
+      if (!data || !data.data || !Array.isArray(data.data)) {
+        return [];
+      }
+      return data.data.filter(
+        (nc) =>
+          ['open', 'analyzing', 'corrected'].includes(nc.status) &&
+          ['damage', 'malfunction', 'calibration_failure', 'measurement_error'].includes(nc.ncType)
+      );
+    },
     enabled: !!equipmentId,
   });
 
@@ -106,9 +175,10 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
     onSuccess: () => {
       toast({ title: '성공', description: '수리 이력이 등록되었습니다.' });
       queryClient.invalidateQueries({ queryKey: ['repair-history', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['repair-summary', equipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['non-conformances', 'equipment', equipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['open-non-conformances', equipmentId] });
       setIsCreateDialogOpen(false);
-      resetForm();
+      form.reset(); // ✅ form.reset() 사용
     },
     onError: (error: Error) => {
       toast({
@@ -126,10 +196,11 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
     onSuccess: () => {
       toast({ title: '성공', description: '수리 이력이 수정되었습니다.' });
       queryClient.invalidateQueries({ queryKey: ['repair-history', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['repair-summary', equipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['non-conformances', 'equipment', equipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['open-non-conformances', equipmentId] });
       setIsEditDialogOpen(false);
       setSelectedRepair(null);
-      resetForm();
+      form.reset(); // ✅ form.reset() 사용
     },
     onError: (error: Error) => {
       toast({
@@ -146,7 +217,6 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
     onSuccess: () => {
       toast({ title: '성공', description: '수리 이력이 삭제되었습니다.' });
       queryClient.invalidateQueries({ queryKey: ['repair-history', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['repair-summary', equipmentId] });
       setIsDeleteDialogOpen(false);
       setSelectedRepair(null);
     },
@@ -159,37 +229,27 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
     },
   });
 
-  const resetForm = () => {
-    setFormData({
-      repairDate: '',
+  const handleOpenCreate = () => {
+    // ✅ form.reset()으로 폼 초기화
+    form.reset({
+      repairDate: format(new Date(), 'yyyy-MM-dd'),
       repairDescription: '',
-      repairedBy: '',
-      repairCompany: '',
-      cost: undefined,
       repairResult: undefined,
       notes: '',
+      nonConformanceId: undefined,
     });
-  };
-
-  const handleOpenCreate = () => {
-    resetForm();
-    setFormData((prev) => ({
-      ...prev,
-      repairDate: format(new Date(), 'yyyy-MM-dd'),
-    }));
     setIsCreateDialogOpen(true);
   };
 
   const handleOpenEdit = (repair: RepairHistory) => {
     setSelectedRepair(repair);
-    setFormData({
+    // ✅ form.reset()으로 폼 초기화
+    form.reset({
       repairDate: format(new Date(repair.repairDate), 'yyyy-MM-dd'),
       repairDescription: repair.repairDescription,
-      repairedBy: repair.repairedBy || '',
-      repairCompany: repair.repairCompany || '',
-      cost: repair.cost,
       repairResult: repair.repairResult,
       notes: repair.notes || '',
+      nonConformanceId: undefined, // 수정 시에는 부적합 변경 불가 (백엔드에서 처리)
     });
     setIsEditDialogOpen(true);
   };
@@ -199,51 +259,39 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleCreate = () => {
-    if (!formData.repairDate || !formData.repairDescription) {
-      toast({
-        title: '입력 오류',
-        description: '수리 일자와 수리 내용은 필수 항목입니다.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  // ✅ form.handleSubmit 사용 - Zod가 자동으로 검증
+  const handleCreate = form.handleSubmit(async (data) => {
+    // ✅ 빈 문자열을 undefined로 변환
+    const cleanData: CreateRepairHistoryDto = {
+      repairDate: data.repairDate,
+      repairDescription: data.repairDescription,
+      repairResult: data.repairResult,
+      notes: data.notes || undefined,
+      nonConformanceId: data.nonConformanceId,
+    };
 
-    if (formData.repairDescription.length < 10) {
-      toast({
-        title: '입력 오류',
-        description: '수리 내용은 최소 10자 이상 입력해야 합니다.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    createMutation.mutate(cleanData);
+  });
 
-    createMutation.mutate(formData);
-  };
-
-  const handleUpdate = () => {
+  // ✅ form.handleSubmit 사용 - Zod가 자동으로 검증
+  const handleUpdate = form.handleSubmit(async (data) => {
     if (!selectedRepair) return;
 
-    if (!formData.repairDate || !formData.repairDescription) {
-      toast({
-        title: '입력 오류',
-        description: '수리 일자와 수리 내용은 필수 항목입니다.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // ✅ 빈 문자열을 undefined로 변환
+    const cleanData: CreateRepairHistoryDto = {
+      repairDate: data.repairDate,
+      repairDescription: data.repairDescription,
+      repairResult: data.repairResult,
+      notes: data.notes || undefined,
+      nonConformanceId: data.nonConformanceId,
+    };
 
-    updateMutation.mutate({ uuid: selectedRepair.uuid, dto: formData });
-  };
+    updateMutation.mutate({ uuid: selectedRepair.uuid, dto: cleanData });
+  });
 
   const handleDelete = () => {
     if (!selectedRepair) return;
     deleteMutation.mutate(selectedRepair.uuid);
-  };
-
-  const formatCurrency = (amount?: number) => {
-    if (amount === undefined || amount === null) return '0';
-    return new Intl.NumberFormat('ko-KR').format(amount);
   };
 
   const repairs = repairData?.items || [];
@@ -274,28 +322,16 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
       </div>
 
       {/* 요약 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 수리 횟수</CardTitle>
-            <Hash className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary?.count || 0}회</div>
-            <p className="text-xs text-muted-foreground mt-1">전체 수리 이력 건수</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 수리 비용</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary?.totalCost)}원</div>
-            <p className="text-xs text-muted-foreground mt-1">누적 수리 비용</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">총 수리 횟수</CardTitle>
+          <Hash className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{repairs.length}회</div>
+          <p className="text-xs text-muted-foreground mt-1">전체 수리 이력 건수</p>
+        </CardContent>
+      </Card>
 
       {/* 수리 이력 타임라인 */}
       <Card>
@@ -311,7 +347,6 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
             repairs={repairs}
             onEdit={handleOpenEdit}
             onDelete={handleOpenDelete}
-            onAdd={handleOpenCreate}
             canEdit={true}
           />
         </CardContent>
@@ -319,215 +354,311 @@ export function RepairHistoryClient({ equipmentId }: RepairHistoryClientProps) {
 
       {/* 생성 다이얼로그 */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>수리 이력 등록</DialogTitle>
             <DialogDescription>새로운 수리 이력을 등록합니다.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="repairDate">수리 일자 *</Label>
-              <Input
-                id="repairDate"
-                type="date"
-                value={formData.repairDate}
-                onChange={(e) => setFormData({ ...formData, repairDate: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="repairDescription">수리 내용 * (최소 10자)</Label>
-              <Textarea
-                id="repairDescription"
-                placeholder="수리 내용을 상세히 입력해주세요"
-                value={formData.repairDescription}
-                onChange={(e) => setFormData({ ...formData, repairDescription: e.target.value })}
-                rows={4}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="repairedBy">수리 담당자</Label>
-                <Input
-                  id="repairedBy"
-                  placeholder="홍길동"
-                  value={formData.repairedBy || ''}
-                  onChange={(e) => setFormData({ ...formData, repairedBy: e.target.value })}
+
+          <Form {...form}>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="grid gap-4 py-4">
+                {/* 수리 일자 */}
+                <FormField
+                  control={form.control}
+                  name="repairDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>수리 일자 *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 수리 내용 */}
+                <FormField
+                  control={form.control}
+                  name="repairDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>수리 내용 *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="수리 내용을 자세히 입력하세요 (최소 10자)"
+                          className="min-h-[100px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 수리 결과 */}
+                <FormField
+                  control={form.control}
+                  name="repairResult"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>수리 결과</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="수리 결과 선택" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {REPAIR_RESULT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 부적합 연결 */}
+                <FormField
+                  control={form.control}
+                  name="nonConformanceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>연결된 부적합 (선택)</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value === '__none__' ? undefined : value);
+                        }}
+                        value={field.value ?? '__none__'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="부적합 선택 (선택사항)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">선택 안 함</SelectItem>
+                          {openNonConformances && openNonConformances.length === 0 && (
+                            <SelectItem value="__empty__" disabled>
+                              열린 부적합이 없습니다
+                            </SelectItem>
+                          )}
+                          {openNonConformances?.map((nc) => (
+                            <SelectItem key={nc.id} value={nc.id}>
+                              [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
+                              {nc.cause.length > 30 ? '...' : ''} (
+                              {format(new Date(nc.discoveryDate), 'yyyy-MM-dd')})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        손상/오작동 부적합을 선택하면 수리 완료 시 자동으로 "조치 완료" 상태로
+                        변경됩니다.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 자동 연동 안내 */}
+                {form.watch('nonConformanceId') && openNonConformances && (
+                  <div className="rounded-md border p-3 bg-blue-50 dark:bg-blue-950 border-blue-200">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+                      <div className="text-sm text-blue-800 dark:text-blue-200">
+                        <strong>자동 연동:</strong> 수리 결과를 "수리 완료"로 설정하면 부적합 상태가
+                        자동으로 "조치 완료"로 변경됩니다.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 비고 */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>비고</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="추가 메모"
+                          className="min-h-[80px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="repairCompany">외부 수리 업체</Label>
-                <Input
-                  id="repairCompany"
-                  placeholder="키사이트 코리아"
-                  value={formData.repairCompany || ''}
-                  onChange={(e) => setFormData({ ...formData, repairCompany: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cost">수리 비용 (원)</Label>
-                <Input
-                  id="cost"
-                  type="number"
-                  min="0"
-                  placeholder="500000"
-                  value={formData.cost || ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      cost: e.target.value ? parseInt(e.target.value) : undefined,
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="repairResult">수리 결과</Label>
-                <Select
-                  value={formData.repairResult || ''}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, repairResult: value as RepairResult })
-                  }
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REPAIR_RESULT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">비고</Label>
-              <Textarea
-                id="notes"
-                placeholder="추가 참고사항"
-                value={formData.notes || ''}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {createMutation.isPending ? '등록 중...' : '등록'}
-            </Button>
-          </DialogFooter>
+                  취소
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? '등록 중...' : '등록'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
       {/* 수정 다이얼로그 */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>수리 이력 수정</DialogTitle>
             <DialogDescription>수리 이력을 수정합니다.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="editRepairDate">수리 일자 *</Label>
-              <Input
-                id="editRepairDate"
-                type="date"
-                value={formData.repairDate}
-                onChange={(e) => setFormData({ ...formData, repairDate: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editRepairDescription">수리 내용 * (최소 10자)</Label>
-              <Textarea
-                id="editRepairDescription"
-                placeholder="수리 내용을 상세히 입력해주세요"
-                value={formData.repairDescription}
-                onChange={(e) => setFormData({ ...formData, repairDescription: e.target.value })}
-                rows={4}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="editRepairedBy">수리 담당자</Label>
-                <Input
-                  id="editRepairedBy"
-                  placeholder="홍길동"
-                  value={formData.repairedBy || ''}
-                  onChange={(e) => setFormData({ ...formData, repairedBy: e.target.value })}
+
+          <Form {...form}>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div className="grid gap-4 py-4">
+                {/* 수리 일자 */}
+                <FormField
+                  control={form.control}
+                  name="repairDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>수리 일자 *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 수리 내용 */}
+                <FormField
+                  control={form.control}
+                  name="repairDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>수리 내용 *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="수리 내용을 자세히 입력하세요 (최소 10자)"
+                          className="min-h-[100px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 수리 결과 */}
+                <FormField
+                  control={form.control}
+                  name="repairResult"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>수리 결과</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="수리 결과 선택" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {REPAIR_RESULT_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 부적합 연결 (수정 시 변경 불가) */}
+                <FormField
+                  control={form.control}
+                  name="nonConformanceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>연결된 부적합 (수정 불가)</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value === '__none__' ? undefined : value);
+                        }}
+                        value={field.value ?? '__none__'}
+                        disabled
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="부적합 선택 (선택사항)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">선택 안 함</SelectItem>
+                          {openNonConformances?.map((nc) => (
+                            <SelectItem key={nc.id} value={nc.id}>
+                              [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
+                              {nc.cause.length > 30 ? '...' : ''} (
+                              {format(new Date(nc.discoveryDate), 'yyyy-MM-dd')})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        부적합 연결은 수정 시 변경할 수 없습니다.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* 비고 */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>비고</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="추가 메모"
+                          className="min-h-[80px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="editRepairCompany">외부 수리 업체</Label>
-                <Input
-                  id="editRepairCompany"
-                  placeholder="키사이트 코리아"
-                  value={formData.repairCompany || ''}
-                  onChange={(e) => setFormData({ ...formData, repairCompany: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="editCost">수리 비용 (원)</Label>
-                <Input
-                  id="editCost"
-                  type="number"
-                  min="0"
-                  placeholder="500000"
-                  value={formData.cost || ''}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      cost: e.target.value ? parseInt(e.target.value) : undefined,
-                    })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="editRepairResult">수리 결과</Label>
-                <Select
-                  value={formData.repairResult || ''}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, repairResult: value as RepairResult })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REPAIR_RESULT_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editNotes">비고</Label>
-              <Textarea
-                id="editNotes"
-                placeholder="추가 참고사항"
-                value={formData.notes || ''}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              취소
-            </Button>
-            <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? '수정 중...' : '수정'}
-            </Button>
-          </DialogFooter>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  취소
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? '수정 중...' : '수정'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

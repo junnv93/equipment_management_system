@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentForm, PendingHistoryData } from '@/components/equipment/EquipmentForm';
 import { type UploadedFile } from '@/components/shared/FileUpload';
-import equipmentApi from '@/lib/api/equipment-api';
+import equipmentApi, { type CreateEquipmentDto } from '@/lib/api/equipment-api';
 
 /**
  * 공용/렌탈 장비 임시등록 페이지
@@ -39,10 +39,12 @@ export default function CreateSharedEquipmentPage() {
       pendingHistory?: PendingHistoryData;
     }) => {
       // pendingHistory를 data에 포함
+      // ✅ Type Safety: CreateEquipmentDto로 명시적 타입 단언
+      // pendingHistory는 런타임에 추가되는 임시 필드로, 백엔드에서 처리됨
       const dataWithHistory = {
         ...data,
         ...(pendingHistory && { pendingHistory }),
-      } as any; // EquipmentForm에서 올바른 타입으로 전달됨
+      } as CreateEquipmentDto;
       const fileList = files?.map((f) => f.file) || [];
       return equipmentApi.createEquipment(dataWithHistory, fileList);
     },

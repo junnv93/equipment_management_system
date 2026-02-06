@@ -10,6 +10,7 @@ import {
   type CalibrationRequired,
   type Classification,
 } from '@equipment-management/schemas';
+import { isTeamRestricted, type UserRole } from '@equipment-management/shared-constants';
 import {
   FormControl,
   FormDescription,
@@ -29,7 +30,9 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api/api-client';
+import { type ManagementNumberCheckResult } from '@/lib/api/equipment-api';
 import {
   SITE_OPTIONS,
   CLASSIFICATION_OPTIONS,
@@ -142,6 +145,16 @@ interface BasicInfoSectionProps {
   isEdit?: boolean;
   selectedSite?: Site;
   onSiteChange?: (site: Site) => void;
+  /** 현재 사용자 역할 (test_engineer이면 사이트/팀 선택 제한) */
+  userRole?: string;
+  /** 현재 사용자의 teamId (test_engineer이면 자동 설정) */
+  userTeamId?: string;
+  /** 관리번호 중복 검사 함수 (디바운스 적용) */
+  onManagementNumberChange?: (managementNumber: string) => void;
+  /** 관리번호 중복 검사 결과 */
+  managementNumberCheckResult?: ManagementNumberCheckResult | null;
+  /** 관리번호 중복 검사 중 여부 */
+  isCheckingManagementNumber?: boolean;
 }
 
 export function BasicInfoSection({
@@ -149,7 +162,14 @@ export function BasicInfoSection({
   isEdit = false,
   selectedSite,
   onSiteChange,
+  userRole,
+  userTeamId,
+  onManagementNumberChange,
+  managementNumberCheckResult,
+  isCheckingManagementNumber = false,
 }: BasicInfoSectionProps) {
+  // lab_manager만 사이트/팀 자유 선택 가능, 나머지는 자기 팀만
+  const teamRestricted = userRole ? isTeamRestricted(userRole as UserRole) : false;
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [filteredTeams, setFilteredTeams] = useState<
@@ -212,8 +232,10 @@ export function BasicInfoSection({
     if (!isEdit && managementNumberPreview) {
       setValue('managementNumber', managementNumberPreview);
       setValue('classification', selectedClassification);
+      // ★ Best Practice: 자동 생성된 관리번호도 실시간 중복 검사
+      onManagementNumberChange?.(managementNumberPreview);
     }
-  }, [managementNumberPreview, isEdit, setValue, selectedClassification]);
+  }, [managementNumberPreview, isEdit, setValue, selectedClassification, onManagementNumberChange]);
 
   // 팀 목록 로드
   useEffect(() => {
@@ -252,6 +274,17 @@ export function BasicInfoSection({
     }
   }, [selectedSite, teams]);
 
+  // test_engineer: 팀 자동 선택 (userTeamId가 있으면 자동 설정)
+  useEffect(() => {
+    if (teamRestricted && userTeamId && filteredTeams.length > 0) {
+      const matchingTeam = filteredTeams.find((t) => t.value === userTeamId);
+      if (matchingTeam) {
+        setValue('teamId', userTeamId);
+        handleTeamChange(userTeamId);
+      }
+    }
+  }, [teamRestricted, userTeamId, filteredTeams, setValue, handleTeamChange]);
+
   return (
     <Card>
       <CardHeader>
@@ -275,7 +308,7 @@ export function BasicInfoSection({
                   장비명 <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: Receiver" {...field} />
+                  <Input placeholder="예: Receiver" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormDescription>장비의 이름을 입력하세요</FormDescription>
                 <FormMessage />
@@ -285,7 +318,7 @@ export function BasicInfoSection({
 
           {/* 관리번호 - 자동생성 UI (등록 시) 또는 수동입력 (수정 시) */}
           {isEdit ? (
-            // 수정 모드: 직접 입력
+            // 수정 모드: 직접 입력 + 실시간 중복 검사
             <FormField
               control={control}
               name="managementNumber"
@@ -294,22 +327,70 @@ export function BasicInfoSection({
                   <FormLabel>
                     관리번호 <span className="text-destructive">*</span>
                   </FormLabel>
-                  <FormControl>
-                    <Input placeholder="예: SUW-E0001" {...field} />
-                  </FormControl>
-                  <FormDescription>고유한 관리번호 (형식: XXX-XYYYY)</FormDescription>
+                  <div className="relative">
+                    <FormControl>
+                      <Input
+                        placeholder="예: SUW-E0001"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          onManagementNumberChange?.(e.target.value);
+                        }}
+                        className={
+                          managementNumberCheckResult?.available === false
+                            ? 'border-destructive focus-visible:ring-destructive pr-10'
+                            : managementNumberCheckResult?.available === true
+                              ? 'border-green-500 focus-visible:ring-green-500 pr-10'
+                              : ''
+                        }
+                      />
+                    </FormControl>
+                    {/* 검사 상태 아이콘 */}
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {isCheckingManagementNumber ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      ) : managementNumberCheckResult?.available === true ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      ) : managementNumberCheckResult?.available === false ? (
+                        <AlertCircle className="h-4 w-4 text-destructive" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {/* 중복 검사 결과 메시지 */}
+                  {managementNumberCheckResult?.available === false ? (
+                    <p className="text-sm text-destructive">
+                      {managementNumberCheckResult.message}
+                      {managementNumberCheckResult.existingEquipment && (
+                        <span className="ml-1 font-medium">
+                          (기존 장비: {managementNumberCheckResult.existingEquipment.name})
+                        </span>
+                      )}
+                    </p>
+                  ) : managementNumberCheckResult?.available === true ? (
+                    <p className="text-sm text-green-600">{managementNumberCheckResult.message}</p>
+                  ) : (
+                    <FormDescription>고유한 관리번호 (형식: XXX-XYYYY)</FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
             />
           ) : (
-            // 등록 모드: 자동 생성 UI
+            // 등록 모드: 자동 생성 UI + 중복 검사
             <div className="space-y-2">
               <FormLabel>
                 관리번호 <span className="text-destructive">*</span>
               </FormLabel>
               {/* 프리뷰 및 자동 조합 표시 */}
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg border ${
+                  managementNumberCheckResult?.available === false
+                    ? 'bg-red-50 border-destructive dark:bg-red-950'
+                    : managementNumberCheckResult?.available === true
+                      ? 'bg-green-50 border-green-500 dark:bg-green-950'
+                      : 'bg-muted/50'
+                }`}
+              >
                 <Badge variant="outline" className="font-mono text-sm">
                   {selectedSite ? SITE_TO_CODE[selectedSite] : 'XXX'}
                 </Badge>
@@ -321,16 +402,54 @@ export function BasicInfoSection({
                   {serialNumberInput ? formatSerialNumber(serialNumberInput) || '????' : '????'}
                 </Badge>
                 {managementNumberPreview && (
-                  <span className="ml-auto text-sm font-semibold text-green-600">
-                    → {managementNumberPreview}
+                  <span className="ml-auto flex items-center gap-2">
+                    <span
+                      className={`text-sm font-semibold ${
+                        managementNumberCheckResult?.available === false
+                          ? 'text-destructive'
+                          : managementNumberCheckResult?.available === true
+                            ? 'text-green-600'
+                            : 'text-green-600'
+                      }`}
+                    >
+                      → {managementNumberPreview}
+                    </span>
+                    {/* 검사 상태 아이콘 */}
+                    {isCheckingManagementNumber ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    ) : managementNumberCheckResult?.available === true ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : managementNumberCheckResult?.available === false ? (
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                    ) : null}
                   </span>
                 )}
               </div>
+              {/* 중복 검사 결과 메시지 */}
+              {managementNumberCheckResult?.available === false ? (
+                <p className="text-sm text-destructive">
+                  {managementNumberCheckResult.message}
+                  {managementNumberCheckResult.existingEquipment && (
+                    <span className="ml-1 font-medium">
+                      (기존 장비: {managementNumberCheckResult.existingEquipment.name})
+                    </span>
+                  )}
+                </p>
+              ) : managementNumberCheckResult?.available === true ? (
+                <p className="text-sm text-green-600">{managementNumberCheckResult.message}</p>
+              ) : null}
               {/* 숨겨진 필드 (폼 제출용) */}
               <FormField
                 control={control}
                 name="managementNumber"
-                render={({ field }) => <input type="hidden" {...field} />}
+                render={({ field }) => (
+                  <input
+                    type="hidden"
+                    name={field.name}
+                    ref={field.ref}
+                    value={field.value ?? ''}
+                  />
+                )}
               />
             </div>
           )}
@@ -351,6 +470,7 @@ export function BasicInfoSection({
                   }}
                   defaultValue={field.value}
                   value={field.value}
+                  disabled={teamRestricted}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -365,7 +485,11 @@ export function BasicInfoSection({
                     ))}
                   </SelectContent>
                 </Select>
-                <FormDescription>장비가 위치한 사이트를 선택하세요</FormDescription>
+                <FormDescription>
+                  {teamRestricted
+                    ? '소속 사이트의 장비만 등록할 수 있습니다'
+                    : '장비가 위치한 사이트를 선택하세요'}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -398,7 +522,12 @@ export function BasicInfoSection({
                       </span>
                     )}
                   </div>
-                  <input type="hidden" {...field} />
+                  <input
+                    type="hidden"
+                    name={field.name}
+                    ref={field.ref}
+                    value={field.value ?? ''}
+                  />
                   <FormDescription>팀 선택에 따라 분류코드가 자동 결정됩니다</FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -461,7 +590,7 @@ export function BasicInfoSection({
                     handleTeamChange(value); // 분류코드 자동 설정
                   }}
                   value={field.value ? String(field.value) : undefined}
-                  disabled={!selectedSite || isLoadingTeams}
+                  disabled={!selectedSite || isLoadingTeams || teamRestricted}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -486,7 +615,9 @@ export function BasicInfoSection({
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  팀 선택 시 분류코드가 자동 설정됩니다
+                  {teamRestricted
+                    ? '소속 팀의 장비만 등록할 수 있습니다'
+                    : '팀 선택 시 분류코드가 자동 설정됩니다'}
                   {selectedClassification && (
                     <span className="ml-2 font-medium text-primary">
                       → {CLASSIFICATION_TO_CODE[selectedClassification]}
@@ -506,7 +637,7 @@ export function BasicInfoSection({
               <FormItem>
                 <FormLabel>자산번호</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: ASSET-001" {...field} />
+                  <Input placeholder="예: ASSET-001" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -523,7 +654,7 @@ export function BasicInfoSection({
                   모델명 <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: MS2720A" {...field} />
+                  <Input placeholder="예: MS2720A" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -540,7 +671,7 @@ export function BasicInfoSection({
                   제조사 <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: Anritsu" {...field} />
+                  <Input placeholder="예: Anritsu" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -555,7 +686,7 @@ export function BasicInfoSection({
               <FormItem>
                 <FormLabel>제조사 연락처</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: 02-1234-5678" {...field} />
+                  <Input placeholder="예: 02-1234-5678" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -572,7 +703,7 @@ export function BasicInfoSection({
                   제조사 시리얼번호 <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: SN123456" {...field} />
+                  <Input placeholder="예: SN123456" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormDescription>제조사에서 부여한 고유 식별번호</FormDescription>
                 <FormMessage />
@@ -594,6 +725,7 @@ export function BasicInfoSection({
                     min={1990}
                     max={2100}
                     {...field}
+                    value={field.value ?? ''}
                     onChange={(e) =>
                       field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
                     }

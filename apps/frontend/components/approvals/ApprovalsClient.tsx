@@ -117,13 +117,17 @@ export function ApprovalsClient({
   const handleApprove = useCallback(
     async (item: ApprovalItem) => {
       try {
-        await approvalsApi.approve(item.category, item.id, userId);
+        // equipmentId 추출 (폐기 승인에 필요)
+        const equipmentId = item.details?.equipmentId as string | undefined;
+        await approvalsApi.approve(item.category, item.id, userId, undefined, equipmentId);
         toast({
           title: '승인 완료',
           description: `${item.summary}이(가) 승인되었습니다.`,
         });
         queryClient.invalidateQueries({ queryKey: ['approvals'] });
         queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
+        // Close the detail modal after successful approval
+        setDetailModalItem(null);
       } catch (error) {
         toast({
           title: '승인 실패',
@@ -140,7 +144,9 @@ export function ApprovalsClient({
   const handleReject = useCallback(
     async (item: ApprovalItem, reason: string) => {
       try {
-        await approvalsApi.reject(item.category, item.id, userId, reason);
+        // equipmentId 추출 (폐기 반려에 필요)
+        const equipmentId = item.details?.equipmentId as string | undefined;
+        await approvalsApi.reject(item.category, item.id, userId, reason, equipmentId);
         toast({
           title: '반려 완료',
           description: `${item.summary}이(가) 반려되었습니다.`,

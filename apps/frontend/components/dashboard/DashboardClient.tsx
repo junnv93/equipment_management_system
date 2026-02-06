@@ -32,6 +32,7 @@ import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader';
 import { QuickActionButtons } from '@/components/dashboard/QuickActionButtons';
 import { PendingApprovalCard } from '@/components/dashboard/PendingApprovalCard';
 import { TeamEquipmentStats } from '@/components/dashboard/TeamEquipmentStats';
+import { ClientOnly } from '@/components/shared/ClientOnly';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { dashboardApi } from '@/lib/api/dashboard-api';
@@ -141,6 +142,7 @@ function DashboardClientComponent({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [updateCount, setUpdateCount] = useState(0);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(undefined);
 
   const userRole = session?.user?.role?.toLowerCase() || 'test_engineer';
 
@@ -155,8 +157,8 @@ function DashboardClientComponent({
     },
     isLoading: summaryLoading,
   } = useQuery({
-    queryKey: ['dashboard-summary', userRole],
-    queryFn: () => dashboardApi.getSummary(),
+    queryKey: ['dashboard-summary', userRole, selectedTeamId],
+    queryFn: () => dashboardApi.getSummary(selectedTeamId),
     initialData: initialSummary,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
@@ -164,8 +166,8 @@ function DashboardClientComponent({
 
   const { data: equipmentByTeam = initialEquipmentByTeam || [], isLoading: teamLoading } = useQuery(
     {
-      queryKey: ['equipment-by-team', userRole],
-      queryFn: () => dashboardApi.getEquipmentByTeam(),
+      queryKey: ['equipment-by-team', userRole, selectedTeamId],
+      queryFn: () => dashboardApi.getEquipmentByTeam(selectedTeamId),
       initialData: initialEquipmentByTeam,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
@@ -176,8 +178,8 @@ function DashboardClientComponent({
     data: overdueCalibrations = initialOverdueCalibrations || [],
     isLoading: calibrationLoading,
   } = useQuery({
-    queryKey: ['overdue-calibrations', userRole],
-    queryFn: () => dashboardApi.getOverdueCalibrations(),
+    queryKey: ['overdue-calibrations', userRole, selectedTeamId],
+    queryFn: () => dashboardApi.getOverdueCalibrations(selectedTeamId),
     initialData: initialOverdueCalibrations,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
@@ -187,8 +189,8 @@ function DashboardClientComponent({
     data: upcomingCalibrations = initialUpcomingCalibrations || [],
     isLoading: upcomingLoading,
   } = useQuery({
-    queryKey: ['upcoming-calibrations', userRole],
-    queryFn: () => dashboardApi.getUpcomingCalibrations(30),
+    queryKey: ['upcoming-calibrations', userRole, selectedTeamId],
+    queryFn: () => dashboardApi.getUpcomingCalibrations(30, selectedTeamId),
     initialData: initialUpcomingCalibrations,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
@@ -196,8 +198,8 @@ function DashboardClientComponent({
 
   const { data: overdueCheckouts = initialOverdueCheckouts || [], isLoading: checkoutsLoading } =
     useQuery({
-      queryKey: ['overdue-checkouts', userRole],
-      queryFn: () => dashboardApi.getOverdueCheckouts(),
+      queryKey: ['overdue-checkouts', userRole, selectedTeamId],
+      queryFn: () => dashboardApi.getOverdueCheckouts(selectedTeamId),
       initialData: initialOverdueCheckouts,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
@@ -216,8 +218,8 @@ function DashboardClientComponent({
     data: equipmentStatusStats = initialEquipmentStatusStats || {},
     isLoading: statsLoading,
   } = useQuery({
-    queryKey: ['equipment-status-stats', userRole],
-    queryFn: () => dashboardApi.getEquipmentStatusStats(),
+    queryKey: ['equipment-status-stats', userRole, selectedTeamId],
+    queryFn: () => dashboardApi.getEquipmentStatusStats(selectedTeamId),
     initialData: initialEquipmentStatusStats,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
@@ -382,64 +384,72 @@ function DashboardClientComponent({
         <h2 id="dashboard-content-heading" className="sr-only">
           대시보드 상세 정보
         </h2>
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="w-full justify-start overflow-x-auto" aria-label="대시보드 탭">
-            {tabs.map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-              >
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {/* 개요 탭 */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <EquipmentStatusChart data={equipmentStatusStats || {}} loading={statsLoading} />
-              <CalibrationList
-                title="교정 예정 장비"
-                description="다음 30일 이내 교정 예정인 장비"
-                data={upcomingCalibrations}
-                loading={upcomingLoading}
-                type="upcoming"
-              />
-              <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
+        <ClientOnly
+          fallback={
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full max-w-md" />
+              <Skeleton className="h-64 w-full" />
             </div>
+          }
+        >
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList className="w-full justify-start overflow-x-auto" aria-label="대시보드 탭">
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-            <RecentActivities data={recentActivities} loading={activitiesLoading} />
-          </TabsContent>
+            {/* 개요 탭 */}
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <EquipmentStatusChart data={equipmentStatusStats || {}} loading={statsLoading} />
+                <CalibrationList
+                  title="교정 예정 장비"
+                  description="다음 30일 이내 교정 예정인 장비"
+                  data={upcomingCalibrations}
+                  loading={upcomingLoading}
+                  type="upcoming"
+                />
+                <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
+              </div>
 
-          {/* 장비 탭 */}
-          <TabsContent value="equipment" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  {userRole === 'test_engineer' ? '내 장비 현황' : '장비 현황'}
-                </CardTitle>
-                <CardDescription>
-                  {userRole === 'test_engineer'
-                    ? '본인이 관리하는 장비의 상태별 통계'
-                    : '장비 상태별 통계 및 팀별 현황'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="col-span-1 md:col-span-2">
-                    <EquipmentStatusChart
-                      data={equipmentStatusStats || {}}
-                      loading={statsLoading}
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-3">
-                      {userRole === 'test_engineer' ? '팀 장비 현황' : '팀별 장비 현황'}
-                    </h3>
-                    <div className="space-y-2">
-                      {teamLoading
-                        ? Array(4)
+              <RecentActivities data={recentActivities} loading={activitiesLoading} />
+            </TabsContent>
+
+            {/* 장비 탭 */}
+            <TabsContent value="equipment" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    {userRole === 'test_engineer' ? '내 장비 현황' : '장비 현황'}
+                  </CardTitle>
+                  <CardDescription>
+                    {userRole === 'test_engineer'
+                      ? '본인이 관리하는 장비의 상태별 통계'
+                      : '장비 상태별 통계 및 팀별 현황'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="col-span-1 md:col-span-2">
+                      <EquipmentStatusChart
+                        data={equipmentStatusStats || {}}
+                        loading={statsLoading}
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-3">
+                        {userRole === 'test_engineer' ? '팀 장비 현황' : '팀별 장비 현황'}
+                      </h3>
+                      <div className="space-y-2">
+                        {teamLoading ? (
+                          Array(4)
                             .fill(0)
                             .map((_, i) => (
                               <div
@@ -448,72 +458,97 @@ function DashboardClientComponent({
                                 aria-hidden="true"
                               />
                             ))
-                        : equipmentByTeam?.map((team) => (
-                            <TeamEquipmentStats key={team.id} team={team} />
-                          ))}
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setSelectedTeamId(undefined)}
+                              className={`w-full flex items-center justify-between p-2.5 bg-card rounded-lg border hover:bg-muted/50 transition-colors ${
+                                selectedTeamId === undefined ? 'bg-primary/10 border-primary' : ''
+                              }`}
+                            >
+                              <span className="font-medium text-sm">전체 팀</span>
+                              <span className="text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                                모두
+                              </span>
+                            </button>
+                            {equipmentByTeam?.map((team) => (
+                              <TeamEquipmentStats
+                                key={team.id}
+                                team={team}
+                                selected={selectedTeamId === team.id}
+                                onClick={() =>
+                                  setSelectedTeamId(
+                                    selectedTeamId === team.id ? undefined : team.id
+                                  )
+                                }
+                              />
+                            ))}
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* 교정 탭 */}
-          <TabsContent value="calibration" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CalibrationList
-                title="교정 예정 장비"
-                description="다음 30일 이내 교정 예정"
-                data={upcomingCalibrations}
-                loading={upcomingLoading}
-                type="upcoming"
-              />
-              <CalibrationList
-                title="교정 지연 장비"
-                description="교정 기한이 지난 장비"
-                data={overdueCalibrations}
-                loading={calibrationLoading}
-                type="overdue"
-              />
-            </div>
-          </TabsContent>
-
-          {/* 대여/반출 탭 (관리자용) */}
-          <TabsContent value="rental" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">반출 현황</CardTitle>
-                  <CardDescription>현재 반출 중인 장비</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <p className="text-3xl font-bold text-primary">
-                      {summary?.activeCheckouts || 0}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">건 반출 중</p>
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          {/* 승인 관리 탭 (기술책임자용) */}
-          <TabsContent value="approvals" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">승인 대기 항목</CardTitle>
-                <CardDescription>
-                  팀 내 승인이 필요한 항목들입니다. 클릭하여 상세 페이지로 이동합니다.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PendingApprovalCard />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {/* 교정 탭 */}
+            <TabsContent value="calibration" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CalibrationList
+                  title="교정 예정 장비"
+                  description="다음 30일 이내 교정 예정"
+                  data={upcomingCalibrations}
+                  loading={upcomingLoading}
+                  type="upcoming"
+                />
+                <CalibrationList
+                  title="교정 지연 장비"
+                  description="교정 기한이 지난 장비"
+                  data={overdueCalibrations}
+                  loading={calibrationLoading}
+                  type="overdue"
+                />
+              </div>
+            </TabsContent>
+
+            {/* 대여/반출 탭 (관리자용) */}
+            <TabsContent value="rental" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">반출 현황</CardTitle>
+                    <CardDescription>현재 반출 중인 장비</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8">
+                      <p className="text-3xl font-bold text-primary">
+                        {summary?.activeCheckouts || 0}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">건 반출 중</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* 승인 관리 탭 (기술책임자용) */}
+            <TabsContent value="approvals" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">승인 대기 항목</CardTitle>
+                  <CardDescription>
+                    팀 내 승인이 필요한 항목들입니다. 클릭하여 상세 페이지로 이동합니다.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PendingApprovalCard />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </ClientOnly>
       </section>
     </div>
   );

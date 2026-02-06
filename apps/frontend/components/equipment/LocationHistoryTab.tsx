@@ -199,7 +199,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                 <FormItem>
                   <FormLabel>변동 일시 *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -212,7 +212,11 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                 <FormItem>
                   <FormLabel>설치 위치 *</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: RF1 Room, 2층 시험실 등" {...field} />
+                    <Input
+                      placeholder="예: RF1 Room, 2층 시험실 등"
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -225,7 +229,11 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                 <FormItem>
                   <FormLabel>비고</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="변동 사유나 특이사항" {...field} />
+                    <Textarea
+                      placeholder="변동 사유나 특이사항"
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

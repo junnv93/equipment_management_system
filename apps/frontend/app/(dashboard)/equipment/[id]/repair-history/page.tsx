@@ -13,16 +13,21 @@ type PageProps = {
  *
  * Next.js 16 패턴:
  * - params는 Promise 타입 → await 필수
- * - Server Component에서 equipmentId 추출
+ * - searchParams로 context 전달 (부적합 페이지에서 넘어올 때)
  * - Client Component로 인터랙티브 UI 위임
  */
 export default async function RepairHistoryPage(props: PageProps) {
-  // ✅ Next.js 16: params는 Promise, await 필수
+  // ✅ Next.js 16: params와 searchParams는 Promise, await 필수
   const { id } = await props.params;
+  const searchParams = await props.searchParams;
+
+  // Query params 추출
+  const ncId = typeof searchParams.ncId === 'string' ? searchParams.ncId : undefined;
+  const autoOpen = searchParams.autoOpen === 'true';
 
   return (
     <Suspense fallback={null}>
-      <RepairHistoryClient equipmentId={id} />
+      <RepairHistoryClient equipmentId={id} initialNcId={ncId} autoOpen={autoOpen} />
     </Suspense>
   );
 }

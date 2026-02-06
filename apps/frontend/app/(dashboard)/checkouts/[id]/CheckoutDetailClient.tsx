@@ -71,10 +71,11 @@ export default function CheckoutDetailClient({
   // 다이얼로그 상태
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [showStartDialog, setShowStartDialog] = useState(false);
 
-  // 승인 mutation
+  // 승인 mutation (approverId는 백엔드에서 세션으로부터 자동 추출)
   const approveMutation = useMutation({
-    mutationFn: (approverId: string) => checkoutApi.approveCheckout(checkout.id, approverId),
+    mutationFn: () => checkoutApi.approveCheckout(checkout.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
@@ -95,12 +96,7 @@ export default function CheckoutDetailClient({
 
   // 반출 시작 mutation
   const startMutation = useMutation({
-    mutationFn: () => {
-      // start API가 없으면 직접 axios 호출
-      return fetch(`/api/checkouts/${checkout.id}/start`, { method: 'POST' }).then((res) =>
-        res.json()
-      );
-    },
+    mutationFn: () => checkoutApi.startCheckout(checkout.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
@@ -148,11 +144,9 @@ export default function CheckoutDetailClient({
     );
   };
 
-  // 승인 처리
+  // 승인 처리 (approverId는 백엔드에서 세션으로부터 자동 추출)
   const handleApprove = () => {
-    // TODO: 실제로는 현재 로그인 사용자 ID 사용
-    const approverId = '00000000-0000-0000-0000-000000000001';
-    approveMutation.mutate(approverId);
+    approveMutation.mutate();
   };
 
   // 반려 처리
@@ -164,9 +158,15 @@ export default function CheckoutDetailClient({
   // 반출 시작 처리
   const handleStart = () => {
     startMutation.mutate();
+    setShowStartDialog(false);
   };
 
   // 액션 버튼 결정
+  // ⚠️ TODO: 역할 기반 버튼 표시 구현 필요
+  // - 현재: 모든 사용자에게 반출 상태에 따라 버튼 표시
+  // - 필요: technical_manager, lab_manager만 "반출 시작", "반출 승인" 버튼 표시
+  // - 참고: Permission.START_CHECKOUT, Permission.APPROVE_CHECKOUT (role-permissions.ts)
+  // - 구현 예: useAuth().hasRole(['technical_manager', 'lab_manager'])
   const renderActions = () => {
     const buttons: React.ReactNode[] = [];
 
@@ -197,7 +197,11 @@ export default function CheckoutDetailClient({
     // 승인됨 상태 - 반출 시작 가능
     if (checkout.status === 'approved') {
       buttons.push(
-        <Button key="start" onClick={handleStart} disabled={startMutation.isPending}>
+        <Button
+          key="start"
+          onClick={() => setShowStartDialog(true)}
+          disabled={startMutation.isPending}
+        >
           <Package className="mr-2 h-4 w-4" />
           반출 시작
         </Button>
@@ -564,6 +568,26 @@ export default function CheckoutDetailClient({
           </CardContent>
         </Card>
       )}
+
+      {/* 반출 시작 확인 다이얼로그 */}
+      <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>반출 시작</DialogTitle>
+            <DialogDescription>
+              반출을 시작하시겠습니까? 장비 상태가 &apos;반출 중&apos;으로 변경됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowStartDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={handleStart} disabled={startMutation.isPending}>
+              {startMutation.isPending ? '처리 중...' : '확인'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 반려 다이얼로그 */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>

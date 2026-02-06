@@ -50,6 +50,7 @@ import equipmentApi, {
 } from '@/lib/api/equipment-api';
 import { useToast } from '@/components/ui/use-toast';
 import { ApiError } from '@/lib/errors/equipment-errors';
+import { useManagementNumberCheck } from '@/hooks/use-management-number-check';
 
 // 동적 Zod 스키마 생성 함수 (향후 폼 검증 강화용으로 유지)
 const _createDynamicSchema = (
@@ -277,6 +278,20 @@ export function EquipmentForm({
   const [usagePeriodEnd, setUsagePeriodEnd] = useState('');
   const [calibrationCertificateFile, setCalibrationCertificateFile] = useState<File | null>(null);
 
+  /**
+   * ★ Best Practice: 관리번호 중복 검사 훅
+   * - 디바운스 적용 (300ms)으로 과도한 API 호출 방지
+   * - React Query 캐싱으로 동일 관리번호 재검사 시 캐시 활용
+   * - 수정 모드에서는 현재 장비 ID를 제외하고 검사
+   */
+  const {
+    checkManagementNumber,
+    isChecking: isCheckingManagementNumber,
+    checkResult: managementNumberCheckResult,
+  } = useManagementNumberCheck({
+    excludeId: isEdit ? initialData?.uuid : undefined,
+  });
+
   // 기본 스키마로 폼 초기화
   const form = useForm<FormValues>({
     defaultValues: {
@@ -332,6 +347,8 @@ export function EquipmentForm({
       calibrationResult: initialData?.calibrationResult || '',
       correctionFactor: initialData?.correctionFactor || '',
       externalIdentifier: initialData?.externalIdentifier || '',
+      classification: initialData?.classification,
+      managementSerialNumberStr: initialData?.managementSerialNumberStr || '',
     },
   });
 
@@ -698,11 +715,20 @@ export function EquipmentForm({
           }
         : undefined;
 
-    await onSubmit(
-      processedData,
-      uploadedFiles.length > 0 ? uploadedFiles : undefined,
-      pendingHistory
-    );
+    // Collect all files to upload
+    const allFiles: UploadedFile[] = [...uploadedFiles];
+
+    // Add calibration certificate if in temporary mode
+    if (isTemporary && calibrationCertificateFile) {
+      allFiles.push({
+        file: calibrationCertificateFile,
+        name: calibrationCertificateFile.name,
+        size: calibrationCertificateFile.size,
+        type: calibrationCertificateFile.type,
+      });
+    }
+
+    await onSubmit(processedData, allFiles.length > 0 ? allFiles : undefined, pendingHistory);
   };
 
   // 확인 모달에서 제출
@@ -744,6 +770,11 @@ export function EquipmentForm({
           isEdit={isEdit}
           selectedSite={selectedSite}
           onSiteChange={handleSiteChange}
+          userRole={userRole}
+          userTeamId={(user as { teamId?: string })?.teamId}
+          onManagementNumberChange={checkManagementNumber}
+          managementNumberCheckResult={managementNumberCheckResult}
+          isCheckingManagementNumber={isCheckingManagementNumber}
         />
 
         {/* 섹션 2: 교정 정보 */}
@@ -880,10 +911,20 @@ export function EquipmentForm({
                   type="file"
                   id="calibrationCertificate"
                   accept=".pdf"
-                  onChange={(e) => setCalibrationCertificateFile(e.target.files?.[0] || null)}
                   required
                   className="cursor-pointer"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCalibrationCertificateFile(file);
+                    }
+                  }}
                 />
+                {calibrationCertificateFile && (
+                  <p className="text-xs text-muted-foreground">
+                    선택된 파일: {calibrationCertificateFile.name}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   PDF 파일만 업로드 가능합니다. (필수)
                 </p>

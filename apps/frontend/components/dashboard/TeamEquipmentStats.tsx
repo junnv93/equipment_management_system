@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
 // ✅ 직접 import (barrel import 제거)
-import dashboardApi from "@/lib/api/dashboard-api";
-import type { EquipmentByTeam } from "@/lib/api/dashboard-api";
-import { AlertTriangle } from "lucide-react";
+import dashboardApi from '@/lib/api/dashboard-api';
+import type { EquipmentByTeam } from '@/lib/api/dashboard-api';
+import { AlertTriangle } from 'lucide-react';
 
 interface TeamStats {
   id: string;
@@ -35,14 +35,14 @@ export default function TeamEquipmentStats() {
           // 아래 값들은 API 응답에 없으면 계산된 값 또는 기본값 사용
           availableEquipment: Math.floor(team.count * 0.8),
           loanedEquipment: Math.floor(team.count * 0.15),
-          calibrationDue: Math.floor(team.count * 0.05)
+          calibrationDue: Math.floor(team.count * 0.05),
         }));
 
         setTeamStats(transformedData);
         setError(null);
       } catch (err) {
-        console.error("팀별 장비 통계 데이터를 불러오는 중 오류 발생:", err);
-        setError("데이터를 불러올 수 없습니다.");
+        console.error('팀별 장비 통계 데이터를 불러오는 중 오류 발생:', err);
+        setError('데이터를 불러올 수 없습니다.');
       } finally {
         setLoading(false);
       }
@@ -112,9 +112,7 @@ export default function TeamEquipmentStats() {
 
 function TeamCard({ team }: { team: TeamStats }) {
   // 가용률 계산
-  const availabilityRate = Math.round(
-    (team.availableEquipment / team.totalEquipment) * 100
-  );
+  const availabilityRate = Math.round((team.availableEquipment / team.totalEquipment) * 100);
 
   return (
     <Card>
@@ -124,19 +122,13 @@ function TeamCard({ team }: { team: TeamStats }) {
       <CardContent>
         <div className="grid grid-cols-2 gap-2">
           <StatItem label="총 장비" value={team.totalEquipment} />
-          <StatItem
-            label="사용 가능"
-            value={team.availableEquipment}
-            highlight
-          />
+          <StatItem label="사용 가능" value={team.availableEquipment} highlight />
           <StatItem label="대여 중" value={team.loanedEquipment} />
           <StatItem label="교정 예정" value={team.calibrationDue} />
         </div>
 
         <div className="mt-4">
-          <p className="text-xs text-muted-foreground mb-1">
-            가용률: {availabilityRate}%
-          </p>
+          <p className="text-xs text-muted-foreground mb-1">가용률: {availabilityRate}%</p>
           <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-green-500 rounded-full"
@@ -161,17 +153,36 @@ function StatItem({
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-lg font-semibold ${highlight ? "text-green-600" : ""}`}>
-        {value}
-      </p>
+      <p className={`text-lg font-semibold ${highlight ? 'text-green-600' : ''}`}>{value}</p>
     </div>
   );
 }
 
 // Named export for simple inline usage in dashboard
-export function TeamEquipmentStatsItem({ team }: { team: EquipmentByTeam }) {
+export function TeamEquipmentStatsItem({
+  team,
+  selected = false,
+  onClick,
+}: {
+  team: EquipmentByTeam;
+  selected?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <div className="flex items-center justify-between p-2.5 bg-card rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
+    <div
+      className={`flex items-center justify-between p-2.5 bg-card rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer ${
+        selected ? 'bg-primary/10 border-primary' : ''
+      }`}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+    >
       <span className="font-medium text-sm">{team.name}</span>
       <span className="text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded">
         {team.count}대
@@ -181,4 +192,4 @@ export function TeamEquipmentStatsItem({ team }: { team: EquipmentByTeam }) {
 }
 
 // Re-export with alias for backwards compatibility
-export { TeamEquipmentStatsItem as TeamEquipmentStats }; 
+export { TeamEquipmentStatsItem as TeamEquipmentStats };

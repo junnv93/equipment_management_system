@@ -43,7 +43,11 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
-import type { IncidentHistoryItem, CreateIncidentHistoryInput, IncidentType } from '@/lib/api/equipment-api';
+import type {
+  IncidentHistoryItem,
+  CreateIncidentHistoryInput,
+  IncidentType,
+} from '@/lib/api/equipment-api';
 
 const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
   damage: '손상',
@@ -139,9 +143,7 @@ export function IncidentHistorySection({
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>손상/수리 내역 추가</DialogTitle>
-                <DialogDescription>
-                  손상, 오작동, 변경, 수리 정보를 입력하세요.
-                </DialogDescription>
+                <DialogDescription>손상, 오작동, 변경, 수리 정보를 입력하세요.</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -152,7 +154,7 @@ export function IncidentHistorySection({
                       <FormItem>
                         <FormLabel>발생 일시 *</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -198,6 +200,7 @@ export function IncidentHistorySection({
                             placeholder="예: 전원부 손상으로 인한 전원 보드 교체 필요"
                             className="min-h-[100px]"
                             {...field}
+                            value={field.value || ''}
                           />
                         </FormControl>
                         <FormMessage />
@@ -205,11 +208,7 @@ export function IncidentHistorySection({
                     )}
                   />
                   <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsDialogOpen(false)}
-                    >
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       취소
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
@@ -225,9 +224,7 @@ export function IncidentHistorySection({
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            손상/수리 내역이 없습니다.
-          </div>
+          <div className="text-center text-muted-foreground py-8">손상/수리 내역이 없습니다.</div>
         ) : (
           <Table>
             <TableHeader>
@@ -242,20 +239,13 @@ export function IncidentHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
+                  <TableCell>{dayjs(item.occurredAt).format('YYYY-MM-DD')}</TableCell>
                   <TableCell>
-                    {dayjs(item.occurredAt).format('YYYY-MM-DD')}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={INCIDENT_TYPE_COLORS[item.incidentType]}
-                    >
+                    <Badge variant="outline" className={INCIDENT_TYPE_COLORS[item.incidentType]}>
                       {INCIDENT_TYPE_LABELS[item.incidentType]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-[250px] truncate">
-                    {item.content}
-                  </TableCell>
+                  <TableCell className="max-w-[250px] truncate">{item.content}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.reportedByName || '-'}
                   </TableCell>

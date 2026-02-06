@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { EquipmentHeader } from './EquipmentHeader';
 import { EquipmentTabs } from './EquipmentTabs';
@@ -10,9 +11,17 @@ import { AlertTriangle } from 'lucide-react';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { useQuery } from '@tanstack/react-query';
 import nonConformancesApi from '@/lib/api/non-conformances-api';
+import disposalApi from '@/lib/api/disposal-api';
+import { DisposalProgressCard } from './disposal/DisposalProgressCard';
+import { DisposedBanner } from './disposal/DisposedBanner';
+import { DisposalDetailDialog } from './disposal/DisposalDetailDialog';
+import type { DisposalRequest } from '@equipment-management/schemas';
+import { useAuth } from '@/hooks/use-auth';
+import { queryKeys } from '@/lib/api/query-config';
 
 interface EquipmentDetailClientProps {
   equipment: Equipment;
+  disposalRequest?: DisposalRequest | null;
 }
 
 /**
@@ -32,27 +41,60 @@ interface EquipmentDetailClientProps {
  * - useQuery의 initialData로 hydration 최적화
  * - 부적합 등록 등 상태 변경 시 캐시 무효화로 자동 갱신
  */
-export function EquipmentDetailClient({ equipment: initialEquipment }: EquipmentDetailClientProps) {
+export function EquipmentDetailClient({
+  equipment: initialEquipment,
+  disposalRequest: initialDisposalRequest,
+}: EquipmentDetailClientProps) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'basic';
+  const { user } = useAuth();
 
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장
   const equipmentId = String(initialEquipment.id);
 
+  // 폐기 관련 다이얼로그 상태
+  const [disposalDetailOpen, setDisposalDetailOpen] = useState(false);
+
   // ✅ 장비 데이터를 React Query로 관리하여 캐시 무효화 시 자동 갱신
   // 캐시 무효화 후 즉시 refetch하여 상태 변경을 반영
+  //
+  // ⚠️ Smart refetch 전략:
+  // - Server Component provides reliable initial data
+  // - refetchOnMount: 1시간 이상 오래된 캐시만 refetch (CalibrationOverdueScheduler 간격과 동기화)
+  // - 이유: 새 페이지 컨텍스트에서 열 때 stale 데이터 방지
+  // - 효과: 상세/목록 페이지 간 일관성 보장
   const { data: equipment } = useQuery({
-    queryKey: ['equipment', equipmentId],
+    queryKey: queryKeys.equipment.detail(equipmentId), // ✅ 표준화된 키
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     initialData: initialEquipment, // Server Component에서 전달받은 초기 데이터
     staleTime: 0, // 캐시 무효화 시 즉시 stale 처리하여 refetch
-    refetchOnMount: true, // 컴포넌트 마운트 시 항상 refetch
+    refetchOnMount: (query) => {
+      // ✅ 스마트 refetch: 캐시가 1시간 이상 오래되면 refetch
+      // CalibrationOverdueScheduler 간격(1시간)과 동기화
+      const dataUpdatedAt = query.state.dataUpdatedAt;
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+      return dataUpdatedAt < oneHourAgo;
+    },
     enabled: !!equipmentId,
+  });
+
+  // ✅ 폐기 요청 데이터를 React Query로 관리하여 실시간 동기화
+  // - initialData로 Server Component에서 받은 데이터 사용 (hydration 최적화)
+  // - staleTime: 0 으로 캐시 무효화 시 즉시 refetch
+  // - enabled: 장비가 pending_disposal 또는 disposed 상태일 때만 활성화
+  const { data: disposalRequest } = useQuery({
+    queryKey: queryKeys.equipment.currentDisposalRequest(equipmentId),
+    queryFn: () => disposalApi.getCurrentDisposalRequest(equipmentId),
+    initialData: initialDisposalRequest,
+    staleTime: 0,
+    enabled:
+      !!equipmentId &&
+      (equipment?.status === 'pending_disposal' || equipment?.status === 'disposed'),
   });
 
   // 부적합 기록 조회
   const { data: nonConformances } = useQuery({
-    queryKey: ['non-conformances', 'equipment', equipmentId],
+    queryKey: queryKeys.equipment.nonConformances(equipmentId), // ✅ 표준화된 키
     queryFn: () => nonConformancesApi.getEquipmentNonConformances(equipmentId),
     enabled: !!equipmentId,
   });
@@ -60,13 +102,42 @@ export function EquipmentDetailClient({ equipment: initialEquipment }: Equipment
   // 열린 부적합 확인
   const openNonConformances = nonConformances?.filter((nc) => nc.status !== 'closed') || [];
 
+  // 폐기 진행 단계 계산
+  // pending: step 1 (요청) is current
+  // reviewed: step 2 (검토) is complete, step 3 (승인) is current
+  // approved: step 3 (승인) is complete
+  const currentStep = disposalRequest
+    ? disposalRequest.reviewStatus === 'pending'
+      ? 1
+      : disposalRequest.reviewStatus === 'reviewed'
+        ? 3
+        : 4
+    : 0;
+
   return (
     <div className="min-h-screen bg-ul-gray-bg dark:bg-gray-950">
       {/* 헤더 */}
-      <EquipmentHeader equipment={equipment} />
+      <EquipmentHeader equipment={equipment} disposalRequest={disposalRequest} />
 
       {/* 컨텐츠 영역 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* 폐기 진행 중 배너 */}
+        {equipment.status === 'pending_disposal' && disposalRequest && (
+          <DisposalProgressCard
+            disposalRequest={disposalRequest}
+            currentStep={currentStep}
+            onViewDetails={() => setDisposalDetailOpen(true)}
+            onCancel={() => {
+              // TODO: Implement cancel confirmation dialog
+            }}
+            canCancel={disposalRequest.requestedBy === user?.id}
+          />
+        )}
+
+        {/* 폐기 완료 배너 */}
+        {equipment.status === 'disposed' && disposalRequest && (
+          <DisposedBanner disposalRequest={disposalRequest} />
+        )}
         {/* 공용장비 안내 배너 */}
         {equipment.isShared && (
           <Alert
@@ -115,6 +186,16 @@ export function EquipmentDetailClient({ equipment: initialEquipment }: Equipment
         {/* 탭 내비게이션 및 컨텐츠 */}
         <EquipmentTabs equipment={equipment} activeTab={activeTab} />
       </div>
+
+      {/* 폐기 상세 다이얼로그 */}
+      {disposalRequest && (
+        <DisposalDetailDialog
+          open={disposalDetailOpen}
+          onOpenChange={setDisposalDetailOpen}
+          disposalRequest={disposalRequest}
+          equipmentName={equipment.name}
+        />
+      )}
     </div>
   );
 }

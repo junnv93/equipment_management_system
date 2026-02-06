@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Edit,
@@ -17,7 +17,6 @@ import {
   Calendar,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
@@ -26,9 +25,17 @@ import { useAuth } from '@/hooks/use-auth';
 import { useEquipmentWithInitialData } from '@/hooks/use-equipment';
 import { cn } from '@/lib/utils';
 import { shouldDisplayCalibrationStatus } from '@/lib/constants/equipment-status-styles';
+import { DisposalButton } from './disposal/DisposalButton';
+import { DisposalRequestDialog } from './disposal/DisposalRequestDialog';
+import { DisposalReviewDialog } from './disposal/DisposalReviewDialog';
+import { DisposalApprovalDialog } from './disposal/DisposalApprovalDialog';
+import { DisposalCancelDialog } from './disposal/DisposalCancelDialog';
+import { useDisposalPermissions } from '@/hooks/use-disposal-permissions';
+import type { DisposalRequest } from '@equipment-management/schemas';
 
 interface EquipmentHeaderProps {
   equipment: Equipment;
+  disposalRequest?: DisposalRequest | null;
 }
 
 /**
@@ -44,9 +51,18 @@ interface EquipmentHeaderProps {
  * - Server Component에서 받은 초기 데이터를 initialData로 사용
  * - mutation 후 React Query 캐시가 갱신되면 즉시 UI 반영 (예: 부적합 등록)
  */
-export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeaderProps) {
-  const router = useRouter();
+export function EquipmentHeader({
+  equipment: initialEquipment,
+  disposalRequest,
+}: EquipmentHeaderProps) {
   const { hasRole } = useAuth();
+
+  // 폐기 관련 다이얼로그 상태
+  const [disposalRequestOpen, setDisposalRequestOpen] = useState(false);
+  const [disposalReviewOpen, setDisposalReviewOpen] = useState(false);
+  const [disposalApprovalOpen, setDisposalApprovalOpen] = useState(false);
+  const [disposalCancelOpen, setDisposalCancelOpen] = useState(false);
+  const [_disposalDetailOpen, _setDisposalDetailOpen] = useState(false);
 
   // ✅ SSOT: Client-side 캐시 구독 훅 사용
   // Server Component에서 받은 초기 데이터를 initialData로 사용하고,
@@ -74,6 +90,9 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
     hasRole(['lab_manager', 'system_admin']) &&
     !equipment.isShared &&
     (equipment.approvalStatus === 'pending_approval' || equipment.approvalStatus === 'rejected');
+
+  // 폐기 권한 확인
+  const disposalPermissions = useDisposalPermissions(equipment, disposalRequest);
   /**
    * 반출 가능 상태 확인
    *
@@ -90,11 +109,16 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
    *
    * 기본 상태(가용성)와 별도로 교정 상태를 계산하여 복합 상태 표현 가능
    * - 폐기(retired) 장비는 교정 상태 표시 안함
-   * - 부적합, 여분 등 다른 상태에서도 교정 상태 표시 가능
+   * - 부적합(non_conforming) 상태에서도 교정기한 초과인 경우 일수 배지 표시
    */
   const calibrationStatus = useMemo(() => {
+    // 특수 케이스: non_conforming 상태에서 교정기한 초과인 경우
     // 교정 상태 표시가 의미 없는 장비 상태 체크 (SSOT: equipment-status-styles.ts)
-    if (!shouldDisplayCalibrationStatus(equipment.status)) {
+    // 단, non_conforming 상태에서 교정기한 초과인 경우는 일수 배지 표시
+    const isNonConforming = equipment.status === 'non_conforming';
+    const shouldSkipCalibration = !shouldDisplayCalibrationStatus(equipment.status);
+
+    if (shouldSkipCalibration && !isNonConforming) {
       return null;
     }
 
@@ -120,14 +144,18 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
 
     if (diffDays < 0) {
       // 교정 기한 초과
+      const overdueDays = Math.abs(diffDays);
       return {
         type: 'overdue' as const,
-        days: Math.abs(diffDays),
-        label: `교정 기한 초과 (${Math.abs(diffDays)}일)`,
+        days: overdueDays,
+        label: `D+${overdueDays} (${overdueDays}일 초과)`,
         color: 'text-red-100',
         bg: 'bg-red-600/90 border-red-400',
         icon: AlertCircle,
       };
+    } else if (isNonConforming) {
+      // non_conforming 상태이지만 교정기한이 초과되지 않은 경우 - 교정 상태 숨김
+      return null;
     } else if (diffDays <= 30) {
       // 30일 이내 교정 만료
       return {
@@ -155,14 +183,15 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
   /**
    * 기본 상태 설정 (가용성 기준)
    *
-   * calibration_scheduled, calibration_overdue는 별도 배지로 표시하므로
-   * 기본 상태로는 available로 처리
+   * calibration_scheduled는 별도 배지로 표시하므로 기본 상태는 available
+   * calibration_overdue는 non_conforming으로 표시 (교정기한 초과 = 부적합)
    */
   const getStatusConfig = (status: string) => {
     // calibration_scheduled는 available로 처리 (교정 상태는 별도 배지)
     const normalizedStatus = status === 'calibration_scheduled' ? 'available' : status;
-    // calibration_overdue도 available로 처리 (교정 상태는 별도 배지)
-    const finalStatus = normalizedStatus === 'calibration_overdue' ? 'available' : normalizedStatus;
+    // calibration_overdue는 non_conforming으로 처리 (부적합 + 교정 일수 배지)
+    const finalStatus =
+      normalizedStatus === 'calibration_overdue' ? 'non_conforming' : normalizedStatus;
 
     const configs: Record<
       string,
@@ -209,6 +238,18 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
         label: '폐기',
         icon: Ban,
       },
+      pending_disposal: {
+        color: 'text-orange-700 dark:text-orange-300',
+        bg: 'bg-orange-100 dark:bg-orange-900/30 border-orange-500',
+        label: '폐기 진행 중',
+        icon: AlertCircle,
+      },
+      disposed: {
+        color: 'text-gray-600 dark:text-gray-400',
+        bg: 'bg-gray-200 dark:bg-gray-800/50 border-gray-500',
+        label: '폐기 완료',
+        icon: Ban,
+      },
     };
 
     return (
@@ -226,17 +267,18 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
   return (
     <div className="bg-gradient-to-r from-ul-midnight via-ul-midnight-dark to-ul-midnight text-white shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 뒤로가기 버튼 */}
+        {/* 목록으로 버튼 */}
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="text-white/80 hover:text-white hover:bg-white/10"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            목록으로
-          </Button>
+          <Link href="/equipment">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white/80 hover:text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              목록으로
+            </Button>
+          </Link>
         </div>
 
         <div className="space-y-6">
@@ -300,6 +342,21 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
                     </Button>
                   </Link>
                 )}
+
+                {/* 폐기 버튼 */}
+                {disposalPermissions.showDisposalButton && (
+                  <DisposalButton
+                    equipment={equipment}
+                    disposalRequest={disposalRequest || null}
+                    onRequestOpen={() => setDisposalRequestOpen(true)}
+                    onReviewOpen={() => setDisposalReviewOpen(true)}
+                    onApproveOpen={() => setDisposalApprovalOpen(true)}
+                    onCancelOpen={() => setDisposalCancelOpen(true)}
+                    onDetailOpen={() => _setDisposalDetailOpen(true)}
+                    permissions={disposalPermissions}
+                  />
+                )}
+
                 {canDelete && (
                   <Button
                     variant="outline"
@@ -361,6 +418,41 @@ export function EquipmentHeader({ equipment: initialEquipment }: EquipmentHeader
           {/* 운영책임자 정보 - 나중에 구현 */}
         </div>
       </div>
+
+      {/* 폐기 관련 다이얼로그 */}
+      <DisposalRequestDialog
+        open={disposalRequestOpen}
+        onOpenChange={setDisposalRequestOpen}
+        equipmentId={equipmentId}
+        equipmentName={equipment.name}
+      />
+
+      <DisposalCancelDialog
+        open={disposalCancelOpen}
+        onOpenChange={setDisposalCancelOpen}
+        equipmentId={equipmentId}
+        equipmentName={equipment.name}
+      />
+
+      {disposalRequest && (
+        <>
+          <DisposalReviewDialog
+            open={disposalReviewOpen}
+            onOpenChange={setDisposalReviewOpen}
+            equipmentId={equipmentId}
+            equipment={equipment}
+            disposalRequest={disposalRequest}
+          />
+
+          <DisposalApprovalDialog
+            open={disposalApprovalOpen}
+            onOpenChange={setDisposalApprovalOpen}
+            equipmentId={equipmentId}
+            equipment={equipment}
+            disposalRequest={disposalRequest}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -1,103 +1,102 @@
-"use client"
+'use client';
 
-import { useCallback, useMemo, memo } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts"
-import { Skeleton } from "@/components/ui/skeleton"
+import { useCallback, useMemo, memo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
 
 // 상태별 색상 정의 (UL-QP-18 equipment status enum 기준)
 const STATUS_COLORS: Record<string, string> = {
-  available: "#16a34a", // 사용 가능 - 녹색
-  in_use: "#2563eb",    // 사용 중 - 파란색
-  checked_out: "#f59e0b", // 반출 중 - 주황색
-  calibration_scheduled: "#8b5cf6", // 교정 예정 - 보라색
-  calibration_overdue: "#dc2626", // 교정 기한 초과 - 빨강
-  non_conforming: "#ef4444", // 부적합 - 진한 빨강
-  spare: "#94a3b8", // 여분 - 회색
-  retired: "#64748b", // 폐기 - 진한 회색
-}
-
-// 상태 한글 라벨 (UL-QP-18 기준)
-const STATUS_LABELS: Record<string, string> = {
-  available: "사용가능",
-  in_use: "사용중",
-  checked_out: "반출중",
-  calibration_scheduled: "교정예정",
-  calibration_overdue: "교정지연",
-  non_conforming: "부적합",
-  spare: "여분",
-  retired: "폐기",
-}
+  available: '#16a34a', // 사용 가능 - 녹색
+  in_use: '#2563eb', // 사용 중 - 파란색
+  checked_out: '#f59e0b', // 반출 중 - 주황색
+  calibration_scheduled: '#8b5cf6', // 교정 예정 - 보라색
+  calibration_overdue: '#dc2626', // 교정 기한 초과 - 빨강
+  non_conforming: '#ef4444', // 부적합 - 진한 빨강
+  spare: '#94a3b8', // 여분 - 회색
+  retired: '#64748b', // 폐기 - 진한 회색
+  pending_disposal: '#f59e0b', // 폐기대기 - 주황색
+  disposed: '#64748b', // 폐기완료 - 진한 회색
+  temporary: '#94a3b8', // 임시등록 - 회색
+  inactive: '#94a3b8', // 비활성 - 회색
+};
 
 interface EquipmentStatusChartProps {
-  data: Record<string, number>
-  loading?: boolean
+  data: Record<string, number>;
+  loading?: boolean;
 }
 
-export const EquipmentStatusChart = memo(function EquipmentStatusChart({ 
-  data, 
-  loading = false 
+export const EquipmentStatusChart = memo(function EquipmentStatusChart({
+  data,
+  loading = false,
 }: EquipmentStatusChartProps) {
   // 데이터 가공 - useMemo로 최적화
   const { chartData, totalEquipment } = useMemo(() => {
     const formattedData = Object.entries(data).map(([status, count]) => ({
-      name: STATUS_LABELS[status] || status,
+      name: EQUIPMENT_STATUS_LABELS[status as keyof typeof EQUIPMENT_STATUS_LABELS] || status,
       value: count,
-      color: STATUS_COLORS[status] || "#e5e7eb", // 기본 색상
-      key: status
+      color: STATUS_COLORS[status] || '#e5e7eb', // 기본 색상
+      key: status,
     }));
-    
+
     const total = formattedData.reduce((sum, item) => sum + item.value, 0);
-    
+
     return {
       chartData: formattedData,
-      totalEquipment: total
+      totalEquipment: total,
     };
   }, [data]);
 
   // 파이 차트 라벨 렌더링 함수 - 퍼센트만 표시 (오버플로우 방지)
-  const renderCustomizedLabel = useCallback(({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent
-  }: {
-    cx: number;
-    cy: number;
-    midAngle: number;
-    innerRadius: number;
-    outerRadius: number;
-    percent: number;
-  }) => {
-    // 5% 이하의 작은 섹션은 라벨 생략
-    if (percent < 0.05) return null;
+  const renderCustomizedLabel = useCallback(
+    ({
+      cx,
+      cy,
+      midAngle,
+      innerRadius,
+      outerRadius,
+      percent,
+    }: {
+      cx: number;
+      cy: number;
+      midAngle: number;
+      innerRadius: number;
+      outerRadius: number;
+      percent: number;
+    }) => {
+      // 5% 이하의 작은 섹션은 라벨 생략
+      if (percent < 0.05) return null;
 
-    const RADIAN = Math.PI / 180
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
-    const x = cx + radius * Math.cos(-midAngle * RADIAN)
-    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+      const RADIAN = Math.PI / 180;
+      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+      const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={14}
-        fontWeight="600"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    )
-  }, []);
+      return (
+        <text
+          x={x}
+          y={y}
+          fill="white"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={14}
+          fontWeight="600"
+        >
+          {`${(percent * 100).toFixed(0)}%`}
+        </text>
+      );
+    },
+    []
+  );
 
   // Tooltip formatter 함수도 useCallback으로 최적화
-  const tooltipFormatter = useCallback((value: number) => {
-    return [`${value}대 (${((value / totalEquipment) * 100).toFixed(1)}%)`, ""]
-  }, [totalEquipment]);
+  const tooltipFormatter = useCallback(
+    (value: number) => {
+      return [`${value}대 (${((value / totalEquipment) * 100).toFixed(1)}%)`, ''];
+    },
+    [totalEquipment]
+  );
 
   return (
     <Card>
@@ -148,22 +147,14 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
             {/* 커스텀 범례 - 그리드 레이아웃으로 깔끔하게 정렬 */}
             <div className="grid grid-cols-2 gap-3 px-4">
               {chartData.map((entry) => (
-                <div
-                  key={entry.key}
-                  className="flex items-center gap-2 text-sm"
-                  role="listitem"
-                >
+                <div key={entry.key} className="flex items-center gap-2 text-sm" role="listitem">
                   <div
                     className="w-3 h-3 rounded-sm shrink-0"
                     style={{ backgroundColor: entry.color }}
                     aria-hidden="true"
                   />
-                  <span className="truncate text-foreground font-medium">
-                    {entry.name}
-                  </span>
-                  <span className="text-muted-foreground ml-auto shrink-0">
-                    {entry.value}
-                  </span>
+                  <span className="truncate text-foreground font-medium">{entry.name}</span>
+                  <span className="text-muted-foreground ml-auto shrink-0">{entry.value}</span>
                 </div>
               ))}
             </div>
@@ -171,12 +162,13 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
             {/* 총 장비 수 */}
             <div className="text-center text-sm border-t pt-4">
               <p className="text-muted-foreground">
-                총 <span className="font-semibold text-foreground text-lg">{totalEquipment}</span>대의 장비
+                총 <span className="font-semibold text-foreground text-lg">{totalEquipment}</span>
+                대의 장비
               </p>
             </div>
           </div>
         )}
       </CardContent>
     </Card>
-  )
-}) 
+  );
+});

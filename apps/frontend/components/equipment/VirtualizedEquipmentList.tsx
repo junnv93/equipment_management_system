@@ -4,13 +4,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { List, type RowComponentProps } from 'react-window';
 import { useInfiniteLoader } from 'react-window-infinite-loader';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import dayjs from 'dayjs';
 import { Equipment } from '@/lib/api/equipment-api';
@@ -33,12 +27,11 @@ interface VirtualizedEquipmentListProps {
 const EquipmentRow = memo(
   ({ equipment, onClick }: { equipment: Equipment; onClick?: (item: Equipment) => void }) => {
     // 상태에 따른 뱃지 스타일 (SSOT: equipment-status-styles.ts)
-    const getStatusBadge = (status: string) => {
-      const style = getEquipmentStatusStyle(status);
+    // 실시간 교정기한 초과 체크 포함
+    const getStatusBadge = (status: string, nextCalibrationDate?: string | Date | null) => {
+      const style = getEquipmentStatusStyle(status, nextCalibrationDate);
       return (
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${style.className}`}
-        >
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${style.className}`}>
           {style.label}
         </span>
       );
@@ -63,9 +56,13 @@ const EquipmentRow = memo(
         <TableCell className="font-medium">{equipment.managementNumber}</TableCell>
         <TableCell className="max-w-[150px] sm:max-w-none truncate">{equipment.name}</TableCell>
         <TableCell className="hidden sm:table-cell">{equipment.modelName || '-'}</TableCell>
-        <TableCell>{getStatusBadge(equipment.status || 'available')}</TableCell>
+        <TableCell>
+          {getStatusBadge(equipment.status || 'available', equipment.nextCalibrationDate)}
+        </TableCell>
         <TableCell className="hidden md:table-cell">
-          {formatDate(equipment.lastCalibrationDate ? String(equipment.lastCalibrationDate) : undefined)}
+          {formatDate(
+            equipment.lastCalibrationDate ? String(equipment.lastCalibrationDate) : undefined
+          )}
         </TableCell>
         <TableCell className="hidden md:table-cell">{equipment.location}</TableCell>
         <TableCell className="text-right">
@@ -117,7 +114,13 @@ interface RowProps {
 }
 
 // 행 렌더링 컴포넌트 (v2 API)
-function RowComponent({ index, style, items, isRowLoaded, onItemClick }: RowComponentProps<RowProps>) {
+function RowComponent({
+  index,
+  style,
+  items,
+  isRowLoaded,
+  onItemClick,
+}: RowComponentProps<RowProps>) {
   if (!isRowLoaded(index)) {
     return (
       <div style={style} className="w-full">
@@ -174,11 +177,14 @@ const VirtualizedEquipmentList = ({
   });
 
   // rowProps for v2 API
-  const rowProps: RowProps = useMemo(() => ({
-    items,
-    isRowLoaded,
-    onItemClick,
-  }), [items, isRowLoaded, onItemClick]);
+  const rowProps: RowProps = useMemo(
+    () => ({
+      items,
+      isRowLoaded,
+      onItemClick,
+    }),
+    [items, isRowLoaded, onItemClick]
+  );
 
   return (
     <div className="border rounded-lg overflow-hidden dark:border-gray-700 h-[600px]">

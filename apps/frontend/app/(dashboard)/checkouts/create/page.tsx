@@ -33,11 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Search,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { Search, Plus, Trash2 } from 'lucide-react';
 import { addDays } from 'date-fns';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
@@ -217,7 +213,7 @@ export default function CreateCheckoutPage() {
                       </TableRow>
                     ) : (
                       equipmentsData?.data?.map((equipment: Equipment) => (
-                        <TableRow key={equipment.id}>
+                        <TableRow key={equipment.id} data-testid={`equipment-${equipment.id}`}>
                           <TableCell className="font-medium">{equipment.name}</TableCell>
                           <TableCell>{equipment.managementNumber}</TableCell>
                           <TableCell>
@@ -226,6 +222,7 @@ export default function CreateCheckoutPage() {
                               size="sm"
                               onClick={() => handleAddEquipment(equipment)}
                               disabled={selectedEquipments.some((e) => e.id === equipment.id)}
+                              data-testid={`add-equipment-${equipment.id}`}
                             >
                               <Plus className="h-4 w-4" />
                             </Button>

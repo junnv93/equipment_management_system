@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Control, useWatch } from 'react-hook-form';
+import { useEffect, useState, useRef } from 'react';
+import { Control, useWatch, useFormContext } from 'react-hook-form';
 import { type Site, EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
 import {
   FormControl,
@@ -55,6 +55,7 @@ export function StatusLocationSection({
 }: StatusLocationSectionProps) {
   const [technicalManagers, setTechnicalManagers] = useState<TechnicalManager[]>([]);
   const [isLoadingManagers, setIsLoadingManagers] = useState(false);
+  const { setValue } = useFormContext<FormValues>();
 
   // 폼에서 사이트와 팀 감시
   const watchedSite = useWatch({ control, name: 'site' });
@@ -62,6 +63,17 @@ export function StatusLocationSection({
 
   const currentSite = selectedSite || watchedSite;
   const currentTeamId = selectedTeamId || watchedTeamId;
+
+  // 팀 변경 시 기술책임자 선택 초기화 (첫 렌더 제외)
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // 팀이 변경되면 이전 팀의 기술책임자 선택값을 초기화
+    setValue('technicalManager', '');
+  }, [currentTeamId, setValue]);
 
   // 기술책임자 목록 로드 (사이트/팀 기준 필터링)
   useEffect(() => {
@@ -71,11 +83,12 @@ export function StatusLocationSection({
       setIsLoadingManagers(true);
       try {
         // API에서 기술책임자 역할을 가진 사용자 조회
+        // 백엔드 DTO: roles(쉼표구분), teams(쉼표구분), site
         const params = new URLSearchParams();
-        params.append('role', 'technical_manager');
+        params.append('roles', 'technical_manager');
         params.append('site', currentSite);
         if (currentTeamId) {
-          params.append('teamId', String(currentTeamId));
+          params.append('teams', String(currentTeamId));
         }
 
         const response = await apiClient.get(`/api/users?${params.toString()}`);
@@ -165,7 +178,7 @@ export function StatusLocationSection({
                   현재 위치 <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: RF1 Room" {...field} />
+                  <Input placeholder="예: RF1 Room" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormDescription>장비가 현재 위치한 장소를 입력하세요</FormDescription>
                 <FormMessage />
@@ -181,7 +194,7 @@ export function StatusLocationSection({
               <FormItem>
                 <FormLabel>최초 설치 위치</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: RF1 Room" {...field} />
+                  <Input placeholder="예: RF1 Room" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -223,18 +236,23 @@ export function StatusLocationSection({
                         placeholder={
                           !currentSite
                             ? '먼저 사이트를 선택하세요'
-                            : isLoadingManagers
-                              ? '로딩 중...'
-                              : technicalManagers.length === 0
-                                ? '직접 입력하세요'
-                                : '기술책임자를 선택하세요'
+                            : !currentTeamId
+                              ? '먼저 팀을 선택하세요'
+                              : isLoadingManagers
+                                ? '로딩 중...'
+                                : technicalManagers.length === 0
+                                  ? '직접 입력하세요'
+                                  : '기술책임자를 선택하세요'
                         }
                       />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
                     {technicalManagers.map((manager) => (
-                      <SelectItem key={manager.uuid} value={manager.name}>
+                      <SelectItem
+                        key={manager.uuid ?? `manager-${manager.id}`}
+                        value={manager.name}
+                      >
                         {manager.name}
                       </SelectItem>
                     ))}
@@ -255,6 +273,11 @@ export function StatusLocationSection({
                     className="mt-2"
                   />
                 )}
+                <FormDescription>
+                  {currentTeamId
+                    ? '선택한 팀의 기술책임자만 표시됩니다'
+                    : '팀을 먼저 선택하면 해당 팀의 기술책임자가 표시됩니다'}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -268,7 +291,7 @@ export function StatusLocationSection({
               <FormItem>
                 <FormLabel>공급사</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: ABC 공급사" {...field} />
+                  <Input placeholder="예: ABC 공급사" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -283,7 +306,7 @@ export function StatusLocationSection({
               <FormItem>
                 <FormLabel>연락처</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: 02-1234-5678" {...field} />
+                  <Input placeholder="예: 02-1234-5678" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -298,7 +321,7 @@ export function StatusLocationSection({
               <FormItem>
                 <FormLabel>S/W 버전</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: v1.0.0" {...field} />
+                  <Input placeholder="예: v1.0.0" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -313,7 +336,7 @@ export function StatusLocationSection({
               <FormItem>
                 <FormLabel>펌웨어 버전</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: v2.1.0" {...field} />
+                  <Input placeholder="예: v2.1.0" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -332,6 +355,7 @@ export function StatusLocationSection({
                 <Input
                   placeholder="예: /docs/manuals/equipment-001.pdf 또는 서버 경로"
                   {...field}
+                  value={field.value || ''}
                 />
               </FormControl>
               <FormDescription>메뉴얼 파일의 저장 경로를 입력하세요</FormDescription>
@@ -352,6 +376,7 @@ export function StatusLocationSection({
                   placeholder="부속품 목록을 입력하세요 (예: 케이블 3개, 안테나 1개, 어댑터 2개)"
                   className="min-h-[80px]"
                   {...field}
+                  value={field.value || ''}
                 />
               </FormControl>
               <FormMessage />

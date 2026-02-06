@@ -2,7 +2,7 @@ import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
 import { CheckoutDetailSkeleton } from './CheckoutDetailSkeleton';
-import checkoutApi from '@/lib/api/checkout-api';
+import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
@@ -10,7 +10,7 @@ import checkoutApi from '@/lib/api/checkout-api';
  * generateMetadata()와 Page()에서 각각 호출해도 한 번만 fetch됩니다.
  */
 const getCheckoutCached = cache(async (id: string) => {
-  return checkoutApi.getCheckout(id);
+  return getCheckoutServer(id);
 });
 
 // Next.js 16 PageProps 타입 정의
@@ -47,7 +47,7 @@ export default async function CheckoutDetailPage(props: PageProps) {
     // 대여 목적인 경우 상태 확인 기록도 조회
     if (checkout.purpose === 'rental') {
       try {
-        conditionChecks = await checkoutApi.getConditionChecks(id);
+        conditionChecks = await getConditionChecksServer(id);
       } catch {
         // 상태 확인 기록 조회 실패 시 빈 배열로 처리
         conditionChecks = [];

@@ -50,7 +50,8 @@ function EquipmentSearchBarComponent({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
     debounce((searchValue: string) => {
-      onChange(searchValue);
+      // 🔥 Trim whitespace before calling onChange
+      onChange(searchValue.trim());
     }, debounceDelay),
     [onChange, debounceDelay]
   );
@@ -85,13 +86,17 @@ function EquipmentSearchBarComponent({
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         debouncedSearch.cancel();
-        onChange(localValue);
+        // 🔥 Trim whitespace before submitting search
+        onChange(localValue.trim());
       }
       if (e.key === 'Escape') {
-        handleClear();
+        setLocalValue('');
+        debouncedSearch.cancel();
+        onChange('');
+        inputRef.current?.blur(); // 🔥 Escape 키로 포커스 해제
       }
     },
-    [debouncedSearch, onChange, localValue, handleClear]
+    [debouncedSearch, onChange, localValue]
   );
 
   return (
@@ -109,7 +114,7 @@ function EquipmentSearchBarComponent({
         {/* 검색 입력 */}
         <Input
           ref={inputRef}
-          type="search"
+          type="text"
           value={localValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}

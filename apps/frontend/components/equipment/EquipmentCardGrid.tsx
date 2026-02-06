@@ -82,7 +82,8 @@ const EquipmentCard = memo(function EquipmentCard({
   equipment: Equipment;
   searchTerm?: string;
 }) {
-  const style = getEquipmentStatusStyle(equipment.status);
+  // 실시간 교정기한 초과 체크 포함
+  const style = getEquipmentStatusStyle(equipment.status, equipment.nextCalibrationDate);
 
   const formatDate = (date?: string | Date | null) => {
     if (!date) return '-';
@@ -91,12 +92,13 @@ const EquipmentCard = memo(function EquipmentCard({
 
   /**
    * 교정 상태 계산 (동적)
-   * - 폐기(retired), 부적합(non_conforming), 여분(spare) 상태는 표시 안함
+   * - 폐기(retired), 여분(spare) 상태는 표시 안함
+   * - 부적합(non_conforming) 상태에서도 교정기한 초과인 경우 일수 배지 표시
    * - 교정 불필요 장비는 표시 안함
    * - 30일 이내 교정 만료 또는 기한 초과 시 D-day 형식으로 표시
    */
   const calibrationStatus = useMemo(() => {
-    // 교정 상태 표시가 의미 없는 장비 상태
+    // 교정 상태 표시를 건너뛸 장비 상태 확인
     if (!shouldDisplayCalibrationStatus(equipment.status)) {
       return null;
     }
@@ -123,11 +125,12 @@ const EquipmentCard = memo(function EquipmentCard({
 
     if (diffDays < 0) {
       // 교정 기한 초과
+      const overdueDays = Math.abs(diffDays);
       return {
         type: 'overdue' as const,
-        days: Math.abs(diffDays),
-        label: `D+${Math.abs(diffDays)}`,
-        fullLabel: `교정 기한 ${Math.abs(diffDays)}일 초과`,
+        days: overdueDays,
+        label: `D+${overdueDays}`,
+        fullLabel: `교정 기한 ${overdueDays}일 초과`,
         className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
         icon: AlertCircle,
       };
@@ -160,6 +163,7 @@ const EquipmentCard = memo(function EquipmentCard({
       className={`border-l-4 ${style.borderColor} hover:shadow-md transition-shadow`}
       role="article"
       aria-labelledby={`equipment-${equipment.id}-name`}
+      data-testid="equipment-card"
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start gap-2">
@@ -167,18 +171,23 @@ const EquipmentCard = memo(function EquipmentCard({
             <CardTitle
               id={`equipment-${equipment.id}-name`}
               className="text-base font-semibold truncate flex items-center gap-2"
+              data-testid="equipment-name"
             >
               <HighlightText text={equipment.name || '이름 없음'} search={searchTerm} />
               {equipment.isShared && (
                 <SharedEquipmentBadge sharedSource={equipment.sharedSource} size="sm" />
               )}
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1" data-testid="management-number">
               <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
-            <Badge variant="outline" className={`${style.className} border-0`}>
+            <Badge
+              variant="outline"
+              className={`${style.className} border-0`}
+              data-testid="status-badge"
+            >
               {style.label}
             </Badge>
             {calibrationStatus && (

@@ -129,6 +129,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                     placeholder="예: 12"
                     min={1}
                     {...field}
+                    value={field.value ?? ''}
                     onChange={(e) =>
                       field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
                     }
@@ -188,7 +189,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                   {isExternalCalibration && <span className="text-destructive"> *</span>}
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="HCT" {...field} />
+                  <Input placeholder="HCT" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -250,6 +251,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                       placeholder="예: 6"
                       min={1}
                       {...field}
+                      value={field.value ?? ''}
                       onChange={(e) =>
                         field.onChange(e.target.value ? parseInt(e.target.value) : undefined)
                       }

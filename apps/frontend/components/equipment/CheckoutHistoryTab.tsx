@@ -272,7 +272,11 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                 <FormItem>
                   <FormLabel>반출 장소 *</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: 한국표준과학연구원" {...field} />
+                    <Input
+                      placeholder="예: 한국표준과학연구원"
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -285,7 +289,12 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                 <FormItem>
                   <FormLabel>반출 사유 *</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="반출 사유를 상세히 입력하세요" rows={3} {...field} />
+                    <Textarea
+                      placeholder="반출 사유를 상세히 입력하세요"
+                      rows={3}
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -298,7 +307,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                 <FormItem>
                   <FormLabel>반입 예정일 *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -312,7 +321,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                   <FormItem>
                     <FormLabel>연락처</FormLabel>
                     <FormControl>
-                      <Input placeholder="010-1234-5678" {...field} />
+                      <Input placeholder="010-1234-5678" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -325,7 +334,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                   <FormItem>
                     <FormLabel>주소</FormLabel>
                     <FormControl>
-                      <Input placeholder="반출지 주소" {...field} />
+                      <Input placeholder="반출지 주소" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -339,7 +348,12 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                 <FormItem>
                   <FormLabel>비고</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="추가 참고사항" rows={2} {...field} />
+                    <Textarea
+                      placeholder="추가 참고사항"
+                      rows={2}
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
