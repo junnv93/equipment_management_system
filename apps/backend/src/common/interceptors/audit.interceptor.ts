@@ -30,7 +30,7 @@ export class AuditInterceptor implements NestInterceptor {
     private readonly auditService: AuditService
   ) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     // 메타데이터 가져오기
     const auditMetadata = this.reflector.get<AuditLogMetadata>(AUDIT_LOG_KEY, context.getHandler());
 

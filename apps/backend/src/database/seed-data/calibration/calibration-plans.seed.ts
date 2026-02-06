@@ -4,10 +4,10 @@
  * TODO: Implement full calibration plans with items
  */
 
-export const CALIBRATION_PLANS_SEED_DATA: any[] = [
+export const CALIBRATION_PLANS_SEED_DATA: unknown[] = [
   // TODO: Implement plans
 ];
 
-export const CALIBRATION_PLAN_ITEMS_SEED_DATA: any[] = [
+export const CALIBRATION_PLAN_ITEMS_SEED_DATA: unknown[] = [
   // TODO: Implement plan items
 ];

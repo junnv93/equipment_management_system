@@ -15,4 +15,5 @@ import { SetMetadata } from '@nestjs/common';
  * ```
  */
 export const SKIP_GLOBAL_VALIDATION_KEY = 'skipGlobalValidation';
-export const SkipGlobalValidation = () => SetMetadata(SKIP_GLOBAL_VALIDATION_KEY, true);
+export const SkipGlobalValidation = (): MethodDecorator =>
+  SetMetadata(SKIP_GLOBAL_VALIDATION_KEY, true);

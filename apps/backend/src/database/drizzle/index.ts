@@ -129,7 +129,7 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // 메트릭 조회 함수
-export function getConnectionMetrics() {
+export function getConnectionMetrics(): unknown {
   return {
     ...metrics,
     poolTotalCount: pgPool.totalCount,

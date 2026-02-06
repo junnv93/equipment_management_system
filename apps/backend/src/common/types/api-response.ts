@@ -80,11 +80,7 @@ export function createPaginatedResponse<T>(
 /**
  * 에러 응답 생성 헬퍼
  */
-export function createErrorResponse(
-  code: string,
-  message: string,
-  details?: unknown
-): ApiResponse<null> {
+export function createErrorResponse(code: string, message: string): ApiResponse<null> {
   return {
     success: false,
     code,

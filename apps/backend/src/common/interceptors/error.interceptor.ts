@@ -21,9 +21,9 @@ export class ErrorInterceptor implements NestInterceptor {
     this.logger.setContext('ErrorInterceptor');
   }
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
-      catchError((error) => {
+      catchError((error: unknown) => {
         // 오류 로그 카운트 증가
         this.monitoringService.incrementLogCount('error');
 
@@ -39,7 +39,8 @@ export class ErrorInterceptor implements NestInterceptor {
         }
 
         // 데이터베이스 오류 또는 기타 서버 오류
-        this.logger.error(`시스템 오류: ${error.message || '알 수 없는 오류'}`, error.stack, {
+        const errorObj = error as Error;
+        this.logger.error(`시스템 오류: ${errorObj.message || '알 수 없는 오류'}`, errorObj.stack, {
           originalError: error,
         });
 
@@ -47,7 +48,7 @@ export class ErrorInterceptor implements NestInterceptor {
         const isProd = process.env.NODE_ENV === 'production';
         const errorMessage = isProd
           ? '서버에서 오류가 발생했습니다. 나중에 다시 시도해주세요.'
-          : error.message || '알 수 없는 오류';
+          : errorObj.message || '알 수 없는 오류';
 
         // 인터널 서버 오류로 변환하여 반환
         return throwError(

@@ -38,9 +38,17 @@ import { NON_CONFORMANCES_SEED_DATA } from './seed-data/operations/non-conforman
 // Phase 2 seed data modules (IMPLEMENTED)
 import { REPAIR_HISTORY_SEED_DATA } from './seed-data/operations/repair-history.seed';
 import { CALIBRATION_FACTORS_SEED_DATA } from './seed-data/calibration/calibration-factors.seed';
+import {
+  CHECKOUTS_SEED_DATA,
+  CHECKOUT_ITEMS_SEED_DATA,
+} from './seed-data/operations/checkouts.seed';
 
 // Phase 2 seed data modules (STUBBED)
 // import { CALIBRATION_PLANS_SEED_DATA, CALIBRATION_PLAN_ITEMS_SEED_DATA } from './seed-data/calibration/calibration-plans.seed';
+
+// Phase 3 seed data modules (Disposal E2E tests)
+import { DISPOSAL_EQUIPMENT_SEED_DATA } from './seed-data/disposal/disposal-equipment.seed';
+import { DISPOSAL_REQUESTS_SEED_DATA } from './seed-data/disposal/disposal-requests.seed';
 
 // Utilities
 import { verifySeed, printVerificationResults } from './utils/verification';
@@ -60,7 +68,7 @@ console.log(`📍 DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]+@/, ':****@')}`);
 // MAIN SEED EXECUTION
 // =============================================================================
 
-async function main() {
+async function main(): Promise<void> {
   const pool = new Pool({
     connectionString: DATABASE_URL,
     max: 10,
@@ -80,6 +88,7 @@ async function main() {
       'audit_logs',
       'equipment_attachments',
       'equipment_requests',
+      'disposal_requests',
       'equipment_incident_history',
       'equipment_maintenance_history',
       'equipment_location_history',
@@ -148,8 +157,11 @@ async function main() {
     // Calibration Plans & Items (STUBBED - Phase 2)
     // TODO: Implement calibration plans seed data
 
-    // Checkouts & Items (STUBBED - Phase 1C)
-    // TODO: Implement checkouts seed data
+    // Checkouts & Items (68 checkouts + items)
+    console.log('  → Checkouts (68)');
+    await db.insert(schema.checkouts).values(CHECKOUTS_SEED_DATA);
+    console.log('  → Checkout Items (equipment associations)');
+    await db.insert(schema.checkoutItems).values(CHECKOUT_ITEMS_SEED_DATA);
 
     // =========================================================================
     // PHASE 2: EXTENDED ENTITIES (Partially Implemented)
@@ -167,9 +179,22 @@ async function main() {
     // TODO: Implement software history (8)
 
     // =========================================================================
-    // PHASE 3: HISTORY & ADMIN (STUBBED)
+    // PHASE 3: DISPOSAL WORKFLOW E2E TEST DATA
     // =========================================================================
-    // console.log('\n📋 Phase 3: Inserting history & administrative data...');
+    console.log('\n📋 Phase 3: Inserting disposal workflow E2E test data...');
+
+    // Disposal Equipment (21)
+    console.log('  → Disposal Equipment (21)');
+    await db.insert(schema.equipment).values(DISPOSAL_EQUIPMENT_SEED_DATA);
+
+    // Disposal Requests (15)
+    console.log('  → Disposal Requests (15)');
+    await db.insert(schema.disposalRequests).values(DISPOSAL_REQUESTS_SEED_DATA);
+
+    // =========================================================================
+    // PHASE 4: HISTORY & ADMIN (STUBBED)
+    // =========================================================================
+    // console.log('\n📋 Phase 4: Inserting history & administrative data...');
     // TODO: Implement location history (20)
     // TODO: Implement maintenance history (15)
     // TODO: Implement incident history (15)

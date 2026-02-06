@@ -8,7 +8,13 @@ import { Logger } from '@nestjs/common';
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  catch(
+    exception: unknown,
+    host: ArgumentsHost
+  ): import('/home/kmjkds/equipment_management_system/node_modules/@types/express/index').Response<
+    any,
+    Record<string, unknown>
+  > {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
@@ -35,7 +41,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       const message =
-        typeof exceptionResponse === 'object'
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null &&
+        'message' in exceptionResponse
           ? (exceptionResponse as any).message || 'HTTP 오류가 발생했습니다'
           : exceptionResponse;
 

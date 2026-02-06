@@ -7,7 +7,7 @@ import * as path from 'path';
 // .env 파일 로드
 dotenv.config();
 
-async function main() {
+async function main(): Promise<void> {
   console.log('🔄 마이그레이션 시작...');
 
   // 데이터베이스 연결 문자열

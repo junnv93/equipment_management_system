@@ -301,7 +301,7 @@ export class DatabaseConnection {
     // TODO: 외부 모니터링 시스템으로 알림 전송
   }
 
-  public getMetrics() {
+  public getMetrics(): unknown {
     return { ...this.metrics };
   }
 

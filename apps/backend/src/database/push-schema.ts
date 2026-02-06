@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-async function pushSchema() {
+async function pushSchema(): Promise<void> {
   console.log('🔄 스키마를 데이터베이스에 적용 중...');
 
   const connectionString =

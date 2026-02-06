@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { Client } from 'pg';
@@ -11,7 +10,7 @@ dotenv.config();
  * 테스트 환경을 위한 마이그레이션 실행 스크립트
  * 테스트 데이터베이스를 초기화하고 마이그레이션을 적용합니다.
  */
-async function runTestMigration() {
+async function runTestMigration(): Promise<void> {
   console.log('📊 테스트 데이터베이스 마이그레이션 시작...');
 
   // 테스트 데이터베이스 연결 정보

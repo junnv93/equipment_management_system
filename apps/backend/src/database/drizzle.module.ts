@@ -16,7 +16,7 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
 
   constructor() {}
 
-  async onModuleInit() {
+  async onModuleInit(): Promise<void> {
     this.logger.log('Initializing database connection...');
 
     // 애플리케이션 시작 시 데이터베이스 연결 테스트
@@ -56,7 +56,7 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     this.logger.log('Closing database connection...');
 
     // 헬스 체크 중지
@@ -70,22 +70,26 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
   }
 
   // DB 인스턴스 반환
-  getDB() {
+  getDB(): unknown {
     return db;
   }
 
   // 스키마 반환
-  getSchema() {
+  getSchema(): typeof import('/home/kmjkds/equipment_management_system/packages/db/src/schema/index') {
     return schema;
   }
 
   // 연결 메트릭 반환
-  getMetrics() {
+  getMetrics(): unknown {
     return getConnectionMetrics();
   }
 
   // 헬스 체크 수행
-  async performHealthCheck() {
+  async performHealthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    latency: number;
+    error?: string | undefined;
+  }> {
     return await healthCheck();
   }
 }

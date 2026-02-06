@@ -6,7 +6,7 @@ import helmet from 'helmet';
 export class HelmetConfigService {
   constructor(private configService: ConfigService) {}
 
-  createHelmetMiddleware() {
+  createHelmetMiddleware(): unknown {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
 
     return helmet({

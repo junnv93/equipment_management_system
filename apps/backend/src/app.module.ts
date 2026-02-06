@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { validateEnv } from './config/env.validation';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -33,6 +34,7 @@ import { AuditModule } from './modules/audit/audit.module';
       envFilePath: ['.env.local', '.env'],
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(), // 스케줄러 모듈 등록 (교정 기한 초과 자동 점검)
 
     // 공통 모듈
     CacheModule,
@@ -69,7 +71,7 @@ import { AuditModule } from './modules/audit/audit.module';
   ],
 })
 export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
+  configure(consumer: MiddlewareConsumer): void {
     consumer
       .apply(MetricsMiddleware)
       .exclude('metrics') // metrics 엔드포인트 자체는 제외

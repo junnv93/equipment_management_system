@@ -5,7 +5,7 @@ import * as path from 'path';
 
 dotenv.config();
 
-async function runMigration() {
+async function runMigration(): Promise<void> {
   const migrationFile = process.argv[2];
   if (!migrationFile) {
     console.error('❌ Usage: ts-node run-migration.ts <migration-file.sql>');

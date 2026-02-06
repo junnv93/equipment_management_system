@@ -25,7 +25,9 @@ export const SKIP_TRANSFORM_KEY = 'skipResponseTransform';
  *   return { raw: 'data' };
  * }
  */
-export const SkipResponseTransform = () => SetMetadata(SKIP_TRANSFORM_KEY, true);
+export const SkipResponseTransform =
+  (): import('/home/kmjkds/equipment_management_system/node_modules/@nestjs/common/decorators/core/set-metadata.decorator').CustomDecorator<string> =>
+    SetMetadata(SKIP_TRANSFORM_KEY, true);
 
 /**
  * 커스텀 메시지 메타데이터 키
@@ -40,7 +42,10 @@ export const RESPONSE_MESSAGE_KEY = 'responseMessage';
  * @Post()
  * create() { ... }
  */
-export const ResponseMessage = (message: string) => SetMetadata(RESPONSE_MESSAGE_KEY, message);
+export const ResponseMessage = (
+  message: string
+): import('/home/kmjkds/equipment_management_system/node_modules/@nestjs/common/decorators/core/set-metadata.decorator').CustomDecorator<string> =>
+  SetMetadata(RESPONSE_MESSAGE_KEY, message);
 
 /**
  * 응답 변환 인터셉터

@@ -39,7 +39,7 @@ export class CacheService {
       }
 
       return data;
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Error in cache operation for key ${key}: ${getErrorMessage(error)}`);
       // 캐시 오류 시 팩토리 함수 결과 직접 반환
       return factory();
@@ -94,7 +94,7 @@ export class CacheService {
     try {
       this.cache.delete(key);
       this.logger.debug(`Cache deleted for key: ${key}`);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Error deleting cache for key ${key}: ${getErrorMessage(error)}`);
     }
   }
@@ -116,7 +116,7 @@ export class CacheService {
       }
 
       this.logger.debug(`Deleted ${deletedCount} cache entries matching pattern: ${pattern}`);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Error deleting cache by pattern ${pattern}: ${getErrorMessage(error)}`);
     }
   }
@@ -128,7 +128,7 @@ export class CacheService {
     try {
       this.cache.clear();
       this.logger.debug('Cache reset completed');
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Error resetting cache: ${getErrorMessage(error)}`);
     }
   }

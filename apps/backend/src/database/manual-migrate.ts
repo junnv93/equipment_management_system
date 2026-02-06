@@ -9,7 +9,7 @@ dotenv.config();
 /**
  * 수동 마이그레이션 실행 함수
  */
-async function manualMigrate() {
+async function manualMigrate(): Promise<void> {
   console.log('📊 수동 마이그레이션 실행 중...');
 
   // 데이터베이스 연결 정보

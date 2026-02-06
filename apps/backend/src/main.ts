@@ -11,7 +11,7 @@ import { ErrorInterceptor } from './common/interceptors/error.interceptor';
 import { MonitoringService } from './modules/monitoring/monitoring.service';
 import { GlobalExceptionFilter } from './common/filters/error.filter';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });

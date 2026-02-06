@@ -6,7 +6,7 @@ import { MetricsService } from './metrics.service';
 export class MetricsMiddleware implements NestMiddleware {
   constructor(private readonly metricsService: MetricsService) {}
 
-  use(req: Request, res: Response, next: NextFunction) {
+  use(req: Request, res: Response, next: NextFunction): void {
     const { method, originalUrl } = req;
     const start = process.hrtime();
 

@@ -127,6 +127,31 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     });
 
     // =========================================================================
+    // Phase 1B: Checkouts
+    // =========================================================================
+
+    const checkoutResult = await pool.query('SELECT COUNT(*) as count FROM checkouts');
+    const checkoutCount = parseInt(checkoutResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Checkouts count',
+      passed: checkoutCount >= 68,
+      actual: checkoutCount,
+      expected: 68,
+    });
+
+    // Pending checkouts (for C-1 permission test)
+    const pendingCheckouts = await pool.query(
+      "SELECT COUNT(*) as count FROM checkouts WHERE status = 'pending'"
+    );
+    const pendingCheckoutCount = parseInt(pendingCheckouts.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Pending checkouts',
+      passed: pendingCheckoutCount >= 8,
+      actual: pendingCheckoutCount,
+      expected: 8,
+    });
+
+    // =========================================================================
     // SUMMARY
     // =========================================================================
 

@@ -8,11 +8,7 @@
  */
 
 import { equipment } from '@equipment-management/db/schema';
-import {
-  EquipmentStatus,
-  CalibrationMethod,
-  generateManagementNumber,
-} from '@equipment-management/schemas';
+import { EquipmentStatus, CalibrationMethod } from '@equipment-management/schemas';
 import { daysAgo, monthsAgo, daysLater, monthsLater } from '../../utils/date-helpers';
 import {
   // Suwon teams
@@ -459,7 +455,7 @@ export const EQUIPMENT_SEED_DATA: (typeof equipment.$inferInsert)[] = [
     'not_applicable',
     monthsAgo(36),
     monthsAgo(24),
-    { isActive: false }
+    { isActive: true } // disposed equipment must remain queryable for audit/history
   ),
 
   // =========================================================================

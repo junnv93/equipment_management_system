@@ -5,12 +5,7 @@
  */
 
 import { teams } from '@equipment-management/db/schema';
-import {
-  Site,
-  Classification,
-  CLASSIFICATION_TO_CODE,
-  SITE_TO_CODE,
-} from '@equipment-management/schemas';
+import { CLASSIFICATION_TO_CODE } from '@equipment-management/schemas';
 import {
   TEAM_FCC_EMC_RF_SUWON_ID,
   TEAM_GENERAL_EMC_SUWON_ID,
@@ -18,9 +13,23 @@ import {
   TEAM_AUTOMOTIVE_EMC_SUWON_ID,
   TEAM_GENERAL_RF_UIWANG_ID,
   TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID,
+  TEAM_PLACEHOLDER_ID,
 } from '../../utils/uuid-constants';
 
 export const TEAMS_SEED_DATA: (typeof teams.$inferInsert)[] = [
+  // =========================================================================
+  // Placeholder Team (for test users)
+  // =========================================================================
+  {
+    id: TEAM_PLACEHOLDER_ID,
+    name: 'Test Team',
+    type: 'GENERAL_EMC',
+    site: 'suwon',
+    classificationCode: CLASSIFICATION_TO_CODE['general_emc'],
+    description: 'Placeholder team for test users (E2E/development)',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
   // =========================================================================
   // Suwon Site (4 teams)
   // =========================================================================

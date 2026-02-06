@@ -31,11 +31,17 @@ import { getErrorMessage } from '../utils/error';
 export class ZodValidationPipe implements PipeTransform {
   constructor(private schema: ZodSchema) {}
 
-  transform(value: unknown, metadata: ArgumentMetadata) {
-    // ⚠️ 중요: ZodValidationPipe는 body에만 적용되어야 합니다
-    // @Param, @Query 등은 다른 파이프(ParseUUIDPipe 등)로 처리됩니다
-    if (metadata.type !== 'body') {
-      // body가 아니면 검증하지 않고 그대로 반환
+  transform(value: unknown, metadata: ArgumentMetadata): unknown {
+    // ✅ SSOT 원칙: Zod 스키마의 변환 로직을 body, query, param 모두에 적용
+    // - body: 요청 본문 검증 및 변환
+    // - query: 쿼리 파라미터 타입 변환 (문자열 → boolean, number 등)
+    // - param: 경로 파라미터 검증 (UUID 등은 ParseUUIDPipe로 우선 처리)
+    // - custom: 커스텀 데코레이터용
+    //
+    // ⚠️ 주의: @Param에서 ParseUUIDPipe와 같이 사용 시 충돌 방지
+    // → ParseUUIDPipe가 먼저 실행되므로 문제없음
+    const allowedTypes = ['body', 'query', 'param'];
+    if (!allowedTypes.includes(metadata.type)) {
       return value;
     }
 
@@ -52,34 +58,34 @@ export class ZodValidationPipe implements PipeTransform {
       // 제공된 필드에 대해서는 여전히 검증을 수행합니다
       const result = this.schema.parse(value);
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       // Zod 오류를 NestJS BadRequestException으로 변환
       if (error instanceof ZodError) {
-        // 디버깅을 위해 상세 에러 정보 로깅 (개발 환경에서만)
-        if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-          console.error(
-            'ZodValidationPipe Error:',
-            JSON.stringify(
-              {
-                value,
-                issues: error.issues.map((issue) => ({
-                  path: issue.path,
-                  message: issue.message,
-                  code: issue.code,
-                  received: (issue as any).received,
-                  expected: (issue as any).expected,
-                })),
-                metadata: metadata.type,
-              },
-              null,
-              2
-            )
-          );
-        }
+        // ✅ 디버깅을 위해 상세 에러 정보 항상 로깅 (근본 원인 파악)
+        console.error(
+          '🔴 ZodValidationPipe Error:',
+          JSON.stringify(
+            {
+              value,
+              issues: error.issues.map((issue) => ({
+                path: issue.path,
+                message: issue.message,
+                code: issue.code,
+                received:
+                  issue.code === 'invalid_type'
+                    ? (issue as { received?: unknown }).received
+                    : undefined,
+              })),
+              metadata: metadata.type,
+            },
+            null,
+            2
+          )
+        );
         throw new BadRequestException({
           message: '입력 데이터 검증 실패',
           errors: error.issues.map((err) => ({
-            path: err.path.join('.'),
+            path: err.path.join('.') || 'root',
             message: err.message,
             code: err.code,
           })),

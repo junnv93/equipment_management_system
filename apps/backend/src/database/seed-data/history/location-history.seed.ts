@@ -4,4 +4,4 @@
  * TODO: Implement full location history when needed
  */
 
-export const LOCATION_HISTORY_SEED_DATA: any[] = [];
+export const LOCATION_HISTORY_SEED_DATA: unknown[] = [];

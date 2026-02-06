@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import { DrizzleModule } from '../drizzle.module';
 import { ConfigModule } from '@nestjs/config';
 import * as pg from 'pg';
-import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { equipment, teams, users, calibrations, checkouts } from '@equipment-management/db/schema';
 
 describe('Database Performance', () => {

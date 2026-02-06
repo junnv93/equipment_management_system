@@ -6,7 +6,7 @@ import { MonitoringService } from '../../modules/monitoring/monitoring.service';
 export class MonitoringMiddleware implements NestMiddleware {
   constructor(private readonly monitoringService: MonitoringService) {}
 
-  use(req: Request, res: Response, next: NextFunction) {
+  use(req: Request, res: Response, next: NextFunction): void {
     const startTime = Date.now();
     const endpoint = req.originalUrl || req.url;
 

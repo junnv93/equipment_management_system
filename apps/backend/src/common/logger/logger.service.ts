@@ -8,7 +8,7 @@ export class LoggerService implements NestLoggerService {
   private context?: string;
   private logger: winston.Logger;
 
-  constructor(private configService: ConfigService) {
+  constructor(configService: ConfigService) {
     const isProduction = configService.get('NODE_ENV') === 'production';
 
     const consoleFormat = winston.format.combine(
@@ -61,16 +61,16 @@ export class LoggerService implements NestLoggerService {
     });
   }
 
-  setContext(context: string) {
+  setContext(context: string): this {
     this.context = context;
     return this;
   }
 
-  log(message: string, ...optionalParams: unknown[]) {
+  log(message: string, ...optionalParams: unknown[]): void {
     this.logger.info(message, { context: this.context, ...this.extractMetadata(optionalParams) });
   }
 
-  error(message: string, trace?: string, ...optionalParams: unknown[]) {
+  error(message: string, trace?: string, ...optionalParams: unknown[]): void {
     this.logger.error(message, {
       context: this.context,
       trace,
@@ -78,15 +78,15 @@ export class LoggerService implements NestLoggerService {
     });
   }
 
-  warn(message: string, ...optionalParams: unknown[]) {
+  warn(message: string, ...optionalParams: unknown[]): void {
     this.logger.warn(message, { context: this.context, ...this.extractMetadata(optionalParams) });
   }
 
-  debug(message: string, ...optionalParams: unknown[]) {
+  debug(message: string, ...optionalParams: unknown[]): void {
     this.logger.debug(message, { context: this.context, ...this.extractMetadata(optionalParams) });
   }
 
-  verbose(message: string, ...optionalParams: unknown[]) {
+  verbose(message: string, ...optionalParams: unknown[]): void {
     this.logger.verbose(message, {
       context: this.context,
       ...this.extractMetadata(optionalParams),

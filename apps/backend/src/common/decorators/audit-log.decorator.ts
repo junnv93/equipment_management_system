@@ -72,4 +72,5 @@ export interface AuditLogMetadata {
  * approve(@Param('uuid') uuid: string) { ... }
  * ```
  */
-export const AuditLog = (metadata: AuditLogMetadata) => SetMetadata(AUDIT_LOG_KEY, metadata);
+export const AuditLog = (metadata: AuditLogMetadata): MethodDecorator =>
+  SetMetadata(AUDIT_LOG_KEY, metadata);

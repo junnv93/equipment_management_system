@@ -13,7 +13,7 @@ dotenv.config();
  * - 'user' → 'test_engineer'
  * - 'approver' → 'technical_manager' (승인 권한이 있으므로)
  */
-async function migrateUserRoles() {
+async function migrateUserRoles(): Promise<void> {
   console.log('🔄 사용자 역할 시스템 마이그레이션 시작...');
 
   const connectionString =
