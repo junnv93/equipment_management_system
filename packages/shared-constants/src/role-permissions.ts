@@ -47,6 +47,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 소프트웨어
     Permission.VIEW_SOFTWARE,
     Permission.CREATE_SOFTWARE_CHANGE,
+    // 폐기
+    Permission.REQUEST_DISPOSAL,
   ],
 
   // 기술책임자: 장비 관리 및 승인 권한, 교정계획서 작성/검토요청
@@ -108,6 +110,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 통계
     Permission.VIEW_STATISTICS,
     Permission.EXPORT_REPORTS,
+    // 폐기
+    Permission.REQUEST_DISPOSAL,
+    Permission.REVIEW_DISPOSAL, // 검토 권한 (같은 팀)
+    Permission.VIEW_DISPOSAL_REQUESTS,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)

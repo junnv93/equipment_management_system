@@ -20,9 +20,30 @@ export const API_ENDPOINTS = {
     CREATE: '/api/equipment',
     UPDATE: (id: string) => `/api/equipment/${id}`,
     DELETE: (id: string) => `/api/equipment/${id}`,
+    /** 관리번호 중복 검사 - excludeId는 수정 시 현재 장비 ID */
+    CHECK_MANAGEMENT_NUMBER: '/api/equipment/check-management-number',
     HISTORY: (id: string) => `/api/equipment/${id}/history`,
     NON_CONFORMANCE: (id: string) => `/api/equipment/${id}/non-conformance`,
     CALIBRATION_HISTORY: (id: string) => `/api/equipment/${id}/calibration-history`,
+    // 장비 등록/수정/삭제 요청 승인
+    REQUESTS: {
+      LIST: '/api/equipment-requests',
+      GET: (id: string) => `/api/equipment-requests/${id}`,
+      PENDING: '/api/equipment-requests/pending',
+      APPROVE: (id: string) => `/api/equipment-requests/${id}/approve`,
+      REJECT: (id: string) => `/api/equipment-requests/${id}/reject`,
+    },
+    // 장비 폐기
+    DISPOSAL: {
+      REQUEST: (equipmentId: string) => `/api/equipment/${equipmentId}/disposal/request`,
+      REVIEW: (equipmentId: string) => `/api/equipment/${equipmentId}/disposal/review`,
+      APPROVE: (equipmentId: string) => `/api/equipment/${equipmentId}/disposal/approve`,
+      CANCEL: (equipmentId: string) => `/api/equipment/${equipmentId}/disposal/request`,
+      CURRENT: (equipmentId: string) => `/api/equipment/${equipmentId}/disposal/current`,
+      // 승인 대기 목록
+      PENDING_REVIEW: '/api/disposal-requests/pending-review',
+      PENDING_APPROVAL: '/api/disposal-requests/pending-approval',
+    },
   },
 
   // ============================================================================

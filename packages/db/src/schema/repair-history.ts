@@ -32,9 +32,6 @@ export const repairHistory = pgTable(
     // 수리 정보
     repairDate: timestamp('repair_date').notNull(), // 수리 일자
     repairDescription: text('repair_description').notNull(), // 수리 내용
-    repairedBy: varchar('repaired_by', { length: 100 }), // 수리 담당자
-    repairCompany: varchar('repair_company', { length: 200 }), // 외부 수리 업체
-    cost: integer('cost'), // 수리 비용 (원)
     repairResult: varchar('repair_result', { length: 50 }), // 수리 결과: 'completed' | 'partial' | 'failed'
 
     // 추가 정보

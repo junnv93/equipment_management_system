@@ -662,6 +662,7 @@ export const INCIDENT_TYPE_VALUES = [
   'malfunction', // 오작동
   'change', // 변경
   'repair', // 수리
+  'calibration_overdue', // 교정 기한 초과
 ] as const;
 
 export const IncidentTypeEnum = z.enum(INCIDENT_TYPE_VALUES as unknown as [string, ...string[]]);
@@ -717,6 +718,7 @@ export const NON_CONFORMANCE_TYPE_VALUES = [
   'damage', // 손상
   'malfunction', // 오작동
   'calibration_failure', // 교정 실패
+  'calibration_overdue', // 교정 기한 초과
   'measurement_error', // 측정 오류
   'other', // 기타
 ] as const;
@@ -1019,6 +1021,7 @@ export const NON_CONFORMANCE_TYPE_LABELS: Record<NonConformanceType, string> = {
   damage: '손상',
   malfunction: '오작동',
   calibration_failure: '교정 실패',
+  calibration_overdue: '교정 기한 초과',
   measurement_error: '측정 오류',
   other: '기타',
 };
@@ -1101,6 +1104,7 @@ export const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
   malfunction: '오작동',
   change: '변경',
   repair: '수리',
+  calibration_overdue: '교정 기한 초과',
 };
 
 /**
@@ -1276,6 +1280,7 @@ export const IncidentTypeValues = {
   MALFUNCTION: 'malfunction',
   CHANGE: 'change',
   REPAIR: 'repair',
+  CALIBRATION_OVERDUE: 'calibration_overdue',
 } as const;
 
 /**
@@ -1286,6 +1291,7 @@ export const NonConformanceTypeValues = {
   DAMAGE: 'damage',
   MALFUNCTION: 'malfunction',
   CALIBRATION_FAILURE: 'calibration_failure',
+  CALIBRATION_OVERDUE: 'calibration_overdue',
   MEASUREMENT_ERROR: 'measurement_error',
   OTHER: 'other',
 } as const;
@@ -1462,3 +1468,36 @@ export const UnifiedApprovalStatusValues = {
   APPROVED: 'approved',
   REJECTED: 'rejected',
 } as const;
+
+// Disposal reason enum
+export const DISPOSAL_REASON_VALUES = ['obsolete', 'broken', 'inaccurate', 'other'] as const;
+export const DisposalReasonEnum = z.enum(
+  DISPOSAL_REASON_VALUES as unknown as [string, ...string[]]
+);
+export type DisposalReason = z.infer<typeof DisposalReasonEnum>;
+
+export const DISPOSAL_REASON_LABELS: Record<DisposalReason, string> = {
+  obsolete: '노후화',
+  broken: '고장 (수리 불가)',
+  inaccurate: '정밀도/정확도 미보장',
+  other: '기타',
+};
+
+// Disposal review status enum
+export const DISPOSAL_REVIEW_STATUS_VALUES = [
+  'pending',
+  'reviewed',
+  'approved',
+  'rejected',
+] as const;
+export const DisposalReviewStatusEnum = z.enum(
+  DISPOSAL_REVIEW_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type DisposalReviewStatus = z.infer<typeof DisposalReviewStatusEnum>;
+
+export const DISPOSAL_REVIEW_STATUS_LABELS: Record<DisposalReviewStatus, string> = {
+  pending: '검토 대기',
+  reviewed: '검토 완료',
+  approved: '승인 완료',
+  rejected: '반려됨',
+};

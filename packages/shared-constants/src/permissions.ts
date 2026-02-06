@@ -122,6 +122,14 @@ export enum Permission {
   // 감사 로그 관련 권한
   // ============================================================================
   VIEW_AUDIT_LOGS = 'view:audit-logs',
+
+  // ============================================================================
+  // 폐기 관련 권한 (2단계 승인 워크플로우)
+  // ============================================================================
+  REQUEST_DISPOSAL = 'request:disposal',
+  REVIEW_DISPOSAL = 'review:disposal',
+  APPROVE_DISPOSAL = 'approve:disposal',
+  VIEW_DISPOSAL_REQUESTS = 'view:disposal:requests',
 }
 
 /**
@@ -200,4 +208,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.CONFIRM_CALIBRATION_PLAN_ITEM]: '교정계획 항목 확인',
 
   [Permission.VIEW_AUDIT_LOGS]: '감사 로그 조회',
+
+  [Permission.REQUEST_DISPOSAL]: '폐기 요청',
+  [Permission.REVIEW_DISPOSAL]: '폐기 검토',
+  [Permission.APPROVE_DISPOSAL]: '폐기 승인',
+  [Permission.VIEW_DISPOSAL_REQUESTS]: '폐기 요청 조회',
 };

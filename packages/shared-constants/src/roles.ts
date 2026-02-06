@@ -69,3 +69,35 @@ export function isQualityManager(role: UserRole): boolean {
 export function isLabManager(role: UserRole): boolean {
   return role === 'lab_manager';
 }
+
+/**
+ * 승인 권한이 있는 역할 목록
+ * (기술책임자, 품질책임자, 시험소장)
+ */
+export const APPROVAL_ROLES: UserRole[] = ['technical_manager', 'quality_manager', 'lab_manager'];
+
+/**
+ * 관리자 권한이 있는 역할 목록
+ * (시험소장)
+ */
+export const ADMIN_ROLES: UserRole[] = ['lab_manager'];
+
+/**
+ * 팀 제한 역할 목록
+ * (시험실무자, 기술책임자는 자기 팀 장비만 등록 가능)
+ */
+export const TEAM_RESTRICTED_ROLES: UserRole[] = ['test_engineer', 'technical_manager'];
+
+/**
+ * 역할이 승인 권한이 있는지 확인
+ */
+export function canApprove(role: UserRole): boolean {
+  return APPROVAL_ROLES.includes(role);
+}
+
+/**
+ * 역할이 팀 제한인지 확인
+ */
+export function isTeamRestricted(role: UserRole): boolean {
+  return TEAM_RESTRICTED_ROLES.includes(role);
+}

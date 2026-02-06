@@ -184,8 +184,8 @@ export type NewEquipment = typeof equipment.$inferInsert;
 // Zod 스키마는 공유 스키마 패키지에서 관리하므로 여기서는 제거
 // 필요시 @equipment-management/schemas에서 직접 import하여 사용
 
-// 관계 타입 (다른 스키마 파일과의 순환 참조 방지를 위해 타입만 정의)
-import type { users } from './users';
+// 관계 정의 및 타입을 위한 import
+import { users } from './users';
 import type { checkouts } from './checkouts';
 
 /**
@@ -205,5 +205,8 @@ export const equipmentRelations = relations(equipment, ({ one }) => ({
     fields: [equipment.teamId],
     references: [teams.id],
   }),
-  // manager와 checkouts relations는 향후 필요시 추가
+  manager: one(users, {
+    fields: [equipment.managerId],
+    references: [users.id],
+  }),
 }));

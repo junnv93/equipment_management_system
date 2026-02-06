@@ -20,11 +20,13 @@ export const nonConformanceStatus = [
 /**
  * 부적합 유형 정의
  * 부적합의 원인을 분류하여 적절한 해결 방법을 선택할 수 있도록 함
+ * ⚠️ SSOT: packages/schemas/src/enums.ts의 NON_CONFORMANCE_TYPE_VALUES와 동기화 필수
  */
 export const nonConformanceType = [
   'damage', // 손상 (물리적 파손)
   'malfunction', // 오작동 (기능 이상)
   'calibration_failure', // 교정 실패
+  'calibration_overdue', // 교정 기한 초과 (시스템 자동 생성)
   'measurement_error', // 측정 오류
   'other', // 기타
 ] as const;
@@ -59,7 +61,7 @@ export const nonConformances = pgTable(
 
     // 부적합 발견 정보
     discoveryDate: date('discovery_date').notNull(), // 발견일
-    discoveredBy: uuid('discovered_by').notNull(), // 발견자 ID (시험실무자)
+    discoveredBy: uuid('discovered_by'), // 발견자 ID (시험실무자 또는 null for 시스템 자동 생성)
     cause: text('cause').notNull(), // 부적합 원인
 
     // 부적합 유형 및 해결 방법

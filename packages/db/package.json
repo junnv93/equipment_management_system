@@ -19,20 +19,20 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.json --skipLibCheck",
-    "clean": "rimraf dist",
+    "build": "rm -rf dist && tsc -p tsconfig.json --skipLibCheck",
+    "clean": "rm -rf dist",
     "db:generate": "drizzle-kit generate:pg",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "drizzle-orm": "^0.36.0",
-    "pg": "^8.11.3",
-    "dotenv": "^16.0.0"
+    "dotenv": "^16.0.0",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "@types/node": "^20.17.27",
     "@types/pg": "^8.10.0",
-    "drizzle-kit": "^0.20.0",
+    "drizzle-kit": "^0.31.8",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.3"
   }

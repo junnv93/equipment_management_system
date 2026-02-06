@@ -21,6 +21,11 @@ export {
   hasEqualOrHigherRole,
   isTechnicalManagerOrAbove,
   isLabManager,
+  APPROVAL_ROLES,
+  ADMIN_ROLES,
+  TEAM_RESTRICTED_ROLES,
+  canApprove,
+  isTeamRestricted,
 } from './roles';
 
 // 권한 관련

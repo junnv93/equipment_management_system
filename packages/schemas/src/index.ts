@@ -18,6 +18,7 @@ export * from './user';
 export * from './team';
 export * from './checkout';
 export * from './calibration';
+export * from './types/disposal';
 
 // ============================================================
 // Enums - Single Source of Truth
