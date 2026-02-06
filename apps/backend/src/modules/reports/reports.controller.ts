@@ -1,17 +1,10 @@
-import { Controller, Get, Post, Body, Query, Param, UseGuards } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiParam,
-  ApiQuery,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 
 @ApiTags('보고서')
 @ApiBearerAuth()
@@ -41,7 +34,19 @@ export class ReportsController {
     @Query('endDate') endDate?: string,
     @Query('equipmentId') equipmentId?: string,
     @Query('departmentId') departmentId?: string
-  ) {
+  ): Promise<{
+    timeframe: { startDate: string; endDate: string };
+    totalUsageHours: number;
+    totalEquipmentCount: number;
+    departmentDistribution: {
+      departmentId: string;
+      departmentName: string;
+      usageHours: number;
+      equipmentCount: number;
+    }[];
+    topEquipment: { equipmentId: string; name: string; usageHours: number; usageCount: number }[];
+    monthlyTrend: { month: string; usageHours: number }[];
+  }> {
     return this.reportsService.getEquipmentUsage(startDate, endDate, equipmentId, departmentId);
   }
 
@@ -58,7 +63,20 @@ export class ReportsController {
   })
   @ApiResponse({ status: 200, description: '교정 상태 통계 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
-  getCalibrationStatus(@Query('status') status?: string, @Query('timeframe') timeframe?: string) {
+  getCalibrationStatus(
+    @Query('status') status?: string,
+    @Query('timeframe') timeframe?: string
+  ): Promise<{
+    summary: {
+      totalEquipment: number;
+      requireCalibration: number;
+      dueThisMonth: number;
+      overdue: number;
+      completedThisMonth: number;
+    };
+    status: { status: string; count: number; percentage: number }[];
+    calibrationTrend: { month: string; completed: number; due: number; overdue: number }[];
+  }> {
     return this.reportsService.getCalibrationStatus(status, timeframe);
   }
 
@@ -77,7 +95,23 @@ export class ReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('departmentId') departmentId?: string
-  ) {
+  ): Promise<{
+    timeframe: { startDate: string; endDate: string };
+    summary: {
+      totalCheckouts: number;
+      activeCheckouts: number;
+      avgCheckoutDuration: number;
+      returnRate: number;
+    };
+    checkoutsByDepartment: {
+      departmentId: string;
+      departmentName: string;
+      count: number;
+      percentage: number;
+    }[];
+    checkoutStatus: { status: string; count: number; percentage: number }[];
+    monthlyTrend: { month: string; checkouts: number; returns: number }[];
+  }> {
     return this.reportsService.getRentalStatistics(startDate, endDate, departmentId);
   }
 
@@ -105,7 +139,33 @@ export class ReportsController {
     @Query('period') period: 'week' | 'month' | 'quarter' | 'year' = 'month',
     @Query('equipmentId') equipmentId?: string,
     @Query('categoryId') categoryId?: string
-  ) {
+  ): Promise<{
+    period: 'week' | 'month' | 'quarter' | 'year';
+    summary: {
+      averageUtilization: number;
+      highUtilizationCount: number;
+      lowUtilizationCount: number;
+      totalEquipmentCount: number;
+    };
+    utilizationByCategory: {
+      categoryId: string;
+      categoryName: string;
+      utilizationRate: number;
+      equipmentCount: number;
+    }[];
+    topUtilized: {
+      equipmentId: string;
+      name: string;
+      utilizationRate: number;
+      department: string;
+    }[];
+    lowUtilized: {
+      equipmentId: string;
+      name: string;
+      utilizationRate: number;
+      department: string;
+    }[];
+  }> {
     return this.reportsService.getUtilizationRate(period, equipmentId, categoryId);
   }
 
@@ -127,7 +187,23 @@ export class ReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('equipmentId') equipmentId?: string
-  ) {
+  ): Promise<{
+    timeframe: { startDate: string; endDate: string };
+    summary: {
+      totalDowntimeHours: number;
+      totalIncidents: number;
+      avgDowntimeDuration: number;
+      affectedEquipmentCount: number;
+    };
+    downtimeReasons: { reason: string; hours: number; percentage: number }[];
+    topDowntimeEquipment: {
+      equipmentId: string;
+      name: string;
+      downtimeHours: number;
+      incidents: number;
+    }[];
+    monthlyTrend: { month: string; downtimeHours: number }[];
+  }> {
     return this.reportsService.getEquipmentDowntime(startDate, endDate, equipmentId);
   }
 
@@ -150,7 +226,13 @@ export class ReportsController {
     @Query('format') format: 'excel' | 'csv',
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string
-  ) {
+  ): Promise<{
+    success: boolean;
+    format: 'excel' | 'csv';
+    fileName: string;
+    downloadUrl: string;
+    generatedAt: string;
+  }> {
     return this.reportsService.exportEquipmentUsage(format, startDate, endDate);
   }
 }

@@ -8,7 +8,6 @@ import {
   Query,
   UseGuards,
   HttpStatus,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { SoftwareService } from './software.service';
@@ -18,7 +17,7 @@ import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
@@ -44,7 +43,9 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_SOFTWARE_CHANGE)
-  create(@Body() createDto: CreateSoftwareChangeDto) {
+  create(
+    @Body() createDto: CreateSoftwareChangeDto
+  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord {
     return this.softwareService.create(createDto);
   }
 
@@ -58,7 +59,16 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
-  findHistory(@Query() query: SoftwareHistoryQueryDto) {
+  findHistory(@Query() query: SoftwareHistoryQueryDto): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.softwareService.findHistory(query);
   }
 
@@ -71,7 +81,16 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE_REQUESTS)
-  findPendingApprovals() {
+  findPendingApprovals(): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.softwareService.findPendingApprovals();
   }
 
@@ -84,7 +103,20 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
-  getRegistry() {
+  getRegistry(): Promise<{
+    registry: {
+      equipmentId: string;
+      equipmentName: string;
+      softwareName: string | null;
+      softwareVersion: string | null;
+      softwareType: string | null;
+      lastUpdated: Date | null;
+    }[];
+    summary: { softwareName: string; equipmentCount: number; versions: (string | null)[] }[];
+    totalEquipments: number;
+    totalSoftwareTypes: number;
+    generatedAt: Date;
+  }> {
     return this.softwareService.getRegistry();
   }
 
@@ -102,7 +134,17 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
-  findEquipmentBySoftware(@Param('name') name: string) {
+  findEquipmentBySoftware(@Param('name') name: string): Promise<{
+    softwareName: string;
+    equipments: {
+      equipmentId: string;
+      equipmentName: string;
+      softwareVersion: string | null;
+      softwareType: string | null;
+      lastUpdated: Date | null;
+    }[];
+    count: number;
+  }> {
     return this.softwareService.findEquipmentBySoftware(name);
   }
 
@@ -117,7 +159,11 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
-  findOne(@Param('uuid') uuid: string) {
+  findOne(
+    @Param('uuid') uuid: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
+  > {
     return this.softwareService.findOne(uuid);
   }
 
@@ -133,7 +179,12 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_SOFTWARE_CHANGE)
-  approve(@Param('uuid') uuid: string, @Body() approveDto: ApproveSoftwareChangeDto) {
+  approve(
+    @Param('uuid') uuid: string,
+    @Body() approveDto: ApproveSoftwareChangeDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
+  > {
     return this.softwareService.approve(uuid, approveDto);
   }
 
@@ -149,7 +200,12 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_SOFTWARE_CHANGE)
-  reject(@Param('uuid') uuid: string, @Body() rejectDto: RejectSoftwareChangeDto) {
+  reject(
+    @Param('uuid') uuid: string,
+    @Body() rejectDto: RejectSoftwareChangeDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
+  > {
     return this.softwareService.reject(uuid, rejectDto);
   }
 }

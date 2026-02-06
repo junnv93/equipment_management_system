@@ -46,10 +46,36 @@ interface PaginationMeta {
 }
 
 /**
+ * 장비 정보 인터페이스 (반출 목록용)
+ */
+interface CheckoutEquipment {
+  id: string;
+  name: string | null;
+  managementNumber: string | null;
+}
+
+/**
+ * 사용자 정보 인터페이스 (반출 목록용)
+ */
+interface CheckoutUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+}
+
+/**
+ * 반출 항목 (관계 데이터 포함)
+ */
+interface CheckoutWithRelations extends Checkout {
+  equipment: CheckoutEquipment[];
+  user: CheckoutUser | null;
+}
+
+/**
  * 반출 목록 응답 인터페이스
  */
 export interface CheckoutListResponse {
-  items: Checkout[];
+  items: CheckoutWithRelations[];
   meta: PaginationMeta;
 }
 
@@ -319,8 +345,45 @@ export class CheckoutsService {
             .limit(numericPageSize)
             .offset(numericOffset);
 
+          // Fetch related data (equipment and users) for each checkout
+          const itemsWithRelations = await Promise.all(
+            items.map(async (checkout) => {
+              // Fetch equipment via checkoutItems
+              const checkoutItemsData = await this.db
+                .select({
+                  equipmentId: checkoutItems.equipmentId,
+                  equipmentName: schema.equipment.name,
+                  equipmentManagementNumber: schema.equipment.managementNumber,
+                })
+                .from(checkoutItems)
+                .leftJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
+                .where(eq(checkoutItems.checkoutId, checkout.id));
+
+              // Fetch requester user info
+              const [requesterData] = await this.db
+                .select({
+                  id: schema.users.id,
+                  name: schema.users.name,
+                  email: schema.users.email,
+                })
+                .from(schema.users)
+                .where(eq(schema.users.id, checkout.requesterId))
+                .limit(1);
+
+              return {
+                ...checkout,
+                equipment: checkoutItemsData.map((item) => ({
+                  id: item.equipmentId,
+                  name: item.equipmentName,
+                  managementNumber: item.equipmentManagementNumber,
+                })),
+                user: requesterData || null,
+              };
+            })
+          );
+
           return {
-            items,
+            items: itemsWithRelations,
             meta: {
               totalItems,
               itemCount: items.length,
@@ -567,6 +630,11 @@ export class CheckoutsService {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, '반출');
+
+      // approverId는 컨트롤러에서 세션으로부터 주입되므로 반드시 존재해야 함
+      if (!approveDto.approverId) {
+        throw new BadRequestException('승인자 정보가 필요합니다.');
+      }
       this.validateUuid(approveDto.approverId, '승인자');
 
       const checkout = await this.findOne(uuid);

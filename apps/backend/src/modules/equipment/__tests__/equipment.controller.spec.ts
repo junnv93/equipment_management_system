@@ -5,10 +5,9 @@ import { EquipmentApprovalService } from '../services/equipment-approval.service
 import { FileUploadService } from '../services/file-upload.service';
 import { EquipmentAttachmentService } from '../services/equipment-attachment.service';
 import { CreateEquipmentDto } from '../dto/create-equipment.dto';
-import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
 import { EquipmentQueryDto } from '../dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
-import { EquipmentStatusEnum, EquipmentStatus } from '@equipment-management/schemas';
+import { EquipmentStatus } from '@equipment-management/schemas';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
 import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
 import {
@@ -115,7 +110,16 @@ export class CalibrationFactorsService {
   }
 
   // 보정계수 목록 조회 (필터: equipmentId, approvalStatus)
-  async findAll(query: CalibrationFactorQueryDto) {
+  async findAll(query: CalibrationFactorQueryDto): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     const {
       equipmentId,
       approvalStatus,
@@ -192,7 +196,11 @@ export class CalibrationFactorsService {
   }
 
   // 장비별 현재 적용 중인 보정계수 조회
-  async findByEquipment(equipmentUuid: string) {
+  async findByEquipment(equipmentUuid: string): Promise<{
+    equipmentId: string;
+    factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    count: number;
+  }> {
     const today = new Date().toISOString().split('T')[0];
 
     const factors = calibrationFactors.filter(
@@ -212,7 +220,16 @@ export class CalibrationFactorsService {
   }
 
   // 보정계수 대장 조회 (전체 장비의 현재 보정계수)
-  async getRegistry() {
+  async getRegistry(): Promise<{
+    registry: {
+      equipmentId: string;
+      factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+      factorCount: number;
+    }[];
+    totalEquipments: number;
+    totalFactors: number;
+    generatedAt: Date;
+  }> {
     const today = new Date().toISOString().split('T')[0];
 
     // 승인된, 현재 유효한 보정계수만 조회
@@ -249,14 +266,28 @@ export class CalibrationFactorsService {
   }
 
   // 승인 대기 목록 조회
-  async findPendingApprovals() {
+  async findPendingApprovals(): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.findAll({
       approvalStatus: CalibrationFactorApprovalStatus.PENDING,
     });
   }
 
   // 보정계수 승인 (기술책임자)
-  async approve(id: string, approveDto: ApproveCalibrationFactorDto) {
+  async approve(
+    id: string,
+    approveDto: ApproveCalibrationFactorDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
+  > {
     const factor = await this.findOne(id);
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
@@ -279,7 +310,12 @@ export class CalibrationFactorsService {
   }
 
   // 보정계수 반려 (기술책임자)
-  async reject(id: string, rejectDto: RejectCalibrationFactorDto) {
+  async reject(
+    id: string,
+    rejectDto: RejectCalibrationFactorDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
+  > {
     const factor = await this.findOne(id);
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
@@ -302,8 +338,7 @@ export class CalibrationFactorsService {
   }
 
   // 소프트 삭제
-  async remove(id: string) {
-    const factor = await this.findOne(id);
+  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
     const index = calibrationFactors.findIndex((cf) => cf.id === id);
 
     calibrationFactors[index] = {

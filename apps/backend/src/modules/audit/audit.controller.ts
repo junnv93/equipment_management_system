@@ -11,7 +11,7 @@ import { AuditService, AuditLogFilter, PaginationOptions } from './audit.service
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 
 /**
  * 감사 로그 조회 컨트롤러
@@ -78,7 +78,25 @@ export class AuditController {
     @Query('action') action?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string
-  ) {
+  ): Promise<{
+    items: {
+      id: string;
+      timestamp: Date;
+      userId: string;
+      userName: string;
+      userRole: string;
+      action: string;
+      entityType: string;
+      entityId: string;
+      entityName: string | null;
+      details:
+        | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
+        | null;
+      ipAddress: string | null;
+      createdAt: Date;
+    }[];
+    meta: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/audit/audit.service').PaginationMeta;
+  }> {
     const filter: AuditLogFilter = {
       userId,
       entityType,
@@ -126,7 +144,25 @@ export class AuditController {
   async findByEntity(
     @Param('entityType') entityType: string,
     @Param('entityId', ParseUUIDPipe) entityId: string
-  ) {
+  ): Promise<{
+    items: {
+      id: string;
+      timestamp: Date;
+      userId: string;
+      userName: string;
+      userRole: string;
+      action: string;
+      entityType: string;
+      entityId: string;
+      entityName: string | null;
+      details:
+        | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
+        | null;
+      ipAddress: string | null;
+      createdAt: Date;
+    }[];
+    formattedLogs: string[];
+  }> {
     const logs = await this.auditService.findByEntity(entityType, entityId);
     return {
       items: logs,
@@ -150,7 +186,28 @@ export class AuditController {
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
   @ApiResponse({ status: 403, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
-  async findByUser(@Param('userId', ParseUUIDPipe) userId: string, @Query('limit') limit?: string) {
+  async findByUser(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query('limit') limit?: string
+  ): Promise<{
+    items: {
+      id: string;
+      timestamp: Date;
+      userId: string;
+      userName: string;
+      userRole: string;
+      action: string;
+      entityType: string;
+      entityId: string;
+      entityName: string | null;
+      details:
+        | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
+        | null;
+      ipAddress: string | null;
+      createdAt: Date;
+    }[];
+    formattedLogs: string[];
+  }> {
     const logs = await this.auditService.findByUser(userId, limit ? parseInt(limit, 10) : 100);
     return {
       items: logs,

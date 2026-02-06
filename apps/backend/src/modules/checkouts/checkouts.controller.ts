@@ -35,7 +35,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('반출 관리')
@@ -53,7 +53,40 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  async create(@Body() createCheckoutDto: CreateCheckoutDto, @Request() req: AuthenticatedRequest) {
+  async create(
+    @Body() createCheckoutDto: CreateCheckoutDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     const requesterId = req.user?.userId || req.user?.sub;
     if (!requesterId) {
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
@@ -72,7 +105,11 @@ export class CheckoutsController {
     description: '반출 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 목록 조회 성공' })
-  async findAll(@Query() query: CheckoutQueryDto) {
+  async findAll(
+    @Query() query: CheckoutQueryDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/checkouts/checkouts.service').CheckoutListResponse
+  > {
     return this.checkoutsService.findAll(query);
   }
 
@@ -85,7 +122,37 @@ export class CheckoutsController {
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     return this.checkoutsService.findOne(uuid);
   }
 
@@ -103,7 +170,37 @@ export class CheckoutsController {
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateCheckoutDto: UpdateCheckoutDto
-  ) {
+  ): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     return this.checkoutsService.update(uuid, updateCheckoutDto);
   }
 
@@ -118,7 +215,37 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
-  async remove(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  async remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     return this.checkoutsService.remove(uuid);
   }
 
@@ -138,9 +265,47 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveCheckoutDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
+    // 승인자 ID는 인증된 세션에서 추출 (클라이언트 입력 신뢰 금지)
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+
     const approverTeamId = req.user?.teamId; // 승인자 팀 ID
-    return this.checkoutsService.approve(uuid, approveDto, approverTeamId);
+
+    // DTO의 approverId는 무시하고 세션에서 추출한 값 사용
+    return this.checkoutsService.approve(uuid, { ...approveDto, approverId }, approverTeamId);
   }
 
   @Patch(':uuid/reject')
@@ -151,7 +316,40 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.OK, description: '반출 반려 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '반려 불가능한 상태 또는 사유 누락' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async reject(@Param('uuid', ParseUUIDPipe) uuid: string, @Body() rejectDto: RejectCheckoutDto) {
+  async reject(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() rejectDto: RejectCheckoutDto
+  ): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     // 반려 사유 필수 검증 (요구사항)
     if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
       throw new BadRequestException('반려 사유는 필수입니다.');
@@ -166,7 +364,37 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.OK, description: '반출 시작 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '반출 시작 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async startCheckout(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  async startCheckout(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     return this.checkoutsService.startCheckout(uuid);
   }
 
@@ -194,7 +422,37 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() returnDto: ReturnCheckoutDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     const returnerId = req.user?.userId || req.user?.sub;
     if (!returnerId) {
       throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
@@ -226,7 +484,37 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveReturnDto: ApproveReturnDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     // 승인자 ID가 없으면 현재 로그인한 사용자 ID 사용
     const approverId = approveReturnDto.approverId || req.user.userId;
     if (!approverId) {
@@ -245,7 +533,37 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.OK, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async cancel(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  async cancel(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    requesterId: string;
+    approverId: string | null;
+    returnerId: string | null;
+    purpose: string;
+    checkoutType: string;
+    destination: string;
+    lenderTeamId: string | null;
+    lenderSiteId: string | null;
+    phoneNumber: string | null;
+    address: string | null;
+    reason: string;
+    checkoutDate: Date | null;
+    expectedReturnDate: Date;
+    actualReturnDate: Date | null;
+    status: string;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    calibrationChecked: boolean | null;
+    repairChecked: boolean | null;
+    workingStatusChecked: boolean | null;
+    inspectionNotes: string | null;
+    returnApprovedBy: string | null;
+    returnApprovedAt: Date | null;
+    lenderConfirmedBy: string | null;
+    lenderConfirmedAt: Date | null;
+    lenderConfirmNotes: string | null;
+  }> {
     return this.checkoutsService.cancel(uuid);
   }
 }

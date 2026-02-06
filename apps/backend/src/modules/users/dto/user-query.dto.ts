@@ -12,6 +12,7 @@ export const userQuerySchema = z.object({
   name: z.string().optional(),
   roles: z.string().optional(), // 쉼표로 구분된 역할 목록
   teams: z.string().optional(), // 쉼표로 구분된 팀 목록
+  site: z.string().optional(), // 사이트 필터 (suwon, uiwang, pyeongtaek)
   department: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
   search: z.string().optional(),
@@ -51,6 +52,12 @@ export class UserQueryDto {
     example: 'rf,sar',
   })
   teams?: string;
+
+  @ApiPropertyOptional({
+    description: '사이트 필터 (suwon, uiwang, pyeongtaek)',
+    example: 'suwon',
+  })
+  site?: string;
 
   @ApiPropertyOptional({
     description: '부서 검색',

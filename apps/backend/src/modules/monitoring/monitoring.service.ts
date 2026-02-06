@@ -165,7 +165,19 @@ export class MonitoringService {
   /**
    * 시스템 메트릭 조회
    */
-  getSystemMetrics() {
+  getSystemMetrics(): {
+    hostname: string;
+    platform: NodeJS.Platform;
+    arch: string;
+    release: string;
+    nodeVersion: string;
+    nodeEnv: string | undefined;
+    cpu: { usage: number; loadAvg: number[] };
+    memory: { total: number; free: number; used: number; percentage: number };
+    uptime: number;
+    network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
+    storage: { diskUsage: number; diskFree: number; diskTotal: number };
+  } {
     this.logger.log('시스템 메트릭 조회');
     return {
       ...this.metrics,
@@ -181,7 +193,13 @@ export class MonitoringService {
   /**
    * HTTP 요청 통계 조회
    */
-  getHttpStats() {
+  getHttpStats(): {
+    totalRequests: number;
+    successRequests: number;
+    errorRequests: number;
+    errorRate: number;
+    topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
+  } {
     // 엔드포인트별 평균 응답 시간 계산
     const avgResponseTimes = new Map<string, number>();
     this.httpStats.responseTimeByEndpoint.forEach((times, endpoint) => {
@@ -216,7 +234,25 @@ export class MonitoringService {
   /**
    * 데이터베이스 진단 정보 조회
    */
-  getDatabaseDiagnostics() {
+  getDatabaseDiagnostics(): {
+    status: string;
+    version: string;
+    connections: { active: number; idle: number; max: number };
+    metrics: {
+      connectionsCreated: number;
+      connectionErrors: number;
+      queriesExecuted: number;
+      queriesFailed: number;
+      avgQueryTime: number;
+      slowQueries: number;
+      queryCacheHitRate: number;
+      indexUsage: number;
+      deadlocks: number;
+      lockWaitTime: number;
+    };
+    tablesInfo: { name: string; rowCount: number; size: string }[];
+    replicationLag: number;
+  } {
     this.logger.log('데이터베이스 진단 정보 조회');
 
     // 임시로 더미 데이터 반환
@@ -253,7 +289,35 @@ export class MonitoringService {
   /**
    * 애플리케이션 전체 건강 상태 조회
    */
-  getHealthStatus() {
+  getHealthStatus(): {
+    status: string;
+    timestamp: string;
+    services: {
+      database: {
+        status: string;
+        metrics: {
+          connectionsCreated: number;
+          connectionErrors: number;
+          queriesExecuted: number;
+          queriesFailed: number;
+          avgQueryTime: number;
+        };
+      };
+      system: {
+        status: string;
+        uptime: string;
+        cpu: { usage: string; status: string };
+        memory: { usage: string; status: string };
+      };
+      api: { status: string; totalRequests: number; errorRate: string };
+      logging: {
+        status: string;
+        counts: { error: number; warn: number; info: number; debug: number; verbose: number };
+      };
+      cache: { status: string; hitRate: number };
+    };
+    lastChecked: string;
+  } {
     this.logger.log('애플리케이션 건강 상태 조회');
 
     // 임계치 설정
@@ -325,7 +389,54 @@ export class MonitoringService {
   /**
    * 상세 진단 정보 조회
    */
-  getDiagnostics() {
+  getDiagnostics(): {
+    system: {
+      hostname: string;
+      platform: NodeJS.Platform;
+      arch: string;
+      release: string;
+      nodeVersion: string;
+      nodeEnv: string | undefined;
+      cpu: { usage: number; loadAvg: number[] };
+      memory: { total: number; free: number; used: number; percentage: number };
+      uptime: number;
+      network: { requestsPerMinute: number; errorRate: number; avgResponseTime: number };
+      storage: { diskUsage: number; diskFree: number; diskTotal: number };
+    };
+    database: {
+      status: string;
+      version: string;
+      connections: { active: number; idle: number; max: number };
+      metrics: {
+        connectionsCreated: number;
+        connectionErrors: number;
+        queriesExecuted: number;
+        queriesFailed: number;
+        avgQueryTime: number;
+        slowQueries: number;
+        queryCacheHitRate: number;
+        indexUsage: number;
+        deadlocks: number;
+        lockWaitTime: number;
+      };
+      tablesInfo: { name: string; rowCount: number; size: string }[];
+      replicationLag: number;
+    };
+    http: {
+      totalRequests: number;
+      successRequests: number;
+      errorRequests: number;
+      errorRate: number;
+      topEndpoints: { endpoint: string; count: number; avgResponseTime: number }[];
+    };
+    timestamp: string;
+    env: string | undefined;
+    logging: {
+      counts: { error: number; warn: number; info: number; debug: number; verbose: number };
+      lastErrors: never[];
+    };
+    performance: { responseTime: { avg: number; p95: number; p99: number }; throughput: number };
+  } {
     this.logger.log('상세 진단 정보 조회');
     return {
       system: this.getSystemMetrics(),

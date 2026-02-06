@@ -5,7 +5,7 @@ import {
   ConflictException,
   Inject,
 } from '@nestjs/common';
-import { eq, and, desc, or, SQL } from 'drizzle-orm';
+import { eq, and, desc, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -38,7 +38,58 @@ export class CalibrationPlansService {
   /**
    * 교정계획서 생성 (외부교정 대상 장비 자동 로드)
    */
-  async create(createDto: CreateCalibrationPlanDto) {
+  async create(createDto: CreateCalibrationPlanDto): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const { year, siteId, teamId, createdBy } = createDto;
 
     // 이미 해당 연도/시험소에 최신 버전 계획서가 있는지 확인
@@ -124,7 +175,38 @@ export class CalibrationPlansService {
   /**
    * 교정계획서 목록 조회
    */
-  async findAll(query: CalibrationPlanQueryDto) {
+  async findAll(query: CalibrationPlanQueryDto): Promise<{
+    items: {
+      id: string;
+      year: number;
+      siteId: string;
+      teamId: string | null;
+      status: string;
+      createdBy: string;
+      submittedAt: Date | null;
+      reviewedBy: string | null;
+      reviewedAt: Date | null;
+      reviewComment: string | null;
+      approvedBy: string | null;
+      approvedAt: Date | null;
+      rejectedBy: string | null;
+      rejectedAt: Date | null;
+      rejectionReason: string | null;
+      rejectionStage: string | null;
+      version: number;
+      parentPlanId: string | null;
+      isLatestVersion: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     const { year, siteId, status, page = 1, pageSize = 20 } = query;
 
     const conditions: SQL[] = [];
@@ -174,7 +256,58 @@ export class CalibrationPlansService {
   /**
    * 교정계획서 상세 조회 (항목 포함)
    */
-  async findOne(uuid: string) {
+  async findOne(uuid: string): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const [plan] = await this.db
       .select()
       .from(calibrationPlans)
@@ -218,7 +351,61 @@ export class CalibrationPlansService {
   /**
    * 교정계획서 수정 (draft 상태만)
    */
-  async update(uuid: string, updateDto: UpdateCalibrationPlanDto) {
+  async update(
+    uuid: string,
+    updateDto: UpdateCalibrationPlanDto
+  ): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const plan = await this.findOneBasic(uuid);
 
     if (plan.status !== 'draft') {
@@ -239,7 +426,7 @@ export class CalibrationPlansService {
   /**
    * 교정계획서 삭제 (draft 상태만)
    */
-  async remove(uuid: string) {
+  async remove(uuid: string): Promise<{ uuid: string; deleted: boolean }> {
     const plan = await this.findOneBasic(uuid);
 
     if (plan.status !== 'draft') {
@@ -256,7 +443,58 @@ export class CalibrationPlansService {
    * 승인 요청 (draft -> pending_approval) - 기존 호환성 유지
    * @deprecated submitForReview() 사용 권장
    */
-  async submit(uuid: string) {
+  async submit(uuid: string): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     return this.submitForReview(uuid, { submittedBy: '' });
   }
 
@@ -264,7 +502,61 @@ export class CalibrationPlansService {
    * 검토 요청 (draft/rejected -> pending_review, 기술책임자)
    * 3단계 승인 워크플로우의 첫 번째 단계
    */
-  async submitForReview(uuid: string, submitDto: SubmitForReviewDto) {
+  async submitForReview(
+    uuid: string,
+    submitDto: SubmitForReviewDto
+  ): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const plan = await this.findOneBasic(uuid);
 
     if (plan.status !== 'draft' && plan.status !== 'rejected') {
@@ -294,7 +586,61 @@ export class CalibrationPlansService {
    * 검토 완료 (pending_review -> pending_approval, 품질책임자)
    * 3단계 승인 워크플로우의 두 번째 단계
    */
-  async review(uuid: string, reviewDto: ReviewCalibrationPlanDto) {
+  async review(
+    uuid: string,
+    reviewDto: ReviewCalibrationPlanDto
+  ): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const plan = await this.findOneBasic(uuid);
 
     if (plan.status !== 'pending_review') {
@@ -321,7 +667,61 @@ export class CalibrationPlansService {
    * 최종 승인 (pending_approval -> approved, 시험소장)
    * 3단계 승인 워크플로우의 세 번째 단계
    */
-  async approve(uuid: string, approveDto: ApproveCalibrationPlanDto) {
+  async approve(
+    uuid: string,
+    approveDto: ApproveCalibrationPlanDto
+  ): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const plan = await this.findOneBasic(uuid);
 
     if (plan.status !== 'pending_approval') {
@@ -347,7 +747,61 @@ export class CalibrationPlansService {
    * 반려 (pending_review/pending_approval -> rejected)
    * 품질책임자(검토 단계) 또는 시험소장(승인 단계)이 반려
    */
-  async reject(uuid: string, rejectDto: RejectCalibrationPlanDto) {
+  async reject(
+    uuid: string,
+    rejectDto: RejectCalibrationPlanDto
+  ): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const plan = await this.findOneBasic(uuid);
 
     // 검토 대기 또는 승인 대기 상태에서만 반려 가능
@@ -382,7 +836,27 @@ export class CalibrationPlansService {
   /**
    * 항목 확인 (기술책임자)
    */
-  async confirmItem(planUuid: string, itemUuid: string, confirmDto: ConfirmPlanItemDto) {
+  async confirmItem(
+    planUuid: string,
+    itemUuid: string,
+    confirmDto: ConfirmPlanItemDto
+  ): Promise<{
+    id: string;
+    planId: string;
+    equipmentId: string;
+    sequenceNumber: number;
+    snapshotValidityDate: Date | null;
+    snapshotCalibrationCycle: number | null;
+    snapshotCalibrationAgency: string | null;
+    plannedCalibrationDate: Date | null;
+    plannedCalibrationAgency: string | null;
+    confirmedBy: string | null;
+    confirmedAt: Date | null;
+    actualCalibrationDate: Date | null;
+    notes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const plan = await this.findOneBasic(planUuid);
 
     // 승인된 계획서만 항목 확인 가능
@@ -415,7 +889,27 @@ export class CalibrationPlansService {
   /**
    * 항목 수정 (계획된 교정기관, 비고)
    */
-  async updateItem(planUuid: string, itemUuid: string, updateDto: UpdateCalibrationPlanItemDto) {
+  async updateItem(
+    planUuid: string,
+    itemUuid: string,
+    updateDto: UpdateCalibrationPlanItemDto
+  ): Promise<{
+    id: string;
+    planId: string;
+    equipmentId: string;
+    sequenceNumber: number;
+    snapshotValidityDate: Date | null;
+    snapshotCalibrationCycle: number | null;
+    snapshotCalibrationAgency: string | null;
+    plannedCalibrationDate: Date | null;
+    plannedCalibrationAgency: string | null;
+    confirmedBy: string | null;
+    confirmedAt: Date | null;
+    actualCalibrationDate: Date | null;
+    notes: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const plan = await this.findOneBasic(planUuid);
 
     if (plan.status !== 'draft') {
@@ -446,7 +940,21 @@ export class CalibrationPlansService {
   /**
    * 외부교정 대상 장비 조회
    */
-  async findExternalEquipment(query: ExternalEquipmentQueryDto) {
+  async findExternalEquipment(query: ExternalEquipmentQueryDto): Promise<
+    {
+      id: string;
+      name: string;
+      managementNumber: string;
+      modelName: string | null;
+      manufacturer: string | null;
+      location: string | null;
+      site: string;
+      lastCalibrationDate: Date | null;
+      nextCalibrationDate: Date | null;
+      calibrationCycle: number | null;
+      calibrationAgency: string | null;
+    }[]
+  > {
     const { year, siteId } = query;
 
     const conditions: SQL[] = [
@@ -494,7 +1002,7 @@ export class CalibrationPlansService {
    * 실제 교정일 자동 기록 (장비 lastCalibrationDate 변경 시 호출)
    * CalibrationService에서 교정 완료 시 호출됨
    */
-  async recordActualCalibrationDate(equipmentId: string, calibrationDate: Date) {
+  async recordActualCalibrationDate(equipmentId: string, calibrationDate: Date): Promise<number> {
     const currentYear = calibrationDate.getFullYear();
 
     // 해당 연도의 승인된 교정계획서 항목 조회
@@ -535,7 +1043,61 @@ export class CalibrationPlansService {
    * - 새 계획서는 version+1, status='draft', isLatestVersion=true
    * - 기존 항목들을 새 계획서로 복사
    */
-  async createNewVersion(uuid: string, userId: string) {
+  async createNewVersion(
+    uuid: string,
+    userId: string
+  ): Promise<{
+    items: {
+      equipment: {
+        id: string;
+        name: string;
+        managementNumber: string;
+        modelName: string | null;
+        manufacturer: string | null;
+        location: string | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+      };
+      id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      planId: string;
+      equipmentId: string;
+      sequenceNumber: number;
+      snapshotValidityDate: Date | null;
+      snapshotCalibrationCycle: number | null;
+      snapshotCalibrationAgency: string | null;
+      plannedCalibrationDate: Date | null;
+      plannedCalibrationAgency: string | null;
+      confirmedBy: string | null;
+      confirmedAt: Date | null;
+      actualCalibrationDate: Date | null;
+      notes: string | null;
+    }[];
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const parent = await this.findOneBasic(uuid);
 
     if (parent.status !== 'approved') {
@@ -602,7 +1164,20 @@ export class CalibrationPlansService {
    * - 같은 year + siteId를 가진 모든 버전
    * - 버전 번호 내림차순 정렬
    */
-  async getVersionHistory(uuid: string) {
+  async getVersionHistory(uuid: string): Promise<
+    {
+      id: string;
+      year: number;
+      siteId: string;
+      status: string;
+      version: number;
+      isLatestVersion: boolean;
+      createdBy: string;
+      createdAt: Date;
+      approvedBy: string | null;
+      approvedAt: Date | null;
+    }[]
+  > {
     const current = await this.findOneBasic(uuid);
 
     // 같은 연도+시험소의 모든 버전 조회
@@ -631,7 +1206,29 @@ export class CalibrationPlansService {
   /**
    * 기본 계획서 조회 (항목 없이)
    */
-  private async findOneBasic(uuid: string) {
+  private async findOneBasic(uuid: string): Promise<{
+    id: string;
+    year: number;
+    siteId: string;
+    teamId: string | null;
+    status: string;
+    createdBy: string;
+    submittedAt: Date | null;
+    reviewedBy: string | null;
+    reviewedAt: Date | null;
+    reviewComment: string | null;
+    approvedBy: string | null;
+    approvedAt: Date | null;
+    rejectedBy: string | null;
+    rejectedAt: Date | null;
+    rejectionReason: string | null;
+    rejectionStage: string | null;
+    version: number;
+    parentPlanId: string | null;
+    isLatestVersion: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const [plan] = await this.db
       .select()
       .from(calibrationPlans)

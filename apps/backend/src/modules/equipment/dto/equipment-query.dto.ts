@@ -6,6 +6,7 @@ import {
   EquipmentStatus,
   CalibrationMethod,
   Classification,
+  Site,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -60,10 +61,10 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
 
   @ApiPropertyOptional({
     description: '사이트',
-    enum: ['suwon', 'uiwang'],
+    enum: ['suwon', 'uiwang', 'pyeongtaek'],
     example: 'suwon',
   })
-  site?: 'suwon' | 'uiwang';
+  site?: Site;
 
   @ApiPropertyOptional({
     description: '교정 방법 (외부교정/자체점검/비대상)',
@@ -99,7 +100,7 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',
-    example: 'name.asc',
+    example: 'managementNumber.asc',
   })
   sort?: string;
 

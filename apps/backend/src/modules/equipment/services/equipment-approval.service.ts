@@ -6,8 +6,7 @@ import {
   Logger,
   Inject,
 } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import {
   equipmentRequests,
   equipmentAttachments,
@@ -94,7 +93,22 @@ export class EquipmentApprovalService {
       this.logger.log(`Equipment create request created: ${request.id}`);
       return request;
     } catch (error) {
+      console.log('\n========================================');
+      console.log('🔴 EQUIPMENT REQUEST CREATION FAILED');
+      console.log('========================================');
+      console.log('Error:', error);
+      if (error instanceof Error) {
+        console.log('Error message:', error.message);
+        console.log('Stack trace:', error.stack);
+      }
+      console.log('========================================\n');
+
       this.logger.error(`Failed to create equipment request: ${error}`);
+      this.logger.error(`Error details:`, error);
+      if (error instanceof Error) {
+        this.logger.error(`Error message: ${error.message}`);
+        this.logger.error(`Stack trace: ${error.stack}`);
+      }
       throw new BadRequestException('장비 등록 요청 생성에 실패했습니다.');
     }
   }
@@ -207,7 +221,7 @@ export class EquipmentApprovalService {
   /**
    * 승인 대기 요청 목록 조회
    */
-  async findPendingRequests(userRoles: string[], userSite?: string): Promise<EquipmentRequest[]> {
+  async findPendingRequests(userRoles: string[], _userSite?: string): Promise<EquipmentRequest[]> {
     try {
       // 기술책임자 또는 관리자만 승인 대기 목록 조회 가능
       const canViewAll =

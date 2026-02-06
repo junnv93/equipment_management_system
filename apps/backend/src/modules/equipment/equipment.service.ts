@@ -1,21 +1,15 @@
 import { Injectable, NotFoundException, Inject, Logger, BadRequestException } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
 import {
   EquipmentStatus,
-  SharedSource,
   parseManagementNumber,
-  generateManagementNumber,
-  SITE_TO_CODE,
   CLASSIFICATION_TO_CODE,
-  Classification,
-  Site,
 } from '@equipment-management/schemas';
 import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
-import { eq, and, like, lt, lte, gte, or, desc, asc, sql, SQL } from 'drizzle-orm';
+import { eq, and, like, or, desc, asc, sql, SQL } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -60,6 +54,7 @@ export class EquipmentService {
 
   // 인덱스가 있는 필드 목록 (정렬 최적화용)
   private readonly INDEXED_FIELDS = [
+    'managementNumber',
     'status',
     'location',
     'manufacturer',
@@ -111,26 +106,54 @@ export class EquipmentService {
   }
 
   /**
+   * 캐시 키용 파라미터 정규화
+   *
+   * Best Practice: undefined/null/빈 문자열 제거하여 캐시 키를 일관되게 생성
+   *
+   * @param params 쿼리 파라미터 객체
+   * @returns 정규화된 파라미터 객체
+   */
+  private normalizeCacheParams(params: Record<string, unknown>): Record<string, unknown> {
+    return Object.entries(params).reduce(
+      (acc, [key, value]) => {
+        // undefined, null, 빈 문자열 제거
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {} as Record<string, unknown>
+    );
+  }
+
+  /**
    * 캐시 키 생성 헬퍼 메서드
+   *
+   * Best Practice: 순환 참조 방지 + 결정론적 키 생성
+   * - Object.keys().sort()로 키 순서 보장
+   * - 정규화된 파라미터만 포함하여 불필요한 캐시 미스 방지
    */
   private buildCacheKey(suffix: string, params?: Record<string, unknown>): string {
     const baseKey = `${this.CACHE_PREFIX}${suffix}`;
     if (!params) {
       return baseKey;
     }
-    // 순환 참조 방지를 위해 안전하게 직렬화
-    const safeParams = JSON.stringify(params, (key, value) => {
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        return Object.keys(value).reduce(
-          (acc, k) => {
-            acc[k] = value[k];
-            return acc;
-          },
-          {} as Record<string, unknown>
-        );
-      }
-      return value;
-    });
+
+    // 정규화된 파라미터로 결정론적 키 생성
+    const normalizedParams = this.normalizeCacheParams(params);
+
+    // 키 순서를 보장하기 위해 정렬
+    const sortedParams = Object.keys(normalizedParams)
+      .sort()
+      .reduce(
+        (acc, key) => {
+          acc[key] = normalizedParams[key];
+          return acc;
+        },
+        {} as Record<string, unknown>
+      );
+
+    const safeParams = JSON.stringify(sortedParams);
     return `${baseKey}:${safeParams}`;
   }
 
@@ -154,6 +177,19 @@ export class EquipmentService {
       calibrationMethod,
       classification,
     } = queryParams;
+
+    // 🔍 디버그: 교정 필터 파라미터 로깅
+    if (
+      calibrationDue !== undefined ||
+      calibrationDueAfter !== undefined ||
+      calibrationOverdue !== undefined
+    ) {
+      this.logger.log(
+        `[CALIBRATION FILTER] calibrationDue=${calibrationDue} (type: ${typeof calibrationDue}), ` +
+          `calibrationDueAfter=${calibrationDueAfter} (type: ${typeof calibrationDueAfter}), ` +
+          `calibrationOverdue=${calibrationOverdue} (type: ${typeof calibrationOverdue})`
+      );
+    }
 
     const whereConditions: SQL<unknown>[] = [eq(equipment.isActive, true)];
 
@@ -264,6 +300,8 @@ export class EquipmentService {
     }
 
     // 교정 기한 초과 필터 (독립적 필터 - status와 조합 가능)
+    // ✅ Drizzle ORM의 Date 객체 처리 문제 해결: sql 템플릿으로 명시적 타임스탬프 변환
+    // 📅 비즈니스 로직: 차기교정일이 오늘까지면 오늘까지는 유효 → 오늘 이전(<)만 초과
     if (calibrationOverdue !== undefined && calibrationOverdue === true) {
       const today = getUtcStartOfDay();
       whereConditions.push(
@@ -293,6 +331,13 @@ export class EquipmentService {
       if (field && this.INDEXED_FIELDS.includes(field as (typeof this.INDEXED_FIELDS)[number])) {
         // 필드명에 따라 적절한 컬럼 참조 사용
         switch (field) {
+          case 'managementNumber':
+            orderBy.push(
+              direction === 'asc'
+                ? asc(equipment.managementNumber)
+                : desc(equipment.managementNumber)
+            );
+            break;
           case 'status':
             orderBy.push(direction === 'asc' ? asc(equipment.status) : desc(equipment.status));
             break;
@@ -328,17 +373,19 @@ export class EquipmentService {
             orderBy.push(direction === 'asc' ? asc(equipment.isActive) : desc(equipment.isActive));
             break;
           case 'name':
-          default:
             orderBy.push(direction === 'asc' ? asc(equipment.name) : desc(equipment.name));
+            break;
+          default:
+            orderBy.push(asc(equipment.managementNumber));
             break;
         }
       } else {
         // 인덱스가 없는 필드는 기본 정렬 사용
-        orderBy.push(asc(equipment.name));
+        orderBy.push(asc(equipment.managementNumber));
       }
     } else {
-      // 기본 정렬: 이름 오름차순 (인덱스 있음)
-      orderBy.push(asc(equipment.name));
+      // 기본 정렬: 관리번호 오름차순 (unique 인덱스 있음)
+      orderBy.push(asc(equipment.managementNumber));
     }
 
     return { whereConditions, orderBy };
@@ -543,6 +590,62 @@ export class EquipmentService {
   }
 
   /**
+   * 관리번호 중복 검사
+   *
+   * 실시간으로 관리번호 사용 가능 여부를 확인합니다.
+   * 수정 시에는 현재 장비 ID를 제외하고 검사합니다.
+   *
+   * @param managementNumber - 검사할 관리번호
+   * @param excludeId - 제외할 장비 ID (수정 시 현재 장비)
+   * @returns 사용 가능 여부와 메시지
+   */
+  async checkManagementNumberAvailability(
+    managementNumber: string,
+    excludeId?: string
+  ): Promise<{
+    available: boolean;
+    message: string;
+    existingEquipment?: { id: string; name: string; managementNumber: string };
+  }> {
+    // 관리번호로 기존 장비 검색
+    const existingEquipment = await this.db.query.equipment.findFirst({
+      where: eq(equipment.managementNumber, managementNumber),
+      columns: {
+        id: true,
+        name: true,
+        managementNumber: true,
+      },
+    });
+
+    // 중복 장비가 없으면 사용 가능
+    if (!existingEquipment) {
+      return {
+        available: true,
+        message: '사용 가능한 관리번호입니다.',
+      };
+    }
+
+    // 수정 모드에서 자기 자신인 경우 사용 가능
+    if (excludeId && existingEquipment.id === excludeId) {
+      return {
+        available: true,
+        message: '현재 장비의 관리번호입니다.',
+      };
+    }
+
+    // 중복 - 사용 불가
+    return {
+      available: false,
+      message: `관리번호 '${managementNumber}'은(는) 이미 '${existingEquipment.name}' 장비에서 사용 중입니다.`,
+      existingEquipment: {
+        id: existingEquipment.id,
+        name: existingEquipment.name,
+        managementNumber: existingEquipment.managementNumber,
+      },
+    };
+  }
+
+  /**
    * 장비 생성
    * 관리번호 중복 검사 후 새 장비 생성
    */
@@ -663,29 +766,31 @@ export class EquipmentService {
 
   /**
    * 장비 목록 조회 (필터링, 정렬, 페이지네이션 지원)
-   * ✅ Single Source of Truth: Zod 스키마가 타입 변환 및 검증을 모두 처리
+   *
+   * ✅ SSOT Principles:
+   * - Zod 스키마가 타입 변환 및 검증을 모두 처리
+   * - queryParams 객체가 유일한 필터 소스 (수동 필드 나열 금지)
+   * - 캐시 키 자동 생성으로 휴먼 에러 방지
+   *
+   * ✅ Best Practices:
+   * - 캐시 키에 모든 파라미터 자동 포함 (새 필터 추가 시 수동 작업 불필요)
+   * - normalizeCacheParams()로 undefined/null 제거하여 일관된 캐시 키 생성
+   * - 정렬된 키로 결정론적 캐시 히트 보장
+   *
    * @param queryParams 쿼리 파라미터
    * @param userSite 사용자 사이트 (시험실무자는 자신의 사이트만 조회)
    */
   async findAll(queryParams: EquipmentQueryDto, userSite?: string): Promise<EquipmentListResponse> {
     const { page = 1, pageSize = 20 } = queryParams;
 
-    // 캐시 키 생성 - 모든 필터 조건을 포함해야 정확한 캐시 히트
+    // 캐시 키 생성
+    // ✅ Best Practice: 모든 쿼리 파라미터를 자동으로 포함 (SSOT)
+    // - 새 필터 추가 시 수동으로 캐시 키에 추가할 필요 없음
+    // - normalizeCacheParams()가 undefined/null/빈 문자열 자동 제거
+    // - 휴먼 에러 방지 및 유지보수성 향상
     const cacheKey = this.buildCacheKey('list', {
-      search: queryParams.search,
-      status: queryParams.status,
-      location: queryParams.location,
-      manufacturer: queryParams.manufacturer,
-      teamId: queryParams.teamId,
-      calibrationMethod: queryParams.calibrationMethod, // ✅ 교정방법 필터 캐시 키에 포함
-      classification: queryParams.classification, // ✅ 장비분류 필터 캐시 키에 포함
-      calibrationDue: queryParams.calibrationDue,
-      calibrationOverdue: queryParams.calibrationOverdue, // ✅ 교정기한초과 필터 캐시 키에 포함
-      site: queryParams.site, // ✅ 사이트 필터 캐시 키에 포함
-      isShared: queryParams.isShared, // ✅ 공용장비 필터 캐시 키에 포함
-      sort: queryParams.sort,
-      page,
-      pageSize,
+      ...queryParams,
+      userSite, // 사용자 사이트도 캐시 키에 포함 (역할별 필터링)
     });
 
     return this.cacheService.getOrSet(
@@ -695,19 +800,13 @@ export class EquipmentService {
           // 쿼리 조건 빌드
           const { whereConditions, orderBy } = this.buildQueryConditions(queryParams, userSite);
 
-          // 총 아이템 수 계산 - 필터 조건 모두 포함
+          // 총 아이템 수 계산
+          // ✅ Best Practice: 모든 필터 파라미터를 자동으로 포함
+          // - page/pageSize는 count에 영향 없으므로 제외
+          const { page: _, pageSize: __, sort: ___, ...countParams } = queryParams;
           const countCacheKey = this.buildCacheKey('count', {
-            search: queryParams.search,
-            status: queryParams.status,
-            location: queryParams.location,
-            manufacturer: queryParams.manufacturer,
-            teamId: queryParams.teamId,
-            calibrationMethod: queryParams.calibrationMethod,
-            classification: queryParams.classification,
-            calibrationDue: queryParams.calibrationDue,
-            calibrationOverdue: queryParams.calibrationOverdue,
-            site: queryParams.site,
-            isShared: queryParams.isShared,
+            ...countParams,
+            userSite,
           });
 
           const totalItems = await this.cacheService.getOrSet(
@@ -908,6 +1007,15 @@ export class EquipmentService {
   }
 
   /**
+   * 공개 캐시 무효화 메서드 (E2E 테스트용)
+   * Controller에서 호출할 수 있도록 public으로 노출
+   */
+  async invalidateCachePublic(): Promise<void> {
+    await this.invalidateCache();
+    this.logger.log('Equipment cache invalidated via API endpoint');
+  }
+
+  /**
    * 교정 기한 초과 장비의 "사용 가능" 상태 변경 검증
    *
    * UL-QP-18 비즈니스 규칙:
@@ -1081,11 +1189,12 @@ export class EquipmentService {
           const today = getUtcStartOfDay();
           const dueDate = getUtcEndOfDay(addDaysUtc(today, days));
 
+          // ✅ Drizzle ORM의 Date 객체 처리 문제 해결: sql 템플릿으로 명시적 타임스탬프 변환
           return await this.db.query.equipment.findMany({
             where: and(
               eq(equipment.isActive, true),
               sql`${equipment.nextCalibrationDate} IS NOT NULL`,
-              lte(equipment.nextCalibrationDate, dueDate)
+              sql`${equipment.nextCalibrationDate} <= ${dueDate.toISOString()}::timestamp`
             ),
             orderBy: asc(equipment.nextCalibrationDate),
           });

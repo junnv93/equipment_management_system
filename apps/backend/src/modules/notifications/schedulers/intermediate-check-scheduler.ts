@@ -32,25 +32,6 @@ export class IntermediateCheckScheduler {
   ) {}
 
   /**
-   * 중복 알림 방지 키 생성
-   * @param calibrationId 교정 ID
-   * @param daysUntil 남은 일수
-   * @returns 고유 키 문자열
-   */
-  private getNotificationKey(calibrationId: string, daysUntil: number): string {
-    // 일수를 구간으로 매핑 (30, 7, 0)
-    let interval: number;
-    if (daysUntil >= 30) {
-      interval = 30;
-    } else if (daysUntil >= 7) {
-      interval = 7;
-    } else {
-      interval = 0;
-    }
-    return `${calibrationId}_${interval}`;
-  }
-
-  /**
    * 알림이 이미 발송되었는지 확인
    */
   private hasAlreadySent(calibrationId: string, daysUntil: number): boolean {
@@ -103,7 +84,9 @@ export class IntermediateCheckScheduler {
    * 2. 관리자가 수동으로 트리거
    * 3. @nestjs/schedule 설치 후 @Cron 데코레이터 사용
    */
-  async handleIntermediateCheckNotifications(days: number = 30) {
+  async handleIntermediateCheckNotifications(
+    days: number = 30
+  ): Promise<{ success: boolean; processed: number; sent: number; skipped: number }> {
     this.logger.log('중간점검 알림 스케줄러 실행 시작 (D-30, D-7, 당일 주기)');
 
     try {
@@ -187,7 +170,9 @@ export class IntermediateCheckScheduler {
    * 교정 예정일과 중간점검 예정일이 있는 경우 둘 다 알림을 발송합니다.
    * 중복 알림 방지 로직이 포함되어 있습니다.
    */
-  async handleCombinedCalibrationNotifications(days: number = 30) {
+  async handleCombinedCalibrationNotifications(
+    days: number = 30
+  ): Promise<{ success: boolean; processed: number; sent: number; skipped: number }> {
     this.logger.log('통합 교정/중간점검 알림 스케줄러 실행 시작 (D-30, D-7, 당일 주기)');
 
     try {
@@ -276,7 +261,12 @@ export class IntermediateCheckScheduler {
   /**
    * 수동으로 중간점검 알림을 트리거합니다. (테스트 및 관리용)
    */
-  async triggerIntermediateCheckNotifications(days: number = 7) {
+  async triggerIntermediateCheckNotifications(days: number = 7): Promise<{
+    totalChecks: number;
+    notificationsSent: number;
+    notificationsFailed: number;
+    details: { calibrationId: string; success: boolean; error?: string | undefined }[];
+  }> {
     this.logger.log(`수동 중간점검 알림 트리거: ${days}일 이내`);
 
     try {

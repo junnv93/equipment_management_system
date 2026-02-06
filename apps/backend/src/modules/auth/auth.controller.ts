@@ -9,7 +9,7 @@ import {
   ForbiddenException,
   UsePipes,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { AuthService, TestUser } from './auth.service';
 import { LoginDto, LoginValidationPipe } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { AzureADAuthGuard } from './guards/azure-ad-auth.guard';
@@ -23,20 +23,33 @@ export class AuthController {
   @Public()
   @Post('login')
   @UsePipes(LoginValidationPipe)
-  async login(@Body() loginDto: LoginDto) {
+  async login(
+    @Body() loginDto: LoginDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/auth/auth.service').AuthResponse
+  > {
     return this.authService.login(loginDto);
   }
 
   @Public()
   @UseGuards(AzureADAuthGuard)
   @Get('azure-login')
-  async azureLogin(@Req() req: AuthenticatedRequest) {
+  async azureLogin(
+    @Req() req: AuthenticatedRequest
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/auth/auth.service').AuthResponse
+  > {
     return this.authService.validateAzureADUser(req.user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Req() req: AuthenticatedRequest) {
+  getProfile(@Req() req: AuthenticatedRequest): {
+    id: string;
+    email: string;
+    roles: string[];
+    department: string | undefined;
+  } {
     return {
       id: req.user.userId,
       email: req.user.email,
@@ -48,7 +61,7 @@ export class AuthController {
   // 개발 환경용 테스트 엔드포인트
   @Get('test')
   @Public()
-  test() {
+  test(): { message: string; timestamp: string } {
     return {
       message: '인증 API가 정상적으로 동작 중입니다.',
       timestamp: new Date().toISOString(),
@@ -64,7 +77,11 @@ export class AuthController {
    */
   @Get('test-login')
   @Public()
-  async testLogin(@Query('role') role: string) {
+  async testLogin(
+    @Query('role') role: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/auth/auth.service').AuthResponse
+  > {
     // 개발 및 테스트 환경에서만 허용
     if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
       throw new ForbiddenException(
@@ -76,53 +93,33 @@ export class AuthController {
       throw new ForbiddenException('Role parameter is required');
     }
 
-    // 역할별 테스트 사용자 정보
-    // 주의: id, uuid, teamId는 반드시 유효한 UUID 형식이어야 함 (DB 저장 시 UUID 타입 검증)
-    const testUsers: Record<string, any> = {
+    // 역할별 테스트 사용자 정보 (최소한의 role→email 매핑만 유지)
+    // site, teamId, location 등은 DB에서 조회됨 (AuthService.generateTestToken)
+    const testUsers: Record<string, TestUser> = {
       test_engineer: {
-        id: '00000000-0000-0000-0000-000000000001',
-        uuid: '00000000-0000-0000-0000-000000000001',
         email: 'test.engineer@example.com',
-        name: '테스트 시험실무자',
+        name: '시험실무자 (Suwon)',
         role: 'test_engineer',
-        site: 'suwon',
-        teamId: '00000000-0000-0000-0000-000000000099',
       },
       technical_manager: {
-        id: '00000000-0000-0000-0000-000000000002',
-        uuid: '00000000-0000-0000-0000-000000000002',
         email: 'tech.manager@example.com',
-        name: '테스트 기술책임자',
+        name: '기술책임자 (Suwon)',
         role: 'technical_manager',
-        site: 'suwon',
-        teamId: '00000000-0000-0000-0000-000000000099',
       },
       quality_manager: {
-        id: '00000000-0000-0000-0000-000000000005',
-        uuid: '00000000-0000-0000-0000-000000000005',
         email: 'quality.manager@example.com',
-        name: '테스트 품질책임자',
+        name: '품질책임자 (Suwon)',
         role: 'quality_manager',
-        site: 'suwon',
-        teamId: '00000000-0000-0000-0000-000000000099',
       },
       lab_manager: {
-        id: '00000000-0000-0000-0000-000000000003',
-        uuid: '00000000-0000-0000-0000-000000000003',
         email: 'lab.manager@example.com',
-        name: '테스트 시험소장',
+        name: '시험소장 (Suwon)',
         role: 'lab_manager',
-        site: 'suwon',
-        teamId: '00000000-0000-0000-0000-000000000099',
       },
       system_admin: {
-        id: '00000000-0000-0000-0000-000000000004',
-        uuid: '00000000-0000-0000-0000-000000000004',
         email: 'system.admin@example.com',
-        name: '테스트 시스템 관리자',
+        name: '시스템 관리자',
         role: 'system_admin',
-        site: 'suwon',
-        teamId: '00000000-0000-0000-0000-000000000099',
       },
     };
 

@@ -1,11 +1,14 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { EquipmentController } from './equipment.controller';
+import { DisposalController } from './disposal.controller';
+import { DisposalRequestsController } from './disposal-requests.controller';
 import { EquipmentService } from './equipment.service';
 import { EquipmentApprovalService } from './services/equipment-approval.service';
 import { EquipmentAttachmentService } from './services/equipment-attachment.service';
 import { FileUploadService } from './services/file-upload.service';
 import { RepairHistoryService } from './services/repair-history.service';
 import { EquipmentHistoryService } from './services/equipment-history.service';
+import { DisposalService } from './services/disposal.service';
 import { RepairHistoryController } from './repair-history.controller';
 import { EquipmentHistoryController } from './equipment-history.controller';
 import { CacheModule } from '../../common/cache/cache.module';
@@ -17,7 +20,13 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     CacheModule,
     forwardRef(() => NonConformancesModule),
   ],
-  controllers: [EquipmentController, RepairHistoryController, EquipmentHistoryController],
+  controllers: [
+    EquipmentController,
+    DisposalController,
+    DisposalRequestsController,
+    RepairHistoryController,
+    EquipmentHistoryController,
+  ],
   providers: [
     EquipmentService,
     EquipmentApprovalService,
@@ -25,6 +34,7 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     FileUploadService,
     RepairHistoryService,
     EquipmentHistoryService,
+    DisposalService,
   ],
   exports: [
     EquipmentService,
@@ -33,6 +43,7 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     FileUploadService,
     RepairHistoryService,
     EquipmentHistoryService,
+    DisposalService,
   ],
 })
 export class EquipmentModule {}

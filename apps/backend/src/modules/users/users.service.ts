@@ -1,15 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { eq, ilike, inArray, and } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { users as usersTable } from '@equipment-management/db/schema';
 import { CreateUserDto, UpdateUserDto, UserQueryDto } from './dto';
-import {
-  User,
-  UserListResponse,
-  UserRoleEnum,
-  UserRoleValues,
-} from '@equipment-management/schemas';
+import { User, UserListResponse } from '@equipment-management/schemas';
 import { parseSortString, sortByField } from '../../common/utils/sort';
 
 @Injectable()
@@ -45,11 +40,17 @@ export class UsersService {
       conditions.push(inArray(usersTable.teamId, teamList));
     }
 
+    // 사이트 필터
+    if (query.site) {
+      conditions.push(eq(usersTable.site, query.site));
+    }
+
     // 쿼리 빌드
     let dbQuery = this.db.select().from(usersTable);
 
     // 조건이 있으면 and()로 결합
     if (conditions.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       dbQuery = dbQuery.where(and(...conditions)) as any;
     }
 
@@ -179,7 +180,7 @@ export class UsersService {
 
     if (existingUser) {
       // 기존 사용자 업데이트 (제공된 값만 업데이트)
-      const updateData: Record<string, any> = {
+      const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
       };
 
@@ -263,7 +264,7 @@ export class UsersService {
   }
 
   // 사용자 활성/비활성화 (향후 isActive 필드 추가 시 구현)
-  async toggleActive(id: string, isActive: boolean): Promise<User | null> {
+  async toggleActive(id: string, _isActive: boolean): Promise<User | null> {
     const user = await this.findOne(id);
     if (!user) {
       return null;
@@ -275,7 +276,12 @@ export class UsersService {
   }
 
   // 사용자 권한 조회
-  async findUserPermissions(id: string) {
+  async findUserPermissions(id: string): Promise<{
+    userId: string;
+    username: string;
+    role: 'test_engineer' | 'technical_manager' | 'quality_manager' | 'lab_manager';
+    permissions: string[];
+  } | null> {
     const user = await this.findOne(id);
     if (!user) {
       return null;
@@ -316,7 +322,9 @@ export class UsersService {
   }
 
   // 임시 비밀번호 생성
-  async generateTemporaryPassword(id: string) {
+  async generateTemporaryPassword(
+    id: string
+  ): Promise<{ tempPassword?: string | undefined; success: boolean; message: string } | null> {
     const user = await this.findOne(id);
     if (!user) {
       return null;

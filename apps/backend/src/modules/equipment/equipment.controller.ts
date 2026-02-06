@@ -34,25 +34,23 @@ import {
 import { EquipmentService } from './equipment.service';
 import { EquipmentApprovalService } from './services/equipment-approval.service';
 import { EquipmentAttachmentService } from './services/equipment-attachment.service';
-import { FileUploadService } from './services/file-upload.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
-import { ApproveEquipmentRequestDto } from './dto/approve-equipment-request.dto';
 import {
   CreateSharedEquipmentDto,
   CreateSharedEquipmentValidationPipe,
 } from './dto/create-shared-equipment.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Public } from '../auth/decorators/public.decorator';
+import { Permission } from '@equipment-management/shared-constants';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
-import { EquipmentStatus, UserRoleValues } from '@equipment-management/schemas';
+import { EquipmentStatus, UserRoleValues, Site } from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
-import { ApproveEquipmentRequestValidationPipe } from './dto/approve-equipment-request.dto';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('장비 관리')
@@ -63,7 +61,6 @@ export class EquipmentController {
   constructor(
     private readonly equipmentService: EquipmentService,
     private readonly approvalService: EquipmentApprovalService,
-    private readonly fileUploadService: FileUploadService,
     private readonly attachmentService: EquipmentAttachmentService
   ) {}
 
@@ -108,10 +105,111 @@ export class EquipmentController {
     @Body() createEquipmentDto: CreateEquipmentDto,
     @UploadedFiles() files?: MulterFile[],
     @Req() req?: AuthenticatedRequest
-  ) {
+  ): Promise<
+    | {
+        id: string;
+        name: string;
+        managementNumber: string;
+        siteCode: string | null;
+        classificationCode: string | null;
+        managementSerialNumber: number | null;
+        assetNumber: string | null;
+        modelName: string | null;
+        manufacturer: string | null;
+        manufacturerContact: string | null;
+        serialNumber: string | null;
+        description: string | null;
+        location: string | null;
+        specMatch: string | null;
+        calibrationRequired: string | null;
+        initialLocation: string | null;
+        installationDate: Date | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+        needsIntermediateCheck: boolean | null;
+        calibrationMethod: string | null;
+        lastIntermediateCheckDate: Date | null;
+        intermediateCheckCycle: number | null;
+        nextIntermediateCheckDate: Date | null;
+        site: string;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+        teamId: string | null;
+        managerId: string | null;
+        purchaseDate: Date | null;
+        price: number | null;
+        supplier: string | null;
+        contactInfo: string | null;
+        softwareVersion: string | null;
+        firmwareVersion: string | null;
+        softwareName: string | null;
+        softwareType: string | null;
+        manualLocation: string | null;
+        accessories: string | null;
+        mainFeatures: string | null;
+        technicalManager: string | null;
+        status: string;
+        isActive: boolean | null;
+        approvalStatus: string | null;
+        requestedBy: string | null;
+        approvedBy: string | null;
+        equipmentType: string | null;
+        calibrationResult: string | null;
+        correctionFactor: string | null;
+        intermediateCheckSchedule: Date | null;
+        repairHistory: string | null;
+        isShared: boolean;
+        sharedSource: string | null;
+        owner: string | null;
+        externalIdentifier: string | null;
+        usagePeriodStart: Date | null;
+        usagePeriodEnd: Date | null;
+      }
+    | {
+        message: string;
+        requestUuid: string;
+        request: {
+          id: string;
+          createdAt: Date | null;
+          updatedAt: Date | null;
+          approvalStatus: 'approved' | 'pending_approval' | 'rejected';
+          requestedBy: string;
+          approvedBy: string | null;
+          requestType: 'create' | 'update' | 'delete';
+          equipmentId: string | null;
+          requestedAt: Date;
+          approvedAt: Date | null;
+          rejectionReason: string | null;
+          requestData: string | null;
+        };
+      }
+  > {
     const userRoles = req?.user?.roles ?? [];
     const userId = req?.user?.userId ?? req?.user?.id ?? '';
-    const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
+    const userSite = req?.user?.site;
+    const userTeamId = req?.user?.teamId;
+    const isLabManager = userRoles.includes(UserRoleValues.LAB_MANAGER);
+    const isTechnicalManager = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER);
+    const isTestEngineer = userRoles.includes(UserRoleValues.TEST_ENGINEER);
+
+    // 🔒 보안: lab_manager를 제외한 모든 역할은 자신의 사이트/팀 장비만 등록 가능
+    // - test_engineer(시험실무자): 자기 팀만
+    // - technical_manager(기술책임자): 자기 팀만
+    // - lab_manager(시험소장): 제한 없음 (전체 시험소 관리)
+    if (!isLabManager) {
+      if (userSite && createEquipmentDto.site && createEquipmentDto.site !== userSite) {
+        throw new ForbiddenException(`자신의 사이트(${userSite}) 장비만 등록할 수 있습니다.`);
+      }
+      if (
+        userTeamId &&
+        createEquipmentDto.teamId &&
+        String(createEquipmentDto.teamId) !== String(userTeamId)
+      ) {
+        throw new ForbiddenException('자신의 팀 장비만 등록할 수 있습니다.');
+      }
+    }
 
     // 파일 업로드 처리
     let attachmentUuids: string[] = [];
@@ -121,12 +219,14 @@ export class EquipmentController {
       attachmentUuids = attachments.map((a) => a.id);
     }
 
-    // 시스템 관리자는 직접 승인 가능
-    if (isAdmin && createEquipmentDto.approvalStatus === 'approved') {
-      return this.equipmentService.create(createEquipmentDto);
+    // 시험소 관리자(lab_manager)는 자체 승인 가능 (UL-QP-18 Section 4)
+    if (isLabManager) {
+      // DTO에 approvalStatus가 없어도 자동으로 approved 처리
+      const approvedDto = { ...createEquipmentDto, approvalStatus: 'approved' as const };
+      return this.equipmentService.create(approvedDto);
     }
 
-    // 시험실무자는 승인 요청 생성
+    // 일반 사용자는 승인 요청 생성
     const request = await this.approvalService.createEquipmentRequest(
       createEquipmentDto,
       userId,
@@ -181,7 +281,70 @@ export class EquipmentController {
   async createShared(
     @Body() createSharedEquipmentDto: CreateSharedEquipmentDto,
     @UploadedFiles() files?: MulterFile[]
-  ) {
+  ): Promise<{
+    message: string;
+    equipment: {
+      id: string;
+      name: string;
+      managementNumber: string;
+      siteCode: string | null;
+      classificationCode: string | null;
+      managementSerialNumber: number | null;
+      assetNumber: string | null;
+      modelName: string | null;
+      manufacturer: string | null;
+      manufacturerContact: string | null;
+      serialNumber: string | null;
+      description: string | null;
+      location: string | null;
+      specMatch: string | null;
+      calibrationRequired: string | null;
+      initialLocation: string | null;
+      installationDate: Date | null;
+      calibrationCycle: number | null;
+      lastCalibrationDate: Date | null;
+      nextCalibrationDate: Date | null;
+      calibrationAgency: string | null;
+      needsIntermediateCheck: boolean | null;
+      calibrationMethod: string | null;
+      lastIntermediateCheckDate: Date | null;
+      intermediateCheckCycle: number | null;
+      nextIntermediateCheckDate: Date | null;
+      site: string;
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      teamId: string | null;
+      managerId: string | null;
+      purchaseDate: Date | null;
+      price: number | null;
+      supplier: string | null;
+      contactInfo: string | null;
+      softwareVersion: string | null;
+      firmwareVersion: string | null;
+      softwareName: string | null;
+      softwareType: string | null;
+      manualLocation: string | null;
+      accessories: string | null;
+      mainFeatures: string | null;
+      technicalManager: string | null;
+      status: string;
+      isActive: boolean | null;
+      approvalStatus: string | null;
+      requestedBy: string | null;
+      approvedBy: string | null;
+      equipmentType: string | null;
+      calibrationResult: string | null;
+      correctionFactor: string | null;
+      intermediateCheckSchedule: Date | null;
+      repairHistory: string | null;
+      isShared: boolean;
+      sharedSource: string | null;
+      owner: string | null;
+      externalIdentifier: string | null;
+      usagePeriodStart: Date | null;
+      usagePeriodEnd: Date | null;
+    };
+  }> {
     // 파일 업로드 처리 (교정성적서)
     if (files && files.length > 0) {
       const attachmentType = 'inspection_report'; // 교정성적서
@@ -202,7 +365,12 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @UsePipes(EquipmentQueryValidationPipe)
-  findAll(@Query() query: EquipmentQueryDto, @Req() req: AuthenticatedRequest) {
+  findAll(
+    @Query() query: EquipmentQueryDto,
+    @Req() req: AuthenticatedRequest
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/equipment/equipment.service').EquipmentListResponse
+  > {
     // 시험실무자는 자신의 사이트 장비만 조회 가능
     // 기술책임자/관리자는 모든 사이트 조회 가능
     const userSite = req.user?.site;
@@ -212,10 +380,78 @@ export class EquipmentController {
       userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
       userRoles.includes(UserRoleValues.LAB_MANAGER);
 
-    // 시험실무자이고 쿼리에 site가 없으면 자신의 사이트로 필터링
-    const siteFilter = isTestOperator && !canViewAllSites && !query.site ? userSite : undefined;
+    // 🔒 보안: test_engineer는 URL 파라미터와 관계없이 무조건 자신의 사이트만 조회
+    // URL에 다른 사이트를 지정해도 무시됨
+    let siteFilter: Site | undefined;
+    if (isTestOperator && !canViewAllSites) {
+      // test_engineer는 강제로 자신의 사이트 필터 적용
+      console.log(
+        `[SECURITY] test_engineer attempting access: userSite=${userSite}, querySite=${query.site}, forcing userSite`
+      );
+      siteFilter = userSite as Site;
+      // 🔒 중요: query 객체의 site를 강제로 덮어씀 (service에서 query.site 우선 사용)
+      query.site = userSite as Site;
+    } else {
+      // 다른 역할은 query.site 사용 가능
+      console.log(
+        `[ACCESS] Role has full site access: roles=${userRoles.join(',')}, querySite=${query.site}`
+      );
+      siteFilter = query.site;
+    }
 
     return this.equipmentService.findAll(query, siteFilter);
+  }
+
+  /**
+   * 관리번호 중복 검사
+   *
+   * 장비 등록/수정 시 실시간으로 관리번호 중복 여부를 확인합니다.
+   * excludeId 파라미터로 현재 수정 중인 장비를 제외할 수 있습니다.
+   */
+  @Get('check-management-number')
+  @ApiOperation({
+    summary: '관리번호 중복 검사',
+    description:
+      '입력된 관리번호가 이미 사용 중인지 확인합니다. 수정 시에는 excludeId로 현재 장비를 제외합니다.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '중복 검사 결과',
+    schema: {
+      type: 'object',
+      properties: {
+        available: { type: 'boolean', description: '사용 가능 여부' },
+        message: { type: 'string', description: '안내 메시지' },
+        existingEquipment: {
+          type: 'object',
+          nullable: true,
+          description: '중복된 장비 정보 (중복 시에만)',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            managementNumber: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  async checkManagementNumber(
+    @Query('managementNumber') managementNumber: string,
+    @Query('excludeId') excludeId?: string
+  ): Promise<{
+    available: boolean;
+    message: string;
+    existingEquipment?: { id: string; name: string; managementNumber: string };
+  }> {
+    if (!managementNumber || managementNumber.trim() === '') {
+      throw new BadRequestException('관리번호를 입력해주세요.');
+    }
+
+    return this.equipmentService.checkManagementNumberAvailability(
+      managementNumber.trim(),
+      excludeId
+    );
   }
 
   @Get(':uuid')
@@ -226,7 +462,71 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string, @Req() req: AuthenticatedRequest) {
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Req() req: AuthenticatedRequest
+  ): Promise<{
+    teamName: string | null;
+    id: string;
+    name: string;
+    managementNumber: string;
+    siteCode: string | null;
+    classificationCode: string | null;
+    managementSerialNumber: number | null;
+    assetNumber: string | null;
+    modelName: string | null;
+    manufacturer: string | null;
+    manufacturerContact: string | null;
+    serialNumber: string | null;
+    description: string | null;
+    location: string | null;
+    specMatch: string | null;
+    calibrationRequired: string | null;
+    initialLocation: string | null;
+    installationDate: Date | null;
+    calibrationCycle: number | null;
+    lastCalibrationDate: Date | null;
+    nextCalibrationDate: Date | null;
+    calibrationAgency: string | null;
+    needsIntermediateCheck: boolean | null;
+    calibrationMethod: string | null;
+    lastIntermediateCheckDate: Date | null;
+    intermediateCheckCycle: number | null;
+    nextIntermediateCheckDate: Date | null;
+    site: string;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    teamId: string | null;
+    managerId: string | null;
+    purchaseDate: Date | null;
+    price: number | null;
+    supplier: string | null;
+    contactInfo: string | null;
+    softwareVersion: string | null;
+    firmwareVersion: string | null;
+    softwareName: string | null;
+    softwareType: string | null;
+    manualLocation: string | null;
+    accessories: string | null;
+    mainFeatures: string | null;
+    technicalManager: string | null;
+    status: string;
+    isActive: boolean | null;
+    approvalStatus: string | null;
+    requestedBy: string | null;
+    approvedBy: string | null;
+    equipmentType: string | null;
+    calibrationResult: string | null;
+    correctionFactor: string | null;
+    intermediateCheckSchedule: Date | null;
+    repairHistory: string | null;
+    isShared: boolean;
+    sharedSource: string | null;
+    owner: string | null;
+    externalIdentifier: string | null;
+    usagePeriodStart: Date | null;
+    usagePeriodEnd: Date | null;
+  }> {
     // ✅ includeTeam=true로 팀 정보 포함 조회
     const equipmentWithTeam = await this.equipmentService.findOne(uuid, true);
 
@@ -282,7 +582,87 @@ export class EquipmentController {
     @Body() updateEquipmentDto: UpdateEquipmentDto,
     @UploadedFiles() files?: MulterFile[],
     @Req() req?: AuthenticatedRequest
-  ) {
+  ): Promise<
+    | {
+        id: string;
+        name: string;
+        managementNumber: string;
+        siteCode: string | null;
+        classificationCode: string | null;
+        managementSerialNumber: number | null;
+        assetNumber: string | null;
+        modelName: string | null;
+        manufacturer: string | null;
+        manufacturerContact: string | null;
+        serialNumber: string | null;
+        description: string | null;
+        location: string | null;
+        specMatch: string | null;
+        calibrationRequired: string | null;
+        initialLocation: string | null;
+        installationDate: Date | null;
+        calibrationCycle: number | null;
+        lastCalibrationDate: Date | null;
+        nextCalibrationDate: Date | null;
+        calibrationAgency: string | null;
+        needsIntermediateCheck: boolean | null;
+        calibrationMethod: string | null;
+        lastIntermediateCheckDate: Date | null;
+        intermediateCheckCycle: number | null;
+        nextIntermediateCheckDate: Date | null;
+        site: string;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+        teamId: string | null;
+        managerId: string | null;
+        purchaseDate: Date | null;
+        price: number | null;
+        supplier: string | null;
+        contactInfo: string | null;
+        softwareVersion: string | null;
+        firmwareVersion: string | null;
+        softwareName: string | null;
+        softwareType: string | null;
+        manualLocation: string | null;
+        accessories: string | null;
+        mainFeatures: string | null;
+        technicalManager: string | null;
+        status: string;
+        isActive: boolean | null;
+        approvalStatus: string | null;
+        requestedBy: string | null;
+        approvedBy: string | null;
+        equipmentType: string | null;
+        calibrationResult: string | null;
+        correctionFactor: string | null;
+        intermediateCheckSchedule: Date | null;
+        repairHistory: string | null;
+        isShared: boolean;
+        sharedSource: string | null;
+        owner: string | null;
+        externalIdentifier: string | null;
+        usagePeriodStart: Date | null;
+        usagePeriodEnd: Date | null;
+      }
+    | {
+        message: string;
+        requestUuid: string;
+        request: {
+          id: string;
+          createdAt: Date | null;
+          updatedAt: Date | null;
+          approvalStatus: 'approved' | 'pending_approval' | 'rejected';
+          requestedBy: string;
+          approvedBy: string | null;
+          requestType: 'create' | 'update' | 'delete';
+          equipmentId: string | null;
+          requestedAt: Date;
+          approvedAt: Date | null;
+          rejectionReason: string | null;
+          requestData: string | null;
+        };
+      }
+  > {
     // 공용장비 수정 차단
     const existingEquipment = await this.equipmentService.findOne(uuid);
     if (existingEquipment.isShared) {
@@ -378,7 +758,67 @@ export class EquipmentController {
   updateStatus(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body('status') status: EquipmentStatus
-  ) {
+  ): Promise<{
+    id: string;
+    name: string;
+    managementNumber: string;
+    siteCode: string | null;
+    classificationCode: string | null;
+    managementSerialNumber: number | null;
+    assetNumber: string | null;
+    modelName: string | null;
+    manufacturer: string | null;
+    manufacturerContact: string | null;
+    serialNumber: string | null;
+    description: string | null;
+    location: string | null;
+    specMatch: string | null;
+    calibrationRequired: string | null;
+    initialLocation: string | null;
+    installationDate: Date | null;
+    calibrationCycle: number | null;
+    lastCalibrationDate: Date | null;
+    nextCalibrationDate: Date | null;
+    calibrationAgency: string | null;
+    needsIntermediateCheck: boolean | null;
+    calibrationMethod: string | null;
+    lastIntermediateCheckDate: Date | null;
+    intermediateCheckCycle: number | null;
+    nextIntermediateCheckDate: Date | null;
+    site: string;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    teamId: string | null;
+    managerId: string | null;
+    purchaseDate: Date | null;
+    price: number | null;
+    supplier: string | null;
+    contactInfo: string | null;
+    softwareVersion: string | null;
+    firmwareVersion: string | null;
+    softwareName: string | null;
+    softwareType: string | null;
+    manualLocation: string | null;
+    accessories: string | null;
+    mainFeatures: string | null;
+    technicalManager: string | null;
+    status: string;
+    isActive: boolean | null;
+    approvalStatus: string | null;
+    requestedBy: string | null;
+    approvedBy: string | null;
+    equipmentType: string | null;
+    calibrationResult: string | null;
+    correctionFactor: string | null;
+    intermediateCheckSchedule: Date | null;
+    repairHistory: string | null;
+    isShared: boolean;
+    sharedSource: string | null;
+    owner: string | null;
+    externalIdentifier: string | null;
+    usagePeriodStart: Date | null;
+    usagePeriodEnd: Date | null;
+  }> {
     return this.equipmentService.updateStatus(uuid, status);
   }
 
@@ -392,7 +832,72 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findByTeam(@Param('teamId') teamId: string, @Req() req: AuthenticatedRequest) {
+  async findByTeam(
+    @Param('teamId') teamId: string,
+    @Req() req: AuthenticatedRequest
+  ): Promise<
+    {
+      id: string;
+      name: string;
+      managementNumber: string;
+      siteCode: string | null;
+      classificationCode: string | null;
+      managementSerialNumber: number | null;
+      assetNumber: string | null;
+      modelName: string | null;
+      manufacturer: string | null;
+      manufacturerContact: string | null;
+      serialNumber: string | null;
+      description: string | null;
+      location: string | null;
+      specMatch: string | null;
+      calibrationRequired: string | null;
+      initialLocation: string | null;
+      installationDate: Date | null;
+      calibrationCycle: number | null;
+      lastCalibrationDate: Date | null;
+      nextCalibrationDate: Date | null;
+      calibrationAgency: string | null;
+      needsIntermediateCheck: boolean | null;
+      calibrationMethod: string | null;
+      lastIntermediateCheckDate: Date | null;
+      intermediateCheckCycle: number | null;
+      nextIntermediateCheckDate: Date | null;
+      site: string;
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      teamId: string | null;
+      managerId: string | null;
+      purchaseDate: Date | null;
+      price: number | null;
+      supplier: string | null;
+      contactInfo: string | null;
+      softwareVersion: string | null;
+      firmwareVersion: string | null;
+      softwareName: string | null;
+      softwareType: string | null;
+      manualLocation: string | null;
+      accessories: string | null;
+      mainFeatures: string | null;
+      technicalManager: string | null;
+      status: string;
+      isActive: boolean | null;
+      approvalStatus: string | null;
+      requestedBy: string | null;
+      approvedBy: string | null;
+      equipmentType: string | null;
+      calibrationResult: string | null;
+      correctionFactor: string | null;
+      intermediateCheckSchedule: Date | null;
+      repairHistory: string | null;
+      isShared: boolean;
+      sharedSource: string | null;
+      owner: string | null;
+      externalIdentifier: string | null;
+      usagePeriodStart: Date | null;
+      usagePeriodEnd: Date | null;
+    }[]
+  > {
     const equipmentList = await this.equipmentService.findByTeam(teamId);
 
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
@@ -420,7 +925,72 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findCalibrationDue(@Query('days') days: number = 30, @Req() req: AuthenticatedRequest) {
+  async findCalibrationDue(
+    @Query('days') days: number = 30,
+    @Req() req: AuthenticatedRequest
+  ): Promise<
+    {
+      id: string;
+      name: string;
+      managementNumber: string;
+      siteCode: string | null;
+      classificationCode: string | null;
+      managementSerialNumber: number | null;
+      assetNumber: string | null;
+      modelName: string | null;
+      manufacturer: string | null;
+      manufacturerContact: string | null;
+      serialNumber: string | null;
+      description: string | null;
+      location: string | null;
+      specMatch: string | null;
+      calibrationRequired: string | null;
+      initialLocation: string | null;
+      installationDate: Date | null;
+      calibrationCycle: number | null;
+      lastCalibrationDate: Date | null;
+      nextCalibrationDate: Date | null;
+      calibrationAgency: string | null;
+      needsIntermediateCheck: boolean | null;
+      calibrationMethod: string | null;
+      lastIntermediateCheckDate: Date | null;
+      intermediateCheckCycle: number | null;
+      nextIntermediateCheckDate: Date | null;
+      site: string;
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      teamId: string | null;
+      managerId: string | null;
+      purchaseDate: Date | null;
+      price: number | null;
+      supplier: string | null;
+      contactInfo: string | null;
+      softwareVersion: string | null;
+      firmwareVersion: string | null;
+      softwareName: string | null;
+      softwareType: string | null;
+      manualLocation: string | null;
+      accessories: string | null;
+      mainFeatures: string | null;
+      technicalManager: string | null;
+      status: string;
+      isActive: boolean | null;
+      approvalStatus: string | null;
+      requestedBy: string | null;
+      approvedBy: string | null;
+      equipmentType: string | null;
+      calibrationResult: string | null;
+      correctionFactor: string | null;
+      intermediateCheckSchedule: Date | null;
+      repairHistory: string | null;
+      isShared: boolean;
+      sharedSource: string | null;
+      owner: string | null;
+      externalIdentifier: string | null;
+      usagePeriodStart: Date | null;
+      usagePeriodEnd: Date | null;
+    }[]
+  > {
     const equipmentList = await this.equipmentService.findCalibrationDue(days);
 
     // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
@@ -450,7 +1020,22 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT_REQUESTS)
-  async findPendingRequests(@Req() req: AuthenticatedRequest) {
+  async findPendingRequests(@Req() req: AuthenticatedRequest): Promise<
+    {
+      id: string;
+      requestType: 'create' | 'update' | 'delete';
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      approvalStatus: 'approved' | 'pending_approval' | 'rejected';
+      requestedBy: string;
+      approvedBy: string | null;
+      equipmentId: string | null;
+      requestedAt: Date;
+      approvedAt: Date | null;
+      rejectionReason: string | null;
+      requestData: string | null;
+    }[]
+  > {
     const userRoles = req.user?.roles || [];
     const userSite = req.user?.site;
     return this.approvalService.findPendingRequests(userRoles, userSite);
@@ -467,7 +1052,136 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT_REQUESTS)
-  async findRequestByUuid(@Param('requestUuid', ParseUUIDPipe) requestUuid: string) {
+  async findRequestByUuid(@Param('requestUuid', ParseUUIDPipe) requestUuid: string): Promise<
+    {
+      id: string;
+      requestType: 'create' | 'update' | 'delete';
+      createdAt: Date | null;
+      updatedAt: Date | null;
+      approvalStatus: 'approved' | 'pending_approval' | 'rejected';
+      requestedBy: string;
+      approvedBy: string | null;
+      equipmentId: string | null;
+      requestedAt: Date;
+      approvedAt: Date | null;
+      rejectionReason: string | null;
+      requestData: string | null;
+    } & {
+      requester?:
+        | {
+            id: string;
+            name: string;
+            location: string | null;
+            site: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            teamId: string | null;
+            email: string;
+            role: string;
+            azureAdId: string | null;
+            position: string | null;
+          }
+        | null
+        | undefined;
+      approver?:
+        | {
+            id: string;
+            name: string;
+            location: string | null;
+            site: string | null;
+            createdAt: Date;
+            updatedAt: Date;
+            teamId: string | null;
+            email: string;
+            role: string;
+            azureAdId: string | null;
+            position: string | null;
+          }
+        | null
+        | undefined;
+      equipment?:
+        | {
+            id: string;
+            name: string;
+            managementNumber: string;
+            siteCode: string | null;
+            classificationCode: string | null;
+            managementSerialNumber: number | null;
+            assetNumber: string | null;
+            modelName: string | null;
+            manufacturer: string | null;
+            manufacturerContact: string | null;
+            serialNumber: string | null;
+            description: string | null;
+            location: string | null;
+            specMatch: string | null;
+            calibrationRequired: string | null;
+            initialLocation: string | null;
+            installationDate: Date | null;
+            calibrationCycle: number | null;
+            lastCalibrationDate: Date | null;
+            nextCalibrationDate: Date | null;
+            calibrationAgency: string | null;
+            needsIntermediateCheck: boolean | null;
+            calibrationMethod: string | null;
+            lastIntermediateCheckDate: Date | null;
+            intermediateCheckCycle: number | null;
+            nextIntermediateCheckDate: Date | null;
+            site: string;
+            createdAt: Date | null;
+            updatedAt: Date | null;
+            teamId: string | null;
+            managerId: string | null;
+            purchaseDate: Date | null;
+            price: number | null;
+            supplier: string | null;
+            contactInfo: string | null;
+            softwareVersion: string | null;
+            firmwareVersion: string | null;
+            softwareName: string | null;
+            softwareType: string | null;
+            manualLocation: string | null;
+            accessories: string | null;
+            mainFeatures: string | null;
+            technicalManager: string | null;
+            status: string;
+            isActive: boolean | null;
+            approvalStatus: string | null;
+            requestedBy: string | null;
+            approvedBy: string | null;
+            equipmentType: string | null;
+            calibrationResult: string | null;
+            correctionFactor: string | null;
+            intermediateCheckSchedule: Date | null;
+            repairHistory: string | null;
+            isShared: boolean;
+            sharedSource: string | null;
+            owner: string | null;
+            externalIdentifier: string | null;
+            usagePeriodStart: Date | null;
+            usagePeriodEnd: Date | null;
+          }
+        | null
+        | undefined;
+      attachments?:
+        | {
+            id: string;
+            description: string | null;
+            createdAt: Date | null;
+            updatedAt: Date | null;
+            equipmentId: string | null;
+            requestId: string | null;
+            attachmentType: 'inspection_report' | 'history_card' | 'other';
+            fileName: string;
+            originalFileName: string;
+            filePath: string;
+            fileSize: number;
+            mimeType: string;
+            uploadedAt: Date;
+          }[]
+        | undefined;
+    }
+  > {
     return this.approvalService.findRequestByUuid(requestUuid);
   }
 
@@ -490,7 +1204,20 @@ export class EquipmentController {
   async approveRequest(
     @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
     @Req() req: AuthenticatedRequest
-  ) {
+  ): Promise<{
+    id: string;
+    requestType: 'create' | 'update' | 'delete';
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    approvalStatus: 'approved' | 'pending_approval' | 'rejected';
+    requestedBy: string;
+    approvedBy: string | null;
+    equipmentId: string | null;
+    requestedAt: Date;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    requestData: string | null;
+  }> {
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? req.user?.id ?? '';
     return this.approvalService.approveRequest(requestUuid, userId, userRoles);
@@ -518,7 +1245,20 @@ export class EquipmentController {
     @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
     @Body() body: { rejectionReason?: string },
     @Req() req: AuthenticatedRequest
-  ) {
+  ): Promise<{
+    id: string;
+    requestType: 'create' | 'update' | 'delete';
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    approvalStatus: 'approved' | 'pending_approval' | 'rejected';
+    requestedBy: string;
+    approvedBy: string | null;
+    equipmentId: string | null;
+    requestedAt: Date;
+    approvedAt: Date | null;
+    rejectionReason: string | null;
+    requestData: string | null;
+  }> {
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? req.user?.id ?? '';
 
@@ -556,7 +1296,17 @@ export class EquipmentController {
     @UploadedFile() file: MulterFile,
     @Body('attachmentType') attachmentType: 'inspection_report' | 'history_card' | 'other',
     @Body('description') description?: string
-  ) {
+  ): Promise<{
+    message: string;
+    attachment: {
+      id: string;
+      fileName: string;
+      originalFileName: string;
+      fileSize: number;
+      mimeType: string;
+      attachmentType: 'inspection_report' | 'history_card' | 'other';
+    };
+  }> {
     if (!file) {
       throw new BadRequestException('파일이 필요합니다.');
     }
@@ -583,6 +1333,39 @@ export class EquipmentController {
         mimeType: attachment.mimeType,
         attachmentType: attachment.attachmentType,
       },
+    };
+  }
+
+  /**
+   * 캐시 무효화 엔드포인트 (E2E 테스트용)
+   *
+   * ⚠️ IMPORTANT: This endpoint is for E2E test purposes only in development/test environments
+   * It allows tests to invalidate the backend cache after direct database modifications
+   *
+   * ⚠️ SECURITY: This endpoint should be disabled in production or protected by environment check
+   *
+   * Usage: POST /api/equipment/cache/invalidate
+   */
+  @Post('cache/invalidate')
+  @HttpCode(HttpStatus.OK)
+  @Public() // ✅ Allow unauthenticated access for E2E tests
+  @ApiOperation({
+    summary: '장비 캐시 무효화 (E2E 테스트용)',
+    description:
+      'E2E 테스트에서 직접 데이터베이스를 수정한 후 백엔드 캐시를 무효화합니다. 개발/테스트 환경 전용.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '캐시가 무효화되었습니다.' })
+  async invalidateCache(): Promise<{ message: string; timestamp: string }> {
+    // ✅ Environment check: Only allow in non-production environments
+    const nodeEnv = process.env.NODE_ENV || 'development';
+    if (nodeEnv === 'production') {
+      throw new ForbiddenException('Cache invalidation is not allowed in production');
+    }
+
+    await this.equipmentService.invalidateCachePublic();
+    return {
+      message: '장비 캐시가 무효화되었습니다.',
+      timestamp: new Date().toISOString(),
     };
   }
 }

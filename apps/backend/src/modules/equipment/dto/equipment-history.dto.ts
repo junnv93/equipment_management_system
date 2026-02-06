@@ -4,7 +4,6 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   IncidentTypeEnum,
   INCIDENT_TYPE_VALUES,
-  INCIDENT_TYPE_LABELS,
   type IncidentType,
 } from '@equipment-management/schemas';
 

@@ -47,7 +47,7 @@ export class CalibrationPlansPdfService {
     const plan = await this.calibrationPlansService.findOne(uuid);
     const items = plan.items || [];
 
-    const formatDate = (dateVal: Date | string | null | undefined) => {
+    const formatDate = (dateVal: Date | string | null | undefined): string => {
       if (!dateVal) return '-';
       const date = typeof dateVal === 'string' ? new Date(dateVal) : dateVal;
       return date.toLocaleDateString('ko-KR');

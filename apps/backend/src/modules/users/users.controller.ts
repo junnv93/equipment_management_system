@@ -8,13 +8,11 @@ import {
   Delete,
   Query,
   NotFoundException,
-  BadRequestException,
   HttpStatus,
   HttpCode,
-  UseGuards,
   UsePipes,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
   CreateUserDto,
@@ -26,7 +24,7 @@ import {
 } from './dto';
 import { User, UserListResponse } from '../../types/models';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('users')
@@ -125,7 +123,9 @@ export class UsersController {
   @ApiResponse({ status: 200, description: '사용자 계정이 성공적으로 활성화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
-  async activateUser(@Param('id') id: string) {
+  async activateUser(
+    @Param('id') id: string
+  ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
     const user = await this.usersService.toggleActive(id, true);
     if (!user) {
       throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
@@ -142,7 +142,9 @@ export class UsersController {
   @ApiResponse({ status: 200, description: '사용자 계정이 성공적으로 비활성화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
-  async deactivateUser(@Param('id') id: string) {
+  async deactivateUser(
+    @Param('id') id: string
+  ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
     const user = await this.usersService.toggleActive(id, false);
     if (!user) {
       throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
@@ -155,7 +157,12 @@ export class UsersController {
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '사용자 권한 목록' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
-  getUserPermissions(@Param('id') id: string) {
+  getUserPermissions(@Param('id') id: string): Promise<{
+    userId: string;
+    username: string;
+    role: 'test_engineer' | 'technical_manager' | 'quality_manager' | 'lab_manager';
+    permissions: string[];
+  } | null> {
     return this.usersService.findUserPermissions(id);
   }
 
@@ -168,7 +175,9 @@ export class UsersController {
   @ApiResponse({ status: 200, description: '비밀번호가 성공적으로 초기화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
-  async resetPassword(@Param('id') id: string) {
+  async resetPassword(
+    @Param('id') id: string
+  ): Promise<{ message: string; temporaryPassword: string | undefined }> {
     // 임시 비밀번호 생성 및 사용자 비밀번호 재설정 로직
     const result = await this.usersService.generateTemporaryPassword(id);
     if (!result) {

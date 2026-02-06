@@ -1,11 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import {
-  CalibrationMethodEnum,
-  CalibrationStatusEnum,
-  CalibrationApprovalStatusEnum,
-} from '@equipment-management/schemas';
+import { CalibrationApprovalStatusEnum } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 

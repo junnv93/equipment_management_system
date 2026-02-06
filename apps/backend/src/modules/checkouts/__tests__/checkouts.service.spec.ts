@@ -3,7 +3,7 @@ import { CheckoutsService } from '../checkouts.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
-import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('CheckoutsService', () => {
   let service: CheckoutsService;

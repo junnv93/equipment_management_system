@@ -61,10 +61,9 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
-  @UsePipes(CreateLocationHistoryValidationPipe)
   async createLocationHistory(
     @Param('uuid') equipmentUuid: string,
-    @Body() dto: CreateLocationHistoryDto,
+    @Body(CreateLocationHistoryValidationPipe) dto: CreateLocationHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<LocationHistoryResponseDto> {
     const userId = req.user?.userId || req.user?.uuid || req.user?.id;
@@ -107,10 +106,9 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
-  @UsePipes(CreateMaintenanceHistoryValidationPipe)
   async createMaintenanceHistory(
     @Param('uuid') equipmentUuid: string,
-    @Body() dto: CreateMaintenanceHistoryDto,
+    @Body(CreateMaintenanceHistoryValidationPipe) dto: CreateMaintenanceHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<MaintenanceHistoryResponseDto> {
     const userId = req.user?.userId || req.user?.uuid || req.user?.id;
@@ -153,10 +151,9 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
-  @UsePipes(CreateIncidentHistoryValidationPipe)
   async createIncidentHistory(
     @Param('uuid') equipmentUuid: string,
-    @Body() dto: CreateIncidentHistoryDto,
+    @Body(CreateIncidentHistoryValidationPipe) dto: CreateIncidentHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<IncidentHistoryResponseDto> {
     const userId = req.user?.userId || req.user?.uuid || req.user?.id;

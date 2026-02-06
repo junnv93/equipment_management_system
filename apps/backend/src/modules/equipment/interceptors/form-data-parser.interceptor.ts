@@ -1,6 +1,5 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 /**
  * FormData 파서 인터셉터
@@ -8,7 +7,7 @@ import { map } from 'rxjs/operators';
  */
 @Injectable()
 export class FormDataParserInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
 
     // FormData인 경우 JSON 필드 파싱
@@ -54,7 +53,7 @@ export class FormDataParserInterceptor implements NestInterceptor {
       }
 
       // 불린 필드 처리
-      const booleanFields = ['needsIntermediateCheck', 'isActive'];
+      const booleanFields = ['needsIntermediateCheck', 'isActive', 'isShared'];
       for (const field of booleanFields) {
         if (request.body[field] !== undefined) {
           if (typeof request.body[field] === 'string') {

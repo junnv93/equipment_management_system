@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { BearerStrategy, IProfile } from 'passport-azure-ad';
 import { ConfigService } from '@nestjs/config';
@@ -6,9 +6,7 @@ import { JwtUser } from '../../../types/auth';
 
 @Injectable()
 export class AzureADStrategy extends PassportStrategy(BearerStrategy, 'azure-ad') {
-  private readonly logger = new Logger(AzureADStrategy.name);
-
-  constructor(private configService: ConfigService) {
+  constructor(configService: ConfigService) {
     const clientID = configService.get<string>('AZURE_AD_CLIENT_ID');
     const tenantID = configService.get<string>('AZURE_AD_TENANT_ID');
 

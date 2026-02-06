@@ -25,7 +25,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('수리 이력')
@@ -45,7 +45,6 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  @UsePipes(RepairHistoryQueryValidationPipe)
   async findByEquipment(
     @Param('uuid') equipmentUuid: string,
     @Query() query: RepairHistoryQueryDto
@@ -80,20 +79,6 @@ export class RepairHistoryController {
   ): Promise<RepairHistoryRecord> {
     const createdBy = req.user?.id || 'unknown';
     return this.repairHistoryService.create(equipmentUuid, createDto, createdBy);
-  }
-
-  @Get('equipment/:uuid/repair-history/summary')
-  @ApiOperation({
-    summary: '수리 비용 요약 조회',
-    description: '특정 장비의 총 수리 비용과 수리 횟수를 조회합니다.',
-  })
-  @ApiParam({ name: 'uuid', description: '장비 UUID' })
-  @ApiResponse({ status: HttpStatus.OK, description: '수리 비용 요약 조회 성공' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async getSummary(@Param('uuid') equipmentUuid: string) {
-    return this.repairHistoryService.getTotalCost(equipmentUuid);
   }
 
   @Get('equipment/:uuid/repair-history/recent')
@@ -159,7 +144,10 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
-  async remove(@Param('uuid') uuid: string, @Request() req: AuthenticatedRequest) {
+  async remove(
+    @Param('uuid') uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ deleted: boolean; id: string }> {
     const deletedBy = req.user?.id || 'unknown';
     return this.repairHistoryService.remove(uuid, deletedBy);
   }

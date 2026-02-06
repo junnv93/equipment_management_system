@@ -2,10 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { CreateSoftwareChangeDto } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
 import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve-software.dto';
-import {
-  SoftwareApprovalStatusValues,
-  type SoftwareApprovalStatus as SoftwareApprovalStatusType,
-} from '@equipment-management/schemas';
+import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
 
 // Backward compatibility alias
 const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
@@ -141,7 +138,16 @@ export class SoftwareService {
   }
 
   // 소프트웨어 변경 이력 조회 (필터: equipmentId, softwareName)
-  async findHistory(query: SoftwareHistoryQueryDto) {
+  async findHistory(query: SoftwareHistoryQueryDto): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     const {
       equipmentId,
       softwareName,
@@ -217,7 +223,20 @@ export class SoftwareService {
   }
 
   // 소프트웨어 통합 관리대장 (전체 장비 소프트웨어 현황)
-  async getRegistry() {
+  async getRegistry(): Promise<{
+    registry: {
+      equipmentId: string;
+      equipmentName: string;
+      softwareName: string | null;
+      softwareVersion: string | null;
+      softwareType: string | null;
+      lastUpdated: Date | null;
+    }[];
+    summary: { softwareName: string; equipmentCount: number; versions: (string | null)[] }[];
+    totalEquipments: number;
+    totalSoftwareTypes: number;
+    generatedAt: Date;
+  }> {
     // 소프트웨어가 있는 장비만 필터
     const equipmentWithSoftware = equipmentSoftwareInfo.filter(
       (eq) => eq.softwareName !== null && eq.softwareVersion !== null
@@ -257,7 +276,17 @@ export class SoftwareService {
   }
 
   // 특정 소프트웨어 사용 장비 목록
-  async findEquipmentBySoftware(softwareName: string) {
+  async findEquipmentBySoftware(softwareName: string): Promise<{
+    softwareName: string;
+    equipments: {
+      equipmentId: string;
+      equipmentName: string;
+      softwareVersion: string | null;
+      softwareType: string | null;
+      lastUpdated: Date | null;
+    }[];
+    count: number;
+  }> {
     const searchName = softwareName.toLowerCase();
     const equipments = equipmentSoftwareInfo.filter((eq) =>
       eq.softwareName?.toLowerCase().includes(searchName)
@@ -283,14 +312,28 @@ export class SoftwareService {
   }
 
   // 승인 대기 목록 조회
-  async findPendingApprovals() {
+  async findPendingApprovals(): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.findHistory({
       approvalStatus: SoftwareApprovalStatus.PENDING,
     });
   }
 
   // 소프트웨어 변경 승인 (기술책임자)
-  async approve(id: string, approveDto: ApproveSoftwareChangeDto) {
+  async approve(
+    id: string,
+    approveDto: ApproveSoftwareChangeDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
+  > {
     const record = await this.findOne(id);
 
     if (record.approvalStatus !== SoftwareApprovalStatus.PENDING) {
@@ -325,7 +368,12 @@ export class SoftwareService {
   }
 
   // 소프트웨어 변경 반려 (기술책임자)
-  async reject(id: string, rejectDto: RejectSoftwareChangeDto) {
+  async reject(
+    id: string,
+    rejectDto: RejectSoftwareChangeDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
+  > {
     const record = await this.findOne(id);
 
     if (record.approvalStatus !== SoftwareApprovalStatus.PENDING) {

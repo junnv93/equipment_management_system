@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, count, gte, lte, sql } from 'drizzle-orm';
+import { eq, and, count, gte, lte } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
-import { UserRole } from '../auth/rbac/roles.enum';
+import { UserRole } from '@equipment-management/schemas';
 import {
   DashboardSummaryDto,
   EquipmentByTeamDto,
@@ -22,6 +22,18 @@ import {
  * - technical_manager: 팀 내 데이터
  * - lab_manager: 시험소 데이터
  * - SYSTEM_ADMIN: 전체 데이터
+ *
+ * Note: Parameters prefixed with _ are intentionally unused,
+ * reserved for future role-based filtering per UL-QP-18 requirements.
+ */
+/**
+ * 대시보드 서비스
+ *
+ * 역할별 맞춤형 대시보드 데이터를 제공합니다.
+ * - test_engineer: 본인 관련 데이터만
+ * - technical_manager: 팀 내 데이터
+ * - lab_manager: 시험소 데이터
+ * - SYSTEM_ADMIN: 전체 데이터
  */
 @Injectable()
 export class DashboardService {
@@ -31,13 +43,16 @@ export class DashboardService {
    * 대시보드 요약 정보 조회
    */
   async getSummary(
-    userId: string,
-    userRole: UserRole,
+    _userId: string,
+    _userRole: UserRole,
     teamId?: string,
-    site?: string
+    _site?: string
   ): Promise<DashboardSummaryDto> {
     // 전체 장비 수
-    const [totalResult] = await this.db.select({ count: count() }).from(schema.equipment);
+    const [totalResult] = await this.db
+      .select({ count: count() })
+      .from(schema.equipment)
+      .where(teamId ? eq(schema.equipment.teamId, teamId) : undefined);
 
     const totalEquipment = totalResult?.count || 0;
 
@@ -45,7 +60,11 @@ export class DashboardService {
     const [availableResult] = await this.db
       .select({ count: count() })
       .from(schema.equipment)
-      .where(eq(schema.equipment.status, 'available'));
+      .where(
+        teamId
+          ? and(eq(schema.equipment.status, 'available'), eq(schema.equipment.teamId, teamId))
+          : eq(schema.equipment.status, 'available')
+      );
 
     const availableEquipment = availableResult?.count || 0;
 
@@ -66,11 +85,18 @@ export class DashboardService {
       .select({ count: count() })
       .from(schema.equipment)
       .where(
-        and(
-          eq(schema.equipment.calibrationRequired, 'required'),
-          gte(schema.equipment.nextCalibrationDate, today),
-          lte(schema.equipment.nextCalibrationDate, thirtyDaysLater)
-        )
+        teamId
+          ? and(
+              eq(schema.equipment.calibrationRequired, 'required'),
+              gte(schema.equipment.nextCalibrationDate, today),
+              lte(schema.equipment.nextCalibrationDate, thirtyDaysLater),
+              eq(schema.equipment.teamId, teamId)
+            )
+          : and(
+              eq(schema.equipment.calibrationRequired, 'required'),
+              gte(schema.equipment.nextCalibrationDate, today),
+              lte(schema.equipment.nextCalibrationDate, thirtyDaysLater)
+            )
       );
 
     const upcomingCalibrations = calibrationResult?.count || 0;
@@ -87,10 +113,10 @@ export class DashboardService {
    * 팀별 장비 현황 조회
    */
   async getEquipmentByTeam(
-    userId: string,
-    userRole: UserRole,
+    _userId: string,
+    _userRole: UserRole,
     teamId?: string,
-    site?: string
+    _site?: string
   ): Promise<EquipmentByTeamDto[]> {
     const results = await this.db
       .select({
@@ -100,6 +126,7 @@ export class DashboardService {
       })
       .from(schema.equipment)
       .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
+      .where(teamId ? eq(schema.equipment.teamId, teamId) : undefined)
       .groupBy(schema.equipment.teamId, schema.teams.name);
 
     return results.map((r) => ({
@@ -113,10 +140,10 @@ export class DashboardService {
    * 교정 지연 장비 조회
    */
   async getOverdueCalibrations(
-    userId: string,
-    userRole: UserRole,
+    _userId: string,
+    _userRole: UserRole,
     teamId?: string,
-    site?: string
+    _site?: string
   ): Promise<OverdueCalibrationDto[]> {
     const today = new Date();
 
@@ -131,10 +158,16 @@ export class DashboardService {
       .from(schema.equipment)
       .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
       .where(
-        and(
-          eq(schema.equipment.calibrationRequired, 'required'),
-          lte(schema.equipment.nextCalibrationDate, today)
-        )
+        teamId
+          ? and(
+              eq(schema.equipment.calibrationRequired, 'required'),
+              lte(schema.equipment.nextCalibrationDate, today),
+              eq(schema.equipment.teamId, teamId)
+            )
+          : and(
+              eq(schema.equipment.calibrationRequired, 'required'),
+              lte(schema.equipment.nextCalibrationDate, today)
+            )
       )
       .orderBy(schema.equipment.nextCalibrationDate)
       .limit(50);
@@ -158,11 +191,11 @@ export class DashboardService {
    * 교정 예정 장비 조회 (다음 N일 이내)
    */
   async getUpcomingCalibrations(
-    userId: string,
-    userRole: UserRole,
+    _userId: string,
+    _userRole: UserRole,
     days: number,
     teamId?: string,
-    site?: string
+    _site?: string
   ): Promise<UpcomingCalibrationDto[]> {
     const today = new Date();
     const futureDate = new Date(today);
@@ -177,11 +210,18 @@ export class DashboardService {
       })
       .from(schema.equipment)
       .where(
-        and(
-          eq(schema.equipment.calibrationRequired, 'required'),
-          gte(schema.equipment.nextCalibrationDate, today),
-          lte(schema.equipment.nextCalibrationDate, futureDate)
-        )
+        teamId
+          ? and(
+              eq(schema.equipment.calibrationRequired, 'required'),
+              gte(schema.equipment.nextCalibrationDate, today),
+              lte(schema.equipment.nextCalibrationDate, futureDate),
+              eq(schema.equipment.teamId, teamId)
+            )
+          : and(
+              eq(schema.equipment.calibrationRequired, 'required'),
+              gte(schema.equipment.nextCalibrationDate, today),
+              lte(schema.equipment.nextCalibrationDate, futureDate)
+            )
       )
       .orderBy(schema.equipment.nextCalibrationDate)
       .limit(50);
@@ -207,10 +247,10 @@ export class DashboardService {
    * 반출 지연 조회 (checkouts + checkout_items 테이블 사용 - 대여/교정/수리 포함)
    */
   async getOverdueCheckouts(
-    userId: string,
-    userRole: UserRole,
+    _userId: string,
+    _userRole: UserRole,
     teamId?: string,
-    site?: string
+    _site?: string
   ): Promise<OverdueCheckoutDto[]> {
     const today = new Date();
 
@@ -234,10 +274,16 @@ export class DashboardService {
       .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
       .leftJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
       .where(
-        and(
-          eq(schema.checkouts.status, 'checked_out'),
-          lte(schema.checkouts.expectedReturnDate, today)
-        )
+        teamId
+          ? and(
+              eq(schema.checkouts.status, 'checked_out'),
+              lte(schema.checkouts.expectedReturnDate, today),
+              eq(schema.equipment.teamId, teamId)
+            )
+          : and(
+              eq(schema.checkouts.status, 'checked_out'),
+              lte(schema.checkouts.expectedReturnDate, today)
+            )
       )
       .orderBy(schema.checkouts.expectedReturnDate)
       .limit(50);
@@ -274,11 +320,11 @@ export class DashboardService {
    * 최근 활동 내역 조회 (기본 구현 - 빈 배열 반환)
    */
   async getRecentActivities(
-    userId: string,
-    userRole: UserRole,
-    limit: number,
-    teamId?: string,
-    site?: string
+    _userId: string,
+    _userRole: UserRole,
+    _limit: number,
+    _teamId?: string,
+    _site?: string
   ): Promise<RecentActivityDto[]> {
     // 감사 로그 기능 구현 전까지 빈 배열 반환
     return [];
@@ -288,10 +334,10 @@ export class DashboardService {
    * 승인 대기 카운트 조회
    */
   async getPendingApprovalCounts(
-    userId: string,
-    userRole: UserRole,
-    teamId?: string,
-    site?: string
+    _userId: string,
+    _userRole: UserRole,
+    _teamId?: string,
+    _site?: string
   ): Promise<PendingApprovalCountsDto> {
     // 장비 승인 대기
     const [equipmentCount] = await this.db
@@ -329,10 +375,10 @@ export class DashboardService {
    * 장비 상태별 통계 조회
    */
   async getEquipmentStatusStats(
-    userId: string,
-    userRole: UserRole,
+    _userId: string,
+    _userRole: UserRole,
     teamId?: string,
-    site?: string
+    _site?: string
   ): Promise<EquipmentStatusStatsDto> {
     const results = await this.db
       .select({
@@ -340,6 +386,7 @@ export class DashboardService {
         count: count(),
       })
       .from(schema.equipment)
+      .where(teamId ? eq(schema.equipment.teamId, teamId) : undefined)
       .groupBy(schema.equipment.status);
 
     const stats: EquipmentStatusStatsDto = {};

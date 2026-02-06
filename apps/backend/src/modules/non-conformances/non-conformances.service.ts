@@ -2,7 +2,10 @@ import { Injectable, NotFoundException, BadRequestException, Inject } from '@nes
 import { eq, and, isNull, desc, asc, like, SQL, ne } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
-import { nonConformances } from '@equipment-management/db/schema/non-conformances';
+import {
+  nonConformances,
+  type NonConformance,
+} from '@equipment-management/db/schema/non-conformances';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { CreateNonConformanceDto } from './dto/create-non-conformance.dto';
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
@@ -19,7 +22,7 @@ export class NonConformancesService {
   /**
    * 부적합 등록 (장비 상태 자동 변경: non_conforming)
    */
-  async create(createDto: CreateNonConformanceDto) {
+  async create(createDto: CreateNonConformanceDto): Promise<NonConformance> {
     // ncType 필수 검증
     if (!createDto.ncType) {
       throw new BadRequestException('부적합 유형(ncType)은 필수입니다');
@@ -54,7 +57,7 @@ export class NonConformancesService {
           ncType: createDto.ncType,
           actionPlan: createDto.actionPlan,
           status: NonConformanceStatus.OPEN,
-        } as any)
+        })
         .returning();
 
       // 2. 장비 상태를 non_conforming으로 변경
@@ -63,7 +66,7 @@ export class NonConformancesService {
         .set({
           status: 'non_conforming',
           updatedAt: new Date(),
-        } as any)
+        })
         .where(eq(equipment.id, createDto.equipmentId));
 
       return nonConformance;
@@ -75,7 +78,16 @@ export class NonConformancesService {
   /**
    * 부적합 목록 조회 (필터: equipmentId, status)
    */
-  async findAll(query: NonConformanceQueryDto) {
+  async findAll(query: NonConformanceQueryDto): Promise<{
+    items: NonConformance[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     const {
       equipmentId,
       status,
@@ -138,7 +150,13 @@ export class NonConformancesService {
   /**
    * 정렬 필드에 해당하는 컬럼 반환
    */
-  private getSortColumn(sortField: string) {
+  private getSortColumn(
+    sortField: string
+  ):
+    | typeof nonConformances.discoveryDate
+    | typeof nonConformances.status
+    | typeof nonConformances.createdAt
+    | typeof nonConformances.updatedAt {
     switch (sortField) {
       case 'discoveryDate':
         return nonConformances.discoveryDate;
@@ -156,7 +174,7 @@ export class NonConformancesService {
   /**
    * 단일 부적합 조회
    */
-  async findOne(id: string) {
+  async findOne(id: string): Promise<NonConformance> {
     const [nonConformance] = await this.db
       .select()
       .from(nonConformances)
@@ -172,7 +190,7 @@ export class NonConformancesService {
   /**
    * 장비별 열린 부적합 조회
    */
-  async findOpenByEquipment(equipmentId: string) {
+  async findOpenByEquipment(equipmentId: string): Promise<NonConformance[]> {
     const results = await this.db
       .select()
       .from(nonConformances)
@@ -209,7 +227,7 @@ export class NonConformancesService {
   /**
    * 원인분석/조치 기록 업데이트
    */
-  async update(id: string, updateDto: UpdateNonConformanceDto) {
+  async update(id: string, updateDto: UpdateNonConformanceDto): Promise<NonConformance> {
     const nonConformance = await this.findOne(id);
 
     if (nonConformance.status === NonConformanceStatus.CLOSED) {
@@ -221,7 +239,7 @@ export class NonConformancesService {
       .set({
         ...updateDto,
         updatedAt: new Date(),
-      } as any)
+      })
       .where(eq(nonConformances.id, id))
       .returning();
 
@@ -232,7 +250,7 @@ export class NonConformancesService {
    * 부적합 종료 (기술책임자)
    * 장비 상태 복원: available
    */
-  async close(id: string, closeDto: CloseNonConformanceDto) {
+  async close(id: string, closeDto: CloseNonConformanceDto): Promise<NonConformance> {
     const nonConformance = await this.findOne(id);
 
     if (nonConformance.status === NonConformanceStatus.CLOSED) {
@@ -260,7 +278,7 @@ export class NonConformancesService {
           closedAt: new Date(),
           closureNotes: closeDto.closureNotes,
           updatedAt: new Date(),
-        } as any)
+        })
         .where(eq(nonConformances.id, id))
         .returning();
 
@@ -286,7 +304,7 @@ export class NonConformancesService {
           .set({
             status: 'available',
             updatedAt: new Date(),
-          } as any)
+          })
           .where(eq(equipment.id, nonConformance.equipmentId));
       }
 
@@ -299,7 +317,7 @@ export class NonConformancesService {
   /**
    * 소프트 삭제
    */
-  async remove(id: string) {
+  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
     await this.findOne(id);
 
     await this.db
@@ -307,7 +325,7 @@ export class NonConformancesService {
       .set({
         deletedAt: new Date(),
         updatedAt: new Date(),
-      } as any)
+      })
       .where(eq(nonConformances.id, id));
 
     return { id, deleted: true };
@@ -336,7 +354,7 @@ export class NonConformancesService {
         repairHistoryId: repairId,
         resolutionType: 'repair',
         updatedAt: new Date(),
-      } as any)
+      })
       .where(eq(nonConformances.id, ncId));
   }
 
@@ -371,14 +389,14 @@ export class NonConformancesService {
         correctionDate: correctionData.correctionDate.toISOString().split('T')[0],
         correctedBy: correctionData.correctedBy,
         updatedAt: new Date(),
-      } as any)
+      })
       .where(eq(nonConformances.id, id));
   }
 
   /**
    * 수리 ID로 연결된 부적합 찾기
    */
-  async findByRepairId(repairId: string) {
+  async findByRepairId(repairId: string): Promise<NonConformance> {
     const results = await this.db
       .select()
       .from(nonConformances)

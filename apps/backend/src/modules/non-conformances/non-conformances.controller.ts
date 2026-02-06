@@ -20,10 +20,11 @@ import {
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
 import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
 import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
+import { type NonConformance } from '@equipment-management/db/schema/non-conformances';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 
 @ApiTags('부적합 관리')
 @ApiBearerAuth()
@@ -47,7 +48,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_NON_CONFORMANCE)
   @UsePipes(CreateNonConformanceValidationPipe)
-  create(@Body() createDto: CreateNonConformanceDto) {
+  create(@Body() createDto: CreateNonConformanceDto): Promise<NonConformance> {
     return this.nonConformancesService.create(createDto);
   }
 
@@ -60,7 +61,16 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findAll(@Query() query: NonConformanceQueryDto) {
+  findAll(@Query() query: NonConformanceQueryDto): Promise<{
+    items: NonConformance[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.nonConformancesService.findAll(query);
   }
 
@@ -75,7 +85,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findOne(@Param('uuid') uuid: string) {
+  findOne(@Param('uuid') uuid: string): Promise<NonConformance> {
     return this.nonConformancesService.findOne(uuid);
   }
 
@@ -89,7 +99,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findOpenByEquipment(@Param('equipmentUuid') equipmentUuid: string) {
+  findOpenByEquipment(@Param('equipmentUuid') equipmentUuid: string): Promise<NonConformance[]> {
     return this.nonConformancesService.findOpenByEquipment(equipmentUuid);
   }
 
@@ -105,7 +115,10 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_NON_CONFORMANCE)
-  update(@Param('uuid') uuid: string, @Body() updateDto: UpdateNonConformanceDto) {
+  update(
+    @Param('uuid') uuid: string,
+    @Body() updateDto: UpdateNonConformanceDto
+  ): Promise<NonConformance> {
     return this.nonConformancesService.update(uuid, updateDto);
   }
 
@@ -122,7 +135,10 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
-  close(@Param('uuid') uuid: string, @Body() closeDto: CloseNonConformanceDto) {
+  close(
+    @Param('uuid') uuid: string,
+    @Body() closeDto: CloseNonConformanceDto
+  ): Promise<NonConformance> {
     return this.nonConformancesService.close(uuid, closeDto);
   }
 
@@ -137,7 +153,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
-  remove(@Param('uuid') uuid: string) {
+  remove(@Param('uuid') uuid: string): Promise<{ id: string; deleted: boolean }> {
     return this.nonConformancesService.remove(uuid);
   }
 }

@@ -32,9 +32,6 @@ const dateStringSchema = z.string().refine(
 export const createRepairHistorySchema = z.object({
   repairDate: dateStringSchema,
   repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
-  repairedBy: z.string().optional(),
-  repairCompany: z.string().optional(),
-  cost: z.number().min(0, '수리 비용은 0 이상이어야 합니다').optional(),
   repairResult: RepairResultEnum.optional(),
   notes: z.string().optional(),
   attachmentPath: z.string().optional(),
@@ -58,7 +55,6 @@ export const repairHistoryQuerySchema = z.object({
   fromDate: z.string().optional(),
   toDate: z.string().optional(),
   repairResult: RepairResultEnum.optional(),
-  repairCompany: z.string().optional(),
   includeDeleted: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : undefined), z.number().optional()),
@@ -86,25 +82,6 @@ export class CreateRepairHistoryDto {
     minLength: 10,
   })
   repairDescription: string;
-
-  @ApiPropertyOptional({
-    description: '수리 담당자',
-    example: '홍길동',
-  })
-  repairedBy?: string;
-
-  @ApiPropertyOptional({
-    description: '외부 수리 업체',
-    example: '키사이트 코리아',
-  })
-  repairCompany?: string;
-
-  @ApiPropertyOptional({
-    description: '수리 비용 (원)',
-    example: 500000,
-    minimum: 0,
-  })
-  cost?: number;
 
   @ApiPropertyOptional({
     description: '수리 결과',
@@ -160,12 +137,6 @@ export class RepairHistoryQueryDto {
   repairResult?: RepairResult;
 
   @ApiPropertyOptional({
-    description: '수리 업체 필터',
-    example: '키사이트',
-  })
-  repairCompany?: string;
-
-  @ApiPropertyOptional({
     description: '삭제된 항목 포함 여부',
     example: false,
   })
@@ -205,15 +176,6 @@ export class RepairHistoryResponseDto {
 
   @ApiProperty({ description: '수리 내용' })
   repairDescription: string;
-
-  @ApiPropertyOptional({ description: '수리 담당자' })
-  repairedBy?: string;
-
-  @ApiPropertyOptional({ description: '외부 수리 업체' })
-  repairCompany?: string;
-
-  @ApiPropertyOptional({ description: '수리 비용' })
-  cost?: number;
 
   @ApiPropertyOptional({ description: '수리 결과' })
   repairResult?: string;

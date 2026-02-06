@@ -5,11 +5,29 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService, AzureADUser } from '../auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { UserRole } from '../rbac/roles.enum';
+import { UsersService } from '../../users/users.service';
 
 describe('AuthService', () => {
   let service: AuthService;
   let jwtService: JwtService;
   let configService: ConfigService;
+  let usersService: UsersService;
+
+  const mockDbUser = {
+    id: '00000000-0000-0000-0000-000000000001',
+    email: 'admin@example.com',
+    name: '관리자 (DB)',
+    role: 'lab_manager',
+    site: 'suwon',
+    location: '수원랩',
+    position: 'Lab Manager',
+    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+    isActive: true,
+    lastLogin: null,
+    deletedAt: null,
+    equipmentCount: 0,
+    rentalsCount: 0,
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,12 +49,19 @@ describe('AuthService', () => {
             }),
           },
         },
+        {
+          provide: UsersService,
+          useValue: {
+            findByEmail: jest.fn().mockResolvedValue(null),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     jwtService = module.get<JwtService>(JwtService);
     configService = module.get<ConfigService>(ConfigService);
+    usersService = module.get<UsersService>(UsersService);
   });
 
   it('should be defined', () => {
@@ -44,83 +69,91 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should return access token and user for admin', async () => {
+    it('should return DB user data when user exists in DB', async () => {
       // Arrange
       const loginDto: LoginDto = {
         email: 'admin@example.com',
         password: 'admin123',
       };
+      jest.spyOn(usersService, 'findByEmail').mockResolvedValue(mockDbUser as any);
 
       // Act
       const result = await service.login(loginDto);
 
       // Assert
       expect(result).toHaveProperty('access_token');
-      expect(result).toHaveProperty('user');
+      expect(result.user).toMatchObject({
+        id: mockDbUser.id,
+        email: mockDbUser.email,
+        name: mockDbUser.name,
+        roles: [mockDbUser.role],
+        site: 'suwon',
+        location: '수원랩',
+        teamId: mockDbUser.teamId,
+      });
+      expect(usersService.findByEmail).toHaveBeenCalledWith('admin@example.com');
+      expect(jwtService.sign).toHaveBeenCalled();
+    });
+
+    it('should fallback to defaults when user not in DB', async () => {
+      // Arrange
+      const loginDto: LoginDto = {
+        email: 'admin@example.com',
+        password: 'admin123',
+      };
+      jest.spyOn(usersService, 'findByEmail').mockResolvedValue(null);
+
+      // Act
+      const result = await service.login(loginDto);
+
+      // Assert
+      expect(result).toHaveProperty('access_token');
       expect(result.user).toMatchObject({
         email: 'admin@example.com',
         name: '관리자',
         roles: [UserRole.LAB_MANAGER],
-        site: 'suwon',
-        location: '수원랩',
       });
-      // UUID 형식 검증
-      expect(result.user.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      );
-      expect(jwtService.sign).toHaveBeenCalled();
+      // Fallback should not have site/teamId
+      expect(result.user.site).toBeUndefined();
+      expect(result.user.teamId).toBeUndefined();
     });
 
-    it('should return access token and user for manager', async () => {
+    it('should authenticate manager with correct password', async () => {
       // Arrange
       const loginDto: LoginDto = {
         email: 'manager@example.com',
         password: 'manager123',
       };
+      jest.spyOn(usersService, 'findByEmail').mockResolvedValue(null);
 
       // Act
       const result = await service.login(loginDto);
 
       // Assert
-      expect(result).toHaveProperty('access_token');
-      expect(result).toHaveProperty('user');
       expect(result.user).toMatchObject({
         email: 'manager@example.com',
         name: '기술책임자',
         roles: [UserRole.TECHNICAL_MANAGER],
-        department: 'RF팀',
-        site: 'suwon',
-        location: '수원랩',
       });
-      expect(result.user.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      );
     });
 
-    it('should return access token and user for regular user', async () => {
+    it('should authenticate user with correct password', async () => {
       // Arrange
       const loginDto: LoginDto = {
         email: 'user@example.com',
         password: 'user123',
       };
+      jest.spyOn(usersService, 'findByEmail').mockResolvedValue(null);
 
       // Act
       const result = await service.login(loginDto);
 
       // Assert
-      expect(result).toHaveProperty('access_token');
-      expect(result).toHaveProperty('user');
       expect(result.user).toMatchObject({
         email: 'user@example.com',
         name: '시험실무자',
         roles: [UserRole.TEST_ENGINEER],
-        department: 'RF팀',
-        site: 'suwon',
-        location: '수원랩',
       });
-      expect(result.user.id).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-      );
     });
 
     it('should throw UnauthorizedException with invalid credentials', async () => {
@@ -153,7 +186,7 @@ describe('AuthService', () => {
       // Assert
       expect(result).toHaveProperty('access_token');
       expect(result).toHaveProperty('user');
-      expect(result.user).toEqual({
+      expect(result.user).toMatchObject({
         id: 'azure-id',
         email: 'azure@example.com',
         name: 'Azure User',
@@ -255,9 +288,9 @@ describe('AuthService', () => {
       });
     });
 
-    it('should map LST.UIW.SAR to SAR team and Uiwang location', () => {
+    it('should map LST.UIW.RF to RF team and Uiwang location', () => {
       // Arrange
-      const azureGroups = ['LST.UIW.SAR'];
+      const azureGroups = ['LST.UIW.RF'];
 
       // Using private method through any trick
       const service_any = service as any;
@@ -267,7 +300,7 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual({
-        teamId: '77777777-7777-7777-7777-777777777777', // 의왕 SAR팀 UUID
+        teamId: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', // 의왕 General RF팀 UUID
         site: 'uiwang',
         location: '의왕랩',
       });

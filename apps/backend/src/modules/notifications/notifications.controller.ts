@@ -19,15 +19,19 @@ import { NotificationQueryDto } from './dto/notification-query.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 import { NotificationSettingsDto } from './dto/notification-settings.dto';
+import { CalibrationOverdueScheduler } from './schedulers/calibration-overdue-scheduler';
 
 @ApiTags('알림 관리')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(
+    private readonly notificationsService: NotificationsService,
+    private readonly calibrationOverdueScheduler: CalibrationOverdueScheduler
+  ) {}
 
   @Post()
   @ApiOperation({ summary: '알림 생성', description: '새로운 알림을 생성합니다.' })
@@ -36,7 +40,7 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_NOTIFICATION)
-  create(@Body() createNotificationDto: CreateNotificationDto) {
+  create(@Body() createNotificationDto: CreateNotificationDto): void {
     return this.notificationsService.create(createNotificationDto);
   }
 
@@ -44,7 +48,16 @@ export class NotificationsController {
   @ApiOperation({ summary: '알림 목록 조회', description: '사용자의 알림 목록을 조회합니다.' })
   @ApiResponse({ status: HttpStatus.OK, description: '알림 목록 조회 성공' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  findAll(@Query() query: NotificationQueryDto) {
+  findAll(@Query() query: NotificationQueryDto): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.notificationsService.findAll(query);
   }
 
@@ -56,7 +69,7 @@ export class NotificationsController {
   @ApiParam({ name: 'recipientId', description: '수신자 ID' })
   @ApiResponse({ status: HttpStatus.OK, description: '읽지 않은 알림 개수 조회 성공' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  countUnread(@Param('recipientId') recipientId: string) {
+  countUnread(@Param('recipientId') recipientId: string): Promise<{ count: number }> {
     return this.notificationsService.countUnread(recipientId);
   }
 
@@ -66,7 +79,11 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.OK, description: '알림 상세 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '알림을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  findOne(@Param('id') id: string) {
+  findOne(
+    @Param('id') id: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
+  > {
     return this.notificationsService.findOne(id);
   }
 
@@ -79,7 +96,12 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_NOTIFICATION)
-  update(@Param('id') id: string, @Body() updateNotificationDto: UpdateNotificationDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateNotificationDto: UpdateNotificationDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
+  > {
     return this.notificationsService.update(id, updateNotificationDto);
   }
 
@@ -91,7 +113,7 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.DELETE_NOTIFICATION)
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): Promise<{ id: string; deleted: boolean }> {
     return this.notificationsService.remove(id);
   }
 
@@ -101,7 +123,11 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.OK, description: '알림 읽음 표시 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '알림을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  markAsRead(@Param('id') id: string) {
+  markAsRead(
+    @Param('id') id: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
+  > {
     return this.notificationsService.markAsRead(id);
   }
 
@@ -113,7 +139,9 @@ export class NotificationsController {
   @ApiParam({ name: 'recipientId', description: '수신자 ID' })
   @ApiResponse({ status: HttpStatus.OK, description: '모든 알림 읽음 표시 성공' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  markAllAsRead(@Param('recipientId') recipientId: string) {
+  markAllAsRead(
+    @Param('recipientId') recipientId: string
+  ): Promise<{ success: boolean; count: number }> {
     return this.notificationsService.markAllAsRead(recipientId);
   }
 
@@ -134,7 +162,9 @@ export class NotificationsController {
     @Body('title') title: string,
     @Body('content') content: string,
     @Body('priority') priority?: NotificationPriority
-  ) {
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
+  > {
     return this.notificationsService.createSystemNotification(title, content, priority);
   }
 
@@ -143,7 +173,9 @@ export class NotificationsController {
   @ApiParam({ name: 'userId', description: '사용자 ID' })
   @ApiResponse({ status: HttpStatus.OK, description: '알림 설정 조회 성공' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  getUserNotificationSettings(@Param('userId') userId: string) {
+  getUserNotificationSettings(
+    @Param('userId') userId: string
+  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/dto/notification-settings.dto').NotificationSettingsDto {
     return this.notificationsService.getUserNotificationSettings(userId);
   }
 
@@ -161,7 +193,7 @@ export class NotificationsController {
   updateUserNotificationSettings(
     @Param('userId') userId: string,
     @Body() settingsDto: NotificationSettingsDto
-  ) {
+  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/dto/notification-settings.dto').NotificationSettingsDto {
     return this.notificationsService.updateUserNotificationSettings(userId, settingsDto);
   }
 
@@ -171,7 +203,7 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_NOTIFICATION)
-  scheduleDailyNotifications() {
+  scheduleDailyNotifications(): { success: boolean; message: string } {
     return this.notificationsService.scheduleDailyNotifications();
   }
 
@@ -181,7 +213,53 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_NOTIFICATION)
-  scheduleWeeklyNotifications() {
+  scheduleWeeklyNotifications(): { success: boolean; message: string } {
     return this.notificationsService.scheduleWeeklyNotifications();
+  }
+
+  @Post('trigger-overdue-check')
+  @ApiOperation({
+    summary: '교정 기한 초과 장비 점검 (수동)',
+    description: '교정 기한이 초과된 장비를 점검하고 자동으로 부적합으로 전환합니다.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '점검 완료',
+    schema: {
+      type: 'object',
+      properties: {
+        processed: { type: 'number', description: '처리한 장비 수' },
+        created: { type: 'number', description: '생성한 부적합 수' },
+        skipped: { type: 'number', description: '건너뛴 장비 수' },
+        details: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              equipmentId: { type: 'string' },
+              managementNumber: { type: 'string' },
+              action: { type: 'string', enum: ['created', 'skipped'] },
+              reason: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  async triggerOverdueCheck(): Promise<{
+    processed: number;
+    created: number;
+    skipped: number;
+    details: Array<{
+      equipmentId: string;
+      managementNumber: string;
+      action: 'created' | 'skipped';
+      reason?: string;
+    }>;
+  }> {
+    return this.calibrationOverdueScheduler.handleCalibrationOverdueCheck();
   }
 }

@@ -27,7 +27,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
+import { Permission } from '@equipment-management/shared-constants';
 
 @ApiTags('보정계수 관리')
 @ApiBearerAuth()
@@ -50,7 +50,9 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION_FACTOR)
   @UsePipes(CreateCalibrationFactorValidationPipe)
-  create(@Body() createDto: CreateCalibrationFactorDto) {
+  create(
+    @Body() createDto: CreateCalibrationFactorDto
+  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord {
     return this.calibrationFactorsService.create(createDto);
   }
 
@@ -63,7 +65,16 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findAll(@Query() query: CalibrationFactorQueryDto) {
+  findAll(@Query() query: CalibrationFactorQueryDto): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.calibrationFactorsService.findAll(query);
   }
 
@@ -76,7 +87,16 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTOR_REQUESTS)
-  findPendingApprovals() {
+  findPendingApprovals(): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.calibrationFactorsService.findPendingApprovals();
   }
 
@@ -89,7 +109,16 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  getRegistry() {
+  getRegistry(): Promise<{
+    registry: {
+      equipmentId: string;
+      factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+      factorCount: number;
+    }[];
+    totalEquipments: number;
+    totalFactors: number;
+    generatedAt: Date;
+  }> {
     return this.calibrationFactorsService.getRegistry();
   }
 
@@ -103,7 +132,11 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findByEquipment(@Param('equipmentUuid') equipmentUuid: string) {
+  findByEquipment(@Param('equipmentUuid') equipmentUuid: string): Promise<{
+    equipmentId: string;
+    factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    count: number;
+  }> {
     return this.calibrationFactorsService.findByEquipment(equipmentUuid);
   }
 
@@ -118,7 +151,11 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findOne(@Param('uuid') uuid: string) {
+  findOne(
+    @Param('uuid') uuid: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
+  > {
     return this.calibrationFactorsService.findOne(uuid);
   }
 
@@ -135,7 +172,12 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
   @UsePipes(ApproveCalibrationFactorValidationPipe)
-  approve(@Param('uuid') uuid: string, @Body() approveDto: ApproveCalibrationFactorDto) {
+  approve(
+    @Param('uuid') uuid: string,
+    @Body() approveDto: ApproveCalibrationFactorDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
+  > {
     return this.calibrationFactorsService.approve(uuid, approveDto);
   }
 
@@ -152,7 +194,12 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
   @UsePipes(RejectCalibrationFactorValidationPipe)
-  reject(@Param('uuid') uuid: string, @Body() rejectDto: RejectCalibrationFactorDto) {
+  reject(
+    @Param('uuid') uuid: string,
+    @Body() rejectDto: RejectCalibrationFactorDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
+  > {
     return this.calibrationFactorsService.reject(uuid, rejectDto);
   }
 
@@ -167,7 +214,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
-  remove(@Param('uuid') uuid: string) {
+  remove(@Param('uuid') uuid: string): Promise<{ id: string; deleted: boolean }> {
     return this.calibrationFactorsService.remove(uuid);
   }
 }

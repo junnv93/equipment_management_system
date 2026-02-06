@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { CreateTeamDto, UpdateTeamDto, TeamQueryDto } from './dto';
 import { Team, TeamListResponse } from '@equipment-management/schemas';

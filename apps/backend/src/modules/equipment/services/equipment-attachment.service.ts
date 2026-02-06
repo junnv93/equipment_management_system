@@ -48,12 +48,12 @@ export class EquipmentAttachmentService {
           fileSize: savedFile.fileSize,
           mimeType: savedFile.mimeType,
           description,
-        } as any)
+        })
         .returning();
 
       this.logger.log(`Attachment created: ${attachment.id}`);
       return attachment;
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Failed to create attachment: ${error}`);
       throw error;
     }
@@ -125,7 +125,7 @@ export class EquipmentAttachmentService {
       await this.db.delete(equipmentAttachments).where(eq(equipmentAttachments.id, uuid));
 
       this.logger.log(`Attachment deleted: ${uuid}`);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof NotFoundException) {
         throw error;
       }

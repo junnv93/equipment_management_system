@@ -129,44 +129,26 @@ const temporaryNotifications = [
 const notifications: Notification[] = [...temporaryNotifications];
 
 // 임시 알림 설정 데이터
-const notificationSettings = [
-  {
-    id: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
-    userId: '550e8400-e29b-41d4-a716-446655440001',
-    emailEnabled: true,
-    inAppEnabled: true,
-    calibrationDueEnabled: true,
-    calibrationCompletedEnabled: true,
-    rentalRequestEnabled: true,
-    rentalApprovedEnabled: true,
-    rentalRejectedEnabled: true,
-    checkoutEnabled: true,
-    maintenanceEnabled: true,
-    notificationTime: '09:00',
-    frequency: NotificationFrequencyEnum.IMMEDIATE,
-    systemNotificationsEnabled: true,
-    createdAt: new Date('2023-05-01T09:00:00Z'),
-    updatedAt: new Date('2023-05-01T09:00:00Z'),
-  },
-];
 
 @Injectable()
 export class NotificationsService {
   // 알림 설정을 위한 임시 데이터 저장소
   private notificationSettings: Record<string, NotificationSettingsDto> = {};
 
-  create(createNotificationDto: CreateNotificationDto) {
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      // id: uuidv4(),
-
-      // ... existing code ...
-    };
-
+  create(_createNotificationDto: CreateNotificationDto): void {
     // ... existing code ...
   }
 
-  async findAll(query: NotificationQueryDto) {
+  async findAll(query: NotificationQueryDto): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     const {
       recipientId,
       teamId,
@@ -288,7 +270,11 @@ export class NotificationsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(
+    id: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
+  > {
     const notification = notifications.find((n) => n.id === id);
 
     if (!notification) {
@@ -298,7 +284,12 @@ export class NotificationsService {
     return notification;
   }
 
-  async update(id: string, updateNotificationDto: UpdateNotificationDto) {
+  async update(
+    id: string,
+    updateNotificationDto: UpdateNotificationDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
+  > {
     const index = notifications.findIndex((n) => n.id === id);
 
     if (index === -1) {
@@ -315,7 +306,7 @@ export class NotificationsService {
     return notifications[index];
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
     const index = notifications.findIndex((n) => n.id === id);
 
     if (index === -1) {
@@ -327,12 +318,16 @@ export class NotificationsService {
   }
 
   // 읽음 표시
-  async markAsRead(id: string) {
+  async markAsRead(
+    id: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
+  > {
     return this.update(id, { isRead: true });
   }
 
   // 모든 알림 읽음 표시
-  async markAllAsRead(recipientId: string) {
+  async markAllAsRead(recipientId: string): Promise<{ success: boolean; count: number }> {
     const userNotifications = notifications.filter(
       (n) => n.recipientId === recipientId || n.recipientId === 'all'
     );
@@ -349,7 +344,7 @@ export class NotificationsService {
     recipientId: string,
     days: number,
     equipmentName: string
-  ) {
+  ): Promise<void> {
     const title = `장비 교정 예정 알림: ${equipmentName}`;
     const content = `${equipmentName} 장비의 교정이 ${days}일 후로 예정되어 있습니다.`;
 
@@ -371,7 +366,22 @@ export class NotificationsService {
     recipientId: string,
     days: number,
     equipmentName: string
-  ) {
+  ): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'intermediate_check_due';
+    priority: 'medium';
+    recipientId: string;
+    isTeamNotification: boolean;
+    equipmentId: string;
+    calibrationId: string;
+    rentalId: undefined;
+    linkUrl: string;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const title = `중간점검 예정 알림: ${equipmentName}`;
     const content = `${equipmentName} 장비의 중간점검이 ${days}일 후로 예정되어 있습니다.`;
 
@@ -403,7 +413,22 @@ export class NotificationsService {
     approverId: string,
     equipmentName: string,
     requesterName: string
-  ) {
+  ): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'calibration_approval_pending';
+    priority: 'high';
+    recipientId: string;
+    isTeamNotification: boolean;
+    equipmentId: string;
+    calibrationId: string;
+    rentalId: undefined;
+    linkUrl: string;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const title = `교정 승인 요청: ${equipmentName}`;
     const content = `${requesterName}님이 ${equipmentName} 장비의 교정 기록을 등록했습니다. 검토 후 승인해주세요.`;
 
@@ -434,7 +459,22 @@ export class NotificationsService {
     equipmentId: string,
     userId: string,
     equipmentName: string
-  ) {
+  ): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'calibration_approved';
+    priority: 'medium';
+    recipientId: string;
+    isTeamNotification: boolean;
+    equipmentId: string;
+    calibrationId: string;
+    rentalId: undefined;
+    linkUrl: string;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const title = `교정 승인 완료: ${equipmentName}`;
     const content = `${equipmentName} 장비의 교정 기록이 승인되었습니다.`;
 
@@ -466,7 +506,22 @@ export class NotificationsService {
     userId: string,
     equipmentName: string,
     reason: string
-  ) {
+  ): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'calibration_rejected';
+    priority: 'high';
+    recipientId: string;
+    isTeamNotification: boolean;
+    equipmentId: string;
+    calibrationId: string;
+    rentalId: undefined;
+    linkUrl: string;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const title = `교정 반려: ${equipmentName}`;
     const content = `${equipmentName} 장비의 교정 기록이 반려되었습니다. 사유: ${reason}`;
 
@@ -497,7 +552,7 @@ export class NotificationsService {
     approverId: string,
     equipmentName: string,
     requesterName: string
-  ) {
+  ): Promise<void> {
     const title = `장비 대여 요청: ${equipmentName}`;
     const content = `${requesterName}님이 ${equipmentName} 장비 대여를 요청했습니다.`;
 
@@ -520,7 +575,22 @@ export class NotificationsService {
     userId: string,
     equipmentName: string,
     isApproved: boolean
-  ) {
+  ): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'rental_approved' | 'rental_rejected';
+    priority: 'medium';
+    recipientId: string;
+    isTeamNotification: boolean;
+    equipmentId: undefined;
+    calibrationId: undefined;
+    rentalId: string;
+    linkUrl: string;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const notificationType = isApproved
       ? NotificationTypeEnum.RENTAL_APPROVED
       : NotificationTypeEnum.RENTAL_REJECTED;
@@ -559,9 +629,23 @@ export class NotificationsService {
   async createReturnRequestNotification(
     rentalId: string,
     approverId: string,
-    userId: string,
     equipmentName: string
-  ) {
+  ): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'return_requested';
+    priority: 'medium';
+    recipientId: string;
+    isTeamNotification: boolean;
+    equipmentId: undefined;
+    calibrationId: undefined;
+    rentalId: string;
+    linkUrl: string;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const newNotification = {
       id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: '장비 반납 요청',
@@ -593,7 +677,22 @@ export class NotificationsService {
     equipmentName: string,
     isApproved: boolean,
     notes?: string
-  ) {
+  ): Promise<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'return_approved' | 'return_rejected';
+    priority: 'medium';
+    recipientId: string;
+    isTeamNotification: boolean;
+    equipmentId: undefined;
+    calibrationId: undefined;
+    rentalId: string;
+    linkUrl: string;
+    isRead: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
     const notificationType = isApproved
       ? NotificationTypeEnum.RETURN_APPROVED
       : NotificationTypeEnum.RETURN_REJECTED;
@@ -632,7 +731,7 @@ export class NotificationsService {
   }
 
   // 미확인 알림 개수 조회
-  async countUnread(recipientId: string) {
+  async countUnread(recipientId: string): Promise<{ count: number }> {
     const unreadCount = notifications.filter(
       (n) => (n.recipientId === recipientId || n.recipientId === 'all') && !n.isRead
     ).length;
@@ -726,11 +825,11 @@ export class NotificationsService {
       case NotificationTypeEnum.CALIBRATION_COMPLETED:
         return settings.calibrationCompletedEnabled ?? true;
       case NotificationTypeEnum.INTERMEDIATE_CHECK_DUE:
-        return (settings as any).intermediateCheckEnabled ?? true;
+        return (settings as unknown as Record<string, boolean>).intermediateCheckEnabled ?? true;
       case NotificationTypeEnum.CALIBRATION_APPROVAL_PENDING:
       case NotificationTypeEnum.CALIBRATION_APPROVED:
       case NotificationTypeEnum.CALIBRATION_REJECTED:
-        return (settings as any).calibrationApprovalEnabled ?? true;
+        return (settings as unknown as Record<string, boolean>).calibrationApprovalEnabled ?? true;
       case NotificationTypeEnum.RENTAL_REQUEST:
         return settings.rentalRequestEnabled ?? true;
       case NotificationTypeEnum.RENTAL_APPROVED:

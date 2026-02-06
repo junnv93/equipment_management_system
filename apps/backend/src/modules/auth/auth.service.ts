@@ -1,8 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from './rbac/roles.enum';
 import { LoginDto } from './dto/login.dto';
+import { UsersService } from '../users/users.service';
 
 // 인터페이스 추가
 export interface UserDto {
@@ -69,9 +70,12 @@ export interface TestUser {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private jwtService: JwtService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private usersService: UsersService
   ) {}
 
   // 로컬 로그인 (개발/테스트 환경 전용, 프로덕션에서는 Azure AD만 사용)
@@ -81,37 +85,6 @@ export class AuthService {
       throw new UnauthorizedException('프로덕션 환경에서는 Azure AD 인증만 사용할 수 있습니다.');
     }
 
-    // 개발/테스트 환경용 테스트 사용자 (UUID v4 형식)
-    const testUsers = {
-      'admin@example.com': {
-        id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-        email: 'admin@example.com',
-        name: '관리자',
-        roles: [UserRole.LAB_MANAGER],
-        department: undefined,
-        site: 'suwon' as const,
-        location: '수원랩' as const,
-      },
-      'manager@example.com': {
-        id: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
-        email: 'manager@example.com',
-        name: '기술책임자',
-        roles: [UserRole.TECHNICAL_MANAGER],
-        department: 'RF팀',
-        site: 'suwon' as const,
-        location: '수원랩' as const,
-      },
-      'user@example.com': {
-        id: '12345678-1234-4567-8901-234567890abc',
-        email: 'user@example.com',
-        name: '시험실무자',
-        roles: [UserRole.TEST_ENGINEER],
-        department: 'RF팀',
-        site: 'suwon' as const,
-        location: '수원랩' as const,
-      },
-    };
-
     // 환경 변수에서 테스트 비밀번호 가져오기 (기본값은 개발용)
     const testPasswords: Record<string, string> = {
       'admin@example.com': process.env.DEV_ADMIN_PASSWORD || 'admin123',
@@ -119,15 +92,54 @@ export class AuthService {
       'user@example.com': process.env.DEV_USER_PASSWORD || 'user123',
     };
 
-    const user = testUsers[loginDto.email as keyof typeof testUsers];
+    // 비밀번호 검증용 최소 사용자 정보 (DB 조회 키로만 사용)
+    const testUserDefaults: Record<string, { roles: UserRole[]; name: string }> = {
+      'admin@example.com': { roles: [UserRole.LAB_MANAGER], name: '관리자' },
+      'manager@example.com': { roles: [UserRole.TECHNICAL_MANAGER], name: '기술책임자' },
+      'user@example.com': { roles: [UserRole.TEST_ENGINEER], name: '시험실무자' },
+    };
+
+    const defaults = testUserDefaults[loginDto.email];
     const expectedPassword = testPasswords[loginDto.email];
 
-    if (user && expectedPassword && loginDto.password === expectedPassword) {
-      return this.generateToken(user);
+    if (!defaults || !expectedPassword || loginDto.password !== expectedPassword) {
+      throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
     }
 
-    // 인증 실패
-    throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+    // DB에서 사용자 정보 조회하여 site, teamId 등 보강
+    // DB row에는 site/location 컬럼이 있지만 User 스키마 타입에는 미포함
+    const dbUser = (await this.usersService.findByEmail(loginDto.email)) as
+      | (Record<string, unknown> & {
+          id: string;
+          email: string;
+          name: string;
+          role: string;
+          teamId?: string | null;
+          position?: string | null;
+        })
+      | null;
+    if (dbUser) {
+      return this.generateToken({
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        roles: [dbUser.role as UserRole],
+        department: undefined,
+        site: (dbUser.site as UserDto['site']) ?? undefined,
+        location: (dbUser.location as UserDto['location']) ?? undefined,
+        position: dbUser.position ?? undefined,
+        teamId: dbUser.teamId ?? undefined,
+      });
+    }
+
+    // DB에 없으면 최소 정보로 폴백 (site/teamId 없음)
+    this.logger.warn(`login(): DB에서 사용자를 찾을 수 없음 (${loginDto.email}), 기본값 사용`);
+    return this.generateToken({
+      id: '',
+      email: loginDto.email,
+      name: defaults.name,
+      roles: defaults.roles,
+    });
   }
 
   // Azure AD 인증 처리 (프로덕션 환경)
@@ -257,12 +269,43 @@ export class AuthService {
   /**
    * 테스트 전용 토큰 생성
    * E2E 테스트에서 사용됩니다.
+   * DB에서 사용자 정보를 조회하여 site, teamId 등을 보강합니다.
    *
-   * @param testUser - 테스트 사용자 정보
+   * @param testUser - 테스트 사용자 정보 (email을 DB 조회 키로 사용)
    * @returns JWT 토큰을 포함한 인증 정보
    */
-  generateTestToken(testUser: TestUser): AuthResponse {
-    const user: UserDto = {
+  async generateTestToken(testUser: TestUser): Promise<AuthResponse> {
+    // DB에서 실제 사용자 정보 조회
+    // DB row에는 site/location 컬럼이 있지만 User 스키마 타입에는 미포함
+    const dbUser = (await this.usersService.findByEmail(testUser.email)) as
+      | (Record<string, unknown> & {
+          id: string;
+          email: string;
+          name: string;
+          role: string;
+          teamId?: string | null;
+          position?: string | null;
+        })
+      | null;
+    if (dbUser) {
+      return this.generateToken({
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        roles: [testUser.role as UserRole],
+        department: undefined,
+        site: (dbUser.site as UserDto['site']) ?? undefined,
+        location: (dbUser.location as UserDto['location']) ?? undefined,
+        position: dbUser.position ?? undefined,
+        teamId: dbUser.teamId ?? undefined,
+      });
+    }
+
+    // DB에 없으면 전달된 정보로 폴백
+    this.logger.warn(
+      `generateTestToken(): DB에서 사용자를 찾을 수 없음 (${testUser.email}), 전달된 정보 사용`
+    );
+    return this.generateToken({
       id: testUser.id ?? testUser.uuid ?? '',
       email: testUser.email,
       name: testUser.name,
@@ -272,9 +315,7 @@ export class AuthService {
       location: testUser.location,
       position: testUser.position,
       teamId: testUser.teamId,
-    };
-
-    return this.generateToken(user);
+    });
   }
 
   // JWT 토큰 생성

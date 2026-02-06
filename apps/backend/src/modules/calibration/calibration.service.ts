@@ -1,21 +1,15 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-  Logger,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
 import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
 import { CalibrationStatus, CalibrationApprovalStatusEnum } from '@equipment-management/schemas';
+import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc } from '../../common/utils';
 import { db } from '../../database/drizzle';
 import * as schema from '@equipment-management/db/schema';
-import { and, eq, gte, lte, count, sql, like, or, desc, asc, SQL } from 'drizzle-orm';
+import { and, eq, gte, lte, count, sql, or, desc, asc, SQL, isNull } from 'drizzle-orm';
 
 // 교정 기록 인터페이스
 export interface CalibrationRecord {
@@ -159,7 +153,7 @@ export class CalibrationService {
    *   - CalibrationService는 교정 기록 관리에만 집중
    *   - 장비 필터링/통계는 EquipmentService가 담당
    */
-  async getSummary() {
+  async getSummary(): Promise<{ total: number; overdueCount: number; dueInMonthCount: number }> {
     const today = getUtcStartOfDay(); // ✅ UTC 기준 오늘 00:00:00
     const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, 30)); // ✅ UTC 기준 30일 후 23:59:59
 
@@ -221,7 +215,19 @@ export class CalibrationService {
    *   - 장비 필터링은 EquipmentService에서 담당
    *   - CalibrationService는 교정 기록 관리에만 집중
    */
-  async getOverdueCalibrations() {
+  async getOverdueCalibrations(): Promise<
+    {
+      id: string;
+      equipmentId: string;
+      equipmentName: string;
+      managementNumber: string;
+      calibrationDate: string;
+      nextCalibrationDate: string;
+      team: string | undefined;
+      teamId: string | undefined;
+      calibrationAgency: string;
+    }[]
+  > {
     const today = getUtcStartOfDay(); // ✅ UTC 기준 오늘 00:00:00
 
     // ✅ sql 템플릿으로 명시적 타임스탬프 변환
@@ -276,7 +282,19 @@ export class CalibrationService {
    *
    * @param days - 오늘부터 N일 이내에 교정이 예정된 장비 조회 (기본값: 30)
    */
-  async getUpcomingCalibrations(days: number = 30) {
+  async getUpcomingCalibrations(days: number = 30): Promise<
+    {
+      id: string;
+      equipmentId: string;
+      equipmentName: string;
+      managementNumber: string;
+      calibrationDate: string;
+      nextCalibrationDate: string;
+      team: string | undefined;
+      teamId: string | undefined;
+      calibrationAgency: string;
+    }[]
+  > {
     const today = getUtcStartOfDay(); // ✅ UTC 기준 오늘 00:00:00
     const futureDate = getUtcEndOfDay(addDaysUtc(today, days)); // ✅ UTC 기준 N일 후 23:59:59
 
@@ -321,7 +339,9 @@ export class CalibrationService {
     }));
   }
 
-  create(createCalibrationDto: CreateCalibrationDto) {
+  create(
+    createCalibrationDto: CreateCalibrationDto
+  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord {
     const { registeredBy, registeredByRole, registrarComment, ...rest } = createCalibrationDto;
 
     // 교정 기록은 시험실무자만 등록 가능 (UL-QP-18 등록/승인 완전 분리 정책)
@@ -361,12 +381,48 @@ export class CalibrationService {
     return newCalibration;
   }
 
-  async findAll(query: CalibrationQueryDto) {
+  async findAll(query: CalibrationQueryDto): Promise<{
+    items: {
+      id: string;
+      equipmentId: string;
+      technicianId: string | null;
+      status: string;
+      calibrationDate: Date;
+      completionDate: Date | null;
+      nextCalibrationDate: Date | null;
+      agencyName: string | null;
+      certificateNumber: string | null;
+      certificatePath: string | null;
+      result: string | null;
+      cost: string | null;
+      notes: string | null;
+      intermediateCheckDate: string | null;
+      approvalStatus: string;
+      registeredBy: string | null;
+      approvedBy: string | null;
+      registeredByRole: string | null;
+      registrarComment: string | null;
+      approverComment: string | null;
+      rejectionReason: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      equipmentName: string | null;
+      managementNumber: string | null;
+      teamId: string | null;
+      teamName: string | null;
+    }[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     const {
       equipmentId,
       calibrationManagerId,
       statuses,
-      methods,
       calibrationAgency,
       fromDate,
       toDate,
@@ -540,7 +596,11 @@ export class CalibrationService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(
+    id: string
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
+  > {
     const calibration = calibrations.find((cal) => cal.id === id);
 
     if (!calibration) {
@@ -550,7 +610,12 @@ export class CalibrationService {
     return calibration;
   }
 
-  async update(id: string, updateCalibrationDto: UpdateCalibrationDto) {
+  async update(
+    id: string,
+    updateCalibrationDto: UpdateCalibrationDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
+  > {
     const index = calibrations.findIndex((cal) => cal.id === id);
 
     if (index === -1) {
@@ -567,7 +632,7 @@ export class CalibrationService {
     return calibrations[index];
   }
 
-  async remove(id: string) {
+  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
     const index = calibrations.findIndex((cal) => cal.id === id);
 
     if (index === -1) {
@@ -579,12 +644,89 @@ export class CalibrationService {
   }
 
   // 특정 장비의 교정 기록 조회
-  async findByEquipment(equipmentId: string) {
+  async findByEquipment(equipmentId: string): Promise<{
+    items: {
+      id: string;
+      equipmentId: string;
+      technicianId: string | null;
+      status: string;
+      calibrationDate: Date;
+      completionDate: Date | null;
+      nextCalibrationDate: Date | null;
+      agencyName: string | null;
+      certificateNumber: string | null;
+      certificatePath: string | null;
+      result: string | null;
+      cost: string | null;
+      notes: string | null;
+      intermediateCheckDate: string | null;
+      approvalStatus: string;
+      registeredBy: string | null;
+      approvedBy: string | null;
+      registeredByRole: string | null;
+      registrarComment: string | null;
+      approverComment: string | null;
+      rejectionReason: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      equipmentName: string | null;
+      managementNumber: string | null;
+      teamId: string | null;
+      teamName: string | null;
+    }[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.findAll({ equipmentId });
   }
 
   // 특정 날짜 범위의 교정 일정 조회
-  async findScheduled(fromDate: Date, toDate: Date) {
+  async findScheduled(
+    fromDate: Date,
+    toDate: Date
+  ): Promise<{
+    items: {
+      id: string;
+      equipmentId: string;
+      technicianId: string | null;
+      status: string;
+      calibrationDate: Date;
+      completionDate: Date | null;
+      nextCalibrationDate: Date | null;
+      agencyName: string | null;
+      certificateNumber: string | null;
+      certificatePath: string | null;
+      result: string | null;
+      cost: string | null;
+      notes: string | null;
+      intermediateCheckDate: string | null;
+      approvalStatus: string;
+      registeredBy: string | null;
+      approvedBy: string | null;
+      registeredByRole: string | null;
+      registrarComment: string | null;
+      approverComment: string | null;
+      rejectionReason: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      equipmentName: string | null;
+      managementNumber: string | null;
+      teamId: string | null;
+      teamName: string | null;
+    }[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.findAll({
       fromDate,
       toDate,
@@ -593,13 +735,22 @@ export class CalibrationService {
   }
 
   // 교정 상태 변경
-  async updateStatus(id: string, status: CalibrationStatus) {
-    const calibration = await this.findOne(id);
+  async updateStatus(
+    id: string,
+    status: CalibrationStatus
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
+  > {
     return this.update(id, { status });
   }
 
   // 예정된 교정 완료 처리
-  async completeCalibration(id: string, updateDto: UpdateCalibrationDto) {
+  async completeCalibration(
+    id: string,
+    updateDto: UpdateCalibrationDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
+  > {
     const calibration = await this.findOne(id);
 
     if (calibration.status !== 'scheduled' && calibration.status !== 'in_progress') {
@@ -613,13 +764,87 @@ export class CalibrationService {
   }
 
   // 특정 담당자가 담당하는 교정 목록 조회
-  async findByManager(calibrationManagerId: string) {
+  async findByManager(calibrationManagerId: string): Promise<{
+    items: {
+      id: string;
+      equipmentId: string;
+      technicianId: string | null;
+      status: string;
+      calibrationDate: Date;
+      completionDate: Date | null;
+      nextCalibrationDate: Date | null;
+      agencyName: string | null;
+      certificateNumber: string | null;
+      certificatePath: string | null;
+      result: string | null;
+      cost: string | null;
+      notes: string | null;
+      intermediateCheckDate: string | null;
+      approvalStatus: string;
+      registeredBy: string | null;
+      approvedBy: string | null;
+      registeredByRole: string | null;
+      registrarComment: string | null;
+      approverComment: string | null;
+      rejectionReason: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      equipmentName: string | null;
+      managementNumber: string | null;
+      teamId: string | null;
+      teamName: string | null;
+    }[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.findAll({ calibrationManagerId });
   }
 
   // 다음 교정 예정일이 다가오는 장비 교정 기록 조회
   // ✅ UTC 기준 날짜 비교
-  async findDueCalibrations(days: number) {
+  async findDueCalibrations(days: number): Promise<{
+    items: {
+      id: string;
+      equipmentId: string;
+      technicianId: string | null;
+      status: string;
+      calibrationDate: Date;
+      completionDate: Date | null;
+      nextCalibrationDate: Date | null;
+      agencyName: string | null;
+      certificateNumber: string | null;
+      certificatePath: string | null;
+      result: string | null;
+      cost: string | null;
+      notes: string | null;
+      intermediateCheckDate: string | null;
+      approvalStatus: string;
+      registeredBy: string | null;
+      approvedBy: string | null;
+      registeredByRole: string | null;
+      registrarComment: string | null;
+      approverComment: string | null;
+      rejectionReason: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      equipmentName: string | null;
+      managementNumber: string | null;
+      teamId: string | null;
+      teamName: string | null;
+    }[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     const today = getUtcStartOfDay();
     const dueDate = addDaysUtc(today, days);
 
@@ -630,14 +855,56 @@ export class CalibrationService {
   }
 
   // 승인 대기 중인 교정 목록 조회
-  async findPendingApprovals() {
+  async findPendingApprovals(): Promise<{
+    items: {
+      id: string;
+      equipmentId: string;
+      technicianId: string | null;
+      status: string;
+      calibrationDate: Date;
+      completionDate: Date | null;
+      nextCalibrationDate: Date | null;
+      agencyName: string | null;
+      certificateNumber: string | null;
+      certificatePath: string | null;
+      result: string | null;
+      cost: string | null;
+      notes: string | null;
+      intermediateCheckDate: string | null;
+      approvalStatus: string;
+      registeredBy: string | null;
+      approvedBy: string | null;
+      registeredByRole: string | null;
+      registrarComment: string | null;
+      approverComment: string | null;
+      rejectionReason: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      equipmentName: string | null;
+      managementNumber: string | null;
+      teamId: string | null;
+      teamName: string | null;
+    }[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> {
     return this.findAll({
       approvalStatus: CalibrationApprovalStatusEnum.enum.pending_approval,
     });
   }
 
   // 교정 승인
-  async approveCalibration(id: string, approveDto: ApproveCalibrationDto) {
+  async approveCalibration(
+    id: string,
+    approveDto: ApproveCalibrationDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
+  > {
     const calibration = await this.findOne(id);
 
     if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
@@ -659,11 +926,13 @@ export class CalibrationService {
       updatedAt: now,
     };
 
-    // 장비 교정일 자동 업데이트
+    // 장비 교정일 자동 업데이트 및 교정 기한 초과 부적합 자동 조치
     await this.updateEquipmentCalibrationDates(
       calibration.equipmentId,
       calibration.calibrationDate,
-      calibration.nextCalibrationDate
+      calibration.nextCalibrationDate,
+      id, // calibrationId
+      approveDto.approverId // 승인자 ID
     );
 
     return calibrations[index];
@@ -676,8 +945,10 @@ export class CalibrationService {
   private async updateEquipmentCalibrationDates(
     equipmentId: string,
     calibrationDate: Date,
-    nextCalibrationDate: Date
-  ) {
+    nextCalibrationDate: Date,
+    calibrationId?: string,
+    approverId?: string
+  ): Promise<void> {
     try {
       await db
         .update(schema.equipment)
@@ -693,14 +964,104 @@ export class CalibrationService {
           `lastCalibrationDate: ${calibrationDate}, ` +
           `nextCalibrationDate: ${nextCalibrationDate}`
       );
+
+      // 교정 기한 초과 부적합 자동 조치 완료 처리
+      if (calibrationId) {
+        await this.markCalibrationOverdueAsCorrected(equipmentId, calibrationId, approverId);
+      }
     } catch (error) {
       this.logger.error(`장비 교정일 업데이트 실패: ${equipmentId}`, error);
       // 장비 업데이트 실패는 교정 승인을 차단하지 않음 (best effort)
     }
   }
 
+  /**
+   * 교정 완료 시 calibration_overdue 부적합 자동 조치 완료 처리
+   *
+   * 교정 승인 후 호출되어 해당 장비의 open calibration_overdue 부적합을
+   * corrected 상태로 변경하고, 장비 상태를 available로 복원합니다.
+   *
+   * @param equipmentId 장비 ID
+   * @param calibrationId 교정 기록 ID (연결용)
+   * @param correctedBy 조치자 ID
+   */
+  private async markCalibrationOverdueAsCorrected(
+    equipmentId: string,
+    calibrationId: string,
+    correctedBy?: string
+  ): Promise<void> {
+    try {
+      // open 또는 analyzing 상태의 calibration_overdue 부적합 조회
+      const existingNc = await db
+        .select({
+          id: nonConformances.id,
+          status: nonConformances.status,
+        })
+        .from(nonConformances)
+        .where(
+          and(
+            eq(nonConformances.equipmentId, equipmentId),
+            eq(nonConformances.ncType, 'calibration_overdue'),
+            isNull(nonConformances.deletedAt),
+            sql`${nonConformances.status} IN ('open', 'analyzing')`
+          )
+        )
+        .limit(1);
+
+      if (existingNc.length === 0) {
+        this.logger.debug(`장비 ${equipmentId}: open calibration_overdue 부적합 없음`);
+        return;
+      }
+
+      const nc = existingNc[0];
+      const today = new Date();
+
+      // 트랜잭션으로 부적합 조치 + 장비 상태 복원 처리
+      await db.transaction(async (tx) => {
+        // (A) 부적합을 corrected 상태로 변경
+        await tx
+          .update(nonConformances)
+          .set({
+            status: 'corrected',
+            resolutionType: 'recalibration',
+            calibrationId,
+            correctionContent: '교정 완료로 인한 자동 조치 완료',
+            correctionDate: today.toISOString().split('T')[0],
+            correctedBy: correctedBy || null,
+            updatedAt: today,
+          })
+          .where(eq(nonConformances.id, nc.id));
+
+        // (B) 장비 상태를 available로 복원
+        // 교정 완료로 부적합이 해결되었으므로 정상 사용 가능 상태로 변경
+        await tx
+          .update(schema.equipment)
+          .set({
+            status: 'available',
+            updatedAt: today,
+          })
+          .where(eq(schema.equipment.id, equipmentId));
+
+        this.logger.log(
+          `장비 ${equipmentId}: calibration_overdue 부적합(${nc.id}) 조치 완료 + 상태 available로 복원`
+        );
+      });
+    } catch (error) {
+      this.logger.error(
+        `calibration_overdue 부적합 자동 조치 실패: ${equipmentId}`,
+        error instanceof Error ? error.stack : String(error)
+      );
+      // 부적합 조치 실패는 교정 승인을 차단하지 않음 (best effort)
+    }
+  }
+
   // 교정 반려
-  async rejectCalibration(id: string, rejectDto: RejectCalibrationDto) {
+  async rejectCalibration(
+    id: string,
+    rejectDto: RejectCalibrationDto
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
+  > {
     const calibration = await this.findOne(id);
 
     if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
@@ -726,7 +1087,11 @@ export class CalibrationService {
   }
 
   // 중간점검 일정이 다가오는 교정 조회
-  async findUpcomingIntermediateChecks(days: number = 7) {
+  async findUpcomingIntermediateChecks(
+    days: number = 7
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord[]
+  > {
     const today = new Date();
     const futureDate = new Date();
     futureDate.setDate(today.getDate() + days);
@@ -778,7 +1143,10 @@ export class CalibrationService {
     status?: 'pending' | 'completed' | 'overdue';
     equipmentId?: string;
     managerId?: string;
-  }) {
+  }): Promise<{
+    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord[];
+    meta: { totalItems: number; overdueCount: number; pendingCount: number };
+  }> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

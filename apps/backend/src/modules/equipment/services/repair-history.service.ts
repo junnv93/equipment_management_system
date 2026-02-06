@@ -1,15 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import {
   CreateRepairHistoryDto,
   UpdateRepairHistoryDto,
   RepairHistoryQueryDto,
-  RepairHistoryResponseDto,
 } from '../dto/repair-history.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { NonConformancesService } from '../../non-conformances/non-conformances.service';
@@ -25,9 +18,6 @@ export interface RepairHistoryRecord {
   equipmentId: string; // UUID
   repairDate: Date;
   repairDescription: string;
-  repairedBy: string | null;
-  repairCompany: string | null;
-  cost: number | null;
   repairResult: string | null;
   notes: string | null;
   attachmentPath: string | null;
@@ -46,9 +36,6 @@ const repairHistoryStore: RepairHistoryRecord[] = [
     equipmentId: '550e8400-e29b-41d4-a716-446655440001',
     repairDate: new Date('2024-01-15'),
     repairDescription: '전원부 고장으로 인한 전원 보드 교체',
-    repairedBy: '홍길동',
-    repairCompany: '키사이트 코리아',
-    cost: 500000,
     repairResult: 'completed',
     notes: '보증 기간 내 무상 수리',
     attachmentPath: null,
@@ -64,9 +51,6 @@ const repairHistoryStore: RepairHistoryRecord[] = [
     equipmentId: '550e8400-e29b-41d4-a716-446655440001',
     repairDate: new Date('2024-06-20'),
     repairDescription: '프로브 커넥터 불량으로 커넥터 교체',
-    repairedBy: '김기사',
-    repairCompany: null,
-    cost: 50000,
     repairResult: 'completed',
     notes: '자체 수리',
     attachmentPath: null,
@@ -105,7 +89,6 @@ export class RepairHistoryService {
       fromDate,
       toDate,
       repairResult,
-      repairCompany,
       includeDeleted = false,
       sort = 'repairDate.desc',
     } = query;
@@ -136,13 +119,6 @@ export class RepairHistoryService {
     // 수리 결과 필터
     if (repairResult) {
       filteredRecords = filteredRecords.filter((r) => r.repairResult === repairResult);
-    }
-
-    // 수리 업체 필터
-    if (repairCompany) {
-      filteredRecords = filteredRecords.filter(
-        (r) => r.repairCompany && r.repairCompany.includes(repairCompany)
-      );
     }
 
     // 정렬
@@ -201,9 +177,6 @@ export class RepairHistoryService {
       equipmentId: equipmentUuid,
       repairDate: new Date(dto.repairDate),
       repairDescription: dto.repairDescription,
-      repairedBy: dto.repairedBy || null,
-      repairCompany: dto.repairCompany || null,
-      cost: dto.cost || null,
       repairResult: dto.repairResult || null,
       notes: dto.notes || null,
       attachmentPath: dto.attachmentPath || null,
@@ -252,9 +225,6 @@ export class RepairHistoryService {
       ...repairHistoryStore[index],
       ...(dto.repairDate && { repairDate: new Date(dto.repairDate) }),
       ...(dto.repairDescription && { repairDescription: dto.repairDescription }),
-      ...(dto.repairedBy !== undefined && { repairedBy: dto.repairedBy || null }),
-      ...(dto.repairCompany !== undefined && { repairCompany: dto.repairCompany || null }),
-      ...(dto.cost !== undefined && { cost: dto.cost || null }),
       ...(dto.repairResult !== undefined && { repairResult: dto.repairResult || null }),
       ...(dto.notes !== undefined && { notes: dto.notes || null }),
       ...(dto.attachmentPath !== undefined && { attachmentPath: dto.attachmentPath || null }),
@@ -301,18 +271,6 @@ export class RepairHistoryService {
     };
 
     return { deleted: true, id: uuid };
-  }
-
-  /**
-   * 장비의 총 수리 비용 계산
-   */
-  async getTotalCost(equipmentUuid: string): Promise<{ totalCost: number; count: number }> {
-    const records = repairHistoryStore.filter((r) => !r.isDeleted);
-    const totalCost = records.reduce((sum, r) => sum + (r.cost || 0), 0);
-    return {
-      totalCost,
-      count: records.length,
-    };
   }
 
   /**

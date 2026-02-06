@@ -8,7 +8,19 @@ export class ReportsService {
     endDate?: string,
     equipmentId?: string,
     departmentId?: string
-  ) {
+  ): Promise<{
+    timeframe: { startDate: string; endDate: string };
+    totalUsageHours: number;
+    totalEquipmentCount: number;
+    departmentDistribution: {
+      departmentId: string;
+      departmentName: string;
+      usageHours: number;
+      equipmentCount: number;
+    }[];
+    topEquipment: { equipmentId: string; name: string; usageHours: number; usageCount: number }[];
+    monthlyTrend: { month: string; usageHours: number }[];
+  }> {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     // 임시 데이터 반환
     return {
@@ -39,7 +51,20 @@ export class ReportsService {
   }
 
   // 교정 상태 보고서
-  async getCalibrationStatus(status?: string, timeframe?: string) {
+  async getCalibrationStatus(
+    status?: string,
+    timeframe?: string
+  ): Promise<{
+    summary: {
+      totalEquipment: number;
+      requireCalibration: number;
+      dueThisMonth: number;
+      overdue: number;
+      completedThisMonth: number;
+    };
+    status: { status: string; count: number; percentage: number }[];
+    calibrationTrend: { month: string; completed: number; due: number; overdue: number }[];
+  }> {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
       summary: {
@@ -67,14 +92,54 @@ export class ReportsService {
    * 반출 통계 보고서 (대여/교정/수리 포함)
    * @deprecated 메서드 이름은 getCheckoutStatistics로 변경됨, API 엔드포인트 URL은 유지
    */
-  async getRentalStatistics(startDate?: string, endDate?: string, departmentId?: string) {
+  async getRentalStatistics(
+    startDate?: string,
+    endDate?: string,
+    departmentId?: string
+  ): Promise<{
+    timeframe: { startDate: string; endDate: string };
+    summary: {
+      totalCheckouts: number;
+      activeCheckouts: number;
+      avgCheckoutDuration: number;
+      returnRate: number;
+    };
+    checkoutsByDepartment: {
+      departmentId: string;
+      departmentName: string;
+      count: number;
+      percentage: number;
+    }[];
+    checkoutStatus: { status: string; count: number; percentage: number }[];
+    monthlyTrend: { month: string; checkouts: number; returns: number }[];
+  }> {
     return this.getCheckoutStatistics(startDate, endDate, departmentId);
   }
 
   /**
    * 반출 통계 보고서 (대여/교정/수리 포함)
    */
-  async getCheckoutStatistics(startDate?: string, endDate?: string, departmentId?: string) {
+  async getCheckoutStatistics(
+    startDate?: string,
+    endDate?: string,
+    departmentId?: string
+  ): Promise<{
+    timeframe: { startDate: string; endDate: string };
+    summary: {
+      totalCheckouts: number;
+      activeCheckouts: number;
+      avgCheckoutDuration: number;
+      returnRate: number;
+    };
+    checkoutsByDepartment: {
+      departmentId: string;
+      departmentName: string;
+      count: number;
+      percentage: number;
+    }[];
+    checkoutStatus: { status: string; count: number; percentage: number }[];
+    monthlyTrend: { month: string; checkouts: number; returns: number }[];
+  }> {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
       timeframe: {
@@ -112,7 +177,33 @@ export class ReportsService {
     period: 'week' | 'month' | 'quarter' | 'year' = 'month',
     equipmentId?: string,
     categoryId?: string
-  ) {
+  ): Promise<{
+    period: 'week' | 'month' | 'quarter' | 'year';
+    summary: {
+      averageUtilization: number;
+      highUtilizationCount: number;
+      lowUtilizationCount: number;
+      totalEquipmentCount: number;
+    };
+    utilizationByCategory: {
+      categoryId: string;
+      categoryName: string;
+      utilizationRate: number;
+      equipmentCount: number;
+    }[];
+    topUtilized: {
+      equipmentId: string;
+      name: string;
+      utilizationRate: number;
+      department: string;
+    }[];
+    lowUtilized: {
+      equipmentId: string;
+      name: string;
+      utilizationRate: number;
+      department: string;
+    }[];
+  }> {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
       period,
@@ -151,7 +242,27 @@ export class ReportsService {
   }
 
   // 장비 가동 중단 보고서
-  async getEquipmentDowntime(startDate?: string, endDate?: string, equipmentId?: string) {
+  async getEquipmentDowntime(
+    startDate?: string,
+    endDate?: string,
+    equipmentId?: string
+  ): Promise<{
+    timeframe: { startDate: string; endDate: string };
+    summary: {
+      totalDowntimeHours: number;
+      totalIncidents: number;
+      avgDowntimeDuration: number;
+      affectedEquipmentCount: number;
+    };
+    downtimeReasons: { reason: string; hours: number; percentage: number }[];
+    topDowntimeEquipment: {
+      equipmentId: string;
+      name: string;
+      downtimeHours: number;
+      incidents: number;
+    }[];
+    monthlyTrend: { month: string; downtimeHours: number }[];
+  }> {
     // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
     return {
       timeframe: {
@@ -187,7 +298,17 @@ export class ReportsService {
   }
 
   // 장비 사용 보고서 내보내기
-  async exportEquipmentUsage(format: 'excel' | 'csv', startDate?: string, endDate?: string) {
+  async exportEquipmentUsage(
+    format: 'excel' | 'csv',
+    startDate?: string,
+    endDate?: string
+  ): Promise<{
+    success: boolean;
+    format: 'excel' | 'csv';
+    fileName: string;
+    downloadUrl: string;
+    generatedAt: string;
+  }> {
     // 실제 구현에서는 보고서 데이터를 엑셀 또는 CSV 형식으로 생성하여 반환
     // 여기서는 임시 응답만 반환
     return {

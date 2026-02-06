@@ -4,7 +4,6 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   CalibrationMethodEnum,
   CalibrationStatusEnum,
-  CalibrationApprovalStatusEnum,
   CalibrationRegisteredByRoleEnum,
   CalibrationResultEnum,
 } from '@equipment-management/schemas';

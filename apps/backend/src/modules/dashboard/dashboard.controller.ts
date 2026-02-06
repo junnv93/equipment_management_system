@@ -12,8 +12,8 @@ import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '../auth/rbac/permissions.enum';
-import { UserRole } from '../auth/rbac/roles.enum';
+import { Permission } from '@equipment-management/shared-constants';
+import { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import {
   DashboardSummaryDto,
@@ -47,15 +47,22 @@ export class DashboardController {
     description:
       '전체 장비 수, 사용 가능 장비 수, 활성 대여/반출 수, 교정 예정 장비 수를 조회합니다.',
   })
+  @ApiQuery({
+    name: 'teamId',
+    required: false,
+    description: '팀 필터 (선택사항)',
+  })
   @ApiResponse({
     status: 200,
     description: '대시보드 요약 정보',
     type: DashboardSummaryDto,
   })
-  async getSummary(@Req() req: AuthenticatedRequest): Promise<DashboardSummaryDto> {
+  async getSummary(
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string
+  ): Promise<DashboardSummaryDto> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
     const site = req.user.site;
 
     return this.dashboardService.getSummary(userId, userRole, teamId, site);
@@ -67,15 +74,22 @@ export class DashboardController {
     summary: '팀별 장비 현황 조회',
     description: '팀별로 장비 수를 집계하여 반환합니다.',
   })
+  @ApiQuery({
+    name: 'teamId',
+    required: false,
+    description: '팀 필터 (선택사항)',
+  })
   @ApiResponse({
     status: 200,
     description: '팀별 장비 현황',
     type: [EquipmentByTeamDto],
   })
-  async getEquipmentByTeam(@Req() req: AuthenticatedRequest): Promise<EquipmentByTeamDto[]> {
+  async getEquipmentByTeam(
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string
+  ): Promise<EquipmentByTeamDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
     const site = req.user.site;
 
     return this.dashboardService.getEquipmentByTeam(userId, userRole, teamId, site);
@@ -87,15 +101,22 @@ export class DashboardController {
     summary: '교정 지연 장비 조회',
     description: '교정 예정일이 지난 장비 목록을 조회합니다.',
   })
+  @ApiQuery({
+    name: 'teamId',
+    required: false,
+    description: '팀 필터 (선택사항)',
+  })
   @ApiResponse({
     status: 200,
     description: '교정 지연 장비 목록',
     type: [OverdueCalibrationDto],
   })
-  async getOverdueCalibrations(@Req() req: AuthenticatedRequest): Promise<OverdueCalibrationDto[]> {
+  async getOverdueCalibrations(
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string
+  ): Promise<OverdueCalibrationDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
     const site = req.user.site;
 
     return this.dashboardService.getOverdueCalibrations(userId, userRole, teamId, site);
@@ -113,6 +134,11 @@ export class DashboardController {
     description: '조회할 일수 (기본값: 30일)',
     example: 30,
   })
+  @ApiQuery({
+    name: 'teamId',
+    required: false,
+    description: '팀 필터 (선택사항)',
+  })
   @ApiResponse({
     status: 200,
     description: '교정 예정 장비 목록',
@@ -120,11 +146,11 @@ export class DashboardController {
   })
   async getUpcomingCalibrations(
     @Req() req: AuthenticatedRequest,
-    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
+    @Query('teamId') teamId?: string
   ): Promise<UpcomingCalibrationDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
     const site = req.user.site;
 
     return this.dashboardService.getUpcomingCalibrations(userId, userRole, days, teamId, site);
@@ -136,15 +162,22 @@ export class DashboardController {
     summary: '반출 지연 조회',
     description: '반납 예정일이 지난 반출(대여/교정/수리 포함) 목록을 조회합니다.',
   })
+  @ApiQuery({
+    name: 'teamId',
+    required: false,
+    description: '팀 필터 (선택사항)',
+  })
   @ApiResponse({
     status: 200,
     description: '반출 지연 목록',
     type: [OverdueCheckoutDto],
   })
-  async getOverdueCheckouts(@Req() req: AuthenticatedRequest): Promise<OverdueCheckoutDto[]> {
+  async getOverdueCheckouts(
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string
+  ): Promise<OverdueCheckoutDto[]> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
     const site = req.user.site;
 
     return this.dashboardService.getOverdueCheckouts(userId, userRole, teamId, site);
@@ -207,6 +240,11 @@ export class DashboardController {
     summary: '장비 상태별 통계 조회',
     description: '장비 상태별 개수를 집계하여 반환합니다.',
   })
+  @ApiQuery({
+    name: 'teamId',
+    required: false,
+    description: '팀 필터 (선택사항)',
+  })
   @ApiResponse({
     status: 200,
     description: '장비 상태별 통계 (상태명: 개수)',
@@ -217,11 +255,11 @@ export class DashboardController {
     },
   })
   async getEquipmentStatusStats(
-    @Req() req: AuthenticatedRequest
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string
   ): Promise<EquipmentStatusStatsDto> {
     const userId = req.user.userId;
     const userRole = req.user.roles?.[0] as UserRole;
-    const teamId = req.user.teamId;
     const site = req.user.site;
 
     return this.dashboardService.getEquipmentStatusStats(userId, userRole, teamId, site);
