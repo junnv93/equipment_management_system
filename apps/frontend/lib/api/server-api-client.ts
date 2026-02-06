@@ -67,6 +67,7 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
   // Axios 인스턴스 생성
   const client = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 15000, // 15초 타임아웃 (Server Component SSR 렌더링 시간 고려)
     headers: {
       'Content-Type': 'application/json',
       // ✅ NextAuth 세션에서 가져온 토큰 설정
@@ -82,13 +83,13 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
         if (!config.url.startsWith('/api/') && !config.url.startsWith('/api?')) {
           console.warn(
             `[Server API Client Warning] API 경로가 '/api/'로 시작하지 않습니다: "${config.url}"\n` +
-            `올바른 형식: '/api/endpoint' (예: '/api/equipment', '/api/calibration')`
+              `올바른 형식: '/api/endpoint' (예: '/api/equipment', '/api/calibration')`
           );
         }
         if (config.url.includes('/api/api')) {
           console.error(
             `[Server API Client Error] API 경로에 '/api/api' 중복이 감지되었습니다: "${config.url}"\n` +
-            `환경변수 NEXT_PUBLIC_API_URL에 '/api'가 포함되어 있지 않은지 확인하세요.`
+              `환경변수 NEXT_PUBLIC_API_URL에 '/api'가 포함되어 있지 않은지 확인하세요.`
           );
         }
       }
@@ -104,14 +105,37 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
       // ✅ 공통 에러 변환 유틸리티 사용
       const apiError = createApiError(error);
 
-      // 401 에러 로깅 (Server Component에서는 자동 재시도 불가)
+      // 🔴 개발 모드: 모든 에러에 대해 상세 정보 로깅
+      if (process.env.NODE_ENV === 'development') {
+        const status = error.response?.status;
+        const errorData = error.response?.data;
+
+        console.error(
+          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '[Server API Client] API 에러 발생\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            `📍 URL: ${error.config?.method?.toUpperCase()} ${error.config?.url}\n` +
+            `🌐 Base URL: ${API_BASE_URL}\n` +
+            `🔢 Status: ${status || 'N/A (응답 없음 - 연결 실패 가능성)'}\n` +
+            `⚡ Axios error code: ${error.code || 'N/A'}\n` +
+            `📝 Raw error message: ${error.message || 'N/A'}\n` +
+            `🔐 Session exists: ${!!session}\n` +
+            `🎫 Access token exists: ${!!accessToken}\n` +
+            `📦 Response data: ${errorData ? JSON.stringify(errorData, null, 2) : 'N/A'}\n` +
+            `💬 Transformed error message: "${apiError.message}"\n` +
+            `🔑 Error code: ${apiError.code}\n` +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+        );
+      }
+
+      // 401 에러 특별 처리 (프로덕션에서도 로깅)
       if (error.response?.status === 401) {
         console.error(
           '[Server API Client] 인증 실패 (401):\n' +
-          `  - URL: ${error.config?.url}\n` +
-          `  - Session exists: ${!!session}\n` +
-          `  - Access token exists: ${!!accessToken}\n` +
-          '  - 해결 방법: 사용자가 로그인했는지 확인하고, NextAuth 세션이 올바르게 설정되었는지 확인하세요.'
+            `  - URL: ${error.config?.url}\n` +
+            `  - Session exists: ${!!session}\n` +
+            `  - Access token exists: ${!!accessToken}\n` +
+            '  - 해결 방법: 사용자가 로그인했는지 확인하고, NextAuth 세션이 올바르게 설정되었는지 확인하세요.'
         );
       }
 

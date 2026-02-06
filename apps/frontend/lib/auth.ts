@@ -107,6 +107,8 @@ export const authOptions = {
                   role: data.user.roles?.[0] || 'USER',
                   roles: data.user.roles || ['USER'],
                   department: data.user.department,
+                  site: data.user.site,
+                  teamId: data.user.teamId,
                   accessToken: data.access_token,
                 };
               } catch (error) {
@@ -159,14 +161,17 @@ export const authOptions = {
               }
 
               try {
+                const url = `${API_BASE_URL}/api/auth/test-login?role=${credentials.role}`;
+                console.log('[Test Auth] Calling backend test-login:', url);
+
                 // 백엔드 테스트 로그인 엔드포인트 호출
-                const response = await fetch(
-                  `${API_BASE_URL}/api/auth/test-login?role=${credentials.role}`
-                );
+                const response = await fetch(url);
 
                 if (!response.ok) {
                   const text = await response.text();
                   console.error('[Test Auth] Backend test-login failed:', response.status, text);
+                  console.error('[Test Auth] URL:', url);
+                  console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
                   return null;
                 }
 
@@ -189,6 +194,7 @@ export const authOptions = {
                 };
               } catch (error) {
                 console.error('[Test Auth] Error during test login:', error);
+                console.error('[Test Auth] API_BASE_URL:', API_BASE_URL);
                 return null;
               }
             },
@@ -218,7 +224,7 @@ export const authOptions = {
      */
     async signIn({
       user,
-      account,
+      account: _account,
       profile,
     }: {
       user: User;
@@ -298,12 +304,15 @@ export const authOptions = {
       if (account?.provider === 'azure-ad') {
         if (user) {
           const azureProfile = profile as AzureADProfile | undefined;
+          const authUser = user as AuthorizedUser;
           token.id = user.id;
           token.email = user.email ?? undefined;
           token.name = user.name ?? undefined;
           token.roles = azureProfile?.roles || ['USER'];
           token.role = token.roles[0] || 'USER';
           token.department = azureProfile?.department;
+          token.site = authUser.site;
+          token.teamId = authUser.teamId;
           token.accessToken = account.access_token ?? undefined;
         }
       }

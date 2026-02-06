@@ -86,18 +86,20 @@ export interface PendingApprovalCounts {
 export type { UserRole };
 
 class DashboardApi {
-  async getSummary(): Promise<DashboardSummary> {
-    const response = await apiClient.get('/api/dashboard/summary');
+  async getSummary(teamId?: string): Promise<DashboardSummary> {
+    const response = await apiClient.get('/api/dashboard/summary', {
+      params: teamId ? { teamId } : undefined,
+    });
     return response.data;
   }
 
   // 별칭 메서드들 (컴포넌트 호환성)
-  async getDashboardSummary(): Promise<DashboardSummary> {
-    return this.getSummary();
+  async getDashboardSummary(teamId?: string): Promise<DashboardSummary> {
+    return this.getSummary(teamId);
   }
 
-  async getEquipmentSummary(): Promise<DashboardSummary> {
-    return this.getSummary();
+  async getEquipmentSummary(teamId?: string): Promise<DashboardSummary> {
+    return this.getSummary(teamId);
   }
 
   async getEquipmentList(): Promise<unknown[]> {
@@ -105,30 +107,38 @@ class DashboardApi {
     return transformArrayResponse<unknown>(response);
   }
 
-  async getCalibrationSchedule(): Promise<UpcomingCalibration[]> {
-    return this.getUpcomingCalibrations(30);
+  async getCalibrationSchedule(teamId?: string): Promise<UpcomingCalibration[]> {
+    return this.getUpcomingCalibrations(30, teamId);
   }
 
-  async getEquipmentByTeam(): Promise<EquipmentByTeam[]> {
-    const response = await apiClient.get('/api/dashboard/equipment-by-team');
+  async getEquipmentByTeam(teamId?: string): Promise<EquipmentByTeam[]> {
+    const response = await apiClient.get('/api/dashboard/equipment-by-team', {
+      params: teamId ? { teamId } : undefined,
+    });
     return transformArrayResponse<EquipmentByTeam>(response);
   }
 
-  async getOverdueCalibrations(): Promise<OverdueCalibration[]> {
-    const response = await apiClient.get('/api/dashboard/overdue-calibrations');
+  async getOverdueCalibrations(teamId?: string): Promise<OverdueCalibration[]> {
+    const response = await apiClient.get('/api/dashboard/overdue-calibrations', {
+      params: teamId ? { teamId } : undefined,
+    });
     return transformArrayResponse<OverdueCalibration>(response);
   }
 
-  async getUpcomingCalibrations(days: number): Promise<UpcomingCalibration[]> {
-    const response = await apiClient.get(`/api/dashboard/upcoming-calibrations?days=${days}`);
+  async getUpcomingCalibrations(days: number, teamId?: string): Promise<UpcomingCalibration[]> {
+    const response = await apiClient.get('/api/dashboard/upcoming-calibrations', {
+      params: { days, ...(teamId ? { teamId } : {}) },
+    });
     return response.data;
   }
 
   /**
    * 반출 지연 목록 조회 (대여/교정/수리 포함)
    */
-  async getOverdueCheckouts(): Promise<OverdueCheckout[]> {
-    const response = await apiClient.get('/api/dashboard/overdue-rentals');
+  async getOverdueCheckouts(teamId?: string): Promise<OverdueCheckout[]> {
+    const response = await apiClient.get('/api/dashboard/overdue-rentals', {
+      params: teamId ? { teamId } : undefined,
+    });
     return response.data;
   }
 
@@ -137,8 +147,10 @@ class DashboardApi {
     return response.data;
   }
 
-  async getEquipmentStatusStats(): Promise<Record<string, number>> {
-    const response = await apiClient.get('/api/dashboard/equipment-status-stats');
+  async getEquipmentStatusStats(teamId?: string): Promise<Record<string, number>> {
+    const response = await apiClient.get('/api/dashboard/equipment-status-stats', {
+      params: teamId ? { teamId } : undefined,
+    });
     return response.data;
   }
 

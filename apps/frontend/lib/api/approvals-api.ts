@@ -13,7 +13,31 @@ import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { type UserRole } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
+import nonConformancesApi, { type NonConformance } from './non-conformances-api';
 import { transformArrayResponse } from './utils/response-transformers';
+
+// ============================================================================
+// Disposal API 페이로드 타입 (SSOT: 백엔드 DTO와 일치)
+// @see apps/backend/src/modules/equipment/dto/disposal.dto.ts
+// ============================================================================
+
+/**
+ * 폐기 검토 API 페이로드
+ * Backend DTO: ReviewDisposalDto { decision, opinion }
+ */
+interface DisposalReviewPayload {
+  decision: 'approve' | 'reject';
+  opinion: string; // 검토 의견 (승인/반려 모두 필수)
+}
+
+/**
+ * 폐기 최종 승인 API 페이로드
+ * Backend DTO: ApproveDisposalDto { decision, comment? }
+ */
+interface DisposalApprovalPayload {
+  decision: 'approve' | 'reject';
+  comment?: string; // 승인 코멘트 (선택)
+}
 
 // ============================================================================
 // 통합 승인 상태 타입 (프론트엔드 로컬 정의)
@@ -190,8 +214,17 @@ class ApprovalsApi {
         return this.getPendingEquipmentApprovals(teamId);
       case 'software':
         return this.getPendingSoftwareApprovals();
+      case 'nonconformity':
+        return this.getPendingNonConformities();
+      case 'inspection':
+        return this.getPendingInspections();
+      case 'common_equipment':
+        return this.getPendingCommonEquipment();
+      case 'disposal_review':
+        return this.getPendingDisposalReviews();
+      case 'disposal_final':
+        return this.getPendingDisposalFinals();
       default:
-        // 다른 카테고리는 아직 미구현
         return [];
     }
   }
@@ -298,6 +331,97 @@ class ApprovalsApi {
   }
 
   /**
+   * 부적합 재개 승인 대기 목록 조회
+   */
+  private async getPendingNonConformities(): Promise<ApprovalItem[]> {
+    try {
+      const response = await nonConformancesApi.getPendingCloseNonConformances();
+      // PaginatedResponse uses 'data' field
+      const items = response.data || [];
+
+      return items
+        .filter((item: NonConformance) => {
+          // damage/malfunction 유형은 수리 기록이 필요
+          const requiresRepair = ['damage', 'malfunction'].includes(item.ncType);
+          if (requiresRepair && !item.repairHistoryId) {
+            console.warn(`부적합 ${item.id}는 수리 기록이 없어 승인할 수 없습니다.`);
+            return false; // 목록에서 제외
+          }
+          return true;
+        })
+        .map((item: NonConformance) => this.mapNonConformanceToApprovalItem(item));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 중간점검 승인 대기 목록 조회
+   */
+  private async getPendingInspections(): Promise<ApprovalItem[]> {
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL);
+      const items = transformArrayResponse<Record<string, unknown>>(response);
+
+      // 완료되지 않은 중간점검만 필터링
+      const pendingItems = items.filter((item) => !item.completed);
+
+      return pendingItems.map((item) => this.mapInspectionToApprovalItem(item));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 공용/렌탈장비 사용 승인 대기 목록 조회
+   */
+  private async getPendingCommonEquipment(): Promise<ApprovalItem[]> {
+    // 공용/렌탈장비는 체크아웃 시스템을 사용하므로 체크아웃 목록과 동일
+    // 타입 필터링이 필요하면 추가
+    try {
+      const response = await checkoutApi.getCheckouts({
+        status: 'pending',
+        // 추가 필터: purpose='rental' 등
+      });
+      const items = response.data || [];
+
+      return items.map((item: Checkout) =>
+        this.mapCheckoutToApprovalItem(item, 'common_equipment')
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 폐기 검토 대기 목록 조회 (기술책임자)
+   */
+  private async getPendingDisposalReviews(): Promise<ApprovalItem[]> {
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.DISPOSAL.PENDING_REVIEW);
+      const items = transformArrayResponse<Record<string, unknown>>(response);
+
+      return items.map((item) => this.mapDisposalToApprovalItem(item, 'disposal_review'));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 폐기 최종 승인 대기 목록 조회 (시험소장)
+   */
+  private async getPendingDisposalFinals(): Promise<ApprovalItem[]> {
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.DISPOSAL.PENDING_APPROVAL);
+      const items = transformArrayResponse<Record<string, unknown>>(response);
+
+      return items.map((item) => this.mapDisposalToApprovalItem(item, 'disposal_final'));
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * 카테고리별 대기 개수 조회
    */
   async getPendingCounts(role?: UserRole): Promise<PendingCountsByCategory> {
@@ -308,18 +432,47 @@ class ApprovalsApi {
 
       const data = response.data || {};
 
+      // 부적합 재개 대기 개수 별도 조회
+      let nonconformityCount = 0;
+      try {
+        const ncResponse = await nonConformancesApi.getPendingCloseNonConformances();
+        nonconformityCount = ncResponse.data?.length || 0;
+      } catch {
+        // 에러 무시
+      }
+
+      // 폐기 검토 대기 개수
+      let disposalReviewCount = 0;
+      try {
+        const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.DISPOSAL.PENDING_REVIEW);
+        const items = transformArrayResponse<Record<string, unknown>>(response);
+        disposalReviewCount = items.length;
+      } catch {
+        // 에러 무시
+      }
+
+      // 폐기 최종 승인 대기 개수
+      let disposalFinalCount = 0;
+      try {
+        const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.DISPOSAL.PENDING_APPROVAL);
+        const items = transformArrayResponse<Record<string, unknown>>(response);
+        disposalFinalCount = items.length;
+      } catch {
+        // 에러 무시
+      }
+
       return {
         equipment: data.equipment || 0,
         calibration: data.calibration || 0,
-        inspection: 0, // API 응답에 없으면 0
+        inspection: 0, // TODO: 백엔드 API 추가 필요
         checkout: data.checkout || 0,
-        return: 0, // 별도 조회 필요
-        common_equipment: 0,
-        nonconformity: 0,
-        disposal_review: 0,
-        disposal_final: 0,
-        plan_review: 0,
-        plan_final: 0,
+        return: 0, // TODO: 백엔드 API 추가 필요
+        common_equipment: 0, // checkout과 동일하게 처리
+        nonconformity: nonconformityCount,
+        disposal_review: disposalReviewCount,
+        disposal_final: disposalFinalCount,
+        plan_review: 0, // TODO: 백엔드 API 추가 필요
+        plan_final: 0, // TODO: 백엔드 API 추가 필요
         software: data.software || 0,
       };
     } catch {
@@ -347,7 +500,8 @@ class ApprovalsApi {
     category: ApprovalCategory,
     id: string,
     approverId: string,
-    comment?: string
+    comment?: string,
+    equipmentId?: string
   ): Promise<void> {
     switch (category) {
       case 'calibration':
@@ -357,7 +511,7 @@ class ApprovalsApi {
         });
         break;
       case 'checkout':
-        await checkoutApi.approveCheckout(id, approverId);
+        await checkoutApi.approveCheckout(id);
         break;
       case 'return':
         await checkoutApi.approveReturn(id, { approverId, comment });
@@ -371,6 +525,41 @@ class ApprovalsApi {
       case 'software':
         await apiClient.patch(API_ENDPOINTS.SOFTWARE.CHANGES.APPROVE(id), { comment });
         break;
+      case 'nonconformity':
+        await nonConformancesApi.closeNonConformance(id, {
+          closedBy: approverId,
+          closureNotes: comment,
+        });
+        break;
+      case 'inspection':
+        await apiClient.post(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(id), {
+          comment,
+        });
+        break;
+      case 'common_equipment':
+        // 공용장비는 체크아웃과 동일하게 처리
+        await checkoutApi.approveCheckout(id);
+        break;
+      case 'disposal_review':
+        if (!equipmentId) throw new Error('equipmentId is required for disposal review');
+        await apiClient.post<unknown, DisposalReviewPayload>(
+          API_ENDPOINTS.EQUIPMENT.DISPOSAL.REVIEW(equipmentId),
+          {
+            decision: 'approve',
+            opinion: comment || '승인합니다',
+          }
+        );
+        break;
+      case 'disposal_final':
+        if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
+        await apiClient.post<unknown, DisposalApprovalPayload>(
+          API_ENDPOINTS.EQUIPMENT.DISPOSAL.APPROVE(equipmentId),
+          {
+            decision: 'approve',
+            comment: comment || '승인합니다',
+          }
+        );
+        break;
       default:
         throw new Error(`Unsupported category: ${category}`);
     }
@@ -383,7 +572,8 @@ class ApprovalsApi {
     category: ApprovalCategory,
     id: string,
     approverId: string,
-    reason: string
+    reason: string,
+    equipmentId?: string
   ): Promise<void> {
     switch (category) {
       case 'calibration':
@@ -406,6 +596,35 @@ class ApprovalsApi {
           reason,
         });
         break;
+      case 'nonconformity':
+        // 부적합은 반려 기능이 없음 (조치 완료 상태에서만 종료 가능)
+        throw new Error('부적합 재개는 반려할 수 없습니다. 부적합 관리 페이지에서 처리하세요.');
+      case 'inspection':
+        // 중간점검은 반려 기능 없음
+        throw new Error('중간점검은 반려할 수 없습니다.');
+      case 'common_equipment':
+        await checkoutApi.rejectCheckout(id, reason, approverId);
+        break;
+      case 'disposal_review':
+        if (!equipmentId) throw new Error('equipmentId is required for disposal review');
+        await apiClient.post<unknown, DisposalReviewPayload>(
+          API_ENDPOINTS.EQUIPMENT.DISPOSAL.REVIEW(equipmentId),
+          {
+            decision: 'reject',
+            opinion: reason || '반려합니다',
+          }
+        );
+        break;
+      case 'disposal_final':
+        if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
+        await apiClient.post<unknown, DisposalApprovalPayload>(
+          API_ENDPOINTS.EQUIPMENT.DISPOSAL.APPROVE(equipmentId),
+          {
+            decision: 'reject',
+            comment: reason || '반려합니다',
+          }
+        );
+        break;
       default:
         throw new Error(`Unsupported category: ${category}`);
     }
@@ -413,6 +632,8 @@ class ApprovalsApi {
 
   /**
    * 일괄 승인 처리
+   *
+   * Note: For disposal categories, we need to fetch the items first to get equipmentId
    */
   async bulkApprove(
     category: ApprovalCategory,
@@ -423,9 +644,21 @@ class ApprovalsApi {
     const success: string[] = [];
     const failed: string[] = [];
 
+    // For disposal categories, fetch items first to get equipmentId
+    let itemsMap: Map<string, ApprovalItem> | undefined;
+    if (category === 'disposal_review' || category === 'disposal_final') {
+      const items = await this.getPendingItems(category);
+      itemsMap = new Map(items.map((item) => [item.id, item]));
+    }
+
     for (const id of ids) {
       try {
-        await this.approve(category, id, approverId, comment);
+        let equipmentId: string | undefined;
+        if (itemsMap) {
+          const item = itemsMap.get(id);
+          equipmentId = item?.details?.equipmentId as string | undefined;
+        }
+        await this.approve(category, id, approverId, comment, equipmentId);
         success.push(id);
       } catch {
         failed.push(id);
@@ -437,6 +670,8 @@ class ApprovalsApi {
 
   /**
    * 일괄 반려 처리
+   *
+   * Note: For disposal categories, we need to fetch the items first to get equipmentId
    */
   async bulkReject(
     category: ApprovalCategory,
@@ -447,9 +682,21 @@ class ApprovalsApi {
     const success: string[] = [];
     const failed: string[] = [];
 
+    // For disposal categories, fetch items first to get equipmentId
+    let itemsMap: Map<string, ApprovalItem> | undefined;
+    if (category === 'disposal_review' || category === 'disposal_final') {
+      const items = await this.getPendingItems(category);
+      itemsMap = new Map(items.map((item) => [item.id, item]));
+    }
+
     for (const id of ids) {
       try {
-        await this.reject(category, id, approverId, reason);
+        let equipmentId: string | undefined;
+        if (itemsMap) {
+          const item = itemsMap.get(id);
+          equipmentId = item?.details?.equipmentId as string | undefined;
+        }
+        await this.reject(category, id, approverId, reason, equipmentId);
         success.push(id);
       } catch {
         failed.push(id);
@@ -550,6 +797,75 @@ class ApprovalsApi {
       requestedAt: String(item.createdAt || ''),
       summary: `${item.softwareName || '소프트웨어'} 변경 요청`,
       details: item,
+      originalData: item,
+    };
+  }
+
+  private mapNonConformanceToApprovalItem(nc: NonConformance): ApprovalItem {
+    return {
+      id: nc.id,
+      category: 'nonconformity',
+      status: 'pending', // corrected 상태 = 승인 대기
+      requesterId: nc.correctedBy || nc.discoveredBy || '',
+      requesterName: '시험실무자', // 실제로는 사용자 정보 조회 필요
+      requesterTeam: '',
+      requestedAt: nc.correctionDate || nc.discoveryDate,
+      summary: `${nc.cause} (조치 완료)`,
+      details: {
+        equipmentId: nc.equipmentId,
+        discoveryDate: nc.discoveryDate,
+        cause: nc.cause,
+        ncType: nc.ncType,
+        correctionContent: nc.correctionContent,
+        correctionDate: nc.correctionDate,
+        actionPlan: nc.actionPlan,
+        analysisContent: nc.analysisContent,
+      },
+      originalData: nc,
+    };
+  }
+
+  private mapInspectionToApprovalItem(item: Record<string, unknown>): ApprovalItem {
+    const equipment = item.equipment as Record<string, unknown> | undefined;
+
+    return {
+      id: String(item.calibrationId || item.id),
+      category: 'inspection',
+      status: 'pending',
+      requesterId: '',
+      requesterName: '자동 알림',
+      requesterTeam: '',
+      requestedAt: String(item.nextIntermediateCheckDate || item.createdAt || ''),
+      summary: `${equipment?.name || '장비'} 중간점검`,
+      details: item,
+      originalData: item,
+    };
+  }
+
+  private mapDisposalToApprovalItem(
+    item: Record<string, unknown>,
+    category: 'disposal_review' | 'disposal_final'
+  ): ApprovalItem {
+    const equipment = item.equipment as Record<string, unknown> | undefined;
+    const requester = item.requester as Record<string, unknown> | undefined;
+
+    return {
+      id: String(item.id),
+      category,
+      status: category === 'disposal_review' ? 'pending' : 'reviewed',
+      requesterId: String(item.requestedBy || ''),
+      requesterName: requester?.name ? String(requester.name) : '알 수 없음',
+      requesterTeam: '',
+      requestedAt: String(item.requestedAt || ''),
+      summary: `${equipment?.name || '장비'} (${equipment?.managementNumber || ''}) 폐기 ${category === 'disposal_review' ? '검토' : '승인'}`,
+      details: {
+        reason: item.reason,
+        reasonDetail: item.reasonDetail,
+        equipmentId: item.equipmentId,
+        equipment,
+        reviewOpinion: item.reviewOpinion,
+        reviewedAt: item.reviewedAt,
+      },
       originalData: item,
     };
   }

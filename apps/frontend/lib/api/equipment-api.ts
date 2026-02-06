@@ -148,7 +148,58 @@ export interface CreateIncidentHistoryInput {
 }
 
 // 장비 API 객체
+/**
+ * 관리번호 중복 검사 결과 타입
+ */
+export interface ManagementNumberCheckResult {
+  /** 사용 가능 여부 */
+  available: boolean;
+  /** 안내 메시지 */
+  message: string;
+  /** 중복된 장비 정보 (중복 시에만) */
+  existingEquipment?: {
+    id: string;
+    name: string;
+    managementNumber: string;
+  };
+}
+
 const equipmentApi = {
+  /**
+   * 관리번호 중복 검사
+   *
+   * 장비 등록/수정 시 실시간으로 관리번호 중복 여부를 확인합니다.
+   *
+   * @param managementNumber - 검사할 관리번호
+   * @param excludeId - 제외할 장비 ID (수정 시 현재 장비)
+   * @returns 사용 가능 여부와 메시지
+   *
+   * @example
+   * // 등록 시
+   * const result = await equipmentApi.checkManagementNumber('SUW-E0001');
+   * if (!result.available) {
+   *   console.log(result.message); // "관리번호 'SUW-E0001'은(는) 이미 '스펙트럼 분석기' 장비에서 사용 중입니다."
+   * }
+   *
+   * @example
+   * // 수정 시 (현재 장비 제외)
+   * const result = await equipmentApi.checkManagementNumber('SUW-E0001', 'current-equipment-uuid');
+   */
+  checkManagementNumber: async (
+    managementNumber: string,
+    excludeId?: string
+  ): Promise<ManagementNumberCheckResult> => {
+    const params = new URLSearchParams({ managementNumber });
+    if (excludeId) {
+      params.append('excludeId', excludeId);
+    }
+
+    const response = await apiClient.get(
+      `/api/equipment/check-management-number?${params.toString()}`
+    );
+    return transformSingleResponse<ManagementNumberCheckResult>(response);
+  },
+
   // 장비 목록 조회
   // ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
   getEquipmentList: async (

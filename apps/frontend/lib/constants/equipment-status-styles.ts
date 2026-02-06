@@ -49,11 +49,11 @@ export const EQUIPMENT_STATUS_STYLES: Record<EquipmentStatus, EquipmentStatusSty
     label: EQUIPMENT_STATUS_LABELS.available, // "사용 가능"으로 표시
     borderColor: 'border-l-green-500',
   },
-  // calibration_overdue도 "사용 가능"으로 표시 (교정 상태는 별도 배지)
+  // calibration_overdue는 "부적합"으로 표시 (백엔드 스케줄러가 자동 전환하지만 즉시 반영 위해)
   calibration_overdue: {
-    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-    label: EQUIPMENT_STATUS_LABELS.available, // "사용 가능"으로 표시
-    borderColor: 'border-l-green-500',
+    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
+    label: EQUIPMENT_STATUS_LABELS.non_conforming, // "부적합"으로 표시
+    borderColor: 'border-l-red-600',
   },
   non_conforming: {
     className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
@@ -106,15 +106,30 @@ export const DEFAULT_STATUS_STYLE: EquipmentStatusStyle = {
  * 장비 상태 스타일 조회 헬퍼 함수
  *
  * @param status 장비 상태 (EquipmentStatus 또는 string)
+ * @param nextCalibrationDate 차기 교정일 (옵션) - 실시간 교정기한 초과 체크용
  * @returns 스타일 객체 (className, label, borderColor)
  *
  * @example
+ * // 기본 사용
  * const style = getEquipmentStatusStyle('available');
  * // { className: 'bg-green-100...', label: '사용 가능', borderColor: 'border-l-green-500' }
+ *
+ * // 교정기한 실시간 체크
+ * const style = getEquipmentStatusStyle('available', equipment.nextCalibrationDate);
+ * // 교정기한이 지났으면 "부적합"으로 자동 변경
  */
-export function getEquipmentStatusStyle(status: string | undefined | null): EquipmentStatusStyle {
+export function getEquipmentStatusStyle(
+  status: string | undefined | null,
+  nextCalibrationDate?: string | Date | null
+): EquipmentStatusStyle {
   if (!status) {
     return EQUIPMENT_STATUS_STYLES.available;
+  }
+
+  // 실시간 교정기한 초과 체크 (백엔드 스케줄러가 아직 실행되지 않은 경우 대비)
+  // available 상태이지만 교정기한이 지난 경우 → 부적합으로 표시
+  if (status === 'available' && nextCalibrationDate && new Date(nextCalibrationDate) < new Date()) {
+    return EQUIPMENT_STATUS_STYLES.non_conforming;
   }
 
   return (

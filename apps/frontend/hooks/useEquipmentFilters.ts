@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, useEffect, useState } from 'react';
+import { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import type {
   Site,
   EquipmentStatus,
@@ -91,10 +92,14 @@ export function useEquipmentFilters() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   // localStorage 상태 (클라이언트 사이드에서만 사용)
   const [view, setViewState] = useState<ViewType>('table');
   const [isClient, setIsClient] = useState(false);
+
+  // 사용자 기본 필터 적용 여부 추적 (초기 1회만)
+  const hasAppliedUserDefaults = useRef(false);
 
   // 클라이언트 사이드에서 localStorage 읽기
   useEffect(() => {
@@ -104,6 +109,41 @@ export function useEquipmentFilters() {
       setViewState(savedView);
     }
   }, []);
+
+  // ✅ 초기 접속 시 사용자 소속 사이트/팀을 기본 필터로 적용
+  // 역할별 기본 필터 정책:
+  // - test_engineer, technical_manager → 사이트 + 팀 필터 적용
+  // - quality_manager, lab_manager → 사이트 필터만 적용
+  useEffect(() => {
+    if (hasAppliedUserDefaults.current) return;
+    if (!session?.user) return;
+
+    const hasSiteParam = searchParams.has('site');
+    const hasTeamParam = searchParams.has('teamId');
+
+    // URL에 이미 필터가 지정되어 있으면 적용하지 않음
+    if (hasSiteParam || hasTeamParam) {
+      hasAppliedUserDefaults.current = true;
+      return;
+    }
+
+    const userSite = session.user.site;
+    const userTeamId = session.user.teamId;
+    const userRole = session.user.role;
+
+    // 팀 필터는 test_engineer, technical_manager만 기본 적용
+    const applyTeamDefault = userRole === 'test_engineer' || userRole === 'technical_manager';
+
+    if (userSite || (applyTeamDefault && userTeamId)) {
+      const params = new URLSearchParams(searchParams.toString());
+      if (userSite) params.set('site', userSite);
+      if (applyTeamDefault && userTeamId) params.set('teamId', userTeamId);
+
+      hasAppliedUserDefaults.current = true;
+      const newURL = `${pathname}?${params.toString()}`;
+      router.replace(newURL, { scroll: false });
+    }
+  }, [session, searchParams, pathname, router]);
 
   // URL에서 필터 파싱
   // ✅ SSOT: parseEquipmentFiltersFromSearchParams 유틸리티 사용
@@ -124,7 +164,16 @@ export function useEquipmentFilters() {
 
       // 변경된 필터만 업데이트
       Object.entries(newFilters).forEach(([key, value]) => {
-        if (value === '' || value === DEFAULT_FILTERS[key as keyof EquipmentFilters]) {
+        // sortOrder는 sortBy가 기본값이 아닐 때 항상 유지
+        const isSortOrder = key === 'sortOrder';
+        const hasSortBy = params.has('sortBy') || newFilters.sortBy;
+        const sortByIsNotDefault =
+          hasSortBy && (newFilters.sortBy || params.get('sortBy')) !== DEFAULT_FILTERS.sortBy;
+
+        if (isSortOrder && sortByIsNotDefault) {
+          // sortBy가 기본값이 아니면 sortOrder 항상 유지
+          params.set(key, String(value));
+        } else if (value === '' || value === DEFAULT_FILTERS[key as keyof EquipmentFilters]) {
           params.delete(key);
         } else {
           params.set(key, String(value));
@@ -141,7 +190,9 @@ export function useEquipmentFilters() {
   // 개별 필터 업데이트
   const setSearch = useCallback(
     (search: string) => {
-      updateURL({ search, page: 1 }); // 검색 시 페이지 초기화
+      // 🔥 Trim whitespace and convert empty/whitespace-only strings to empty string
+      const trimmedSearch = search.trim();
+      updateURL({ search: trimmedSearch, page: 1 }); // 검색 시 페이지 초기화
     },
     [updateURL]
   );
@@ -211,7 +262,7 @@ export function useEquipmentFilters() {
 
   const setSort = useCallback(
     (sortBy: EquipmentFilters['sortBy'], sortOrder: 'asc' | 'desc') => {
-      updateURL({ sortBy, sortOrder });
+      updateURL({ sortBy, sortOrder }); // 정렬 변경 시 페이지 유지 (결과셋은 동일하므로)
     },
     [updateURL]
   );

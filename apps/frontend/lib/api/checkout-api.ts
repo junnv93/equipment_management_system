@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { apiClient } from './api-client';
 import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 
@@ -188,7 +188,7 @@ const checkoutApi = {
     });
 
     const url = `/api/checkouts${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await axios.get(url);
+    const response = await apiClient.get(url);
     // ✅ 공통 유틸리티 사용: 백엔드 응답을 프론트엔드 형식으로 변환
     return transformPaginatedResponse<Checkout>(response);
   },
@@ -198,7 +198,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async getCheckout(id: string): Promise<Checkout> {
-    const response = await axios.get(`/api/checkouts/${id}`);
+    const response = await apiClient.get(`/api/checkouts/${id}`);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -218,7 +218,7 @@ const checkoutApi = {
     });
 
     const url = `/api/users/${userId}/checkouts?${queryParams.toString()}`;
-    const response = await axios.get(url);
+    const response = await apiClient.get(url);
     return response.data;
   },
 
@@ -238,7 +238,7 @@ const checkoutApi = {
     });
 
     const url = `/api/equipment/${equipmentId}/checkouts?${queryParams.toString()}`;
-    const response = await axios.get(url);
+    const response = await apiClient.get(url);
     return response.data;
   },
 
@@ -247,7 +247,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async createCheckout(data: CreateCheckoutDto): Promise<Checkout> {
-    const response = await axios.post('/api/checkouts', data);
+    const response = await apiClient.post('/api/checkouts', data);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -256,17 +256,18 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async updateCheckout(id: string, data: UpdateCheckoutDto): Promise<Checkout> {
-    const response = await axios.patch(`/api/checkouts/${id}`, data);
+    const response = await apiClient.patch(`/api/checkouts/${id}`, data);
     return transformSingleResponse<Checkout>(response);
   },
 
   /**
    * 반출 승인을 처리합니다 (1단계 승인 통합).
    * 모든 목적(교정/수리/외부 대여)에 대해 1단계 승인으로 통합되었습니다.
+   * approverId는 백엔드에서 세션으로부터 자동 추출됩니다.
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async approveCheckout(id: string, approverId: string): Promise<Checkout> {
-    const response = await axios.patch(`/api/checkouts/${id}/approve`, { approverId });
+  async approveCheckout(id: string, notes?: string): Promise<Checkout> {
+    const response = await apiClient.patch(`/api/checkouts/${id}/approve`, { notes });
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -274,16 +275,16 @@ const checkoutApi = {
    * 반출 1차 승인을 처리합니다.
    * approveCheckout의 별칭 (하위 호환성)
    */
-  async approveFirst(id: string, approverId: string): Promise<Checkout> {
-    return this.approveCheckout(id, approverId);
+  async approveFirst(id: string, notes?: string): Promise<Checkout> {
+    return this.approveCheckout(id, notes);
   },
 
   /**
    * 반출 최종 승인을 처리합니다.
    * approveCheckout의 별칭 (하위 호환성)
    */
-  async approveFinal(id: string, approverId: string): Promise<Checkout> {
-    return this.approveCheckout(id, approverId);
+  async approveFinal(id: string, notes?: string): Promise<Checkout> {
+    return this.approveCheckout(id, notes);
   },
 
   /**
@@ -291,7 +292,18 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async rejectCheckout(id: string, reason: string, approverId?: string): Promise<Checkout> {
-    const response = await axios.patch(`/api/checkouts/${id}/reject`, { reason, approverId });
+    const response = await apiClient.patch(`/api/checkouts/${id}/reject`, { reason, approverId });
+    return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
+   * 반출을 시작합니다.
+   * 상태: approved → checked_out
+   * 장비 상태도 checked_out으로 자동 변경됩니다.
+   * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
+   */
+  async startCheckout(id: string): Promise<Checkout> {
+    const response = await apiClient.post(`/api/checkouts/${id}/start`);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -301,7 +313,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async returnCheckout(id: string, data: ReturnCheckoutDto): Promise<Checkout> {
-    const response = await axios.post(`/api/checkouts/${id}/return`, data);
+    const response = await apiClient.post(`/api/checkouts/${id}/return`, data);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -312,7 +324,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async approveReturn(id: string, data: ApproveReturnDto = {}): Promise<Checkout> {
-    const response = await axios.patch(`/api/checkouts/${id}/approve-return`, data);
+    const response = await apiClient.patch(`/api/checkouts/${id}/approve-return`, data);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -373,7 +385,7 @@ const checkoutApi = {
     checkoutId: string,
     data: CreateConditionCheckDto
   ): Promise<ConditionCheck> {
-    const response = await axios.post(`/api/checkouts/${checkoutId}/condition-check`, data);
+    const response = await apiClient.post(`/api/checkouts/${checkoutId}/condition-check`, data);
     return transformSingleResponse<ConditionCheck>(response);
   },
 
@@ -382,7 +394,7 @@ const checkoutApi = {
    * 대여 목적 반출의 양측 4단계 확인 이력을 조회합니다.
    */
   async getConditionChecks(checkoutId: string): Promise<ConditionCheck[]> {
-    const response = await axios.get(`/api/checkouts/${checkoutId}/condition-checks`);
+    const response = await apiClient.get(`/api/checkouts/${checkoutId}/condition-checks`);
     return response.data?.data || response.data || [];
   },
 
@@ -401,7 +413,7 @@ const checkoutApi = {
     });
 
     const url = `/api/checkouts/pending-checks${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await axios.get(url);
+    const response = await apiClient.get(url);
     return transformPaginatedResponse<Checkout>(response);
   },
 };

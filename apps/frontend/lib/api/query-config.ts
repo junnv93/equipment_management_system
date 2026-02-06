@@ -128,16 +128,25 @@ export const queryKeys = {
   equipment: {
     all: ['equipment'] as const,
     lists: () => [...queryKeys.equipment.all, 'list'] as const,
-    list: (filters: Record<string, unknown>) => [...queryKeys.equipment.lists(), filters] as const,
+    list: (filters: Record<string, any>) => [...queryKeys.equipment.lists(), filters] as const,
     details: () => [...queryKeys.equipment.all, 'detail'] as const,
     detail: (id: string | number) => [...queryKeys.equipment.details(), id] as const,
     history: (id: string, type: string) =>
       [...queryKeys.equipment.detail(id), 'history', type] as const,
+    // Sub-resources (nested under detail)
+    nonConformances: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'non-conformances'] as const,
+    incidentHistory: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'incident-history'] as const,
+    disposalRequests: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'disposal-requests'] as const,
+    currentDisposalRequest: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'disposal-request', 'current'] as const,
   },
   calibrationPlans: {
     all: ['calibrationPlans'] as const,
     lists: () => [...queryKeys.calibrationPlans.all, 'list'] as const,
-    list: (filters: Record<string, unknown>) =>
+    list: (filters: Record<string, any>) =>
       [...queryKeys.calibrationPlans.lists(), filters] as const,
     details: () => [...queryKeys.calibrationPlans.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.calibrationPlans.details(), id] as const,
@@ -175,5 +184,20 @@ export const queryKeys = {
     list: (filters?: Record<string, unknown>) =>
       [...queryKeys.notifications.all, 'list', filters] as const,
     unreadCount: () => [...queryKeys.notifications.all, 'unreadCount'] as const,
+  },
+  nonConformances: {
+    all: ['non-conformances'] as const,
+    lists: () => [...queryKeys.nonConformances.all, 'list'] as const,
+    list: (filters: Record<string, any>) =>
+      [...queryKeys.nonConformances.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.nonConformances.all, 'detail', id] as const,
+    byEquipment: (equipmentId: string) =>
+      [...queryKeys.nonConformances.all, 'equipment', equipmentId] as const,
+  },
+  disposal: {
+    all: ['disposal-requests'] as const,
+    lists: () => [...queryKeys.disposal.all, 'list'] as const,
+    list: (filters: Record<string, any>) => [...queryKeys.disposal.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.disposal.all, 'detail', id] as const,
   },
 } as const;

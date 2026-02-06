@@ -90,5 +90,4 @@ export type {
   UpdateRepairHistoryDto,
   RepairHistoryQuery,
   RepairHistoryListResponse,
-  RepairSummaryResponse,
 } from './repair-history-api';

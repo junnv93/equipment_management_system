@@ -150,69 +150,118 @@ export function createApiError(error: unknown): ApiError {
     const status = axiosError.response?.status;
     const errorData = axiosError.response?.data;
 
-    // 네트워크 에러 (응답 없음)
-    if (!axiosError.response && axiosError.code === 'ERR_NETWORK') {
+    // 응답 없는 에러 (네트워크/연결 레벨 실패)
+    if (!axiosError.response) {
+      const code = axiosError.code;
+
+      // 타임아웃 에러
+      if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
+        return new ApiError('서버 응답 시간이 초과되었습니다.', EquipmentErrorCode.TIMEOUT_ERROR);
+      }
+
+      // 네트워크/연결 에러 (브라우저: ERR_NETWORK, Node.js: ECONNREFUSED 등)
+      const networkErrorCodes = [
+        'ERR_NETWORK', // Axios 브라우저 네트워크 에러
+        'ECONNREFUSED', // Node.js: 연결 거부 (백엔드 다운)
+        'ECONNRESET', // Node.js: 연결 리셋
+        'ENOTFOUND', // Node.js: DNS 조회 실패
+        'EHOSTUNREACH', // Node.js: 호스트 도달 불가
+        'ENETUNREACH', // Node.js: 네트워크 도달 불가
+        'EPIPE', // Node.js: 파이프 끊김
+        'EAI_AGAIN', // Node.js: DNS 일시 실패
+      ];
+
+      if (code && networkErrorCodes.includes(code)) {
+        return new ApiError(
+          `백엔드 서버에 연결할 수 없습니다 (${code}). 서버가 실행 중인지 확인해주세요.`,
+          EquipmentErrorCode.NETWORK_ERROR
+        );
+      }
+
+      // 기타 응답 없는 에러 (코드가 없거나 알 수 없는 코드)
       return new ApiError(
-        '서버와 연결할 수 없습니다. 인터넷 연결을 확인해주세요.',
+        `서버 연결 오류가 발생했습니다${code ? ` (${code})` : ''}. 잠시 후 다시 시도해주세요.`,
         EquipmentErrorCode.NETWORK_ERROR
       );
     }
 
-    // 타임아웃 에러
+    // 타임아웃 에러 (응답이 있는 경우에도 코드로 확인)
     if (axiosError.code === 'ECONNABORTED' || axiosError.code === 'ETIMEDOUT') {
-      return new ApiError(
-        '서버 응답 시간이 초과되었습니다.',
-        EquipmentErrorCode.TIMEOUT_ERROR
-      );
+      return new ApiError('서버 응답 시간이 초과되었습니다.', EquipmentErrorCode.TIMEOUT_ERROR);
     }
 
     if (errorData && typeof errorData === 'object') {
-      // 백엔드 표준 에러 응답 구조: { error: { code, message, details }, meta: {...} }
+      // 🔴 백엔드 표준 에러 응답 구조 #1: { code, message, timestamp, details }
+      // 예: { code: "UNAUTHORIZED", message: "인증에 실패했습니다.", ... }
+      if ('code' in errorData && 'message' in errorData) {
+        const backendError = errorData as {
+          code?: string;
+          message?: string;
+          details?: unknown;
+        };
+
+        const message = backendError.message || '알 수 없는 오류가 발생했습니다.';
+        const errorCode =
+          mapBackendErrorCode(backendError.code) ||
+          (status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR);
+
+        return new ApiError(message, errorCode, status, backendError.details);
+      }
+
+      // 백엔드 표준 에러 응답 구조 #2: { error: { code, message, details }, meta: {...} }
       if ('error' in errorData) {
         const backendError = errorData as {
           error: { code?: string; message?: string; details?: unknown };
         };
         const message = backendError.error.message || '알 수 없는 오류가 발생했습니다.';
-        const errorCode = mapBackendErrorCode(backendError.error.code) ||
+        const errorCode =
+          mapBackendErrorCode(backendError.error.code) ||
           (status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR);
 
-        return new ApiError(
-          message,
-          errorCode,
-          status,
-          backendError.error.details
-        );
+        return new ApiError(message, errorCode, status, backendError.error.details);
       }
 
-      // NestJS ValidationPipe 에러 구조: { message: string | string[], error?: string, statusCode?: number }
+      // NestJS ValidationPipe 및 Zod 검증 에러 구조
+      // 1. NestJS: { message: string | string[], error?: string, statusCode?: number }
+      // 2. Zod: { message: string, errors: Array<{path, message, code}> }
       if ('message' in errorData) {
         const nestError = errorData as {
           message: string | string[] | null | undefined;
           error?: string;
           statusCode?: number;
+          errors?: Array<{ path: string; message: string; code: string }>;
         };
 
-        // 방어적 코드: message가 null/undefined일 수 있음
+        // 방어적 코드: message가 null/undefined/empty일 수 있음
         let message: string;
-        let details: string[] | undefined;
+        let details: unknown;
 
-        if (Array.isArray(nestError.message)) {
-          message = nestError.message.filter(Boolean).join(', ') || '알 수 없는 오류가 발생했습니다.';
-          details = nestError.message.filter(Boolean) as string[];
-        } else if (nestError.message) {
+        if (Array.isArray(nestError.message) && nestError.message.length > 0) {
+          const filteredMessages = nestError.message.filter(
+            (m): m is string => typeof m === 'string' && m.trim().length > 0
+          );
+          message = filteredMessages.join(', ') || '알 수 없는 오류가 발생했습니다.';
+          details = filteredMessages.length > 0 ? filteredMessages : undefined;
+        } else if (nestError.message && typeof nestError.message === 'string') {
           message = String(nestError.message);
         } else {
           message = nestError.error || '알 수 없는 오류가 발생했습니다.';
         }
 
-        const errorCode = status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR;
+        // ✅ Zod 검증 에러의 상세 정보 전달
+        if (nestError.errors && Array.isArray(nestError.errors)) {
+          details = nestError.errors;
+          // 첫 번째 에러 메시지를 주 메시지로 사용 (더 구체적)
+          if (nestError.errors.length > 0 && nestError.errors[0].message) {
+            message = nestError.errors[0].message;
+          }
+        }
 
-        return new ApiError(
-          message,
-          errorCode,
-          status,
-          details
-        );
+        const errorCode = status
+          ? httpStatusToErrorCode(status)
+          : EquipmentErrorCode.VALIDATION_ERROR;
+
+        return new ApiError(message, errorCode, status, details);
       }
     }
 
@@ -243,22 +292,24 @@ export function createApiError(error: unknown): ApiError {
   // 일반 Error 객체
   if (error instanceof Error) {
     // 네트워크 관련 에러 메시지 패턴
-    if (error.message.includes('Network') || error.message.includes('fetch')) {
+    if (error.message && (error.message.includes('Network') || error.message.includes('fetch'))) {
       return new ApiError(
         '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.',
         EquipmentErrorCode.NETWORK_ERROR
       );
     }
 
+    // 🔴 방어적 코드: error.message가 없을 수 있음
     return new ApiError(
-      error.message,
+      error.message || '알 수 없는 오류가 발생했습니다.',
       EquipmentErrorCode.UNKNOWN_ERROR
     );
   }
 
-  // 알 수 없는 에러
-  return new ApiError(
-    '예기치 않은 오류가 발생했습니다.',
-    EquipmentErrorCode.UNKNOWN_ERROR
-  );
+  // 알 수 없는 에러 - 개발 모드에서 디버깅 정보 제공
+  if (process.env.NODE_ENV === 'development') {
+    console.error('[createApiError] 알 수 없는 에러 구조:', error);
+  }
+
+  return new ApiError('예기치 않은 오류가 발생했습니다.', EquipmentErrorCode.UNKNOWN_ERROR);
 }

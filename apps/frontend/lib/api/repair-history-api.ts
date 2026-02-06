@@ -1,11 +1,7 @@
 import { apiClient } from './api-client';
 
-// 수리 결과 enum
-export enum RepairResult {
-  COMPLETED = 'completed',
-  PARTIAL = 'partial',
-  FAILED = 'failed',
-}
+// 수리 결과 타입
+export type RepairResult = 'completed' | 'partial' | 'failed';
 
 // 수리 이력 인터페이스
 export interface RepairHistory {
@@ -13,9 +9,6 @@ export interface RepairHistory {
   equipmentId: number;
   repairDate: string;
   repairDescription: string;
-  repairedBy?: string;
-  repairCompany?: string;
-  cost?: number;
   repairResult?: RepairResult;
   notes?: string;
   attachmentPath?: string;
@@ -29,9 +22,6 @@ export interface RepairHistory {
 export interface CreateRepairHistoryDto {
   repairDate: string;
   repairDescription: string;
-  repairedBy?: string;
-  repairCompany?: string;
-  cost?: number;
   repairResult?: RepairResult;
   notes?: string;
   attachmentPath?: string;
@@ -46,7 +36,6 @@ export interface RepairHistoryQuery {
   fromDate?: string;
   toDate?: string;
   repairResult?: RepairResult;
-  repairCompany?: string;
   includeDeleted?: boolean;
   sort?: string;
   page?: number;
@@ -62,12 +51,6 @@ export interface RepairHistoryListResponse {
     itemsPerPage: number;
     totalPages: number;
   };
-}
-
-// 수리 비용 요약 응답
-export interface RepairSummaryResponse {
-  totalCost: number;
-  count: number;
 }
 
 /**
@@ -89,7 +72,7 @@ export async function getRepairHistoryByEquipment(
   if (query?.pageSize) params.append('pageSize', String(query.pageSize));
 
   const queryString = params.toString();
-  const url = `/equipment/${equipmentUuid}/repair-history${queryString ? `?${queryString}` : ''}`;
+  const url = `/api/equipment/${equipmentUuid}/repair-history${queryString ? `?${queryString}` : ''}`;
   const response = await apiClient.get<RepairHistoryListResponse>(url);
   return response.data;
 }
@@ -98,7 +81,7 @@ export async function getRepairHistoryByEquipment(
  * 수리 이력 상세 조회
  */
 export async function getRepairHistory(uuid: string): Promise<RepairHistory> {
-  const response = await apiClient.get<RepairHistory>(`/repair-history/${uuid}`);
+  const response = await apiClient.get<RepairHistory>(`/api/repair-history/${uuid}`);
   return response.data;
 }
 
@@ -110,7 +93,7 @@ export async function createRepairHistory(
   dto: CreateRepairHistoryDto
 ): Promise<RepairHistory> {
   const response = await apiClient.post<RepairHistory>(
-    `/equipment/${equipmentUuid}/repair-history`,
+    `/api/equipment/${equipmentUuid}/repair-history`,
     dto
   );
   return response.data;
@@ -123,7 +106,7 @@ export async function updateRepairHistory(
   uuid: string,
   dto: UpdateRepairHistoryDto
 ): Promise<RepairHistory> {
-  const response = await apiClient.patch<RepairHistory>(`/repair-history/${uuid}`, dto);
+  const response = await apiClient.patch<RepairHistory>(`/api/repair-history/${uuid}`, dto);
   return response.data;
 }
 
@@ -134,17 +117,7 @@ export async function deleteRepairHistory(
   uuid: string
 ): Promise<{ deleted: boolean; uuid: string }> {
   const response = await apiClient.delete<{ deleted: boolean; uuid: string }>(
-    `/repair-history/${uuid}`
-  );
-  return response.data;
-}
-
-/**
- * 수리 비용 요약 조회
- */
-export async function getRepairSummary(equipmentUuid: string): Promise<RepairSummaryResponse> {
-  const response = await apiClient.get<RepairSummaryResponse>(
-    `/equipment/${equipmentUuid}/repair-history/summary`
+    `/api/repair-history/${uuid}`
   );
   return response.data;
 }

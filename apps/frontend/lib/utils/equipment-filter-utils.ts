@@ -89,8 +89,8 @@ export const DEFAULT_UI_FILTERS: UIEquipmentFilters = {
   isShared: 'all',
   calibrationDueFilter: 'all',
   teamId: '',
-  sortBy: 'createdAt',
-  sortOrder: 'desc',
+  sortBy: 'managementNumber',
+  sortOrder: 'asc',
   page: 1,
   pageSize: 20,
 };
@@ -112,7 +112,12 @@ export function parseEquipmentFiltersFromSearchParams(
       return searchParams.get(key);
     }
     const value = searchParams[key];
-    return typeof value === 'string' ? value : null;
+    if (typeof value === 'string') return value;
+    // 배열인 경우 첫 번째 값 반환 (Next.js가 중복 쿼리 파라미터를 배열로 전달할 수 있음)
+    if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'string') {
+      return value[0];
+    }
+    return null;
   };
 
   const search = get('search') || DEFAULT_UI_FILTERS.search;
