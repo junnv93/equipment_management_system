@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { CHECKOUT_PURPOSE_LABELS } from '@equipment-management/schemas';
 
 export interface InspectionFormData {
   calibrationChecked: boolean;
@@ -21,12 +22,6 @@ interface ReturnInspectionFormProps {
   onCancel: () => void;
   isLoading?: boolean;
 }
-
-const PURPOSE_LABELS: Record<string, string> = {
-  calibration: '교정',
-  repair: '수리',
-  rental: '외부 대여',
-};
 
 export default function ReturnInspectionForm({
   purpose,
@@ -82,7 +77,10 @@ export default function ReturnInspectionForm({
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground">
-        반출 목적: <span className="font-medium">{PURPOSE_LABELS[purpose] || purpose}</span>
+        반출 목적:{' '}
+        <span className="font-medium">
+          {CHECKOUT_PURPOSE_LABELS[purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] || purpose}
+        </span>
       </div>
 
       {validationError && (

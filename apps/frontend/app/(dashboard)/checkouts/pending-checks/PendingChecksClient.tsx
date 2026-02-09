@@ -13,11 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
-import {
-  CHECKOUT_STATUS_LABELS,
-  CHECKOUT_PURPOSE_LABELS,
-  CheckoutStatus,
-} from '@equipment-management/schemas';
+import { CHECKOUT_PURPOSE_LABELS, CheckoutStatus } from '@equipment-management/schemas';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 
 interface PendingChecksClientProps {
   initialData: PaginatedResponse<Checkout>;
@@ -84,9 +82,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
               </Badge>
               <Badge variant="secondary">{checkInfo.role}</Badge>
             </div>
-            <Badge variant="outline">
-              {CHECKOUT_STATUS_LABELS[checkout.status] || checkout.status}
-            </Badge>
+            <CheckoutStatusBadge status={checkout.status} />
           </div>
           <CardTitle className="text-lg mt-2">
             {checkout.equipment?.[0]?.name || '장비 정보 없음'}
@@ -148,7 +144,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
           <h1 className="text-3xl font-bold tracking-tight">확인 필요 목록</h1>
           <p className="text-muted-foreground">내가 확인해야 할 대여 건 목록입니다.</p>
         </div>
-        <Button variant="outline" onClick={() => router.push('/checkouts')}>
+        <Button variant="outline" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.LIST)}>
           반출 목록으로
         </Button>
       </div>

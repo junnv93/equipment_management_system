@@ -1,6 +1,7 @@
 import { apiClient } from './api-client';
 import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 // ✅ SSOT: 반출 상태 타입 import
 import type {
@@ -122,6 +123,7 @@ export interface CheckoutQuery {
   userId?: string;
   equipmentId?: string;
   teamId?: string;
+  direction?: 'outbound' | 'inbound';
   startDate?: string;
   endDate?: string;
   search?: string;
@@ -196,7 +198,7 @@ const checkoutApi = {
       }
     });
 
-    const url = `/api/checkouts${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.CHECKOUTS.LIST}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get(url);
     // ✅ 공통 유틸리티 사용: 백엔드 응답을 프론트엔드 형식으로 변환
     return transformPaginatedResponse<Checkout>(response);
@@ -207,7 +209,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async getCheckout(id: string): Promise<Checkout> {
-    const response = await apiClient.get(`/api/checkouts/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.GET(id));
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -256,7 +258,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async createCheckout(data: CreateCheckoutDto): Promise<Checkout> {
-    const response = await apiClient.post('/api/checkouts', data);
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.CREATE, data);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -265,7 +267,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async updateCheckout(id: string, data: UpdateCheckoutDto): Promise<Checkout> {
-    const response = await apiClient.patch(`/api/checkouts/${id}`, data);
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.UPDATE(id), data);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -276,7 +278,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async approveCheckout(id: string, notes?: string): Promise<Checkout> {
-    const response = await apiClient.patch(`/api/checkouts/${id}/approve`, { notes });
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.APPROVE(id), { notes });
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -301,7 +303,10 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async rejectCheckout(id: string, reason: string, approverId?: string): Promise<Checkout> {
-    const response = await apiClient.patch(`/api/checkouts/${id}/reject`, { reason, approverId });
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.REJECT(id), {
+      reason,
+      approverId,
+    });
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -315,7 +320,7 @@ const checkoutApi = {
     id: string,
     data?: { itemConditions?: Array<{ equipmentId: string; conditionBefore: string }> }
   ): Promise<Checkout> {
-    const response = await apiClient.post(`/api/checkouts/${id}/start`, data || {});
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.START(id), data || {});
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -324,7 +329,7 @@ const checkoutApi = {
    * DB에서 사용된 실제 반출지 값들을 반환합니다.
    */
   async getDestinations(): Promise<string[]> {
-    const response = await apiClient.get('/api/checkouts/destinations');
+    const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.DESTINATIONS);
     return response.data?.data || response.data || [];
   },
 
@@ -334,7 +339,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async returnCheckout(id: string, data: ReturnCheckoutDto): Promise<Checkout> {
-    const response = await apiClient.post(`/api/checkouts/${id}/return`, data);
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.RETURN(id), data);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -345,7 +350,7 @@ const checkoutApi = {
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async approveReturn(id: string, data: ApproveReturnDto = {}): Promise<Checkout> {
-    const response = await apiClient.patch(`/api/checkouts/${id}/approve-return`, data);
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.APPROVE_RETURN(id), data);
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -406,7 +411,10 @@ const checkoutApi = {
     checkoutId: string,
     data: CreateConditionCheckDto
   ): Promise<ConditionCheck> {
-    const response = await apiClient.post(`/api/checkouts/${checkoutId}/condition-check`, data);
+    const response = await apiClient.post(
+      API_ENDPOINTS.CHECKOUTS.CONDITION_CHECK(checkoutId),
+      data
+    );
     return transformSingleResponse<ConditionCheck>(response);
   },
 
@@ -415,7 +423,7 @@ const checkoutApi = {
    * 대여 목적 반출의 양측 4단계 확인 이력을 조회합니다.
    */
   async getConditionChecks(checkoutId: string): Promise<ConditionCheck[]> {
-    const response = await apiClient.get(`/api/checkouts/${checkoutId}/condition-checks`);
+    const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.CONDITION_CHECKS(checkoutId));
     return response.data?.data || response.data || [];
   },
 
@@ -433,7 +441,7 @@ const checkoutApi = {
       }
     });
 
-    const url = `/api/checkouts/pending-checks${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.CHECKOUTS.PENDING_CHECKS}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get(url);
     return transformPaginatedResponse<Checkout>(response);
   },

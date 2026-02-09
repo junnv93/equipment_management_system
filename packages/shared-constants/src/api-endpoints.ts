@@ -27,11 +27,11 @@ export const API_ENDPOINTS = {
     CALIBRATION_HISTORY: (id: string) => `/api/equipment/${id}/calibration-history`,
     // 장비 등록/수정/삭제 요청 승인
     REQUESTS: {
-      LIST: '/api/equipment-requests',
-      GET: (id: string) => `/api/equipment-requests/${id}`,
-      PENDING: '/api/equipment-requests/pending',
-      APPROVE: (id: string) => `/api/equipment-requests/${id}/approve`,
-      REJECT: (id: string) => `/api/equipment-requests/${id}/reject`,
+      LIST: '/api/equipment/requests',
+      GET: (id: string) => `/api/equipment/requests/${id}`,
+      PENDING: '/api/equipment/requests/pending',
+      APPROVE: (id: string) => `/api/equipment/requests/${id}/approve`,
+      REJECT: (id: string) => `/api/equipment/requests/${id}/reject`,
     },
     // 장비 폐기
     DISPOSAL: {
@@ -67,6 +67,8 @@ export const API_ENDPOINTS = {
     CONDITION_CHECKS: (id: string) => `/api/checkouts/${id}/condition-checks`,
     // 확인 필요 목록 조회
     PENDING_CHECKS: '/api/checkouts/pending-checks',
+    // 반출지 목록 조회 (DB에서 실제 사용된 값들)
+    DESTINATIONS: '/api/checkouts/destinations',
   },
 
   // ============================================================================
@@ -219,6 +221,7 @@ export const API_ENDPOINTS = {
     LOGOUT: '/api/auth/signout',
     SESSION: '/api/auth/session',
     CSRF: '/api/auth/csrf',
+    REFRESH: '/api/auth/refresh',
   },
 
   // ============================================================================
@@ -227,6 +230,20 @@ export const API_ENDPOINTS = {
   AUDIT_LOGS: {
     LIST: '/api/audit-logs',
     GET: (id: string) => `/api/audit-logs/${id}`,
+  },
+
+  // ============================================================================
+  // 렌탈 반입 관리
+  // ============================================================================
+  RENTAL_IMPORTS: {
+    LIST: '/api/rental-imports',
+    GET: (id: string) => `/api/rental-imports/${id}`,
+    CREATE: '/api/rental-imports',
+    APPROVE: (id: string) => `/api/rental-imports/${id}/approve`,
+    REJECT: (id: string) => `/api/rental-imports/${id}/reject`,
+    RECEIVE: (id: string) => `/api/rental-imports/${id}/receive`,
+    INITIATE_RETURN: (id: string) => `/api/rental-imports/${id}/initiate-return`,
+    CANCEL: (id: string) => `/api/rental-imports/${id}/cancel`,
   },
 } as const;
 
