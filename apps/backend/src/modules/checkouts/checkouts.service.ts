@@ -13,10 +13,12 @@ import { ApproveCheckoutDto } from './dto/approve-checkout.dto';
 import { RejectCheckoutDto } from './dto/reject-checkout.dto';
 import { ReturnCheckoutDto } from './dto/return-checkout.dto';
 import { ApproveReturnDto } from './dto/approve-return.dto';
+import { CreateConditionCheckDto } from './dto/create-condition-check.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '@equipment-management/schemas';
 import { eq, and, like, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
+import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -154,8 +156,10 @@ export class CheckoutsService {
       equipmentId,
       requesterId,
       approverId,
+      teamId,
       purpose,
       statuses,
+      destination,
       checkoutFrom,
       checkoutTo,
       returnFrom,
@@ -177,6 +181,10 @@ export class CheckoutsService {
 
     if (purpose) {
       whereConditions.push(eq(checkouts.purpose, purpose));
+    }
+
+    if (destination) {
+      whereConditions.push(eq(checkouts.destination, destination));
     }
 
     // 상태 필터링
@@ -235,6 +243,21 @@ export class CheckoutsService {
       whereConditions.push(sql`${checkouts.id} IN (${subquery})`);
     }
 
+    // 팀 ID 필터링 (신청자의 팀 OR 대여 시 빌려주는 팀)
+    if (teamId) {
+      const requestersByTeam = this.db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.teamId, teamId));
+
+      whereConditions.push(
+        or(
+          sql`${checkouts.requesterId} IN (${requestersByTeam})`,
+          eq(checkouts.lenderTeamId, teamId)
+        )!
+      );
+    }
+
     // 정렬 설정
     const orderBy: SQL<unknown>[] = [];
     if (sort) {
@@ -288,8 +311,10 @@ export class CheckoutsService {
       equipmentId: queryParams.equipmentId,
       requesterId: queryParams.requesterId,
       approverId: queryParams.approverId,
+      teamId: queryParams.teamId,
       purpose: queryParams.purpose,
       statuses: queryParams.statuses,
+      destination: queryParams.destination,
       checkoutFrom: queryParams.checkoutFrom,
       checkoutTo: queryParams.checkoutTo,
       returnFrom: queryParams.returnFrom,
@@ -310,6 +335,7 @@ export class CheckoutsService {
             equipmentId: queryParams.equipmentId,
             requesterId: queryParams.requesterId,
             approverId: queryParams.approverId,
+            teamId: queryParams.teamId,
             purpose: queryParams.purpose,
             statuses: queryParams.statuses,
             checkoutFrom: queryParams.checkoutFrom,
@@ -401,6 +427,19 @@ export class CheckoutsService {
       },
       this.CACHE_TTL
     );
+  }
+
+  /**
+   * 고유 반출지(destination) 목록 조회
+   */
+  async getDistinctDestinations(): Promise<string[]> {
+    const results = await this.db
+      .selectDistinct({ destination: checkouts.destination })
+      .from(checkouts)
+      .where(sql`${checkouts.destination} IS NOT NULL AND ${checkouts.destination} != ''`)
+      .orderBy(asc(checkouts.destination));
+
+    return results.map((r) => r.destination).filter(Boolean) as string[];
   }
 
   /**
@@ -544,6 +583,20 @@ export class CheckoutsService {
           );
         }
 
+        // 목적별 팀 소유권 검증
+        const purposeVal = createCheckoutDto.purpose;
+        if (purposeVal === 'calibration' || purposeVal === 'repair') {
+          // 교정/수리: 자기 팀 장비만 가능
+          if (userTeamId && equipment.teamId && equipment.teamId !== userTeamId) {
+            throw new BadRequestException('교정/수리 목적의 반출은 소속 팀 장비만 가능합니다.');
+          }
+        } else if (purposeVal === 'rental') {
+          // 외부 대여: 다른 팀 장비만 가능
+          if (userTeamId && equipment.teamId && equipment.teamId === userTeamId) {
+            throw new BadRequestException('외부 대여는 다른 팀의 장비만 가능합니다.');
+          }
+        }
+
         // 팀별 권한 체크: EMC팀은 RF팀 장비 반출 신청 불가
         await this.checkTeamPermission(equipmentId, userTeamId);
       }
@@ -583,6 +636,12 @@ export class CheckoutsService {
         workingStatusChecked: false,
         inspectionNotes: null,
       };
+
+      // 외부 대여 시 빌려주는 측 정보 저장
+      if (createCheckoutDto.purpose === 'rental') {
+        insertData.lenderTeamId = createCheckoutDto.lenderTeamId || null;
+        insertData.lenderSiteId = createCheckoutDto.lenderSiteId || null;
+      }
 
       // 반출 생성 (Equipment 모듈과 동일한 패턴: as typeof table.$inferInsert)
       const [newCheckout] = await this.db
@@ -651,6 +710,13 @@ export class CheckoutsService {
 
       for (const item of items) {
         await this.checkTeamPermission(item.equipmentId, approverTeamId);
+      }
+
+      // 대여 목적: 장비 소속 팀(lenderTeamId)의 기술책임자만 승인 가능
+      if (checkout.purpose === 'rental' && checkout.lenderTeamId && approverTeamId) {
+        if (approverTeamId !== checkout.lenderTeamId) {
+          throw new ForbiddenException('대여 장비 소속 팀의 기술책임자만 승인할 수 있습니다.');
+        }
       }
 
       // 모든 목적(교정/수리/외부 대여)을 1단계 승인으로 통합
@@ -744,7 +810,10 @@ export class CheckoutsService {
    * 최종 승인된 반출만 반출 가능
    * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
-  async startCheckout(uuid: string): Promise<Checkout> {
+  async startCheckout(
+    uuid: string,
+    itemConditions?: Array<{ equipmentId: string; conditionBefore: string }>
+  ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, '반출');
@@ -780,6 +849,21 @@ export class CheckoutsService {
 
       for (const item of items) {
         await this.equipmentService.updateStatus(item.equipmentId, 'checked_out');
+      }
+
+      // 장비별 반출 전 상태 기록 (Phase 3)
+      if (itemConditions && itemConditions.length > 0) {
+        for (const cond of itemConditions) {
+          await this.db
+            .update(checkoutItems)
+            .set({ conditionBefore: cond.conditionBefore })
+            .where(
+              and(
+                eq(checkoutItems.checkoutId, uuid),
+                eq(checkoutItems.equipmentId, cond.equipmentId)
+              )
+            );
+        }
       }
 
       await this.invalidateCache();
@@ -857,6 +941,21 @@ export class CheckoutsService {
         throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
       }
 
+      // 장비별 반입 후 상태 기록 (Phase 3)
+      if (returnDto.itemConditions && returnDto.itemConditions.length > 0) {
+        for (const cond of returnDto.itemConditions) {
+          await this.db
+            .update(checkoutItems)
+            .set({ conditionAfter: cond.conditionAfter })
+            .where(
+              and(
+                eq(checkoutItems.checkoutId, uuid),
+                eq(checkoutItems.equipmentId, cond.equipmentId)
+              )
+            );
+        }
+      }
+
       // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
 
       await this.invalidateCache();
@@ -929,6 +1028,155 @@ export class CheckoutsService {
       );
       throw error;
     }
+  }
+
+  /**
+   * 상태 확인 등록 (대여 목적 양측 4단계)
+   * condition_checks 테이블에 INSERT + 반출 상태 자동 전이
+   */
+  async submitConditionCheck(
+    uuid: string,
+    dto: CreateConditionCheckDto,
+    checkerId: string
+  ): Promise<typeof conditionChecks.$inferSelect> {
+    try {
+      this.validateUuid(uuid, '반출');
+      this.validateUuid(checkerId, '확인자');
+
+      const checkout = await this.findOne(uuid);
+
+      // 대여 목적만 상태 확인 가능
+      if (checkout.purpose !== 'rental') {
+        throw new BadRequestException('상태 확인은 대여 목적 반출에서만 사용할 수 있습니다.');
+      }
+
+      // 단계별 현재 상태 검증 및 상태 전이 매핑
+      const stepTransitions: Record<string, { requiredStatus: string; nextStatus: string }> = {
+        lender_checkout: { requiredStatus: 'approved', nextStatus: 'lender_checked' },
+        borrower_receive: { requiredStatus: 'lender_checked', nextStatus: 'in_use' },
+        borrower_return: { requiredStatus: 'in_use', nextStatus: 'borrower_returned' },
+        lender_return: { requiredStatus: 'borrower_returned', nextStatus: 'lender_received' },
+      };
+
+      const transition = stepTransitions[dto.step];
+      if (!transition) {
+        throw new BadRequestException(`유효하지 않은 상태 확인 단계입니다: ${dto.step}`);
+      }
+
+      if (checkout.status !== transition.requiredStatus) {
+        throw new BadRequestException(
+          `현재 반출 상태(${checkout.status})에서는 ${dto.step} 단계를 수행할 수 없습니다. ` +
+            `필요한 상태: ${transition.requiredStatus}`
+        );
+      }
+
+      // condition_checks에 INSERT
+      const [conditionCheck] = await this.db
+        .insert(conditionChecks)
+        .values({
+          checkoutId: uuid,
+          step: dto.step,
+          checkedBy: checkerId,
+          checkedAt: new Date(),
+          appearanceStatus: dto.appearanceStatus,
+          operationStatus: dto.operationStatus,
+          accessoriesStatus: dto.accessoriesStatus || null,
+          abnormalDetails: dto.abnormalDetails || null,
+          comparisonWithPrevious: dto.comparisonWithPrevious || null,
+          notes: dto.notes || null,
+        })
+        .returning();
+
+      // 반출 상태 자동 전이
+      const checkoutUpdateData: Partial<Checkout> = {
+        status: transition.nextStatus as CheckoutStatus,
+        updatedAt: new Date(),
+      };
+
+      // 단계별 날짜 및 장비 상태 업데이트
+      if (dto.step === 'lender_checkout') {
+        // ① 반출 전 확인 → checkoutDate 설정, 장비 status → checked_out
+        checkoutUpdateData.checkoutDate = new Date();
+        const items = await this.db
+          .select()
+          .from(checkoutItems)
+          .where(eq(checkoutItems.checkoutId, uuid));
+        for (const item of items) {
+          await this.equipmentService.updateStatus(item.equipmentId, 'checked_out');
+        }
+      } else if (dto.step === 'lender_return') {
+        // ④ 반입 확인 → actualReturnDate 설정, 장비 status → available
+        checkoutUpdateData.actualReturnDate = new Date();
+        const items = await this.db
+          .select()
+          .from(checkoutItems)
+          .where(eq(checkoutItems.checkoutId, uuid));
+        for (const item of items) {
+          await this.equipmentService.updateStatus(item.equipmentId, 'available');
+        }
+      }
+
+      await this.db
+        .update(checkouts)
+        .set(checkoutUpdateData as Record<string, unknown>)
+        .where(eq(checkouts.id, uuid));
+
+      await this.invalidateCache();
+      return conditionCheck;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      this.logger.error(
+        `상태 확인 등록 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 반출별 상태 확인 이력 조회
+   */
+  async getConditionChecks(
+    uuid: string
+  ): Promise<
+    (typeof conditionChecks.$inferSelect & {
+      checker?: { id: string; name: string | null; email: string | null };
+    })[]
+  > {
+    this.validateUuid(uuid, '반출');
+
+    const checks = await this.db
+      .select()
+      .from(conditionChecks)
+      .where(eq(conditionChecks.checkoutId, uuid))
+      .orderBy(asc(conditionChecks.checkedAt));
+
+    // checker 정보 조인
+    const checksWithChecker = await Promise.all(
+      checks.map(async (check) => {
+        const [checkerData] = await this.db
+          .select({
+            id: schema.users.id,
+            name: schema.users.name,
+            email: schema.users.email,
+          })
+          .from(schema.users)
+          .where(eq(schema.users.id, check.checkedBy))
+          .limit(1);
+
+        return {
+          ...check,
+          checker: checkerData || undefined,
+        };
+      })
+    );
+
+    return checksWithChecker;
   }
 
   /**

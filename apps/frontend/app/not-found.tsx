@@ -21,15 +21,9 @@ export default function NotFound() {
 
         {/* 404 메시지 */}
         <div className="space-y-2">
-          <h1 className="text-6xl font-bold tracking-tight text-foreground">
-            404
-          </h1>
-          <h2 className="text-xl font-semibold text-foreground">
-            페이지를 찾을 수 없습니다
-          </h2>
-          <p className="text-muted-foreground">
-            요청하신 페이지가 존재하지 않거나 이동되었습니다.
-          </p>
+          <h1 className="text-6xl font-bold tracking-tight text-foreground">404</h1>
+          <h2 className="text-xl font-semibold text-foreground">페이지를 찾을 수 없습니다</h2>
+          <p className="text-muted-foreground">요청하신 페이지가 존재하지 않거나 이동되었습니다.</p>
         </div>
 
         {/* 액션 버튼 */}
@@ -50,29 +44,18 @@ export default function NotFound() {
 
         {/* 추가 안내 */}
         <div className="rounded-lg border border-border bg-muted/50 p-4">
-          <p className="text-sm text-muted-foreground">
-            찾으시는 페이지가 있으신가요?
-          </p>
+          <p className="text-sm text-muted-foreground">찾으시는 페이지가 있으신가요?</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
-            <Link
-              href="/equipment"
-              className="text-sm text-primary hover:underline"
-            >
+            <Link href="/equipment" className="text-sm text-primary hover:underline">
               장비 관리
             </Link>
             <span className="text-muted-foreground">|</span>
-            <Link
-              href="/calibration"
-              className="text-sm text-primary hover:underline"
-            >
+            <Link href="/calibration" className="text-sm text-primary hover:underline">
               교정 관리
             </Link>
             <span className="text-muted-foreground">|</span>
-            <Link
-              href="/checkouts"
-              className="text-sm text-primary hover:underline"
-            >
-              반출 관리
+            <Link href="/checkouts" className="text-sm text-primary hover:underline">
+              반출입 관리
             </Link>
           </div>
         </div>

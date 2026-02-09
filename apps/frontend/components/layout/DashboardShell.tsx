@@ -128,7 +128,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       {
         icon: <ClipboardCheck className="h-5 w-5" />,
         href: FRONTEND_ROUTES.CHECKOUTS.LIST,
-        label: '대여/반출 관리',
+        label: '반출입 관리',
       },
       {
         icon: <FileSpreadsheet className="h-5 w-5" />,

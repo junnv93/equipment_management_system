@@ -13,12 +13,14 @@ export const checkoutQuerySchema = z.object({
   equipmentId: z.string().uuid().optional(),
   requesterId: z.string().uuid().optional(),
   approverId: z.string().uuid().optional(),
+  teamId: z.string().uuid().optional(),
   purpose: z
     .enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
       message: '유효하지 않은 반출 목적입니다.',
     })
     .optional(),
   statuses: z.string().optional(),
+  destination: z.string().optional(),
   checkoutFrom: z.string().optional(),
   checkoutTo: z.string().optional(),
   returnFrom: z.string().optional(),
@@ -60,6 +62,13 @@ export class CheckoutQueryDto {
   approverId?: string;
 
   @ApiProperty({
+    description: '팀 UUID로 필터링 (신청자 팀 또는 대여 빌려주는 팀)',
+    example: '550e8400-e29b-41d4-a716-446655440010',
+    required: false,
+  })
+  teamId?: string;
+
+  @ApiProperty({
     description: '반출 목적으로 필터링',
     enum: CHECKOUT_PURPOSE_VALUES,
     required: false,
@@ -72,6 +81,13 @@ export class CheckoutQueryDto {
     required: false,
   })
   statuses?: string;
+
+  @ApiProperty({
+    description: '반출지로 필터링',
+    example: '교정기관 ABC',
+    required: false,
+  })
+  destination?: string;
 
   @ApiProperty({
     description: '반출일 이후로 필터링',

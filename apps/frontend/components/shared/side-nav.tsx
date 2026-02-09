@@ -56,12 +56,12 @@ export function SideNav() {
       ],
     },
     {
-      title: '대여/반출 관리',
+      title: '반출입 관리',
       href: FRONTEND_ROUTES.CHECKOUTS.LIST,
       icon: <Clipboard className="h-5 w-5" />,
       submenu: [
         {
-          title: '대여/반출 목록',
+          title: '반출입 목록',
           href: FRONTEND_ROUTES.CHECKOUTS.LIST,
         },
         {

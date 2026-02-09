@@ -31,6 +31,8 @@ import {
   RejectCheckoutDto,
   ReturnCheckoutDto,
   ApproveReturnDto,
+  StartCheckoutDto,
+  CreateConditionCheckDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -38,7 +40,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 
-@ApiTags('반출 관리')
+@ApiTags('반출입 관리')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('checkouts')
@@ -98,18 +100,40 @@ export class CheckoutsController {
     return this.checkoutsService.create(createCheckoutDto, requesterId, userTeamId);
   }
 
+  @Get('destinations')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({
+    summary: '반출지 목록 조회',
+    description: 'DB에 저장된 고유 반출지(destination) 목록을 반환합니다.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '반출지 목록 조회 성공' })
+  async getDestinations(): Promise<string[]> {
+    return this.checkoutsService.getDistinctDestinations();
+  }
+
   @Get()
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @ApiOperation({
     summary: '반출 목록 조회',
-    description: '반출 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다.',
+    description:
+      '반출 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다. ' +
+      '시험소장(lab_manager)은 전체 조회, 나머지 역할은 소속 팀 기반으로 자동 필터링됩니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 목록 조회 성공' })
   async findAll(
-    @Query() query: CheckoutQueryDto
+    @Query() query: CheckoutQueryDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/checkouts/checkouts.service').CheckoutListResponse
   > {
+    // lab_manager(시험소장)는 전체 조회, 나머지 역할은 소속 팀 기반 필터링
+    const roles = req.user?.roles || [];
+    const isLabManager = roles.includes('lab_manager');
+
+    if (!isLabManager && !query.teamId && req.user?.teamId) {
+      query.teamId = req.user.teamId;
+    }
+
     return this.checkoutsService.findAll(query);
   }
 
@@ -359,12 +383,20 @@ export class CheckoutsController {
 
   @Post(':uuid/start')
   @RequirePermissions(Permission.START_CHECKOUT)
-  @ApiOperation({ summary: '반출 시작', description: '최종 승인된 반출을 실제로 반출 처리합니다.' })
+  @ApiOperation({
+    summary: '반출 시작',
+    description:
+      '최종 승인된 반출을 실제로 반출 처리합니다. 장비별 반출 전 상태를 기록할 수 있습니다.',
+  })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: StartCheckoutDto, required: false })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 시작 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '반출 시작 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async startCheckout(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{
+  async startCheckout(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() startDto?: StartCheckoutDto
+  ): Promise<{
     id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -395,7 +427,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    return this.checkoutsService.startCheckout(uuid);
+    return this.checkoutsService.startCheckout(uuid, startDto?.itemConditions);
   }
 
   @Post(':uuid/return')
@@ -521,6 +553,44 @@ export class CheckoutsController {
       throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
     }
     return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId });
+  }
+
+  @Post(':uuid/condition-check')
+  @RequirePermissions(Permission.COMPLETE_CHECKOUT)
+  @ApiOperation({
+    summary: '상태 확인 등록 (대여 목적)',
+    description:
+      '대여 목적 반출의 양측 4단계 상태 확인을 등록합니다. ' +
+      '각 단계(lender_checkout, borrower_receive, borrower_return, lender_return)에 따라 ' +
+      '반출 상태가 자동으로 전이됩니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: CreateConditionCheckDto })
+  @ApiResponse({ status: HttpStatus.CREATED, description: '상태 확인 등록 성공' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 단계 또는 상태' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
+  async submitConditionCheck(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() dto: CreateConditionCheckDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    const checkerId = req.user?.userId || req.user?.sub;
+    if (!checkerId) {
+      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+    }
+    return this.checkoutsService.submitConditionCheck(uuid, dto, checkerId);
+  }
+
+  @Get(':uuid/condition-checks')
+  @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @ApiOperation({
+    summary: '상태 확인 이력 조회',
+    description: '특정 반출의 양측 4단계 상태 확인 이력을 조회합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiResponse({ status: HttpStatus.OK, description: '상태 확인 이력 조회 성공' })
+  async getConditionChecks(@Param('uuid', ParseUUIDPipe) uuid: string) {
+    return this.checkoutsService.getConditionChecks(uuid);
   }
 
   @Patch(':uuid/cancel')

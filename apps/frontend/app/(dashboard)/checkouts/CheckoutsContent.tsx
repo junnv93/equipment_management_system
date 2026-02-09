@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
@@ -8,26 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import { Building, ClipboardList, Clock, Search, Plus, Filter, MapPin } from 'lucide-react';
+import { ClipboardList, Clock, Search, Plus, Filter, MapPin } from 'lucide-react';
 import checkoutApi, { Checkout, CheckoutQuery } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
+import {
+  CHECKOUT_STATUS_LABELS,
+  CHECKOUT_STATUS_FILTER_OPTIONS,
+  CheckoutStatus,
+} from '@equipment-management/schemas';
+import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
+import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
 
 interface CheckoutSummary {
   total: number;
@@ -45,20 +37,17 @@ interface CheckoutsContentProps {
 }
 
 /**
- * 반출 관리 Client Component
+ * 반출입 관리 Client Component
  *
  * Server Component에서 초기 데이터를 받아 React Query로 관리합니다.
  * 탭/필터 변경 시 클라이언트에서 재조회합니다.
  *
  * 비즈니스 로직:
  * - 장비 반출 요청 및 현황 관리
- * - 반출 상태: 승인대기, 1차승인, 최종승인, 반출중, 거부됨, 반입됨, 기한초과
- * - 반출지: 고객사, 협력사, 지사, 전시회, 기타
+ * - 반출 상태: CHECKOUT_STATUS_LABELS (SSOT) 기반 13개 상태
+ * - 반출지: DB에서 동적으로 조회
  */
-export default function CheckoutsContent({
-  initialData,
-  initialSummary,
-}: CheckoutsContentProps) {
+export default function CheckoutsContent({ initialData, initialSummary }: CheckoutsContentProps) {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState('all');
@@ -92,16 +81,16 @@ export default function CheckoutsContent({
       };
 
       if (statusFilter !== 'all') {
-        query.status = statusFilter;
+        query.statuses = statusFilter;
       }
 
       if (locationFilter !== 'all') {
-        query.location = locationFilter;
+        query.destination = locationFilter;
       }
 
       switch (currentTab) {
         case 'overdue':
-          return checkoutApi.getCheckouts({ ...query, status: 'overdue' });
+          return checkoutApi.getCheckouts({ ...query, statuses: 'overdue' });
         case 'today':
           const today = new Date().toISOString().split('T')[0];
           return checkoutApi.getCheckouts({ ...query, endDate: today });
@@ -111,63 +100,48 @@ export default function CheckoutsContent({
     },
     // ✅ 초기 데이터 활용 (필터가 기본값일 때만)
     initialData:
-      currentTab === 'all' &&
-      statusFilter === 'all' &&
-      locationFilter === 'all' &&
-      !searchTerm
+      currentTab === 'all' && statusFilter === 'all' && locationFilter === 'all' && !searchTerm
         ? initialData
         : undefined,
     staleTime: 30 * 1000,
   });
 
-  // 반출 상태에 따른 배지 스타일
+  // ✅ SSOT: 반출지 목록 DB 기반 조회
+  const { data: destinations } = useQuery({
+    queryKey: ['checkout-destinations'],
+    queryFn: () => checkoutApi.getDestinations(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // ✅ 그룹화: 날짜 + 반출지 기준으로 checkout 그룹 생성
+  const groups = useMemo(() => {
+    if (!checkoutsData?.data) return [];
+    return groupCheckoutsByDateAndDestination(checkoutsData.data);
+  }, [checkoutsData?.data]);
+
+  // ✅ SSOT: 반출 상태에 따른 배지 스타일 (CHECKOUT_STATUS_LABELS 기반)
+  const statusStyles: Record<string, string> = {
+    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    approved: 'bg-blue-100 text-blue-800 border-blue-200',
+    rejected: 'bg-red-100 text-red-800 border-red-200',
+    checked_out: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    lender_checked: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    borrower_received: 'bg-teal-100 text-teal-800 border-teal-200',
+    in_use: 'bg-purple-100 text-purple-800 border-purple-200',
+    borrower_returned: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    lender_received: 'bg-lime-100 text-lime-800 border-lime-200',
+    returned: 'bg-green-100 text-green-800 border-green-200',
+    return_approved: 'bg-green-100 text-green-800 border-green-200',
+    overdue: 'bg-red-100 text-red-800 border-red-200',
+    canceled: 'bg-gray-100 text-gray-800 border-gray-200',
+  };
+
   const getCheckoutStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
-            승인 대기중
-          </Badge>
-        );
-      case 'approved':
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
-            1차 승인
-          </Badge>
-        );
-      case 'approved_legacy':
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
-            최종 승인
-          </Badge>
-        );
-      case 'checked_out':
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
-            반출 중
-          </Badge>
-        );
-      case 'rejected':
-        return (
-          <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">
-            거부됨
-          </Badge>
-        );
-      case 'returned':
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
-            반입됨
-          </Badge>
-        );
-      case 'overdue':
-        return (
-          <Badge variant="outline" className="bg-red-100 text-red-900 hover:bg-red-100">
-            기한 초과
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    return (
+      <Badge variant="outline" className={statusStyles[status] || ''}>
+        {CHECKOUT_STATUS_LABELS[status as CheckoutStatus] || status}
+      </Badge>
+    );
   };
 
   // 검색어 변경 핸들러
@@ -209,30 +183,23 @@ export default function CheckoutsContent({
     </div>
   );
 
-  // 로딩 중 표시할 UI
+  // 로딩 중 표시할 UI (카드형 스켈레톤)
   const renderLoadingState = () => (
     <>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <TableRow key={i}>
-          <TableCell>
-            <Skeleton className="h-5 w-[180px]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-5 w-[120px]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-5 w-[100px]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-5 w-[120px]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-5 w-[80px]" />
-          </TableCell>
-          <TableCell>
-            <Skeleton className="h-5 w-[80px]" />
-          </TableCell>
-        </TableRow>
+      {[1, 2, 3].map((i) => (
+        <Card key={i} className="overflow-hidden">
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-5 w-[100px]" />
+              <Skeleton className="h-5 w-[120px]" />
+              <Skeleton className="h-5 w-[60px]" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-[60px]" />
+              <Skeleton className="h-5 w-[50px]" />
+            </div>
+          </div>
+        </Card>
       ))}
     </>
   );
@@ -241,8 +208,8 @@ export default function CheckoutsContent({
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">반출 관리</h1>
-          <p className="text-muted-foreground">장비 반출 요청 및 현황을 관리합니다.</p>
+          <h1 className="text-3xl font-bold tracking-tight">반출입 관리</h1>
+          <p className="text-muted-foreground">장비 반출입 요청 및 현황을 관리합니다.</p>
         </div>
         <Button onClick={() => router.push('/checkouts/create')}>
           <Plus className="mr-2 h-4 w-4" /> 반출 신청
@@ -325,7 +292,7 @@ export default function CheckoutsContent({
             />
           </div>
           <Select value={statusFilter} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[140px]">
               <div className="flex items-center">
                 <Filter className="mr-2 h-4 w-4" />
                 <span>상태</span>
@@ -333,15 +300,15 @@ export default function CheckoutsContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">전체</SelectItem>
-              <SelectItem value="pending">승인 대기중</SelectItem>
-              <SelectItem value="checked_out">반출 중</SelectItem>
-              <SelectItem value="rejected">거부됨</SelectItem>
-              <SelectItem value="returned">반입됨</SelectItem>
-              <SelectItem value="overdue">기한 초과</SelectItem>
+              {CHECKOUT_STATUS_FILTER_OPTIONS.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {CHECKOUT_STATUS_LABELS[status]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={locationFilter} onValueChange={handleLocationChange}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[140px]">
               <div className="flex items-center">
                 <MapPin className="mr-2 h-4 w-4" />
                 <span>반출지</span>
@@ -349,73 +316,30 @@ export default function CheckoutsContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">전체</SelectItem>
-              <SelectItem value="customer">고객사</SelectItem>
-              <SelectItem value="partner">협력사</SelectItem>
-              <SelectItem value="branch">지사</SelectItem>
-              <SelectItem value="exhibition">전시회</SelectItem>
-              <SelectItem value="other">기타</SelectItem>
+              {destinations?.map((dest) => (
+                <SelectItem key={dest} value={dest}>
+                  {dest}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* 반출 목록 테이블 */}
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>장비</TableHead>
-              <TableHead>신청자</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>반출지</TableHead>
-              <TableHead>반출일</TableHead>
-              <TableHead>반입 예정일</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {checkoutsLoading ? (
-              renderLoadingState()
-            ) : checkoutsData?.data?.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  {renderEmptyState()}
-                </TableCell>
-              </TableRow>
-            ) : (
-              checkoutsData?.data?.map((checkout: Checkout) => (
-                <TableRow
-                  key={checkout.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(`/checkouts/${checkout.id}`)}
-                >
-                  <TableCell className="font-medium">
-                    {checkout.equipment && checkout.equipment.length > 0
-                      ? `${checkout.equipment[0].name} ${checkout.equipment.length > 1 ? `외 ${checkout.equipment.length - 1}건` : ''}`
-                      : '장비 정보 없음'}
-                  </TableCell>
-                  <TableCell>{checkout.user?.name || '알 수 없는 사용자'}</TableCell>
-                  <TableCell>{getCheckoutStatusBadge(checkout.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Building className="h-4 w-4 mr-1 text-gray-500" />
-                      {checkout.destination || checkout.location}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {checkout.startDate
-                      ? format(new Date(checkout.startDate), 'yyyy-MM-dd', { locale: ko })
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {checkout.expectedReturnDate
-                      ? format(new Date(checkout.expectedReturnDate), 'yyyy-MM-dd', { locale: ko })
-                      : '-'}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      {/* 반출 목록 - 그룹 카드 */}
+      <div className="space-y-3">
+        {checkoutsLoading
+          ? renderLoadingState()
+          : groups.length === 0
+            ? renderEmptyState()
+            : groups.map((group) => (
+                <CheckoutGroupCard
+                  key={group.key}
+                  group={group}
+                  onCheckoutClick={(id) => router.push(`/checkouts/${id}`)}
+                  getStatusBadge={getCheckoutStatusBadge}
+                />
+              ))}
       </div>
     </div>
   );

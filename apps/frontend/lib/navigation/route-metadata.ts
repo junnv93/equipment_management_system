@@ -133,19 +133,19 @@ export const routeMap: Record<string, RouteMetadata> = {
   },
 
   // ========================================
-  // 대여/반출 관리
+  // 반출입 관리
   // ========================================
   '/checkouts': {
-    label: '대여/반출 관리',
+    label: '반출입 관리',
     parent: '/',
     icon: FileText,
   },
   '/checkouts/create': {
-    label: '대여/반출 등록',
+    label: '반출입 등록',
     parent: '/checkouts',
   },
   '/checkouts/manage': {
-    label: '대여/반출 관리',
+    label: '반출입 관리',
     parent: '/checkouts',
   },
 

@@ -1,5 +1,5 @@
 /**
- * 반출 관리 페이지 (Server Component)
+ * 반출입 관리 페이지 (Server Component)
  *
  * ✅ Next.js 16 Best Practice:
  * - Server Component에서 초기 데이터 fetch

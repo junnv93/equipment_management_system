@@ -118,12 +118,15 @@ export interface CheckoutQuery {
   page?: number;
   pageSize?: number;
   status?: string;
+  statuses?: string;
   userId?: string;
   equipmentId?: string;
+  teamId?: string;
   startDate?: string;
   endDate?: string;
   search?: string;
   location?: string;
+  destination?: string;
 }
 
 export interface CreateCheckoutDto {
@@ -135,6 +138,8 @@ export interface CreateCheckoutDto {
   reason: string; // ✅ 백엔드 필수 필드 추가
   expectedReturnDate: string; // ISO 형식
   notes?: string; // ✅ 백엔드에는 notes 필드가 없지만, reason에 포함 가능
+  lenderTeamId?: string; // 외부 대여 시 빌려주는 팀 ID
+  lenderSiteId?: string; // 외부 대여 시 빌려주는 사이트 ID
   // startDate는 백엔드에서 자동 설정되므로 프론트엔드에서 보내지 않음
 }
 
@@ -154,6 +159,10 @@ export interface ReturnCheckoutDto {
   repairChecked?: boolean; // 수리 확인 (수리 목적 반출 시 필수)
   workingStatusChecked: boolean; // 작동 여부 확인 (모든 유형 필수)
   inspectionNotes?: string; // 검사 비고
+  itemConditions?: Array<{
+    equipmentId: string;
+    conditionAfter: string;
+  }>; // 장비별 반입 후 상태 기록
   // 레거시 호환성
   actualReturnDate?: string;
   returnCondition?: string;
@@ -302,9 +311,21 @@ const checkoutApi = {
    * 장비 상태도 checked_out으로 자동 변경됩니다.
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async startCheckout(id: string): Promise<Checkout> {
-    const response = await apiClient.post(`/api/checkouts/${id}/start`);
+  async startCheckout(
+    id: string,
+    data?: { itemConditions?: Array<{ equipmentId: string; conditionBefore: string }> }
+  ): Promise<Checkout> {
+    const response = await apiClient.post(`/api/checkouts/${id}/start`, data || {});
     return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
+   * 반출지 목록을 조회합니다.
+   * DB에서 사용된 실제 반출지 값들을 반환합니다.
+   */
+  async getDestinations(): Promise<string[]> {
+    const response = await apiClient.get('/api/checkouts/destinations');
+    return response.data?.data || response.data || [];
   },
 
   /**
