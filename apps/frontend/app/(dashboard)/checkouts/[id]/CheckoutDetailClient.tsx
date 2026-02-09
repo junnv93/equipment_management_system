@@ -1,9 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
+import { useToast } from '@/components/ui/use-toast';
+import { getErrorMessage } from '@/lib/api/error';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import {
@@ -37,13 +40,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import checkoutApi, { Checkout, ConditionCheck } from '@/lib/api/checkout-api';
 import {
-  CHECKOUT_STATUS_LABELS,
   CHECKOUT_PURPOSE_LABELS,
   CONDITION_CHECK_STEP_LABELS,
   CONDITION_STATUS_LABELS,
   ACCESSORIES_STATUS_LABELS,
   CheckoutStatus,
 } from '@equipment-management/schemas';
+import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
 
@@ -67,19 +70,52 @@ export default function CheckoutDetailClient({
 }: CheckoutDetailClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
+
+  // 브레드크럼 동적 라벨 설정
+  useEffect(() => {
+    // 반출 정보를 사용해서 의미있는 라벨 생성
+    const purposeLabel = CHECKOUT_PURPOSE_LABELS[checkout.purpose];
+    const label = `${purposeLabel} 반출 - ${checkout.destination}`;
+    setDynamicLabel(checkout.id, label);
+
+    // 컴포넌트 언마운트 시 라벨 제거
+    return () => {
+      clearDynamicLabel(checkout.id);
+    };
+  }, [checkout.id, checkout.purpose, checkout.destination, setDynamicLabel, clearDynamicLabel]);
 
   // 다이얼로그 상태
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showStartDialog, setShowStartDialog] = useState(false);
+  const [showApproveReturnDialog, setShowApproveReturnDialog] = useState(false);
+
+  // 장비별 반출 전 상태 기록 (Phase 3)
+  const [itemConditionsBefore, setItemConditionsBefore] = useState<Record<string, string>>({});
 
   // 승인 mutation (approverId는 백엔드에서 세션으로부터 자동 추출)
   const approveMutation = useMutation({
     mutationFn: () => checkoutApi.approveCheckout(checkout.id),
     onSuccess: () => {
+      toast({
+        title: '승인 완료',
+        description: '반출 요청이 승인되었습니다.',
+      });
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.refresh();
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: '승인 실패',
+        description: getErrorMessage(
+          error,
+          '반출 승인 중 오류가 발생했습니다. 권한을 확인하거나 잠시 후 다시 시도해주세요.'
+        ),
+      });
     },
   });
 
@@ -87,47 +123,83 @@ export default function CheckoutDetailClient({
   const rejectMutation = useMutation({
     mutationFn: (reason: string) => checkoutApi.rejectCheckout(checkout.id, reason),
     onSuccess: () => {
+      toast({
+        title: '반려 완료',
+        description: '반출 요청이 반려되었습니다.',
+      });
       setShowRejectDialog(false);
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.refresh();
     },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: '반려 실패',
+        description: getErrorMessage(
+          error,
+          '반출 반려 중 오류가 발생했습니다. 네트워크 연결을 확인해주세요.'
+        ),
+      });
+    },
   });
 
-  // 반출 시작 mutation
+  // 반출 시작 mutation (장비별 상태 기록 포함)
   const startMutation = useMutation({
-    mutationFn: () => checkoutApi.startCheckout(checkout.id),
+    mutationFn: () => {
+      const conditions = Object.entries(itemConditionsBefore)
+        .filter(([, value]) => value.trim())
+        .map(([equipmentId, conditionBefore]) => ({ equipmentId, conditionBefore }));
+      return checkoutApi.startCheckout(
+        checkout.id,
+        conditions.length > 0 ? { itemConditions: conditions } : undefined
+      );
+    },
     onSuccess: () => {
+      toast({
+        title: '반출 시작',
+        description: '장비 반출이 시작되었습니다.',
+      });
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.refresh();
     },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: '반출 시작 실패',
+        description: getErrorMessage(
+          error,
+          '반출을 시작할 수 없습니다. 장비 상태를 확인하거나 다시 시도해주세요.'
+        ),
+      });
+    },
   });
 
-  // 상태 배지 렌더링
-  const renderStatusBadge = (status: CheckoutStatus) => {
-    const statusStyles: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      approved: 'bg-blue-100 text-blue-800 border-blue-200',
-      rejected: 'bg-red-100 text-red-800 border-red-200',
-      checked_out: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      lender_checked: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-      borrower_received: 'bg-teal-100 text-teal-800 border-teal-200',
-      in_use: 'bg-purple-100 text-purple-800 border-purple-200',
-      borrower_returned: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      lender_received: 'bg-lime-100 text-lime-800 border-lime-200',
-      returned: 'bg-green-100 text-green-800 border-green-200',
-      return_approved: 'bg-green-100 text-green-800 border-green-200',
-      overdue: 'bg-red-100 text-red-800 border-red-200',
-      canceled: 'bg-gray-100 text-gray-800 border-gray-200',
-    };
-
-    return (
-      <Badge variant="outline" className={statusStyles[status] || ''}>
-        {CHECKOUT_STATUS_LABELS[status] || status}
-      </Badge>
-    );
-  };
+  // 반입 승인 mutation
+  const approveReturnMutation = useMutation({
+    mutationFn: () => checkoutApi.approveReturn(checkout.id),
+    onSuccess: () => {
+      toast({
+        title: '반입 승인 완료',
+        description: '장비가 정상적으로 반입되었습니다.',
+      });
+      setShowApproveReturnDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
+      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
+      router.refresh();
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: '반입 승인 실패',
+        description: getErrorMessage(
+          error,
+          '반입 승인 중 오류가 발생했습니다. 검사 내역을 확인하거나 다시 시도해주세요.'
+        ),
+      });
+    },
+  });
 
   // 목적 배지 렌더링
   const renderPurposeBadge = (purpose: string) => {
@@ -159,6 +231,11 @@ export default function CheckoutDetailClient({
   const handleStart = () => {
     startMutation.mutate();
     setShowStartDialog(false);
+  };
+
+  // 반입 승인 처리
+  const handleApproveReturn = () => {
+    approveReturnMutation.mutate();
   };
 
   // 액션 버튼 결정
@@ -194,8 +271,8 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // 승인됨 상태 - 반출 시작 가능
-    if (checkout.status === 'approved') {
+    // 승인됨 상태 - 교정/수리만 반출 시작 가능 (대여는 상태 확인으로 진행)
+    if (checkout.status === 'approved' && checkout.purpose !== 'rental') {
       buttons.push(
         <Button
           key="start"
@@ -208,8 +285,8 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // 반출 중 상태 - 반입 처리 가능
-    if (checkout.status === 'checked_out') {
+    // 반출 중 상태 - 교정/수리만 반입 처리 가능 (대여는 4단계 상태 확인으로 진행)
+    if (checkout.status === 'checked_out' && checkout.purpose !== 'rental') {
       buttons.push(
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
@@ -223,13 +300,9 @@ export default function CheckoutDetailClient({
     // 대여 목적 특수 상태 - 상태 확인 필요
     if (
       checkout.purpose === 'rental' &&
-      [
-        'checked_out',
-        'lender_checked',
-        'borrower_received',
-        'in_use',
-        'borrower_returned',
-      ].includes(checkout.status)
+      ['approved', 'lender_checked', 'borrower_received', 'in_use', 'borrower_returned'].includes(
+        checkout.status
+      )
     ) {
       buttons.push(
         <Button key="check" variant="outline" asChild>
@@ -241,10 +314,27 @@ export default function CheckoutDetailClient({
       );
     }
 
+    // 대여 목적 최종 단계 - lender_received 상태에서 반입 처리
+    if (checkout.status === 'lender_received' && checkout.purpose === 'rental') {
+      buttons.push(
+        <Button key="return" asChild>
+          <Link href={`/checkouts/${checkout.id}/return`}>
+            <CheckCheck className="mr-2 h-4 w-4" />
+            반입 처리
+          </Link>
+        </Button>
+      );
+    }
+
     // 반입 완료 상태 - 최종 승인 가능
     if (checkout.status === 'returned') {
       buttons.push(
-        <Button key="approve-return" className="bg-green-600 hover:bg-green-700">
+        <Button
+          key="approve-return"
+          onClick={() => setShowApproveReturnDialog(true)}
+          disabled={approveReturnMutation.isPending}
+          className="bg-green-600 hover:bg-green-700"
+        >
           <CheckCircle2 className="mr-2 h-4 w-4" />
           반입 승인
         </Button>
@@ -267,7 +357,7 @@ export default function CheckoutDetailClient({
           </Button>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">반출 상세</h1>
-            {renderStatusBadge(checkout.status)}
+            <CheckoutStatusBadge status={checkout.status} />
             {renderPurposeBadge(checkout.purpose)}
           </div>
           <p className="text-muted-foreground mt-1">{checkout.destination}</p>
@@ -569,21 +659,64 @@ export default function CheckoutDetailClient({
         </Card>
       )}
 
-      {/* 반출 시작 확인 다이얼로그 */}
+      {/* 반출 시작 확인 다이얼로그 (장비별 상태 기록 포함) */}
       <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>반출 시작</DialogTitle>
             <DialogDescription>
-              반출을 시작하시겠습니까? 장비 상태가 &apos;반출 중&apos;으로 변경됩니다.
+              반출을 시작하시겠습니까? 장비 상태가 &apos;반출 중&apos;으로 변경됩니다. 각 장비의
+              반출 전 상태를 기록해주세요.
             </DialogDescription>
           </DialogHeader>
+          {checkout.equipment && checkout.equipment.length > 0 && (
+            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+              {checkout.equipment.map((equip) => (
+                <div key={equip.id} className="space-y-1">
+                  <Label className="text-sm font-medium">
+                    {equip.name} ({equip.managementNumber})
+                  </Label>
+                  <Textarea
+                    placeholder="반출 전 상태 (예: 외관 양호, 정상 작동)"
+                    value={itemConditionsBefore[equip.id] || ''}
+                    onChange={(e) =>
+                      setItemConditionsBefore((prev) => ({
+                        ...prev,
+                        [equip.id]: e.target.value,
+                      }))
+                    }
+                    rows={2}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowStartDialog(false)}>
               취소
             </Button>
             <Button onClick={handleStart} disabled={startMutation.isPending}>
               {startMutation.isPending ? '처리 중...' : '확인'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 반입 승인 확인 다이얼로그 */}
+      <Dialog open={showApproveReturnDialog} onOpenChange={setShowApproveReturnDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>반입 승인</DialogTitle>
+            <DialogDescription>
+              반입을 승인하시겠습니까? 장비 상태가 &apos;사용 가능&apos;으로 복원됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowApproveReturnDialog(false)}>
+              취소
+            </Button>
+            <Button onClick={handleApproveReturn} disabled={approveReturnMutation.isPending}>
+              {approveReturnMutation.isPending ? '처리 중...' : '확인'}
             </Button>
           </DialogFooter>
         </DialogContent>

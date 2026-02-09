@@ -135,8 +135,8 @@ export default function EquipmentConditionForm({
 
       {/* 유효성 검증 에러 */}
       {validationError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+        <Alert variant="destructive" role="alert" aria-live="assertive">
+          <AlertCircle className="h-4 w-4" aria-hidden="true" />
           <AlertDescription>{validationError}</AlertDescription>
         </Alert>
       )}

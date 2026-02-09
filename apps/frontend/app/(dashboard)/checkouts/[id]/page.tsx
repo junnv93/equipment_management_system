@@ -1,7 +1,6 @@
-import { Suspense, cache } from 'react';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
-import { CheckoutDetailSkeleton } from './CheckoutDetailSkeleton';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
 
 /**
@@ -65,11 +64,8 @@ export default async function CheckoutDetailPage(props: PageProps) {
     throw error;
   }
 
-  return (
-    <Suspense fallback={<CheckoutDetailSkeleton />}>
-      <CheckoutDetailClient checkout={checkout} conditionChecks={conditionChecks || []} />
-    </Suspense>
-  );
+  // Data is already fetched above, no need for Suspense boundary
+  return <CheckoutDetailClient checkout={checkout} conditionChecks={conditionChecks || []} />;
 }
 
 /**
