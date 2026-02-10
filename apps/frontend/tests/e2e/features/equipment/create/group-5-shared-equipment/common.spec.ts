@@ -26,7 +26,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
-import dayjs from 'dayjs';
+import { format, addMonths, addYears } from 'date-fns';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -55,9 +55,9 @@ test.describe('공용/렌탈 장비 임시등록 - 기본 기능', () => {
    */
   test.fixme('공용장비 임시등록 성공', async ({ techManagerPage }) => {
     // Prepare test data - dates
-    const today = dayjs().format('YYYY-MM-DD');
-    const sixMonthsLater = dayjs().add(6, 'month').format('YYYY-MM-DD');
-    const oneYearLater = dayjs().add(1, 'year').format('YYYY-MM-DD');
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const sixMonthsLater = format(addMonths(new Date(), 6), 'yyyy-MM-dd');
+    const oneYearLater = format(addYears(new Date(), 1), 'yyyy-MM-dd');
 
     // Create a mock PDF file for calibration certificate
     const tmpDir = os.tmpdir();

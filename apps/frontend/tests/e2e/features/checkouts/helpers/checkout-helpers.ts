@@ -5,12 +5,212 @@
  */
 
 import { Page, expect } from '@playwright/test';
+import { Pool } from 'pg';
 import {
   CHECKOUT_STATUS_VALUES,
   CHECKOUT_STATUS_LABELS,
   CHECKOUT_PURPOSE_VALUES,
   CHECKOUT_PURPOSE_LABELS,
 } from '@equipment-management/schemas';
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// ============================================================================
+// Database Direct Reset (for test state management)
+// ============================================================================
+
+const DATABASE_URL =
+  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/equipment_management';
+
+let checkoutPool: Pool | null = null;
+
+function getCheckoutPool(): Pool {
+  if (!checkoutPool) {
+    checkoutPool = new Pool({
+      connectionString: DATABASE_URL,
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+  }
+  return checkoutPool;
+}
+
+/**
+ * Reset equipment status to 'available' via direct DB SQL.
+ * Useful for tests where equipment may have been changed by schedulers or previous runs.
+ */
+export async function resetEquipmentToAvailable(equipmentId: string): Promise<void> {
+  const pool = getCheckoutPool();
+  await pool.query(`UPDATE equipment SET status = 'available', updated_at = NOW() WHERE id = $1`, [
+    equipmentId,
+  ]);
+}
+
+/**
+ * Cleanup the checkout pool (call in afterAll or global teardown)
+ */
+export async function cleanupCheckoutPool(): Promise<void> {
+  if (checkoutPool) {
+    try {
+      await checkoutPool.end();
+    } catch {
+      // ignore
+    } finally {
+      checkoutPool = null;
+    }
+  }
+}
+
+/**
+ * Clear the backend in-memory cache.
+ *
+ * Direct SQL resets bypass the ORM and don't trigger cache invalidation.
+ * Call this after SQL resets to ensure the backend serves fresh data.
+ *
+ * Uses Node's fetch (not page.request) so it works in beforeAll hooks.
+ */
+export async function clearBackendCache(): Promise<void> {
+  const url = `${BACKEND_URL}/api/auth/test-cache-clear`;
+  const response = await fetch(url, { method: 'POST' });
+  if (!response.ok) {
+    throw new Error(`Failed to clear backend cache: ${response.status}`);
+  }
+}
+
+/**
+ * Reset a checkout to 'pending' status via direct DB SQL.
+ *
+ * The backend business logic prevents status rollback (e.g., approved→pending),
+ * so we need direct SQL for test state reset.
+ * Automatically clears backend cache after DB update.
+ *
+ * @example
+ * await resetCheckoutToPending(CHECKOUT_001_ID);
+ */
+export async function resetCheckoutToPending(checkoutId: string): Promise<void> {
+  const pool = getCheckoutPool();
+  await pool.query(
+    `UPDATE checkouts
+     SET status = 'pending',
+         approver_id = NULL,
+         approved_at = NULL,
+         rejection_reason = NULL,
+         checkout_date = NULL,
+         actual_return_date = NULL,
+         calibration_checked = false,
+         repair_checked = false,
+         working_status_checked = false,
+         inspection_notes = NULL,
+         returner_id = NULL,
+         return_approved_by = NULL,
+         return_approved_at = NULL,
+         lender_confirmed_by = NULL,
+         lender_confirmed_at = NULL,
+         lender_confirm_notes = NULL,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [checkoutId]
+  );
+}
+
+/**
+ * Reset a checkout to 'approved' status via direct DB SQL.
+ *
+ * @example
+ * await resetCheckoutToApproved(CHECKOUT_009_ID, TECH_MANAGER_ID);
+ */
+export async function resetCheckoutToApproved(
+  checkoutId: string,
+  approverId: string = '00000000-0000-0000-0000-000000000002'
+): Promise<void> {
+  const pool = getCheckoutPool();
+  await pool.query(
+    `UPDATE checkouts
+     SET status = 'approved',
+         approver_id = $2,
+         approved_at = NOW(),
+         rejection_reason = NULL,
+         checkout_date = NULL,
+         actual_return_date = NULL,
+         calibration_checked = false,
+         repair_checked = false,
+         working_status_checked = false,
+         inspection_notes = NULL,
+         returner_id = NULL,
+         return_approved_by = NULL,
+         return_approved_at = NULL,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [checkoutId, approverId]
+  );
+}
+
+/**
+ * Reset a checkout to 'checked_out' status via direct DB SQL.
+ *
+ * @example
+ * await resetCheckoutToCheckedOut(CHECKOUT_019_ID);
+ */
+export async function resetCheckoutToCheckedOut(
+  checkoutId: string,
+  approverId: string = '00000000-0000-0000-0000-000000000002'
+): Promise<void> {
+  const pool = getCheckoutPool();
+  await pool.query(
+    `UPDATE checkouts
+     SET status = 'checked_out',
+         approver_id = $2,
+         approved_at = NOW() - INTERVAL '1 day',
+         checkout_date = NOW(),
+         rejection_reason = NULL,
+         actual_return_date = NULL,
+         calibration_checked = false,
+         repair_checked = false,
+         working_status_checked = false,
+         inspection_notes = NULL,
+         returner_id = NULL,
+         return_approved_by = NULL,
+         return_approved_at = NULL,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [checkoutId, approverId]
+  );
+}
+
+/**
+ * Reset a checkout to 'returned' status via direct DB SQL.
+ *
+ * @example
+ * await resetCheckoutToReturned(CHECKOUT_042_ID);
+ */
+export async function resetCheckoutToReturned(
+  checkoutId: string,
+  approverId: string = '00000000-0000-0000-0000-000000000002'
+): Promise<void> {
+  const pool = getCheckoutPool();
+  await pool.query(
+    `UPDATE checkouts
+     SET status = 'returned',
+         approver_id = $2,
+         approved_at = NOW() - INTERVAL '2 days',
+         checkout_date = NOW() - INTERVAL '1 day',
+         actual_return_date = NOW(),
+         calibration_checked = true,
+         repair_checked = false,
+         working_status_checked = true,
+         returner_id = $2,
+         return_approved_by = NULL,
+         return_approved_at = NULL,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [checkoutId, approverId]
+  );
+}
 
 // ============================================================================
 // Types
@@ -272,6 +472,107 @@ export async function lenderFinalCheck(page: Page, checkoutId: string): Promise<
 }
 
 // ============================================================================
+// Authenticated API Helpers
+// ============================================================================
+
+/**
+ * Get a JWT token from the backend's test-login endpoint.
+ *
+ * The backend provides `GET /api/auth/test-login?role=<role>` in dev mode,
+ * which returns `{ access_token }`. This token is used for direct backend API calls
+ * in E2E tests where page.request doesn't carry NextAuth session cookies.
+ *
+ * @example
+ * const token = await getBackendToken(page, 'technical_manager');
+ */
+export async function getBackendToken(
+  page: Page,
+  role: string = 'technical_manager'
+): Promise<string> {
+  const response = await page.request.get(`${BACKEND_URL}/api/auth/test-login?role=${role}`);
+  if (!response.ok()) {
+    throw new Error(`Failed to get backend token: ${response.status()}`);
+  }
+  const data = await response.json();
+  return data.access_token || data.token || '';
+}
+
+/**
+ * Make an authenticated GET request to the backend API.
+ *
+ * @example
+ * const data = await apiGet(page, `/api/checkouts/${id}`);
+ * expect(data.status).toBe('approved');
+ */
+export async function apiGet(
+  page: Page,
+  path: string,
+  role: string = 'technical_manager'
+): Promise<Record<string, unknown>> {
+  const token = await getBackendToken(page, role);
+  const url = path.startsWith('http') ? path : `${BACKEND_URL}${path}`;
+  const response = await page.request.get(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(response.ok()).toBeTruthy();
+  return response.json();
+}
+
+/**
+ * Make an authenticated POST request to the backend API.
+ *
+ * @example
+ * const result = await apiPost(page, `/api/checkouts/${id}/approve`);
+ */
+export async function apiPost(
+  page: Page,
+  path: string,
+  data?: Record<string, unknown>,
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  const token = await getBackendToken(page, role);
+  const url = path.startsWith('http') ? path : `${BACKEND_URL}${path}`;
+  const response = await page.request.post(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  let responseData = {};
+  try {
+    responseData = await response.json();
+  } catch {
+    // Some endpoints don't return JSON
+  }
+  return { response, data: responseData };
+}
+
+/**
+ * Make an authenticated PATCH request to the backend API.
+ *
+ * @example
+ * await apiPatch(page, `/api/checkouts/${id}`, { status: 'pending' });
+ */
+export async function apiPatch(
+  page: Page,
+  path: string,
+  data?: Record<string, unknown>,
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  const token = await getBackendToken(page, role);
+  const url = path.startsWith('http') ? path : `${BACKEND_URL}${path}`;
+  const response = await page.request.patch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    data,
+  });
+  let responseData = {};
+  try {
+    responseData = await response.json();
+  } catch {
+    // Some endpoints don't return JSON
+  }
+  return { response, data: responseData };
+}
+
+// ============================================================================
 // Verification Helpers (API-based)
 // ============================================================================
 
@@ -286,11 +587,7 @@ export async function verifyEquipmentStatus(
   equipmentId: string,
   expectedStatus: string
 ): Promise<void> {
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const response = await page.request.get(`${backendUrl}/api/equipment/${equipmentId}`);
-  expect(response.ok()).toBeTruthy();
-
-  const data = await response.json();
+  const data = await apiGet(page, `/api/equipment/${equipmentId}`);
   expect(data.status).toBe(expectedStatus);
 }
 
@@ -305,11 +602,7 @@ export async function verifyCheckoutStatus(
   checkoutId: string,
   expectedStatus: string
 ): Promise<void> {
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const response = await page.request.get(`${backendUrl}/api/checkouts/${checkoutId}`);
-  expect(response.ok()).toBeTruthy();
-
-  const data = await response.json();
+  const data = await apiGet(page, `/api/checkouts/${checkoutId}`);
   expect(data.status).toBe(expectedStatus);
 }
 
@@ -320,11 +613,8 @@ export async function verifyCheckoutStatus(
  * await verifyCheckoutInList(page, CHECKOUT_001_ID);
  */
 export async function verifyCheckoutInList(page: Page, checkoutId: string): Promise<boolean> {
-  const response = await page.request.get('/api/checkouts');
-  expect(response.ok()).toBeTruthy();
-
-  const data = await response.json();
-  const checkouts = data.data || data;
+  const data = await apiGet(page, '/api/checkouts');
+  const checkouts = (data.items as Array<{ id: string }>) || [];
 
   return checkouts.some((checkout: { id: string }) => checkout.id === checkoutId);
 }
@@ -495,6 +785,128 @@ export async function waitForSuccessMessage(page: Page, message: string): Promis
  */
 export async function waitForErrorMessage(page: Page, message: string): Promise<void> {
   await page.getByRole('alert').getByText(message).waitFor({ state: 'visible' });
+}
+
+// ============================================================================
+// Rental 4-Step API Helpers
+// ============================================================================
+
+/**
+ * Submit a condition check via API (rental 4-step)
+ *
+ * @example
+ * await apiSubmitConditionCheck(page, CHECKOUT_011_ID, 'lender_checkout', { appearanceStatus: 'normal', operationStatus: 'normal' });
+ */
+export async function apiSubmitConditionCheck(
+  page: Page,
+  checkoutId: string,
+  step: string,
+  conditions: {
+    appearanceStatus: string;
+    operationStatus: string;
+    accessoriesStatus?: string;
+    notes?: string;
+  },
+  role: string = 'technical_manager'
+): Promise<{ response: import('@playwright/test').APIResponse; data: Record<string, unknown> }> {
+  return apiPost(
+    page,
+    `/api/checkouts/${checkoutId}/condition-check`,
+    { step, ...conditions },
+    role
+  );
+}
+
+/**
+ * Get condition checks for a checkout via API
+ */
+export async function apiGetConditionChecks(
+  page: Page,
+  checkoutId: string,
+  role: string = 'technical_manager'
+): Promise<Record<string, unknown>[]> {
+  const data = await apiGet(page, `/api/checkouts/${checkoutId}/condition-checks`, role);
+  return data as unknown as Record<string, unknown>[];
+}
+
+/**
+ * Verify equipment status via API (typed)
+ *
+ * @example
+ * await verifyEquipmentStatusViaApi(page, EQUIP.SPECTRUM_ANALYZER_SUW_E, 'checked_out');
+ */
+export async function verifyEquipmentStatusViaApi(
+  page: Page,
+  equipmentId: string,
+  expectedStatus: string
+): Promise<void> {
+  const data = await apiGet(page, `/api/equipment/${equipmentId}`);
+  expect(data.status).toBe(expectedStatus);
+}
+
+/**
+ * Reset a checkout to a specific rental status via direct DB SQL
+ */
+export async function resetRentalCheckoutToState(
+  checkoutId: string,
+  targetStatus: string,
+  approverId: string = '00000000-0000-0000-0000-000000000002'
+): Promise<void> {
+  const pool = getCheckoutPool();
+
+  const baseFields: Record<string, unknown> = {
+    status: targetStatus,
+    approver_id: approverId,
+    approved_at: "NOW() - INTERVAL '3 days'",
+  };
+
+  // Add dates based on progression
+  if (['lender_checked', 'in_use', 'borrower_returned', 'lender_received'].includes(targetStatus)) {
+    baseFields.checkout_date = "NOW() - INTERVAL '2 days'";
+  }
+  if (['lender_received'].includes(targetStatus)) {
+    baseFields.actual_return_date = 'NOW()';
+  }
+
+  // Use separate parameters ($4, $5) for CASE expressions to avoid
+  // PostgreSQL "inconsistent types deduced for parameter $2" error.
+  // $2 is inferred from the column type (SET status = $2),
+  // while $4/$5 are used as text in comparisons.
+  await pool.query(
+    `UPDATE checkouts
+     SET status = $2,
+         approver_id = $3,
+         approved_at = NOW() - INTERVAL '3 days',
+         checkout_date = CASE
+           WHEN $4 IN ('lender_checked','in_use','borrower_returned','lender_received')
+           THEN NOW() - INTERVAL '2 days'
+           ELSE NULL
+         END,
+         actual_return_date = CASE
+           WHEN $5 = 'lender_received' THEN NOW()
+           ELSE NULL
+         END,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [checkoutId, targetStatus, approverId, targetStatus, targetStatus]
+  );
+}
+
+/**
+ * Full checkout cleanup - delete test-created checkouts and reset equipment
+ *
+ * Only affects checkouts with the test ID prefix '10000000-'
+ */
+export async function fullCheckoutCleanup(): Promise<void> {
+  const pool = getCheckoutPool();
+  // Delete condition checks for test checkouts
+  await pool.query(
+    `DELETE FROM condition_checks WHERE checkout_id IN (SELECT id FROM checkouts WHERE id LIKE '10000000-%')`
+  );
+  // Reset equipment statuses for test equipment
+  await pool.query(
+    `UPDATE equipment SET status = 'available', updated_at = NOW() WHERE id LIKE 'eeee%' AND status = 'checked_out'`
+  );
 }
 
 // ============================================================================
