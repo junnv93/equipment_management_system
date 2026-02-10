@@ -81,6 +81,30 @@ export const FRONTEND_ROUTES = {
   },
 
   // ============================================================================
+  // 장비 반입 관리 (렌탈 + 내부 공용, 반출입 관리 하위로 통합)
+  // ============================================================================
+  EQUIPMENT_IMPORTS: {
+    LIST: '/checkouts?view=inbound',
+    CREATE_RENTAL: '/checkouts/import/rental',
+    CREATE_INTERNAL: '/checkouts/import/shared',
+    DETAIL: (id: string) => `/checkouts/import/${id}`,
+    RECEIVE: (id: string) => `/checkouts/import/${id}/receive`,
+  },
+
+  // ============================================================================
+  // DEPRECATED: Legacy rental imports routes (backward compatibility)
+  // ============================================================================
+  /**
+   * @deprecated Use EQUIPMENT_IMPORTS instead
+   */
+  RENTAL_IMPORTS: {
+    LIST: '/checkouts?view=inbound',
+    CREATE: '/checkouts/import/rental',
+    DETAIL: (id: string) => `/checkouts/import/${id}`,
+    RECEIVE: (id: string) => `/checkouts/import/${id}/receive`,
+  },
+
+  // ============================================================================
   // 인증
   // ============================================================================
   AUTH: {
