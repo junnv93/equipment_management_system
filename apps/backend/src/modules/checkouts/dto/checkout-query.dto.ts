@@ -14,6 +14,7 @@ export const checkoutQuerySchema = z.object({
   requesterId: z.string().uuid().optional(),
   approverId: z.string().uuid().optional(),
   teamId: z.string().uuid().optional(),
+  direction: z.enum(['outbound', 'inbound']).optional(),
   purpose: z
     .enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
       message: '유효하지 않은 반출 목적입니다.',
@@ -32,6 +33,7 @@ export const checkoutQuerySchema = z.object({
     (val) => (val ? Number(val) : undefined),
     z.number().int().min(1).max(100).optional()
   ),
+  includeSummary: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional()),
 });
 
 export type CheckoutQueryInput = z.infer<typeof checkoutQuerySchema>;
@@ -67,6 +69,14 @@ export class CheckoutQueryDto {
     required: false,
   })
   teamId?: string;
+
+  @ApiProperty({
+    description:
+      '방향 필터링 (teamId와 함께 사용). outbound=우리 팀 장비가 나가는 건, inbound=외부 장비가 들어오는 건',
+    enum: ['outbound', 'inbound'],
+    required: false,
+  })
+  direction?: 'outbound' | 'inbound';
 
   @ApiProperty({
     description: '반출 목적으로 필터링',
@@ -146,4 +156,12 @@ export class CheckoutQueryDto {
     required: false,
   })
   pageSize?: number;
+
+  @ApiProperty({
+    description: '요약 정보 포함 여부 (true 시 summary 필드 포함)',
+    example: false,
+    default: false,
+    required: false,
+  })
+  includeSummary?: boolean;
 }

@@ -12,6 +12,14 @@ export const returnCheckoutSchema = z.object({
   repairChecked: z.boolean().optional(),
   workingStatusChecked: z.boolean().optional(),
   inspectionNotes: z.string().optional(),
+  itemConditions: z
+    .array(
+      z.object({
+        equipmentId: z.string().uuid(),
+        conditionAfter: z.string().min(1),
+      })
+    )
+    .optional(),
 });
 
 export type ReturnCheckoutInput = z.infer<typeof returnCheckoutSchema>;
@@ -47,4 +55,20 @@ export class ReturnCheckoutDto {
     required: false,
   })
   inspectionNotes?: string;
+
+  @ApiProperty({
+    description: '장비별 반입 후 상태 기록',
+    example: [
+      {
+        equipmentId: '550e8400-e29b-41d4-a716-446655440000',
+        conditionAfter: '외관 양호, 정상 작동 확인',
+      },
+    ],
+    required: false,
+    type: 'array',
+  })
+  itemConditions?: Array<{
+    equipmentId: string;
+    conditionAfter: string;
+  }>;
 }

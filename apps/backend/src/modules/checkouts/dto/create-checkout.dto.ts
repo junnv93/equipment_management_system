@@ -22,6 +22,8 @@ export const createCheckoutSchema = z.object({
   reason: z.string().min(1, '반출 사유를 입력해주세요'),
   expectedReturnDate: z.string().datetime({ message: '유효한 날짜 형식이 아닙니다' }),
   notes: z.string().optional(),
+  lenderTeamId: z.string().uuid().optional(),
+  lenderSiteId: z.string().optional(),
 });
 
 export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
@@ -82,4 +84,18 @@ export class CreateCheckoutDto {
     required: false,
   })
   notes?: string;
+
+  @ApiProperty({
+    description: '외부 대여 시 빌려주는 팀 UUID',
+    example: '550e8400-e29b-41d4-a716-446655440010',
+    required: false,
+  })
+  lenderTeamId?: string;
+
+  @ApiProperty({
+    description: '외부 대여 시 빌려주는 사이트 ID',
+    example: 'pyeongtaek',
+    required: false,
+  })
+  lenderSiteId?: string;
 }

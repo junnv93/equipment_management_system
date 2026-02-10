@@ -33,6 +33,7 @@ import {
   ApproveReturnDto,
   StartCheckoutDto,
   CreateConditionCheckDto,
+  CheckoutResponseDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -51,7 +52,11 @@ export class CheckoutsController {
   @RequirePermissions(Permission.CREATE_CHECKOUT)
   @ApiOperation({ summary: '반출 신청', description: '장비 담당자만 반출을 신청할 수 있습니다.' })
   @ApiBody({ type: CreateCheckoutDto })
-  @ApiResponse({ status: HttpStatus.CREATED, description: '반출 신청 성공' })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: '반출 신청 성공',
+    type: CheckoutResponseDto,
+  })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
@@ -117,7 +122,8 @@ export class CheckoutsController {
     summary: '반출 목록 조회',
     description:
       '반출 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다. ' +
-      '시험소장(lab_manager)은 전체 조회, 나머지 역할은 소속 팀 기반으로 자동 필터링됩니다.',
+      '시험소장(lab_manager)은 전체 조회, 나머지 역할은 소속 팀 기반으로 자동 필터링됩니다. ' +
+      '?includeSummary=true 사용 시 요약 정보(total, pending, approved 등)도 함께 반환됩니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 목록 조회 성공' })
   async findAll(
@@ -134,7 +140,8 @@ export class CheckoutsController {
       query.teamId = req.user.teamId;
     }
 
-    return this.checkoutsService.findAll(query);
+    // ✅ 성능 최적화: includeSummary 파라미터를 서비스에 전달
+    return this.checkoutsService.findAll(query, query.includeSummary ?? false);
   }
 
   @Get(':uuid')
@@ -144,7 +151,7 @@ export class CheckoutsController {
     description: '특정 UUID를 가진 반출의 상세 정보를 조회합니다.',
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
-  @ApiResponse({ status: HttpStatus.OK, description: '반출 조회 성공' })
+  @ApiResponse({ status: HttpStatus.OK, description: '반출 조회 성공', type: CheckoutResponseDto })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{
     id: string;

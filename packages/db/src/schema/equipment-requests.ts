@@ -1,12 +1,4 @@
-import {
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  varchar,
-  index,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { pgEnum, pgTable, text, timestamp, varchar, index, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { users } from './users';
@@ -77,6 +69,7 @@ export type EquipmentRequest = typeof equipmentRequests.$inferSelect;
 export type NewEquipmentRequest = typeof equipmentRequests.$inferInsert;
 
 // Drizzle relations 설정
+// ⚠️ requester/approver 모두 users 테이블 참조 → relationName 필수 (Drizzle 다중 관계 규칙)
 export const equipmentRequestsRelations = relations(equipmentRequests, ({ one }) => ({
   equipment: one(equipment, {
     fields: [equipmentRequests.equipmentId],
@@ -85,9 +78,11 @@ export const equipmentRequestsRelations = relations(equipmentRequests, ({ one })
   requester: one(users, {
     fields: [equipmentRequests.requestedBy],
     references: [users.id],
+    relationName: 'equipmentRequestRequester',
   }),
   approver: one(users, {
     fields: [equipmentRequests.approvedBy],
     references: [users.id],
+    relationName: 'equipmentRequestApprover',
   }),
 }));

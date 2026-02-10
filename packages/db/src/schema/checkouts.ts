@@ -36,6 +36,7 @@ export const checkoutPurpose = [
   'calibration', // 교정
   'repair', // 수리
   'rental', // 외부 대여
+  'return_to_vendor', // 렌탈 반납
 ] as const;
 
 /**
