@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, and, isNull } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
@@ -64,7 +64,14 @@ export class ApprovalsService {
       },
     });
 
-    const userTeamId = user?.teamId;
+    // ✅ 사용자가 존재하지 않는 경우 명확한 에러 반환
+    if (!user) {
+      throw new NotFoundException(
+        `사용자를 찾을 수 없습니다 (userId: ${userId}). 세션이 만료되었거나 삭제된 계정입니다.`
+      );
+    }
+
+    const userTeamId = user.teamId;
     const isLabManager = userRole === 'lab_manager';
 
     // Parallel execution for efficiency

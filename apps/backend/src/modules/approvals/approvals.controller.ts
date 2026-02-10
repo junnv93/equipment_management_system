@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../types/auth';
 import { UserRole } from '@equipment-management/schemas';
@@ -43,8 +43,13 @@ export class ApprovalsController {
    */
   @Get('counts')
   async getCounts(@Req() req: AuthenticatedRequest): Promise<PendingCountsByCategory> {
-    const userId = req.user.userId;
-    const userRole = req.user.roles?.[0] as UserRole;
+    const userId = req.user?.userId;
+    const userRole = req.user?.roles?.[0] as UserRole;
+
+    // ✅ userId 검증: JWT Guard를 통과했지만 userId가 없는 경우 방어
+    if (!userId) {
+      throw new UnauthorizedException('인증 정보가 유효하지 않습니다. 다시 로그인해주세요.');
+    }
 
     return this.approvalsService.getPendingCountsByRole(userId, userRole);
   }
