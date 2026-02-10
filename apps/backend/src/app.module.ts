@@ -26,6 +26,8 @@ import { LoggerModule } from './common/logger/logger.module';
 import { MonitoringMiddleware } from './common/middleware/monitoring.middleware';
 import { HelmetConfigService } from './common/middleware/helmet-config';
 import { AuditModule } from './modules/audit/audit.module';
+import { EquipmentImportsModule } from './modules/equipment-imports/equipment-imports.module';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
 
 @Module({
   imports: [
@@ -60,6 +62,8 @@ import { AuditModule } from './modules/audit/audit.module';
     ReportsModule,
     MonitoringModule,
     DashboardModule,
+    EquipmentImportsModule, // Unified rental + internal shared imports
+    ApprovalsModule, // Unified approval counts API
   ],
   controllers: [],
   providers: [

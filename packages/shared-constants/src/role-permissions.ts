@@ -49,6 +49,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_SOFTWARE_CHANGE,
     // 폐기
     Permission.REQUEST_DISPOSAL,
+    // 장비 반입 (렌탈 + 내부 공용)
+    Permission.VIEW_EQUIPMENT_IMPORTS,
+    Permission.CREATE_EQUIPMENT_IMPORT,
   ],
 
   // 기술책임자: 장비 관리 및 승인 권한, 교정계획서 작성/검토요청
@@ -114,6 +117,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.REQUEST_DISPOSAL,
     Permission.REVIEW_DISPOSAL, // 검토 권한 (같은 팀)
     Permission.VIEW_DISPOSAL_REQUESTS,
+    // 장비 반입 (렌탈 + 내부 공용)
+    Permission.VIEW_EQUIPMENT_IMPORTS,
+    Permission.CREATE_EQUIPMENT_IMPORT,
+    Permission.APPROVE_EQUIPMENT_IMPORT,
+    Permission.COMPLETE_EQUIPMENT_IMPORT,
+    Permission.CANCEL_EQUIPMENT_IMPORT,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)

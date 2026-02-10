@@ -39,3 +39,18 @@ export { API_ENDPOINTS, type ApiEndpoints } from './api-endpoints';
 
 // 프론트엔드 라우트
 export { FRONTEND_ROUTES, type FrontendRoutes } from './frontend-routes';
+
+// 반출 목적별 장비 선택 가능성 규칙
+export {
+  CALIBRATION_REPAIR_ALLOWED_STATUSES,
+  RENTAL_ALLOWED_STATUSES,
+  PURPOSE_ALLOWED_STATUSES,
+  getAllowedStatusesForPurpose,
+  CHECKOUT_HIDDEN_STATUSES,
+  CHECKOUT_BLOCKED_REASONS,
+  getBlockedReason,
+  type EquipmentSelectability,
+} from './checkout-selectability';
+
+// 반출 목적 배지 스타일
+export { CHECKOUT_PURPOSE_STYLES, type CheckoutPurposeStyle } from './checkout-purpose-styles';

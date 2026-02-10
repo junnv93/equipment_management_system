@@ -1,0 +1,376 @@
+import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import type {
+  EquipmentImportSource,
+  EquipmentImportStatus,
+  Classification,
+} from '@equipment-management/schemas';
+
+/**
+ * ============================================================================
+ * Equipment Import API - Unified API for External Rental and Internal Shared
+ * ============================================================================
+ *
+ * This API client supports both import types through discriminated unions:
+ * - sourceType: 'rental' → External rental from vendors
+ * - sourceType: 'internal_shared' → Internal shared from departments (e.g., Safety Lab)
+ *
+ * Type safety is enforced through TypeScript discriminated unions and
+ * backend Zod validation with conditional field requirements.
+ */
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
+
+/**
+ * Base equipment import type (common fields)
+ */
+interface BaseEquipmentImport {
+  id: string;
+  requesterId: string;
+  site: string;
+  teamId: string;
+  equipmentName: string;
+  modelName: string | null;
+  manufacturer: string | null;
+  serialNumber: string | null;
+  description: string | null;
+  classification: Classification;
+  usagePeriodStart: string;
+  usagePeriodEnd: string;
+  reason: string;
+  status: EquipmentImportStatus;
+  approverId: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  receivedBy: string | null;
+  receivedAt: string | null;
+  receivingCondition: ReceivingCondition | null;
+  equipmentId: string | null;
+  returnCheckoutId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Rental import type (external vendor)
+ */
+export interface RentalImport extends BaseEquipmentImport {
+  sourceType: 'rental';
+  vendorName: string;
+  vendorContact: string | null;
+  externalIdentifier: string | null;
+  ownerDepartment: null;
+  internalContact: null;
+  borrowingJustification: null;
+}
+
+/**
+ * Internal shared import type (internal department)
+ */
+export interface InternalSharedImport extends BaseEquipmentImport {
+  sourceType: 'internal_shared';
+  vendorName: null;
+  vendorContact: null;
+  externalIdentifier: null;
+  ownerDepartment: string;
+  internalContact: string | null;
+  borrowingJustification: string | null;
+}
+
+/**
+ * Discriminated union of all import types
+ */
+export type EquipmentImport = RentalImport | InternalSharedImport;
+
+/**
+ * Receiving condition check (common for both types)
+ */
+export interface ReceivingCondition {
+  appearance: 'normal' | 'abnormal';
+  operation: 'normal' | 'abnormal';
+  accessories: 'complete' | 'incomplete';
+  notes?: string;
+}
+
+// ============================================================================
+// DTO Types (Create/Update)
+// ============================================================================
+
+/**
+ * Base create DTO (common fields)
+ */
+interface BaseCreateDto {
+  equipmentName: string;
+  modelName?: string;
+  manufacturer?: string;
+  serialNumber?: string;
+  description?: string;
+  classification: string;
+  usagePeriodStart: string;
+  usagePeriodEnd: string;
+  reason: string;
+}
+
+/**
+ * Create rental import DTO (requires vendor fields)
+ */
+export interface CreateRentalImportDto extends BaseCreateDto {
+  sourceType: 'rental';
+  vendorName: string;
+  vendorContact?: string;
+  externalIdentifier?: string;
+}
+
+/**
+ * Create internal shared import DTO (requires department fields)
+ */
+export interface CreateInternalSharedImportDto extends BaseCreateDto {
+  sourceType: 'internal_shared';
+  ownerDepartment: string;
+  internalContact?: string;
+  borrowingJustification?: string;
+}
+
+/**
+ * Discriminated union for create operations
+ */
+export type CreateEquipmentImportDto = CreateRentalImportDto | CreateInternalSharedImportDto;
+
+/**
+ * Receive equipment import DTO (common for both types)
+ */
+export interface ReceiveEquipmentImportDto {
+  receivingCondition: ReceivingCondition;
+  calibrationInfo?: {
+    calibrationMethod: string;
+    calibrationCycle?: number;
+    lastCalibrationDate?: string;
+    calibrationAgency?: string;
+  };
+}
+
+/**
+ * Query parameters for list endpoint
+ */
+export interface EquipmentImportQuery {
+  page?: number;
+  limit?: number;
+  sourceType?: EquipmentImportSource; // Filter by source type
+  status?: EquipmentImportStatus;
+  site?: string;
+  teamId?: string;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Paginated response format
+ */
+export interface EquipmentImportListResponse {
+  items: EquipmentImport[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+  };
+}
+
+// ============================================================================
+// API Client Methods
+// ============================================================================
+
+/**
+ * Equipment Import API Client
+ */
+class EquipmentImportApi {
+  /**
+   * Get list of equipment imports with optional filters
+   *
+   * @param query - Query parameters including sourceType filter
+   * @returns Paginated list of equipment imports
+   *
+   * @example
+   * // Get all imports
+   * const all = await equipmentImportApi.getList();
+   *
+   * // Get only rental imports
+   * const rentals = await equipmentImportApi.getList({ sourceType: 'rental' });
+   *
+   * // Get only internal shared imports
+   * const internal = await equipmentImportApi.getList({ sourceType: 'internal_shared' });
+   */
+  async getList(query?: EquipmentImportQuery): Promise<EquipmentImportListResponse> {
+    const params = new URLSearchParams();
+
+    if (query?.page) params.append('page', String(query.page));
+    if (query?.limit) params.append('limit', String(query.limit));
+    if (query?.sourceType) params.append('sourceType', query.sourceType);
+    if (query?.status) params.append('status', query.status);
+    if (query?.site) params.append('site', query.site);
+    if (query?.teamId) params.append('teamId', query.teamId);
+    if (query?.search) params.append('search', query.search);
+    if (query?.sortBy) params.append('sortBy', query.sortBy);
+    if (query?.sortOrder) params.append('sortOrder', query.sortOrder);
+
+    const queryString = params.toString();
+    const url = `${API_ENDPOINTS.EQUIPMENT_IMPORTS.LIST}${queryString ? `?${queryString}` : ''}`;
+    const response = await apiClient.get<EquipmentImportListResponse>(url);
+    return response.data;
+  }
+
+  /**
+   * Get a single equipment import by ID
+   *
+   * @param id - Equipment import UUID
+   * @returns Equipment import details (rental or internal shared)
+   */
+  async getOne(id: string): Promise<EquipmentImport> {
+    const response = await apiClient.get<EquipmentImport>(API_ENDPOINTS.EQUIPMENT_IMPORTS.GET(id));
+    return response.data;
+  }
+
+  /**
+   * Create a new equipment import
+   *
+   * Supports both rental and internal shared imports through discriminated union.
+   * The backend validates conditional fields based on sourceType.
+   *
+   * @param dto - Create DTO (rental or internal shared)
+   * @returns Created equipment import
+   *
+   * @example
+   * // Create rental import
+   * const rental = await equipmentImportApi.create({
+   *   sourceType: 'rental',
+   *   equipmentName: 'Test Equipment',
+   *   vendorName: 'ABC Rental',
+   *   classification: 'fcc_emc_rf',
+   *   usagePeriodStart: '2026-03-01T00:00:00Z',
+   *   usagePeriodEnd: '2026-06-01T00:00:00Z',
+   *   reason: 'For EMC testing',
+   * });
+   *
+   * // Create internal shared import
+   * const internal = await equipmentImportApi.create({
+   *   sourceType: 'internal_shared',
+   *   equipmentName: 'Spectrum Analyzer',
+   *   ownerDepartment: 'Safety Lab',
+   *   classification: 'fcc_emc_rf',
+   *   usagePeriodStart: '2026-03-01T00:00:00Z',
+   *   usagePeriodEnd: '2026-06-01T00:00:00Z',
+   *   reason: 'For special EMC testing',
+   * });
+   */
+  async create(dto: CreateEquipmentImportDto): Promise<EquipmentImport> {
+    const response = await apiClient.post<EquipmentImport>(
+      API_ENDPOINTS.EQUIPMENT_IMPORTS.CREATE,
+      dto
+    );
+    return response.data;
+  }
+
+  /**
+   * Approve an equipment import
+   *
+   * Approver is extracted from the authenticated session (backend).
+   * Works for both rental and internal shared imports.
+   *
+   * @param id - Equipment import UUID
+   * @param comment - Optional approval comment
+   * @returns Updated equipment import
+   */
+  async approve(id: string, comment?: string): Promise<EquipmentImport> {
+    const response = await apiClient.post<EquipmentImport>(
+      API_ENDPOINTS.EQUIPMENT_IMPORTS.APPROVE(id),
+      { comment }
+    );
+    return response.data;
+  }
+
+  /**
+   * Reject an equipment import
+   *
+   * Works for both rental and internal shared imports.
+   *
+   * @param id - Equipment import UUID
+   * @param reason - Rejection reason (required)
+   * @returns Updated equipment import
+   */
+  async reject(id: string, reason: string): Promise<EquipmentImport> {
+    const response = await apiClient.post<EquipmentImport>(
+      API_ENDPOINTS.EQUIPMENT_IMPORTS.REJECT(id),
+      { reason }
+    );
+    return response.data;
+  }
+
+  /**
+   * Receive equipment (auto-create equipment record)
+   *
+   * After receiving:
+   * - Rental imports: equipment.sharedSource = 'external'
+   * - Internal shared imports: equipment.sharedSource = 'internal_shared'
+   *
+   * Equipment owner is set to:
+   * - Rental: vendorName
+   * - Internal shared: ownerDepartment
+   *
+   * @param id - Equipment import UUID
+   * @param dto - Receiving condition and calibration info
+   * @returns Updated equipment import
+   */
+  async receive(id: string, dto: ReceiveEquipmentImportDto): Promise<EquipmentImport> {
+    const response = await apiClient.post<EquipmentImport>(
+      API_ENDPOINTS.EQUIPMENT_IMPORTS.RECEIVE(id),
+      dto
+    );
+    return response.data;
+  }
+
+  /**
+   * Initiate return process (create return checkout)
+   *
+   * Return destination is determined by sourceType:
+   * - Rental: vendorName
+   * - Internal shared: ownerDepartment
+   *
+   * @param id - Equipment import UUID
+   * @returns Created checkout ID for return tracking
+   */
+  async initiateReturn(id: string): Promise<{ checkoutId: string }> {
+    const response = await apiClient.post<{ checkoutId: string }>(
+      API_ENDPOINTS.EQUIPMENT_IMPORTS.INITIATE_RETURN(id)
+    );
+    return response.data;
+  }
+
+  /**
+   * Cancel an equipment import
+   *
+   * Only allowed for 'pending' status.
+   * Works for both rental and internal shared imports.
+   *
+   * @param id - Equipment import UUID
+   * @param reason - Cancellation reason (required)
+   * @returns Updated equipment import
+   */
+  async cancel(id: string, reason: string): Promise<EquipmentImport> {
+    const response = await apiClient.post<EquipmentImport>(
+      API_ENDPOINTS.EQUIPMENT_IMPORTS.CANCEL(id),
+      { reason }
+    );
+    return response.data;
+  }
+}
+
+// Export singleton instance
+const equipmentImportApi = new EquipmentImportApi();
+export default equipmentImportApi;
+
+// Re-export types for convenience
+export type { EquipmentImportSource, EquipmentImportStatus } from '@equipment-management/schemas';

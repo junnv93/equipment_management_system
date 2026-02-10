@@ -130,6 +130,39 @@ export enum Permission {
   REVIEW_DISPOSAL = 'review:disposal',
   APPROVE_DISPOSAL = 'approve:disposal',
   VIEW_DISPOSAL_REQUESTS = 'view:disposal:requests',
+
+  // ============================================================================
+  // 장비 반입 관련 권한 (렌탈 + 내부 공용 통합)
+  // ============================================================================
+  VIEW_EQUIPMENT_IMPORTS = 'view:equipment-imports',
+  CREATE_EQUIPMENT_IMPORT = 'create:equipment-import',
+  APPROVE_EQUIPMENT_IMPORT = 'approve:equipment-import',
+  COMPLETE_EQUIPMENT_IMPORT = 'complete:equipment-import',
+  CANCEL_EQUIPMENT_IMPORT = 'cancel:equipment-import',
+
+  // ============================================================================
+  // DEPRECATED: Legacy rental import permissions (backward compatibility)
+  // ============================================================================
+  /**
+   * @deprecated Use VIEW_EQUIPMENT_IMPORTS instead
+   */
+  VIEW_RENTAL_IMPORTS = 'view:equipment-imports',
+  /**
+   * @deprecated Use CREATE_EQUIPMENT_IMPORT instead
+   */
+  CREATE_RENTAL_IMPORT = 'create:equipment-import',
+  /**
+   * @deprecated Use APPROVE_EQUIPMENT_IMPORT instead
+   */
+  APPROVE_RENTAL_IMPORT = 'approve:equipment-import',
+  /**
+   * @deprecated Use COMPLETE_EQUIPMENT_IMPORT instead
+   */
+  COMPLETE_RENTAL_IMPORT = 'complete:equipment-import',
+  /**
+   * @deprecated Use CANCEL_EQUIPMENT_IMPORT instead
+   */
+  CANCEL_RENTAL_IMPORT = 'cancel:equipment-import',
 }
 
 /**
@@ -213,4 +246,13 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.REVIEW_DISPOSAL]: '폐기 검토',
   [Permission.APPROVE_DISPOSAL]: '폐기 승인',
   [Permission.VIEW_DISPOSAL_REQUESTS]: '폐기 요청 조회',
+
+  [Permission.VIEW_EQUIPMENT_IMPORTS]: '장비 반입 조회',
+  [Permission.CREATE_EQUIPMENT_IMPORT]: '장비 반입 신청',
+  [Permission.APPROVE_EQUIPMENT_IMPORT]: '장비 반입 승인',
+  [Permission.COMPLETE_EQUIPMENT_IMPORT]: '장비 반입 완료',
+  [Permission.CANCEL_EQUIPMENT_IMPORT]: '장비 반입 취소',
+
+  // Legacy labels omitted (same string values as new permissions)
+  // VIEW_RENTAL_IMPORTS, CREATE_RENTAL_IMPORT, etc. share strings with EQUIPMENT_IMPORTS
 };

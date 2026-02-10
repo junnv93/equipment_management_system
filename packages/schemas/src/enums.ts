@@ -351,6 +351,7 @@ export const CHECKOUT_PURPOSE_VALUES = [
   'calibration', // 교정
   'repair', // 수리
   'rental', // 대여
+  'return_to_vendor', // 렌탈 반납
 ] as const;
 
 export const CheckoutPurposeEnum = z.enum(
@@ -499,12 +500,14 @@ export type NonConformanceStatus = z.infer<typeof NonConformanceStatusEnum>;
  * SINGLE SOURCE OF TRUTH: 공용장비 출처 열거형
  *
  * 표준 값 (소문자 + 언더스코어):
- * - safety_lab: Safety Lab 등 사내 공용장비
- * - external: 외부 기관 보유 장비
+ * - safety_lab: Safety Lab 등 사내 공용장비 (legacy)
+ * - external: 외부 기관 보유 장비 (렌탈)
+ * - internal_shared: 내부 공용장비 (통합 반입 프로세스용)
  */
 export const SHARED_SOURCE_VALUES = [
-  'safety_lab', // Safety Lab 등 사내 공용장비
-  'external', // 외부 기관 보유 장비
+  'safety_lab', // Safety Lab 등 사내 공용장비 (legacy)
+  'external', // 외부 기관 보유 장비 (렌탈)
+  'internal_shared', // 내부 공용장비 (통합 반입 프로세스용)
 ] as const;
 
 export const SharedSourceEnum = z.enum(SHARED_SOURCE_VALUES as unknown as [string, ...string[]]);
@@ -634,6 +637,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'calibration', // 교정
   'checkout', // 반출
   'rental', // 대여
+  'rental_import', // 렌탈 반입
   'user', // 사용자
   'team', // 팀
   'calibration_factor', // 보정계수
@@ -955,6 +959,26 @@ export const EQUIPMENT_STATUS_FILTER_OPTIONS: EquipmentStatus[] = [
 ];
 
 /**
+ * UI 필터에 표시할 반출 상태 목록
+ * - 모든 주요 상태를 포함하되, 사용자가 필터링할 수 있는 상태만 포함
+ */
+export const CHECKOUT_STATUS_FILTER_OPTIONS: CheckoutStatus[] = [
+  'pending',
+  'approved',
+  'checked_out',
+  'returned',
+  'return_approved',
+  'overdue',
+  'rejected',
+  'canceled',
+  'lender_checked',
+  'borrower_received',
+  'in_use',
+  'borrower_returned',
+  'lender_received',
+];
+
+/**
  * 교정 방법 라벨 (UI 표시용)
  */
 export const CALIBRATION_METHOD_VALUES = CalibrationMethodEnum.options;
@@ -1002,6 +1026,7 @@ export const CHECKOUT_PURPOSE_LABELS: Record<CheckoutPurpose, string> = {
   calibration: '교정',
   repair: '수리',
   rental: '대여',
+  return_to_vendor: '렌탈 반납',
 };
 
 /**
@@ -1501,3 +1526,117 @@ export const DISPOSAL_REVIEW_STATUS_LABELS: Record<DisposalReviewStatus, string>
   approved: '승인 완료',
   rejected: '반려됨',
 };
+
+// ============================================================================
+// 장비 반입 관련 ENUM (렌탈 + 내부 공용 통합)
+// ============================================================================
+
+/**
+ * SINGLE SOURCE OF TRUTH: 장비 반입 출처 타입 열거형
+ *
+ * 장비 반입 시스템은 두 가지 출처를 지원합니다:
+ * - rental: 외부 렌탈 업체 (vendor 정보 필수)
+ * - internal_shared: 내부 공용장비 (ownerDepartment 정보 필수)
+ *
+ * 이 필드는 discriminator로 사용되어 조건부 validation을 제어합니다.
+ */
+export const EQUIPMENT_IMPORT_SOURCE_VALUES = [
+  'rental', // 외부 렌탈 업체
+  'internal_shared', // 내부 공용장비
+] as const;
+
+export const EquipmentImportSourceEnum = z.enum(
+  EQUIPMENT_IMPORT_SOURCE_VALUES as unknown as [string, ...string[]]
+);
+export type EquipmentImportSource = z.infer<typeof EquipmentImportSourceEnum>;
+
+/**
+ * 장비 반입 출처 라벨 (UI 표시용)
+ */
+export const EQUIPMENT_IMPORT_SOURCE_LABELS: Record<EquipmentImportSource, string> = {
+  rental: '외부 렌탈',
+  internal_shared: '내부 공용',
+};
+
+/**
+ * SINGLE SOURCE OF TRUTH: 장비 반입 상태 열거형
+ *
+ * 통합 반입 워크플로우 상태 (렌탈 + 내부 공용):
+ * - pending: 반입 신청 (승인 대기)
+ * - approved: 승인됨 (장비 도착 대기)
+ * - rejected: 거절됨
+ * - received: 수령 완료 (장비 자동 등록됨)
+ * - return_requested: 반납 진행 중 (checkout 생성됨)
+ * - returned: 반납 완료 (장비 비활성화)
+ * - canceled: 취소됨
+ */
+export const EQUIPMENT_IMPORT_STATUS_VALUES = [
+  'pending', // 반입 신청 (승인 대기)
+  'approved', // 승인됨 (장비 도착 대기)
+  'rejected', // 거절됨
+  'received', // 수령 완료 (장비 자동 등록됨)
+  'return_requested', // 반납 진행 중 (checkout 생성됨)
+  'returned', // 반납 완료 (장비 비활성화)
+  'canceled', // 취소됨
+] as const;
+
+export const EquipmentImportStatusEnum = z.enum(
+  EQUIPMENT_IMPORT_STATUS_VALUES as unknown as [string, ...string[]]
+);
+export type EquipmentImportStatus = z.infer<typeof EquipmentImportStatusEnum>;
+
+/**
+ * 장비 반입 상태 라벨 (UI 표시용)
+ */
+export const EQUIPMENT_IMPORT_STATUS_LABELS: Record<EquipmentImportStatus, string> = {
+  pending: '승인 대기',
+  approved: '승인됨',
+  rejected: '거절됨',
+  received: '수령 완료',
+  return_requested: '반납 진행 중',
+  returned: '반납 완료',
+  canceled: '취소됨',
+};
+
+/**
+ * 장비 반입 상태 값 객체 (dot-notation 접근용)
+ * @example EquipmentImportStatusValues.PENDING // 'pending'
+ */
+export const EquipmentImportStatusValues = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  RECEIVED: 'received',
+  RETURN_REQUESTED: 'return_requested',
+  RETURNED: 'returned',
+  CANCELED: 'canceled',
+} as const;
+
+// ============================================================================
+// DEPRECATED: Legacy rental import types (backward compatibility)
+// ============================================================================
+
+/**
+ * @deprecated Use EquipmentImportStatus instead
+ */
+export type RentalImportStatus = EquipmentImportStatus;
+
+/**
+ * @deprecated Use EquipmentImportStatusEnum instead
+ */
+export const RentalImportStatusEnum = EquipmentImportStatusEnum;
+
+/**
+ * @deprecated Use EQUIPMENT_IMPORT_STATUS_VALUES instead
+ */
+export const RENTAL_IMPORT_STATUS_VALUES = EQUIPMENT_IMPORT_STATUS_VALUES;
+
+/**
+ * @deprecated Use EQUIPMENT_IMPORT_STATUS_LABELS instead
+ */
+export const RENTAL_IMPORT_STATUS_LABELS = EQUIPMENT_IMPORT_STATUS_LABELS;
+
+/**
+ * @deprecated Use EquipmentImportStatusValues instead
+ */
+export const RentalImportStatusValues = EquipmentImportStatusValues;

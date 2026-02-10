@@ -14,6 +14,7 @@ export * from './calibration-plans';
 export * from './repair-history';
 export * from './audit-logs';
 export * from './disposal-requests';
+export * from './equipment-imports'; // Unified rental + internal shared imports (includes legacy rental-imports aliases)
 
 // 장비 이력 스키마
 export * from './equipment-location-history';

@@ -233,17 +233,48 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
-  // 렌탈 반입 관리
+  // 장비 반입 관리 (렌탈 + 내부 공용 통합)
   // ============================================================================
+  EQUIPMENT_IMPORTS: {
+    LIST: '/api/equipment-imports',
+    GET: (id: string) => `/api/equipment-imports/${id}`,
+    CREATE: '/api/equipment-imports',
+    APPROVE: (id: string) => `/api/equipment-imports/${id}/approve`,
+    REJECT: (id: string) => `/api/equipment-imports/${id}/reject`,
+    RECEIVE: (id: string) => `/api/equipment-imports/${id}/receive`,
+    INITIATE_RETURN: (id: string) => `/api/equipment-imports/${id}/initiate-return`,
+    CANCEL: (id: string) => `/api/equipment-imports/${id}/cancel`,
+  },
+
+  // ============================================================================
+  // 승인 관리 통합 API
+  // ============================================================================
+  /**
+   * 통합 승인 카운트 API
+   *
+   * 모든 승인 카테고리의 대기 개수를 한 번에 조회
+   * 기존 13개 별도 API 호출을 1개로 통합하여 성능 향상
+   */
+  APPROVALS: {
+    COUNTS: '/api/approvals/counts',
+  },
+
+  // ============================================================================
+  // DEPRECATED: Legacy rental imports (proxy to EQUIPMENT_IMPORTS)
+  // ============================================================================
+  /**
+   * @deprecated Use EQUIPMENT_IMPORTS instead
+   * Legacy endpoints for backward compatibility
+   */
   RENTAL_IMPORTS: {
-    LIST: '/api/rental-imports',
-    GET: (id: string) => `/api/rental-imports/${id}`,
-    CREATE: '/api/rental-imports',
-    APPROVE: (id: string) => `/api/rental-imports/${id}/approve`,
-    REJECT: (id: string) => `/api/rental-imports/${id}/reject`,
-    RECEIVE: (id: string) => `/api/rental-imports/${id}/receive`,
-    INITIATE_RETURN: (id: string) => `/api/rental-imports/${id}/initiate-return`,
-    CANCEL: (id: string) => `/api/rental-imports/${id}/cancel`,
+    LIST: '/api/equipment-imports?sourceType=rental',
+    GET: (id: string) => `/api/equipment-imports/${id}`,
+    CREATE: '/api/equipment-imports',
+    APPROVE: (id: string) => `/api/equipment-imports/${id}/approve`,
+    REJECT: (id: string) => `/api/equipment-imports/${id}/reject`,
+    RECEIVE: (id: string) => `/api/equipment-imports/${id}/receive`,
+    INITIATE_RETURN: (id: string) => `/api/equipment-imports/${id}/initiate-return`,
+    CANCEL: (id: string) => `/api/equipment-imports/${id}/cancel`,
   },
 } as const;
 
