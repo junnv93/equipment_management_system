@@ -1,8 +1,10 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { authOptions } from '@/lib/auth';
-import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 import type { UserRole } from '@equipment-management/schemas';
+import { APPROVAL_ROLES } from '@equipment-management/shared-constants';
+import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 
 /**
  * 승인 관리 통합 페이지 (Server Component)
@@ -13,6 +15,12 @@ import type { UserRole } from '@equipment-management/schemas';
  *
  * @see docs/development/FRONTEND_UI_PROMPTS(UI-3: 승인 관리 통합 페이지_수정O).md
  */
+
+// ✅ Next.js 16: Static Metadata Export
+export const metadata: Metadata = {
+  title: '승인 관리 | 장비 관리 시스템',
+  description: '장비, 교정, 반출 등 각종 승인 요청을 통합 관리합니다',
+};
 export default async function ApprovalsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
@@ -31,14 +39,8 @@ export default async function ApprovalsPage(props: {
   const userId = session.user.id;
   const userTeamId = session.user.teamId;
 
-  // 승인 권한이 없는 역할은 대시보드로 리다이렉트
-  const rolesWithApprovalAccess: UserRole[] = [
-    'technical_manager',
-    'quality_manager',
-    'lab_manager',
-  ];
-
-  if (!rolesWithApprovalAccess.includes(userRole)) {
+  // 승인 권한이 없는 역할은 대시보드로 리다이렉트 (SSOT: APPROVAL_ROLES)
+  if (!APPROVAL_ROLES.includes(userRole)) {
     redirect('/dashboard');
   }
 
