@@ -1,6 +1,7 @@
 import { pgTable, varchar, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
+import { teams } from './teams';
 
 // 사용자 역할 정의 (UL-QP-18 절차서 영문 명칭 기준)
 export const userRoles = [
@@ -35,6 +36,10 @@ export const users = pgTable('users', {
 });
 
 // 관계 정의
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [users.teamId],
+    references: [teams.id],
+  }),
   managedEquipments: many(equipment),
 }));

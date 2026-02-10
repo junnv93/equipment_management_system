@@ -60,5 +60,14 @@ export interface FrontendPaginatedResponse<T> {
       currentPage: number;
       totalPages: number;
     };
+    /** 선택적 요약 정보 (특정 리소스에서 제공) */
+    summary?: {
+      total: number;
+      pending: number;
+      approved: number;
+      overdue: number;
+      returnedToday: number;
+      [key: string]: number; // 확장 가능
+    };
   };
 }

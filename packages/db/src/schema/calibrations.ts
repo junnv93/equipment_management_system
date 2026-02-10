@@ -2,6 +2,7 @@ import { pgTable, varchar, timestamp, text, decimal, uuid, date } from 'drizzle-
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { teams } from './teams';
+import { users } from './users';
 
 // 교정 상태 정의
 export const calibrationStatus = [
@@ -68,5 +69,15 @@ export const calibrationsRelations = relations(calibrations, ({ one }) => ({
   equipment: one(equipment, {
     fields: [calibrations.equipmentId],
     references: [equipment.id],
+  }),
+  registeredByUser: one(users, {
+    fields: [calibrations.registeredBy],
+    references: [users.id],
+    relationName: 'calibration_registered_by',
+  }),
+  approvedByUser: one(users, {
+    fields: [calibrations.approvedBy],
+    references: [users.id],
+    relationName: 'calibration_approved_by',
   }),
 }));

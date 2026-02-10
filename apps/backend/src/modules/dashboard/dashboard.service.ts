@@ -335,15 +335,35 @@ export class DashboardService {
    */
   async getPendingApprovalCounts(
     _userId: string,
-    _userRole: UserRole,
-    _teamId?: string,
+    userRole: UserRole,
+    teamId?: string,
     _site?: string
   ): Promise<PendingApprovalCountsDto> {
-    // 장비 승인 대기
-    const [equipmentCount] = await this.db
-      .select({ count: count() })
-      .from(schema.equipment)
-      .where(eq(schema.equipment.approvalStatus, 'pending_approval'));
+    // 장비 승인 대기 (equipmentRequests 테이블 조회 + 팀 필터링)
+    const isLabManager = userRole === 'lab_manager';
+    let equipmentCountResult: { count: number }[];
+
+    if (teamId && !isLabManager) {
+      // technical_manager: 같은 팀 요청자의 승인 대기만 조회
+      equipmentCountResult = await this.db
+        .select({ count: count() })
+        .from(schema.equipmentRequests)
+        .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
+        .where(
+          and(
+            eq(schema.equipmentRequests.approvalStatus, 'pending_approval'),
+            eq(schema.users.teamId, teamId)
+          )
+        );
+    } else {
+      // lab_manager 또는 teamId 없음: 전체 조회
+      equipmentCountResult = await this.db
+        .select({ count: count() })
+        .from(schema.equipmentRequests)
+        .where(eq(schema.equipmentRequests.approvalStatus, 'pending_approval'));
+    }
+
+    const [equipmentCount] = equipmentCountResult;
 
     // 교정 승인 대기 (calibrations 테이블 조회 - 추후 approvalStatus 컬럼 추가 필요)
     const calibration = 0;

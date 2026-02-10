@@ -29,6 +29,9 @@ export class FormDataParserInterceptor implements NestInterceptor {
         'nextCalibrationDate',
         'purchaseDate',
         'intermediateCheckSchedule',
+        'lastIntermediateCheckDate',
+        'nextIntermediateCheckDate',
+        'installationDate',
       ];
 
       for (const field of dateFields) {
@@ -41,7 +44,8 @@ export class FormDataParserInterceptor implements NestInterceptor {
       }
 
       // 숫자 필드 처리
-      const numberFields = ['calibrationCycle', 'purchaseYear', 'price', 'teamId'];
+      // ⚠️ teamId는 UUID 문자열이므로 숫자 변환 대상에서 제외
+      const numberFields = ['calibrationCycle', 'purchaseYear', 'price', 'intermediateCheckCycle'];
 
       for (const field of numberFields) {
         if (request.body[field] && typeof request.body[field] === 'string') {

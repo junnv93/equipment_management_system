@@ -663,11 +663,9 @@ export class EquipmentController {
         };
       }
   > {
-    // 공용장비 수정 차단
+    // ✅ 공용장비도 수정 가능하도록 isShared 체크 제거
+    // (렌탈 장비는 수령 후 교정 정보 업데이트 필요)
     const existingEquipment = await this.equipmentService.findOne(uuid);
-    if (existingEquipment.isShared) {
-      throw new ForbiddenException('공용장비는 수정할 수 없습니다.');
-    }
 
     const userRoles = req?.user?.roles ?? [];
     const userId = req?.user?.userId ?? req?.user?.id ?? '';
@@ -1038,7 +1036,8 @@ export class EquipmentController {
   > {
     const userRoles = req.user?.roles || [];
     const userSite = req.user?.site;
-    return this.approvalService.findPendingRequests(userRoles, userSite);
+    const userTeamId = req.user?.teamId;
+    return this.approvalService.findPendingRequests(userRoles, userSite, userTeamId);
   }
 
   @Get('requests/:requestUuid')

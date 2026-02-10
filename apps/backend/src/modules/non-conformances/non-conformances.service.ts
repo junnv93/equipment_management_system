@@ -76,10 +76,31 @@ export class NonConformancesService {
   }
 
   /**
-   * 부적합 목록 조회 (필터: equipmentId, status)
+   * 부적합 목록 조회 (필터: equipmentId, status) - with team relations
    */
   async findAll(query: NonConformanceQueryDto): Promise<{
-    items: NonConformance[];
+    items: Array<
+      NonConformance & {
+        discoverer?: {
+          id: string;
+          name: string;
+          email: string;
+          team: { id: string; name: string } | null;
+        } | null;
+        corrector?: {
+          id: string;
+          name: string;
+          email: string;
+          team: { id: string; name: string } | null;
+        } | null;
+        closer?: {
+          id: string;
+          name: string;
+          email: string;
+          team: { id: string; name: string } | null;
+        } | null;
+      }
+    >;
     meta: {
       totalItems: number;
       itemCount: number;
@@ -97,43 +118,103 @@ export class NonConformancesService {
       pageSize = 20,
     } = query;
 
-    // 조건 구성
-    const conditions: SQL[] = [isNull(nonConformances.deletedAt)];
+    // Use Drizzle relational query to include user→team relations
+    const items = await this.db.query.nonConformances.findMany({
+      where: (nc, { eq: eqFn, isNull: isNullFn, like: likeFn, and: andFn }) => {
+        const conditions = [isNullFn(nc.deletedAt)];
 
+        if (equipmentId) {
+          conditions.push(eqFn(nc.equipmentId, equipmentId));
+        }
+
+        if (status) {
+          conditions.push(eqFn(nc.status, status));
+        }
+
+        if (search) {
+          conditions.push(likeFn(nc.cause, `%${search}%`));
+        }
+
+        return andFn(...conditions);
+      },
+      with: {
+        equipment: {
+          columns: {
+            id: true,
+            name: true,
+            managementNumber: true,
+          },
+        },
+        discoverer: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+          with: {
+            team: true, // ← Critical: includes team relation
+          },
+        },
+        corrector: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+          with: {
+            team: true, // ← Critical: includes team relation
+          },
+        },
+        closer: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+          with: {
+            team: true, // ← Critical: includes team relation
+          },
+        },
+      },
+      orderBy: (nc, { desc: descFn, asc: ascFn }) => {
+        const [sortField, sortDirection] = sort.split('.');
+        const isAsc = sortDirection === 'asc';
+
+        switch (sortField) {
+          case 'discoveryDate':
+            return isAsc ? [ascFn(nc.discoveryDate)] : [descFn(nc.discoveryDate)];
+          case 'status':
+            return isAsc ? [ascFn(nc.status)] : [descFn(nc.status)];
+          case 'createdAt':
+            return isAsc ? [ascFn(nc.createdAt)] : [descFn(nc.createdAt)];
+          case 'updatedAt':
+            return isAsc ? [ascFn(nc.updatedAt)] : [descFn(nc.updatedAt)];
+          default:
+            return [descFn(nc.discoveryDate)];
+        }
+      },
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
+
+    // Get total count for pagination
+    const conditions: SQL[] = [isNull(nonConformances.deletedAt)];
     if (equipmentId) {
       conditions.push(eq(nonConformances.equipmentId, equipmentId));
     }
-
     if (status) {
       conditions.push(eq(nonConformances.status, status));
     }
-
     if (search) {
       conditions.push(like(nonConformances.cause, `%${search}%`));
     }
 
-    // 정렬 처리
-    const [sortField, sortDirection] = sort.split('.');
-    const sortColumn = this.getSortColumn(sortField);
-    const orderBy = sortDirection === 'asc' ? asc(sortColumn) : desc(sortColumn);
-
-    // 전체 개수 조회
     const allItems = await this.db
       .select()
       .from(nonConformances)
       .where(and(...conditions));
 
     const totalItems = allItems.length;
-
-    // 페이지네이션 적용 조회
-    const offset = (page - 1) * pageSize;
-    const items = await this.db
-      .select()
-      .from(nonConformances)
-      .where(and(...conditions))
-      .orderBy(orderBy)
-      .limit(pageSize)
-      .offset(offset);
 
     return {
       items,

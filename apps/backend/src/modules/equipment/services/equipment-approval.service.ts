@@ -221,12 +221,15 @@ export class EquipmentApprovalService {
   /**
    * 승인 대기 요청 목록 조회
    */
-  async findPendingRequests(userRoles: string[], _userSite?: string): Promise<EquipmentRequest[]> {
+  async findPendingRequests(
+    userRoles: string[],
+    _userSite?: string,
+    userTeamId?: string
+  ): Promise<EquipmentRequest[]> {
     try {
       // 기술책임자 또는 관리자만 승인 대기 목록 조회 가능
-      const canViewAll =
-        userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
-        userRoles.includes(UserRoleValues.LAB_MANAGER);
+      const isLabManager = userRoles.includes(UserRoleValues.LAB_MANAGER);
+      const canViewAll = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) || isLabManager;
 
       if (!canViewAll) {
         throw new ForbiddenException('승인 대기 목록을 조회할 권한이 없습니다.');
@@ -236,10 +239,22 @@ export class EquipmentApprovalService {
         where: eq(equipmentRequests.approvalStatus, 'pending_approval'),
         orderBy: [desc(equipmentRequests.requestedAt)],
         with: {
-          requester: true,
+          requester: {
+            with: {
+              team: true,
+            },
+          },
           equipment: true,
         },
       });
+
+      // technical_manager: 같은 팀 요청자의 대기 건만 반환
+      if (!isLabManager && userTeamId) {
+        return requests.filter((r) => {
+          const requester = (r as EquipmentRequest & { requester?: UserSelect | null }).requester;
+          return requester?.teamId === userTeamId;
+        });
+      }
 
       return requests;
     } catch (error) {
@@ -276,10 +291,15 @@ export class EquipmentApprovalService {
         throw new NotFoundException('요청을 찾을 수 없습니다.');
       }
 
-      // 첨부 파일 조회
-      const attachments = await this.db.query.equipmentAttachments.findMany({
-        where: eq(equipmentAttachments.requestId, request.id),
-      });
+      // 첨부 파일 조회 (테이블 미생성 시에도 승인 플로우 차단 방지)
+      let attachments: EquipmentAttachment[] = [];
+      try {
+        attachments = await this.db.query.equipmentAttachments.findMany({
+          where: eq(equipmentAttachments.requestId, request.id),
+        });
+      } catch (attachmentError) {
+        this.logger.warn(`첨부 파일 조회 실패 (승인 플로우에 영향 없음): ${attachmentError}`);
+      }
 
       return {
         ...request,

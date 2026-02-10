@@ -942,6 +942,9 @@ export class DisposalService {
             email: true,
             role: true,
           },
+          with: {
+            team: true, // ← Critical: includes team relation
+          },
         },
       },
       orderBy: (disposalRequests, { desc }) => [desc(disposalRequests.requestedAt)],
@@ -971,6 +974,9 @@ export class DisposalService {
             email: true,
             role: true,
           },
+          with: {
+            team: true, // ← Critical: includes team relation
+          },
         },
         reviewer: {
           columns: {
@@ -978,6 +984,9 @@ export class DisposalService {
             name: true,
             email: true,
             role: true,
+          },
+          with: {
+            team: true, // ← Critical: includes team relation
           },
         },
       },
