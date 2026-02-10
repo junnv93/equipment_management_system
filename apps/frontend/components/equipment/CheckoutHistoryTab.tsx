@@ -38,10 +38,12 @@ import {
 import { Plus, FileOutput, Calendar, ArrowRight, User } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { type CreateCheckoutDto, type Checkout } from '@/lib/api/checkout-api';
-import dayjs from 'dayjs';
+import { addDays } from 'date-fns';
+import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 
 // 반출 신청 스키마
 const checkoutSchema = z.object({
@@ -66,28 +68,6 @@ const PURPOSE_LABELS: Record<string, string> = {
   rental: '외부 대여',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: '승인 대기',
-  approved: '승인됨',
-  rejected: '반려됨',
-  checked_out: '반출 중',
-  returned: '반입 검사 중',
-  return_approved: '반입 완료',
-  overdue: '연체',
-  canceled: '취소됨',
-};
-
-const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  pending: 'outline',
-  approved: 'default',
-  rejected: 'destructive',
-  checked_out: 'secondary',
-  returned: 'secondary',
-  return_approved: 'default',
-  overdue: 'destructive',
-  canceled: 'outline',
-};
-
 /**
  * 반출 이력 탭 - 테이블 + 타임라인 UI
  *
@@ -108,7 +88,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       destination: '',
       purpose: undefined,
       reason: '',
-      expectedReturnDate: dayjs().add(7, 'day').format('YYYY-MM-DD'),
+      expectedReturnDate: formatDate(addDays(new Date(), 7), 'yyyy-MM-dd'),
       phoneNumber: '',
       address: '',
       notes: '',
@@ -135,7 +115,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         destination: '',
         purpose: undefined,
         reason: '',
-        expectedReturnDate: dayjs().add(7, 'day').format('YYYY-MM-DD'),
+        expectedReturnDate: formatDate(addDays(new Date(), 7), 'yyyy-MM-dd'),
         phoneNumber: '',
         address: '',
         notes: '',
@@ -469,9 +449,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                             <Badge variant="outline" className="text-xs">
                               {PURPOSE_LABELS[checkout.purpose] || checkout.purpose}
                             </Badge>
-                            <Badge variant={STATUS_VARIANTS[checkout.status] || 'outline'}>
-                              {STATUS_LABELS[checkout.status] || checkout.status}
-                            </Badge>
+                            <CheckoutStatusBadge status={checkout.status} />
                           </div>
                           <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
                             {checkout.destination || checkout.location}
@@ -491,20 +469,20 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                         {checkout.checkoutDate && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            <span>반출: {dayjs(checkout.checkoutDate).format('YYYY-MM-DD')}</span>
+                            <span>반출: {formatDate(checkout.checkoutDate, 'yyyy-MM-dd')}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-1">
                           <ArrowRight className="h-4 w-4" />
                           <span>
-                            반입 예정: {dayjs(checkout.expectedReturnDate).format('YYYY-MM-DD')}
+                            반입 예정: {formatDate(checkout.expectedReturnDate, 'yyyy-MM-dd')}
                           </span>
                         </div>
                         {checkout.actualReturnDate && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
                             <span>
-                              실제 반입: {dayjs(checkout.actualReturnDate).format('YYYY-MM-DD')}
+                              실제 반입: {formatDate(checkout.actualReturnDate, 'yyyy-MM-dd')}
                             </span>
                           </div>
                         )}

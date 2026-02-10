@@ -49,7 +49,8 @@ import calibrationApi, {
   type CreateCalibrationDto,
   type Calibration,
 } from '@/lib/api/calibration-api';
-import dayjs from 'dayjs';
+import { addMonths } from 'date-fns';
+import { formatDate, toDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -111,8 +112,8 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
   const form = useForm<CalibrationFormData>({
     resolver: zodResolver(calibrationSchema),
     defaultValues: {
-      calibrationDate: dayjs().format('YYYY-MM-DD'),
-      nextCalibrationDate: dayjs().add(12, 'month').format('YYYY-MM-DD'),
+      calibrationDate: formatDate(new Date(), 'yyyy-MM-dd'),
+      nextCalibrationDate: formatDate(addMonths(new Date(), 12), 'yyyy-MM-dd'),
       calibrationAgency: '',
       certificateNumber: '',
       calibrationCycle: 12,
@@ -181,8 +182,8 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
       setIsDialogOpen(false);
       setCertificateFile(null);
       form.reset({
-        calibrationDate: dayjs().format('YYYY-MM-DD'),
-        nextCalibrationDate: dayjs().add(12, 'month').format('YYYY-MM-DD'),
+        calibrationDate: formatDate(new Date(), 'yyyy-MM-dd'),
+        nextCalibrationDate: formatDate(addMonths(new Date(), 12), 'yyyy-MM-dd'),
         calibrationAgency: '',
         certificateNumber: '',
         calibrationCycle: 12,
@@ -209,7 +210,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
   // 교정일 변경 시 다음 교정일 자동 계산
   const handleCalibrationDateChange = (date: string) => {
     const currentCycle = form.getValues('calibrationCycle') || 12;
-    const nextDate = dayjs(date).add(currentCycle, 'month').format('YYYY-MM-DD');
+    const nextDate = formatDate(addMonths(toDate(date) ?? new Date(), currentCycle), 'yyyy-MM-dd');
     form.setValue('nextCalibrationDate', nextDate);
   };
 
@@ -217,7 +218,10 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
   const handleCycleChange = (cycle: number) => {
     const currentDate = form.getValues('calibrationDate');
     if (currentDate) {
-      const nextDate = dayjs(currentDate).add(cycle, 'month').format('YYYY-MM-DD');
+      const nextDate = formatDate(
+        addMonths(toDate(currentDate) ?? new Date(), cycle),
+        'yyyy-MM-dd'
+      );
       form.setValue('nextCalibrationDate', nextDate);
     }
   };
@@ -461,8 +465,8 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
           <TableBody>
             {calibrations.map((cal: Calibration) => (
               <TableRow key={cal.id}>
-                <TableCell>{dayjs(cal.calibrationDate).format('YYYY-MM-DD')}</TableCell>
-                <TableCell>{dayjs(cal.nextCalibrationDate).format('YYYY-MM-DD')}</TableCell>
+                <TableCell>{formatDate(cal.calibrationDate, 'yyyy-MM-dd')}</TableCell>
+                <TableCell>{formatDate(cal.nextCalibrationDate, 'yyyy-MM-dd')}</TableCell>
                 <TableCell>{cal.calibrationAgency}</TableCell>
                 <TableCell>
                   <Badge

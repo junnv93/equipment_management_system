@@ -34,7 +34,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, MapPin } from 'lucide-react';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import type { LocationHistoryItem, CreateLocationHistoryInput } from '@/lib/api/equipment-api';
 
 const locationHistorySchema = z.object({
@@ -66,7 +66,7 @@ export function LocationHistorySection({
   const form = useForm<z.infer<typeof locationHistorySchema>>({
     resolver: zodResolver(locationHistorySchema),
     defaultValues: {
-      changedAt: dayjs().format('YYYY-MM-DD'),
+      changedAt: formatDate(new Date(), 'yyyy-MM-dd'),
       newLocation: '',
       notes: '',
     },
@@ -120,7 +120,13 @@ export function LocationHistorySection({
                 <DialogDescription>장비의 위치 변동 정보를 입력하세요.</DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.stopPropagation(); // 부모 폼으로 이벤트 버블링 방지
+                    form.handleSubmit(handleSubmit)(e);
+                  }}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="changedAt"
@@ -195,7 +201,7 @@ export function LocationHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{dayjs(item.changedAt).format('YYYY-MM-DD')}</TableCell>
+                  <TableCell>{formatDate(item.changedAt, 'yyyy-MM-dd')}</TableCell>
                   <TableCell>{item.newLocation}</TableCell>
                   <TableCell className="text-muted-foreground">{item.notes || '-'}</TableCell>
                   <TableCell>

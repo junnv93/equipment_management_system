@@ -85,7 +85,7 @@ export function EquipmentHeader({
    * - 공용장비(isShared)는 삭제 불가
    * - 승인 전(pending_approval) 또는 반려(rejected) 상태만 삭제 가능
    */
-  const canEdit = !equipment.isShared && equipment.status !== 'retired';
+  const canEdit = equipment.status !== 'retired'; // ✅ isShared 제약 제거 - 공용장비도 수정 가능
   const canDelete =
     hasRole(['lab_manager', 'system_admin']) &&
     !equipment.isShared &&

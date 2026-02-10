@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
-import dayjs from 'dayjs';
+import { differenceInDays, isBefore } from 'date-fns';
+import { toDate, formatDate } from '@/lib/utils/date';
 
 interface UsagePeriodBadgeProps {
   startDate: string | Date;
@@ -24,16 +25,18 @@ interface UsagePeriodBadgeProps {
  * />
  */
 export function UsagePeriodBadge({ startDate, endDate, className }: UsagePeriodBadgeProps) {
-  const now = dayjs();
-  const start = dayjs(startDate);
-  const end = dayjs(endDate);
-  const daysRemaining = end.diff(now, 'days');
+  const now = new Date();
+  const start = toDate(startDate);
+  const end = toDate(endDate);
+  if (!start || !end) return null;
+
+  const daysRemaining = differenceInDays(end, now);
 
   // 사용 시작 전
-  if (now.isBefore(start)) {
+  if (isBefore(now, start)) {
     return (
       <Badge variant="outline" className={className} aria-label="사용 시작 전">
-        시작 예정: {start.format('MM/DD')}
+        시작 예정: {formatDate(start, 'MM/dd')}
       </Badge>
     );
   }

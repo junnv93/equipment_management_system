@@ -31,7 +31,7 @@ import {
 import { Plus, Wrench, Calendar, User } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateMaintenanceHistoryInput } from '@/lib/api/equipment-api';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -61,7 +61,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   const form = useForm<MaintenanceHistoryFormData>({
     resolver: zodResolver(maintenanceHistorySchema),
     defaultValues: {
-      performedAt: dayjs().format('YYYY-MM-DD'),
+      performedAt: formatDate(new Date(), 'yyyy-MM-dd'),
       content: '',
     },
   });
@@ -84,7 +84,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
       queryClient.invalidateQueries({ queryKey: ['maintenance-history', equipmentId] });
       setIsDialogOpen(false);
       form.reset({
-        performedAt: dayjs().format('YYYY-MM-DD'),
+        performedAt: formatDate(new Date(), 'yyyy-MM-dd'),
         content: '',
       });
       toast({
@@ -280,7 +280,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            <span>{dayjs(item.performedAt).format('YYYY-MM-DD')}</span>
+                            <span>{formatDate(item.performedAt, 'yyyy-MM-dd')}</span>
                           </div>
                           <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
                             {item.content}

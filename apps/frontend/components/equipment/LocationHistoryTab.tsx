@@ -31,7 +31,7 @@ import {
 import { Plus, MapPin, Calendar, User, FileText } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipment-api';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
@@ -77,7 +77,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   const form = useForm<LocationHistoryFormData>({
     resolver: zodResolver(locationHistorySchema),
     defaultValues: {
-      changedAt: dayjs().format('YYYY-MM-DD'),
+      changedAt: formatDate(new Date(), 'yyyy-MM-dd'),
       newLocation: '',
       notes: '',
     },
@@ -101,7 +101,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       queryClient.invalidateQueries({ queryKey: ['location-history', equipmentId] });
       setIsDialogOpen(false);
       form.reset({
-        changedAt: dayjs().format('YYYY-MM-DD'),
+        changedAt: formatDate(new Date(), 'yyyy-MM-dd'),
         newLocation: '',
         notes: '',
       });
@@ -338,7 +338,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Calendar className="h-4 w-4" />
-                            <span>{dayjs(item.changedAt).format('YYYY-MM-DD')}</span>
+                            <span>{formatDate(item.changedAt, 'yyyy-MM-dd')}</span>
                           </div>
                           <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
                             {item.newLocation}

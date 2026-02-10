@@ -34,7 +34,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Wrench } from 'lucide-react';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import type {
   MaintenanceHistoryItem,
   CreateMaintenanceHistoryInput,
@@ -68,7 +68,7 @@ export function MaintenanceHistorySection({
   const form = useForm<z.infer<typeof maintenanceHistorySchema>>({
     resolver: zodResolver(maintenanceHistorySchema),
     defaultValues: {
-      performedAt: dayjs().format('YYYY-MM-DD'),
+      performedAt: formatDate(new Date(), 'yyyy-MM-dd'),
       content: '',
     },
   });
@@ -120,7 +120,13 @@ export function MaintenanceHistorySection({
                 <DialogDescription>유지보수 수행 정보를 입력하세요.</DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.stopPropagation(); // 부모 폼으로 이벤트 버블링 방지
+                    form.handleSubmit(handleSubmit)(e);
+                  }}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="performedAt"
@@ -183,7 +189,7 @@ export function MaintenanceHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{dayjs(item.performedAt).format('YYYY-MM-DD')}</TableCell>
+                  <TableCell>{formatDate(item.performedAt, 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="max-w-[300px] truncate">{item.content}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.performedByName || '-'}

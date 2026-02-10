@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { notFound } from 'next/navigation';
 import teamsApi from '@/lib/api/teams-api';
 import { isNotFoundError } from '@/lib/api/error';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { TeamDetail } from './TeamDetail';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +22,8 @@ interface TeamDetailWrapperProps {
  * TeamDetail 컴포넌트에 전달
  */
 export function TeamDetailWrapper({ teamId }: TeamDetailWrapperProps) {
+  const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
+
   const {
     data: team,
     isLoading,
@@ -34,6 +38,19 @@ export function TeamDetailWrapper({ teamId }: TeamDetailWrapperProps) {
       return failureCount < 3;
     },
   });
+
+  // 브레드크럼 동적 라벨 설정
+  useEffect(() => {
+    if (team) {
+      // 팀 정보를 사용해서 의미있는 라벨 생성
+      setDynamicLabel(teamId, team.name);
+    }
+
+    // 컴포넌트 언마운트 시 라벨 제거
+    return () => {
+      clearDynamicLabel(teamId);
+    };
+  }, [team, teamId, setDynamicLabel, clearDynamicLabel]);
 
   // 404 에러 처리
   if (error && isNotFoundError(error)) {

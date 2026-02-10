@@ -42,7 +42,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import type {
   IncidentHistoryItem,
   CreateIncidentHistoryInput,
@@ -92,7 +92,7 @@ export function IncidentHistorySection({
   const form = useForm<z.infer<typeof incidentHistorySchema>>({
     resolver: zodResolver(incidentHistorySchema),
     defaultValues: {
-      occurredAt: dayjs().format('YYYY-MM-DD'),
+      occurredAt: formatDate(new Date(), 'yyyy-MM-dd'),
       incidentType: undefined,
       content: '',
     },
@@ -146,7 +146,13 @@ export function IncidentHistorySection({
                 <DialogDescription>손상, 오작동, 변경, 수리 정보를 입력하세요.</DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                <form
+                  onSubmit={(e) => {
+                    e.stopPropagation(); // 부모 폼으로 이벤트 버블링 방지
+                    form.handleSubmit(handleSubmit)(e);
+                  }}
+                  className="space-y-4"
+                >
                   <FormField
                     control={form.control}
                     name="occurredAt"
@@ -239,7 +245,7 @@ export function IncidentHistorySection({
             <TableBody>
               {history.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>{dayjs(item.occurredAt).format('YYYY-MM-DD')}</TableCell>
+                  <TableCell>{formatDate(item.occurredAt, 'yyyy-MM-dd')}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={INCIDENT_TYPE_COLORS[item.incidentType]}>
                       {INCIDENT_TYPE_LABELS[item.incidentType]}

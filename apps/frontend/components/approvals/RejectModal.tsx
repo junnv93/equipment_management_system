@@ -120,14 +120,9 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="max-w-md"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="reject-dialog-title"
-      >
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle id="reject-dialog-title">반려</DialogTitle>
+          <DialogTitle>반려</DialogTitle>
           <DialogDescription>
             &quot;{item.summary}&quot; 요청을 반려합니다. 반려 사유를 입력해주세요.
           </DialogDescription>
@@ -184,7 +179,7 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
               variant="destructive"
               disabled={isPending}
               aria-busy={isPending}
-              className="bg-[#CA0123] hover:bg-[#A8011D]"
+              className="bg-ul-red hover:bg-ul-red-hover"
             >
               <XCircle className="h-4 w-4 mr-1" />
               {isPending ? '처리 중...' : '반려'}

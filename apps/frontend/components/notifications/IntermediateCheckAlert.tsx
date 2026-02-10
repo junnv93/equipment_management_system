@@ -19,8 +19,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { CheckCircle2, AlertTriangle, Clock, X } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { differenceInDays } from 'date-fns';
+import { formatDate } from '@/lib/utils/date';
 import { apiClient } from '@/lib/api/api-client';
 
 export interface IntermediateCheck {
@@ -230,9 +230,7 @@ export function IntermediateCheckAlert({
               <span className="text-muted-foreground"> ({managementNumber})</span>
             )}
             의 중간점검일이{' '}
-            <strong>
-              {format(new Date(check.intermediateCheckDate), 'yyyy년 M월 d일', { locale: ko })}
-            </strong>
+            <strong>{formatDate(check.intermediateCheckDate, 'yyyy년 M월 d일')}</strong>
             입니다.
           </p>
           <div className="flex gap-2 mt-3">
@@ -262,7 +260,7 @@ export function IntermediateCheckAlert({
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm">
                 <strong>점검 예정일:</strong>{' '}
-                {format(new Date(check.intermediateCheckDate), 'yyyy년 M월 d일', { locale: ko })}
+                {formatDate(check.intermediateCheckDate, 'yyyy년 M월 d일')}
               </p>
             </div>
             <div className="space-y-2">

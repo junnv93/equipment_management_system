@@ -39,7 +39,7 @@ import {
 } from './CalibrationHistorySection';
 import { CalibrationValidityChecker } from './CalibrationValidityChecker';
 import { AlertCircle, CheckCircle2, Clock, Shield } from 'lucide-react';
-import dayjs from 'dayjs';
+import { formatDate, toDate } from '@/lib/utils/date';
 import equipmentApi, {
   type LocationHistoryItem,
   type MaintenanceHistoryItem,
@@ -308,20 +308,20 @@ export function EquipmentForm({
       calibrationRequired: initialData?.calibrationRequired || undefined,
       calibrationCycle: initialData?.calibrationCycle,
       lastCalibrationDate: initialData?.lastCalibrationDate
-        ? dayjs(initialData.lastCalibrationDate).format('YYYY-MM-DD')
+        ? formatDate(initialData.lastCalibrationDate, 'yyyy-MM-dd')
         : '',
       nextCalibrationDate: initialData?.nextCalibrationDate
-        ? dayjs(initialData.nextCalibrationDate).format('YYYY-MM-DD')
+        ? formatDate(initialData.nextCalibrationDate, 'yyyy-MM-dd')
         : '',
       calibrationAgency: initialData?.calibrationAgency || '',
       needsIntermediateCheck: initialData?.needsIntermediateCheck || false,
       calibrationMethod: initialData?.calibrationMethod,
       lastIntermediateCheckDate: initialData?.lastIntermediateCheckDate
-        ? dayjs(initialData.lastIntermediateCheckDate).format('YYYY-MM-DD')
+        ? formatDate(initialData.lastIntermediateCheckDate, 'yyyy-MM-dd')
         : '',
       intermediateCheckCycle: initialData?.intermediateCheckCycle,
       nextIntermediateCheckDate: initialData?.nextIntermediateCheckDate
-        ? dayjs(initialData.nextIntermediateCheckDate).format('YYYY-MM-DD')
+        ? formatDate(initialData.nextIntermediateCheckDate, 'yyyy-MM-dd')
         : '',
       purchaseYear:
         initialData?.purchaseYear !== undefined && initialData?.purchaseYear !== null
@@ -329,7 +329,7 @@ export function EquipmentForm({
           : undefined,
       teamId:
         initialData?.teamId !== undefined && initialData?.teamId !== null
-          ? Number(initialData.teamId)
+          ? String(initialData.teamId)
           : undefined,
       site: (initialData?.site || userSite) as Site | undefined,
       supplier: initialData?.supplier || '',
@@ -341,7 +341,7 @@ export function EquipmentForm({
       technicalManager: initialData?.technicalManager || '',
       initialLocation: initialData?.initialLocation || '',
       installationDate: initialData?.installationDate
-        ? dayjs(initialData.installationDate).format('YYYY-MM-DD')
+        ? formatDate(initialData.installationDate, 'yyyy-MM-dd')
         : '',
       status: (initialData?.status || 'available') as EquipmentStatus,
       calibrationResult: initialData?.calibrationResult || '',
@@ -642,21 +642,17 @@ export function EquipmentForm({
       specMatch: data.specMatch || undefined,
       calibrationRequired: data.calibrationRequired || undefined,
       calibrationCycle: data.calibrationCycle || undefined,
-      lastCalibrationDate: data.lastCalibrationDate
-        ? dayjs(data.lastCalibrationDate).toDate()
-        : undefined,
-      nextCalibrationDate: data.nextCalibrationDate
-        ? dayjs(data.nextCalibrationDate).toDate()
-        : undefined,
+      lastCalibrationDate: data.lastCalibrationDate ? toDate(data.lastCalibrationDate) : undefined,
+      nextCalibrationDate: data.nextCalibrationDate ? toDate(data.nextCalibrationDate) : undefined,
       calibrationAgency: data.calibrationAgency || undefined,
       needsIntermediateCheck: data.needsIntermediateCheck || false,
       calibrationMethod: data.calibrationMethod || undefined,
       lastIntermediateCheckDate: data.lastIntermediateCheckDate
-        ? dayjs(data.lastIntermediateCheckDate).toDate()
+        ? toDate(data.lastIntermediateCheckDate)
         : undefined,
       intermediateCheckCycle: data.intermediateCheckCycle || undefined,
       nextIntermediateCheckDate: data.nextIntermediateCheckDate
-        ? dayjs(data.nextIntermediateCheckDate).toDate()
+        ? toDate(data.nextIntermediateCheckDate)
         : undefined,
       purchaseYear: data.purchaseYear || undefined,
       teamId: data.teamId || undefined,
@@ -674,7 +670,7 @@ export function EquipmentForm({
         data.technicalManager && data.technicalManager.trim() ? data.technicalManager : undefined,
       initialLocation:
         data.initialLocation && data.initialLocation.trim() ? data.initialLocation : undefined,
-      installationDate: data.installationDate ? dayjs(data.installationDate).toDate() : undefined,
+      installationDate: data.installationDate ? toDate(data.installationDate) : undefined,
       status: isTemporary ? 'temporary' : data.status || undefined,
       calibrationResult:
         data.calibrationResult && data.calibrationResult.trim()
@@ -691,8 +687,8 @@ export function EquipmentForm({
         isShared: true,
         sharedSource: equipmentType === 'common' ? 'safety_lab' : 'external',
         owner: owner || undefined,
-        usagePeriodStart: usagePeriodStart ? dayjs(usagePeriodStart).toDate() : undefined,
-        usagePeriodEnd: usagePeriodEnd ? dayjs(usagePeriodEnd).toDate() : undefined,
+        usagePeriodStart: usagePeriodStart ? toDate(usagePeriodStart) : undefined,
+        usagePeriodEnd: usagePeriodEnd ? toDate(usagePeriodEnd) : undefined,
       }),
     };
 
@@ -722,9 +718,6 @@ export function EquipmentForm({
     if (isTemporary && calibrationCertificateFile) {
       allFiles.push({
         file: calibrationCertificateFile,
-        name: calibrationCertificateFile.name,
-        size: calibrationCertificateFile.size,
-        type: calibrationCertificateFile.type,
       });
     }
 

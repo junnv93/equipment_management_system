@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckCircle2, XCircle, Eye, Calendar, User, Building2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { formatDate } from '@/lib/utils/date';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
@@ -22,22 +21,22 @@ interface ApprovalItemCardProps {
   actionLabel: string;
 }
 
-// 상태별 스타일
+// 상태별 스타일 (SSOT: Tailwind config UL 브랜드 색상 사용)
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-[#FF9D55] text-white',
-  pending_review: 'bg-[#FF9D55] text-white',
-  reviewed: 'bg-[#0067B1] text-white',
-  approved: 'bg-[#00A451] text-white',
-  rejected: 'bg-[#CA0123] text-white',
+  pending: 'bg-ul-orange text-white',
+  pending_review: 'bg-ul-orange text-white',
+  reviewed: 'bg-ul-blue text-white',
+  approved: 'bg-ul-green text-white',
+  rejected: 'bg-ul-red text-white',
 };
 
 // 상태별 왼쪽 보더 색상
 const BORDER_COLORS: Record<string, string> = {
-  pending: 'border-l-[#FF9D55]',
-  pending_review: 'border-l-[#FF9D55]',
-  reviewed: 'border-l-[#0067B1]',
-  approved: 'border-l-[#00A451]',
-  rejected: 'border-l-[#CA0123]',
+  pending: 'border-l-ul-orange',
+  pending_review: 'border-l-ul-orange',
+  reviewed: 'border-l-ul-blue',
+  approved: 'border-l-ul-green',
+  rejected: 'border-l-ul-red',
 };
 
 export function ApprovalItemCard({
@@ -120,11 +119,7 @@ export function ApprovalItemCard({
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-muted-foreground">요청일시</p>
-                  <p className="font-medium">
-                    {format(new Date(item.requestedAt), 'yyyy-MM-dd HH:mm', {
-                      locale: ko,
-                    })}
-                  </p>
+                  <p className="font-medium">{formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}</p>
                 </div>
               </div>
             </div>
@@ -175,7 +170,7 @@ export function ApprovalItemCard({
               size="sm"
               onClick={handleApprove}
               disabled={isProcessing}
-              className="bg-[#00A451] hover:bg-[#008940] text-white"
+              className="bg-ul-green hover:bg-ul-green-hover text-white"
               aria-busy={isProcessing}
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -187,7 +182,7 @@ export function ApprovalItemCard({
               variant="destructive"
               onClick={handleReject}
               disabled={isProcessing}
-              className="bg-[#CA0123] hover:bg-[#A8011D]"
+              className="bg-ul-red hover:bg-ul-red-hover"
             >
               <XCircle className="h-4 w-4 mr-1" />
               반려

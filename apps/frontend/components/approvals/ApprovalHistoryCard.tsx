@@ -1,7 +1,6 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { formatDate } from '@/lib/utils/date';
 import { Check, XCircle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ApprovalHistoryEntry } from '@/lib/api/approvals-api';
@@ -23,9 +22,9 @@ const ACTION_ICONS: Record<string, React.ElementType> = {
 };
 
 const ACTION_STYLES: Record<string, string> = {
-  review: 'bg-[#0067B1] text-white',
-  approve: 'bg-[#00A451] text-white',
-  reject: 'bg-[#CA0123] text-white',
+  review: 'bg-ul-blue text-white',
+  approve: 'bg-ul-green text-white',
+  reject: 'bg-ul-red text-white',
 };
 
 export function ApprovalHistoryCard({ history }: ApprovalHistoryCardProps) {
@@ -69,9 +68,7 @@ export function ApprovalHistoryCard({ history }: ApprovalHistoryCardProps) {
                   {ACTION_LABELS[entry.action] || entry.action}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(entry.actionAt), 'yyyy-MM-dd HH:mm', {
-                    locale: ko,
-                  })}
+                  {formatDate(entry.actionAt, 'yyyy-MM-dd HH:mm')}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">

@@ -93,7 +93,7 @@ export function BulkActionBar({
           size="sm"
           disabled={!hasSelection}
           onClick={() => setIsApproveDialogOpen(true)}
-          className="bg-[#00A451] hover:bg-[#008940] text-white"
+          className="bg-ul-green hover:bg-ul-green-hover text-white"
         >
           <CheckCircle2 className="h-4 w-4 mr-1" />
           일괄 {actionLabel}
@@ -104,7 +104,7 @@ export function BulkActionBar({
           variant="destructive"
           disabled={!hasSelection}
           onClick={() => setIsRejectDialogOpen(true)}
-          className="bg-[#CA0123] hover:bg-[#A8011D]"
+          className="bg-ul-red hover:bg-ul-red-hover"
         >
           <XCircle className="h-4 w-4 mr-1" />
           일괄 반려
@@ -125,7 +125,7 @@ export function BulkActionBar({
             <AlertDialogAction
               onClick={handleBulkApprove}
               disabled={isProcessing}
-              className="bg-[#00A451] hover:bg-[#008940]"
+              className="bg-ul-green hover:bg-ul-green-hover"
             >
               {isProcessing ? '처리 중...' : `${actionLabel}`}
             </AlertDialogAction>
@@ -162,7 +162,7 @@ export function BulkActionBar({
             <AlertDialogAction
               onClick={handleBulkReject}
               disabled={isProcessing || rejectReason.length < 10}
-              className="bg-[#CA0123] hover:bg-[#A8011D]"
+              className="bg-ul-red hover:bg-ul-red-hover"
             >
               {isProcessing ? '처리 중...' : '반려'}
             </AlertDialogAction>

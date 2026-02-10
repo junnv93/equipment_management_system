@@ -148,6 +148,52 @@ export const routeMap: Record<string, RouteMetadata> = {
     label: '반출입 관리',
     parent: '/checkouts',
   },
+  '/checkouts/[id]': {
+    label: '반출 상세',
+    parent: '/checkouts',
+    dynamic: true,
+  },
+  '/checkouts/[id]/check': {
+    label: '반출 확인',
+    parent: '/checkouts/[id]',
+  },
+  '/checkouts/[id]/return': {
+    label: '반입 처리',
+    parent: '/checkouts/[id]',
+  },
+
+  // ========================================
+  // 렌탈 반입 관리
+  // ========================================
+  '/rental-imports': {
+    label: '렌탈 반입',
+    parent: '/',
+    icon: FileText,
+  },
+  '/rental-imports/[id]': {
+    label: '렌탈 반입 상세',
+    parent: '/rental-imports',
+    dynamic: true,
+  },
+  '/checkouts/import/[id]': {
+    label: '렌탈 반입 상세',
+    parent: '/checkouts',
+    dynamic: true,
+  },
+
+  // Equipment Imports (Unified)
+  '/checkouts/import/rental': {
+    label: '외부 렌탈 반입',
+    parent: '/checkouts',
+  },
+  '/checkouts/import/shared': {
+    label: '내부 공용 반입',
+    parent: '/checkouts',
+  },
+  '/checkouts/import/[id]/receive': {
+    label: '수령 확인',
+    parent: '/checkouts/import/[id]',
+  },
 
   // ========================================
   // 유지보수
@@ -228,6 +274,11 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/',
     icon: Shield,
     hidden: true, // 브레드크럼에서 숨김 (하위 페이지만 표시)
+  },
+  '/admin/approvals': {
+    label: '승인 관리',
+    parent: '/',
+    icon: Shield,
   },
   '/admin/equipment-approvals': {
     label: '장비 등록 승인',

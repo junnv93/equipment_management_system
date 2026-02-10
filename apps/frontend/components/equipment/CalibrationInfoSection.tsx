@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import dayjs from 'dayjs';
+import { addMonths } from 'date-fns';
+import { toDate, formatDate } from '@/lib/utils/date';
 import { FormValues } from './BasicInfoSection';
 
 interface CalibrationInfoSectionProps {
@@ -44,10 +45,11 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
   // 교정 주기 변경 시 다음 교정일 자동 계산
   useEffect(() => {
     if (calibrationCycle && lastCalibrationDate && typeof lastCalibrationDate === 'string') {
-      const nextDate = dayjs(lastCalibrationDate)
-        .add(calibrationCycle, 'month')
-        .format('YYYY-MM-DD');
-      setValue('nextCalibrationDate', nextDate);
+      const parsed = toDate(lastCalibrationDate);
+      if (parsed) {
+        const nextDate = formatDate(addMonths(parsed, calibrationCycle), 'yyyy-MM-dd');
+        setValue('nextCalibrationDate', nextDate);
+      }
     }
   }, [calibrationCycle, lastCalibrationDate, setValue]);
 
@@ -58,10 +60,11 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
       lastIntermediateCheckDate &&
       typeof lastIntermediateCheckDate === 'string'
     ) {
-      const nextDate = dayjs(lastIntermediateCheckDate)
-        .add(intermediateCheckCycle, 'month')
-        .format('YYYY-MM-DD');
-      setValue('nextIntermediateCheckDate', nextDate);
+      const parsed = toDate(lastIntermediateCheckDate);
+      if (parsed) {
+        const nextDate = formatDate(addMonths(parsed, intermediateCheckCycle), 'yyyy-MM-dd');
+        setValue('nextIntermediateCheckDate', nextDate);
+      }
     }
   }, [intermediateCheckCycle, lastIntermediateCheckDate, setValue]);
 

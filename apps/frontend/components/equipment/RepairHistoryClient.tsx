@@ -52,7 +52,7 @@ import {
   CreateRepairHistoryDto,
 } from '@/lib/api/repair-history-api';
 import RepairHistoryTimeline from '@/components/equipment/RepairHistoryTimeline';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils/date';
 import { ArrowLeft, Plus, Wrench, Hash, Info } from 'lucide-react';
 import Link from 'next/link';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
@@ -117,7 +117,7 @@ export function RepairHistoryClient({
   const form = useForm<RepairHistoryFormValues>({
     resolver: zodResolver(repairHistoryFormSchema),
     defaultValues: {
-      repairDate: format(new Date(), 'yyyy-MM-dd'),
+      repairDate: formatDate(new Date(), 'yyyy-MM-dd'),
       repairDescription: '',
       repairResult: undefined,
       notes: '',
@@ -138,7 +138,7 @@ export function RepairHistoryClient({
   useEffect(() => {
     if (autoOpen && initialNcId) {
       form.reset({
-        repairDate: format(new Date(), 'yyyy-MM-dd'),
+        repairDate: formatDate(new Date(), 'yyyy-MM-dd'),
         repairDescription: '',
         repairResult: undefined,
         notes: '',
@@ -232,7 +232,7 @@ export function RepairHistoryClient({
   const handleOpenCreate = () => {
     // ✅ form.reset()으로 폼 초기화
     form.reset({
-      repairDate: format(new Date(), 'yyyy-MM-dd'),
+      repairDate: formatDate(new Date(), 'yyyy-MM-dd'),
       repairDescription: '',
       repairResult: undefined,
       notes: '',
@@ -245,7 +245,7 @@ export function RepairHistoryClient({
     setSelectedRepair(repair);
     // ✅ form.reset()으로 폼 초기화
     form.reset({
-      repairDate: format(new Date(repair.repairDate), 'yyyy-MM-dd'),
+      repairDate: formatDate(repair.repairDate, 'yyyy-MM-dd'),
       repairDescription: repair.repairDescription,
       repairResult: repair.repairResult,
       notes: repair.notes || '',
@@ -453,7 +453,7 @@ export function RepairHistoryClient({
                             <SelectItem key={nc.id} value={nc.id}>
                               [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
                               {nc.cause.length > 30 ? '...' : ''} (
-                              {format(new Date(nc.discoveryDate), 'yyyy-MM-dd')})
+                              {formatDate(nc.discoveryDate, 'yyyy-MM-dd')})
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -615,7 +615,7 @@ export function RepairHistoryClient({
                             <SelectItem key={nc.id} value={nc.id}>
                               [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
                               {nc.cause.length > 30 ? '...' : ''} (
-                              {format(new Date(nc.discoveryDate), 'yyyy-MM-dd')})
+                              {formatDate(nc.discoveryDate, 'yyyy-MM-dd')})
                             </SelectItem>
                           ))}
                         </SelectContent>

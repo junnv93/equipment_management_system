@@ -40,7 +40,7 @@ import calibrationFactorsApi, {
   APPROVAL_STATUS_LABELS,
   APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils/date';
 import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
 import Link from 'next/link';
 
@@ -330,10 +330,8 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                     <TableCell>
                       {factor.factorValue} {factor.unit}
                     </TableCell>
-                    <TableCell>{format(new Date(factor.effectiveDate), 'yyyy-MM-dd')}</TableCell>
-                    <TableCell>
-                      {format(new Date(factor.requestedAt), 'yyyy-MM-dd HH:mm')}
-                    </TableCell>
+                    <TableCell>{formatDate(factor.effectiveDate, 'yyyy-MM-dd')}</TableCell>
+                    <TableCell>{formatDate(factor.requestedAt, 'yyyy-MM-dd HH:mm')}</TableCell>
                     <TableCell>
                       <Badge className={APPROVAL_STATUS_COLORS[factor.approvalStatus]}>
                         {APPROVAL_STATUS_LABELS[factor.approvalStatus]}
@@ -397,14 +395,10 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                       )}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(factor.effectiveDate), 'yyyy-MM-dd')}
-                      {factor.expiryDate && (
-                        <> ~ {format(new Date(factor.expiryDate), 'yyyy-MM-dd')}</>
-                      )}
+                      {formatDate(factor.effectiveDate, 'yyyy-MM-dd')}
+                      {factor.expiryDate && <> ~ {formatDate(factor.expiryDate, 'yyyy-MM-dd')}</>}
                     </TableCell>
-                    <TableCell>
-                      {factor.approvedAt ? format(new Date(factor.approvedAt), 'yyyy-MM-dd') : '-'}
-                    </TableCell>
+                    <TableCell>{formatDate(factor.approvedAt, 'yyyy-MM-dd')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

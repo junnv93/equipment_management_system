@@ -37,6 +37,7 @@ import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { dashboardApi, type PendingApprovalCounts } from '@/lib/api/dashboard-api';
+import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
 
 // MobileNav는 모바일 뷰포트에서만 필요하므로 지연 로딩 (bundle-dynamic-imports)
 const MobileNav = dynamic(
@@ -179,95 +180,97 @@ export function DashboardShell({ children }: DashboardShellProps) {
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* 스킵 네비게이션 */}
-      <SkipLink href="#main-content" />
+    <BreadcrumbProvider>
+      <div className="flex min-h-screen bg-background">
+        {/* 스킵 네비게이션 */}
+        <SkipLink href="#main-content" />
 
-      {/* 데스크톱 사이드바 - UL Midnight Blue */}
-      <aside
-        className="fixed inset-y-0 z-20 hidden w-64 bg-ul-midnight md:block"
-        role="navigation"
-        aria-label="메인 네비게이션"
-      >
-        {/* 사이드바 헤더 */}
-        <div className="flex h-14 items-center border-b border-white/10 px-4">
-          <Link
-            href="/"
-            className={cn(
-              'flex items-center gap-2 font-semibold text-white',
-              'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2 focus:ring-offset-ul-midnight rounded-md',
-              'hover:bg-white/10 motion-safe:transition-all motion-safe:duration-200 motion-reduce:transition-none',
-              'px-2 py-1.5 -mx-2',
-              'group'
-            )}
-            aria-label="홈으로 이동"
-          >
-            <div
+        {/* 데스크톱 사이드바 - UL Midnight Blue */}
+        <aside
+          className="fixed inset-y-0 z-20 hidden w-64 bg-ul-midnight md:block"
+          role="navigation"
+          aria-label="메인 네비게이션"
+        >
+          {/* 사이드바 헤더 */}
+          <div className="flex h-14 items-center border-b border-white/10 px-4">
+            <Link
+              href="/"
               className={cn(
-                'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
-                'group-hover:scale-110 motion-safe:transition-transform motion-reduce:transition-none'
+                'flex items-center gap-2 font-semibold text-white',
+                'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2 focus:ring-offset-ul-midnight rounded-md',
+                'hover:bg-white/10 motion-safe:transition-all motion-safe:duration-200 motion-reduce:transition-none',
+                'px-2 py-1.5 -mx-2',
+                'group'
               )}
+              aria-label="홈으로 이동"
             >
-              <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
-            </div>
-            <span className="group-hover:text-ul-info motion-safe:transition-colors motion-reduce:transition-none">
-              장비 관리 시스템
-            </span>
-          </Link>
-        </div>
-
-        {/* 네비게이션 링크 */}
-        <nav className="flex flex-col gap-1 p-4" role="menubar">
-          {navItems.map((item) => (
-            <SidebarItem
-              key={item.href}
-              icon={item.icon}
-              href={item.href}
-              label={item.label}
-              isActive={isActive(item.href)}
-              badge={item.badge}
-            />
-          ))}
-        </nav>
-
-        {/* 사이드바 하단 - UL 브랜딩 */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-          <div className="flex items-center gap-2">
-            <span className="text-ul-red font-bold text-xs">UL Solutions</span>
-            <span className="text-white/30 text-xs">|</span>
-            <span className="text-white/40 text-xs">Working for a safer world.</span>
+              <div
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
+                  'group-hover:scale-110 motion-safe:transition-transform motion-reduce:transition-none'
+                )}
+              >
+                <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+              </div>
+              <span className="group-hover:text-ul-info motion-safe:transition-colors motion-reduce:transition-none">
+                장비 관리 시스템
+              </span>
+            </Link>
           </div>
-        </div>
-      </aside>
 
-      {/* 메인 콘텐츠 영역 */}
-      <div className="flex flex-col flex-1 md:ml-64">
-        {/* 헤더 */}
-        <Header
-          title="장비 관리 시스템"
-          leftContent={
-            <MobileNav
-              navItems={navItems}
-              brandName="장비 관리 시스템"
-              brandIcon={<Wrench className="h-6 w-6" aria-hidden="true" />}
-            />
-          }
-          rightContent={
+          {/* 네비게이션 링크 */}
+          <nav className="flex flex-col gap-1 p-4" role="menubar">
+            {navItems.map((item) => (
+              <SidebarItem
+                key={item.href}
+                icon={item.icon}
+                href={item.href}
+                label={item.label}
+                isActive={isActive(item.href)}
+                badge={item.badge}
+              />
+            ))}
+          </nav>
+
+          {/* 사이드바 하단 - UL 브랜딩 */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
             <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <UserProfileDropdown />
+              <span className="text-ul-red font-bold text-xs">UL Solutions</span>
+              <span className="text-white/30 text-xs">|</span>
+              <span className="text-white/40 text-xs">Working for a safer world.</span>
             </div>
-          }
-        />
+          </div>
+        </aside>
 
-        {/* 메인 콘텐츠 */}
-        <main id="main-content" className="flex-1 overflow-auto" role="main" tabIndex={-1}>
-          {children}
-        </main>
+        {/* 메인 콘텐츠 영역 */}
+        <div className="flex flex-col flex-1 md:ml-64">
+          {/* 헤더 */}
+          <Header
+            title="장비 관리 시스템"
+            leftContent={
+              <MobileNav
+                navItems={navItems}
+                brandName="장비 관리 시스템"
+                brandIcon={<Wrench className="h-6 w-6" aria-hidden="true" />}
+              />
+            }
+            rightContent={
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <UserProfileDropdown />
+              </div>
+            }
+          />
+
+          {/* 메인 콘텐츠 */}
+          <main id="main-content" className="flex-1 overflow-auto" role="main" tabIndex={-1}>
+            {children}
+          </main>
+        </div>
+
+        {/* 라이브 영역 (스크린리더 알림용) */}
+        <div aria-live="polite" aria-atomic="true" className="sr-only" id="live-announcements" />
       </div>
-
-      {/* 라이브 영역 (스크린리더 알림용) */}
-      <div aria-live="polite" aria-atomic="true" className="sr-only" id="live-announcements" />
-    </div>
+    </BreadcrumbProvider>
   );
 }

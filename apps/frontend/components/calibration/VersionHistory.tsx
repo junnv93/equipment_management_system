@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils/date';
 import calibrationPlansApi, {
   CalibrationPlanVersion,
   CALIBRATION_PLAN_STATUS_LABELS,
@@ -115,11 +115,11 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    작성: {format(new Date(version.createdAt), 'yyyy-MM-dd HH:mm')}
+                    작성: {formatDate(version.createdAt, 'yyyy-MM-dd HH:mm')}
                     {version.approvedAt && (
                       <>
                         {' · '}
-                        승인: {format(new Date(version.approvedAt), 'yyyy-MM-dd')}
+                        승인: {formatDate(version.approvedAt, 'yyyy-MM-dd')}
                       </>
                     )}
                   </div>

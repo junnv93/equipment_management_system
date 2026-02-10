@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { MapPin, Tag, Package, Calendar, Wrench } from 'lucide-react';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
 
 interface BasicInfoTabProps {
@@ -18,15 +18,6 @@ interface BasicInfoTabProps {
  * - 아이콘과 라벨로 가독성 향상
  */
 export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
-  const formatDate = (dateString?: string | Date | null) => {
-    if (!dateString) return '-';
-    try {
-      return dayjs(dateString).format('YYYY-MM-DD');
-    } catch {
-      return String(dateString);
-    }
-  };
-
   // 정보 필드 컴포넌트
   const InfoField = ({
     label,

@@ -6,7 +6,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import dynamic from 'next/dynamic';
 import {
   Package,
   FileCheck,
@@ -18,6 +17,7 @@ import {
   Trash2,
   Calendar,
   Code,
+  PackagePlus,
 } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
 import approvalsApi, {
@@ -28,15 +28,8 @@ import approvalsApi, {
 } from '@/lib/api/approvals-api';
 import { ApprovalList } from './ApprovalList';
 import { BulkActionBar } from './BulkActionBar';
-
-// 모달 컴포넌트 동적 import (성능 최적화)
-const ApprovalDetailModal = dynamic(() => import('./ApprovalDetailModal'), {
-  loading: () => null,
-});
-
-const RejectModal = dynamic(() => import('./RejectModal'), {
-  loading: () => null,
-});
+import ApprovalDetailModal from './ApprovalDetailModal';
+import RejectModal from './RejectModal';
 
 interface ApprovalsClientProps {
   userRole: UserRole;
@@ -57,6 +50,7 @@ const ICONS: Record<string, React.ElementType> = {
   Trash2,
   Calendar,
   Code,
+  PackagePlus,
 };
 
 export function ApprovalsClient({
@@ -70,6 +64,9 @@ export function ApprovalsClient({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // ✅ Hydration 에러 방지: 클라이언트 마운트 감지
+  const [mounted, setMounted] = useState(false);
+
   // 현재 역할에서 사용 가능한 탭 (useMemo로 안정화)
   const availableTabs = useMemo(() => ROLE_TABS[userRole] || [], [userRole]);
   const defaultTab = initialTab || availableTabs[0] || 'equipment';
@@ -78,6 +75,11 @@ export function ApprovalsClient({
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [detailModalItem, setDetailModalItem] = useState<ApprovalItem | null>(null);
   const [rejectModalItem, setRejectModalItem] = useState<ApprovalItem | null>(null);
+
+  // 클라이언트 마운트 후에만 Radix UI 렌더링 (useId 충돌 방지)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // URL 쿼리 파라미터 동기화
   useEffect(() => {
@@ -255,6 +257,16 @@ export function ApprovalsClient({
     );
   }
 
+  // 클라이언트 마운트 전: 스켈레톤 로더 표시
+  if (!mounted) {
+    return (
+      <div className="space-y-4">
+        <div className="h-10 bg-muted animate-pulse rounded" />
+        <div className="h-64 bg-muted animate-pulse rounded" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -272,7 +284,7 @@ export function ApprovalsClient({
               <TabsTrigger
                 key={tab}
                 value={tab}
-                className="flex items-center gap-1.5 data-[state=active]:border-b-2 data-[state=active]:border-[#CA0123]"
+                className="flex items-center gap-1.5 data-[state=active]:border-b-2 data-[state=active]:border-ul-red"
                 aria-selected={activeTab === tab}
               >
                 {getIcon(meta.icon)}
@@ -280,7 +292,7 @@ export function ApprovalsClient({
                 {count > 0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-1 h-5 min-w-5 px-1.5 bg-[#FF9D55] text-white"
+                    className="ml-1 h-5 min-w-5 px-1.5 bg-ul-orange text-white"
                     aria-label={`대기 ${count}건`}
                   >
                     {count}

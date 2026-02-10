@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +36,7 @@ import calibrationPlansApi, {
   CALIBRATION_PLAN_STATUS_COLORS,
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
-import { format } from 'date-fns';
+import { formatDate } from '@/lib/utils/date';
 import {
   ArrowLeft,
   Send,
@@ -77,6 +78,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   const { toast } = useToast();
   const { data: session } = useSession();
   const queryClient = useQueryClient();
+  const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
   const [editingItemUuid, setEditingItemUuid] = useState<string | null>(null);
   const [editingAgency, setEditingAgency] = useState('');
@@ -99,6 +101,23 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
     queryFn: () => calibrationPlansApi.getCalibrationPlan(planUuid),
     enabled: !!planUuid,
   });
+
+  // 브레드크럼 동적 라벨 설정
+  useEffect(() => {
+    if (plan) {
+      // 교정 계획서 정보를 사용해서 의미있는 라벨 생성
+      const siteLabel = plan.siteId ? SITE_LABELS[plan.siteId] || plan.siteId : '';
+      const yearLabel = plan.year ? `${plan.year}년` : '';
+      const label = `${siteLabel} ${yearLabel} 교정계획서`.trim();
+
+      setDynamicLabel(planUuid, label);
+    }
+
+    // 컴포넌트 언마운트 시 라벨 제거
+    return () => {
+      clearDynamicLabel(planUuid);
+    };
+  }, [plan, planUuid, setDynamicLabel, clearDynamicLabel]);
 
   // 검토 요청 뮤테이션 (기술책임자 → 품질책임자)
   const submitForReviewMutation = useMutation({
@@ -359,7 +378,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
               </Badge>
             </div>
             <p className="text-muted-foreground">
-              작성자: {plan.createdBy} | 작성일: {format(new Date(plan.createdAt), 'yyyy-MM-dd')}
+              작성자: {plan.createdBy} | 작성일: {formatDate(plan.createdAt, 'yyyy-MM-dd')}
             </p>
           </div>
         </div>
@@ -446,7 +465,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
               <span className="text-xs text-muted-foreground">기술책임자</span>
               {plan.submittedAt && (
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(plan.submittedAt), 'MM/dd HH:mm')}
+                  {formatDate(plan.submittedAt, 'MM/dd HH:mm')}
                 </span>
               )}
             </div>
@@ -485,7 +504,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
               <span className="text-xs text-muted-foreground">품질책임자</span>
               {plan.reviewedAt && (
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(plan.reviewedAt), 'MM/dd HH:mm')}
+                  {formatDate(plan.reviewedAt, 'MM/dd HH:mm')}
                 </span>
               )}
 
@@ -580,7 +599,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
               <span className="text-xs text-muted-foreground">시험소장</span>
               {plan.approvedAt && (
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(plan.approvedAt), 'MM/dd HH:mm')}
+                  {formatDate(plan.approvedAt, 'MM/dd HH:mm')}
                 </span>
               )}
             </div>
@@ -614,7 +633,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
           <CardContent className="pt-6">
             <div className="flex items-center gap-4 text-sm">
               <span>승인자: {plan.approvedBy}</span>
-              <span>승인일: {format(new Date(plan.approvedAt), 'yyyy-MM-dd HH:mm')}</span>
+              <span>승인일: {formatDate(plan.approvedAt, 'yyyy-MM-dd HH:mm')}</span>
             </div>
           </CardContent>
         </Card>
@@ -673,7 +692,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                       <TableCell>{item.equipment?.name || '-'}</TableCell>
                       <TableCell>
                         {item.snapshotValidityDate
-                          ? format(new Date(item.snapshotValidityDate), 'yyyy-MM-dd')
+                          ? formatDate(item.snapshotValidityDate, 'yyyy-MM-dd')
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -684,7 +703,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                       <TableCell>{item.snapshotCalibrationAgency || '-'}</TableCell>
                       <TableCell>
                         {item.plannedCalibrationDate
-                          ? format(new Date(item.plannedCalibrationDate), 'yyyy-MM-dd')
+                          ? formatDate(item.plannedCalibrationDate, 'yyyy-MM-dd')
                           : '-'}
                       </TableCell>
                       <TableCell>
@@ -719,7 +738,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                         ) : (
                           <>
                             {item.actualCalibrationDate
-                              ? format(new Date(item.actualCalibrationDate), 'yyyy-MM-dd')
+                              ? formatDate(item.actualCalibrationDate, 'yyyy-MM-dd')
                               : item.notes || '-'}
                           </>
                         )}

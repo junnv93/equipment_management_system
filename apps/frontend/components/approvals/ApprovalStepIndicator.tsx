@@ -72,11 +72,11 @@ export function ApprovalStepIndicator({
               className={cn(
                 'flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors',
                 isRejected && isCurrent
-                  ? 'border-[#CA0123] bg-[#CA0123] text-white'
+                  ? 'border-ul-red bg-ul-red text-white'
                   : isCompleted
-                    ? 'border-[#00A451] bg-[#00A451] text-white'
+                    ? 'border-ul-green bg-ul-green text-white'
                     : isCurrent
-                      ? 'border-[#0067B1] bg-[#0067B1] text-white'
+                      ? 'border-ul-blue bg-ul-blue text-white'
                       : 'border-gray-300 bg-white text-gray-400'
               )}
               aria-current={isCurrent ? 'step' : undefined}
@@ -113,7 +113,7 @@ export function ApprovalStepIndicator({
               <div
                 className={cn(
                   'w-8 h-0.5 mx-2',
-                  currentOrder > stepOrder ? 'bg-[#00A451]' : 'bg-gray-200'
+                  currentOrder > stepOrder ? 'bg-ul-green' : 'bg-gray-200'
                 )}
                 aria-hidden="true"
               />

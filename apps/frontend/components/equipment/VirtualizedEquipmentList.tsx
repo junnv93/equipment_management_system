@@ -6,7 +6,7 @@ import { useInfiniteLoader } from 'react-window-infinite-loader';
 import { Button } from '@/components/ui/button';
 import { Table, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import { Equipment } from '@/lib/api/equipment-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
@@ -37,15 +37,7 @@ const EquipmentRow = memo(
       );
     };
 
-    // 날짜 포맷 함수
-    const formatDate = (dateString?: string) => {
-      if (!dateString) return '-';
-      try {
-        return dayjs(dateString).format('YYYY-MM-DD');
-      } catch {
-        return dateString;
-      }
-    };
+    // formatDate from '@/lib/utils/date' 사용 (SSOT)
 
     const _handleClick = useCallback(() => {
       if (onClick) onClick(equipment);

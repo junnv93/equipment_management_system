@@ -1,7 +1,6 @@
 'use client';
 
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { formatDate } from '@/lib/utils/date';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +17,7 @@ import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
 import { ApprovalHistoryCard } from './ApprovalHistoryCard';
+import { renderCategoryDetails, CategoryBadge } from './detail-renderers';
 
 interface ApprovalDetailModalProps {
   item: ApprovalItem;
@@ -30,11 +30,11 @@ interface ApprovalDetailModalProps {
 
 // 상태별 스타일
 const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-[#FF9D55] text-white',
-  pending_review: 'bg-[#FF9D55] text-white',
-  reviewed: 'bg-[#0067B1] text-white',
-  approved: 'bg-[#00A451] text-white',
-  rejected: 'bg-[#CA0123] text-white',
+  pending: 'bg-ul-orange text-white',
+  pending_review: 'bg-ul-orange text-white',
+  reviewed: 'bg-ul-blue text-white',
+  approved: 'bg-ul-green text-white',
+  rejected: 'bg-ul-red text-white',
 };
 
 export default function ApprovalDetailModal({
@@ -54,67 +54,11 @@ export default function ApprovalDetailModal({
 
   const statusStyle = STATUS_STYLES[item.status] || STATUS_STYLES.pending;
 
-  // details 객체에서 렌더링할 항목 추출
-  const renderDetails = () => {
-    const details = item.details as Record<string, unknown>;
-    const entries = Object.entries(details).filter(
-      ([key, value]) =>
-        value !== null && value !== undefined && key !== 'originalData' && typeof value !== 'object'
-    );
-
-    return entries.map(([key, value]) => {
-      // 날짜 필드 포맷팅
-      if (
-        key.toLowerCase().includes('date') &&
-        typeof value === 'string' &&
-        !isNaN(Date.parse(value))
-      ) {
-        return (
-          <div key={key} className="flex justify-between py-2">
-            <span className="text-muted-foreground">{formatKey(key)}</span>
-            <span className="font-medium">
-              {format(new Date(value), 'yyyy-MM-dd', { locale: ko })}
-            </span>
-          </div>
-        );
-      }
-
-      return (
-        <div key={key} className="flex justify-between py-2">
-          <span className="text-muted-foreground">{formatKey(key)}</span>
-          <span className="font-medium">{String(value)}</span>
-        </div>
-      );
-    });
-  };
-
-  // 키를 한글 라벨로 변환
-  const formatKey = (key: string): string => {
-    const keyMap: Record<string, string> = {
-      equipmentId: '장비 ID',
-      equipmentName: '장비명',
-      calibrationDate: '교정일',
-      nextCalibrationDate: '다음 교정일',
-      calibrationResult: '교정 결과',
-      calibrationAgency: '교정 기관',
-      destination: '목적지',
-      purpose: '목적',
-      expectedReturnDate: '예상 반입일',
-      year: '연도',
-    };
-    return keyMap[key] || key;
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        className="max-w-2xl max-h-[90vh]"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="detail-dialog-title"
-      >
+      <DialogContent className="max-w-2xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle id="detail-dialog-title">승인 요청 상세</DialogTitle>
+          <DialogTitle>승인 요청 상세</DialogTitle>
           <DialogDescription>요청 내용을 확인하고 승인 또는 반려를 진행하세요.</DialogDescription>
         </DialogHeader>
 
@@ -126,6 +70,7 @@ export default function ApprovalDetailModal({
                 <Badge className={statusStyle}>
                   {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
                 </Badge>
+                <CategoryBadge category={item.category} />
                 <h3 className="text-lg font-semibold">{item.summary}</h3>
               </div>
 
@@ -140,11 +85,7 @@ export default function ApprovalDetailModal({
                 </div>
                 <div>
                   <p className="text-muted-foreground">요청일시</p>
-                  <p className="font-medium">
-                    {format(new Date(item.requestedAt), 'yyyy-MM-dd HH:mm', {
-                      locale: ko,
-                    })}
-                  </p>
+                  <p className="font-medium">{formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}</p>
                 </div>
               </div>
             </div>
@@ -173,7 +114,9 @@ export default function ApprovalDetailModal({
             {/* 요청 상세 정보 */}
             <div>
               <h4 className="text-sm font-semibold mb-3">요청 상세</h4>
-              <div className="bg-muted/50 rounded-lg p-4 divide-y">{renderDetails()}</div>
+              <div className="bg-muted/50 rounded-lg p-4 divide-y">
+                {renderCategoryDetails(item.category, item.details)}
+              </div>
             </div>
 
             {/* 첨부 파일 */}
@@ -189,7 +132,7 @@ export default function ApprovalDetailModal({
                         className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                           <span className="text-sm">{attachment.filename}</span>
                           <span className="text-xs text-muted-foreground">
                             ({Math.round(attachment.size / 1024)}KB)
@@ -199,9 +142,10 @@ export default function ApprovalDetailModal({
                           type="button"
                           size="sm"
                           variant="ghost"
+                          aria-label={`${attachment.filename} 다운로드`}
                           onClick={() => window.open(attachment.url, '_blank')}
                         >
-                          <Download className="h-4 w-4" />
+                          <Download className="h-4 w-4" aria-hidden="true" />
                         </Button>
                       </div>
                     ))}
@@ -230,18 +174,18 @@ export default function ApprovalDetailModal({
           <Button
             type="button"
             onClick={onApprove}
-            className="bg-[#00A451] hover:bg-[#008940] text-white"
+            className="bg-ul-green hover:bg-ul-green-hover text-white"
           >
-            <CheckCircle2 className="h-4 w-4 mr-1" />
+            <CheckCircle2 className="h-4 w-4 mr-1" aria-hidden="true" />
             {actionLabel}
           </Button>
           <Button
             type="button"
             variant="destructive"
             onClick={onReject}
-            className="bg-[#CA0123] hover:bg-[#A8011D]"
+            className="bg-ul-red hover:bg-ul-red-hover"
           >
-            <XCircle className="h-4 w-4 mr-1" />
+            <XCircle className="h-4 w-4 mr-1" aria-hidden="true" />
             반려
           </Button>
         </DialogFooter>

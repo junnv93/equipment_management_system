@@ -3,7 +3,8 @@
 import { memo, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react';
-import dayjs from 'dayjs';
+import { differenceInDays } from 'date-fns';
+import { toDate, formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -178,11 +179,6 @@ const EquipmentRow = memo(function EquipmentRow({
   equipment: Equipment;
   searchTerm?: string;
 }) {
-  const _formatDate = (date?: string | Date | null) => {
-    if (!date) return '-';
-    return dayjs(date).format('YYYY-MM-DD');
-  };
-
   /**
    * 교정 기한 표시 (D-day 형식) - 테이블형 전용
    *
@@ -204,16 +200,17 @@ const EquipmentRow = memo(function EquipmentRow({
       return <span className="text-muted-foreground">-</span>;
     }
 
-    const dueDate = dayjs(date);
-    const today = dayjs();
-    const diff = dueDate.diff(today, 'day');
+    const dueDate = toDate(date);
+    if (!dueDate) return '-';
+    const today = new Date();
+    const diff = differenceInDays(dueDate, today);
 
     if (diff < 0) {
       // 기한 초과 - 빨간색 강조
       return (
         <div className="flex flex-col gap-0.5">
           <span className="text-red-700 dark:text-red-400 font-semibold text-sm">
-            {dueDate.format('YYYY-MM-DD')}
+            {formatDate(dueDate, 'yyyy-MM-dd')}
           </span>
           <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 px-1.5 py-0.5 rounded w-fit font-semibold">
             D+{Math.abs(diff)} (초과)
@@ -226,7 +223,7 @@ const EquipmentRow = memo(function EquipmentRow({
       return (
         <div className="flex flex-col gap-0.5">
           <span className="text-orange-700 dark:text-orange-400 font-semibold text-sm">
-            {dueDate.format('YYYY-MM-DD')}
+            {formatDate(dueDate, 'yyyy-MM-dd')}
           </span>
           <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 px-1.5 py-0.5 rounded w-fit font-medium">
             D-{diff} (긴급)
@@ -239,7 +236,7 @@ const EquipmentRow = memo(function EquipmentRow({
       return (
         <div className="flex flex-col gap-0.5">
           <span className="text-yellow-700 dark:text-yellow-400 font-medium text-sm">
-            {dueDate.format('YYYY-MM-DD')}
+            {formatDate(dueDate, 'yyyy-MM-dd')}
           </span>
           <span className="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 px-1.5 py-0.5 rounded w-fit">
             D-{diff}
@@ -248,7 +245,7 @@ const EquipmentRow = memo(function EquipmentRow({
       );
     }
     // 정상 (30일 초과)
-    return <span className="text-sm">{dueDate.format('YYYY-MM-DD')}</span>;
+    return <span className="text-sm">{formatDate(dueDate, 'yyyy-MM-dd')}</span>;
   };
 
   return (

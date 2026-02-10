@@ -111,7 +111,7 @@ export interface FormValues {
   intermediateCheckCycle?: number;
   nextIntermediateCheckDate?: string;
   purchaseYear?: number;
-  teamId?: number | string;
+  teamId?: string; // UUID 문자열 (SSOT: packages/schemas - z.string().uuid())
   site?: Site;
   // 관리번호 생성용 필드
   classification?: Classification;

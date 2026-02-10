@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import Link from 'next/link';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 import {
   Calendar,
   MapPin,
@@ -85,10 +85,7 @@ const EquipmentCard = memo(function EquipmentCard({
   // 실시간 교정기한 초과 체크 포함
   const style = getEquipmentStatusStyle(equipment.status, equipment.nextCalibrationDate);
 
-  const formatDate = (date?: string | Date | null) => {
-    if (!date) return '-';
-    return dayjs(date).format('YYYY-MM-DD');
-  };
+  // formatDate from '@/lib/utils/date' 사용 (SSOT)
 
   /**
    * 교정 상태 계산 (동적)

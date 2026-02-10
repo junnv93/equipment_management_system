@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { EquipmentHeader } from './EquipmentHeader';
 import { EquipmentTabs } from './EquipmentTabs';
 import { NonConformanceBanner } from './NonConformanceBanner';
@@ -48,9 +49,28 @@ export function EquipmentDetailClient({
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'basic';
   const { user } = useAuth();
+  const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장
   const equipmentId = String(initialEquipment.id);
+
+  // 브레드크럼 동적 라벨 설정
+  useEffect(() => {
+    // 장비 정보를 사용해서 의미있는 라벨 생성
+    const label = `${initialEquipment.name} (${initialEquipment.managementNumber})`;
+    setDynamicLabel(equipmentId, label);
+
+    // 컴포넌트 언마운트 시 라벨 제거
+    return () => {
+      clearDynamicLabel(equipmentId);
+    };
+  }, [
+    equipmentId,
+    initialEquipment.name,
+    initialEquipment.managementNumber,
+    setDynamicLabel,
+    clearDynamicLabel,
+  ]);
 
   // 폐기 관련 다이얼로그 상태
   const [disposalDetailOpen, setDisposalDetailOpen] = useState(false);
@@ -166,8 +186,8 @@ export function EquipmentDetailClient({
                 </>
               ) : (
                 <>
-                  이 장비는 공용장비로 등록되어 있어 수정 및 삭제가 불가능합니다. 대여 및 반출은
-                  가능합니다.
+                  이 장비는 공용장비로 등록되어 있습니다. 수정 및 반출은 가능하나, 삭제는
+                  불가능합니다.
                 </>
               )}
             </AlertDescription>

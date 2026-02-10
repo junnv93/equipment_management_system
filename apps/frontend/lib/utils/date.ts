@@ -1,5 +1,26 @@
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid, formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
+
+/**
+ * string | Date 값을 안전하게 Date 객체로 변환합니다.
+ *
+ * - Date 객체: 그대로 반환
+ * - ISO 문자열: parseISO로 파싱
+ * - null/undefined: null 반환
+ *
+ * differenceInDays, isBefore, isAfter 등 date-fns 함수에
+ * string | Date 유니온 타입을 전달해야 할 때 사용합니다.
+ */
+export function toDate(value: string | Date | null | undefined): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return isValid(value) ? value : null;
+  try {
+    const parsed = parseISO(value);
+    return isValid(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * ISO 문자열이나 Date 객체를 받아 사용자 친화적인 날짜 형식으로 변환합니다.
@@ -14,14 +35,14 @@ export function formatDate(
   includeTime: boolean = false
 ): string {
   if (!date) return '-';
-  
+
   try {
     // Date 객체가 아니면 ISO 문자열로 간주하고 파싱
     const dateObj = date instanceof Date ? date : parseISO(date);
-    
+
     // 유효한 날짜인지 확인
     if (!isValid(dateObj)) return '-';
-    
+
     // formatStr이 제공되지 않은 경우 includeTime에 따라 기본 포맷 사용
     const defaultFormat = includeTime ? 'yyyy.MM.dd HH:mm' : 'yyyy.MM.dd';
     return format(dateObj, formatStr || defaultFormat, { locale: ko });
@@ -50,6 +71,25 @@ export function formatShortDate(date: string | Date | undefined | null): string 
 }
 
 /**
+ * ISO 문자열이나 Date 객체를 받아 상대적 시간 표시로 변환합니다.
+ * 예: "3분 전", "2시간 전", "어제"
+ *
+ * @param date ISO 문자열 또는 Date 객체
+ * @returns 상대 시간 문자열, 유효하지 않은 날짜는 '-'로 표시
+ */
+export function formatRelativeTime(date: string | Date | undefined | null): string {
+  if (!date) return '-';
+
+  try {
+    const dateObj = date instanceof Date ? date : parseISO(date);
+    if (!isValid(dateObj)) return '-';
+    return formatDistanceToNow(dateObj, { addSuffix: true, locale: ko });
+  } catch {
+    return '-';
+  }
+}
+
+/**
  * 현재 날짜로부터 지정된 일수 후의 날짜를 계산합니다.
  * @param days 더할 일수
  * @returns 계산된 Date 객체
@@ -69,10 +109,10 @@ export function daysBetween(date1: string | Date, date2: string | Date = new Dat
   try {
     const d1 = date1 instanceof Date ? date1 : parseISO(date1);
     const d2 = date2 instanceof Date ? date2 : parseISO(date2);
-    
+
     // 유효한 날짜인지 확인
     if (!isValid(d1) || !isValid(d2)) return 0;
-    
+
     const diffTime = Math.abs(d2.getTime() - d1.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   } catch (error) {
@@ -113,10 +153,10 @@ export function getDateBeforeDays(days: number): string {
 export function isDateOverdue(dateString: string): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0); // 오늘 자정으로 설정
-  
+
   const targetDate = new Date(dateString);
   targetDate.setHours(0, 0, 0, 0); // 비교 날짜도 자정으로 설정
-  
+
   return targetDate < today;
 }
 
@@ -126,4 +166,4 @@ export function isDateOverdue(dateString: string): boolean {
  */
 export function getCurrentDateTime(): string {
   return new Date().toISOString();
-} 
+}

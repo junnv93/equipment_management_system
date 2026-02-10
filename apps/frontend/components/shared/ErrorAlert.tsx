@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertCircle,
   AlertTriangle,
@@ -29,7 +25,7 @@ import {
   isRetryableError,
   isAuthError,
 } from '@/lib/errors/equipment-errors';
-import dayjs from 'dayjs';
+import { formatDate } from '@/lib/utils/date';
 
 /**
  * ErrorAlert 컴포넌트 Props
@@ -179,13 +175,7 @@ export function ErrorAlert({
     // 재시도 버튼
     if (canRetry || onRetry) {
       actions.push(
-        <Button
-          key="retry"
-          variant="outline"
-          size="sm"
-          onClick={onRetry}
-          className="gap-1"
-        >
+        <Button key="retry" variant="outline" size="sm" onClick={onRetry} className="gap-1">
           <RefreshCw className="h-3 w-3" />
           다시 시도
         </Button>
@@ -263,7 +253,7 @@ export function ErrorAlert({
             )}
             <div>
               <span className="text-muted-foreground">시간: </span>
-              <span>{dayjs(apiError.timestamp).format('YYYY-MM-DD HH:mm:ss')}</span>
+              <span>{formatDate(apiError.timestamp, 'yyyy-MM-dd HH:mm:ss')}</span>
             </div>
             {apiError.details !== undefined && apiError.details !== null && (
               <div className="mt-2">
@@ -287,12 +277,7 @@ export function ErrorAlert({
       <AlertTitle className={`flex items-center justify-between ${style.titleClass}`}>
         <span>{displayTitle}</span>
         {onDismiss && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 -mr-2"
-            onClick={onDismiss}
-          >
+          <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={onDismiss}>
             <X className="h-3 w-3" />
             <span className="sr-only">닫기</span>
           </Button>
@@ -358,17 +343,14 @@ export function PartialSuccessAlert({
   };
 
   return (
-    <Alert className={`bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900 ${className}`}>
+    <Alert
+      className={`bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900 ${className}`}
+    >
       <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
       <AlertTitle className="flex items-center justify-between text-yellow-800 dark:text-yellow-200">
         <span>부분 저장 완료</span>
         {onDismiss && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 -mr-2"
-            onClick={onDismiss}
-          >
+          <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={onDismiss}>
             <X className="h-3 w-3" />
             <span className="sr-only">닫기</span>
           </Button>
@@ -402,10 +384,8 @@ export function PartialSuccessAlert({
                 <ul className="list-disc list-inside space-y-1 text-sm">
                   {failedItems.map((item, index) => (
                     <li key={index}>
-                      <span className="font-medium">
-                        {typeLabels[item.type] || item.type}
-                      </span>
-                      : {item.error}
+                      <span className="font-medium">{typeLabels[item.type] || item.type}</span>:{' '}
+                      {item.error}
                     </li>
                   ))}
                 </ul>
@@ -419,9 +399,7 @@ export function PartialSuccessAlert({
             <Lightbulb className="h-3 w-3" />
             안내
           </div>
-          <p className="text-sm">
-            장비 상세 페이지에서 실패한 이력을 다시 추가할 수 있습니다.
-          </p>
+          <p className="text-sm">장비 상세 페이지에서 실패한 이력을 다시 추가할 수 있습니다.</p>
         </div>
       </AlertDescription>
     </Alert>

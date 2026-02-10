@@ -44,14 +44,14 @@ import equipmentApi, {
   type IncidentType,
 } from '@/lib/api/equipment-api';
 import Link from 'next/link';
-import dayjs from 'dayjs';
+import { isBefore, startOfDay } from 'date-fns';
+import { formatDate, toDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { createRepairHistory, type CreateRepairHistoryDto } from '@/lib/api/repair-history-api';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
-import { format } from 'date-fns';
 
 // 사고 이력 등록 스키마
 const incidentHistorySchema = z.object({
@@ -117,7 +117,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const form = useForm<IncidentHistoryFormData>({
     resolver: zodResolver(incidentHistorySchema),
     defaultValues: {
-      occurredAt: dayjs().format('YYYY-MM-DD'),
+      occurredAt: formatDate(new Date(), 'yyyy-MM-dd'),
       incidentType: undefined,
       content: '',
       createNonConformance: false,
@@ -130,7 +130,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const repairForm = useForm<RepairHistoryFormData>({
     resolver: zodResolver(repairHistorySchema),
     defaultValues: {
-      repairDate: format(new Date(), 'yyyy-MM-dd'),
+      repairDate: formatDate(new Date(), 'yyyy-MM-dd'),
       repairDescription: '',
       repairResult: undefined,
       notes: '',
@@ -152,7 +152,12 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   }, [incidentType, form]);
 
   // 과거 이력 여부 확인 (현재 날짜보다 이전)
-  const isPastIncident = occurredAt && dayjs(occurredAt).isBefore(dayjs(), 'day');
+  const isPastIncident =
+    occurredAt &&
+    (() => {
+      const parsed = toDate(occurredAt);
+      return parsed ? isBefore(startOfDay(parsed), startOfDay(new Date())) : false;
+    })();
 
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장
   const equipmentId = String(equipment.id);
@@ -193,7 +198,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
       setIsDialogOpen(false);
       form.reset({
-        occurredAt: dayjs().format('YYYY-MM-DD'),
+        occurredAt: formatDate(new Date(), 'yyyy-MM-dd'),
         incidentType: undefined,
         content: '',
         createNonConformance: false,
@@ -479,7 +484,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                           <SelectItem key={nc.id} value={nc.id}>
                             [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
                             {nc.cause.length > 30 ? '...' : ''} (
-                            {format(new Date(nc.discoveryDate), 'yyyy-MM-dd')})
+                            {formatDate(nc.discoveryDate, 'yyyy-MM-dd')})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -791,7 +796,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                               </Badge>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Calendar className="h-4 w-4" />
-                                <span>{dayjs(item.occurredAt).format('YYYY-MM-DD')}</span>
+                                <span>{formatDate(item.occurredAt, 'yyyy-MM-dd')}</span>
                               </div>
                             </div>
                             <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
