@@ -143,7 +143,7 @@ export function ApprovalsClient({
         throw error;
       }
     },
-    [userId, toast, queryClient, approvalsApi.approve]
+    [approvalsApi, userId, toast, queryClient]
   );
 
   // 반려 처리
@@ -169,7 +169,7 @@ export function ApprovalsClient({
         throw error;
       }
     },
-    [userId, toast, queryClient, approvalsApi.reject]
+    [approvalsApi, userId, toast, queryClient]
   );
 
   // 일괄 승인 처리
@@ -196,7 +196,7 @@ export function ApprovalsClient({
     setSelectedItems([]);
     queryClient.invalidateQueries({ queryKey: ['approvals'] });
     queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
-  }, [activeTab, selectedItems, userId, toast, queryClient, approvalsApi.bulkApprove]);
+  }, [approvalsApi, activeTab, selectedItems, userId, toast, queryClient]);
 
   // 일괄 반려 처리
   const handleBulkReject = useCallback(
@@ -224,7 +224,7 @@ export function ApprovalsClient({
       queryClient.invalidateQueries({ queryKey: ['approvals'] });
       queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
     },
-    [activeTab, selectedItems, userId, toast, queryClient, approvalsApi.bulkReject]
+    [approvalsApi, activeTab, selectedItems, userId, toast, queryClient]
   );
 
   // 선택 토글
