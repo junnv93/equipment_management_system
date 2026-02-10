@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,10 @@ export function ApprovalsClient({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // ✅ 세션 초기화 대기: API 호출 전에 NextAuth 세션이 준비되어야 함
+  const { status: sessionStatus } = useSession();
+  const isSessionReady = sessionStatus === 'authenticated';
+
   // ✅ Hydration 에러 방지: 클라이언트 마운트 감지
   const [mounted, setMounted] = useState(false);
 
@@ -105,6 +110,7 @@ export function ApprovalsClient({
   const { data: pendingItems = [], isLoading } = useQuery({
     queryKey: ['approvals', activeTab, userTeamId],
     queryFn: () => approvalsApi.getPendingItems(activeTab, userTeamId),
+    enabled: isSessionReady, // ✅ 세션 준비될 때까지 대기
     staleTime: 30000, // 30초
   });
 
@@ -112,6 +118,7 @@ export function ApprovalsClient({
   const { data: pendingCounts } = useQuery({
     queryKey: ['approval-counts', userRole],
     queryFn: () => approvalsApi.getPendingCounts(userRole),
+    enabled: isSessionReady, // ✅ 세션 준비될 때까지 대기
     staleTime: 60000, // 1분
   });
 
