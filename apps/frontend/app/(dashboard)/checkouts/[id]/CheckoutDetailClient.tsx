@@ -38,6 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import checkoutApi, { Checkout, ConditionCheck } from '@/lib/api/checkout-api';
 import {
   CHECKOUT_PURPOSE_LABELS,
@@ -46,6 +47,7 @@ import {
   ACCESSORIES_STATUS_LABELS,
   CheckoutStatus,
 } from '@equipment-management/schemas';
+import { CHECKOUT_PURPOSE_STYLES } from '@equipment-management/shared-constants';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
@@ -86,11 +88,13 @@ export default function CheckoutDetailClient({
     };
   }, [checkout.id, checkout.purpose, checkout.destination, setDynamicLabel, clearDynamicLabel]);
 
-  // 다이얼로그 상태
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  // 다이얼로그 상태 (통합)
+  const [dialogState, setDialogState] = useState({
+    reject: false,
+    start: false,
+    approveReturn: false,
+  });
   const [rejectReason, setRejectReason] = useState('');
-  const [showStartDialog, setShowStartDialog] = useState(false);
-  const [showApproveReturnDialog, setShowApproveReturnDialog] = useState(false);
 
   // 장비별 반출 전 상태 기록 (Phase 3)
   const [itemConditionsBefore, setItemConditionsBefore] = useState<Record<string, string>>({});
@@ -127,7 +131,7 @@ export default function CheckoutDetailClient({
         title: '반려 완료',
         description: '반출 요청이 반려되었습니다.',
       });
-      setShowRejectDialog(false);
+      setDialogState((prev) => ({ ...prev, reject: false }));
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.refresh();
@@ -184,7 +188,7 @@ export default function CheckoutDetailClient({
         title: '반입 승인 완료',
         description: '장비가 정상적으로 반입되었습니다.',
       });
-      setShowApproveReturnDialog(false);
+      setDialogState((prev) => ({ ...prev, approveReturn: false }));
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.refresh();
@@ -203,14 +207,11 @@ export default function CheckoutDetailClient({
 
   // 목적 배지 렌더링
   const renderPurposeBadge = (purpose: string) => {
-    const purposeStyles: Record<string, string> = {
-      calibration: 'bg-blue-50 text-blue-700 border-blue-200',
-      repair: 'bg-orange-50 text-orange-700 border-orange-200',
-      rental: 'bg-purple-50 text-purple-700 border-purple-200',
-    };
-
     return (
-      <Badge variant="outline" className={purposeStyles[purpose] || ''}>
+      <Badge
+        variant="outline"
+        className={CHECKOUT_PURPOSE_STYLES[purpose as keyof typeof CHECKOUT_PURPOSE_STYLES] || ''}
+      >
         {CHECKOUT_PURPOSE_LABELS[purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] || purpose}
       </Badge>
     );
@@ -230,7 +231,7 @@ export default function CheckoutDetailClient({
   // 반출 시작 처리
   const handleStart = () => {
     startMutation.mutate();
-    setShowStartDialog(false);
+    setDialogState((prev) => ({ ...prev, start: false }));
   };
 
   // 반입 승인 처리
@@ -262,7 +263,7 @@ export default function CheckoutDetailClient({
         <Button
           key="reject"
           variant="destructive"
-          onClick={() => setShowRejectDialog(true)}
+          onClick={() => setDialogState((prev) => ({ ...prev, reject: true }))}
           disabled={rejectMutation.isPending}
         >
           <XCircle className="mr-2 h-4 w-4" />
@@ -276,7 +277,7 @@ export default function CheckoutDetailClient({
       buttons.push(
         <Button
           key="start"
-          onClick={() => setShowStartDialog(true)}
+          onClick={() => setDialogState((prev) => ({ ...prev, start: true }))}
           disabled={startMutation.isPending}
         >
           <Package className="mr-2 h-4 w-4" />
@@ -331,7 +332,7 @@ export default function CheckoutDetailClient({
       buttons.push(
         <Button
           key="approve-return"
-          onClick={() => setShowApproveReturnDialog(true)}
+          onClick={() => setDialogState((prev) => ({ ...prev, approveReturn: true }))}
           disabled={approveReturnMutation.isPending}
           className="bg-green-600 hover:bg-green-700"
         >
@@ -406,7 +407,18 @@ export default function CheckoutDetailClient({
             {checkout.address && (
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">주소</span>
-                <span className="font-medium text-right max-w-[200px]">{checkout.address}</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="font-medium text-right max-w-[200px] truncate cursor-help">
+                        {checkout.address}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">{checkout.address}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )}
             {checkout.phoneNumber && (
@@ -421,7 +433,18 @@ export default function CheckoutDetailClient({
             <Separator />
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">반출 사유</span>
-              <span className="font-medium text-right max-w-[200px]">{checkout.reason}</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="font-medium text-right max-w-[200px] truncate cursor-help">
+                      {checkout.reason}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">{checkout.reason}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </CardContent>
         </Card>
@@ -660,11 +683,19 @@ export default function CheckoutDetailClient({
       )}
 
       {/* 반출 시작 확인 다이얼로그 (장비별 상태 기록 포함) */}
-      <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
-        <DialogContent className="max-w-lg">
+      <Dialog
+        open={dialogState.start}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, start: open }))}
+      >
+        <DialogContent
+          className="max-w-lg"
+          aria-labelledby="start-dialog-title"
+          aria-describedby="start-dialog-description"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
-            <DialogTitle>반출 시작</DialogTitle>
-            <DialogDescription>
+            <DialogTitle id="start-dialog-title">반출 시작</DialogTitle>
+            <DialogDescription id="start-dialog-description">
               반출을 시작하시겠습니까? 장비 상태가 &apos;반출 중&apos;으로 변경됩니다. 각 장비의
               반출 전 상태를 기록해주세요.
             </DialogDescription>
@@ -692,7 +723,10 @@ export default function CheckoutDetailClient({
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStartDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogState((prev) => ({ ...prev, start: false }))}
+            >
               취소
             </Button>
             <Button onClick={handleStart} disabled={startMutation.isPending}>
@@ -703,16 +737,26 @@ export default function CheckoutDetailClient({
       </Dialog>
 
       {/* 반입 승인 확인 다이얼로그 */}
-      <Dialog open={showApproveReturnDialog} onOpenChange={setShowApproveReturnDialog}>
-        <DialogContent>
+      <Dialog
+        open={dialogState.approveReturn}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, approveReturn: open }))}
+      >
+        <DialogContent
+          aria-labelledby="approve-return-dialog-title"
+          aria-describedby="approve-return-dialog-description"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogHeader>
-            <DialogTitle>반입 승인</DialogTitle>
-            <DialogDescription>
+            <DialogTitle id="approve-return-dialog-title">반입 승인</DialogTitle>
+            <DialogDescription id="approve-return-dialog-description">
               반입을 승인하시겠습니까? 장비 상태가 &apos;사용 가능&apos;으로 복원됩니다.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApproveReturnDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogState((prev) => ({ ...prev, approveReturn: false }))}
+            >
               취소
             </Button>
             <Button onClick={handleApproveReturn} disabled={approveReturnMutation.isPending}>
@@ -723,11 +767,26 @@ export default function CheckoutDetailClient({
       </Dialog>
 
       {/* 반려 다이얼로그 */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
+      <Dialog
+        open={dialogState.reject}
+        onOpenChange={(open) => setDialogState((prev) => ({ ...prev, reject: open }))}
+      >
+        <DialogContent
+          aria-labelledby="reject-dialog-title"
+          aria-describedby="reject-dialog-description"
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            // Focus the textarea after dialog opens
+            setTimeout(() => {
+              document.getElementById('rejectReason')?.focus();
+            }, 0);
+          }}
+        >
           <DialogHeader>
-            <DialogTitle>반출 반려</DialogTitle>
-            <DialogDescription>반출 요청을 반려합니다. 반려 사유를 입력해주세요.</DialogDescription>
+            <DialogTitle id="reject-dialog-title">반출 반려</DialogTitle>
+            <DialogDescription id="reject-dialog-description">
+              반출 요청을 반려합니다. 반려 사유를 입력해주세요.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -738,11 +797,16 @@ export default function CheckoutDetailClient({
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 rows={4}
+                aria-required="true"
+                aria-invalid={!rejectReason.trim()}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogState((prev) => ({ ...prev, reject: false }))}
+            >
               취소
             </Button>
             <Button

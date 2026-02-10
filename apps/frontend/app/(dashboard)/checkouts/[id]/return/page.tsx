@@ -3,18 +3,18 @@ import { notFound } from 'next/navigation';
 import ReturnCheckoutClient from './ReturnCheckoutClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import checkoutApi from '@/lib/api/checkout-api';
+import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
  */
 const getCheckoutCached = cache(async (id: string) => {
-  return checkoutApi.getCheckout(id);
+  return getCheckoutServer(id);
 });
 
 const getConditionChecksCached = cache(async (id: string) => {
   try {
-    return await checkoutApi.getConditionChecks(id);
+    return await getConditionChecksServer(id);
   } catch {
     return [];
   }

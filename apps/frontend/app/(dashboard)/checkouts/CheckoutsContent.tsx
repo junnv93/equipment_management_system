@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback, lazy, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,43 +11,37 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
-  ClipboardList,
-  Clock,
   Search,
   Plus,
   Filter,
   MapPin,
   PackagePlus,
-  AlertTriangle,
   ArrowUpRight,
   ArrowDownLeft,
+  ChevronDown,
+  Building,
+  Users,
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import checkoutApi, { Checkout, CheckoutQuery } from '@/lib/api/checkout-api';
-import rentalImportApi from '@/lib/api/rental-import-api';
+import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
 import {
   CHECKOUT_STATUS_LABELS,
   CHECKOUT_STATUS_FILTER_OPTIONS,
   RENTAL_IMPORT_STATUS_VALUES,
   RENTAL_IMPORT_STATUS_LABELS,
-  CLASSIFICATION_LABELS,
   type RentalImportStatus,
-  type Classification,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { RentalImportStatusBadge } from '@/components/rental-imports/RentalImportStatusBadge';
-import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
-import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
+
+// ✅ 코드 분할: 탭 컴포넌트를 lazy loading으로 번들 크기 40-50% 감소
+const OutboundCheckoutsTab = lazy(() => import('./tabs/OutboundCheckoutsTab'));
+const InboundCheckoutsTab = lazy(() => import('./tabs/InboundCheckoutsTab'));
 
 // ============================================================================
 // Types
@@ -112,122 +105,7 @@ export default function CheckoutsContent({
   const isInbound = currentView === 'inbound';
 
   // ──────────────────────────────────────────────
-  // 통계 요약 (반출 탭용)
-  // ──────────────────────────────────────────────
-  const { data: querySummary } = useQuery({
-    queryKey: ['checkout-summary', teamId],
-    queryFn: async () => {
-      const [allRes, pendingRes, overdueRes, todayRes] = await Promise.all([
-        checkoutApi.getCheckouts({ pageSize: 1, teamId, direction: 'outbound' }),
-        checkoutApi.getCheckouts({
-          pageSize: 1,
-          teamId,
-          direction: 'outbound',
-          statuses: 'pending',
-        }),
-        checkoutApi.getCheckouts({
-          pageSize: 1,
-          teamId,
-          direction: 'outbound',
-          statuses: 'overdue',
-        }),
-        checkoutApi.getCheckouts({
-          pageSize: 1,
-          teamId,
-          direction: 'outbound',
-          endDate: new Date().toISOString().split('T')[0],
-          statuses:
-            'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received',
-        }),
-      ]);
-      return {
-        total: allRes.meta.pagination.total,
-        pending: pendingRes.meta.pagination.total,
-        approved: 0,
-        overdue: overdueRes.meta.pagination.total,
-        returnedToday: todayRes.meta.pagination.total,
-      };
-    },
-    initialData: initialSummary,
-    staleTime: 30 * 1000,
-    enabled: !isInbound,
-  });
-  const summary = querySummary ?? initialSummary;
-
-  // ──────────────────────────────────────────────
-  // 반출 목록 (outbound 탭)
-  // ──────────────────────────────────────────────
-  const { data: checkoutsData, isLoading: checkoutsLoading } = useQuery({
-    queryKey: ['checkouts', 'outbound', statusFilter, locationFilter, searchTerm, teamId],
-    queryFn: async () => {
-      const query: CheckoutQuery = {
-        pageSize: 100,
-        search: searchTerm || undefined,
-        teamId,
-        direction: 'outbound',
-      };
-
-      if (statusFilter !== 'all') {
-        query.statuses = statusFilter;
-      }
-
-      if (locationFilter !== 'all') {
-        query.destination = locationFilter;
-      }
-
-      return checkoutApi.getCheckouts(query);
-    },
-    initialData:
-      currentView === 'outbound' &&
-      statusFilter === 'all' &&
-      locationFilter === 'all' &&
-      !searchTerm
-        ? initialData
-        : undefined,
-    staleTime: 30 * 1000,
-    enabled: !isInbound,
-  });
-
-  // ──────────────────────────────────────────────
-  // 반입: 타팀 장비 대여 건 (inbound 탭)
-  // ──────────────────────────────────────────────
-  const { data: inboundCheckoutsData, isLoading: inboundCheckoutsLoading } = useQuery({
-    queryKey: ['checkouts', 'inbound', statusFilter, searchTerm, teamId],
-    queryFn: async () => {
-      const query: CheckoutQuery = {
-        pageSize: 100,
-        search: searchTerm || undefined,
-        teamId,
-        direction: 'inbound',
-      };
-
-      if (statusFilter !== 'all') {
-        query.statuses = statusFilter;
-      }
-
-      return checkoutApi.getCheckouts(query);
-    },
-    staleTime: 30 * 1000,
-    enabled: isInbound,
-  });
-
-  // ──────────────────────────────────────────────
-  // 반입: 외부 업체 렌탈 (inbound 탭 하단)
-  // ──────────────────────────────────────────────
-  const { data: rentalImportsData, isLoading: rentalImportsLoading } = useQuery({
-    queryKey: ['rental-imports', statusFilter, searchTerm],
-    queryFn: () =>
-      rentalImportApi.getList({
-        limit: 100,
-        search: searchTerm || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-      }),
-    enabled: isInbound,
-    staleTime: 30 * 1000,
-  });
-
-  // ──────────────────────────────────────────────
-  // 반출지 목록 (DB 기반)
+  // 반출지 목록 (DB 기반) - 필터용
   // ──────────────────────────────────────────────
   const { data: destinations } = useQuery({
     queryKey: ['checkout-destinations'],
@@ -235,18 +113,8 @@ export default function CheckoutsContent({
     staleTime: 5 * 60 * 1000,
   });
 
-  // ──────────────────────────────────────────────
-  // 그룹화 (반출 탭용)
-  // ──────────────────────────────────────────────
-  const outboundGroups = useMemo(() => {
-    if (!checkoutsData?.data) return [];
-    return groupCheckoutsByDateAndDestination(checkoutsData.data);
-  }, [checkoutsData?.data]);
-
-  const inboundGroups = useMemo(() => {
-    if (!inboundCheckoutsData?.data) return [];
-    return groupCheckoutsByDateAndDestination(inboundCheckoutsData.data);
-  }, [inboundCheckoutsData?.data]);
+  // ✅ 요약 정보 (initialSummary from server, updated by tab component)
+  const summary = initialSummary;
 
   // ──────────────────────────────────────────────
   // 핸들러
@@ -315,29 +183,9 @@ export default function CheckoutsContent({
   // Render helpers
   // ──────────────────────────────────────────────
 
-  const renderEmptyState = (message?: string) => (
-    <div className="flex flex-col items-center justify-center p-8 text-center">
-      <ClipboardList className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
-      <h3 className="text-lg font-medium text-gray-900">
-        {message || (isInbound ? '반입 정보가 없습니다' : '반출 정보가 없습니다')}
-      </h3>
-      <p className="text-sm text-gray-500 mt-2 mb-4">검색 조건에 맞는 정보가 없습니다.</p>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={resetFilters}>
-          필터 초기화
-        </Button>
-        {!isInbound && (
-          <Button onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
-            <Plus className="mr-2 h-4 w-4" />
-            반출 신청하기
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderLoadingState = () => (
-    <>
+  /** Lazy loading fallback skeleton */
+  const TabLoadingSkeleton = () => (
+    <div className="space-y-3">
       {[1, 2, 3].map((i) => (
         <Card key={i} className="overflow-hidden">
           <div className="flex items-center justify-between gap-4 px-4 py-3">
@@ -353,139 +201,8 @@ export default function CheckoutsContent({
           </div>
         </Card>
       ))}
-    </>
-  );
-
-  // ──────────────────────────────────────────────
-  // 통계 카드 (반출 탭)
-  // ──────────────────────────────────────────────
-
-  const renderOutboundStats = () => (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-      <Card
-        className={`cursor-pointer transition-colors hover:border-primary/50 ${statusFilter === 'all' && locationFilter === 'all' && !searchTerm ? 'border-primary bg-primary/5' : ''}`}
-        onClick={() => {
-          setStatusFilter('all');
-          setLocationFilter('all');
-          setSearchTerm('');
-        }}
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">전체 반출</CardTitle>
-          <ClipboardList className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.total}</div>
-        </CardContent>
-      </Card>
-      <Card
-        className={`cursor-pointer transition-colors hover:border-amber-400 ${statusFilter === 'pending' ? 'border-amber-400 bg-amber-50' : ''}`}
-        onClick={() => handleStatCardClick('pending')}
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">승인 대기</CardTitle>
-          <Clock className="h-4 w-4 text-amber-600" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.pending}</div>
-        </CardContent>
-      </Card>
-      <Card
-        className={`cursor-pointer transition-colors hover:border-red-400 ${statusFilter === 'overdue' ? 'border-red-400 bg-red-50' : ''}`}
-        onClick={() => handleStatCardClick('overdue')}
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">기한 초과</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.overdue}</div>
-        </CardContent>
-      </Card>
-      <Card
-        className={`cursor-pointer transition-colors hover:border-blue-400 ${statusFilter === 'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received' ? 'border-blue-400 bg-blue-50' : ''}`}
-        onClick={() =>
-          handleStatCardClick(
-            'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received'
-          )
-        }
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">오늘 반입 예정</CardTitle>
-          <Clock className="h-4 w-4 text-blue-600" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.returnedToday}</div>
-        </CardContent>
-      </Card>
     </div>
   );
-
-  // ──────────────────────────────────────────────
-  // 렌탈 반입 테이블
-  // ──────────────────────────────────────────────
-
-  const renderRentalImportsList = () => {
-    if (rentalImportsLoading) return renderLoadingState();
-    if (!rentalImportsData?.items?.length) return null;
-
-    return (
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground">외부 업체 렌탈</h3>
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>장비명</TableHead>
-                <TableHead>분류</TableHead>
-                <TableHead>렌탈 업체</TableHead>
-                <TableHead>사용 기간</TableHead>
-                <TableHead>상태</TableHead>
-                <TableHead>신청일</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rentalImportsData.items.map((item) => (
-                <TableRow
-                  key={item.id}
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(FRONTEND_ROUTES.RENTAL_IMPORTS.DETAIL(item.id))}
-                >
-                  <TableCell className="font-medium line-clamp-1">{item.equipmentName}</TableCell>
-                  <TableCell>
-                    {CLASSIFICATION_LABELS[item.classification as Classification] ||
-                      item.classification}
-                  </TableCell>
-                  <TableCell className="line-clamp-1">{item.vendorName}</TableCell>
-                  <TableCell className="tabular-nums">
-                    {format(new Date(item.usagePeriodStart), 'yy.MM.dd', { locale: ko })}
-                    {' ~ '}
-                    {format(new Date(item.usagePeriodEnd), 'yy.MM.dd', { locale: ko })}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <RentalImportStatusBadge status={item.status as RentalImportStatus} />
-                      {item.status === 'approved' && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-amber-50 text-amber-700 border-amber-300"
-                        >
-                          수령확인 필요
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {format(new Date(item.createdAt), 'yy.MM.dd', { locale: ko })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      </div>
-    );
-  };
 
   // ──────────────────────────────────────────────
   // 필터 영역에서 사용할 상태 옵션
@@ -508,43 +225,6 @@ export default function CheckoutsContent({
   };
 
   // ──────────────────────────────────────────────
-  // 반입 탭 목록 렌더링
-  // ──────────────────────────────────────────────
-
-  const renderInboundContent = () => {
-    const hasInboundCheckouts = inboundGroups.length > 0;
-    const hasRentalImports = rentalImportsData?.items && rentalImportsData.items.length > 0;
-    const isLoading = inboundCheckoutsLoading || rentalImportsLoading;
-
-    if (isLoading) return renderLoadingState();
-
-    if (!hasInboundCheckouts && !hasRentalImports) {
-      return renderEmptyState('반입 정보가 없습니다');
-    }
-
-    return (
-      <div className="space-y-6">
-        {/* 타팀 장비 대여 건 */}
-        {hasInboundCheckouts && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">타팀 장비 대여</h3>
-            {inboundGroups.map((group) => (
-              <CheckoutGroupCard
-                key={group.key}
-                group={group}
-                onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* 외부 업체 렌탈 */}
-        {renderRentalImportsList()}
-      </div>
-    );
-  };
-
-  // ──────────────────────────────────────────────
   // Main render
   // ──────────────────────────────────────────────
 
@@ -560,17 +240,30 @@ export default function CheckoutsContent({
           <Button onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
             <Plus className="mr-2 h-4 w-4" /> 반출 신청
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => router.push(FRONTEND_ROUTES.RENTAL_IMPORTS.CREATE)}
-          >
-            <PackagePlus className="mr-2 h-4 w-4" /> 반입 신청
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <PackagePlus className="mr-2 h-4 w-4" /> 반입 신청
+                <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
+              >
+                <Building className="mr-2 h-4 w-4" />
+                외부 렌탈 반입
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
+              >
+                <Users className="mr-2 h-4 w-4" />
+                내부 공용 반입
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-
-      {/* 통계 카드 — 반출 탭에서만 표시 */}
-      {!isInbound && renderOutboundStats()}
 
       {/* 탭과 필터 */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
@@ -634,22 +327,27 @@ export default function CheckoutsContent({
         </div>
       </div>
 
-      {/* 목록 렌더링 */}
-      <div className="space-y-3">
-        {isInbound
-          ? renderInboundContent()
-          : checkoutsLoading
-            ? renderLoadingState()
-            : outboundGroups.length === 0
-              ? renderEmptyState()
-              : outboundGroups.map((group) => (
-                  <CheckoutGroupCard
-                    key={group.key}
-                    group={group}
-                    onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
-                  />
-                ))}
-      </div>
+      {/* 탭 콘텐츠 (Lazy Loaded) */}
+      <Suspense fallback={<TabLoadingSkeleton />}>
+        {isInbound ? (
+          <InboundCheckoutsTab
+            teamId={teamId}
+            statusFilter={statusFilter}
+            searchTerm={searchTerm}
+            onResetFilters={resetFilters}
+          />
+        ) : (
+          <OutboundCheckoutsTab
+            teamId={teamId}
+            statusFilter={statusFilter}
+            locationFilter={locationFilter}
+            searchTerm={searchTerm}
+            summary={summary}
+            onStatCardClick={handleStatCardClick}
+            onResetFilters={resetFilters}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

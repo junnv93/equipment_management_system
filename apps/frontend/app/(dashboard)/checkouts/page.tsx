@@ -10,6 +10,10 @@
  * - 장비 반출 요청 및 현황 관리
  * - 반출 목적: 교정, 수리, 대여(외부 대여는 2단계 승인 필요)
  * - 반출 시 장비 상태가 'checked_out'으로 변경
+ *
+ * URL 파라미터:
+ * - ?view=outbound|inbound (기본: outbound)
+ * - ?tab=rental_imports (레거시 호환 → inbound로 매핑)
  */
 
 import { createServerApiClient } from '@/lib/api/server-api-client';
@@ -22,7 +26,17 @@ type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default async function CheckoutsPage(_props: PageProps) {
+export default async function CheckoutsPage(props: PageProps) {
+  // ✅ Next.js 16: searchParams는 Promise
+  const searchParams = await props.searchParams;
+
+  // URL 파라미터에서 view 모드 결정
+  // 기존 ?tab=rental_imports → ?view=inbound 호환
+  let initialView: 'outbound' | 'inbound' = 'outbound';
+  if (searchParams.view === 'inbound' || searchParams.tab === 'rental_imports') {
+    initialView = 'inbound';
+  }
+
   // ✅ Server-side 데이터 fetch
   const apiClient = await createServerApiClient();
 
@@ -30,14 +44,15 @@ export default async function CheckoutsPage(_props: PageProps) {
   let initialSummary;
 
   try {
-    // 초기 반출 목록 fetch
-    const listResponse = await apiClient.get('/api/checkouts?pageSize=100');
+    // ✅ 성능 최적화: includeSummary=true로 목록+요약을 단일 요청으로 조회
+    // 이전: 2개 요청 (목록 + 클라이언트 재계산), 이후: 1개 요청
+    const listResponse = await apiClient.get('/api/checkouts?pageSize=100&includeSummary=true');
     initialData = transformPaginatedResponse<Checkout>(listResponse);
 
-    // 요약 정보 생성 (백엔드에 summary 엔드포인트가 없으므로 목록에서 계산)
-    initialSummary = {
+    // 백엔드에서 summary를 포함하여 반환하면 사용, 없으면 기본값
+    initialSummary = (listResponse.data as any).summary || {
       total: initialData.meta.pagination.total,
-      pending: 0, // TODO: 백엔드에서 상태별 카운트 제공 시 업데이트
+      pending: 0,
       approved: 0,
       overdue: 0,
       returnedToday: 0,
@@ -65,5 +80,11 @@ export default async function CheckoutsPage(_props: PageProps) {
     };
   }
 
-  return <CheckoutsContent initialData={initialData} initialSummary={initialSummary} />;
+  return (
+    <CheckoutsContent
+      initialData={initialData}
+      initialSummary={initialSummary}
+      initialView={initialView}
+    />
+  );
 }

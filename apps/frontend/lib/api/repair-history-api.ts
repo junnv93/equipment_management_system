@@ -36,6 +36,7 @@ export interface RepairHistoryQuery {
   fromDate?: string;
   toDate?: string;
   repairResult?: RepairResult;
+  repairCompany?: string;
   includeDeleted?: boolean;
   sort?: string;
   page?: number;

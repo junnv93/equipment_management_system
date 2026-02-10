@@ -101,7 +101,7 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
   // 응답 인터셉터: 에러 처리
   client.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
       // ✅ 공통 에러 변환 유틸리티 사용
       const apiError = createApiError(error);
 
@@ -128,15 +128,18 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
         );
       }
 
-      // 401 에러 특별 처리 (프로덕션에서도 로깅)
+      // 401 에러 특별 처리: 로그인 페이지로 리다이렉트
       if (error.response?.status === 401) {
         console.error(
           '[Server API Client] 인증 실패 (401):\n' +
             `  - URL: ${error.config?.url}\n` +
             `  - Session exists: ${!!session}\n` +
             `  - Access token exists: ${!!accessToken}\n` +
-            '  - 해결 방법: 사용자가 로그인했는지 확인하고, NextAuth 세션이 올바르게 설정되었는지 확인하세요.'
+            '  - 로그인 페이지로 리다이렉트합니다.'
         );
+        // Server Component에서 401 발생 시 로그인 페이지로 리다이렉트
+        const { redirect } = await import('next/navigation');
+        redirect('/login');
       }
 
       return Promise.reject(apiError);

@@ -124,11 +124,13 @@ export interface CheckoutQuery {
   equipmentId?: string;
   teamId?: string;
   direction?: 'outbound' | 'inbound';
+  purpose?: string; // ✅ 반출 목적 필터 (calibration, repair, rental, return_to_vendor)
   startDate?: string;
   endDate?: string;
   search?: string;
   location?: string;
   destination?: string;
+  includeSummary?: boolean; // ✅ 성능 최적화: 요약 정보 포함 여부
 }
 
 export interface CreateCheckoutDto {
@@ -280,22 +282,6 @@ const checkoutApi = {
   async approveCheckout(id: string, notes?: string): Promise<Checkout> {
     const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.APPROVE(id), { notes });
     return transformSingleResponse<Checkout>(response);
-  },
-
-  /**
-   * 반출 1차 승인을 처리합니다.
-   * approveCheckout의 별칭 (하위 호환성)
-   */
-  async approveFirst(id: string, notes?: string): Promise<Checkout> {
-    return this.approveCheckout(id, notes);
-  },
-
-  /**
-   * 반출 최종 승인을 처리합니다.
-   * approveCheckout의 별칭 (하위 호환성)
-   */
-  async approveFinal(id: string, notes?: string): Promise<Checkout> {
-    return this.approveCheckout(id, notes);
   },
 
   /**

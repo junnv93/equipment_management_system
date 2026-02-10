@@ -29,13 +29,13 @@ import {
  * @returns 프론트엔드 형식의 페이지네이션 응답
  */
 export function transformPaginatedResponse<T>(
-  response: AxiosResponse<PaginatedListResponse<T>>
+  response: AxiosResponse<PaginatedListResponse<T> & { summary?: any }>
 ): FrontendPaginatedResponse<T> {
   const backendData = response.data;
 
   // 백엔드 응답 구조 확인
   if (backendData && 'items' in backendData && 'meta' in backendData) {
-    return {
+    const result: FrontendPaginatedResponse<T> = {
       data: backendData.items || [],
       meta: {
         pagination: {
@@ -46,6 +46,13 @@ export function transformPaginatedResponse<T>(
         },
       },
     };
+
+    // ✅ 성능 최적화: summary 필드가 있으면 보존
+    if ('summary' in backendData && backendData.summary) {
+      result.meta.summary = backendData.summary;
+    }
+
+    return result;
   }
 
   // 레거시 호환성: 이미 변환된 형태인 경우
