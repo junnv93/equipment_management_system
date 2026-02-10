@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, useSession, signOut } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
 import { clearTokenCache } from '@/lib/api/api-client';
+import { AuthenticatedClientProvider } from '@/lib/api/authenticated-client-provider';
 
 // React Query 클라이언트 인스턴스 생성
 const queryClient = new QueryClient({
@@ -84,7 +85,10 @@ export function Providers({ children }: ProvidersProps) {
     <SessionProvider refetchInterval={5 * 60}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
-          <AuthSync>{children}</AuthSync>
+          {/* ✅ Best Practice: SessionProvider 내부에서 useSession() 사용 */}
+          <AuthenticatedClientProvider>
+            <AuthSync>{children}</AuthSync>
+          </AuthenticatedClientProvider>
         </QueryClientProvider>
       </ThemeProvider>
     </SessionProvider>

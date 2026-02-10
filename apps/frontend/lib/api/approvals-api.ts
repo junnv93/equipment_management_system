@@ -209,6 +209,14 @@ export interface PendingCountsByCategory {
   software: number;
 }
 
+/**
+ * 일괄 처리 결과
+ */
+export interface BulkActionResult {
+  success: string[];
+  failed: string[];
+}
+
 // ============================================================================
 // 승인 관리 API
 // ============================================================================

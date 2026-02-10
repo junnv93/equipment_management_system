@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -21,12 +20,13 @@ import {
   PackagePlus,
 } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
-import approvalsApi, {
+import {
   type ApprovalCategory,
   type ApprovalItem,
   ROLE_TABS,
   TAB_META,
 } from '@/lib/api/approvals-api';
+import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
 import { ApprovalList } from './ApprovalList';
 import { BulkActionBar } from './BulkActionBar';
 import ApprovalDetailModal from './ApprovalDetailModal';
@@ -65,9 +65,8 @@ export function ApprovalsClient({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // ✅ 세션 초기화 대기: API 호출 전에 NextAuth 세션이 준비되어야 함
-  const { status: sessionStatus } = useSession();
-  const isSessionReady = sessionStatus === 'authenticated';
+  // ✅ Best Practice: useAuthenticatedClient를 통한 인증된 API 클라이언트 사용
+  const approvalsApi = useApprovalsApi();
 
   // ✅ Hydration 에러 방지: 클라이언트 마운트 감지
   const [mounted, setMounted] = useState(false);
@@ -110,7 +109,6 @@ export function ApprovalsClient({
   const { data: pendingItems = [], isLoading } = useQuery({
     queryKey: ['approvals', activeTab, userTeamId],
     queryFn: () => approvalsApi.getPendingItems(activeTab, userTeamId),
-    enabled: isSessionReady, // ✅ 세션 준비될 때까지 대기
     staleTime: 30000, // 30초
   });
 
@@ -118,7 +116,6 @@ export function ApprovalsClient({
   const { data: pendingCounts } = useQuery({
     queryKey: ['approval-counts', userRole],
     queryFn: () => approvalsApi.getPendingCounts(userRole),
-    enabled: isSessionReady, // ✅ 세션 준비될 때까지 대기
     staleTime: 60000, // 1분
   });
 
@@ -146,7 +143,7 @@ export function ApprovalsClient({
         throw error;
       }
     },
-    [userId, toast, queryClient]
+    [approvalsApi, userId, toast, queryClient]
   );
 
   // 반려 처리
@@ -172,7 +169,7 @@ export function ApprovalsClient({
         throw error;
       }
     },
-    [userId, toast, queryClient]
+    [approvalsApi, userId, toast, queryClient]
   );
 
   // 일괄 승인 처리
@@ -199,7 +196,7 @@ export function ApprovalsClient({
     setSelectedItems([]);
     queryClient.invalidateQueries({ queryKey: ['approvals'] });
     queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
-  }, [activeTab, selectedItems, userId, toast, queryClient]);
+  }, [approvalsApi, activeTab, selectedItems, userId, toast, queryClient]);
 
   // 일괄 반려 처리
   const handleBulkReject = useCallback(
@@ -227,7 +224,7 @@ export function ApprovalsClient({
       queryClient.invalidateQueries({ queryKey: ['approvals'] });
       queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
     },
-    [activeTab, selectedItems, userId, toast, queryClient]
+    [approvalsApi, activeTab, selectedItems, userId, toast, queryClient]
   );
 
   // 선택 토글
