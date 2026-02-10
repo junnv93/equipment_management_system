@@ -14,6 +14,11 @@ import { createApiError } from './utils/response-transformers';
  * - 인증 토큰은 NextAuth 세션(httpOnly 쿠키)에서만 관리
  * - localStorage.token 사용 시 NextAuth 세션과 불일치 문제 발생
  *
+ * Token Refresh 아키텍처:
+ *   - Access Token은 15분 수명
+ *   - SessionProvider refetchInterval(4분)로 JWT 콜백이 자동 갱신
+ *   - 401 발생 시 getSession()으로 최신 토큰 재조회
+ *
  * 올바른 패턴:
  *   const session = await getSession();
  *   const token = session?.accessToken;
@@ -25,10 +30,6 @@ import { createApiError } from './utils/response-transformers';
  * 참고: docs/development/AUTH_ARCHITECTURE.md
  * ============================================================================
  */
-
-// 토큰 캐싱 (성능 최적화 - 매 요청마다 getSession 호출 방지)
-let cachedToken: string | null = null;
-let tokenExpiry: number = 0;
 
 /**
  * API 클라이언트 설정
@@ -56,14 +57,14 @@ const validateApiPath = (path: string): void => {
     if (path && !path.startsWith('/api/') && !path.startsWith('/api?')) {
       console.warn(
         `[API Client Warning] API 경로가 '/api/'로 시작하지 않습니다: "${path}"\n` +
-        `올바른 형식: '/api/endpoint' (예: '/api/equipment', '/api/calibration')`
+          `올바른 형식: '/api/endpoint' (예: '/api/equipment', '/api/calibration')`
       );
     }
     // /api/api 중복 감지
     if (path && path.includes('/api/api')) {
       console.error(
         `[API Client Error] API 경로에 '/api/api' 중복이 감지되었습니다: "${path}"\n` +
-        `환경변수 NEXT_PUBLIC_API_URL에 '/api'가 포함되어 있지 않은지 확인하세요.`
+          `환경변수 NEXT_PUBLIC_API_URL에 '/api'가 포함되어 있지 않은지 확인하세요.`
       );
     }
   }
@@ -78,33 +79,20 @@ export const apiClient = axios.create({
 
 /**
  * NextAuth 세션에서 액세스 토큰 가져오기
- * 캐싱을 통해 성능 최적화 (5분 캐시)
+ * NextAuth가 세션을 클라이언트에 캐싱하므로 별도 캐시 불필요
  */
 async function getAccessToken(): Promise<string | null> {
-  const now = Date.now();
-
-  // 캐시된 토큰이 유효하면 재사용 (5분 캐시)
-  if (cachedToken && tokenExpiry > now) {
-    return cachedToken;
-  }
-
   try {
     const session = await getSession();
 
-    // 디버그 로깅 (개발 환경에서만)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[API Client] 세션 조회 결과:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.accessToken,
-        user: session?.user?.email,
-      });
+    if (session?.error === 'RefreshAccessTokenError') {
+      // Refresh token도 만료됨 — 재로그인 필요
+      console.error('[API Client] 세션 갱신 실패 (RefreshAccessTokenError)');
+      return null;
     }
 
     if (session?.accessToken) {
-      cachedToken = session.accessToken as string;
-      // 5분 캐시 (토큰 만료 전에 갱신)
-      tokenExpiry = now + 5 * 60 * 1000;
-      return cachedToken;
+      return session.accessToken as string;
     } else if (session) {
       console.warn('[API Client] 세션은 있지만 accessToken이 없습니다:', Object.keys(session));
     }
@@ -116,11 +104,11 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 /**
- * 토큰 캐시 초기화 (로그아웃 또는 401 에러 시 호출)
+ * 토큰 캐시 초기화 (하위 호환 - no-op)
+ * 이전에는 5분 캐시를 사용했으나 JWT 콜백 기반 갱신으로 불필요
  */
 export function clearTokenCache(): void {
-  cachedToken = null;
-  tokenExpiry = 0;
+  // no-op: NextAuth가 세션 관리를 전담
 }
 
 // 요청 인터셉터 설정
@@ -149,20 +137,26 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // 토큰이 만료된 경우 (401)
+    // 토큰이 만료된 경우 (401) - 1회 재시도
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      // ✅ NextAuth 기반 토큰 갱신
-      // 캐시 초기화 후 세션 재조회 (NextAuth가 자동으로 토큰 갱신 처리)
-      clearTokenCache();
-
       try {
-        const token = await getAccessToken();
+        // getSession()을 호출하면 NextAuth JWT 콜백이 트리거되어 토큰 갱신
+        const session = await getSession();
 
-        if (token) {
+        if (session?.error === 'RefreshAccessTokenError') {
+          // Refresh token도 만료됨 — 재로그인 리다이렉트
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:session-expired'));
+            window.location.href = '/login';
+          }
+          return Promise.reject(error);
+        }
+
+        if (session?.accessToken) {
           // 새로운 토큰으로 원래 요청 재시도
-          originalRequest.headers.Authorization = `Bearer ${token}`;
+          originalRequest.headers.Authorization = `Bearer ${session.accessToken}`;
           return apiClient(originalRequest);
         }
       } catch (refreshError) {
@@ -170,7 +164,6 @@ apiClient.interceptors.response.use(
       }
 
       // 토큰 갱신 실패 시 로그인 페이지로 리다이렉트
-      // ⚠️ signOut()은 next-auth/react에서 호출해야 하므로 이벤트로 처리
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth:session-expired'));
         window.location.href = '/login';

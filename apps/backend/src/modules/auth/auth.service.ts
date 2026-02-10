@@ -20,6 +20,8 @@ export interface UserDto {
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
+  expires_at: number; // Unix timestamp (초)
   user: UserDto;
 }
 
@@ -318,9 +320,76 @@ export class AuthService {
     });
   }
 
-  // JWT 토큰 생성
+  /**
+   * Refresh Token으로 새 Access Token + Refresh Token 발급 (Rotation)
+   *
+   * - refresh_token 검증 (별도 시크릿, type === 'refresh' 확인)
+   * - payload.sub로 DB에서 최신 사용자 정보 조회 (역할 변경 즉시 반영)
+   * - 새 access_token + 새 refresh_token 발급
+   */
+  async refreshTokens(refreshToken: string): Promise<AuthResponse> {
+    try {
+      const refreshSecret =
+        this.configService.get<string>('REFRESH_TOKEN_SECRET') ||
+        this.configService.get<string>('JWT_SECRET') + '_refresh';
+
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: refreshSecret,
+      });
+
+      // type 클레임 확인: access token으로 refresh 시도 방지
+      if (payload.type !== 'refresh') {
+        throw new UnauthorizedException('유효하지 않은 리프레시 토큰입니다.');
+      }
+
+      const userId = payload.sub;
+      if (!userId) {
+        throw new UnauthorizedException('리프레시 토큰에 사용자 정보가 없습니다.');
+      }
+
+      // DB에서 최신 사용자 정보 조회 (역할 변경 즉시 반영)
+      const dbUser = (await this.usersService.findOne(userId)) as
+        | (Record<string, unknown> & {
+            id: string;
+            email: string;
+            name: string;
+            role: string;
+            teamId?: string | null;
+            position?: string | null;
+          })
+        | null;
+
+      if (!dbUser) {
+        throw new UnauthorizedException('사용자를 찾을 수 없습니다.');
+      }
+
+      return this.generateToken({
+        id: dbUser.id,
+        email: dbUser.email as string,
+        name: dbUser.name as string,
+        roles: [dbUser.role as UserRole],
+        department: undefined,
+        site: (dbUser.site as UserDto['site']) ?? undefined,
+        location: (dbUser.location as UserDto['location']) ?? undefined,
+        position: dbUser.position ?? undefined,
+        teamId: dbUser.teamId ?? undefined,
+      });
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.warn(`refreshTokens() 실패: ${(error as Error).message}`);
+      throw new UnauthorizedException('리프레시 토큰이 만료되었거나 유효하지 않습니다.');
+    }
+  }
+
+  // JWT 토큰 생성 (Access Token 15분 + Refresh Token 7일)
   private generateToken(user: UserDto): AuthResponse {
-    const payload = {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    const refreshSecret =
+      this.configService.get<string>('REFRESH_TOKEN_SECRET') || jwtSecret + '_refresh';
+
+    const accessPayload = {
       sub: user.id,
       email: user.email,
       name: user.name,
@@ -332,11 +401,24 @@ export class AuthService {
       teamId: user.teamId,
     };
 
+    const refreshPayload = {
+      sub: user.id,
+      email: user.email,
+      type: 'refresh' as const,
+    };
+
+    const accessTokenExpiresInSeconds = 15 * 60; // 15분
+
     return {
-      access_token: this.jwtService.sign(payload, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: '1d', // 토큰 만료 시간
+      access_token: this.jwtService.sign(accessPayload, {
+        secret: jwtSecret,
+        expiresIn: '15m',
       }),
+      refresh_token: this.jwtService.sign(refreshPayload, {
+        secret: refreshSecret,
+        expiresIn: '7d',
+      }),
+      expires_at: Math.floor(Date.now() / 1000) + accessTokenExpiresInSeconds,
       user: {
         id: user.id,
         email: user.email,

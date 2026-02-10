@@ -5,6 +5,13 @@
  * - 모든 콜백에 적절한 타입 정의 사용
  * - 모듈 확장(types/next-auth.d.ts)과 일관성 유지
  * - any 타입 사용 금지
+ *
+ * Token Refresh 아키텍처:
+ * - Access Token: 15분 (단기, 보안 강화)
+ * - Refresh Token: 7일 (장기, Rotation 적용)
+ * - JWT 콜백에서 만료 60초 전 자동 갱신
+ * - SessionProvider refetchInterval(5분)로 주기적 JWT 콜백 트리거
+ * - Absolute Max Lifetime: 30일 초과 시 활동 여부와 무관하게 재로그인 강제
  */
 
 import { getSession } from 'next-auth/react';
@@ -30,9 +37,11 @@ interface AuthorizedUser extends User {
   role: string;
   roles: string[];
   department?: string;
-  site?: 'suwon' | 'uiwang';
+  site?: 'suwon' | 'uiwang' | 'pyeongtaek';
   teamId?: string;
   accessToken?: string;
+  refreshToken?: string;
+  accessTokenExpires?: number;
 }
 
 // 백엔드 API 베이스 URL (호스트만 포함, /api는 각 엔드포인트에서 지정)
@@ -43,6 +52,43 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 const isTest = process.env.NODE_ENV === 'test';
 const enableLocalAuth = process.env.ENABLE_LOCAL_AUTH === 'true' || isDevelopment;
 const hasAzureAD = !!(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET);
+
+// 절대 세션 수명: 활동 여부와 무관하게 이 기간 이후 재로그인 강제 (30일)
+const ABSOLUTE_SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30일 (초)
+
+/**
+ * Refresh Token으로 새 Access Token 발급
+ * 백엔드 /api/auth/refresh 엔드포인트 직접 호출
+ */
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: token.refreshToken }),
+    });
+
+    if (!response.ok) {
+      console.error('[Auth] Token refresh failed:', response.status);
+      return { ...token, error: 'RefreshAccessTokenError' };
+    }
+
+    const data = await response.json();
+
+    console.log('[Auth] Token refreshed successfully for:', token.email);
+
+    return {
+      ...token,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      accessTokenExpires: data.expires_at,
+      error: undefined,
+    };
+  } catch (error) {
+    console.error('[Auth] Token refresh error:', error);
+    return { ...token, error: 'RefreshAccessTokenError' };
+  }
+}
 
 /**
  * NextAuth 설정 옵션
@@ -110,6 +156,8 @@ export const authOptions = {
                   site: data.user.site,
                   teamId: data.user.teamId,
                   accessToken: data.access_token,
+                  refreshToken: data.refresh_token,
+                  accessTokenExpires: data.expires_at,
                 };
               } catch (error) {
                 console.error('인증 오류:', error);
@@ -191,6 +239,8 @@ export const authOptions = {
                   site: data.user.site,
                   teamId: data.user.teamId,
                   accessToken: data.access_token,
+                  refreshToken: data.refresh_token,
+                  accessTokenExpires: data.expires_at,
                 };
               } catch (error) {
                 console.error('[Test Auth] Error during test login:', error);
@@ -208,7 +258,7 @@ export const authOptions = {
   },
   session: {
     strategy: 'jwt' as const,
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 7 * 24 * 60 * 60, // 7일 (Refresh Token 수명과 정렬)
   },
   callbacks: {
     /**
@@ -249,7 +299,12 @@ export const authOptions = {
           name: user.name || user.email.split('@')[0],
           role: authUser.role || (azureProfile?.roles && azureProfile.roles[0]) || 'test_engineer',
           site: authUser.site || 'suwon',
-          location: authUser.site === 'uiwang' ? '의왕랩' : '수원랩',
+          location:
+            authUser.site === 'uiwang'
+              ? '의왕랩'
+              : authUser.site === 'pyeongtaek'
+                ? '평택랩'
+                : '수원랩',
           teamId: authUser.teamId,
           position: azureProfile?.department,
         };
@@ -282,7 +337,11 @@ export const authOptions = {
     },
 
     /**
-     * JWT 콜백 - 토큰에 사용자 정보 저장
+     * JWT 콜백 - 토큰에 사용자 정보 저장 & 자동 갱신
+     *
+     * 초기 로그인: user + account 존재 → refreshToken, accessTokenExpires 저장
+     * 후속 요청: 만료 60초 전 → refreshAccessToken() 호출
+     * 마이그레이션: accessTokenExpires 없는 기존 세션 → 기존 동작 유지
      *
      * @param token - 기존 JWT 토큰
      * @param user - 최초 로그인 시 authorize에서 반환된 사용자 정보
@@ -314,6 +373,10 @@ export const authOptions = {
           token.site = authUser.site;
           token.teamId = authUser.teamId;
           token.accessToken = account.access_token ?? undefined;
+          // Azure AD의 경우 refresh token은 별도 처리 (OAuth refresh)
+          token.refreshToken = authUser.refreshToken;
+          token.accessTokenExpires = authUser.accessTokenExpires;
+          token.sessionStartedAt = Math.floor(Date.now() / 1000);
         }
       }
 
@@ -327,7 +390,39 @@ export const authOptions = {
         token.site = authUser.site;
         token.teamId = authUser.teamId;
         token.accessToken = authUser.accessToken;
+        token.refreshToken = authUser.refreshToken;
+        token.accessTokenExpires = authUser.accessTokenExpires;
+        token.sessionStartedAt = Math.floor(Date.now() / 1000);
       }
+
+      // 절대 세션 만료 체크: 30일 초과 시 활동 여부와 무관하게 재로그인 강제
+      if (token.sessionStartedAt) {
+        const now = Math.floor(Date.now() / 1000);
+        if (now - token.sessionStartedAt > ABSOLUTE_SESSION_MAX_AGE) {
+          console.log('[Auth] Absolute session lifetime exceeded (30d), forcing re-login', {
+            email: token.email,
+            sessionAgeDays: Math.floor((now - token.sessionStartedAt) / 86400),
+          });
+          return { ...token, error: 'RefreshAccessTokenError' };
+        }
+      }
+
+      // 후속 요청: 토큰 자동 갱신 체크
+      // accessTokenExpires가 없는 기존 세션은 기존 동작 유지 (마이그레이션 호환)
+      if (token.accessTokenExpires && token.refreshToken) {
+        const now = Math.floor(Date.now() / 1000);
+        const timeUntilExpiry = token.accessTokenExpires - now;
+
+        // 만료 60초 전이면 갱신
+        if (timeUntilExpiry < 60) {
+          console.log('[Auth] Access token expiring soon, refreshing...', {
+            email: token.email,
+            secondsLeft: timeUntilExpiry,
+          });
+          return refreshAccessToken(token);
+        }
+      }
+
       return token;
     },
 
@@ -346,6 +441,10 @@ export const authOptions = {
         session.user.site = token.site;
         session.user.teamId = token.teamId;
         session.accessToken = token.accessToken;
+      }
+      // error 전파 (RefreshAccessTokenError 등)
+      if (token.error) {
+        session.error = token.error;
       }
       return session;
     },

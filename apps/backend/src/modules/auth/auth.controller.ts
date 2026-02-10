@@ -9,36 +9,32 @@ import {
   ForbiddenException,
   UsePipes,
 } from '@nestjs/common';
-import { AuthService, TestUser } from './auth.service';
+import { AuthService, AuthResponse, TestUser } from './auth.service';
 import { LoginDto, LoginValidationPipe } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
 import { AzureADAuthGuard } from './guards/azure-ad-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../types/auth';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly cacheService: SimpleCacheService
+  ) {}
 
   @Public()
   @Post('login')
   @UsePipes(LoginValidationPipe)
-  async login(
-    @Body() loginDto: LoginDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/auth/auth.service').AuthResponse
-  > {
+  async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
     return this.authService.login(loginDto);
   }
 
   @Public()
   @UseGuards(AzureADAuthGuard)
   @Get('azure-login')
-  async azureLogin(
-    @Req() req: AuthenticatedRequest
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/auth/auth.service').AuthResponse
-  > {
+  async azureLogin(@Req() req: AuthenticatedRequest): Promise<AuthResponse> {
     return this.authService.validateAzureADUser(req.user);
   }
 
@@ -69,6 +65,19 @@ export class AuthController {
   }
 
   /**
+   * Refresh Token으로 새 Access Token 발급
+   * Access Token 만료 시 호출되므로 @Public() 필수 (JWT Guard 우회)
+   */
+  @Public()
+  @Post('refresh')
+  async refresh(@Body('refresh_token') refreshToken: string): Promise<AuthResponse> {
+    if (!refreshToken) {
+      throw new ForbiddenException('refresh_token is required');
+    }
+    return this.authService.refreshTokens(refreshToken);
+  }
+
+  /**
    * 테스트 전용 로그인 엔드포인트
    * E2E 테스트에서 사용됩니다.
    *
@@ -77,11 +86,7 @@ export class AuthController {
    */
   @Get('test-login')
   @Public()
-  async testLogin(
-    @Query('role') role: string
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/auth/auth.service').AuthResponse
-  > {
+  async testLogin(@Query('role') role: string): Promise<AuthResponse> {
     // 개발 및 테스트 환경에서만 허용
     if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
       throw new ForbiddenException(
@@ -132,5 +137,27 @@ export class AuthController {
 
     // AuthService의 login 메서드를 사용하여 JWT 토큰 생성
     return this.authService.generateTestToken(testUser);
+  }
+
+  /**
+   * 테스트 전용 캐시 초기화 엔드포인트
+   * E2E 테스트에서 DB를 직접 리셋한 후 백엔드 인메모리 캐시를 무효화할 때 사용합니다.
+   */
+  @Post('test-cache-clear')
+  @Public()
+  testCacheClear(): { cleared: boolean; message: string } {
+    if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
+      throw new ForbiddenException(
+        'Test cache clear is only available in development and test environments'
+      );
+    }
+
+    const size = this.cacheService.size();
+    this.cacheService.clear();
+
+    return {
+      cleared: true,
+      message: `Cleared ${size} cache entries`,
+    };
   }
 }

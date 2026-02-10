@@ -61,6 +61,8 @@ describe('AuthController', () => {
 
       const expectedResult: AuthResponse = {
         access_token: 'test-token',
+        refresh_token: 'test-refresh-token',
+        expires_at: Math.floor(Date.now() / 1000) + 900,
         user: {
           id: mockUser.id,
           email: mockUser.email,
@@ -139,6 +141,8 @@ describe('AuthController', () => {
 
       const expectedResult: AuthResponse = {
         access_token: 'azure-token',
+        refresh_token: 'azure-refresh-token',
+        expires_at: Math.floor(Date.now() / 1000) + 900,
         user: {
           id: 'azure-id',
           email: 'azure@example.com',

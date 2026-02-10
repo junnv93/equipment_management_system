@@ -5,7 +5,7 @@ import 'next-auth/jwt';
  * 사이트 코드 타입
  * teams-api.ts의 Site 타입과 동기화 유지
  */
-type SiteCode = 'suwon' | 'uiwang';
+type SiteCode = 'suwon' | 'uiwang' | 'pyeongtaek';
 
 declare module 'next-auth' {
   interface User {
@@ -16,6 +16,8 @@ declare module 'next-auth' {
     site?: SiteCode;
     teamId?: string;
     accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpires?: number;
   }
 
   interface Session {
@@ -31,6 +33,7 @@ declare module 'next-auth' {
       teamId?: string;
     };
     accessToken?: string;
+    error?: string;
   }
 }
 
@@ -43,5 +46,9 @@ declare module 'next-auth/jwt' {
     site?: SiteCode;
     teamId?: string;
     accessToken?: string;
+    refreshToken?: string;
+    accessTokenExpires?: number;
+    sessionStartedAt?: number;
+    error?: string;
   }
 }
