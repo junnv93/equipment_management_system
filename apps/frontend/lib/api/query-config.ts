@@ -200,4 +200,44 @@ export const queryKeys = {
     list: (filters: Record<string, any>) => [...queryKeys.disposal.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.disposal.all, 'detail', id] as const,
   },
+  checkouts: {
+    all: ['checkouts'] as const,
+    lists: () => [...queryKeys.checkouts.all, 'list'] as const,
+    list: (filters: Record<string, any>) => [...queryKeys.checkouts.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.checkouts.all, 'detail', id] as const,
+    outbound: (teamId?: string, status?: string, location?: string) =>
+      ['checkouts-outbound', teamId, status, location] as const,
+    inbound: (teamId?: string, status?: string) => ['checkouts-inbound', teamId, status] as const,
+    destinations: () => ['checkout-destinations'] as const,
+  },
+  calibrations: {
+    all: ['calibrations'] as const,
+    byEquipment: (equipmentId: string) =>
+      [...queryKeys.calibrations.all, 'equipment', equipmentId] as const,
+    intermediateChecks: () => ['intermediate-checks'] as const,
+  },
+  maintenance: {
+    all: ['maintenance'] as const,
+    summary: () => ['maintenance-summary'] as const,
+    list: (tab?: string, typeFilter?: string, search?: string) =>
+      ['maintenances', tab, typeFilter, search] as const,
+    detail: (id: string) => [...queryKeys.maintenance.all, 'detail', id] as const,
+  },
+  software: {
+    all: ['software'] as const,
+    registry: () => ['software-registry'] as const,
+    byEquipment: (equipmentId: string) => [...queryKeys.software.all, equipmentId] as const,
+    history: (equipmentId: string) => [...queryKeys.software.all, 'history', equipmentId] as const,
+  },
+  approvals: {
+    all: ['approvals'] as const,
+    list: (category?: string, teamId?: string) =>
+      [...queryKeys.approvals.all, category, teamId] as const,
+    counts: (role?: string) => ['approval-counts', role] as const,
+    pendingCounts: () => ['pending-approval-counts'] as const,
+  },
+  auditLogs: {
+    all: ['audit-logs'] as const,
+    list: (filters: Record<string, any>) => [...queryKeys.auditLogs.all, filters] as const,
+  },
 } as const;
