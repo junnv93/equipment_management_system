@@ -36,6 +36,7 @@ import { EquipmentApprovalService } from './services/equipment-approval.service'
 import { EquipmentAttachmentService } from './services/equipment-attachment.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
+import { UpdateStatusDto, UpdateStatusValidationPipe } from './dto/update-status.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 import {
   CreateSharedEquipmentDto,
@@ -562,6 +563,7 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.OK, description: '장비 정보 수정 요청이 생성되었습니다.' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '장비를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: '동시 수정 충돌 (Version Conflict)' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
@@ -750,12 +752,14 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.OK, description: '장비 상태 변경 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '장비를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
+  @ApiResponse({ status: HttpStatus.CONFLICT, description: '동시 수정 충돌 (Version Conflict)' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @UsePipes(UpdateStatusValidationPipe)
   updateStatus(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body('status') status: EquipmentStatus
+    @Body() updateStatusDto: UpdateStatusDto
   ): Promise<{
     id: string;
     name: string;
@@ -816,8 +820,13 @@ export class EquipmentController {
     externalIdentifier: string | null;
     usagePeriodStart: Date | null;
     usagePeriodEnd: Date | null;
+    version: number;
   }> {
-    return this.equipmentService.updateStatus(uuid, status);
+    return this.equipmentService.updateStatus(
+      uuid,
+      updateStatusDto.status,
+      updateStatusDto.version
+    );
   }
 
   @Get('team/:teamId')

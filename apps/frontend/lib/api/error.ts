@@ -23,10 +23,13 @@ export {
   type ErrorInfo,
 } from '../errors/equipment-errors';
 
+export { isConflictError } from '../errors/equipment-errors';
+
 import {
   ApiError,
   EquipmentErrorCode,
   httpStatusToErrorCode,
+  mapBackendErrorCode,
 } from '../errors/equipment-errors';
 
 /**
@@ -103,7 +106,15 @@ export function toApiError(error: unknown): ApiError | null {
 
     if (axiosError.response?.status) {
       const status = axiosError.response.status;
-      const errorCode = httpStatusToErrorCode(status);
+      // Prefer backend error code (e.g., VERSION_CONFLICT) over HTTP status mapping
+      const backendCode = axiosError.response.data?.code;
+      const mappedCode = backendCode
+        ? mapBackendErrorCode(backendCode)
+        : EquipmentErrorCode.UNKNOWN_ERROR;
+      const errorCode =
+        mappedCode !== EquipmentErrorCode.UNKNOWN_ERROR
+          ? mappedCode
+          : httpStatusToErrorCode(status);
 
       return new ApiError(
         axiosError.response.data?.message || getDefaultMessageForStatus(status),
@@ -140,10 +151,7 @@ export function toApiError(error: unknown): ApiError | null {
 
   // 5. 일반 Error 객체
   if (error instanceof Error) {
-    return new ApiError(
-      error.message,
-      EquipmentErrorCode.UNKNOWN_ERROR
-    );
+    return new ApiError(error.message, EquipmentErrorCode.UNKNOWN_ERROR);
   }
 
   return null;
@@ -169,6 +177,7 @@ function getStatusFromCode(code: string): number {
     DUPLICATE_MANAGEMENT_NUMBER: 409,
     DUPLICATE_SERIAL_NUMBER: 409,
     CONFLICT: 409,
+    VERSION_CONFLICT: 409,
     SERVER_ERROR: 500,
     NETWORK_ERROR: 0,
     TIMEOUT_ERROR: 408,
@@ -187,7 +196,7 @@ function getDefaultMessageForStatus(status: number): string {
     401: '인증이 필요합니다. 다시 로그인해주세요.',
     403: '이 작업을 수행할 권한이 없습니다.',
     404: '요청한 리소스를 찾을 수 없습니다.',
-    409: '이미 존재하는 데이터입니다.',
+    409: '다른 사용자가 이 데이터를 수정했습니다. 최신 데이터를 확인해주세요.',
     413: '파일 크기가 너무 큽니다.',
     415: '지원하지 않는 파일 형식입니다.',
     500: '서버 내부 오류가 발생했습니다.',
@@ -243,13 +252,21 @@ export function getErrorMessage(error: unknown, defaultMessage = '오류가 발�
 export function isNotFoundError(error: unknown): boolean {
   // ApiError 인스턴스 체크
   if (error instanceof ApiError) {
-    return error.statusCode === 404 || error.code === EquipmentErrorCode.NOT_FOUND || error.code === EquipmentErrorCode.EQUIPMENT_NOT_FOUND;
+    return (
+      error.statusCode === 404 ||
+      error.code === EquipmentErrorCode.NOT_FOUND ||
+      error.code === EquipmentErrorCode.EQUIPMENT_NOT_FOUND
+    );
   }
 
   // 변환 후 체크
   const apiError = toApiError(error);
   if (apiError) {
-    return apiError.statusCode === 404 || apiError.code === EquipmentErrorCode.NOT_FOUND || apiError.code === EquipmentErrorCode.EQUIPMENT_NOT_FOUND;
+    return (
+      apiError.statusCode === 404 ||
+      apiError.code === EquipmentErrorCode.NOT_FOUND ||
+      apiError.code === EquipmentErrorCode.EQUIPMENT_NOT_FOUND
+    );
   }
 
   // 에러 객체에 직접 statusCode 또는 code가 있는 경우
@@ -274,12 +291,20 @@ export function isNotFoundError(error: unknown): boolean {
  */
 export function isUnauthorizedError(error: unknown): boolean {
   if (error instanceof ApiError) {
-    return error.statusCode === 401 || error.code === EquipmentErrorCode.UNAUTHORIZED || error.code === EquipmentErrorCode.SESSION_EXPIRED;
+    return (
+      error.statusCode === 401 ||
+      error.code === EquipmentErrorCode.UNAUTHORIZED ||
+      error.code === EquipmentErrorCode.SESSION_EXPIRED
+    );
   }
 
   const apiError = toApiError(error);
   if (apiError) {
-    return apiError.statusCode === 401 || apiError.code === EquipmentErrorCode.UNAUTHORIZED || apiError.code === EquipmentErrorCode.SESSION_EXPIRED;
+    return (
+      apiError.statusCode === 401 ||
+      apiError.code === EquipmentErrorCode.UNAUTHORIZED ||
+      apiError.code === EquipmentErrorCode.SESSION_EXPIRED
+    );
   }
 
   if (typeof error === 'object' && error !== null) {

@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
+import { SoftwareHistory } from '@equipment-management/db/schema';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
@@ -43,9 +44,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_SOFTWARE_CHANGE)
-  create(
-    @Body() createDto: CreateSoftwareChangeDto
-  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord {
+  create(@Body() createDto: CreateSoftwareChangeDto): Promise<SoftwareHistory> {
     return this.softwareService.create(createDto);
   }
 
@@ -60,7 +59,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
   findHistory(@Query() query: SoftwareHistoryQueryDto): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord[];
+    items: SoftwareHistory[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -82,7 +81,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE_REQUESTS)
   findPendingApprovals(): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord[];
+    items: SoftwareHistory[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -159,11 +158,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
-  findOne(
-    @Param('uuid') uuid: string
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
-  > {
+  findOne(@Param('uuid') uuid: string): Promise<SoftwareHistory> {
     return this.softwareService.findOne(uuid);
   }
 
@@ -176,15 +171,17 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.OK, description: '소프트웨어 변경 승인 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '변경 이력을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터 또는 상태 오류' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: '버전 충돌 - 다른 사용자가 이미 수정했습니다',
+  })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_SOFTWARE_CHANGE)
   approve(
     @Param('uuid') uuid: string,
     @Body() approveDto: ApproveSoftwareChangeDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
-  > {
+  ): Promise<SoftwareHistory> {
     return this.softwareService.approve(uuid, approveDto);
   }
 
@@ -197,15 +194,17 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.OK, description: '소프트웨어 변경 반려 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '변경 이력을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터 또는 상태 오류' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: '버전 충돌 - 다른 사용자가 이미 수정했습니다',
+  })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_SOFTWARE_CHANGE)
   reject(
     @Param('uuid') uuid: string,
     @Body() rejectDto: RejectSoftwareChangeDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/software/software.service').SoftwareHistoryRecord
-  > {
+  ): Promise<SoftwareHistory> {
     return this.softwareService.reject(uuid, rejectDto);
   }
 }

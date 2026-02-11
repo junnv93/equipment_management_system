@@ -297,6 +297,7 @@ describe('NonConformancesService', () => {
       const closeDto = {
         closedBy: 'closer-uuid',
         closureNotes: '종료 메모',
+        version: 1,
       };
 
       // Mock findOne
@@ -337,9 +338,9 @@ describe('NonConformancesService', () => {
       mockDb.from.mockReturnThis();
       mockDb.where.mockResolvedValueOnce([closedNonConformance]);
 
-      await expect(service.close('nc-uuid', { closedBy: 'closer-uuid' })).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.close('nc-uuid', { closedBy: 'closer-uuid', version: 1 })
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException when closing non-corrected non-conformance', async () => {
@@ -353,9 +354,9 @@ describe('NonConformancesService', () => {
       mockDb.from.mockReturnThis();
       mockDb.where.mockResolvedValueOnce([openNonConformance]);
 
-      await expect(service.close('nc-uuid', { closedBy: 'closer-uuid' })).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.close('nc-uuid', { closedBy: 'closer-uuid', version: 1 })
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { CHECKOUT_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -62,8 +63,6 @@ export function ApprovalsClient({
 }: ApprovalsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // ✅ Best Practice: useAuthenticatedClient를 통한 인증된 API 클라이언트 사용
   const approvalsApi = useApprovalsApi();
@@ -119,113 +118,118 @@ export function ApprovalsClient({
     staleTime: 60000, // 1분
   });
 
-  // 승인 처리
-  const handleApprove = useCallback(
-    async (item: ApprovalItem) => {
-      try {
-        // equipmentId 추출 (폐기 승인에 필요)
-        const equipmentId = item.details?.equipmentId as string | undefined;
-        await approvalsApi.approve(item.category, item.id, userId, undefined, equipmentId);
-        toast({
-          title: '승인 완료',
-          description: `${item.summary}이(가) 승인되었습니다.`,
-        });
-        queryClient.invalidateQueries({ queryKey: ['approvals'] });
-        queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
-        // Close the detail modal after successful approval
-        setDetailModalItem(null);
-      } catch (error) {
-        toast({
-          title: '승인 실패',
-          description: '승인 처리 중 오류가 발생했습니다.',
-          variant: 'destructive',
-        });
-        throw error;
-      }
+  // ✅ 승인 처리 - Optimistic Update 패턴
+  const approveMutation = useOptimisticMutation<void, ApprovalItem, ApprovalItem[]>({
+    mutationFn: async (item) => {
+      const equipmentId = item.details?.equipmentId as string | undefined;
+      await approvalsApi.approve(item.category, item.id, userId, undefined, equipmentId);
     },
-    [approvalsApi, userId, toast, queryClient]
-  );
-
-  // 반려 처리
-  const handleReject = useCallback(
-    async (item: ApprovalItem, reason: string) => {
-      try {
-        // equipmentId 추출 (폐기 반려에 필요)
-        const equipmentId = item.details?.equipmentId as string | undefined;
-        await approvalsApi.reject(item.category, item.id, userId, reason, equipmentId);
-        toast({
-          title: '반려 완료',
-          description: `${item.summary}이(가) 반려되었습니다.`,
-        });
-        queryClient.invalidateQueries({ queryKey: ['approvals'] });
-        queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
-        setRejectModalItem(null);
-      } catch (error) {
-        toast({
-          title: '반려 실패',
-          description: '반려 처리 중 오류가 발생했습니다.',
-          variant: 'destructive',
-        });
-        throw error;
-      }
+    queryKey: ['approvals', activeTab, userTeamId],
+    optimisticUpdate: (old, item) => {
+      // ✅ 승인한 항목만 즉시 제거 (전체 재조회 불필요)
+      return old?.filter((i) => i.id !== item.id) || [];
     },
-    [approvalsApi, userId, toast, queryClient]
-  );
+    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    successMessage: (_, item) => `${item.summary}이(가) 승인되었습니다.`,
+    errorMessage: '승인 처리 중 오류가 발생했습니다.',
+    onSuccessCallback: () => setDetailModalItem(null),
+  });
 
-  // 일괄 승인 처리
-  const handleBulkApprove = useCallback(async () => {
-    if (selectedItems.length === 0) return;
+  const handleApprove = async (item: ApprovalItem) => {
+    await approveMutation.mutateAsync(item);
+  };
 
-    const result = await approvalsApi.bulkApprove(activeTab, selectedItems, userId);
+  // ✅ 반려 처리 - Optimistic Update 패턴
+  const rejectMutation = useOptimisticMutation<
+    void,
+    { item: ApprovalItem; reason: string },
+    ApprovalItem[]
+  >({
+    mutationFn: async ({ item, reason }) => {
+      const equipmentId = item.details?.equipmentId as string | undefined;
+      await approvalsApi.reject(item.category, item.id, userId, reason, equipmentId);
+    },
+    queryKey: ['approvals', activeTab, userTeamId],
+    optimisticUpdate: (old, { item }) => {
+      // ✅ 반려한 항목만 즉시 제거
+      return old?.filter((i) => i.id !== item.id) || [];
+    },
+    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    successMessage: (_, { item }) => `${item.summary}이(가) 반려되었습니다.`,
+    errorMessage: '반려 처리 중 오류가 발생했습니다.',
+    onSuccessCallback: () => setRejectModalItem(null),
+  });
 
-    if (result.success.length > 0) {
-      toast({
-        title: '일괄 승인 완료',
-        description: `${result.success.length}건이 승인되었습니다.`,
-      });
-    }
+  const handleReject = async (item: ApprovalItem, reason: string) => {
+    await rejectMutation.mutateAsync({ item, reason });
+  };
 
-    if (result.failed.length > 0) {
-      toast({
-        title: '일부 승인 실패',
-        description: `${result.failed.length}건 승인에 실패했습니다.`,
-        variant: 'destructive',
-      });
-    }
-
-    setSelectedItems([]);
-    queryClient.invalidateQueries({ queryKey: ['approvals'] });
-    queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
-  }, [approvalsApi, activeTab, selectedItems, userId, toast, queryClient]);
-
-  // 일괄 반려 처리
-  const handleBulkReject = useCallback(
-    async (reason: string) => {
-      if (selectedItems.length === 0) return;
-
-      const result = await approvalsApi.bulkReject(activeTab, selectedItems, userId, reason);
-
-      if (result.success.length > 0) {
-        toast({
-          title: '일괄 반려 완료',
-          description: `${result.success.length}건이 반려되었습니다.`,
-        });
-      }
-
+  // ✅ 일괄 승인 처리 - Optimistic Update 패턴
+  const bulkApproveMutation = useOptimisticMutation<
+    { success: string[]; failed: string[] },
+    string[],
+    ApprovalItem[]
+  >({
+    mutationFn: async (ids) => {
+      return await approvalsApi.bulkApprove(activeTab, ids, userId);
+    },
+    queryKey: ['approvals', activeTab, userTeamId],
+    optimisticUpdate: (old, ids) => {
+      // ✅ 선택된 항목들만 즉시 제거 (낙관적 - 모두 성공 가정)
+      return old?.filter((item) => !ids.includes(item.id)) || [];
+    },
+    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    successMessage: (result) => {
       if (result.failed.length > 0) {
-        toast({
-          title: '일부 반려 실패',
-          description: `${result.failed.length}건 반려에 실패했습니다.`,
-          variant: 'destructive',
-        });
+        return `${result.success.length}건 승인 완료, ${result.failed.length}건 실패`;
       }
-
-      setSelectedItems([]);
-      queryClient.invalidateQueries({ queryKey: ['approvals'] });
-      queryClient.invalidateQueries({ queryKey: ['approval-counts'] });
+      return `${result.success.length}건이 승인되었습니다.`;
     },
-    [approvalsApi, activeTab, selectedItems, userId, toast, queryClient]
-  );
+    errorMessage: '일괄 승인 중 오류가 발생했습니다.',
+    onSuccessCallback: (result) => {
+      setSelectedItems([]);
+      // Partial failure 시 추가 토스트
+      if (result.failed.length > 0 && result.success.length > 0) {
+        // Note: errorMessage already shows the combined message
+        // This is just to clear selections
+      }
+    },
+  });
+
+  const handleBulkApprove = async () => {
+    if (selectedItems.length === 0) return;
+    await bulkApproveMutation.mutateAsync(selectedItems);
+  };
+
+  // ✅ 일괄 반려 처리 - Optimistic Update 패턴
+  const bulkRejectMutation = useOptimisticMutation<
+    { success: string[]; failed: string[] },
+    { ids: string[]; reason: string },
+    ApprovalItem[]
+  >({
+    mutationFn: async ({ ids, reason }) => {
+      return await approvalsApi.bulkReject(activeTab, ids, userId, reason);
+    },
+    queryKey: ['approvals', activeTab, userTeamId],
+    optimisticUpdate: (old, { ids }) => {
+      // ✅ 선택된 항목들만 즉시 제거 (낙관적 - 모두 성공 가정)
+      return old?.filter((item) => !ids.includes(item.id)) || [];
+    },
+    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    successMessage: (result) => {
+      if (result.failed.length > 0) {
+        return `${result.success.length}건 반려 완료, ${result.failed.length}건 실패`;
+      }
+      return `${result.success.length}건이 반려되었습니다.`;
+    },
+    errorMessage: '일괄 반려 중 오류가 발생했습니다.',
+    onSuccessCallback: () => setSelectedItems([]),
+  });
+
+  const handleBulkReject = async (reason: string) => {
+    if (selectedItems.length === 0) return;
+    await bulkRejectMutation.mutateAsync({ ids: selectedItems, reason });
+  };
 
   // 선택 토글
   const handleToggleSelect = useCallback((id: string) => {

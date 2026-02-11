@@ -8,6 +8,8 @@ import {
   type CalibrationMethod,
   type Site,
   CalibrationMethodEnum,
+  createEquipmentSchema,
+  updateEquipmentSchema,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,7 @@ import equipmentApi, {
 import { useToast } from '@/components/ui/use-toast';
 import { ApiError } from '@/lib/errors/equipment-errors';
 import { useManagementNumberCheck } from '@/hooks/use-management-number-check';
+import { sanitizeFormData } from '@/lib/utils/form-data-utils';
 
 // 동적 Zod 스키마 생성 함수 (향후 폼 검증 강화용으로 유지)
 const _createDynamicSchema = (
@@ -164,6 +167,11 @@ interface EquipmentFormProps {
     attachmentType: string;
     createdAt: string;
   }>;
+  /** Server Component에서 전달하는 사용자 기본값 (mount 시점에 즉시 사용 가능) */
+  userDefaults?: {
+    site?: string;
+    teamId?: string;
+  };
 }
 
 /**
@@ -200,6 +208,28 @@ const ROLE_INFO = {
   },
 };
 
+/**
+ * ✅ SSOT: 필드명 한글 매핑 (사용자 친화적 에러 메시지용)
+ */
+const FIELD_LABELS: Record<string, string> = {
+  name: '장비명',
+  managementNumber: '관리번호',
+  site: '사이트',
+  teamId: '팀',
+  modelName: '모델명',
+  manufacturer: '제조사',
+  serialNumber: '일련번호',
+  location: '현재 위치',
+  calibrationCycle: '교정 주기',
+  lastCalibrationDate: '최종 교정일',
+  nextCalibrationDate: '차기 교정일',
+  calibrationAgency: '교정 기관',
+  calibrationMethod: '관리 방법',
+  lastIntermediateCheckDate: '최종 중간 점검일',
+  intermediateCheckCycle: '중간점검 주기',
+  technicalManager: '기술책임자',
+};
+
 export function EquipmentForm({
   initialData,
   onSubmit,
@@ -208,6 +238,7 @@ export function EquipmentForm({
   isLoading = false,
   mode = 'normal',
   existingAttachments = [],
+  userDefaults,
 }: EquipmentFormProps) {
   // 임시등록 모드 여부
   const isTemporary = mode === 'temporary';
@@ -215,6 +246,15 @@ export function EquipmentForm({
   const { user, isManager: _isManager, isAdmin: _isAdmin } = useAuth();
   const { toast } = useToast();
   const userSite = (user as { site?: Site })?.site;
+  const userTeamId = (user as { teamId?: string })?.teamId;
+
+  // ✅ Server Component에서 전달받은 기본값 우선 사용 (mount 시점에 즉시 사용 가능)
+  // useAuth()는 비동기 로딩이라 mount 시점에 undefined → useForm defaultValues에 반영 불가
+  const effectiveSite = (initialData?.site || userDefaults?.site || userSite) as Site | undefined;
+  const effectiveTeamId =
+    initialData?.teamId !== undefined && initialData?.teamId !== null
+      ? String(initialData.teamId)
+      : userDefaults?.teamId || userTeamId || undefined;
 
   // 사용자 역할 결정 - useMemo 내부에서 직접 roles 접근하여 의존성 안정화
   const userRole = useMemo(() => {
@@ -238,10 +278,8 @@ export function EquipmentForm({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<FormValues | null>(null);
 
-  // 사이트 선택 상태
-  const [selectedSite, setSelectedSite] = useState<Site | undefined>(
-    (initialData?.site || userSite) as Site | undefined
-  );
+  // 사이트 선택 상태 (서버에서 전달된 effectiveSite 사용)
+  const [selectedSite, setSelectedSite] = useState<Site | undefined>(effectiveSite);
 
   // 파일 업로드 상태
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -327,11 +365,8 @@ export function EquipmentForm({
         initialData?.purchaseYear !== undefined && initialData?.purchaseYear !== null
           ? Number(initialData.purchaseYear)
           : undefined,
-      teamId:
-        initialData?.teamId !== undefined && initialData?.teamId !== null
-          ? String(initialData.teamId)
-          : undefined,
-      site: (initialData?.site || userSite) as Site | undefined,
+      teamId: effectiveTeamId,
+      site: effectiveSite,
       supplier: initialData?.supplier || '',
       contactInfo: initialData?.contactInfo || '',
       softwareVersion: initialData?.softwareVersion || '',
@@ -351,6 +386,20 @@ export function EquipmentForm({
       managementSerialNumberStr: initialData?.managementSerialNumberStr || '',
     },
   });
+
+  // ✅ useAuth() 로딩 완료 후 폼 값 동기화 (Server Component 미경유 시 fallback)
+  // userDefaults가 없고, 수정 모드가 아닌 경우에만 동작
+  useEffect(() => {
+    if (!isEdit && !userDefaults && user) {
+      if (!form.getValues('site') && userSite) {
+        form.setValue('site', userSite);
+        setSelectedSite(userSite);
+      }
+      if (!form.getValues('teamId') && userTeamId) {
+        form.setValue('teamId', userTeamId);
+      }
+    }
+  }, [user, userSite, userTeamId, isEdit, userDefaults, form]);
 
   // 수정 모드일 때 이력 데이터 로드
   useEffect(() => {
@@ -616,6 +665,51 @@ export function EquipmentForm({
 
   // 폼 제출 핸들러
   const handleFormSubmit = async (data: FormValues) => {
+    /**
+     * ✅ SSOT: 제출 전 Zod 스키마 검증
+     * - 백엔드 에러를 기다리지 않고 즉시 사용자에게 피드백
+     * - 명확한 에러 메시지 제공
+     */
+    try {
+      const schema = isEdit ? updateEquipmentSchema : createEquipmentSchema;
+
+      // 날짜 변환 후 검증
+      const dataToValidate = {
+        ...data,
+        lastCalibrationDate: data.lastCalibrationDate
+          ? toDate(data.lastCalibrationDate)
+          : undefined,
+        nextCalibrationDate: data.nextCalibrationDate
+          ? toDate(data.nextCalibrationDate)
+          : undefined,
+        lastIntermediateCheckDate: data.lastIntermediateCheckDate
+          ? toDate(data.lastIntermediateCheckDate)
+          : undefined,
+        nextIntermediateCheckDate: data.nextIntermediateCheckDate
+          ? toDate(data.nextIntermediateCheckDate)
+          : undefined,
+        installationDate: data.installationDate ? toDate(data.installationDate) : undefined,
+      };
+
+      // Zod 스키마 검증
+      schema.parse(dataToValidate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        // Zod 검증 에러를 사용자 친화적 메시지로 변환
+        const firstError = error.issues[0];
+        const fieldPath = firstError.path.join('.');
+        const fieldLabel = FIELD_LABELS[fieldPath] || fieldPath || '알 수 없는 필드';
+        toast({
+          title: '입력 데이터 검증 실패',
+          description: `${fieldLabel}: ${firstError.message}`,
+          variant: 'destructive',
+        });
+        console.error('🔴 프론트엔드 Zod 검증 실패:', error.issues);
+        return;
+      }
+      throw error;
+    }
+
     // 승인 필요 시 확인 모달 표시
     if (needsApproval) {
       setPendingFormData(data);
@@ -628,69 +722,88 @@ export function EquipmentForm({
 
   // 실제 제출 처리
   const processSubmit = async (data: FormValues) => {
-    // 날짜 문자열을 Date 객체로 변환
-    const processedData = {
-      name: data.name,
-      managementNumber: data.managementNumber,
-      assetNumber: data.assetNumber || undefined,
-      modelName: data.modelName || undefined,
-      manufacturer: data.manufacturer || undefined,
-      manufacturerContact: data.manufacturerContact || undefined,
-      serialNumber: data.serialNumber || undefined,
-      location: data.location || undefined,
-      description: data.description || undefined,
-      specMatch: data.specMatch || undefined,
-      calibrationRequired: data.calibrationRequired || undefined,
-      calibrationCycle: data.calibrationCycle || undefined,
-      lastCalibrationDate: data.lastCalibrationDate ? toDate(data.lastCalibrationDate) : undefined,
-      nextCalibrationDate: data.nextCalibrationDate ? toDate(data.nextCalibrationDate) : undefined,
-      calibrationAgency: data.calibrationAgency || undefined,
-      needsIntermediateCheck: data.needsIntermediateCheck || false,
-      calibrationMethod: data.calibrationMethod || undefined,
-      lastIntermediateCheckDate: data.lastIntermediateCheckDate
-        ? toDate(data.lastIntermediateCheckDate)
-        : undefined,
-      intermediateCheckCycle: data.intermediateCheckCycle || undefined,
-      nextIntermediateCheckDate: data.nextIntermediateCheckDate
-        ? toDate(data.nextIntermediateCheckDate)
-        : undefined,
-      purchaseYear: data.purchaseYear || undefined,
-      teamId: data.teamId || undefined,
-      site: data.site || undefined,
-      supplier: data.supplier && data.supplier.trim() ? data.supplier : undefined,
-      contactInfo: data.contactInfo && data.contactInfo.trim() ? data.contactInfo : undefined,
-      softwareVersion:
-        data.softwareVersion && data.softwareVersion.trim() ? data.softwareVersion : undefined,
-      firmwareVersion:
-        data.firmwareVersion && data.firmwareVersion.trim() ? data.firmwareVersion : undefined,
-      manualLocation:
-        data.manualLocation && data.manualLocation.trim() ? data.manualLocation : undefined,
-      accessories: data.accessories && data.accessories.trim() ? data.accessories : undefined,
-      technicalManager:
-        data.technicalManager && data.technicalManager.trim() ? data.technicalManager : undefined,
-      initialLocation:
-        data.initialLocation && data.initialLocation.trim() ? data.initialLocation : undefined,
-      installationDate: data.installationDate ? toDate(data.installationDate) : undefined,
-      status: isTemporary ? 'temporary' : data.status || undefined,
-      calibrationResult:
-        data.calibrationResult && data.calibrationResult.trim()
-          ? data.calibrationResult
+    /**
+     * ✅ SSOT: sanitizeFormData 유틸리티로 일관된 데이터 정제
+     * - 빈 문자열 → undefined (Zod .optional() 필드와 호환)
+     * - 날짜 문자열 → Date 객체 변환
+     * - teamId: 빈 문자열 → undefined (schema: .optional().nullable())
+     */
+
+    // 1. 날짜 필드 변환
+    const processedData = sanitizeFormData(
+      {
+        // 필수 필드
+        name: data.name,
+        managementNumber: data.managementNumber,
+        site: data.site, // 필수 - 절대 undefined가 되면 안 됨
+
+        // 날짜 필드 (문자열 → Date)
+        lastCalibrationDate: data.lastCalibrationDate
+          ? toDate(data.lastCalibrationDate)
           : undefined,
-      correctionFactor:
-        data.correctionFactor && data.correctionFactor.trim() ? data.correctionFactor : undefined,
-      externalIdentifier:
-        data.externalIdentifier && data.externalIdentifier.trim()
-          ? data.externalIdentifier
+        nextCalibrationDate: data.nextCalibrationDate
+          ? toDate(data.nextCalibrationDate)
           : undefined,
-      // 임시등록 모드 전용 필드
-      ...(isTemporary && {
+        lastIntermediateCheckDate: data.lastIntermediateCheckDate
+          ? toDate(data.lastIntermediateCheckDate)
+          : undefined,
+        nextIntermediateCheckDate: data.nextIntermediateCheckDate
+          ? toDate(data.nextIntermediateCheckDate)
+          : undefined,
+        installationDate: data.installationDate ? toDate(data.installationDate) : undefined,
+
+        // 숫자 필드 (명시적 타입 유지)
+        calibrationCycle: data.calibrationCycle,
+        intermediateCheckCycle: data.intermediateCheckCycle,
+        purchaseYear: data.purchaseYear,
+
+        // Boolean 필드 (기본값 적용)
+        needsIntermediateCheck: data.needsIntermediateCheck ?? false,
+
+        // 나머지 선택적 필드 (빈 문자열 자동 제거)
+        assetNumber: data.assetNumber,
+        modelName: data.modelName,
+        manufacturer: data.manufacturer,
+        manufacturerContact: data.manufacturerContact,
+        serialNumber: data.serialNumber,
+        location: data.location,
+        description: data.description,
+        specMatch: data.specMatch,
+        calibrationRequired: data.calibrationRequired,
+        calibrationAgency: data.calibrationAgency,
+        calibrationMethod: data.calibrationMethod,
+        teamId: data.teamId, // optional().nullable() - 빈 문자열 → undefined
+        supplier: data.supplier,
+        contactInfo: data.contactInfo,
+        softwareVersion: data.softwareVersion,
+        firmwareVersion: data.firmwareVersion,
+        manualLocation: data.manualLocation,
+        accessories: data.accessories,
+        technicalManager: data.technicalManager,
+        initialLocation: data.initialLocation,
+        status: isTemporary ? 'temporary' : data.status,
+        calibrationResult: data.calibrationResult,
+        correctionFactor: data.correctionFactor,
+        externalIdentifier: data.externalIdentifier,
+        classification: data.classification,
+        managementSerialNumberStr: data.managementSerialNumberStr,
+      },
+      {
+        // nullable 필드 명시 (schema에서 .nullable()인 필드)
+        nullableFields: ['teamId', 'sharedSource', 'owner', 'externalIdentifier'],
+      }
+    );
+
+    // 2. 임시등록 모드 전용 필드 추가
+    if (isTemporary) {
+      Object.assign(processedData, {
         isShared: true,
         sharedSource: equipmentType === 'common' ? 'safety_lab' : 'external',
         owner: owner || undefined,
         usagePeriodStart: usagePeriodStart ? toDate(usagePeriodStart) : undefined,
         usagePeriodEnd: usagePeriodEnd ? toDate(usagePeriodEnd) : undefined,
-      }),
-    };
+      });
+    }
 
     /**
      * ★ Best Practice: 임시 이력 데이터 변환

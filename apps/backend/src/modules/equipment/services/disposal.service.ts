@@ -6,8 +6,8 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, and, inArray } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { eq, and, inArray, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { disposalRequests } from '@equipment-management/db/schema';
 import { equipment } from '@equipment-management/db/schema';
@@ -18,6 +18,7 @@ import {
   ApproveDisposalInput,
 } from '../dto/disposal.dto';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { VersionedBaseService } from '../../../common/base/versioned-base.service';
 
 /**
  * 장비 폐기 서비스
@@ -28,15 +29,17 @@ import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
  * 3. 승인 (lab_manager) → reviewStatus='approved' or 'rejected', equipment.status='disposed'
  */
 @Injectable()
-export class DisposalService {
+export class DisposalService extends VersionedBaseService {
   private readonly logger = new Logger(DisposalService.name);
   private readonly CACHE_PREFIX = 'equipment:';
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    protected readonly db: NodePgDatabase<typeof schema>,
     private readonly cacheService: SimpleCacheService
-  ) {}
+  ) {
+    super();
+  }
 
   /**
    * 폐기 요청 생성
@@ -425,23 +428,37 @@ export class DisposalService {
       throw new ForbiddenException('같은 팀의 장비만 검토할 수 있습니다.');
     }
 
-    // 5. 트랜잭션: 검토 처리
+    // 5. 트랜잭션: 검토 처리 (CAS: version 검증)
     await this.db.transaction(async (tx) => {
       if (reviewDto.decision === 'approve') {
         // 승인: reviewStatus를 'reviewed'로 변경
-        await tx
+        const [updated] = await tx
           .update(disposalRequests)
           .set({
             reviewStatus: 'reviewed',
             reviewedBy,
             reviewedAt: new Date(),
             reviewOpinion: reviewDto.opinion,
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
-          .where(eq(disposalRequests.id, request.id));
+          } as Record<string, unknown>)
+          .where(
+            and(
+              eq(disposalRequests.id, request.id),
+              eq(disposalRequests.version, reviewDto.version)
+            )
+          )
+          .returning();
+
+        if (!updated) {
+          throw new ConflictException({
+            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+            code: 'VERSION_CONFLICT',
+          });
+        }
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
-        await tx
+        const [updated] = await tx
           .update(disposalRequests)
           .set({
             reviewStatus: 'rejected',
@@ -449,9 +466,23 @@ export class DisposalService {
             rejectedAt: new Date(),
             rejectionReason: reviewDto.opinion,
             rejectionStep: 'review',
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
-          .where(eq(disposalRequests.id, request.id));
+          } as Record<string, unknown>)
+          .where(
+            and(
+              eq(disposalRequests.id, request.id),
+              eq(disposalRequests.version, reviewDto.version)
+            )
+          )
+          .returning();
+
+        if (!updated) {
+          throw new ConflictException({
+            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+            code: 'VERSION_CONFLICT',
+          });
+        }
 
         // 장비 상태 원복
         await tx
@@ -635,20 +666,34 @@ export class DisposalService {
       throw new NotFoundException('검토 완료된 폐기 요청을 찾을 수 없습니다.');
     }
 
-    // 2. 트랜잭션: 승인 처리
+    // 2. 트랜잭션: 승인 처리 (CAS: version 검증)
     await this.db.transaction(async (tx) => {
       if (approveDto.decision === 'approve') {
         // 승인: reviewStatus를 'approved'로 변경하고 장비 상태를 'disposed'로 변경
-        await tx
+        const [updated] = await tx
           .update(disposalRequests)
           .set({
             reviewStatus: 'approved',
             approvedBy,
             approvedAt: new Date(),
             approvalComment: approveDto.comment || null,
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
-          .where(eq(disposalRequests.id, request.id));
+          } as Record<string, unknown>)
+          .where(
+            and(
+              eq(disposalRequests.id, request.id),
+              eq(disposalRequests.version, approveDto.version)
+            )
+          )
+          .returning();
+
+        if (!updated) {
+          throw new ConflictException({
+            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+            code: 'VERSION_CONFLICT',
+          });
+        }
 
         // 장비 상태를 'disposed'로 변경
         await tx
@@ -660,7 +705,7 @@ export class DisposalService {
           .where(eq(equipment.id, equipmentId));
       } else {
         // 반려: reviewStatus를 'rejected'로 변경하고 장비 상태를 'available'로 원복
-        await tx
+        const [updated] = await tx
           .update(disposalRequests)
           .set({
             reviewStatus: 'rejected',
@@ -668,9 +713,23 @@ export class DisposalService {
             rejectedAt: new Date(),
             rejectionReason: approveDto.comment || '승인 단계에서 반려',
             rejectionStep: 'approval',
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
-          .where(eq(disposalRequests.id, request.id));
+          } as Record<string, unknown>)
+          .where(
+            and(
+              eq(disposalRequests.id, request.id),
+              eq(disposalRequests.version, approveDto.version)
+            )
+          )
+          .returning();
+
+        if (!updated) {
+          throw new ConflictException({
+            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+            code: 'VERSION_CONFLICT',
+          });
+        }
 
         // 장비 상태 원복
         await tx

@@ -1,13 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
 /**
  * 반출 시작 스키마 (장비별 반출 전 상태 기록)
+ * version은 optimistic locking을 위해 필수
  */
 export const startCheckoutSchema = z.object({
+  ...versionedSchema, // ✅ Optimistic locking version
   itemConditions: z
     .array(
       z.object({
@@ -23,7 +26,9 @@ export const StartCheckoutValidationPipe = new ZodValidationPipe(startCheckoutSc
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class StartCheckoutDto {
+export class StartCheckoutDto extends VersionedDto {
+  // ✅ version 필드는 VersionedDto에서 자동 상속
+
   @ApiProperty({
     description: '장비별 반출 전 상태 기록',
     example: [

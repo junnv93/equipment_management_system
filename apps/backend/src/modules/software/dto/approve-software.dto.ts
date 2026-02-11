@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -8,6 +9,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 소프트웨어 변경 승인 스키마
  */
 export const approveSoftwareChangeSchema = z.object({
+  ...versionedSchema, // ✅ Include version field
   approverId: z.string().uuid({ message: '유효한 승인자 UUID가 아닙니다' }),
   approverComment: z.string().min(1, '승인 시 승인자 코멘트는 필수입니다'),
 });
@@ -21,6 +23,7 @@ export const ApproveSoftwareChangeValidationPipe = new ZodValidationPipe(
  * 소프트웨어 변경 반려 스키마
  */
 export const rejectSoftwareChangeSchema = z.object({
+  ...versionedSchema, // ✅ Include version field
   approverId: z.string().uuid({ message: '유효한 승인자 UUID가 아닙니다' }),
   rejectionReason: z.string().min(1, '반려 사유는 필수입니다'),
 });
@@ -30,7 +33,7 @@ export const RejectSoftwareChangeValidationPipe = new ZodValidationPipe(rejectSo
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class ApproveSoftwareChangeDto {
+export class ApproveSoftwareChangeDto extends VersionedDto {
   @ApiProperty({
     description: '승인자 ID (기술책임자)',
     example: '550e8400-e29b-41d4-a716-446655440001',
@@ -44,7 +47,7 @@ export class ApproveSoftwareChangeDto {
   approverComment: string;
 }
 
-export class RejectSoftwareChangeDto {
+export class RejectSoftwareChangeDto extends VersionedDto {
   @ApiProperty({
     description: '승인자 ID (기술책임자)',
     example: '550e8400-e29b-41d4-a716-446655440001',

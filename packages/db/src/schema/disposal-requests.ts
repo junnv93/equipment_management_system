@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, index, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { users } from './users';
@@ -57,6 +57,9 @@ export const disposalRequests = pgTable(
     rejectedAt: timestamp('rejected_at'),
     rejectionReason: text('rejection_reason'),
     rejectionStep: varchar('rejection_step', { length: 20 }), // 'review' | 'approval'
+
+    // Optimistic locking version
+    version: integer('version').notNull().default(1),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

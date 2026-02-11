@@ -8,12 +8,19 @@ import {
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { updateEquipmentSchema } from '@equipment-management/schemas';
+import { VersionedDto } from '../../../common/dto/base-versioned.dto';
 
 /**
  * 장비 업데이트 DTO
+ *
+ * ✅ Optimistic Locking: VersionedDto 상속으로 version 필드 자동 포함
+ * ✅ Phase 1: Equipment Module - 2026-02-11
+ * ✅ 참고: ApproveCheckoutDto와 동일한 패턴
+ *
  * 모든 필드가 선택적입니다.
  */
-export class UpdateEquipmentDto implements Partial<UpdateEquipmentInput> {
+export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEquipmentInput> {
+  // ✅ version 필드는 VersionedDto에서 자동 상속
   @ApiPropertyOptional({ description: '장비명' })
   name?: string;
 

@@ -255,6 +255,7 @@ describe('EquipmentService', () => {
       const updateDto = {
         name: '업데이트된 장비명',
         location: '새로운 위치',
+        version: 1, // ✅ Optimistic locking version
       };
 
       // Act
@@ -272,9 +273,9 @@ describe('EquipmentService', () => {
       mockDb.query.equipment.findFirst.mockResolvedValue(null);
 
       // Act & Assert
-      await expect(service.update('non-existent-uuid', { name: '새 이름' })).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        service.update('non-existent-uuid', { name: '새 이름', version: 1 })
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -21,8 +21,8 @@ import type { CreateConditionCheckDto } from '@/lib/api/checkout-api';
 interface EquipmentConditionFormProps {
   /** 상태 확인 단계 */
   step: ConditionCheckStep;
-  /** 제출 콜백 */
-  onSubmit: (data: CreateConditionCheckDto) => void;
+  /** 제출 콜백 (version 필드 제외) */
+  onSubmit: (data: Omit<CreateConditionCheckDto, 'version'>) => void;
   /** 취소 콜백 */
   onCancel: () => void;
   /** 로딩 상태 */
@@ -108,7 +108,7 @@ export default function EquipmentConditionForm({
   const handleSubmit = () => {
     if (!validate()) return;
 
-    const data: CreateConditionCheckDto = {
+    const data: Omit<CreateConditionCheckDto, 'version'> = {
       step,
       appearanceStatus,
       operationStatus,

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/api/error';
+import { useQuery } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { RETURN_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
+import type { PaginatedResponse } from '@/lib/api/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,8 +39,6 @@ const PURPOSE_COLORS: Record<string, string> = {
 };
 
 export default function ReturnApprovalsContent() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { data: _session } = useSession();
   const [selectedCheckout, setSelectedCheckout] = useState<Checkout | null>(null);
   const [comment, setComment] = useState('');
@@ -51,30 +50,44 @@ export default function ReturnApprovalsContent() {
     queryFn: async () => {
       return checkoutApi.getPendingReturnApprovals();
     },
+    staleTime: 30000, // ✅ client-swr-dedup: 30초간 캐시 재사용
   });
 
-  // 반입 승인 뮤테이션
-  const approveMutation = useMutation({
-    mutationFn: async ({ id, comment }: { id: string; comment?: string }) => {
-      return checkoutApi.approveReturn(id, { comment });
+  // ✅ 반입 승인 뮤테이션 (Optimistic Update + Cross-page invalidation)
+  const approveMutation = useOptimisticMutation<
+    Checkout,
+    { id: string; version: number; comment?: string },
+    PaginatedResponse<Checkout>
+  >({
+    mutationFn: async ({ id, version, comment }) => {
+      return checkoutApi.approveReturn(id, { version, comment });
     },
-    onSuccess: () => {
-      toast({
-        title: '반입 승인 완료',
-        description: '반입이 최종 승인되었습니다. 장비 상태가 사용 가능으로 변경되었습니다.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['return-pending-approvals'] });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
+    queryKey: ['return-pending-approvals'],
+    optimisticUpdate: (old, { id }) => {
+      if (!old)
+        return {
+          data: [],
+          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+        };
+      return {
+        ...old,
+        data: old.data.filter((c) => c.id !== id),
+        meta: {
+          ...old.meta,
+          pagination: {
+            ...old.meta.pagination,
+            total: Math.max(0, old.meta.pagination.total - 1),
+          },
+        },
+      };
+    },
+    invalidateKeys: RETURN_APPROVAL_INVALIDATE_KEYS,
+    successMessage: '반입이 최종 승인되었습니다. 장비 상태가 사용 가능으로 변경되었습니다.',
+    errorMessage: '반입 승인 중 오류가 발생했습니다.',
+    onSuccessCallback: () => {
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedCheckout(null);
-    },
-    onError: (error: unknown) => {
-      toast({
-        title: '승인 실패',
-        description: getErrorMessage(error, '반입 승인 중 오류가 발생했습니다.'),
-        variant: 'destructive',
-      });
     },
   });
 
@@ -87,6 +100,7 @@ export default function ReturnApprovalsContent() {
     if (!selectedCheckout) return;
     approveMutation.mutate({
       id: selectedCheckout.id,
+      version: selectedCheckout.version,
       comment: comment.trim() || undefined,
     });
   };

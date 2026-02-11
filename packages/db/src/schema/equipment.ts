@@ -136,6 +136,11 @@ export const equipment = pgTable(
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
+
+    // Optimistic locking (Phase 1: Equipment Module - 2026-02-11)
+    // ✅ CAS pattern: version 필드로 동시 수정 방지
+    // ✅ 참고: checkouts.version 패턴과 동일
+    version: integer('version').notNull().default(1),
   },
   (table) => {
     return {
@@ -168,6 +173,8 @@ export const equipment = pgTable(
       classificationCodeIdx: index('equipment_classification_code_idx').on(
         table.classificationCode
       ),
+      // Optimistic locking 인덱스
+      versionIdx: index('equipment_version_idx').on(table.version),
     };
   }
 );

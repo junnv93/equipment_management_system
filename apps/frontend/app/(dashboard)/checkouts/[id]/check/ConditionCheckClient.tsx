@@ -57,8 +57,11 @@ export default function ConditionCheckClient({
   });
 
   // 제출 핸들러
-  const handleSubmit = (data: CreateConditionCheckDto) => {
-    submitMutation.mutate(data);
+  const handleSubmit = (data: Omit<CreateConditionCheckDto, 'version'>) => {
+    submitMutation.mutate({
+      ...data,
+      version: checkout.version, // ✅ Phase 1: Optimistic Locking
+    });
   };
 
   // 취소 핸들러

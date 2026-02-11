@@ -15,6 +15,7 @@ import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
 import nonConformancesApi, { type NonConformance } from './non-conformances-api';
 import equipmentImportApi, { type EquipmentImport } from './equipment-import-api';
+import { reviewDisposal, approveDisposal, getCurrentDisposalRequest } from './disposal-api';
 import { transformArrayResponse, transformPaginatedResponse } from './utils/response-transformers';
 
 // ============================================================================
@@ -597,18 +598,24 @@ class ApprovalsApi {
   ): Promise<void> {
     switch (category) {
       // Direction-based (consolidated)
-      case 'outgoing':
-        // All outgoing are checkouts (regular or vendor returns)
-        await checkoutApi.approveCheckout(id);
+      case 'outgoing': {
+        // ✅ Phase 1: Fetch checkout to get version
+        const checkout = await checkoutApi.getCheckout(id);
+        await checkoutApi.approveCheckout(id, checkout.version, comment);
         break;
+      }
 
       case 'incoming':
         // Incoming can be: checkout return OR equipment import
         // Determine type from originalData
         if (this.isCheckout(originalData)) {
-          await checkoutApi.approveReturn(id, { approverId, comment });
+          // ✅ Phase 1: Fetch checkout to get version
+          const checkout = await checkoutApi.getCheckout(id);
+          await checkoutApi.approveReturn(id, { version: checkout.version, approverId, comment });
         } else if (this.isEquipmentImport(originalData)) {
-          await equipmentImportApi.approve(id);
+          // ✅ Fetch equipment import to get version
+          const equipmentImport = await equipmentImportApi.getOne(id);
+          await equipmentImportApi.approve(id, equipmentImport.version, comment);
         } else {
           throw new Error('Unknown incoming item type');
         }
@@ -618,12 +625,16 @@ class ApprovalsApi {
       case 'equipment':
         await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(id));
         break;
-      case 'calibration':
+      case 'calibration': {
+        // ✅ Fetch calibration to get version
+        const calibration = await calibrationApi.getCalibration(id);
         await calibrationApi.approveCalibration(id, {
+          version: calibration.version,
           approverId,
           approverComment: comment || '',
         });
         break;
+      }
       case 'inspection':
         await apiClient.post(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(id), {
           comment,
@@ -635,26 +646,30 @@ class ApprovalsApi {
           closureNotes: comment,
         });
         break;
-      case 'disposal_review':
+      case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
-        await apiClient.post<unknown, DisposalReviewPayload>(
-          API_ENDPOINTS.EQUIPMENT.DISPOSAL.REVIEW(equipmentId),
-          {
-            decision: 'approve',
-            opinion: comment || '승인합니다',
-          }
-        );
+        // ✅ Fetch disposal request to get version
+        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
+        if (!disposalRequest) throw new Error('Disposal request not found');
+        await reviewDisposal(equipmentId, {
+          version: disposalRequest.version,
+          decision: 'approve',
+          opinion: comment || '승인합니다',
+        });
         break;
-      case 'disposal_final':
+      }
+      case 'disposal_final': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
-        await apiClient.post<unknown, DisposalApprovalPayload>(
-          API_ENDPOINTS.EQUIPMENT.DISPOSAL.APPROVE(equipmentId),
-          {
-            decision: 'approve',
-            comment: comment || '승인합니다',
-          }
-        );
+        // ✅ Fetch disposal request to get version
+        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
+        if (!disposalRequest) throw new Error('Disposal request not found');
+        await approveDisposal(equipmentId, {
+          version: disposalRequest.version,
+          decision: 'approve',
+          comment: comment || '승인합니다',
+        });
         break;
+      }
       case 'plan_review':
         await apiClient.patch(API_ENDPOINTS.CALIBRATION_PLANS.REVIEW(id), { comment });
         break;
@@ -682,18 +697,24 @@ class ApprovalsApi {
   ): Promise<void> {
     switch (category) {
       // Direction-based (consolidated)
-      case 'outgoing':
-        // All outgoing are checkouts (regular or vendor returns)
-        await checkoutApi.rejectCheckout(id, reason, approverId);
+      case 'outgoing': {
+        // ✅ Phase 1: Fetch checkout to get version
+        const checkout = await checkoutApi.getCheckout(id);
+        await checkoutApi.rejectCheckout(id, checkout.version, reason, approverId);
         break;
+      }
 
       case 'incoming':
         // Incoming can be: checkout return OR equipment import
         // Determine type from originalData
         if (this.isCheckout(originalData)) {
-          await checkoutApi.rejectCheckout(id, reason, approverId);
+          // ✅ Phase 1: Fetch checkout to get version
+          const checkout = await checkoutApi.getCheckout(id);
+          await checkoutApi.rejectCheckout(id, checkout.version, reason, approverId);
         } else if (this.isEquipmentImport(originalData)) {
-          await equipmentImportApi.reject(id, reason);
+          // ✅ Fetch equipment import to get version
+          const equipmentImport = await equipmentImportApi.getOne(id);
+          await equipmentImportApi.reject(id, equipmentImport.version, reason);
         } else {
           throw new Error('Unknown incoming item type');
         }
@@ -705,38 +726,46 @@ class ApprovalsApi {
           rejectionReason: reason,
         });
         break;
-      case 'calibration':
+      case 'calibration': {
+        // ✅ Fetch calibration to get version
+        const calibration = await calibrationApi.getCalibration(id);
         await calibrationApi.rejectCalibration(id, {
+          version: calibration.version,
           approverId,
           rejectionReason: reason,
         });
         break;
+      }
       case 'inspection':
         // 중간점검은 반려 기능 없음
         throw new Error('중간점검은 반려할 수 없습니다.');
       case 'nonconformity':
         // 부적합은 반려 기능이 없음 (조치 완료 상태에서만 종료 가능)
         throw new Error('부적합 재개는 반려할 수 없습니다. 부적합 관리 페이지에서 처리하세요.');
-      case 'disposal_review':
+      case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
-        await apiClient.post<unknown, DisposalReviewPayload>(
-          API_ENDPOINTS.EQUIPMENT.DISPOSAL.REVIEW(equipmentId),
-          {
-            decision: 'reject',
-            opinion: reason || '반려합니다',
-          }
-        );
+        // ✅ Fetch disposal request to get version
+        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
+        if (!disposalRequest) throw new Error('Disposal request not found');
+        await reviewDisposal(equipmentId, {
+          version: disposalRequest.version,
+          decision: 'reject',
+          opinion: reason || '반려합니다',
+        });
         break;
-      case 'disposal_final':
+      }
+      case 'disposal_final': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
-        await apiClient.post<unknown, DisposalApprovalPayload>(
-          API_ENDPOINTS.EQUIPMENT.DISPOSAL.APPROVE(equipmentId),
-          {
-            decision: 'reject',
-            comment: reason || '반려합니다',
-          }
-        );
+        // ✅ Fetch disposal request to get version
+        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
+        if (!disposalRequest) throw new Error('Disposal request not found');
+        await approveDisposal(equipmentId, {
+          version: disposalRequest.version,
+          decision: 'reject',
+          comment: reason || '반려합니다',
+        });
         break;
+      }
       case 'plan_review':
       case 'plan_final':
         await apiClient.patch(API_ENDPOINTS.CALIBRATION_PLANS.REJECT(id), {

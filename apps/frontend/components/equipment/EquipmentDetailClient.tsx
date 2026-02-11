@@ -39,7 +39,7 @@ interface EquipmentDetailClientProps {
  *
  * ✅ 상태 동기화 패턴 (Best Practice):
  * - Server Component에서 초기 데이터를 props로 전달받음
- * - useQuery의 initialData로 hydration 최적화
+ * - useQuery의 placeholderData로 즉시 표시 + 백그라운드 refetch
  * - 부적합 등록 등 상태 변경 시 캐시 무효화로 자동 갱신
  */
 export function EquipmentDetailClient({
@@ -83,10 +83,10 @@ export function EquipmentDetailClient({
   // - refetchOnMount: 1시간 이상 오래된 캐시만 refetch (CalibrationOverdueScheduler 간격과 동기화)
   // - 이유: 새 페이지 컨텍스트에서 열 때 stale 데이터 방지
   // - 효과: 상세/목록 페이지 간 일관성 보장
-  const { data: equipment } = useQuery({
+  const { data: equipment = initialEquipment } = useQuery({
     queryKey: queryKeys.equipment.detail(equipmentId), // ✅ 표준화된 키
     queryFn: () => equipmentApi.getEquipment(equipmentId),
-    initialData: initialEquipment, // Server Component에서 전달받은 초기 데이터
+    placeholderData: initialEquipment, // Server Component에서 전달받은 초기 데이터
     staleTime: 0, // 캐시 무효화 시 즉시 stale 처리하여 refetch
     refetchOnMount: (query) => {
       // ✅ 스마트 refetch: 캐시가 1시간 이상 오래되면 refetch
@@ -99,13 +99,13 @@ export function EquipmentDetailClient({
   });
 
   // ✅ 폐기 요청 데이터를 React Query로 관리하여 실시간 동기화
-  // - initialData로 Server Component에서 받은 데이터 사용 (hydration 최적화)
+  // - placeholderData로 Server Component에서 받은 데이터 즉시 표시 + 백그라운드 refetch
   // - staleTime: 0 으로 캐시 무효화 시 즉시 refetch
   // - enabled: 장비가 pending_disposal 또는 disposed 상태일 때만 활성화
   const { data: disposalRequest } = useQuery({
     queryKey: queryKeys.equipment.currentDisposalRequest(equipmentId),
     queryFn: () => disposalApi.getCurrentDisposalRequest(equipmentId),
-    initialData: initialDisposalRequest,
+    placeholderData: initialDisposalRequest,
     staleTime: 0,
     enabled:
       !!equipmentId &&

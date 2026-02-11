@@ -15,12 +15,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/api/error';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
-import calibrationApi, { CreateCalibrationDto } from '@/lib/api/calibration-api';
+import calibrationApi, { CreateCalibrationDto, Calibration } from '@/lib/api/calibration-api';
 import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
 import type { UserRole } from '@equipment-management/schemas';
@@ -28,15 +28,15 @@ import type { UserRole } from '@equipment-management/schemas';
 export function CalibrationRegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const { toast } = useToast();
 
   // URL 파라미터에서 equipmentId 추출
   const equipmentIdFromUrl = searchParams.get('equipmentId');
 
   // 사용자 역할 결정 (기본값: test_engineer)
-  const userRole: UserRole = (session?.user as { role?: UserRole } | undefined)?.role || 'test_engineer';
+  const userRole: UserRole =
+    (session?.user as { role?: UserRole } | undefined)?.role || 'test_engineer';
   const isTechnicalManager = userRole === 'technical_manager' || userRole === 'lab_manager';
 
   // 상태 관리
@@ -148,33 +148,38 @@ export function CalibrationRegisterContent() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 교정 등록 mutation
-  const registerCalibrationMutation = useMutation({
-    mutationFn: (data: CreateCalibrationDto) => {
-      return calibrationApi.createCalibration(data);
+  // ✅ 교정 등록 mutation - Optimistic Update 패턴
+  const registerCalibrationMutation = useOptimisticMutation<
+    Calibration,
+    CreateCalibrationDto,
+    Equipment
+  >({
+    mutationFn: (data) => calibrationApi.createCalibration(data),
+    queryKey: selectedEquipmentId ? ['equipment', selectedEquipmentId] : ['equipment'],
+    optimisticUpdate: (oldEquipment, data): Equipment => {
+      // ✅ oldEquipment가 없으면 원본 그대로 반환 (빈 객체 대신)
+      if (!oldEquipment) {
+        return {} as Equipment; // Type assertion for undefined case
+      }
+
+      // ✅ 해당 장비만 즉시 업데이트 (D-day 배지 실시간 반영)
+      return {
+        ...oldEquipment,
+        lastCalibrationDate: data.calibrationDate,
+        nextCalibrationDate: data.nextCalibrationDate,
+        calibrationCycle: data.calibrationCycle,
+        status: 'available', // 교정 완료 후 사용 가능 상태로
+      } as unknown as Equipment;
     },
-    onSuccess: () => {
-      const message = isTechnicalManager
-        ? '교정 정보가 등록 및 승인되었습니다.'
-        : '교정 정보가 등록되었습니다. 기술책임자의 승인을 기다려주세요.';
-      toast({
-        title: '교정 정보 등록 완료',
-        description: message,
-      });
-      queryClient.invalidateQueries({ queryKey: ['calibration-history'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-summary'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-overdue'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-upcoming'] });
-      queryClient.invalidateQueries({ queryKey: ['equipment'] });
-      router.push('/calibration');
-    },
-    onError: (error: unknown) => {
-      toast({
-        title: '교정 정보 등록 실패',
-        description: getErrorMessage(error, '교정 정보 등록 중 오류가 발생했습니다.'),
-        variant: 'destructive',
-      });
-    },
+    invalidateKeys: [
+      ['calibration-history'], // 이력만 재조회
+      ['calibration-summary'], // 요약만 재조회
+    ],
+    successMessage: isTechnicalManager
+      ? '교정 정보가 등록 및 승인되었습니다.'
+      : '교정 정보가 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
+    errorMessage: '교정 정보 등록 중 오류가 발생했습니다.',
+    onSuccessCallback: () => router.push('/calibration'),
   });
 
   // 폼 제출 처리

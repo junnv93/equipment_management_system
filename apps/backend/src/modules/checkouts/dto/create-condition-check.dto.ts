@@ -6,13 +6,16 @@ import {
   CONDITION_STATUS_VALUES,
   ACCESSORIES_STATUS_VALUES,
 } from '@equipment-management/schemas';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
 /**
  * 상태 확인 등록 스키마
+ * version은 optimistic locking을 위해 필수
  */
 export const createConditionCheckSchema = z.object({
+  ...versionedSchema, // ✅ Optimistic locking version
   step: z.enum([...CONDITION_CHECK_STEP_VALUES] as [string, ...string[]], {
     message: '유효하지 않은 상태 확인 단계입니다.',
   }),
@@ -33,7 +36,9 @@ export const CreateConditionCheckValidationPipe = new ZodValidationPipe(createCo
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class CreateConditionCheckDto {
+export class CreateConditionCheckDto extends VersionedDto {
+  // ✅ version 필드는 VersionedDto에서 자동 상속
+
   @ApiProperty({
     description: '상태 확인 단계',
     enum: CONDITION_CHECK_STEP_VALUES,

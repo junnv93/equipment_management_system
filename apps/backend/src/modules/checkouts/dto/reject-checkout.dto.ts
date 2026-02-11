@@ -1,13 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
 /**
  * 반출 반려 스키마
+ * version은 optimistic locking을 위해 필수
  */
 export const rejectCheckoutSchema = z.object({
+  ...versionedSchema, // ✅ Optimistic locking version
   approverId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
   reason: z.string().min(1, '반려 사유를 입력해주세요'),
 });
@@ -17,7 +20,9 @@ export const RejectCheckoutValidationPipe = new ZodValidationPipe(rejectCheckout
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class RejectCheckoutDto {
+export class RejectCheckoutDto extends VersionedDto {
+  // ✅ version 필드는 VersionedDto에서 자동 상속
+
   @ApiProperty({
     description: '승인자 UUID',
     example: '550e8400-e29b-41d4-a716-446655440001',

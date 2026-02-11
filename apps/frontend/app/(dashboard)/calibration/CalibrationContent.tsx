@@ -47,18 +47,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import equipmentApi from '@/lib/api/equipment-api';
-import calibrationApi from '@/lib/api/calibration-api';
+import calibrationApi, { type CalibrationSummary } from '@/lib/api/calibration-api';
 import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { format, differenceInDays, isBefore } from 'date-fns';
 import { ko } from 'date-fns/locale';
-
-// 교정 요약 데이터 타입
-interface CalibrationSummary {
-  total: number;
-  overdueCount: number;
-  dueInMonthCount: number;
-}
 
 // 중간점검 데이터 타입
 interface IntermediateCheckItem {
@@ -142,7 +135,7 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
   const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
     queryKey: ['calibration-summary'],
     queryFn: () => calibrationApi.getCalibrationSummary(),
-    initialData: initialSummary,
+    placeholderData: initialSummary,
   });
 
   // 교정 기한 초과 장비 조회

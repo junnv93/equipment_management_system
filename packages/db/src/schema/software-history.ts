@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, text, uuid, index } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, text, uuid, index, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { users } from './users';
@@ -65,6 +65,9 @@ export const softwareHistory = pgTable(
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+
+    // Optimistic locking
+    version: integer('version').notNull().default(1),
   },
   (table) => {
     return {
@@ -82,6 +85,8 @@ export const softwareHistory = pgTable(
         table.softwareName,
         table.changedAt
       ),
+      // Optimistic locking 조회 최적화
+      versionIdx: index('software_history_version_idx').on(table.version),
     };
   }
 );

@@ -102,6 +102,10 @@ export class DisposalController {
   })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '대기 중인 폐기 요청을 찾을 수 없음' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: '버전 충돌 - 다른 사용자가 이미 수정했습니다',
+  })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '같은 팀의 장비만 검토 가능' })
   @RequirePermissions(Permission.REVIEW_DISPOSAL)
   @AuditLog({
@@ -138,6 +142,10 @@ export class DisposalController {
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: '검토 완료된 폐기 요청을 찾을 수 없음',
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: '버전 충돌 - 다른 사용자가 이미 수정했습니다',
   })
   @RequirePermissions(Permission.APPROVE_DISPOSAL)
   @AuditLog({

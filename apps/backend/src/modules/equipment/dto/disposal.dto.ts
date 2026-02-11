@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DisposalReasonEnum } from '@equipment-management/schemas';
 import { ApiProperty } from '@nestjs/swagger';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ============================================================================
 // Zod 스키마 (SSOT from @equipment-management/schemas)
@@ -20,6 +21,7 @@ export type RequestDisposalInput = z.infer<typeof requestDisposalSchema>;
  * 폐기 검토 DTO 스키마 (technical_manager, 같은 팀)
  */
 export const reviewDisposalSchema = z.object({
+  ...versionedSchema,
   decision: z.enum(['approve', 'reject'], {
     message: 'approve 또는 reject 중 하나를 선택해주세요',
   }),
@@ -32,6 +34,7 @@ export type ReviewDisposalInput = z.infer<typeof reviewDisposalSchema>;
  * 폐기 승인 DTO 스키마 (lab_manager)
  */
 export const approveDisposalSchema = z.object({
+  ...versionedSchema,
   decision: z.enum(['approve', 'reject'], {
     message: 'approve 또는 reject 중 하나를 선택해주세요',
   }),
@@ -66,7 +69,10 @@ export class RequestDisposalDto implements RequestDisposalInput {
 /**
  * 폐기 검토 DTO
  */
-export class ReviewDisposalDto implements ReviewDisposalInput {
+export class ReviewDisposalDto
+  extends VersionedDto
+  implements Omit<ReviewDisposalInput, 'version'>
+{
   @ApiProperty({
     description: '검토 결과 (승인/반려)',
     enum: ['approve', 'reject'],
@@ -84,7 +90,10 @@ export class ReviewDisposalDto implements ReviewDisposalInput {
 /**
  * 폐기 승인 DTO
  */
-export class ApproveDisposalDto implements ApproveDisposalInput {
+export class ApproveDisposalDto
+  extends VersionedDto
+  implements Omit<ApproveDisposalInput, 'version'>
+{
   @ApiProperty({
     description: '승인 결과 (승인/반려)',
     enum: ['approve', 'reject'],

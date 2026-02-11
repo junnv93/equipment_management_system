@@ -49,6 +49,7 @@ interface BaseEquipmentImport {
   receivingCondition: ReceivingCondition | null;
   equipmentId: string | null;
   returnCheckoutId: string | null;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -281,13 +282,14 @@ class EquipmentImportApi {
    * Works for both rental and internal shared imports.
    *
    * @param id - Equipment import UUID
+   * @param version - Version for optimistic locking
    * @param comment - Optional approval comment
    * @returns Updated equipment import
    */
-  async approve(id: string, comment?: string): Promise<EquipmentImport> {
-    const response = await apiClient.post<EquipmentImport>(
+  async approve(id: string, version: number, comment?: string): Promise<EquipmentImport> {
+    const response = await apiClient.patch<EquipmentImport>(
       API_ENDPOINTS.EQUIPMENT_IMPORTS.APPROVE(id),
-      { comment }
+      { version, comment }
     );
     return response.data;
   }
@@ -298,13 +300,14 @@ class EquipmentImportApi {
    * Works for both rental and internal shared imports.
    *
    * @param id - Equipment import UUID
+   * @param version - Version for optimistic locking
    * @param reason - Rejection reason (required)
    * @returns Updated equipment import
    */
-  async reject(id: string, reason: string): Promise<EquipmentImport> {
-    const response = await apiClient.post<EquipmentImport>(
+  async reject(id: string, version: number, reason: string): Promise<EquipmentImport> {
+    const response = await apiClient.patch<EquipmentImport>(
       API_ENDPOINTS.EQUIPMENT_IMPORTS.REJECT(id),
-      { reason }
+      { version, rejectionReason: reason }
     );
     return response.data;
   }

@@ -40,6 +40,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       // NestJS HTTP 예외 처리
       const status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
+
+      // Extract message and custom fields
       const message =
         typeof exceptionResponse === 'object' &&
         exceptionResponse !== null &&
@@ -47,12 +49,29 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           ? (exceptionResponse as any).message || 'HTTP 오류가 발생했습니다'
           : exceptionResponse;
 
+      // SSOT: Preserve custom error code if present (e.g., VERSION_CONFLICT for optimistic locking)
+      const customCode =
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null &&
+        'code' in exceptionResponse
+          ? (exceptionResponse as any).code
+          : undefined;
+
+      // Build error response with custom fields at top level
       errorResponse = {
-        code: this.mapHttpStatusToErrorCode(status),
+        code: customCode || this.mapHttpStatusToErrorCode(status),
         message: Array.isArray(message) ? message.join(', ') : String(message),
         timestamp: new Date().toISOString(),
-        details: typeof exceptionResponse === 'object' ? exceptionResponse : undefined,
       };
+
+      // Preserve additional custom fields (e.g., currentVersion, expectedVersion) at top level
+      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        Object.keys(exceptionResponse).forEach((key) => {
+          if (key !== 'message' && key !== 'code' && key !== 'statusCode') {
+            (errorResponse as any)[key] = (exceptionResponse as any)[key];
+          }
+        });
+      }
 
       return response.status(status).json(errorResponse);
     } else {

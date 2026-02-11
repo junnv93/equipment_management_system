@@ -4,13 +4,16 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { CreateCheckoutDto } from './create-checkout.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '@equipment-management/schemas';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
 /**
  * 반출 수정 스키마
+ * version은 optimistic locking을 위해 필수
  */
 export const updateCheckoutSchema = z.object({
+  ...versionedSchema, // ✅ Optimistic locking version
   destination: z.string().min(1).optional(),
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
@@ -29,9 +32,37 @@ export const UpdateCheckoutValidationPipe = new ZodValidationPipe(updateCheckout
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class UpdateCheckoutDto extends PartialType(
-  OmitType(CreateCheckoutDto, ['equipmentIds', 'purpose'] as const)
-) {
+export class UpdateCheckoutDto extends VersionedDto {
+  // ✅ version 필드는 VersionedDto에서 자동 상속
+
+  @ApiProperty({
+    description: '반출 장소',
+    example: 'KOLAS 교정기관',
+    required: false,
+  })
+  destination?: string;
+
+  @ApiProperty({
+    description: '전화번호',
+    example: '010-1234-5678',
+    required: false,
+  })
+  phoneNumber?: string;
+
+  @ApiProperty({
+    description: '주소',
+    example: '서울시 강남구',
+    required: false,
+  })
+  address?: string;
+
+  @ApiProperty({
+    description: '반출 사유',
+    example: '정기 교정',
+    required: false,
+  })
+  reason?: string;
+
   @ApiProperty({
     description: '반출 상태',
     enum: CHECKOUT_STATUS_VALUES,

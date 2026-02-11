@@ -11,8 +11,23 @@ import type {
   AccessoriesStatus,
 } from '@equipment-management/schemas';
 
+/**
+ * ✅ Phase 2: Server-Driven UI
+ * 서버가 계산한 사용자별 가능한 액션
+ */
+export interface CheckoutAvailableActions {
+  canApprove: boolean;
+  canReject: boolean;
+  canStart: boolean;
+  canReturn: boolean;
+  canApproveReturn: boolean;
+  canCancel: boolean;
+  canSubmitConditionCheck: boolean;
+}
+
 export interface Checkout {
   id: string;
+  version: number; // ✅ Phase 1: Optimistic Locking
   equipmentIds?: string[]; // ✅ 백엔드 응답에 따라 조정
   equipment?: Array<{
     id: string;
@@ -66,6 +81,10 @@ export interface Checkout {
   notes?: string; // 레거시 호환성
   // 상태 확인 기록 (대여 목적)
   conditionChecks?: ConditionCheck[];
+  // ✅ Phase 2: Server-Driven UI - 서버가 계산한 가능한 액션
+  meta?: {
+    availableActions: CheckoutAvailableActions;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -98,6 +117,7 @@ export interface ConditionCheck {
  * 상태 확인 등록 DTO
  */
 export interface CreateConditionCheckDto {
+  version: number; // ✅ Phase 1: Optimistic Locking
   step: ConditionCheckStep;
   appearanceStatus: ConditionStatus;
   operationStatus: ConditionStatus;
@@ -148,6 +168,7 @@ export interface CreateCheckoutDto {
 }
 
 export interface UpdateCheckoutDto {
+  version: number; // ✅ Phase 1: Optimistic Locking
   location?: string;
   contactNumber?: string;
   address?: string;
@@ -159,6 +180,7 @@ export interface UpdateCheckoutDto {
 }
 
 export interface ReturnCheckoutDto {
+  version: number; // ✅ Phase 1: Optimistic Locking
   calibrationChecked?: boolean; // 교정 확인 (교정 목적 반출 시 필수)
   repairChecked?: boolean; // 수리 확인 (수리 목적 반출 시 필수)
   workingStatusChecked: boolean; // 작동 여부 확인 (모든 유형 필수)
@@ -174,6 +196,7 @@ export interface ReturnCheckoutDto {
 }
 
 export interface ApproveReturnDto {
+  version: number; // ✅ Phase 1: Optimistic Locking
   approverId?: string; // 승인자 UUID (선택, 미제공 시 현재 로그인 사용자)
   comment?: string; // 승인 코멘트
 }
@@ -277,19 +300,27 @@ const checkoutApi = {
    * 반출 승인을 처리합니다 (1단계 승인 통합).
    * 모든 목적(교정/수리/외부 대여)에 대해 1단계 승인으로 통합되었습니다.
    * approverId는 백엔드에서 세션으로부터 자동 추출됩니다.
+   * ✅ Phase 1: Optimistic Locking - version 필수
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async approveCheckout(id: string, notes?: string): Promise<Checkout> {
-    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.APPROVE(id), { notes });
+  async approveCheckout(id: string, version: number, notes?: string): Promise<Checkout> {
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.APPROVE(id), { version, notes });
     return transformSingleResponse<Checkout>(response);
   },
 
   /**
    * 반출 요청을 거부합니다.
+   * ✅ Phase 1: Optimistic Locking - version 필수
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async rejectCheckout(id: string, reason: string, approverId?: string): Promise<Checkout> {
+  async rejectCheckout(
+    id: string,
+    version: number,
+    reason: string,
+    approverId?: string
+  ): Promise<Checkout> {
     const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.REJECT(id), {
+      version,
       reason,
       approverId,
     });
@@ -300,13 +331,15 @@ const checkoutApi = {
    * 반출을 시작합니다.
    * 상태: approved → checked_out
    * 장비 상태도 checked_out으로 자동 변경됩니다.
+   * ✅ Phase 1: Optimistic Locking - version 필수
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async startCheckout(
     id: string,
+    version: number,
     data?: { itemConditions?: Array<{ equipmentId: string; conditionBefore: string }> }
   ): Promise<Checkout> {
-    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.START(id), data || {});
+    const response = await apiClient.post(API_ENDPOINTS.CHECKOUTS.START(id), { version, ...data });
     return transformSingleResponse<Checkout>(response);
   },
 
@@ -322,6 +355,7 @@ const checkoutApi = {
   /**
    * 장비 반입(반납)을 처리합니다.
    * 상태: checked_out → returned (검사 완료, 기술책임자 승인 대기)
+   * ✅ Phase 1: Optimistic Locking - version은 data에 포함
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async returnCheckout(id: string, data: ReturnCheckoutDto): Promise<Checkout> {
@@ -333,9 +367,10 @@ const checkoutApi = {
    * 반입 최종 승인을 처리합니다 (기술책임자).
    * 상태: returned → return_approved
    * 장비 상태: available로 자동 복원
+   * ✅ Phase 1: Optimistic Locking - version은 data에 포함
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async approveReturn(id: string, data: ApproveReturnDto = {}): Promise<Checkout> {
+  async approveReturn(id: string, data: ApproveReturnDto): Promise<Checkout> {
     const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.APPROVE_RETURN(id), data);
     return transformSingleResponse<Checkout>(response);
   },
@@ -391,6 +426,7 @@ const checkoutApi = {
   /**
    * 상태 확인을 등록합니다 (대여 목적).
    * 대여 목적 반출 시 양측 4단계 확인을 위한 API입니다.
+   * ✅ Phase 1: Optimistic Locking - version은 data에 포함
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
   async submitConditionCheck(

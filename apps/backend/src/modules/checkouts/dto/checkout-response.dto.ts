@@ -92,6 +92,13 @@ export class CheckoutResponseDto {
   @ApiProperty({ description: '수정일시' })
   updatedAt: Date;
 
+  @ApiProperty({
+    description: '낙관적 잠금 버전 (Optimistic Locking Version)',
+    example: 1,
+    type: Number,
+  })
+  version: number;
+
   // ============================================================================
   // 사용자 정보
   // ============================================================================

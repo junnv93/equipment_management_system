@@ -46,7 +46,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
       const fileList = files?.map((f) => f.file);
       const result = await updateEquipment.mutateAsync({
         id: equipmentId,
-        data,
+        data: { ...data, version: equipment.version ?? 1 },
         files: fileList,
       });
 
@@ -73,18 +73,19 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
       } else if (error instanceof Error) {
         setSubmitError(error);
       } else {
-        setSubmitError(new ApiError(
-          '장비 수정 중 알 수 없는 오류가 발생했습니다.',
-          EquipmentErrorCode.UNKNOWN_ERROR
-        ));
+        setSubmitError(
+          new ApiError(
+            '장비 수정 중 알 수 없는 오류가 발생했습니다.',
+            EquipmentErrorCode.UNKNOWN_ERROR
+          )
+        );
       }
 
       // 간단한 toast도 표시
       toast({
         title: '수정 실패',
-        description: error instanceof ApiError
-          ? error.getUserMessage()
-          : '장비 수정 중 오류가 발생했습니다.',
+        description:
+          error instanceof ApiError ? error.getUserMessage() : '장비 수정 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
     }
@@ -98,7 +99,9 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
     assetNumber: equipment.assetNumber || undefined,
     modelName: equipment.modelName || undefined,
     manufacturer: equipment.manufacturer || undefined,
-    manufacturerContact: (equipment as Record<string, unknown>).manufacturerContact as string | undefined,
+    manufacturerContact: (equipment as Record<string, unknown>).manufacturerContact as
+      | string
+      | undefined,
     serialNumber: equipment.serialNumber || undefined,
     location: equipment.location || undefined,
     description: equipment.description || undefined,
@@ -113,11 +116,17 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
     needsIntermediateCheck: equipment.needsIntermediateCheck || false,
     calibrationMethod: equipment.calibrationMethod || undefined,
     lastIntermediateCheckDate: (equipment as Record<string, unknown>).lastIntermediateCheckDate
-      ? new Date((equipment as Record<string, unknown>).lastIntermediateCheckDate as string).toISOString().split('T')[0]
+      ? new Date((equipment as Record<string, unknown>).lastIntermediateCheckDate as string)
+          .toISOString()
+          .split('T')[0]
       : undefined,
-    intermediateCheckCycle: (equipment as Record<string, unknown>).intermediateCheckCycle as number | undefined,
+    intermediateCheckCycle: (equipment as Record<string, unknown>).intermediateCheckCycle as
+      | number
+      | undefined,
     nextIntermediateCheckDate: (equipment as Record<string, unknown>).nextIntermediateCheckDate
-      ? new Date((equipment as Record<string, unknown>).nextIntermediateCheckDate as string).toISOString().split('T')[0]
+      ? new Date((equipment as Record<string, unknown>).nextIntermediateCheckDate as string)
+          .toISOString()
+          .split('T')[0]
       : undefined,
     purchaseYear: equipment.purchaseYear || undefined,
     teamId: typeof equipment.teamId === 'number' ? equipment.teamId : equipment.teamId || undefined,
@@ -131,7 +140,9 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
     technicalManager: equipment.technicalManager || undefined,
     initialLocation: (equipment as Record<string, unknown>).initialLocation as string | undefined,
     installationDate: (equipment as Record<string, unknown>).installationDate
-      ? new Date((equipment as Record<string, unknown>).installationDate as string).toISOString().split('T')[0]
+      ? new Date((equipment as Record<string, unknown>).installationDate as string)
+          .toISOString()
+          .split('T')[0]
       : undefined,
     status: equipment.status || undefined,
     calibrationResult: equipment.calibrationResult || undefined,
@@ -152,9 +163,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
             <Edit3 className="h-6 w-6 text-primary" />
             장비 수정
           </h1>
-          <p className="text-muted-foreground text-sm">
-            {equipment.name}의 정보를 수정합니다
-          </p>
+          <p className="text-muted-foreground text-sm">{equipment.name}의 정보를 수정합니다</p>
         </div>
       </div>
 

@@ -79,14 +79,16 @@ export default function CalibrationApprovalsContent() {
   const approveMutation = useMutation({
     mutationFn: async ({
       id,
+      version,
       approverId,
       approverComment,
     }: {
       id: string;
+      version: number;
       approverId: string;
       approverComment: string;
     }) => {
-      return calibrationApi.approveCalibration(id, { approverId, approverComment });
+      return calibrationApi.approveCalibration(id, { version, approverId, approverComment });
     },
     onSuccess: () => {
       toast({
@@ -100,11 +102,16 @@ export default function CalibrationApprovalsContent() {
       setSelectedRequest(null);
     },
     onError: (error: unknown) => {
+      const errorMessage = getErrorMessage(error, '교정 승인 중 오류가 발생했습니다.');
       toast({
         title: '승인 실패',
-        description: getErrorMessage(error, '교정 승인 중 오류가 발생했습니다.'),
+        description: errorMessage,
         variant: 'destructive',
       });
+      // ✅ 409 Conflict 시 자동 새로고침
+      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+        queryClient.invalidateQueries({ queryKey: ['calibration-pending'] });
+      }
     },
   });
 
@@ -112,14 +119,16 @@ export default function CalibrationApprovalsContent() {
   const rejectMutation = useMutation({
     mutationFn: async ({
       id,
+      version,
       approverId,
       rejectionReason,
     }: {
       id: string;
+      version: number;
       approverId: string;
       rejectionReason: string;
     }) => {
-      return calibrationApi.rejectCalibration(id, { approverId, rejectionReason });
+      return calibrationApi.rejectCalibration(id, { version, approverId, rejectionReason });
     },
     onSuccess: () => {
       toast({
@@ -131,11 +140,16 @@ export default function CalibrationApprovalsContent() {
       setSelectedRequest(null);
     },
     onError: (error: unknown) => {
+      const errorMessage = getErrorMessage(error, '교정 반려 중 오류가 발생했습니다.');
       toast({
         title: '반려 실패',
-        description: getErrorMessage(error, '교정 반려 중 오류가 발생했습니다.'),
+        description: errorMessage,
         variant: 'destructive',
       });
+      // ✅ 409 Conflict 시 자동 새로고침
+      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+        queryClient.invalidateQueries({ queryKey: ['calibration-pending'] });
+      }
     },
   });
 
@@ -161,6 +175,7 @@ export default function CalibrationApprovalsContent() {
     }
     approveMutation.mutate({
       id: selectedRequest.id,
+      version: selectedRequest.version, // ✅ Optimistic locking
       approverId: session?.user?.id as string,
       approverComment: comment,
     });
@@ -170,6 +185,7 @@ export default function CalibrationApprovalsContent() {
     if (!selectedRequest) return;
     rejectMutation.mutate({
       id: selectedRequest.id,
+      version: selectedRequest.version, // ✅ Optimistic locking
       approverId: session?.user?.id as string,
       rejectionReason: reason,
     });

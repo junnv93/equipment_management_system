@@ -1,4 +1,13 @@
-import { pgTable, varchar, timestamp, text, decimal, uuid, date } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  varchar,
+  timestamp,
+  text,
+  decimal,
+  uuid,
+  date,
+  integer,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { teams } from './teams';
@@ -54,6 +63,9 @@ export const calibrations = pgTable('calibrations', {
   registrarComment: text('registrar_comment'), // 등록자 코멘트 (기술책임자 직접 등록 시 필수)
   approverComment: text('approver_comment'), // 승인자 코멘트 (기술책임자 승인 시 필수)
   rejectionReason: text('rejection_reason'), // 반려 사유
+
+  // Optimistic locking version
+  version: integer('version').notNull().default(1),
 
   // 시스템 필드
   createdAt: timestamp('created_at').defaultNow().notNull(),

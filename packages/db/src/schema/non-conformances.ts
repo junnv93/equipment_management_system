@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, text, uuid, date, index } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, text, uuid, date, index, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { users } from './users';
@@ -88,6 +88,9 @@ export const nonConformances = pgTable(
     closedBy: uuid('closed_by'), // 종료 승인자 ID (기술책임자)
     closedAt: timestamp('closed_at'), // 종료 시각
     closureNotes: text('closure_notes'), // 종료 메모
+
+    // Optimistic locking version
+    version: integer('version').notNull().default(1),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

@@ -203,6 +203,7 @@ describe('CheckoutsService', () => {
     const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
     const approverId = '550e8400-e29b-41d4-a716-446655440004';
     const mockApproveDto = {
+      version: 1,
       approverId: approverId,
       comment: '승인합니다.',
     };
@@ -235,6 +236,7 @@ describe('CheckoutsService', () => {
     const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
     const approverId = '550e8400-e29b-41d4-a716-446655440004';
     const mockRejectDto = {
+      version: 1,
       reason: '장비 상태가 좋지 않아 반출이 불가합니다.',
       approverId: approverId,
     };
@@ -267,7 +269,7 @@ describe('CheckoutsService', () => {
     });
 
     it('should throw BadRequestException when reason is empty', async () => {
-      const emptyReasonDto = { reason: '', approverId: approverId };
+      const emptyReasonDto = { version: 1, reason: '', approverId: approverId };
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([mockPendingCheckout]);
@@ -280,6 +282,7 @@ describe('CheckoutsService', () => {
     const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
     const returnerId = '550e8400-e29b-41d4-a716-446655440002';
     const mockReturnDto = {
+      version: 1,
       calibrationChecked: true,
       repairChecked: false,
       workingStatusChecked: true,
@@ -330,6 +333,7 @@ describe('CheckoutsService', () => {
     const checkoutId = '550e8400-e29b-41d4-a716-446655440003';
     const approverId = '550e8400-e29b-41d4-a716-446655440004';
     const mockApproveReturnDto = {
+      version: 1,
       approverId: approverId,
       comment: '반입 확인 완료',
     };

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -8,6 +9,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 교정 승인 스키마
  */
 export const approveCalibrationSchema = z.object({
+  ...versionedSchema,
   approverId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
   approverComment: z.string().min(1, '승인 시 승인자 코멘트는 필수입니다.'),
 });
@@ -19,6 +21,7 @@ export const ApproveCalibrationValidationPipe = new ZodValidationPipe(approveCal
  * 교정 반려 스키마
  */
 export const rejectCalibrationSchema = z.object({
+  ...versionedSchema,
   approverId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
   rejectionReason: z.string().min(1, '반려 사유는 필수입니다.'),
 });
@@ -28,7 +31,7 @@ export const RejectCalibrationValidationPipe = new ZodValidationPipe(rejectCalib
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class ApproveCalibrationDto {
+export class ApproveCalibrationDto extends VersionedDto {
   @ApiProperty({
     description: '승인자 ID (기술책임자)',
     example: '550e8400-e29b-41d4-a716-446655440001',
@@ -42,7 +45,7 @@ export class ApproveCalibrationDto {
   approverComment: string;
 }
 
-export class RejectCalibrationDto {
+export class RejectCalibrationDto extends VersionedDto {
   @ApiProperty({
     description: '승인자 ID (기술책임자)',
     example: '550e8400-e29b-41d4-a716-446655440001',

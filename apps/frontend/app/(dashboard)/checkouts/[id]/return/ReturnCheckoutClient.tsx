@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import checkoutApi, { Checkout, ConditionCheck, ReturnCheckoutDto } from '@/lib/api/checkout-api';
+import { CHECKOUT_RETURN_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
 import {
   CHECKOUT_PURPOSE_LABELS,
   CHECKOUT_STATUS_LABELS,
@@ -43,12 +44,17 @@ export default function ReturnCheckoutClient({
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  // 반입 처리 mutation
+  // 반입 처리 mutation (cross-page invalidation: 반입 승인 대기 목록 등)
   const returnMutation = useMutation({
     mutationFn: (data: ReturnCheckoutDto) => checkoutApi.returnCheckout(checkout.id, data),
     onSuccess: () => {
+      // ✅ async-parallel: 모든 관련 캐시 병렬 무효화
+      Promise.all(
+        CHECKOUT_RETURN_INVALIDATE_KEYS.map((key) =>
+          queryClient.invalidateQueries({ queryKey: key })
+        )
+      );
       queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.push(`/checkouts/${checkout.id}`);
       router.refresh();
     },
@@ -57,6 +63,7 @@ export default function ReturnCheckoutClient({
   // 제출 핸들러
   const handleSubmit = (data: InspectionFormData) => {
     const returnData: ReturnCheckoutDto = {
+      version: checkout.version, // ✅ Phase 1: Optimistic Locking
       calibrationChecked: data.calibrationChecked,
       repairChecked: data.repairChecked,
       workingStatusChecked: data.workingStatusChecked,

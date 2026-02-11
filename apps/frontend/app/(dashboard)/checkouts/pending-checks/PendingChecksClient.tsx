@@ -47,7 +47,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
     queryFn: async () => {
       return checkoutApi.getPendingChecks();
     },
-    initialData: initialData,
+    placeholderData: initialData,
     staleTime: 30 * 1000,
   });
 

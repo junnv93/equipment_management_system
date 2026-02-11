@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, Inject, Logger, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  Logger,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
@@ -676,8 +683,8 @@ export class EquipmentService {
         .values(insertData as typeof equipment.$inferInsert)
         .returning();
 
-      // 캐시 무효화
-      await this.invalidateCache();
+      // 캐시 무효화 (신규 장비이므로 teamId 기반 선택적 무효화)
+      await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
 
       return newEquipment;
     } catch (error) {
@@ -749,8 +756,8 @@ export class EquipmentService {
         .values(insertData as typeof equipment.$inferInsert)
         .returning();
 
-      // 캐시 무효화
-      await this.invalidateCache();
+      // 캐시 무효화 (공용장비 생성)
+      await this.invalidateCache(newEquipment.id, newEquipment.teamId ?? undefined);
 
       return newEquipment;
     } catch (error) {
@@ -941,7 +948,63 @@ export class EquipmentService {
   }
 
   /**
+   * Optimistic Locking: CAS 패턴으로 장비 업데이트
+   *
+   * ✅ Phase 1: Equipment Module - 2026-02-11
+   * ✅ 참고: checkouts.service.ts의 updateWithVersion() 패턴 재사용
+   *
+   * @param uuid - 장비 UUID
+   * @param expectedVersion - 클라이언트가 알고 있는 version
+   * @param updateData - 업데이트할 데이터
+   * @returns 업데이트된 장비 (version이 1 증가됨)
+   * @throws ConflictException - version 불일치 (다른 사용자가 먼저 수정함)
+   * @throws NotFoundException - 장비가 존재하지 않음
+   */
+  private async updateWithVersion(
+    uuid: string,
+    expectedVersion: number,
+    updateData: Partial<Equipment>
+  ): Promise<Equipment> {
+    const [updated] = await this.db
+      .update(equipment)
+      .set({
+        ...updateData,
+        version: sql`version + 1`, // ✅ Explicit SQL increment (no trigger)
+        updatedAt: new Date(),
+      } as Record<string, unknown>)
+      .where(and(eq(equipment.id, uuid), eq(equipment.version, expectedVersion))) // ← CAS condition
+      .returning();
+
+    if (!updated) {
+      // Check if equipment exists or version mismatch
+      const [existing] = await this.db
+        .select({ id: equipment.id, version: equipment.version })
+        .from(equipment)
+        .where(eq(equipment.id, uuid))
+        .limit(1);
+
+      if (!existing) {
+        throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
+      }
+
+      // Version mismatch = concurrent modification
+      throw new ConflictException({
+        message: '다른 사용자가 이미 수정했습니다. 페이지가 자동으로 새로고침됩니다.',
+        code: 'VERSION_CONFLICT',
+        currentVersion: existing.version,
+        expectedVersion,
+      });
+    }
+
+    return updated;
+  }
+
+  /**
    * UUID로 장비 업데이트
+   *
+   * ✅ Phase 1: Equipment Module - 2026-02-11
+   * ✅ Optimistic Locking: updateWithVersion() 사용
+   *
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    */
   async update(uuid: string, updateEquipmentDto: UpdateEquipmentDto): Promise<Equipment> {
@@ -973,23 +1036,20 @@ export class EquipmentService {
       // DTO를 DB 엔티티로 변환
       const updateData = this.transformUpdateDtoToEntity(updateEquipmentDto, existingEquipment);
 
-      // 업데이트 수행
-      const [updated] = await this.db
-        .update(equipment)
-        .set(updateData)
-        .where(eq(equipment.id, uuid))
-        .returning();
+      // ✅ Optimistic Locking: CAS 패턴으로 업데이트
+      const updated = await this.updateWithVersion(uuid, updateEquipmentDto.version, updateData);
 
-      if (!updated) {
-        throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
-
-      // 캐시 무효화
-      await this.invalidateCache();
+      // 캐시 무효화 (기존 팀 + 변경된 팀 모두 무효화)
+      const affectedTeamId = existingEquipment.teamId ?? updateEquipmentDto.teamId;
+      await this.invalidateCache(uuid, affectedTeamId ?? undefined);
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
       this.logger.error(
@@ -1001,9 +1061,30 @@ export class EquipmentService {
 
   /**
    * 캐시 무효화 헬퍼 메서드
+   *
+   * @param equipmentId - 특정 장비 ID (detail 캐시 무효화)
+   * @param teamId - 영향받는 팀 ID (선택적 무효화)
    */
-  private async invalidateCache(): Promise<void> {
-    await this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
+  private async invalidateCache(equipmentId?: string, teamId?: string): Promise<void> {
+    // 개별 장비 detail 캐시 무효화
+    if (equipmentId) {
+      await this.cacheService.delete(this.buildCacheKey('detail', { uuid: equipmentId }));
+      await this.cacheService.delete(
+        this.buildCacheKey('detail', { uuid: equipmentId, includeTeam: true })
+      );
+    }
+
+    if (teamId) {
+      // 선택적 무효화: 해당 팀 관련 목록 캐시만 삭제
+      await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}.*"teamId":"${teamId}".*`);
+      // 팀 전용 캐시 삭제
+      await this.cacheService.delete(this.buildCacheKey('team', { teamId }));
+    }
+
+    // 전체 집계/필터 없는 캐시는 항상 무효화 (calibration, all-ids 등)
+    await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}(calibration|all-ids)`);
+    // 팀 필터링이 없는 전체 목록도 무효화
+    await this.cacheService.deleteByPattern(`${this.CACHE_PREFIX}(list|count):(?!.*teamId)`);
   }
 
   /**
@@ -1088,8 +1169,8 @@ export class EquipmentService {
         throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
       }
 
-      // 캐시 무효화
-      await this.invalidateCache();
+      // 캐시 무효화 (삭제된 장비)
+      await this.invalidateCache(uuid, updated.teamId ?? undefined);
 
       return updated;
     } catch (error) {
@@ -1105,9 +1186,18 @@ export class EquipmentService {
 
   /**
    * UUID로 장비 상태 업데이트
+   *
+   * ✅ Phase 1: Equipment Module - 2026-02-11
+   * ✅ Optimistic Locking: updateWithVersion() 사용 (외부 API 호출 시)
+   * ✅ 내부 호출: version 없이 호출 가능 (CAS 스킵)
+   *
+   * @param uuid - 장비 UUID
+   * @param status - 변경할 상태
+   * @param version - Optimistic locking version (선택사항: 내부 호출 시 생략 가능)
+   *
    * API 표준: 모든 리소스 식별자는 uuid로 통일
    */
-  async updateStatus(uuid: string, status: EquipmentStatus): Promise<Equipment> {
+  async updateStatus(uuid: string, status: EquipmentStatus, version?: number): Promise<Equipment> {
     try {
       // 기존 장비 조회 (교정 상태 검증을 위해)
       const existingEquipment = await this.findOne(uuid);
@@ -1118,25 +1208,42 @@ export class EquipmentService {
       // Equipment 모듈의 transformUpdateDtoToEntity 패턴과 동일하게 처리
       const updateData: Partial<Equipment> = {
         status,
-        updatedAt: new Date(),
       };
 
-      const [updated] = await this.db
-        .update(equipment)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(equipment.id, uuid))
-        .returning();
+      let updated: Equipment;
 
-      if (!updated) {
-        throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
+      if (version !== undefined) {
+        // ✅ 외부 API 호출: Optimistic Locking 사용
+        updated = await this.updateWithVersion(uuid, version, updateData);
+      } else {
+        // ✅ 내부 호출: CAS 스킵 (트랜잭션 내에서 안전)
+        const [result] = await this.db
+          .update(equipment)
+          .set({
+            ...updateData,
+            version: sql`version + 1`, // Still increment version for consistency
+            updatedAt: new Date(),
+          } as Record<string, unknown>)
+          .where(eq(equipment.id, uuid))
+          .returning();
+
+        if (!result) {
+          throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
+        }
+
+        updated = result;
       }
 
-      // 캐시 무효화
-      await this.invalidateCache();
+      // 캐시 무효화 (상태 변경된 장비)
+      await this.invalidateCache(uuid, updated.teamId ?? undefined);
 
       return updated;
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
       this.logger.error(

@@ -112,7 +112,14 @@ const HISTORY_TYPE_LABELS: Record<string, string> = {
   calibration: '교정',
 };
 
-export default function CreateEquipmentContent() {
+interface CreateEquipmentContentProps {
+  userDefaults?: {
+    site?: string;
+    teamId?: string;
+  };
+}
+
+export default function CreateEquipmentContent({ userDefaults }: CreateEquipmentContentProps) {
   const router = useRouter();
   const { toast } = useToast();
   const createEquipment = useCreateEquipment();
@@ -294,6 +301,7 @@ export default function CreateEquipmentContent() {
         onCancel={handleCancel}
         isEdit={false}
         isLoading={createEquipment.isPending}
+        userDefaults={userDefaults}
       />
     </div>
   );

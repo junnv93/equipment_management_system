@@ -23,6 +23,7 @@ import {
   transformArrayResponse,
 } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
+import { createFormData as createFormDataUtil } from '../utils/form-data-utils';
 
 /**
  * 프론트엔드에서 사용하는 Equipment 타입
@@ -30,6 +31,9 @@ import type { PaginatedResponse } from './types';
  * ✅ schemas 패키지의 EquipmentResponse 타입을 기본으로 사용
  * - teamName 필드가 포함되어 있음 (백엔드에서 팀 테이블 조인)
  * - 프론트엔드에서 필요한 추가 필드만 확장
+ *
+ * ✅ Phase 1: Equipment Module - 2026-02-11
+ * - version 필드 추가 (Optimistic Locking)
  *
  * @see packages/schemas/src/equipment.ts - EquipmentResponse
  */
@@ -44,6 +48,8 @@ export type Equipment = Omit<SchemaEquipmentResponse, 'id' | 'createdAt' | 'upda
   // 임시등록 장비 전용 필드 (공용/렌탈)
   usagePeriodStart?: string | Date;
   usagePeriodEnd?: string | Date;
+  // Optimistic locking (Phase 1)
+  version: number;
 };
 
 /**
@@ -73,11 +79,15 @@ export type CreateEquipmentDto = CreateEquipmentInput & {
 /**
  * 장비 수정 DTO
  *
+ * ✅ Phase 1: Equipment Module - 2026-02-11
+ * ✅ Optimistic Locking: version 필드 필수
+ *
  * schemas 패키지의 UpdateEquipmentInput을 기본으로 사용하되,
- * 프론트엔드에서 필요한 추가 필드(image 파일)만 확장합니다.
+ * 프론트엔드에서 필요한 추가 필드(image 파일, version)만 확장합니다.
  */
 export type UpdateEquipmentDto = UpdateEquipmentInput & {
   image?: File | null; // 프론트엔드에서 파일 업로드용
+  version: number; // Optimistic locking version (필수)
 };
 
 /**
@@ -247,24 +257,13 @@ const equipmentApi = {
     const allFiles = [...(image ? [image] : []), ...(files || [])];
 
     if (allFiles.length > 0) {
-      const formData = new FormData();
-
-      // FormData에 장비 데이터 추가
-      Object.entries(equipmentData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          // Date 객체는 ISO 문자열로 변환
-          if (value instanceof Date) {
-            formData.append(key, value.toISOString());
-          } else {
-            formData.append(key, String(value));
-          }
-        }
-      });
-
-      // 파일 추가
-      allFiles.forEach((file) => {
-        formData.append('files', file);
-      });
+      /**
+       * ✅ SSOT: createFormDataUtil 사용
+       * - Date → ISO 문자열 자동 변환
+       * - undefined/null/빈 문자열 자동 제거
+       * - 일관된 타입 변환 로직
+       */
+      const formData = createFormDataUtil(equipmentData, allFiles);
 
       response = await apiClient.post('/api/equipment', formData, {
         headers: {
@@ -293,24 +292,13 @@ const equipmentApi = {
     const allFiles = [...(image ? [image] : []), ...(files || [])];
 
     if (allFiles.length > 0) {
-      const formData = new FormData();
-
-      // FormData에 장비 데이터 추가
-      Object.entries(equipmentData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          // Date 객체는 ISO 문자열로 변환
-          if (value instanceof Date) {
-            formData.append(key, value.toISOString());
-          } else {
-            formData.append(key, String(value));
-          }
-        }
-      });
-
-      // 파일 추가
-      allFiles.forEach((file) => {
-        formData.append('files', file);
-      });
+      /**
+       * ✅ SSOT: createFormDataUtil 사용
+       * - Date → ISO 문자열 자동 변환
+       * - undefined/null/빈 문자열 자동 제거
+       * - 일관된 타입 변환 로직
+       */
+      const formData = createFormDataUtil(equipmentData, allFiles);
 
       response = await apiClient.patch(`/api/equipment/${id}`, formData, {
         headers: {
@@ -333,8 +321,14 @@ const equipmentApi = {
   // 장비 상태 변경
   // ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
   // ✅ API_STANDARDS 준수: EquipmentStatus 타입 사용
-  updateEquipmentStatus: async (id: string, status: EquipmentStatus): Promise<Equipment> => {
-    const response = await apiClient.patch(`/api/equipment/${id}/status`, { status });
+  // ✅ Phase 1: Equipment Module - 2026-02-11
+  // ✅ Optimistic Locking: version 필드 추가
+  updateEquipmentStatus: async (
+    id: string,
+    status: EquipmentStatus,
+    version: number
+  ): Promise<Equipment> => {
+    const response = await apiClient.patch(`/api/equipment/${id}/status`, { status, version });
     return transformSingleResponse<Equipment>(response);
   },
 
@@ -427,23 +421,12 @@ const equipmentApi = {
     let response;
 
     if (files && files.length > 0) {
-      const formData = new FormData();
-
-      // FormData에 장비 데이터 추가
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (value instanceof Date) {
-            formData.append(key, value.toISOString());
-          } else {
-            formData.append(key, String(value));
-          }
-        }
-      });
-
-      // 파일 추가
-      files.forEach((file) => {
-        formData.append('files', file);
-      });
+      /**
+       * ✅ SSOT: createFormDataUtil 사용
+       * - Date → ISO 문자열 자동 변환
+       * - undefined/null/빈 문자열 자동 제거
+       */
+      const formData = createFormDataUtil(data, files);
 
       response = await apiClient.post('/api/equipment/shared', formData, {
         headers: {

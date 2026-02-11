@@ -23,7 +23,16 @@ import equipmentApi, { type CreateEquipmentDto } from '@/lib/api/equipment-api';
  * - 교정 유효성 자동 검증 (차기교정일 > 사용종료일)
  * - 사용 기간 표시 (D-day)
  */
-export default function CreateSharedEquipmentContent() {
+interface CreateSharedEquipmentContentProps {
+  userDefaults?: {
+    site?: string;
+    teamId?: string;
+  };
+}
+
+export default function CreateSharedEquipmentContent({
+  userDefaults,
+}: CreateSharedEquipmentContentProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -118,6 +127,7 @@ export default function CreateSharedEquipmentContent() {
         onSubmit={handleSubmit}
         onCancel={() => router.back()}
         isLoading={createMutation.isPending}
+        userDefaults={userDefaults}
       />
     </div>
   );

@@ -16,33 +16,13 @@ import {
 } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
-import calibrationFactorsApi, { FACTOR_TYPE_LABELS } from '@/lib/api/calibration-factors-api';
+import calibrationFactorsApi, {
+  FACTOR_TYPE_LABELS,
+  type CalibrationFactorRegistry,
+} from '@/lib/api/calibration-factors-api';
 import { format } from 'date-fns';
 import { Calculator, ChevronDown, ChevronRight, FileDown, Search, Building2 } from 'lucide-react';
 import Link from 'next/link';
-
-// 보정계수 대장 응답 타입
-interface CalibrationFactorRegistryItem {
-  equipmentId: string;
-  factorCount: number;
-  factors: {
-    id: string;
-    factorType: string;
-    factorName: string;
-    factorValue: number;
-    unit: string;
-    effectiveDate: string;
-    expiryDate: string | null;
-    approvedAt: string | null;
-  }[];
-}
-
-interface CalibrationFactorRegistry {
-  registry: CalibrationFactorRegistryItem[];
-  totalEquipments: number;
-  totalFactors: number;
-  generatedAt: string;
-}
 
 interface CalibrationFactorsRegistryContentProps {
   /** 서버에서 가져온 초기 대장 데이터 */
@@ -69,7 +49,7 @@ export default function CalibrationFactorsRegistryContent({
   const { data: registry, isLoading } = useQuery({
     queryKey: ['calibration-factors-registry'],
     queryFn: () => calibrationFactorsApi.getCalibrationFactorRegistry(),
-    initialData: initialData ?? undefined,
+    placeholderData: initialData ?? undefined,
     staleTime: 60 * 1000, // 1분
   });
 
@@ -127,7 +107,8 @@ export default function CalibrationFactorsRegistryContent({
     const rows = registry.registry.flatMap((item) =>
       item.factors.map((factor) => [
         item.equipmentId,
-        FACTOR_TYPE_LABELS[factor.factorType as keyof typeof FACTOR_TYPE_LABELS] || factor.factorType,
+        FACTOR_TYPE_LABELS[factor.factorType as keyof typeof FACTOR_TYPE_LABELS] ||
+          factor.factorType,
         factor.factorName,
         factor.factorValue,
         factor.unit,
@@ -288,7 +269,9 @@ export default function CalibrationFactorsRegistryContent({
                       <div className="flex items-center gap-2">
                         {item.factors.slice(0, 3).map((factor) => (
                           <Badge key={factor.id} variant="outline" className="text-xs">
-                            {FACTOR_TYPE_LABELS[factor.factorType as keyof typeof FACTOR_TYPE_LABELS] || factor.factorType}
+                            {FACTOR_TYPE_LABELS[
+                              factor.factorType as keyof typeof FACTOR_TYPE_LABELS
+                            ] || factor.factorType}
                           </Badge>
                         ))}
                         {item.factors.length > 3 && (
@@ -316,7 +299,9 @@ export default function CalibrationFactorsRegistryContent({
                             <TableRow key={factor.id}>
                               <TableCell>
                                 <Badge variant="outline">
-                                  {FACTOR_TYPE_LABELS[factor.factorType as keyof typeof FACTOR_TYPE_LABELS] || factor.factorType}
+                                  {FACTOR_TYPE_LABELS[
+                                    factor.factorType as keyof typeof FACTOR_TYPE_LABELS
+                                  ] || factor.factorType}
                                 </Badge>
                               </TableCell>
                               <TableCell className="font-medium">{factor.factorName}</TableCell>

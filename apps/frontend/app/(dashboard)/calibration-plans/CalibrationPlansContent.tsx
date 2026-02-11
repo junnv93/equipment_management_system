@@ -73,8 +73,8 @@ export default function CalibrationPlansContent({
         status: selectedStatus !== 'all' ? (selectedStatus as CalibrationPlanStatus) : undefined,
       }),
     // ✅ 서버에서 가져온 초기 데이터 사용 - 첫 렌더링 시 로딩 없음
-    initialData,
-    // 초기 데이터가 있으면 stale 상태로 시작 (백그라운드에서 재검증)
+    placeholderData: initialData,
+    // placeholderData는 항상 stale 취급 → 백그라운드에서 자동 재검증
     staleTime: 30 * 1000, // 30초
   });
 
@@ -139,13 +139,16 @@ export default function CalibrationPlansContent({
                 <SelectContent>
                   <SelectItem value="all">전체 상태</SelectItem>
                   {/* SSOT 라벨 사용 */}
-                  {(Object.entries(CALIBRATION_PLAN_STATUS_LABELS) as [CalibrationPlanStatus, string][]).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    )
-                  )}
+                  {(
+                    Object.entries(CALIBRATION_PLAN_STATUS_LABELS) as [
+                      CalibrationPlanStatus,
+                      string,
+                    ][]
+                  ).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

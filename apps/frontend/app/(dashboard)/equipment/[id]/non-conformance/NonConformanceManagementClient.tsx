@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { ArrowLeft, Plus, AlertTriangle, FileText, CheckCircle, Clock, Wrench } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import nonConformancesApi, {
   NonConformance,
   NonConformanceType,
@@ -16,7 +17,6 @@ import nonConformancesApi, {
 } from '@/lib/api/non-conformances-api';
 import equipmentApi from '@/lib/api/equipment-api';
 import { useAuth } from '@/hooks/use-auth';
-import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 
 interface NonConformanceManagementClientProps {
   equipmentId: string;
@@ -26,22 +26,29 @@ export default function NonConformanceManagementClient({
   equipmentId,
 }: NonConformanceManagementClientProps) {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { data: session } = useSession();
   const { isManager } = useAuth();
 
   // 현재 로그인한 사용자 ID (세션에서 가져옴)
   const currentUserId = session?.user?.id ?? '';
 
-  const [equipment, setEquipment] = useState<{
-    id: string;
-    name: string;
-    managementNumber: string;
-    status: string;
-  } | null>(null);
-  const [nonConformances, setNonConformances] = useState<NonConformance[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // ✅ React Query로 데이터 조회
+  const { data: equipment, isLoading: equipmentLoading } = useQuery({
+    queryKey: ['equipment', equipmentId],
+    queryFn: () => equipmentApi.getEquipment(equipmentId),
+  });
+
+  const {
+    data: nonConformancesData,
+    isLoading: ncLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['non-conformances', equipmentId],
+    queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
+  });
+
+  const nonConformances = nonConformancesData?.data || [];
+  const loading = equipmentLoading || ncLoading;
 
   // 부적합 등록 폼 상태
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -61,69 +68,114 @@ export default function NonConformanceManagementClient({
   });
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [equipmentId]);
+  // ✅ 부적합 등록 mutation - Optimistic Update 패턴
+  const createMutation = useOptimisticMutation<
+    NonConformance,
+    {
+      equipmentId: string;
+      discoveryDate: string;
+      discoveredBy: string;
+      cause: string;
+      ncType: NonConformanceType;
+      actionPlan?: string;
+    },
+    { data: NonConformance[] }
+  >({
+    mutationFn: (data) => nonConformancesApi.createNonConformance(data),
+    queryKey: ['non-conformances', equipmentId],
+    optimisticUpdate: (old, data) => {
+      const newItem: NonConformance = {
+        id: 'temp-' + Date.now(),
+        ...data,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as NonConformance;
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [equipmentData, ncData] = await Promise.all([
-        equipmentApi.getEquipment(equipmentId),
-        nonConformancesApi.getNonConformances({ equipmentId }),
-      ]);
-      setEquipment({
-        id: String(equipmentData.id),
-        name: equipmentData.name,
-        managementNumber: equipmentData.managementNumber,
-        status: equipmentData.status || 'available',
-      });
-      setNonConformances(ncData.data);
-    } catch (err) {
-      setError('데이터를 불러오는데 실패했습니다.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // ✅ 새 항목 즉시 추가
+      return {
+        data: [...(old?.data || []), newItem],
+      };
+    },
+    invalidateKeys: [['equipment', equipmentId]], // 장비 상태 업데이트
+    successMessage: '부적합이 등록되었습니다.',
+    errorMessage: '부적합 등록에 실패했습니다.',
+    onSuccessCallback: () => {
+      setShowCreateForm(false);
+      setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
+      setCreating(false);
+      router.refresh();
+    },
+    onErrorCallback: () => {
+      setCreating(false);
+    },
+  });
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!createForm.cause.trim()) {
       alert('부적합 원인을 입력해주세요.');
       return;
     }
 
-    try {
-      setCreating(true);
-      await nonConformancesApi.createNonConformance({
-        equipmentId,
-        discoveryDate: new Date().toISOString().split('T')[0],
-        discoveredBy: currentUserId,
-        cause: createForm.cause,
-        ncType: createForm.ncType,
-        actionPlan: createForm.actionPlan || undefined,
-      });
-      setShowCreateForm(false);
-      setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
-
-      await EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(
-        queryClient,
-        equipmentId
-      );
-      await EquipmentCacheInvalidation.refetchEquipment(queryClient, equipmentId);
-
-      await loadData();
-      router.refresh();
-    } catch (err) {
-      alert('부적합 등록에 실패했습니다.');
-      console.error(err);
-    } finally {
-      setCreating(false);
-    }
+    setCreating(true);
+    createMutation.mutate({
+      equipmentId,
+      discoveryDate: new Date().toISOString().split('T')[0],
+      discoveredBy: currentUserId,
+      cause: createForm.cause,
+      ncType: createForm.ncType,
+      actionPlan: createForm.actionPlan || undefined,
+    });
   };
 
-  const handleUpdate = async (id: string) => {
+  // ✅ 부적합 수정 mutation - Optimistic Update 패턴
+  const updateMutation = useOptimisticMutation<
+    NonConformance,
+    {
+      id: string;
+      updateData: {
+        analysisContent?: string;
+        correctionContent?: string;
+        correctionDate?: string;
+        correctedBy?: string;
+        status?: 'open' | 'analyzing' | 'corrected';
+      };
+    },
+    { data: NonConformance[] }
+  >({
+    mutationFn: ({ id, updateData }) => nonConformancesApi.updateNonConformance(id, updateData),
+    queryKey: ['non-conformances', equipmentId],
+    optimisticUpdate: (old, { id, updateData }) => {
+      if (!old?.data) return { data: [] };
+
+      // ✅ 수정된 항목 즉시 업데이트
+      return {
+        data: old.data.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...updateData,
+                updatedAt: new Date().toISOString(),
+              }
+            : item
+        ),
+      };
+    },
+    invalidateKeys: [['equipment', equipmentId]],
+    successMessage: '부적합 기록이 수정되었습니다.',
+    errorMessage: '업데이트에 실패했습니다.',
+    onSuccessCallback: () => {
+      setEditingId(null);
+      setUpdateForm({ analysisContent: '', correctionContent: '', status: '' });
+      setUpdating(false);
+      router.refresh();
+    },
+    onErrorCallback: () => {
+      setUpdating(false);
+    },
+  });
+
+  const handleUpdate = (id: string) => {
     const nc = nonConformances.find((n) => n.id === id);
 
     if (
@@ -146,41 +198,23 @@ export default function NonConformanceManagementClient({
       }
     }
 
-    try {
-      setUpdating(true);
-      const updateData: {
-        analysisContent?: string;
-        correctionContent?: string;
-        correctionDate?: string;
-        correctedBy?: string;
-        status?: 'open' | 'analyzing' | 'corrected';
-      } = {};
-      if (updateForm.analysisContent) updateData.analysisContent = updateForm.analysisContent;
-      if (updateForm.correctionContent) {
-        updateData.correctionContent = updateForm.correctionContent;
-        updateData.correctionDate = new Date().toISOString().split('T')[0];
-        updateData.correctedBy = currentUserId;
-      }
-      if (updateForm.status) updateData.status = updateForm.status;
-
-      await nonConformancesApi.updateNonConformance(id, updateData);
-      setEditingId(null);
-      setUpdateForm({ analysisContent: '', correctionContent: '', status: '' });
-
-      await EquipmentCacheInvalidation.invalidateAfterNonConformanceCreation(
-        queryClient,
-        equipmentId
-      );
-      await EquipmentCacheInvalidation.refetchEquipment(queryClient, equipmentId);
-
-      await loadData();
-      router.refresh();
-    } catch (err) {
-      alert('업데이트에 실패했습니다.');
-      console.error(err);
-    } finally {
-      setUpdating(false);
+    setUpdating(true);
+    const updateData: {
+      analysisContent?: string;
+      correctionContent?: string;
+      correctionDate?: string;
+      correctedBy?: string;
+      status?: 'open' | 'analyzing' | 'corrected';
+    } = {};
+    if (updateForm.analysisContent) updateData.analysisContent = updateForm.analysisContent;
+    if (updateForm.correctionContent) {
+      updateData.correctionContent = updateForm.correctionContent;
+      updateData.correctionDate = new Date().toISOString().split('T')[0];
+      updateData.correctedBy = currentUserId;
     }
+    if (updateForm.status) updateData.status = updateForm.status;
+
+    updateMutation.mutate({ id, updateData });
   };
 
   const startEditing = (nc: NonConformance) => {
@@ -215,10 +249,12 @@ export default function NonConformanceManagementClient({
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+          데이터를 불러오는데 실패했습니다.
+        </div>
       </div>
     );
   }

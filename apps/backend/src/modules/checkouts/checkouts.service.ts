@@ -21,11 +21,12 @@ import {
   CHECKOUT_STATUS_VALUES,
   EQUIPMENT_STATUS_LABELS,
 } from '@equipment-management/schemas';
-import { getAllowedStatusesForPurpose } from '@equipment-management/shared-constants';
+import { getAllowedStatusesForPurpose, Permission } from '@equipment-management/shared-constants';
 import { eq, and, like, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { EquipmentService } from '../equipment/equipment.service';
@@ -34,6 +35,30 @@ import { EquipmentImportsService } from '../equipment-imports/equipment-imports.
 import { ForbiddenException } from '@nestjs/common';
 // Drizzle에서 자동 추론되는 타입 사용
 type Checkout = typeof checkouts.$inferSelect;
+
+/**
+ * ✅ Phase 2: Server-Driven UI
+ * 사용자 권한 + 상태 기반 가능한 액션
+ */
+export interface CheckoutAvailableActions {
+  canApprove: boolean;
+  canReject: boolean;
+  canStart: boolean;
+  canReturn: boolean;
+  canApproveReturn: boolean;
+  canCancel: boolean;
+  canSubmitConditionCheck: boolean;
+}
+
+/**
+ * ✅ Phase 2: Server-Driven UI
+ * 메타데이터(availableActions)를 포함한 Checkout
+ */
+export interface CheckoutWithMeta extends Checkout {
+  meta: {
+    availableActions: CheckoutAvailableActions;
+  };
+}
 
 /**
  * 쿼리 조건 빌더 인터페이스
@@ -96,7 +121,7 @@ export interface CheckoutListResponse {
 }
 
 @Injectable()
-export class CheckoutsService {
+export class CheckoutsService extends VersionedBaseService {
   private readonly logger = new Logger(CheckoutsService.name);
   private readonly CACHE_TTL = 1000 * 60 * 5; // 5분
   private readonly CACHE_PREFIX = 'checkouts:';
@@ -113,13 +138,15 @@ export class CheckoutsService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    protected readonly db: NodePgDatabase<typeof schema>,
     private readonly cacheService: SimpleCacheService,
     private readonly equipmentService: EquipmentService,
     private readonly teamsService: TeamsService,
     @Inject(forwardRef(() => EquipmentImportsService))
     private readonly rentalImportsService: EquipmentImportsService
-  ) {}
+  ) {
+    super(); // ✅ Required for extending VersionedBaseService
+  }
 
   /**
    * UUID 형식 검증 헬퍼 메서드
@@ -131,6 +158,41 @@ export class CheckoutsService {
     }
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
       throw new BadRequestException(`유효하지 않은 ${fieldName} UUID 형식입니다.`);
+    }
+  }
+
+  /**
+   * 상태 전환 헬퍼 (반복 코드 제거)
+   *
+   * ✅ VersionedBaseService.updateWithVersion() 사용 (DRY)
+   * ✅ Type-safe: CheckoutStatus enum 사용
+   * ✅ Consistent: 모든 상태 변경이 optimistic locking 사용 보장
+   */
+  protected async updateCheckoutStatus(
+    uuid: string,
+    currentCheckout: Checkout,
+    newStatus: CheckoutStatus,
+    additionalData?: Partial<Checkout>
+  ): Promise<Checkout> {
+    try {
+      return await this.updateWithVersion<Checkout>(
+        checkouts,
+        uuid,
+        currentCheckout.version,
+        {
+          status: newStatus,
+          ...additionalData,
+        },
+        '반출'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
+        // findOne 캐시가 stale version을 가지고 있으면 재시도도 계속 409
+        const detailCacheKey = this.buildCacheKey('detail', { uuid });
+        await this.cacheService.delete(detailCacheKey);
+      }
+      throw error;
     }
   }
 
@@ -189,10 +251,17 @@ export class CheckoutsService {
    * ✅ 성능 최적화: 선택적 무효화로 캐시 히트율 30-40% 개선
    *
    * @param teamIds 영향받는 팀 ID 배열 (지정하지 않으면 전체 무효화)
+   * @param checkoutId 변경된 checkout의 ID (detail 캐시 무효화용)
    *
    * 예: 반출 생성 시 신청자 팀과 대여 팀의 캐시만 무효화
    */
-  private async invalidateCache(teamIds?: string[]): Promise<void> {
+  private async invalidateCache(teamIds?: string[], checkoutId?: string): Promise<void> {
+    // ✅ SSOT: 개별 checkout의 detail 캐시 무효화 (optimistic locking 지원)
+    if (checkoutId) {
+      const detailCacheKey = this.buildCacheKey('detail', { uuid: checkoutId });
+      await this.cacheService.delete(detailCacheKey);
+    }
+
     if (!teamIds || teamIds.length === 0) {
       // 팀 정보가 없으면 전체 무효화 (안전한 fallback)
       await this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
@@ -668,10 +737,23 @@ export class CheckoutsService {
    * ✅ 일관성: db.select()를 사용하여 다른 쿼리와 동일한 패턴 유지 (Rentals와 동일)
    * ✅ 개선: 관계 쿼리 API 의존성 제거로 안정성 향상
    */
-  async findOne(uuid: string): Promise<Checkout> {
+  /**
+   * ✅ Phase 2: Server-Driven UI
+   * Optional userPermissions로 meta.availableActions 포함 가능
+   *
+   * @param uuid 반출 UUID
+   * @param userPermissions (선택) 사용자 권한 목록 - 제공 시 meta 포함
+   * @param userTeamId (선택) 사용자 팀 ID
+   * @returns Checkout 또는 CheckoutWithMeta
+   */
+  async findOne(
+    uuid: string,
+    userPermissions?: string[],
+    userTeamId?: string
+  ): Promise<Checkout | CheckoutWithMeta> {
     const cacheKey = this.buildCacheKey('detail', { uuid });
 
-    return this.cacheService.getOrSet(
+    const checkout = await this.cacheService.getOrSet(
       cacheKey,
       async () => {
         try {
@@ -702,6 +784,22 @@ export class CheckoutsService {
       },
       this.CACHE_TTL
     );
+
+    // ✅ Phase 2: userPermissions 제공 시 meta.availableActions 포함
+    if (userPermissions) {
+      const availableActions = await this.calculateAvailableActions(
+        checkout,
+        userPermissions,
+        userTeamId
+      );
+
+      return {
+        ...checkout,
+        meta: { availableActions },
+      };
+    }
+
+    return checkout;
   }
 
   /**
@@ -755,6 +853,63 @@ export class CheckoutsService {
         // 오류 발생 시 체크를 건너뛰고 진행 (보안보다는 안정성 우선)
       }
     }
+  }
+
+  /**
+   * ✅ Phase 2: Server-Driven UI
+   * 사용자 권한 + 상태 기반 액션 계산
+   *
+   * SSOT: 서버가 클라이언트에게 가능한 액션 알림
+   * - 클라이언트는 이 정보만 보고 UI 렌더링
+   * - 권한 로직 중복 제거 (서버에만 존재)
+   *
+   * @param checkout 반출 정보
+   * @param userPermissions 사용자 권한 목록
+   * @param userTeamId 사용자 팀 ID (선택)
+   * @returns 가능한 액션 목록
+   */
+  private async calculateAvailableActions(
+    checkout: Checkout,
+    userPermissions: string[],
+    userTeamId?: string
+  ): Promise<CheckoutAvailableActions> {
+    const { status, purpose, lenderTeamId } = checkout;
+    const hasPermission = (p: Permission) => userPermissions.includes(p);
+
+    return {
+      // 승인: pending 상태 + 승인 권한 + (대여의 경우 lender 팀 일치)
+      canApprove:
+        status === 'pending' &&
+        hasPermission(Permission.APPROVE_CHECKOUT) &&
+        (purpose !== 'rental' || !lenderTeamId || lenderTeamId === userTeamId),
+
+      // 반려: pending 상태 + 반려 권한
+      canReject: status === 'pending' && hasPermission(Permission.REJECT_CHECKOUT),
+
+      // 반출 시작: approved 상태 + 대여 목적 아님 + 반출 시작 권한
+      canStart:
+        status === 'approved' && purpose !== 'rental' && hasPermission(Permission.START_CHECKOUT),
+
+      // 반입: (checked_out이고 대여 아님) 또는 (lender_received이고 대여) + 반입 권한
+      canReturn:
+        ((status === 'checked_out' && purpose !== 'rental') ||
+          (status === 'lender_received' && purpose === 'rental')) &&
+        hasPermission(Permission.COMPLETE_CHECKOUT),
+
+      // 반입 승인: returned 상태 + 승인 권한
+      canApproveReturn: status === 'returned' && hasPermission(Permission.APPROVE_CHECKOUT),
+
+      // 취소: pending 상태 + 취소 권한
+      canCancel: status === 'pending' && hasPermission(Permission.CANCEL_CHECKOUT),
+
+      // 상태 확인 등록: 대여 목적 + 특정 상태들 + 완료 권한
+      canSubmitConditionCheck:
+        purpose === 'rental' &&
+        ['approved', 'lender_checked', 'borrower_received', 'in_use', 'borrower_returned'].includes(
+          status
+        ) &&
+        hasPermission(Permission.COMPLETE_CHECKOUT),
+    };
   }
 
   /**
@@ -939,27 +1094,20 @@ export class CheckoutsService {
         }
       }
 
-      // 모든 목적(교정/수리/외부 대여)을 1단계 승인으로 통합
-      const updateData: Partial<Checkout> = {
-        status: 'approved' as CheckoutStatus,
-        approverId: approveDto.approverId,
-        approvedAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      const updated = await this.updateCheckoutStatus(
+        uuid,
+        checkout,
+        'approved' as CheckoutStatus,
+        {
+          approverId: approveDto.approverId,
+          approvedAt: new Date(),
+        }
+      );
 
-      const [updated] = await this.db
-        .update(checkouts)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
-
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return updated;
     } catch (error) {
@@ -998,26 +1146,20 @@ export class CheckoutsService {
         throw new BadRequestException('반려 사유는 필수입니다.');
       }
 
-      const updateData: Partial<Checkout> = {
-        status: 'rejected' as CheckoutStatus,
-        approverId: rejectDto.approverId,
-        rejectionReason: rejectDto.reason.trim(),
-        updatedAt: new Date(),
-      };
+      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      const updated = await this.updateCheckoutStatus(
+        uuid,
+        checkout,
+        'rejected' as CheckoutStatus,
+        {
+          approverId: rejectDto.approverId,
+          rejectionReason: rejectDto.reason.trim(),
+        }
+      );
 
-      const [updated] = await this.db
-        .update(checkouts)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
-
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return updated;
     } catch (error) {
@@ -1038,7 +1180,10 @@ export class CheckoutsService {
    */
   async startCheckout(
     uuid: string,
-    itemConditions?: Array<{ equipmentId: string; conditionBefore: string }>
+    dto: {
+      version: number;
+      itemConditions?: Array<{ equipmentId: string; conditionBefore: string }>;
+    }
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
@@ -1050,22 +1195,17 @@ export class CheckoutsService {
         throw new BadRequestException('승인된 반출만 반출할 수 있습니다.');
       }
 
-      // 반출 처리
-      const updateData: Partial<Checkout> = {
-        status: 'checked_out' as CheckoutStatus,
-        checkoutDate: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const [updated] = await this.db
-        .update(checkouts)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
+      // ✅ Optimistic locking: CAS를 사용한 상태 전환 (version 검증 포함)
+      const updated = await this.updateWithVersion<Checkout>(
+        checkouts,
+        uuid,
+        dto.version,
+        {
+          status: 'checked_out' as CheckoutStatus,
+          checkoutDate: new Date(),
+        },
+        '반출'
+      );
 
       // 반출된 장비들의 상태를 'checked_out'으로 변경
       const items = await this.db
@@ -1078,8 +1218,8 @@ export class CheckoutsService {
       }
 
       // 장비별 반출 전 상태 기록 (Phase 3)
-      if (itemConditions && itemConditions.length > 0) {
-        for (const cond of itemConditions) {
+      if (dto.itemConditions && dto.itemConditions.length > 0) {
+        for (const cond of dto.itemConditions) {
           await this.db
             .update(checkoutItems)
             .set({ conditionBefore: cond.conditionBefore })
@@ -1092,9 +1232,9 @@ export class CheckoutsService {
         }
       }
 
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return updated;
     } catch (error) {
@@ -1148,27 +1288,20 @@ export class CheckoutsService {
         throw new BadRequestException('수리 목적 반출의 경우 수리 확인은 필수입니다.');
       }
 
-      // 반입 처리 (검사 완료 상태로 변경)
-      const updateData: Partial<Checkout> = {
-        status: 'returned' as CheckoutStatus,
-        actualReturnDate: new Date(),
-        returnerId,
-        calibrationChecked: returnDto.calibrationChecked ?? false,
-        repairChecked: returnDto.repairChecked ?? false,
-        workingStatusChecked: returnDto.workingStatusChecked ?? false,
-        inspectionNotes: returnDto.inspectionNotes || null,
-        updatedAt: new Date(),
-      };
-
-      const [updated] = await this.db
-        .update(checkouts)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
+      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      const updated = await this.updateCheckoutStatus(
+        uuid,
+        checkout,
+        'returned' as CheckoutStatus,
+        {
+          actualReturnDate: new Date(),
+          returnerId,
+          calibrationChecked: returnDto.calibrationChecked ?? false,
+          repairChecked: returnDto.repairChecked ?? false,
+          workingStatusChecked: returnDto.workingStatusChecked ?? false,
+          inspectionNotes: returnDto.inspectionNotes || null,
+        }
+      );
 
       // 장비별 반입 후 상태 기록 (Phase 3)
       if (returnDto.itemConditions && returnDto.itemConditions.length > 0) {
@@ -1187,9 +1320,9 @@ export class CheckoutsService {
 
       // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
 
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return updated;
     } catch (error) {
@@ -1221,23 +1354,16 @@ export class CheckoutsService {
         throw new BadRequestException('검사 완료된(returned) 반입만 최종 승인할 수 있습니다.');
       }
 
-      // 반입 최종 승인 처리
-      const updateData: Partial<Checkout> = {
-        status: 'return_approved' as CheckoutStatus,
-        returnApprovedBy: approveReturnDto.approverId,
-        returnApprovedAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const [updated] = await this.db
-        .update(checkouts)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
+      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      const updated = await this.updateCheckoutStatus(
+        uuid,
+        checkout,
+        'return_approved' as CheckoutStatus,
+        {
+          returnApprovedBy: approveReturnDto.approverId,
+          returnApprovedAt: new Date(),
+        }
+      );
 
       // ✅ 반입 승인 후 장비 상태를 'available'로 복원
       const items = await this.db
@@ -1260,9 +1386,9 @@ export class CheckoutsService {
         }
       }
 
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return updated;
     } catch (error) {
@@ -1362,10 +1488,14 @@ export class CheckoutsService {
         }
       }
 
-      await this.db
-        .update(checkouts)
-        .set(checkoutUpdateData as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid));
+      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      await this.updateWithVersion<Checkout>(
+        checkouts,
+        uuid,
+        checkout.version,
+        checkoutUpdateData,
+        '반출'
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
@@ -1442,24 +1572,12 @@ export class CheckoutsService {
         throw new BadRequestException('승인 전 반출만 취소할 수 있습니다.');
       }
 
-      const updateData: Partial<Checkout> = {
-        status: 'canceled' as CheckoutStatus,
-        updatedAt: new Date(),
-      };
+      // ✅ Optimistic locking: CAS를 사용한 상태 전환
+      const updated = await this.updateCheckoutStatus(uuid, checkout, 'canceled' as CheckoutStatus);
 
-      const [updated] = await this.db
-        .update(checkouts)
-        .set(updateData as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
-
-      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
+      // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
-      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
+      await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
       return updated;
     } catch (error) {
@@ -1528,15 +1646,14 @@ export class CheckoutsService {
         updateFields.status = status;
       }
 
-      const [updated] = await this.db
-        .update(checkouts)
-        .set(updateFields as Record<string, unknown>)
-        .where(eq(checkouts.id, uuid))
-        .returning();
-
-      if (!updated) {
-        throw new NotFoundException(`반출 UUID ${uuid}를 찾을 수 없습니다.`);
-      }
+      // ✅ Optimistic locking: CAS를 사용한 업데이트
+      const updated = await this.updateWithVersion<Checkout>(
+        checkouts,
+        uuid,
+        existingCheckout.version,
+        updateFields,
+        '반출'
+      );
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
       const affectedTeams = await this.getAffectedTeamIds(existingCheckout);

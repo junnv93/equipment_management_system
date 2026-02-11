@@ -28,6 +28,8 @@ export interface Calibration {
   approverComment?: string;
   rejectionReason?: string;
   intermediateCheckDate?: string;
+  // Optimistic locking
+  version: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -80,11 +82,13 @@ export interface CreateCalibrationDto {
 export interface UpdateCalibrationDto extends Partial<CreateCalibrationDto> {}
 
 export interface ApproveCalibrationDto {
+  version: number; // ✅ Optimistic locking
   approverId: string;
   approverComment: string;
 }
 
 export interface RejectCalibrationDto {
+  version: number; // ✅ Optimistic locking
   approverId: string;
   rejectionReason: string;
 }

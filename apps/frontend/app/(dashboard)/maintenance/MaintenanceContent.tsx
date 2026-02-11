@@ -20,24 +20,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import {
-  Search,
-  Plus,
-  Filter,
-  Calendar,
-  ClipboardList,
-  AlertTriangle,
-  Clock,
-} from 'lucide-react';
-import maintenanceApi, { Maintenance, MaintenanceQuery } from '@/lib/api/maintenance-api';
+import { Search, Plus, Filter, Calendar, ClipboardList, AlertTriangle, Clock } from 'lucide-react';
+import maintenanceApi, {
+  Maintenance,
+  MaintenanceQuery,
+  type MaintenanceSummary,
+} from '@/lib/api/maintenance-api';
 import type { PaginatedResponse } from '@/lib/api/types';
-
-interface MaintenanceSummary {
-  total: number;
-  scheduled: number;
-  inProgress: number;
-  overdue: number;
-}
 
 interface MaintenanceContentProps {
   /** 서버에서 가져온 초기 점검 목록 */
@@ -65,7 +54,7 @@ export default function MaintenanceContent({
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['maintenance-summary'],
     queryFn: () => maintenanceApi.getMaintenanceSummary(),
-    initialData: initialSummary,
+    placeholderData: initialSummary,
     staleTime: 30 * 1000,
   });
 
@@ -101,7 +90,8 @@ export default function MaintenanceContent({
       }
     },
     // ✅ 서버에서 가져온 초기 데이터 (currentTab이 'all'일 때만)
-    initialData: currentTab === 'all' && typeFilter === 'all' && !searchTerm ? initialData : undefined,
+    placeholderData:
+      currentTab === 'all' && typeFilter === 'all' && !searchTerm ? initialData : undefined,
     staleTime: 30 * 1000,
   });
 

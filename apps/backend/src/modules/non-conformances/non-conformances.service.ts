@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
-import { eq, and, isNull, desc, asc, like, SQL, ne } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  ConflictException,
+} from '@nestjs/common';
+import { eq, and, isNull, desc, asc, like, SQL, ne, sql } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@equipment-management/db/schema';
 import {
   nonConformances,
@@ -11,13 +17,16 @@ import { CreateNonConformanceDto } from './dto/create-non-conformance.dto';
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
 import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
 import { NonConformanceQueryDto, NonConformanceStatus } from './dto/non-conformance-query.dto';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 
 @Injectable()
-export class NonConformancesService {
+export class NonConformancesService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>
-  ) {}
+    protected readonly db: NodePgDatabase<typeof schema>
+  ) {
+    super();
+  }
 
   /**
    * 부적합 등록 (장비 상태 자동 변경: non_conforming)
@@ -348,9 +357,9 @@ export class NonConformancesService {
       throw new BadRequestException('손상/오작동 유형은 수리 기록이 필요합니다');
     }
 
-    // 트랜잭션으로 부적합 종료 + 장비 상태 복원
+    // ✅ CAS + 트랜잭션으로 부적합 종료 + 장비 상태 복원
     const result = await this.db.transaction(async (tx) => {
-      // 1. 부적합 종료
+      // 1. 부적합 종료 (CAS: version 검증)
       const [updated] = await tx
         .update(nonConformances)
         .set({
@@ -358,10 +367,18 @@ export class NonConformancesService {
           closedBy: closeDto.closedBy,
           closedAt: new Date(),
           closureNotes: closeDto.closureNotes,
+          version: sql`version + 1`,
           updatedAt: new Date(),
-        })
-        .where(eq(nonConformances.id, id))
+        } as Record<string, unknown>)
+        .where(and(eq(nonConformances.id, id), eq(nonConformances.version, closeDto.version)))
         .returning();
+
+      if (!updated) {
+        throw new ConflictException({
+          message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+          code: 'VERSION_CONFLICT',
+        });
+      }
 
       // 2. 해당 장비에 다른 열린 부적합(closed가 아닌 모든 상태)이 있는지 확인
       // open, analyzing, corrected 상태 모두 "아직 종료되지 않은" 부적합임

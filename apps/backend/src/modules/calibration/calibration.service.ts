@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger, Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
@@ -7,7 +8,6 @@ import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calib
 import { CalibrationStatus, CalibrationApprovalStatusEnum } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc } from '../../common/utils';
-import { db } from '../../database/drizzle';
 import * as schema from '@equipment-management/db/schema';
 import { and, eq, gte, lte, count, sql, or, desc, asc, SQL, isNull } from 'drizzle-orm';
 
@@ -134,13 +134,15 @@ const temporaryCalibrations: CalibrationRecord[] = [
 const calibrations: CalibrationRecord[] = [...temporaryCalibrations];
 
 @Injectable()
-export class CalibrationService {
+export class CalibrationService extends VersionedBaseService {
   private readonly logger = new Logger(CalibrationService.name);
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly drizzleDb: NodePgDatabase<typeof schema>
-  ) {}
+    protected readonly db: NodePgDatabase<typeof schema>
+  ) {
+    super();
+  }
 
   /**
    * 교정 요약 통계 조회
@@ -158,7 +160,7 @@ export class CalibrationService {
     const thirtyDaysLater = getUtcEndOfDay(addDaysUtc(today, 30)); // ✅ UTC 기준 30일 후 23:59:59
 
     // Count total equipment requiring calibration
-    const [totalResult] = await this.drizzleDb
+    const [totalResult] = await this.db
       .select({ count: count() })
       .from(schema.equipment)
       .where(
@@ -170,7 +172,7 @@ export class CalibrationService {
 
     // Count overdue (nextCalibrationDate < today)
     // ✅ sql 템플릿으로 명시적 타임스탬프 변환 (Drizzle ORM Date 처리 이슈 방지)
-    const [overdueResult] = await this.drizzleDb
+    const [overdueResult] = await this.db
       .select({ count: count() })
       .from(schema.equipment)
       .where(
@@ -184,7 +186,7 @@ export class CalibrationService {
 
     // Count upcoming (within 30 days)
     // ✅ EquipmentService의 calibrationDue 필터와 동일한 로직
-    const [upcomingResult] = await this.drizzleDb
+    const [upcomingResult] = await this.db
       .select({ count: count() })
       .from(schema.equipment)
       .where(
@@ -231,7 +233,7 @@ export class CalibrationService {
     const today = getUtcStartOfDay(); // ✅ UTC 기준 오늘 00:00:00
 
     // ✅ sql 템플릿으로 명시적 타임스탬프 변환
-    const results = await this.drizzleDb
+    const results = await this.db
       .select({
         id: schema.equipment.id,
         equipmentId: schema.equipment.id,
@@ -299,7 +301,7 @@ export class CalibrationService {
     const futureDate = getUtcEndOfDay(addDaysUtc(today, days)); // ✅ UTC 기준 N일 후 23:59:59
 
     // ✅ sql 템플릿으로 명시적 타임스탬프 변환 (Drizzle ORM Date 처리 이슈 방지)
-    const results = await this.drizzleDb
+    const results = await this.db
       .select({
         id: schema.equipment.id,
         equipmentId: schema.equipment.id,
@@ -507,7 +509,7 @@ export class CalibrationService {
     }
 
     // ========== 2. Count total items ==========
-    const countResult = await this.drizzleDb
+    const countResult = await this.db
       .select({ count: count() })
       .from(schema.calibrations)
       .leftJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
@@ -540,7 +542,7 @@ export class CalibrationService {
     }
 
     // ========== 4. Fetch data with JOINs ==========
-    const items = await this.drizzleDb
+    const items = await this.db
       .select({
         // Calibration fields
         id: schema.calibrations.id,
@@ -908,7 +910,7 @@ export class CalibrationService {
     };
   }> {
     // Use Drizzle relational query to include user→team relations
-    const items = await this.drizzleDb.query.calibrations.findMany({
+    const items = await this.db.query.calibrations.findMany({
       where: (calibrations, { eq }) =>
         eq(calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval),
       with: {
@@ -986,7 +988,7 @@ export class CalibrationService {
     };
   }
 
-  // 교정 승인
+  // 교정 승인 (CAS 보호)
   async approveCalibration(
     id: string,
     approveDto: ApproveCalibrationDto
@@ -1003,16 +1005,30 @@ export class CalibrationService {
       throw new BadRequestException('승인 시 승인자 코멘트는 필수입니다.');
     }
 
-    const index = calibrations.findIndex((cal) => cal.id === id);
-    const now = new Date();
+    // ✅ CAS: DB 기반 optimistic locking
+    await this.updateWithVersion(
+      schema.calibrations,
+      id,
+      approveDto.version,
+      {
+        approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
+        approvedBy: approveDto.approverId,
+        approverComment: approveDto.approverComment,
+      },
+      '교정 기록'
+    );
 
-    calibrations[index] = {
-      ...calibrations[index],
-      approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
-      approvedBy: approveDto.approverId,
-      approverComment: approveDto.approverComment,
-      updatedAt: now,
-    };
+    // 인메모리 캐시도 동기화
+    const index = calibrations.findIndex((cal) => cal.id === id);
+    if (index !== -1) {
+      calibrations[index] = {
+        ...calibrations[index],
+        approvalStatus: CalibrationApprovalStatusEnum.enum.approved,
+        approvedBy: approveDto.approverId,
+        approverComment: approveDto.approverComment,
+        updatedAt: new Date(),
+      };
+    }
 
     // 장비 교정일 자동 업데이트 및 교정 기한 초과 부적합 자동 조치
     await this.updateEquipmentCalibrationDates(
@@ -1023,7 +1039,7 @@ export class CalibrationService {
       approveDto.approverId // 승인자 ID
     );
 
-    return calibrations[index];
+    return calibration;
   }
 
   /**
@@ -1038,12 +1054,13 @@ export class CalibrationService {
     approverId?: string
   ): Promise<void> {
     try {
-      await db
+      await this.db
         .update(schema.equipment)
         .set({
           lastCalibrationDate: calibrationDate,
           nextCalibrationDate: nextCalibrationDate,
           updatedAt: new Date(),
+          version: sql`${schema.equipment.version} + 1`,
         })
         .where(eq(schema.equipment.id, equipmentId));
 
@@ -1080,7 +1097,7 @@ export class CalibrationService {
   ): Promise<void> {
     try {
       // open 또는 analyzing 상태의 calibration_overdue 부적합 조회
-      const existingNc = await db
+      const existingNc = await this.db
         .select({
           id: nonConformances.id,
           status: nonConformances.status,
@@ -1105,7 +1122,7 @@ export class CalibrationService {
       const today = new Date();
 
       // 트랜잭션으로 부적합 조치 + 장비 상태 복원 처리
-      await db.transaction(async (tx) => {
+      await this.db.transaction(async (tx) => {
         // (A) 부적합을 corrected 상태로 변경
         await tx
           .update(nonConformances)
@@ -1143,7 +1160,7 @@ export class CalibrationService {
     }
   }
 
-  // 교정 반려
+  // 교정 반려 (CAS 보호)
   async rejectCalibration(
     id: string,
     rejectDto: RejectCalibrationDto
@@ -1160,18 +1177,32 @@ export class CalibrationService {
       throw new BadRequestException('반려 사유는 필수입니다.');
     }
 
+    // ✅ CAS: DB 기반 optimistic locking
+    await this.updateWithVersion(
+      schema.calibrations,
+      id,
+      rejectDto.version,
+      {
+        approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
+        approvedBy: rejectDto.approverId,
+        rejectionReason: rejectDto.rejectionReason,
+      },
+      '교정 기록'
+    );
+
+    // 인메모리 캐시도 동기화
     const index = calibrations.findIndex((cal) => cal.id === id);
-    const now = new Date();
+    if (index !== -1) {
+      calibrations[index] = {
+        ...calibrations[index],
+        approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
+        approvedBy: rejectDto.approverId,
+        rejectionReason: rejectDto.rejectionReason,
+        updatedAt: new Date(),
+      };
+    }
 
-    calibrations[index] = {
-      ...calibrations[index],
-      approvalStatus: CalibrationApprovalStatusEnum.enum.rejected,
-      approvedBy: rejectDto.approverId,
-      rejectionReason: rejectDto.rejectionReason,
-      updatedAt: now,
-    };
-
-    return calibrations[index];
+    return calibration;
   }
 
   // 중간점검 일정이 다가오는 교정 조회
@@ -1249,7 +1280,7 @@ export class CalibrationService {
     today.setHours(0, 0, 0, 0);
 
     // Use Drizzle relational query with equipment→team relations
-    const items = await this.drizzleDb.query.calibrations.findMany({
+    const items = await this.db.query.calibrations.findMany({
       where: (calibrations, { isNotNull, eq, and: andFn }) => {
         const conditions = [isNotNull(calibrations.intermediateCheckDate)];
 
