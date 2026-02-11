@@ -3,9 +3,9 @@
 import { Badge } from '@/components/ui/badge';
 import {
   CHECKOUT_STATUS_LABELS,
-  RENTAL_IMPORT_STATUS_LABELS,
+  EQUIPMENT_IMPORT_STATUS_LABELS,
   type CheckoutStatus,
-  type RentalImportStatus,
+  type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 
 // ============================================================================
@@ -39,7 +39,7 @@ export const CHECKOUT_STATUS_STYLES: Record<CheckoutStatus, string> = {
 };
 
 /** Rental import 상태 → 스타일 매핑 (WCAG AA 색상 대비 보장: 4.5:1+) */
-export const RENTAL_STATUS_STYLES: Record<RentalImportStatus, string> = {
+export const RENTAL_STATUS_STYLES: Record<EquipmentImportStatus, string> = {
   // 대기 (amber) - text-800 for better contrast
   pending: 'bg-amber-50 text-amber-800 border-amber-200',
   // 승인 (blue) - text-800 for better contrast
@@ -84,7 +84,7 @@ export function CheckoutStatusBadge({
   const isRental = type === 'rental';
 
   const label = isRental
-    ? RENTAL_IMPORT_STATUS_LABELS[status as RentalImportStatus] || status
+    ? EQUIPMENT_IMPORT_STATUS_LABELS[status as EquipmentImportStatus] || status
     : CHECKOUT_STATUS_LABELS[status as CheckoutStatus] || status;
 
   const styleMap = isRental ? RENTAL_STATUS_STYLES : CHECKOUT_STATUS_STYLES;

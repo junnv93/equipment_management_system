@@ -1,8 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 export const rejectEquipmentImportSchema = z.object({
+  ...versionedSchema,
   rejectionReason: z.string().min(1, '반려 사유를 입력해주세요'),
 });
 
@@ -11,7 +13,7 @@ export const RejectEquipmentImportValidationPipe = new ZodValidationPipe(
   rejectEquipmentImportSchema
 );
 
-export class RejectEquipmentImportDto {
+export class RejectEquipmentImportDto extends VersionedDto {
   @ApiProperty({ description: '반려 사유', example: '장비 사양이 요구사항과 맞지 않습니다.' })
   rejectionReason: string;
 }

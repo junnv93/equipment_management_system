@@ -18,6 +18,8 @@ import {
   CreateEquipmentImportDto,
   CreateEquipmentImportInput,
   CreateEquipmentImportValidationPipe,
+  ApproveEquipmentImportDto,
+  ApproveEquipmentImportValidationPipe,
   RejectEquipmentImportDto,
   RejectEquipmentImportValidationPipe,
   ReceiveEquipmentImportDto,
@@ -82,11 +84,16 @@ export class EquipmentImportsController {
 
   @Patch(':id/approve')
   @RequirePermissions(Permission.APPROVE_EQUIPMENT_IMPORT)
+  @UsePipes(ApproveEquipmentImportValidationPipe)
   @ApiOperation({ summary: '장비 반입 승인' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '승인 성공' })
-  async approve(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
-    return this.equipmentImportsService.approve(id, req.user.userId);
+  async approve(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApproveEquipmentImportDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    return this.equipmentImportsService.approve(id, req.user.userId, dto);
   }
 
   @Patch(':id/reject')
@@ -150,20 +157,4 @@ export class EquipmentImportsController {
   async cancel(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.equipmentImportsService.cancel(id, req.user.userId);
   }
-}
-
-// ============================================================================
-// DEPRECATED: Legacy rental imports controller (backward compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use EquipmentImportsController instead
- */
-@ApiTags('렌탈 반입 관리 (Deprecated - Use equipment-imports)')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller('rental-imports')
-export class RentalImportsController extends EquipmentImportsController {
-  // All methods inherited from EquipmentImportsController
-  // This controller exists only for backward compatibility
 }

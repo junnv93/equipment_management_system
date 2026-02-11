@@ -1,8 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 export const approveEquipmentImportSchema = z.object({
+  ...versionedSchema,
   comment: z.string().optional(),
 });
 
@@ -11,7 +13,7 @@ export const ApproveEquipmentImportValidationPipe = new ZodValidationPipe(
   approveEquipmentImportSchema
 );
 
-export class ApproveEquipmentImportDto {
+export class ApproveEquipmentImportDto extends VersionedDto {
   @ApiProperty({ description: '승인 코멘트', required: false })
   comment?: string;
 }

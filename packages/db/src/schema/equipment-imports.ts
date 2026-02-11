@@ -1,4 +1,13 @@
-import { pgTable, uuid, varchar, text, timestamp, index, jsonb } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  index,
+  jsonb,
+  integer,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { users } from './users';
@@ -88,6 +97,9 @@ export const equipmentImports = pgTable(
     returnCheckoutId: uuid('return_checkout_id').references(() => checkouts.id, {
       onDelete: 'set null',
     }),
+
+    // Optimistic locking version
+    version: integer('version').notNull().default(1),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

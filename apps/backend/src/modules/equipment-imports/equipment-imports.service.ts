@@ -7,7 +7,8 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { eq, and, like, desc, asc, sql, SQL, or } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import * as schema from '@equipment-management/db/schema';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { equipment } from '@equipment-management/db/schema/equipment';
@@ -19,6 +20,7 @@ import {
   type EquipmentImportSource,
 } from '@equipment-management/schemas';
 import { CreateEquipmentImportInput } from './dto/create-equipment-import.dto';
+import { ApproveEquipmentImportDto } from './dto/approve-equipment-import.dto';
 import { RejectEquipmentImportDto } from './dto/reject-equipment-import.dto';
 import { ReceiveEquipmentImportDto } from './dto/receive-equipment-import.dto';
 import { EquipmentImportQueryDto } from './dto/equipment-import-query.dto';
@@ -36,16 +38,18 @@ import {
 type EquipmentImport = typeof equipmentImports.$inferSelect;
 
 @Injectable()
-export class EquipmentImportsService {
+export class EquipmentImportsService extends VersionedBaseService {
   private readonly logger = new Logger(EquipmentImportsService.name);
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    protected readonly db: NodePgDatabase<typeof schema>,
     private readonly equipmentService: EquipmentService,
     @Inject(forwardRef(() => CheckoutsService))
     private readonly checkoutsService: CheckoutsService
-  ) {}
+  ) {
+    super();
+  }
 
   /**
    * 장비 반입 신청 생성 (통합: 렌탈 + 내부 공용)
@@ -250,23 +254,29 @@ export class EquipmentImportsService {
    * 장비 반입 승인
    * pending → approved
    */
-  async approve(id: string, approverId: string): Promise<EquipmentImport> {
+  async approve(
+    id: string,
+    approverId: string,
+    dto: ApproveEquipmentImportDto
+  ): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== 'pending') {
       throw new BadRequestException('승인 대기 상태의 반입 신청만 승인할 수 있습니다.');
     }
 
-    const [updated] = await this.db
-      .update(equipmentImports)
-      .set({
+    // ✅ CAS: optimistic locking
+    const updated = await this.updateWithVersion<EquipmentImport>(
+      equipmentImports,
+      id,
+      dto.version,
+      {
         status: 'approved' as EquipmentImportStatus,
         approverId,
         approvedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(equipmentImports.id, id))
-      .returning();
+      },
+      '장비 반입'
+    );
 
     this.logger.log(`Equipment import approved: ${id} (sourceType: ${updated.sourceType})`);
 
@@ -288,17 +298,19 @@ export class EquipmentImportsService {
       throw new BadRequestException('승인 대기 상태의 반입 신청만 거절할 수 있습니다.');
     }
 
-    const [updated] = await this.db
-      .update(equipmentImports)
-      .set({
+    // ✅ CAS: optimistic locking
+    const updated = await this.updateWithVersion<EquipmentImport>(
+      equipmentImports,
+      id,
+      dto.version,
+      {
         status: 'rejected' as EquipmentImportStatus,
         approverId,
         approvedAt: new Date(),
         rejectionReason: dto.rejectionReason,
-        updatedAt: new Date(),
-      })
-      .where(eq(equipmentImports.id, id))
-      .returning();
+      },
+      '장비 반입'
+    );
 
     return updated;
   }
@@ -389,19 +401,20 @@ export class EquipmentImportsService {
       } as typeof equipment.$inferInsert)
       .returning();
 
-    // equipment import 업데이트
-    const [updated] = await this.db
-      .update(equipmentImports)
-      .set({
+    // ✅ CAS: equipment import 업데이트 (optimistic locking)
+    const updated = await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
+      equipmentImports,
+      id,
+      equipmentImport.version,
+      {
         status: 'received' as EquipmentImportStatus,
         receivedBy,
         receivedAt: new Date(),
         receivingCondition: dto.receivingCondition,
         equipmentId: newEquipment.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(equipmentImports.id, id))
-      .returning();
+      },
+      '장비 반입'
+    );
 
     this.logger.log(
       `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
@@ -584,12 +597,3 @@ export class EquipmentImportsService {
     throw new BadRequestException('임시 관리번호 생성에 실패했습니다. 관리자에게 문의하세요.');
   }
 }
-
-// ============================================================================
-// DEPRECATED: Legacy alias (backward compatibility)
-// ============================================================================
-
-/**
- * @deprecated Use EquipmentImportsService instead
- */
-export const RentalImportsService = EquipmentImportsService;
