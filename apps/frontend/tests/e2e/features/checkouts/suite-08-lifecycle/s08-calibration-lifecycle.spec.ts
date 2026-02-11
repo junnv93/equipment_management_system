@@ -30,7 +30,18 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
   const testEquipmentId = EQUIP.SPECTRUM_ANALYZER_SUW_E;
 
   test.beforeAll(async () => {
-    await resetEquipmentToAvailable(testEquipmentId);
+    const pool = require('../helpers/checkout-helpers').getCheckoutPool();
+
+    // ★ Reset equipment to available with future calibration date
+    await pool.query(
+      `UPDATE equipment
+       SET status = 'available',
+           next_calibration_date = NOW() + INTERVAL '365 days',
+           updated_at = NOW()
+       WHERE id = $1`,
+      [testEquipmentId]
+    );
+
     await clearBackendCache();
   });
 
@@ -97,12 +108,19 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
 
     const token = await getBackendToken(page, 'technical_manager');
 
+    // ✅ Fetch current version for optimistic locking
+    const getResponse = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const currentCheckout = await getResponse.json();
+    const currentVersion = currentCheckout.version;
+
     const response = await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/start`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      data: {},
+      data: { version: currentVersion },
     });
 
     expect(response.ok()).toBeTruthy();
@@ -128,6 +146,17 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
 
     const token = await getBackendToken(page, 'technical_manager');
 
+    // ★ 사전 검증: checkout이 checked_out 상태인지 확인
+    const beforeReturnResponse = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${checkoutId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    expect(beforeReturnResponse.ok()).toBeTruthy();
+    const beforeReturn = await beforeReturnResponse.json();
+    expect(beforeReturn.status).toBe('checked_out'); // ← 여기서 실패하면 Step 3 문제
+
     const response = await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/return`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -147,6 +176,16 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
     expect(data.workingStatusChecked).toBe(true);
     expect(data.actualReturnDate).toBeTruthy();
     expect(data.returnerId).toBeTruthy();
+
+    // ★ Equipment status는 아직 checked_out (반입 승인 전까지 유지)
+    const equipCheckResponse = await page.request.get(
+      `${BACKEND_URL}/api/equipment/${testEquipmentId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const equipCheck = await equipCheckResponse.json();
+    expect(equipCheck.status).toBe('checked_out'); // 반입 승인 전까지는 checked_out
   });
 
   test('S08-05: Step 5 - 반입 최종 승인 → return_approved + ★equipment=available', async ({
@@ -156,6 +195,18 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
     await clearBackendCache(); // return 결과 반영
 
     const token = await getBackendToken(page, 'technical_manager');
+
+    // ★ 사전 검증: checkout이 returned 상태인지 확인
+    const beforeApproveResponse = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${checkoutId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    expect(beforeApproveResponse.ok()).toBeTruthy();
+    const beforeApprove = await beforeApproveResponse.json();
+    console.log('Step 5 pre-check - checkout status:', beforeApprove.status);
+    expect(beforeApprove.status).toBe('returned'); // ← 여기서 실패하면 Step 4 문제
 
     const response = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${checkoutId}/approve-return`,
@@ -168,6 +219,10 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
       }
     );
 
+    if (!response.ok()) {
+      const errorBody = await response.text();
+      console.error('approve-return failed:', response.status(), errorBody);
+    }
     expect(response.ok()).toBeTruthy();
     const data = await response.json();
     expect(data.status).toBe('return_approved');

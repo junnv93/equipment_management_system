@@ -33,9 +33,9 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import {
   CHECKOUT_STATUS_LABELS,
   CHECKOUT_STATUS_FILTER_OPTIONS,
-  RENTAL_IMPORT_STATUS_VALUES,
-  RENTAL_IMPORT_STATUS_LABELS,
-  type RentalImportStatus,
+  EQUIPMENT_IMPORT_STATUS_VALUES,
+  EQUIPMENT_IMPORT_STATUS_LABELS,
+  type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
@@ -211,9 +211,9 @@ export default function CheckoutsContent({
   const renderStatusFilterOptions = () => {
     if (isInbound) {
       // 반입 탭: checkout + rental 상태 통합 (rental 상태 기본 사용)
-      return RENTAL_IMPORT_STATUS_VALUES.map((status) => (
+      return EQUIPMENT_IMPORT_STATUS_VALUES.map((status) => (
         <SelectItem key={status} value={status}>
-          {RENTAL_IMPORT_STATUS_LABELS[status as RentalImportStatus]}
+          {EQUIPMENT_IMPORT_STATUS_LABELS[status as EquipmentImportStatus]}
         </SelectItem>
       ));
     }

@@ -52,3 +52,8 @@ pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/sui
 대여:     pending → approved → lender_checked → in_use → borrower_returned → lender_received
                                   ↑ equip=checked_out                           ↑ equip=available
 ```
+
+## 문서
+
+- **CHECKOUT_TEST_PLAN.md**: 전체 테스트 시나리오 상세 (47개 테스트, 코드 예시 포함)
+- **CHECKOUT_TEST_PLAN.old.md**: 이전 버전 (백업)

@@ -28,7 +28,7 @@ const DATABASE_URL =
 
 let checkoutPool: Pool | null = null;
 
-function getCheckoutPool(): Pool {
+export function getCheckoutPool(): Pool {
   if (!checkoutPool) {
     checkoutPool = new Pool({
       connectionString: DATABASE_URL,
@@ -893,19 +893,109 @@ export async function resetRentalCheckoutToState(
 }
 
 /**
+ * Reset a rental checkout to 'approved' status (convenience wrapper)
+ *
+ * @example
+ * await resetRentalCheckoutToApproved(SUITE_10.STEP1_LENDER);
+ */
+export async function resetRentalCheckoutToApproved(
+  checkoutId: string,
+  approverId: string = '00000000-0000-0000-0000-000000000002'
+): Promise<void> {
+  await resetRentalCheckoutToState(checkoutId, 'approved', approverId);
+}
+
+/**
+ * Reset a checkout to 'checked_out' status via ORM-based API calls.
+ *
+ * Unlike direct SQL resets, this uses the backend's service layer (approve → start),
+ * ensuring the ORM cache is properly invalidated. This prevents "invalid status" errors
+ * when the service reads stale checkout entities from cache.
+ *
+ * @example
+ * await resetCheckoutToCheckedOutViaAPI(page, SUITE_06.CALIBRATION);
+ */
+export async function resetCheckoutToCheckedOutViaAPI(
+  page: Page,
+  checkoutId: string,
+  role: 'technical_manager' | 'lab_manager' = 'technical_manager'
+): Promise<void> {
+  const token = await getBackendToken(page, role);
+
+  // Step 1: Reset to pending (direct SQL - necessary to rollback state)
+  await resetCheckoutToPending(checkoutId);
+  await clearBackendCache();
+
+  // Step 2: Approve (approved → triggers ORM update)
+  await page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/approve`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: {},
+  });
+  await clearBackendCache();
+
+  // Step 3: Start checkout (checked_out → triggers ORM + equipment status update)
+  await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/start`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  await clearBackendCache();
+}
+
+/**
+ * Reset a checkout to 'returned' status via ORM-based API calls.
+ *
+ * @example
+ * await resetCheckoutToReturnedViaAPI(page, SUITE_07.CALIBRATION, 'calibration');
+ */
+export async function resetCheckoutToReturnedViaAPI(
+  page: Page,
+  checkoutId: string,
+  purpose: 'calibration' | 'repair',
+  role: 'technical_manager' | 'lab_manager' = 'technical_manager'
+): Promise<void> {
+  const token = await getBackendToken(page, role);
+
+  // Step 1: Reset to checked_out (via ORM)
+  await resetCheckoutToCheckedOutViaAPI(page, checkoutId, role);
+
+  // Step 2: Return checkout (returned → triggers ORM update)
+  const returnPayload =
+    purpose === 'calibration'
+      ? { calibrationChecked: true, workingStatusChecked: true, inspectionNotes: 'E2E test reset' }
+      : { repairChecked: true, workingStatusChecked: true, inspectionNotes: 'E2E test reset' };
+
+  await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/return`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: returnPayload,
+  });
+  await clearBackendCache();
+}
+
+/**
  * Full checkout cleanup - delete test-created checkouts and reset equipment
  *
  * Only affects checkouts with the test ID prefix '10000000-'
+ * Deletes in order: condition_checks → checkout_items → checkouts
+ * Then resets all test equipment to 'available' status
  */
 export async function fullCheckoutCleanup(): Promise<void> {
   const pool = getCheckoutPool();
-  // Delete condition checks for test checkouts
+
+  // Step 1: Delete condition_checks (FK to checkouts)
   await pool.query(
     `DELETE FROM condition_checks WHERE checkout_id IN (SELECT id FROM checkouts WHERE id LIKE '10000000-%')`
   );
-  // Reset equipment statuses for test equipment
+
+  // Step 2: Delete checkout_items (FK to checkouts)
   await pool.query(
-    `UPDATE equipment SET status = 'available', updated_at = NOW() WHERE id LIKE 'eeee%' AND status = 'checked_out'`
+    `DELETE FROM checkout_items WHERE checkout_id IN (SELECT id FROM checkouts WHERE id LIKE '10000000-%')`
+  );
+
+  // Step 3: Delete checkouts
+  await pool.query(`DELETE FROM checkouts WHERE id LIKE '10000000-%'`);
+
+  // Step 4: Reset all test equipment to available status
+  await pool.query(
+    `UPDATE equipment SET status = 'available', updated_at = NOW() WHERE id LIKE 'eeee%'`
   );
 }
 

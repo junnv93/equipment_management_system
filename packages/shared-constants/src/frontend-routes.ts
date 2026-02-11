@@ -92,19 +92,6 @@ export const FRONTEND_ROUTES = {
   },
 
   // ============================================================================
-  // DEPRECATED: Legacy rental imports routes (backward compatibility)
-  // ============================================================================
-  /**
-   * @deprecated Use EQUIPMENT_IMPORTS instead
-   */
-  RENTAL_IMPORTS: {
-    LIST: '/checkouts?view=inbound',
-    CREATE: '/checkouts/import/rental',
-    DETAIL: (id: string) => `/checkouts/import/${id}`,
-    RECEIVE: (id: string) => `/checkouts/import/${id}/receive`,
-  },
-
-  // ============================================================================
   // 인증
   // ============================================================================
   AUTH: {

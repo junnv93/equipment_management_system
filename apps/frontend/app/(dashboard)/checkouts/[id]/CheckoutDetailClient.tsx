@@ -3,10 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
-import { useToast } from '@/components/ui/use-toast';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { getErrorMessage } from '@/lib/api/error';
+import {
+  CHECKOUT_APPROVAL_INVALIDATE_KEYS,
+  RETURN_APPROVAL_INVALIDATE_KEYS,
+} from '@/lib/query-keys/checkout-keys';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import {
@@ -67,13 +71,22 @@ interface CheckoutDetailClientProps {
  * - 역할별 액션 버튼
  */
 export default function CheckoutDetailClient({
-  checkout,
+  checkout: initialCheckout,
   conditionChecks,
 }: CheckoutDetailClientProps) {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
+
+  // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
+  // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
+  // invalidateQueries → 자동 refetch → UI 자동 갱신 (수동 동기화 불필요)
+  const { data: checkout = initialCheckout } = useQuery({
+    queryKey: ['checkout', initialCheckout.id],
+    queryFn: () => checkoutApi.getCheckout(initialCheckout.id),
+    placeholderData: initialCheckout,
+    staleTime: 0,
+    refetchOnMount: false, // Server Component이 이미 최신 데이터 제공
+  });
 
   // 브레드크럼 동적 라벨 설정
   useEffect(() => {
@@ -100,108 +113,99 @@ export default function CheckoutDetailClient({
   const [itemConditionsBefore, setItemConditionsBefore] = useState<Record<string, string>>({});
 
   // 승인 mutation (approverId는 백엔드에서 세션으로부터 자동 추출)
-  const approveMutation = useMutation({
-    mutationFn: () => checkoutApi.approveCheckout(checkout.id),
-    onSuccess: () => {
-      toast({
-        title: '승인 완료',
-        description: '반출 요청이 승인되었습니다.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
+  const approveMutation = useOptimisticMutation<Checkout, void, Checkout>({
+    mutationFn: () => checkoutApi.approveCheckout(checkout.id, checkout.version),
+    queryKey: ['checkout', checkout.id],
+    optimisticUpdate: (old): Checkout =>
+      ({
+        ...old,
+        status: 'approved' as CheckoutStatus,
+        approvedAt: new Date().toISOString(),
+        version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
+      }) as Checkout,
+    invalidateKeys: CHECKOUT_APPROVAL_INVALIDATE_KEYS,
+    successMessage: '반출 요청이 승인되었습니다.',
+    errorMessage: (error) => getErrorMessage(error, '반출 승인 중 오류가 발생했습니다.'),
+    onSuccessCallback: () => {
       router.refresh();
-    },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: '승인 실패',
-        description: getErrorMessage(
-          error,
-          '반출 승인 중 오류가 발생했습니다. 권한을 확인하거나 잠시 후 다시 시도해주세요.'
-        ),
-      });
     },
   });
 
   // 반려 mutation
-  const rejectMutation = useMutation({
-    mutationFn: (reason: string) => checkoutApi.rejectCheckout(checkout.id, reason),
-    onSuccess: () => {
-      toast({
-        title: '반려 완료',
-        description: '반출 요청이 반려되었습니다.',
-      });
+  const rejectMutation = useOptimisticMutation<Checkout, string, Checkout>({
+    mutationFn: (reason: string) =>
+      checkoutApi.rejectCheckout(checkout.id, checkout.version, reason),
+    queryKey: ['checkout', checkout.id],
+    optimisticUpdate: (old, reason): Checkout =>
+      ({
+        ...old,
+        status: 'rejected' as CheckoutStatus,
+        rejectionReason: reason,
+        version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
+      }) as Checkout,
+    invalidateKeys: CHECKOUT_APPROVAL_INVALIDATE_KEYS,
+    successMessage: '반출 요청이 반려되었습니다.',
+    errorMessage: (error) => getErrorMessage(error, '반출 반려 중 오류가 발생했습니다.'),
+    onSuccessCallback: () => {
       setDialogState((prev) => ({ ...prev, reject: false }));
-      queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.refresh();
     },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: '반려 실패',
-        description: getErrorMessage(
-          error,
-          '반출 반려 중 오류가 발생했습니다. 네트워크 연결을 확인해주세요.'
-        ),
-      });
+    onErrorCallback: () => {
+      setDialogState((prev) => ({ ...prev, reject: false }));
     },
   });
 
   // 반출 시작 mutation (장비별 상태 기록 포함)
-  const startMutation = useMutation({
+  const startMutation = useOptimisticMutation<Checkout, void, Checkout>({
     mutationFn: () => {
       const conditions = Object.entries(itemConditionsBefore)
         .filter(([, value]) => value.trim())
         .map(([equipmentId, conditionBefore]) => ({ equipmentId, conditionBefore }));
       return checkoutApi.startCheckout(
         checkout.id,
+        checkout.version,
         conditions.length > 0 ? { itemConditions: conditions } : undefined
       );
     },
-    onSuccess: () => {
-      toast({
-        title: '반출 시작',
-        description: '장비 반출이 시작되었습니다.',
-      });
-      queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
+    queryKey: ['checkout', checkout.id],
+    optimisticUpdate: (old): Checkout =>
+      ({
+        ...old,
+        status: 'checked_out' as CheckoutStatus,
+        checkoutDate: new Date().toISOString(),
+        version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
+      }) as Checkout,
+    invalidateKeys: [['checkouts']],
+    successMessage: '장비 반출이 시작되었습니다.',
+    errorMessage: (error) => getErrorMessage(error, '반출을 시작할 수 없습니다.'),
+    onSuccessCallback: () => {
       router.refresh();
     },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: '반출 시작 실패',
-        description: getErrorMessage(
-          error,
-          '반출을 시작할 수 없습니다. 장비 상태를 확인하거나 다시 시도해주세요.'
-        ),
-      });
+    onErrorCallback: () => {
+      setDialogState((prev) => ({ ...prev, start: false }));
     },
   });
 
   // 반입 승인 mutation
-  const approveReturnMutation = useMutation({
-    mutationFn: () => checkoutApi.approveReturn(checkout.id),
-    onSuccess: () => {
-      toast({
-        title: '반입 승인 완료',
-        description: '장비가 정상적으로 반입되었습니다.',
-      });
+  const approveReturnMutation = useOptimisticMutation<Checkout, void, Checkout>({
+    mutationFn: () => checkoutApi.approveReturn(checkout.id, { version: checkout.version }),
+    queryKey: ['checkout', checkout.id],
+    optimisticUpdate: (old): Checkout =>
+      ({
+        ...old,
+        status: 'return_approved' as CheckoutStatus,
+        returnApprovedAt: new Date().toISOString(),
+        version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
+      }) as Checkout,
+    invalidateKeys: RETURN_APPROVAL_INVALIDATE_KEYS,
+    successMessage: '장비가 정상적으로 반입되었습니다.',
+    errorMessage: (error) => getErrorMessage(error, '반입 승인 중 오류가 발생했습니다.'),
+    onSuccessCallback: () => {
       setDialogState((prev) => ({ ...prev, approveReturn: false }));
-      queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.refresh();
     },
-    onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: '반입 승인 실패',
-        description: getErrorMessage(
-          error,
-          '반입 승인 중 오류가 발생했습니다. 검사 내역을 확인하거나 다시 시도해주세요.'
-        ),
-      });
+    onErrorCallback: () => {
+      setDialogState((prev) => ({ ...prev, approveReturn: false }));
     },
   });
 
@@ -687,15 +691,10 @@ export default function CheckoutDetailClient({
         open={dialogState.start}
         onOpenChange={(open) => setDialogState((prev) => ({ ...prev, start: open }))}
       >
-        <DialogContent
-          className="max-w-lg"
-          aria-labelledby="start-dialog-title"
-          aria-describedby="start-dialog-description"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
+        <DialogContent className="max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle id="start-dialog-title">반출 시작</DialogTitle>
-            <DialogDescription id="start-dialog-description">
+            <DialogTitle>반출 시작</DialogTitle>
+            <DialogDescription>
               반출을 시작하시겠습니까? 장비 상태가 &apos;반출 중&apos;으로 변경됩니다. 각 장비의
               반출 전 상태를 기록해주세요.
             </DialogDescription>
@@ -741,14 +740,10 @@ export default function CheckoutDetailClient({
         open={dialogState.approveReturn}
         onOpenChange={(open) => setDialogState((prev) => ({ ...prev, approveReturn: open }))}
       >
-        <DialogContent
-          aria-labelledby="approve-return-dialog-title"
-          aria-describedby="approve-return-dialog-description"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-        >
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle id="approve-return-dialog-title">반입 승인</DialogTitle>
-            <DialogDescription id="approve-return-dialog-description">
+            <DialogTitle>반입 승인</DialogTitle>
+            <DialogDescription>
               반입을 승인하시겠습니까? 장비 상태가 &apos;사용 가능&apos;으로 복원됩니다.
             </DialogDescription>
           </DialogHeader>
@@ -772,8 +767,6 @@ export default function CheckoutDetailClient({
         onOpenChange={(open) => setDialogState((prev) => ({ ...prev, reject: open }))}
       >
         <DialogContent
-          aria-labelledby="reject-dialog-title"
-          aria-describedby="reject-dialog-description"
           onOpenAutoFocus={(e) => {
             e.preventDefault();
             // Focus the textarea after dialog opens
@@ -783,10 +776,8 @@ export default function CheckoutDetailClient({
           }}
         >
           <DialogHeader>
-            <DialogTitle id="reject-dialog-title">반출 반려</DialogTitle>
-            <DialogDescription id="reject-dialog-description">
-              반출 요청을 반려합니다. 반려 사유를 입력해주세요.
-            </DialogDescription>
+            <DialogTitle>반출 반려</DialogTitle>
+            <DialogDescription>반출 요청을 반려합니다. 반려 사유를 입력해주세요.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>

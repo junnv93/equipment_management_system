@@ -162,19 +162,6 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/checkouts/[id]',
   },
 
-  // ========================================
-  // 렌탈 반입 관리
-  // ========================================
-  '/rental-imports': {
-    label: '렌탈 반입',
-    parent: '/',
-    icon: FileText,
-  },
-  '/rental-imports/[id]': {
-    label: '렌탈 반입 상세',
-    parent: '/rental-imports',
-    dynamic: true,
-  },
   '/checkouts/import/[id]': {
     label: '렌탈 반입 상세',
     parent: '/checkouts',

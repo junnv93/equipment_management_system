@@ -78,33 +78,43 @@ export default function EquipmentImportDetail({ id }: Props) {
   }, [equipmentImport, id, setDynamicLabel, clearDynamicLabel]);
 
   const approveMutation = useMutation({
-    mutationFn: () => equipmentImportApi.approve(id),
+    mutationFn: () => equipmentImportApi.approve(id, equipmentImport?.version || 1), // ✅ Include version
     onSuccess: () => {
       toast({ title: '반입 신청이 승인되었습니다.' });
       queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
     },
     onError: (error) => {
+      const errorMessage = getErrorMessage(error);
       toast({
         title: '승인 실패',
-        description: getErrorMessage(error),
+        description: errorMessage,
         variant: 'destructive',
       });
+      // ✅ 409 Conflict 시 자동 새로고침
+      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+        queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+      }
     },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: () => equipmentImportApi.reject(id, rejectionReason),
+    mutationFn: () => equipmentImportApi.reject(id, equipmentImport?.version || 1, rejectionReason), // ✅ Include version
     onSuccess: () => {
       toast({ title: '반입 신청이 거절되었습니다.' });
       setShowRejectDialog(false);
       queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
     },
     onError: (error) => {
+      const errorMessage = getErrorMessage(error);
       toast({
         title: '거절 실패',
-        description: getErrorMessage(error),
+        description: errorMessage,
         variant: 'destructive',
       });
+      // ✅ 409 Conflict 시 자동 새로고침
+      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+        queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+      }
     },
   });
 

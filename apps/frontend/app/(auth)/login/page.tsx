@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { BrandingSection } from '@/components/auth/BrandingSection';
 import { LoginPageContent } from '@/components/auth/LoginPageContent';
 
@@ -22,6 +24,7 @@ export const metadata: Metadata = {
  * - Server Component로 메타데이터 생성 (SEO)
  * - BrandingSection: Server Component (정적 콘텐츠)
  * - LoginPageContent: Client Component (상호작용)
+ * - ✅ useSearchParams() 사용하는 Client Component는 Server Component에서 Suspense로 감싸야 함
  *
  * 성능 최적화:
  * - 정적 콘텐츠는 서버에서 렌더링하여 번들 크기 최소화
@@ -36,7 +39,24 @@ export default function LoginPage() {
       <BrandingSection />
 
       {/* 우측: 로그인 폼 섹션 (Client Component) */}
-      <LoginPageContent showDevAccounts={isDevelopment} />
+      {/* ✅ Next.js 16: useSearchParams()를 사용하는 Client Component는 Suspense로 감싸야 함 */}
+      <Suspense
+        fallback={
+          <div className="flex-1 lg:w-1/2 flex items-center justify-center bg-white dark:bg-background">
+            <div className="w-full max-w-md">
+              <div className="bg-card rounded-2xl shadow-lg border border-border p-8">
+                <div className="space-y-4" aria-busy="true" aria-label="로딩 중">
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                  <Skeleton className="h-12 w-full rounded-lg" />
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      >
+        <LoginPageContent showDevAccounts={isDevelopment} />
+      </Suspense>
     </div>
   );
 }

@@ -122,7 +122,14 @@ export function ApprovalsClient({
   const approveMutation = useOptimisticMutation<void, ApprovalItem, ApprovalItem[]>({
     mutationFn: async (item) => {
       const equipmentId = item.details?.equipmentId as string | undefined;
-      await approvalsApi.approve(item.category, item.id, userId, undefined, equipmentId);
+      await approvalsApi.approve(
+        item.category,
+        item.id,
+        userId,
+        undefined,
+        equipmentId,
+        item.originalData
+      );
     },
     queryKey: ['approvals', activeTab, userTeamId],
     optimisticUpdate: (old, item) => {
@@ -147,7 +154,14 @@ export function ApprovalsClient({
   >({
     mutationFn: async ({ item, reason }) => {
       const equipmentId = item.details?.equipmentId as string | undefined;
-      await approvalsApi.reject(item.category, item.id, userId, reason, equipmentId);
+      await approvalsApi.reject(
+        item.category,
+        item.id,
+        userId,
+        reason,
+        equipmentId,
+        item.originalData
+      );
     },
     queryKey: ['approvals', activeTab, userTeamId],
     optimisticUpdate: (old, { item }) => {

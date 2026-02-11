@@ -35,6 +35,31 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     await resetRentalCheckoutToState(SUITE_10.STEP3_RETURN, 'in_use');
     await resetRentalCheckoutToState(SUITE_10.STEP4_FINAL, 'borrower_returned');
     await resetCheckoutToApproved(SUITE_10.ORDER_VIOLATION);
+
+    // ✅ Suite 10용 장비 교정 기한 연장 (available 상태 복원 가능하도록)
+    const { getCheckoutPool } = await import('../helpers/checkout-helpers');
+    const pool = getCheckoutPool();
+    await pool.query(
+      `
+      UPDATE equipment
+      SET next_calibration_date = NOW() + INTERVAL '1 year',
+          updated_at = NOW()
+      WHERE id IN (
+        SELECT DISTINCT equipment_id
+        FROM checkout_items
+        WHERE checkout_id IN ($1, $2, $3, $4, $5, $6)
+      )
+    `,
+      [
+        SUITE_10.STEP1_LENDER,
+        SUITE_10.STEP2_BORROWER,
+        SUITE_10.STEP3_RETURN,
+        SUITE_10.STEP4_FINAL,
+        SUITE_10.ORDER_VIOLATION,
+        SUITE_10.HISTORY,
+      ]
+    );
+
     await clearBackendCache();
   });
 

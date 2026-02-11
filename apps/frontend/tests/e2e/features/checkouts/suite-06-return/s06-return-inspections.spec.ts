@@ -12,6 +12,7 @@ import { test, expect } from '../../../shared/fixtures/auth.fixture';
 import { SUITE_06, BACKEND_URL } from '../helpers/checkout-constants';
 import {
   resetCheckoutToCheckedOut,
+  resetCheckoutToPending,
   clearBackendCache,
   apiGet,
   getBackendToken,
@@ -22,9 +23,13 @@ test.describe('Suite 06: 반입 처리', () => {
   test.describe.configure({ mode: 'serial' });
 
   test.beforeAll(async () => {
+    // ★ Direct SQL reset (beforeAll cannot use Page fixtures)
     await resetCheckoutToCheckedOut(SUITE_06.CALIBRATION);
     await resetCheckoutToCheckedOut(SUITE_06.REPAIR);
     await resetCheckoutToCheckedOut(SUITE_06.MISSING_CHECK);
+    // WRONG_STATUS는 rejected 상태로 유지 (또는 pending으로 리셋)
+    await resetCheckoutToPending(SUITE_06.WRONG_STATUS);
+    // ★ Clear backend cache after direct SQL updates
     await clearBackendCache();
   });
 
@@ -35,6 +40,7 @@ test.describe('Suite 06: 반입 처리', () => {
   test('S06-01: 교정 반입: calibrationChecked+workingStatusChecked → returned', async ({
     techManagerPage: page,
   }) => {
+    await clearBackendCache(); // Ensure fresh data
     const token = await getBackendToken(page, 'technical_manager');
 
     const response = await page.request.post(
@@ -63,6 +69,7 @@ test.describe('Suite 06: 반입 처리', () => {
   test('S06-02: 수리 반입: repairChecked+workingStatusChecked → returned', async ({
     techManagerPage: page,
   }) => {
+    await clearBackendCache(); // Ensure fresh data
     const token = await getBackendToken(page, 'technical_manager');
 
     const response = await page.request.post(

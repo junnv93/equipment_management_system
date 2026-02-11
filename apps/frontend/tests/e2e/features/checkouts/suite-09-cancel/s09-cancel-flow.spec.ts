@@ -29,13 +29,13 @@ test.describe('Suite 09: 반출 취소', () => {
     await cleanupCheckoutPool();
   });
 
-  test('S09-01: pending 반출 취소 → status=canceled', async ({ testOperatorPage: page }) => {
-    // 먼저 반출 생성
-    const token = await getBackendToken(page, 'test_engineer');
+  test('S09-01: pending 반출 취소 → status=canceled', async ({ techManagerPage: page }) => {
+    // 먼저 반출 생성 (test_engineer로)
+    const engineerToken = await getBackendToken(page, 'test_engineer');
 
     const createResponse = await page.request.post(`${BACKEND_URL}/api/checkouts`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${engineerToken}`,
         'Content-Type': 'application/json',
       },
       data: {
@@ -52,11 +52,12 @@ test.describe('Suite 09: 반출 취소', () => {
     pendingCheckoutId = createData.id;
     expect(createData.status).toBe('pending');
 
-    // 취소
+    // 취소 (technical_manager 권한 필요)
+    const managerToken = await getBackendToken(page, 'technical_manager');
     const cancelResponse = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${pendingCheckoutId}/cancel`,
       {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${managerToken}` },
       }
     );
 
@@ -100,14 +101,21 @@ test.describe('Suite 09: 반출 취소', () => {
     );
     expect(approveResponse.ok()).toBeTruthy();
 
-    // 취소 시도 → 400
+    // ★ Clear cache after approve to ensure cancel() reads fresh 'approved' status
+    await clearBackendCache();
+
+    // 취소 시도 (manager 권한으로) → 400 (비즈니스 로직 검증)
     const cancelResponse = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${approvedCheckoutId}/cancel`,
       {
-        headers: { Authorization: `Bearer ${engineerToken}` },
+        headers: { Authorization: `Bearer ${managerToken}` },
       }
     );
 
+    if (cancelResponse.status() !== 400) {
+      const body = await cancelResponse.text();
+      console.error('Expected 400, got:', cancelResponse.status(), body);
+    }
     expect(cancelResponse.status()).toBe(400);
   });
 });

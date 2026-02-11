@@ -39,20 +39,75 @@ export const TEST_EQUIPMENT_IDS = {
 
   // Pyeongtaek (Automotive EMC - A)
   TEST_HARNESS_PYT_A: 'eeee6001-0001-4001-8001-000000000001', // available
+
+  // Convenience aliases for race condition tests (using available equipment)
+  EQUIPMENT_1: 'eeee1001-0001-4001-8001-000000000001', // SPECTRUM_ANALYZER_SUW_E (available)
+  EQUIPMENT_2: 'eeee1002-0002-4002-8002-000000000002', // SIGNAL_GEN_SUW_E (available)
+  EQUIPMENT_3: 'eeee1003-0003-4003-8003-000000000003', // NETWORK_ANALYZER_SUW_E (available)
+  EQUIPMENT_4: 'eeee3001-0001-4001-8001-000000000001', // SAR_PROBE_SUW_S (available)
+  EQUIPMENT_5: 'eeee4001-0001-4001-8001-000000000001', // HARNESS_COUPLER_SUW_A (available)
+  EQUIPMENT_6: 'eeee5001-0001-4001-8001-000000000001', // RECEIVER_UIW_W (available)
+  EQUIPMENT_7: 'eeee5002-0002-4002-8002-000000000002', // TRANSMITTER_UIW_W (available)
 } as const;
 
 // =============================================================================
-// User IDs
+// User IDs (SSOT: backend/src/database/utils/uuid-constants.ts)
 // =============================================================================
 
 export const TEST_USER_IDS = {
+  // Suwon FCC EMC/RF (5 users)
   TEST_ENGINEER_SUWON: '00000000-0000-0000-0000-000000000001',
   TECHNICAL_MANAGER_SUWON: '00000000-0000-0000-0000-000000000002',
   LAB_MANAGER_SUWON: '00000000-0000-0000-0000-000000000003',
   SYSTEM_ADMIN: '00000000-0000-0000-0000-000000000004',
   QUALITY_MANAGER_SUWON: '00000000-0000-0000-0000-000000000005',
+
+  // Suwon General EMC (2 users)
+  TEST_ENGINEER_SUWON_GENERAL_EMC: '00000000-0000-0000-0000-000000000009',
+  TECHNICAL_MANAGER_SUWON_GENERAL_EMC: '00000000-0000-0000-0000-00000000000a',
+
+  // Suwon SAR (2 users)
+  TEST_ENGINEER_SUWON_SAR: '00000000-0000-0000-0000-00000000000b',
+  TECHNICAL_MANAGER_SUWON_SAR: '00000000-0000-0000-0000-00000000000c',
+
+  // Uiwang General RF (2 users)
   TECHNICAL_MANAGER_UIWANG: 'f47ac10b-58cc-4372-a567-0e02b2c3d478',
   TEST_ENGINEER_UIWANG: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+
+  // Pyeongtaek Automotive EMC (3 users)
+  LAB_MANAGER_PYEONGTAEK: 'cccccccc-dddd-eeee-ffff-000000000000',
+  TEST_ENGINEER_PYEONGTAEK: '00000000-0000-0000-0000-000000000013',
+  TECHNICAL_MANAGER_PYEONGTAEK: '00000000-0000-0000-0000-000000000014',
+} as const;
+
+// =============================================================================
+// User Emails (for test-login)
+// =============================================================================
+
+export const TEST_USER_EMAILS = {
+  // Suwon FCC EMC/RF
+  TEST_ENGINEER_SUWON: 'test.engineer@example.com',
+  TECHNICAL_MANAGER_SUWON: 'tech.manager@example.com',
+  LAB_MANAGER_SUWON: 'lab.manager@example.com',
+  QUALITY_MANAGER_SUWON: 'quality.manager@example.com',
+  SYSTEM_ADMIN: 'system.admin@example.com',
+
+  // Suwon General EMC
+  TEST_ENGINEER_SUWON_GENERAL_EMC: 'test.engineer.suwon.general.emc@example.com',
+  TECHNICAL_MANAGER_SUWON_GENERAL_EMC: 'tech.manager.suwon.general.emc@example.com',
+
+  // Suwon SAR
+  TEST_ENGINEER_SUWON_SAR: 'test.engineer.suwon.sar@example.com',
+  TECHNICAL_MANAGER_SUWON_SAR: 'tech.manager.suwon.sar@example.com',
+
+  // Uiwang General RF
+  TEST_ENGINEER_UIWANG: 'user1@example.com',
+  TECHNICAL_MANAGER_UIWANG: 'manager2@example.com',
+
+  // Pyeongtaek Automotive EMC
+  LAB_MANAGER_PYEONGTAEK: 'admin2@example.com',
+  TEST_ENGINEER_PYEONGTAEK: 'test.engineer.pyeongtaek@example.com',
+  TECHNICAL_MANAGER_PYEONGTAEK: 'tech.manager.pyeongtaek@example.com',
 } as const;
 
 // =============================================================================

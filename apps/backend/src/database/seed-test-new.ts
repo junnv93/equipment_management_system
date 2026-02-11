@@ -111,7 +111,11 @@ async function main(): Promise<void> {
         await db.execute(sql.raw(`TRUNCATE TABLE ${table} CASCADE`));
         console.log(`✓ ${table}`);
       } catch (err: any) {
-        if (err.message.includes('does not exist')) {
+        // Check for PostgreSQL error code 42P01 (relation does not exist)
+        // Error can be in err.code or err.cause.code (Drizzle wraps errors)
+        const errorCode = err.code || err.cause?.code;
+        const errorMsg = err.message || err.cause?.message || '';
+        if (errorCode === '42P01' || errorMsg.includes('does not exist')) {
           console.log(`⊗ ${table} (not yet created)`);
         } else {
           throw err;

@@ -86,7 +86,7 @@ export const SUITE_05 = {
 // ============================================================================
 export const SUITE_06 = {
   CALIBRATION: CHECKOUT_019_ID, // checked_out - calibration
-  REPAIR: CHECKOUT_020_ID, // checked_out - repair
+  REPAIR: CHECKOUT_022_ID, // checked_out - repair (fixed: 020 was calibration, not repair)
   MISSING_CHECK: CHECKOUT_021_ID, // checked_out - calibration (missing check test)
   WRONG_STATUS: CHECKOUT_015_ID, // rejected (cannot return → API 400)
 } as const;

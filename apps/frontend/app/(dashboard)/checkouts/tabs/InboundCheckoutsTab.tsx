@@ -19,17 +19,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
-import rentalImportApi from '@/lib/api/rental-import-api';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
 import {
-  RENTAL_IMPORT_STATUS_LABELS,
+  EQUIPMENT_IMPORT_STATUS_LABELS,
   CLASSIFICATION_LABELS,
-  type RentalImportStatus,
   type Classification,
   type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { RentalImportStatusBadge } from '@/components/rental-imports/RentalImportStatusBadge';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
@@ -86,12 +83,13 @@ export default function InboundCheckoutsTab({
   // 반입: 외부 업체 렌탈
   // ──────────────────────────────────────────────
   const { data: rentalImportsData, isLoading: rentalImportsLoading } = useQuery({
-    queryKey: ['rental-imports', statusFilter, searchTerm],
+    queryKey: ['equipment-imports', 'rental', statusFilter, searchTerm],
     queryFn: () =>
-      rentalImportApi.getList({
+      equipmentImportApi.getList({
+        sourceType: 'rental', // ✅ Filter for rental imports only
         limit: 100,
         search: searchTerm || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
       }),
     staleTime: 30 * 1000,
   });
@@ -179,7 +177,7 @@ export default function InboundCheckoutsTab({
                 <TableRow
                   key={item.id}
                   className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => router.push(FRONTEND_ROUTES.RENTAL_IMPORTS.DETAIL(item.id))}
+                  onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(item.id))}
                 >
                   <TableCell className="font-medium line-clamp-1">{item.equipmentName}</TableCell>
                   <TableCell>
@@ -194,7 +192,7 @@ export default function InboundCheckoutsTab({
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <RentalImportStatusBadge status={item.status as RentalImportStatus} />
+                      <EquipmentImportStatusBadge status={item.status as EquipmentImportStatus} />
                       {item.status === 'approved' && (
                         <Badge
                           variant="outline"

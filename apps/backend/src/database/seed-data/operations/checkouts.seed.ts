@@ -419,7 +419,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     updatedAt: daysAgo(5),
   }),
 
-  // 17. Rejected - Rental (without reason - old data)
+  // 17. Rejected - Rental (with rejection reason)
   createCheckout({
     id: CHECKOUT_017_ID,
     requesterId: USER_TEST_ENGINEER_SUWON_ID,
@@ -432,6 +432,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '장비 대여 요청',
     expectedReturnDate: daysLater(30),
     status: 'rejected',
+    rejectionReason: '대여 기관 인증 서류 미비로 반려합니다.',
     createdAt: daysAgo(30),
     updatedAt: daysAgo(29),
   }),

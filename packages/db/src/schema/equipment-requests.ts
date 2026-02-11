@@ -1,4 +1,13 @@
-import { pgEnum, pgTable, text, timestamp, varchar, index, uuid } from 'drizzle-orm/pg-core';
+import {
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
+  index,
+  uuid,
+  integer,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { users } from './users';
@@ -43,6 +52,9 @@ export const equipmentRequests = pgTable(
     // 요청 데이터 (JSON 형태로 저장)
     requestData: text('request_data'), // JSON stringified equipment data
 
+    // Optimistic locking version
+    version: integer('version').notNull().default(1),
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -60,6 +72,8 @@ export const equipmentRequests = pgTable(
         table.approvalStatus,
         table.requestType
       ),
+      // CAS (Compare-And-Swap) 복합 인덱스: optimistic locking 지원
+      idVersionIdx: index('equipment_requests_id_version_idx').on(table.id, table.version),
     };
   }
 );

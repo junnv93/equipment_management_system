@@ -20,23 +20,33 @@ export const TEAM_GENERAL_RF_UIWANG_ID = 'a1b2c3d4-e5f6-4789-abcd-ef0123456789';
 export const TEAM_AUTOMOTIVE_EMC_PYEONGTAEK_ID = 'b2c3d4e5-f6a7-4890-bcde-f01234567890'; // A
 
 // =============================================================================
-// USERS (8 users across 3 sites)
+// USERS (14 users across 3 sites, 7 teams)
 // ⚠️ CRITICAL: Must match NextAuth test-login UUIDs in auth.controller.ts
 // =============================================================================
 
-// Suwon users (5 users)
+// Suwon FCC EMC/RF users (5 users)
 export const USER_TEST_ENGINEER_SUWON_ID = '00000000-0000-0000-0000-000000000001'; // test_engineer
 export const USER_TECHNICAL_MANAGER_SUWON_ID = '00000000-0000-0000-0000-000000000002'; // technical_manager
 export const USER_LAB_MANAGER_SUWON_ID = '00000000-0000-0000-0000-000000000003'; // lab_manager (시험소장)
 export const USER_SYSTEM_ADMIN_ID = '00000000-0000-0000-0000-000000000004'; // system_admin
 export const USER_QUALITY_MANAGER_SUWON_ID = '00000000-0000-0000-0000-000000000005'; // quality_manager
 
+// Suwon General EMC users (2 users)
+export const USER_TEST_ENGINEER_SUWON_GENERAL_EMC_ID = '00000000-0000-0000-0000-000000000009';
+export const USER_TECHNICAL_MANAGER_SUWON_GENERAL_EMC_ID = '00000000-0000-0000-0000-00000000000a';
+
+// Suwon SAR users (2 users)
+export const USER_TEST_ENGINEER_SUWON_SAR_ID = '00000000-0000-0000-0000-00000000000b';
+export const USER_TECHNICAL_MANAGER_SUWON_SAR_ID = '00000000-0000-0000-0000-00000000000c';
+
 // Uiwang users (2 users)
 export const USER_TECHNICAL_MANAGER_UIWANG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d478';
 export const USER_TEST_ENGINEER_UIWANG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
-// Pyeongtaek users (1 user)
+// Pyeongtaek users (3 users)
 export const USER_LAB_MANAGER_PYEONGTAEK_ID = 'cccccccc-dddd-eeee-ffff-000000000000';
+export const USER_TEST_ENGINEER_PYEONGTAEK_ID = '00000000-0000-0000-0000-000000000013';
+export const USER_TECHNICAL_MANAGER_PYEONGTAEK_ID = '00000000-0000-0000-0000-000000000014';
 
 // =============================================================================
 // EQUIPMENT (32 equipment across statuses, sites, classifications)

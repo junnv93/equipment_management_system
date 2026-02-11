@@ -321,6 +321,42 @@ export class AuthService {
   }
 
   /**
+   * 이메일로 테스트 토큰 생성 (신규 방식 - 권장)
+   * DB에서 이메일로 사용자를 조회하여 JWT 토큰을 생성합니다.
+   *
+   * @param email - 테스트 사용자의 이메일 주소
+   * @returns JWT 토큰을 포함한 인증 정보
+   */
+  async generateTestTokenByEmail(email: string): Promise<AuthResponse> {
+    const dbUser = (await this.usersService.findByEmail(email)) as
+      | (Record<string, unknown> & {
+          id: string;
+          email: string;
+          name: string;
+          role: string;
+          teamId?: string | null;
+          position?: string | null;
+        })
+      | null;
+
+    if (!dbUser) {
+      throw new UnauthorizedException(`사용자를 찾을 수 없습니다: ${email}`);
+    }
+
+    return this.generateToken({
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      roles: [dbUser.role as UserRole],
+      department: undefined,
+      site: (dbUser.site as UserDto['site']) ?? undefined,
+      location: (dbUser.location as UserDto['location']) ?? undefined,
+      position: dbUser.position ?? undefined,
+      teamId: dbUser.teamId ?? undefined,
+    });
+  }
+
+  /**
    * Refresh Token으로 새 Access Token + Refresh Token 발급 (Rotation)
    *
    * - refresh_token 검증 (별도 시크릿, type === 'refresh' 확인)

@@ -163,7 +163,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: queryKeys.equipment.list(queryFilters), // ✅ 표준화된 키
     queryFn: () => equipmentApi.getEquipmentList(queryFilters),
-    initialData, // Server에서 전달받은 초기 데이터
+    placeholderData: initialData, // Server에서 전달받은 초기 데이터
     retry: 3,
     staleTime: 0, // 장비 상태는 실시간 정확성이 중요 (부적합, 교정기한초과 등)
     refetchOnMount: 'always', // ✅ 항상 최신 데이터 확인 (상태 변경 민감)

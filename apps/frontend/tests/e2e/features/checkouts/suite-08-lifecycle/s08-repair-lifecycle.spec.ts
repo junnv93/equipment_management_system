@@ -85,12 +85,19 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
 
     const token = await getBackendToken(page, 'technical_manager');
 
+    // ✅ Fetch current version for optimistic locking
+    const getResponse = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const currentCheckout = await getResponse.json();
+    const currentVersion = currentCheckout.version;
+
     const response = await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/start`, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      data: {},
+      data: { version: currentVersion },
     });
 
     expect(response.ok()).toBeTruthy();

@@ -201,15 +201,32 @@ export const authOptions = {
                 type: 'text',
                 placeholder: 'test_engineer | technical_manager | lab_manager | system_admin',
               },
+              email: {
+                label: 'Email',
+                type: 'email',
+                placeholder: 'test.engineer@example.com (optional, overrides role)',
+              },
             },
             async authorize(credentials) {
-              if (!credentials?.role) {
-                console.error('[Test Auth] Role is required');
+              // email이 제공되면 email 우선, 아니면 role 사용
+              const email = credentials?.email;
+              const role = credentials?.role;
+
+              if (!email && !role) {
+                console.error('[Test Auth] Either email or role is required');
                 return null;
               }
 
               try {
-                const url = `${API_BASE_URL}/api/auth/test-login?role=${credentials.role}`;
+                // email이 있으면 email로, 없으면 role로 요청
+                const params = new URLSearchParams();
+                if (email) {
+                  params.set('email', email);
+                } else if (role) {
+                  params.set('role', role);
+                }
+
+                const url = `${API_BASE_URL}/api/auth/test-login?${params.toString()}`;
                 console.log('[Test Auth] Calling backend test-login:', url);
 
                 // 백엔드 테스트 로그인 엔드포인트 호출

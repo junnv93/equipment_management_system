@@ -1615,28 +1615,3 @@ export const EquipmentImportStatusValues = {
 // ============================================================================
 // DEPRECATED: Legacy rental import types (backward compatibility)
 // ============================================================================
-
-/**
- * @deprecated Use EquipmentImportStatus instead
- */
-export type RentalImportStatus = EquipmentImportStatus;
-
-/**
- * @deprecated Use EquipmentImportStatusEnum instead
- */
-export const RentalImportStatusEnum = EquipmentImportStatusEnum;
-
-/**
- * @deprecated Use EQUIPMENT_IMPORT_STATUS_VALUES instead
- */
-export const RENTAL_IMPORT_STATUS_VALUES = EQUIPMENT_IMPORT_STATUS_VALUES;
-
-/**
- * @deprecated Use EQUIPMENT_IMPORT_STATUS_LABELS instead
- */
-export const RENTAL_IMPORT_STATUS_LABELS = EQUIPMENT_IMPORT_STATUS_LABELS;
-
-/**
- * @deprecated Use EquipmentImportStatusValues instead
- */
-export const RentalImportStatusValues = EquipmentImportStatusValues;

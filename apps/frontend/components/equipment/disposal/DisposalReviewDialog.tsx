@@ -45,7 +45,7 @@ export function DisposalReviewDialog({
 
   const mutation = useMutation({
     mutationFn: (decision: 'approve' | 'reject') =>
-      reviewDisposal(equipmentId, { decision, opinion }),
+      reviewDisposal(equipmentId, { version: disposalRequest.version, decision, opinion }),
     onSuccess: async (_, decision) => {
       toast({
         title: decision === 'approve' ? '검토 완료' : '요청 반려',
@@ -58,12 +58,17 @@ export function DisposalReviewDialog({
       await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
       handleClose();
     },
-    onError: (error: Error) => {
+    onError: async (error: Error) => {
+      const errorMessage = error.message;
       toast({
         title: '처리 실패',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive',
       });
+      // ✅ 409 Conflict 시 자동 새로고침
+      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+        await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
+      }
     },
   });
 

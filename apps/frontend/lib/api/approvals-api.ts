@@ -599,9 +599,10 @@ class ApprovalsApi {
     switch (category) {
       // Direction-based (consolidated)
       case 'outgoing': {
-        // ✅ Phase 1: Fetch checkout to get version
-        const checkout = await checkoutApi.getCheckout(id);
-        await checkoutApi.approveCheckout(id, checkout.version, comment);
+        // ✅ Optimized: use version from originalData, fallback to fetch
+        const outgoingVersion =
+          this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
+        await checkoutApi.approveCheckout(id, outgoingVersion, comment);
         break;
       }
 
@@ -609,13 +610,13 @@ class ApprovalsApi {
         // Incoming can be: checkout return OR equipment import
         // Determine type from originalData
         if (this.isCheckout(originalData)) {
-          // ✅ Phase 1: Fetch checkout to get version
-          const checkout = await checkoutApi.getCheckout(id);
-          await checkoutApi.approveReturn(id, { version: checkout.version, approverId, comment });
+          const incomingVersion =
+            this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
+          await checkoutApi.approveReturn(id, { version: incomingVersion, approverId, comment });
         } else if (this.isEquipmentImport(originalData)) {
-          // ✅ Fetch equipment import to get version
-          const equipmentImport = await equipmentImportApi.getOne(id);
-          await equipmentImportApi.approve(id, equipmentImport.version, comment);
+          const importVersion =
+            this.extractVersion(originalData) ?? (await equipmentImportApi.getOne(id)).version;
+          await equipmentImportApi.approve(id, importVersion, comment);
         } else {
           throw new Error('Unknown incoming item type');
         }
@@ -626,10 +627,10 @@ class ApprovalsApi {
         await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(id));
         break;
       case 'calibration': {
-        // ✅ Fetch calibration to get version
-        const calibration = await calibrationApi.getCalibration(id);
+        const calVersion =
+          this.extractVersion(originalData) ?? (await calibrationApi.getCalibration(id)).version;
         await calibrationApi.approveCalibration(id, {
-          version: calibration.version,
+          version: calVersion,
           approverId,
           approverComment: comment || '',
         });
@@ -648,11 +649,12 @@ class ApprovalsApi {
         break;
       case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
-        // ✅ Fetch disposal request to get version
-        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
-        if (!disposalRequest) throw new Error('Disposal request not found');
+        const reviewVersion =
+          this.extractVersion(originalData) ??
+          (await getCurrentDisposalRequest(equipmentId))?.version;
+        if (reviewVersion === undefined) throw new Error('Disposal request not found');
         await reviewDisposal(equipmentId, {
-          version: disposalRequest.version,
+          version: reviewVersion,
           decision: 'approve',
           opinion: comment || '승인합니다',
         });
@@ -660,11 +662,12 @@ class ApprovalsApi {
       }
       case 'disposal_final': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
-        // ✅ Fetch disposal request to get version
-        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
-        if (!disposalRequest) throw new Error('Disposal request not found');
+        const finalVersion =
+          this.extractVersion(originalData) ??
+          (await getCurrentDisposalRequest(equipmentId))?.version;
+        if (finalVersion === undefined) throw new Error('Disposal request not found');
         await approveDisposal(equipmentId, {
-          version: disposalRequest.version,
+          version: finalVersion,
           decision: 'approve',
           comment: comment || '승인합니다',
         });
@@ -698,23 +701,21 @@ class ApprovalsApi {
     switch (category) {
       // Direction-based (consolidated)
       case 'outgoing': {
-        // ✅ Phase 1: Fetch checkout to get version
-        const checkout = await checkoutApi.getCheckout(id);
-        await checkoutApi.rejectCheckout(id, checkout.version, reason, approverId);
+        const outgoingVersion =
+          this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
+        await checkoutApi.rejectCheckout(id, outgoingVersion, reason, approverId);
         break;
       }
 
       case 'incoming':
-        // Incoming can be: checkout return OR equipment import
-        // Determine type from originalData
         if (this.isCheckout(originalData)) {
-          // ✅ Phase 1: Fetch checkout to get version
-          const checkout = await checkoutApi.getCheckout(id);
-          await checkoutApi.rejectCheckout(id, checkout.version, reason, approverId);
+          const incomingVersion =
+            this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
+          await checkoutApi.rejectCheckout(id, incomingVersion, reason, approverId);
         } else if (this.isEquipmentImport(originalData)) {
-          // ✅ Fetch equipment import to get version
-          const equipmentImport = await equipmentImportApi.getOne(id);
-          await equipmentImportApi.reject(id, equipmentImport.version, reason);
+          const importVersion =
+            this.extractVersion(originalData) ?? (await equipmentImportApi.getOne(id)).version;
+          await equipmentImportApi.reject(id, importVersion, reason);
         } else {
           throw new Error('Unknown incoming item type');
         }
@@ -727,28 +728,27 @@ class ApprovalsApi {
         });
         break;
       case 'calibration': {
-        // ✅ Fetch calibration to get version
-        const calibration = await calibrationApi.getCalibration(id);
+        const calVersion =
+          this.extractVersion(originalData) ?? (await calibrationApi.getCalibration(id)).version;
         await calibrationApi.rejectCalibration(id, {
-          version: calibration.version,
+          version: calVersion,
           approverId,
           rejectionReason: reason,
         });
         break;
       }
       case 'inspection':
-        // 중간점검은 반려 기능 없음
         throw new Error('중간점검은 반려할 수 없습니다.');
       case 'nonconformity':
-        // 부적합은 반려 기능이 없음 (조치 완료 상태에서만 종료 가능)
         throw new Error('부적합 재개는 반려할 수 없습니다. 부적합 관리 페이지에서 처리하세요.');
       case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
-        // ✅ Fetch disposal request to get version
-        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
-        if (!disposalRequest) throw new Error('Disposal request not found');
+        const reviewVersion =
+          this.extractVersion(originalData) ??
+          (await getCurrentDisposalRequest(equipmentId))?.version;
+        if (reviewVersion === undefined) throw new Error('Disposal request not found');
         await reviewDisposal(equipmentId, {
-          version: disposalRequest.version,
+          version: reviewVersion,
           decision: 'reject',
           opinion: reason || '반려합니다',
         });
@@ -756,11 +756,12 @@ class ApprovalsApi {
       }
       case 'disposal_final': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal approval');
-        // ✅ Fetch disposal request to get version
-        const disposalRequest = await getCurrentDisposalRequest(equipmentId);
-        if (!disposalRequest) throw new Error('Disposal request not found');
+        const finalVersion =
+          this.extractVersion(originalData) ??
+          (await getCurrentDisposalRequest(equipmentId))?.version;
+        if (finalVersion === undefined) throw new Error('Disposal request not found');
         await approveDisposal(equipmentId, {
-          version: disposalRequest.version,
+          version: finalVersion,
           decision: 'reject',
           comment: reason || '반려합니다',
         });
@@ -877,6 +878,17 @@ class ApprovalsApi {
   // ============================================================================
   // 헬퍼 메서드
   // ============================================================================
+
+  /**
+   * Extract version from originalData (avoids extra fetch when version is already available)
+   */
+  private extractVersion(data: unknown): number | undefined {
+    if (data && typeof data === 'object' && 'version' in data) {
+      const v = (data as Record<string, unknown>).version;
+      return typeof v === 'number' ? v : undefined;
+    }
+    return undefined;
+  }
 
   /**
    * Type guard: Check if data is a Checkout

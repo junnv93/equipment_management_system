@@ -36,7 +36,7 @@ export async function requestDisposal(
 // Review disposal (technical manager)
 export async function reviewDisposal(
   equipmentId: string,
-  data: { decision: 'approve' | 'reject'; opinion: string }
+  data: { version: number; decision: 'approve' | 'reject'; opinion: string }
 ): Promise<DisposalRequest> {
   const response = await apiClient.post(`/api/equipment/${equipmentId}/disposal/review`, data);
   return transformSingleResponse<DisposalRequest>(response);
@@ -45,7 +45,7 @@ export async function reviewDisposal(
 // Approve disposal (lab manager)
 export async function approveDisposal(
   equipmentId: string,
-  data: { decision: 'approve' | 'reject'; comment?: string }
+  data: { version: number; decision: 'approve' | 'reject'; comment?: string }
 ): Promise<DisposalRequest> {
   const response = await apiClient.post(`/api/equipment/${equipmentId}/disposal/approve`, data);
   return transformSingleResponse<DisposalRequest>(response);

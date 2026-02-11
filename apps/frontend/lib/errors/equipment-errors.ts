@@ -27,6 +27,9 @@ export enum EquipmentErrorCode {
   DUPLICATE_MANAGEMENT_NUMBER = 'DUPLICATE_MANAGEMENT_NUMBER',
   DUPLICATE_SERIAL_NUMBER = 'DUPLICATE_SERIAL_NUMBER',
 
+  // 동시성 에러 (CAS / Optimistic Locking)
+  VERSION_CONFLICT = 'VERSION_CONFLICT',
+
   // 권한 에러
   UNAUTHORIZED = 'UNAUTHORIZED',
   PERMISSION_DENIED = 'PERMISSION_DENIED',
@@ -89,7 +92,10 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
   [EquipmentErrorCode.INVALID_FORMAT]: {
     title: '형식 오류',
     message: '입력 형식이 올바르지 않습니다.',
-    solutions: ['관리번호: XXX-XYYYY 형식으로 입력하세요', '예: SUW-E0001 (수원), UIW-E0001 (의왕)'],
+    solutions: [
+      '관리번호: XXX-XYYYY 형식으로 입력하세요',
+      '예: SUW-E0001 (수원), UIW-E0001 (의왕)',
+    ],
     severity: 'error',
   },
   [EquipmentErrorCode.INVALID_DATE]: {
@@ -109,10 +115,7 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
   [EquipmentErrorCode.DUPLICATE_MANAGEMENT_NUMBER]: {
     title: '관리번호 중복',
     message: '이미 등록된 관리번호입니다.',
-    solutions: [
-      '다른 관리번호를 사용하세요',
-      '기존 장비를 확인하려면 장비 목록에서 검색하세요',
-    ],
+    solutions: ['다른 관리번호를 사용하세요', '기존 장비를 확인하려면 장비 목록에서 검색하세요'],
     actionLabel: '장비 목록에서 검색',
     actionHref: '/equipment',
     severity: 'error',
@@ -120,13 +123,16 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
   [EquipmentErrorCode.DUPLICATE_SERIAL_NUMBER]: {
     title: '일련번호 중복',
     message: '이미 등록된 일련번호입니다.',
-    solutions: [
-      '다른 일련번호를 사용하세요',
-      '기존 장비 확인을 권장합니다',
-    ],
+    solutions: ['다른 일련번호를 사용하세요', '기존 장비 확인을 권장합니다'],
     actionLabel: '장비 목록에서 검색',
     actionHref: '/equipment',
     severity: 'error',
+  },
+  [EquipmentErrorCode.VERSION_CONFLICT]: {
+    title: '데이터 충돌',
+    message: '다른 사용자가 이 데이터를 수정했습니다. 최신 데이터를 불러옵니다.',
+    solutions: ['페이지가 자동으로 새로고침됩니다', '새로고침 후 다시 시도해주세요'],
+    severity: 'warning',
   },
 
   // 권한 에러
@@ -176,19 +182,13 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
   [EquipmentErrorCode.SERVER_ERROR]: {
     title: '서버 오류',
     message: '서버에서 오류가 발생했습니다.',
-    solutions: [
-      '잠시 후 다시 시도해주세요',
-      '문제가 지속되면 시스템 관리자에게 문의하세요',
-    ],
+    solutions: ['잠시 후 다시 시도해주세요', '문제가 지속되면 시스템 관리자에게 문의하세요'],
     severity: 'error',
   },
   [EquipmentErrorCode.NETWORK_ERROR]: {
     title: '네트워크 오류',
     message: '서버와 연결할 수 없습니다.',
-    solutions: [
-      '인터넷 연결 상태를 확인하세요',
-      '잠시 후 다시 시도해주세요',
-    ],
+    solutions: ['인터넷 연결 상태를 확인하세요', '잠시 후 다시 시도해주세요'],
     severity: 'error',
   },
   [EquipmentErrorCode.TIMEOUT_ERROR]: {
@@ -202,19 +202,13 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
   [EquipmentErrorCode.FILE_TOO_LARGE]: {
     title: '파일 크기 초과',
     message: '업로드 파일 크기가 너무 큽니다.',
-    solutions: [
-      '파일 크기를 10MB 이하로 줄여주세요',
-      'PDF의 경우 압축하거나 분할해주세요',
-    ],
+    solutions: ['파일 크기를 10MB 이하로 줄여주세요', 'PDF의 경우 압축하거나 분할해주세요'],
     severity: 'error',
   },
   [EquipmentErrorCode.INVALID_FILE_TYPE]: {
     title: '지원하지 않는 파일 형식',
     message: '업로드할 수 없는 파일 형식입니다.',
-    solutions: [
-      '허용된 파일 형식: PDF, JPG, PNG, GIF',
-      '다른 형식의 파일은 PDF로 변환해주세요',
-    ],
+    solutions: ['허용된 파일 형식: PDF, JPG, PNG, GIF', '다른 형식의 파일은 PDF로 변환해주세요'],
     severity: 'error',
   },
   [EquipmentErrorCode.FILE_UPLOAD_FAILED]: {
@@ -265,10 +259,7 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
   [EquipmentErrorCode.UNKNOWN_ERROR]: {
     title: '알 수 없는 오류',
     message: '예기치 않은 오류가 발생했습니다.',
-    solutions: [
-      '잠시 후 다시 시도해주세요',
-      '문제가 지속되면 시스템 관리자에게 문의하세요',
-    ],
+    solutions: ['잠시 후 다시 시도해주세요', '문제가 지속되면 시스템 관리자에게 문의하세요'],
     severity: 'error',
   },
 };
@@ -359,6 +350,7 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     DUPLICATE_SERIAL_NUMBER: EquipmentErrorCode.DUPLICATE_SERIAL_NUMBER,
     DUPLICATE_ERROR: EquipmentErrorCode.DUPLICATE_ERROR,
     CONFLICT: EquipmentErrorCode.DUPLICATE_ERROR,
+    VERSION_CONFLICT: EquipmentErrorCode.VERSION_CONFLICT,
 
     // 검증 에러
     VALIDATION_ERROR: EquipmentErrorCode.VALIDATION_ERROR,
@@ -413,6 +405,25 @@ export function isRetryableError(error: unknown): boolean {
       EquipmentErrorCode.SERVER_ERROR,
     ];
     return retryableCodes.includes(error.code);
+  }
+  return false;
+}
+
+/**
+ * 에러가 409 충돌(CAS / 중복) 관련인지 확인
+ */
+export function isConflictError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return (
+      error.statusCode === 409 ||
+      error.code === EquipmentErrorCode.VERSION_CONFLICT ||
+      error.code === EquipmentErrorCode.DUPLICATE_ERROR
+    );
+  }
+  if (typeof error === 'object' && error !== null) {
+    const errorObj = error as Record<string, unknown>;
+    if (errorObj.statusCode === 409 || errorObj.status === 409) return true;
+    if (errorObj.code === 'VERSION_CONFLICT' || errorObj.code === 'CONFLICT') return true;
   }
   return false;
 }

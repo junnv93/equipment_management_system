@@ -13,6 +13,7 @@ export interface JwtUser {
   email: string;
   name?: string;
   roles: string[];
+  permissions?: string[]; // ✅ Phase 2: Server-Driven UI를 위한 권한 목록
   department?: string;
   site?: string;
   teamId?: string;

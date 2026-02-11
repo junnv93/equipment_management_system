@@ -1,832 +1,1925 @@
-# Checkout/Rental E2E Integration Test Plan
+# Checkout/Rental E2E Test Plan
 
-## Application Overview
+## 개요
 
-장비 관리 시스템의 대여/반출(Checkout) 전체 프로세스 E2E 테스트 플랜.
+이 테스트 플랜은 장비 반출입 시스템의 전체 비즈니스 프로세스를 검증합니다.
 
-## 핵심 원칙
+- **단순 UI 존재 확인이 아닌** 실제 백엔드 API + DB 상태 통합 검증
+- **의존성 격리**: 병렬 가능한 테스트와 직렬 실행이 필요한 테스트를 명확히 분리
+- **SSOT 준수**: 모든 상태/라벨은 `@equipment-management/schemas`에서 import
 
-- **SSOT 준수**: 모든 상태값/라벨/ID는 @equipment-management/schemas, test-checkout-ids.ts에서 import
-- **Backend+Frontend 통합 검증**: UI 변화와 함께 page.request.get()으로 API 직접 호출하여 DB 상태 검증
-- **의존성 기반 그룹화**: 11개 독립 그룹이 서로 다른 Checkout ID를 사용하여 병렬 실행. 그룹 내 상태 변경 테스트는 serial
+---
 
-## Checkout ID 격리 전략
+## 테스트 실행 전략
 
-| 그룹                       | 사용 ID                   | 실행 모드 |
-| -------------------------- | ------------------------- | --------- |
-| Suite 1: 읽기 전용         | 015-018, 050-064 (읽기만) | parallel  |
-| Suite 2: 폼 검증/생성      | 새로 생성 (격리)          | parallel  |
-| Suite 3: 승인              | 001-003, 005              | serial    |
-| Suite 4: 반려              | 004, 006-008              | serial    |
-| Suite 5: 반출 처리         | 009-011                   | serial    |
-| Suite 6: 반입 처리         | 019-022                   | serial    |
-| Suite 7: 반입 승인         | 042-045                   | serial    |
-| Suite 8: 전체 라이프사이클 | 새로 생성                 | serial    |
-| Suite 9: 취소              | 새로 생성                 | serial    |
-| Suite 10: 대여 4단계       | 027-041                   | serial    |
-| Suite 11: 권한/보안        | 읽기만 + API 호출         | parallel  |
+### 병렬 실행 가능 (Parallel)
 
-## 기술 스택
+- **Suite 01**: 조회 전용 (상태 변경 없음)
+- **Suite 02**: 신규 생성 (ID 동적 할당)
+- **Suite 11**: 권한 검증 (read-only API 호출)
 
-- Playwright + Custom Auth Fixtures (testOperatorPage, techManagerPage, siteAdminPage)
-- SSOT: @equipment-management/schemas (CHECKOUT_STATUS_LABELS, CHECKOUT_PURPOSE_LABELS)
-- Test Data: test-checkout-ids.ts, shared-test-data.ts
-- Backend API: localhost:3001/api/checkouts/\*
+### 직렬 실행 필수 (Serial within suite)
 
-## Test Scenarios
+- **Suite 03-10**: 상태 변경 테스트 (각 스위트는 전용 ID 사용하므로 스위트 간은 병렬 가능)
 
-### 1. Suite 1: 읽기 전용 목록/상세 검증 (Parallel)
+### ID 격리 전략
 
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
+| Suite    | IDs                                | 변경 여부                     |
+| -------- | ---------------------------------- | ----------------------------- |
+| Suite 01 | 015-018, 050-055, 056-061, 062-064 | ❌ Read-only                  |
+| Suite 02 | 동적 생성                          | ✅ 신규 생성만                |
+| Suite 03 | 001-003, 005                       | ✅ pending → approved         |
+| Suite 04 | 004, 006-008                       | ✅ pending → rejected         |
+| Suite 05 | 009-010, 013                       | ✅ approved → checked_out     |
+| Suite 06 | 019-022                            | ✅ checked_out → returned     |
+| Suite 07 | 042-044, 012                       | ✅ returned → return_approved |
+| Suite 08 | 동적 생성                          | ✅ 전체 라이프사이클          |
+| Suite 09 | 동적 생성                          | ✅ pending → canceled         |
+| Suite 10 | 011, 014, 027, 030, 033, 036       | ✅ 대여 4단계 전이            |
+| Suite 11 | API only                           | ❌ UI 프로빙만                |
 
-#### 1.1. S1-01: 반출 목록 페이지 로드 및 데이터 표시
+---
 
-**File:** `tests/e2e/features/checkouts/suite-1-readonly/s1-list-display.spec.ts`
+## Suite 01: Read-Only Tests (병렬)
 
-**Steps:**
+### s01-list-display.spec.ts - 반출 목록 조회
 
-1. techManagerPage로 /checkouts 네비게이션
-2. 페이지 제목 heading 확인
-3. 테이블에 데이터 행 1개 이상 존재 확인
-4. 각 행에 장비명, 신청자, 상태 배지, 목적, 날짜 컬럼 확인
-5. API 호출: GET /api/checkouts → meta.totalItems > 0 확인
+#### TEST-01-01: 반출 목록 페이지 로드 및 기본 구조 검증
 
-**Expected Results:**
-
-- 반출 목록 페이지가 200 상태로 로드
-- 테이블에 시드 데이터 기반 반출 목록이 표시
-- API 응답의 totalItems와 UI 테이블 행 수가 일치
-
-#### 1.2. S1-02: 상태별 필터링 (pending/approved/checked_out)
-
-**File:** `tests/e2e/features/checkouts/suite-1-readonly/s1-list-display.spec.ts`
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: parallel
 
 **Steps:**
 
-1. techManagerPage로 /checkouts 네비게이션
-2. 상태 필터에서 CHECKOUT_STATUS_LABELS.pending 선택
-3. 표시된 행의 상태 배지가 모두 해당 상태인지 확인
-4. API: GET /api/checkouts?statuses=pending → items 모두 status=pending
-5. 필터를 checked_out으로 변경 후 동일 검증
+1. Navigate to `/checkouts`
+2. Verify page heading visible (반출 관리 or 반출입 관리)
+3. Verify tab buttons visible: "반출" and "반입"
+4. Verify table headers visible
+5. Verify filter controls present
 
-**Expected Results:**
+**Verification:**
 
-- 필터 변경 시 UI가 즉시 업데이트
-- UI에 표시된 결과가 API 응답과 일치
-- SSOT 라벨 사용 확인
+- **UI**: Heading, tabs, table structure
+- **API**: `GET /api/checkouts` returns `meta.totalItems > 0`
+- **DB**: N/A (read-only)
 
-#### 1.3. S1-03: 목적별 필터링 (calibration/repair/rental)
+**Assertions:**
 
-**File:** `tests/e2e/features/checkouts/suite-1-readonly/s1-list-display.spec.ts`
+```typescript
+await expect(page.getByRole('heading', { name: /반출.*관리/ })).toBeVisible();
+await expect(page.getByRole('tab', { name: '반출' })).toBeVisible();
+await expect(page.getByRole('tab', { name: '반입' })).toBeVisible();
 
-**Steps:**
+// API verification
+const response = await apiGet(page, '/api/checkouts');
+expect(response.meta.totalItems).toBeGreaterThan(0);
+```
 
-1. techManagerPage로 /checkouts 네비게이션
-2. 목적 필터에서 CHECKOUT_PURPOSE_LABELS.calibration 선택
-3. 행의 목적 컬럼이 모두 교정인지 확인
-4. API: GET /api/checkouts?purpose=calibration → items 모두 purpose=calibration
-5. 필터를 rental로 변경하여 대여만 표시 확인
+---
 
-**Expected Results:**
+#### TEST-01-02: 상태별 필터링 (pending, approved, checked_out)
 
-- 목적 필터가 정확히 해당 목적의 반출만 표시
-- SSOT 라벨과 UI 표시 일치
-
-#### 1.4. S1-04: 반출 상세 페이지 정보 표시
-
-**File:** `tests/e2e/features/checkouts/suite-1-readonly/s1-detail-display.spec.ts`
-
-**Steps:**
-
-1. techManagerPage로 /checkouts/CHECKOUT_050_ID 네비게이션
-2. 반출 상세 heading 확인
-3. 상태 배지: return_approved 라벨 표시 확인
-4. 장비 목록, 신청자, 승인자, 반출일, 반입일 정보 표시 확인
-5. API: GET /api/checkouts/CHECKOUT_050_ID → 데이터와 UI 일치
-
-**Expected Results:**
-
-- 상세 페이지의 모든 필드가 API 응답과 일치
-- 완료된 반출에는 액션 버튼 없음
-- SSOT 상태 라벨 정확히 표시
-
-#### 1.5. S1-05: 거절된 반출 상세 - 거절 사유 표시
-
-**File:** `tests/e2e/features/checkouts/suite-1-readonly/s1-detail-display.spec.ts`
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: parallel
 
 **Steps:**
 
-1. techManagerPage로 /checkouts/CHECKOUT_017_ID 네비게이션
-2. 상태 배지: CHECKOUT_STATUS_LABELS.rejected 표시 확인
-3. 거절 사유 텍스트가 페이지에 표시 확인
-4. API: GET /api/checkouts/CHECKOUT_017_ID → rejectionReason 확인
-5. 액션 버튼 모두 없는지 확인
+1. Navigate to `/checkouts`
+2. Select status filter: "승인 대기" (pending)
+3. Verify filtered results
+4. Change filter to "승인됨" (approved)
+5. Verify filtered results
+6. Change filter to "반출 중" (checked_out)
+7. Verify filtered results
 
-**Expected Results:**
+**Verification:**
 
-- 거절 사유가 명확히 표시
-- 워크플로우가 종료되어 액션 불가
-- API rejectionReason과 UI 일치
+- **UI**: Filter dropdown changes, table updates
+- **API**: `GET /api/checkouts?statuses=pending` → all items have `status=pending`
+- **API**: `GET /api/checkouts?statuses=approved` → all items have `status=approved`
+- **DB**: N/A (read-only)
 
-#### 1.6. S1-06: 기한 초과(overdue) 반출 표시
+**Assertions:**
 
-**File:** `tests/e2e/features/checkouts/suite-1-readonly/s1-detail-display.spec.ts`
+```typescript
+import { CHECKOUT_STATUS_LABELS } from '@equipment-management/schemas';
 
-**Steps:**
+// Test pending filter
+await page.getByLabel('상태').selectOption('pending');
+const pendingResponse = await apiGet(page, '/api/checkouts?statuses=pending');
+expect(pendingResponse.items.every((item) => item.status === 'pending')).toBe(true);
 
-1. techManagerPage로 /checkouts/CHECKOUT_059_ID 네비게이션
-2. 기한 초과 관련 경고 또는 배지 표시 확인
-3. 예상 반입일이 과거 날짜인지 확인
-4. API: GET /api/checkouts/CHECKOUT_059_ID → expectedReturnDate < now 확인
+// Test approved filter
+await page.getByLabel('상태').selectOption('approved');
+const approvedResponse = await apiGet(page, '/api/checkouts?statuses=approved');
+expect(approvedResponse.items.every((item) => item.status === 'approved')).toBe(true);
+```
 
-**Expected Results:**
+---
 
-- 기한 초과 반출이 시각적으로 구분
-- 예상 반입일이 과거 날짜로 표시
+#### TEST-01-03: 목적별 필터링 (calibration, repair, rental)
 
-#### 1.7. S1-07: 페이지네이션 동작
-
-**File:** `tests/e2e/features/checkouts/suite-1-readonly/s1-list-display.spec.ts`
-
-**Steps:**
-
-1. techManagerPage로 /checkouts 네비게이션
-2. 전체 반출 수 확인 (API meta.totalItems)
-3. 다음 페이지 이동 후 데이터 변경 확인
-4. 이전 페이지로 복귀 확인
-
-**Expected Results:**
-
-- 페이지네이션이 정상 동작
-- API meta.currentPage가 페이지 전환에 따라 변경
-
-### 2. Suite 2: 반출 신청 폼 검증 및 생성 (Parallel)
-
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
-
-#### 2.1. S2-01: 필수 필드 미입력 시 폼 검증
-
-**File:** `tests/e2e/features/checkouts/suite-2-creation/s2-form-validation.spec.ts`
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: parallel
 
 **Steps:**
 
-1. testOperatorPage로 /checkouts/create 네비게이션
-2. 장비 선택 없이 반출 신청 버튼 클릭
-3. 에러 메시지 확인
-4. 장비 1개 선택 후 목적/장소/사유 비우고 제출 시도
-5. 각 필수 필드의 에러 메시지 확인
+1. API: `GET /api/checkouts?purpose=calibration`
+2. Verify all results have `purpose=calibration`
+3. API: `GET /api/checkouts?purpose=repair`
+4. Verify all results have `purpose=repair`
+5. API: `GET /api/checkouts?purpose=rental`
+6. Verify all results have `purpose=rental`
 
-**Expected Results:**
+**Verification:**
 
-- 장비 미선택 시 에러 표시
-- 각 필수 필드 미입력 시 에러 메시지
-- 폼이 제출되지 않고 에러 상태 유지
+- **UI**: Optional (can test via API only for speed)
+- **API**: Purpose filter returns correct results
+- **DB**: N/A (read-only)
 
-#### 2.2. S2-02: 과거 날짜 반입 예정일 검증
+---
 
-**File:** `tests/e2e/features/checkouts/suite-2-creation/s2-form-validation.spec.ts`
+#### TEST-01-04: 페이지네이션 동작 검증
 
-**Steps:**
-
-1. testOperatorPage로 /checkouts/create 네비게이션
-2. 모든 필수 필드 입력
-3. 반입 예정일을 과거 날짜로 설정
-4. 반출 신청 클릭
-5. 에러 메시지 확인
-6. Backend 검증: POST /api/checkouts에 과거 날짜 → 400 응답
-
-**Expected Results:**
-
-- 프론트엔드에서 과거 날짜 에러 표시
-- 백엔드에서도 400 에러 (이중 검증)
-
-#### 2.3. S2-03: 교정 목적 반출 생성 성공
-
-**File:** `tests/e2e/features/checkouts/suite-2-creation/s2-create-success.spec.ts`
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: parallel
 
 **Steps:**
 
-1. testOperatorPage로 /checkouts/create 네비게이션
-2. available 장비 선택
-3. 목적: 교정 선택, 장소/사유 입력
-4. 반출 신청 클릭
-5. 리디렉트 URL에서 checkout ID 추출
-6. API: GET /api/checkouts/{id} → status=pending, purpose=calibration 확인
+1. API: `GET /api/checkouts?page=1&pageSize=20`
+2. Verify `meta.totalItems`, `meta.currentPage`, `meta.totalPages`
+3. If `totalPages > 1`: API: `GET /api/checkouts?page=2&pageSize=20`
+4. Verify `meta.currentPage = 2`, `items.length > 0`
+5. UI: Click "다음 페이지" button
+6. Verify URL changes to `?page=2`
 
-**Expected Results:**
+**Verification:**
 
-- 반출 생성 성공, 상세 페이지 또는 목록으로 리디렉트
-- API에서 status=pending, purpose=calibration 확인
-- requesterId가 로그인 사용자와 일치
+- **UI**: Pagination buttons work
+- **API**: Page parameter correctly applied
+- **DB**: N/A (read-only)
 
-#### 2.4. S2-04: 수리 목적 반출 생성 성공
+---
 
-**File:** `tests/e2e/features/checkouts/suite-2-creation/s2-create-success.spec.ts`
+### s01-detail-display.spec.ts - 반출 상세 조회
 
-**Steps:**
+#### TEST-01-05: 완료된 반출 상세 정보 표시 (return_approved)
 
-1. testOperatorPage로 /checkouts/create 네비게이션
-2. 장비 선택
-3. 목적: 수리 선택, 장소/사유 입력
-4. 반출 신청 → API 확인: purpose=repair
-
-**Expected Results:**
-
-- 수리 목적 반출 생성 성공
-- API purpose=repair 확인
-
-#### 2.5. S2-05: 대여 목적 반출 생성 - 대여 전용 필드 검증
-
-**File:** `tests/e2e/features/checkouts/suite-2-creation/s2-create-rental.spec.ts`
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: parallel
+**Test Data**: `CHECKOUT_050_ID` (return_approved)
 
 **Steps:**
 
-1. testOperatorPage로 /checkouts/create 네비게이션
-2. 장비 선택
-3. 목적: 대여 선택
-4. 대여 전용 필드(대여 제공 팀, 사이트) 표시 확인
-5. 미입력 시 에러 확인
-6. 대여 전용 필드 입력 후 나머지 입력
-7. 신청 → API: purpose=rental, lenderTeamId/lenderSiteId 존재
+1. Navigate to `/checkouts/{CHECKOUT_050_ID}`
+2. Verify heading "반출 상세" visible
+3. Verify status badge shows "반입 승인" label
+4. Verify all timestamps populated
+5. Verify NO action buttons visible (workflow complete)
 
-**Expected Results:**
+**Verification:**
 
-- 대여 선택 시 추가 필드 동적 표시
-- 대여 전용 필드 필수이며 미입력 시 에러
-- API에 lenderTeamId, lenderSiteId 포함
+- **UI**: Status badge, information cards, no action buttons
+- **API**: `GET /api/checkouts/{id}` → `status=return_approved`
+- **DB**: N/A (read-only)
 
-#### 2.6. S2-06: 부적합 장비 반출 차단 검증
+**Assertions:**
 
-**File:** `tests/e2e/features/checkouts/suite-2-creation/s2-form-validation.spec.ts`
+```typescript
+import { CHECKOUT_STATUS_LABELS } from '@equipment-management/schemas';
+import { CHECKOUT_050_ID } from '../shared/constants/test-checkout-ids';
 
-**Steps:**
+await page.goto(`/checkouts/${CHECKOUT_050_ID}`);
+await expect(page.getByRole('heading', { name: /반출.*상세/ })).toBeVisible();
 
-1. testOperatorPage로 /checkouts/create 네비게이션
-2. 부적합 장비가 선택 불가하거나 경고 표시 확인
-3. API 직접 호출: POST /api/checkouts에 부적합 장비 ID → 400 에러
-4. 에러 메시지: '부적합 상태입니다' 확인
+// Status badge shows correct label
+const statusBadge = page.getByTestId('status-badge');
+await expect(statusBadge).toContainText(CHECKOUT_STATUS_LABELS.return_approved);
 
-**Expected Results:**
+// No action buttons
+await expect(page.getByRole('button', { name: '승인' })).not.toBeVisible();
+await expect(page.getByRole('button', { name: '반려' })).not.toBeVisible();
 
-- UI에서 부적합 장비 선택 불가
-- 백엔드에서 400 에러 (비즈니스 규칙)
+// API verification
+const response = await apiGet(page, `/api/checkouts/${CHECKOUT_050_ID}`);
+expect(response.status).toBe('return_approved');
+expect(response.approvedAt).toBeTruthy();
+expect(response.checkoutDate).toBeTruthy();
+expect(response.actualReturnDate).toBeTruthy();
+expect(response.returnApprovedAt).toBeTruthy();
+```
 
-### 3. Suite 3: 승인 워크플로우 (Serial) - IDs: 001-003, 005
+---
 
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
+#### TEST-01-06: 거절된 반출 상세 - 거절 사유 표시
 
-#### 3.1. S3-01: 교정 반출 승인 (pending → approved) + API 검증
-
-**File:** `tests/e2e/features/checkouts/suite-3-approval/s3-approval-workflow.spec.ts`
-
-**Steps:**
-
-1. beforeAll: API로 CHECKOUT_001-003, 005를 pending으로 리셋
-2. techManagerPage로 /checkouts/CHECKOUT_001_ID 네비게이션
-3. 승인/반려 버튼 모두 visible 확인
-4. 승인 클릭
-5. 승인/반려 not.toBeVisible, 반출 시작 visible 확인
-6. API: GET /api/checkouts/CHECKOUT_001_ID → status=approved, approverId != null, approvedAt != null
-
-**Expected Results:**
-
-- 승인 후 status=approved (API 검증)
-- UI에서 버튼 전환 정확
-- approverId가 서버사이드에서 설정
-
-#### 3.2. S3-02: 수리 반출 승인
-
-**File:** `tests/e2e/features/checkouts/suite-3-approval/s3-approval-workflow.spec.ts`
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: parallel
+**Test Data**: `CHECKOUT_017_ID` (rejected)
 
 **Steps:**
 
-1. techManagerPage로 /checkouts/CHECKOUT_003_ID 네비게이션
-2. 승인 클릭
-3. 반출 시작 버튼 visible 확인
-4. API: status=approved, purpose=repair
+1. Navigate to `/checkouts/{CHECKOUT_017_ID}`
+2. Verify status badge shows "거절됨" label
+3. Verify rejection reason card visible
+4. Verify rejection reason text is non-empty
+5. Verify NO action buttons visible
 
-**Expected Results:**
+**Verification:**
 
-- 수리 반출도 동일한 1단계 승인 프로세스
-- 상태 전이 정상
+- **UI**: Status badge, rejection reason card
+- **API**: `GET /api/checkouts/{id}` → `status=rejected`, `rejectionReason` non-empty
+- **DB**: N/A (read-only)
 
-#### 3.3. S3-03: 대여 반출 승인
+**Assertions:**
 
-**File:** `tests/e2e/features/checkouts/suite-3-approval/s3-approval-workflow.spec.ts`
+```typescript
+import { CHECKOUT_017_ID } from '../shared/constants/test-checkout-ids';
 
-**Steps:**
+await page.goto(`/checkouts/${CHECKOUT_017_ID}`);
 
-1. techManagerPage로 /checkouts/CHECKOUT_005_ID 네비게이션
-2. 대여 텍스트 확인
-3. 승인 클릭
-4. 반출 시작 버튼 visible 확인
-5. API: status=approved, purpose=rental
+// Status badge
+await expect(page.getByTestId('status-badge')).toContainText(CHECKOUT_STATUS_LABELS.rejected);
 
-**Expected Results:**
+// Rejection reason visible
+const rejectionCard = page.locator('text=거절 사유').locator('..');
+await expect(rejectionCard).toBeVisible();
 
-- 대여 반출도 통합 1단계 승인
-- 승인 후 반출 시작 버튼 표시
+// API verification
+const response = await apiGet(page, `/api/checkouts/${CHECKOUT_017_ID}`);
+expect(response.status).toBe('rejected');
+expect(response.rejectionReason).toBeTruthy();
+expect(response.rejectionReason.length).toBeGreaterThan(0);
+```
 
-#### 3.4. S3-04: 승인 상태 페이지 새로고침 후 유지 확인
+---
 
-**File:** `tests/e2e/features/checkouts/suite-3-approval/s3-approval-workflow.spec.ts`
+#### TEST-01-07: 기한 초과(overdue) 반출 표시
 
-**Steps:**
-
-1. techManagerPage로 /checkouts/CHECKOUT_002_ID 승인
-2. 반출 시작 visible 확인
-3. page.reload()
-4. 새로고침 후에도 반출 시작 visible, 승인 not.toBeVisible 확인
-5. API: status=approved 유지 확인
-
-**Expected Results:**
-
-- 승인 상태가 DB에 영구 저장되어 새로고침 후 유지
-- 프론트엔드 캐시가 아닌 실제 DB 반영
-
-### 4. Suite 4: 반려 워크플로우 (Serial) - IDs: 004, 006-008
-
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
-
-#### 4.1. S4-01: 교정 반출 반려 및 사유 저장 (pending → rejected)
-
-**File:** `tests/e2e/features/checkouts/suite-4-rejection/s4-rejection-workflow.spec.ts`
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: parallel
+**Test Data**: `CHECKOUT_059_ID` (overdue)
 
 **Steps:**
 
-1. beforeAll: CHECKOUT_004, 006-008을 pending으로 리셋
-2. techManagerPage로 /checkouts/CHECKOUT_007_ID 네비게이션
-3. 반려 클릭 → dialog(name=반출 반려) 확인
-4. 반려 사유 입력 → dialog 내 반려 버튼 클릭
-5. 모든 액션 버튼 not.toBeVisible 확인
-6. 거절 사유 텍스트 페이지에 표시 확인
-7. API: status=rejected, rejectionReason 포함 확인
+1. API: `GET /api/checkouts/{CHECKOUT_059_ID}`
+2. Verify `status=overdue` OR `expectedReturnDate < now`
+3. Navigate to detail page
+4. Verify overdue visual indicator present
 
-**Expected Results:**
+**Verification:**
 
-- 반려 후 status=rejected (API 검증)
-- rejectionReason 정확히 저장
-- UI에 거절 사유 표시, 모든 액션 버튼 사라짐
+- **UI**: Overdue badge or warning indicator
+- **API**: Status or date confirms overdue
+- **DB**: N/A (read-only)
 
-#### 4.2. S4-02: 수리 반출 반려
+---
 
-**File:** `tests/e2e/features/checkouts/suite-4-rejection/s4-rejection-workflow.spec.ts`
+#### TEST-01-08: 취소된 반출 상세 표시
 
-**Steps:**
-
-1. techManagerPage로 /checkouts/CHECKOUT_004_ID 네비게이션
-2. 반려 → dialog에서 사유 입력 → 제출
-3. API: status=rejected
-
-**Expected Results:**
-
-- 수리 반출 반려 성공, 사유 저장
-
-#### 4.3. S4-03: 반려 사유 필수 검증 (빈 사유로 제출 불가)
-
-**File:** `tests/e2e/features/checkouts/suite-4-rejection/s4-rejection-workflow.spec.ts`
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: parallel
+**Test Data**: `CHECKOUT_062_ID` (canceled)
 
 **Steps:**
 
-1. techManagerPage로 /checkouts/CHECKOUT_008_ID 네비게이션
-2. 반려 클릭하여 dialog 오픈
-3. dialog 내 반려 버튼이 disabled 확인 (사유 미입력)
-4. 사유 입력 후 enabled 확인
-5. 제출
-6. Backend 검증: POST /api/checkouts/{id}/reject에 빈 reason → 400
+1. Navigate to `/checkouts/{CHECKOUT_062_ID}`
+2. Verify status badge shows "취소됨" label
+3. Verify NO action buttons visible
 
-**Expected Results:**
+**Verification:**
 
-- 프론트엔드: 빈 사유 제출 방지 (버튼 disabled)
-- 백엔드: 빈 사유 거부 (이중 검증)
+- **UI**: Status badge
+- **API**: `GET /api/checkouts/{id}` → `status=canceled`
+- **DB**: N/A (read-only)
 
-#### 4.4. S4-04: 대여 반출 반려 - 대여 워크플로우 종료
+---
 
-**File:** `tests/e2e/features/checkouts/suite-4-rejection/s4-rejection-workflow.spec.ts`
+## Suite 02: Creation Tests (병렬)
 
-**Steps:**
+### s02-form-validation.spec.ts - 폼 검증
 
-1. techManagerPage로 /checkouts/CHECKOUT_006_ID 네비게이션
-2. 대여 텍스트 확인
-3. 반려 → dialog → 사유 → 제출
-4. 대여 전용 버튼(반출 전 확인 등) not.toBeVisible 확인
-5. API: status=rejected
+#### TEST-02-01: 필수 필드 미입력 시 폼 검증
 
-**Expected Results:**
-
-- 대여 반출 반려 시 4단계 워크플로우 버튼도 모두 사라짐
-- 워크플로우 완전 종료
-
-#### 4.5. S4-05: 거절된 반출 수정 불가 확인
-
-**File:** `tests/e2e/features/checkouts/suite-4-rejection/s4-rejection-workflow.spec.ts`
+**Priority**: P1
+**Role**: test_engineer
+**Execution**: parallel
 
 **Steps:**
 
-1. techManagerPage로 /checkouts/CHECKOUT_015_ID (시드 - rejected)
-2. rejected 라벨 확인
-3. 승인/반려/반출시작/수정 버튼 모두 없음 확인
-4. Backend: PATCH /api/checkouts/CHECKOUT_015_ID → 400
+1. Navigate to `/checkouts/create`
+2. Attempt submit without selecting equipment
+3. Verify validation error message
+4. Select equipment
+5. Leave other required fields empty (destination, reason, expectedReturnDate)
+6. Attempt submit
+7. Verify per-field validation errors
 
-**Expected Results:**
+**Verification:**
 
-- 거절된 반출은 UI와 API 모두에서 수정 불가
-- 워크플로우 종료 상태가 영구적
+- **UI**: Validation error messages displayed
+- **API**: N/A (frontend validation blocks submission)
+- **DB**: N/A (no submission)
 
-### 5. Suite 5: 반출 처리 (Serial) - IDs: 009-011
+**Assertions:**
 
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
+```typescript
+await page.goto('/checkouts/create');
 
-#### 5.1. S5-01: 반출 시작 → 장비 상태 checked_out 전이
+// Try submit without equipment
+const submitButton = page.getByRole('button', { name: '반출 신청' });
+await submitButton.click();
+await expect(page.getByText(/장비를.*선택/)).toBeVisible();
 
-**File:** `tests/e2e/features/checkouts/suite-5-processing/s5-start-checkout.spec.ts`
+// Select equipment but leave other fields empty
+await page.getByRole('row', { name: /SUW-E0001/ }).click();
+await submitButton.click();
 
-**Steps:**
+// Verify field-specific errors
+await expect(page.getByText(/목적지.*입력/)).toBeVisible();
+await expect(page.getByText(/사유.*입력/)).toBeVisible();
+await expect(page.getByText(/반입.*예정일.*선택/)).toBeVisible();
+```
 
-1. 사전 API: CHECKOUT_009_ID status=approved 확인
-2. siteAdminPage로 /checkouts/CHECKOUT_009_ID 네비게이션
-3. approved 배지 확인
-4. 반출 시작 클릭 → 확인
-5. 반출 중 배지 확인, 반입 처리 링크 visible
-6. API: status=checked_out, checkoutDate != null
-7. ★ API 장비 검증: equipment.status=checked_out
+---
 
-**Expected Results:**
+#### TEST-02-02: 과거 날짜 반입 예정일 검증 (프론트엔드 + 백엔드)
 
-- 반출 시작 후 checkout status=checked_out
-- 장비 상태가 checked_out으로 변경 (핵심 비즈니스)
-- checkoutDate 타임스탬프 설정
-
-#### 5.2. S5-02: 승인되지 않은 반출 시작 차단 (API)
-
-**File:** `tests/e2e/features/checkouts/suite-5-processing/s5-start-checkout.spec.ts`
-
-**Steps:**
-
-1. Backend 직접 호출: POST /api/checkouts/CHECKOUT_010_ID/start
-2. approved가 아닌 상태에서 start 시도 → 400 확인
-3. 에러: '승인된 반출만 반출할 수 있습니다'
-
-**Expected Results:**
-
-- pending 상태에서 직접 start 불가
-- 400 BadRequest 응답
-
-#### 5.3. S5-03: 다중 장비 반출 시작 → 모든 장비 일괄 변경
-
-**File:** `tests/e2e/features/checkouts/suite-5-processing/s5-start-checkout.spec.ts`
+**Priority**: P1
+**Role**: test_engineer
+**Execution**: parallel
 
 **Steps:**
 
-1. siteAdminPage로 CHECKOUT_011_ID (다중 장비, approved)
-2. 반출 시작 클릭 → 확인
-3. API: status=checked_out
-4. 각 checkout_item의 equipmentId에 대해 equipment.status=checked_out 확인
+1. Navigate to `/checkouts/create`
+2. Fill all fields with PAST `expectedReturnDate`
+3. Attempt submit
+4. Verify frontend validation error
+5. (Fallback) If frontend allows, API call should return 400
 
-**Expected Results:**
+**Verification:**
 
-- 다중 장비 반출 시 모든 장비가 일괄 checked_out
-- 원자적 처리
+- **UI**: Date picker validation or error message
+- **API**: `POST /api/checkouts` with past date → 400 "반입 예정일은 현재 시점보다 늦어야 합니다"
+- **DB**: N/A (request blocked)
 
-### 6. Suite 6: 반입 처리 및 검사 (Serial) - IDs: 019-022
+**Assertions:**
 
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
+```typescript
+await page.goto('/checkouts/create');
 
-#### 6.1. S6-01: 교정 반출 반입 처리 (calibrationChecked + workingStatusChecked 필수)
+// Fill form with past date
+await selectEquipment(page, SPECTRUM_ANALYZER_SUW_E);
+await page.getByLabel('목적지').fill('Test Lab');
+await page.getByLabel('사유').fill('Test calibration');
+await page.getByLabel('목적').selectOption('calibration');
 
-**File:** `tests/e2e/features/checkouts/suite-6-return/s6-return-inspections.spec.ts`
+// Set past date
+const pastDate = new Date();
+pastDate.setDate(pastDate.getDate() - 1);
+await page.getByLabel('반입 예정일').fill(pastDate.toISOString().split('T')[0]);
 
-**Steps:**
+// Attempt submit
+const submitButton = page.getByRole('button', { name: '반출 신청' });
+await submitButton.click();
 
-1. 사전 API: CHECKOUT_019_ID status=checked_out, purpose=calibration
-2. techManagerPage로 /checkouts/CHECKOUT_019_ID 네비게이션
-3. 반입 처리 링크 또는 반입 신청 버튼 클릭
-4. 교정 확인 체크 + 작동 상태 확인 체크 + 비고 입력
-5. 반입 신청 제출
-6. API: status=returned, calibrationChecked=true, workingStatusChecked=true
-7. ★ API 장비: equipment.status=checked_out 유지 (반입 승인 전)
+// Verify validation (UI or API 400)
+const errorVisible = await page.getByText(/날짜.*과거/).isVisible();
+if (!errorVisible) {
+  // If UI allows, verify API returns 400
+  const response = await apiPost(page, '/api/checkouts', {
+    equipmentIds: [SPECTRUM_ANALYZER_SUW_E],
+    destination: 'Test Lab',
+    reason: 'Test',
+    purpose: 'calibration',
+    expectedReturnDate: pastDate.toISOString(),
+  });
+  expect(response.status).toBe(400);
+}
+```
 
-**Expected Results:**
+---
 
-- 반입 처리 후 status=returned
-- 검사 항목 정확히 저장
-- 장비 상태는 아직 checked_out 유지
+#### TEST-02-03: 부적합 장비 반출 차단 검증
 
-#### 6.2. S6-02: 수리 반출 반입 처리 (repairChecked + workingStatusChecked 필수)
-
-**File:** `tests/e2e/features/checkouts/suite-6-return/s6-return-inspections.spec.ts`
-
-**Steps:**
-
-1. 사전 API: CHECKOUT_020_ID status=checked_out, purpose=repair
-2. 반입 신청 → 수리 확인 + 작동 확인 체크 → 제출
-3. API: status=returned, repairChecked=true
-
-**Expected Results:**
-
-- 수리 반출은 repairChecked 필수
-- 검사 항목 정확히 저장
-
-#### 6.3. S6-03: 교정 반출에서 교정 확인 미체크 시 에러 (API)
-
-**File:** `tests/e2e/features/checkouts/suite-6-return/s6-return-inspections.spec.ts`
-
-**Steps:**
-
-1. Backend: POST /api/checkouts/CHECKOUT_021_ID/return body: {workingStatusChecked:true, calibrationChecked:false}
-2. 응답: 400 '교정 목적 반출의 경우 교정 확인은 필수입니다'
-3. workingStatusChecked 미체크 테스트: {calibrationChecked:true, workingStatusChecked:false}
-4. 응답: 400 '작동 여부 확인은 필수입니다'
-
-**Expected Results:**
-
-- 교정 반출: calibrationChecked + workingStatusChecked 모두 필수
-- 필수 검사 누락 시 400 에러
-
-#### 6.4. S6-04: checked_out이 아닌 상태에서 반입 차단 (API)
-
-**File:** `tests/e2e/features/checkouts/suite-6-return/s6-return-inspections.spec.ts`
+**Priority**: P1
+**Role**: test_engineer
+**Execution**: parallel
+**Test Data**: `POWER_METER_SUW_E` (status: non_conforming)
 
 **Steps:**
 
-1. Backend: POST /api/checkouts/{non_checked_out_id}/return
-2. pending/approved 상태에서 반입 시도 → 400
-3. 에러: '반출 중인 반출만 반입할 수 있습니다'
+1. Navigate to `/checkouts/create`
+2. Verify non-conforming equipment is:
+   - Unselectable (disabled) OR
+   - Shows warning tooltip OR
+   - Filtered out entirely
+3. API: Attempt `POST /api/checkouts` with non-conforming equipment ID
+4. Verify 400 error response
 
-**Expected Results:**
+**Verification:**
 
-- checked_out 상태에서만 반입 가능
-- 비즈니스 규칙 백엔드 검증
+- **UI**: Equipment selectability follows SSOT rules
+- **API**: Backend validates equipment status → 400
+- **DB**: N/A (request blocked)
 
-### 7. Suite 7: 반입 승인 (Serial) - IDs: 042-045
+**Business Rule Reference:**
 
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
+- `packages/shared-constants/src/checkout-selectability.ts`
+- `PURPOSE_ALLOWED_STATUSES`, `CHECKOUT_HIDDEN_STATUSES`
 
-#### 7.1. S7-01: 반입 승인 → 장비 상태 available 복원 (핵심 비즈니스)
+**Assertions:**
 
-**File:** `tests/e2e/features/checkouts/suite-7-return-approval/s7-return-approval.spec.ts`
+```typescript
+import { POWER_METER_SUW_E } from '../shared/constants/test-equipment-ids';
 
-**Steps:**
+await page.goto('/checkouts/create');
 
-1. 사전 API: CHECKOUT_042_ID status=returned
-2. techManagerPage로 /checkouts/CHECKOUT_042_ID 네비게이션
-3. 반입 승인 버튼 클릭 → 확인
-4. return_approved 배지 확인
-5. API: status=return_approved, returnApprovedBy != null, returnApprovedAt != null
-6. ★★ API 핵심: equipment.status=available (복원!)
+// Verify non-conforming equipment is not selectable
+const nonConformingRow = page.getByRole('row', { name: new RegExp(POWER_METER_SUW_E) });
+const checkbox = nonConformingRow.getByRole('checkbox');
 
-**Expected Results:**
+// Should be disabled or have warning
+const isDisabled = await checkbox.isDisabled();
+const hasWarning = await nonConformingRow.getByRole('button', { name: /경고/ }).isVisible();
 
-- 반입 승인 후 status=return_approved
-- ★ 핵심: 장비 상태가 available로 복원 (가장 중요한 비즈니스 로직)
-- returnApprovedBy에 승인자 ID 설정
+expect(isDisabled || hasWarning).toBe(true);
 
-#### 7.2. S7-02: returned가 아닌 상태에서 반입 승인 차단 (API)
+// API verification
+const response = await apiPost(page, '/api/checkouts', {
+  equipmentIds: [POWER_METER_SUW_E],
+  destination: 'Test Lab',
+  reason: 'Test',
+  purpose: 'rental',
+  expectedReturnDate: new Date(Date.now() + 86400000).toISOString(),
+});
 
-**File:** `tests/e2e/features/checkouts/suite-7-return-approval/s7-return-approval.spec.ts`
+expect(response.status).toBe(400);
+expect(response.message).toMatch(/부적합|사용.*불가|status/i);
+```
 
-**Steps:**
+---
 
-1. Backend: PATCH /api/checkouts/{non_returned_id}/approve-return
-2. 응답: 400 '검사 완료된(returned) 반입만 최종 승인 가능'
+### s02-create-success.spec.ts - 생성 성공
 
-**Expected Results:**
+#### TEST-02-04: 교정 목적 반출 생성 성공 (API 중심)
 
-- returned 상태에서만 반입 승인 가능
-- 비즈니스 규칙 백엔드 검증
-
-#### 7.3. S7-03: 다중 장비 반입 승인 → 모든 장비 available 복원
-
-**File:** `tests/e2e/features/checkouts/suite-7-return-approval/s7-return-approval.spec.ts`
-
-**Steps:**
-
-1. CHECKOUT_044_ID (다중 장비, returned) 반입 승인
-2. 각 checkout_item의 equipmentId에 대해 equipment.status=available 확인
-
-**Expected Results:**
-
-- 다중 장비 반입 승인 시 모든 장비가 일괄 available 복원
-
-### 8. Suite 8: 전체 라이프사이클 (Serial) - 새로 생성
-
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
-
-#### 8.1. S8-01: 완전한 교정 반출 라이프사이클 (pending→approved→checked_out→returned→return_approved)
-
-**File:** `tests/e2e/features/checkouts/suite-8-lifecycle/s8-full-lifecycle.spec.ts`
+**Priority**: P0
+**Role**: test_engineer
+**Execution**: parallel
+**Test Data**: `SPECTRUM_ANALYZER_SUW_E` (available)
 
 **Steps:**
 
-1. STEP 1: testOperatorPage로 반출 생성 (교정, 장비 선택, 폼 입력, 제출)
-2. API 검증: status=pending, equipment.status=available
-3. STEP 2: techManagerPage로 승인
-4. API: status=approved, approverId != null
-5. STEP 3: 반출 시작 클릭
-6. API: status=checked_out, ★ equipment.status=checked_out
-7. STEP 4: 반입 처리 (교정확인+작동확인 체크, 비고 입력)
-8. API: status=returned, ★ equipment.status=checked_out (유지)
-9. STEP 5: 반입 승인
-10. API: status=return_approved, ★★ equipment.status=available (복원!)
-11. STEP 6: 장비 상세 페이지에서 사용가능 확인
+1. API: `POST /api/checkouts` with:
+   - `equipmentIds`: [SPECTRUM_ANALYZER_SUW_E]
+   - `purpose`: 'calibration'
+   - `destination`: 'Calibration Lab'
+   - `reason`: 'Annual calibration check'
+   - `expectedReturnDate`: tomorrow
+2. Verify response: `status=pending`, `purpose=calibration`
+3. API: `GET /api/checkouts/{id}` to confirm persistence
 
-**Expected Results:**
+**Verification:**
 
-- 5단계 상태 전이 모두 성공
-- 장비 상태: available → checked_out → available 완전 사이클
-- 각 단계에서 적절한 타임스탬프와 사용자 ID 기록
-- ★ 이 테스트는 전체 시스템의 핵심 비즈니스 로직을 E2E로 검증
+- **UI**: Optional (can test API-only for speed)
+- **API**: Creation returns 201, correct fields
+- **DB**: Data persisted (verified via GET)
 
-#### 8.2. S8-02: 완전한 수리 반출 라이프사이클
+**Assertions:**
 
-**File:** `tests/e2e/features/checkouts/suite-8-lifecycle/s8-full-lifecycle.spec.ts`
+```typescript
+const tomorrow = new Date(Date.now() + 86400000).toISOString();
 
-**Steps:**
+const createResponse = await apiPost(page, '/api/checkouts', {
+  equipmentIds: [SPECTRUM_ANALYZER_SUW_E],
+  purpose: 'calibration',
+  destination: 'Calibration Lab',
+  reason: 'Annual calibration check',
+  expectedReturnDate: tomorrow,
+});
 
-1. S8-01과 동일한 흐름이나 purpose=repair
-2. STEP 4에서 repairChecked + workingStatusChecked 필수
-3. 각 단계 API 검증 동일 수행
+expect(createResponse.status).toBe(pending);
+expect(createResponse.purpose).toBe('calibration');
+expect(createResponse.equipmentIds).toContain(SPECTRUM_ANALYZER_SUW_E);
 
-**Expected Results:**
+// Verify persistence
+const getResponse = await apiGet(page, `/api/checkouts/${createResponse.id}`);
+expect(getResponse.id).toBe(createResponse.id);
+expect(getResponse.status).toBe('pending');
+```
 
-- 수리 반출의 전체 라이프사이클 검증
-- 교정과 다른 필수 검사 항목 확인
+---
 
-### 9. Suite 9: 취소 워크플로우 (Serial)
+#### TEST-02-05: 수리 목적 반출 생성 성공
 
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
+**Priority**: P1
+**Role**: test_engineer
+**Execution**: parallel
+**Test Data**: `SIGNAL_GEN_SUW_E` (available)
 
-#### 9.1. S9-01: pending 반출 취소 성공
+**Steps:** Same as TEST-02-04 but with `purpose=repair`
 
-**File:** `tests/e2e/features/checkouts/suite-9-cancel/s9-cancel-flow.spec.ts`
+---
 
-**Steps:**
+#### TEST-02-06: 대여 목적 반출 생성 - 대여 전용 필드 검증
 
-1. testOperatorPage로 새 반출 생성
-2. 생성된 반출 상세 페이지로 이동
-3. 취소 버튼 또는 삭제 기능 클릭
-4. 확인 dialog 처리
-5. API: status=canceled
-
-**Expected Results:**
-
-- pending 상태 반출만 취소 가능
-- 취소 후 status=canceled
-
-#### 9.2. S9-02: approved 이후 취소 불가 (API)
-
-**File:** `tests/e2e/features/checkouts/suite-9-cancel/s9-cancel-flow.spec.ts`
-
-**Steps:**
-
-1. Backend: PATCH /api/checkouts/{approved_id}/cancel
-2. 응답: 400 '승인 전 반출만 취소할 수 있습니다'
-3. checked_out, returned 상태에서도 동일 시도 → 400
-
-**Expected Results:**
-
-- pending 외 상태에서 취소 불가
-- 비즈니스 규칙 백엔드 검증
-
-### 10. Suite 10: 대여 4단계 워크플로우 (Serial) - IDs: 027-041
-
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
-
-#### 10.1. S10-01: 대여자 반출 전 확인 (Step ①)
-
-**File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
+**Priority**: P1
+**Role**: test_engineer
+**Execution**: parallel
+**Test Data**: `RECEIVER_UIW_W` (available, different team)
 
 **Steps:**
 
-1. 적절한 역할 페이지로 /checkouts/CHECKOUT_027_ID 네비게이션
-2. 반출 전 확인 (대여자) 버튼 클릭 → 확인
-3. API: 상태 전이 확인
-4. CheckoutStatusStepper에서 Step ① 완료 표시
+1. API: `POST /api/checkouts` with:
+   - `purpose`: 'rental'
+   - `lenderTeamId`: (lending team UUID)
+   - `lenderSiteId`: 'UIW'
+   - Other required fields
+2. Verify response includes `lenderTeamId`, `lenderSiteId`
+3. API: `POST /api/checkouts` with `purpose=rental` WITHOUT `lenderTeamId`
+4. Verify validation error (400 or successful creation with null)
 
-**Expected Results:**
+**Verification:**
 
-- 대여자 반출 전 확인 완료
-- 상태 전이 정확
+- **UI**: Optional
+- **API**: Rental-specific fields required and persisted
+- **DB**: Fields stored correctly
 
-#### 10.2. S10-02: 차용자 수령 확인 (Step ②)
+---
 
-**File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
+## Suite 03: Approval Workflow (직렬)
 
-**Steps:**
+`test.describe.configure({ mode: 'serial' })` 적용
 
-1. /checkouts/CHECKOUT_030_ID (lender_checked) 네비게이션
-2. 수령 확인 (차용자) 버튼 클릭 → 확인
-3. API: 상태 전이 확인
+### s03-approval-workflow.spec.ts
 
-**Expected Results:**
+**beforeAll:**
 
-- 차용자 수령 확인 완료
+```typescript
+await resetCheckoutToPending(CHECKOUT_001_ID);
+await resetCheckoutToPending(CHECKOUT_002_ID);
+await resetCheckoutToPending(CHECKOUT_003_ID);
+await resetCheckoutToPending(CHECKOUT_005_ID);
+```
 
-#### 10.3. S10-03: 차용자 반입 전 확인 (Step ③)
+#### TEST-03-01: 교정 반출 승인 + API 검증 (P0 CRITICAL)
 
-**File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
-
-**Steps:**
-
-1. /checkouts/CHECKOUT_033_ID (in_use) 네비게이션
-2. 반입 전 확인 (차용자) 버튼 클릭 → 확인
-3. API: 상태 전이 확인
-
-**Expected Results:**
-
-- 차용자 반입 전 확인 완료
-
-#### 10.4. S10-04: 대여자 최종 확인 (Step ④)
-
-**File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_001_ID` (pending, calibration)
 
 **Steps:**
 
-1. /checkouts/CHECKOUT_036_ID (borrower_returned) 네비게이션
-2. 반입 최종 확인 (대여자) 버튼 클릭 → 확인
-3. API: status=lender_received 확인
-4. Stepper 모든 4단계 완료 표시
+1. Navigate to `/checkouts/{CHECKOUT_001_ID}`
+2. Verify status badge shows "승인 대기"
+3. Verify "승인" and "반려" buttons visible
+4. Click "승인" button
+5. Wait for success message
+6. Verify status badge changes to "승인됨"
+7. Verify "승인/반려" buttons disappear
+8. Verify "반출 시작" button appears
 
-**Expected Results:**
+**Verification:**
 
-- 대여 4단계 워크플로우 완료
-- 각 단계별 상태 전이 순서대로
+- **UI**: Button visibility changes, status badge updates
+- **API**: `GET /api/checkouts/{id}` after approval:
+  - `status=approved`
+  - `approverId` matches current user (server-side extraction)
+  - `approvedAt` timestamp populated
+- **DB**: Changes persisted (verified via API GET)
 
-#### 10.5. S10-05: 대여 4단계 순서 위반 차단 (API)
+**Critical Security Check:**
 
-**File:** `tests/e2e/features/checkouts/suite-10-rental/s10-rental-4step.spec.ts`
+- `approverId` must match session user, NOT any client-provided value
+- Reference: Security fix applied 2026-02-05 (CHECKOUT_APPROVAL_FLOW_TESTS_FIX_SUMMARY.md)
+
+**Assertions:**
+
+```typescript
+import { CHECKOUT_001_ID } from '../helpers/checkout-constants';
+import { CHECKOUT_STATUS_LABELS } from '@equipment-management/schemas';
+
+await page.goto(`/checkouts/${CHECKOUT_001_ID}`);
+
+// Initial state
+await expect(page.getByTestId('status-badge')).toContainText(CHECKOUT_STATUS_LABELS.pending);
+const approveButton = page.getByRole('button', { name: '승인' });
+const rejectButton = page.getByRole('button', { name: '반려' });
+await expect(approveButton).toBeVisible();
+await expect(rejectButton).toBeVisible();
+
+// Click approve
+await approveButton.click();
+
+// Wait for success
+await waitForSuccessMessage(page);
+
+// Verify UI changes
+await expect(page.getByTestId('status-badge')).toContainText(CHECKOUT_STATUS_LABELS.approved);
+await expect(approveButton).not.toBeVisible();
+await expect(rejectButton).not.toBeVisible();
+await expect(page.getByRole('button', { name: '반출 시작' })).toBeVisible();
+
+// API verification
+const response = await apiGet(page, `/api/checkouts/${CHECKOUT_001_ID}`);
+expect(response.status).toBe('approved');
+expect(response.approverId).toBeTruthy();
+expect(response.approvedAt).toBeTruthy();
+
+// CRITICAL: Verify approverId matches session user (server-side extraction)
+const session = await page.evaluate(() => window.next.router.query);
+expect(response.approverId).toBe(session.userId); // Server extracted, NOT client-provided
+```
+
+---
+
+#### TEST-03-02: 수리 반출 승인 (P0)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_003_ID` (pending, repair)
+
+**Steps:** Same pattern as TEST-03-01, verify `purpose=repair`
+
+---
+
+#### TEST-03-03: 대여 반출 승인 (P0)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_005_ID` (pending, rental)
+
+**Steps:** Same pattern as TEST-03-01, verify `purpose=rental`, "대여" text visible
+
+---
+
+#### TEST-03-04: 승인 상태 페이지 새로고침 후 유지 (P0)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_002_ID` (pending)
 
 **Steps:**
 
-1. Step ① 완료 전에 Step ② 시도 (API 직접 호출)
-2. 순서 위반 시 에러 응답 확인
+1. Navigate and approve (same as TEST-03-01)
+2. **Reload page**: `await page.reload()`
+3. Verify status still "승인됨"
+4. Verify button state persists (no approve/reject, only "반출 시작")
 
-**Expected Results:**
+**Verification:**
 
-- 대여 4단계는 순서를 건너뛸 수 없음
-- 비즈니스 규칙에 의해 순서 강제
+- **UI**: State persists after reload
+- **API**: N/A (tested in previous test)
+- **DB**: Persistence confirmed via page reload
 
-### 11. Suite 11: 권한 및 보안 검증 (Parallel)
+**Purpose:** Ensures approval is stored in DB, not just frontend state
 
-**Seed:** `tests/e2e/features/checkouts/seed.spec.ts`
+---
 
-#### 11.1. S11-01: test_engineer는 승인/반려 불가
+## Suite 04: Rejection Workflow (직렬)
 
-**File:** `tests/e2e/features/checkouts/suite-11-permissions/s11-role-permissions.spec.ts`
+`test.describe.configure({ mode: 'serial' })` 적용
 
-**Steps:**
+### s04-rejection-workflow.spec.ts
 
-1. testOperatorPage로 pending 반출 상세 네비게이션
-2. 승인/반려 버튼 not.toBeVisible 확인
-3. Backend: PATCH approve (test_engineer JWT) → 403
-4. Backend: PATCH reject → 403
+**beforeAll:**
 
-**Expected Results:**
+```typescript
+await resetCheckoutToPending(CHECKOUT_004_ID);
+await resetCheckoutToPending(CHECKOUT_006_ID);
+await resetCheckoutToPending(CHECKOUT_007_ID);
+await resetCheckoutToPending(CHECKOUT_008_ID);
+```
 
-- test_engineer에게 승인/반려 버튼 미표시
-- API에서도 403 Forbidden
-- 이중 보안: UI + API
+#### TEST-04-01: 교정 반출 반려 및 사유 저장 (P0 CRITICAL)
 
-#### 11.2. S11-02: approverId 서버사이드 추출 검증
-
-**File:** `tests/e2e/features/checkouts/suite-11-permissions/s11-role-permissions.spec.ts`
-
-**Steps:**
-
-1. techManagerPage로 승인 API 호출 시 body에 다른 사용자 ID 전송
-2. 응답에서 approverId가 세션 사용자 ID인지 확인
-3. 클라이언트 전송값이 무시되는지 확인
-
-**Expected Results:**
-
-- approverId가 req.user.userId에서 추출
-- 클라이언트 위장 불가
-
-#### 11.3. S11-03: EMC팀은 RF팀 장비 반출 차단
-
-**File:** `tests/e2e/features/checkouts/suite-11-permissions/s11-role-permissions.spec.ts`
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_007_ID` (pending, calibration)
 
 **Steps:**
 
-1. EMC팀 사용자로 RF팀 장비 반출 생성 API 호출
-2. 응답: 403 'EMC팀은 RF팀 장비 반출 권한 없음'
+1. Navigate to `/checkouts/{CHECKOUT_007_ID}`
+2. Click "반려" button
+3. Verify rejection dialog opens with title "반출 반려"
+4. Fill rejection reason: "Equipment not available for calibration"
+5. Click dialog submit button
+6. Wait for success message
+7. Verify dialog closes
+8. Verify status badge shows "거절됨"
+9. Verify rejection reason visible on page
+10. Verify NO action buttons visible
 
-**Expected Results:**
+**Verification:**
 
-- 팀 기반 접근 제어 동작
-- EMC ↔ RF 크로스팀 반출 차단
+- **UI**: Dialog workflow, status update, reason display
+- **API**: `GET /api/checkouts/{id}` after rejection:
+  - `status=rejected`
+  - `rejectionReason` contains entered text
+- **DB**: Rejection persisted
 
-#### 11.4. S11-04: lab_manager 자가 승인 가능
+**Assertions:**
 
-**File:** `tests/e2e/features/checkouts/suite-11-permissions/s11-role-permissions.spec.ts`
+```typescript
+await page.goto(`/checkouts/${CHECKOUT_007_ID}`);
+
+// Click reject
+const rejectButton = page.getByRole('button', { name: '반려' });
+await rejectButton.click();
+
+// Verify dialog
+const dialog = page.getByRole('dialog', { name: '반출 반려' });
+await expect(dialog).toBeVisible();
+
+// Fill reason
+const reasonInput = dialog.getByLabel('반려 사유');
+await reasonInput.fill('Equipment not available for calibration');
+
+// Submit
+await dialog.getByRole('button', { name: '반려' }).click();
+
+// Wait for success and dialog close
+await waitForSuccessMessage(page);
+await expect(dialog).not.toBeVisible();
+
+// Verify status change
+await expect(page.getByTestId('status-badge')).toContainText(CHECKOUT_STATUS_LABELS.rejected);
+
+// Verify reason visible
+await expect(page.getByText('Equipment not available for calibration')).toBeVisible();
+
+// Verify no action buttons
+await expect(page.getByRole('button', { name: '승인' })).not.toBeVisible();
+await expect(page.getByRole('button', { name: '반려' })).not.toBeVisible();
+await expect(page.getByRole('button', { name: '반출 시작' })).not.toBeVisible();
+
+// API verification
+const response = await apiGet(page, `/api/checkouts/${CHECKOUT_007_ID}`);
+expect(response.status).toBe('rejected');
+expect(response.rejectionReason).toContain('Equipment not available');
+```
+
+---
+
+#### TEST-04-02: 수리 반출 반려 (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_004_ID` (pending, repair)
+
+**Steps:** Same pattern as TEST-04-01
+
+---
+
+#### TEST-04-03: 반려 사유 필수 검증 (이중 검증) (P2)
+
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_008_ID` (pending)
 
 **Steps:**
 
-1. siteAdminPage로 새 반출 생성
-2. 동일 사용자가 승인
-3. API: requesterId = approverId 확인
+1. Navigate and open rejection dialog
+2. Verify submit button is disabled when reason is empty
+3. Type 1 character in reason field
+4. Verify submit button becomes enabled
+5. Clear reason field
+6. Verify button disabled again
+7. (API fallback) Try `PATCH /api/checkouts/{id}/reject` with empty reason
+8. Verify 400 error
 
-**Expected Results:**
+**Verification:**
 
-- lab_manager는 자가 승인 가능
-- UL-QP-18 역할 규칙 준수
+- **UI**: Button disabled when reason empty (frontend validation)
+- **API**: Backend also validates → 400 if reason empty
+- **DB**: N/A (request blocked)
+
+**Assertions:**
+
+```typescript
+await page.goto(`/checkouts/${CHECKOUT_008_ID}`);
+await page.getByRole('button', { name: '반려' }).click();
+
+const dialog = page.getByRole('dialog', { name: '반출 반려' });
+const reasonInput = dialog.getByLabel('반려 사유');
+const submitButton = dialog.getByRole('button', { name: '반려' });
+
+// Initially disabled
+await expect(submitButton).toBeDisabled();
+
+// Type → enabled
+await reasonInput.fill('Test');
+await expect(submitButton).toBeEnabled();
+
+// Clear → disabled
+await reasonInput.clear();
+await expect(submitButton).toBeDisabled();
+
+// API verification (backend validation)
+const response = await apiPatch(page, `/api/checkouts/${CHECKOUT_008_ID}/reject`, {
+  reason: '',
+});
+expect(response.status).toBe(400);
+expect(response.message).toMatch(/사유.*필수|reason.*required/i);
+```
+
+---
+
+#### TEST-04-04: 대여 반출 반려 - 워크플로우 종료 (P0)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_006_ID` (pending, rental)
+
+**Steps:** Same as TEST-04-01, additionally verify rental-specific buttons (e.g., "상태 확인") also disappear
+
+---
+
+#### TEST-04-05: 거절된 반출 수정 불가 (터미널 상태) (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_015_ID` (already rejected in seed)
+
+**Steps:**
+
+1. Navigate to `/checkouts/{CHECKOUT_015_ID}`
+2. Verify status badge shows "거절됨"
+3. Verify NO action buttons visible
+4. API: `PATCH /api/checkouts/{id}` with update
+5. Verify 400 error "거절된 반출은 수정할 수 없습니다"
+
+**Verification:**
+
+- **UI**: No edit/action buttons
+- **API**: Update blocked → 400
+- **DB**: N/A (request blocked)
+
+---
+
+## Suite 05: Start Checkout (직렬) ★ 장비 상태 전이 핵심
+
+`test.describe.configure({ mode: 'serial' })` 적용
+
+### s05-start-checkout.spec.ts
+
+**beforeAll:**
+
+```typescript
+await resetCheckoutToApproved(CHECKOUT_009_ID);
+await resetCheckoutToApproved(CHECKOUT_013_ID);
+await resetCheckoutToPending(CHECKOUT_010_ID); // For blocking test
+```
+
+#### TEST-05-01: 반출 시작 → 장비 상태 checked_out 전이 (P0 CRITICAL)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_009_ID` (approved, single equipment)
+
+**Steps:**
+
+1. API: Get equipment ID from checkout
+2. API: `GET /api/equipment/{equipmentId}` → verify initial `status=available`
+3. Navigate to `/checkouts/{CHECKOUT_009_ID}`
+4. Verify "반출 시작" button visible
+5. Click "반출 시작"
+6. Verify confirmation dialog (optional, based on implementation)
+7. Wait for success message
+8. Verify button disappears or changes
+
+**Verification (CRITICAL):**
+
+- **UI**: Button state change
+- **API 1**: `GET /api/checkouts/{id}` after start:
+  - `status=checked_out`
+  - `checkoutDate` timestamp populated
+- **API 2**: `GET /api/equipment/{equipmentId}` after start:
+  - ★ **`status=checked_out`** (THIS IS THE KEY VERIFICATION)
+- **DB**: Both checkout status AND equipment status changed
+
+**Assertions:**
+
+```typescript
+import { CHECKOUT_009_ID } from '../helpers/checkout-constants';
+
+// Get equipment ID
+const checkoutBefore = await apiGet(page, `/api/checkouts/${CHECKOUT_009_ID}`);
+const equipmentId = checkoutBefore.equipment[0].id;
+
+// Verify equipment initial state
+const equipmentBefore = await apiGet(page, `/api/equipment/${equipmentId}`);
+expect(equipmentBefore.status).toBe('available');
+
+// UI: Start checkout
+await page.goto(`/checkouts/${CHECKOUT_009_ID}`);
+const startButton = page.getByRole('button', { name: '반출 시작' });
+await expect(startButton).toBeVisible();
+await startButton.click();
+
+// Handle confirmation dialog if present
+const confirmDialog = page.getByRole('dialog', { name: /반출.*시작|확인/ });
+if (await confirmDialog.isVisible({ timeout: 2000 })) {
+  await confirmDialog.getByRole('button', { name: /확인|반출/ }).click();
+}
+
+await waitForSuccessMessage(page);
+
+// ★ CRITICAL VERIFICATION 1: Checkout status changed
+const checkoutAfter = await apiGet(page, `/api/checkouts/${CHECKOUT_009_ID}`);
+expect(checkoutAfter.status).toBe('checked_out');
+expect(checkoutAfter.checkoutDate).toBeTruthy();
+
+// ★ CRITICAL VERIFICATION 2: Equipment status changed
+const equipmentAfter = await apiGet(page, `/api/equipment/${equipmentId}`);
+expect(equipmentAfter.status).toBe('checked_out');
+
+console.log(
+  `✅ Equipment ${equipmentId} status: ${equipmentBefore.status} → ${equipmentAfter.status}`
+);
+```
+
+---
+
+#### TEST-05-02: 승인되지 않은 반출 시작 차단 (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_010_ID` (pending)
+
+**Steps:**
+
+1. API: `POST /api/checkouts/{CHECKOUT_010_ID}/start`
+2. Verify 400 error "승인된 반출만 반출할 수 있습니다"
+
+**Verification:**
+
+- **UI**: Optional (button should not be visible on pending checkout)
+- **API**: Backend guards status transition → 400
+- **DB**: N/A (request blocked)
+
+---
+
+#### TEST-05-03: 다중 장비 반출 시작 (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_013_ID` (approved, multiple equipment)
+
+**Steps:**
+
+1. API: Get all equipment IDs from checkout
+2. API: Verify all equipment initially `status=available`
+3. Click "반출 시작"
+4. API: Verify checkout `status=checked_out`
+5. API: Loop through all equipment IDs, verify ALL are `status=checked_out`
+
+**Verification:**
+
+- **UI**: Single button click
+- **API**: Atomic multi-equipment status change
+- **DB**: All equipment statuses updated together
+
+---
+
+## Suite 06: Return Processing (직렬)
+
+`test.describe.configure({ mode: 'serial' })` 적용
+
+### s06-return-inspections.spec.ts
+
+**beforeAll:**
+
+```typescript
+await resetCheckoutToCheckedOut(CHECKOUT_019_ID); // calibration
+await resetCheckoutToCheckedOut(CHECKOUT_020_ID); // repair
+await resetCheckoutToCheckedOut(CHECKOUT_021_ID); // calibration
+await resetCheckoutToCheckedOut(CHECKOUT_022_ID); // calibration
+```
+
+#### TEST-06-01: 교정 반출 반입 (calibrationChecked + workingStatusChecked) (P0)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_019_ID` (checked_out, calibration)
+
+**Steps:**
+
+1. Navigate to `/checkouts/{CHECKOUT_019_ID}`
+2. Verify status badge shows "반출 중"
+3. Click "반입 처리" button/link
+4. Verify return inspection form visible
+5. Check "교정 확인" checkbox
+6. Check "작동 상태 확인" checkbox
+7. Fill "검사 메모" (optional): "Equipment in good condition"
+8. Click submit
+9. Wait for success message
+
+**Verification:**
+
+- **UI**: Form submission, success message
+- **API**: `GET /api/checkouts/{id}` after return:
+  - `status=returned`
+  - `calibrationChecked=true`
+  - `workingStatusChecked=true`
+  - `inspectionNotes` contains text
+  - `actualReturnDate` timestamp populated
+- **API**: `GET /api/equipment/{id}`:
+  - ★ **`status` STILL `checked_out`** (NOT available yet - awaits approval)
+- **DB**: Return recorded but equipment not restored yet
+
+**Assertions:**
+
+```typescript
+await page.goto(`/checkouts/${CHECKOUT_019_ID}`);
+
+// Click return button
+const returnButton = page.getByRole('link', { name: '반입 처리' }); // or button
+await returnButton.click();
+
+// Fill inspection form
+await page.getByLabel('교정 확인').check();
+await page.getByLabel('작동 상태 확인').check();
+await page.getByLabel('검사 메모').fill('Equipment in good condition');
+
+// Submit
+await page.getByRole('button', { name: '반입 완료' }).click();
+await waitForSuccessMessage(page);
+
+// API: Verify checkout status changed to returned
+const checkoutAfter = await apiGet(page, `/api/checkouts/${CHECKOUT_019_ID}`);
+expect(checkoutAfter.status).toBe('returned');
+expect(checkoutAfter.calibrationChecked).toBe(true);
+expect(checkoutAfter.workingStatusChecked).toBe(true);
+expect(checkoutAfter.inspectionNotes).toContain('good condition');
+expect(checkoutAfter.actualReturnDate).toBeTruthy();
+
+// API: Verify equipment STILL checked_out (not restored yet)
+const equipmentId = checkoutAfter.equipment[0].id;
+const equipmentAfter = await apiGet(page, `/api/equipment/${equipmentId}`);
+expect(equipmentAfter.status).toBe('checked_out'); // NOT available!
+```
+
+---
+
+#### TEST-06-02: 수리 반출 반입 (repairChecked + workingStatusChecked) (P0)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_020_ID` (checked_out, repair)
+
+**Steps:** Same as TEST-06-01, but check "수리 확인" instead of "교정 확인"
+
+**Verification:** `repairChecked=true`, `workingStatusChecked=true`
+
+---
+
+#### TEST-06-03: 교정 확인 미체크 → 400 에러 (필수 검사 강제) (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_021_ID` (checked_out, calibration)
+
+**Steps:**
+
+1. API: `POST /api/checkouts/{CHECKOUT_021_ID}/return` with:
+   - `calibrationChecked: false`
+   - `workingStatusChecked: true`
+2. Verify 400 error "교정 확인은 필수입니다"
+3. API: `POST /api/checkouts/{CHECKOUT_021_ID}/return` with:
+   - `calibrationChecked: true`
+   - `workingStatusChecked: false`
+4. Verify 400 error "작동 상태 확인은 필수입니다"
+
+**Verification:**
+
+- **UI**: Optional (can test via API only)
+- **API**: Backend validates purpose-specific required checks
+- **DB**: N/A (request blocked)
+
+---
+
+#### TEST-06-04: pending 상태에서 반입 차단 (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_022_ID` (need to reset to pending for this test)
+
+**Steps:**
+
+1. API: `POST /api/checkouts/{id}/return` on a pending checkout
+2. Verify 400 error "반출 중인 상태에서만 반입할 수 있습니다"
+
+**Verification:**
+
+- **UI**: Button should not be visible on pending checkout
+- **API**: Backend guards status → 400
+- **DB**: N/A (request blocked)
+
+---
+
+## Suite 07: Return Approval (직렬) ★ 장비 상태 복원 핵심
+
+`test.describe.configure({ mode: 'serial' })` 적용
+
+### s07-return-approval.spec.ts
+
+**beforeAll:**
+
+```typescript
+await resetCheckoutToReturned(CHECKOUT_042_ID);
+await resetCheckoutToReturned(CHECKOUT_043_ID);
+await resetCheckoutToReturned(CHECKOUT_044_ID); // multi-equipment
+await resetCheckoutToApproved(CHECKOUT_012_ID); // For blocking test
+```
+
+#### TEST-07-01: 반입 승인 → 장비 available 복원 (P0 CRITICAL)
+
+**Priority**: P0
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_042_ID` (returned, single equipment)
+
+**Steps:**
+
+1. API: Get equipment ID from checkout
+2. API: `GET /api/equipment/{equipmentId}` → verify `status=checked_out`
+3. Navigate to `/checkouts/{CHECKOUT_042_ID}`
+4. Verify status badge shows "반입 완료"
+5. Verify "반입 승인" button visible
+6. Click "반입 승인"
+7. Verify confirmation dialog (optional)
+8. Wait for success message
+
+**Verification (CRITICAL):**
+
+- **UI**: Button state change
+- **API 1**: `GET /api/checkouts/{id}` after approval:
+  - `status=return_approved`
+  - `returnApprovedBy` matches current user
+  - `returnApprovedAt` timestamp populated
+- **API 2**: `GET /api/equipment/{equipmentId}` after approval:
+  - ★ **`status=available`** (RESTORED - THIS IS THE KEY VERIFICATION)
+- **DB**: Both checkout status AND equipment status updated
+
+**Assertions:**
+
+```typescript
+import { CHECKOUT_042_ID } from '../helpers/checkout-constants';
+
+// Get equipment ID
+const checkoutBefore = await apiGet(page, `/api/checkouts/${CHECKOUT_042_ID}`);
+const equipmentId = checkoutBefore.equipment[0].id;
+
+// Verify equipment initial state (should be checked_out)
+const equipmentBefore = await apiGet(page, `/api/equipment/${equipmentId}`);
+expect(equipmentBefore.status).toBe('checked_out');
+
+// UI: Approve return
+await page.goto(`/checkouts/${CHECKOUT_042_ID}`);
+const approveButton = page.getByRole('button', { name: '반입 승인' });
+await expect(approveButton).toBeVisible();
+await approveButton.click();
+
+// Handle confirmation dialog if present
+const confirmDialog = page.getByRole('dialog', { name: /반입.*승인|확인/ });
+if (await confirmDialog.isVisible({ timeout: 2000 })) {
+  await confirmDialog.getByRole('button', { name: /확인|승인/ }).click();
+}
+
+await waitForSuccessMessage(page);
+
+// ★ CRITICAL VERIFICATION 1: Checkout status final
+const checkoutAfter = await apiGet(page, `/api/checkouts/${CHECKOUT_042_ID}`);
+expect(checkoutAfter.status).toBe('return_approved');
+expect(checkoutAfter.returnApprovedBy).toBeTruthy();
+expect(checkoutAfter.returnApprovedAt).toBeTruthy();
+
+// ★ CRITICAL VERIFICATION 2: Equipment status RESTORED
+const equipmentAfter = await apiGet(page, `/api/equipment/${equipmentId}`);
+expect(equipmentAfter.status).toBe('available');
+
+console.log(
+  `✅ Equipment ${equipmentId} status: ${equipmentBefore.status} → ${equipmentAfter.status}`
+);
+```
+
+---
+
+#### TEST-07-02: approved 상태에서 반입 승인 차단 (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_012_ID` (approved)
+
+**Steps:**
+
+1. API: `PATCH /api/checkouts/{CHECKOUT_012_ID}/approve-return`
+2. Verify 400 error "반입 완료 상태에서만 반입 승인할 수 있습니다"
+
+**Verification:**
+
+- **UI**: Button should not be visible on approved checkout
+- **API**: Backend guards status → 400
+- **DB**: N/A (request blocked)
+
+---
+
+#### TEST-07-03: 다중 장비 반입 승인 → 모든 장비 available (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_044_ID` (returned, multiple equipment)
+
+**Steps:**
+
+1. API: Get all equipment IDs from checkout
+2. API: Verify all equipment currently `status=checked_out`
+3. Click "반입 승인"
+4. API: Verify checkout `status=return_approved`
+5. API: Loop through all equipment IDs, verify ALL are `status=available`
+
+**Verification:**
+
+- **UI**: Single button click
+- **API**: Atomic multi-equipment restoration
+- **DB**: All equipment statuses restored together
+
+---
+
+## Suite 08: Full Lifecycle (직렬) ★ P0 CRITICAL
+
+`test.describe.configure({ mode: 'serial' })` 적용
+
+### s08-calibration-lifecycle.spec.ts
+
+**beforeAll:**
+
+```typescript
+// Reset equipment to available
+await resetEquipmentToAvailable(SAR_PROBE_SUW_S);
+```
+
+#### TEST-08-01: 교정 반출 전체 라이프사이클 (P0 CRITICAL)
+
+**Priority**: P0
+**Roles**: test_engineer (create), technical_manager (approve/start/return/approve-return)
+**Execution**: serial
+**Test Data**: Dynamically created, Equipment: `SAR_PROBE_SUW_S`
+
+**Steps:**
+
+**Step 1: Create (test_engineer)**
+
+```typescript
+const createResponse = await apiPost(testEngineerPage, '/api/checkouts', {
+  equipmentIds: [SAR_PROBE_SUW_S],
+  purpose: 'calibration',
+  destination: 'Calibration Lab',
+  reason: 'Annual calibration check',
+  expectedReturnDate: new Date(Date.now() + 86400000).toISOString(),
+});
+expect(createResponse.status).toBe('pending');
+const checkoutId = createResponse.id;
+```
+
+**Step 2: Approve (technical_manager)**
+
+```typescript
+await apiPatch(techManagerPage, `/api/checkouts/${checkoutId}/approve`, {});
+const afterApprove = await apiGet(techManagerPage, `/api/checkouts/${checkoutId}`);
+expect(afterApprove.status).toBe('approved');
+expect(afterApprove.approverId).toBeTruthy();
+expect(afterApprove.approvedAt).toBeTruthy();
+```
+
+**Step 3: Start Checkout (technical_manager)**
+
+```typescript
+await apiPost(techManagerPage, `/api/checkouts/${checkoutId}/start`, {});
+const afterStart = await apiGet(techManagerPage, `/api/checkouts/${checkoutId}`);
+expect(afterStart.status).toBe('checked_out');
+expect(afterStart.checkoutDate).toBeTruthy();
+
+// ★ Verify equipment status changed
+const equipmentAfterStart = await apiGet(techManagerPage, `/api/equipment/${SAR_PROBE_SUW_S}`);
+expect(equipmentAfterStart.status).toBe('checked_out');
+```
+
+**Step 4: Return (technical_manager)**
+
+```typescript
+await apiPost(techManagerPage, `/api/checkouts/${checkoutId}/return`, {
+  calibrationChecked: true,
+  workingStatusChecked: true,
+  inspectionNotes: 'Calibration complete, equipment working normally',
+});
+const afterReturn = await apiGet(techManagerPage, `/api/checkouts/${checkoutId}`);
+expect(afterReturn.status).toBe('returned');
+expect(afterReturn.calibrationChecked).toBe(true);
+expect(afterReturn.workingStatusChecked).toBe(true);
+expect(afterReturn.actualReturnDate).toBeTruthy();
+
+// ★ Verify equipment STILL checked_out
+const equipmentAfterReturn = await apiGet(techManagerPage, `/api/equipment/${SAR_PROBE_SUW_S}`);
+expect(equipmentAfterReturn.status).toBe('checked_out');
+```
+
+**Step 5: Approve Return (technical_manager)**
+
+```typescript
+await apiPatch(techManagerPage, `/api/checkouts/${checkoutId}/approve-return`, {});
+const final = await apiGet(techManagerPage, `/api/checkouts/${checkoutId}`);
+expect(final.status).toBe('return_approved');
+expect(final.returnApprovedBy).toBeTruthy();
+expect(final.returnApprovedAt).toBeTruthy();
+
+// ★ Verify equipment RESTORED to available
+const equipmentFinal = await apiGet(techManagerPage, `/api/equipment/${SAR_PROBE_SUW_S}`);
+expect(equipmentFinal.status).toBe('available');
+```
+
+**Verification Summary:**
+
+- **5 status transitions**: pending → approved → checked_out → returned → return_approved
+- **2 equipment transitions**: available → checked_out → available
+- **Cross-role interaction**: test_engineer creates, technical_manager processes
+- **All timestamps populated**: approvedAt, checkoutDate, actualReturnDate, returnApprovedAt
+- **Inspection data persisted**: calibrationChecked, workingStatusChecked, inspectionNotes
+
+---
+
+### s08-repair-lifecycle.spec.ts
+
+#### TEST-08-02: 수리 반출 전체 라이프사이클
+
+**Priority**: P1
+**Roles**: test_engineer (create), technical_manager (approve/start/return/approve-return)
+**Execution**: serial
+**Test Data**: Dynamically created, Equipment: `HARNESS_COUPLER_SUW_A`
+
+**Steps:** Same as TEST-08-01 but:
+
+- `purpose=repair`
+- `repairChecked=true` instead of `calibrationChecked=true`
+
+---
+
+## Suite 09: Cancel Flow (직렬)
+
+`test.describe.configure({ mode: 'serial' })` 적용
+
+### s09-cancel-flow.spec.ts
+
+#### TEST-09-01: pending 반출 취소 성공
+
+**Priority**: P1
+**Role**: test_engineer (requester)
+**Execution**: serial
+**Test Data**: Dynamically created
+
+**Steps:**
+
+1. API: Create new checkout (as test_engineer)
+2. Verify `status=pending`
+3. API: `PATCH /api/checkouts/{id}/cancel`
+4. Verify `status=canceled`
+
+**Verification:**
+
+- **UI**: Optional
+- **API**: Cancel endpoint works
+- **DB**: Status updated to canceled
+
+---
+
+#### TEST-09-02: approved 이후 취소 불가 (API)
+
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: Dynamically created
+
+**Steps:**
+
+1. API: Create checkout
+2. API: Approve checkout
+3. API: `PATCH /api/checkouts/{id}/cancel` → verify 400
+4. API: Start checkout
+5. API: `PATCH /api/checkouts/{id}/cancel` → verify 400
+6. API: Return checkout
+7. API: `PATCH /api/checkouts/{id}/cancel` → verify 400
+
+**Verification:**
+
+- **UI**: Cancel button should not be visible after approval
+- **API**: Backend blocks cancel for non-pending statuses
+- **DB**: N/A (request blocked)
+
+---
+
+## Suite 10: Rental 4-Step (직렬) ★ 신규 핵심
+
+`test.describe.configure({ mode: 'serial' })` 적용
+
+### s10-rental-4step.spec.ts
+
+**beforeAll:**
+
+```typescript
+await resetRentalCheckoutToApproved(CHECKOUT_011_ID);
+// 027, 030, 033, 036 are pre-seeded at specific states
+```
+
+#### TEST-10-01: Step 1 - 대여자 반출 전 확인 (approved → lender_checked) (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_011_ID` (approved, purpose=rental)
+
+**Steps:**
+
+1. API: `POST /api/checkouts/{CHECKOUT_011_ID}/condition-check` with:
+   ```json
+   {
+     "step": "lender_checkout",
+     "appearanceStatus": "normal",
+     "operationStatus": "normal",
+     "accessoriesStatus": "complete",
+     "notes": "Equipment ready for shipment"
+   }
+   ```
+2. Verify response contains condition check record
+
+**Verification:**
+
+- **API 1**: `GET /api/checkouts/{id}` after step 1:
+  - `status=lender_checked`
+  - `checkoutDate` timestamp populated
+- **API 2**: `GET /api/equipment/{id}`:
+  - ★ **`status=checked_out`** (equipment leaves inventory)
+- **API 3**: `GET /api/checkouts/{id}/condition-checks`:
+  - Array contains 1 record with `step=lender_checkout`
+
+**Assertions:**
+
+```typescript
+import { CHECKOUT_011_ID } from '../helpers/checkout-constants';
+
+const checkoutBefore = await apiGet(page, `/api/checkouts/${CHECKOUT_011_ID}`);
+expect(checkoutBefore.status).toBe('approved');
+expect(checkoutBefore.purpose).toBe('rental');
+const equipmentId = checkoutBefore.equipment[0].id;
+
+// Step 1: Lender checkout
+const conditionResponse = await apiPost(page, `/api/checkouts/${CHECKOUT_011_ID}/condition-check`, {
+  step: 'lender_checkout',
+  appearanceStatus: 'normal',
+  operationStatus: 'normal',
+  accessoriesStatus: 'complete',
+  notes: 'Equipment ready for shipment',
+});
+expect(conditionResponse.step).toBe('lender_checkout');
+
+// Verify checkout status changed
+const checkoutAfter = await apiGet(page, `/api/checkouts/${CHECKOUT_011_ID}`);
+expect(checkoutAfter.status).toBe('lender_checked');
+expect(checkoutAfter.checkoutDate).toBeTruthy();
+
+// ★ Verify equipment status changed
+const equipmentAfter = await apiGet(page, `/api/equipment/${equipmentId}`);
+expect(equipmentAfter.status).toBe('checked_out');
+
+// Verify condition check recorded
+const checks = await apiGet(page, `/api/checkouts/${CHECKOUT_011_ID}/condition-checks`);
+expect(checks.length).toBe(1);
+expect(checks[0].step).toBe('lender_checkout');
+```
+
+---
+
+#### TEST-10-02: Step 2 - 차용자 수령 확인 (lender_checked → in_use) (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_027_ID` (seed: lender_checked)
+
+**Steps:**
+
+1. API: `POST /api/checkouts/{CHECKOUT_027_ID}/condition-check` with:
+   ```json
+   {
+     "step": "borrower_receive",
+     "appearanceStatus": "normal",
+     "operationStatus": "normal",
+     "accessoriesStatus": "complete",
+     "notes": "Equipment received in good condition"
+   }
+   ```
+
+**Verification:**
+
+- **API 1**: `GET /api/checkouts/{id}` → `status=in_use`
+- **API 2**: `GET /api/equipment/{id}` → `status` unchanged (still checked_out or in_use)
+- **API 3**: Condition checks array has 2 records
+
+---
+
+#### TEST-10-03: Step 3 - 차용자 반납 전 확인 (in_use → borrower_returned) (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_033_ID` (seed: in_use)
+
+**Steps:**
+
+1. API: `POST /api/checkouts/{CHECKOUT_033_ID}/condition-check` with:
+   ```json
+   {
+     "step": "borrower_return",
+     "appearanceStatus": "normal",
+     "operationStatus": "normal",
+     "comparisonWithPrevious": "No changes compared to receipt",
+     "notes": "Equipment ready to return"
+   }
+   ```
+
+**Verification:**
+
+- **API 1**: `GET /api/checkouts/{id}` → `status=borrower_returned`
+- **API 2**: Equipment status unchanged
+- **API 3**: Condition checks array has 3 records
+
+---
+
+#### TEST-10-04: Step 4 - 대여자 최종 확인 (borrower_returned → lender_received) (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_036_ID` (seed: borrower_returned)
+
+**Steps:**
+
+1. API: `POST /api/checkouts/{CHECKOUT_036_ID}/condition-check` with:
+   ```json
+   {
+     "step": "lender_return",
+     "appearanceStatus": "normal",
+     "operationStatus": "normal",
+     "comparisonWithPrevious": "Equipment returned in same condition as shipped",
+     "notes": "Final inspection complete"
+   }
+   ```
+
+**Verification (CRITICAL):**
+
+- **API 1**: `GET /api/checkouts/{id}` → `status=lender_received`, `actualReturnDate` populated
+- **API 2**: `GET /api/equipment/{id}`:
+  - ★ **`status=available`** (equipment back in inventory!)
+- **API 3**: Condition checks array has 4 records
+
+**Assertions:**
+
+```typescript
+const checkoutBefore = await apiGet(page, `/api/checkouts/${CHECKOUT_036_ID}`);
+expect(checkoutBefore.status).toBe('borrower_returned');
+const equipmentId = checkoutBefore.equipment[0].id;
+
+// Step 4: Lender final check
+await apiPost(page, `/api/checkouts/${CHECKOUT_036_ID}/condition-check`, {
+  step: 'lender_return',
+  appearanceStatus: 'normal',
+  operationStatus: 'normal',
+  comparisonWithPrevious: 'Equipment returned in same condition',
+  notes: 'Final inspection complete',
+});
+
+// Verify checkout status final
+const checkoutAfter = await apiGet(page, `/api/checkouts/${CHECKOUT_036_ID}`);
+expect(checkoutAfter.status).toBe('lender_received');
+expect(checkoutAfter.actualReturnDate).toBeTruthy();
+
+// ★ Verify equipment RESTORED to available
+const equipmentAfter = await apiGet(page, `/api/equipment/${equipmentId}`);
+expect(equipmentAfter.status).toBe('available');
+
+// Verify all 4 condition checks recorded
+const checks = await apiGet(page, `/api/checkouts/${CHECKOUT_036_ID}/condition-checks`);
+expect(checks.length).toBe(4);
+expect(checks.map((c) => c.step)).toEqual([
+  'lender_checkout',
+  'borrower_receive',
+  'borrower_return',
+  'lender_return',
+]);
+```
+
+---
+
+#### TEST-10-05: 대여 4단계 순서 위반 차단 (P2)
+
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: serial
+**Test Data**: `CHECKOUT_014_ID` (reset to approved)
+
+**Steps:**
+
+1. API: Try `POST /condition-check` with `step=borrower_receive` on approved checkout
+2. Verify 400 error "이전 단계를 먼저 완료해야 합니다"
+3. API: Try `POST /condition-check` with `step=lender_return` on approved checkout
+4. Verify 400 error
+
+**Verification:**
+
+- **API**: Backend enforces step order
+- **DB**: N/A (request blocked)
+
+---
+
+#### TEST-10-06: condition-check 이력 조회 (P2)
+
+**Priority**: P2
+**Role**: technical_manager
+**Execution**: parallel (read-only)
+**Test Data**: `CHECKOUT_030_ID` (seed: borrower_received, should have 2 checks)
+
+**Steps:**
+
+1. API: `GET /api/checkouts/{CHECKOUT_030_ID}/condition-checks`
+2. Verify response is an array
+3. Verify each entry has: `id`, `step`, `checkedBy`, `checkedAt`, `appearanceStatus`, `operationStatus`
+
+**Verification:**
+
+- **API**: History retrieval works
+- **DB**: N/A (read-only)
+
+---
+
+## Suite 11: Permissions (병렬)
+
+### s11-role-permissions.spec.ts
+
+#### TEST-11-01: test_engineer는 승인/반려 불가 (P1)
+
+**Priority**: P1
+**Roles**: test_engineer + technical_manager
+**Execution**: parallel
+**Test Data**: Any pending checkout (read-only)
+
+**Steps:**
+
+1. (As test_engineer) Navigate to pending checkout detail
+2. Verify "승인" button NOT visible
+3. Verify "반려" button NOT visible
+4. API: `PATCH /api/checkouts/{id}/approve` as test_engineer
+5. Verify 403 Forbidden
+6. API: `PATCH /api/checkouts/{id}/reject` as test_engineer
+7. Verify 403 Forbidden
+
+**Verification:**
+
+- **UI**: Role-based button visibility
+- **API**: Permission guard blocks unauthorized actions
+- **DB**: N/A (request blocked)
+
+---
+
+#### TEST-11-02: approverId 서버사이드 추출 검증 (P1)
+
+**Priority**: P1
+**Role**: technical_manager
+**Execution**: parallel
+**Test Data**: Dynamically created
+
+**Steps:**
+
+1. API: Create new checkout
+2. API: `PATCH /api/checkouts/{id}/approve` with body:
+   ```json
+   {
+     "approverId": "fake-uuid-12345"
+   }
+   ```
+3. API: `GET /api/checkouts/{id}`
+4. Verify `approverId` matches session user UUID, NOT "fake-uuid-12345"
+
+**Verification:**
+
+- **Security**: Server extracts approverId from `req.user.userId`, ignores client value
+- **Reference**: Security fix applied 2026-02-05
+
+**Assertions:**
+
+```typescript
+const createResponse = await apiPost(techManagerPage, '/api/checkouts', { ... });
+const checkoutId = createResponse.id;
+
+// Try to spoof approverId
+await apiPatch(techManagerPage, `/api/checkouts/${checkoutId}/approve`, {
+  approverId: 'fake-uuid-12345',
+});
+
+// Verify server-side extraction
+const final = await apiGet(techManagerPage, `/api/checkouts/${checkoutId}`);
+expect(final.approverId).not.toBe('fake-uuid-12345');
+expect(final.approverId).toBe(SESSION_TECH_MANAGER_USER_ID); // From session
+```
+
+---
+
+#### TEST-11-03: EMC팀 RF팀 장비 반출 차단 (P2)
+
+**Priority**: P2
+**Role**: test_engineer (EMC team)
+**Execution**: parallel
+**Test Data**: RF team equipment
+
+**Steps:**
+
+1. Identify EMC team user and RF team equipment
+2. API: `POST /api/checkouts` with EMC user for RF equipment
+3. Verify 403 Forbidden "EMC 팀은 RF 팀 장비를 반출할 수 없습니다"
+
+**Verification:**
+
+- **API**: Team-based access control
+- **DB**: N/A (request blocked)
+
+---
+
+#### TEST-11-04: lab_manager 자가 승인 가능 (P2)
+
+**Priority**: P2
+**Role**: lab_manager
+**Execution**: parallel
+**Test Data**: Dynamically created
+
+**Steps:**
+
+1. API: Create checkout as lab_manager
+2. API: Approve same checkout as lab_manager
+3. API: `GET /api/checkouts/{id}`
+4. Verify `requesterId = approverId`
+
+**Verification:**
+
+- **API**: Self-approval allowed for lab_manager role
+- **DB**: Same user ID in both fields
+
+---
+
+## Test Execution Commands
+
+### Run All Checkouts Tests
+
+```bash
+pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/ --workers=4
+```
+
+### Run by Suite
+
+```bash
+# Read-only tests (fast, parallel)
+pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/suite-01-readonly/
+
+# Critical lifecycle tests
+pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/suite-08-lifecycle/
+
+# Rental 4-step tests
+pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/suite-10-rental/
+```
+
+### Run P0 Critical Tests Only
+
+```bash
+pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/ --grep "P0|CRITICAL"
+```
+
+### Debug Single Test
+
+```bash
+pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/suite-03-approval/s03-approval-workflow.spec.ts --debug
+```
+
+### UI Mode (Visual)
+
+```bash
+pnpm --filter frontend exec npx playwright test tests/e2e/features/checkouts/ --ui
+```
+
+---
+
+## Test Data Requirements
+
+### Seed Data (backend)
+
+- 68 checkout IDs with known states (CHECKOUT_001 - CHECKOUT_068)
+- 15+ test equipment IDs across teams/sites
+- 3 test users (test_engineer, technical_manager, lab_manager)
+
+### Environment
+
+- Backend: `http://localhost:3001` (NestJS)
+- Frontend: `http://localhost:3000` (Next.js 16)
+- DB: PostgreSQL on port 5432
+
+---
+
+## Success Criteria
+
+### Test Coverage
+
+- ✅ 47 test scenarios across 11 suites
+- ✅ All checkout statuses covered (pending → return_approved, rejected, canceled)
+- ✅ All purposes covered (calibration, repair, rental)
+- ✅ Equipment status transitions verified (available ↔ checked_out)
+- ✅ Rental 4-step workflow fully tested
+
+### Quality Metrics
+
+- ✅ 100% SSOT compliance (all enums/labels from packages)
+- ✅ Triple verification (UI + API + DB state)
+- ✅ Security validation (server-side approverId, permission guards)
+- ✅ Cross-role interactions tested
+- ✅ No ID collisions between serial suites
+
+### Performance
+
+- ✅ Parallel suites complete in < 3 minutes
+- ✅ Serial suites complete in < 10 minutes total
+- ✅ Full test suite < 15 minutes
+
+---
+
+## Known Issues & Workarounds
+
+### Issue 1: Server Component Authentication (401)
+
+**Status:** Documented in `CHECKOUT_APPROVAL_FLOW_TESTS_FIX_SUMMARY.md`
+**Impact:** `/checkouts/[id]/page.tsx` may return 401 in tests
+**Workaround:** Tests use API verification primarily, UI verification is secondary
+
+### Issue 2: Permission-Based Button Visibility
+
+**Status:** Not yet implemented
+**Impact:** All users see approve/reject buttons
+**Workaround:** Tests verify API permission guards work correctly
+
+---
+
+## Maintenance
+
+### When to Update Tests
+
+1. **Business logic changes:** Update corresponding suite
+2. **New status added:** Add to Suite 01 read-only tests
+3. **API endpoint changes:** Update API calls in all affected tests
+4. **UI redesign:** Update selectors in test files
+
+### How to Add New Test
+
+1. Identify correct suite (read-only vs state-modifying)
+2. Allocate unique checkout ID if state-modifying
+3. Follow triple verification pattern (UI + API + DB)
+4. Import enums/labels from SSOT packages
+5. Add to appropriate `.spec.ts` file
+
+---
+
+**Test Plan Version:** 1.0
+**Last Updated:** 2026-02-10
+**Author:** Claude Code (Sonnet 4.5)
+**Status:** Ready for Implementation

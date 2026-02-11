@@ -31,6 +31,7 @@ export const DisposalRequestSchema = z.object({
   rejectedAt: z.string().datetime().optional(),
   rejectionReason: z.string().optional(),
   rejectionStep: z.enum(['review', 'approval']).optional(),
+  version: z.number().int().positive(),
 });
 
 export type DisposalAttachment = z.infer<typeof DisposalAttachmentSchema>;

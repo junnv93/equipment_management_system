@@ -8,8 +8,8 @@
  */
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import equipmentApi, {
   type Equipment,
@@ -17,7 +17,6 @@ import equipmentApi, {
   type CreateEquipmentDto,
   type UpdateEquipmentDto,
 } from '@/lib/api/equipment-api';
-import { getErrorMessage } from '@/lib/api/error';
 
 /**
  * 장비 목록 조회 훅
@@ -76,139 +75,151 @@ export function useEquipment(id: string) {
 export function useEquipmentWithInitialData(initialData: Equipment) {
   const equipmentId = String(initialData.id);
 
-  return useQuery({
+  const result = useQuery({
     queryKey: ['equipment', equipmentId],
     queryFn: () => equipmentApi.getEquipment(equipmentId),
-    initialData,
+    placeholderData: initialData,
     staleTime: 0, // 항상 fresh하게 유지하여 캐시 갱신 즉시 반영
   });
+
+  // placeholderData는 타입상 data가 undefined일 수 있으므로,
+  // initialData를 fallback으로 사용하여 항상 Equipment 타입 보장
+  return { ...result, data: result.data ?? initialData };
 }
 
 /**
- * 장비 생성 훅
+ * ✅ 장비 생성 훅 - Optimistic Update 패턴
+ *
+ * 장비 등록 시 즉시 목록에 추가하여 사용자 경험을 개선합니다.
  */
 export function useCreateEquipment() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  return useOptimisticMutation<
+    Equipment | { requestUuid: string },
+    { data: CreateEquipmentDto; files?: File[] },
+    { data: Equipment[] }
+  >({
+    mutationFn: ({ data, files }) => equipmentApi.createEquipment(data, files),
+    queryKey: ['equipment', 'list'],
+    optimisticUpdate: (old, { data }) => {
+      if (!old?.data) return { data: [] };
 
-  return useMutation({
-    mutationFn: ({ data, files }: { data: CreateEquipmentDto; files?: File[] }) =>
-      equipmentApi.createEquipment(data, files),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['equipment-requests'] });
+      // ✅ 새 장비 즉시 추가 (임시 ID 사용)
+      const newEquipment: Equipment = {
+        id: 'temp-' + Date.now(),
+        ...data,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as Equipment;
 
-      // 승인 요청인 경우 다른 메시지 표시
-      if (response?.requestUuid) {
-        toast({
-          title: '요청 제출 완료',
-          description: '장비 등록 요청이 제출되었습니다. 승인 대기 중입니다.',
-        });
-      } else {
-        toast({
-          title: '성공',
-          description: '장비가 성공적으로 등록되었습니다.',
-        });
-      }
+      return {
+        ...old,
+        data: [newEquipment, ...old.data],
+      };
     },
-    onError: (error: unknown) => {
-      toast({
-        title: '오류',
-        description: getErrorMessage(error, '장비 등록 중 오류가 발생했습니다.'),
-        variant: 'destructive',
-      });
-    },
+    invalidateKeys: [['equipment', 'list'], ['equipment-requests']],
+    successMessage: (response) =>
+      response && 'requestUuid' in response
+        ? '장비 등록 요청이 제출되었습니다. 승인 대기 중입니다.'
+        : '장비가 성공적으로 등록되었습니다.',
+    errorMessage: '장비 등록 중 오류가 발생했습니다.',
   });
 }
 
 /**
- * 장비 수정 훅
+ * ✅ 장비 수정 훅 - Optimistic Update 패턴
+ *
+ * 장비 수정 시 즉시 목록에 반영하여 사용자 경험을 개선합니다.
  */
 export function useUpdateEquipment() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  return useOptimisticMutation<
+    Equipment | { requestUuid: string },
+    { id: string; data: UpdateEquipmentDto; files?: File[] },
+    { data: Equipment[] }
+  >({
+    mutationFn: ({ id, data, files }) => equipmentApi.updateEquipment(id, data, files),
+    queryKey: ['equipment', 'list'],
+    optimisticUpdate: (old, { id, data }) => {
+      if (!old?.data) return { data: [] };
 
-  return useMutation({
-    mutationFn: ({ id, data, files }: { id: string; data: UpdateEquipmentDto; files?: File[] }) =>
-      equipmentApi.updateEquipment(id, data, files),
-    onSuccess: (response, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['equipment', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['equipment-requests'] });
-
-      // 승인 요청인 경우 다른 메시지 표시
-      if (response?.requestUuid) {
-        toast({
-          title: '요청 제출 완료',
-          description: '장비 수정 요청이 제출되었습니다. 승인 대기 중입니다.',
-        });
-      } else {
-        toast({
-          title: '성공',
-          description: '장비 정보가 성공적으로 수정되었습니다.',
-        });
-      }
+      // ✅ 수정된 장비 즉시 업데이트
+      return {
+        ...old,
+        data: old.data.map((item) =>
+          item.id === id
+            ? ({
+                ...item,
+                ...data,
+                updatedAt: new Date().toISOString(),
+              } as Equipment)
+            : item
+        ),
+      };
     },
-    onError: (error: unknown) => {
-      toast({
-        title: '오류',
-        description: getErrorMessage(error, '장비 수정 중 오류가 발생했습니다.'),
-        variant: 'destructive',
-      });
-    },
+    invalidateKeys: [['equipment', 'list'], ['equipment-requests']],
+    successMessage: (response) =>
+      response && 'requestUuid' in response
+        ? '장비 수정 요청이 제출되었습니다. 승인 대기 중입니다.'
+        : '장비 정보가 성공적으로 수정되었습니다.',
+    errorMessage: '장비 수정 중 오류가 발생했습니다.',
   });
 }
 
 /**
- * 장비 삭제 훅
+ * ✅ 장비 삭제 훅 - Optimistic Update 패턴
+ *
+ * 장비 삭제 시 즉시 목록에서 제거하여 사용자 경험을 개선합니다.
  */
 export function useDeleteEquipment() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  return useOptimisticMutation<void, string, { data: Equipment[] }>({
+    mutationFn: (id) => equipmentApi.deleteEquipment(id),
+    queryKey: ['equipment', 'list'],
+    optimisticUpdate: (old, id) => {
+      if (!old?.data) return { data: [] };
 
-  return useMutation({
-    mutationFn: (id: string) => equipmentApi.deleteEquipment(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] });
-      toast({
-        title: '성공',
-        description: '장비가 성공적으로 삭제되었습니다.',
-      });
+      // ✅ 삭제된 장비 즉시 제거
+      return {
+        ...old,
+        data: old.data.filter((item) => item.id !== id),
+      };
     },
-    onError: (error: unknown) => {
-      toast({
-        title: '오류',
-        description: getErrorMessage(error, '장비 삭제 중 오류가 발생했습니다.'),
-        variant: 'destructive',
-      });
-    },
+    invalidateKeys: [['equipment', 'list']],
+    successMessage: '장비가 성공적으로 삭제되었습니다.',
+    errorMessage: '장비 삭제 중 오류가 발생했습니다.',
   });
 }
 
 /**
- * 장비 상태 변경 훅
+ * ✅ 장비 상태 변경 훅 - Optimistic Update 패턴
+ *
+ * ✅ Phase 1: Equipment Module - 2026-02-11
+ * ✅ Optimistic Locking: version 필드 추가
+ *
+ * 상태 변경을 즉시 UI에 반영하여 사용자 경험을 개선합니다.
+ * 409 Conflict 발생 시 자동으로 서버에서 최신 데이터를 가져와 동기화합니다.
  */
 export function useUpdateEquipmentStatus() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  return useOptimisticMutation<
+    Equipment,
+    { id: string; status: EquipmentStatus; version: number },
+    { data: Equipment[] }
+  >({
+    mutationFn: ({ id, status, version }) =>
+      equipmentApi.updateEquipmentStatus(id, status, version),
+    queryKey: ['equipment', 'list'],
+    optimisticUpdate: (old, { id, status }) => {
+      if (!old?.data) return { data: [] };
 
-  return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: EquipmentStatus }) =>
-      equipmentApi.updateEquipmentStatus(id, status),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['equipment', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] });
-      toast({
-        title: '성공',
-        description: '장비 상태가 성공적으로 변경되었습니다.',
-      });
+      // ✅ 변경된 장비만 즉시 업데이트
+      return {
+        ...old,
+        data: old.data.map((item) => (item.id === id ? { ...item, status } : item)),
+      };
     },
-    onError: (error: unknown) => {
-      toast({
-        title: '오류',
-        description: getErrorMessage(error, '장비 상태 변경 중 오류가 발생했습니다.'),
-        variant: 'destructive',
-      });
-    },
+    invalidateKeys: [['equipment', 'list']], // 백그라운드 재검증
+    successMessage: '장비 상태가 성공적으로 변경되었습니다.',
+    // ✅ Version conflict는 useOptimisticMutation의 onError에서 자동 처리
+    // - 서버에서 최신 데이터 가져오기 (invalidateQueries)
+    // - 에러 토스트 표시: "다른 사용자가 이미 수정했습니다. 페이지가 자동으로 새로고침됩니다."
+    errorMessage: '장비 상태 변경 중 오류가 발생했습니다.',
   });
 }

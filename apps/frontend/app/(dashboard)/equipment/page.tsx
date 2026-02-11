@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   EquipmentListContent,
@@ -13,11 +14,27 @@ import {
   parseEquipmentFiltersFromSearchParams,
   convertFiltersToApiParams,
 } from '@/lib/utils/equipment-filter-utils';
+import { getServerAuthSession } from '@/lib/auth/server-session';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
+
+/**
+ * 역할별 기본 필터 정책
+ *
+ * - test_engineer, technical_manager: 사이트 + 팀 필터 자동 적용
+ * - quality_manager, lab_manager: 사이트 필터만 적용
+ * - system_admin: 필터 미적용 (전체 조회 가능)
+ */
+const ROLES_WITH_TEAM_FILTER = ['test_engineer', 'technical_manager'];
+const ROLES_WITH_SITE_FILTER = [
+  'test_engineer',
+  'technical_manager',
+  'quality_manager',
+  'lab_manager',
+];
 
 /**
  * 장비 목록 페이지 (Server Component)
@@ -28,19 +45,55 @@ type PageProps = {
  * - ClientOnly wrapper로 hydration mismatch 방지
  * - Suspense로 스트리밍 지원
  *
- * Hydration 최적화:
- * - ClientOnly: Radix UI 컴포넌트의 자동 ID 생성으로 인한 mismatch 방지
- * - fallback: 서버 렌더링 시 skeleton 제공 (SEO 유지)
+ * ✅ SSOT: getServerAuthSession() 래퍼 사용 (lib/auth/server-session.ts)
+ * ✅ 역할별 기본 필터는 서버 사이드 redirect로 URL에 반영 (URL = 유일한 진실의 소스)
  */
 export default async function EquipmentPage(props: PageProps) {
-  // searchParams는 Promise이므로 await 필요
   const searchParams = await props.searchParams;
+
+  // ============================================================================
+  // ✅ 역할별 기본 필터 적용 (서버 사이드 redirect)
+  // SSOT: getServerAuthSession() → lib/auth/server-session.ts
+  // ============================================================================
+  const session = await getServerAuthSession();
+  const user = session?.user;
+
+  if (user) {
+    const userRole = user.role;
+    const userSite = user.site;
+    const userTeamId = user.teamId;
+
+    const hasSiteParam = searchParams.site !== undefined;
+    const hasTeamParam = searchParams.teamId !== undefined;
+
+    // 사이트 필터 적용 대상 역할인지 확인
+    const shouldApplySite =
+      ROLES_WITH_SITE_FILTER.includes(userRole) && !!userSite && !hasSiteParam;
+    // 팀 필터 적용 대상 역할인지 확인
+    const shouldApplyTeam =
+      ROLES_WITH_TEAM_FILTER.includes(userRole) && !!userTeamId && !hasTeamParam;
+
+    if (shouldApplySite || shouldApplyTeam) {
+      const params = new URLSearchParams();
+
+      // 기존 파라미터 유지
+      for (const [key, value] of Object.entries(searchParams)) {
+        if (value !== undefined && value !== null) {
+          params.set(key, Array.isArray(value) ? value[0] : String(value));
+        }
+      }
+
+      // 기본 필터 추가
+      if (shouldApplySite) params.set('site', userSite);
+      if (shouldApplyTeam) params.set('teamId', userTeamId);
+
+      redirect(`/equipment?${params.toString()}`);
+    }
+  }
 
   // ============================================================================
   // 🔴 SSOT: 직접 searchParams 파싱 금지!
   // 반드시 equipment-filter-utils.ts의 공유 함수를 사용하세요.
-  // 이유: 클라이언트(useEquipmentFilters)와 서버(page.tsx) 간 파싱 로직 불일치로
-  //       새 필터가 서버에서 누락되는 버그 발생 (2026-01-30)
   // @see lib/utils/equipment-filter-utils.ts
   // ============================================================================
   const uiFilters = parseEquipmentFiltersFromSearchParams(searchParams);
@@ -51,22 +104,15 @@ export default async function EquipmentPage(props: PageProps) {
   try {
     initialData = await equipmentApiServer.getEquipmentList(initialQuery);
   } catch (error) {
-    // 🔴 에러 시 클라이언트에서 fetch하도록 initialData 없이 렌더링
-    // 개발 모드에서는 상세한 에러 정보 로깅
     if (process.env.NODE_ENV === 'development') {
       console.error(
-        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-          '[Equipment Page] Server-side fetch 실패\n' +
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-          `📍 Query: ${JSON.stringify(initialQuery, null, 2)}\n` +
-          `❌ Error: ${error instanceof Error ? error.message : String(error)}\n` +
-          '💡 Fallback: Client-side fetch will be attempted\n' +
-          '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+        '[Equipment Page] Server-side fetch 실패\n' +
+          `Query: ${JSON.stringify(initialQuery, null, 2)}\n` +
+          `Error: ${error instanceof Error ? error.message : String(error)}`
       );
     } else {
       console.error('Failed to fetch initial equipment list:', error);
     }
-    // initialData를 undefined로 유지하여 클라이언트에서 재시도
   }
 
   return (
@@ -91,7 +137,6 @@ export default async function EquipmentPage(props: PageProps) {
       </div>
 
       {/* 메인 컨텐츠 */}
-      {/* ✅ ClientOnly: Radix UI hydration mismatch 방지 */}
       <Suspense fallback={<EquipmentListSkeleton />}>
         <ClientOnly fallback={<EquipmentListSkeleton />}>
           <EquipmentListContent initialData={initialData} />

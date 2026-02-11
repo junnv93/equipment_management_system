@@ -72,23 +72,20 @@ export function TeamList({ initialData }: TeamListProps) {
   }, [debouncedSearch, siteFilter, router]);
 
   // 쿼리 파라미터 생성
-  const queryParams: TeamQuery = useMemo(() => ({
-    search: debouncedSearch || undefined,
-    site: siteFilter !== 'all' ? (siteFilter as 'suwon' | 'uiwang') : undefined,
-    pageSize: 50, // 팀은 보통 많지 않으므로 한 번에 로드
-  }), [debouncedSearch, siteFilter]);
+  const queryParams: TeamQuery = useMemo(
+    () => ({
+      search: debouncedSearch || undefined,
+      site: siteFilter !== 'all' ? (siteFilter as 'suwon' | 'uiwang') : undefined,
+      pageSize: 50, // 팀은 보통 많지 않으므로 한 번에 로드
+    }),
+    [debouncedSearch, siteFilter]
+  );
 
   // 팀 목록 쿼리
-  const {
-    data,
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey: ['teams', queryParams],
     queryFn: () => teamsApi.getTeams(queryParams),
-    initialData,
+    placeholderData: initialData,
     staleTime: 60 * 1000, // 1분
   });
 
@@ -165,12 +162,8 @@ export function TeamList({ initialData }: TeamListProps) {
 
         {/* 팀 추가 버튼 (권한 있는 경우만) */}
         {canCreateTeam && (
-          <Button
-            onClick={() => router.push('/teams/create')}
-            className="shrink-0 ml-auto"
-          >
-            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-            팀 추가
+          <Button onClick={() => router.push('/teams/create')} className="shrink-0 ml-auto">
+            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />팀 추가
           </Button>
         )}
       </div>
@@ -218,10 +211,7 @@ export function TeamList({ initialData }: TeamListProps) {
           {teams.map((team, index) => (
             <div
               key={team.id}
-              className={cn(
-                'animate-in fade-in slide-in-from-bottom-4',
-                'fill-mode-forwards'
-              )}
+              className={cn('animate-in fade-in slide-in-from-bottom-4', 'fill-mode-forwards')}
               style={{
                 animationDelay: `${index * 50}ms`,
                 animationDuration: '300ms',
@@ -282,8 +272,7 @@ function EmptyTeamList({
         )}
         {canCreate && (
           <Button onClick={() => router.push('/teams/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            팀 추가
+            <Plus className="h-4 w-4 mr-2" />팀 추가
           </Button>
         )}
       </div>

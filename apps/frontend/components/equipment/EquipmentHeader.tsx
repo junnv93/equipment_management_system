@@ -65,8 +65,8 @@ export function EquipmentHeader({
   const [_disposalDetailOpen, _setDisposalDetailOpen] = useState(false);
 
   // ✅ SSOT: Client-side 캐시 구독 훅 사용
-  // Server Component에서 받은 초기 데이터를 initialData로 사용하고,
-  // mutation 후 캐시가 갱신되면 즉시 UI에 반영됨
+  // Server Component에서 받은 초기 데이터를 placeholderData로 즉시 표시하고,
+  // 백그라운드에서 항상 최신 데이터 refetch + mutation 후 캐시 갱신 즉시 반영
   const { data: equipment } = useEquipmentWithInitialData(initialEquipment);
 
   // 장비 식별자: 백엔드는 id 필드에 UUID를 저장

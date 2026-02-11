@@ -1,13 +1,13 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 import { Wrench } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AzureAdButton } from '@/components/auth/AzureAdButton';
 import { useAuthProviders } from '@/components/auth/AuthProviders';
 import { LoginForm } from '@/components/auth/LoginForm';
+import { DevLoginButtons } from '@/components/auth/DevLoginButtons';
 import { getSafeCallbackUrl } from '@/lib/auth/auth-utils';
 
 function LoginProviders() {
@@ -64,6 +64,9 @@ interface LoginPageContentProps {
  * - 로그인 폼 상호작용 처리
  */
 export function LoginPageContent({ showDevAccounts = false }: LoginPageContentProps) {
+  const searchParams = useSearchParams();
+  const callbackUrl = getSafeCallbackUrl(searchParams?.get('callbackUrl'), '/');
+
   return (
     <div className="flex-1 lg:w-1/2 flex flex-col bg-white dark:bg-background">
       {/* 스킵 링크 (접근성) */}
@@ -99,56 +102,17 @@ export function LoginPageContent({ showDevAccounts = false }: LoginPageContentPr
           <div className="bg-card rounded-2xl shadow-lg border border-border p-8">
             {/* 헤더 */}
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                Welcome back
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                계정에 로그인하여 시작하세요
-              </p>
+              <h2 className="text-2xl font-bold text-foreground mb-2">Welcome back</h2>
+              <p className="text-sm text-muted-foreground">계정에 로그인하여 시작하세요</p>
             </div>
 
-            {/* 로그인 콘텐츠 */}
-            <Suspense
-              fallback={
-                <div className="space-y-4" aria-busy="true" aria-label="로딩 중">
-                  <Skeleton className="h-12 w-full rounded-lg" />
-                  <Skeleton className="h-12 w-full rounded-lg" />
-                  <Skeleton className="h-12 w-full rounded-lg" />
-                </div>
-              }
-            >
-              <LoginProviders />
-            </Suspense>
+            {/* 로그인 콘텐츠 - Suspense는 Server Component(page.tsx)에서 처리 */}
+            <LoginProviders />
 
-            {/* 테스트 계정 정보 (개발 환경) */}
+            {/* 개발자 모드 빠른 로그인 (개발 환경) */}
             {showDevAccounts && (
               <div className="mt-8 pt-6 border-t border-border">
-                <p className="text-xs text-muted-foreground mb-3 text-center">
-                  개발 환경 테스트 계정
-                </p>
-                <div className="space-y-2" role="list" aria-label="테스트 계정 목록">
-                  <div
-                    className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg text-xs"
-                    role="listitem"
-                  >
-                    <span className="font-medium text-foreground">시험소 관리자</span>
-                    <code className="text-muted-foreground">admin@example.com / admin123</code>
-                  </div>
-                  <div
-                    className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg text-xs"
-                    role="listitem"
-                  >
-                    <span className="font-medium text-foreground">기술책임자</span>
-                    <code className="text-muted-foreground">manager@example.com / manager123</code>
-                  </div>
-                  <div
-                    className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-lg text-xs"
-                    role="listitem"
-                  >
-                    <span className="font-medium text-foreground">시험실무자</span>
-                    <code className="text-muted-foreground">user@example.com / user123</code>
-                  </div>
-                </div>
+                <DevLoginButtons callbackUrl={callbackUrl} />
               </div>
             )}
           </div>

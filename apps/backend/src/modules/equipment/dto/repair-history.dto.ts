@@ -57,8 +57,14 @@ export const repairHistoryQuerySchema = z.object({
   repairResult: RepairResultEnum.optional(),
   includeDeleted: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional(),
   sort: z.string().optional(),
-  page: z.preprocess((val) => (val ? Number(val) : undefined), z.number().optional()),
-  pageSize: z.preprocess((val) => (val ? Number(val) : undefined), z.number().optional()),
+  page: z.preprocess(
+    (val) => (val ? Number(val) : undefined),
+    z.number().int().positive().optional()
+  ),
+  pageSize: z.preprocess(
+    (val) => (val ? Number(val) : undefined),
+    z.number().int().positive().max(100).optional()
+  ),
 });
 
 export type RepairHistoryQueryInput = z.infer<typeof repairHistoryQuerySchema>;

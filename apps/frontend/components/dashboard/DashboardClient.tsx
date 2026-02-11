@@ -159,7 +159,7 @@ function DashboardClientComponent({
   } = useQuery({
     queryKey: ['dashboard-summary', userRole, selectedTeamId],
     queryFn: () => dashboardApi.getSummary(selectedTeamId),
-    initialData: initialSummary,
+    placeholderData: initialSummary,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
   });
@@ -168,7 +168,7 @@ function DashboardClientComponent({
     {
       queryKey: ['equipment-by-team', userRole, selectedTeamId],
       queryFn: () => dashboardApi.getEquipmentByTeam(selectedTeamId),
-      initialData: initialEquipmentByTeam,
+      placeholderData: initialEquipmentByTeam,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
     }
@@ -180,7 +180,7 @@ function DashboardClientComponent({
   } = useQuery({
     queryKey: ['overdue-calibrations', userRole, selectedTeamId],
     queryFn: () => dashboardApi.getOverdueCalibrations(selectedTeamId),
-    initialData: initialOverdueCalibrations,
+    placeholderData: initialOverdueCalibrations,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
   });
@@ -191,7 +191,7 @@ function DashboardClientComponent({
   } = useQuery({
     queryKey: ['upcoming-calibrations', userRole, selectedTeamId],
     queryFn: () => dashboardApi.getUpcomingCalibrations(30, selectedTeamId),
-    initialData: initialUpcomingCalibrations,
+    placeholderData: initialUpcomingCalibrations,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
   });
@@ -200,7 +200,7 @@ function DashboardClientComponent({
     useQuery({
       queryKey: ['overdue-checkouts', userRole, selectedTeamId],
       queryFn: () => dashboardApi.getOverdueCheckouts(selectedTeamId),
-      initialData: initialOverdueCheckouts,
+      placeholderData: initialOverdueCheckouts,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
     });
@@ -209,7 +209,7 @@ function DashboardClientComponent({
     useQuery({
       queryKey: ['recent-activities', userRole],
       queryFn: () => dashboardApi.getRecentActivitiesByRole(userRole),
-      initialData: initialRecentActivities,
+      placeholderData: initialRecentActivities,
       gcTime: GC_TIME,
       staleTime: STALE_TIME,
     });
@@ -220,7 +220,7 @@ function DashboardClientComponent({
   } = useQuery({
     queryKey: ['equipment-status-stats', userRole, selectedTeamId],
     queryFn: () => dashboardApi.getEquipmentStatusStats(selectedTeamId),
-    initialData: initialEquipmentStatusStats,
+    placeholderData: initialEquipmentStatusStats,
     gcTime: GC_TIME,
     staleTime: STALE_TIME,
   });

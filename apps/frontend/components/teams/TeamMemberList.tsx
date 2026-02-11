@@ -41,7 +41,7 @@ export function TeamMemberList({ teamId, initialMembers = [] }: TeamMemberListPr
   } = useQuery({
     queryKey: ['teamMembers', teamId],
     queryFn: () => teamsApi.getTeamMembers(teamId),
-    initialData: initialMembers.length > 0 ? initialMembers : undefined,
+    placeholderData: initialMembers.length > 0 ? initialMembers : undefined,
     staleTime: 60 * 1000,
   });
 
@@ -113,12 +113,8 @@ export function TeamMemberList({ teamId, initialMembers = [] }: TeamMemberListPr
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-4 font-medium text-muted-foreground">
-                      이름
-                    </th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">
-                      역할
-                    </th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">이름</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">역할</th>
                     <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
                       이메일
                     </th>
@@ -161,9 +157,7 @@ export function TeamMemberList({ teamId, initialMembers = [] }: TeamMemberListPr
                           <div>
                             <p className="font-medium">{member.name}</p>
                             {member.position && (
-                              <p className="text-xs text-muted-foreground">
-                                {member.position}
-                              </p>
+                              <p className="text-xs text-muted-foreground">{member.position}</p>
                             )}
                           </div>
                         </div>

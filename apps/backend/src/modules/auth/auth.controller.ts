@@ -81,12 +81,16 @@ export class AuthController {
    * 테스트 전용 로그인 엔드포인트
    * E2E 테스트에서 사용됩니다.
    *
-   * @param role - 테스트 사용자의 역할 (test_engineer, technical_manager, quality_manager, lab_manager, system_admin)
+   * @param role - (레거시) 테스트 사용자의 역할 (test_engineer, technical_manager, quality_manager, lab_manager, system_admin)
+   * @param email - (권장) 테스트 사용자의 이메일 주소 (여러 팀의 사용자 지원)
    * @returns JWT 토큰을 포함한 인증 정보
    */
   @Get('test-login')
   @Public()
-  async testLogin(@Query('role') role: string): Promise<AuthResponse> {
+  async testLogin(
+    @Query('role') role?: string,
+    @Query('email') email?: string
+  ): Promise<AuthResponse> {
     // 개발 및 테스트 환경에서만 허용
     if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
       throw new ForbiddenException(
@@ -94,8 +98,15 @@ export class AuthController {
       );
     }
 
+    // email이 제공되면 email로 직접 조회 (우선순위)
+    if (email) {
+      // DB에서 사용자 조회하여 JWT 생성 (AuthService에서 처리)
+      return this.authService.generateTestTokenByEmail(email);
+    }
+
+    // role만 제공된 경우 레거시 동작 (수원 FCC EMC/RF 팀 사용자)
     if (!role) {
-      throw new ForbiddenException('Role parameter is required');
+      throw new ForbiddenException('Either role or email parameter is required');
     }
 
     // 역할별 테스트 사용자 정보 (최소한의 role→email 매핑만 유지)
