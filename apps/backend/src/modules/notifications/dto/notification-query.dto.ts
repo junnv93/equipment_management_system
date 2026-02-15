@@ -9,6 +9,10 @@ import {
   type NotificationType,
   type NotificationPriority,
 } from '@equipment-management/schemas';
+import {
+  NOTIFICATION_CATEGORIES,
+  type NotificationCategory,
+} from '@equipment-management/shared-constants';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -24,7 +28,12 @@ const toArray = <T extends string>(val: unknown): T[] | undefined => {
 /**
  * 알림 조회 쿼리 스키마
  */
+const NotificationCategoryEnum = z.enum(
+  NOTIFICATION_CATEGORIES as unknown as [string, ...string[]]
+);
+
 export const notificationQuerySchema = z.object({
+  category: NotificationCategoryEnum.optional(),
   recipientId: z.string().uuid({ message: '유효한 수신자 UUID가 아닙니다' }).optional(),
   teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
@@ -51,11 +60,19 @@ export const notificationQuerySchema = z.object({
 });
 
 export type NotificationQueryInput = z.infer<typeof notificationQuerySchema>;
-export const NotificationQueryValidationPipe = new ZodValidationPipe(notificationQuerySchema);
+export const NotificationQueryValidationPipe = new ZodValidationPipe(notificationQuerySchema, {
+  targets: ['query'],
+});
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class NotificationQueryDto {
+  @ApiPropertyOptional({
+    description: '알림 카테고리',
+    enum: NOTIFICATION_CATEGORIES,
+  })
+  category?: NotificationCategory;
+
   @ApiPropertyOptional({ description: '알림 수신자 ID' })
   recipientId?: string;
 

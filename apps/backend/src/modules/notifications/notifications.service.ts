@@ -1,962 +1,387 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-// import { v4 as uuidv4 } from 'uuid';
-import { CreateNotificationDto } from './dto/create-notification.dto';
-import {
-  NotificationTypeValues,
-  NotificationPriorityValues,
-  type NotificationType,
-  type NotificationPriority,
-} from '@equipment-management/schemas';
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
+import * as schema from '@equipment-management/db/schema';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 
-// Alias for backward compatibility (dot-notation access)
-const NotificationTypeEnum = NotificationTypeValues;
-const NotificationPriorityEnum = NotificationPriorityValues;
-import {
-  NotificationFrequencyEnum,
-  NotificationSettingsDto,
-} from './dto/notification-settings.dto';
-import { UpdateNotificationDto } from './dto/update-notification.dto';
-import { NotificationQueryDto } from './dto/notification-query.dto';
-import { parseSortString, sortByField } from '../../common/utils/sort';
+/**
+ * 알림 서비스 (DB 기반)
+ *
+ * 인메모리 배열 → Drizzle ORM 쿼리로 전면 교체.
+ * 알림 CRUD + 읽음 처리 + 미읽음 카운트를 담당.
+ * 알림 생성은 NotificationDispatcher가 담당 (이 서비스는 저수준 DB 레이어).
+ */
 
-// 알림 인터페이스 정의
-export interface Notification {
+export interface NotificationRecord {
   id: string;
   title: string;
   content: string;
-  type: NotificationType;
-  priority: NotificationPriority;
+  type: string;
+  category: string;
+  priority: string;
   recipientId: string | null;
+  teamId: string | null;
+  isSystemWide: boolean;
+  equipmentId: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  linkUrl: string | null;
   isRead: boolean;
-  isTeamNotification?: boolean;
-  teamId?: string;
-  equipmentId?: string;
-  calibrationId?: string;
-  rentalId?: string;
-  linkUrl?: string;
+  readAt: Date | null;
+  actorId: string | null;
+  actorName: string | null;
+  expiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  readAt?: Date;
-  expiresAt?: Date;
 }
 
-// 임시 알림 데이터
-const temporaryNotifications = [
-  {
-    id: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
-    title: '장비 교정 일정 알림',
-    content: 'RF-Analyzer(SUW-E0001) 장비의 교정 일정이 2주 후로 예정되어 있습니다.',
-    type: NotificationTypeEnum.CALIBRATION_DUE,
-    priority: NotificationPriorityEnum.MEDIUM,
-    recipientId: '550e8400-e29b-41d4-a716-446655440001',
-    isTeamNotification: false,
-    equipmentId: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
-    calibrationId: '3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r',
-    rentalId: undefined,
-    linkUrl: '/equipment/1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p/calibrations',
-    isRead: false,
-    createdAt: new Date('2023-05-01T09:00:00Z'),
-    updatedAt: new Date('2023-05-01T09:00:00Z'),
-  },
-  {
-    id: '2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q',
-    title: '장비 대여 요청 승인',
-    content: 'Oscilloscope(EQ-002) 장비 대여 요청이 승인되었습니다.',
-    type: NotificationTypeEnum.RENTAL_APPROVED,
-    priority: NotificationPriorityEnum.MEDIUM,
-    recipientId: '660f9500-f30b-52e5-b827-557766550111',
-    isTeamNotification: false,
-    equipmentId: '2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q',
-    calibrationId: undefined,
-    rentalId: '7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v',
-    linkUrl: '/rentals/7g8h9i0j-1k2l-3m4n-5o6p-7q8r9s0t1u2v',
-    isRead: true,
-    createdAt: new Date('2023-05-10T14:30:00Z'),
-    updatedAt: new Date('2023-05-10T15:45:00Z'),
-  },
-  {
-    id: '3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r',
-    title: '장비 교정 완료',
-    content: 'Power Supply(EQ-003) 장비의 교정이 완료되었습니다.',
-    type: NotificationTypeEnum.CALIBRATION_COMPLETED,
-    priority: NotificationPriorityEnum.LOW,
-    recipientId: '550e8400-e29b-41d4-a716-446655440001',
-    isTeamNotification: true,
-    equipmentId: '3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r',
-    calibrationId: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    rentalId: undefined,
-    linkUrl:
-      '/equipment/3c4d5e6f-7g8h-9i0j-1k2l-3m4n5o6p7q8r/calibrations/4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    isRead: false,
-    createdAt: new Date('2023-05-15T11:20:00Z'),
-    updatedAt: new Date('2023-05-15T11:20:00Z'),
-  },
-  {
-    id: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    title: '장비 대여 요청',
-    content: 'Temperature Chamber(EQ-004) 장비 대여 요청이 접수되었습니다.',
-    type: NotificationTypeEnum.RENTAL_REQUEST,
-    priority: NotificationPriorityEnum.HIGH,
-    recipientId: '770a0600-a40c-63f6-c938-668877660222',
-    isTeamNotification: false,
-    equipmentId: '4d5e6f7g-8h9i-0j1k-2l3m-4n5o6p7q8r9s',
-    calibrationId: undefined,
-    rentalId: '8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w',
-    linkUrl: '/rentals/8h9i0j1k-2l3m-4n5o-6p7q-8r9s0t1u2v3w',
-    isRead: false,
-    createdAt: new Date('2023-05-20T08:45:00Z'),
-    updatedAt: new Date('2023-05-20T08:45:00Z'),
-  },
-  {
-    id: '5e6f7g8h-9i0j-1k2l-3m4n-5o6p7q8r9s0t',
-    title: '시스템 점검 안내',
-    content: '장비 관리 시스템이 2023년 6월 1일 00:00 ~ 04:00 (KST) 동안 점검 예정입니다.',
-    type: NotificationTypeEnum.SYSTEM,
-    priority: NotificationPriorityEnum.HIGH,
-    recipientId: 'all',
-    isTeamNotification: false,
-    equipmentId: undefined,
-    calibrationId: undefined,
-    rentalId: undefined,
-    linkUrl: undefined,
-    isRead: false,
-    createdAt: new Date('2023-05-25T10:00:00Z'),
-    updatedAt: new Date('2023-05-25T10:00:00Z'),
-  },
-];
-
-// 검색 가능한 알림 목록
-const notifications: Notification[] = [...temporaryNotifications];
-
-// 임시 알림 설정 데이터
+interface FindAllQuery {
+  recipientId?: string;
+  teamId?: string;
+  types?: string[];
+  priorities?: string[];
+  category?: string;
+  isRead?: boolean;
+  search?: string;
+  fromDate?: string;
+  toDate?: string;
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+}
 
 @Injectable()
 export class NotificationsService {
-  // 알림 설정을 위한 임시 데이터 저장소
-  private notificationSettings: Record<string, NotificationSettingsDto> = {};
+  private readonly logger = new Logger(NotificationsService.name);
 
-  create(_createNotificationDto: CreateNotificationDto): void {
-    // ... existing code ...
-  }
+  constructor(
+    @Inject('DRIZZLE_INSTANCE')
+    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly cacheService: SimpleCacheService
+  ) {}
 
-  async findAll(query: NotificationQueryDto): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification[];
-    meta: {
-      totalItems: number;
-      itemCount: number;
-      itemsPerPage: number;
-      totalPages: number;
-      currentPage: number;
-    };
+  /**
+   * 사용자의 알림 목록을 조회한다.
+   *
+   * WHERE (recipientId = userId OR teamId = userTeamId OR isSystemWide = true)
+   */
+  async findAllForUser(
+    userId: string,
+    userTeamId: string | null,
+    query: FindAllQuery
+  ): Promise<{
+    items: NotificationRecord[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
   }> {
     const {
-      recipientId,
-      teamId,
+      category,
       types,
       priorities,
-      equipmentId,
-      calibrationId,
-      rentalId,
       isRead,
       search,
       fromDate,
       toDate,
-      sort = 'createdAt.desc',
       page = 1,
       pageSize = 20,
     } = query;
 
-    // 필터링
-    let filteredNotifications = [...notifications];
-
-    if (recipientId) {
-      filteredNotifications = filteredNotifications.filter(
-        (notification) =>
-          notification.recipientId === recipientId || notification.recipientId === 'all'
-      );
+    // 기본 수신 조건: 개인 OR 팀 OR 시스템 전체
+    const recipientConditions = [
+      eq(schema.notifications.recipientId, userId),
+      eq(schema.notifications.isSystemWide, true),
+    ];
+    if (userTeamId) {
+      recipientConditions.push(eq(schema.notifications.teamId, userTeamId));
     }
 
-    if (teamId) {
-      filteredNotifications = filteredNotifications.filter(
-        (notification) => notification.isTeamNotification && notification.recipientId === teamId
-      );
-    }
+    const conditions = [or(...recipientConditions)!];
 
-    if (types) {
-      filteredNotifications = filteredNotifications.filter((notification) =>
-        types.includes(notification.type)
-      );
+    // 추가 필터링
+    if (category) {
+      conditions.push(eq(schema.notifications.category, category));
     }
-
-    if (priorities) {
-      filteredNotifications = filteredNotifications.filter((notification) =>
-        priorities.includes(notification.priority)
-      );
+    if (types && types.length > 0) {
+      conditions.push(inArray(schema.notifications.type, types));
     }
-
-    if (equipmentId) {
-      filteredNotifications = filteredNotifications.filter(
-        (notification) => notification.equipmentId === equipmentId
-      );
+    if (priorities && priorities.length > 0) {
+      conditions.push(inArray(schema.notifications.priority, priorities));
     }
-
-    if (calibrationId) {
-      filteredNotifications = filteredNotifications.filter(
-        (notification) => notification.calibrationId === calibrationId
-      );
-    }
-
-    if (rentalId) {
-      filteredNotifications = filteredNotifications.filter(
-        (notification) => notification.rentalId === rentalId
-      );
-    }
-
     if (isRead !== undefined) {
-      filteredNotifications = filteredNotifications.filter(
-        (notification) => notification.isRead === isRead
-      );
+      conditions.push(eq(schema.notifications.isRead, isRead));
     }
-
     if (search) {
-      const searchLower = search.toLowerCase();
-      filteredNotifications = filteredNotifications.filter(
-        (notification) =>
-          notification.title.toLowerCase().includes(searchLower) ||
-          notification.content.toLowerCase().includes(searchLower)
+      conditions.push(
+        or(
+          ilike(schema.notifications.title, `%${search}%`),
+          ilike(schema.notifications.content, `%${search}%`)
+        )!
       );
     }
-
     if (fromDate) {
-      const fromDateObj = new Date(fromDate);
-      filteredNotifications = filteredNotifications.filter(
-        (notification) => new Date(notification.createdAt) >= fromDateObj
-      );
+      conditions.push(gte(schema.notifications.createdAt, new Date(fromDate)));
     }
-
     if (toDate) {
       const toDateObj = new Date(toDate);
-      toDateObj.setHours(23, 59, 59, 999); // 해당 날짜의 마지막 시간으로 설정
-      filteredNotifications = filteredNotifications.filter(
-        (notification) => new Date(notification.createdAt) <= toDateObj
-      );
+      toDateObj.setHours(23, 59, 59, 999);
+      conditions.push(lte(schema.notifications.createdAt, toDateObj));
     }
 
-    // 정렬
-    const sortConfig = parseSortString(sort);
-    if (sortConfig) {
-      filteredNotifications = sortByField(
-        filteredNotifications,
-        sortConfig.field,
-        sortConfig.direction
-      );
-    }
+    const whereClause = and(...conditions);
 
-    // 페이지네이션
-    const totalItems = filteredNotifications.length;
+    // Count query
+    const [{ count }] = await this.db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(schema.notifications)
+      .where(whereClause);
+
+    const totalItems = count;
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
-    const paginatedNotifications = filteredNotifications.slice(offset, offset + pageSize);
+
+    // Data query
+    const items = await this.db
+      .select()
+      .from(schema.notifications)
+      .where(whereClause)
+      .orderBy(desc(schema.notifications.createdAt))
+      .limit(pageSize)
+      .offset(offset);
 
     return {
-      items: paginatedNotifications,
-      meta: {
-        totalItems,
-        itemCount: paginatedNotifications.length,
-        itemsPerPage: pageSize,
-        totalPages,
-        currentPage: page,
-      },
+      items: items as NotificationRecord[],
+      total: totalItems,
+      page,
+      pageSize,
+      totalPages,
     };
   }
 
-  async findOne(
-    id: string
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
-  > {
-    const notification = notifications.find((n) => n.id === id);
+  /**
+   * 미읽음 알림 개수 (15초 캐시)
+   */
+  async countUnread(userId: string, userTeamId: string | null): Promise<{ count: number }> {
+    const cacheKey = `notification:unread:${userId}`;
+
+    const count = await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const recipientConditions = [
+          eq(schema.notifications.recipientId, userId),
+          eq(schema.notifications.isSystemWide, true),
+        ];
+        if (userTeamId) {
+          recipientConditions.push(eq(schema.notifications.teamId, userTeamId));
+        }
+
+        const [result] = await this.db
+          .select({ count: sql<number>`cast(count(*) as integer)` })
+          .from(schema.notifications)
+          .where(and(or(...recipientConditions), eq(schema.notifications.isRead, false)));
+
+        return result.count;
+      },
+      15 // 15초 캐시
+    );
+
+    return { count };
+  }
+
+  /**
+   * 단일 알림 조회
+   */
+  async findOne(id: string): Promise<NotificationRecord> {
+    const [notification] = await this.db
+      .select()
+      .from(schema.notifications)
+      .where(eq(schema.notifications.id, id))
+      .limit(1);
 
     if (!notification) {
       throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
     }
 
-    return notification;
+    return notification as NotificationRecord;
   }
 
-  async update(
-    id: string,
-    updateNotificationDto: UpdateNotificationDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
-  > {
-    const index = notifications.findIndex((n) => n.id === id);
-
-    if (index === -1) {
-      throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
-    }
-
+  /**
+   * 읽음 표시
+   */
+  async markAsRead(id: string, userId: string): Promise<NotificationRecord> {
     const now = new Date();
-    notifications[index] = {
-      ...notifications[index],
-      ...updateNotificationDto,
-      updatedAt: now,
-    };
 
-    return notifications[index];
-  }
+    const [updated] = await this.db
+      .update(schema.notifications)
+      .set({ isRead: true, readAt: now, updatedAt: now })
+      .where(and(eq(schema.notifications.id, id), eq(schema.notifications.recipientId, userId)))
+      .returning();
 
-  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
-    const index = notifications.findIndex((n) => n.id === id);
-
-    if (index === -1) {
+    if (!updated) {
       throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
     }
 
-    notifications.splice(index, 1);
+    this.cacheService.delete(`notification:unread:${userId}`);
+    return updated as NotificationRecord;
+  }
+
+  /**
+   * 모든 알림 읽음 표시
+   */
+  async markAllAsRead(
+    userId: string,
+    userTeamId: string | null
+  ): Promise<{ success: boolean; count: number }> {
+    const now = new Date();
+
+    const recipientConditions = [eq(schema.notifications.recipientId, userId)];
+    if (userTeamId) {
+      recipientConditions.push(eq(schema.notifications.teamId, userTeamId));
+    }
+
+    const result = await this.db
+      .update(schema.notifications)
+      .set({ isRead: true, readAt: now, updatedAt: now })
+      .where(and(or(...recipientConditions), eq(schema.notifications.isRead, false)))
+      .returning({ id: schema.notifications.id });
+
+    this.cacheService.delete(`notification:unread:${userId}`);
+
+    return { success: true, count: result.length };
+  }
+
+  /**
+   * 알림 삭제
+   */
+  async remove(id: string, userId: string): Promise<{ id: string; deleted: boolean }> {
+    const result = await this.db
+      .delete(schema.notifications)
+      .where(and(eq(schema.notifications.id, id), eq(schema.notifications.recipientId, userId)))
+      .returning({ id: schema.notifications.id });
+
+    if (result.length === 0) {
+      throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
+    }
+
+    this.cacheService.delete(`notification:unread:${userId}`);
     return { id, deleted: true };
   }
 
-  // 읽음 표시
-  async markAsRead(
-    id: string
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/notifications/notifications.service').Notification
-  > {
-    return this.update(id, { isRead: true });
-  }
+  /**
+   * 배치 삽입 (Dispatcher가 호출)
+   */
+  async createBatch(
+    records: Array<{
+      title: string;
+      content: string;
+      type: string;
+      category: string;
+      priority: string;
+      recipientId?: string | null;
+      teamId?: string | null;
+      isSystemWide?: boolean;
+      equipmentId?: string | null;
+      entityType?: string | null;
+      entityId?: string | null;
+      linkUrl?: string | null;
+      actorId?: string | null;
+      actorName?: string | null;
+      expiresAt?: Date | null;
+    }>
+  ): Promise<NotificationRecord[]> {
+    if (records.length === 0) return [];
 
-  // 모든 알림 읽음 표시
-  async markAllAsRead(recipientId: string): Promise<{ success: boolean; count: number }> {
-    const userNotifications = notifications.filter(
-      (n) => n.recipientId === recipientId || n.recipientId === 'all'
-    );
+    const inserted = await this.db.insert(schema.notifications).values(records).returning();
 
-    const updatePromises = userNotifications.map((n) => this.markAsRead(n.id));
-    await Promise.all(updatePromises);
-
-    return { success: true, count: userNotifications.length };
-  }
-
-  // 교정 일정 알림 생성
-  async createCalibrationDueNotification(
-    equipmentId: string,
-    recipientId: string,
-    days: number,
-    equipmentName: string
-  ): Promise<void> {
-    const title = `장비 교정 예정 알림: ${equipmentName}`;
-    const content = `${equipmentName} 장비의 교정이 ${days}일 후로 예정되어 있습니다.`;
-
-    return this.create({
-      title,
-      content,
-      type: NotificationTypeEnum.CALIBRATION_DUE,
-      priority: NotificationPriorityEnum.MEDIUM,
-      recipientId,
-      equipmentId,
-      linkUrl: `/equipment/${equipmentId}/calibrations`,
-    });
-  }
-
-  // 중간점검 알림 생성
-  async createIntermediateCheckNotification(
-    calibrationId: string,
-    equipmentId: string,
-    recipientId: string,
-    days: number,
-    equipmentName: string
-  ): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    type: 'intermediate_check_due';
-    priority: 'medium';
-    recipientId: string;
-    isTeamNotification: boolean;
-    equipmentId: string;
-    calibrationId: string;
-    rentalId: undefined;
-    linkUrl: string;
-    isRead: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const title = `중간점검 예정 알림: ${equipmentName}`;
-    const content = `${equipmentName} 장비의 중간점검이 ${days}일 후로 예정되어 있습니다.`;
-
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      content,
-      type: NotificationTypeEnum.INTERMEDIATE_CHECK_DUE,
-      priority: NotificationPriorityEnum.MEDIUM,
-      recipientId,
-      isTeamNotification: false,
-      equipmentId,
-      calibrationId,
-      rentalId: undefined,
-      linkUrl: `/calibration/${calibrationId}`,
-      isRead: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    notifications.push(newNotification);
-    return newNotification;
-  }
-
-  // 교정 승인 대기 알림 생성
-  async createCalibrationApprovalPendingNotification(
-    calibrationId: string,
-    equipmentId: string,
-    approverId: string,
-    equipmentName: string,
-    requesterName: string
-  ): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    type: 'calibration_approval_pending';
-    priority: 'high';
-    recipientId: string;
-    isTeamNotification: boolean;
-    equipmentId: string;
-    calibrationId: string;
-    rentalId: undefined;
-    linkUrl: string;
-    isRead: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const title = `교정 승인 요청: ${equipmentName}`;
-    const content = `${requesterName}님이 ${equipmentName} 장비의 교정 기록을 등록했습니다. 검토 후 승인해주세요.`;
-
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      content,
-      type: NotificationTypeEnum.CALIBRATION_APPROVAL_PENDING,
-      priority: NotificationPriorityEnum.HIGH,
-      recipientId: approverId,
-      isTeamNotification: false,
-      equipmentId,
-      calibrationId,
-      rentalId: undefined,
-      linkUrl: `/admin/calibration-approvals`,
-      isRead: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    notifications.push(newNotification);
-    return newNotification;
-  }
-
-  // 교정 승인 완료 알림 생성
-  async createCalibrationApprovedNotification(
-    calibrationId: string,
-    equipmentId: string,
-    userId: string,
-    equipmentName: string
-  ): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    type: 'calibration_approved';
-    priority: 'medium';
-    recipientId: string;
-    isTeamNotification: boolean;
-    equipmentId: string;
-    calibrationId: string;
-    rentalId: undefined;
-    linkUrl: string;
-    isRead: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const title = `교정 승인 완료: ${equipmentName}`;
-    const content = `${equipmentName} 장비의 교정 기록이 승인되었습니다.`;
-
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      content,
-      type: NotificationTypeEnum.CALIBRATION_APPROVED,
-      priority: NotificationPriorityEnum.MEDIUM,
-      recipientId: userId,
-      isTeamNotification: false,
-      equipmentId,
-      calibrationId,
-      rentalId: undefined,
-      linkUrl: `/calibration/${calibrationId}`,
-      isRead: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    notifications.push(newNotification);
-    return newNotification;
-  }
-
-  // 교정 반려 알림 생성
-  async createCalibrationRejectedNotification(
-    calibrationId: string,
-    equipmentId: string,
-    userId: string,
-    equipmentName: string,
-    reason: string
-  ): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    type: 'calibration_rejected';
-    priority: 'high';
-    recipientId: string;
-    isTeamNotification: boolean;
-    equipmentId: string;
-    calibrationId: string;
-    rentalId: undefined;
-    linkUrl: string;
-    isRead: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const title = `교정 반려: ${equipmentName}`;
-    const content = `${equipmentName} 장비의 교정 기록이 반려되었습니다. 사유: ${reason}`;
-
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      content,
-      type: NotificationTypeEnum.CALIBRATION_REJECTED,
-      priority: NotificationPriorityEnum.HIGH,
-      recipientId: userId,
-      isTeamNotification: false,
-      equipmentId,
-      calibrationId,
-      rentalId: undefined,
-      linkUrl: `/calibration/${calibrationId}`,
-      isRead: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    notifications.push(newNotification);
-    return newNotification;
-  }
-
-  // 대여 요청 알림 생성
-  async createRentalRequestNotification(
-    rentalId: string,
-    approverId: string,
-    equipmentName: string,
-    requesterName: string
-  ): Promise<void> {
-    const title = `장비 대여 요청: ${equipmentName}`;
-    const content = `${requesterName}님이 ${equipmentName} 장비 대여를 요청했습니다.`;
-
-    return this.create({
-      title,
-      content,
-      type: NotificationTypeEnum.RENTAL_REQUEST,
-      priority: NotificationPriorityEnum.HIGH,
-      recipientId: approverId,
-      rentalId,
-      linkUrl: `/rentals/${rentalId}`,
-    });
+    return inserted as NotificationRecord[];
   }
 
   /**
-   * 대여/반출 상태 변경 알림 생성
+   * 만료 알림 정리 (스케줄러가 호출)
+   *
+   * 중요도(priority) × 읽음(isRead) 매트릭스에 따른 차등 보존:
+   *
+   * | Priority       | 읽음 상태 | 기본 TTL | 유예   | 실질 보존 |
+   * |----------------|-----------|---------|--------|-----------|
+   * | low            | 무관      | base    | 0일    | base      |
+   * | medium         | 읽음      | base    | 0일    | base      |
+   * | medium         | 미읽음    | base    | +mediumGrace | base + mediumGrace |
+   * | high/critical  | 무관      | base    | +highGrace   | base + highGrace   |
+   *
+   * base, highGrace, mediumGrace는 SettingsService에서 동적 로드.
    */
-  async createRentalStatusNotification(
-    rentalId: string,
-    userId: string,
-    equipmentName: string,
-    isApproved: boolean
-  ): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    type: 'rental_approved' | 'rental_rejected';
-    priority: 'medium';
-    recipientId: string;
-    isTeamNotification: boolean;
-    equipmentId: undefined;
-    calibrationId: undefined;
-    rentalId: string;
-    linkUrl: string;
-    isRead: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const notificationType = isApproved
-      ? NotificationTypeEnum.RENTAL_APPROVED
-      : NotificationTypeEnum.RENTAL_REJECTED;
+  async deleteExpired(options?: {
+    highGraceDays?: number;
+    mediumUnreadGraceDays?: number;
+  }): Promise<number> {
+    const now = new Date();
 
-    const title = isApproved ? '장비 대여 요청 승인' : '장비 대여 요청 거절';
+    const highGraceDays = options?.highGraceDays ?? 90;
+    const mediumUnreadGraceDays = options?.mediumUnreadGraceDays ?? 30;
 
-    const content = isApproved
-      ? `${equipmentName} 장비 대여 요청이 승인되었습니다.`
-      : `${equipmentName} 장비 대여 요청이 거절되었습니다.`;
+    const highGraceMs = highGraceDays * 24 * 60 * 60 * 1000;
+    const mediumUnreadGraceMs = mediumUnreadGraceDays * 24 * 60 * 60 * 1000;
 
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      content,
-      type: notificationType,
-      priority: NotificationPriorityEnum.MEDIUM,
-      recipientId: userId,
-      isTeamNotification: false,
-      equipmentId: undefined,
-      calibrationId: undefined,
-      rentalId,
-      linkUrl: `/rentals/${rentalId}`,
-      isRead: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const result = await this.db
+      .delete(schema.notifications)
+      .where(
+        and(
+          lte(schema.notifications.expiresAt, now),
+          or(
+            // 1. low priority → 만료 즉시 삭제
+            eq(schema.notifications.priority, 'low'),
+            // 2. medium + 읽음 → 만료 즉시 삭제
+            and(eq(schema.notifications.priority, 'medium'), eq(schema.notifications.isRead, true)),
+            // 3. medium + 미읽음 → mediumUnreadGraceDays 유예 후 삭제
+            and(
+              eq(schema.notifications.priority, 'medium'),
+              eq(schema.notifications.isRead, false),
+              lte(schema.notifications.expiresAt, new Date(now.getTime() - mediumUnreadGraceMs))
+            ),
+            // 4. high/critical → highGraceDays 유예 후 삭제 (읽음 여부 무관)
+            and(
+              inArray(schema.notifications.priority, ['high', 'critical']),
+              lte(schema.notifications.expiresAt, new Date(now.getTime() - highGraceMs))
+            )
+          )
+        )
+      )
+      .returning({ id: schema.notifications.id });
 
-    notifications.push(newNotification);
-
-    return newNotification;
-  }
-
-  /**
-   * 반납 요청 알림 생성
-   */
-  async createReturnRequestNotification(
-    rentalId: string,
-    approverId: string,
-    equipmentName: string
-  ): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    type: 'return_requested';
-    priority: 'medium';
-    recipientId: string;
-    isTeamNotification: boolean;
-    equipmentId: undefined;
-    calibrationId: undefined;
-    rentalId: string;
-    linkUrl: string;
-    isRead: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: '장비 반납 요청',
-      content: `${equipmentName} 장비에 대한 반납 요청이 접수되었습니다.`,
-      type: NotificationTypeEnum.RETURN_REQUESTED,
-      priority: NotificationPriorityEnum.MEDIUM,
-      recipientId: approverId, // 알림을 받을 승인자 ID
-      isTeamNotification: false,
-      equipmentId: undefined,
-      calibrationId: undefined,
-      rentalId,
-      linkUrl: `/admin/return-approvals`,
-      isRead: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    notifications.push(newNotification);
-
-    return newNotification;
-  }
-
-  /**
-   * 반납 승인/거절 알림 생성
-   */
-  async createReturnStatusNotification(
-    rentalId: string,
-    userId: string,
-    equipmentName: string,
-    isApproved: boolean,
-    notes?: string
-  ): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    type: 'return_approved' | 'return_rejected';
-    priority: 'medium';
-    recipientId: string;
-    isTeamNotification: boolean;
-    equipmentId: undefined;
-    calibrationId: undefined;
-    rentalId: string;
-    linkUrl: string;
-    isRead: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    const notificationType = isApproved
-      ? NotificationTypeEnum.RETURN_APPROVED
-      : NotificationTypeEnum.RETURN_REJECTED;
-
-    const title = isApproved ? '장비 반납 요청 승인' : '장비 반납 요청 거절';
-
-    let content = isApproved
-      ? `${equipmentName} 장비 반납 요청이 승인되었습니다.`
-      : `${equipmentName} 장비 반납 요청이 거절되었습니다.`;
-
-    // 메모가 있을 경우 내용에 추가
-    if (notes) {
-      content += ` 메모: ${notes}`;
+    if (result.length > 0) {
+      this.logger.log(
+        `만료 알림 삭제: ${result.length}건 (유예: high=${highGraceDays}d, medium-unread=${mediumUnreadGraceDays}d)`
+      );
     }
 
-    const newNotification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      content,
-      type: notificationType,
-      priority: NotificationPriorityEnum.MEDIUM,
-      recipientId: userId,
-      isTeamNotification: false,
-      equipmentId: undefined,
-      calibrationId: undefined,
-      rentalId,
-      linkUrl: `/rentals/${rentalId}`,
-      isRead: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    notifications.push(newNotification);
-
-    return newNotification;
+    return result.length;
   }
 
-  // 미확인 알림 개수 조회
-  async countUnread(recipientId: string): Promise<{ count: number }> {
-    const unreadCount = notifications.filter(
-      (n) => (n.recipientId === recipientId || n.recipientId === 'all') && !n.isRead
-    ).length;
-
-    return { count: unreadCount };
-  }
-
-  // 시스템 알림 생성 (모든 사용자 대상)
+  /**
+   * 시스템 공지 생성 (레거시 호환 — CalibrationOverdueScheduler 등에서 사용)
+   *
+   * @param retentionDays 보관 일수 (미지정 시 기본 90일)
+   */
   async createSystemNotification(
     title: string,
     content: string,
-    priority: NotificationPriority = NotificationPriorityEnum.MEDIUM
-  ): Promise<Notification> {
-    // 시스템 알림 생성 로직
-    const systemNotification: Notification = {
-      id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title,
-      content,
-      type: NotificationTypeEnum.SYSTEM,
-      priority: priority,
-      isRead: false,
-      recipientId: null, // 시스템 알림은 특정 사용자에게 전송되지 않을 수 있음
-      isTeamNotification: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    priority: string = 'medium',
+    retentionDays: number = 90
+  ): Promise<NotificationRecord> {
+    const [created] = await this.db
+      .insert(schema.notifications)
+      .values({
+        title,
+        content,
+        type: 'system_announcement',
+        category: 'system',
+        priority,
+        isSystemWide: true,
+        expiresAt: new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000),
+      })
+      .returning();
 
-    notifications.push(systemNotification);
-    return systemNotification;
-  }
-
-  // 사용자 알림 설정 관련 메서드
-  getUserNotificationSettings(userId: string): NotificationSettingsDto {
-    // 사용자 알림 설정이 없으면 기본 설정 반환
-    if (!this.notificationSettings[userId]) {
-      const defaultSettings: NotificationSettingsDto = {
-        userId,
-        emailEnabled: true,
-        inAppEnabled: true,
-        calibrationDueEnabled: true,
-        calibrationCompletedEnabled: true,
-        rentalRequestEnabled: true,
-        rentalApprovedEnabled: true,
-        rentalRejectedEnabled: true,
-        checkoutEnabled: true,
-        maintenanceEnabled: true,
-        systemNotificationsEnabled: true,
-        notificationTime: '09:00',
-        frequency: NotificationFrequencyEnum.IMMEDIATE,
-      };
-      return defaultSettings;
-    }
-
-    return this.notificationSettings[userId];
-  }
-
-  updateUserNotificationSettings(
-    userId: string,
-    settingsDto: NotificationSettingsDto
-  ): NotificationSettingsDto {
-    // userId 일치 확인
-    if (userId !== settingsDto.userId) {
-      throw new BadRequestException('userId가 일치하지 않습니다.');
-    }
-
-    // 기존 설정 가져오기
-    const existingSettings = this.getUserNotificationSettings(userId);
-
-    // 새 설정으로 업데이트
-    this.notificationSettings[userId] = {
-      ...existingSettings,
-      ...settingsDto,
-    };
-
-    return this.notificationSettings[userId];
-  }
-
-  /**
-   * 사용자의 특정 알림 유형이 활성화되어 있는지 확인
-   */
-  isNotificationEnabled(userId: string, notificationType: NotificationType): boolean {
-    const settings = this.getUserNotificationSettings(userId);
-
-    if (!settings.inAppEnabled) {
-      return false;
-    }
-
-    switch (notificationType) {
-      case NotificationTypeEnum.CALIBRATION_DUE:
-        return settings.calibrationDueEnabled ?? true;
-      case NotificationTypeEnum.CALIBRATION_COMPLETED:
-        return settings.calibrationCompletedEnabled ?? true;
-      case NotificationTypeEnum.INTERMEDIATE_CHECK_DUE:
-        return (settings as unknown as Record<string, boolean>).intermediateCheckEnabled ?? true;
-      case NotificationTypeEnum.CALIBRATION_APPROVAL_PENDING:
-      case NotificationTypeEnum.CALIBRATION_APPROVED:
-      case NotificationTypeEnum.CALIBRATION_REJECTED:
-        return (settings as unknown as Record<string, boolean>).calibrationApprovalEnabled ?? true;
-      case NotificationTypeEnum.RENTAL_REQUEST:
-        return settings.rentalRequestEnabled ?? true;
-      case NotificationTypeEnum.RENTAL_APPROVED:
-        return settings.rentalApprovedEnabled ?? true;
-      case NotificationTypeEnum.RENTAL_REJECTED:
-        return settings.rentalRejectedEnabled ?? true;
-      case NotificationTypeEnum.RETURN_REQUESTED:
-        return settings.returnRequestedEnabled ?? true;
-      case NotificationTypeEnum.RETURN_APPROVED:
-        return settings.returnApprovedEnabled ?? true;
-      case NotificationTypeEnum.RETURN_REJECTED:
-        return settings.returnRejectedEnabled ?? true;
-      case NotificationTypeEnum.EQUIPMENT_MAINTENANCE:
-      case NotificationTypeEnum.MAINTENANCE:
-        return settings.maintenanceEnabled ?? true;
-      case NotificationTypeEnum.CHECKOUT:
-        return settings.checkoutEnabled ?? true;
-      case NotificationTypeEnum.SYSTEM:
-        return settings.systemNotificationsEnabled ?? true;
-      default:
-        return true;
-    }
-  }
-
-  // 이메일 발송 여부 확인
-  shouldSendEmail(userId: string, notificationType: NotificationType): boolean {
-    const settings = this.getUserNotificationSettings(userId);
-    return settings.emailEnabled === true && this.isNotificationEnabled(userId, notificationType);
-  }
-
-  // 일간 알림 스케줄링
-  scheduleDailyNotifications(): { success: boolean; message: string } {
-    // 실제로는 스케줄러를 통해 일정 시간에 실행되어야 함
-    // 여기서는 즉시 실행 구현
-
-    // 빈 결과 배열 초기화
-    const result: { userId: string; notificationCount: number }[] = [];
-
-    // 모든 사용자의 알림 설정 확인
-    Object.keys(this.notificationSettings).forEach((userId) => {
-      const settings = this.notificationSettings[userId];
-
-      // 일간 알림 설정인 경우에만 처리
-      if (settings.frequency === NotificationFrequencyEnum.DAILY) {
-        // 해당 사용자에 대한 알림 수 카운트
-        let notificationCount = 0;
-
-        // 1. 교정 예정 알림
-        if (settings.calibrationDueEnabled === true) {
-          this.createSystemNotification(
-            '일간 교정 예정 알림',
-            '다음 7일 이내에 교정이 예정된 장비가 있습니다.',
-            NotificationPriorityEnum.HIGH
-          ).then(() => notificationCount++);
-        }
-
-        // 2. 대여 상태 알림
-        if (
-          settings.rentalRequestEnabled === true ||
-          settings.rentalApprovedEnabled === true ||
-          settings.rentalRejectedEnabled === true
-        ) {
-          this.createSystemNotification(
-            '일간 대여 상태 요약',
-            '귀하의 대여 요청과 승인 상태를 확인하세요.',
-            NotificationPriorityEnum.MEDIUM
-          ).then(() => notificationCount++);
-        }
-
-        // 결과 추가
-        result.push({
-          userId,
-          notificationCount,
-        });
-      }
-    });
-
-    return {
-      success: true,
-      message: `${result.length}명의 사용자에게 일간 알림을 발송했습니다.`,
-    };
-  }
-
-  // 주간 알림 스케줄링
-  scheduleWeeklyNotifications(): { success: boolean; message: string } {
-    // 실제로는 스케줄러를 통해 일정 시간에 실행되어야 함
-    // 여기서는 즉시 실행 구현
-
-    // 빈 결과 배열 초기화
-    const result: { userId: string; notificationCount: number }[] = [];
-
-    // 모든 사용자의 알림 설정 확인
-    Object.keys(this.notificationSettings).forEach((userId) => {
-      const settings = this.notificationSettings[userId];
-
-      // 주간 알림 설정인 경우에만 처리
-      if (settings.frequency === NotificationFrequencyEnum.WEEKLY) {
-        // 해당 사용자에 대한 알림 수 카운트
-        let notificationCount = 0;
-
-        // 1. 주간 장비 상태 요약
-        this.createSystemNotification(
-          '주간 장비 상태 요약',
-          '이번 주에 관리가 필요한 장비 목록을 확인하세요.',
-          NotificationPriorityEnum.MEDIUM
-        ).then(() => notificationCount++);
-
-        // 2. 주간 교정 요약
-        if (settings.calibrationDueEnabled === true) {
-          this.createSystemNotification(
-            '주간 교정 요약',
-            '이번 달에 교정이 예정된 장비 목록입니다.',
-            NotificationPriorityEnum.MEDIUM
-          ).then(() => notificationCount++);
-        }
-
-        // 결과 추가
-        result.push({
-          userId,
-          notificationCount,
-        });
-      }
-    });
-
-    return {
-      success: true,
-      message: `${result.length}명의 사용자에게 주간 알림을 발송했습니다.`,
-    };
+    return created as NotificationRecord;
   }
 }

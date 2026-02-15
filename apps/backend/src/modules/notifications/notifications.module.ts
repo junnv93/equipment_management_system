@@ -1,27 +1,83 @@
 import { Module, forwardRef, OnModuleInit, Logger } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
+import { NotificationTemplateService } from './services/notification-template.service';
+import { NotificationRecipientResolver } from './services/notification-recipient-resolver';
+import { NotificationPreferencesService } from './services/notification-preferences.service';
+import { NotificationDispatcher } from './services/notification-dispatcher';
+import { NotificationEventListener } from './listeners/notification-event-listener';
 import { IntermediateCheckScheduler } from './schedulers/intermediate-check-scheduler';
 import { CalibrationOverdueScheduler } from './schedulers/calibration-overdue-scheduler';
+import { CheckoutOverdueScheduler } from './schedulers/checkout-overdue-scheduler';
+import { NotificationCleanupScheduler } from './schedulers/notification-cleanup-scheduler';
+import { NotificationSseService } from './sse/notification-sse.service';
+import { NotificationSseController } from './sse/notification-sse.controller';
+import { SseJwtAuthGuard } from './sse/sse-jwt-auth.guard';
 import { CalibrationModule } from '../calibration/calibration.module';
+import { AuthModule } from '../auth/auth.module';
+import { DrizzleModule } from '../../database/drizzle.module';
+import { CacheModule } from '../../common/cache/cache.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
-  imports: [forwardRef(() => CalibrationModule)],
-  controllers: [NotificationsController],
-  providers: [NotificationsService, IntermediateCheckScheduler, CalibrationOverdueScheduler],
-  exports: [NotificationsService, IntermediateCheckScheduler, CalibrationOverdueScheduler],
+  imports: [
+    forwardRef(() => CalibrationModule),
+    forwardRef(() => AuthModule),
+    DrizzleModule,
+    CacheModule,
+    SettingsModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  // SSE 컨트롤러를 먼저 등록 — /notifications/stream이 :id 파라미터보다 먼저 매칭되어야 함
+  controllers: [NotificationSseController, NotificationsController],
+  providers: [
+    // 핵심 서비스
+    NotificationsService,
+    NotificationTemplateService,
+    NotificationRecipientResolver,
+    NotificationPreferencesService,
+    NotificationDispatcher,
+
+    // SSE 실시간 푸시
+    NotificationSseService,
+    SseJwtAuthGuard,
+
+    // 이벤트 리스너 (범용 — 27개 이벤트 자동 처리)
+    NotificationEventListener,
+
+    // 스케줄러
+    IntermediateCheckScheduler,
+    CalibrationOverdueScheduler,
+    CheckoutOverdueScheduler,
+    NotificationCleanupScheduler,
+  ],
+  exports: [
+    NotificationsService,
+    NotificationDispatcher,
+    NotificationSseService,
+    IntermediateCheckScheduler,
+    CalibrationOverdueScheduler,
+    CheckoutOverdueScheduler,
+  ],
 })
 export class NotificationsModule implements OnModuleInit {
   private readonly logger = new Logger(NotificationsModule.name);
 
-  constructor(private readonly calibrationOverdueScheduler: CalibrationOverdueScheduler) {}
+  constructor(
+    private readonly calibrationOverdueScheduler: CalibrationOverdueScheduler,
+    private readonly checkoutOverdueScheduler: CheckoutOverdueScheduler
+  ) {}
 
   /**
-   * 애플리케이션 시작 시 교정 기한 초과 점검 즉시 실행
-   *
-   * 근본적인 해결책:
-   * - 앱 시작 시 기존 교정기한 초과 장비를 즉시 부적합으로 전환
-   * - 스케줄러가 자정에만 실행되므로 시작 시점의 상태 동기화 필요
+   * 애플리케이션 시작 시 교정/반출 기한 초과 점검 즉시 실행
    */
   async onModuleInit(): Promise<void> {
     this.logger.log('애플리케이션 시작 시 교정 기한 초과 점검 실행...');
@@ -36,5 +92,7 @@ export class NotificationsModule implements OnModuleInit {
         error instanceof Error ? error.stack : String(error)
       );
     }
+
+    // CheckoutOverdueScheduler는 자체 onModuleInit에서 실행됨 (별도 호출 불필요)
   }
 }

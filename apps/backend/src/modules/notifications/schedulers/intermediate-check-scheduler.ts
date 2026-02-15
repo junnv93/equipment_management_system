@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { NotificationsService } from '../notifications.service';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { and, eq, gte, inArray } from 'drizzle-orm';
+import * as schema from '@equipment-management/db/schema';
 import { CalibrationService } from '../../calibration/calibration.service';
-
-// 알림 주기 정의 (D-30일, D-7일, 당일)
-const NOTIFICATION_INTERVALS = [30, 7, 0] as const;
+import { SettingsService } from '../../settings/settings.service';
+import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
 /**
  * 중간점검 알림 스케줄러
@@ -11,138 +13,176 @@ const NOTIFICATION_INTERVALS = [30, 7, 0] as const;
  * 이 서비스는 교정 중간점검 예정 알림을 발송합니다.
  * 알림 주기: D-30일, D-7일, 당일
  *
- * 실제 스케줄링은 외부 cron 작업 또는 NotificationsController의 트리거 엔드포인트를 통해 수행됩니다.
- *
- * @Cron 데코레이터를 사용하려면 @nestjs/schedule 패키지를 설치하세요:
- * npm install @nestjs/schedule
- *
- * 그리고 AppModule에 ScheduleModule.forRoot()를 추가하세요.
+ * 중복 방지: DB 기반 (notifications 테이블 조회)
+ * → 서버 재시작, 멀티 인스턴스에서도 안전
  */
 @Injectable()
 export class IntermediateCheckScheduler {
   private readonly logger = new Logger(IntermediateCheckScheduler.name);
 
-  // 중복 알림 방지를 위한 발송 기록 저장소
-  // 실제 운영 환경에서는 Redis 또는 데이터베이스를 사용해야 함
-  private sentNotifications: Map<string, Set<number>> = new Map();
-
   constructor(
-    private readonly notificationsService: NotificationsService,
-    private readonly calibrationService: CalibrationService
+    @Inject('DRIZZLE_INSTANCE')
+    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly calibrationService: CalibrationService,
+    private readonly settingsService: SettingsService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   /**
-   * 알림이 이미 발송되었는지 확인
+   * DB 기반 중복 알림 체크
+   *
+   * notifications 테이블에서 같은 type + entityId로 최근 hoursBack 시간 내
+   * 알림이 존재하는지 확인한다.
+   * idx_notifications_entity (entityType, entityId) 인덱스 활용.
    */
-  private hasAlreadySent(calibrationId: string, daysUntil: number): boolean {
-    const intervals = this.sentNotifications.get(calibrationId);
-    if (!intervals) return false;
-
-    // 해당 구간에 이미 알림을 보냈는지 확인
-    if (daysUntil >= 30) {
-      return intervals.has(30);
-    } else if (daysUntil >= 7) {
-      return intervals.has(7);
-    } else {
-      return intervals.has(0);
-    }
+  private async hasRecentNotification(
+    entityType: string,
+    entityId: string,
+    type: string,
+    hoursBack: number = 25
+  ): Promise<boolean> {
+    const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+    const [existing] = await this.db
+      .select({ id: schema.notifications.id })
+      .from(schema.notifications)
+      .where(
+        and(
+          eq(schema.notifications.entityType, entityType),
+          eq(schema.notifications.entityId, entityId),
+          eq(schema.notifications.type, type),
+          gte(schema.notifications.createdAt, cutoff)
+        )
+      )
+      .limit(1);
+    return !!existing;
   }
 
   /**
-   * 발송 기록 저장
+   * 장비 정보 배치 조회 (N+1 방지)
+   *
+   * 이벤트 페이로드에 필요한 equipmentName, managementNumber, teamId, site를
+   * 한 번의 쿼리로 조회하여 Map으로 반환.
    */
-  private markAsSent(calibrationId: string, daysUntil: number): void {
-    if (!this.sentNotifications.has(calibrationId)) {
-      this.sentNotifications.set(calibrationId, new Set());
-    }
+  private async getEquipmentMap(
+    equipmentIds: string[]
+  ): Promise<
+    Map<string, { name: string; managementNumber: string; teamId: string; site: string }>
+  > {
+    const uniqueIds = [...new Set(equipmentIds.filter(Boolean))];
+    if (uniqueIds.length === 0) return new Map();
 
-    // 해당 구간 기록
-    if (daysUntil >= 30) {
-      this.sentNotifications.get(calibrationId)!.add(30);
-    } else if (daysUntil >= 7) {
-      this.sentNotifications.get(calibrationId)!.add(7);
-    } else {
-      this.sentNotifications.get(calibrationId)!.add(0);
-    }
+    const rows = await this.db
+      .select({
+        id: schema.equipment.id,
+        name: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+        teamId: schema.equipment.teamId,
+        site: schema.equipment.site,
+      })
+      .from(schema.equipment)
+      .where(inArray(schema.equipment.id, uniqueIds));
+
+    return new Map(
+      rows.map((r) => [
+        r.id,
+        {
+          name: r.name ?? '',
+          managementNumber: r.managementNumber ?? '',
+          teamId: r.teamId ?? '',
+          site: r.site ?? '',
+        },
+      ])
+    );
   }
 
   /**
-   * 당일인지 확인 (0일 남음)
+   * 설정된 알림 주기에 해당하는 날짜인지 확인
+   * DB system_settings에서 동적으로 로드한 alertDays 사용
    */
-  private shouldSendForInterval(daysUntil: number): boolean {
-    // D-30, D-7, 당일(0)에만 알림 발송
-    return NOTIFICATION_INTERVALS.includes(daysUntil as (typeof NOTIFICATION_INTERVALS)[number]);
+  private shouldSendForInterval(daysUntil: number, alertDays: number[]): boolean {
+    return alertDays.includes(daysUntil);
   }
 
   /**
    * 중간점검 예정 알림을 발송합니다.
    * D-30일, D-7일, 당일에 중간점검 예정 알림을 발송합니다.
-   * 중복 알림 방지 로직이 포함되어 있습니다.
-   *
-   * 이 메서드는 다음 방법으로 호출할 수 있습니다:
-   * 1. 외부 cron 작업에서 API 호출
-   * 2. 관리자가 수동으로 트리거
-   * 3. @nestjs/schedule 설치 후 @Cron 데코레이터 사용
    */
   async handleIntermediateCheckNotifications(
     days: number = 30
   ): Promise<{ success: boolean; processed: number; sent: number; skipped: number }> {
-    this.logger.log('중간점검 알림 스케줄러 실행 시작 (D-30, D-7, 당일 주기)');
+    const alertDays = await this.settingsService.getCalibrationAlertDays();
+    this.logger.log(`중간점검 알림 스케줄러 실행 시작 (알림 주기: D-${alertDays.join(', D-')})`);
 
     try {
-      // D-30일까지의 중간점검 예정 조회
       const upcomingChecks = await this.calibrationService.findUpcomingIntermediateChecks(days);
 
       this.logger.log(`${upcomingChecks.length}개의 중간점검 예정 항목 발견`);
+
+      // 배치 장비 조회 (N+1 방지)
+      const equipmentMap = await this.getEquipmentMap(
+        upcomingChecks.map((c) => c.equipmentId).filter(Boolean)
+      );
 
       let sentCount = 0;
       let skippedCount = 0;
 
       for (const calibration of upcomingChecks) {
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // 날짜만 비교하기 위해 시간 초기화
+        today.setHours(0, 0, 0, 0);
         const checkDate = new Date(calibration.intermediateCheckDate!);
         checkDate.setHours(0, 0, 0, 0);
         const daysUntilCheck = Math.ceil(
           (checkDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        // D-30, D-7, 당일에만 알림 발송
-        if (!this.shouldSendForInterval(daysUntilCheck)) {
+        if (!this.shouldSendForInterval(daysUntilCheck, alertDays)) {
           continue;
         }
 
-        // 중복 알림 방지 체크
-        if (this.hasAlreadySent(calibration.id, daysUntilCheck)) {
-          this.logger.debug(`중복 알림 건너뜀: 교정 ID ${calibration.id}, D-${daysUntilCheck}`);
+        // DB 기반 중복 체크 (서버 재시작 무관)
+        const isDuplicate = await this.hasRecentNotification(
+          'calibration',
+          calibration.id,
+          'calibration_dueSoon'
+        );
+        if (isDuplicate) {
+          this.logger.debug(`중복 알림 건너뜀(DB): 교정 ID ${calibration.id}, D-${daysUntilCheck}`);
           skippedCount++;
           continue;
         }
 
-        // 담당자에게 중간점검 알림 발송
-        if (calibration.calibrationManagerId) {
-          try {
-            await this.notificationsService.createIntermediateCheckNotification(
-              calibration.id,
-              calibration.equipmentId,
-              calibration.calibrationManagerId,
-              daysUntilCheck,
-              `장비 ${calibration.equipmentId}`
-            );
+        // 이벤트 발행 (수신자 해석은 NOTIFICATION_REGISTRY가 자동 처리)
+        try {
+          const equip = equipmentMap.get(calibration.equipmentId) ?? {
+            name: '',
+            managementNumber: '',
+            teamId: '',
+            site: '',
+          };
 
-            // 발송 기록 저장
-            this.markAsSent(calibration.id, daysUntilCheck);
-            sentCount++;
+          this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
+            calibrationId: calibration.id,
+            equipmentId: calibration.equipmentId,
+            equipmentName: equip.name,
+            managementNumber: equip.managementNumber,
+            teamId: equip.teamId,
+            site: equip.site,
+            daysUntil: daysUntilCheck,
+            actorId: 'system',
+            actorName: '시스템',
+            timestamp: new Date(),
+          });
 
-            this.logger.log(
-              `중간점검 알림 발송 완료: 교정 ID ${calibration.id}, 담당자 ${calibration.calibrationManagerId}, D-${daysUntilCheck}`
-            );
-          } catch (error) {
-            this.logger.error(
-              `중간점검 알림 발송 실패: 교정 ID ${calibration.id}`,
-              error instanceof Error ? error.stack : String(error)
-            );
-          }
+          sentCount++;
+
+          this.logger.log(
+            `중간점검 알림 발행 완료: 교정 ID ${calibration.id}, 장비 ${equip.managementNumber || calibration.equipmentId}, D-${daysUntilCheck}`
+          );
+        } catch (error) {
+          this.logger.error(
+            `중간점검 알림 발행 실패: 교정 ID ${calibration.id}`,
+            error instanceof Error ? error.stack : String(error)
+          );
         }
       }
 
@@ -165,28 +205,31 @@ export class IntermediateCheckScheduler {
   }
 
   /**
-   * 교정 알림과 함께 중간점검 알림을 통합 발송합니다.
-   * D-30일, D-7일, 당일에 교정 예정 알림을 발송합니다.
-   * 교정 예정일과 중간점검 예정일이 있는 경우 둘 다 알림을 발송합니다.
-   * 중복 알림 방지 로직이 포함되어 있습니다.
+   * 교정 예정 + 중간점검 통합 알림 발송
    */
   async handleCombinedCalibrationNotifications(
     days: number = 30
   ): Promise<{ success: boolean; processed: number; sent: number; skipped: number }> {
-    this.logger.log('통합 교정/중간점검 알림 스케줄러 실행 시작 (D-30, D-7, 당일 주기)');
+    const alertDays = await this.settingsService.getCalibrationAlertDays();
+    this.logger.log(
+      `통합 교정/중간점검 알림 스케줄러 실행 시작 (알림 주기: D-${alertDays.join(', D-')})`
+    );
 
     try {
-      // D-30일까지의 교정 예정 조회
       const result = await this.calibrationService.findDueCalibrations(days);
       const dueCalibrations = result.items || [];
 
       this.logger.log(`${dueCalibrations.length}개의 교정 예정 항목 발견`);
 
+      // 배치 장비 조회 (N+1 방지)
+      const equipmentMap = await this.getEquipmentMap(
+        dueCalibrations.map((c) => c.equipmentId).filter(Boolean)
+      );
+
       let sentCount = 0;
       let skippedCount = 0;
 
       for (const calibration of dueCalibrations) {
-        // Skip if nextCalibrationDate is null
         if (!calibration.nextCalibrationDate) {
           continue;
         }
@@ -199,44 +242,55 @@ export class IntermediateCheckScheduler {
           (nextCalibrationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        // D-30, D-7, 당일에만 알림 발송
-        if (!this.shouldSendForInterval(daysUntilCalibration)) {
+        if (!this.shouldSendForInterval(daysUntilCalibration, alertDays)) {
           continue;
         }
 
-        // 중복 알림 방지 체크 (교정 알림용 키)
-        const calibrationKey = `calibration_${calibration.id}`;
-        if (this.hasAlreadySent(calibrationKey, daysUntilCalibration)) {
+        // DB 기반 중복 체크 (서버 재시작 무관)
+        const isDuplicate = await this.hasRecentNotification(
+          'calibration',
+          calibration.id,
+          'calibration_dueSoon'
+        );
+        if (isDuplicate) {
           this.logger.debug(
-            `중복 교정 알림 건너뜀: 교정 ID ${calibration.id}, D-${daysUntilCalibration}`
+            `중복 교정 알림 건너뜀(DB): 교정 ID ${calibration.id}, D-${daysUntilCalibration}`
           );
           skippedCount++;
           continue;
         }
 
-        // 교정 예정 알림 발송
-        if (calibration.technicianId) {
-          try {
-            await this.notificationsService.createCalibrationDueNotification(
-              calibration.equipmentId,
-              calibration.technicianId,
-              daysUntilCalibration,
-              `장비 ${calibration.equipmentId}`
-            );
+        try {
+          const equip = equipmentMap.get(calibration.equipmentId) ?? {
+            name: '',
+            managementNumber: '',
+            teamId: '',
+            site: '',
+          };
 
-            // 발송 기록 저장
-            this.markAsSent(calibrationKey, daysUntilCalibration);
-            sentCount++;
+          this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
+            calibrationId: calibration.id,
+            equipmentId: calibration.equipmentId,
+            equipmentName: equip.name,
+            managementNumber: equip.managementNumber,
+            teamId: equip.teamId,
+            site: equip.site,
+            daysUntil: daysUntilCalibration,
+            actorId: 'system',
+            actorName: '시스템',
+            timestamp: new Date(),
+          });
 
-            this.logger.log(
-              `교정 예정 알림 발송 완료: 장비 ${calibration.equipmentId}, D-${daysUntilCalibration}`
-            );
-          } catch (error) {
-            this.logger.error(
-              `교정 예정 알림 발송 실패: 장비 ${calibration.equipmentId}`,
-              error instanceof Error ? error.stack : String(error)
-            );
-          }
+          sentCount++;
+
+          this.logger.log(
+            `교정 예정 알림 발행 완료: 장비 ${equip.managementNumber || calibration.equipmentId}, D-${daysUntilCalibration}`
+          );
+        } catch (error) {
+          this.logger.error(
+            `교정 예정 알림 발행 실패: 장비 ${calibration.equipmentId}`,
+            error instanceof Error ? error.stack : String(error)
+          );
         }
       }
 
@@ -273,6 +327,11 @@ export class IntermediateCheckScheduler {
       const upcomingChecks = await this.calibrationService.findUpcomingIntermediateChecks(days);
       const results: Array<{ calibrationId: string; success: boolean; error?: string }> = [];
 
+      // 배치 장비 조회 (N+1 방지)
+      const equipmentMap = await this.getEquipmentMap(
+        upcomingChecks.map((c) => c.equipmentId).filter(Boolean)
+      );
+
       for (const calibration of upcomingChecks) {
         const today = new Date();
         const checkDate = new Date(calibration.intermediateCheckDate!);
@@ -280,23 +339,33 @@ export class IntermediateCheckScheduler {
           (checkDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         );
 
-        if (calibration.calibrationManagerId) {
-          try {
-            await this.notificationsService.createIntermediateCheckNotification(
-              calibration.id,
-              calibration.equipmentId,
-              calibration.calibrationManagerId,
-              daysUntilCheck,
-              `장비 ${calibration.equipmentId}`
-            );
-            results.push({ calibrationId: calibration.id, success: true });
-          } catch (error) {
-            results.push({
-              calibrationId: calibration.id,
-              success: false,
-              error: error instanceof Error ? error.message : String(error),
-            });
-          }
+        try {
+          const equip = equipmentMap.get(calibration.equipmentId) ?? {
+            name: '',
+            managementNumber: '',
+            teamId: '',
+            site: '',
+          };
+
+          this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON, {
+            calibrationId: calibration.id,
+            equipmentId: calibration.equipmentId,
+            equipmentName: equip.name,
+            managementNumber: equip.managementNumber,
+            teamId: equip.teamId,
+            site: equip.site,
+            daysUntil: daysUntilCheck,
+            actorId: 'system',
+            actorName: '시스템',
+            timestamp: new Date(),
+          });
+          results.push({ calibrationId: calibration.id, success: true });
+        } catch (error) {
+          results.push({
+            calibrationId: calibration.id,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
 

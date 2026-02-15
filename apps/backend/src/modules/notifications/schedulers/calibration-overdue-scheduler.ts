@@ -1,5 +1,6 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, isNull, lt, notInArray, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
@@ -8,6 +9,7 @@ import { nonConformances } from '@equipment-management/db/schema/non-conformance
 import { NotificationsService } from '../notifications.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { getUtcStartOfDay } from '../../../common/utils';
+import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
 /**
  * 교정 기한 초과 자동 부적합 전환 스케줄러
@@ -44,7 +46,8 @@ export class CalibrationOverdueScheduler {
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly notificationsService: NotificationsService,
-    private readonly cacheInvalidationHelper: CacheInvalidationHelper
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   /**
@@ -107,6 +110,7 @@ export class CalibrationOverdueScheduler {
           status: equipment.status,
           nextCalibrationDate: equipment.nextCalibrationDate,
           teamId: equipment.teamId,
+          site: equipment.site,
         })
         .from(equipment)
         .where(
@@ -206,15 +210,20 @@ export class CalibrationOverdueScheduler {
 
           this.logger.debug(`장비 ${equip.managementNumber}(${equip.id}): 캐시 무효화 완료`);
 
-          // 2-3. 관리자에게 알림 발송 (트랜잭션 외부에서 실행)
+          // 2-3. 알림 이벤트 발행 (레지스트리 기반 수신자 자동 해석)
           try {
-            // TODO: 실제 관리자 ID 조회 로직 필요 (팀의 기술책임자)
-            // 현재는 시스템 알림으로 대체
-            await this.notificationsService.createSystemNotification(
-              `교정 기한 초과 알림: ${equip.name}`,
-              `장비 ${equip.managementNumber}(${equip.name})의 교정 기한이 초과되어 부적합으로 전환되었습니다. 교정을 수행해주세요.`,
-              'high'
-            );
+            this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_OVERDUE, {
+              equipmentId: equip.id,
+              equipmentName: equip.name ?? '',
+              managementNumber: equip.managementNumber ?? '',
+              teamId: equip.teamId ?? '',
+              // RecipientResolver가 scope='site' 해석에 사용 (크로스 사이트 워크플로우)
+              site: equip.site ?? '',
+              nextCalibrationDate: equip.nextCalibrationDate?.toISOString().split('T')[0] ?? '',
+              actorId: 'system',
+              actorName: '시스템',
+              timestamp: new Date(),
+            });
           } catch (notifyError) {
             // 알림 실패는 전체 프로세스에 영향 주지 않음
             this.logger.warn(`알림 발송 실패 (장비: ${equip.managementNumber}): ${notifyError}`);
