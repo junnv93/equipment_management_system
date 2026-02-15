@@ -16,6 +16,15 @@ export * from './audit-logs';
 export * from './disposal-requests';
 export * from './equipment-imports'; // Unified rental + internal shared imports (includes legacy rental-imports aliases)
 
+// 알림 스키마
+export * from './notifications';
+
+// 사용자 환경 설정
+export * from './user-preferences';
+
+// 시스템 설정
+export * from './system-settings';
+
 // 장비 이력 스키마
 export * from './equipment-location-history';
 export * from './equipment-maintenance-history';

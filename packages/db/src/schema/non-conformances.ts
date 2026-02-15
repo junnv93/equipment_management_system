@@ -89,6 +89,11 @@ export const nonConformances = pgTable(
     closedAt: timestamp('closed_at'), // 종료 시각
     closureNotes: text('closure_notes'), // 종료 메모
 
+    // 반려 정보 (기술책임자 — 조치 불충분 시)
+    rejectedBy: uuid('rejected_by'), // 반려자 ID (기술책임자)
+    rejectedAt: timestamp('rejected_at'), // 반려 시각
+    rejectionReason: text('rejection_reason'), // 반려 사유
+
     // Optimistic locking version
     version: integer('version').notNull().default(1),
 
@@ -150,5 +155,10 @@ export const nonConformancesRelations = relations(nonConformances, ({ one }) => 
     fields: [nonConformances.closedBy],
     references: [users.id],
     relationName: 'nonConformanceCloser',
+  }),
+  rejector: one(users, {
+    fields: [nonConformances.rejectedBy],
+    references: [users.id],
+    relationName: 'nonConformanceRejector',
   }),
 }));

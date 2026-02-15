@@ -30,6 +30,7 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
   technical_manager: 2,
   quality_manager: 3,
   lab_manager: 4,
+  system_admin: 5,
 };
 
 /**
@@ -71,22 +72,45 @@ export function isLabManager(role: UserRole): boolean {
 }
 
 /**
+ * 역할이 시스템 관리자인지 확인
+ */
+export function isSystemAdmin(role: UserRole): boolean {
+  return role === 'system_admin';
+}
+
+/**
  * 승인 권한이 있는 역할 목록
  * (기술책임자, 품질책임자, 시험소장)
  */
-export const APPROVAL_ROLES: UserRole[] = ['technical_manager', 'quality_manager', 'lab_manager'];
+export const APPROVAL_ROLES: UserRole[] = [
+  'technical_manager',
+  'quality_manager',
+  'lab_manager',
+  'system_admin',
+];
 
 /**
  * 관리자 권한이 있는 역할 목록
  * (시험소장)
  */
-export const ADMIN_ROLES: UserRole[] = ['lab_manager'];
+export const ADMIN_ROLES: UserRole[] = ['lab_manager', 'system_admin'];
 
 /**
  * 팀 제한 역할 목록
- * (시험실무자, 기술책임자는 자기 팀 장비만 등록 가능)
+ * (시험실무자, 기술책임자는 자기 팀 장비만 등록/조회 가능)
  */
 export const TEAM_RESTRICTED_ROLES: UserRole[] = ['test_engineer', 'technical_manager'];
+
+/**
+ * 사이트 제한 역할 목록
+ * (모든 일반 역할은 자기 사이트 데이터만 기본 조회)
+ */
+export const SITE_RESTRICTED_ROLES: UserRole[] = [
+  'test_engineer',
+  'technical_manager',
+  'quality_manager',
+  'lab_manager',
+];
 
 /**
  * 역할이 승인 권한이 있는지 확인
@@ -101,3 +125,20 @@ export function canApprove(role: UserRole): boolean {
 export function isTeamRestricted(role: UserRole): boolean {
   return TEAM_RESTRICTED_ROLES.includes(role);
 }
+
+/**
+ * 역할이 사이트 제한인지 확인
+ */
+export function isSiteRestricted(role: UserRole): boolean {
+  return SITE_RESTRICTED_ROLES.includes(role);
+}
+
+/**
+ * 팀 관리 페이지용 사이트 제한 역할 목록
+ * quality_manager는 전체 사이트 조회 가능 (교정계획서 검토 역할)
+ */
+export const TEAMS_SITE_RESTRICTED_ROLES: UserRole[] = [
+  'test_engineer',
+  'technical_manager',
+  'lab_manager',
+];

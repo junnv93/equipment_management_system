@@ -1,6 +1,7 @@
 import { pgTable, varchar, timestamp, uuid, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
+import { users } from './users';
 
 // 팀 유형 정의 (분류와 1:1 매핑)
 // ✅ 팀 타입 = 분류 타입 (팀 이름을 분류 이름으로 통일)
@@ -37,25 +38,37 @@ export const siteTypes = ['suwon', 'uiwang', 'pyeongtaek'] as const;
 // 팀 테이블 스키마
 // ✅ Best Practice: 팀은 반드시 하나의 사이트에 소속됨
 // ✅ 팀이 장비 분류코드를 결정함 (classificationCode 필드)
-export const teams = pgTable('teams', {
-  id: uuid('id').primaryKey().defaultRandom().notNull(),
-  name: varchar('name', { length: 100 }).notNull(),
-  type: varchar('type', { length: 50 }).notNull(), // ✅ 필수 필드: RF, SAR, EMC, AUTO, SOFTWARE
-  site: varchar('site', { length: 20 }).notNull(), // ✅ 필수 필드: 'suwon' | 'uiwang' | 'pyeongtaek'
-  classificationCode: varchar('classification_code', { length: 1 }), // ✅ 분류코드: E, R, S, A, P
-  description: varchar('description', { length: 255 }),
+export const teams = pgTable(
+  'teams',
+  {
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+    name: varchar('name', { length: 100 }).notNull(),
+    type: varchar('type', { length: 50 }).notNull(), // ✅ 필수 필드: RF, SAR, EMC, AUTO, SOFTWARE
+    site: varchar('site', { length: 20 }).notNull(), // ✅ 필수 필드: 'suwon' | 'uiwang' | 'pyeongtaek'
+    classificationCode: varchar('classification_code', { length: 1 }), // ✅ 분류코드: E, R, S, A, P
+    description: varchar('description', { length: 255 }),
+    leaderId: uuid('leader_id'),
 
-  // 시스템 필드
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
-  // 사이트별 팀 조회 최적화
-  siteIdx: index('teams_site_idx').on(table.site),
-}));
+    // 시스템 필드
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    // 사이트별 팀 조회 최적화
+    siteIdx: index('teams_site_idx').on(table.site),
+  })
+);
 
 // 관계 정의
-export const teamsRelations = relations(teams, ({ many }) => ({
+// NOTE: teams↔users 관계가 2개 (members, leader)이므로 relationName으로 구분
+export const teamsRelations = relations(teams, ({ many, one }) => ({
   equipments: many(equipment),
+  members: many(users, { relationName: 'teamMembers' }),
+  leader: one(users, {
+    fields: [teams.leaderId],
+    references: [users.id],
+    relationName: 'teamLeader',
+  }),
 }));
 
 // 타입 정의

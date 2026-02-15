@@ -141,6 +141,12 @@ export enum Permission {
   CANCEL_EQUIPMENT_IMPORT = 'cancel:equipment-import',
 
   // ============================================================================
+  // 시스템 설정 관련 권한
+  // ============================================================================
+  MANAGE_SYSTEM_SETTINGS = 'manage:system:settings',
+  VIEW_SYSTEM_SETTINGS = 'view:system:settings',
+
+  // ============================================================================
   // DEPRECATED: Legacy rental import permissions (backward compatibility)
   // ============================================================================
   /**
@@ -252,6 +258,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   [Permission.APPROVE_EQUIPMENT_IMPORT]: '장비 반입 승인',
   [Permission.COMPLETE_EQUIPMENT_IMPORT]: '장비 반입 완료',
   [Permission.CANCEL_EQUIPMENT_IMPORT]: '장비 반입 취소',
+
+  [Permission.MANAGE_SYSTEM_SETTINGS]: '시스템 설정 관리',
+  [Permission.VIEW_SYSTEM_SETTINGS]: '시스템 설정 조회',
 
   // Legacy labels omitted (same string values as new permissions)
   // VIEW_RENTAL_IMPORTS, CREATE_RENTAL_IMPORT, etc. share strings with EQUIPMENT_IMPORTS

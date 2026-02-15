@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRoleEnum, TeamIdSchema } from './enums';
+import { UserRoleEnum, TeamIdSchema, SiteEnum } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
 
 // 기본 사용자 스키마 (공통 필드)
@@ -8,9 +8,13 @@ export const baseUserSchema = z.object({
   name: z.string().min(1).max(100),
   role: UserRoleEnum,
   teamId: TeamIdSchema, // UUID 형식의 팀 ID
+  site: SiteEnum.optional(),
+  location: z.string().max(50).optional(),
   department: z.string().max(100).optional(),
   position: z.string().max(100).optional(),
   phoneNumber: z.string().max(20).optional(),
+  employeeId: z.string().max(50).optional(),
+  managerName: z.string().max(100).optional(),
 });
 
 // 사용자 생성 스키마
@@ -20,25 +24,22 @@ export const createUserSchema = baseUserSchema.extend({
 });
 
 // 사용자 업데이트 스키마
-export const updateUserSchema = baseUserSchema
-  .partial()
-  .extend({
-    password: z.string().min(8).max(100).optional(),
-    isActive: z.boolean().optional(),
-  });
+export const updateUserSchema = baseUserSchema.partial().extend({
+  password: z.string().min(8).max(100).optional(),
+  isActive: z.boolean().optional(),
+});
 
 // 사용자 조회용 스키마
-export const userSchema = baseUserSchema
-  .extend({
-    id: z.string().uuid(),
-    isActive: z.boolean(),
-    lastLogin: z.date().nullable(),
-    equipmentCount: z.number().nonnegative().optional(),
-    rentalsCount: z.number().nonnegative().optional(),
-    createdAt: z.date(),
-    updatedAt: z.date(),
-    deletedAt: z.date().nullable(),
-  });
+export const userSchema = baseUserSchema.extend({
+  id: z.string().uuid(),
+  isActive: z.boolean(),
+  lastLogin: z.date().nullable(),
+  equipmentCount: z.number().nonnegative().optional(),
+  rentalsCount: z.number().nonnegative().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable(),
+});
 
 // 사용자 스키마에서 추출된 타입
 export type BaseUser = z.infer<typeof baseUserSchema>;
@@ -57,4 +58,4 @@ export const isUser = (value: unknown): value is User => {
   } catch {
     return false;
   }
-}; 
+};

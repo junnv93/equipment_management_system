@@ -63,6 +63,15 @@ export const FRONTEND_ROUTES = {
   },
 
   // ============================================================================
+  // 팀 관리
+  // ============================================================================
+  TEAMS: {
+    LIST: '/teams',
+    DETAIL: (id: string) => `/teams/${id}`,
+    EDIT: (id: string) => `/teams/${id}/edit`,
+  },
+
+  // ============================================================================
   // 관리자
   // ============================================================================
   ADMIN: {
@@ -89,6 +98,18 @@ export const FRONTEND_ROUTES = {
     CREATE_INTERNAL: '/checkouts/import/shared',
     DETAIL: (id: string) => `/checkouts/import/${id}`,
     RECEIVE: (id: string) => `/checkouts/import/${id}/receive`,
+  },
+
+  // ============================================================================
+  // 설정
+  // ============================================================================
+  SETTINGS: {
+    INDEX: '/settings',
+    PROFILE: '/settings/profile',
+    NOTIFICATIONS: '/settings/notifications',
+    DISPLAY: '/settings/display',
+    ADMIN_CALIBRATION: '/settings/admin/calibration',
+    ADMIN_SYSTEM: '/settings/admin/system',
   },
 
   // ============================================================================

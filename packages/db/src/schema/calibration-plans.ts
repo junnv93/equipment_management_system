@@ -70,7 +70,8 @@ export const calibrationPlans = pgTable(
     rejectionStage: varchar('rejection_stage', { length: 20 }), // 'review' | 'approval'
 
     // 버전 관리
-    version: integer('version').default(1).notNull(), // 버전 번호
+    version: integer('version').default(1).notNull(), // 버전 번호 (계획서 개정)
+    casVersion: integer('cas_version').default(1).notNull(), // CAS 동시 수정 방지
     parentPlanId: uuid('parent_plan_id'), // 부모 계획서 (이전 버전) - self-reference
     isLatestVersion: boolean('is_latest_version').default(true).notNull(), // 최신 버전 여부
 

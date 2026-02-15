@@ -25,6 +25,34 @@ export const API_ENDPOINTS = {
     HISTORY: (id: string) => `/api/equipment/${id}/history`,
     NON_CONFORMANCE: (id: string) => `/api/equipment/${id}/non-conformance`,
     CALIBRATION_HISTORY: (id: string) => `/api/equipment/${id}/calibration-history`,
+    /** 장비 상태 변경 */
+    STATUS: (id: string) => `/api/equipment/${id}/status`,
+    /** 교정 예정 장비 조회 */
+    CALIBRATION_DUE: '/api/equipment/calibration/due',
+    /** 팀별 장비 조회 */
+    TEAM: (teamId: string) => `/api/equipment/team/${teamId}`,
+    /** 파일 첨부 */
+    ATTACHMENTS: '/api/equipment/attachments',
+    /** 공용장비 등록 */
+    SHARED: '/api/equipment/shared',
+    // 위치 변동 이력
+    LOCATION_HISTORY: {
+      LIST: (id: string) => `/api/equipment/${id}/location-history`,
+      CREATE: (id: string) => `/api/equipment/${id}/location-history`,
+      DELETE: (historyId: string) => `/api/equipment/location-history/${historyId}`,
+    },
+    // 유지보수 내역
+    MAINTENANCE_HISTORY: {
+      LIST: (id: string) => `/api/equipment/${id}/maintenance-history`,
+      CREATE: (id: string) => `/api/equipment/${id}/maintenance-history`,
+      DELETE: (historyId: string) => `/api/equipment/maintenance-history/${historyId}`,
+    },
+    // 사고/손상 이력
+    INCIDENT_HISTORY: {
+      LIST: (id: string) => `/api/equipment/${id}/incident-history`,
+      CREATE: (id: string) => `/api/equipment/${id}/incident-history`,
+      DELETE: (historyId: string) => `/api/equipment/incident-history/${historyId}`,
+    },
     // 장비 등록/수정/삭제 요청 승인
     REQUESTS: {
       LIST: '/api/equipment/requests',
@@ -62,6 +90,7 @@ export const API_ENDPOINTS = {
     CANCEL: (id: string) => `/api/checkouts/${id}/cancel`,
     RETURN: (id: string) => `/api/checkouts/${id}/return`,
     APPROVE_RETURN: (id: string) => `/api/checkouts/${id}/approve-return`,
+    REJECT_RETURN: (id: string) => `/api/checkouts/${id}/reject-return`,
     // 대여 목적 양측 확인 (상태 확인 기록)
     CONDITION_CHECK: (id: string) => `/api/checkouts/${id}/condition-check`,
     CONDITION_CHECKS: (id: string) => `/api/checkouts/${id}/condition-checks`,
@@ -75,14 +104,14 @@ export const API_ENDPOINTS = {
   // 교정 관리
   // ============================================================================
   CALIBRATIONS: {
-    LIST: '/api/calibrations',
-    GET: (id: string) => `/api/calibrations/${id}`,
-    CREATE: '/api/calibrations',
-    UPDATE: (id: string) => `/api/calibrations/${id}`,
-    DELETE: (id: string) => `/api/calibrations/${id}`,
-    APPROVE: (id: string) => `/api/calibrations/${id}/approve`,
-    REJECT: (id: string) => `/api/calibrations/${id}/reject`,
-    PENDING: '/api/calibrations/pending',
+    LIST: '/api/calibration',
+    GET: (id: string) => `/api/calibration/${id}`,
+    CREATE: '/api/calibration',
+    UPDATE: (id: string) => `/api/calibration/${id}`,
+    DELETE: (id: string) => `/api/calibration/${id}`,
+    APPROVE: (id: string) => `/api/calibration/${id}/approve`,
+    REJECT: (id: string) => `/api/calibration/${id}/reject`,
+    PENDING: '/api/calibration/pending',
     SUMMARY: '/api/calibration/summary',
     OVERDUE: '/api/calibration/overdue',
     UPCOMING: (days?: number) => `/api/calibration/upcoming${days ? `?days=${days}` : ''}`,
@@ -113,6 +142,12 @@ export const API_ENDPOINTS = {
     ITEMS: (id: string) => `/api/calibration-plans/${id}/items`,
     CONFIRM_ITEM: (planId: string, itemId: string) =>
       `/api/calibration-plans/${planId}/items/${itemId}/confirm`,
+    UPDATE_ITEM: (planId: string, itemId: string) =>
+      `/api/calibration-plans/${planId}/items/${itemId}`,
+    NEW_VERSION: (id: string) => `/api/calibration-plans/${id}/new-version`,
+    VERSION_HISTORY: (id: string) => `/api/calibration-plans/${id}/versions`,
+    PDF: (id: string) => `/api/calibration-plans/${id}/pdf`,
+    EXTERNAL_EQUIPMENT: '/api/calibration-plans/equipment/external',
     PENDING_REVIEW: '/api/calibration-plans?status=pending_review',
     PENDING_APPROVAL: '/api/calibration-plans?status=pending_approval',
     VERSIONS: (year?: number, siteId?: string) =>
@@ -143,8 +178,11 @@ export const API_ENDPOINTS = {
     GET: (id: string) => `/api/non-conformances/${id}`,
     CREATE: '/api/non-conformances',
     UPDATE: (id: string) => `/api/non-conformances/${id}`,
+    DELETE: (id: string) => `/api/non-conformances/${id}`,
     CLOSE: (id: string) => `/api/non-conformances/${id}/close`,
+    REJECT_CORRECTION: (id: string) => `/api/non-conformances/${id}/reject-correction`,
     PENDING: '/api/non-conformances/pending',
+    EQUIPMENT: (equipmentId: string) => `/api/non-conformances/equipment/${equipmentId}`,
   },
 
   // ============================================================================
@@ -156,6 +194,13 @@ export const API_ENDPOINTS = {
     CREATE: '/api/software',
     UPDATE: (id: string) => `/api/software/${id}`,
     DELETE: (id: string) => `/api/software/${id}`,
+    CHANGE_REQUEST: '/api/software/change-request',
+    PENDING: '/api/software/pending',
+    REGISTRY: '/api/software/registry',
+    HISTORY: '/api/software/history',
+    APPROVE: (id: string) => `/api/software/${id}/approve`,
+    REJECT: (id: string) => `/api/software/${id}/reject`,
+    EQUIPMENT_BY_SOFTWARE: (name: string) => `/api/software/${encodeURIComponent(name)}/equipment`,
     CHANGES: {
       LIST: '/api/software-changes',
       GET: (id: string) => `/api/software-changes/${id}`,
@@ -173,7 +218,17 @@ export const API_ENDPOINTS = {
     LIST: '/api/users',
     GET: (id: string) => `/api/users/${id}`,
     ME: '/api/users/me',
+    PREFERENCES: '/api/users/me/preferences',
     UPDATE: (id: string) => `/api/users/${id}`,
+    CHANGE_ROLE: (id: string) => `/api/users/${id}/change-role`,
+  },
+
+  // ============================================================================
+  // 시스템 설정
+  // ============================================================================
+  SETTINGS: {
+    CALIBRATION: '/api/settings/calibration',
+    SYSTEM: '/api/settings/system',
   },
 
   // ============================================================================
@@ -193,10 +248,12 @@ export const API_ENDPOINTS = {
   NOTIFICATIONS: {
     LIST: '/api/notifications',
     GET: (id: string) => `/api/notifications/${id}`,
+    UNREAD_COUNT: '/api/notifications/unread-count',
     MARK_READ: (id: string) => `/api/notifications/${id}/read`,
     MARK_ALL_READ: '/api/notifications/read-all',
     DELETE: (id: string) => `/api/notifications/${id}`,
     SETTINGS: '/api/notifications/settings',
+    STREAM: '/api/notifications/stream',
   },
 
   // ============================================================================
@@ -257,6 +314,42 @@ export const API_ENDPOINTS = {
    */
   APPROVALS: {
     COUNTS: '/api/approvals/counts',
+  },
+
+  // ============================================================================
+  // 보고서 관리
+  // ============================================================================
+  REPORTS: {
+    EQUIPMENT_USAGE: '/api/reports/equipment-usage',
+    CALIBRATION_STATUS: '/api/reports/calibration-status',
+    RENTAL_STATISTICS: '/api/reports/rental-statistics',
+    UTILIZATION_RATE: '/api/reports/utilization-rate',
+    EQUIPMENT_DOWNTIME: '/api/reports/equipment-downtime',
+    EXPORT: {
+      EQUIPMENT_USAGE: '/api/reports/export/equipment-usage',
+      EQUIPMENT_INVENTORY: '/api/reports/export/equipment-inventory',
+      CALIBRATION_STATUS: '/api/reports/export/calibration-status',
+      UTILIZATION: '/api/reports/export/utilization',
+      TEAM_EQUIPMENT: '/api/reports/export/team-equipment',
+      MAINTENANCE: '/api/reports/export/maintenance',
+    },
+  },
+
+  // ============================================================================
+  // 점검(유지보수) 관리
+  // ============================================================================
+  MAINTENANCES: {
+    LIST: '/api/maintenances',
+    GET: (id: string) => `/api/maintenances/${id}`,
+    CREATE: '/api/maintenances',
+    UPDATE: (id: string) => `/api/maintenances/${id}`,
+    DELETE: (id: string) => `/api/maintenances/${id}`,
+    SUMMARY: '/api/maintenances/summary',
+    UPCOMING: '/api/maintenances/upcoming',
+    OVERDUE: '/api/maintenances/overdue',
+    CALCULATE_NEXT_DATE: '/api/maintenances/calculate-next-date',
+    EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/maintenances`,
+    SET_PERIOD: (equipmentId: string) => `/api/equipment/${equipmentId}/maintenance-period`,
   },
 
   // ============================================================================

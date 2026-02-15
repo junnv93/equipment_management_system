@@ -51,12 +51,13 @@ export const CalibrationMethodEnum = z.enum([
 export type CalibrationMethod = z.infer<typeof CalibrationMethodEnum>;
 
 // 사용자 역할 열거형 (UL-QP-18 절차서 영문 명칭 기준)
-// 역할 계층: test_engineer(1) < technical_manager(2) < quality_manager(3) < lab_manager(4)
+// 역할 계층: test_engineer(1) < technical_manager(2) < quality_manager(3) < lab_manager(4) < system_admin(5)
 export const UserRoleEnum = z.enum([
   'test_engineer', // 시험실무자 (Test Engineer)
   'technical_manager', // 기술책임자 (Technical Manager)
   'quality_manager', // 품질책임자 (Quality Manager) - 교정계획서 검토
   'lab_manager', // 시험소장 (Lab Manager)
+  'system_admin', // 시스템 관리자 (System Administrator)
 ]);
 
 export type UserRole = z.infer<typeof UserRoleEnum>;
@@ -576,6 +577,18 @@ export const CALIBRATION_PLAN_STATUS_VALUES = [
   'rejected', // 반려됨
 ] as const;
 
+/**
+ * 교정계획서 상태 상수 객체 (코드에서 직접 비교용)
+ * @example CalibrationPlanStatusValues.DRAFT === 'draft'
+ */
+export const CalibrationPlanStatusValues = {
+  DRAFT: 'draft',
+  PENDING_REVIEW: 'pending_review',
+  PENDING_APPROVAL: 'pending_approval',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
 export const CalibrationPlanStatusEnum = z.enum(
   CALIBRATION_PLAN_STATUS_VALUES as unknown as [string, ...string[]]
 );
@@ -785,25 +798,66 @@ export type RepairResult = z.infer<typeof RepairResultEnum>;
  * SINGLE SOURCE OF TRUTH: 알림 유형 열거형
  *
  * 표준 유형값 (소문자 + 언더스코어):
+ * 이벤트명 기반 (eventName.replace(/\./g, '_'))
  */
 export const NOTIFICATION_TYPE_VALUES = [
-  'calibration_due', // 교정 예정
-  'calibration_completed', // 교정 완료
-  'calibration_approval_pending', // 교정 승인 대기
+  // ─── 반출 (Checkout) ───
+  'checkout_created', // 반출 요청
+  'checkout_approved', // 반출 승인됨
+  'checkout_rejected', // 반출 반려됨
+  'checkout_started', // 반출 시작
+  'checkout_returned', // 반입 요청
+  'checkout_return_approved', // 반입 승인됨
+  'checkout_overdue', // 반출 기한 초과
+
+  // ─── 교정 (Calibration) ───
+  'calibration_created', // 교정 등록 (승인 요청)
   'calibration_approved', // 교정 승인됨
   'calibration_rejected', // 교정 반려됨
+  'calibration_due_soon', // 교정 예정 (D-day 알림)
+  'calibration_overdue', // 교정 기한 초과
+
+  // ─── 부적합 (Non-Conformance) ───
+  'non_conformance_created', // 부적합 등록
+  'non_conformance_corrected', // 부적합 조치 완료
+  'non_conformance_closed', // 부적합 종료
+  'non_conformance_correction_rejected', // 조치 반려
+
+  // ─── 장비 요청 (Equipment Request) ───
+  'equipment_request_created', // 장비 요청 등록
+  'equipment_request_approved', // 장비 요청 승인됨
+  'equipment_request_rejected', // 장비 요청 반려됨
+
+  // ─── 폐기 (Disposal) ───
+  'disposal_requested', // 폐기 요청
+  'disposal_reviewed', // 폐기 검토 완료
+  'disposal_approved', // 폐기 최종 승인
+  'disposal_rejected', // 폐기 반려
+
+  // ─── 장비 반입 (Equipment Import) ───
+  'equipment_import_created', // 반입 요청
+  'equipment_import_approved', // 반입 승인됨
+  'equipment_import_rejected', // 반입 반려됨
+
+  // ─── 시스템 ───
+  'system_announcement', // 시스템 공지
+
+  // ─── 레거시 호환 (기존 코드에서 참조) ───
+  'calibration_due', // → calibration_due_soon 으로 대체 예정
+  'calibration_completed', // → calibration_approved 으로 대체 예정
+  'calibration_approval_pending', // → calibration_created 으로 대체 예정
   'intermediate_check_due', // 중간점검 예정
-  'rental_request', // 대여 요청
-  'rental_approved', // 대여 승인됨
-  'rental_rejected', // 대여 반려됨
-  'rental_completed', // 대여 완료
-  'return_requested', // 반납 요청
-  'return_approved', // 반납 승인됨
-  'return_rejected', // 반납 반려됨
-  'equipment_maintenance', // 장비 유지보수
-  'system', // 시스템
-  'checkout', // 반출
-  'maintenance', // 유지보수
+  'rental_request', // → checkout_created 으로 대체 예정
+  'rental_approved', // → checkout_approved 으로 대체 예정
+  'rental_rejected', // → checkout_rejected 으로 대체 예정
+  'rental_completed', // 레거시
+  'return_requested', // → checkout_returned 으로 대체 예정
+  'return_approved', // → checkout_return_approved 으로 대체 예정
+  'return_rejected', // 레거시
+  'equipment_maintenance', // 레거시
+  'system', // → system_announcement 으로 대체 예정
+  'checkout', // → checkout_created 으로 대체 예정
+  'maintenance', // 레거시
 ] as const;
 
 export const NotificationTypeEnum = z.enum(
@@ -997,6 +1051,7 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   technical_manager: '기술책임자',
   quality_manager: '품질책임자',
   lab_manager: '시험소장',
+  system_admin: '시스템 관리자',
 };
 
 /**
@@ -1220,14 +1275,41 @@ export const NotificationPriorityValues = {
 
 /**
  * 알림 유형 값 객체 (dot-notation 접근용)
- * @example NotificationTypeValues.CALIBRATION_DUE // 'calibration_due'
+ * @example NotificationTypeValues.CHECKOUT_CREATED // 'checkout_created'
  */
 export const NotificationTypeValues = {
+  // 신규 이벤트 기반 타입
+  CHECKOUT_CREATED: 'checkout_created',
+  CHECKOUT_APPROVED: 'checkout_approved',
+  CHECKOUT_REJECTED: 'checkout_rejected',
+  CHECKOUT_STARTED: 'checkout_started',
+  CHECKOUT_RETURNED: 'checkout_returned',
+  CHECKOUT_RETURN_APPROVED: 'checkout_return_approved',
+  CHECKOUT_OVERDUE: 'checkout_overdue',
+  CALIBRATION_CREATED: 'calibration_created',
+  CALIBRATION_APPROVED: 'calibration_approved',
+  CALIBRATION_REJECTED: 'calibration_rejected',
+  CALIBRATION_DUE_SOON: 'calibration_due_soon',
+  CALIBRATION_OVERDUE: 'calibration_overdue',
+  NON_CONFORMANCE_CREATED: 'non_conformance_created',
+  NON_CONFORMANCE_CORRECTED: 'non_conformance_corrected',
+  NON_CONFORMANCE_CLOSED: 'non_conformance_closed',
+  NON_CONFORMANCE_CORRECTION_REJECTED: 'non_conformance_correction_rejected',
+  EQUIPMENT_REQUEST_CREATED: 'equipment_request_created',
+  EQUIPMENT_REQUEST_APPROVED: 'equipment_request_approved',
+  EQUIPMENT_REQUEST_REJECTED: 'equipment_request_rejected',
+  DISPOSAL_REQUESTED: 'disposal_requested',
+  DISPOSAL_REVIEWED: 'disposal_reviewed',
+  DISPOSAL_APPROVED: 'disposal_approved',
+  DISPOSAL_REJECTED: 'disposal_rejected',
+  EQUIPMENT_IMPORT_CREATED: 'equipment_import_created',
+  EQUIPMENT_IMPORT_APPROVED: 'equipment_import_approved',
+  EQUIPMENT_IMPORT_REJECTED: 'equipment_import_rejected',
+  SYSTEM_ANNOUNCEMENT: 'system_announcement',
+  // 레거시 호환
   CALIBRATION_DUE: 'calibration_due',
   CALIBRATION_COMPLETED: 'calibration_completed',
   CALIBRATION_APPROVAL_PENDING: 'calibration_approval_pending',
-  CALIBRATION_APPROVED: 'calibration_approved',
-  CALIBRATION_REJECTED: 'calibration_rejected',
   INTERMEDIATE_CHECK_DUE: 'intermediate_check_due',
   RENTAL_REQUEST: 'rental_request',
   RENTAL_APPROVED: 'rental_approved',
@@ -1360,6 +1442,7 @@ export const UserRoleValues = {
   TECHNICAL_MANAGER: 'technical_manager',
   QUALITY_MANAGER: 'quality_manager',
   LAB_MANAGER: 'lab_manager',
+  SYSTEM_ADMIN: 'system_admin',
 } as const;
 
 /**
@@ -1400,6 +1483,17 @@ export const CheckoutStatusValues = {
   RETURN_APPROVED: 'return_approved',
   OVERDUE: 'overdue',
   CANCELED: 'canceled',
+} as const;
+
+/**
+ * 반출 목적 값 객체 (dot-notation 접근용)
+ * @example CheckoutPurposeValues.CALIBRATION // 'calibration'
+ */
+export const CheckoutPurposeValues = {
+  CALIBRATION: 'calibration',
+  REPAIR: 'repair',
+  RENTAL: 'rental',
+  RETURN_TO_VENDOR: 'return_to_vendor',
 } as const;
 
 /**
@@ -1526,6 +1620,17 @@ export const DISPOSAL_REVIEW_STATUS_LABELS: Record<DisposalReviewStatus, string>
   approved: '승인 완료',
   rejected: '반려됨',
 };
+
+/**
+ * 폐기 검토 상태 값 객체 (dot-notation 접근용)
+ * @example DisposalReviewStatusValues.PENDING // 'pending'
+ */
+export const DisposalReviewStatusValues = {
+  PENDING: 'pending',
+  REVIEWED: 'reviewed',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
 
 // ============================================================================
 // 장비 반입 관련 ENUM (렌탈 + 내부 공용 통합)

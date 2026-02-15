@@ -82,6 +82,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_CALIBRATION_REQUESTS, // 교정 승인 대기 목록 조회
     // 사용자/팀 관리
     Permission.VIEW_USERS,
+    Permission.MANAGE_ROLES, // 자기 팀 내 역할 변경 (범위 제한은 서비스 레이어에서 시행)
     Permission.VIEW_TEAMS, // 팀 목록 조회
     // 알림
     Permission.VIEW_NOTIFICATIONS,
@@ -151,9 +152,15 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.EXPORT_REPORTS,
   ],
 
-  // 시험소장: 모든 권한 (단, 교정 기록 등록 제외)
+  // 시험소장: 모든 권한 (단, 교정 기록 등록, 시스템 설정 관리 제외)
   // 교정 기록은 시험실무자만 등록 가능 (UL-QP-18 등록/승인 완전 분리 정책)
-  lab_manager: Object.values(Permission).filter((p) => p !== Permission.CREATE_CALIBRATION),
+  lab_manager: Object.values(Permission).filter(
+    (p) => p !== Permission.CREATE_CALIBRATION && p !== Permission.MANAGE_SYSTEM_SETTINGS
+  ),
+
+  // 시스템 관리자: lab_manager의 모든 권한 + 시스템 설정 관리
+  // UL-QP-18 직무분리: 교정 등록(CREATE_CALIBRATION) 제외
+  system_admin: Object.values(Permission).filter((p) => p !== Permission.CREATE_CALIBRATION),
 };
 
 /**
