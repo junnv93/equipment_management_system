@@ -1,0 +1,152 @@
+# 내부 LAN 전용 프로덕션 설정 (수원랩)
+# 외부 인터넷 노출 없이 유선 LAN 네트워크에서만 접근 가능
+# 사용법: docker compose -f docker-compose.lan.yml up -d
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database (핵심 데이터 저장소)
+  postgres:
+    image: postgres:15
+    container_name: equipment_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres_equipment # 프로젝트 실제 DB명과 일치
+    ports:
+      - '5432:5432'
+    volumes:
+      # 영구 데이터 저장 (데스크탑 디스크에 저장됨)
+      - /var/lib/equipment-system/postgres:/var/lib/postgresql/data
+      # 백업 디렉토리 마운트
+      - /var/lib/equipment-system/backups:/backups
+    networks:
+      - equipment_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  # Redis Cache (성능 향상)
+  redis:
+    image: redis:7-alpine
+    container_name: equipment_redis_prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    ports:
+      - '6379:6379'
+    volumes:
+      - /var/lib/equipment-system/redis:/data
+    networks:
+      - equipment_network
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  # Backend API (NestJS)
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/docker/Dockerfile
+      target: production
+    container_name: equipment_backend_prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # DB 연결 (컨테이너 내부 네트워크)
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/postgres_equipment
+      # Redis 연결
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # 인증 시크릿
+      JWT_SECRET: ${JWT_SECRET}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET}
+      # Azure AD (회사 계정 통합)
+      AZURE_AD_CLIENT_ID: ${AZURE_AD_CLIENT_ID}
+      AZURE_AD_CLIENT_SECRET: ${AZURE_AD_CLIENT_SECRET}
+      AZURE_AD_TENANT_ID: ${AZURE_AD_TENANT_ID}
+    ports:
+      - '3001:3001'
+    volumes:
+      - /var/lib/equipment-system/logs/backend:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - equipment_network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/docker/Dockerfile
+      target: production
+    container_name: equipment_frontend_prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # ⚠️ 중요: 운영 서버의 실제 LAN IP로 변경 필요
+      NEXT_PUBLIC_API_URL: http://192.168.1.100:3001
+      NEXTAUTH_URL: http://192.168.1.100:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
+    networks:
+      - equipment_network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+  # Nginx Reverse Proxy (옵션: 단일 포트 80으로 통합)
+  nginx:
+    image: nginx:alpine
+    container_name: equipment_nginx_prod
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx/lan.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - equipment_network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '50m'
+        max-file: '5'
+
+networks:
+  equipment_network:
+    driver: bridge
+# Named volumes (optional, 위 설정에서는 bind mount 사용)
+# volumes:
+#   postgres_data:
+#   redis_data:
