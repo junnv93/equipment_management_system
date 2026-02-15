@@ -1,17 +1,20 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { SiteEnum } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
 /**
  * 팀 조회 쿼리 스키마
+ * ✅ SSOT: SiteEnum from @equipment-management/schemas
  * ✅ 사이트 필터 추가: 사용자 사이트에 맞는 팀만 조회
  */
 export const teamQuerySchema = z.object({
   ids: z.string().optional(),
   search: z.string().optional(),
-  site: z.enum(['suwon', 'uiwang', 'pyeongtaek']).optional(), // ✅ 사이트 필터
+  site: SiteEnum.optional(),
+  type: z.string().optional(), // ✅ 팀 유형 필터
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -21,7 +24,9 @@ export const teamQuerySchema = z.object({
 });
 
 export type TeamQueryInput = z.infer<typeof teamQuerySchema>;
-export const TeamQueryValidationPipe = new ZodValidationPipe(teamQuerySchema);
+export const TeamQueryValidationPipe = new ZodValidationPipe(teamQuerySchema, {
+  targets: ['query'],
+});
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
@@ -44,6 +49,13 @@ export class TeamQueryDto {
     example: 'suwon',
   })
   site?: 'suwon' | 'uiwang' | 'pyeongtaek';
+
+  @ApiPropertyOptional({
+    description:
+      '팀 유형 필터 (FCC_EMC_RF, GENERAL_EMC, GENERAL_RF, SAR, AUTOMOTIVE_EMC, SOFTWARE)',
+    example: 'FCC_EMC_RF',
+  })
+  type?: string;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (예: name.asc,createdAt.desc)',

@@ -97,4 +97,6 @@ export class UserQueryDto {
 }
 
 // Zod 검증 파이프 생성
-export const UserQueryValidationPipe = new ZodValidationPipe(userQuerySchema);
+export const UserQueryValidationPipe = new ZodValidationPipe(userQuerySchema, {
+  targets: ['query'],
+});

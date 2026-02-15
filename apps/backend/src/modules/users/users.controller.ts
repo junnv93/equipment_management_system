@@ -7,10 +7,12 @@ import {
   Param,
   Delete,
   Query,
+  Request,
   NotFoundException,
   HttpStatus,
   HttpCode,
   UsePipes,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -21,19 +23,34 @@ import {
   UpdateUserValidationPipe,
   UserQueryDto,
   UserQueryValidationPipe,
+  ChangeRoleDto,
+  ChangeRoleValidationPipe,
 } from './dto';
+import type { ChangeRoleInput } from './dto';
+import {
+  DisplayPreferencesDto,
+  UpdatePreferencesValidationPipe,
+  DEFAULT_DISPLAY_PREFERENCES,
+} from './dto/user-preferences.dto';
 import { User, UserListResponse } from '../../types/models';
+import type { UserRole } from '@equipment-management/schemas';
+import { AuthenticatedRequest } from '../../types/auth';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('users')
+@UseGuards(PermissionsGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @RequirePermissions(Permission.UPDATE_USERS)
   @UsePipes(CreateUserValidationPipe)
+  @AuditLog({ action: 'create', entityType: 'user', entityIdPath: 'response.id' })
   @ApiOperation({ summary: '사용자 생성', description: '새로운 사용자를 생성합니다.' })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: '사용자 생성 성공' })
@@ -67,6 +84,58 @@ export class UsersController {
     return this.usersService.findAll(query);
   }
 
+  @Get('me')
+  @ApiOperation({
+    summary: '내 프로필 조회',
+    description: '현재 로그인한 사용자의 상세 정보를 조회합니다. 팀 정보를 포함합니다.',
+  })
+  @ApiResponse({ status: 200, description: '내 프로필 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 필요' })
+  async getMyProfile(@Request() req: AuthenticatedRequest) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('사용자 정보를 확인할 수 없습니다.');
+    }
+    const user = await this.usersService.findOneWithTeam(userId);
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+    return user;
+  }
+
+  @Get('me/preferences')
+  @ApiOperation({
+    summary: '내 표시 설정 조회',
+    description: '현재 로그인한 사용자의 표시 설정을 조회합니다. 미설정 시 기본값을 반환합니다.',
+  })
+  @ApiResponse({ status: 200, description: '표시 설정 조회 성공' })
+  async getMyPreferences(@Request() req: AuthenticatedRequest) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('사용자 정보를 확인할 수 없습니다.');
+    }
+    const prefs = await this.usersService.getPreferences(userId);
+    return { ...DEFAULT_DISPLAY_PREFERENCES, ...prefs };
+  }
+
+  @Patch('me/preferences')
+  @ApiOperation({
+    summary: '내 표시 설정 변경',
+    description: '현재 로그인한 사용자의 표시 설정을 변경합니다. 부분 업데이트를 지원합니다.',
+  })
+  @ApiResponse({ status: 200, description: '표시 설정 변경 성공' })
+  async updateMyPreferences(
+    @Request() req: AuthenticatedRequest,
+    @Body(UpdatePreferencesValidationPipe) dto: DisplayPreferencesDto
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new NotFoundException('사용자 정보를 확인할 수 없습니다.');
+    }
+    const updated = await this.usersService.updatePreferences(userId, dto);
+    return { ...DEFAULT_DISPLAY_PREFERENCES, ...updated };
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: '사용자 상세 조회',
@@ -84,7 +153,9 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @RequirePermissions(Permission.UPDATE_USERS)
   @UsePipes(UpdateUserValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
   @ApiOperation({
     summary: '사용자 정보 수정',
     description: '특정 ID를 가진 사용자의 정보를 수정합니다.',
@@ -102,6 +173,8 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @RequirePermissions(Permission.UPDATE_USERS)
+  @AuditLog({ action: 'delete', entityType: 'user', entityIdPath: 'params.id' })
   @ApiOperation({ summary: '사용자 삭제', description: '특정 ID를 가진 사용자를 삭제합니다.' })
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 204, description: '사용자 삭제 성공' })
@@ -114,6 +187,34 @@ export class UsersController {
     }
   }
 
+  @Patch(':id/change-role')
+  @RequirePermissions(Permission.MANAGE_ROLES)
+  @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
+  @ApiOperation({
+    summary: '사용자 역할 변경',
+    description:
+      '기술책임자/시험소장이 사용자의 역할을 변경합니다. Conditional WHERE 기반 경량 CAS로 동시 수정을 방어합니다.',
+  })
+  @ApiParam({ name: 'id', description: '대상 사용자 ID' })
+  @ApiBody({ type: ChangeRoleDto })
+  @ApiResponse({ status: 200, description: '역할 변경 성공' })
+  @ApiResponse({ status: 403, description: '권한 없음 (자기 변경, 범위 초과 등)' })
+  @ApiResponse({ status: 404, description: '사용자를 찾을 수 없음' })
+  @ApiResponse({ status: 409, description: '동시 수정 충돌 (이미 다른 관리자가 변경)' })
+  async changeRole(
+    @Param('id') id: string,
+    @Body(ChangeRoleValidationPipe) dto: ChangeRoleInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<User> {
+    return this.usersService.changeRole(id, dto, {
+      userId: req.user.userId,
+      email: req.user.email,
+      role: req.user.roles?.[0] || '',
+      teamId: req.user.teamId,
+      site: req.user.site,
+    });
+  }
+
   @Patch(':id/activate')
   @ApiOperation({
     summary: '사용자 계정 활성화',
@@ -123,6 +224,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: '사용자 계정이 성공적으로 활성화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
+  @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
   async activateUser(
     @Param('id') id: string
   ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
@@ -142,6 +244,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: '사용자 계정이 성공적으로 비활성화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
+  @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
   async deactivateUser(
     @Param('id') id: string
   ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
@@ -160,7 +263,7 @@ export class UsersController {
   getUserPermissions(@Param('id') id: string): Promise<{
     userId: string;
     username: string;
-    role: 'test_engineer' | 'technical_manager' | 'quality_manager' | 'lab_manager';
+    role: UserRole;
     permissions: string[];
   } | null> {
     return this.usersService.findUserPermissions(id);
@@ -175,6 +278,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: '비밀번호가 성공적으로 초기화되었습니다.' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
+  @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
   async resetPassword(
     @Param('id') id: string
   ): Promise<{ message: string; temporaryPassword: string | undefined }> {

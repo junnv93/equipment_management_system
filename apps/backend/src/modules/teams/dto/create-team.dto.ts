@@ -1,29 +1,28 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { SiteEnum, Site } from '@equipment-management/schemas';
+import {
+  TeamTypeEnum,
+  ClassificationCodeEnum,
+  SiteEnum,
+  type TeamType,
+  type ClassificationCode,
+  type Site,
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
-// 팀 타입 열거형 (분류코드와 매핑)
-// RF→E, EMC→R, SAR→S, AUTO→A, SOFTWARE→P
-export const TeamTypeEnum = z.enum(['RF', 'SAR', 'EMC', 'AUTO', 'SOFTWARE']);
-export type TeamType = z.infer<typeof TeamTypeEnum>;
-
-// 분류코드 열거형
-export const ClassificationCodeEnum = z.enum(['E', 'R', 'S', 'A', 'P']);
-export type ClassificationCode = z.infer<typeof ClassificationCodeEnum>;
-
 /**
  * 팀 생성 스키마
+ * ✅ SSOT: enums are imported from @equipment-management/schemas
  * ✅ Best Practice: 팀은 반드시 하나의 사이트에 소속됨
  * ✅ 팀이 장비 분류코드를 결정 (classificationCode)
  */
 export const createTeamSchema = z.object({
   name: z.string().min(1, '팀 이름을 입력해주세요').max(100),
   type: TeamTypeEnum,
-  site: SiteEnum, // ✅ 필수: 팀 소속 사이트
-  classificationCode: ClassificationCodeEnum.optional(), // 분류코드 (E, R, S, A, P)
+  site: SiteEnum,
+  classificationCode: ClassificationCodeEnum.optional(),
   description: z.string().max(500).optional(),
   leaderId: z.string().uuid().optional(),
 });
@@ -36,14 +35,24 @@ export const CreateTeamValidationPipe = new ZodValidationPipe(createTeamSchema);
 export class CreateTeamDto {
   @ApiProperty({
     description: '팀 이름',
-    example: 'RF 테스트팀',
+    example: 'FCC EMC/RF 테스트팀',
   })
   name: string;
 
   @ApiProperty({
-    description: '팀 타입 (분류코드 결정: RF→E, EMC→R, SAR→S, AUTO→A, SOFTWARE→P)',
-    enum: ['RF', 'SAR', 'EMC', 'AUTO', 'SOFTWARE'],
-    example: 'RF',
+    description: '팀 타입 (분류코드 결정)',
+    enum: [
+      'FCC_EMC_RF',
+      'GENERAL_EMC',
+      'GENERAL_RF',
+      'SAR',
+      'AUTOMOTIVE_EMC',
+      'SOFTWARE',
+      'RF',
+      'EMC',
+      'AUTO',
+    ],
+    example: 'FCC_EMC_RF',
   })
   type: TeamType;
 
@@ -55,8 +64,8 @@ export class CreateTeamDto {
   site: Site;
 
   @ApiPropertyOptional({
-    description: '분류코드 (E, R, S, A, P)',
-    enum: ['E', 'R', 'S', 'A', 'P'],
+    description: '분류코드 (E, R, W, S, A, P)',
+    enum: ['E', 'R', 'W', 'S', 'A', 'P'],
     example: 'E',
   })
   classificationCode?: ClassificationCode;
