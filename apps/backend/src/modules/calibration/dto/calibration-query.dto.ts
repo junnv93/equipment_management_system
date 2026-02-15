@@ -21,6 +21,8 @@ export const calibrationQuerySchema = z.object({
   isPassed: z.string().optional(),
   search: z.string().optional(),
   approvalStatus: CalibrationApprovalStatusEnum.optional(),
+  teamId: z.string().uuid().optional(),
+  site: z.string().optional(),
   sort: z.string().default('calibrationDate.desc'),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -30,7 +32,9 @@ export const calibrationQuerySchema = z.object({
 });
 
 export type CalibrationQueryInput = z.infer<typeof calibrationQuerySchema>;
-export const CalibrationQueryValidationPipe = new ZodValidationPipe(calibrationQuerySchema);
+export const CalibrationQueryValidationPipe = new ZodValidationPipe(calibrationQuerySchema, {
+  targets: ['query'],
+});
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
@@ -107,6 +111,18 @@ export class CalibrationQueryDto {
     example: 'pending_approval',
   })
   approvalStatus?: string;
+
+  @ApiPropertyOptional({
+    description: '팀 ID (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+  })
+  teamId?: string;
+
+  @ApiPropertyOptional({
+    description: '사이트 코드 (SUW/UIW/PYT)',
+    example: 'SUW',
+  })
+  site?: string;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',

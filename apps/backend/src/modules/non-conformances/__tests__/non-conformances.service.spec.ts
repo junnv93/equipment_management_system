@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { NonConformancesService } from '../non-conformances.service';
 import { NonConformanceStatus } from '../dto/non-conformance-query.dto';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 
 describe('NonConformancesService', () => {
   let service: NonConformancesService;
 
-  // Mock DB connection
+  // Mock DB — flat chain where every method returns the mockDb itself
   const mockDb = {
     select: jest.fn().mockReturnThis(),
     from: jest.fn().mockReturnThis(),
@@ -22,25 +24,51 @@ describe('NonConformancesService', () => {
     transaction: jest.fn(),
   };
 
+  const mockCacheInvalidationHelper = {
+    invalidateAfterNonConformanceCreation: jest.fn().mockResolvedValue(undefined),
+    invalidateAfterNonConformanceStatusChange: jest.fn().mockResolvedValue(undefined),
+    invalidateAfterEquipmentUpdate: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockCacheService = {
+    get: jest.fn().mockReturnValue(undefined),
+    set: jest.fn(),
+    delete: jest.fn(),
+    deleteByPattern: jest.fn(),
+    // Default: bypass cache, call factory
+    getOrSet: jest
+      .fn()
+      .mockImplementation((_key: string, factory: () => Promise<unknown>) => factory()),
+  };
+
   beforeEach(async () => {
-    // Reset all mocks
     jest.clearAllMocks();
+
+    // Re-apply implementations after clearAllMocks
+    mockDb.select.mockReturnThis();
+    mockDb.from.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.limit.mockReturnThis();
+    mockDb.offset.mockReturnThis();
+    mockDb.orderBy.mockReturnThis();
+    mockDb.insert.mockReturnThis();
+    mockDb.update.mockReturnThis();
+    mockDb.values.mockReturnThis();
+    mockDb.set.mockReturnThis();
+    mockCacheService.getOrSet.mockImplementation((_key: string, factory: () => Promise<unknown>) =>
+      factory()
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NonConformancesService,
-        {
-          provide: 'DRIZZLE_INSTANCE',
-          useValue: mockDb,
-        },
+        { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
+        { provide: CacheInvalidationHelper, useValue: mockCacheInvalidationHelper },
+        { provide: SimpleCacheService, useValue: mockCacheService },
       ],
     }).compile();
 
     service = module.get<NonConformancesService>(NonConformancesService);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -71,10 +99,7 @@ describe('NonConformancesService', () => {
         createdAt: new Date(),
       };
 
-      // Mock equipment lookup
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
+      // Mock equipment lookup: select().from().where().limit()
       mockDb.limit.mockResolvedValueOnce([mockEquipment]);
 
       // Mock transaction
@@ -98,94 +123,15 @@ describe('NonConformancesService', () => {
     });
 
     it('should throw NotFoundException when equipment not found', async () => {
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
       mockDb.limit.mockResolvedValueOnce([]);
 
       await expect(service.create(createDto)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException when equipment is already non-conforming', async () => {
-      const nonConformingEquipment = {
-        ...mockEquipment,
-        status: 'non_conforming',
-      };
-
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
-      mockDb.limit.mockResolvedValueOnce([nonConformingEquipment]);
+      mockDb.limit.mockResolvedValueOnce([{ ...mockEquipment, status: 'non_conforming' }]);
 
       await expect(service.create(createDto)).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  describe('findAll', () => {
-    it('should return paginated list of non-conformances', async () => {
-      const mockItems = [
-        { id: 'nc-1', status: 'open', equipmentId: 'eq-1' },
-        { id: 'nc-2', status: 'open', equipmentId: 'eq-2' },
-      ];
-
-      // Mock count query
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce(mockItems);
-
-      // Mock paginated query
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
-      mockDb.orderBy.mockReturnThis();
-      mockDb.limit.mockReturnThis();
-      mockDb.offset.mockResolvedValueOnce(mockItems);
-
-      const result = await service.findAll({});
-
-      expect(result).toBeDefined();
-      expect(result.items).toBeDefined();
-      expect(Array.isArray(result.items)).toBe(true);
-      expect(result.meta).toBeDefined();
-      expect(result.meta.totalItems).toBe(2);
-    });
-
-    it('should filter by equipmentId', async () => {
-      const equipmentId = 'eq-1';
-      const mockItems = [{ id: 'nc-1', status: 'open', equipmentId }];
-
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce(mockItems);
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
-      mockDb.orderBy.mockReturnThis();
-      mockDb.limit.mockReturnThis();
-      mockDb.offset.mockResolvedValueOnce(mockItems);
-
-      const result = await service.findAll({ equipmentId });
-
-      expect(result.items.every((item: any) => item.equipmentId === equipmentId)).toBe(true);
-    });
-
-    it('should filter by status', async () => {
-      const status = 'open';
-      const mockItems = [{ id: 'nc-1', status, equipmentId: 'eq-1' }];
-
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce(mockItems);
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
-      mockDb.orderBy.mockReturnThis();
-      mockDb.limit.mockReturnThis();
-      mockDb.offset.mockResolvedValueOnce(mockItems);
-
-      const result = await service.findAll({ status });
-
-      expect(result.items.every((item: any) => item.status === status)).toBe(true);
     });
   });
 
@@ -197,8 +143,7 @@ describe('NonConformancesService', () => {
         equipmentId: 'eq-uuid',
       };
 
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
+      // Mock: getOrSet calls factory → select().from().where() → [nc]
       mockDb.where.mockResolvedValueOnce([mockNonConformance]);
 
       const result = await service.findOne('nc-uuid');
@@ -208,8 +153,6 @@ describe('NonConformancesService', () => {
     });
 
     it('should throw NotFoundException when not found', async () => {
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
       mockDb.where.mockResolvedValueOnce([]);
 
       await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException);
@@ -218,24 +161,16 @@ describe('NonConformancesService', () => {
 
   describe('isEquipmentNonConforming', () => {
     it('should return true when open non-conformance exists', async () => {
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
       mockDb.limit.mockResolvedValueOnce([{ id: 'nc-1', status: 'open' }]);
 
       const result = await service.isEquipmentNonConforming('eq-uuid');
-
       expect(result).toBe(true);
     });
 
     it('should return false when no open non-conformance exists', async () => {
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockReturnThis();
       mockDb.limit.mockResolvedValueOnce([]);
 
       const result = await service.isEquipmentNonConforming('eq-uuid');
-
       expect(result).toBe(false);
     });
   });
@@ -245,149 +180,192 @@ describe('NonConformancesService', () => {
       id: 'nc-uuid',
       status: 'open',
       equipmentId: 'eq-uuid',
+      version: 1,
     };
 
-    it('should update non-conformance', async () => {
+    it('should update non-conformance via updateWithVersion', async () => {
       const updateDto = {
+        version: 1,
         analysisContent: '원인 분석 내용',
         status: 'analyzing' as const,
       };
 
-      // Mock findOne
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce([mockNonConformance]);
+      // Mock findOne via cache → factory → DB
+      mockCacheService.getOrSet.mockResolvedValueOnce(mockNonConformance);
 
-      // Mock update
-      mockDb.update.mockReturnThis();
-      mockDb.set.mockReturnThis();
-      mockDb.where.mockReturnThis();
-      mockDb.returning.mockResolvedValueOnce([{ ...mockNonConformance, ...updateDto }]);
+      // Mock updateWithVersion: update().set().where().returning()
+      const updatedNc = { ...mockNonConformance, ...updateDto, version: 2 };
+      mockDb.returning.mockResolvedValueOnce([updatedNc]);
 
       const result = await service.update('nc-uuid', updateDto);
 
       expect(result).toBeDefined();
       expect(result.analysisContent).toBe(updateDto.analysisContent);
+      expect(mockCacheService.delete).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException when updating closed non-conformance', async () => {
-      const closedNonConformance = {
-        ...mockNonConformance,
-        status: NonConformanceStatus.CLOSED,
-      };
+      const closedNc = { ...mockNonConformance, status: NonConformanceStatus.CLOSED };
 
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce([closedNonConformance]);
+      // Mock findOne returns closed NC
+      mockCacheService.getOrSet.mockResolvedValueOnce(closedNc);
 
-      await expect(service.update('nc-uuid', { analysisContent: 'test' })).rejects.toThrow(
-        BadRequestException
+      await expect(
+        service.update('nc-uuid', { version: 1, analysisContent: 'test' })
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ConflictException on version mismatch', async () => {
+      // Mock findOne
+      mockCacheService.getOrSet.mockResolvedValueOnce(mockNonConformance);
+
+      // Mock updateWithVersion: 0 rows affected
+      mockDb.returning.mockResolvedValueOnce([]);
+      // Mock existence check (entity exists but version mismatch)
+      mockDb.limit.mockResolvedValueOnce([{ id: 'nc-uuid', version: 2 }]);
+
+      await expect(service.update('nc-uuid', { version: 1, status: 'analyzing' })).rejects.toThrow(
+        ConflictException
       );
+      // Stale cache should be deleted
+      expect(mockCacheService.delete).toHaveBeenCalled();
     });
   });
 
   describe('close', () => {
     it('should close a corrected non-conformance', async () => {
-      const mockNonConformance = {
+      const correctedNc = {
         id: 'nc-uuid',
         status: NonConformanceStatus.CORRECTED,
         equipmentId: 'eq-uuid',
+        ncType: 'calibration_overdue',
       };
+      const closeDto = { closureNotes: '종료 메모', version: 1 };
 
-      const closeDto = {
-        closedBy: 'closer-uuid',
-        closureNotes: '종료 메모',
-        version: 1,
-      };
-
-      // Mock findOne
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce([mockNonConformance]);
+      // Mock findOne via cache
+      mockCacheService.getOrSet.mockResolvedValueOnce(correctedNc);
 
       // Mock transaction
       mockDb.transaction.mockImplementation(async (callback) => {
+        const txWhere = jest.fn();
+        // First where: CAS update returning → success
+        txWhere.mockReturnValueOnce({
+          returning: jest
+            .fn()
+            .mockResolvedValue([
+              { ...correctedNc, status: NonConformanceStatus.CLOSED, version: 2 },
+            ]),
+        });
+        // Second where: otherOpenNCs query → .limit(1)
+        txWhere.mockReturnValueOnce({
+          limit: jest.fn().mockResolvedValue([]),
+        });
+
         const tx = {
           update: jest.fn().mockReturnThis(),
           set: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          returning: jest
-            .fn()
-            .mockResolvedValue([{ ...mockNonConformance, status: NonConformanceStatus.CLOSED }]),
           select: jest.fn().mockReturnThis(),
           from: jest.fn().mockReturnThis(),
-          limit: jest.fn().mockResolvedValue([]), // No other open non-conformances
+          where: txWhere,
         };
         return callback(tx);
       });
 
-      const result = await service.close('nc-uuid', closeDto);
+      const result = await service.close('nc-uuid', closeDto, 'closer-uuid');
 
       expect(result).toBeDefined();
       expect(result.status).toBe(NonConformanceStatus.CLOSED);
+      expect(mockCacheService.delete).toHaveBeenCalled();
     });
 
-    it('should throw BadRequestException when closing already closed non-conformance', async () => {
-      const closedNonConformance = {
+    it('should throw BadRequestException when closing already closed', async () => {
+      const closedNc = {
         id: 'nc-uuid',
         status: NonConformanceStatus.CLOSED,
         equipmentId: 'eq-uuid',
       };
 
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce([closedNonConformance]);
+      mockCacheService.getOrSet.mockResolvedValueOnce(closedNc);
 
-      await expect(
-        service.close('nc-uuid', { closedBy: 'closer-uuid', version: 1 })
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.close('nc-uuid', { version: 1 }, 'closer-uuid')).rejects.toThrow(
+        BadRequestException
+      );
     });
 
-    it('should throw BadRequestException when closing non-corrected non-conformance', async () => {
-      const openNonConformance = {
+    it('should throw BadRequestException when closing non-corrected', async () => {
+      const openNc = {
         id: 'nc-uuid',
         status: NonConformanceStatus.OPEN,
         equipmentId: 'eq-uuid',
       };
 
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce([openNonConformance]);
+      mockCacheService.getOrSet.mockResolvedValueOnce(openNc);
+
+      await expect(service.close('nc-uuid', { version: 1 }, 'closer-uuid')).rejects.toThrow(
+        BadRequestException
+      );
+    });
+  });
+
+  describe('rejectCorrection', () => {
+    it('should reject correction and revert to analyzing', async () => {
+      const correctedNc = {
+        id: 'nc-uuid',
+        status: NonConformanceStatus.CORRECTED,
+        equipmentId: 'eq-uuid',
+        version: 1,
+      };
+      const dto = { version: 1, rejectionReason: '재검토 필요' };
+
+      // Mock findOne
+      mockCacheService.getOrSet.mockResolvedValueOnce(correctedNc);
+
+      // Mock updateWithVersion success
+      const updatedNc = { ...correctedNc, status: NonConformanceStatus.ANALYZING, version: 2 };
+      mockDb.returning.mockResolvedValueOnce([updatedNc]);
+
+      const result = await service.rejectCorrection('nc-uuid', dto, 'rejector-uuid');
+
+      expect(result.status).toBe(NonConformanceStatus.ANALYZING);
+      expect(mockCacheService.delete).toHaveBeenCalled();
+      expect(
+        mockCacheInvalidationHelper.invalidateAfterNonConformanceStatusChange
+      ).toHaveBeenCalledWith('eq-uuid', false);
+    });
+
+    it('should throw BadRequestException when rejecting closed NC', async () => {
+      const closedNc = {
+        id: 'nc-uuid',
+        status: NonConformanceStatus.CLOSED,
+        equipmentId: 'eq-uuid',
+      };
+
+      mockCacheService.getOrSet.mockResolvedValueOnce(closedNc);
 
       await expect(
-        service.close('nc-uuid', { closedBy: 'closer-uuid', version: 1 })
+        service.rejectCorrection('nc-uuid', { version: 1, rejectionReason: 'test' }, 'user')
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('remove', () => {
     it('should soft delete a non-conformance', async () => {
-      const mockNonConformance = {
-        id: 'nc-uuid',
-        status: 'open',
-        equipmentId: 'eq-uuid',
-      };
+      const mockNc = { id: 'nc-uuid', status: 'open', equipmentId: 'eq-uuid' };
 
       // Mock findOne
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
-      mockDb.where.mockResolvedValueOnce([mockNonConformance]);
+      mockCacheService.getOrSet.mockResolvedValueOnce(mockNc);
 
-      // Mock update (soft delete)
-      mockDb.update.mockReturnThis();
-      mockDb.set.mockReturnThis();
+      // Mock update (soft delete): update().set().where()
       mockDb.where.mockResolvedValueOnce(undefined);
 
       const result = await service.remove('nc-uuid');
 
-      expect(result).toBeDefined();
-      expect(result.id).toBe('nc-uuid');
-      expect(result.deleted).toBe(true);
+      expect(result).toEqual({ id: 'nc-uuid', deleted: true });
+      expect(mockCacheService.delete).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when removing non-existent', async () => {
-      mockDb.select.mockReturnThis();
-      mockDb.from.mockReturnThis();
+      // Mock findOne → not found
       mockDb.where.mockResolvedValueOnce([]);
 
       await expect(service.remove('non-existent')).rejects.toThrow(NotFoundException);

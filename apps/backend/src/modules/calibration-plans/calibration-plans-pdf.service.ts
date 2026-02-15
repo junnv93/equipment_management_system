@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CalibrationPlansService } from './calibration-plans.service';
+import { CALIBRATION_PLAN_STATUS_LABELS, SITE_LABELS } from '@equipment-management/schemas';
 
 /**
  * 교정계획 아이템 (PDF 생성용 간소화 타입)
@@ -22,19 +23,9 @@ interface PlanItemForPdf {
   };
 }
 
-// 시험소 라벨
-const SITE_LABELS: Record<string, string> = {
-  suwon: '수원',
-  uiwang: '의왕',
-};
-
-// 상태 라벨
-const STATUS_LABELS: Record<string, string> = {
-  draft: '작성 중',
-  pending_approval: '승인 대기',
-  approved: '승인됨',
-  rejected: '반려됨',
-};
+// ✅ SSOT: packages/schemas에서 임포트 — Record<string, string>로 확장하여 동적 인덱싱 허용
+const STATUS_LABELS: Record<string, string> = CALIBRATION_PLAN_STATUS_LABELS;
+const SITE_LABEL_MAP: Record<string, string> = SITE_LABELS;
 
 @Injectable()
 export class CalibrationPlansPdfService {
@@ -59,7 +50,7 @@ export class CalibrationPlansPdfService {
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>${plan.year}년 ${SITE_LABELS[plan.siteId] || plan.siteId} 교정계획서</title>
+  <title>${plan.year}년 ${SITE_LABEL_MAP[plan.siteId] || plan.siteId} 교정계획서</title>
   <style>
     @page {
       size: A4 landscape;
@@ -113,7 +104,7 @@ export class CalibrationPlansPdfService {
   </style>
 </head>
 <body>
-  <h1>${plan.year}년 ${SITE_LABELS[plan.siteId] || plan.siteId} 교정계획서</h1>
+  <h1>${plan.year}년 ${SITE_LABEL_MAP[plan.siteId] || plan.siteId} 교정계획서</h1>
 
   <div class="info">
     <p><strong>상태:</strong> ${STATUS_LABELS[plan.status] || plan.status}</p>

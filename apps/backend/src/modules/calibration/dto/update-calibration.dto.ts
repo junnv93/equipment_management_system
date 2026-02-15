@@ -4,19 +4,21 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { CreateCalibrationDto, calibrationBaseSchema } from './create-calibration.dto';
 import { CalibrationStatusEnum } from '@equipment-management/schemas';
+import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
 /**
  * 교정 수정 스키마 (base 스키마에서 파생 - Zod v4에서는 refine 후 omit 불가)
+ *
+ * ✅ CAS: version 필드 추가 (optional — 내부 호출(certificatePath 등)에서는 version 없이 사용)
  */
 export const updateCalibrationSchema = calibrationBaseSchema
   .omit({ equipmentId: true })
   .partial()
   .extend({
     status: CalibrationStatusEnum.optional(),
-    isPassed: z.boolean().optional(),
-    resultNotes: z.string().optional(),
+    version: versionedSchema.version.optional(),
   });
 
 export type UpdateCalibrationInput = z.infer<typeof updateCalibrationSchema>;
@@ -36,16 +38,11 @@ export class UpdateCalibrationDto extends PartialType(
   status?: string;
 
   @ApiProperty({
-    description: '교정 결과 (합격/불합격)',
-    example: true,
+    description: 'Optimistic locking version (CAS 보호 시 필수)',
+    example: 1,
     required: false,
+    type: 'integer',
+    minimum: 1,
   })
-  isPassed?: boolean;
-
-  @ApiProperty({
-    description: '교정 결과 메모',
-    example: '모든 파라미터가 허용 오차 범위 내에 있습니다.',
-    required: false,
-  })
-  resultNotes?: string;
+  version?: number;
 }

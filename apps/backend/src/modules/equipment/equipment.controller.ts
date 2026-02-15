@@ -277,6 +277,7 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_EQUIPMENT)
+  @AuditLog({ action: 'create', entityType: 'equipment', entityIdPath: 'response.equipment.id' })
   @UseInterceptors(FilesInterceptor('files', 10), FormDataParserInterceptor)
   @UsePipes(CreateSharedEquipmentValidationPipe)
   async createShared(
@@ -756,6 +757,7 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'update', entityType: 'equipment', entityIdPath: 'params.uuid' })
   @UsePipes(UpdateStatusValidationPipe)
   updateStatus(
     @Param('uuid', ParseUUIDPipe) uuid: string,

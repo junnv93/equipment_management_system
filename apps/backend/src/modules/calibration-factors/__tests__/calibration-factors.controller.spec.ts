@@ -201,48 +201,50 @@ describe('CalibrationFactorsController', () => {
   describe('approve', () => {
     it('should approve a pending calibration factor', async () => {
       const uuid = 'pending-factor-uuid';
+      const approverId = '550e8400-e29b-41d4-a716-446655440003';
       const approveDto = {
-        approverId: '550e8400-e29b-41d4-a716-446655440003',
         approverComment: '검토 완료',
       };
+      const mockReq = { user: { userId: approverId } } as any;
 
       const expectedResult = {
         id: uuid,
         approvalStatus: 'approved',
-        approvedBy: approveDto.approverId,
+        approvedBy: approverId,
         approverComment: approveDto.approverComment,
       };
 
       mockCalibrationFactorsService.approve.mockResolvedValue(expectedResult);
 
-      const result = await controller.approve(uuid, approveDto);
+      const result = await controller.approve(uuid, approveDto as any, mockReq);
 
-      expect(service.approve).toHaveBeenCalledWith(uuid, approveDto);
+      expect(service.approve).toHaveBeenCalledWith(uuid, { ...approveDto, approverId });
       expect(result.approvalStatus).toBe('approved');
-      expect(result.approvedBy).toBe(approveDto.approverId);
+      expect(result.approvedBy).toBe(approverId);
     });
   });
 
   describe('reject', () => {
     it('should reject a pending calibration factor', async () => {
       const uuid = 'pending-factor-uuid';
+      const approverId = '550e8400-e29b-41d4-a716-446655440003';
       const rejectDto = {
-        approverId: '550e8400-e29b-41d4-a716-446655440003',
         rejectionReason: '값이 범위를 벗어남',
       };
+      const mockReq = { user: { userId: approverId } } as any;
 
       const expectedResult = {
         id: uuid,
         approvalStatus: 'rejected',
-        approvedBy: rejectDto.approverId,
+        approvedBy: approverId,
         approverComment: rejectDto.rejectionReason,
       };
 
       mockCalibrationFactorsService.reject.mockResolvedValue(expectedResult);
 
-      const result = await controller.reject(uuid, rejectDto);
+      const result = await controller.reject(uuid, rejectDto as any, mockReq);
 
-      expect(service.reject).toHaveBeenCalledWith(uuid, rejectDto);
+      expect(service.reject).toHaveBeenCalledWith(uuid, { ...rejectDto, approverId });
       expect(result.approvalStatus).toBe('rejected');
     });
   });

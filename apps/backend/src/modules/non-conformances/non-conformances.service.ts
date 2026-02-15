@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { eq, and, isNull, desc, asc, like, SQL, ne, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -16,16 +17,63 @@ import { equipment } from '@equipment-management/db/schema/equipment';
 import { CreateNonConformanceDto } from './dto/create-non-conformance.dto';
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
 import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
+import { RejectCorrectionDto } from './dto/reject-correction.dto';
 import { NonConformanceQueryDto, NonConformanceStatus } from './dto/non-conformance-query.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
+
+/**
+ * 부적합 상태 전이 규칙 (State Machine)
+ *
+ * open → analyzing: 원인분석 시작
+ * open → corrected: 즉시 조치 완료 (markCorrected)
+ * analyzing → corrected: 조치 완료 (update status or markCorrected)
+ * corrected → closed: 기술책임자 승인 종료
+ * corrected → analyzing: 기술책임자 반려 (재작업 요청)
+ */
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  [NonConformanceStatus.OPEN]: [NonConformanceStatus.ANALYZING, NonConformanceStatus.CORRECTED],
+  [NonConformanceStatus.ANALYZING]: [NonConformanceStatus.CORRECTED],
+  [NonConformanceStatus.CORRECTED]: [NonConformanceStatus.CLOSED, NonConformanceStatus.ANALYZING],
+  [NonConformanceStatus.CLOSED]: [], // 종료 상태 — 전이 불가
+};
 
 @Injectable()
 export class NonConformancesService extends VersionedBaseService {
+  private readonly logger = new Logger(NonConformancesService.name);
+
+  private readonly CACHE_PREFIX = 'non-conformances';
+  private readonly CACHE_TTL = 120_000; // 2분 (MEDIUM)
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>
+    protected readonly db: NodePgDatabase<typeof schema>,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper,
+    private readonly cacheService: SimpleCacheService,
+    private readonly eventEmitter: EventEmitter2
   ) {
     super();
+  }
+
+  private buildCacheKey(type: string, id: string): string {
+    return `${this.CACHE_PREFIX}:${type}:${id}`;
+  }
+
+  /**
+   * 상태 전이 유효성 검증
+   * @throws BadRequestException 허용되지 않는 전이인 경우
+   */
+  private validateTransition(currentStatus: string, targetStatus: string): void {
+    const allowed = VALID_TRANSITIONS[currentStatus];
+    if (!allowed || !allowed.includes(targetStatus)) {
+      throw new BadRequestException(
+        `상태 전이가 허용되지 않습니다: ${currentStatus} → ${targetStatus}. ` +
+          `허용된 전이: ${currentStatus} → [${allowed?.join(', ') || '없음'}]`
+      );
+    }
   }
 
   /**
@@ -81,6 +129,27 @@ export class NonConformancesService extends VersionedBaseService {
       return nonConformance;
     });
 
+    // 캐시 무효화 (장비 상태 non_conforming으로 변경됨)
+    await this.cacheInvalidationHelper
+      .invalidateAfterNonConformanceCreation(createDto.equipmentId)
+      .catch((err) =>
+        this.logger.warn(`Cache invalidation failed after NC creation: ${err.message}`)
+      );
+
+    // 📢 알림 이벤트 발행 (부적합 등록)
+    const equip = equipmentResult[0];
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CREATED, {
+      ncId: result.id,
+      equipmentId: createDto.equipmentId,
+      equipmentName: equip.name ?? '',
+      managementNumber: equip.managementNumber ?? '',
+      reporterTeamId: equip.teamId ?? '',
+      ncType: createDto.ncType,
+      actorId: createDto.discoveredBy ?? '',
+      actorName: '',
+      timestamp: new Date(),
+    });
+
     return result;
   }
 
@@ -108,6 +177,12 @@ export class NonConformancesService extends VersionedBaseService {
           email: string;
           team: { id: string; name: string } | null;
         } | null;
+        rejector?: {
+          id: string;
+          name: string;
+          email: string;
+          team: { id: string; name: string } | null;
+        } | null;
       }
     >;
     meta: {
@@ -121,6 +196,7 @@ export class NonConformancesService extends VersionedBaseService {
     const {
       equipmentId,
       status,
+      site,
       search,
       sort = 'discoveryDate.desc',
       page = 1,
@@ -138,6 +214,12 @@ export class NonConformancesService extends VersionedBaseService {
 
         if (status) {
           conditions.push(eqFn(nc.status, status));
+        }
+
+        // 🔒 사이트 필터: 장비의 사이트로 부적합 격리
+        if (site) {
+          const siteEquipmentIds = sql`${nc.equipmentId} IN (SELECT id FROM equipment WHERE site = ${site})`;
+          conditions.push(siteEquipmentIds);
         }
 
         if (search) {
@@ -182,6 +264,16 @@ export class NonConformancesService extends VersionedBaseService {
           },
           with: {
             team: true, // ← Critical: includes team relation
+          },
+        },
+        rejector: {
+          columns: {
+            id: true,
+            name: true,
+            email: true,
+          },
+          with: {
+            team: true,
           },
         },
       },
@@ -262,19 +354,26 @@ export class NonConformancesService extends VersionedBaseService {
   }
 
   /**
-   * 단일 부적합 조회
+   * 단일 부적합 조회 (cache-aside)
    */
   async findOne(id: string): Promise<NonConformance> {
-    const [nonConformance] = await this.db
-      .select()
-      .from(nonConformances)
-      .where(and(eq(nonConformances.id, id), isNull(nonConformances.deletedAt)));
+    const cacheKey = this.buildCacheKey('detail', id);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const [nonConformance] = await this.db
+          .select()
+          .from(nonConformances)
+          .where(and(eq(nonConformances.id, id), isNull(nonConformances.deletedAt)));
 
-    if (!nonConformance) {
-      throw new NotFoundException(`부적합 ID ${id}를 찾을 수 없습니다.`);
-    }
+        if (!nonConformance) {
+          throw new NotFoundException(`부적합 ID ${id}를 찾을 수 없습니다.`);
+        }
 
-    return nonConformance;
+        return nonConformance;
+      },
+      this.CACHE_TTL
+    );
   }
 
   /**
@@ -320,96 +419,217 @@ export class NonConformancesService extends VersionedBaseService {
   async update(id: string, updateDto: UpdateNonConformanceDto): Promise<NonConformance> {
     const nonConformance = await this.findOne(id);
 
-    if (nonConformance.status === NonConformanceStatus.CLOSED) {
+    // 상태 변경이 요청된 경우 중앙화된 전이 검증
+    if (updateDto.status && updateDto.status !== nonConformance.status) {
+      this.validateTransition(nonConformance.status, updateDto.status);
+    } else if (nonConformance.status === NonConformanceStatus.CLOSED) {
       throw new BadRequestException('종료된 부적합은 수정할 수 없습니다.');
     }
 
-    const [updated] = await this.db
-      .update(nonConformances)
-      .set({
-        ...updateDto,
-        updatedAt: new Date(),
-      })
-      .where(eq(nonConformances.id, id))
-      .returning();
+    // version은 CAS용이므로 SET 절에서 제외
+    const { version, ...updateFields } = updateDto;
 
-    return updated;
+    try {
+      const updated = await this.updateWithVersion<NonConformance>(
+        nonConformances,
+        id,
+        version,
+        updateFields,
+        '부적합'
+      );
+
+      // 캐시 무효화: detail 캐시 삭제
+      this.cacheService.delete(this.buildCacheKey('detail', id));
+
+      return updated;
+    } catch (error) {
+      // CAS 실패 시 stale cache 방지
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
   }
 
   /**
    * 부적합 종료 (기술책임자)
    * 장비 상태 복원: available
    */
-  async close(id: string, closeDto: CloseNonConformanceDto): Promise<NonConformance> {
+  async close(
+    id: string,
+    closeDto: CloseNonConformanceDto,
+    closedBy: string
+  ): Promise<NonConformance> {
     const nonConformance = await this.findOne(id);
 
-    if (nonConformance.status === NonConformanceStatus.CLOSED) {
-      throw new BadRequestException('이미 종료된 부적합입니다.');
-    }
-
-    // 조치 완료 상태인지 확인 (corrected 상태에서만 종료 가능)
-    if (nonConformance.status !== NonConformanceStatus.CORRECTED) {
-      throw new BadRequestException('조치 완료(corrected) 상태에서만 종료할 수 있습니다.');
-    }
+    // 중앙화된 상태 전이 검증 (corrected → closed)
+    this.validateTransition(nonConformance.status, NonConformanceStatus.CLOSED);
 
     // damage/malfunction 유형은 수리 기록 필수 검증
     if (this.requiresRepair(nonConformance.ncType as string) && !nonConformance.repairHistoryId) {
       throw new BadRequestException('손상/오작동 유형은 수리 기록이 필요합니다');
     }
 
-    // ✅ CAS + 트랜잭션으로 부적합 종료 + 장비 상태 복원
-    const result = await this.db.transaction(async (tx) => {
-      // 1. 부적합 종료 (CAS: version 검증)
-      const [updated] = await tx
-        .update(nonConformances)
-        .set({
-          status: NonConformanceStatus.CLOSED,
-          closedBy: closeDto.closedBy,
-          closedAt: new Date(),
-          closureNotes: closeDto.closureNotes,
-          version: sql`version + 1`,
-          updatedAt: new Date(),
-        } as Record<string, unknown>)
-        .where(and(eq(nonConformances.id, id), eq(nonConformances.version, closeDto.version)))
-        .returning();
-
-      if (!updated) {
-        throw new ConflictException({
-          message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
-          code: 'VERSION_CONFLICT',
-        });
-      }
-
-      // 2. 해당 장비에 다른 열린 부적합(closed가 아닌 모든 상태)이 있는지 확인
-      // open, analyzing, corrected 상태 모두 "아직 종료되지 않은" 부적합임
-      const otherOpenNonConformances = await tx
-        .select()
-        .from(nonConformances)
-        .where(
-          and(
-            eq(nonConformances.equipmentId, nonConformance.equipmentId),
-            isNull(nonConformances.deletedAt),
-            ne(nonConformances.status, NonConformanceStatus.CLOSED),
-            ne(nonConformances.id, id) // 현재 종료하려는 부적합 제외
-          )
-        )
-        .limit(1);
-
-      // 다른 열린 부적합이 없으면 장비 상태 복원
-      if (otherOpenNonConformances.length === 0) {
-        await tx
-          .update(equipment)
+    // CAS + 트랜잭션으로 부적합 종료 + 장비 상태 복원
+    // 트랜잭션 내부이므로 updateWithVersion() 직접 사용 불가 (tx 컨텍스트)
+    // → 동일한 404/409 분기 패턴을 수동 적용
+    let result: { updated: NonConformance; equipmentStatusRestored: boolean };
+    try {
+      result = await this.db.transaction(async (tx) => {
+        // 1. 부적합 종료 (CAS: version 검증)
+        const [updated] = await tx
+          .update(nonConformances)
           .set({
-            status: 'available',
+            status: NonConformanceStatus.CLOSED,
+            closedBy,
+            closedAt: new Date(),
+            closureNotes: closeDto.closureNotes,
+            version: sql`version + 1`,
             updatedAt: new Date(),
-          })
-          .where(eq(equipment.id, nonConformance.equipmentId));
-      }
+          } as Record<string, unknown>)
+          .where(and(eq(nonConformances.id, id), eq(nonConformances.version, closeDto.version)))
+          .returning();
 
-      return updated;
+        if (!updated) {
+          // 404 vs 409 구분 (updateWithVersion 패턴)
+          const [existing] = await tx
+            .select({ id: nonConformances.id, version: nonConformances.version })
+            .from(nonConformances)
+            .where(eq(nonConformances.id, id))
+            .limit(1);
+
+          if (!existing) {
+            throw new NotFoundException(`부적합 UUID ${id}를 찾을 수 없습니다.`);
+          }
+
+          throw new ConflictException({
+            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+            code: 'VERSION_CONFLICT',
+            currentVersion: existing.version,
+            expectedVersion: closeDto.version,
+          });
+        }
+
+        // 2. 해당 장비에 다른 열린 부적합(closed가 아닌 모든 상태)이 있는지 확인
+        const otherOpenNonConformances = await tx
+          .select()
+          .from(nonConformances)
+          .where(
+            and(
+              eq(nonConformances.equipmentId, nonConformance.equipmentId),
+              isNull(nonConformances.deletedAt),
+              ne(nonConformances.status, NonConformanceStatus.CLOSED),
+              ne(nonConformances.id, id)
+            )
+          )
+          .limit(1);
+
+        // 다른 열린 부적합이 없으면 장비 상태 복원
+        if (otherOpenNonConformances.length === 0) {
+          await tx
+            .update(equipment)
+            .set({
+              status: 'available',
+              updatedAt: new Date(),
+            })
+            .where(eq(equipment.id, nonConformance.equipmentId));
+        }
+
+        return { updated, equipmentStatusRestored: otherOpenNonConformances.length === 0 };
+      });
+    } catch (error) {
+      // CAS 실패 시 stale cache 방지
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
+
+    // 성공 시 detail 캐시 삭제
+    this.cacheService.delete(this.buildCacheKey('detail', id));
+
+    // 캐시 무효화 (장비 상태가 available로 복원되었으면 equipmentStatusChanged=true)
+    await this.cacheInvalidationHelper
+      .invalidateAfterNonConformanceStatusChange(
+        nonConformance.equipmentId,
+        result.equipmentStatusRestored
+      )
+      .catch((err) => this.logger.warn(`Cache invalidation failed after NC close: ${err.message}`));
+
+    // 📢 알림 이벤트 발행 (부적합 종료)
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CLOSED, {
+      ncId: id,
+      equipmentId: nonConformance.equipmentId,
+      equipmentName: '',
+      managementNumber: '',
+      reporterTeamId: '',
+      actorId: closedBy,
+      actorName: '',
+      timestamp: new Date(),
     });
 
-    return result;
+    return result.updated;
+  }
+
+  /**
+   * 부적합 조치 반려 (기술책임자)
+   * corrected → analyzing 상태로 되돌림 (재작업 요청)
+   */
+  async rejectCorrection(
+    id: string,
+    dto: RejectCorrectionDto,
+    rejectedBy: string
+  ): Promise<NonConformance> {
+    const nonConformance = await this.findOne(id);
+
+    // 중앙화된 상태 전이 검증
+    this.validateTransition(nonConformance.status, NonConformanceStatus.ANALYZING);
+
+    try {
+      const updated = await this.updateWithVersion<NonConformance>(
+        nonConformances,
+        id,
+        dto.version,
+        {
+          status: NonConformanceStatus.ANALYZING,
+          rejectedBy,
+          rejectedAt: new Date(),
+          rejectionReason: dto.rejectionReason,
+        },
+        '부적합'
+      );
+
+      // 성공 시 detail 캐시 삭제
+      this.cacheService.delete(this.buildCacheKey('detail', id));
+
+      // 캐시 무효화 (장비 상태는 변경되지 않음 — non_conforming 유지)
+      await this.cacheInvalidationHelper
+        .invalidateAfterNonConformanceStatusChange(nonConformance.equipmentId, false)
+        .catch((err) =>
+          this.logger.warn(`Cache invalidation failed after NC rejection: ${err.message}`)
+        );
+
+      // 📢 알림 이벤트 발행 (조치 반려)
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTION_REJECTED, {
+        ncId: id,
+        equipmentId: nonConformance.equipmentId,
+        equipmentName: '',
+        managementNumber: '',
+        reporterTeamId: '',
+        reason: dto.rejectionReason,
+        actorId: rejectedBy,
+        actorName: '',
+        timestamp: new Date(),
+      });
+
+      return updated;
+    } catch (error) {
+      // CAS 실패 시 stale cache 방지
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(this.buildCacheKey('detail', id));
+      }
+      throw error;
+    }
   }
 
   /**
@@ -425,6 +645,9 @@ export class NonConformancesService extends VersionedBaseService {
         updatedAt: new Date(),
       })
       .where(eq(nonConformances.id, id));
+
+    // detail 캐시 무효화
+    this.cacheService.delete(this.buildCacheKey('detail', id));
 
     return { id, deleted: true };
   }
@@ -454,6 +677,9 @@ export class NonConformancesService extends VersionedBaseService {
         updatedAt: new Date(),
       })
       .where(eq(nonConformances.id, ncId));
+
+    // detail 캐시 무효화
+    this.cacheService.delete(this.buildCacheKey('detail', ncId));
   }
 
   /**
@@ -470,9 +696,8 @@ export class NonConformancesService extends VersionedBaseService {
   ): Promise<void> {
     const nc = await this.findOne(id);
 
-    if (nc.status === NonConformanceStatus.CLOSED) {
-      throw new BadRequestException('이미 종료된 부적합입니다');
-    }
+    // 중앙화된 상태 전이 검증 (open/analyzing → corrected)
+    this.validateTransition(nc.status, NonConformanceStatus.CORRECTED);
 
     // damage/malfunction 유형은 수리 연결 필수
     if (this.requiresRepair(nc.ncType as string) && !nc.repairHistoryId) {
@@ -489,6 +714,21 @@ export class NonConformancesService extends VersionedBaseService {
         updatedAt: new Date(),
       })
       .where(eq(nonConformances.id, id));
+
+    // detail 캐시 무효화
+    this.cacheService.delete(this.buildCacheKey('detail', id));
+
+    // 📢 알림 이벤트 발행 (조치 완료 — 승인 요청)
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.NC_CORRECTED, {
+      ncId: id,
+      equipmentId: nc.equipmentId,
+      equipmentName: '',
+      managementNumber: '',
+      reporterTeamId: '',
+      actorId: correctionData.correctedBy,
+      actorName: '',
+      timestamp: new Date(),
+    });
   }
 
   /**

@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -8,6 +8,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 교정계획서 수정 스키마
  */
 export const updateCalibrationPlanSchema = z.object({
+  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
   teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
 });
 
@@ -32,6 +33,9 @@ export const UpdateCalibrationPlanItemValidationPipe = new ZodValidationPipe(
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class UpdateCalibrationPlanDto {
+  @ApiProperty({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
+  casVersion: number;
+
   @ApiPropertyOptional({
     description: '팀 ID',
     example: '550e8400-e29b-41d4-a716-446655440000',

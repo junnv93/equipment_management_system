@@ -10,6 +10,8 @@ import {
   UseGuards,
   HttpStatus,
   UsePipes,
+  BadRequestException,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { CalibrationFactorsService } from './calibration-factors.service';
@@ -28,6 +30,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('보정계수 관리')
 @ApiBearerAuth()
@@ -49,6 +53,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION_FACTOR)
+  @AuditLog({ action: 'create', entityType: 'calibration_factor', entityIdPath: 'response.id' })
   @UsePipes(CreateCalibrationFactorValidationPipe)
   create(
     @Body() createDto: CreateCalibrationFactorDto
@@ -171,14 +176,20 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
+  @AuditLog({ action: 'approve', entityType: 'calibration_factor', entityIdPath: 'params.uuid' })
   @UsePipes(ApproveCalibrationFactorValidationPipe)
-  approve(
+  async approve(
     @Param('uuid') uuid: string,
-    @Body() approveDto: ApproveCalibrationFactorDto
+    @Body() approveDto: ApproveCalibrationFactorDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
   > {
-    return this.calibrationFactorsService.approve(uuid, approveDto);
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.calibrationFactorsService.approve(uuid, { ...approveDto, approverId });
   }
 
   @Patch(':uuid/reject')
@@ -193,14 +204,20 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
+  @AuditLog({ action: 'reject', entityType: 'calibration_factor', entityIdPath: 'params.uuid' })
   @UsePipes(RejectCalibrationFactorValidationPipe)
-  reject(
+  async reject(
     @Param('uuid') uuid: string,
-    @Body() rejectDto: RejectCalibrationFactorDto
+    @Body() rejectDto: RejectCalibrationFactorDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
   > {
-    return this.calibrationFactorsService.reject(uuid, rejectDto);
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.calibrationFactorsService.reject(uuid, { ...rejectDto, approverId });
   }
 
   @Delete(':uuid')
@@ -214,6 +231,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
+  @AuditLog({ action: 'delete', entityType: 'calibration_factor', entityIdPath: 'params.uuid' })
   remove(@Param('uuid') uuid: string): Promise<{ id: string; deleted: boolean }> {
     return this.calibrationFactorsService.remove(uuid);
   }

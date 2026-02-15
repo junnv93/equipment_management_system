@@ -1,6 +1,7 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -11,8 +12,10 @@ const updatableStatusValues = ['open', 'analyzing', 'corrected'] as const;
 
 /**
  * 부적합 수정 스키마
+ * CAS: version 필드로 동시 수정 충돌 방지
  */
 export const updateNonConformanceSchema = z.object({
+  ...versionedSchema,
   actionPlan: z.string().optional(),
   analysisContent: z.string().optional(),
   correctionContent: z.string().optional(),
@@ -35,7 +38,7 @@ export const UpdateNonConformanceValidationPipe = new ZodValidationPipe(updateNo
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
-export class UpdateNonConformanceDto {
+export class UpdateNonConformanceDto extends VersionedDto {
   @ApiPropertyOptional({ description: '조치 계획' })
   actionPlan?: string;
 

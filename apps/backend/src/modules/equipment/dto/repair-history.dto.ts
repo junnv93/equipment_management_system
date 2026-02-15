@@ -68,7 +68,9 @@ export const repairHistoryQuerySchema = z.object({
 });
 
 export type RepairHistoryQueryInput = z.infer<typeof repairHistoryQuerySchema>;
-export const RepairHistoryQueryValidationPipe = new ZodValidationPipe(repairHistoryQuerySchema);
+export const RepairHistoryQueryValidationPipe = new ZodValidationPipe(repairHistoryQuerySchema, {
+  targets: ['query'],
+});
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 

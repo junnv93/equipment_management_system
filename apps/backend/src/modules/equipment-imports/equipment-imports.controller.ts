@@ -32,6 +32,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('장비 반입 관리 (렌탈 + 내부 공용)')
 @ApiBearerAuth()
@@ -42,6 +43,7 @@ export class EquipmentImportsController {
 
   @Post()
   @RequirePermissions(Permission.CREATE_EQUIPMENT_IMPORT)
+  @AuditLog({ action: 'create', entityType: 'equipment_import', entityIdPath: 'response.id' })
   @UsePipes(CreateEquipmentImportValidationPipe)
   @ApiOperation({
     summary: '장비 반입 신청',
@@ -84,6 +86,7 @@ export class EquipmentImportsController {
 
   @Patch(':id/approve')
   @RequirePermissions(Permission.APPROVE_EQUIPMENT_IMPORT)
+  @AuditLog({ action: 'approve', entityType: 'equipment_import', entityIdPath: 'params.id' })
   @UsePipes(ApproveEquipmentImportValidationPipe)
   @ApiOperation({ summary: '장비 반입 승인' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
@@ -98,6 +101,7 @@ export class EquipmentImportsController {
 
   @Patch(':id/reject')
   @RequirePermissions(Permission.APPROVE_EQUIPMENT_IMPORT)
+  @AuditLog({ action: 'reject', entityType: 'equipment_import', entityIdPath: 'params.id' })
   @UsePipes(RejectEquipmentImportValidationPipe)
   @ApiOperation({ summary: '장비 반입 거절' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
@@ -112,6 +116,7 @@ export class EquipmentImportsController {
 
   @Post(':id/receive')
   @RequirePermissions(Permission.COMPLETE_EQUIPMENT_IMPORT)
+  @AuditLog({ action: 'update', entityType: 'equipment_import', entityIdPath: 'params.id' })
   @ApiOperation({
     summary: '장비 수령 확인 + 자동 등록',
     description:
@@ -132,6 +137,7 @@ export class EquipmentImportsController {
 
   @Post(':id/initiate-return')
   @RequirePermissions(Permission.CREATE_CHECKOUT)
+  @AuditLog({ action: 'update', entityType: 'equipment_import', entityIdPath: 'params.id' })
   @ApiOperation({
     summary: '장비 반납 시작 (checkout 자동 생성)',
     description:
@@ -151,6 +157,7 @@ export class EquipmentImportsController {
 
   @Patch(':id/cancel')
   @RequirePermissions(Permission.CANCEL_EQUIPMENT_IMPORT)
+  @AuditLog({ action: 'update', entityType: 'equipment_import', entityIdPath: 'params.id' })
   @ApiOperation({ summary: '장비 반입 취소' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '취소 성공' })

@@ -29,7 +29,10 @@ export const softwareHistoryQuerySchema = z.object({
 });
 
 export type SoftwareHistoryQueryInput = z.infer<typeof softwareHistoryQuerySchema>;
-export const SoftwareHistoryQueryValidationPipe = new ZodValidationPipe(softwareHistoryQuerySchema);
+export const SoftwareHistoryQueryValidationPipe = new ZodValidationPipe(
+  softwareHistoryQuerySchema,
+  { targets: ['query'] }
+);
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 

@@ -12,7 +12,11 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import {
   CreateLocationHistoryDto,
@@ -28,7 +32,7 @@ import {
 
 @ApiTags('Equipment History')
 @Controller('equipment')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class EquipmentHistoryController {
   constructor(private readonly equipmentHistoryService: EquipmentHistoryService) {}
@@ -61,6 +65,8 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
+  @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'create', entityType: 'location_history', entityIdPath: 'params.uuid' })
   async createLocationHistory(
     @Param('uuid') equipmentUuid: string,
     @Body(CreateLocationHistoryValidationPipe) dto: CreateLocationHistoryDto,
@@ -74,6 +80,8 @@ export class EquipmentHistoryController {
   @ApiOperation({ summary: '위치 변동 이력 삭제' })
   @ApiParam({ name: 'historyId', description: '이력 UUID' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
+  @RequirePermissions(Permission.DELETE_EQUIPMENT)
+  @AuditLog({ action: 'delete', entityType: 'location_history', entityIdPath: 'params.historyId' })
   async deleteLocationHistory(@Param('historyId') historyId: string): Promise<void> {
     return this.equipmentHistoryService.deleteLocationHistory(historyId);
   }
@@ -106,6 +114,8 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
+  @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'create', entityType: 'maintenance_history', entityIdPath: 'params.uuid' })
   async createMaintenanceHistory(
     @Param('uuid') equipmentUuid: string,
     @Body(CreateMaintenanceHistoryValidationPipe) dto: CreateMaintenanceHistoryDto,
@@ -119,6 +129,12 @@ export class EquipmentHistoryController {
   @ApiOperation({ summary: '유지보수 내역 삭제' })
   @ApiParam({ name: 'historyId', description: '이력 UUID' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
+  @RequirePermissions(Permission.DELETE_EQUIPMENT)
+  @AuditLog({
+    action: 'delete',
+    entityType: 'maintenance_history',
+    entityIdPath: 'params.historyId',
+  })
   async deleteMaintenanceHistory(@Param('historyId') historyId: string): Promise<void> {
     return this.equipmentHistoryService.deleteMaintenanceHistory(historyId);
   }
@@ -151,6 +167,8 @@ export class EquipmentHistoryController {
     status: HttpStatus.BAD_REQUEST,
     description: '필수 필드 누락 또는 유효성 검사 실패',
   })
+  @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'create', entityType: 'incident_history', entityIdPath: 'params.uuid' })
   async createIncidentHistory(
     @Param('uuid') equipmentUuid: string,
     @Body(CreateIncidentHistoryValidationPipe) dto: CreateIncidentHistoryDto,
@@ -164,6 +182,8 @@ export class EquipmentHistoryController {
   @ApiOperation({ summary: '손상/오작동/변경/수리 내역 삭제' })
   @ApiParam({ name: 'historyId', description: '이력 UUID' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
+  @RequirePermissions(Permission.DELETE_EQUIPMENT)
+  @AuditLog({ action: 'delete', entityType: 'incident_history', entityIdPath: 'params.historyId' })
   async deleteIncidentHistory(@Param('historyId') historyId: string): Promise<void> {
     return this.equipmentHistoryService.deleteIncidentHistory(historyId);
   }

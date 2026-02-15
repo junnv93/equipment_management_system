@@ -115,7 +115,7 @@ export class ApprovalsService {
       this.getEquipmentRequestCount(),
       this.getCalibrationCount(),
       this.getIntermediateCheckCount(),
-      this.getNonConformanceCount(),
+      this.getNonConformanceCount(userTeamId, isLabManager),
       this.getDisposalReviewCount(userId, isLabManager, userTeamId),
       this.getDisposalFinalCount(),
       this.getCalibrationPlanReviewCount(),
@@ -255,8 +255,15 @@ export class ApprovalsService {
 
   /**
    * 부적합 종료 승인 대기 개수 (corrected 상태)
+   *
+   * Team filtering:
+   * - technical_manager: Only non-conformances from their own team
+   * - lab_manager: All non-conformances (cross-site visibility)
    */
-  private async getNonConformanceCount(): Promise<number> {
+  private async getNonConformanceCount(
+    userTeamId?: string | null,
+    isLabManager?: boolean
+  ): Promise<number> {
     try {
       const items = await this.db.query.nonConformances.findMany({
         where: (nc, { eq: eqFn, and: andFn, isNull: isNullFn }) =>
@@ -266,13 +273,25 @@ export class ApprovalsService {
           ncType: true,
           repairHistoryId: true,
         },
+        with: {
+          equipment: {
+            columns: {
+              teamId: true,
+            },
+          },
+        },
       });
 
       // Filter out items that require repair but don't have repair history
-      const validItems = items.filter((item) => {
+      let validItems = items.filter((item) => {
         const requiresRepair = ['damage', 'malfunction'].includes(item.ncType);
         return !requiresRepair || item.repairHistoryId !== null;
       });
+
+      // Team filtering (cross-site workflow consideration)
+      if (!isLabManager && userTeamId) {
+        validItems = validItems.filter((item) => item.equipment?.teamId === userTeamId);
+      }
 
       return validItems.length;
     } catch {

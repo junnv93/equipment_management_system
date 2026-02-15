@@ -1045,6 +1045,12 @@ export class EquipmentService {
 
       return updated;
     } catch (error) {
+      if (error instanceof ConflictException) {
+        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
+        // findOne 캐시가 stale version을 가지고 있으면 재시도도 계속 409
+        await this.cacheService.delete(this.buildCacheKey('detail', { uuid }));
+        await this.cacheService.delete(this.buildCacheKey('detail', { uuid, includeTeam: true }));
+      }
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||
@@ -1239,6 +1245,11 @@ export class EquipmentService {
 
       return updated;
     } catch (error) {
+      if (error instanceof ConflictException) {
+        // ✅ Cache coherence: CAS 실패 시 stale cache 제거
+        await this.cacheService.delete(this.buildCacheKey('detail', { uuid }));
+        await this.cacheService.delete(this.buildCacheKey('detail', { uuid, includeTeam: true }));
+      }
       if (
         error instanceof NotFoundException ||
         error instanceof BadRequestException ||

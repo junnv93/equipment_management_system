@@ -11,6 +11,9 @@ import {
   HttpStatus,
   ParseUUIDPipe,
   Res,
+  Request,
+  UsePipes,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -27,19 +30,45 @@ import {
   CreateCalibrationPlanDto,
   UpdateCalibrationPlanDto,
   UpdateCalibrationPlanItemDto,
-  CalibrationPlanQueryDto,
-  ExternalEquipmentQueryDto,
   ApproveCalibrationPlanDto,
   RejectCalibrationPlanDto,
   SubmitCalibrationPlanDto,
   ConfirmPlanItemDto,
   SubmitForReviewDto,
   ReviewCalibrationPlanDto,
+  CalibrationPlanQueryValidationPipe,
+  ExternalEquipmentQueryValidationPipe,
 } from './dto';
+import type { CalibrationPlanQueryInput, ExternalEquipmentQueryInput } from './dto';
+import { CreateCalibrationPlanValidationPipe } from './dto/create-calibration-plan.dto';
+import {
+  UpdateCalibrationPlanValidationPipe,
+  UpdateCalibrationPlanItemValidationPipe,
+} from './dto/update-calibration-plan.dto';
+import {
+  SubmitForReviewValidationPipe,
+  ReviewCalibrationPlanValidationPipe,
+  ApproveCalibrationPlanValidationPipe,
+  RejectCalibrationPlanValidationPipe,
+  ConfirmPlanItemValidationPipe,
+} from './dto/approve-calibration-plan.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
+import type { AuthenticatedRequest } from '../../types/auth';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
+
+/**
+ * 서버에서 JWT 사용자 ID를 안전하게 추출
+ */
+function extractUserId(req: AuthenticatedRequest): string {
+  const userId = req.user?.userId || req.user?.sub;
+  if (!userId) {
+    throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+  }
+  return userId;
+}
 
 @ApiTags('교정계획서')
 @ApiBearerAuth()
@@ -63,62 +92,12 @@ export class CalibrationPlansController {
   })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터' })
   @ApiResponse({ status: HttpStatus.CONFLICT, description: '이미 계획서가 존재함' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION_PLAN)
-  create(@Body() createDto: CreateCalibrationPlanDto): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    return this.calibrationPlansService.create(createDto);
+  @UsePipes(CreateCalibrationPlanValidationPipe)
+  @AuditLog({ action: 'create', entityType: 'calibration_plan', entityIdPath: 'response.id' })
+  create(@Body() createDto: CreateCalibrationPlanDto, @Request() req: AuthenticatedRequest) {
+    const createdBy = extractUserId(req);
+    return this.calibrationPlansService.create({ ...createDto, createdBy });
   }
 
   @Get()
@@ -127,41 +106,9 @@ export class CalibrationPlansController {
     description: '교정계획서 목록을 조회합니다. 필터: year, siteId, status',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 목록 조회 성공' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  findAll(@Query() query: CalibrationPlanQueryDto): Promise<{
-    items: {
-      id: string;
-      year: number;
-      siteId: string;
-      teamId: string | null;
-      status: string;
-      createdBy: string;
-      submittedAt: Date | null;
-      reviewedBy: string | null;
-      reviewedAt: Date | null;
-      reviewComment: string | null;
-      approvedBy: string | null;
-      approvedAt: Date | null;
-      rejectedBy: string | null;
-      rejectedAt: Date | null;
-      rejectionReason: string | null;
-      rejectionStage: string | null;
-      version: number;
-      parentPlanId: string | null;
-      isLatestVersion: boolean;
-      createdAt: Date;
-      updatedAt: Date;
-    }[];
-    meta: {
-      totalItems: number;
-      itemCount: number;
-      itemsPerPage: number;
-      totalPages: number;
-      currentPage: number;
-    };
-  }> {
+  @UsePipes(CalibrationPlanQueryValidationPipe)
+  findAll(@Query() query: CalibrationPlanQueryInput) {
     return this.calibrationPlansService.findAll(query);
   }
 
@@ -171,24 +118,9 @@ export class CalibrationPlansController {
     description: '외부교정 대상 장비 목록을 조회합니다. 필터: year, siteId',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '외부교정 대상 장비 목록 조회 성공' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  findExternalEquipment(@Query() query: ExternalEquipmentQueryDto): Promise<
-    {
-      id: string;
-      name: string;
-      managementNumber: string;
-      modelName: string | null;
-      manufacturer: string | null;
-      location: string | null;
-      site: string;
-      lastCalibrationDate: Date | null;
-      nextCalibrationDate: Date | null;
-      calibrationCycle: number | null;
-      calibrationAgency: string | null;
-    }[]
-  > {
+  @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
+  @UsePipes(ExternalEquipmentQueryValidationPipe)
+  findExternalEquipment(@Query() query: ExternalEquipmentQueryInput) {
     return this.calibrationPlansService.findExternalEquipment(query);
   }
 
@@ -200,61 +132,8 @@ export class CalibrationPlansController {
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 상세 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string) {
     return this.calibrationPlansService.findOne(uuid);
   }
 
@@ -267,64 +146,10 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 수정 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청 데이터 또는 상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION_PLAN)
-  update(
-    @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateDto: UpdateCalibrationPlanDto
-  ): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  @UsePipes(UpdateCalibrationPlanValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
+  update(@Param('uuid', ParseUUIDPipe) uuid: string, @Body() updateDto: UpdateCalibrationPlanDto) {
     return this.calibrationPlansService.update(uuid, updateDto);
   }
 
@@ -337,10 +162,9 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 삭제 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.DELETE_CALIBRATION_PLAN)
-  remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{ uuid: string; deleted: boolean }> {
+  @AuditLog({ action: 'delete', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
+  remove(@Param('uuid', ParseUUIDPipe) uuid: string) {
     return this.calibrationPlansService.remove(uuid);
   }
 
@@ -353,64 +177,12 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '승인 요청 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.SUBMIT_CALIBRATION_PLAN)
+  @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   submit(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() _submitDto?: SubmitCalibrationPlanDto
-  ): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  ) {
     return this.calibrationPlansService.submit(uuid);
   }
 
@@ -424,65 +196,16 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '검토 요청 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.SUBMIT_CALIBRATION_PLAN)
+  @UsePipes(SubmitForReviewValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   submitForReview(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() submitDto: SubmitForReviewDto
-  ): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    return this.calibrationPlansService.submitForReview(uuid, submitDto);
+    @Body() submitDto: SubmitForReviewDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    const submittedBy = extractUserId(req);
+    return this.calibrationPlansService.submitForReview(uuid, { ...submitDto, submittedBy });
   }
 
   @Patch(':uuid/review')
@@ -495,65 +218,16 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '검토 완료 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.REVIEW_CALIBRATION_PLAN)
+  @UsePipes(ReviewCalibrationPlanValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   review(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() reviewDto: ReviewCalibrationPlanDto
-  ): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    return this.calibrationPlansService.review(uuid, reviewDto);
+    @Body() reviewDto: ReviewCalibrationPlanDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    const reviewedBy = extractUserId(req);
+    return this.calibrationPlansService.review(uuid, { ...reviewDto, reviewedBy });
   }
 
   @Patch(':uuid/approve')
@@ -565,65 +239,16 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '승인 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_PLAN)
+  @UsePipes(ApproveCalibrationPlanValidationPipe)
+  @AuditLog({ action: 'approve', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   approve(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() approveDto: ApproveCalibrationPlanDto
-  ): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    return this.calibrationPlansService.approve(uuid, approveDto);
+    @Body() approveDto: ApproveCalibrationPlanDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    const approvedBy = extractUserId(req);
+    return this.calibrationPlansService.approve(uuid, { ...approveDto, approvedBy });
   }
 
   @Patch(':uuid/reject')
@@ -636,65 +261,16 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '반려 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류 또는 사유 누락' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.REJECT_CALIBRATION_PLAN)
+  @UsePipes(RejectCalibrationPlanValidationPipe)
+  @AuditLog({ action: 'reject', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   reject(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() rejectDto: RejectCalibrationPlanDto
-  ): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    return this.calibrationPlansService.reject(uuid, rejectDto);
+    @Body() rejectDto: RejectCalibrationPlanDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    const rejectedBy = extractUserId(req);
+    return this.calibrationPlansService.reject(uuid, { ...rejectDto, rejectedBy });
   }
 
   @Patch(':uuid/items/:itemUuid/confirm')
@@ -707,31 +283,17 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '항목 확인 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '계획서 또는 항목을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CONFIRM_CALIBRATION_PLAN_ITEM)
+  @UsePipes(ConfirmPlanItemValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   confirmItem(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
-    @Body() confirmDto: ConfirmPlanItemDto
-  ): Promise<{
-    id: string;
-    planId: string;
-    equipmentId: string;
-    sequenceNumber: number;
-    snapshotValidityDate: Date | null;
-    snapshotCalibrationCycle: number | null;
-    snapshotCalibrationAgency: string | null;
-    plannedCalibrationDate: Date | null;
-    plannedCalibrationAgency: string | null;
-    confirmedBy: string | null;
-    confirmedAt: Date | null;
-    actualCalibrationDate: Date | null;
-    notes: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    return this.calibrationPlansService.confirmItem(uuid, itemUuid, confirmDto);
+    @Body() confirmDto: ConfirmPlanItemDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    const confirmedBy = extractUserId(req);
+    return this.calibrationPlansService.confirmItem(uuid, itemUuid, { ...confirmDto, confirmedBy });
   }
 
   @Patch(':uuid/items/:itemUuid')
@@ -744,30 +306,14 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '항목 수정 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '계획서 또는 항목을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION_PLAN)
+  @UsePipes(UpdateCalibrationPlanItemValidationPipe)
+  @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
   updateItem(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
     @Body() updateDto: UpdateCalibrationPlanItemDto
-  ): Promise<{
-    id: string;
-    planId: string;
-    equipmentId: string;
-    sequenceNumber: number;
-    snapshotValidityDate: Date | null;
-    snapshotCalibrationCycle: number | null;
-    snapshotCalibrationAgency: string | null;
-    plannedCalibrationDate: Date | null;
-    plannedCalibrationAgency: string | null;
-    confirmedBy: string | null;
-    confirmedAt: Date | null;
-    actualCalibrationDate: Date | null;
-    notes: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
+  ) {
     return this.calibrationPlansService.updateItem(uuid, itemUuid, updateDto);
   }
 
@@ -781,8 +327,6 @@ export class CalibrationPlansController {
   @ApiProduces('text/html')
   @ApiResponse({ status: HttpStatus.OK, description: 'HTML 출력 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
   async downloadPdf(
     @Param('uuid', ParseUUIDPipe) uuid: string,
@@ -807,69 +351,15 @@ export class CalibrationPlansController {
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID (승인된 계획서)' })
   @ApiResponse({ status: HttpStatus.CREATED, description: '새 버전 생성 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: '승인된 계획서만 새 버전 생성 가능',
-  })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '승인된 계획서만 새 버전 생성 가능' })
   @RequirePermissions(Permission.CREATE_CALIBRATION_PLAN)
+  @AuditLog({ action: 'create', entityType: 'calibration_plan', entityIdPath: 'response.id' })
   createNewVersion(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() body: { createdBy: string }
-  ): Promise<{
-    items: {
-      equipment: {
-        id: string;
-        name: string;
-        managementNumber: string;
-        modelName: string | null;
-        manufacturer: string | null;
-        location: string | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-      };
-      id: string;
-      createdAt: Date;
-      updatedAt: Date;
-      planId: string;
-      equipmentId: string;
-      sequenceNumber: number;
-      snapshotValidityDate: Date | null;
-      snapshotCalibrationCycle: number | null;
-      snapshotCalibrationAgency: string | null;
-      plannedCalibrationDate: Date | null;
-      plannedCalibrationAgency: string | null;
-      confirmedBy: string | null;
-      confirmedAt: Date | null;
-      actualCalibrationDate: Date | null;
-      notes: string | null;
-    }[];
-    id: string;
-    year: number;
-    siteId: string;
-    teamId: string | null;
-    status: string;
-    createdBy: string;
-    submittedAt: Date | null;
-    reviewedBy: string | null;
-    reviewedAt: Date | null;
-    reviewComment: string | null;
-    approvedBy: string | null;
-    approvedAt: Date | null;
-    rejectedBy: string | null;
-    rejectedAt: Date | null;
-    rejectionReason: string | null;
-    rejectionStage: string | null;
-    version: number;
-    parentPlanId: string | null;
-    isLatestVersion: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }> {
-    return this.calibrationPlansService.createNewVersion(uuid, body.createdBy);
+    @Request() req: AuthenticatedRequest
+  ) {
+    const createdBy = extractUserId(req);
+    return this.calibrationPlansService.createNewVersion(uuid, createdBy);
   }
 
   @Get(':uuid/versions')
@@ -880,23 +370,8 @@ export class CalibrationPlansController {
   @ApiParam({ name: 'uuid', description: '교정계획서 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '버전 히스토리 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  getVersionHistory(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<
-    {
-      id: string;
-      year: number;
-      siteId: string;
-      status: string;
-      version: number;
-      isLatestVersion: boolean;
-      createdBy: string;
-      createdAt: Date;
-      approvedBy: string | null;
-      approvedAt: Date | null;
-    }[]
-  > {
+  getVersionHistory(@Param('uuid', ParseUUIDPipe) uuid: string) {
     return this.calibrationPlansService.getVersionHistory(uuid);
   }
 }

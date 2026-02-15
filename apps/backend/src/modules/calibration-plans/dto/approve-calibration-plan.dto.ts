@@ -6,49 +6,61 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 /**
  * 교정계획서 검토 요청 스키마 (기술책임자 → 품질책임자)
+ * ⚠️ submittedBy는 서버에서 JWT로 추출 (클라이언트 전송 금지)
  */
 export const submitForReviewSchema = z.object({
-  submittedBy: z.string().uuid('작성자 ID는 UUID 형식이어야 합니다'),
+  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
   memo: z.string().optional(),
 });
 
 export type SubmitForReviewInput = z.infer<typeof submitForReviewSchema>;
+/** 서비스 내부용 (controller가 userId 주입) */
+export type SubmitForReviewPayload = SubmitForReviewInput & { submittedBy: string };
 export const SubmitForReviewValidationPipe = new ZodValidationPipe(submitForReviewSchema);
 
 /**
  * 교정계획서 검토 완료 스키마 (품질책임자)
+ * ⚠️ reviewedBy는 서버에서 JWT로 추출
  */
 export const reviewCalibrationPlanSchema = z.object({
-  reviewedBy: z.string().uuid('검토자 ID는 UUID 형식이어야 합니다'),
+  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
   reviewComment: z.string().optional(),
 });
 
 export type ReviewCalibrationPlanInput = z.infer<typeof reviewCalibrationPlanSchema>;
+/** 서비스 내부용 (controller가 userId 주입) */
+export type ReviewCalibrationPlanPayload = ReviewCalibrationPlanInput & { reviewedBy: string };
 export const ReviewCalibrationPlanValidationPipe = new ZodValidationPipe(
   reviewCalibrationPlanSchema
 );
 
 /**
  * 교정계획서 최종 승인 스키마 (시험소장)
+ * ⚠️ approvedBy는 서버에서 JWT로 추출
  */
 export const approveCalibrationPlanSchema = z.object({
-  approvedBy: z.string().uuid('승인자 ID는 UUID 형식이어야 합니다'),
+  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
 });
 
 export type ApproveCalibrationPlanInput = z.infer<typeof approveCalibrationPlanSchema>;
+/** 서비스 내부용 (controller가 userId 주입) */
+export type ApproveCalibrationPlanPayload = ApproveCalibrationPlanInput & { approvedBy: string };
 export const ApproveCalibrationPlanValidationPipe = new ZodValidationPipe(
   approveCalibrationPlanSchema
 );
 
 /**
  * 교정계획서 반려 스키마 (품질책임자 또는 시험소장)
+ * ⚠️ rejectedBy는 서버에서 JWT로 추출
  */
 export const rejectCalibrationPlanSchema = z.object({
-  rejectedBy: z.string().uuid('반려자 ID는 UUID 형식이어야 합니다'),
+  casVersion: z.number().int().positive('casVersion은 양수여야 합니다'),
   rejectionReason: z.string().min(1, '반려 사유는 필수입니다'),
 });
 
 export type RejectCalibrationPlanInput = z.infer<typeof rejectCalibrationPlanSchema>;
+/** 서비스 내부용 (controller가 userId 주입) */
+export type RejectCalibrationPlanPayload = RejectCalibrationPlanInput & { rejectedBy: string };
 export const RejectCalibrationPlanValidationPipe = new ZodValidationPipe(
   rejectCalibrationPlanSchema
 );
@@ -68,41 +80,38 @@ export const SubmitCalibrationPlanValidationPipe = new ZodValidationPipe(
 
 /**
  * 교정계획서 항목 확인 스키마
+ * ⚠️ confirmedBy는 서버에서 JWT로 추출
  */
 export const confirmPlanItemSchema = z.object({
-  confirmedBy: z.string().uuid('확인자 ID는 UUID 형식이어야 합니다'),
+  casVersion: z.number().int().positive('casVersion은 양수여야 합니다').optional(),
 });
 
 export type ConfirmPlanItemInput = z.infer<typeof confirmPlanItemSchema>;
+/** 서비스 내부용 (controller가 userId 주입) */
+export type ConfirmPlanItemPayload = ConfirmPlanItemInput & { confirmedBy: string };
 export const ConfirmPlanItemValidationPipe = new ZodValidationPipe(confirmPlanItemSchema);
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 /**
  * 검토 요청 DTO (기술책임자 → 품질책임자)
+ * submittedBy는 서버에서 JWT로 추출
  */
 export class SubmitForReviewDto {
-  @ApiProperty({
-    description: '작성자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  submittedBy: string;
+  @ApiProperty({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
+  casVersion: number;
 
-  @ApiPropertyOptional({
-    description: '검토 요청 메모',
-  })
+  @ApiPropertyOptional({ description: '검토 요청 메모' })
   memo?: string;
 }
 
 /**
  * 검토 완료 DTO (품질책임자)
+ * reviewedBy는 서버에서 JWT로 추출
  */
 export class ReviewCalibrationPlanDto {
-  @ApiProperty({
-    description: '검토자 ID (품질책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440003',
-  })
-  reviewedBy: string;
+  @ApiProperty({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
+  casVersion: number;
 
   @ApiPropertyOptional({
     description: '검토 의견',
@@ -113,24 +122,20 @@ export class ReviewCalibrationPlanDto {
 
 /**
  * 최종 승인 DTO (시험소장)
+ * approvedBy는 서버에서 JWT로 추출
  */
 export class ApproveCalibrationPlanDto {
-  @ApiProperty({
-    description: '승인자 ID (시험소장)',
-    example: '550e8400-e29b-41d4-a716-446655440002',
-  })
-  approvedBy: string;
+  @ApiProperty({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
+  casVersion: number;
 }
 
 /**
  * 반려 DTO (품질책임자 또는 시험소장)
+ * rejectedBy는 서버에서 JWT로 추출
  */
 export class RejectCalibrationPlanDto {
-  @ApiProperty({
-    description: '반려자 ID (품질책임자 또는 시험소장)',
-    example: '550e8400-e29b-41d4-a716-446655440002',
-  })
-  rejectedBy: string;
+  @ApiProperty({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
+  casVersion: number;
 
   @ApiProperty({
     description: '반려 사유 (필수)',
@@ -144,19 +149,15 @@ export class RejectCalibrationPlanDto {
  * @deprecated SubmitForReviewDto 사용 권장
  */
 export class SubmitCalibrationPlanDto {
-  @ApiPropertyOptional({
-    description: '제출 메모',
-  })
+  @ApiPropertyOptional({ description: '제출 메모' })
   memo?: string;
 }
 
 /**
  * 항목 확인 DTO
+ * confirmedBy는 서버에서 JWT로 추출
  */
 export class ConfirmPlanItemDto {
-  @ApiProperty({
-    description: '확인자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  confirmedBy: string;
+  @ApiPropertyOptional({ description: 'CAS 버전 (동시 수정 방지)', example: 1 })
+  casVersion?: number;
 }

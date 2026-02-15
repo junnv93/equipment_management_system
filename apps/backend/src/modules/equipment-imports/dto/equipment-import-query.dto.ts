@@ -24,7 +24,10 @@ export const equipmentImportQuerySchema = z.object({
 });
 
 export type EquipmentImportQueryInput = z.infer<typeof equipmentImportQuerySchema>;
-export const EquipmentImportQueryValidationPipe = new ZodValidationPipe(equipmentImportQuerySchema);
+export const EquipmentImportQueryValidationPipe = new ZodValidationPipe(
+  equipmentImportQuerySchema,
+  { targets: ['query'] }
+);
 
 export class EquipmentImportQueryDto {
   @ApiProperty({ description: '페이지 번호', example: 1, required: false })

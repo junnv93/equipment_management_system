@@ -1,15 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+// ✅ SSOT: NonConformanceStatus는 schemas 패키지에서 import
+import {
+  NON_CONFORMANCE_STATUS_VALUES,
+  NonConformanceStatusValues,
+} from '@equipment-management/schemas';
 
-// ========== Enum 정의 ==========
-
-export enum NonConformanceStatus {
-  OPEN = 'open',
-  ANALYZING = 'analyzing',
-  CORRECTED = 'corrected',
-  CLOSED = 'closed',
-}
+// Re-export for backward compatibility (service, tests에서 사용)
+export const NonConformanceStatus = NonConformanceStatusValues;
 
 // ========== Zod 스키마 정의 ==========
 
@@ -19,10 +18,11 @@ export enum NonConformanceStatus {
 export const nonConformanceQuerySchema = z.object({
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
   status: z
-    .nativeEnum(NonConformanceStatus, {
+    .enum(NON_CONFORMANCE_STATUS_VALUES as unknown as [string, ...string[]], {
       message: '유효하지 않은 상태입니다 (open, analyzing, corrected, closed)',
     })
     .optional(),
+  site: z.enum(['suwon', 'uiwang', 'pyeongtaek']).optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
@@ -33,7 +33,9 @@ export const nonConformanceQuerySchema = z.object({
 });
 
 export type NonConformanceQueryInput = z.infer<typeof nonConformanceQuerySchema>;
-export const NonConformanceQueryValidationPipe = new ZodValidationPipe(nonConformanceQuerySchema);
+export const NonConformanceQueryValidationPipe = new ZodValidationPipe(nonConformanceQuerySchema, {
+  targets: ['query'],
+});
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
@@ -43,9 +45,15 @@ export class NonConformanceQueryDto {
 
   @ApiPropertyOptional({
     description: '상태 필터',
-    enum: NonConformanceStatus,
+    enum: NON_CONFORMANCE_STATUS_VALUES,
   })
   status?: string;
+
+  @ApiPropertyOptional({
+    description: '사이트 필터 (장비 소속 사이트)',
+    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+  })
+  site?: string;
 
   @ApiPropertyOptional({ description: '검색어 (원인 내용)' })
   search?: string;

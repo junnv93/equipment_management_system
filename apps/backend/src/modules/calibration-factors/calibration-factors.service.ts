@@ -284,7 +284,7 @@ export class CalibrationFactorsService {
   // 보정계수 승인 (기술책임자)
   async approve(
     id: string,
-    approveDto: ApproveCalibrationFactorDto
+    approveDto: ApproveCalibrationFactorDto & { approverId: string }
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
   > {
@@ -312,7 +312,7 @@ export class CalibrationFactorsService {
   // 보정계수 반려 (기술책임자)
   async reject(
     id: string,
-    rejectDto: RejectCalibrationFactorDto
+    rejectDto: RejectCalibrationFactorDto & { approverId: string }
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
   > {

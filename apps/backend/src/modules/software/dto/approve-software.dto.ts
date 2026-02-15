@@ -10,7 +10,7 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const approveSoftwareChangeSchema = z.object({
   ...versionedSchema, // ✅ Include version field
-  approverId: z.string().uuid({ message: '유효한 승인자 UUID가 아닙니다' }),
+  // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
   approverComment: z.string().min(1, '승인 시 승인자 코멘트는 필수입니다'),
 });
 
@@ -24,7 +24,7 @@ export const ApproveSoftwareChangeValidationPipe = new ZodValidationPipe(
  */
 export const rejectSoftwareChangeSchema = z.object({
   ...versionedSchema, // ✅ Include version field
-  approverId: z.string().uuid({ message: '유효한 승인자 UUID가 아닙니다' }),
+  // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
   rejectionReason: z.string().min(1, '반려 사유는 필수입니다'),
 });
 
@@ -34,11 +34,7 @@ export const RejectSoftwareChangeValidationPipe = new ZodValidationPipe(rejectSo
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class ApproveSoftwareChangeDto extends VersionedDto {
-  @ApiProperty({
-    description: '승인자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  approverId: string;
+  // approverId: 서버에서 JWT 추출 (Rule 2)
 
   @ApiProperty({
     description: '승인자 코멘트',
@@ -48,11 +44,7 @@ export class ApproveSoftwareChangeDto extends VersionedDto {
 }
 
 export class RejectSoftwareChangeDto extends VersionedDto {
-  @ApiProperty({
-    description: '승인자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  approverId: string;
+  // approverId: 서버에서 JWT 추출 (Rule 2)
 
   @ApiProperty({
     description: '반려 사유',

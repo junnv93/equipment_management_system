@@ -8,7 +8,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
  * 보정계수 승인 스키마
  */
 export const approveCalibrationFactorSchema = z.object({
-  approverId: z.string().uuid({ message: '유효한 승인자 UUID가 아닙니다' }),
+  // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
   approverComment: z.string().min(1, '승인 시 승인자 코멘트는 필수입니다'),
 });
 
@@ -21,7 +21,7 @@ export const ApproveCalibrationFactorValidationPipe = new ZodValidationPipe(
  * 보정계수 반려 스키마
  */
 export const rejectCalibrationFactorSchema = z.object({
-  approverId: z.string().uuid({ message: '유효한 승인자 UUID가 아닙니다' }),
+  // approverId: 서버에서 JWT 추출 (Rule 2: 클라이언트 body 신뢰 금지)
   rejectionReason: z.string().min(1, '반려 사유는 필수입니다'),
 });
 
@@ -33,11 +33,7 @@ export const RejectCalibrationFactorValidationPipe = new ZodValidationPipe(
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class ApproveCalibrationFactorDto {
-  @ApiProperty({
-    description: '승인자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  approverId: string;
+  // approverId: 서버에서 JWT 추출 (Rule 2)
 
   @ApiProperty({
     description: '승인자 코멘트',
@@ -47,11 +43,7 @@ export class ApproveCalibrationFactorDto {
 }
 
 export class RejectCalibrationFactorDto {
-  @ApiProperty({
-    description: '승인자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  approverId: string;
+  // approverId: 서버에서 JWT 추출 (Rule 2)
 
   @ApiProperty({
     description: '반려 사유',

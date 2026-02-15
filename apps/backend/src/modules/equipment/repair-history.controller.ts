@@ -27,6 +27,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('수리 이력')
 @ApiBearerAuth()
@@ -71,6 +72,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'create', entityType: 'repair_history', entityIdPath: 'params.uuid' })
   @UsePipes(CreateRepairHistoryValidationPipe)
   async create(
     @Param('uuid') equipmentUuid: string,
@@ -125,6 +127,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'update', entityType: 'repair_history', entityIdPath: 'params.uuid' })
   @UsePipes(UpdateRepairHistoryValidationPipe)
   async update(
     @Param('uuid') uuid: string,
@@ -144,6 +147,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
+  @AuditLog({ action: 'delete', entityType: 'repair_history', entityIdPath: 'params.uuid' })
   async remove(
     @Param('uuid') uuid: string,
     @Request() req: AuthenticatedRequest

@@ -38,7 +38,8 @@ export const calibrationFactorQuerySchema = z.object({
 
 export type CalibrationFactorQueryInput = z.infer<typeof calibrationFactorQuerySchema>;
 export const CalibrationFactorQueryValidationPipe = new ZodValidationPipe(
-  calibrationFactorQuerySchema
+  calibrationFactorQuerySchema,
+  { targets: ['query'] }
 );
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========

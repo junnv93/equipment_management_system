@@ -126,4 +126,6 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
 }
 
 // Zod 검증 파이프 생성
-export const EquipmentQueryValidationPipe = new ZodValidationPipe(equipmentFilterSchema);
+export const EquipmentQueryValidationPipe = new ZodValidationPipe(equipmentFilterSchema, {
+  targets: ['query'],
+});

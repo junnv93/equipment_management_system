@@ -6,6 +6,7 @@ import {
   Logger,
   Inject,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, desc, sql } from 'drizzle-orm';
 import {
   equipmentRequests,
@@ -19,6 +20,7 @@ import * as schema from '@equipment-management/db/schema';
 import { EquipmentService } from '../equipment.service';
 import { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
+import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
 import type { EquipmentRequest } from '@equipment-management/db/schema/equipment-requests';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type {
@@ -41,7 +43,8 @@ export class EquipmentApprovalService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     private readonly db: PostgresJsDatabase<typeof schema>,
-    private readonly equipmentService: EquipmentService
+    private readonly equipmentService: EquipmentService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   /**
@@ -89,6 +92,19 @@ export class EquipmentApprovalService {
             .where(eq(equipmentAttachments.id, attachment.id));
         }
       }
+
+      // 📢 알림 이벤트 발행
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_CREATED, {
+        requestId: request.id,
+        equipmentId: '',
+        equipmentName: createDto.name || '신규 장비',
+        managementNumber: createDto.managementNumber || '',
+        requesterId: validRequestedBy,
+        requesterTeamId: user?.teamId ?? '',
+        actorId: validRequestedBy,
+        actorName: user?.name ?? '',
+        timestamp: new Date(),
+      });
 
       this.logger.log(`Equipment create request created: ${request.id}`);
       return request;
@@ -386,6 +402,20 @@ export class EquipmentApprovalService {
         .where(eq(equipmentRequests.id, requestUuid))
         .returning();
 
+      // 📢 알림 이벤트 발행
+      const requestData = JSON.parse(request.requestData || '{}');
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_APPROVED, {
+        requestId: requestUuid,
+        equipmentId: request.equipmentId ?? '',
+        equipmentName: requestData.name || '장비',
+        managementNumber: requestData.managementNumber || '',
+        requesterId: request.requestedBy,
+        requesterTeamId: '',
+        actorId: validApprovedBy,
+        actorName: '',
+        timestamp: new Date(),
+      });
+
       this.logger.log(`Request approved: ${requestUuid}`);
       return updated;
     } catch (error) {
@@ -450,6 +480,21 @@ export class EquipmentApprovalService {
         })
         .where(eq(equipmentRequests.id, requestUuid))
         .returning();
+
+      // 📢 알림 이벤트 발행
+      const rejectRequestData = JSON.parse(request.requestData || '{}');
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_REJECTED, {
+        requestId: requestUuid,
+        equipmentId: request.equipmentId ?? '',
+        equipmentName: rejectRequestData.name || '장비',
+        managementNumber: rejectRequestData.managementNumber || '',
+        requesterId: request.requestedBy,
+        requesterTeamId: '',
+        reason: rejectionReason,
+        actorId: validApprovedBy,
+        actorName: '',
+        timestamp: new Date(),
+      });
 
       this.logger.log(`Request rejected: ${requestUuid}`);
       return updated;

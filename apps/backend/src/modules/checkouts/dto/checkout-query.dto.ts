@@ -14,6 +14,7 @@ export const checkoutQuerySchema = z.object({
   requesterId: z.string().uuid().optional(),
   approverId: z.string().uuid().optional(),
   teamId: z.string().uuid().optional(),
+  site: z.string().optional(),
   direction: z.enum(['outbound', 'inbound']).optional(),
   purpose: z
     .enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
@@ -37,7 +38,9 @@ export const checkoutQuerySchema = z.object({
 });
 
 export type CheckoutQueryInput = z.infer<typeof checkoutQuerySchema>;
-export const CheckoutQueryValidationPipe = new ZodValidationPipe(checkoutQuerySchema);
+export const CheckoutQueryValidationPipe = new ZodValidationPipe(checkoutQuerySchema, {
+  targets: ['query'],
+});
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
@@ -69,6 +72,13 @@ export class CheckoutQueryDto {
     required: false,
   })
   teamId?: string;
+
+  @ApiProperty({
+    description: '사이트로 필터링 (서버에서 자동 주입, 클라이언트 파라미터 무시)',
+    example: 'suwon',
+    required: false,
+  })
+  site?: string;
 
   @ApiProperty({
     description:

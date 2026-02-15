@@ -8,10 +8,10 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
 /**
  * 반입 승인 스키마
  * version은 optimistic locking을 위해 필수
+ * ✅ Rule 2: approverId는 서버에서 req.user.userId로 추출 (DTO에 미포함)
  */
 export const approveReturnSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  approverId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
   comment: z.string().optional(),
 });
 
@@ -22,12 +22,7 @@ export const ApproveReturnValidationPipe = new ZodValidationPipe(approveReturnSc
 
 export class ApproveReturnDto extends VersionedDto {
   // ✅ version 필드는 VersionedDto에서 자동 상속
-
-  @ApiProperty({
-    description: '승인자 UUID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440000',
-  })
-  approverId: string;
+  // ✅ approverId는 서버에서 req.user.userId로 추출 (Rule 2)
 
   @ApiProperty({
     description: '승인 코멘트',

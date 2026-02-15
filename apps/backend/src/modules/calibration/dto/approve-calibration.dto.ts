@@ -7,11 +7,12 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
 
 /**
  * 교정 승인 스키마
+ * ✅ 보안: approverId는 서버에서 JWT로 추출 (클라이언트 전송 불필요)
+ * ✅ approverComment는 선택사항 — 코멘트 없이 바로 승인 가능
  */
 export const approveCalibrationSchema = z.object({
   ...versionedSchema,
-  approverId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
-  approverComment: z.string().min(1, '승인 시 승인자 코멘트는 필수입니다.'),
+  approverComment: z.string().optional(),
 });
 
 export type ApproveCalibrationInput = z.infer<typeof approveCalibrationSchema>;
@@ -19,10 +20,10 @@ export const ApproveCalibrationValidationPipe = new ZodValidationPipe(approveCal
 
 /**
  * 교정 반려 스키마
+ * ✅ 보안: approverId는 서버에서 JWT로 추출 (클라이언트 전송 불필요)
  */
 export const rejectCalibrationSchema = z.object({
   ...versionedSchema,
-  approverId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
   rejectionReason: z.string().min(1, '반려 사유는 필수입니다.'),
 });
 
@@ -33,28 +34,23 @@ export const RejectCalibrationValidationPipe = new ZodValidationPipe(rejectCalib
 
 export class ApproveCalibrationDto extends VersionedDto {
   @ApiProperty({
-    description: '승인자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  approverId: string;
-
-  @ApiProperty({
-    description: '승인자 코멘트 (기술책임자 승인 시 필수)',
+    description: '승인자 코멘트 (선택사항)',
     example: '교정 결과 확인 완료',
+    required: false,
   })
-  approverComment: string;
+  approverComment?: string;
+
+  // approverId는 서버에서 주입 (컨트롤러에서 req.user.userId 사용)
+  approverId?: string;
 }
 
 export class RejectCalibrationDto extends VersionedDto {
-  @ApiProperty({
-    description: '승인자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  approverId: string;
-
   @ApiProperty({
     description: '반려 사유',
     example: '교정 성적서 첨부가 누락되었습니다.',
   })
   rejectionReason: string;
+
+  // approverId는 서버에서 주입 (컨트롤러에서 req.user.userId 사용)
+  approverId?: string;
 }

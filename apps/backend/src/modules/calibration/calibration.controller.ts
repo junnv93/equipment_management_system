@@ -12,6 +12,8 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  UsePipes,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -24,10 +26,21 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { CalibrationService } from './calibration.service';
-import { CreateCalibrationDto } from './dto/create-calibration.dto';
-import { UpdateCalibrationDto } from './dto/update-calibration.dto';
+import {
+  CreateCalibrationDto,
+  CreateCalibrationValidationPipe,
+} from './dto/create-calibration.dto';
+import {
+  UpdateCalibrationDto,
+  UpdateCalibrationValidationPipe,
+} from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
-import { ApproveCalibrationDto, RejectCalibrationDto } from './dto/approve-calibration.dto';
+import {
+  ApproveCalibrationDto,
+  RejectCalibrationDto,
+  ApproveCalibrationValidationPipe,
+  RejectCalibrationValidationPipe,
+} from './dto/approve-calibration.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
@@ -35,6 +48,9 @@ import { Permission } from '@equipment-management/shared-constants';
 import { CalibrationStatus } from '@equipment-management/schemas';
 import { FileUploadService } from '../equipment/services/file-upload.service';
 import type { MulterFile } from '../../types/common.types';
+import type { AuthenticatedRequest } from '../../types/auth';
+import type { CalibrationRecord } from './calibration.service';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('교정 관리')
 @ApiBearerAuth()
@@ -56,9 +72,9 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_CALIBRATION)
-  create(
-    @Body() createCalibrationDto: CreateCalibrationDto
-  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord {
+  @AuditLog({ action: 'create', entityType: 'calibration', entityIdPath: 'response.id' })
+  @UsePipes(CreateCalibrationValidationPipe)
+  create(@Body() createCalibrationDto: CreateCalibrationDto): Promise<CalibrationRecord> {
     return this.calibrationService.create(createCalibrationDto);
   }
 
@@ -72,35 +88,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findAll(@Query() query: CalibrationQueryDto): Promise<{
-    items: {
-      id: string;
-      equipmentId: string;
-      technicianId: string | null;
-      status: string;
-      calibrationDate: Date;
-      completionDate: Date | null;
-      nextCalibrationDate: Date | null;
-      agencyName: string | null;
-      certificateNumber: string | null;
-      certificatePath: string | null;
-      result: string | null;
-      cost: string | null;
-      notes: string | null;
-      intermediateCheckDate: string | null;
-      approvalStatus: string;
-      registeredBy: string | null;
-      approvedBy: string | null;
-      registeredByRole: string | null;
-      registrarComment: string | null;
-      approverComment: string | null;
-      rejectionReason: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      equipmentName: string | null;
-      managementNumber: string | null;
-      teamId: string | null;
-      teamName: string | null;
-    }[];
+    items: CalibrationRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -121,44 +109,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_REQUESTS)
-  findPendingApprovals(): Promise<{
-    items: {
-      id: string;
-      equipmentId: string;
-      technicianId: string | null;
-      status: string;
-      calibrationDate: Date;
-      completionDate: Date | null;
-      nextCalibrationDate: Date | null;
-      agencyName: string | null;
-      certificateNumber: string | null;
-      certificatePath: string | null;
-      result: string | null;
-      cost: string | null;
-      notes: string | null;
-      intermediateCheckDate: string | null;
-      approvalStatus: string;
-      registeredBy: string | null;
-      approvedBy: string | null;
-      registeredByRole: string | null;
-      registrarComment: string | null;
-      approverComment: string | null;
-      rejectionReason: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      equipmentName: string | null;
-      managementNumber: string | null;
-      teamId: string | null;
-      teamName: string | null;
-    }[];
-    meta: {
-      totalItems: number;
-      itemCount: number;
-      itemsPerPage: number;
-      totalPages: number;
-      currentPage: number;
-    };
-  }> {
+  findPendingApprovals() {
     return this.calibrationService.findPendingApprovals();
   }
 
@@ -171,11 +122,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findUpcomingIntermediateChecks(
-    @Query('days') days: number = 7
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord[]
-  > {
+  findUpcomingIntermediateChecks(@Query('days') days: number = 7): Promise<CalibrationRecord[]> {
     return this.calibrationService.findUpcomingIntermediateChecks(days);
   }
 
@@ -191,15 +138,16 @@ export class CalibrationController {
   findAllIntermediateChecks(
     @Query('status') status?: 'pending' | 'overdue',
     @Query('equipmentId') equipmentId?: string,
-    @Query('managerId') managerId?: string
-  ): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord[];
-    meta: { totalItems: number; overdueCount: number; pendingCount: number };
-  }> {
+    @Query('managerId') managerId?: string,
+    @Query('teamId') teamId?: string,
+    @Query('site') site?: string
+  ) {
     return this.calibrationService.findAllIntermediateChecks({
       status,
       equipmentId,
       managerId,
+      teamId,
+      site,
     });
   }
 
@@ -215,14 +163,18 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   completeIntermediateCheck(
     @Param('uuid') uuid: string,
-    @Body() body: { completedBy: string; notes?: string }
-  ): Promise<{
-    calibration: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord;
-    message: string;
-  }> {
-    return this.calibrationService.completeIntermediateCheck(uuid, body.completedBy, body.notes);
+    @Body() body: { notes?: string },
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ calibration: CalibrationRecord; message: string }> {
+    // ✅ 보안: completedBy를 JWT 세션에서 추출 (Rule 2)
+    const completedBy = req.user?.userId || req.user?.sub;
+    if (!completedBy) {
+      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+    }
+    return this.calibrationService.completeIntermediateCheck(uuid, completedBy, body.notes);
   }
 
   @Get('equipment/:equipmentId')
@@ -236,35 +188,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findByEquipment(@Param('equipmentId') equipmentId: string): Promise<{
-    items: {
-      id: string;
-      equipmentId: string;
-      technicianId: string | null;
-      status: string;
-      calibrationDate: Date;
-      completionDate: Date | null;
-      nextCalibrationDate: Date | null;
-      agencyName: string | null;
-      certificateNumber: string | null;
-      certificatePath: string | null;
-      result: string | null;
-      cost: string | null;
-      notes: string | null;
-      intermediateCheckDate: string | null;
-      approvalStatus: string;
-      registeredBy: string | null;
-      approvedBy: string | null;
-      registeredByRole: string | null;
-      registrarComment: string | null;
-      approverComment: string | null;
-      rejectionReason: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      equipmentName: string | null;
-      managementNumber: string | null;
-      teamId: string | null;
-      teamName: string | null;
-    }[];
+    items: CalibrationRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -286,35 +210,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findDueCalibrations(@Query('days') days: number = 30): Promise<{
-    items: {
-      id: string;
-      equipmentId: string;
-      technicianId: string | null;
-      status: string;
-      calibrationDate: Date;
-      completionDate: Date | null;
-      nextCalibrationDate: Date | null;
-      agencyName: string | null;
-      certificateNumber: string | null;
-      certificatePath: string | null;
-      result: string | null;
-      cost: string | null;
-      notes: string | null;
-      intermediateCheckDate: string | null;
-      approvalStatus: string;
-      registeredBy: string | null;
-      approvedBy: string | null;
-      registeredByRole: string | null;
-      registrarComment: string | null;
-      approverComment: string | null;
-      rejectionReason: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      equipmentName: string | null;
-      managementNumber: string | null;
-      teamId: string | null;
-      teamName: string | null;
-    }[];
+    items: CalibrationRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -337,35 +233,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
   findByManager(@Param('managerId') managerId: string): Promise<{
-    items: {
-      id: string;
-      equipmentId: string;
-      technicianId: string | null;
-      status: string;
-      calibrationDate: Date;
-      completionDate: Date | null;
-      nextCalibrationDate: Date | null;
-      agencyName: string | null;
-      certificateNumber: string | null;
-      certificatePath: string | null;
-      result: string | null;
-      cost: string | null;
-      notes: string | null;
-      intermediateCheckDate: string | null;
-      approvalStatus: string;
-      registeredBy: string | null;
-      approvedBy: string | null;
-      registeredByRole: string | null;
-      registrarComment: string | null;
-      approverComment: string | null;
-      rejectionReason: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      equipmentName: string | null;
-      managementNumber: string | null;
-      teamId: string | null;
-      teamName: string | null;
-    }[];
+    items: CalibrationRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -390,35 +258,7 @@ export class CalibrationController {
     @Query('fromDate') fromDate: string = new Date().toISOString(),
     @Query('toDate') toDate: string
   ): Promise<{
-    items: {
-      id: string;
-      equipmentId: string;
-      technicianId: string | null;
-      status: string;
-      calibrationDate: Date;
-      completionDate: Date | null;
-      nextCalibrationDate: Date | null;
-      agencyName: string | null;
-      certificateNumber: string | null;
-      certificatePath: string | null;
-      result: string | null;
-      cost: string | null;
-      notes: string | null;
-      intermediateCheckDate: string | null;
-      approvalStatus: string;
-      registeredBy: string | null;
-      approvedBy: string | null;
-      registeredByRole: string | null;
-      registrarComment: string | null;
-      approverComment: string | null;
-      rejectionReason: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      equipmentName: string | null;
-      managementNumber: string | null;
-      teamId: string | null;
-      teamName: string | null;
-    }[];
+    items: CalibrationRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -429,7 +269,7 @@ export class CalibrationController {
   }> {
     const fromDateObj = new Date(fromDate);
     const toDateObj = toDate ? new Date(toDate) : new Date(fromDateObj);
-    toDateObj.setMonth(toDateObj.getMonth() + 3); // 기본 3개월 범위
+    toDateObj.setMonth(toDateObj.getMonth() + 3);
 
     return this.calibrationService.findScheduled(fromDateObj, toDateObj);
   }
@@ -440,8 +280,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  getSummary(): Promise<{ total: number; overdueCount: number; dueInMonthCount: number }> {
-    return this.calibrationService.getSummary();
+  getSummary(
+    @Query('teamId') teamId?: string,
+    @Query('site') site?: string
+  ): Promise<{ total: number; overdueCount: number; dueInMonthCount: number }> {
+    return this.calibrationService.getSummary(teamId, site);
   }
 
   @Get('overdue')
@@ -450,7 +293,10 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  getOverdueCalibrations(): Promise<
+  getOverdueCalibrations(
+    @Query('teamId') teamId?: string,
+    @Query('site') site?: string
+  ): Promise<
     {
       id: string;
       equipmentId: string;
@@ -463,7 +309,7 @@ export class CalibrationController {
       calibrationAgency: string;
     }[]
   > {
-    return this.calibrationService.getOverdueCalibrations();
+    return this.calibrationService.getOverdueCalibrations(teamId, site);
   }
 
   @Get('upcoming')
@@ -472,7 +318,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  getUpcomingCalibrations(@Query('days') days: number = 30): Promise<
+  getUpcomingCalibrations(
+    @Query('days') days: number = 30,
+    @Query('teamId') teamId?: string,
+    @Query('site') site?: string
+  ): Promise<
     {
       id: string;
       equipmentId: string;
@@ -485,7 +335,7 @@ export class CalibrationController {
       calibrationAgency: string;
     }[]
   > {
-    return this.calibrationService.getUpcomingCalibrations(days);
+    return this.calibrationService.getUpcomingCalibrations(days, teamId, site);
   }
 
   @Get(':uuid')
@@ -499,11 +349,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findOne(
-    @Param('uuid') uuid: string
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
-  > {
+  findOne(@Param('uuid') uuid: string): Promise<CalibrationRecord> {
     return this.calibrationService.findOne(uuid);
   }
 
@@ -533,6 +379,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @UseInterceptors(FileInterceptor('file'))
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadCertificate(
     @Param('uuid') uuid: string,
     @UploadedFile() file: MulterFile
@@ -576,12 +423,12 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
+  @UsePipes(UpdateCalibrationValidationPipe)
   update(
     @Param('uuid') uuid: string,
     @Body() updateCalibrationDto: UpdateCalibrationDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
-  > {
+  ): Promise<CalibrationRecord> {
     return this.calibrationService.update(uuid, updateCalibrationDto);
   }
 
@@ -593,6 +440,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.DELETE_CALIBRATION)
+  @AuditLog({ action: 'delete', entityType: 'calibration', entityIdPath: 'params.uuid' })
   remove(@Param('uuid') uuid: string): Promise<{ id: string; deleted: boolean }> {
     return this.calibrationService.remove(uuid);
   }
@@ -606,12 +454,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   updateStatus(
     @Param('uuid') uuid: string,
     @Body('status') status: CalibrationStatus
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
-  > {
+  ): Promise<CalibrationRecord> {
     return this.calibrationService.updateStatus(uuid, status);
   }
 
@@ -627,12 +474,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
+  @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   completeCalibration(
     @Param('uuid') uuid: string,
     @Body() updateCalibrationDto: UpdateCalibrationDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
-  > {
+  ): Promise<CalibrationRecord> {
     return this.calibrationService.completeCalibration(uuid, updateCalibrationDto);
   }
 
@@ -648,13 +494,19 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION)
-  approveCalibration(
+  @AuditLog({ action: 'approve', entityType: 'calibration', entityIdPath: 'params.uuid' })
+  @UsePipes(ApproveCalibrationValidationPipe)
+  async approveCalibration(
     @Param('uuid') uuid: string,
-    @Body() approveDto: ApproveCalibrationDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
-  > {
-    return this.calibrationService.approveCalibration(uuid, approveDto);
+    @Body() approveDto: ApproveCalibrationDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<CalibrationRecord> {
+    // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.calibrationService.approveCalibration(uuid, { ...approveDto, approverId });
   }
 
   @Patch(':uuid/reject')
@@ -669,12 +521,18 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION)
-  rejectCalibration(
+  @AuditLog({ action: 'reject', entityType: 'calibration', entityIdPath: 'params.uuid' })
+  @UsePipes(RejectCalibrationValidationPipe)
+  async rejectCalibration(
     @Param('uuid') uuid: string,
-    @Body() rejectDto: RejectCalibrationDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration/calibration.service').CalibrationRecord
-  > {
-    return this.calibrationService.rejectCalibration(uuid, rejectDto);
+    @Body() rejectDto: RejectCalibrationDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<CalibrationRecord> {
+    // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.calibrationService.rejectCalibration(uuid, { ...rejectDto, approverId });
   }
 }

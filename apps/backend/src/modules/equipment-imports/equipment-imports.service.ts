@@ -14,6 +14,8 @@ import { equipmentImports } from '@equipment-management/db/schema/equipment-impo
 import { equipment } from '@equipment-management/db/schema/equipment';
 import {
   EquipmentImportStatus,
+  EquipmentImportStatusValues as EIVal,
+  EquipmentStatusValues as ESVal,
   generateTemporaryManagementNumber,
   type Classification,
   type Site,
@@ -24,8 +26,10 @@ import { ApproveEquipmentImportDto } from './dto/approve-equipment-import.dto';
 import { RejectEquipmentImportDto } from './dto/reject-equipment-import.dto';
 import { ReceiveEquipmentImportDto } from './dto/receive-equipment-import.dto';
 import { EquipmentImportQueryDto } from './dto/equipment-import-query.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EquipmentService } from '../equipment/equipment.service';
 import { CheckoutsService } from '../checkouts/checkouts.service';
+import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { addMonths } from 'date-fns';
 import {
   isRentalImport,
@@ -46,7 +50,8 @@ export class EquipmentImportsService extends VersionedBaseService {
     protected readonly db: NodePgDatabase<typeof schema>,
     private readonly equipmentService: EquipmentService,
     @Inject(forwardRef(() => CheckoutsService))
-    private readonly checkoutsService: CheckoutsService
+    private readonly checkoutsService: CheckoutsService,
+    private readonly eventEmitter: EventEmitter2
   ) {
     super();
   }
@@ -86,7 +91,7 @@ export class EquipmentImportsService extends VersionedBaseService {
       usagePeriodStart,
       usagePeriodEnd,
       reason: dto.reason,
-      status: 'pending' as EquipmentImportStatus,
+      status: EIVal.PENDING as EquipmentImportStatus,
     };
 
     let values: typeof equipmentImports.$inferInsert;
@@ -117,6 +122,19 @@ export class EquipmentImportsService extends VersionedBaseService {
     const [created] = await this.db.insert(equipmentImports).values(values).returning();
 
     this.logger.log(`Equipment import created: ${created.id} (sourceType: ${created.sourceType})`);
+
+    // 📢 알림 이벤트 발행 (장비 반입 신청)
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_CREATED, {
+      importId: created.id,
+      equipmentName: dto.equipmentName,
+      managementNumber: '',
+      requesterId,
+      requesterTeamId: teamId,
+      site,
+      actorId: requesterId,
+      actorName: '',
+      timestamp: new Date(),
+    });
 
     return created;
   }
@@ -261,7 +279,7 @@ export class EquipmentImportsService extends VersionedBaseService {
   ): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
-    if (equipmentImport.status !== 'pending') {
+    if (equipmentImport.status !== EIVal.PENDING) {
       throw new BadRequestException('승인 대기 상태의 반입 신청만 승인할 수 있습니다.');
     }
 
@@ -271,7 +289,7 @@ export class EquipmentImportsService extends VersionedBaseService {
       id,
       dto.version,
       {
-        status: 'approved' as EquipmentImportStatus,
+        status: EIVal.APPROVED as EquipmentImportStatus,
         approverId,
         approvedAt: new Date(),
       },
@@ -279,6 +297,19 @@ export class EquipmentImportsService extends VersionedBaseService {
     );
 
     this.logger.log(`Equipment import approved: ${id} (sourceType: ${updated.sourceType})`);
+
+    // 📢 알림 이벤트 발행 (장비 반입 승인)
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_APPROVED, {
+      importId: id,
+      equipmentName: updated.equipmentName,
+      managementNumber: '',
+      requesterId: updated.requesterId,
+      requesterTeamId: updated.teamId ?? '',
+      site: updated.site ?? '',
+      actorId: approverId,
+      actorName: '',
+      timestamp: new Date(),
+    });
 
     return updated;
   }
@@ -294,7 +325,7 @@ export class EquipmentImportsService extends VersionedBaseService {
   ): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
-    if (equipmentImport.status !== 'pending') {
+    if (equipmentImport.status !== EIVal.PENDING) {
       throw new BadRequestException('승인 대기 상태의 반입 신청만 거절할 수 있습니다.');
     }
 
@@ -304,13 +335,27 @@ export class EquipmentImportsService extends VersionedBaseService {
       id,
       dto.version,
       {
-        status: 'rejected' as EquipmentImportStatus,
+        status: EIVal.REJECTED as EquipmentImportStatus,
         approverId,
         approvedAt: new Date(),
         rejectionReason: dto.rejectionReason,
       },
       '장비 반입'
     );
+
+    // 📢 알림 이벤트 발행 (장비 반입 거절)
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_REJECTED, {
+      importId: id,
+      equipmentName: updated.equipmentName,
+      managementNumber: '',
+      requesterId: updated.requesterId,
+      requesterTeamId: updated.teamId ?? '',
+      site: updated.site ?? '',
+      reason: dto.rejectionReason,
+      actorId: approverId,
+      actorName: '',
+      timestamp: new Date(),
+    });
 
     return updated;
   }
@@ -333,7 +378,7 @@ export class EquipmentImportsService extends VersionedBaseService {
   ): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
-    if (equipmentImport.status !== 'approved') {
+    if (equipmentImport.status !== EIVal.APPROVED) {
       throw new BadRequestException('승인된 반입 신청만 수령 처리할 수 있습니다.');
     }
 
@@ -387,7 +432,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         usagePeriodEnd: equipmentImport.usagePeriodEnd,
         status: 'temporary',
         isActive: true,
-        approvalStatus: 'approved',
+        approvalStatus: EIVal.APPROVED,
         // 교정 정보 추가
         calibrationMethod: dto.calibrationInfo?.calibrationMethod || null,
         calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
@@ -407,7 +452,7 @@ export class EquipmentImportsService extends VersionedBaseService {
       id,
       equipmentImport.version,
       {
-        status: 'received' as EquipmentImportStatus,
+        status: EIVal.RECEIVED as EquipmentImportStatus,
         receivedBy,
         receivedAt: new Date(),
         receivingCondition: dto.receivingCondition,
@@ -438,7 +483,7 @@ export class EquipmentImportsService extends VersionedBaseService {
   ): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
-    if (equipmentImport.status !== 'received') {
+    if (equipmentImport.status !== EIVal.RECEIVED) {
       throw new BadRequestException('수령 완료된 반입 건만 반납을 시작할 수 있습니다.');
     }
 
@@ -447,7 +492,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     }
 
     // 장비 상태를 'available'로 변경 (checkout 생성 조건 충족)
-    await this.equipmentService.updateStatus(equipmentImport.equipmentId, 'available');
+    await this.equipmentService.updateStatus(equipmentImport.equipmentId, ESVal.AVAILABLE);
 
     // destination 동적 결정
     const destination = getReturnDestination(equipmentImport);
@@ -491,7 +536,7 @@ export class EquipmentImportsService extends VersionedBaseService {
   async cancel(id: string, userId: string): Promise<EquipmentImport> {
     const equipmentImport = await this.findOne(id);
 
-    if (equipmentImport.status !== 'pending' && equipmentImport.status !== 'approved') {
+    if (equipmentImport.status !== EIVal.PENDING && equipmentImport.status !== EIVal.APPROVED) {
       throw new BadRequestException('승인 대기 또는 승인됨 상태의 반입 신청만 취소할 수 있습니다.');
     }
 
@@ -503,7 +548,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     const [updated] = await this.db
       .update(equipmentImports)
       .set({
-        status: 'canceled' as EquipmentImportStatus,
+        status: EIVal.CANCELED as EquipmentImportStatus,
         updatedAt: new Date(),
       })
       .where(eq(equipmentImports.id, id))
@@ -538,7 +583,7 @@ export class EquipmentImportsService extends VersionedBaseService {
     await this.db
       .update(equipmentImports)
       .set({
-        status: 'returned' as EquipmentImportStatus,
+        status: EIVal.RETURNED as EquipmentImportStatus,
         updatedAt: new Date(),
       })
       .where(eq(equipmentImports.id, equipmentImport.id));

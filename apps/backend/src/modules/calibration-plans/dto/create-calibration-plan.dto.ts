@@ -15,8 +15,10 @@ export const createCalibrationPlanSchema = z.object({
     .max(2100, { message: '연도는 2100 이하여야 합니다' }),
   siteId: z.string().min(1, '시험소 ID를 입력해주세요'),
   teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
-  createdBy: z.string().min(1, '작성자 ID를 입력해주세요'),
 });
+
+/** 서비스 내부용 (controller가 createdBy 주입) */
+export type CreateCalibrationPlanPayload = CreateCalibrationPlanInput & { createdBy: string };
 
 export type CreateCalibrationPlanInput = z.infer<typeof createCalibrationPlanSchema>;
 export const CreateCalibrationPlanValidationPipe = new ZodValidationPipe(
@@ -25,6 +27,10 @@ export const CreateCalibrationPlanValidationPipe = new ZodValidationPipe(
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
+/**
+ * 교정계획서 생성 DTO (Swagger 문서화용)
+ * createdBy는 서버에서 JWT로 추출
+ */
 export class CreateCalibrationPlanDto {
   @ApiProperty({
     description: '계획 연도',
@@ -46,10 +52,4 @@ export class CreateCalibrationPlanDto {
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   teamId?: string;
-
-  @ApiProperty({
-    description: '작성자 ID (기술책임자)',
-    example: '550e8400-e29b-41d4-a716-446655440001',
-  })
-  createdBy: string;
 }

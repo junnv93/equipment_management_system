@@ -17,8 +17,14 @@ import {
   ReviewDisposalInput,
   ApproveDisposalInput,
 } from '../dto/disposal.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { VersionedBaseService } from '../../../common/base/versioned-base.service';
+import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
+import {
+  DisposalReviewStatusValues as DRVal,
+  EquipmentStatusValues as ESVal,
+} from '@equipment-management/schemas';
 
 /**
  * 장비 폐기 서비스
@@ -36,7 +42,8 @@ export class DisposalService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: NodePgDatabase<typeof schema>,
-    private readonly cacheService: SimpleCacheService
+    private readonly cacheService: SimpleCacheService,
+    private readonly eventEmitter: EventEmitter2
   ) {
     super();
   }
@@ -200,7 +207,7 @@ export class DisposalService extends VersionedBaseService {
     const existingRequest = await this.db.query.disposalRequests.findFirst({
       where: and(
         eq(disposalRequests.equipmentId, equipmentId),
-        eq(disposalRequests.reviewStatus, 'pending')
+        eq(disposalRequests.reviewStatus, DRVal.PENDING)
       ),
     });
 
@@ -218,7 +225,7 @@ export class DisposalService extends VersionedBaseService {
           reason: dto.reason,
           reasonDetail: dto.reasonDetail,
           requestedBy,
-          reviewStatus: 'pending',
+          reviewStatus: DRVal.PENDING,
         })
         .returning();
 
@@ -226,7 +233,7 @@ export class DisposalService extends VersionedBaseService {
       await tx
         .update(equipment)
         .set({
-          status: 'pending_disposal',
+          status: ESVal.PENDING_DISPOSAL,
           updatedAt: new Date(),
         })
         .where(eq(equipment.id, equipmentId));
@@ -240,6 +247,20 @@ export class DisposalService extends VersionedBaseService {
     this.logger.log(
       `폐기 요청 생성: equipmentId=${equipmentId}, requestId=${result.id}, requestedBy=${requestedBy}`
     );
+
+    // 📢 알림 이벤트 발행 (폐기 요청)
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REQUESTED, {
+      disposalId: result.id,
+      equipmentId,
+      equipmentName: equipmentItem.name ?? '',
+      managementNumber: equipmentItem.managementNumber ?? '',
+      requesterId: requestedBy,
+      requesterTeamId: equipmentItem.teamId ?? '',
+      site: equipmentItem.site ?? '',
+      actorId: requestedBy,
+      actorName: '',
+      timestamp: new Date(),
+    });
 
     // Relations 포함하여 반환
     return this.getCurrentDisposalRequest(equipmentId);
@@ -395,7 +416,7 @@ export class DisposalService extends VersionedBaseService {
     const request = await this.db.query.disposalRequests.findFirst({
       where: and(
         eq(disposalRequests.equipmentId, equipmentId),
-        eq(disposalRequests.reviewStatus, 'pending')
+        eq(disposalRequests.reviewStatus, DRVal.PENDING)
       ),
     });
 
@@ -435,7 +456,7 @@ export class DisposalService extends VersionedBaseService {
         const [updated] = await tx
           .update(disposalRequests)
           .set({
-            reviewStatus: 'reviewed',
+            reviewStatus: DRVal.REVIEWED,
             reviewedBy,
             reviewedAt: new Date(),
             reviewOpinion: reviewDto.opinion,
@@ -461,7 +482,7 @@ export class DisposalService extends VersionedBaseService {
         const [updated] = await tx
           .update(disposalRequests)
           .set({
-            reviewStatus: 'rejected',
+            reviewStatus: DRVal.REJECTED,
             rejectedBy: reviewedBy,
             rejectedAt: new Date(),
             rejectionReason: reviewDto.opinion,
@@ -488,7 +509,7 @@ export class DisposalService extends VersionedBaseService {
         await tx
           .update(equipment)
           .set({
-            status: 'available',
+            status: ESVal.AVAILABLE,
             updatedAt: new Date(),
           })
           .where(eq(equipment.id, equipmentId));
@@ -503,6 +524,37 @@ export class DisposalService extends VersionedBaseService {
     this.logger.log(
       `폐기 검토 완료: requestId=${request.id}, decision=${reviewDto.decision}, reviewedBy=${reviewedBy}`
     );
+
+    // 📢 알림 이벤트 발행 (폐기 검토)
+    if (reviewDto.decision === 'approve') {
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REVIEWED, {
+        disposalId: request.id,
+        equipmentId,
+        equipmentName: equipmentItem.name ?? '',
+        managementNumber: equipmentItem.managementNumber ?? '',
+        requesterId: request.requestedBy,
+        requesterTeamId: equipmentItem.teamId ?? '',
+        site: equipmentItem.site ?? '',
+        actorId: reviewedBy,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    } else {
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REJECTED, {
+        disposalId: request.id,
+        equipmentId,
+        equipmentName: equipmentItem.name ?? '',
+        managementNumber: equipmentItem.managementNumber ?? '',
+        requesterId: request.requestedBy,
+        requesterTeamId: equipmentItem.teamId ?? '',
+        site: equipmentItem.site ?? '',
+        reason: reviewDto.opinion ?? '',
+        rejectionStep: 'review',
+        actorId: reviewedBy,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    }
 
     // Relations 포함하여 반환
     return this.getCurrentDisposalRequest(equipmentId);
@@ -658,7 +710,7 @@ export class DisposalService extends VersionedBaseService {
     const request = await this.db.query.disposalRequests.findFirst({
       where: and(
         eq(disposalRequests.equipmentId, equipmentId),
-        eq(disposalRequests.reviewStatus, 'reviewed')
+        eq(disposalRequests.reviewStatus, DRVal.REVIEWED)
       ),
     });
 
@@ -673,7 +725,7 @@ export class DisposalService extends VersionedBaseService {
         const [updated] = await tx
           .update(disposalRequests)
           .set({
-            reviewStatus: 'approved',
+            reviewStatus: DRVal.APPROVED,
             approvedBy,
             approvedAt: new Date(),
             approvalComment: approveDto.comment || null,
@@ -699,7 +751,7 @@ export class DisposalService extends VersionedBaseService {
         await tx
           .update(equipment)
           .set({
-            status: 'disposed',
+            status: ESVal.DISPOSED,
             updatedAt: new Date(),
           })
           .where(eq(equipment.id, equipmentId));
@@ -708,7 +760,7 @@ export class DisposalService extends VersionedBaseService {
         const [updated] = await tx
           .update(disposalRequests)
           .set({
-            reviewStatus: 'rejected',
+            reviewStatus: DRVal.REJECTED,
             rejectedBy: approvedBy,
             rejectedAt: new Date(),
             rejectionReason: approveDto.comment || '승인 단계에서 반려',
@@ -735,7 +787,7 @@ export class DisposalService extends VersionedBaseService {
         await tx
           .update(equipment)
           .set({
-            status: 'available',
+            status: ESVal.AVAILABLE,
             updatedAt: new Date(),
           })
           .where(eq(equipment.id, equipmentId));
@@ -748,6 +800,37 @@ export class DisposalService extends VersionedBaseService {
     this.logger.log(
       `폐기 최종 승인 완료: requestId=${request.id}, decision=${approveDto.decision}, approvedBy=${approvedBy}`
     );
+
+    // 📢 알림 이벤트 발행 (폐기 최종 승인/반려)
+    if (approveDto.decision === 'approve') {
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_APPROVED, {
+        disposalId: request.id,
+        equipmentId,
+        equipmentName: '',
+        managementNumber: '',
+        requesterId: request.requestedBy,
+        requesterTeamId: '',
+        site: '',
+        actorId: approvedBy,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    } else {
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REJECTED, {
+        disposalId: request.id,
+        equipmentId,
+        equipmentName: '',
+        managementNumber: '',
+        requesterId: request.requestedBy,
+        requesterTeamId: '',
+        site: '',
+        reason: approveDto.comment ?? '',
+        rejectionStep: 'approval',
+        actorId: approvedBy,
+        actorName: '',
+        timestamp: new Date(),
+      });
+    }
 
     // Relations 포함하여 반환
     return this.getCurrentDisposalRequest(equipmentId);
@@ -768,7 +851,7 @@ export class DisposalService extends VersionedBaseService {
     const request = await this.db.query.disposalRequests.findFirst({
       where: and(
         eq(disposalRequests.equipmentId, equipmentId),
-        eq(disposalRequests.reviewStatus, 'pending')
+        eq(disposalRequests.reviewStatus, DRVal.PENDING)
       ),
     });
 
@@ -790,7 +873,7 @@ export class DisposalService extends VersionedBaseService {
       await tx
         .update(equipment)
         .set({
-          status: 'available',
+          status: ESVal.AVAILABLE,
           updatedAt: new Date(),
         })
         .where(eq(equipment.id, equipmentId));
@@ -952,7 +1035,7 @@ export class DisposalService extends VersionedBaseService {
     const request = await this.db.query.disposalRequests.findFirst({
       where: and(
         eq(disposalRequests.equipmentId, equipmentId),
-        inArray(disposalRequests.reviewStatus, ['pending', 'reviewed', 'approved'])
+        inArray(disposalRequests.reviewStatus, [DRVal.PENDING, DRVal.REVIEWED, DRVal.APPROVED])
       ),
       with: {
         equipment: true,
@@ -991,7 +1074,7 @@ export class DisposalService extends VersionedBaseService {
     const isLabManager = currentUser.role === 'lab_manager';
 
     const requests = await this.db.query.disposalRequests.findMany({
-      where: eq(disposalRequests.reviewStatus, 'pending'),
+      where: eq(disposalRequests.reviewStatus, DRVal.PENDING),
       with: {
         equipment: true,
         requester: {
@@ -1023,7 +1106,7 @@ export class DisposalService extends VersionedBaseService {
    */
   async getPendingApprovalRequests(): Promise<unknown[]> {
     const requests = await this.db.query.disposalRequests.findMany({
-      where: eq(disposalRequests.reviewStatus, 'reviewed'),
+      where: eq(disposalRequests.reviewStatus, DRVal.REVIEWED),
       with: {
         equipment: true,
         requester: {

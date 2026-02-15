@@ -10,6 +10,7 @@ import {
   HttpStatus,
   HttpCode,
   UseGuards,
+  UsePipes,
   ParseUUIDPipe,
   BadRequestException,
   Request,
@@ -27,10 +28,12 @@ import {
   CreateCheckoutDto,
   UpdateCheckoutDto,
   CheckoutQueryDto,
+  CheckoutQueryValidationPipe,
   ApproveCheckoutDto,
   RejectCheckoutDto,
   ReturnCheckoutDto,
   ApproveReturnDto,
+  RejectReturnDto,
   StartCheckoutDto,
   CreateConditionCheckDto,
   CheckoutResponseDto,
@@ -40,6 +43,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
@@ -50,6 +54,7 @@ export class CheckoutsController {
 
   @Post()
   @RequirePermissions(Permission.CREATE_CHECKOUT)
+  @AuditLog({ action: 'create', entityType: 'checkout', entityIdPath: 'response.id' })
   @ApiOperation({ summary: '반출 신청', description: '장비 담당자만 반출을 신청할 수 있습니다.' })
   @ApiBody({ type: CreateCheckoutDto })
   @ApiResponse({
@@ -85,6 +90,7 @@ export class CheckoutsController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @UsePipes(CheckoutQueryValidationPipe)
   @ApiOperation({
     summary: '반출 목록 조회',
     description:
@@ -99,23 +105,26 @@ export class CheckoutsController {
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/checkouts/checkouts.service').CheckoutListResponse
   > {
-    // lab_manager(시험소장)는 전체 조회, 나머지 역할은 소속 팀 기반 필터링
+    // 역할 기반 데이터 격리: team_restricted → 팀 필터, site_restricted → 사이트 필터
     const roles = req.user?.roles || [];
-    const isLabManager = roles.includes('lab_manager');
+    const isSystemAdmin = roles.includes('system_admin');
+    const isTeamRestricted = roles.includes('test_engineer') || roles.includes('technical_manager');
 
-    if (!isLabManager && !query.teamId && req.user?.teamId) {
-      query.teamId = req.user.teamId;
+    // 🔒 보안: 역할별 강제 필터링 (URL 파라미터 오버라이드 방지)
+    if (!isSystemAdmin) {
+      if (isTeamRestricted && req.user?.teamId) {
+        // test_engineer, technical_manager: 팀 필터 (팀 ⊂ 사이트이므로 사이트 필터 불필요)
+        query.teamId = req.user.teamId;
+      } else if (req.user?.site) {
+        // quality_manager, lab_manager: 사이트 필터 (자기 사이트 전체 조회)
+        query.site = req.user.site;
+      }
     }
 
     // ✅ 성능 최적화: includeSummary 파라미터를 서비스에 전달
     return this.checkoutsService.findAll(query, query.includeSummary ?? false);
   }
 
-  @Get(':uuid')
-  /**
-   * ✅ Phase 2: Server-Driven UI
-   * meta.availableActions 포함하여 반환
-   */
   @Get(':uuid')
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
   @ApiOperation({
@@ -144,6 +153,7 @@ export class CheckoutsController {
 
   @Patch(':uuid')
   @RequirePermissions(Permission.UPDATE_CHECKOUT)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 정보 수정',
     description: '특정 UUID를 가진 반출의 정보를 수정합니다. 승인 전만 수정 가능합니다.',
@@ -192,6 +202,7 @@ export class CheckoutsController {
 
   @Delete(':uuid')
   @RequirePermissions(Permission.DELETE_CHECKOUT)
+  @AuditLog({ action: 'delete', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: '반출 취소',
@@ -207,6 +218,7 @@ export class CheckoutsController {
 
   @Patch(':uuid/approve')
   @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 승인',
     description:
@@ -266,6 +278,7 @@ export class CheckoutsController {
 
   @Patch(':uuid/reject')
   @RequirePermissions(Permission.REJECT_CHECKOUT)
+  @AuditLog({ action: 'reject', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({ summary: '반출 반려', description: '반출을 반려합니다. 반려 사유는 필수입니다.' })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiBody({ type: RejectCheckoutDto })
@@ -274,47 +287,24 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async reject(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() rejectDto: RejectCheckoutDto
-  ): Promise<{
-    id: string;
-    createdAt: Date;
-    updatedAt: Date;
-    requesterId: string;
-    approverId: string | null;
-    returnerId: string | null;
-    purpose: string;
-    checkoutType: string;
-    destination: string;
-    lenderTeamId: string | null;
-    lenderSiteId: string | null;
-    phoneNumber: string | null;
-    address: string | null;
-    reason: string;
-    checkoutDate: Date | null;
-    expectedReturnDate: Date;
-    actualReturnDate: Date | null;
-    status: string;
-    approvedAt: Date | null;
-    rejectionReason: string | null;
-    calibrationChecked: boolean | null;
-    repairChecked: boolean | null;
-    workingStatusChecked: boolean | null;
-    inspectionNotes: string | null;
-    returnApprovedBy: string | null;
-    returnApprovedAt: Date | null;
-    lenderConfirmedBy: string | null;
-    lenderConfirmedAt: Date | null;
-    lenderConfirmNotes: string | null;
-  }> {
+    @Body() rejectDto: RejectCheckoutDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
     // 반려 사유 필수 검증 (요구사항)
     if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
       throw new BadRequestException('반려 사유는 필수입니다.');
     }
-    return this.checkoutsService.reject(uuid, rejectDto);
+    return this.checkoutsService.reject(uuid, { ...rejectDto, approverId });
   }
 
   @Post(':uuid/start')
   @RequirePermissions(Permission.START_CHECKOUT)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 시작',
     description:
@@ -367,6 +357,7 @@ export class CheckoutsController {
 
   @Post(':uuid/return')
   @RequirePermissions(Permission.COMPLETE_CHECKOUT)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반입 처리',
     description:
@@ -429,6 +420,7 @@ export class CheckoutsController {
 
   @Patch(':uuid/approve-return')
   @RequirePermissions(Permission.APPROVE_CHECKOUT) // 기술책임자 권한
+  @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반입 최종 승인',
     description:
@@ -482,16 +474,55 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    // 승인자 ID가 없으면 현재 로그인한 사용자 ID 사용
-    const approverId = approveReturnDto.approverId || req.user.userId;
+    // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
+    const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
       throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
     }
     return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId });
   }
 
+  @Patch(':uuid/reject-return')
+  @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @AuditLog({ action: 'reject', entityType: 'checkout', entityIdPath: 'params.uuid' })
+  @ApiOperation({
+    summary: '반입 반려',
+    description:
+      '기술책임자가 검사 결과가 미충족인 반입을 반려합니다. ' +
+      '반려 시 상태가 checked_out으로 되돌아가며, 재검사 후 반입 처리가 필요합니다.',
+  })
+  @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
+  @ApiBody({ type: RejectReturnDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '반입 반려 성공 (상태: returned → checked_out)',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: '반려 불가능한 상태 (returned 상태만 반려 가능) 또는 사유 누락',
+  })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '기술책임자 권한 없음' })
+  async rejectReturn(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() rejectReturnDto: RejectReturnDto,
+    @Request() req: AuthenticatedRequest
+  ) {
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    const approverTeamId = req.user?.teamId;
+    return this.checkoutsService.rejectReturn(uuid, {
+      ...rejectReturnDto,
+      approverId,
+      approverTeamId,
+    });
+  }
+
   @Post(':uuid/condition-check')
   @RequirePermissions(Permission.COMPLETE_CHECKOUT)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '상태 확인 등록 (대여 목적)',
     description:
@@ -530,6 +561,7 @@ export class CheckoutsController {
 
   @Patch(':uuid/cancel')
   @RequirePermissions(Permission.CANCEL_CHECKOUT)
+  @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 취소',
     description: '승인 전 반출을 취소합니다. 신청자만 취소 가능합니다.',

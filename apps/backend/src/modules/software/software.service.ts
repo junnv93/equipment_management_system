@@ -313,7 +313,10 @@ export class SoftwareService extends VersionedBaseService {
    * ✅ Optimistic Locking: updateWithVersion() 사용
    * ✅ Transactional: 소프트웨어 이력 + 장비 버전 업데이트 원자성 보장
    */
-  async approve(id: string, approveDto: ApproveSoftwareChangeDto): Promise<schema.SoftwareHistory> {
+  async approve(
+    id: string,
+    approveDto: ApproveSoftwareChangeDto & { approverId: string }
+  ): Promise<schema.SoftwareHistory> {
     const record = await this.findOne(id);
 
     if (record.approvalStatus !== SoftwareApprovalStatus.PENDING) {
@@ -347,7 +350,10 @@ export class SoftwareService extends VersionedBaseService {
    *
    * ✅ Optimistic Locking: updateWithVersion() 사용
    */
-  async reject(id: string, rejectDto: RejectSoftwareChangeDto): Promise<schema.SoftwareHistory> {
+  async reject(
+    id: string,
+    rejectDto: RejectSoftwareChangeDto & { approverId: string }
+  ): Promise<schema.SoftwareHistory> {
     const record = await this.findOne(id);
 
     if (record.approvalStatus !== SoftwareApprovalStatus.PENDING) {

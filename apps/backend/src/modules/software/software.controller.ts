@@ -7,18 +7,28 @@ import {
   Param,
   Query,
   UseGuards,
+  UsePipes,
   HttpStatus,
+  BadRequestException,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { SoftwareService } from './software.service';
 import { CreateSoftwareChangeDto } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
-import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve-software.dto';
+import {
+  ApproveSoftwareChangeDto,
+  RejectSoftwareChangeDto,
+  ApproveSoftwareChangeValidationPipe,
+  RejectSoftwareChangeValidationPipe,
+} from './dto/approve-software.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { SoftwareHistory } from '@equipment-management/db/schema';
+import { AuthenticatedRequest } from '../../types/auth';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
@@ -44,6 +54,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_SOFTWARE_CHANGE)
+  @AuditLog({ action: 'create', entityType: 'software', entityIdPath: 'response.id' })
   create(@Body() createDto: CreateSoftwareChangeDto): Promise<SoftwareHistory> {
     return this.softwareService.create(createDto);
   }
@@ -178,11 +189,18 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_SOFTWARE_CHANGE)
-  approve(
+  @AuditLog({ action: 'approve', entityType: 'software', entityIdPath: 'params.uuid' })
+  @UsePipes(ApproveSoftwareChangeValidationPipe)
+  async approve(
     @Param('uuid') uuid: string,
-    @Body() approveDto: ApproveSoftwareChangeDto
+    @Body() approveDto: ApproveSoftwareChangeDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
-    return this.softwareService.approve(uuid, approveDto);
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.softwareService.approve(uuid, { ...approveDto, approverId });
   }
 
   @Patch(':uuid/reject')
@@ -201,10 +219,17 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_SOFTWARE_CHANGE)
-  reject(
+  @AuditLog({ action: 'reject', entityType: 'software', entityIdPath: 'params.uuid' })
+  @UsePipes(RejectSoftwareChangeValidationPipe)
+  async reject(
     @Param('uuid') uuid: string,
-    @Body() rejectDto: RejectSoftwareChangeDto
+    @Body() rejectDto: RejectSoftwareChangeDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
-    return this.softwareService.reject(uuid, rejectDto);
+    const approverId = req.user?.userId || req.user?.sub;
+    if (!approverId) {
+      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+    }
+    return this.softwareService.reject(uuid, { ...rejectDto, approverId });
   }
 }

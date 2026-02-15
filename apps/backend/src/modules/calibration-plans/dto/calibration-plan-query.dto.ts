@@ -32,6 +32,7 @@ export const calibrationPlanQuerySchema = z.object({
       message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang, pyeongtaek)',
     })
     .optional(),
+  teamId: z.string().uuid({ message: '유효하지 않은 팀 ID입니다 (UUID 형식)' }).optional(),
   status: z
     .enum(calibrationPlanStatusValues, {
       message: '유효하지 않은 상태입니다',
@@ -45,7 +46,10 @@ export const calibrationPlanQuerySchema = z.object({
 });
 
 export type CalibrationPlanQueryInput = z.infer<typeof calibrationPlanQuerySchema>;
-export const CalibrationPlanQueryValidationPipe = new ZodValidationPipe(calibrationPlanQuerySchema);
+export const CalibrationPlanQueryValidationPipe = new ZodValidationPipe(
+  calibrationPlanQuerySchema,
+  { targets: ['query'] }
+);
 
 /**
  * 외부 장비 조회 쿼리 스키마
@@ -60,11 +64,13 @@ export const externalEquipmentQuerySchema = z.object({
       message: '유효하지 않은 시험소 ID입니다 (suwon, uiwang, pyeongtaek)',
     })
     .optional(),
+  teamId: z.string().uuid({ message: '유효하지 않은 팀 ID입니다 (UUID 형식)' }).optional(),
 });
 
 export type ExternalEquipmentQueryInput = z.infer<typeof externalEquipmentQuerySchema>;
 export const ExternalEquipmentQueryValidationPipe = new ZodValidationPipe(
-  externalEquipmentQuerySchema
+  externalEquipmentQuerySchema,
+  { targets: ['query'] }
 );
 
 // ========== DTO 클래스 (Swagger 문서화용) ==========
@@ -82,6 +88,12 @@ export class CalibrationPlanQueryDto {
     enum: ['suwon', 'uiwang', 'pyeongtaek'],
   })
   siteId?: string;
+
+  @ApiPropertyOptional({
+    description: '팀 ID (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  teamId?: string;
 
   @ApiPropertyOptional({
     description: '상태 (3단계 승인)',
@@ -116,4 +128,10 @@ export class ExternalEquipmentQueryDto {
     enum: ['suwon', 'uiwang', 'pyeongtaek'],
   })
   siteId?: string;
+
+  @ApiPropertyOptional({
+    description: '팀 ID (UUID)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  teamId?: string;
 }

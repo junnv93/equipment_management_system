@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
@@ -7,10 +7,10 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
 
 /**
  * 부적합 종료 스키마
+ * closedBy는 서버에서 JWT로부터 추출 (Rule 2: Server-Side User Extraction)
  */
 export const closeNonConformanceSchema = z.object({
   ...versionedSchema,
-  closedBy: z.string().uuid({ message: '유효한 종료 승인자 UUID가 아닙니다' }),
   closureNotes: z.string().optional(),
 });
 
@@ -20,9 +20,6 @@ export const CloseNonConformanceValidationPipe = new ZodValidationPipe(closeNonC
 // ========== DTO 클래스 (Swagger 문서화용) ==========
 
 export class CloseNonConformanceDto extends VersionedDto {
-  @ApiProperty({ description: '종료 승인자 UUID (기술책임자)' })
-  closedBy: string;
-
   @ApiPropertyOptional({ description: '종료 메모' })
   closureNotes?: string;
 }
