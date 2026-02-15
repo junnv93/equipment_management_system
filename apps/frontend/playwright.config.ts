@@ -32,25 +32,37 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
+    // Auth Setup (1회 실행 — 5개 역할 browser-native 로그인 + storageState 저장)
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+
+    // Browser projects — setup 완료 후 실행
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      dependencies: ['setup'],
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      dependencies: ['setup'],
     },
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
+      dependencies: ['setup'],
     },
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
+      dependencies: ['setup'],
     },
   ],
   // webServer 설정 비활성화 - 수동으로 서버 실행 필요

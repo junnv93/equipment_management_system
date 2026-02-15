@@ -503,7 +503,7 @@ test.describe('Group F2: Role Permissions', () => {
         ).not.toBeVisible();
 
         // 4. Try direct API call
-        const createAttempt = await techManagerPage.request.post('/api/calibrations', {
+        const createAttempt = await techManagerPage.request.post('/api/calibration', {
           data: {
             equipmentId: testEquipmentId,
             calibrationType: 'periodic',

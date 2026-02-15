@@ -8,22 +8,24 @@
  * - 탭 전환
  * - 빈 상태 처리
  * - 에러 처리
+ *
+ * ✅ Auth Fixture 마이그레이션 완료 (2026-02-12)
+ *    - 기존: 독자적 loginAs() 폼 기반 로그인 (타임아웃 실패)
+ *    - 수정: SSOT auth.fixture.ts (NextAuth test-login Provider)
+ *
+ * ✅ UI 로케이터 수정 완료 (2026-02-12)
+ *    - CalibrationContent.tsx 실제 UI 구조에 맞춰 셀렉터 수정
+ *    - 통계 카드: data-testid 없음 → 텍스트 기반 매칭
+ *    - 팀 필터: shadcn/ui Select → role="combobox" 트리거
+ *    - 빈 상태: strict mode 위반 수정 → getByRole('heading') 사용
  */
 
-import { test, expect, Page } from '@playwright/test';
-
-// 테스트용 로그인 헬퍼
-async function loginAs(page: Page, email: string, password: string) {
-  await page.goto('http://localhost:3000/login');
-  await page.fill('input[name="email"]', email);
-  await page.fill('input[name="password"]', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
-}
+import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import type { Page } from '@playwright/test';
 
 // 교정 관리 페이지로 이동 헬퍼
 async function navigateToCalibrationPage(page: Page) {
-  await page.goto('http://localhost:3000/calibration');
+  await page.goto('/calibration');
   // 페이지 로딩 대기 (데이터 fetch 완료까지)
   await page.waitForLoadState('networkidle');
   // React Query가 데이터를 로드할 때까지 추가 대기
@@ -31,389 +33,393 @@ async function navigateToCalibrationPage(page: Page) {
 }
 
 test.describe('교정 관리 페이지 - 데이터 표시', () => {
-  test.beforeEach(async ({ page }) => {
-    // 기술책임자로 로그인 (전체 데이터 접근 권한)
-    await loginAs(page, 'technical.manager@example.com', 'password123');
-  });
+  test('요약 통계 카드가 올바르게 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
-  test('요약 통계 카드가 올바르게 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
-
-    // 통계 카드 확인 (3개: 전체, 기한 초과, 30일 이내)
-    const statCards = page.locator('[data-testid="stat-card"], .grid > div > div.rounded-lg');
-    const cardCount = await statCards.count();
-
-    // 최소 3개의 통계 카드가 있어야 함
-    expect(cardCount).toBeGreaterThanOrEqual(3);
-
-    // 카드 내용 확인
-    const totalCard = page.locator('text=/전체 교정 장비|Total/i').first();
+    // 통계 카드 확인 (4개: 전체 교정 장비, 정상 장비, 교정 기한 초과, 30일 이내 교정 필요)
+    // 실제 UI: CalibrationContent.tsx → .grid.grid-cols-1.md:grid-cols-4 > Card
+    const totalCard = techManagerPage.locator('text=/전체 교정 장비/').first();
     await expect(totalCard).toBeVisible();
 
-    const overdueCard = page.locator('text=/기한 초과|Overdue/i').first();
+    const overdueCard = techManagerPage.locator('text=/교정 기한 초과/').first();
     await expect(overdueCard).toBeVisible();
 
-    const upcomingCard = page.locator('text=/30일 이내|Due Soon/i').first();
+    const upcomingCard = techManagerPage.locator('text=/30일 이내 교정 필요/').first();
     await expect(upcomingCard).toBeVisible();
   });
 
-  test('기한 초과 탭에 올바른 데이터가 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('기한 초과 탭에 올바른 데이터가 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
     // 기한 초과 탭 클릭
-    const overdueTab = page.locator('button[role="tab"]', { hasText: '기한 초과' });
+    const overdueTab = techManagerPage.locator('button[role="tab"]', { hasText: '기한 초과' });
     await overdueTab.click();
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
-    // 테이블 또는 리스트가 표시되는지 확인
-    const table = page.locator('table');
+    // 테이블 또는 빈 상태가 표시되는지 확인
+    const table = techManagerPage.locator('table');
     const isTableVisible = await table.isVisible();
 
     if (isTableVisible) {
-      // 테이블 헤더 확인
-      await expect(page.locator('th:has-text("장비명")')).toBeVisible();
-      await expect(page.locator('th:has-text("관리번호")')).toBeVisible();
-      await expect(page.locator('th:has-text("차기 교정일")')).toBeVisible();
+      // 테이블 헤더 확인 (실제 UI: 장비명, 관리번호, 팀, 교정일, 다음 교정일, 교정 기관, 상태, 관리)
+      await expect(techManagerPage.locator('th:has-text("장비명")')).toBeVisible();
+      await expect(techManagerPage.locator('th:has-text("관리번호")')).toBeVisible();
+      await expect(techManagerPage.locator('th:has-text("다음 교정일")')).toBeVisible();
     } else {
-      // 빈 상태 메시지 확인
-      const emptyMessage = page.locator('text=/기한이 초과된 장비가 없습니다|No overdue/i');
+      // 빈 상태 메시지 확인 (h3 태그로 특정)
+      const emptyMessage = techManagerPage.getByRole('heading', { name: /교정 정보가 없습니다/ });
       await expect(emptyMessage).toBeVisible();
     }
   });
 
-  test('30일 이내 예정 탭에 올바른 데이터가 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('30일 이내 예정 탭에 올바른 데이터가 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
     // 30일 이내 예정 탭 클릭
-    const upcomingTab = page.locator('button[role="tab"]', { hasText: '30일 이내 예정' });
+    const upcomingTab = techManagerPage.locator('button[role="tab"]', {
+      hasText: '30일 이내 예정',
+    });
     await upcomingTab.click();
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 테이블 또는 빈 상태 확인
-    const table = page.locator('table');
+    const table = techManagerPage.locator('table');
     const isTableVisible = await table.isVisible();
 
     if (isTableVisible) {
       // 데이터 행이 있는지 확인
-      const rows = page.locator('tbody tr');
+      const rows = techManagerPage.locator('tbody tr');
       const rowCount = await rows.count();
       expect(rowCount).toBeGreaterThanOrEqual(0);
     } else {
       // 빈 상태 메시지
-      const emptyMessage = page.locator('text=/30일 이내 교정 예정 장비가 없습니다/i');
+      const emptyMessage = techManagerPage.getByRole('heading', { name: /교정 정보가 없습니다/ });
       await expect(emptyMessage).toBeVisible();
     }
   });
 
-  test('중간점검 탭이 올바르게 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('중간점검 탭이 올바르게 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
-    // 중간점검 탭 클릭
-    const intermediateTab = page.locator('button[role="tab"]', { hasText: '중간점검' });
+    // 중간점검 탭 클릭 (탭 텍스트에 개수 포함: "중간점검 (N)")
+    const intermediateTab = techManagerPage.locator('button[role="tab"]', { hasText: '중간점검' });
     await intermediateTab.click();
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 중간점검 데이터 표시 확인
-    const hasTable = await page.locator('table').isVisible();
-    const hasEmptyState = await page
-      .locator('text=/중간점검 일정이 없습니다|No intermediate/i')
-      .isVisible();
+    const hasTable = await techManagerPage.locator('table').isVisible();
+    const hasEmptyState = await techManagerPage
+      .getByRole('heading', { name: /중간점검 일정이 없습니다/ })
+      .isVisible()
+      .catch(() => false);
 
     // 테이블 또는 빈 상태 중 하나는 반드시 표시되어야 함
     expect(hasTable || hasEmptyState).toBe(true);
   });
 
-  test('전체 탭에 모든 교정 이력이 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('전체 탭에 모든 교정 이력이 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
     // 전체 탭은 기본 선택됨
-    const allTab = page.locator('button[role="tab"]', { hasText: '전체' });
+    const allTab = techManagerPage.locator('button[role="tab"]', { hasText: '전체' });
     await expect(allTab).toHaveAttribute('data-state', 'active');
 
     // 테이블 확인
-    const table = page.locator('table');
+    const table = techManagerPage.locator('table');
     const isTableVisible = await table.isVisible();
 
     if (isTableVisible) {
       // 테이블 헤더 확인
-      await expect(page.locator('th:has-text("장비명")')).toBeVisible();
+      await expect(techManagerPage.locator('th:has-text("장비명")')).toBeVisible();
     } else {
       // 빈 상태
-      const emptyMessage = page.locator('text=/등록된 교정 정보가 없습니다/i');
+      const emptyMessage = techManagerPage.getByRole('heading', { name: /교정 정보가 없습니다/ });
       await expect(emptyMessage).toBeVisible();
     }
   });
 });
 
 test.describe('교정 관리 페이지 - 팀 필터', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'technical.manager@example.com', 'password123');
-  });
+  test('팀 필터 옵션이 동적으로 로드되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
-  test('팀 필터 옵션이 동적으로 로드되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
-
-    // 팀 필터 버튼 찾기
-    const teamFilterTrigger = page.locator('button:has-text("팀 필터")');
+    // 팀 필터 트리거 찾기 (shadcn Select → role="combobox", 기본값 "모든 팀")
+    const teamFilterTrigger = techManagerPage.getByRole('combobox');
     await teamFilterTrigger.click();
 
     // 드롭다운이 열렸는지 확인
-    const dropdown = page.locator('[role="listbox"], [role="menu"]');
+    const dropdown = techManagerPage.locator('[role="listbox"]');
     await expect(dropdown).toBeVisible();
 
     // "모든 팀" 옵션 확인
-    const allTeamsOption = page.locator('[role="option"]:has-text("모든 팀")');
+    const allTeamsOption = techManagerPage.locator('[role="option"]', { hasText: '모든 팀' });
     await expect(allTeamsOption).toBeVisible();
 
     // 동적으로 로드된 팀 옵션이 있는지 확인
-    const teamOptions = page.locator('[role="option"]');
+    const teamOptions = techManagerPage.locator('[role="option"]');
     const optionCount = await teamOptions.count();
 
     // 최소 "모든 팀" + 1개 이상의 팀이 있어야 함
     expect(optionCount).toBeGreaterThan(1);
 
-    console.log(`✅ 팀 필터 옵션 수: ${optionCount} (모든 팀 포함)`);
+    console.log(`팀 필터 옵션 수: ${optionCount} (모든 팀 포함)`);
   });
 
-  test('팀 필터를 선택하면 해당 팀의 장비만 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('팀 필터를 선택하면 해당 팀의 장비만 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
     // 팀 필터 열기
-    const teamFilterTrigger = page.locator('button:has-text("팀 필터")');
+    const teamFilterTrigger = techManagerPage.getByRole('combobox');
     await teamFilterTrigger.click();
 
     // 동적 팀 옵션 중 첫 번째 선택 (모든 팀 제외)
-    const teamOptions = page.locator('[role="option"]:not(:has-text("모든 팀"))');
-    const firstTeamOption = teamOptions.first();
+    const teamOptions = techManagerPage
+      .locator('[role="option"]')
+      .filter({ hasNotText: '모든 팀' });
+    const teamCount = await teamOptions.count();
 
     // 팀이 존재하면 선택
-    if ((await teamOptions.count()) > 0) {
+    if (teamCount > 0) {
+      const firstTeamOption = teamOptions.first();
       const teamName = await firstTeamOption.textContent();
       await firstTeamOption.click();
-      await page.waitForLoadState('networkidle');
+      await techManagerPage.waitForLoadState('networkidle');
 
-      console.log(`✅ 선택한 팀: ${teamName}`);
+      console.log(`선택한 팀: ${teamName}`);
 
       // 필터가 적용되었는지 확인 (테이블 또는 빈 상태)
-      const hasTable = await page.locator('table tbody tr').count();
-      const hasEmptyState = await page.locator('text=/교정 정보가 없습니다/i').isVisible();
+      const hasTable = (await techManagerPage.locator('table tbody tr').count()) > 0;
+      const hasEmptyState = await techManagerPage
+        .getByRole('heading', { name: /교정 정보가 없습니다/ })
+        .isVisible()
+        .catch(() => false);
 
       // 결과가 표시되거나 빈 상태가 표시되어야 함
-      expect(hasTable > 0 || hasEmptyState).toBe(true);
+      expect(hasTable || hasEmptyState).toBe(true);
     }
   });
 
-  test('"모든 팀" 옵션을 선택하면 전체 장비가 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('"모든 팀" 옵션을 선택하면 전체 장비가 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
+
+    const teamFilterTrigger = techManagerPage.getByRole('combobox');
 
     // 먼저 특정 팀 선택
-    const teamFilterTrigger = page.locator('button:has-text("팀 필터")');
     await teamFilterTrigger.click();
+    const teamOptions = techManagerPage
+      .locator('[role="option"]')
+      .filter({ hasNotText: '모든 팀' });
 
-    const teamOptions = page.locator('[role="option"]:not(:has-text("모든 팀"))');
     if ((await teamOptions.count()) > 0) {
       await teamOptions.first().click();
-      await page.waitForLoadState('networkidle');
+      await techManagerPage.waitForLoadState('networkidle');
 
       // 다시 팀 필터 열고 "모든 팀" 선택
       await teamFilterTrigger.click();
-      const allTeamsOption = page.locator('[role="option"]:has-text("모든 팀")');
+      const allTeamsOption = techManagerPage.locator('[role="option"]', { hasText: '모든 팀' });
       await allTeamsOption.click();
-      await page.waitForLoadState('networkidle');
+      await techManagerPage.waitForLoadState('networkidle');
 
       // 전체 데이터가 표시되어야 함
-      const table = page.locator('table');
+      const table = techManagerPage.locator('table');
       const isTableVisible = await table.isVisible();
 
       if (isTableVisible) {
-        console.log('✅ 모든 팀 필터 적용 - 전체 데이터 표시');
+        console.log('모든 팀 필터 적용 - 전체 데이터 표시');
       }
     }
   });
 });
 
 test.describe('교정 관리 페이지 - 검색 기능', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'technical.manager@example.com', 'password123');
-  });
+  test('장비명으로 검색이 가능해야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
-  test('장비명으로 검색이 가능해야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
-
-    // 검색 입력 필드 찾기
-    const searchInput = page.locator('input[placeholder*="검색"], input[type="search"]');
+    // 검색 입력 필드 찾기 (placeholder: "장비명, 관리번호 검색...")
+    const searchInput = techManagerPage.getByPlaceholder(/검색/);
     await expect(searchInput).toBeVisible();
 
     // 검색어 입력
     await searchInput.fill('Spectrum');
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 검색 결과 확인
-    const hasResults = (await page.locator('table tbody tr').count()) > 0;
-    const hasEmptyState = await page.locator('text=/교정 정보가 없습니다/i').isVisible();
+    const hasResults = (await techManagerPage.locator('table tbody tr').count()) > 0;
+    const hasEmptyState = await techManagerPage
+      .getByRole('heading', { name: /교정 정보가 없습니다/ })
+      .isVisible()
+      .catch(() => false);
 
     // 결과 또는 빈 상태가 표시되어야 함
     expect(hasResults || hasEmptyState).toBe(true);
 
     if (hasResults) {
-      console.log('✅ 장비명 검색 결과 표시됨');
+      console.log('장비명 검색 결과 표시됨');
     }
   });
 
-  test('관리번호로 검색이 가능해야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('관리번호로 검색이 가능해야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
-    const searchInput = page.locator('input[placeholder*="검색"], input[type="search"]');
+    const searchInput = techManagerPage.getByPlaceholder(/검색/);
     await expect(searchInput).toBeVisible();
 
     // 관리번호 형식으로 검색 (SUW-E0001 형식)
     await searchInput.fill('SUW');
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 검색 결과 확인
-    const hasResults = (await page.locator('table tbody tr').count()) > 0;
-    const hasEmptyState = await page.locator('text=/교정 정보가 없습니다/i').isVisible();
+    const hasResults = (await techManagerPage.locator('table tbody tr').count()) > 0;
+    const hasEmptyState = await techManagerPage
+      .getByRole('heading', { name: /교정 정보가 없습니다/ })
+      .isVisible()
+      .catch(() => false);
 
     expect(hasResults || hasEmptyState).toBe(true);
   });
 
-  test('검색어를 지우면 전체 목록이 다시 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('검색어를 지우면 전체 목록이 다시 표시되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
-    const searchInput = page.locator('input[placeholder*="검색"], input[type="search"]');
+    const searchInput = techManagerPage.getByPlaceholder(/검색/);
 
     // 검색어 입력
     await searchInput.fill('NonExistentEquipment');
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 검색어 지우기
     await searchInput.clear();
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 전체 목록 또는 빈 상태가 표시되어야 함
-    const hasTable = await page.locator('table').isVisible();
-    const hasEmptyState = await page.locator('text=/등록된 교정 정보가 없습니다/i').isVisible();
+    const hasTable = await techManagerPage.locator('table').isVisible();
+    const hasEmptyState = await techManagerPage
+      .getByRole('heading', { name: /교정 정보가 없습니다/ })
+      .isVisible()
+      .catch(() => false);
 
     expect(hasTable || hasEmptyState).toBe(true);
   });
 });
 
 test.describe('교정 관리 페이지 - 탭 전환', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'technical.manager@example.com', 'password123');
-  });
-
-  test('모든 탭이 접근 가능해야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('모든 탭이 접근 가능해야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
     // 4개의 탭 확인
     const tabs = ['전체', '기한 초과', '30일 이내 예정', '중간점검'];
 
     for (const tabName of tabs) {
-      const tab = page.locator(`button[role="tab"]:has-text("${tabName}")`);
+      const tab = techManagerPage.locator(`button[role="tab"]`).filter({ hasText: tabName });
       await expect(tab).toBeVisible();
       await expect(tab).toBeEnabled();
 
       // 탭 클릭
       await tab.click();
-      await page.waitForLoadState('networkidle');
+      await techManagerPage.waitForLoadState('networkidle');
 
       // 탭이 활성화되었는지 확인
       await expect(tab).toHaveAttribute('data-state', 'active');
 
-      console.log(`✅ ${tabName} 탭 전환 성공`);
+      console.log(`${tabName} 탭 전환 성공`);
     }
   });
 
-  test('탭 전환 시 데이터가 올바르게 로드되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('탭 전환 시 데이터가 올바르게 로드되어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
     // 전체 탭 -> 기한 초과 탭
-    const overdueTab = page.locator('button[role="tab"]:has-text("기한 초과")');
+    const overdueTab = techManagerPage
+      .locator('button[role="tab"]')
+      .filter({ hasText: '기한 초과' });
     await overdueTab.click();
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 데이터 또는 빈 상태 확인
-    const hasData1 = await page.locator('table tbody tr').count();
-    const hasEmpty1 = await page.locator('text=/기한이 초과된 장비가 없습니다/i').isVisible();
-    expect(hasData1 > 0 || hasEmpty1).toBe(true);
+    const hasData1 = (await techManagerPage.locator('table tbody tr').count()) > 0;
+    const hasEmpty1 = await techManagerPage
+      .getByRole('heading', { name: /교정 정보가 없습니다/ })
+      .isVisible()
+      .catch(() => false);
+    expect(hasData1 || hasEmpty1).toBe(true);
 
     // 30일 이내 예정 탭으로 전환
-    const upcomingTab = page.locator('button[role="tab"]:has-text("30일 이내 예정")');
+    const upcomingTab = techManagerPage
+      .locator('button[role="tab"]')
+      .filter({ hasText: '30일 이내 예정' });
     await upcomingTab.click();
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 데이터 또는 빈 상태 확인
-    const hasData2 = await page.locator('table tbody tr').count();
-    const hasEmpty2 = await page.locator('text=/30일 이내 교정 예정 장비가 없습니다/i').isVisible();
-    expect(hasData2 > 0 || hasEmpty2).toBe(true);
+    const hasData2 = (await techManagerPage.locator('table tbody tr').count()) > 0;
+    const hasEmpty2 = await techManagerPage
+      .getByRole('heading', { name: /교정 정보가 없습니다/ })
+      .isVisible()
+      .catch(() => false);
+    expect(hasData2 || hasEmpty2).toBe(true);
   });
 });
 
 test.describe('교정 관리 페이지 - 빈 상태 처리', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAs(page, 'test.engineer@example.com', 'password123');
-  });
-
-  test('데이터가 없을 때 적절한 빈 상태 메시지가 표시되어야 한다', async ({ page }) => {
-    await navigateToCalibrationPage(page);
+  test('데이터가 없을 때 적절한 빈 상태 메시지가 표시되어야 한다', async ({ testOperatorPage }) => {
+    await navigateToCalibrationPage(testOperatorPage);
 
     // 검색으로 빈 상태 유도
-    const searchInput = page.locator('input[placeholder*="검색"], input[type="search"]');
+    const searchInput = testOperatorPage.getByPlaceholder(/검색/);
     await searchInput.fill('ThisEquipmentDefinitelyDoesNotExist12345');
-    await page.waitForLoadState('networkidle');
+    await testOperatorPage.waitForLoadState('networkidle');
 
-    // 빈 상태 메시지 확인
-    const emptyMessage = page.locator('text=/교정 정보가 없습니다/i');
-    const isEmptyVisible = await emptyMessage.isVisible();
+    // 빈 상태 메시지 확인 (h3 태그로 특정하여 strict mode 방지)
+    const emptyMessage = testOperatorPage.getByRole('heading', { name: /교정 정보가 없습니다/ });
+    const isEmptyVisible = await emptyMessage.isVisible().catch(() => false);
 
     if (isEmptyVisible) {
-      console.log('✅ 빈 상태 메시지 표시됨');
+      console.log('빈 상태 메시지 표시됨');
     }
   });
 });
 
 test.describe('교정 관리 페이지 - 에러 처리', () => {
-  test('로딩 상태가 올바르게 표시되어야 한다', async ({ page }) => {
-    // 로그인
-    await loginAs(page, 'technical.manager@example.com', 'password123');
-
+  test('로딩 상태가 올바르게 표시되어야 한다', async ({ techManagerPage }) => {
     // 페이지 이동 (로딩 상태 관찰)
-    await page.goto('http://localhost:3000/calibration');
+    await techManagerPage.goto('/calibration');
 
     // 로딩 표시 확인 (빠르게 사라질 수 있음)
-    const loadingIndicator = page.locator('text=/불러오는 중|Loading/i');
-    // 로딩 표시가 나타났다가 사라져야 함 (빠를 수 있음)
-    await page.waitForLoadState('networkidle');
+    await techManagerPage.waitForLoadState('networkidle');
 
     // 최종적으로 콘텐츠가 표시되어야 함
-    const content = page.locator('table, text=/교정 정보가 없습니다/i');
-    await expect(content).toBeVisible({ timeout: 10000 });
+    // .or() 패턴으로 table 또는 빈 상태 heading 중 하나 확인
+    const table = techManagerPage.locator('table');
+    const emptyHeading = techManagerPage.getByRole('heading', { name: /교정 정보가 없습니다/ });
+    await expect(table.or(emptyHeading)).toBeVisible({ timeout: 10000 });
   });
 });
 
 test.describe('교정 관리 페이지 - 권한별 접근', () => {
-  test('시험실무자는 교정 관리 페이지에 접근할 수 있어야 한다', async ({ page }) => {
-    await loginAs(page, 'test.engineer@example.com', 'password123');
-    await navigateToCalibrationPage(page);
+  test('시험실무자는 교정 관리 페이지에 접근할 수 있어야 한다', async ({ testOperatorPage }) => {
+    await navigateToCalibrationPage(testOperatorPage);
 
     // 페이지 제목 확인
-    await expect(page.locator('h1, h2').filter({ hasText: /교정|Calibration/i })).toBeVisible();
+    await expect(
+      testOperatorPage.locator('h1, h2').filter({ hasText: /교정|Calibration/i })
+    ).toBeVisible();
   });
 
-  test('기술책임자는 교정 관리 페이지에 접근할 수 있어야 한다', async ({ page }) => {
-    await loginAs(page, 'technical.manager@example.com', 'password123');
-    await navigateToCalibrationPage(page);
+  test('기술책임자는 교정 관리 페이지에 접근할 수 있어야 한다', async ({ techManagerPage }) => {
+    await navigateToCalibrationPage(techManagerPage);
 
     // 페이지 제목 확인
-    await expect(page.locator('h1, h2').filter({ hasText: /교정|Calibration/i })).toBeVisible();
+    await expect(
+      techManagerPage.locator('h1, h2').filter({ hasText: /교정|Calibration/i })
+    ).toBeVisible();
   });
 
-  test('시험소장은 교정 관리 페이지에 접근할 수 있어야 한다', async ({ page }) => {
-    await loginAs(page, 'lab.manager@example.com', 'password123');
-    await navigateToCalibrationPage(page);
+  test('시험소장은 교정 관리 페이지에 접근할 수 있어야 한다', async ({ siteAdminPage }) => {
+    await navigateToCalibrationPage(siteAdminPage);
 
     // 페이지 제목 확인
-    await expect(page.locator('h1, h2').filter({ hasText: /교정|Calibration/i })).toBeVisible();
+    await expect(
+      siteAdminPage.locator('h1, h2').filter({ hasText: /교정|Calibration/i })
+    ).toBeVisible();
   });
 });

@@ -2,65 +2,103 @@
  * Playwright 글로벌 설정
  *
  * 테스트 실행 전 수행되는 설정:
- * 1. 테스트 환경 변수 확인
- * 2. 테스트 DB 연결 확인 (선택적)
+ * 1. .auth/ 디렉토리 생성 보장
+ * 2. Frontend / Backend health check (재시도 포함)
+ * 3. 테스트 시드 데이터 로딩
  */
 
 import { FullConfig } from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
+
+const AUTH_DIR = path.join(__dirname, '.auth');
+
+/**
+ * 서비스 health check (재시도 포함)
+ *
+ * @param url - Health check URL
+ * @param name - 서비스 이름 (로그용)
+ * @param maxRetries - 최대 재시도 횟수
+ * @param retryDelay - 재시도 간 대기 시간(ms)
+ * @param required - true면 실패 시 throw, false면 경고만
+ */
+async function checkHealth(
+  url: string,
+  name: string,
+  maxRetries: number,
+  retryDelay: number,
+  required: boolean
+): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000),
+      });
+      if (response.ok) {
+        console.log(`  ✅ ${name} 응답: ${response.status}`);
+        return true;
+      }
+      throw new Error(`Status: ${response.status}`);
+    } catch (error) {
+      if (attempt < maxRetries) {
+        console.warn(
+          `  ⏳ ${name} 연결 실패 (${attempt}/${maxRetries}), ${retryDelay}ms 후 재시도...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      } else if (required) {
+        console.error(`  ❌ ${name} 연결 불가 (${maxRetries}회 시도 실패)`);
+        console.error(`     URL: ${url}`);
+        throw new Error(
+          `${name} is not accessible after ${maxRetries} attempts. ` +
+            `Please start the service before running E2E tests.`
+        );
+      } else {
+        console.warn(`  ⚠️  ${name} 연결 불가 — 일부 테스트가 실패할 수 있습니다.`);
+        return false;
+      }
+    }
+  }
+  return false;
+}
 
 async function globalSetup(config: FullConfig) {
   console.log('\n🔧 Playwright 글로벌 설정 시작...');
 
-  // 테스트 환경 정보 출력
+  // 1. .auth 디렉토리 보장
+  if (!fs.existsSync(AUTH_DIR)) {
+    fs.mkdirSync(AUTH_DIR, { recursive: true });
+    console.log('  📁 .auth/ 디렉토리 생성됨');
+  }
+
+  // 2. 테스트 환경 정보
   const baseURL = config.projects[0]?.use?.baseURL || 'http://localhost:3000';
-  console.log(`📍 Base URL: ${baseURL}`);
-  console.log(`🌐 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
-
-  // 테스트 서버 상태 확인
-  try {
-    const response = await fetch(`${baseURL}/login`, { method: 'HEAD' });
-    console.log(`✅ Frontend 서버 응답: ${response.status}`);
-  } catch (error) {
-    console.warn('⚠️  Frontend 서버에 연결할 수 없습니다. webServer가 시작될 때까지 대기합니다.');
-  }
-
-  // 백엔드 API 상태 확인
   const apiURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  try {
-    // 백엔드 health endpoint는 /api/monitoring/health
-    const response = await fetch(`${apiURL}/api/monitoring/health`, { method: 'GET' });
-    if (response.ok) {
-      console.log(`✅ Backend API 응답: ${response.status}`);
-    } else {
-      console.warn(`⚠️  Backend API 응답: ${response.status}`);
-    }
-  } catch (error) {
-    console.warn('⚠️  Backend API에 연결할 수 없습니다.');
-    console.warn(`   URL: ${apiURL}/api/monitoring/health`);
-    console.warn('   로그인 테스트가 실패할 수 있습니다.');
-    console.warn('   백엔드를 시작하려면: pnpm --filter backend run dev');
-  }
+  console.log(`  📍 Frontend: ${baseURL}`);
+  console.log(`  📍 Backend: ${apiURL}`);
+  console.log(`  🌐 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 
-  // ✅ 근본적 해결책: 테스트 시드 데이터 자동 로드
-  // E2E 테스트 실행 전 반드시 test users가 DB에 존재해야 함
-  // Foreign key 제약 (equipmentRequests.requestedBy) 때문에 필수
-  console.log('🌱 테스트 시드 데이터 로딩 시작...');
+  // 3. Health checks (Backend 5회 재시도 — 필수, Frontend 3회 — 필수)
+  await checkHealth(`${apiURL}/api/monitoring/health`, 'Backend API', 5, 3000, true);
+  await checkHealth(`${baseURL}/login`, 'Frontend', 3, 2000, true);
+
+  // 4. 테스트 시드 데이터 로딩
+  console.log('  🌱 테스트 시드 데이터 로딩...');
   try {
     const { execSync } = await import('child_process');
     const seedScript = '../backend/src/database/seed-test-new.ts';
 
-    // Run seed script (uses development database connection from .env)
     execSync(`cd ../backend && npx ts-node ${seedScript}`, {
       stdio: 'inherit',
       env: { ...process.env, NODE_ENV: 'development' },
     });
-    console.log('✅ 테스트 시드 데이터 로딩 완료\n');
+    console.log('  ✅ 시드 데이터 로딩 완료');
   } catch (error) {
-    console.warn('⚠️  테스트 시드 데이터 로딩 실패');
+    console.warn('  ⚠️  시드 데이터 로딩 실패');
     console.warn(
-      '   수동으로 실행하세요: pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts'
+      '     수동 실행: pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts'
     );
-    console.warn('   테스트가 foreign key 오류로 실패할 수 있습니다.');
+    console.warn('     테스트가 foreign key 오류로 실패할 수 있습니다.');
   }
 
   console.log('🔧 글로벌 설정 완료\n');
