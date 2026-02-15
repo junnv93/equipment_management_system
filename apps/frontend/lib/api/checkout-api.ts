@@ -21,6 +21,7 @@ export interface CheckoutAvailableActions {
   canStart: boolean;
   canReturn: boolean;
   canApproveReturn: boolean;
+  canRejectReturn: boolean;
   canCancel: boolean;
   canSubmitConditionCheck: boolean;
 }
@@ -138,7 +139,6 @@ export interface CheckoutHistory extends Checkout {
 export interface CheckoutQuery {
   page?: number;
   pageSize?: number;
-  status?: string;
   statuses?: string;
   userId?: string;
   equipmentId?: string;
@@ -197,8 +197,13 @@ export interface ReturnCheckoutDto {
 
 export interface ApproveReturnDto {
   version: number; // ✅ Phase 1: Optimistic Locking
-  approverId?: string; // 승인자 UUID (선택, 미제공 시 현재 로그인 사용자)
   comment?: string; // 승인 코멘트
+  // ✅ Rule 2: approverId는 서버에서 req.user.userId로 추출
+}
+
+export interface RejectReturnDto {
+  version: number; // ✅ Phase 1: Optimistic Locking
+  reason: string; // 반려 사유 (필수)
 }
 
 export interface CheckoutSummary {
@@ -311,18 +316,12 @@ const checkoutApi = {
   /**
    * 반출 요청을 거부합니다.
    * ✅ Phase 1: Optimistic Locking - version 필수
-   * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
+   * ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 미전송)
    */
-  async rejectCheckout(
-    id: string,
-    version: number,
-    reason: string,
-    approverId?: string
-  ): Promise<Checkout> {
+  async rejectCheckout(id: string, version: number, reason: string): Promise<Checkout> {
     const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.REJECT(id), {
       version,
       reason,
-      approverId,
     });
     return transformSingleResponse<Checkout>(response);
   },
@@ -376,11 +375,22 @@ const checkoutApi = {
   },
 
   /**
+   * 반입을 반려합니다 (기술책임자).
+   * 상태: returned → checked_out (재검사/재반입 필요)
+   * ✅ Phase 1: Optimistic Locking - version은 data에 포함
+   * ✅ Rule 2: approverId는 서버에서 추출 (DTO에 미포함)
+   */
+  async rejectReturn(id: string, data: RejectReturnDto): Promise<Checkout> {
+    const response = await apiClient.patch(API_ENDPOINTS.CHECKOUTS.REJECT_RETURN(id), data);
+    return transformSingleResponse<Checkout>(response);
+  },
+
+  /**
    * 검사 완료된 반입 건 목록 조회 (기술책임자 승인 대기)
    * ✅ 공통 메서드 재사용: 중복 제거
    */
   async getPendingReturnApprovals(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
-    return this.getCheckouts({ ...query, status: 'returned' });
+    return this.getCheckouts({ ...query, statuses: 'returned' });
   },
 
   /**
@@ -406,7 +416,7 @@ const checkoutApi = {
    * ✅ 공통 메서드 재사용: 중복 제거
    */
   async getOverdueCheckouts(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
-    return this.getCheckouts({ ...query, status: 'overdue' });
+    return this.getCheckouts({ ...query, statuses: 'overdue' });
   },
 
   /**

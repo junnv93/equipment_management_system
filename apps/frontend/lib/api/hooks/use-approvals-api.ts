@@ -89,9 +89,10 @@ export function useApprovalsApi() {
       id: string,
       userId: string,
       reason?: string,
-      equipmentId?: string
+      equipmentId?: string,
+      originalData?: unknown
     ): Promise<void> => {
-      return approvalsApi.approve(category, id, userId, reason, equipmentId);
+      return approvalsApi.approve(category, id, userId, reason, equipmentId, originalData);
     },
     []
   );
@@ -105,9 +106,10 @@ export function useApprovalsApi() {
       id: string,
       userId: string,
       reason: string,
-      equipmentId?: string
+      equipmentId?: string,
+      originalData?: unknown
     ): Promise<void> => {
-      return approvalsApi.reject(category, id, userId, reason, equipmentId);
+      return approvalsApi.reject(category, id, userId, reason, equipmentId, originalData);
     },
     []
   );
@@ -119,9 +121,10 @@ export function useApprovalsApi() {
     async (
       category: ApprovalCategory,
       ids: string[],
-      userId: string
+      userId: string,
+      comment?: string
     ): Promise<BulkActionResult> => {
-      return approvalsApi.bulkApprove(category, ids, userId);
+      return approvalsApi.bulkApprove(category, ids, userId, comment);
     },
     []
   );

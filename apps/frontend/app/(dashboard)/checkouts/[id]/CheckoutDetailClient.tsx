@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { queryKeys } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import {
   CHECKOUT_APPROVAL_INVALIDATE_KEYS,
@@ -81,7 +82,7 @@ export default function CheckoutDetailClient({
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
   // invalidateQueries → 자동 refetch → UI 자동 갱신 (수동 동기화 불필요)
   const { data: checkout = initialCheckout } = useQuery({
-    queryKey: ['checkout', initialCheckout.id],
+    queryKey: queryKeys.checkouts.detail(initialCheckout.id),
     queryFn: () => checkoutApi.getCheckout(initialCheckout.id),
     placeholderData: initialCheckout,
     staleTime: 0,
@@ -115,7 +116,7 @@ export default function CheckoutDetailClient({
   // 승인 mutation (approverId는 백엔드에서 세션으로부터 자동 추출)
   const approveMutation = useOptimisticMutation<Checkout, void, Checkout>({
     mutationFn: () => checkoutApi.approveCheckout(checkout.id, checkout.version),
-    queryKey: ['checkout', checkout.id],
+    queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
@@ -135,7 +136,7 @@ export default function CheckoutDetailClient({
   const rejectMutation = useOptimisticMutation<Checkout, string, Checkout>({
     mutationFn: (reason: string) =>
       checkoutApi.rejectCheckout(checkout.id, checkout.version, reason),
-    queryKey: ['checkout', checkout.id],
+    queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old, reason): Checkout =>
       ({
         ...old,
@@ -167,7 +168,7 @@ export default function CheckoutDetailClient({
         conditions.length > 0 ? { itemConditions: conditions } : undefined
       );
     },
-    queryKey: ['checkout', checkout.id],
+    queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
@@ -175,7 +176,7 @@ export default function CheckoutDetailClient({
         checkoutDate: new Date().toISOString(),
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
-    invalidateKeys: [['checkouts']],
+    invalidateKeys: [queryKeys.checkouts.all],
     successMessage: '장비 반출이 시작되었습니다.',
     errorMessage: (error) => getErrorMessage(error, '반출을 시작할 수 없습니다.'),
     onSuccessCallback: () => {
@@ -189,7 +190,7 @@ export default function CheckoutDetailClient({
   // 반입 승인 mutation
   const approveReturnMutation = useOptimisticMutation<Checkout, void, Checkout>({
     mutationFn: () => checkoutApi.approveReturn(checkout.id, { version: checkout.version }),
-    queryKey: ['checkout', checkout.id],
+    queryKey: queryKeys.checkouts.detail(checkout.id),
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,

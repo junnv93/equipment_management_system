@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -52,15 +53,15 @@ export default function MaintenanceContent({
 
   // 점검 요약 정보 (초기 데이터 활용)
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['maintenance-summary'],
+    queryKey: queryKeys.maintenance.summary(),
     queryFn: () => maintenanceApi.getMaintenanceSummary(),
     placeholderData: initialSummary,
-    staleTime: 30 * 1000,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // 점검 목록 (초기 데이터 활용)
   const { data: maintenancesData, isLoading: maintenancesLoading } = useQuery({
-    queryKey: ['maintenances', currentTab, typeFilter, searchTerm],
+    queryKey: queryKeys.maintenance.list(currentTab, typeFilter, searchTerm),
     queryFn: async () => {
       const query: MaintenanceQuery = {
         pageSize: 100,
@@ -92,7 +93,7 @@ export default function MaintenanceContent({
     // ✅ 서버에서 가져온 초기 데이터 (currentTab이 'all'일 때만)
     placeholderData:
       currentTab === 'all' && typeFilter === 'all' && !searchTerm ? initialData : undefined,
-    staleTime: 30 * 1000,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // 점검 상태에 따른 배지 스타일

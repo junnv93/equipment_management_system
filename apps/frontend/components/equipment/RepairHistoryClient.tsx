@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -127,7 +128,7 @@ export function RepairHistoryClient({
 
   // 수리 이력 조회
   const { data: repairData, isLoading } = useQuery({
-    queryKey: ['repair-history', equipmentId],
+    queryKey: queryKeys.equipment.repairHistory(equipmentId),
     queryFn: () => getRepairHistoryByEquipment(equipmentId, { sort: 'repairDate.desc' }),
     enabled: !!equipmentId,
   });
@@ -153,7 +154,7 @@ export function RepairHistoryClient({
 
   // 열린 부적합 목록 조회 (수리 이력 연결용)
   const { data: openNonConformances } = useQuery({
-    queryKey: ['open-non-conformances', equipmentId],
+    queryKey: queryKeys.equipment.openNonConformances(equipmentId),
     queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
     select: (data) => {
       // ✅ 방어적 코드: data가 undefined이거나 data.data가 없을 경우 빈 배열 반환
@@ -174,11 +175,17 @@ export function RepairHistoryClient({
     mutationFn: (dto: CreateRepairHistoryDto) => createRepairHistory(equipmentId, dto),
     onSuccess: () => {
       toast({ title: '성공', description: '수리 이력이 등록되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['repair-history', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['non-conformances', 'equipment', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['open-non-conformances', equipmentId] });
       setIsCreateDialogOpen(false);
       form.reset(); // ✅ form.reset() 사용
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.repairHistory(equipmentId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.openNonConformances(equipmentId),
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -195,12 +202,18 @@ export function RepairHistoryClient({
       updateRepairHistory(params.uuid, params.dto),
     onSuccess: () => {
       toast({ title: '성공', description: '수리 이력이 수정되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['repair-history', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['non-conformances', 'equipment', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['open-non-conformances', equipmentId] });
       setIsEditDialogOpen(false);
       setSelectedRepair(null);
       form.reset(); // ✅ form.reset() 사용
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.repairHistory(equipmentId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.openNonConformances(equipmentId),
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -216,9 +229,11 @@ export function RepairHistoryClient({
     mutationFn: (uuid: string) => deleteRepairHistory(uuid),
     onSuccess: () => {
       toast({ title: '성공', description: '수리 이력이 삭제되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['repair-history', equipmentId] });
       setIsDeleteDialogOpen(false);
       setSelectedRepair(null);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.repairHistory(equipmentId) });
     },
     onError: (error: Error) => {
       toast({

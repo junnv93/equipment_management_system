@@ -21,7 +21,7 @@ interface BulkActionBarProps {
   selectedCount: number;
   totalCount: number;
   onSelectAll: () => void;
-  onBulkApprove: () => Promise<void>;
+  onBulkApprove: () => void | Promise<void>;
   onBulkReject: (reason: string) => Promise<void>;
   actionLabel: string;
 }

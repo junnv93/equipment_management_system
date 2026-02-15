@@ -8,6 +8,7 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { isNotFoundError } from '@/lib/api/error';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 interface EditTeamFormClientProps {
   teamId: string;
@@ -25,8 +26,9 @@ export function EditTeamFormClient({ teamId }: EditTeamFormClientProps) {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['team', teamId],
+    queryKey: queryKeys.teams.detail(teamId),
     queryFn: () => teamsApi.getTeam(teamId),
+    ...QUERY_CONFIG.TEAMS,
     retry: (failureCount, error) => {
       if (isNotFoundError(error)) return false;
       return failureCount < 3;

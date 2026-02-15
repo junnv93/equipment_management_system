@@ -45,6 +45,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
+import { queryKeys } from '@/lib/api/query-config';
 import calibrationApi, {
   type CreateCalibrationDto,
   type Calibration,
@@ -61,14 +62,14 @@ import {
   type CalibrationResult,
 } from '@equipment-management/schemas';
 
-// 교정 등록 스키마
+// 교정 등록 스키마 (calibrationCycle은 UI 계산용, API 전송하지 않음)
 const calibrationSchema = z.object({
   calibrationDate: z.string().min(1, '교정일을 입력하세요'),
   nextCalibrationDate: z.string().min(1, '다음 교정일을 입력하세요'),
   calibrationAgency: z.string().min(1, '교정 기관을 입력하세요').max(100),
   certificateNumber: z.string().min(1, '교정성적서 번호를 입력하세요').max(100),
   calibrationCycle: z.coerce.number().min(1, '교정 주기를 입력하세요 (최소 1개월)'),
-  calibrationResult: CalibrationResultEnum, // SSOT 적용
+  result: CalibrationResultEnum, // SSOT 적용 (lowercase: 'pass', 'fail', 'conditional')
   notes: z.string().optional(),
 });
 
@@ -78,18 +79,9 @@ interface CalibrationHistoryTabProps {
   equipment: Equipment;
 }
 
-// SSOT에서 import한 CALIBRATION_RESULT_LABELS, CALIBRATION_APPROVAL_STATUS_LABELS 사용
-// 기존 대문자 값과의 호환성을 위한 매핑 (레거시 데이터 지원)
-const LEGACY_RESULT_MAP: Record<string, CalibrationResult> = {
-  PASS: 'pass',
-  FAIL: 'fail',
-  CONDITIONAL: 'conditional',
-};
-
-// 결과값 라벨 가져오기 (레거시 대문자 값 호환)
+// 결과값 라벨 가져오기 (백엔드 정규화 완료 — lowercase만 수신)
 const getResultLabel = (result: string): string => {
-  const normalizedResult = LEGACY_RESULT_MAP[result] || result;
-  return CALIBRATION_RESULT_LABELS[normalizedResult as CalibrationResult] || result;
+  return CALIBRATION_RESULT_LABELS[result as CalibrationResult] || result;
 };
 
 /**
@@ -117,7 +109,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
       calibrationAgency: '',
       certificateNumber: '',
       calibrationCycle: 12,
-      calibrationResult: undefined,
+      result: undefined,
       notes: '',
     },
   });
@@ -128,7 +120,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
   // 교정 이력 조회
   // API Client에서 페이지네이션 응답 처리 완료 → 배열로 반환
   const { data: calibrations = [], isLoading } = useQuery({
-    queryKey: ['calibrations', 'equipment', equipmentId],
+    queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     queryFn: () => calibrationApi.getEquipmentCalibrations(equipmentId),
     enabled: !!equipmentId,
   });
@@ -164,8 +156,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
         nextCalibrationDate: data.nextCalibrationDate,
         calibrationAgency: data.calibrationAgency,
         certificateNumber: data.certificateNumber,
-        calibrationCycle: data.calibrationCycle,
-        calibrationResult: data.calibrationResult,
+        result: data.result,
         notes: data.notes || undefined,
       });
 
@@ -178,7 +169,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
       }
 
       // 3. 성공 처리
-      queryClient.invalidateQueries({ queryKey: ['calibrations', 'equipment', equipmentId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.byEquipment(equipmentId) });
       setIsDialogOpen(false);
       setCertificateFile(null);
       form.reset({
@@ -187,7 +178,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
         calibrationAgency: '',
         certificateNumber: '',
         calibrationCycle: 12,
-        calibrationResult: undefined,
+        result: undefined,
         notes: '',
       });
       toast({
@@ -338,7 +329,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
             />
             <FormField
               control={form.control}
-              name="calibrationResult"
+              name="result"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>교정 결과 *</FormLabel>
@@ -471,15 +462,14 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 <TableCell>
                   <Badge
                     variant={
-                      cal.calibrationResult === 'pass' || cal.calibrationResult === 'PASS'
+                      cal.result === 'pass'
                         ? 'default'
-                        : cal.calibrationResult === 'conditional' ||
-                            cal.calibrationResult === 'CONDITIONAL'
+                        : cal.result === 'conditional'
                           ? 'secondary'
                           : 'destructive'
                     }
                   >
-                    {getResultLabel(cal.calibrationResult)}
+                    {cal.result ? getResultLabel(cal.result) : '-'}
                   </Badge>
                 </TableCell>
                 <TableCell>

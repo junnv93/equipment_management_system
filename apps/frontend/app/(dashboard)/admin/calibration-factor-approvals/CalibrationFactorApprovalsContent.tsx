@@ -26,6 +26,7 @@ import calibrationFactorsApi, {
   APPROVAL_STATUS_LABELS,
   APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calculator, Calendar } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -41,7 +42,7 @@ export default function CalibrationFactorApprovalsContent() {
 
   // 승인 대기 보정계수 목록 조회
   const { data: pendingData, isLoading } = useQuery({
-    queryKey: ['calibration-factors-pending'],
+    queryKey: queryKeys.calibrationFactors.pending(),
     queryFn: () => calibrationFactorsApi.getPendingCalibrationFactors(),
   });
 
@@ -63,9 +64,6 @@ export default function CalibrationFactorApprovalsContent() {
         title: '승인 완료',
         description: '보정계수가 승인되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-factors-pending'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-factors'] });
-      queryClient.invalidateQueries({ queryKey: ['equipment-factors'] });
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedFactor(null);
@@ -76,6 +74,10 @@ export default function CalibrationFactorApprovalsContent() {
         description: getErrorMessage(error, '보정계수 승인 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.pending() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.all });
     },
   });
 
@@ -97,7 +99,6 @@ export default function CalibrationFactorApprovalsContent() {
         title: '반려 완료',
         description: '보정계수가 반려되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-factors-pending'] });
       setIsRejectDialogOpen(false);
       setSelectedFactor(null);
     },
@@ -107,6 +108,9 @@ export default function CalibrationFactorApprovalsContent() {
         description: getErrorMessage(error, '보정계수 반려 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.pending() });
     },
   });
 

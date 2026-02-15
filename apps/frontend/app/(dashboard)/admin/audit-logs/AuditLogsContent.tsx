@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { queryKeys } from '@/lib/api/query-config';
 import { auditApi, type AuditLogFilter } from '@/lib/api/audit-api';
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Search, RefreshCw, History, Filter } from 'lucide-react';
@@ -87,7 +88,7 @@ export default function AuditLogsContent() {
 
   // 감사 로그 목록 조회
   const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['audit-logs', filter],
+    queryKey: queryKeys.auditLogs.list(filter),
     queryFn: () => auditApi.getAuditLogs(filter),
   });
 

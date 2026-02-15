@@ -234,7 +234,7 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   // 알림
   // ========================================
-  '/alerts': {
+  '/notifications': {
     label: '알림',
     parent: '/',
     icon: Bell,
@@ -248,8 +248,24 @@ export const routeMap: Record<string, RouteMetadata> = {
     parent: '/',
     icon: Settings,
   },
+  '/settings/profile': {
+    label: '내 프로필',
+    parent: '/settings',
+  },
   '/settings/notifications': {
     label: '알림 설정',
+    parent: '/settings',
+  },
+  '/settings/display': {
+    label: '표시 설정',
+    parent: '/settings',
+  },
+  '/settings/admin/calibration': {
+    label: '교정 알림 설정',
+    parent: '/settings',
+  },
+  '/settings/admin/system': {
+    label: '시스템 설정',
     parent: '/settings',
   },
 

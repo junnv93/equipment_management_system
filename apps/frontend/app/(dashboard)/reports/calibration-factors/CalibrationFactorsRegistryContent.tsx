@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import calibrationFactorsApi, {
   FACTOR_TYPE_LABELS,
   type CalibrationFactorRegistry,
@@ -47,10 +48,10 @@ export default function CalibrationFactorsRegistryContent({
 
   // 보정계수 대장 조회 (초기 데이터 활용)
   const { data: registry, isLoading } = useQuery({
-    queryKey: ['calibration-factors-registry'],
+    queryKey: queryKeys.calibrationFactors.registry(),
     queryFn: () => calibrationFactorsApi.getCalibrationFactorRegistry(),
     placeholderData: initialData ?? undefined,
-    staleTime: 60 * 1000, // 1분
+    staleTime: CACHE_TIMES.MEDIUM,
   });
 
   const toggleEquipment = (equipmentId: string) => {

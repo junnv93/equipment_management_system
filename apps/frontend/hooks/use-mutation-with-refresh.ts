@@ -5,8 +5,8 @@ import { useQueryClient, useMutation, UseMutationOptions } from '@tanstack/react
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 
-interface MutationWithRefreshOptions<TData, TVariables, TContext> extends
-  Omit<UseMutationOptions<TData, Error, TVariables, TContext>, 'onSuccess' | 'onError'> {
+interface MutationWithRefreshOptions<TData, TVariables, TContext>
+  extends Omit<UseMutationOptions<TData, Error, TVariables, TContext>, 'onSuccess' | 'onError'> {
   /**
    * 성공 시 무효화할 쿼리 키 목록
    */
@@ -62,11 +62,7 @@ interface MutationWithRefreshOptions<TData, TVariables, TContext> extends
  * });
  * ```
  */
-export function useMutationWithRefresh<
-  TData = unknown,
-  TVariables = void,
-  TContext = unknown,
->({
+export function useMutationWithRefresh<TData = unknown, TVariables = void, TContext = unknown>({
   invalidateKeys = [],
   refreshServerCache = false,
   successMessage,
@@ -82,30 +78,12 @@ export function useMutationWithRefresh<
   return useMutation<TData, Error, TVariables, TContext>({
     ...mutationOptions,
     onSuccess: async (data, variables, context) => {
-      // 1. 클라이언트 캐시 무효화 및 즉시 refetch
-      // 중요: refreshServerCache와 관계없이 React Query 캐시는 무효화해야 함
-      // invalidateQueries + refetchQueries 조합으로 확실한 UI 갱신 보장
-      if (invalidateKeys.length > 0) {
-        // 먼저 캐시 무효화 (stale로 표시)
-        await Promise.all(
-          invalidateKeys.map((key) =>
-            queryClient.invalidateQueries({ queryKey: key })
-          )
-        );
-        // 그 다음 활성 쿼리 refetch (type 옵션 없이 모든 매칭 쿼리 refetch)
-        await Promise.all(
-          invalidateKeys.map((key) =>
-            queryClient.refetchQueries({ queryKey: key })
-          )
-        );
-      }
-
-      // 2. Server Component 캐시 갱신 (Router Cache 무효화)
+      // 1. Server Component 캐시 갱신 (Router Cache 무효화)
       if (refreshServerCache) {
         router.refresh();
       }
 
-      // 3. 성공 토스트
+      // 2. 성공 토스트
       if (successMessage) {
         toast({
           title: successMessage.title,
@@ -113,7 +91,7 @@ export function useMutationWithRefresh<
         });
       }
 
-      // 4. 추가 콜백
+      // 3. 추가 콜백
       onSuccessCallback?.(data, variables, context);
     },
     onError: (error, variables, context) => {
@@ -130,6 +108,14 @@ export function useMutationWithRefresh<
 
       // 추가 콜백
       onErrorCallback?.(error, variables, context);
+    },
+    onSettled: async () => {
+      // 클라이언트 캐시 무효화 — 항상 실행 (성공/실패 무관)
+      if (invalidateKeys.length > 0) {
+        await Promise.all(
+          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
+        );
+      }
     },
   });
 }

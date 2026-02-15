@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, usePathname } from 'next/navigation';
 import equipmentApi from '@/lib/api/equipment-api';
 import { extractDynamicParams, normalizeDynamicRoute } from './route-metadata';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 /**
  * 동적 라우트의 커스텀 라벨을 가져오는 훅
@@ -36,7 +37,7 @@ export function useDynamicBreadcrumbLabels(): Record<string, string> | undefined
 
   // 장비 상세 페이지
   const { data: equipmentLabel } = useQuery({
-    queryKey: ['breadcrumb-equipment', dynamicParams.id],
+    queryKey: queryKeys.breadcrumbs.equipment(dynamicParams.id),
     queryFn: async () => {
       if (!dynamicParams.id) return null;
 
@@ -52,8 +53,8 @@ export function useDynamicBreadcrumbLabels(): Record<string, string> | undefined
       }
     },
     enabled: isDynamic && normalizedRoute.includes('/equipment/[id]'),
-    staleTime: 5 * 60 * 1000, // 5분 캐싱
-    gcTime: 10 * 60 * 1000, // 10분 가비지 컬렉션 (이전 cacheTime)
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
   });
 
   // 팀 상세 페이지 (필요시 추가)
@@ -120,7 +121,7 @@ export function useBreadcrumbLabel<T>(
   labelExtractor: (data: T) => string
 ): string | undefined {
   const { data } = useQuery({
-    queryKey: ['breadcrumb', resourceType, resourceId],
+    queryKey: queryKeys.breadcrumbs.resource(resourceType, resourceId),
     queryFn: async () => {
       try {
         const data = await fetchFn();
@@ -131,8 +132,8 @@ export function useBreadcrumbLabel<T>(
       }
     },
     enabled: !!resourceId,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
   });
 
   return data;
@@ -148,9 +149,7 @@ export function useBreadcrumbLabel<T>(
  * const equipmentName = useEquipmentBreadcrumbLabel('abc-123');
  * // "디지털 멀티미터 DMM-2000"
  */
-export function useEquipmentBreadcrumbLabel(
-  equipmentId: string | undefined
-): string | undefined {
+export function useEquipmentBreadcrumbLabel(equipmentId: string | undefined): string | undefined {
   return useBreadcrumbLabel(
     'equipment',
     equipmentId,

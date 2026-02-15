@@ -9,7 +9,7 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { clearTokenCache } from '@/lib/api/api-client';
 
 export function useAuth() {
@@ -72,18 +72,7 @@ export function useAuth() {
     router.refresh();
   }, [router]);
 
-  // 세션 만료 이벤트 핸들러 (api-client에서 발생)
-  useEffect(() => {
-    const handleSessionExpired = () => {
-      clearTokenCache();
-      signOut({ redirect: false });
-    };
-
-    window.addEventListener('auth:session-expired', handleSessionExpired);
-    return () => {
-      window.removeEventListener('auth:session-expired', handleSessionExpired);
-    };
-  }, []);
+  // auth:session-expired 핸들러는 AuthSync(providers.tsx)가 SSOT로 처리
 
   return {
     session,

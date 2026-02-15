@@ -2,7 +2,6 @@ import { apiClient } from './api-client';
 import type { PaginatedResponse } from './types';
 import { transformArrayResponse } from './utils/response-transformers';
 import type {
-  CalibrationResult,
   CalibrationApprovalStatus,
   CalibrationRegisteredByRole,
 } from '@equipment-management/schemas';
@@ -11,13 +10,15 @@ import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 export interface Calibration {
   id: string;
   equipmentId: string;
+  calibrationManagerId?: string;
   calibrationDate: string;
   nextCalibrationDate: string;
+  status?: string;
   calibrationAgency: string;
-  calibrationCycle: number;
-  certificateNumber?: string; // 교정성적서 번호
-  certificatePath?: string; // 교정성적서 파일 경로
-  calibrationResult: CalibrationResult | 'PASS' | 'FAIL' | 'CONDITIONAL'; // SSOT + 레거시 지원
+  certificateNumber?: string;
+  certificatePath?: string;
+  result?: string; // lowercase: 'pass', 'fail', 'conditional'
+  cost?: number;
   notes?: string;
   // 승인 프로세스 필드
   approvalStatus?: CalibrationApprovalStatus;
@@ -32,6 +33,12 @@ export interface Calibration {
   version: number;
   createdAt: string;
   updatedAt: string;
+  // 조인 필드 (목록 조회 시)
+  equipmentName?: string;
+  managementNumber?: string;
+  team?: string;
+  teamId?: string;
+  teamName?: string;
 }
 
 export interface CalibrationHistory {
@@ -43,9 +50,11 @@ export interface CalibrationHistory {
   nextCalibrationDate: string;
   calibrationAgency: string;
   certificateNumber?: string;
-  calibrationResult: CalibrationResult | 'PASS' | 'FAIL' | 'CONDITIONAL';
+  result?: string; // lowercase: 'pass', 'fail', 'conditional'
+  notes?: string;
   team?: string;
-  teamId?: string; // ✅ Team ID for filtering
+  teamId?: string;
+  teamName?: string;
   approvalStatus?: CalibrationApprovalStatus;
   registeredByRole?: CalibrationRegisteredByRole;
   createdAt: string;
@@ -61,6 +70,8 @@ export interface CalibrationQuery {
   page?: number;
   pageSize?: number;
   approvalStatus?: string;
+  teamId?: string;
+  site?: string;
 }
 
 export interface CreateCalibrationDto {
@@ -68,10 +79,11 @@ export interface CreateCalibrationDto {
   calibrationDate: string;
   nextCalibrationDate: string;
   calibrationAgency: string;
-  certificateNumber?: string; // 교정성적서 번호
-  calibrationCycle: number;
-  calibrationResult: CalibrationResult;
+  certificateNumber?: string;
+  result?: string; // lowercase: 'pass', 'fail', 'conditional'
   notes?: string;
+  cost?: number;
+  calibrationManagerId?: string;
   // 승인 프로세스 필드
   registeredBy?: string;
   registeredByRole?: CalibrationRegisteredByRole;
@@ -82,14 +94,12 @@ export interface CreateCalibrationDto {
 export interface UpdateCalibrationDto extends Partial<CreateCalibrationDto> {}
 
 export interface ApproveCalibrationDto {
-  version: number; // ✅ Optimistic locking
-  approverId: string;
-  approverComment: string;
+  version: number;
+  approverComment?: string;
 }
 
 export interface RejectCalibrationDto {
-  version: number; // ✅ Optimistic locking
-  approverId: string;
+  version: number;
   rejectionReason: string;
 }
 
@@ -172,20 +182,42 @@ const calibrationApi = {
   },
 
   // 교정 요약 통계
-  getCalibrationSummary: async (): Promise<CalibrationSummary> => {
-    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.SUMMARY);
+  getCalibrationSummary: async (teamId?: string, site?: string): Promise<CalibrationSummary> => {
+    const params = new URLSearchParams();
+    if (teamId) params.set('teamId', teamId);
+    if (site) params.set('site', site);
+    const qs = params.toString();
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.CALIBRATIONS.SUMMARY}${qs ? `?${qs}` : ''}`
+    );
     return response.data;
   },
 
   // 교정 기한 초과 장비
-  getOverdueCalibrations: async (): Promise<CalibrationHistory[]> => {
-    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.OVERDUE);
+  getOverdueCalibrations: async (teamId?: string, site?: string): Promise<CalibrationHistory[]> => {
+    const params = new URLSearchParams();
+    if (teamId) params.set('teamId', teamId);
+    if (site) params.set('site', site);
+    const qs = params.toString();
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.CALIBRATIONS.OVERDUE}${qs ? `?${qs}` : ''}`
+    );
     return response.data;
   },
 
   // 곧 교정이 필요한 장비
-  getUpcomingCalibrations: async (days: number = 30): Promise<CalibrationHistory[]> => {
-    const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.UPCOMING(days));
+  getUpcomingCalibrations: async (
+    days: number = 30,
+    teamId?: string,
+    site?: string
+  ): Promise<CalibrationHistory[]> => {
+    const params = new URLSearchParams();
+    if (teamId) params.set('teamId', teamId);
+    if (site) params.set('site', site);
+    const qs = params.toString();
+    const baseUrl = API_ENDPOINTS.CALIBRATIONS.UPCOMING(days);
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    const response = await apiClient.get(`${baseUrl}${qs ? `${separator}${qs}` : ''}`);
     return response.data;
   },
 

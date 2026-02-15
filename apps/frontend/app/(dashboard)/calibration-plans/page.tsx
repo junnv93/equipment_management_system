@@ -3,49 +3,89 @@
  *
  * ✅ Next.js 16 Best Practice:
  * - Server Component에서 초기 데이터 fetch
+ * - Suspense + ClientOnly wrapper로 hydration mismatch 방지
  * - Client Component에 initialData 전달
  * - FCP 개선 및 SEO 최적화
  *
+ * ✅ SSOT 패턴 (2026-02-14)
+ * - calibration-plans-filter-utils.ts에서 모든 필터 파싱/변환
+ * - calibration-plans-api-server.ts로 서버 사이드 fetch 중앙화
+ *
+ * ✅ 역할별 기본 필터 (2026-02-15)
+ * - technical_manager: 자기 팀만 조회 (site + teamId 필터)
+ * - quality_manager, lab_manager: site 필터만 (전체 팀 조회 가능)
+ * - system_admin: 필터 미적용 (전체 조회)
+ *
  * 비즈니스 로직:
  * - 연간 외부교정 대상 장비의 교정 계획을 관리
- * - 연도/시험소/상태별 필터링 지원
+ * - 연도/시험소/팀/상태별 필터링 지원
  */
 
-import { createServerApiClient } from '@/lib/api/server-api-client';
-import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
+import { Suspense } from 'react';
+import { redirect } from 'next/navigation';
+import {
+  parseCalibrationPlansFiltersFromSearchParams,
+  convertFiltersToApiParams,
+} from '@/lib/utils/calibration-plans-filter-utils';
+import * as calibrationPlansApiServer from '@/lib/api/calibration-plans-api-server';
 import CalibrationPlansContent from './CalibrationPlansContent';
-import type { CalibrationPlan } from '@/lib/api/calibration-plans-api';
+import { getServerAuthSession } from '@/lib/auth/server-session';
+import { buildRoleBasedRedirectUrl } from '@/lib/utils/role-filter-utils';
+import { ClientOnly } from '@/components/shared/ClientOnly';
+import { ListPageSkeleton } from '@/components/ui/list-page-skeleton';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
+/**
+ * 로딩 폴백 (ListPageSkeleton 사용)
+ */
+function CalibrationPlansLoadingFallback() {
+  return (
+    <ListPageSkeleton
+      title="교정계획서"
+      description="연간 외부교정 대상 장비의 교정 계획을 관리합니다"
+      showFilters={true}
+      filterCount={4}
+      showSearch={false}
+      gridCols={{ base: 1 }}
+      cardCount={8}
+      showActionButton={true}
+    />
+  );
+}
+
 export default async function CalibrationPlansPage(props: PageProps) {
   const searchParams = await props.searchParams;
 
-  // URL 쿼리 파라미터에서 필터 값 추출
-  const currentYear = new Date().getFullYear();
-  const year = typeof searchParams?.year === 'string' ? searchParams.year : String(currentYear);
-  const siteId = typeof searchParams?.siteId === 'string' ? searchParams.siteId : undefined;
-  const status = typeof searchParams?.status === 'string' ? searchParams.status : undefined;
+  // 1️⃣ 역할별 기본 필터 적용 (서버 사이드 redirect)
+  const session = await getServerAuthSession();
+  if (session?.user) {
+    const redirectUrl = buildRoleBasedRedirectUrl('/calibration-plans', searchParams, session.user);
+    if (redirectUrl) redirect(redirectUrl);
+  }
 
-  // ✅ Server-side 데이터 fetch
-  const apiClient = await createServerApiClient();
+  // 2️⃣ 필터 파싱 (SSOT)
+  const uiFilters = parseCalibrationPlansFiltersFromSearchParams(searchParams);
+  const apiFilters = convertFiltersToApiParams(uiFilters);
 
-  // 쿼리 파라미터 구성
-  const params = new URLSearchParams();
-  if (year && year !== 'all') params.append('year', year);
-  if (siteId && siteId !== 'all') params.append('siteId', siteId);
-  if (status && status !== 'all') params.append('status', status);
-
+  // 3️⃣ 초기 데이터 서버 fetch (FCP 최적화)
   let initialData;
   try {
-    const response = await apiClient.get(`/api/calibration-plans?${params.toString()}`);
-    initialData = transformPaginatedResponse<CalibrationPlan>(response);
+    initialData = await calibrationPlansApiServer.getCalibrationPlansList(apiFilters);
   } catch (error) {
     // 에러 발생 시 빈 데이터로 시작 (Client에서 재시도)
-    console.error('[CalibrationPlansPage] Initial fetch error:', error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error(
+        '[CalibrationPlansPage] Server-side fetch 실패\n' +
+          `Query: ${JSON.stringify(apiFilters, null, 2)}\n` +
+          `Error: ${error instanceof Error ? error.message : String(error)}`
+      );
+    } else {
+      console.error('Failed to fetch initial calibration plans:', error);
+    }
     initialData = {
       data: [],
       meta: {
@@ -60,11 +100,10 @@ export default async function CalibrationPlansPage(props: PageProps) {
   }
 
   return (
-    <CalibrationPlansContent
-      initialData={initialData}
-      initialYear={year}
-      initialSite={siteId ?? 'all'}
-      initialStatus={status ?? 'all'}
-    />
+    <Suspense fallback={<CalibrationPlansLoadingFallback />}>
+      <ClientOnly fallback={<CalibrationPlansLoadingFallback />}>
+        <CalibrationPlansContent initialData={initialData} initialFilters={uiFilters} />
+      </ClientOnly>
+    </Suspense>
   );
 }

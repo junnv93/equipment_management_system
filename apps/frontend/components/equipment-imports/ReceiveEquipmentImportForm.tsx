@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
@@ -90,7 +91,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
   ]);
 
   const { data: equipmentImport, isLoading } = useQuery({
-    queryKey: ['equipment-import', id],
+    queryKey: queryKeys.equipmentImports.detail(id),
     queryFn: () => equipmentImportApi.getOne(id),
   });
 
@@ -124,8 +125,10 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
         title: '수령 확인이 완료되었습니다.',
         description: '장비가 자동으로 등록되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
       router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(id));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
     },
     onError: (error) => {
       toast({

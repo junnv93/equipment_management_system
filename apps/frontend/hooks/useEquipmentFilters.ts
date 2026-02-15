@@ -122,33 +122,76 @@ export function useEquipmentFilters() {
   }, [searchParams]);
 
   // URL 업데이트 함수
+  // ✅ 무한 리다이렉트 방지: "_all" 센티널 값으로 "첫 방문"과 "전체 선택" 구분
   const updateURL = useCallback(
     (newFilters: Partial<EquipmentFilters>) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const currentFilters = { ...filters }; // 현재 필터 상태
+      const updatedFilters = { ...currentFilters, ...newFilters }; // 병합
+      const params = new URLSearchParams();
 
-      // 변경된 필터만 업데이트
-      Object.entries(newFilters).forEach(([key, value]) => {
-        // sortOrder는 sortBy가 기본값이 아닐 때 항상 유지
-        const isSortOrder = key === 'sortOrder';
-        const hasSortBy = params.has('sortBy') || newFilters.sortBy;
-        const sortByIsNotDefault =
-          hasSortBy && (newFilters.sortBy || params.get('sortBy')) !== DEFAULT_FILTERS.sortBy;
+      // 검색어 (빈 문자열이 아닐 때만)
+      if (updatedFilters.search && updatedFilters.search !== DEFAULT_FILTERS.search) {
+        params.set('search', updatedFilters.search);
+      }
 
-        if (isSortOrder && sortByIsNotDefault) {
-          // sortBy가 기본값이 아니면 sortOrder 항상 유지
-          params.set(key, String(value));
-        } else if (value === '' || value === DEFAULT_FILTERS[key as keyof EquipmentFilters]) {
-          params.delete(key);
-        } else {
-          params.set(key, String(value));
-        }
-      });
+      // ✅ site: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
+      if ('site' in newFilters || updatedFilters.site) {
+        params.set('site', updatedFilters.site || '_all');
+      }
+
+      // ✅ status: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
+      if ('status' in newFilters || updatedFilters.status) {
+        params.set('status', updatedFilters.status || '_all');
+      }
+
+      // ✅ calibrationMethod: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
+      if ('calibrationMethod' in newFilters || updatedFilters.calibrationMethod) {
+        params.set('calibrationMethod', updatedFilters.calibrationMethod || '_all');
+      }
+
+      // ✅ classification: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
+      if ('classification' in newFilters || updatedFilters.classification) {
+        params.set('classification', updatedFilters.classification || '_all');
+      }
+
+      // ✅ teamId: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
+      if ('teamId' in newFilters || updatedFilters.teamId) {
+        params.set('teamId', updatedFilters.teamId || '_all');
+      }
+
+      // isShared (기본값 'all'이 아닐 때만)
+      if (updatedFilters.isShared !== 'all') {
+        params.set('isShared', updatedFilters.isShared);
+      }
+
+      // calibrationDueFilter (기본값 'all'이 아닐 때만)
+      if (updatedFilters.calibrationDueFilter !== 'all') {
+        params.set('calibrationDueFilter', updatedFilters.calibrationDueFilter);
+      }
+
+      // sortBy (기본값이 아닐 때만)
+      if (updatedFilters.sortBy !== DEFAULT_FILTERS.sortBy) {
+        params.set('sortBy', updatedFilters.sortBy);
+        // sortBy가 있으면 sortOrder도 항상 포함
+        params.set('sortOrder', updatedFilters.sortOrder);
+      }
+
+      // page (1이 아닐 때만)
+      if (updatedFilters.page !== 1) {
+        params.set('page', String(updatedFilters.page));
+      }
+
+      // pageSize (기본값이 아닐 때만)
+      if (updatedFilters.pageSize !== DEFAULT_FILTERS.pageSize) {
+        params.set('pageSize', String(updatedFilters.pageSize));
+      }
 
       // URL 업데이트 (shallow routing)
-      const newURL = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      const queryString = params.toString();
+      const newURL = queryString ? `${pathname}?${queryString}` : pathname;
       router.push(newURL, { scroll: false });
     },
-    [searchParams, pathname, router]
+    [searchParams, pathname, router, filters]
   );
 
   // 개별 필터 업데이트

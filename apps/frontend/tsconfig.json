@@ -22,6 +22,7 @@
     "paths": {
       "@/*": ["./*"],
       "@equipment-management/schemas": ["../../packages/schemas/src/index.ts"],
+      "@equipment-management/shared-constants": ["../../packages/shared-constants/src/index.ts"],
       "@equipment-management/db": ["../../packages/db/src/index.ts"],
       "@equipment-management/db/*": ["../../packages/db/src/*"]
     }

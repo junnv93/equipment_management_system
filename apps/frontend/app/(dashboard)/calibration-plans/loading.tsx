@@ -1,46 +1,24 @@
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ListPageSkeleton } from '@/components/ui/list-page-skeleton';
 
 /**
- * 교정계획서 라우트 로딩 UI
+ * 교정 계획 페이지 로딩 상태
  *
- * Next.js 16 패턴:
- * - Next.js가 자동으로 Suspense 경계 생성
- * - calibration-plans/* 하위 모든 라우트에서 공유
+ * ListPageSkeleton 공통 컴포넌트 사용
+ * - 필터: year + siteId + status (3개)
+ * - 그리드: 1열 전체 (테이블 레이아웃)
+ * - 카드: 8개 (연간 계획 목록)
  */
 export default function CalibrationPlansLoading() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* 헤더 스켈레톤 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-10 w-10 rounded" />
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-40" />
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-28" />
-        </div>
-      </div>
-
-      {/* 메인 카드 스켈레톤 */}
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-36" />
-          <Skeleton className="h-4 w-48" />
-        </CardHeader>
-        <CardContent>
-          {/* 테이블 헤더 */}
-          <Skeleton className="h-10 w-full mb-2" />
-          {/* 테이블 행들 */}
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-14 w-full mb-2" />
-          ))}
-        </CardContent>
-      </Card>
-    </div>
+    <ListPageSkeleton
+      title="교정 계획"
+      description="연간 교정 계획을 수립하고 관리합니다"
+      showFilters={true}
+      filterCount={3}
+      showSearch={false}
+      gridCols={{ base: 1 }}
+      cardCount={8}
+      showActionButton={true}
+    />
   );
 }

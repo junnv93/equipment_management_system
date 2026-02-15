@@ -39,15 +39,10 @@ import { ApiError } from '@/lib/errors/equipment-errors';
 export interface CalibrationRecord {
   id: string;
   calibrationDate: string | Date;
-  completionDate?: string | Date;
   nextCalibrationDate?: string | Date;
-  agencyName?: string;
-  calibrationAgency?: string; // API 응답 호환
+  calibrationAgency?: string;
   certificateNumber?: string;
-  certificationNumber?: string; // API 응답 호환
-  result?: string;
-  calibrationResult?: 'PASS' | 'FAIL' | 'CONDITIONAL'; // API 응답 호환
-  isPassed?: boolean | null; // 교정 결과: true=적합, false=부적합, null=미완료
+  result?: string; // lowercase: 'pass', 'fail', 'conditional'
   status: string;
   approvalStatus?: string;
 }
@@ -58,7 +53,7 @@ export interface CreateCalibrationHistoryInput {
   nextCalibrationDate: string;
   calibrationAgency: string;
   calibrationCycle: number;
-  calibrationResult: 'PASS' | 'FAIL' | 'CONDITIONAL';
+  result: 'pass' | 'fail' | 'conditional';
   notes?: string;
 }
 
@@ -98,35 +93,24 @@ const APPROVAL_STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
-// 교정 결과 라벨 및 색상
+// 교정 결과 라벨 및 색상 (SSOT: DB 값 pass/fail/conditional 직접 매핑)
 const RESULT_LABELS: Record<string, string> = {
-  passed: '적합',
-  failed: '부적합',
-  pending: '-',
+  pass: '적합',
+  fail: '부적합',
+  conditional: '조건부 적합',
 };
 
 const RESULT_COLORS: Record<string, string> = {
-  passed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  pending: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  pass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  fail: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  conditional: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
 };
 
-// 교정 결과 키 계산 함수
-const getResultKey = (record: CalibrationRecord): string => {
-  // isPassed 필드가 있으면 사용
-  if (record.isPassed === true) return 'passed';
-  if (record.isPassed === false) return 'failed';
-  // calibrationResult 필드가 있으면 사용
-  if (record.calibrationResult === 'PASS') return 'passed';
-  if (record.calibrationResult === 'FAIL') return 'failed';
-  return 'pending';
-};
-
-// 교정 결과 옵션
+// 교정 결과 옵션 (lowercase — 백엔드 Zod 스키마 SSOT)
 const CALIBRATION_RESULT_OPTIONS = [
-  { value: 'PASS', label: '적합 (PASS)' },
-  { value: 'FAIL', label: '부적합 (FAIL)' },
-  { value: 'CONDITIONAL', label: '조건부 적합' },
+  { value: 'pass', label: '적합' },
+  { value: 'fail', label: '부적합' },
+  { value: 'conditional', label: '조건부 적합' },
 ];
 
 export function CalibrationHistorySection({
@@ -145,7 +129,7 @@ export function CalibrationHistorySection({
     nextCalibrationDate: formatDate(addMonths(new Date(), 12), 'yyyy-MM-dd'),
     calibrationAgency: '',
     calibrationCycle: 12,
-    calibrationResult: 'PASS',
+    result: 'pass',
     notes: '',
   });
   // 에러 상태 관리
@@ -158,7 +142,7 @@ export function CalibrationHistorySection({
       nextCalibrationDate: formatDate(addMonths(new Date(), 12), 'yyyy-MM-dd'),
       calibrationAgency: '',
       calibrationCycle: 12,
-      calibrationResult: 'PASS',
+      result: 'pass',
       notes: '',
     });
     // 에러 상태 초기화
@@ -332,19 +316,21 @@ export function CalibrationHistorySection({
             </TableHeader>
             <TableBody>
               {history.map((item) => {
-                const resultKey = getResultKey(item);
-                const agencyName = item.agencyName || item.calibrationAgency;
+                const resultKey = item.result || '';
                 const isTempItem = item.id.startsWith('temp-');
                 return (
                   <TableRow key={item.id}>
                     <TableCell>{formatDate(item.calibrationDate, 'yyyy-MM-dd')}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={RESULT_COLORS[resultKey]}>
-                        {RESULT_LABELS[resultKey]}
+                      <Badge
+                        variant="outline"
+                        className={RESULT_COLORS[resultKey] || 'bg-gray-100 text-gray-800'}
+                      >
+                        {RESULT_LABELS[resultKey] || '-'}
                       </Badge>
                     </TableCell>
                     <TableCell>{formatDate(item.nextCalibrationDate, 'yyyy-MM-dd')}</TableCell>
-                    <TableCell>{agencyName || '-'}</TableCell>
+                    <TableCell>{item.calibrationAgency || '-'}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -436,13 +422,13 @@ export function CalibrationHistorySection({
 
             {/* 교정 결과 */}
             <div className="space-y-2">
-              <Label htmlFor="calibrationResult">교정 결과 *</Label>
+              <Label htmlFor="result">교정 결과 *</Label>
               <Select
-                value={formData.calibrationResult}
+                value={formData.result}
                 onValueChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    calibrationResult: value as 'PASS' | 'FAIL' | 'CONDITIONAL',
+                    result: value as 'pass' | 'fail' | 'conditional',
                   }))
                 }
                 disabled={isSaving}

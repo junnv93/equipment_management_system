@@ -8,6 +8,7 @@
  * @see docs/development/API_STANDARDS.md
  */
 import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type {
   EquipmentResponse as SchemaEquipmentResponse,
   CreateEquipmentInput,
@@ -205,7 +206,7 @@ const equipmentApi = {
     }
 
     const response = await apiClient.get(
-      `/api/equipment/check-management-number?${params.toString()}`
+      `${API_ENDPOINTS.EQUIPMENT.CHECK_MANAGEMENT_NUMBER}?${params.toString()}`
     );
     return transformSingleResponse<ManagementNumberCheckResult>(response);
   },
@@ -224,7 +225,7 @@ const equipmentApi = {
       }
     });
 
-    const url = `/api/equipment${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.EQUIPMENT.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(url);
     // ✅ 공통 유틸리티 사용: 백엔드 응답을 프론트엔드 형식으로 변환
     return transformPaginatedResponse<Equipment>(response);
@@ -233,13 +234,13 @@ const equipmentApi = {
   // 장비 상세 조회
   // ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
   getEquipment: async (id: string): Promise<Equipment> => {
-    const response = await apiClient.get(`/api/equipment/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.GET(id));
     return transformSingleResponse<Equipment>(response);
   },
 
   // 장비 상세 조회 (별칭 - 하위 호환성)
   getById: async (id: string): Promise<Equipment> => {
-    const response = await apiClient.get(`/api/equipment/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.GET(id));
     return transformSingleResponse<Equipment>(response);
   },
 
@@ -265,14 +266,14 @@ const equipmentApi = {
        */
       const formData = createFormDataUtil(equipmentData, allFiles);
 
-      response = await apiClient.post('/api/equipment', formData, {
+      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.CREATE, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
     } else {
       // 일반 JSON 데이터인 경우
-      response = await apiClient.post('/api/equipment', equipmentData);
+      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.CREATE, equipmentData);
     }
 
     return transformSingleResponse<EquipmentMutationResponse>(response);
@@ -300,14 +301,14 @@ const equipmentApi = {
        */
       const formData = createFormDataUtil(equipmentData, allFiles);
 
-      response = await apiClient.patch(`/api/equipment/${id}`, formData, {
+      response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT.UPDATE(id), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
     } else {
       // 일반 JSON 데이터인 경우
-      response = await apiClient.patch(`/api/equipment/${id}`, equipmentData);
+      response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT.UPDATE(id), equipmentData);
     }
 
     return transformSingleResponse<EquipmentMutationResponse>(response);
@@ -315,7 +316,7 @@ const equipmentApi = {
 
   // 장비 삭제
   deleteEquipment: async (id: string): Promise<void> => {
-    return apiClient.delete(`/api/equipment/${id}`);
+    return apiClient.delete(API_ENDPOINTS.EQUIPMENT.DELETE(id));
   },
 
   // 장비 상태 변경
@@ -328,18 +329,18 @@ const equipmentApi = {
     status: EquipmentStatus,
     version: number
   ): Promise<Equipment> => {
-    const response = await apiClient.patch(`/api/equipment/${id}/status`, { status, version });
+    const response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT.STATUS(id), { status, version });
     return transformSingleResponse<Equipment>(response);
   },
 
   // 교정 예정 장비 조회
   getCalibrationDueEquipment: async (days: number = 30): Promise<Equipment[]> => {
-    return apiClient.get(`/api/equipment/calibration/due?days=${days}`);
+    return apiClient.get(`${API_ENDPOINTS.EQUIPMENT.CALIBRATION_DUE}?days=${days}`);
   },
 
   // 팀별 장비 조회
   getTeamEquipment: async (teamId: string): Promise<Equipment[]> => {
-    return apiClient.get(`/api/equipment/team/${teamId}`);
+    return apiClient.get(API_ENDPOINTS.EQUIPMENT.TEAM(teamId));
   },
 
   // ========== 승인 프로세스 API ==========
@@ -349,19 +350,19 @@ const equipmentApi = {
    */
   // 승인 대기 요청 목록 조회
   getPendingRequests: async (): Promise<EquipmentRequest[]> => {
-    const response = await apiClient.get('/api/equipment/requests/pending');
+    const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING);
     return response.data || [];
   },
 
   // 요청 상세 조회
   getRequestByUuid: async (requestUuid: string): Promise<EquipmentRequest> => {
-    const response = await apiClient.get(`/api/equipment/requests/${requestUuid}`);
+    const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.GET(requestUuid));
     return response.data;
   },
 
   // 요청 승인
   approveRequest: async (requestUuid: string): Promise<EquipmentRequest> => {
-    const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/approve`);
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid));
     return response.data;
   },
 
@@ -370,7 +371,7 @@ const equipmentApi = {
     requestUuid: string,
     rejectionReason: string
   ): Promise<EquipmentRequest> => {
-    const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/reject`, {
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(requestUuid), {
       rejectionReason,
     });
     return response.data;
@@ -389,7 +390,7 @@ const equipmentApi = {
       formData.append('description', description);
     }
 
-    const response = await apiClient.post('/api/equipment/attachments', formData, {
+    const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.ATTACHMENTS, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -428,13 +429,13 @@ const equipmentApi = {
        */
       const formData = createFormDataUtil(data, files);
 
-      response = await apiClient.post('/api/equipment/shared', formData, {
+      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.SHARED, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
     } else {
-      response = await apiClient.post('/api/equipment/shared', data);
+      response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.SHARED, data);
     }
 
     // 응답에서 equipment 객체 추출 (백엔드가 { equipment: {...} } 형태로 반환하는 경우 처리)
@@ -449,7 +450,9 @@ const equipmentApi = {
 
   // 위치 변동 이력 조회
   getLocationHistory: async (equipmentUuid: string): Promise<LocationHistoryItem[]> => {
-    const response = await apiClient.get(`/api/equipment/${equipmentUuid}/location-history`);
+    const response = await apiClient.get(
+      API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.LIST(equipmentUuid)
+    );
     return transformArrayResponse<LocationHistoryItem>(response);
   },
 
@@ -458,18 +461,23 @@ const equipmentApi = {
     equipmentUuid: string,
     data: CreateLocationHistoryInput
   ): Promise<LocationHistoryItem> => {
-    const response = await apiClient.post(`/api/equipment/${equipmentUuid}/location-history`, data);
+    const response = await apiClient.post(
+      API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(equipmentUuid),
+      data
+    );
     return transformSingleResponse<LocationHistoryItem>(response);
   },
 
   // 위치 변동 이력 삭제
   deleteLocationHistory: async (historyId: string): Promise<void> => {
-    return apiClient.delete(`/api/equipment/location-history/${historyId}`);
+    return apiClient.delete(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId));
   },
 
   // 유지보수 내역 조회
   getMaintenanceHistory: async (equipmentUuid: string): Promise<MaintenanceHistoryItem[]> => {
-    const response = await apiClient.get(`/api/equipment/${equipmentUuid}/maintenance-history`);
+    const response = await apiClient.get(
+      API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.LIST(equipmentUuid)
+    );
     return transformArrayResponse<MaintenanceHistoryItem>(response);
   },
 
@@ -479,7 +487,7 @@ const equipmentApi = {
     data: CreateMaintenanceHistoryInput
   ): Promise<MaintenanceHistoryItem> => {
     const response = await apiClient.post(
-      `/api/equipment/${equipmentUuid}/maintenance-history`,
+      API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.CREATE(equipmentUuid),
       data
     );
     return transformSingleResponse<MaintenanceHistoryItem>(response);
@@ -487,12 +495,14 @@ const equipmentApi = {
 
   // 유지보수 내역 삭제
   deleteMaintenanceHistory: async (historyId: string): Promise<void> => {
-    return apiClient.delete(`/api/equipment/maintenance-history/${historyId}`);
+    return apiClient.delete(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.DELETE(historyId));
   },
 
   // 손상/오작동/변경/수리 내역 조회
   getIncidentHistory: async (equipmentUuid: string): Promise<IncidentHistoryItem[]> => {
-    const response = await apiClient.get(`/api/equipment/${equipmentUuid}/incident-history`);
+    const response = await apiClient.get(
+      API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.LIST(equipmentUuid)
+    );
     return transformArrayResponse<IncidentHistoryItem>(response);
   },
 
@@ -501,18 +511,23 @@ const equipmentApi = {
     equipmentUuid: string,
     data: CreateIncidentHistoryInput
   ): Promise<IncidentHistoryItem> => {
-    const response = await apiClient.post(`/api/equipment/${equipmentUuid}/incident-history`, data);
+    const response = await apiClient.post(
+      API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(equipmentUuid),
+      data
+    );
     return transformSingleResponse<IncidentHistoryItem>(response);
   },
 
   // 손상/오작동/변경/수리 내역 삭제
   deleteIncidentHistory: async (historyId: string): Promise<void> => {
-    return apiClient.delete(`/api/equipment/incident-history/${historyId}`);
+    return apiClient.delete(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(historyId));
   },
 
   // 교정 이력 조회 (기존 Calibrations API 활용)
   getCalibrationHistory: async (equipmentUuid: string): Promise<CalibrationHistoryItem[]> => {
-    const response = await apiClient.get(`/api/calibrations?equipmentId=${equipmentUuid}`);
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.CALIBRATIONS.LIST}?equipmentId=${equipmentUuid}`
+    );
     return transformArrayResponse<CalibrationHistoryItem>(response);
   },
 };

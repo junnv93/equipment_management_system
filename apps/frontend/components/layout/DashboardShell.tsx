@@ -8,12 +8,11 @@
  * - usePathname 등 클라이언트 훅 사용
  *
  * 성능 최적화 (vercel-react-best-practices):
- * - MobileNav: dynamic import (모바일에서만 필요)
+ * - MobileNav: 직접 import (SSR-safe, CSS md:hidden으로 데스크톱 숨김)
  * - 아이콘: lucide-react 개별 import (tree-shaking)
  */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import {
   LayoutDashboard,
   Package2,
@@ -24,31 +23,27 @@ import {
   Bell,
   Settings,
   Wrench,
+  FileText,
 } from 'lucide-react';
 import { ReactNode, memo, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useQuery } from '@tanstack/react-query';
+import { useNotificationStream } from '@/hooks/use-notification-stream';
 import { cn } from '@/lib/utils';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import type { NavItem } from '@/components/layout/MobileNav';
+import { FRONTEND_ROUTES, Permission, hasPermission } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
+import { MobileNav, type NavItem } from '@/components/layout/MobileNav';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
+import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
-import { dashboardApi, type PendingApprovalCounts } from '@/lib/api/dashboard-api';
+import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { computeApprovalTotal } from '@/lib/utils/approval-count-utils';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
-
-// MobileNav는 모바일 뷰포트에서만 필요하므로 지연 로딩 (bundle-dynamic-imports)
-const MobileNav = dynamic(
-  () => import('@/components/layout/MobileNav').then((mod) => mod.MobileNav),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="md:hidden w-10 h-10 animate-pulse bg-muted rounded" aria-hidden="true" />
-    ),
-  }
-);
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -100,75 +95,112 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const userRole = session?.user?.role;
 
+  // SSE 알림 실시간 스트림 (세션 있을 때만 자동 연결)
+  // useNotificationStream 내부에서 accessToken 없으면 no-op
+  useNotificationStream();
+
   // 승인 대기 카운트 조회 (권한이 있는 경우에만)
-  const { data: pendingCounts } = useQuery<PendingApprovalCounts>({
-    queryKey: ['pending-approval-counts', userRole],
-    queryFn: () => dashboardApi.getPendingApprovalCounts(userRole || ''),
-    enabled: !!userRole && hasApprovalPermissions(userRole), // 권한이 있을 때만 실행
-    staleTime: 30000, // 30초
-    refetchInterval: 60000, // 1분마다 자동 새로고침
+  // SSOT: ApprovalsService (GET /api/approvals/counts) — 대시보드 카드, 승인 페이지와 동일 소스
+  // enabled: false일 때 쿼리 비활성화 → 세션 로딩 중 API 호출 없음
+  const { data: pendingCounts } = useQuery<PendingCountsByCategory>({
+    queryKey: queryKeys.approvals.counts(userRole),
+    queryFn: () => approvalsApi.getPendingCounts(),
+    enabled: !!userRole && hasApprovalPermissions(userRole),
+    staleTime: CACHE_TIMES.SHORT,
+    refetchInterval: 60000,
   });
 
-  // navItems를 useMemo로 메모이제이션하여 불필요한 재생성 방지 (rerender-memo)
-  // SSOT: FRONTEND_ROUTES 사용
+  // 선언적 네비게이션 설정
+  // SSOT: FRONTEND_ROUTES(경로) + Permission(가시성) + hasPermission(필터링)
+  // requiredPermission이 null이면 모든 역할에게 표시
   const navItems: NavItem[] = useMemo(() => {
-    const baseItems: NavItem[] = [
+    const role = userRole as UserRole | undefined;
+
+    // 각 메뉴의 가시성을 Permission 상수로 선언 — 역할 하드코딩 없음
+    const navConfig: Array<{
+      icon: React.ReactNode;
+      href: string;
+      label: string;
+      requiredPermission: Permission | null;
+      badge?: number;
+    }> = [
       {
         icon: <LayoutDashboard className="h-5 w-5" />,
         href: FRONTEND_ROUTES.DASHBOARD,
         label: '대시보드',
+        requiredPermission: null, // 모든 역할
       },
       {
         icon: <Package2 className="h-5 w-5" />,
         href: FRONTEND_ROUTES.EQUIPMENT.LIST,
         label: '장비 관리',
+        requiredPermission: Permission.VIEW_EQUIPMENT,
       },
       {
         icon: <ClipboardCheck className="h-5 w-5" />,
         href: FRONTEND_ROUTES.CHECKOUTS.LIST,
         label: '반출입 관리',
+        requiredPermission: Permission.VIEW_CHECKOUTS,
       },
       {
         icon: <FileSpreadsheet className="h-5 w-5" />,
         href: FRONTEND_ROUTES.CALIBRATION.LIST,
         label: '교정 관리',
+        requiredPermission: Permission.VIEW_CALIBRATIONS,
       },
-    ];
-
-    // ✅ 승인 권한이 있는 경우에만 "승인 관리" 메뉴 추가
-    if (userRole && hasApprovalPermissions(userRole)) {
-      const totalPending = pendingCounts?.total || 0;
-      baseItems.push({
+      {
+        icon: <FileText className="h-5 w-5" />,
+        href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
+        label: '교정계획서',
+        requiredPermission: Permission.VIEW_CALIBRATION_PLANS,
+      },
+      {
         icon: <CheckSquare className="h-5 w-5" />,
         href: FRONTEND_ROUTES.ADMIN.APPROVALS,
         label: '승인 관리',
-        badge: totalPending > 0 ? totalPending : undefined, // 대기 건수가 있을 때만 배지 표시
-      });
-    }
-
-    baseItems.push(
+        requiredPermission: Permission.APPROVE_EQUIPMENT, // 승인 권한 중 하나라도 있으면 표시
+        badge: (() => {
+          if (!role || !hasApprovalPermissions(role)) return undefined;
+          const total = computeApprovalTotal(pendingCounts, role);
+          return total > 0 ? total : undefined;
+        })(),
+      },
       {
         icon: <Users className="h-5 w-5" />,
-        href: '/teams',
+        href: FRONTEND_ROUTES.TEAMS.LIST,
         label: '팀 관리',
+        requiredPermission: Permission.VIEW_TEAMS,
       },
       {
         icon: <Bell className="h-5 w-5" />,
         href: FRONTEND_ROUTES.NOTIFICATIONS.LIST,
         label: '알림',
+        requiredPermission: Permission.VIEW_NOTIFICATIONS,
       },
       {
         icon: <Settings className="h-5 w-5" />,
-        href: '/settings',
+        href: FRONTEND_ROUTES.SETTINGS.INDEX,
         label: '설정',
-      }
-    );
+        requiredPermission: null, // 모든 역할
+      },
+    ];
 
-    return baseItems;
-  }, [userRole, pendingCounts?.total]);
+    // Permission 기반 필터링 — 역할 추가/변경 시 role-permissions.ts만 수정하면 됨
+    return navConfig.filter((item) => {
+      if (item.requiredPermission === null) return true;
+      if (!role) return false;
+
+      // 승인 관리는 기존 hasApprovalPermissions 로직 유지 (복수 권한 OR 조건)
+      if (item.href === FRONTEND_ROUTES.ADMIN.APPROVALS) {
+        return hasApprovalPermissions(role);
+      }
+
+      return hasPermission(role, item.requiredPermission);
+    });
+  }, [userRole, pendingCounts]);
 
   // isActive를 useCallback으로 안정화 (rerender-functional-setstate)
   const isActive = useCallback(
@@ -178,6 +210,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
     },
     [pathname]
   );
+
+  // Layer 0: 세션 복원 전까지 인증 의존 컴포넌트 미마운트
+  // → 하위 컴포넌트의 API 호출이 토큰 없이 발생하는 문제 원천 차단
+  // NOTE: 모든 hooks 호출 이후에 위치해야 함 (React 규칙: 조건부 early return 전 hooks 완료)
+  if (status === 'loading') {
+    return <DashboardShellSkeleton />;
+  }
 
   return (
     <BreadcrumbProvider>
@@ -257,6 +296,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             rightContent={
               <div className="flex items-center gap-2">
                 <ThemeToggle />
+                <NotificationsDropdown />
                 <UserProfileDropdown />
               </div>
             }
@@ -272,5 +312,79 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <div aria-live="polite" aria-atomic="true" className="sr-only" id="live-announcements" />
       </div>
     </BreadcrumbProvider>
+  );
+}
+
+/**
+ * DashboardShell 스켈레톤
+ *
+ * 세션 복원 중(status === 'loading') 표시되는 레이아웃 스켈레톤.
+ * 사이드바 구조는 정적으로 렌더링하고, 메인 콘텐츠 영역만 스켈레톤 처리.
+ */
+function DashboardShellSkeleton() {
+  return (
+    <div className="flex min-h-screen bg-background">
+      {/* 데스크톱 사이드바 스켈레톤 */}
+      <aside className="fixed inset-y-0 z-20 hidden w-64 bg-ul-midnight md:block">
+        {/* 사이드바 헤더 */}
+        <div className="flex h-14 items-center border-b border-white/10 px-4">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red">
+              <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+            </div>
+            <span className="font-semibold text-white">장비 관리 시스템</span>
+          </div>
+        </div>
+
+        {/* 네비게이션 스켈레톤 */}
+        <nav className="flex flex-col gap-1 p-4">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2">
+              <Skeleton className="h-5 w-5 rounded bg-white/10" />
+              <Skeleton className="h-4 flex-1 bg-white/10" />
+            </div>
+          ))}
+        </nav>
+
+        {/* 사이드바 하단 */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+          <div className="flex items-center gap-2">
+            <span className="text-ul-red font-bold text-xs">UL Solutions</span>
+            <span className="text-white/30 text-xs">|</span>
+            <span className="text-white/40 text-xs">Working for a safer world.</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* 메인 콘텐츠 영역 스켈레톤 */}
+      <div className="flex flex-col flex-1 md:ml-64">
+        {/* 헤더 스켈레톤 */}
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6">
+          <Skeleton className="h-6 w-6 md:hidden" />
+          <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </div>
+        </header>
+
+        {/* 메인 콘텐츠 스켈레톤 */}
+        <main className="flex-1 overflow-auto p-6">
+          <div className="space-y-6">
+            <Skeleton className="h-9 w-48" />
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="border rounded-lg p-6 space-y-4">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }

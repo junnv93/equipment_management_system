@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Filter, Users, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -15,78 +15,78 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import teamsApi, { type Team, type TeamQuery, SITE_CONFIG } from '@/lib/api/teams-api';
+import teamsApi, { type Team, SITE_CONFIG, TEAM_TYPE_CONFIG } from '@/lib/api/teams-api';
 import type { PaginatedResponse } from '@/lib/api/types';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TeamCard, TeamCardSkeleton } from './TeamCard';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useTeamFilters } from '@/hooks/use-team-filters';
+import type { UITeamFilters } from '@/lib/utils/team-filter-utils';
+import type { Site } from '@equipment-management/schemas';
 
-interface TeamListProps {
+// 드롭다운에 표시할 주요 팀 유형 (레거시 제외)
+const PRIMARY_TEAM_TYPES = [
+  'FCC_EMC_RF',
+  'GENERAL_EMC',
+  'GENERAL_RF',
+  'SAR',
+  'AUTOMOTIVE_EMC',
+  'SOFTWARE',
+] as const;
+
+interface TeamListContentProps {
   initialData?: PaginatedResponse<Team>;
+  initialFilters?: UITeamFilters;
 }
 
 /**
  * 팀 목록 컴포넌트 ('use client')
  *
+ * SSOT 패턴:
+ * - URL 파라미터가 유일한 진실의 소스
+ * - useTeamFilters 훅으로 필터 상태 관리
+ * - 서버에서 전달받은 initialData를 placeholderData로 사용
+ *
  * 기능:
  * - 사이트별 팀 필터링
- * - 검색 기능
- * - URL 상태 동기화
+ * - 검색 기능 (300ms 디바운스)
  * - stagger 애니메이션
  *
  * 권한:
- * - lab_manager: 시험소 내 팀 관리
- * - system_admin: 전체 팀 관리
+ * - lab_manager, system_admin, technical_manager: 팀 생성 가능
  */
-export function TeamList({ initialData }: TeamListProps) {
+export function TeamListContent({ initialData, initialFilters }: TeamListContentProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { hasRole } = useAuth();
+  const { filters, apiFilters, activeCount, updateSearch, updateSite, updateType, clearFilters } =
+    useTeamFilters(initialFilters);
 
-  // URL에서 초기 필터값 읽기
-  const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [siteFilter, setSiteFilter] = useState(searchParams.get('site') || 'all');
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  // 검색어 로컬 상태 (디바운스용)
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
 
-  // 검색어 디바운스
+  // 검색어 디바운스 (300ms)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search);
+      setDebouncedSearch(searchInput);
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [searchInput]);
 
-  // URL 상태 동기화
+  // 디바운스된 검색어를 URL에 반영
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (debouncedSearch) params.set('search', debouncedSearch);
-    if (siteFilter && siteFilter !== 'all') params.set('site', siteFilter);
-
-    const queryString = params.toString();
-    const newUrl = queryString ? `/teams?${queryString}` : '/teams';
-
-    // 현재 URL과 다를 때만 업데이트
-    if (window.location.pathname + window.location.search !== newUrl) {
-      router.replace(newUrl, { scroll: false });
+    if (debouncedSearch !== filters.search) {
+      updateSearch(debouncedSearch);
     }
-  }, [debouncedSearch, siteFilter, router]);
-
-  // 쿼리 파라미터 생성
-  const queryParams: TeamQuery = useMemo(
-    () => ({
-      search: debouncedSearch || undefined,
-      site: siteFilter !== 'all' ? (siteFilter as 'suwon' | 'uiwang') : undefined,
-      pageSize: 50, // 팀은 보통 많지 않으므로 한 번에 로드
-    }),
-    [debouncedSearch, siteFilter]
-  );
+  }, [debouncedSearch, filters.search, updateSearch]);
 
   // 팀 목록 쿼리
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ['teams', queryParams],
-    queryFn: () => teamsApi.getTeams(queryParams),
-    placeholderData: initialData,
-    staleTime: 60 * 1000, // 1분
+    queryKey: queryKeys.teams.list(apiFilters),
+    queryFn: () => teamsApi.getTeams(apiFilters),
+    placeholderData: initialData, // ✅ 서버 데이터를 stale로 처리 → 백그라운드 refetch
+    ...QUERY_CONFIG.TEAMS,
   });
 
   const teams = data?.data || [];
@@ -94,11 +94,12 @@ export function TeamList({ initialData }: TeamListProps) {
 
   // 필터 초기화
   const handleClearFilters = () => {
-    setSearch('');
-    setSiteFilter('all');
+    setSearchInput('');
+    setDebouncedSearch('');
+    clearFilters();
   };
 
-  const hasActiveFilters = !!debouncedSearch || siteFilter !== 'all';
+  const hasActiveFilters = activeCount > 0;
 
   // 에러 상태
   if (error) {
@@ -124,24 +125,47 @@ export function TeamList({ initialData }: TeamListProps) {
           <Input
             type="search"
             placeholder="팀 검색..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="pl-10"
             aria-label="팀 검색"
           />
         </div>
 
         {/* 사이트 필터 */}
-        <Select value={siteFilter} onValueChange={setSiteFilter}>
+        <Select
+          value={filters.site || '_all'}
+          onValueChange={(value) => updateSite(value === '_all' ? '' : (value as Site))}
+        >
           <SelectTrigger className="w-[160px]" aria-label="사이트 필터">
             <Filter className="h-4 w-4 mr-2" aria-hidden="true" />
             <SelectValue placeholder="사이트 선택" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체 사이트</SelectItem>
+            <SelectItem value="_all">전체 사이트</SelectItem>
             {Object.entries(SITE_CONFIG).map(([key, config]) => (
               <SelectItem key={key} value={key}>
                 {config.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* 팀 유형 필터 */}
+        <Select
+          value={filters.type || '_all'}
+          onValueChange={(value: string) =>
+            updateType(value === '_all' ? '' : (value as Parameters<typeof updateType>[0]))
+          }
+        >
+          <SelectTrigger className="w-[180px]" aria-label="팀 유형 필터">
+            <SelectValue placeholder="전체 유형" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">전체 유형</SelectItem>
+            {PRIMARY_TEAM_TYPES.map((key) => (
+              <SelectItem key={key} value={key}>
+                {TEAM_TYPE_CONFIG[key]?.label || key}
               </SelectItem>
             ))}
           </SelectContent>
@@ -182,9 +206,14 @@ export function TeamList({ initialData }: TeamListProps) {
                   검색: {debouncedSearch}
                 </Badge>
               )}
-              {siteFilter !== 'all' && (
+              {filters.site && (
                 <Badge variant="secondary" className="text-xs">
-                  사이트: {SITE_CONFIG[siteFilter as keyof typeof SITE_CONFIG]?.label}
+                  사이트: {SITE_CONFIG[filters.site as keyof typeof SITE_CONFIG]?.label}
+                </Badge>
+              )}
+              {filters.type && (
+                <Badge variant="secondary" className="text-xs">
+                  유형: {TEAM_TYPE_CONFIG[filters.type]?.label || filters.type}
                 </Badge>
               )}
             </div>

@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import softwareApi, { SOFTWARE_TYPE_LABELS, SoftwareType } from '@/lib/api/software-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { Monitor, Search, Package, Layers } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +25,7 @@ export default function SoftwareContent() {
 
   // 소프트웨어 관리대장 조회
   const { data: registryData, isLoading } = useQuery({
-    queryKey: ['software-registry'],
+    queryKey: queryKeys.software.registry(),
     queryFn: () => softwareApi.getSoftwareRegistry(),
   });
 

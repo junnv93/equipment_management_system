@@ -26,6 +26,7 @@ import calibrationPlansApi, {
   CALIBRATION_PLAN_STATUS_COLORS,
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, Building2, User, Eye } from 'lucide-react';
 
@@ -41,15 +42,16 @@ export default function CalibrationPlanApprovalsContent() {
 
   // 승인 대기 계획서 목록 조회
   const { data: pendingData, isLoading } = useQuery({
-    queryKey: ['calibration-plans-pending'],
+    queryKey: queryKeys.calibrationPlans.pending(),
     queryFn: () => calibrationPlansApi.getPendingApprovalPlans(),
   });
 
   // 승인 뮤테이션
   const approveMutation = useMutation({
     mutationFn: async (planUuid: string) => {
+      const plan = pendingData?.data?.find((p) => p.uuid === planUuid);
       return calibrationPlansApi.approveCalibrationPlan(planUuid, {
-        approvedBy: session?.user?.id as string,
+        casVersion: plan?.casVersion ?? 0,
       });
     },
     onSuccess: () => {
@@ -57,8 +59,6 @@ export default function CalibrationPlanApprovalsContent() {
         title: '승인 완료',
         description: '교정계획서가 승인되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plans-pending'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plans'] });
       setIsApproveDialogOpen(false);
       setSelectedPlan(null);
     },
@@ -69,13 +69,18 @@ export default function CalibrationPlanApprovalsContent() {
         variant: 'destructive',
       });
     },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationPlans.pending() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationPlans.all });
+    },
   });
 
   // 반려 뮤테이션
   const rejectMutation = useMutation({
     mutationFn: async ({ uuid, reason }: { uuid: string; reason: string }) => {
+      const plan = pendingData?.data?.find((p) => p.uuid === uuid);
       return calibrationPlansApi.rejectCalibrationPlan(uuid, {
-        rejectedBy: session?.user?.id as string,
+        casVersion: plan?.casVersion ?? 0,
         rejectionReason: reason,
       });
     },
@@ -84,8 +89,6 @@ export default function CalibrationPlanApprovalsContent() {
         title: '반려 완료',
         description: '교정계획서가 반려되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plans-pending'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plans'] });
       setIsRejectDialogOpen(false);
       setSelectedPlan(null);
     },
@@ -95,6 +98,10 @@ export default function CalibrationPlanApprovalsContent() {
         description: getErrorMessage(error, '계획서 반려 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationPlans.pending() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationPlans.all });
     },
   });
 

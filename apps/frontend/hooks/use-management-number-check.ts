@@ -26,6 +26,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import equipmentApi, { ManagementNumberCheckResult } from '@/lib/api/equipment-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 /** 디바운스 딜레이 (ms) */
 const DEBOUNCE_DELAY = 300;
@@ -76,7 +77,7 @@ export function useManagementNumberCheck(
     error,
     refetch: _refetch,
   } = useQuery({
-    queryKey: ['managementNumberCheck', debouncedValue, excludeId],
+    queryKey: queryKeys.equipment.managementNumberCheck(debouncedValue, excludeId),
     queryFn: async () => {
       if (!debouncedValue || debouncedValue.length < MIN_CHECK_LENGTH) {
         return null;
@@ -84,8 +85,8 @@ export function useManagementNumberCheck(
       return equipmentApi.checkManagementNumber(debouncedValue, excludeId);
     },
     enabled: !disableAutoCheck && debouncedValue.length >= MIN_CHECK_LENGTH,
-    staleTime: 30 * 1000, // 30초간 캐시 유지
-    gcTime: 5 * 60 * 1000, // 5분간 가비지 컬렉션 방지
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.LONG,
     retry: 1, // 실패 시 1회만 재시도
   });
 
@@ -119,11 +120,9 @@ export function useManagementNumberCheck(
 
       try {
         // 캐시 확인
-        const cachedData = queryClient.getQueryData<ManagementNumberCheckResult>([
-          'managementNumberCheck',
-          value,
-          excludeId,
-        ]);
+        const cachedData = queryClient.getQueryData<ManagementNumberCheckResult>(
+          queryKeys.equipment.managementNumberCheck(value, excludeId)
+        );
 
         if (cachedData) {
           return cachedData;
@@ -133,7 +132,10 @@ export function useManagementNumberCheck(
         const result = await equipmentApi.checkManagementNumber(value, excludeId);
 
         // 결과 캐싱
-        queryClient.setQueryData(['managementNumberCheck', value, excludeId], result);
+        queryClient.setQueryData(
+          queryKeys.equipment.managementNumberCheck(value, excludeId),
+          result
+        );
 
         return result;
       } catch (err) {

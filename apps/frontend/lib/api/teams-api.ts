@@ -7,12 +7,17 @@
  * @see packages/schemas/src/team.ts
  */
 import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type {
   Team as SchemaTeam,
   CreateTeamInput,
   UpdateTeamInput,
 } from '@equipment-management/schemas';
-import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
+import {
+  transformPaginatedResponse,
+  transformSingleResponse,
+  transformArrayResponse,
+} from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 
 /**
@@ -27,21 +32,21 @@ export type Team = Omit<SchemaTeam, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
 };
 
 /**
- * 팀 유형 정의 (분류와 1:1 매핑)
- * ✅ 팀 이름 = 분류 이름 (통일)
+ * 팀 유형 정의 — SSOT from @equipment-management/schemas
  */
-export type TeamType = 'FCC_EMC_RF' | 'GENERAL_EMC' | 'GENERAL_RF' | 'SAR' | 'AUTOMOTIVE_EMC' | 'SOFTWARE';
+import type { TeamType } from '@equipment-management/schemas';
+export type { TeamType };
 
 /**
  * 팀 유형 → 분류코드 매핑
  */
 export const TEAM_TYPE_TO_CLASSIFICATION: Record<string, string> = {
-  FCC_EMC_RF: 'E',     // FCC EMC/RF
-  GENERAL_EMC: 'R',    // General EMC
-  GENERAL_RF: 'W',     // General RF
-  SAR: 'S',            // SAR
+  FCC_EMC_RF: 'E', // FCC EMC/RF
+  GENERAL_EMC: 'R', // General EMC
+  GENERAL_RF: 'W', // General RF
+  SAR: 'S', // SAR
   AUTOMOTIVE_EMC: 'A', // Automotive EMC
-  SOFTWARE: 'P',       // Software Program
+  SOFTWARE: 'P', // Software Program
   // 레거시 호환성
   RF: 'E',
   EMC: 'R',
@@ -52,14 +57,17 @@ export const TEAM_TYPE_TO_CLASSIFICATION: Record<string, string> = {
  * 팀 유형별 메타데이터 (UL 색상 팔레트 기반)
  * ✅ 팀 이름 = 분류 이름 (통일)
  */
-export const TEAM_TYPE_CONFIG: Record<string, {
-  color: string;
-  bgColor: string;
-  borderColor: string;
-  icon: string;
-  label: string;
-  classificationCode: string;
-}> = {
+export const TEAM_TYPE_CONFIG: Record<
+  string,
+  {
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    icon: string;
+    label: string;
+    classificationCode: string;
+  }
+> = {
   FCC_EMC_RF: {
     color: '#122C49', // UL Midnight Blue
     bgColor: 'bg-[#122C49]/10',
@@ -153,6 +161,7 @@ export interface TeamQuery {
   ids?: string;
   search?: string;
   site?: Site;
+  type?: TeamType;
   sort?: string;
   page?: number;
   pageSize?: number;
@@ -167,6 +176,13 @@ export interface TeamMember {
   email?: string;
   role: string;
   position?: string;
+  department?: string;
+  phoneNumber?: string;
+  employeeId?: string;
+  managerName?: string;
+  isActive?: boolean;
+  site?: string;
+  teamId?: string;
   avatarUrl?: string;
 }
 
@@ -193,25 +209,8 @@ const teamsApi = {
       }
     });
 
-    const url = `/api/teams${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.TEAMS.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(url);
-
-    // 백엔드 응답 형식에 맞게 변환
-    if (response.data && 'data' in response.data) {
-      const backendData = response.data;
-      return {
-        data: backendData.data || [],
-        meta: {
-          pagination: {
-            total: backendData.meta?.pagination?.total || 0,
-            pageSize: backendData.meta?.pagination?.pageSize || 20,
-            currentPage: backendData.meta?.pagination?.page || 1,
-            totalPages: backendData.meta?.pagination?.totalPages || 1,
-          },
-        },
-      };
-    }
-
     return transformPaginatedResponse<Team>(response);
   },
 
@@ -219,7 +218,7 @@ const teamsApi = {
    * 팀 상세 조회
    */
   getTeam: async (id: string): Promise<TeamDetail> => {
-    const response = await apiClient.get(`/api/teams/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.TEAMS.GET(id));
     return transformSingleResponse<TeamDetail>(response);
   },
 
@@ -227,7 +226,7 @@ const teamsApi = {
    * 팀 생성
    */
   createTeam: async (data: CreateTeamInput): Promise<Team> => {
-    const response = await apiClient.post('/api/teams', data);
+    const response = await apiClient.post(API_ENDPOINTS.TEAMS.CREATE, data);
     return transformSingleResponse<Team>(response);
   },
 
@@ -235,7 +234,7 @@ const teamsApi = {
    * 팀 수정
    */
   updateTeam: async (id: string, data: UpdateTeamInput): Promise<Team> => {
-    const response = await apiClient.put(`/api/teams/${id}`, data);
+    const response = await apiClient.put(API_ENDPOINTS.TEAMS.UPDATE(id), data);
     return transformSingleResponse<Team>(response);
   },
 
@@ -243,25 +242,64 @@ const teamsApi = {
    * 팀 삭제
    */
   deleteTeam: async (id: string): Promise<void> => {
-    await apiClient.delete(`/api/teams/${id}`);
+    await apiClient.delete(API_ENDPOINTS.TEAMS.DELETE(id));
   },
 
   /**
    * 팀 멤버 조회
    */
   getTeamMembers: async (teamId: string): Promise<TeamMember[]> => {
-    const response = await apiClient.get(`/api/v1/users?teamId=${teamId}`);
-    const data = response.data;
-    return data?.data || data?.items || [];
+    const response = await apiClient.get(`${API_ENDPOINTS.USERS.LIST}?teams=${teamId}`);
+    return transformArrayResponse<TeamMember>(response);
   },
 
   /**
    * 팀에 소속된 장비 수 조회
    */
   getTeamEquipmentCount: async (teamId: string): Promise<number> => {
-    const response = await apiClient.get(`/api/equipment?teamId=${teamId}&pageSize=1`);
-    const data = response.data;
-    return data?.meta?.pagination?.total || data?.meta?.totalItems || 0;
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.EQUIPMENT.LIST}?teamId=${teamId}&pageSize=1`
+    );
+    const result = transformPaginatedResponse<unknown>(response);
+    return result.meta.pagination.total;
+  },
+
+  /**
+   * 사용자 검색 (LeaderCombobox용)
+   */
+  searchUsers: async (params: {
+    search?: string;
+    site?: string;
+    teams?: string; // Comma-separated team IDs
+  }): Promise<TeamMember[]> => {
+    const qs = new URLSearchParams();
+    if (params.search) qs.set('search', params.search);
+    if (params.site) qs.set('site', params.site);
+    if (params.teams) qs.set('teams', params.teams); // NEW: Filter by teams
+    qs.set('pageSize', '20');
+    const response = await apiClient.get(`${API_ENDPOINTS.USERS.LIST}?${qs.toString()}`);
+    return transformArrayResponse<TeamMember>(response);
+  },
+
+  /**
+   * 사용자 역할 변경
+   *
+   * Conditional WHERE CAS:
+   * - currentRole이 서버의 실제 역할과 불일치 시 409 VERSION_CONFLICT
+   * - 자기 자신, 범위 외 사용자 시도 시 403
+   */
+  changeUserRole: async (
+    userId: string,
+    newRole: string,
+    currentRole: string,
+    reason?: string
+  ): Promise<TeamMember> => {
+    const response = await apiClient.patch(API_ENDPOINTS.USERS.CHANGE_ROLE(userId), {
+      newRole,
+      currentRole,
+      ...(reason && { reason }),
+    });
+    return transformSingleResponse<TeamMember>(response);
   },
 };
 

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -100,7 +101,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
 
   // 반출 이력 조회
   const { data: checkoutsResponse, isLoading } = useQuery({
-    queryKey: ['checkouts', 'equipment', equipmentId],
+    queryKey: queryKeys.checkouts.byEquipment(equipmentId),
     queryFn: () => checkoutApi.getEquipmentCheckouts(equipmentId),
     enabled: !!equipmentId,
   });
@@ -109,7 +110,6 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   const createMutation = useMutation({
     mutationFn: (data: CreateCheckoutDto) => checkoutApi.createCheckout(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['checkouts', 'equipment', equipmentId] });
       setIsDialogOpen(false);
       form.reset({
         destination: '',
@@ -124,6 +124,9 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         title: '반출 신청 완료',
         description: '반출 신청이 성공적으로 등록되었습니다. 승인을 기다리고 있습니다.',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.byEquipment(equipmentId) });
     },
     onError: (error: unknown) => {
       console.error('반출 신청 실패:', error);

@@ -4,7 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, AlertTriangle, FileText, CheckCircle, Clock, Wrench } from 'lucide-react';
+import {
+  ArrowLeft,
+  Plus,
+  AlertTriangle,
+  FileText,
+  CheckCircle,
+  Clock,
+  Wrench,
+  XCircle,
+} from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import nonConformancesApi, {
@@ -16,6 +25,7 @@ import nonConformancesApi, {
   RESOLUTION_TYPE_LABELS,
 } from '@/lib/api/non-conformances-api';
 import equipmentApi from '@/lib/api/equipment-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
 
 interface NonConformanceManagementClientProps {
@@ -34,7 +44,7 @@ export default function NonConformanceManagementClient({
 
   // ✅ React Query로 데이터 조회
   const { data: equipment, isLoading: equipmentLoading } = useQuery({
-    queryKey: ['equipment', equipmentId],
+    queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
   });
 
@@ -43,7 +53,7 @@ export default function NonConformanceManagementClient({
     isLoading: ncLoading,
     isError,
   } = useQuery({
-    queryKey: ['non-conformances', equipmentId],
+    queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
     queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
   });
 
@@ -82,7 +92,7 @@ export default function NonConformanceManagementClient({
     { data: NonConformance[] }
   >({
     mutationFn: (data) => nonConformancesApi.createNonConformance(data),
-    queryKey: ['non-conformances', equipmentId],
+    queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
     optimisticUpdate: (old, data) => {
       const newItem: NonConformance = {
         id: 'temp-' + Date.now(),
@@ -97,7 +107,7 @@ export default function NonConformanceManagementClient({
         data: [...(old?.data || []), newItem],
       };
     },
-    invalidateKeys: [['equipment', equipmentId]], // 장비 상태 업데이트
+    invalidateKeys: [queryKeys.equipment.detail(equipmentId)], // 장비 상태 업데이트
     successMessage: '부적합이 등록되었습니다.',
     errorMessage: '부적합 등록에 실패했습니다.',
     onSuccessCallback: () => {
@@ -128,12 +138,13 @@ export default function NonConformanceManagementClient({
     });
   };
 
-  // ✅ 부적합 수정 mutation - Optimistic Update 패턴
+  // ✅ 부적합 수정 mutation - Optimistic Update + CAS 패턴
   const updateMutation = useOptimisticMutation<
     NonConformance,
     {
       id: string;
       updateData: {
+        version: number;
         analysisContent?: string;
         correctionContent?: string;
         correctionDate?: string;
@@ -144,7 +155,7 @@ export default function NonConformanceManagementClient({
     { data: NonConformance[] }
   >({
     mutationFn: ({ id, updateData }) => nonConformancesApi.updateNonConformance(id, updateData),
-    queryKey: ['non-conformances', equipmentId],
+    queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
     optimisticUpdate: (old, { id, updateData }) => {
       if (!old?.data) return { data: [] };
 
@@ -161,7 +172,7 @@ export default function NonConformanceManagementClient({
         ),
       };
     },
-    invalidateKeys: [['equipment', equipmentId]],
+    invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
     successMessage: '부적합 기록이 수정되었습니다.',
     errorMessage: '업데이트에 실패했습니다.',
     onSuccessCallback: () => {
@@ -177,9 +188,9 @@ export default function NonConformanceManagementClient({
 
   const handleUpdate = (id: string) => {
     const nc = nonConformances.find((n) => n.id === id);
+    if (!nc) return;
 
     if (
-      nc &&
       ['damage', 'malfunction'].includes(nc.ncType) &&
       !nc.repairHistoryId &&
       updateForm.status === 'corrected'
@@ -200,12 +211,13 @@ export default function NonConformanceManagementClient({
 
     setUpdating(true);
     const updateData: {
+      version: number;
       analysisContent?: string;
       correctionContent?: string;
       correctionDate?: string;
       correctedBy?: string;
       status?: 'open' | 'analyzing' | 'corrected';
-    } = {};
+    } = { version: nc.version };
     if (updateForm.analysisContent) updateData.analysisContent = updateForm.analysisContent;
     if (updateForm.correctionContent) {
       updateData.correctionContent = updateForm.correctionContent;
@@ -403,6 +415,24 @@ export default function NonConformanceManagementClient({
                     </Link>
                   )}
                 </div>
+
+                {/* 반려 사유 배너 — analyzing 상태이면서 rejectionReason이 있을 때 표시 */}
+                {nc.status === 'analyzing' && nc.rejectionReason && (
+                  <div className="rounded-md border p-4 bg-red-50 border-red-200">
+                    <div className="flex items-start gap-3">
+                      <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-red-900">조치 반려됨</p>
+                        <p className="text-sm text-red-800 mt-1">{nc.rejectionReason}</p>
+                        {nc.rejectedAt && (
+                          <p className="text-xs text-red-600 mt-1">
+                            반려일: {new Date(nc.rejectedAt).toLocaleDateString('ko-KR')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <h4 className="text-sm font-medium text-gray-700">부적합 원인</h4>

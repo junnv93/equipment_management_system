@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { queryKeys } from '@/lib/api/query-config';
 import checkoutApi, { Checkout, ConditionCheck, ReturnCheckoutDto } from '@/lib/api/checkout-api';
 import { CHECKOUT_RETURN_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
 import {
@@ -48,15 +49,16 @@ export default function ReturnCheckoutClient({
   const returnMutation = useMutation({
     mutationFn: (data: ReturnCheckoutDto) => checkoutApi.returnCheckout(checkout.id, data),
     onSuccess: () => {
-      // ✅ async-parallel: 모든 관련 캐시 병렬 무효화
+      router.push(`/checkouts/${checkout.id}`);
+      router.refresh();
+    },
+    onSettled: () => {
       Promise.all(
         CHECKOUT_RETURN_INVALIDATE_KEYS.map((key) =>
           queryClient.invalidateQueries({ queryKey: key })
         )
       );
-      queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
-      router.push(`/checkouts/${checkout.id}`);
-      router.refresh();
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.detail(checkout.id) });
     },
   });
 

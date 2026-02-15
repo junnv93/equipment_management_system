@@ -7,6 +7,7 @@ import { ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { queryKeys } from '@/lib/api/query-config';
 import checkoutApi, {
   Checkout,
   ConditionCheck,
@@ -49,10 +50,12 @@ export default function ConditionCheckClient({
     mutationFn: (data: CreateConditionCheckDto) =>
       checkoutApi.submitConditionCheck(checkout.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['checkout', checkout.id] });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.push(`/checkouts/${checkout.id}`);
       router.refresh();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.detail(checkout.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
     },
   });
 

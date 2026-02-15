@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 
 export interface Maintenance {
@@ -95,7 +96,7 @@ const maintenanceApi = {
       }
     });
 
-    const url = `/api/maintenances${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.MAINTENANCES.LIST}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await axios.get(url);
     return response.data;
   },
@@ -104,7 +105,7 @@ const maintenanceApi = {
    * 특정 점검 정보를 조회합니다.
    */
   async getMaintenance(id: string): Promise<Maintenance> {
-    const response = await axios.get(`/api/maintenances/${id}`);
+    const response = await axios.get(API_ENDPOINTS.MAINTENANCES.GET(id));
     return response.data.data;
   },
 
@@ -123,7 +124,7 @@ const maintenanceApi = {
       }
     });
 
-    const url = `/api/equipment/${equipmentId}/maintenances?${queryParams.toString()}`;
+    const url = `${API_ENDPOINTS.MAINTENANCES.EQUIPMENT(equipmentId)}?${queryParams.toString()}`;
     const response = await axios.get(url);
     return response.data;
   },
@@ -132,7 +133,7 @@ const maintenanceApi = {
    * 새 점검 정보를 등록합니다.
    */
   async createMaintenance(data: CreateMaintenanceDto): Promise<Maintenance> {
-    const response = await axios.post('/api/maintenances', data);
+    const response = await axios.post(API_ENDPOINTS.MAINTENANCES.CREATE, data);
     return response.data.data;
   },
 
@@ -140,7 +141,7 @@ const maintenanceApi = {
    * 점검 정보를 업데이트합니다.
    */
   async updateMaintenance(id: string, data: UpdateMaintenanceDto): Promise<Maintenance> {
-    const response = await axios.patch(`/api/maintenances/${id}`, data);
+    const response = await axios.patch(API_ENDPOINTS.MAINTENANCES.UPDATE(id), data);
     return response.data.data;
   },
 
@@ -148,14 +149,14 @@ const maintenanceApi = {
    * 점검 정보를 삭제합니다.
    */
   async deleteMaintenance(id: string): Promise<void> {
-    await axios.delete(`/api/maintenances/${id}`);
+    await axios.delete(API_ENDPOINTS.MAINTENANCES.DELETE(id));
   },
 
   /**
    * 점검 요약 정보를 조회합니다.
    */
   async getMaintenanceSummary(): Promise<MaintenanceSummary> {
-    const response = await axios.get('/api/maintenances/summary');
+    const response = await axios.get(API_ENDPOINTS.MAINTENANCES.SUMMARY);
     return response.data.data;
   },
 
@@ -173,7 +174,7 @@ const maintenanceApi = {
       }
     });
 
-    const url = `/api/maintenances/upcoming?${queryParams.toString()}`;
+    const url = `${API_ENDPOINTS.MAINTENANCES.UPCOMING}?${queryParams.toString()}`;
     const response = await axios.get(url);
     return response.data;
   },
@@ -192,7 +193,7 @@ const maintenanceApi = {
       }
     });
 
-    const url = `/api/maintenances/overdue?${queryParams.toString()}`;
+    const url = `${API_ENDPOINTS.MAINTENANCES.OVERDUE}?${queryParams.toString()}`;
     const response = await axios.get(url);
     return response.data;
   },
@@ -205,7 +206,7 @@ const maintenanceApi = {
     maintenanceDate: string,
     period: number
   ): Promise<{ nextMaintenanceDate: string }> {
-    const response = await axios.post('/api/maintenances/calculate-next-date', {
+    const response = await axios.post(API_ENDPOINTS.MAINTENANCES.CALCULATE_NEXT_DATE, {
       equipmentId,
       maintenanceDate,
       period,
@@ -217,7 +218,7 @@ const maintenanceApi = {
    * 장비의 점검 주기를 설정합니다.
    */
   async setMaintenancePeriod(equipmentId: string, period: number): Promise<{ success: boolean }> {
-    const response = await axios.post(`/api/equipment/${equipmentId}/maintenance-period`, {
+    const response = await axios.post(API_ENDPOINTS.MAINTENANCES.SET_PERIOD(equipmentId), {
       period,
     });
     return response.data;

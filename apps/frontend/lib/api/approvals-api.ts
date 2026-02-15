@@ -10,7 +10,11 @@
 
 import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { type UserRole } from '@equipment-management/schemas';
+import {
+  type UserRole,
+  type UnifiedApprovalStatus,
+  UNIFIED_APPROVAL_STATUS_LABELS,
+} from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
 import nonConformancesApi, { type NonConformance } from './non-conformances-api';
@@ -43,30 +47,11 @@ interface DisposalApprovalPayload {
 
 // ============================================================================
 // 통합 승인 상태 타입 (프론트엔드 로컬 정의)
-// Note: packages/schemas/src/enums.ts에 UnifiedApprovalStatus 추가됨
-// 패키지 빌드 후 import로 전환 예정
-// ============================================================================
-
-/**
- * 통합 승인 상태
- */
-export type UnifiedApprovalStatus =
-  | 'pending' // 대기 (1단계 승인용)
-  | 'pending_review' // 검토 대기 (다단계 1단계)
-  | 'reviewed' // 검토 완료 (다단계 2단계 대기)
-  | 'approved' // 승인 완료
-  | 'rejected'; // 반려
-
-/**
- * 통합 승인 상태 라벨
- */
-export const UNIFIED_APPROVAL_STATUS_LABELS: Record<UnifiedApprovalStatus, string> = {
-  pending: '대기',
-  pending_review: '검토 대기',
-  reviewed: '검토 완료',
-  approved: '승인 완료',
-  rejected: '반려',
-};
+// ✅ SSOT: UnifiedApprovalStatus, UNIFIED_APPROVAL_STATUS_LABELS는
+// @equipment-management/schemas에서 import (위 import 참조)
+// Re-export for downstream consumers
+export type { UnifiedApprovalStatus };
+export { UNIFIED_APPROVAL_STATUS_LABELS };
 
 // ============================================================================
 // 승인 카테고리 정의
@@ -117,14 +102,31 @@ export const ROLE_TABS: Record<UserRole, ApprovalCategory[]> = {
   ],
   quality_manager: ['plan_review', 'software'],
   lab_manager: ['disposal_final', 'plan_final', 'incoming'], // lab_manager also sees incoming (rental imports)
+  system_admin: [], // 시스템 관리자는 설정 관리 전용, 승인 워크플로우 미참여
 };
 
 /**
  * 탭 메타 정보
  *
- * SSOT: 아이콘과 라벨의 단일 소스
+ * SSOT: 아이콘, 라벨, 승인 시 코멘트 필수 여부의 단일 소스
+ *
+ * commentRequired가 true인 카테고리는:
+ * - 승인 시 코멘트 입력 다이얼로그를 표시
+ * - 백엔드 DTO에서도 해당 필드를 .min(1)로 검증
  */
-export const TAB_META: Record<ApprovalCategory, { label: string; icon: string; action: string }> = {
+export interface TabMeta {
+  label: string;
+  icon: string;
+  action: string;
+  /** 승인 시 코멘트 입력 필수 여부 (기본 false) */
+  commentRequired?: boolean;
+  /** 코멘트 입력 다이얼로그 제목 (commentRequired일 때 사용) */
+  commentDialogTitle?: string;
+  /** 코멘트 placeholder (commentRequired일 때 사용) */
+  commentPlaceholder?: string;
+}
+
+export const TAB_META: Record<ApprovalCategory, TabMeta> = {
   // Direction-based
   outgoing: { label: '반출', icon: 'ArrowUpFromLine', action: '승인' },
   incoming: { label: '반입', icon: 'ArrowDownToLine', action: '승인' },
@@ -134,7 +136,14 @@ export const TAB_META: Record<ApprovalCategory, { label: string; icon: string; a
   calibration: { label: '교정 기록', icon: 'FileCheck', action: '승인' },
   inspection: { label: '중간점검', icon: 'ClipboardCheck', action: '승인' },
   nonconformity: { label: '부적합 재개', icon: 'AlertTriangle', action: '승인' },
-  disposal_review: { label: '폐기 검토', icon: 'Trash2', action: '검토완료' },
+  disposal_review: {
+    label: '폐기 검토',
+    icon: 'Trash2',
+    action: '검토완료',
+    commentRequired: true,
+    commentDialogTitle: '폐기 검토 의견',
+    commentPlaceholder: '검토 의견을 입력하세요',
+  },
   disposal_final: { label: '폐기 승인', icon: 'Trash2', action: '승인' },
   plan_review: { label: '교정계획서 검토', icon: 'Calendar', action: '검토완료' },
   plan_final: { label: '교정계획서 승인', icon: 'Calendar', action: '승인' },
@@ -269,9 +278,9 @@ class ApprovalsApi {
     try {
       const [regularCheckouts, vendorReturns] = await Promise.all([
         // Regular checkouts
-        checkoutApi.getCheckouts({ status: 'pending' }),
+        checkoutApi.getCheckouts({ statuses: 'pending' }),
         // Vendor returns
-        checkoutApi.getCheckouts({ status: 'pending', purpose: 'return_to_vendor' }),
+        checkoutApi.getCheckouts({ statuses: 'pending', purpose: 'return_to_vendor' }),
       ]);
 
       const regularItems = (regularCheckouts.data || [])
@@ -348,7 +357,7 @@ class ApprovalsApi {
    */
   private async getPendingCheckouts(teamId?: string): Promise<ApprovalItem[]> {
     try {
-      const response = await checkoutApi.getCheckouts({ status: 'pending' });
+      const response = await checkoutApi.getCheckouts({ statuses: 'pending' });
       // PaginatedResponse uses 'data' field
       const items = response.data || [];
 
@@ -486,7 +495,7 @@ class ApprovalsApi {
     // 타입 필터링이 필요하면 추가
     try {
       const response = await checkoutApi.getCheckouts({
-        status: 'pending',
+        statuses: 'pending',
         // 추가 필터: purpose='rental' 등
       });
       const items = response.data || [];
@@ -612,7 +621,7 @@ class ApprovalsApi {
         if (this.isCheckout(originalData)) {
           const incomingVersion =
             this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
-          await checkoutApi.approveReturn(id, { version: incomingVersion, approverId, comment });
+          await checkoutApi.approveReturn(id, { version: incomingVersion, comment });
         } else if (this.isEquipmentImport(originalData)) {
           const importVersion =
             this.extractVersion(originalData) ?? (await equipmentImportApi.getOne(id)).version;
@@ -631,8 +640,7 @@ class ApprovalsApi {
           this.extractVersion(originalData) ?? (await calibrationApi.getCalibration(id)).version;
         await calibrationApi.approveCalibration(id, {
           version: calVersion,
-          approverId,
-          approverComment: comment || '',
+          approverComment: comment || undefined,
         });
         break;
       }
@@ -641,12 +649,16 @@ class ApprovalsApi {
           comment,
         });
         break;
-      case 'nonconformity':
+      case 'nonconformity': {
+        const ncVersion =
+          this.extractVersion(originalData) ??
+          (await nonConformancesApi.getNonConformance(id)).version;
         await nonConformancesApi.closeNonConformance(id, {
-          closedBy: approverId,
+          version: ncVersion,
           closureNotes: comment,
         });
         break;
+      }
       case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
         const reviewVersion =
@@ -703,7 +715,7 @@ class ApprovalsApi {
       case 'outgoing': {
         const outgoingVersion =
           this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
-        await checkoutApi.rejectCheckout(id, outgoingVersion, reason, approverId);
+        await checkoutApi.rejectCheckout(id, outgoingVersion, reason);
         break;
       }
 
@@ -711,7 +723,7 @@ class ApprovalsApi {
         if (this.isCheckout(originalData)) {
           const incomingVersion =
             this.extractVersion(originalData) ?? (await checkoutApi.getCheckout(id)).version;
-          await checkoutApi.rejectCheckout(id, incomingVersion, reason, approverId);
+          await checkoutApi.rejectReturn(id, { version: incomingVersion, reason });
         } else if (this.isEquipmentImport(originalData)) {
           const importVersion =
             this.extractVersion(originalData) ?? (await equipmentImportApi.getOne(id)).version;
@@ -732,15 +744,22 @@ class ApprovalsApi {
           this.extractVersion(originalData) ?? (await calibrationApi.getCalibration(id)).version;
         await calibrationApi.rejectCalibration(id, {
           version: calVersion,
-          approverId,
           rejectionReason: reason,
         });
         break;
       }
       case 'inspection':
         throw new Error('중간점검은 반려할 수 없습니다.');
-      case 'nonconformity':
-        throw new Error('부적합 재개는 반려할 수 없습니다. 부적합 관리 페이지에서 처리하세요.');
+      case 'nonconformity': {
+        const ncRejectVersion =
+          this.extractVersion(originalData) ??
+          (await nonConformancesApi.getNonConformance(id)).version;
+        await nonConformancesApi.rejectCorrection(id, {
+          version: ncRejectVersion,
+          rejectionReason: reason,
+        });
+        break;
+      }
       case 'disposal_review': {
         if (!equipmentId) throw new Error('equipmentId is required for disposal review');
         const reviewVersion =
@@ -934,7 +953,7 @@ class ApprovalsApi {
         equipmentId: calibration.equipmentId,
         calibrationDate: calibration.calibrationDate,
         nextCalibrationDate: calibration.nextCalibrationDate,
-        calibrationResult: calibration.calibrationResult,
+        result: calibration.result,
         calibrationAgency: calibration.calibrationAgency,
         certificateNumber: calibration.certificateNumber,
       },
@@ -1043,6 +1062,8 @@ class ApprovalsApi {
         correctionDate: nc.correctionDate,
         actionPlan: nc.actionPlan,
         analysisContent: nc.analysisContent,
+        rejectionReason: nc.rejectionReason,
+        rejectedAt: nc.rejectedAt,
       },
       originalData: nc,
     };

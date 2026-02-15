@@ -5,7 +5,7 @@
  */
 
 // 팀 목록 관련
-export { TeamList, TeamListSkeleton } from './TeamList';
+export { TeamListContent, TeamListSkeleton } from './TeamListContent';
 export { TeamCard, TeamCardSkeleton } from './TeamCard';
 
 // 팀 상세 관련

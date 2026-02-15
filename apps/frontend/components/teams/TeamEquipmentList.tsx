@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import equipmentApi from '@/lib/api/equipment-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { cn } from '@/lib/utils';
 
 interface TeamEquipmentListProps {
@@ -20,7 +21,10 @@ interface TeamEquipmentListProps {
 /**
  * 장비 상태별 배지 설정
  */
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+> = {
   available: { label: '사용 가능', variant: 'default' },
   in_use: { label: '사용 중', variant: 'secondary' },
   checked_out: { label: '반출 중', variant: 'outline' },
@@ -43,15 +47,10 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
   const [search, setSearch] = useState('');
 
   // 팀 장비 목록 조회
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ['teamEquipment', teamId],
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.equipment.list({ teamId }),
     queryFn: () => equipmentApi.getEquipmentList({ teamId, pageSize: 100 }),
-    staleTime: 60 * 1000,
+    ...QUERY_CONFIG.EQUIPMENT_LIST,
   });
 
   const equipment = data?.data || [];
@@ -133,9 +132,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                 {search ? '검색 결과가 없습니다' : '등록된 장비가 없습니다'}
               </p>
               <Button variant="outline" className="mt-4" asChild>
-                <Link href="/equipment/create">
-                  장비 등록하기
-                </Link>
+                <Link href="/equipment/create">장비 등록하기</Link>
               </Button>
             </div>
           ) : (
@@ -143,12 +140,8 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-4 font-medium text-muted-foreground">
-                      장비명
-                    </th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">
-                      관리번호
-                    </th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">장비명</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">관리번호</th>
                     <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
                       상태
                     </th>
@@ -162,7 +155,9 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                 </thead>
                 <tbody>
                   {filteredEquipment.map((item, index) => {
-                    const statusConfig = item.status ? STATUS_CONFIG[item.status] : STATUS_CONFIG.available;
+                    const statusConfig = item.status
+                      ? STATUS_CONFIG[item.status]
+                      : STATUS_CONFIG.available;
 
                     return (
                       <tr
@@ -185,9 +180,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                               {item.name}
                             </Link>
                             {item.modelName && (
-                              <p className="text-xs text-muted-foreground">
-                                {item.modelName}
-                              </p>
+                              <p className="text-xs text-muted-foreground">{item.modelName}</p>
                             )}
                           </div>
                         </td>
@@ -197,9 +190,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                           </code>
                         </td>
                         <td className="p-4 hidden md:table-cell">
-                          <Badge variant={statusConfig.variant}>
-                            {statusConfig.label}
-                          </Badge>
+                          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
                         </td>
                         <td className="p-4 hidden lg:table-cell">
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -209,9 +200,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                         </td>
                         <td className="p-4 text-right">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/equipment/${item.uuid || item.id}`}>
-                              상세
-                            </Link>
+                            <Link href={`/equipment/${item.uuid || item.id}`}>상세</Link>
                           </Button>
                         </td>
                       </tr>

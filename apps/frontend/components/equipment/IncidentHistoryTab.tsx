@@ -171,7 +171,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
   // 열린 부적합 목록 조회 (수리 이력 연결용)
   const { data: openNonConformances } = useQuery({
-    queryKey: ['open-non-conformances', equipmentId],
+    queryKey: queryKeys.equipment.openNonConformances(equipmentId),
     queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
     select: (data) => {
       if (!data || !data.data || !Array.isArray(data.data)) {
@@ -190,12 +190,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const createMutation = useMutation({
     mutationFn: (data: CreateIncidentHistoryInput) =>
       equipmentApi.createIncidentHistory(equipmentId, data),
-    onSuccess: async () => {
-      // ✅ 중앙화된 캐시 무효화 헬퍼 사용
-      // - 사고 이력 목록 무효화
-      // - 장비 상세 + 목록 무효화 (사고로 상태 변경 가능)
-      await EquipmentCacheInvalidation.invalidateAfterIncidentHistory(queryClient, equipmentId);
-
+    onSuccess: () => {
       setIsDialogOpen(false);
       form.reset({
         occurredAt: formatDate(new Date(), 'yyyy-MM-dd'),
@@ -209,8 +204,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
         title: '사고 이력 등록 완료',
         description: '사고 이력이 성공적으로 등록되었습니다.',
       });
-      // 2. Server Component 데이터 갱신 (Next.js Router Cache 무효화)
       router.refresh();
+    },
+    onSettled: async () => {
+      await EquipmentCacheInvalidation.invalidateAfterIncidentHistory(queryClient, equipmentId);
     },
     onError: (error: unknown) => {
       console.error('🔴 사고 이력 등록 실패:', error);
@@ -249,15 +246,21 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     mutationFn: (dto: CreateRepairHistoryDto) => createRepairHistory(equipmentId, dto),
     onSuccess: () => {
       toast({ title: '성공', description: '수리 이력이 등록되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['repair-history', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['non-conformances', 'equipment', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['open-non-conformances', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.incidentHistory(equipmentId) });
-      queryClient.invalidateQueries({ queryKey: ['equipment', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['equipmentList'] });
       setIsDialogOpen(false);
       repairForm.reset();
       router.refresh();
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.repairHistory(equipmentId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.openNonConformances(equipmentId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.incidentHistory(equipmentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.detail(equipmentId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
     },
     onError: (error: Error) => {
       toast({

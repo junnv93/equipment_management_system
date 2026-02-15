@@ -247,6 +247,73 @@ export class EquipmentCacheInvalidation {
 }
 
 /**
+ * 알림 캐시 무효화 헬퍼
+ *
+ * 승인/반려 등 상태 변경 후 알림 캐시를 무효화하여
+ * 배지 카운트와 드롭다운이 최신 상태를 반영하도록 한다.
+ */
+export class NotificationCacheInvalidation {
+  /**
+   * 모든 알림 캐시 무효화 (목록 + 미읽음 카운트)
+   *
+   * 사용 시점:
+   * - 승인/반려 처리 후 (관련 알림 발생)
+   * - 벌크 승인 후
+   * - 알림 설정 변경 후
+   */
+  static async invalidateAll(queryClient: QueryClient): Promise<void> {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.notifications.all,
+      exact: false,
+    });
+  }
+}
+
+/**
+ * 교정계획서 캐시 무효화 헬퍼
+ */
+export class CalibrationPlansCacheInvalidation {
+  /**
+   * 모든 교정계획서 캐시 무효화
+   */
+  static async invalidateAll(queryClient: QueryClient): Promise<void> {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.calibrationPlans.all,
+      exact: false,
+    });
+  }
+
+  /**
+   * 특정 교정계획서 상세 + 목록 무효화
+   */
+  static async invalidatePlan(queryClient: QueryClient, planId: string): Promise<void> {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibrationPlans.detail(planId),
+        exact: false,
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibrationPlans.lists(),
+        exact: false,
+      }),
+    ]);
+  }
+
+  /**
+   * 상태 변경 후 무효화 (대시보드 포함)
+   */
+  static async invalidateAfterStatusChange(
+    queryClient: QueryClient,
+    planId: string
+  ): Promise<void> {
+    await Promise.all([
+      this.invalidatePlan(queryClient, planId),
+      DashboardCacheInvalidation.invalidateAll(queryClient),
+    ]);
+  }
+}
+
+/**
  * 대시보드 캐시 무효화 헬퍼
  */
 export class DashboardCacheInvalidation {

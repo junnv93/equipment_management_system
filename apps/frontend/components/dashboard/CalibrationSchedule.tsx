@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { CalendarIcon, AlertTriangle } from "lucide-react";
-import { useState, useEffect } from "react";
-// ✅ 직접 import (barrel import 제거)
-import dashboardApi from "@/lib/api/dashboard-api";
-import type { UpcomingCalibration } from "@/lib/api/dashboard-api";
-import { Card } from "@/components/ui/card";
+import { CalendarIcon, AlertTriangle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import dashboardApi from '@/lib/api/dashboard-api';
+import type { UpcomingCalibration } from '@/lib/api/dashboard-api';
+import { Card } from '@/components/ui/card';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 interface CalibrationItem {
   id: string;
@@ -13,7 +13,7 @@ interface CalibrationItem {
   managementNumber: string;
   calibrationDueDate: string;
   daysRemaining: number;
-  status: "upcoming" | "urgent" | "overdue";
+  status: 'upcoming' | 'urgent' | 'overdue';
 }
 
 interface CalibrationScheduleProps {
@@ -21,37 +21,23 @@ interface CalibrationScheduleProps {
 }
 
 export default function CalibrationSchedule({ days = 30 }: CalibrationScheduleProps) {
-  const [calibrationData, setCalibrationData] = useState<UpcomingCalibration[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const data = await dashboardApi.getCalibrationSchedule();
-        setCalibrationData(data);
-        setError(null);
-      } catch (err) {
-        console.error("교정 일정 데이터를 불러오는 중 오류 발생:", err);
-        setError("데이터를 불러올 수 없습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [days]);
+  // ✅ TanStack Query로 서버 상태 관리
+  const {
+    data: calibrationData = [],
+    isLoading: loading,
+    isError,
+  } = useQuery<UpcomingCalibration[]>({
+    queryKey: queryKeys.dashboard.upcomingCalibrations(),
+    queryFn: () => dashboardApi.getCalibrationSchedule(),
+    ...QUERY_CONFIG.DASHBOARD,
+  });
 
   // 로딩 상태 표시
   if (loading) {
     return (
       <div className="space-y-4">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={index}
-            className="flex items-center p-3 rounded-md border border-gray-200"
-          >
+          <div key={index} className="flex items-center p-3 rounded-md border border-gray-200">
             <div className="w-2 h-full min-h-[2.5rem] rounded-full mr-4 bg-gray-200 animate-pulse" />
             <div className="flex-1">
               <div className="h-5 bg-gray-200 rounded w-2/3 mb-2 animate-pulse"></div>
@@ -68,26 +54,25 @@ export default function CalibrationSchedule({ days = 30 }: CalibrationSchedulePr
   }
 
   // 에러 상태 표시
-  if (error) {
+  if (isError) {
     return (
       <Card className="p-4 bg-red-50 border-red-200">
         <div className="flex items-center gap-2 text-red-600">
           <AlertTriangle className="h-5 w-5" />
-          <span>{error}</span>
+          <span>데이터를 불러올 수 없습니다.</span>
         </div>
       </Card>
     );
   }
 
   // API 응답 데이터를 컴포넌트 형식에 맞게 변환
-  const calibrationItems: CalibrationItem[] = calibrationData.map(item => ({
+  const calibrationItems: CalibrationItem[] = calibrationData.map((item) => ({
     id: item.equipmentId,
     equipmentName: item.equipmentName,
-    managementNumber: item.equipmentId || "-",
+    managementNumber: item.equipmentId || '-',
     calibrationDueDate: new Date(item.dueDate).toLocaleDateString(),
     daysRemaining: item.daysUntilDue,
-    status: item.daysUntilDue > 7 ? "upcoming" :
-            item.daysUntilDue > 0 ? "urgent" : "overdue"
+    status: item.daysUntilDue > 7 ? 'upcoming' : item.daysUntilDue > 0 ? 'urgent' : 'overdue',
   }));
 
   // 데이터가 없는 경우
@@ -109,11 +94,11 @@ export default function CalibrationSchedule({ days = 30 }: CalibrationSchedulePr
         >
           <div
             className={`w-2 h-full min-h-[2.5rem] rounded-full mr-4 ${
-              item.status === "upcoming"
-                ? "bg-blue-400"
-                : item.status === "urgent"
-                ? "bg-amber-500"
-                : "bg-red-500"
+              item.status === 'upcoming'
+                ? 'bg-blue-400'
+                : item.status === 'urgent'
+                  ? 'bg-amber-500'
+                  : 'bg-red-500'
             }`}
           />
 
@@ -129,11 +114,11 @@ export default function CalibrationSchedule({ days = 30 }: CalibrationSchedulePr
             </div>
             <span
               className={`text-xs font-medium mt-1 ${
-                item.status === "upcoming"
-                  ? "text-blue-600"
-                  : item.status === "urgent"
-                  ? "text-amber-600"
-                  : "text-red-600"
+                item.status === 'upcoming'
+                  ? 'text-blue-600'
+                  : item.status === 'urgent'
+                    ? 'text-amber-600'
+                    : 'text-red-600'
               }`}
             >
               {item.daysRemaining > 0
@@ -145,4 +130,4 @@ export default function CalibrationSchedule({ days = 30 }: CalibrationSchedulePr
       ))}
     </div>
   );
-} 
+}

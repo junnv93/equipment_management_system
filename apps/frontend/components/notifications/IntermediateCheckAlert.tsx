@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
+import { queryKeys } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { CheckCircle2, AlertTriangle, Clock, X } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
 import { formatDate } from '@/lib/utils/date';
 import { apiClient } from '@/lib/api/api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 export interface IntermediateCheck {
   id: string;
@@ -111,7 +113,7 @@ export function IntermediateCheckAlert({
   // 중간점검 완료 뮤테이션
   const completeMutation = useMutation({
     mutationFn: async () => {
-      return apiClient.post(`/api/calibration/${check.id}/intermediate-check/complete`, {
+      return apiClient.post(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(check.id), {
         completedBy: session?.user?.id,
         notes: completionNotes || undefined,
       });
@@ -121,9 +123,6 @@ export function IntermediateCheckAlert({
         title: '중간점검 완료',
         description: '중간점검이 완료 처리되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['intermediate-checks'] });
-      queryClient.invalidateQueries({ queryKey: ['calibrations'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setIsCompleteDialogOpen(false);
       setCompletionNotes('');
       onComplete?.();
@@ -134,6 +133,11 @@ export function IntermediateCheckAlert({
         description: getErrorMessage(error, '중간점검 완료 처리 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.intermediateChecks() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 
@@ -147,7 +151,7 @@ export function IntermediateCheckAlert({
         className={`flex items-center justify-between p-3 rounded-lg border ${style.alertClass}`}
       >
         <div className="flex items-center gap-3">
-          <IconComponent className={`h-4 w-4 ${style.iconClass}`} />
+          <IconComponent className={`h-4 w-4 ${style.iconClass}`} aria-hidden="true" />
           <div>
             <span className="font-medium">{equipmentName || `장비 ${check.equipmentId}`}</span>
             {managementNumber && (
@@ -164,12 +168,12 @@ export function IntermediateCheckAlert({
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setIsCompleteDialogOpen(true)}>
-            <CheckCircle2 className="h-4 w-4 mr-1" />
+            <CheckCircle2 className="h-4 w-4 mr-1" aria-hidden="true" />
             완료
           </Button>
           {onDismiss && (
-            <Button size="sm" variant="ghost" onClick={onDismiss}>
-              <X className="h-4 w-4" />
+            <Button size="sm" variant="ghost" onClick={onDismiss} aria-label="알림 닫기">
+              <X className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
         </div>
@@ -211,7 +215,7 @@ export function IntermediateCheckAlert({
 
   return (
     <Alert className={style.alertClass}>
-      <IconComponent className={`h-4 w-4 ${style.iconClass}`} />
+      <IconComponent className={`h-4 w-4 ${style.iconClass}`} aria-hidden="true" />
       <AlertTitle className="flex items-center gap-2">
         중간점검 {style.label}
         <Badge className={style.badgeClass}>
@@ -235,7 +239,7 @@ export function IntermediateCheckAlert({
           </p>
           <div className="flex gap-2 mt-3">
             <Button size="sm" onClick={() => setIsCompleteDialogOpen(true)}>
-              <CheckCircle2 className="h-4 w-4 mr-1" />
+              <CheckCircle2 className="h-4 w-4 mr-1" aria-hidden="true" />
               점검 완료
             </Button>
             {onDismiss && (

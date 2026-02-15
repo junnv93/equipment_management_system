@@ -1,63 +1,77 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle, AlertTriangle, Clock, ExternalLink } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import nonConformancesApi, {
   NonConformance,
   NON_CONFORMANCE_STATUS_LABELS,
   NON_CONFORMANCE_STATUS_COLORS,
 } from '@/lib/api/non-conformances-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { getErrorMessage } from '@/lib/api/error';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function NonConformanceApprovalsContent() {
-  const { data: session } = useSession();
-  const [nonConformances, setNonConformances] = useState<NonConformance[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [closingId, setClosingId] = useState<string | null>(null);
   const [closureNotes, setClosureNotes] = useState<Record<string, string>>({});
 
-  // 현재 로그인한 사용자 ID
-  const currentUserId = session?.user?.id ?? '';
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      // 조치 완료(corrected) 상태의 부적합 목록 조회
+  // ✅ TanStack Query로 서버 상태 관리 (useState + useEffect 패턴 제거)
+  const {
+    data: nonConformances = [],
+    isLoading: loading,
+    isError,
+  } = useQuery<NonConformance[]>({
+    queryKey: [...queryKeys.nonConformances.lists(), { status: 'corrected' }],
+    queryFn: async () => {
       const data = await nonConformancesApi.getPendingCloseNonConformances();
-      setNonConformances(data.data);
-    } catch (err) {
-      setError('데이터를 불러오는데 실패했습니다.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data.data;
+    },
+    ...QUERY_CONFIG.PENDING_APPROVALS,
+  });
 
-  const handleClose = async (id: string) => {
-    try {
-      setClosingId(id);
-      await nonConformancesApi.closeNonConformance(id, {
-        closedBy: currentUserId,
-        closureNotes: closureNotes[id] || undefined,
+  // ✅ useMutation으로 종료 처리
+  const closeMutation = useMutation({
+    mutationFn: async ({ id, version, notes }: { id: string; version: number; notes?: string }) => {
+      return nonConformancesApi.closeNonConformance(id, {
+        version,
+        closureNotes: notes || undefined,
       });
-      await loadData();
+    },
+    onSuccess: (_data, variables) => {
+      toast({ title: '사용 재개 승인 완료', description: '부적합이 종료되었습니다.' });
       setClosureNotes((prev) => {
         const next = { ...prev };
-        delete next[id];
+        delete next[variables.id];
         return next;
       });
-    } catch (err) {
-      alert('종료 처리에 실패했습니다.');
-      console.error(err);
-    } finally {
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: '종료 처리 실패',
+        description: getErrorMessage(error, '종료 처리에 실패했습니다.'),
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
       setClosingId(null);
-    }
+      // ✅ SSOT: 서버 동기화는 onSettled에서
+      queryClient.invalidateQueries({ queryKey: queryKeys.nonConformances.all });
+    },
+  });
+
+  const handleClose = (id: string) => {
+    const nc = nonConformances.find((n) => n.id === id);
+    if (!nc) return;
+    setClosingId(id);
+    closeMutation.mutate({
+      id,
+      version: nc.version,
+      notes: closureNotes[id],
+    });
   };
 
   if (loading) {
@@ -68,10 +82,12 @@ export default function NonConformanceApprovalsContent() {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className="p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+          데이터를 불러오는데 실패했습니다.
+        </div>
       </div>
     );
   }

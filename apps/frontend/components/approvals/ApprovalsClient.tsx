@@ -7,6 +7,17 @@ import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { CHECKOUT_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Package,
   FileCheck,
@@ -28,6 +39,7 @@ import {
   TAB_META,
 } from '@/lib/api/approvals-api';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { ApprovalList } from './ApprovalList';
 import { BulkActionBar } from './BulkActionBar';
 import ApprovalDetailModal from './ApprovalDetailModal';
@@ -79,6 +91,13 @@ export function ApprovalsClient({
   const [detailModalItem, setDetailModalItem] = useState<ApprovalItem | null>(null);
   const [rejectModalItem, setRejectModalItem] = useState<ApprovalItem | null>(null);
 
+  // ✅ 승인 코멘트 다이얼로그 상태 (commentRequired 카테고리용)
+  const [approveCommentItem, setApproveCommentItem] = useState<ApprovalItem | null>(null);
+  const [approveComment, setApproveComment] = useState('');
+  // 벌크 승인 코멘트 다이얼로그 상태
+  const [isBulkApproveCommentOpen, setIsBulkApproveCommentOpen] = useState(false);
+  const [bulkApproveComment, setBulkApproveComment] = useState('');
+
   // 클라이언트 마운트 후에만 Radix UI 렌더링 (useId 충돌 방지)
   useEffect(() => {
     setMounted(true);
@@ -106,44 +125,76 @@ export function ApprovalsClient({
 
   // 승인 대기 목록 조회
   const { data: pendingItems = [], isLoading } = useQuery({
-    queryKey: ['approvals', activeTab, userTeamId],
+    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     queryFn: () => approvalsApi.getPendingItems(activeTab, userTeamId),
-    staleTime: 30000, // 30초
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // 카테고리별 대기 개수 조회
+  // SSOT: 네비 뱃지, 대시보드 카드와 동일한 query key 공유
   const { data: pendingCounts } = useQuery({
-    queryKey: ['approval-counts', userRole],
+    queryKey: queryKeys.approvals.counts(userRole),
     queryFn: () => approvalsApi.getPendingCounts(userRole),
-    staleTime: 60000, // 1분
+    staleTime: CACHE_TIMES.MEDIUM,
   });
 
   // ✅ 승인 처리 - Optimistic Update 패턴
-  const approveMutation = useOptimisticMutation<void, ApprovalItem, ApprovalItem[]>({
-    mutationFn: async (item) => {
+  // 타입 변경: ApprovalItem → { item, comment? } — 코멘트 전달 지원
+  const approveMutation = useOptimisticMutation<
+    void,
+    { item: ApprovalItem; comment?: string },
+    ApprovalItem[]
+  >({
+    mutationFn: async ({ item, comment }) => {
       const equipmentId = item.details?.equipmentId as string | undefined;
       await approvalsApi.approve(
         item.category,
         item.id,
         userId,
-        undefined,
+        comment,
         equipmentId,
         item.originalData
       );
     },
-    queryKey: ['approvals', activeTab, userTeamId],
-    optimisticUpdate: (old, item) => {
+    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
+    optimisticUpdate: (old, { item }) => {
       // ✅ 승인한 항목만 즉시 제거 (전체 재조회 불필요)
       return old?.filter((i) => i.id !== item.id) || [];
     },
-    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
-    successMessage: (_, item) => `${item.summary}이(가) 승인되었습니다.`,
+    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    successMessage: (_, { item }) => `${item.summary}이(가) 승인되었습니다.`,
     errorMessage: '승인 처리 중 오류가 발생했습니다.',
-    onSuccessCallback: () => setDetailModalItem(null),
+    onSuccessCallback: () => {
+      setDetailModalItem(null);
+      setApproveCommentItem(null);
+      setApproveComment('');
+    },
   });
 
-  const handleApprove = async (item: ApprovalItem) => {
-    await approveMutation.mutateAsync(item);
+  /**
+   * 승인 핸들러 — SSOT: TAB_META.commentRequired 기반 분기
+   *
+   * commentRequired=true → 코멘트 입력 다이얼로그 표시
+   * commentRequired=false → 직접 mutation 실행
+   */
+  const handleApprove = (item: ApprovalItem) => {
+    const meta = TAB_META[item.category];
+    if (meta?.commentRequired) {
+      // 상세 모달이 열려있으면 닫고 코멘트 다이얼로그로 전환
+      setDetailModalItem(null);
+      setApproveCommentItem(item);
+      setApproveComment('');
+    } else {
+      approveMutation.mutate({ item });
+    }
+  };
+
+  /**
+   * 코멘트 다이얼로그에서 확인 클릭 시
+   */
+  const handleApproveWithComment = () => {
+    if (!approveCommentItem || !approveComment.trim()) return;
+    approveMutation.mutate({ item: approveCommentItem, comment: approveComment });
   };
 
   // ✅ 반려 처리 - Optimistic Update 패턴
@@ -163,12 +214,12 @@ export function ApprovalsClient({
         item.originalData
       );
     },
-    queryKey: ['approvals', activeTab, userTeamId],
+    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old, { item }) => {
       // ✅ 반려한 항목만 즉시 제거
       return old?.filter((i) => i.id !== item.id) || [];
     },
-    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (_, { item }) => `${item.summary}이(가) 반려되었습니다.`,
     errorMessage: '반려 처리 중 오류가 발생했습니다.',
     onSuccessCallback: () => setRejectModalItem(null),
@@ -181,18 +232,18 @@ export function ApprovalsClient({
   // ✅ 일괄 승인 처리 - Optimistic Update 패턴
   const bulkApproveMutation = useOptimisticMutation<
     { success: string[]; failed: string[] },
-    string[],
+    { ids: string[]; comment?: string },
     ApprovalItem[]
   >({
-    mutationFn: async (ids) => {
-      return await approvalsApi.bulkApprove(activeTab, ids, userId);
+    mutationFn: async ({ ids, comment }) => {
+      return await approvalsApi.bulkApprove(activeTab, ids, userId, comment);
     },
-    queryKey: ['approvals', activeTab, userTeamId],
-    optimisticUpdate: (old, ids) => {
+    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
+    optimisticUpdate: (old, { ids }) => {
       // ✅ 선택된 항목들만 즉시 제거 (낙관적 - 모두 성공 가정)
       return old?.filter((item) => !ids.includes(item.id)) || [];
     },
-    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
       if (result.failed.length > 0) {
         return `${result.success.length}건 승인 완료, ${result.failed.length}건 실패`;
@@ -200,19 +251,33 @@ export function ApprovalsClient({
       return `${result.success.length}건이 승인되었습니다.`;
     },
     errorMessage: '일괄 승인 중 오류가 발생했습니다.',
-    onSuccessCallback: (result) => {
+    onSuccessCallback: () => {
       setSelectedItems([]);
-      // Partial failure 시 추가 토스트
-      if (result.failed.length > 0 && result.success.length > 0) {
-        // Note: errorMessage already shows the combined message
-        // This is just to clear selections
-      }
+      setIsBulkApproveCommentOpen(false);
+      setBulkApproveComment('');
     },
   });
 
-  const handleBulkApprove = async () => {
+  /**
+   * 일괄 승인 핸들러 — commentRequired 카테고리는 코멘트 다이얼로그 표시
+   */
+  const handleBulkApprove = () => {
     if (selectedItems.length === 0) return;
-    await bulkApproveMutation.mutateAsync(selectedItems);
+    const meta = TAB_META[activeTab];
+    if (meta?.commentRequired) {
+      setIsBulkApproveCommentOpen(true);
+      setBulkApproveComment('');
+    } else {
+      bulkApproveMutation.mutate({ ids: selectedItems });
+    }
+  };
+
+  /**
+   * 벌크 코멘트 다이얼로그에서 확인 클릭 시
+   */
+  const handleBulkApproveWithComment = () => {
+    if (!bulkApproveComment.trim()) return;
+    bulkApproveMutation.mutate({ ids: selectedItems, comment: bulkApproveComment });
   };
 
   // ✅ 일괄 반려 처리 - Optimistic Update 패턴
@@ -224,12 +289,12 @@ export function ApprovalsClient({
     mutationFn: async ({ ids, reason }) => {
       return await approvalsApi.bulkReject(activeTab, ids, userId, reason);
     },
-    queryKey: ['approvals', activeTab, userTeamId],
+    queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old, { ids }) => {
       // ✅ 선택된 항목들만 즉시 제거 (낙관적 - 모두 성공 가정)
       return old?.filter((item) => !ids.includes(item.id)) || [];
     },
-    invalidateKeys: [['approval-counts', userRole], ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
       if (result.failed.length > 0) {
         return `${result.success.length}건 반려 완료, ${result.failed.length}건 실패`;
@@ -270,6 +335,10 @@ export function ApprovalsClient({
     if (!pendingCounts) return 0;
     return pendingCounts[category] || 0;
   };
+
+  // 현재 탭의 코멘트 다이얼로그 메타 (SSOT: TAB_META)
+  const activeTabMeta = TAB_META[activeTab];
+  const commentMeta = approveCommentItem ? TAB_META[approveCommentItem.category] : null;
 
   if (availableTabs.length === 0) {
     return (
@@ -376,6 +445,106 @@ export function ApprovalsClient({
           onConfirm={(reason) => handleReject(rejectModalItem, reason)}
         />
       )}
+
+      {/* ✅ 승인 코멘트 다이얼로그 (commentRequired 카테고리용) */}
+      <Dialog
+        open={!!approveCommentItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setApproveCommentItem(null);
+            setApproveComment('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{commentMeta?.commentDialogTitle || '승인 코멘트'}</DialogTitle>
+            <DialogDescription>{approveCommentItem?.summary}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="approve-comment">검토 코멘트 *</Label>
+              <Textarea
+                id="approve-comment"
+                placeholder={commentMeta?.commentPlaceholder || '검토 내용을 입력하세요'}
+                value={approveComment}
+                onChange={(e) => setApproveComment(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setApproveCommentItem(null);
+                setApproveComment('');
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApproveWithComment}
+              disabled={!approveComment.trim() || approveMutation.isPending}
+            >
+              {commentMeta?.action || '승인'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ✅ 벌크 승인 코멘트 다이얼로그 (commentRequired 카테고리용) */}
+      <Dialog
+        open={isBulkApproveCommentOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsBulkApproveCommentOpen(false);
+            setBulkApproveComment('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{activeTabMeta?.commentDialogTitle || '일괄 승인 코멘트'}</DialogTitle>
+            <DialogDescription>
+              선택된 {selectedItems.length}건에 공통 코멘트를 입력하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-approve-comment">검토 코멘트 *</Label>
+              <Textarea
+                id="bulk-approve-comment"
+                placeholder={activeTabMeta?.commentPlaceholder || '검토 내용을 입력하세요'}
+                value={bulkApproveComment}
+                onChange={(e) => setBulkApproveComment(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsBulkApproveCommentOpen(false);
+                setBulkApproveComment('');
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              onClick={handleBulkApproveWithComment}
+              disabled={!bulkApproveComment.trim() || bulkApproveMutation.isPending}
+            >
+              {selectedItems.length}건 {activeTabMeta?.action || '승인'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

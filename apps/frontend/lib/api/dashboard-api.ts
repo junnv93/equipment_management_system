@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
 import { transformArrayResponse } from './utils/response-transformers';
 
@@ -73,6 +74,11 @@ export interface RecentActivity {
   entityName: string;
 }
 
+/**
+ * @deprecated Use PendingCountsByCategory from approvals-api.ts instead.
+ * This interface uses a different category structure that doesn't match
+ * the actual approval page tabs (e.g., 'checkout' vs 'outgoing'/'incoming').
+ */
 export interface PendingApprovalCounts {
   equipment: number;
   calibration: number;
@@ -87,7 +93,7 @@ export type { UserRole };
 
 class DashboardApi {
   async getSummary(teamId?: string): Promise<DashboardSummary> {
-    const response = await apiClient.get('/api/dashboard/summary', {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.SUMMARY, {
       params: teamId ? { teamId } : undefined,
     });
     return response.data;
@@ -103,7 +109,7 @@ class DashboardApi {
   }
 
   async getEquipmentList(): Promise<unknown[]> {
-    const response = await apiClient.get('/api/equipment?limit=10');
+    const response = await apiClient.get(`${API_ENDPOINTS.EQUIPMENT.LIST}?limit=10`);
     return transformArrayResponse<unknown>(response);
   }
 
@@ -112,21 +118,21 @@ class DashboardApi {
   }
 
   async getEquipmentByTeam(teamId?: string): Promise<EquipmentByTeam[]> {
-    const response = await apiClient.get('/api/dashboard/equipment-by-team', {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.EQUIPMENT_BY_TEAM, {
       params: teamId ? { teamId } : undefined,
     });
     return transformArrayResponse<EquipmentByTeam>(response);
   }
 
   async getOverdueCalibrations(teamId?: string): Promise<OverdueCalibration[]> {
-    const response = await apiClient.get('/api/dashboard/overdue-calibrations', {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.OVERDUE_CALIBRATIONS, {
       params: teamId ? { teamId } : undefined,
     });
     return transformArrayResponse<OverdueCalibration>(response);
   }
 
   async getUpcomingCalibrations(days: number, teamId?: string): Promise<UpcomingCalibration[]> {
-    const response = await apiClient.get('/api/dashboard/upcoming-calibrations', {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.UPCOMING_CALIBRATIONS, {
       params: { days, ...(teamId ? { teamId } : {}) },
     });
     return response.data;
@@ -136,31 +142,32 @@ class DashboardApi {
    * 반출 지연 목록 조회 (대여/교정/수리 포함)
    */
   async getOverdueCheckouts(teamId?: string): Promise<OverdueCheckout[]> {
-    const response = await apiClient.get('/api/dashboard/overdue-rentals', {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.OVERDUE_RENTALS, {
       params: teamId ? { teamId } : undefined,
     });
     return response.data;
   }
 
   async getRecentActivities(): Promise<RecentActivity[]> {
-    const response = await apiClient.get('/api/dashboard/recent-activities');
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITIES);
     return response.data;
   }
 
   async getEquipmentStatusStats(teamId?: string): Promise<Record<string, number>> {
-    const response = await apiClient.get('/api/dashboard/equipment-status-stats', {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.EQUIPMENT_STATUS_STATS, {
       params: teamId ? { teamId } : undefined,
     });
     return response.data;
   }
 
   /**
-   * 승인 대기 카운트 조회
-   * 역할에 따라 다른 범위의 데이터 반환
+   * @deprecated Use approvalsApi.getPendingCounts() from approvals-api.ts instead.
+   * This method calls a legacy endpoint with incomplete counting logic
+   * (calibration/disposal/NC hardcoded to 0).
    */
   async getPendingApprovalCounts(role?: string): Promise<PendingApprovalCounts> {
     try {
-      const response = await apiClient.get('/api/dashboard/pending-approval-counts', {
+      const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.PENDING_APPROVAL_COUNTS, {
         params: role ? { role } : undefined,
       });
       return response.data;
@@ -185,7 +192,7 @@ class DashboardApi {
    */
   async getRecentActivitiesByRole(role?: string, limit = 20): Promise<RecentActivity[]> {
     try {
-      const response = await apiClient.get('/api/dashboard/recent-activities', {
+      const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITIES, {
         params: { role, limit },
       });
       return response.data;

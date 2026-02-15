@@ -15,6 +15,7 @@ import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { CHECKOUT_PURPOSE_LABELS, CheckoutStatus } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 
 interface PendingChecksClientProps {
@@ -43,12 +44,12 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
 
   // 확인 필요 목록 조회
   const { data: checksData, isLoading } = useQuery({
-    queryKey: ['pending-checks'],
+    queryKey: queryKeys.checkouts.pending(),
     queryFn: async () => {
       return checkoutApi.getPendingChecks();
     },
     placeholderData: initialData,
-    staleTime: 30 * 1000,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // 빈 상태 렌더링

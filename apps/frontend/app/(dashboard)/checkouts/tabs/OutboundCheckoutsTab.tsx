@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ClipboardList, Clock, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
+import { CACHE_TIMES } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
@@ -82,7 +83,7 @@ export default function OutboundCheckoutsTab({
 
       return checkoutApi.getCheckouts(query);
     },
-    staleTime: 30 * 1000,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // ──────────────────────────────────────────────

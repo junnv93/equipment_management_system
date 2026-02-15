@@ -22,34 +22,23 @@ import { RejectReasonDialog } from '@/components/admin/RejectReasonDialog';
 import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkeleton';
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, User, Building2 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { CALIBRATION_RESULT_LABELS, type CalibrationResult } from '@equipment-management/schemas';
 
 // Calibration 타입을 직접 사용 (CalibrationRequest는 Calibration의 별칭)
 type CalibrationRequest = Calibration;
 
-// 레거시 대문자 값 호환을 위한 매핑
-const LEGACY_RESULT_MAP: Record<string, CalibrationResult> = {
-  PASS: 'pass',
-  FAIL: 'fail',
-  CONDITIONAL: 'conditional',
-};
-
 const getResultLabel = (result: string): string => {
-  const normalizedResult = LEGACY_RESULT_MAP[result] || result;
-  return CALIBRATION_RESULT_LABELS[normalizedResult as CalibrationResult] || result;
+  return CALIBRATION_RESULT_LABELS[result as CalibrationResult] || result;
 };
 
-// 결과 색상 (소문자 + 대문자 모두 지원)
+// 결과 색상 (소문자 값만 지원 — 백엔드 정규화 완료)
 const RESULT_COLORS: Record<string, string> = {
   pass: 'bg-green-100 text-green-800',
-  PASS: 'bg-green-100 text-green-800',
   fail: 'bg-red-100 text-red-800',
-  FAIL: 'bg-red-100 text-red-800',
   conditional: 'bg-yellow-100 text-yellow-800',
-  CONDITIONAL: 'bg-yellow-100 text-yellow-800',
 };
 
 import {
@@ -61,7 +50,6 @@ export default function CalibrationApprovalsContent() {
   const _router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
   const [selectedRequest, setSelectedRequest] = useState<CalibrationRequest | null>(null);
   const [comment, setComment] = useState('');
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
@@ -69,7 +57,7 @@ export default function CalibrationApprovalsContent() {
 
   // 승인 대기 교정 목록 조회
   const { data: requests, isLoading } = useQuery({
-    queryKey: ['calibration-pending'],
+    queryKey: queryKeys.calibrations.pending(),
     queryFn: async () => {
       return calibrationApi.getPendingCalibrations();
     },
@@ -80,23 +68,19 @@ export default function CalibrationApprovalsContent() {
     mutationFn: async ({
       id,
       version,
-      approverId,
       approverComment,
     }: {
       id: string;
       version: number;
-      approverId: string;
-      approverComment: string;
+      approverComment?: string;
     }) => {
-      return calibrationApi.approveCalibration(id, { version, approverId, approverComment });
+      return calibrationApi.approveCalibration(id, { version, approverComment });
     },
     onSuccess: () => {
       toast({
         title: '승인 완료',
         description: '교정 기록이 승인되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-pending'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-history'] });
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedRequest(null);
@@ -110,8 +94,12 @@ export default function CalibrationApprovalsContent() {
       });
       // ✅ 409 Conflict 시 자동 새로고침
       if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
-        queryClient.invalidateQueries({ queryKey: ['calibration-pending'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.historyList() });
     },
   });
 
@@ -120,22 +108,19 @@ export default function CalibrationApprovalsContent() {
     mutationFn: async ({
       id,
       version,
-      approverId,
       rejectionReason,
     }: {
       id: string;
       version: number;
-      approverId: string;
       rejectionReason: string;
     }) => {
-      return calibrationApi.rejectCalibration(id, { version, approverId, rejectionReason });
+      return calibrationApi.rejectCalibration(id, { version, rejectionReason });
     },
     onSuccess: () => {
       toast({
         title: '반려 완료',
         description: '교정 기록이 반려되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-pending'] });
       setIsRejectDialogOpen(false);
       setSelectedRequest(null);
     },
@@ -148,8 +133,11 @@ export default function CalibrationApprovalsContent() {
       });
       // ✅ 409 Conflict 시 자동 새로고침
       if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
-        queryClient.invalidateQueries({ queryKey: ['calibration-pending'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
     },
   });
 
@@ -165,19 +153,10 @@ export default function CalibrationApprovalsContent() {
 
   const handleApproveConfirm = () => {
     if (!selectedRequest) return;
-    if (!comment.trim()) {
-      toast({
-        title: '코멘트 필요',
-        description: '승인 시 검토 코멘트를 입력해주세요.',
-        variant: 'destructive',
-      });
-      return;
-    }
     approveMutation.mutate({
       id: selectedRequest.id,
-      version: selectedRequest.version, // ✅ Optimistic locking
-      approverId: session?.user?.id as string,
-      approverComment: comment,
+      version: selectedRequest.version,
+      approverComment: comment.trim() || undefined,
     });
   };
 
@@ -185,8 +164,7 @@ export default function CalibrationApprovalsContent() {
     if (!selectedRequest) return;
     rejectMutation.mutate({
       id: selectedRequest.id,
-      version: selectedRequest.version, // ✅ Optimistic locking
-      approverId: session?.user?.id as string,
+      version: selectedRequest.version,
       rejectionReason: reason,
     });
   };
@@ -233,11 +211,11 @@ export default function CalibrationApprovalsContent() {
                           </Badge>
                           <Badge
                             className={
-                              RESULT_COLORS[request.calibrationResult] ||
+                              (request.result && RESULT_COLORS[request.result]) ||
                               'bg-gray-100 text-gray-800'
                             }
                           >
-                            {getResultLabel(request.calibrationResult)}
+                            {request.result ? getResultLabel(request.result) : '미입력'}
                           </Badge>
                           <span className="text-sm font-medium">
                             장비 ID: {request.equipmentId}
@@ -337,14 +315,14 @@ export default function CalibrationApprovalsContent() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>교정 승인</DialogTitle>
-            <DialogDescription>교정 기록을 검토한 후 승인 코멘트를 입력해주세요.</DialogDescription>
+            <DialogDescription>교정 기록을 승인합니다. 코멘트는 선택사항입니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="comment">검토 코멘트 *</Label>
+              <Label htmlFor="comment">검토 코멘트 (선택)</Label>
               <Textarea
                 id="comment"
-                placeholder="검토 완료 내용을 입력하세요"
+                placeholder="검토 코멘트를 입력하세요 (선택사항)"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 className="min-h-[100px]"
@@ -361,10 +339,7 @@ export default function CalibrationApprovalsContent() {
             >
               취소
             </Button>
-            <Button
-              onClick={handleApproveConfirm}
-              disabled={!comment.trim() || approveMutation.isPending}
-            >
+            <Button onClick={handleApproveConfirm} disabled={approveMutation.isPending}>
               승인
             </Button>
           </DialogFooter>

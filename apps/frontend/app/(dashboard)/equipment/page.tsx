@@ -15,6 +15,7 @@ import {
   convertFiltersToApiParams,
 } from '@/lib/utils/equipment-filter-utils';
 import { getServerAuthSession } from '@/lib/auth/server-session';
+import { buildRoleBasedRedirectUrl } from '@/lib/utils/role-filter-utils';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -24,17 +25,13 @@ type PageProps = {
 /**
  * 역할별 기본 필터 정책
  *
+ * ✅ SSOT: TEAM_RESTRICTED_ROLES, SITE_RESTRICTED_ROLES from @equipment-management/shared-constants
+ * ✅ 공유 유틸리티: buildRoleBasedRedirectUrl() from lib/utils/role-filter-utils.ts
+ *
  * - test_engineer, technical_manager: 사이트 + 팀 필터 자동 적용
  * - quality_manager, lab_manager: 사이트 필터만 적용
  * - system_admin: 필터 미적용 (전체 조회 가능)
  */
-const ROLES_WITH_TEAM_FILTER = ['test_engineer', 'technical_manager'];
-const ROLES_WITH_SITE_FILTER = [
-  'test_engineer',
-  'technical_manager',
-  'quality_manager',
-  'lab_manager',
-];
 
 /**
  * 장비 목록 페이지 (Server Component)
@@ -56,39 +53,9 @@ export default async function EquipmentPage(props: PageProps) {
   // SSOT: getServerAuthSession() → lib/auth/server-session.ts
   // ============================================================================
   const session = await getServerAuthSession();
-  const user = session?.user;
-
-  if (user) {
-    const userRole = user.role;
-    const userSite = user.site;
-    const userTeamId = user.teamId;
-
-    const hasSiteParam = searchParams.site !== undefined;
-    const hasTeamParam = searchParams.teamId !== undefined;
-
-    // 사이트 필터 적용 대상 역할인지 확인
-    const shouldApplySite =
-      ROLES_WITH_SITE_FILTER.includes(userRole) && !!userSite && !hasSiteParam;
-    // 팀 필터 적용 대상 역할인지 확인
-    const shouldApplyTeam =
-      ROLES_WITH_TEAM_FILTER.includes(userRole) && !!userTeamId && !hasTeamParam;
-
-    if (shouldApplySite || shouldApplyTeam) {
-      const params = new URLSearchParams();
-
-      // 기존 파라미터 유지
-      for (const [key, value] of Object.entries(searchParams)) {
-        if (value !== undefined && value !== null) {
-          params.set(key, Array.isArray(value) ? value[0] : String(value));
-        }
-      }
-
-      // 기본 필터 추가
-      if (shouldApplySite) params.set('site', userSite);
-      if (shouldApplyTeam) params.set('teamId', userTeamId);
-
-      redirect(`/equipment?${params.toString()}`);
-    }
+  if (session?.user) {
+    const redirectUrl = buildRoleBasedRedirectUrl('/equipment', searchParams, session.user);
+    if (redirectUrl) redirect(redirectUrl);
   }
 
   // ============================================================================

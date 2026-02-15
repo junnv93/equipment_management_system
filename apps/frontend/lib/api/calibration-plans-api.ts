@@ -81,6 +81,8 @@ export interface CalibrationPlan {
   version: number;
   parentPlanId: string | null;
   isLatestVersion: boolean;
+  // CAS (동시 수정 방지)
+  casVersion: number;
   // 시스템 필드
   createdAt: string;
   updatedAt: string;
@@ -115,11 +117,13 @@ export interface CalibrationPlanQuery {
 export interface ExternalEquipmentQuery {
   year?: number;
   siteId?: string;
+  teamId?: string;
 }
 
 // 외부교정 대상 장비 인터페이스
 export interface ExternalEquipment {
-  uuid: string;
+  id: string; // Backend는 id를 반환 (uuid와 동일한 값)
+  uuid?: string; // 하위 호환성
   name: string;
   managementNumber: string;
   modelName: string | null;
@@ -132,16 +136,18 @@ export interface ExternalEquipment {
   calibrationAgency: string | null;
 }
 
+// ✅ DTOs: userId 제거 (서버에서 JWT 추출), casVersion 추가
+
 // 계획서 생성 DTO
 export interface CreateCalibrationPlanDto {
   year: number;
   siteId: string;
   teamId?: string;
-  createdBy: string;
 }
 
 // 계획서 수정 DTO
 export interface UpdateCalibrationPlanDto {
+  casVersion: number;
   teamId?: string;
 }
 
@@ -151,32 +157,32 @@ export interface UpdateCalibrationPlanItemDto {
   notes?: string;
 }
 
-// 승인 DTO
-export interface ApproveCalibrationPlanDto {
-  approvedBy: string;
-}
-
-// 반려 DTO
-export interface RejectCalibrationPlanDto {
-  rejectedBy: string;
-  rejectionReason: string;
-}
-
-// 항목 확인 DTO
-export interface ConfirmPlanItemDto {
-  confirmedBy: string;
-}
-
 // 검토 요청 DTO (기술책임자 → 품질책임자)
 export interface SubmitForReviewDto {
-  submittedBy: string;
+  casVersion: number;
   memo?: string;
 }
 
 // 검토 완료 DTO (품질책임자)
 export interface ReviewCalibrationPlanDto {
-  reviewedBy: string;
+  casVersion: number;
   reviewComment?: string;
+}
+
+// 승인 DTO (시험소장)
+export interface ApproveCalibrationPlanDto {
+  casVersion: number;
+}
+
+// 반려 DTO (품질책임자 또는 시험소장)
+export interface RejectCalibrationPlanDto {
+  casVersion: number;
+  rejectionReason: string;
+}
+
+// 항목 확인 DTO
+export interface ConfirmPlanItemDto {
+  casVersion: number;
 }
 
 // ✅ SSOT: packages/schemas의 라벨 재사용
@@ -299,7 +305,7 @@ const calibrationPlansApi = {
     data: UpdateCalibrationPlanItemDto
   ): Promise<CalibrationPlanItem> => {
     return apiClient
-      .patch(`/api/calibration-plans/${planUuid}/items/${itemUuid}`, data)
+      .patch(API_ENDPOINTS.CALIBRATION_PLANS.UPDATE_ITEM(planUuid, itemUuid), data)
       .then((res) => res.data);
   },
 
@@ -315,7 +321,7 @@ const calibrationPlansApi = {
       }
     });
 
-    const url = `/api/calibration-plans/equipment/external${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.CALIBRATION_PLANS.EXTERNAL_EQUIPMENT}${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get(url).then((res) => res.data);
   },
 
@@ -335,20 +341,22 @@ const calibrationPlansApi = {
 
   // PDF 다운로드 (새 탭에서 HTML 열기 - 브라우저에서 인쇄하여 PDF 저장)
   openPrintView: (uuid: string): void => {
-    const url = `/api/calibration-plans/${uuid}/pdf`;
+    const url = API_ENDPOINTS.CALIBRATION_PLANS.PDF(uuid);
     window.open(url, '_blank');
   },
 
   // 새 버전 생성 (승인된 계획서만)
-  createNewVersion: async (uuid: string, createdBy: string): Promise<CalibrationPlan> => {
+  createNewVersion: async (uuid: string): Promise<CalibrationPlan> => {
     return apiClient
-      .post(`/api/calibration-plans/${uuid}/new-version`, { createdBy })
+      .post(API_ENDPOINTS.CALIBRATION_PLANS.NEW_VERSION(uuid))
       .then((res) => res.data);
   },
 
   // 버전 히스토리 조회
   getVersionHistory: async (uuid: string): Promise<CalibrationPlanVersion[]> => {
-    return apiClient.get(`/api/calibration-plans/${uuid}/versions`).then((res) => res.data);
+    return apiClient
+      .get(API_ENDPOINTS.CALIBRATION_PLANS.VERSION_HISTORY(uuid))
+      .then((res) => res.data);
   },
 };
 

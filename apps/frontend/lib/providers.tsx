@@ -1,11 +1,17 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider, useSession, signOut } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
 import { clearTokenCache } from '@/lib/api/api-client';
 import { AuthenticatedClientProvider } from '@/lib/api/authenticated-client-provider';
+import { CACHE_TIMES } from '@/lib/api/query-config';
+import { patchPerformanceMeasure } from '@/lib/utils/patch-performance-measure';
+
+// Turbopack 개발 모드 Performance.measure 음수 타임스탬프 버그 패치
+// https://github.com/vercel/next.js/issues/86060
+patchPerformanceMeasure();
 
 // React Query 클라이언트 인스턴스 생성
 const queryClient = new QueryClient({
@@ -13,7 +19,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5분
+      staleTime: CACHE_TIMES.LONG,
     },
   },
 });
@@ -36,6 +42,11 @@ interface ProvidersProps {
  */
 function AuthSync({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
+  const statusRef = useRef(status);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   useEffect(() => {
     // 로그아웃 시 API 클라이언트 토큰 캐시 초기화
@@ -52,11 +63,14 @@ function AuthSync({ children }: { children: ReactNode }) {
     }
   }, [session?.error]);
 
-  // 세션 만료 이벤트 핸들러 (api-client에서 발생)
+  // 세션 만료 이벤트 SSOT 핸들러 (api-client, authenticated-client-provider에서 발생)
+  // loading 중 401은 세션 복원 과정이므로 무시
   useEffect(() => {
     const handleSessionExpired = () => {
-      clearTokenCache();
-      signOut({ redirect: false });
+      if (statusRef.current === 'authenticated') {
+        clearTokenCache();
+        signOut({ callbackUrl: '/login' });
+      }
     };
 
     window.addEventListener('auth:session-expired', handleSessionExpired);

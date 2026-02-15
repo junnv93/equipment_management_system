@@ -40,6 +40,7 @@ import calibrationFactorsApi, {
   APPROVAL_STATUS_LABELS,
   APPROVAL_STATUS_COLORS,
 } from '@/lib/api/calibration-factors-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
 import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
 import Link from 'next/link';
@@ -76,14 +77,14 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
 
   // 장비별 보정계수 조회
   const { data: equipmentFactors, isLoading } = useQuery({
-    queryKey: ['equipment-factors', equipmentId],
+    queryKey: queryKeys.calibrationFactors.byEquipment(equipmentId),
     queryFn: () => calibrationFactorsApi.getEquipmentFactors(equipmentId),
     enabled: !!equipmentId,
   });
 
   // 전체 보정계수 조회 (대기 중인 것 포함)
   const { data: allFactors } = useQuery({
-    queryKey: ['calibration-factors', equipmentId],
+    queryKey: queryKeys.calibrationFactors.allByEquipment(equipmentId),
     queryFn: () => calibrationFactorsApi.getCalibrationFactors({ equipmentId }),
     enabled: !!equipmentId,
   });
@@ -96,8 +97,6 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
         title: '변경 요청 완료',
         description: '보정계수 변경 요청이 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
       });
-      queryClient.invalidateQueries({ queryKey: ['equipment-factors', equipmentId] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-factors', equipmentId] });
       setIsCreateDialogOpen(false);
       resetForm();
     },
@@ -107,6 +106,9 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
         description: error.message || '보정계수 변경 요청 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.all });
     },
   });
 

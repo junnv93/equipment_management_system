@@ -46,14 +46,14 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
-import equipmentApi from '@/lib/api/equipment-api';
 import calibrationApi, { type CalibrationSummary } from '@/lib/api/calibration-api';
 import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { format, differenceInDays, isBefore } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
-// 중간점검 데이터 타입
+// 중간점검 데이터 타입 (CalibrationRecord SSOT 기반 + 플래튼된 조인 필드)
 interface IntermediateCheckItem {
   id: string;
   equipmentId: string;
@@ -61,10 +61,15 @@ interface IntermediateCheckItem {
   intermediateCheckDate: string;
   calibrationDate: string;
   nextCalibrationDate: string;
-  calibrationMethod: string;
   status: string;
   calibrationAgency: string;
-  resultNotes: string | null;
+  notes: string | null;
+  // 플래튼된 조인 필드 (백엔드에서 equipment → flat)
+  equipmentName?: string;
+  managementNumber?: string;
+  team?: string;
+  teamId?: string;
+  teamName?: string;
 }
 
 interface IntermediateChecksResponse {
@@ -112,90 +117,101 @@ function getIntermediateCheckStatusStyle(checkDate: string) {
   };
 }
 
+import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
+import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
+
 interface CalibrationContentProps {
   initialSummary?: CalibrationSummary;
+  initialFilters?: UICalibrationFilters;
 }
 
-export default function CalibrationContent({ initialSummary }: CalibrationContentProps) {
+export default function CalibrationContent({
+  initialSummary,
+  initialFilters,
+}: CalibrationContentProps) {
+  // SSOT 패턴: URL-driven 필터 훅 사용
+  const { filters, updateSearch, updateTeamId } = useCalibrationFilters(initialFilters);
+  const defaultTeamId = filters.teamId || initialFilters?.teamId;
+  const defaultSite = filters.site || initialFilters?.site;
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
-
-  // 상태 관리
-  const [searchTerm, setSearchTerm] = useState('');
-  const [teamFilter, setTeamFilter] = useState('all');
   const [currentTab, setCurrentTab] = useState('all');
   const [selectedIntermediateCheck, setSelectedIntermediateCheck] =
     useState<IntermediateCheckItem | null>(null);
   const [completionNotes, setCompletionNotes] = useState('');
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
 
-  // 교정 요약 통계 조회
+  // 교정 요약 통계 조회 (역할별 필터 적용)
   const { data: summaryData, isLoading: isSummaryLoading } = useQuery({
-    queryKey: ['calibration-summary'],
-    queryFn: () => calibrationApi.getCalibrationSummary(),
+    queryKey: queryKeys.calibrations.summary(defaultTeamId, defaultSite),
+    queryFn: () => calibrationApi.getCalibrationSummary(defaultTeamId, defaultSite),
     placeholderData: initialSummary,
+    ...QUERY_CONFIG.CALIBRATION_SUMMARY,
   });
 
   // 교정 기한 초과 장비 조회
   const { data: overdueData, isLoading: isOverdueLoading } = useQuery({
-    queryKey: ['calibration-overdue'],
-    queryFn: () => calibrationApi.getOverdueCalibrations(),
+    queryKey: queryKeys.calibrations.overdue(defaultTeamId, defaultSite),
+    queryFn: () => calibrationApi.getOverdueCalibrations(defaultTeamId, defaultSite),
+    ...QUERY_CONFIG.CALIBRATION_SUMMARY,
   });
 
   // 30일 이내 교정 예정 장비 조회
   const { data: upcomingData, isLoading: isUpcomingLoading } = useQuery({
-    queryKey: ['calibration-upcoming'],
-    queryFn: () => calibrationApi.getUpcomingCalibrations(30),
+    queryKey: queryKeys.calibrations.upcoming(30, defaultTeamId, defaultSite),
+    queryFn: () => calibrationApi.getUpcomingCalibrations(30, defaultTeamId, defaultSite),
+    ...QUERY_CONFIG.CALIBRATION_SUMMARY,
   });
 
-  // 장비 목록 조회
-  const { data: equipmentData, isLoading: isEquipmentLoading } = useQuery({
-    queryKey: ['equipment'],
-    queryFn: () =>
-      equipmentApi.getEquipmentList({
-        pageSize: 1000,
-      }),
-  });
-
-  // 모든 교정 이력 조회
+  // 모든 교정 이력 조회 (teamId/site 필터 적용)
   const { data: calibrationHistoryData, isLoading: isHistoryLoading } = useQuery({
-    queryKey: ['calibration-history'],
+    queryKey: queryKeys.calibrations.historyList(
+      defaultTeamId || defaultSite ? { teamId: defaultTeamId, site: defaultSite } : undefined
+    ),
     queryFn: () =>
       calibrationApi.getCalibrationHistory({
-        pageSize: 1000,
+        pageSize: 100,
+        teamId: defaultTeamId,
+        site: defaultSite,
       }),
+    ...QUERY_CONFIG.CALIBRATION_LIST,
   });
 
-  // 전체 중간점검 목록 조회
+  // 전체 중간점검 목록 조회 (teamId/site 필터 적용)
   const { data: intermediateChecksData, isLoading: isIntermediateChecksLoading } =
     useQuery<IntermediateChecksResponse>({
-      queryKey: ['intermediate-checks', 'all'],
+      queryKey: queryKeys.calibrations.intermediateChecks(defaultTeamId, defaultSite),
       queryFn: async () => {
-        const response = await apiClient.get(API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL);
+        const params = new URLSearchParams();
+        if (defaultTeamId) params.set('teamId', defaultTeamId);
+        if (defaultSite) params.set('site', defaultSite);
+        const qs = params.toString();
+        const url = `${API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL}${qs ? `?${qs}` : ''}`;
+        const response = await apiClient.get(url);
         return response.data;
       },
+      ...QUERY_CONFIG.CALIBRATION_LIST,
     });
 
   // 팀 목록 조회 (동적 로딩)
   const { data: teamsData, isLoading: isTeamsLoading } = useQuery({
-    queryKey: ['teams'],
+    queryKey: queryKeys.teams.list(),
     queryFn: async () => {
       const response = await apiClient.get(API_ENDPOINTS.TEAMS.LIST);
       return response.data;
     },
+    ...QUERY_CONFIG.TEAMS,
   });
 
   // 중간점검 완료 뮤테이션
   const completeIntermediateCheckMutation = useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
+      // ✅ completedBy는 백엔드에서 JWT 세션 추출 (Rule 2)
       const response = await apiClient.post(
         API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.COMPLETE(id),
-        {
-          completedBy: session?.user?.id,
-          notes: notes || undefined,
-        }
+        { notes: notes || undefined }
       );
       return response.data;
     },
@@ -204,9 +220,6 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
         title: '중간점검 완료',
         description: '중간점검이 완료 처리되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['intermediate-checks'] });
-      queryClient.invalidateQueries({ queryKey: ['calibration-history'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       setIsCompleteDialogOpen(false);
       setSelectedIntermediateCheck(null);
       setCompletionNotes('');
@@ -217,6 +230,11 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
         description: getErrorMessage(error, '중간점검 완료 처리 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      // ✅ calibrations.all prefix로 broad invalidation (SSOT: onSettled에서 서버 동기화)
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
   });
 
@@ -238,34 +256,32 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
     isSummaryLoading ||
     isOverdueLoading ||
     isUpcomingLoading ||
-    isEquipmentLoading ||
     isHistoryLoading ||
     isIntermediateChecksLoading ||
     isTeamsLoading;
 
   // 데이터 연결 상태 확인
-  const isError =
-    !summaryData && !overdueData && !upcomingData && !equipmentData && !calibrationHistoryData;
+  const isError = !summaryData && !overdueData && !upcomingData && !calibrationHistoryData;
 
   // 교정 데이터 준비
   const getFilteredCalibrationData = () => {
     if (currentTab === 'overdue' && overdueData) {
       return overdueData.filter(
         (item) =>
-          (!searchTerm ||
-            item.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.managementNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (teamFilter === 'all' || item.teamId === teamFilter)
+          (!filters.search ||
+            item.equipmentName.toLowerCase().includes(filters.search.toLowerCase()) ||
+            item.managementNumber.toLowerCase().includes(filters.search.toLowerCase())) &&
+          (!filters.teamId || item.teamId === filters.teamId)
       );
     }
 
     if (currentTab === 'upcoming' && upcomingData) {
       return upcomingData.filter(
         (item) =>
-          (!searchTerm ||
-            item.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.managementNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (teamFilter === 'all' || item.teamId === teamFilter)
+          (!filters.search ||
+            item.equipmentName.toLowerCase().includes(filters.search.toLowerCase()) ||
+            item.managementNumber.toLowerCase().includes(filters.search.toLowerCase())) &&
+          (!filters.teamId || item.teamId === filters.teamId)
       );
     }
 
@@ -273,10 +289,10 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
     if (calibrationHistoryData?.data) {
       return calibrationHistoryData.data.filter(
         (item) =>
-          (!searchTerm ||
-            item.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.managementNumber.toLowerCase().includes(searchTerm.toLowerCase())) &&
-          (teamFilter === 'all' || item.teamId === teamFilter)
+          (!filters.search ||
+            item.equipmentName.toLowerCase().includes(filters.search.toLowerCase()) ||
+            item.managementNumber.toLowerCase().includes(filters.search.toLowerCase())) &&
+          (!filters.teamId || item.teamId === filters.teamId)
       );
     }
 
@@ -402,14 +418,17 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
           <Input
             placeholder="장비명, 관리번호 검색..."
             className="pl-8"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={filters.search}
+            onChange={(e) => updateSearch(e.target.value)}
           />
         </div>
 
         <div className="flex items-center w-full md:w-64 space-x-2">
           <Filter className="h-4 w-4 text-gray-500" />
-          <Select value={teamFilter} onValueChange={setTeamFilter}>
+          <Select
+            value={filters.teamId || 'all'}
+            onValueChange={(v) => updateTeamId(v === 'all' ? '' : v)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="팀 필터" />
             </SelectTrigger>
@@ -495,7 +514,7 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
                           </Link>
                         </TableCell>
                         <TableCell>{item.managementNumber}</TableCell>
-                        <TableCell>{item.team || '-'}</TableCell>
+                        <TableCell>{item.teamName || item.team || '-'}</TableCell>
                         <TableCell>{formatDate(item.calibrationDate)}</TableCell>
                         <TableCell>{formatDate(item.nextCalibrationDate)}</TableCell>
                         <TableCell>{item.calibrationAgency}</TableCell>
@@ -605,9 +624,9 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
                     <TableRow>
                       <TableHead>상태</TableHead>
                       <TableHead>점검 예정일</TableHead>
-                      <TableHead>장비 ID</TableHead>
-                      <TableHead>교정 방법</TableHead>
-                      <TableHead>교정 기관</TableHead>
+                      <TableHead>장비명</TableHead>
+                      <TableHead>관리번호</TableHead>
+                      <TableHead>팀</TableHead>
                       <TableHead>차기 교정일</TableHead>
                       <TableHead className="text-right">액션</TableHead>
                     </TableRow>
@@ -636,15 +655,22 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
                               locale: ko,
                             })}
                           </TableCell>
-                          <TableCell className="font-mono text-sm">{check.equipmentId}</TableCell>
-                          <TableCell>
-                            {check.calibrationMethod === 'external_calibration'
-                              ? '외부 교정'
-                              : check.calibrationMethod === 'self_inspection'
-                                ? '자체 점검'
-                                : check.calibrationMethod}
+                          <TableCell className="font-medium">
+                            {check.equipmentName ? (
+                              <Link
+                                href={`/equipment/${check.equipmentId}`}
+                                className="hover:underline"
+                              >
+                                {check.equipmentName}
+                              </Link>
+                            ) : (
+                              <span className="font-mono text-sm text-muted-foreground">
+                                {check.equipmentId.substring(0, 8)}...
+                              </span>
+                            )}
                           </TableCell>
-                          <TableCell>{check.calibrationAgency || '-'}</TableCell>
+                          <TableCell>{check.managementNumber || '-'}</TableCell>
+                          <TableCell>{check.teamName || check.team || '-'}</TableCell>
                           <TableCell>
                             {format(new Date(check.nextCalibrationDate), 'yyyy-MM-dd', {
                               locale: ko,
@@ -677,7 +703,9 @@ export default function CalibrationContent({ initialSummary }: CalibrationConten
           <DialogHeader>
             <DialogTitle>중간점검 완료</DialogTitle>
             <DialogDescription>
-              장비 {selectedIntermediateCheck?.equipmentId}의 중간점검을 완료합니다.
+              {selectedIntermediateCheck?.equipmentName
+                ? `장비 "${selectedIntermediateCheck.equipmentName}"의 중간점검을 완료합니다.`
+                : `장비 ${selectedIntermediateCheck?.equipmentId}의 중간점검을 완료합니다.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

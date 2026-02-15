@@ -38,6 +38,7 @@ import {
   type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 // ✅ 코드 분할: 탭 컴포넌트를 lazy loading으로 번들 크기 40-50% 감소
 const OutboundCheckoutsTab = lazy(() => import('./tabs/OutboundCheckoutsTab'));
@@ -108,9 +109,9 @@ export default function CheckoutsContent({
   // 반출지 목록 (DB 기반) - 필터용
   // ──────────────────────────────────────────────
   const { data: destinations } = useQuery({
-    queryKey: ['checkout-destinations'],
+    queryKey: queryKeys.checkouts.destinations(),
     queryFn: () => checkoutApi.getDestinations(),
-    staleTime: 5 * 60 * 1000,
+    staleTime: CACHE_TIMES.LONG,
   });
 
   // ✅ 요약 정보 (initialSummary from server, updated by tab component)

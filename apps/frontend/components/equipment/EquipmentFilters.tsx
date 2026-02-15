@@ -32,6 +32,7 @@ import type {
 } from '@/hooks/useEquipmentFilters';
 import { useAuth } from '@/hooks/use-auth';
 import teamsApi, { type Team } from '@/lib/api/teams-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 /**
  * 장비 상태 옵션 (SSOT 기반 - 사용자에게 표시할 옵션만)
@@ -182,14 +183,14 @@ function EquipmentFiltersComponent({
 
   // 팀 목록을 API에서 동적으로 가져오기
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ['teams', 'filter-options', teamQuerySite],
+    queryKey: queryKeys.teams.filterOptions(teamQuerySite),
     queryFn: () =>
       teamsApi.getTeams({
         site: teamQuerySite, // ✅ 사이트 필터 적용
         pageSize: 100,
       }),
-    staleTime: 5 * 60 * 1000, // 5분간 캐시
-    gcTime: 10 * 60 * 1000, // 10분간 가비지 컬렉션 방지
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
     enabled: !!teamQuerySite, // 사이트 정보가 있을 때만 조회
   });
 
@@ -324,16 +325,14 @@ function EquipmentFiltersComponent({
               <div className="space-y-2">
                 <Label htmlFor="filter-site">사이트</Label>
                 <Select
-                  value={filters.site || '__all__'}
-                  onValueChange={(value) =>
-                    onSiteChange(value === '__all__' ? '' : (value as Site))
-                  }
+                  value={filters.site || '_all'}
+                  onValueChange={(value) => onSiteChange(value === '_all' ? '' : (value as Site))}
                 >
                   <SelectTrigger id="filter-site" aria-label="사이트 필터 선택">
                     <SelectValue placeholder="모든 사이트" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">모든 사이트</SelectItem>
+                    <SelectItem value="_all">모든 사이트</SelectItem>
                     {SITE_OPTIONS.filter((opt) => opt.value).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -347,16 +346,16 @@ function EquipmentFiltersComponent({
               <div className="space-y-2">
                 <Label htmlFor="filter-status">상태</Label>
                 <Select
-                  value={filters.status || '__all__'}
+                  value={filters.status || '_all'}
                   onValueChange={(value) =>
-                    onStatusChange(value === '__all__' ? '' : (value as EquipmentStatus))
+                    onStatusChange(value === '_all' ? '' : (value as EquipmentStatus))
                   }
                 >
                   <SelectTrigger id="filter-status" aria-label="장비 상태 필터 선택">
                     <SelectValue placeholder="모든 상태" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">모든 상태</SelectItem>
+                    <SelectItem value="_all">모든 상태</SelectItem>
                     {STATUS_OPTIONS.filter((opt) => opt.value).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -370,18 +369,16 @@ function EquipmentFiltersComponent({
               <div className="space-y-2">
                 <Label htmlFor="filter-calibration">교정 방법</Label>
                 <Select
-                  value={filters.calibrationMethod || '__all__'}
+                  value={filters.calibrationMethod || '_all'}
                   onValueChange={(value) =>
-                    onCalibrationMethodChange(
-                      value === '__all__' ? '' : (value as CalibrationMethod)
-                    )
+                    onCalibrationMethodChange(value === '_all' ? '' : (value as CalibrationMethod))
                   }
                 >
                   <SelectTrigger id="filter-calibration" aria-label="교정 방법 필터 선택">
                     <SelectValue placeholder="모든 교정 방법" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">모든 교정 방법</SelectItem>
+                    <SelectItem value="_all">모든 교정 방법</SelectItem>
                     {CALIBRATION_METHOD_OPTIONS.filter((opt) => opt.value).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -395,16 +392,16 @@ function EquipmentFiltersComponent({
               <div className="space-y-2">
                 <Label htmlFor="filter-classification">장비 분류</Label>
                 <Select
-                  value={filters.classification || '__all__'}
+                  value={filters.classification || '_all'}
                   onValueChange={(value) =>
-                    onClassificationChange(value === '__all__' ? '' : (value as Classification))
+                    onClassificationChange(value === '_all' ? '' : (value as Classification))
                   }
                 >
                   <SelectTrigger id="filter-classification" aria-label="장비 분류 필터 선택">
                     <SelectValue placeholder="모든 분류" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">모든 분류</SelectItem>
+                    <SelectItem value="_all">모든 분류</SelectItem>
                     {CLASSIFICATION_OPTIONS.filter((opt) => opt.value).map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -467,8 +464,8 @@ function EquipmentFiltersComponent({
               <div className="space-y-2">
                 <Label htmlFor="filter-team">팀</Label>
                 <Select
-                  value={filters.teamId || '__all__'}
-                  onValueChange={(value) => onTeamIdChange(value === '__all__' ? '' : value)}
+                  value={filters.teamId || '_all'}
+                  onValueChange={(value) => onTeamIdChange(value === '_all' ? '' : value)}
                   disabled={isLoadingTeams}
                 >
                   <SelectTrigger id="filter-team" aria-label="팀 필터 선택">
@@ -482,7 +479,7 @@ function EquipmentFiltersComponent({
                     )}
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__all__">모든 팀</SelectItem>
+                    <SelectItem value="_all">모든 팀</SelectItem>
                     {teamOptions
                       .filter((opt) => opt.value)
                       .map((option) => (

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,60 +25,83 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import calibrationPlansApi, {
   CalibrationPlan,
-  CalibrationPlanStatus,
   CALIBRATION_PLAN_STATUS_LABELS,
   CALIBRATION_PLAN_STATUS_COLORS,
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
+import teamsApi from '@/lib/api/teams-api';
 import type { PaginatedResponse } from '@/lib/api/types';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filters';
+import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { format } from 'date-fns';
-import { Plus, FileText, Calendar, Building2, Eye } from 'lucide-react';
+import { Plus, FileText, Calendar, Building2, Eye, Users } from 'lucide-react';
+import type { CalibrationPlanStatus } from '@equipment-management/schemas';
+import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
 
 interface CalibrationPlansContentProps {
   /** 서버에서 가져온 초기 데이터 */
   initialData: PaginatedResponse<CalibrationPlan>;
-  /** 초기 연도 필터 (URL에서 전달) */
-  initialYear?: string;
-  /** 초기 시험소 필터 (URL에서 전달) */
-  initialSite?: string;
-  /** 초기 상태 필터 (URL에서 전달) */
-  initialStatus?: string;
+  /** 초기 필터 (SSOT 패턴) */
+  initialFilters?: UICalibrationPlansFilters;
 }
 
 /**
  * 교정계획서 목록 Client Component
  *
- * Server Component에서 초기 데이터를 받아 React Query로 관리합니다.
- * 필터 변경 시 클라이언트에서 재조회합니다.
+ * SSOT 패턴:
+ * - URL 파라미터가 유일한 진실의 소스 (useCalibrationPlansFilters 훅)
+ * - Server Component에서 초기 데이터를 받아 React Query로 관리
  */
 export default function CalibrationPlansContent({
   initialData,
-  initialYear,
-  initialSite,
-  initialStatus,
+  initialFilters,
 }: CalibrationPlansContentProps) {
   const router = useRouter();
   const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<string>(initialYear ?? String(currentYear));
-  const [selectedSite, setSelectedSite] = useState<string>(initialSite ?? 'all');
-  const [selectedStatus, setSelectedStatus] = useState<string>(initialStatus ?? 'all');
+  const { data: session } = useSession();
+
+  // ✅ SSOT: URL-driven 필터 (useState 제거)
+  const { filters, apiFilters, updateYear, updateSiteId, updateTeamId, updateStatus } =
+    useCalibrationPlansFilters(initialFilters);
+
+  // 역할 확인
+  const userRole = session?.user?.role;
+  const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as any);
+
+  // 팀 목록 조회 (필터링용)
+  const { data: teamsData } = useQuery({
+    queryKey: queryKeys.teams.list({ site: filters.siteId || undefined }),
+    queryFn: () => teamsApi.getTeams({ site: (filters.siteId as any) || undefined, pageSize: 100 }),
+    enabled: !!filters.siteId,
+  });
+
+  const teams = teamsData?.data || [];
 
   // 교정계획서 목록 조회 (초기 데이터 활용)
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['calibration-plans', selectedYear, selectedSite, selectedStatus],
+    queryKey: queryKeys.calibrationPlans.list(apiFilters),
     queryFn: () =>
       calibrationPlansApi.getCalibrationPlans({
-        year: selectedYear !== 'all' ? Number(selectedYear) : undefined,
-        siteId: selectedSite !== 'all' ? selectedSite : undefined,
-        status: selectedStatus !== 'all' ? (selectedStatus as CalibrationPlanStatus) : undefined,
+        ...apiFilters,
+        year: apiFilters.year ? Number(apiFilters.year) : undefined,
       }),
-    // ✅ 서버에서 가져온 초기 데이터 사용 - 첫 렌더링 시 로딩 없음
     placeholderData: initialData,
-    // placeholderData는 항상 stale 취급 → 백그라운드에서 자동 재검증
-    staleTime: 30 * 1000, // 30초
+    ...QUERY_CONFIG.CALIBRATION_PLANS,
   });
 
   const plans = data?.data || [];
+
+  // ✅ 방어 코드: uuid 검증 및 경고
+  if (process.env.NODE_ENV === 'development' && plans.length > 0) {
+    const invalidPlans = plans.filter((plan) => !plan.uuid);
+    if (invalidPlans.length > 0) {
+      console.warn(
+        '[CalibrationPlansContent] UUID 누락된 계획서 발견:',
+        invalidPlans.map((p, idx) => ({ index: idx, year: p.year, siteId: p.siteId }))
+      );
+    }
+  }
 
   // 연도 옵션 생성 (현재 연도 기준 +-2년)
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
@@ -105,12 +128,11 @@ export default function CalibrationPlansContent({
         <CardContent>
           <div className="flex gap-4">
             <div className="w-[150px]">
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <Select value={filters.year || String(currentYear)} onValueChange={updateYear}>
                 <SelectTrigger>
                   <SelectValue placeholder="연도 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">전체 연도</SelectItem>
                   {yearOptions.map((year) => (
                     <SelectItem key={year} value={String(year)}>
                       {year}년
@@ -120,25 +142,64 @@ export default function CalibrationPlansContent({
               </Select>
             </div>
             <div className="w-[150px]">
-              <Select value={selectedSite} onValueChange={setSelectedSite}>
+              <Select
+                value={filters.siteId || '_all'}
+                onValueChange={(v) => updateSiteId(v === '_all' ? '' : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="시험소 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">전체 시험소</SelectItem>
-                  <SelectItem value="suwon">수원</SelectItem>
-                  <SelectItem value="uiwang">의왕</SelectItem>
+                  <SelectItem value="_all">전체 시험소</SelectItem>
+                  {Object.entries(SITE_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="w-[180px]">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <Select
+                value={filters.teamId || '_all'}
+                onValueChange={(v) => updateTeamId(v === '_all' ? '' : v)}
+                disabled={!filters.siteId || !!isTeamRestricted}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="팀 선택">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      {filters.teamId
+                        ? teams.find((t) => t.id === filters.teamId)?.name || '팀 선택'
+                        : '전체 팀'}
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {!isTeamRestricted && <SelectItem value="_all">전체 팀</SelectItem>}
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                  {teams.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      시험소를 먼저 선택하세요
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-[180px]">
+              <Select
+                value={filters.status || '_all'}
+                onValueChange={(v) => updateStatus(v === '_all' ? '' : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="상태 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">전체 상태</SelectItem>
-                  {/* SSOT 라벨 사용 */}
+                  <SelectItem value="_all">전체 상태</SelectItem>
                   {(
                     Object.entries(CALIBRATION_PLAN_STATUS_LABELS) as [
                       CalibrationPlanStatus,
@@ -197,42 +258,48 @@ export default function CalibrationPlansContent({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {plans.map((plan: CalibrationPlan) => (
-                  <TableRow key={plan.uuid}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {plan.year}년
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        {SITE_LABELS[plan.siteId] || plan.siteId}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={CALIBRATION_PLAN_STATUS_COLORS[plan.status]}>
-                        {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{plan.createdBy}</TableCell>
-                    <TableCell>{format(new Date(plan.createdAt), 'yyyy-MM-dd')}</TableCell>
-                    <TableCell>
-                      {plan.approvedAt ? format(new Date(plan.approvedAt), 'yyyy-MM-dd') : '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/calibration-plans/${plan.uuid}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        상세
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {plans.map((plan: CalibrationPlan, index: number) => {
+                  // ✅ uuid 검증: 누락 시 fallback key 사용 (프로덕션 안정성)
+                  const key = plan.uuid || `plan-fallback-${plan.year}-${plan.siteId}-${index}`;
+
+                  return (
+                    <TableRow key={key}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {plan.year}년
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          {SITE_LABELS[plan.siteId] || plan.siteId}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={CALIBRATION_PLAN_STATUS_COLORS[plan.status]}>
+                          {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{plan.createdBy}</TableCell>
+                      <TableCell>{format(new Date(plan.createdAt), 'yyyy-MM-dd')}</TableCell>
+                      <TableCell>
+                        {plan.approvedAt ? format(new Date(plan.approvedAt), 'yyyy-MM-dd') : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/calibration-plans/${plan.uuid}`)}
+                          disabled={!plan.uuid} // uuid 없으면 버튼 비활성화
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          상세
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

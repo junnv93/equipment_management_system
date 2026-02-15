@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import teamsApi, { type Team } from '@/lib/api/teams-api';
+import { queryKeys } from '@/lib/api/query-config';
 
 interface DeleteTeamModalProps {
   team: Team;
@@ -39,11 +40,7 @@ interface DeleteTeamModalProps {
  * - system_admin만 팀 삭제 가능
  * - 팀 삭제 전 소속 장비/팀원 이동 안내 필요
  */
-export function DeleteTeamModal({
-  team,
-  open,
-  onOpenChange,
-}: DeleteTeamModalProps) {
+export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -52,9 +49,6 @@ export function DeleteTeamModal({
   const deleteMutation = useMutation({
     mutationFn: () => teamsApi.deleteTeam(team.id),
     onSuccess: () => {
-      // 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-
       toast({
         title: '팀이 삭제되었습니다',
         description: `${team.name} 팀이 성공적으로 삭제되었습니다.`,
@@ -62,6 +56,9 @@ export function DeleteTeamModal({
 
       onOpenChange(false);
       router.push('/teams');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.all });
     },
     onError: (error: Error) => {
       toast({
@@ -72,8 +69,8 @@ export function DeleteTeamModal({
     },
   });
 
-  const hasRelatedData = (team.memberCount && team.memberCount > 0) ||
-    (team.equipmentCount && team.equipmentCount > 0);
+  const hasRelatedData =
+    (team.memberCount && team.memberCount > 0) || (team.equipmentCount && team.equipmentCount > 0);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -92,8 +89,7 @@ export function DeleteTeamModal({
           <AlertDialogDescription asChild>
             <div className="space-y-3 text-left">
               <p>
-                <strong className="text-foreground">{team.name}</strong> 팀을
-                삭제하시겠습니까?
+                <strong className="text-foreground">{team.name}</strong> 팀을 삭제하시겠습니까?
               </p>
 
               {hasRelatedData && (
@@ -102,9 +98,7 @@ export function DeleteTeamModal({
                     연관된 데이터가 있습니다:
                   </p>
                   <ul className="text-sm text-amber-700 dark:text-amber-300 list-disc list-inside space-y-1">
-                    {team.memberCount && team.memberCount > 0 && (
-                      <li>팀원 {team.memberCount}명</li>
-                    )}
+                    {team.memberCount && team.memberCount > 0 && <li>팀원 {team.memberCount}명</li>}
                     {team.equipmentCount && team.equipmentCount > 0 && (
                       <li>장비 {team.equipmentCount}개</li>
                     )}
@@ -115,17 +109,13 @@ export function DeleteTeamModal({
                 </div>
               )}
 
-              <p className="text-sm text-muted-foreground">
-                이 작업은 되돌릴 수 없습니다.
-              </p>
+              <p className="text-sm text-muted-foreground">이 작업은 되돌릴 수 없습니다.</p>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleteMutation.isPending}>
-            취소
-          </AlertDialogCancel>
+          <AlertDialogCancel disabled={deleteMutation.isPending}>취소</AlertDialogCancel>
           <Button
             variant="destructive"
             onClick={() => deleteMutation.mutate()}

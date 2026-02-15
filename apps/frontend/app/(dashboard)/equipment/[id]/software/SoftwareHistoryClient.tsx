@@ -35,6 +35,7 @@ import softwareApi, {
 } from '@/lib/api/software-api';
 // ✅ 직접 import (barrel import 제거)
 import equipmentApi from '@/lib/api/equipment-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { ArrowLeft, Plus, History, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,13 +61,13 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
 
   // 장비 정보 조회
   const { data: equipment, isLoading: isLoadingEquipment } = useQuery({
-    queryKey: ['equipment', equipmentId],
+    queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
   });
 
   // 소프트웨어 변경 이력 조회
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ['software-history', equipmentId],
+    queryKey: queryKeys.software.history(equipmentId),
     queryFn: () => softwareApi.getSoftwareHistory({ equipmentId }),
   });
 
@@ -87,7 +88,6 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
         title: '변경 요청 완료',
         description: '소프트웨어 변경 요청이 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
       });
-      queryClient.invalidateQueries({ queryKey: ['software-history', equipmentId] });
       setIsCreateDialogOpen(false);
       setNewChange({
         softwareName: '',
@@ -102,6 +102,9 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
         description: error.message || '소프트웨어 변경 요청 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.software.history(equipmentId) });
     },
   });
 

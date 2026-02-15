@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext, useMemo, ReactNode } from 'react';
-import axios, { AxiosInstance } from 'axios';
-import { useSession } from 'next-auth/react';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import { useSession, getSession } from 'next-auth/react';
 import { createApiError } from './utils/response-transformers';
 
 /**
@@ -64,12 +64,27 @@ export function AuthenticatedClientProvider({ children }: AuthenticatedClientPro
       (error) => Promise.reject(error)
     );
 
-    // ✅ 응답 인터셉터: 표준 에러 처리
+    // ✅ 응답 인터셉터: 401 시 세션 갱신 1회 시도 → 재요청 → 실패 시에만 이벤트 dispatch
     instance.interceptors.response.use(
       (response) => response,
       async (error) => {
-        // 401 에러 시 리다이렉트 (refresh token도 만료됨)
-        if (error.response?.status === 401) {
+        const originalRequest = error.config as InternalAxiosRequestConfig & {
+          _authRetried?: boolean;
+        };
+
+        if (error.response?.status === 401 && originalRequest && !originalRequest._authRetried) {
+          originalRequest._authRetried = true;
+          try {
+            // getSession() 호출 → JWT 콜백 트리거 → 토큰 자동 갱신
+            const freshSession = await getSession();
+            if (freshSession?.accessToken) {
+              originalRequest.headers.Authorization = `Bearer ${freshSession.accessToken}`;
+              return instance(originalRequest);
+            }
+          } catch {
+            // 세션 갱신 실패 — 아래에서 이벤트 dispatch
+          }
+          // 재시도도 실패 → 진짜 세션 만료
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('auth:session-expired'));
           }

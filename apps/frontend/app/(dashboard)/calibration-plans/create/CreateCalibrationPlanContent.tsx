@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -29,10 +29,13 @@ import calibrationPlansApi, {
   ExternalEquipment,
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
+import teamsApi from '@/lib/api/teams-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
-import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
 
 export default function CreateCalibrationPlanContent() {
   const router = useRouter();
@@ -43,14 +46,45 @@ export default function CreateCalibrationPlanContent() {
 
   const [selectedYear, setSelectedYear] = useState<string>(String(nextYear));
   const [selectedSite, setSelectedSite] = useState<string>('');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
-  // 외부교정 대상 장비 조회
+  // 세션 기반 기본값 설정
+  useEffect(() => {
+    if (session?.user) {
+      if (session.user.site && !selectedSite) {
+        setSelectedSite(session.user.site);
+      }
+      if (session.user.teamId && !selectedTeamId) {
+        setSelectedTeamId(session.user.teamId);
+      }
+    }
+  }, [session, selectedSite, selectedTeamId]);
+
+  // 역할 확인
+  const userRole = session?.user?.role;
+  const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as any);
+
+  // 팀 목록 조회 (사이트 선택 시)
+  const { data: teamsData } = useQuery({
+    queryKey: queryKeys.teams.list({ site: selectedSite || undefined }),
+    queryFn: () => teamsApi.getTeams({ site: (selectedSite as any) || undefined, pageSize: 100 }),
+    enabled: !!selectedSite,
+  });
+
+  const teams = teamsData?.data || [];
+
+  // 외부교정 대상 장비 조회 (teamId 필터 추가)
   const { data: equipment, isLoading: isLoadingEquipment } = useQuery({
-    queryKey: ['external-equipment', selectedYear, selectedSite],
+    queryKey: queryKeys.calibrationPlans.externalEquipment(
+      selectedYear,
+      selectedSite,
+      selectedTeamId
+    ),
     queryFn: () =>
       calibrationPlansApi.getExternalEquipment({
         year: selectedYear ? Number(selectedYear) : undefined,
         siteId: selectedSite || undefined,
+        teamId: selectedTeamId || undefined,
       }),
     enabled: !!selectedYear && !!selectedSite,
   });
@@ -84,10 +118,20 @@ export default function CreateCalibrationPlanContent() {
       return;
     }
 
+    // TM/TE는 teamId 필수
+    if (isTeamRestricted && !selectedTeamId) {
+      toast({
+        title: '필수 정보 누락',
+        description: '팀을 선택해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     createMutation.mutate({
       year: Number(selectedYear),
       siteId: selectedSite,
-      createdBy: session?.user?.id as string,
+      teamId: selectedTeamId || undefined,
     });
   };
 
@@ -117,7 +161,7 @@ export default function CreateCalibrationPlanContent() {
           <CardDescription>계획서의 연도와 시험소를 선택하세요</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <Label htmlFor="year">연도 *</Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -135,13 +179,56 @@ export default function CreateCalibrationPlanContent() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="site">시험소 *</Label>
-              <Select value={selectedSite} onValueChange={setSelectedSite}>
+              <Select
+                value={selectedSite}
+                onValueChange={setSelectedSite}
+                disabled={!!isTeamRestricted && !!session?.user?.site}
+              >
                 <SelectTrigger id="site">
                   <SelectValue placeholder="시험소 선택" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="suwon">수원</SelectItem>
                   <SelectItem value="uiwang">의왕</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="team">
+                팀 {isTeamRestricted && '*'}
+                {isTeamRestricted && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (기술책임자는 자기 팀만 선택 가능)
+                  </span>
+                )}
+              </Label>
+              <Select
+                value={selectedTeamId}
+                onValueChange={setSelectedTeamId}
+                disabled={!selectedSite || (!!isTeamRestricted && !!session?.user?.teamId)}
+              >
+                <SelectTrigger id="team">
+                  <SelectValue placeholder="팀 선택">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      {selectedTeamId
+                        ? teams.find((t) => t.id === selectedTeamId)?.name || '팀 선택'
+                        : '팀 선택'}
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {!isTeamRestricted && <SelectItem value="">전체 팀 (팀 없음)</SelectItem>}
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                  {teams.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground">
+                      시험소를 먼저 선택하세요
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -194,7 +281,7 @@ export default function CreateCalibrationPlanContent() {
                     </TableHeader>
                     <TableBody>
                       {equipment.map((eq: ExternalEquipment, index: number) => (
-                        <TableRow key={eq.uuid}>
+                        <TableRow key={eq.id}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell className="font-mono">{eq.managementNumber}</TableCell>
                           <TableCell>{eq.name}</TableCell>

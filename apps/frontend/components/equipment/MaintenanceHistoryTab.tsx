@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -71,7 +72,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
 
   // 유지보수 이력 조회
   const { data: history = [], isLoading } = useQuery({
-    queryKey: ['maintenance-history', equipmentId],
+    queryKey: queryKeys.equipment.maintenanceHistory(equipmentId),
     queryFn: () => equipmentApi.getMaintenanceHistory(equipmentId),
     enabled: !!equipmentId,
   });
@@ -81,7 +82,6 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     mutationFn: (data: CreateMaintenanceHistoryInput) =>
       equipmentApi.createMaintenanceHistory(equipmentId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenance-history', equipmentId] });
       setIsDialogOpen(false);
       form.reset({
         performedAt: formatDate(new Date(), 'yyyy-MM-dd'),
@@ -90,6 +90,11 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
       toast({
         title: '유지보수 등록 완료',
         description: '유지보수 내역이 성공적으로 등록되었습니다.',
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.maintenanceHistory(equipmentId),
       });
     },
     onError: (error: unknown) => {
@@ -106,10 +111,14 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   const deleteMutation = useMutation({
     mutationFn: (historyId: string) => equipmentApi.deleteMaintenanceHistory(historyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenance-history', equipmentId] });
       toast({
         title: '삭제 완료',
         description: '유지보수 내역이 삭제되었습니다.',
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.equipment.maintenanceHistory(equipmentId),
       });
     },
     onError: (error: unknown) => {

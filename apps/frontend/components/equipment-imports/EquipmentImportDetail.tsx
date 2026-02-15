@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -58,7 +59,7 @@ export default function EquipmentImportDetail({ id }: Props) {
   const [cancelReason, setCancelReason] = useState('');
 
   const { data: equipmentImport, isLoading } = useQuery({
-    queryKey: ['equipment-import', id],
+    queryKey: queryKeys.equipmentImports.detail(id),
     queryFn: () => equipmentImportApi.getOne(id),
   });
 
@@ -81,7 +82,9 @@ export default function EquipmentImportDetail({ id }: Props) {
     mutationFn: () => equipmentImportApi.approve(id, equipmentImport?.version || 1), // ✅ Include version
     onSuccess: () => {
       toast({ title: '반입 신청이 승인되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
     },
     onError: (error) => {
       const errorMessage = getErrorMessage(error);
@@ -92,7 +95,7 @@ export default function EquipmentImportDetail({ id }: Props) {
       });
       // ✅ 409 Conflict 시 자동 새로고침
       if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
-        queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
       }
     },
   });
@@ -102,7 +105,9 @@ export default function EquipmentImportDetail({ id }: Props) {
     onSuccess: () => {
       toast({ title: '반입 신청이 거절되었습니다.' });
       setShowRejectDialog(false);
-      queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
     },
     onError: (error) => {
       const errorMessage = getErrorMessage(error);
@@ -113,7 +118,7 @@ export default function EquipmentImportDetail({ id }: Props) {
       });
       // ✅ 409 Conflict 시 자동 새로고침
       if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
-        queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
       }
     },
   });
@@ -122,7 +127,9 @@ export default function EquipmentImportDetail({ id }: Props) {
     mutationFn: () => equipmentImportApi.initiateReturn(id),
     onSuccess: () => {
       toast({ title: '반납 프로세스가 시작되었습니다.' });
-      queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
     },
     onError: (error) => {
       toast({
@@ -138,7 +145,9 @@ export default function EquipmentImportDetail({ id }: Props) {
     onSuccess: () => {
       toast({ title: '반입 신청이 취소되었습니다.' });
       setShowCancelDialog(false);
-      queryClient.invalidateQueries({ queryKey: ['equipment-import', id] });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentImports.detail(id) });
     },
     onError: (error) => {
       toast({

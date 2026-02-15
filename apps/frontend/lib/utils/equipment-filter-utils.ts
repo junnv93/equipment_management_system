@@ -102,6 +102,10 @@ export const DEFAULT_UI_FILTERS: UIEquipmentFilters = {
  *
  * @param searchParams - URL 쿼리 파라미터 (URLSearchParams 또는 Record<string, string | string[] | undefined>)
  * @returns UI 필터 객체
+ *
+ * "_all" 변환 규칙:
+ * - URL: site=_all → UI State: site='' (빈 문자열)
+ * - 이유: 무한 리다이렉트 방지 + Radix UI Select 제약 우회
  */
 export function parseEquipmentFiltersFromSearchParams(
   searchParams: URLSearchParams | Record<string, string | string[] | undefined>
@@ -121,12 +125,21 @@ export function parseEquipmentFiltersFromSearchParams(
   };
 
   const search = get('search') || DEFAULT_UI_FILTERS.search;
-  const site = (get('site') || DEFAULT_UI_FILTERS.site) as Site | '';
-  const status = (get('status') || DEFAULT_UI_FILTERS.status) as EquipmentStatus | '';
-  const calibrationMethod = (get('calibrationMethod') || DEFAULT_UI_FILTERS.calibrationMethod) as
+
+  // ✅ "_all"을 빈 문자열로 변환 (무한 리다이렉트 방지)
+  const siteRaw = get('site') || DEFAULT_UI_FILTERS.site;
+  const site = (siteRaw === '_all' ? '' : siteRaw) as Site | '';
+
+  const statusRaw = get('status') || DEFAULT_UI_FILTERS.status;
+  const status = (statusRaw === '_all' ? '' : statusRaw) as EquipmentStatus | '';
+
+  const calibrationMethodRaw = get('calibrationMethod') || DEFAULT_UI_FILTERS.calibrationMethod;
+  const calibrationMethod = (calibrationMethodRaw === '_all' ? '' : calibrationMethodRaw) as
     | CalibrationMethod
     | '';
-  const classification = (get('classification') || DEFAULT_UI_FILTERS.classification) as
+
+  const classificationRaw = get('classification') || DEFAULT_UI_FILTERS.classification;
+  const classification = (classificationRaw === '_all' ? '' : classificationRaw) as
     | Classification
     | '';
 
@@ -142,7 +155,9 @@ export function parseEquipmentFiltersFromSearchParams(
       : 'all'
   ) as UIEquipmentFilters['calibrationDueFilter'];
 
-  const teamId = get('teamId') || DEFAULT_UI_FILTERS.teamId;
+  // ✅ teamId도 "_all" 변환
+  const teamIdRaw = get('teamId') || DEFAULT_UI_FILTERS.teamId;
+  const teamId = teamIdRaw === '_all' ? '' : teamIdRaw;
   const sortBy = get('sortBy') || DEFAULT_UI_FILTERS.sortBy;
   const sortOrder = (get('sortOrder') || DEFAULT_UI_FILTERS.sortOrder) as 'asc' | 'desc';
   const page = parseInt(get('page') || String(DEFAULT_UI_FILTERS.page), 10);

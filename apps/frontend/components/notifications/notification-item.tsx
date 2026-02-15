@@ -1,140 +1,146 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Bell,
-  Calendar,
-  CheckCircle,
-  AlertCircle,
-  Settings,
-  Box,
-  Clock,
-  XCircle,
-  ArrowLeft,
-} from 'lucide-react';
+import Link from 'next/link';
+import type { LucideIcon } from 'lucide-react';
+import { Bell, Calendar, AlertCircle, Settings, Box, XCircle, ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { formatDate, formatRelativeTime } from '@/lib/utils/date';
+import type { NotificationItem as NotificationItemType } from '@/lib/api/notifications-api';
+import type { NotificationCategory } from '@equipment-management/shared-constants';
 
-interface Notification {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-  priority: string;
-  isRead: boolean;
-  linkUrl?: string;
-  createdAt: string;
+/**
+ * SSOT 기반 카테고리 스타일 매핑
+ *
+ * SSOT 체인:
+ *   @equipment-management/shared-constants: NotificationCategory 정의
+ *     → notification-registry.ts: 이벤트별 category 매핑
+ *       → dispatcher.ts: DB에 category 저장
+ *         → API response: { category: 'checkout' }
+ *           → 이 매핑: 렌더링
+ *
+ * 새 이벤트 type이 기존 category에 추가되면 스타일 자동 적용.
+ * 새 category 추가 시 shared-constants → 이 매핑 1줄 추가.
+ */
+interface CategoryStyle {
+  icon: LucideIcon;
+  color: string;
+  borderColor: string;
 }
 
-// 알림 유형별 아이콘 컴포넌트 매핑
-const getNotificationIcon = (type: string) => {
-  switch (type) {
-    case 'calibration_due':
-      return <Calendar className="h-4 w-4 text-blue-500" />;
-    case 'calibration_completed':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case 'rental_request':
-      return <Box className="h-4 w-4 text-orange-500" />;
-    case 'rental_approved':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case 'rental_rejected':
-      return <XCircle className="h-4 w-4 text-red-500" />;
-    case 'rental_completed':
-      return <Box className="h-4 w-4 text-blue-500" />;
-    case 'return_requested':
-      return <ArrowLeft className="h-4 w-4 text-purple-500" />;
-    case 'return_approved':
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case 'return_rejected':
-      return <XCircle className="h-4 w-4 text-red-500" />;
-    case 'equipment_maintenance':
-      return <Settings className="h-4 w-4 text-gray-500" />;
-    case 'checkout':
-      return <Clock className="h-4 w-4 text-teal-500" />;
-    case 'maintenance':
-      return <Settings className="h-4 w-4 text-gray-500" />;
-    case 'system':
-      return <AlertCircle className="h-4 w-4 text-red-500" />;
-    default:
-      return <Bell className="h-4 w-4 text-slate-500" />;
-  }
+const CATEGORY_STYLE_MAP: Record<NotificationCategory, CategoryStyle> = {
+  checkout: { icon: Box, color: 'text-orange-500', borderColor: 'border-l-orange-500' },
+  calibration: { icon: Calendar, color: 'text-blue-500', borderColor: 'border-l-blue-500' },
+  calibration_plan: {
+    icon: Calendar,
+    color: 'text-indigo-500',
+    borderColor: 'border-l-indigo-500',
+  },
+  non_conformance: { icon: AlertCircle, color: 'text-red-500', borderColor: 'border-l-red-500' },
+  disposal: {
+    icon: XCircle,
+    color: 'text-muted-foreground',
+    borderColor: 'border-l-muted-foreground',
+  },
+  equipment_import: {
+    icon: ArrowLeft,
+    color: 'text-purple-500',
+    borderColor: 'border-l-purple-500',
+  },
+  equipment: { icon: Settings, color: 'text-teal-500', borderColor: 'border-l-teal-500' },
+  system: { icon: AlertCircle, color: 'text-red-600', borderColor: 'border-l-red-600' },
 };
 
-// 알림 유형별 배경색 스타일 매핑
-const getNotificationStyle = (type: string, isRead: boolean) => {
-  const baseStyle = isRead ? 'opacity-60 bg-slate-50' : 'bg-white';
-
-  switch (type) {
-    case 'calibration_due':
-      return `${baseStyle} border-l-4 border-l-blue-500`;
-    case 'calibration_completed':
-      return `${baseStyle} border-l-4 border-l-green-500`;
-    case 'rental_request':
-      return `${baseStyle} border-l-4 border-l-orange-500`;
-    case 'rental_approved':
-      return `${baseStyle} border-l-4 border-l-green-500`;
-    case 'rental_rejected':
-      return `${baseStyle} border-l-4 border-l-red-500`;
-    case 'rental_completed':
-      return `${baseStyle} border-l-4 border-l-blue-500`;
-    case 'return_requested':
-      return `${baseStyle} border-l-4 border-l-purple-500`;
-    case 'return_approved':
-      return `${baseStyle} border-l-4 border-l-green-500`;
-    case 'return_rejected':
-      return `${baseStyle} border-l-4 border-l-red-500`;
-    case 'equipment_maintenance':
-      return `${baseStyle} border-l-4 border-l-gray-500`;
-    case 'checkout':
-      return `${baseStyle} border-l-4 border-l-teal-500`;
-    case 'maintenance':
-      return `${baseStyle} border-l-4 border-l-gray-500`;
-    case 'system':
-      return `${baseStyle} border-l-4 border-l-red-500`;
-    default:
-      return `${baseStyle} border-l-4 border-l-slate-500`;
-  }
+const DEFAULT_STYLE: CategoryStyle = {
+  icon: Bell,
+  color: 'text-muted-foreground',
+  borderColor: 'border-l-muted-foreground',
 };
+
+function getCategoryStyle(category: string): CategoryStyle {
+  return CATEGORY_STYLE_MAP[category as NotificationCategory] ?? DEFAULT_STYLE;
+}
 
 interface NotificationItemProps {
-  notification: Notification;
+  notification: NotificationItemType;
   onMarkAsRead: (id: string) => void;
 }
 
 export function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
-  const [isRead, setIsRead] = useState(notification.isRead);
-  const icon = getNotificationIcon(notification.type);
-  const style = getNotificationStyle(notification.type, isRead);
+  const style = getCategoryStyle(notification.category);
+  const Icon = style.icon;
 
   const formattedDate = formatRelativeTime(notification.createdAt);
-
   const fullDate = formatDate(notification.createdAt, 'yyyy년 MM월 dd일 HH:mm');
 
-  const handleClick = () => {
-    if (!isRead) {
-      setIsRead(true);
+  const handleMarkAsRead = () => {
+    if (!notification.isRead) {
       onMarkAsRead(notification.id);
-    }
-
-    if (notification.linkUrl) {
-      window.location.href = notification.linkUrl;
     }
   };
 
-  return (
-    <div
-      className={`p-4 mb-2 rounded shadow-sm cursor-pointer relative ${style}`}
-      onClick={handleClick}
-      title={fullDate}
-    >
-      {!isRead && <div className="absolute right-3 top-3 h-2 w-2 rounded-full bg-blue-600" />}
+  const content = (
+    <>
+      {!notification.isRead && (
+        <div className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary" />
+      )}
       <div className="flex items-start">
-        <div className="mr-3 mt-1">{icon}</div>
+        <div className="mr-3 mt-1">
+          <Icon className={cn('h-4 w-4', style.color)} aria-hidden="true" />
+        </div>
         <div className="flex-1">
           <div className="font-medium text-sm">{notification.title}</div>
-          <div className="text-sm text-gray-600 mt-1">{notification.content}</div>
-          <div className="text-xs text-gray-400 mt-2">{formattedDate}</div>
+          <div className="text-sm text-muted-foreground mt-1">{notification.content}</div>
+          <div className="text-xs text-muted-foreground/60 mt-2">{formattedDate}</div>
         </div>
       </div>
-    </div>
+    </>
+  );
+
+  const baseClassName = cn(
+    'p-4 mb-2 rounded shadow-sm relative border-l-4 block w-full text-left',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+    notification.isRead ? 'opacity-60 bg-muted' : 'bg-card',
+    style.borderColor
+  );
+
+  // 내부 링크가 있으면 Next.js Link (SPA 내비게이션)
+  if (notification.linkUrl?.startsWith('/')) {
+    return (
+      <Link
+        href={notification.linkUrl}
+        className={baseClassName}
+        title={fullDate}
+        onClick={handleMarkAsRead}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  // 외부 링크가 있으면 <a> 태그
+  if (notification.linkUrl) {
+    return (
+      <a
+        href={notification.linkUrl}
+        className={baseClassName}
+        title={fullDate}
+        onClick={handleMarkAsRead}
+        rel="noopener noreferrer"
+      >
+        {content}
+      </a>
+    );
+  }
+
+  // 링크 없으면 button (읽음 처리만)
+  return (
+    <button
+      type="button"
+      className={cn(baseClassName, 'cursor-default')}
+      title={fullDate}
+      onClick={handleMarkAsRead}
+    >
+      {content}
+    </button>
   );
 }

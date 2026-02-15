@@ -1,17 +1,12 @@
-"use client";
+'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  CheckCircle2,
-  Clock,
-  Wrench,
-  AlertTriangle,
-  Truck,
-} from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle2, Clock, Wrench, AlertTriangle, Truck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 // ✅ 직접 import (barrel import 제거)
-import dashboardApi from "@/lib/api/dashboard-api";
+import dashboardApi from '@/lib/api/dashboard-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 // DashboardSummary를 확장한 로컬 타입
 // ✅ 대여(loaned)는 반출(checkout)로 통합됨
@@ -30,7 +25,7 @@ interface StatsCardProps {
   description?: string;
   change?: {
     value: number;
-    type: "increase" | "decrease";
+    type: 'increase' | 'decrease';
   };
 }
 
@@ -43,24 +38,18 @@ function StatsCard({ title, value, icon, description, change }: StatsCardProps) 
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
         {change && (
           <div className="flex items-center pt-1">
             <span
               className={`text-xs ${
-                change.type === "increase"
-                  ? "text-green-500"
-                  : "text-red-500"
+                change.type === 'increase' ? 'text-green-500' : 'text-red-500'
               }`}
             >
-              {change.type === "increase" ? "+" : "-"}
+              {change.type === 'increase' ? '+' : '-'}
               {change.value}%
             </span>
-            <span className="text-xs text-muted-foreground ml-1">
-              from last month
-            </span>
+            <span className="text-xs text-muted-foreground ml-1">from last month</span>
           </div>
         )}
       </CardContent>
@@ -79,10 +68,10 @@ function StatsCard({ title, value, icon, description, change }: StatsCardProps) 
 export default function EquipmentSummary() {
   // ✅ React Query로 상태 통합 (stats, loading, error → 단일 훅)
   const { data, isLoading, error } = useQuery({
-    queryKey: ['equipment-summary'],
+    queryKey: queryKeys.dashboard.equipmentSummary(),
     queryFn: () => dashboardApi.getEquipmentSummary(),
-    staleTime: 30 * 1000, // 30초
-    gcTime: 5 * 60 * 1000, // 5분
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.LONG,
     retry: 2,
   });
 

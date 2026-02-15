@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import {
   DropdownMenu,
@@ -14,128 +13,51 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { NotificationItem } from '@/components/notifications/notification-item';
+import {
+  useUnreadCount,
+  useNotificationList,
+  useMarkAsRead,
+  useMarkAllAsRead,
+} from '@/hooks/use-notifications';
 import Link from 'next/link';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
-interface Notification {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-  priority: string;
-  isRead: boolean;
-  linkUrl?: string;
-  createdAt: string;
-}
-
-// 더미 알림 데이터
-const dummyNotifications: Notification[] = [
-  {
-    id: '1',
-    title: '장비 반납 요청',
-    content: 'Oscilloscope(EQ-002) 장비에 대한 반납 요청이 접수되었습니다.',
-    type: 'return_requested',
-    priority: 'medium',
-    isRead: false,
-    linkUrl: '/admin/return-approvals',
-    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '2',
-    title: '장비 반납 승인',
-    content: 'Multimeter(SUW-E0001) 장비 반납 요청이 승인되었습니다.',
-    type: 'return_approved',
-    priority: 'medium',
-    isRead: false,
-    linkUrl: '/checkouts/123',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '3',
-    title: '장비 대여 요청 승인',
-    content: 'RF-Analyzer(EQ-003) 장비 대여 요청이 승인되었습니다.',
-    type: 'rental_approved',
-    priority: 'medium',
-    isRead: true,
-    linkUrl: '/checkouts/456',
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: '4',
-    title: '장비 교정 일정 알림',
-    content: 'Oscilloscope(EQ-002) 장비의 교정 일정이 2주 후로 예정되어 있습니다.',
-    type: 'calibration_due',
-    priority: 'high',
-    isRead: true,
-    linkUrl: '/equipments/789/calibrations',
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
+/**
+ * 알림 드롭다운
+ *
+ * 더미 데이터 → TanStack Query 마이그레이션 완료
+ * - useUnreadCount: 30초 폴링 + SSE 실시간 무효화
+ * - useNotificationList: 최근 5개 알림 조회
+ * - useMarkAsRead / useMarkAllAsRead: 뮤테이션 → onSettled에서 자동 무효화
+ */
 export function NotificationsDropdown() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const { data: notificationData, isLoading } = useNotificationList({
+    pageSize: 5,
+  });
+  const markAsReadMutation = useMarkAsRead();
+  const markAllAsReadMutation = useMarkAllAsRead();
 
-  // 알림 데이터 가져오기
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        // 실제 구현에서는 API 호출이 필요
-        // const response = await fetch('/api/notifications');
-        // const data = await response.json();
+  const notifications = notificationData?.items ?? [];
 
-        // 임시로 더미 데이터 사용
-        setNotifications(dummyNotifications);
-        setUnreadCount(dummyNotifications.filter((n) => !n.isRead).length);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Failed to fetch notifications:', error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchNotifications();
-  }, []);
-
-  // 알림을 읽음으로 표시하는 함수
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      // 실제 구현에서는 API 호출이 필요
-      // await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
-
-      // 임시로 로컬 상태 업데이트
-      setNotifications(
-        notifications.map((notification) =>
-          notification.id === id ? { ...notification, isRead: true } : notification
-        )
-      );
-
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
+  const handleMarkAsRead = (id: string) => {
+    markAsReadMutation.mutate(id);
   };
 
-  // 모든 알림을 읽음으로 표시하는 함수
-  const handleMarkAllAsRead = async () => {
-    try {
-      // 실제 구현에서는 API 호출이 필요
-      // await fetch('/api/notifications/read-all', { method: 'POST' });
-
-      // 임시로 로컬 상태 업데이트
-      setNotifications(notifications.map((notification) => ({ ...notification, isRead: true })));
-
-      setUnreadCount(0);
-    } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
-    }
+  const handleMarkAllAsRead = () => {
+    markAllAsReadMutation.mutate();
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative h-8 w-8 rounded-full">
-          <Bell className="h-5 w-5" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="relative h-8 w-8 rounded-full"
+          aria-label="알림"
+        >
+          <Bell className="h-5 w-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
@@ -150,7 +72,13 @@ export function NotificationsDropdown() {
         <DropdownMenuLabel className="flex justify-between items-center">
           <span>알림</span>
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={handleMarkAllAsRead}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-xs"
+              onClick={handleMarkAllAsRead}
+              disabled={markAllAsReadMutation.isPending}
+            >
               모두 읽음으로 표시
             </Button>
           )}
@@ -179,7 +107,10 @@ export function NotificationsDropdown() {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/notifications" className="justify-center text-xs text-muted-foreground">
+          <Link
+            href={FRONTEND_ROUTES.NOTIFICATIONS.LIST}
+            className="justify-center text-xs text-muted-foreground"
+          >
             모든 알림 보기
           </Link>
         </DropdownMenuItem>

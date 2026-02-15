@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 export type ReportType =
   | 'equipment_inventory'
@@ -21,7 +22,7 @@ export const getEquipmentUsage = async (
   departmentId?: string
 ) => {
   try {
-    const response = await apiClient.get('/api/reports/equipment-usage', {
+    const response = await apiClient.get(API_ENDPOINTS.REPORTS.EQUIPMENT_USAGE, {
       params: { startDate, endDate, equipmentId, departmentId },
     });
     return response.data;
@@ -34,7 +35,7 @@ export const getEquipmentUsage = async (
 // 교정 상태 보고서 조회
 export const getCalibrationStatus = async (status?: string, timeframe?: string) => {
   try {
-    const response = await apiClient.get('/api/reports/calibration-status', {
+    const response = await apiClient.get(API_ENDPOINTS.REPORTS.CALIBRATION_STATUS, {
       params: { status, timeframe },
     });
     return response.data;
@@ -54,7 +55,7 @@ export const getCheckoutStatistics = async (
 ) => {
   try {
     // 백엔드 API 엔드포인트는 유지 (백엔드 호환성)
-    const response = await apiClient.get('/api/reports/rental-statistics', {
+    const response = await apiClient.get(API_ENDPOINTS.REPORTS.RENTAL_STATISTICS, {
       params: { startDate, endDate, departmentId },
     });
     return response.data;
@@ -76,7 +77,7 @@ export const getUtilizationRate = async (
   categoryId?: string
 ) => {
   try {
-    const response = await apiClient.get('/api/reports/utilization-rate', {
+    const response = await apiClient.get(API_ENDPOINTS.REPORTS.UTILIZATION_RATE, {
       params: { period, equipmentId, categoryId },
     });
     return response.data;
@@ -93,7 +94,7 @@ export const getEquipmentDowntime = async (
   equipmentId?: string
 ) => {
   try {
-    const response = await apiClient.get('/api/reports/equipment-downtime', {
+    const response = await apiClient.get(API_ENDPOINTS.REPORTS.EQUIPMENT_DOWNTIME, {
       params: { startDate, endDate, equipmentId },
     });
     return response.data;
@@ -110,7 +111,7 @@ export const exportEquipmentUsage = async (
   endDate?: string
 ) => {
   try {
-    const response = await apiClient.get('/api/reports/export/equipment-usage', {
+    const response = await apiClient.get(API_ENDPOINTS.REPORTS.EXPORT.EQUIPMENT_USAGE, {
       params: { format, startDate, endDate },
       responseType: 'blob', // 파일 다운로드를 위한 설정
     });
@@ -195,19 +196,19 @@ export const generateReport = async (
     let endpoint = '';
     switch (reportType) {
       case 'equipment_inventory':
-        endpoint = '/api/reports/export/equipment-inventory';
+        endpoint = API_ENDPOINTS.REPORTS.EXPORT.EQUIPMENT_INVENTORY;
         break;
       case 'calibration_status':
-        endpoint = '/api/reports/export/calibration-status';
+        endpoint = API_ENDPOINTS.REPORTS.EXPORT.CALIBRATION_STATUS;
         break;
       case 'utilization_report':
-        endpoint = '/api/reports/export/utilization';
+        endpoint = API_ENDPOINTS.REPORTS.EXPORT.UTILIZATION;
         break;
       case 'team_equipment':
-        endpoint = '/api/reports/export/team-equipment';
+        endpoint = API_ENDPOINTS.REPORTS.EXPORT.TEAM_EQUIPMENT;
         break;
       case 'maintenance_report':
-        endpoint = '/api/reports/export/maintenance';
+        endpoint = API_ENDPOINTS.REPORTS.EXPORT.MAINTENANCE;
         break;
       default:
         throw new Error('지원하지 않는 보고서 유형입니다.');

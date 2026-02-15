@@ -27,9 +27,9 @@ type PageProps = {
 export default async function EditTeamPage(props: PageProps) {
   const { id } = await props.params;
 
-  // 유효한 팀 ID 확인
-  const validTeamIds = ['rf', 'sar', 'emc', 'auto'];
-  if (!validTeamIds.includes(id.toLowerCase()) && !/^\d+$/.test(id)) {
+  // UUID 형식 검증 (detail 페이지와 동일 패턴)
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_REGEX.test(id)) {
     notFound();
   }
 
@@ -44,9 +44,7 @@ export default async function EditTeamPage(props: PageProps) {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">팀 수정</h1>
-          <p className="text-muted-foreground">
-            팀 정보를 수정합니다
-          </p>
+          <p className="text-muted-foreground">팀 정보를 수정합니다</p>
         </div>
       </div>
 
@@ -97,17 +95,8 @@ function EditTeamFormSkeleton() {
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const { id } = await props.params;
 
-  const teamNames: Record<string, string> = {
-    rf: 'RF 테스트팀',
-    sar: 'SAR 테스트팀',
-    emc: 'EMC 테스트팀',
-    auto: 'Automotive 테스트팀',
-  };
-
-  const teamName = teamNames[id.toLowerCase()] || `팀 ${id}`;
-
   return {
-    title: `${teamName} 수정`,
-    description: `${teamName} 정보를 수정합니다.`,
+    title: '팀 수정',
+    description: '팀 정보를 수정합니다.',
   };
 }

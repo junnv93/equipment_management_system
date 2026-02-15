@@ -117,11 +117,7 @@ function renderCalibrationDetails(details: Record<string, unknown>) {
       <DetailRow label="장비 ID" value={details.equipmentId} />
       <DateRow label="교정일" value={details.calibrationDate} />
       <DateRow label="다음 교정일" value={details.nextCalibrationDate} />
-      <LabeledRow
-        label="교정 결과"
-        value={details.calibrationResult}
-        labels={CALIBRATION_RESULT_LABELS}
-      />
+      <LabeledRow label="교정 결과" value={details.result} labels={CALIBRATION_RESULT_LABELS} />
       <DetailRow label="교정 기관" value={details.calibrationAgency} />
       <DetailRow label="성적서 번호" value={details.certificateNumber} />
     </>
@@ -158,6 +154,12 @@ function renderNonConformityDetails(details: Record<string, unknown>) {
       <DateRow label="조치일" value={details.correctionDate} />
       <DetailRow label="분석 내용" value={details.analysisContent} />
       <DetailRow label="조치 계획" value={details.actionPlan} />
+      {details.rejectionReason && (
+        <div className="mt-2 pt-2 border-t border-red-200">
+          <DetailRow label="이전 반려 사유" value={details.rejectionReason} />
+          <DateRow label="반려일" value={details.rejectedAt} />
+        </div>
+      )}
     </>
   );
 }

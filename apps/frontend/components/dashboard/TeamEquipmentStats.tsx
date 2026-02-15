@@ -1,11 +1,11 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useState, useEffect } from 'react';
-// ✅ 직접 import (barrel import 제거)
+import { useQuery } from '@tanstack/react-query';
 import dashboardApi from '@/lib/api/dashboard-api';
 import type { EquipmentByTeam } from '@/lib/api/dashboard-api';
 import { AlertTriangle } from 'lucide-react';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 interface TeamStats {
   id: string;
@@ -17,39 +17,28 @@ interface TeamStats {
 }
 
 export default function TeamEquipmentStats() {
-  const [teamStats, setTeamStats] = useState<TeamStats[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const data = await dashboardApi.getEquipmentByTeam();
-
-        // 서버에서 가져온 데이터를 컴포넌트 형식에 맞게 변환
-        const transformedData: TeamStats[] = data.map((team: EquipmentByTeam) => ({
+  // ✅ TanStack Query로 서버 상태 관리
+  const {
+    data: teamStats = [],
+    isLoading: loading,
+    isError,
+  } = useQuery<TeamStats[]>({
+    queryKey: queryKeys.dashboard.equipmentByTeam(),
+    queryFn: async () => {
+      const data = await dashboardApi.getEquipmentByTeam();
+      return data.map(
+        (team: EquipmentByTeam): TeamStats => ({
           id: team.id,
           name: team.name,
           totalEquipment: team.count || 0,
-          // 아래 값들은 API 응답에 없으면 계산된 값 또는 기본값 사용
           availableEquipment: Math.floor(team.count * 0.8),
           loanedEquipment: Math.floor(team.count * 0.15),
           calibrationDue: Math.floor(team.count * 0.05),
-        }));
-
-        setTeamStats(transformedData);
-        setError(null);
-      } catch (err) {
-        console.error('팀별 장비 통계 데이터를 불러오는 중 오류 발생:', err);
-        setError('데이터를 불러올 수 없습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+        })
+      );
+    },
+    ...QUERY_CONFIG.DASHBOARD,
+  });
 
   // 로딩 상태 표시
   if (loading) {
@@ -81,12 +70,12 @@ export default function TeamEquipmentStats() {
   }
 
   // 에러 상태 표시
-  if (error) {
+  if (isError) {
     return (
       <Card className="p-4 bg-red-50 border-red-200">
         <div className="flex items-center gap-2 text-red-600">
           <AlertTriangle className="h-5 w-5" />
-          <span>{error}</span>
+          <span>데이터를 불러올 수 없습니다.</span>
         </div>
       </Card>
     );

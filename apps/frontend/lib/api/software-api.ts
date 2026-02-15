@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
 
@@ -113,7 +114,7 @@ export const SOFTWARE_APPROVAL_STATUS_COLORS: Record<SoftwareApprovalStatus, str
 const softwareApi = {
   // 소프트웨어 변경 요청
   createSoftwareChange: async (data: CreateSoftwareChangeDto): Promise<SoftwareHistory> => {
-    return apiClient.post('/api/software/change-request', data).then((res) => res.data);
+    return apiClient.post(API_ENDPOINTS.SOFTWARE.CHANGE_REQUEST, data).then((res) => res.data);
   },
 
   // 소프트웨어 변경 이력 조회
@@ -128,31 +129,31 @@ const softwareApi = {
       }
     });
 
-    const url = `/api/software/history${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.SOFTWARE.HISTORY}${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get(url).then((res) => transformPaginatedResponse<SoftwareHistory>(res));
   },
 
   // 소프트웨어 변경 이력 상세 조회
   getSoftwareHistoryDetail: async (id: string): Promise<SoftwareHistory> => {
-    return apiClient.get(`/api/software/${id}`).then((res) => res.data);
+    return apiClient.get(API_ENDPOINTS.SOFTWARE.GET(id)).then((res) => res.data);
   },
 
   // 승인 대기 목록 조회
   getPendingSoftwareChanges: async (): Promise<PaginatedResponse<SoftwareHistory>> => {
     return apiClient
-      .get('/api/software/pending')
+      .get(API_ENDPOINTS.SOFTWARE.PENDING)
       .then((res) => transformPaginatedResponse<SoftwareHistory>(res));
   },
 
   // 소프트웨어 통합 관리대장 조회
   getSoftwareRegistry: async (): Promise<SoftwareRegistry> => {
-    return apiClient.get('/api/software/registry').then((res) => res.data);
+    return apiClient.get(API_ENDPOINTS.SOFTWARE.REGISTRY).then((res) => res.data);
   },
 
   // 특정 소프트웨어 사용 장비 목록 조회
   getEquipmentBySoftware: async (softwareName: string): Promise<EquipmentBySoftware> => {
     return apiClient
-      .get(`/api/software/${encodeURIComponent(softwareName)}/equipment`)
+      .get(API_ENDPOINTS.SOFTWARE.EQUIPMENT_BY_SOFTWARE(softwareName))
       .then((res) => res.data);
   },
 
@@ -161,7 +162,7 @@ const softwareApi = {
     id: string,
     data: ApproveSoftwareChangeDto
   ): Promise<SoftwareHistory> => {
-    return apiClient.patch(`/api/software/${id}/approve`, data).then((res) => res.data);
+    return apiClient.patch(API_ENDPOINTS.SOFTWARE.APPROVE(id), data).then((res) => res.data);
   },
 
   // 소프트웨어 변경 반려
@@ -169,7 +170,7 @@ const softwareApi = {
     id: string,
     data: RejectSoftwareChangeDto
   ): Promise<SoftwareHistory> => {
-    return apiClient.patch(`/api/software/${id}/reject`, data).then((res) => res.data);
+    return apiClient.patch(API_ENDPOINTS.SOFTWARE.REJECT(id), data).then((res) => res.data);
   },
 };
 

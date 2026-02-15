@@ -17,15 +17,16 @@ import equipmentApi, {
   type CreateEquipmentDto,
   type UpdateEquipmentDto,
 } from '@/lib/api/equipment-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 /**
  * 장비 목록 조회 훅
  */
 export function useEquipmentList(query?: EquipmentQuery) {
   return useQuery({
-    queryKey: ['equipment', 'list', query],
+    queryKey: queryKeys.equipment.list(query ?? {}),
     queryFn: () => equipmentApi.getEquipmentList(query),
-    staleTime: 5 * 60 * 1000, // 5분
+    staleTime: CACHE_TIMES.LONG,
   });
 }
 
@@ -34,10 +35,10 @@ export function useEquipmentList(query?: EquipmentQuery) {
  */
 export function useEquipment(id: string) {
   return useQuery({
-    queryKey: ['equipment', id],
+    queryKey: queryKeys.equipment.detail(id),
     queryFn: () => equipmentApi.getEquipment(id),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000, // 5분
+    staleTime: CACHE_TIMES.LONG,
   });
 }
 
@@ -76,7 +77,7 @@ export function useEquipmentWithInitialData(initialData: Equipment) {
   const equipmentId = String(initialData.id);
 
   const result = useQuery({
-    queryKey: ['equipment', equipmentId],
+    queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
     placeholderData: initialData,
     staleTime: 0, // 항상 fresh하게 유지하여 캐시 갱신 즉시 반영
@@ -99,7 +100,7 @@ export function useCreateEquipment() {
     { data: Equipment[] }
   >({
     mutationFn: ({ data, files }) => equipmentApi.createEquipment(data, files),
-    queryKey: ['equipment', 'list'],
+    queryKey: queryKeys.equipment.lists(),
     optimisticUpdate: (old, { data }) => {
       if (!old?.data) return { data: [] };
 
@@ -116,7 +117,7 @@ export function useCreateEquipment() {
         data: [newEquipment, ...old.data],
       };
     },
-    invalidateKeys: [['equipment', 'list'], ['equipment-requests']],
+    invalidateKeys: [queryKeys.equipment.lists(), queryKeys.equipmentRequests.all],
     successMessage: (response) =>
       response && 'requestUuid' in response
         ? '장비 등록 요청이 제출되었습니다. 승인 대기 중입니다.'
@@ -137,7 +138,7 @@ export function useUpdateEquipment() {
     { data: Equipment[] }
   >({
     mutationFn: ({ id, data, files }) => equipmentApi.updateEquipment(id, data, files),
-    queryKey: ['equipment', 'list'],
+    queryKey: queryKeys.equipment.lists(),
     optimisticUpdate: (old, { id, data }) => {
       if (!old?.data) return { data: [] };
 
@@ -155,7 +156,7 @@ export function useUpdateEquipment() {
         ),
       };
     },
-    invalidateKeys: [['equipment', 'list'], ['equipment-requests']],
+    invalidateKeys: [queryKeys.equipment.lists(), queryKeys.equipmentRequests.all],
     successMessage: (response) =>
       response && 'requestUuid' in response
         ? '장비 수정 요청이 제출되었습니다. 승인 대기 중입니다.'
@@ -172,7 +173,7 @@ export function useUpdateEquipment() {
 export function useDeleteEquipment() {
   return useOptimisticMutation<void, string, { data: Equipment[] }>({
     mutationFn: (id) => equipmentApi.deleteEquipment(id),
-    queryKey: ['equipment', 'list'],
+    queryKey: queryKeys.equipment.lists(),
     optimisticUpdate: (old, id) => {
       if (!old?.data) return { data: [] };
 
@@ -182,7 +183,7 @@ export function useDeleteEquipment() {
         data: old.data.filter((item) => item.id !== id),
       };
     },
-    invalidateKeys: [['equipment', 'list']],
+    invalidateKeys: [queryKeys.equipment.lists()],
     successMessage: '장비가 성공적으로 삭제되었습니다.',
     errorMessage: '장비 삭제 중 오류가 발생했습니다.',
   });
@@ -205,7 +206,7 @@ export function useUpdateEquipmentStatus() {
   >({
     mutationFn: ({ id, status, version }) =>
       equipmentApi.updateEquipmentStatus(id, status, version),
-    queryKey: ['equipment', 'list'],
+    queryKey: queryKeys.equipment.lists(),
     optimisticUpdate: (old, { id, status }) => {
       if (!old?.data) return { data: [] };
 
@@ -215,7 +216,7 @@ export function useUpdateEquipmentStatus() {
         data: old.data.map((item) => (item.id === id ? { ...item, status } : item)),
       };
     },
-    invalidateKeys: [['equipment', 'list']], // 백그라운드 재검증
+    invalidateKeys: [queryKeys.equipment.lists()], // 백그라운드 재검증
     successMessage: '장비 상태가 성공적으로 변경되었습니다.',
     // ✅ Version conflict는 useOptimisticMutation의 onError에서 자동 처리
     // - 서버에서 최신 데이터 가져오기 (invalidateQueries)

@@ -44,6 +44,7 @@ import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
 import teamsApi, { SITE_CONFIG, type Site } from '@/lib/api/teams-api';
 import { SITE_LABELS } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
 import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
 import {
@@ -77,7 +78,7 @@ export default function CreateCheckoutContent() {
 
   // 외부 대여 시 선택된 사이트의 팀 목록 조회
   const { data: teamsData } = useQuery({
-    queryKey: ['teams', selectedSite],
+    queryKey: queryKeys.teams.bySite(selectedSite),
     queryFn: () => teamsApi.getTeams({ site: selectedSite as Site, pageSize: 50 }),
     enabled: purpose === 'rental' && !!selectedSite,
   });
@@ -85,7 +86,7 @@ export default function CreateCheckoutContent() {
   // 장비 목록 조회 - 상태 필터 없이 전체 조회 (목적별 선택 가능 여부는 클라이언트에서 판단)
   const equipmentTeamId = purpose === 'rental' ? selectedTeamId : userTeamId;
   const { data: equipmentsData, isLoading: equipmentsLoading } = useQuery({
-    queryKey: ['equipments', 'checkout-all', searchTerm, purpose, equipmentTeamId],
+    queryKey: queryKeys.equipment.checkoutSearch(searchTerm, purpose, equipmentTeamId),
     queryFn: async () => {
       const response = await equipmentApi.getEquipmentList({
         search: searchTerm || undefined,
@@ -112,8 +113,10 @@ export default function CreateCheckoutContent() {
         description: '반출 신청이 성공적으로 접수되었습니다.',
         variant: 'default',
       });
-      queryClient.invalidateQueries({ queryKey: ['checkouts'] });
       router.push(FRONTEND_ROUTES.CHECKOUTS.LIST);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkouts.all });
     },
     onError: (error: unknown) => {
       toast({

@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
 import calibrationPlansApi, {
   CalibrationPlanVersion,
@@ -38,7 +39,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['calibration-plan-versions', planUuid],
+    queryKey: queryKeys.calibrationPlans.versions(planUuid),
     queryFn: () => calibrationPlansApi.getVersionHistory(planUuid),
     enabled: !!planUuid,
   });

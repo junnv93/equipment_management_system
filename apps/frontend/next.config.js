@@ -6,9 +6,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // 주석: Turbopack은 Next.js 16.1에서 아직 실험적 기능입니다.
-  // production build는 기본적으로 안정적인 Webpack을 사용합니다.
-  // 개발 모드에서는 `pnpm dev`로 Turbopack을 활성화할 수 있습니다.
+
+  // Monorepo workspace 패키지를 소스에서 직접 트랜스파일
+  // dist/ 빌드 없이 소스 변경 즉시 반영 (HMR 지원)
+  transpilePackages: ['@equipment-management/shared-constants', '@equipment-management/schemas'],
 
   // Monorepo 루트 경로 명시 (경고 제거)
   turbopack: {

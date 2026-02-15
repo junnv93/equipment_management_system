@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -88,7 +89,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
 
   // 위치 변동 이력 조회
   const { data: history = [], isLoading } = useQuery({
-    queryKey: ['location-history', equipmentId],
+    queryKey: queryKeys.equipment.locationHistory(equipmentId),
     queryFn: () => equipmentApi.getLocationHistory(equipmentId),
     enabled: !!equipmentId,
   });
@@ -98,7 +99,6 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     mutationFn: (data: CreateLocationHistoryInput) =>
       equipmentApi.createLocationHistory(equipmentId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['location-history', equipmentId] });
       setIsDialogOpen(false);
       form.reset({
         changedAt: formatDate(new Date(), 'yyyy-MM-dd'),
@@ -109,6 +109,9 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
         title: '위치 변동 등록 완료',
         description: '위치 변동 이력이 성공적으로 등록되었습니다.',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.locationHistory(equipmentId) });
     },
     onError: (error: unknown) => {
       console.error('위치 변동 이력 등록 실패:', error);
@@ -124,11 +127,13 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   const deleteMutation = useMutation({
     mutationFn: (historyId: string) => equipmentApi.deleteLocationHistory(historyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['location-history', equipmentId] });
       toast({
         title: '삭제 완료',
         description: '위치 변동 이력이 삭제되었습니다.',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.locationHistory(equipmentId) });
     },
     onError: (error: unknown) => {
       console.error('위치 변동 이력 삭제 실패:', error);

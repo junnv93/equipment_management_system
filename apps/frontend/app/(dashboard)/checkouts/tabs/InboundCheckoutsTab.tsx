@@ -27,6 +27,7 @@ import {
   type EquipmentImportStatus,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
@@ -60,7 +61,7 @@ export default function InboundCheckoutsTab({
   // 반입: 타팀 장비 대여 건 (페이지네이션)
   // ──────────────────────────────────────────────
   const { data: inboundCheckoutsData, isLoading: inboundCheckoutsLoading } = useQuery({
-    queryKey: ['checkouts', 'inbound', statusFilter, searchTerm, teamId, currentPage],
+    queryKey: queryKeys.checkouts.inbound({ statusFilter, searchTerm, teamId, page: currentPage }),
     queryFn: async () => {
       const query: CheckoutQuery = {
         page: currentPage,
@@ -76,14 +77,14 @@ export default function InboundCheckoutsTab({
 
       return checkoutApi.getCheckouts(query);
     },
-    staleTime: 30 * 1000,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // ──────────────────────────────────────────────
   // 반입: 외부 업체 렌탈
   // ──────────────────────────────────────────────
   const { data: rentalImportsData, isLoading: rentalImportsLoading } = useQuery({
-    queryKey: ['equipment-imports', 'rental', statusFilter, searchTerm],
+    queryKey: queryKeys.equipmentImports.bySourceType('rental', { statusFilter, searchTerm }),
     queryFn: () =>
       equipmentImportApi.getList({
         sourceType: 'rental', // ✅ Filter for rental imports only
@@ -91,14 +92,17 @@ export default function InboundCheckoutsTab({
         search: searchTerm || undefined,
         status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
       }),
-    staleTime: 30 * 1000,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // ──────────────────────────────────────────────
   // 반입: 내부 공용장비
   // ──────────────────────────────────────────────
   const { data: internalSharedImportsData, isLoading: internalSharedImportsLoading } = useQuery({
-    queryKey: ['equipment-imports', 'internal_shared', statusFilter, searchTerm],
+    queryKey: queryKeys.equipmentImports.bySourceType('internal_shared', {
+      statusFilter,
+      searchTerm,
+    }),
     queryFn: () =>
       equipmentImportApi.getList({
         limit: 100,
@@ -106,7 +110,7 @@ export default function InboundCheckoutsTab({
         status: statusFilter !== 'all' ? (statusFilter as EquipmentImportStatus) : undefined,
         sourceType: 'internal_shared',
       }),
-    staleTime: 30 * 1000,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // ──────────────────────────────────────────────

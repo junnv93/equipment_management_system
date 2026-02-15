@@ -5,7 +5,9 @@ import { useQuery } from '@tanstack/react-query';
 import { notFound } from 'next/navigation';
 import teamsApi from '@/lib/api/teams-api';
 import { isNotFoundError } from '@/lib/api/error';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
+import { useAuth } from '@/hooks/use-auth';
 import { TeamDetail } from './TeamDetail';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +25,7 @@ interface TeamDetailWrapperProps {
  */
 export function TeamDetailWrapper({ teamId }: TeamDetailWrapperProps) {
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
+  const { user } = useAuth();
 
   const {
     data: team,
@@ -30,10 +33,10 @@ export function TeamDetailWrapper({ teamId }: TeamDetailWrapperProps) {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['team', teamId],
+    queryKey: queryKeys.teams.detail(teamId),
     queryFn: () => teamsApi.getTeam(teamId),
+    ...QUERY_CONFIG.TEAMS,
     retry: (failureCount, error) => {
-      // 404 에러는 재시도하지 않음
       if (isNotFoundError(error)) return false;
       return failureCount < 3;
     },
@@ -73,7 +76,21 @@ export function TeamDetailWrapper({ teamId }: TeamDetailWrapperProps) {
     return <TeamDetailSkeleton />;
   }
 
-  return <TeamDetail team={team} />;
+  return (
+    <TeamDetail
+      team={team}
+      currentUser={
+        user
+          ? {
+              userId: user.id || '',
+              role: user.role || '',
+              teamId: user.teamId,
+              site: user.site,
+            }
+          : undefined
+      }
+    />
+  );
 }
 
 /**

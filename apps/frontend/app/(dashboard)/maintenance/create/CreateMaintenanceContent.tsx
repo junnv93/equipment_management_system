@@ -29,6 +29,7 @@ import { format, addMonths } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Search, Wrench, Clock, User, DollarSign, ClipboardCheck } from 'lucide-react';
+import { queryKeys } from '@/lib/api/query-config';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 
 /**
@@ -78,7 +79,7 @@ export function CreateMaintenanceContent() {
 
   // 장비 목록 조회
   const { data: equipmentData, isLoading: equipmentLoading } = useQuery({
-    queryKey: ['equipment-list', searchTerm],
+    queryKey: queryKeys.equipment.search(searchTerm),
     queryFn: async () => {
       if (equipmentIdParam) {
         // 특정 장비 정보만 가져오기
@@ -97,7 +98,7 @@ export function CreateMaintenanceContent() {
 
   // 선택된 장비 정보 조회
   const { data: selectedEquipment, isLoading: selectedEquipmentLoading } = useQuery({
-    queryKey: ['equipment', equipmentId],
+    queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: async (): Promise<EquipmentWithMaintenance> => {
       const equipment = await equipmentApi.getEquipment(equipmentId);
       return equipment as EquipmentWithMaintenance;
@@ -130,9 +131,11 @@ export function CreateMaintenanceContent() {
         title: '점검 정보 등록 완료',
         description: '장비 점검 정보가 성공적으로 등록되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['maintenance-history'] });
-      queryClient.invalidateQueries({ queryKey: ['equipment'] });
       router.push('/maintenance');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.all });
     },
     onError: (error: unknown) => {
       toast({
@@ -298,25 +301,22 @@ export function CreateMaintenanceContent() {
                       <p className="text-sm text-muted-foreground">제조사</p>
                       <p className="font-medium">{selectedEquipment.manufacturer}</p>
                     </div>
-                    {selectedEquipment.maintenancePeriod &&
-                      maintenanceType === 'regular' && (
-                        <div className="md:col-span-2">
-                          <p className="text-sm text-muted-foreground">정기 점검 주기</p>
-                          <p className="font-medium">
-                            {selectedEquipment.maintenancePeriod}개월
-                          </p>
-                          <div className="flex items-center mt-2">
-                            <Checkbox
-                              id="useRegularPeriod"
-                              checked={useRegularPeriod}
-                              onCheckedChange={(checked) => setUseRegularPeriod(checked as boolean)}
-                            />
-                            <label htmlFor="useRegularPeriod" className="ml-2 text-sm">
-                              장비의 정기 점검 주기 사용
-                            </label>
-                          </div>
+                    {selectedEquipment.maintenancePeriod && maintenanceType === 'regular' && (
+                      <div className="md:col-span-2">
+                        <p className="text-sm text-muted-foreground">정기 점검 주기</p>
+                        <p className="font-medium">{selectedEquipment.maintenancePeriod}개월</p>
+                        <div className="flex items-center mt-2">
+                          <Checkbox
+                            id="useRegularPeriod"
+                            checked={useRegularPeriod}
+                            onCheckedChange={(checked) => setUseRegularPeriod(checked as boolean)}
+                          />
+                          <label htmlFor="useRegularPeriod" className="ml-2 text-sm">
+                            장비의 정기 점검 주기 사용
+                          </label>
                         </div>
-                      )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p>선택된 장비 정보가 없습니다.</p>

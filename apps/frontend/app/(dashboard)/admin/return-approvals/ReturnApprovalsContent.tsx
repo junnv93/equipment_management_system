@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { RETURN_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import { format } from 'date-fns';
-import { CheckCircle2, Calendar, User, Building2, Package } from 'lucide-react';
+import { CheckCircle2, XCircle, Calendar, User, Building2, Package } from 'lucide-react';
 import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkeleton';
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import { useSession } from 'next-auth/react';
@@ -42,15 +43,17 @@ export default function ReturnApprovalsContent() {
   const { data: _session } = useSession();
   const [selectedCheckout, setSelectedCheckout] = useState<Checkout | null>(null);
   const [comment, setComment] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
   // 검사 완료된 반입 목록 조회 (returned 상태)
   const { data: checkouts, isLoading } = useQuery({
-    queryKey: ['return-pending-approvals'],
+    queryKey: queryKeys.checkouts.returnPending(),
     queryFn: async () => {
       return checkoutApi.getPendingReturnApprovals();
     },
-    staleTime: 30000, // ✅ client-swr-dedup: 30초간 캐시 재사용
+    staleTime: CACHE_TIMES.SHORT,
   });
 
   // ✅ 반입 승인 뮤테이션 (Optimistic Update + Cross-page invalidation)
@@ -62,7 +65,7 @@ export default function ReturnApprovalsContent() {
     mutationFn: async ({ id, version, comment }) => {
       return checkoutApi.approveReturn(id, { version, comment });
     },
-    queryKey: ['return-pending-approvals'],
+    queryKey: queryKeys.checkouts.returnPending(),
     optimisticUpdate: (old, { id }) => {
       if (!old)
         return {
@@ -91,9 +94,52 @@ export default function ReturnApprovalsContent() {
     },
   });
 
+  // ✅ 반입 반려 뮤테이션 (Optimistic Update + Cross-page invalidation)
+  const rejectMutation = useOptimisticMutation<
+    Checkout,
+    { id: string; version: number; reason: string },
+    PaginatedResponse<Checkout>
+  >({
+    mutationFn: async ({ id, version, reason }) => {
+      return checkoutApi.rejectReturn(id, { version, reason });
+    },
+    queryKey: queryKeys.checkouts.returnPending(),
+    optimisticUpdate: (old, { id }) => {
+      if (!old)
+        return {
+          data: [],
+          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+        };
+      return {
+        ...old,
+        data: old.data.filter((c) => c.id !== id),
+        meta: {
+          ...old.meta,
+          pagination: {
+            ...old.meta.pagination,
+            total: Math.max(0, old.meta.pagination.total - 1),
+          },
+        },
+      };
+    },
+    invalidateKeys: RETURN_APPROVAL_INVALIDATE_KEYS,
+    successMessage: '반입이 반려되었습니다. 재검사 후 반입 처리가 필요합니다.',
+    errorMessage: '반입 반려 중 오류가 발생했습니다.',
+    onSuccessCallback: () => {
+      setIsRejectDialogOpen(false);
+      setRejectReason('');
+      setSelectedCheckout(null);
+    },
+  });
+
   const handleApprove = (checkout: Checkout) => {
     setSelectedCheckout(checkout);
     setIsApproveDialogOpen(true);
+  };
+
+  const handleReject = (checkout: Checkout) => {
+    setSelectedCheckout(checkout);
+    setIsRejectDialogOpen(true);
   };
 
   const handleApproveConfirm = () => {
@@ -105,7 +151,17 @@ export default function ReturnApprovalsContent() {
     });
   };
 
+  const handleRejectConfirm = () => {
+    if (!selectedCheckout || !rejectReason.trim()) return;
+    rejectMutation.mutate({
+      id: selectedCheckout.id,
+      version: selectedCheckout.version,
+      reason: rejectReason.trim(),
+    });
+  };
+
   const pendingReturns = checkouts?.data || [];
+  const isActionPending = approveMutation.isPending || rejectMutation.isPending;
 
   if (isLoading) {
     return <ApprovalLoadingSkeleton cardHeight="h-24" />;
@@ -115,7 +171,9 @@ export default function ReturnApprovalsContent() {
     <div className="container mx-auto py-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">반입 승인 관리</h1>
-        <p className="text-muted-foreground">검사 완료된 반입 건을 검토하고 최종 승인합니다</p>
+        <p className="text-muted-foreground">
+          검사 완료된 반입 건을 검토하고 최종 승인하거나 반려합니다
+        </p>
       </div>
 
       <Card>
@@ -227,9 +285,18 @@ export default function ReturnApprovalsContent() {
 
                       <div className="flex gap-2 ml-4">
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReject(checkout)}
+                          disabled={isActionPending}
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          반려
+                        </Button>
+                        <Button
                           size="sm"
                           onClick={() => handleApprove(checkout)}
-                          disabled={approveMutation.isPending}
+                          disabled={isActionPending}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           최종 승인
@@ -304,6 +371,67 @@ export default function ReturnApprovalsContent() {
             </Button>
             <Button onClick={handleApproveConfirm} disabled={approveMutation.isPending}>
               {approveMutation.isPending ? '처리 중...' : '최종 승인'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 반려 다이얼로그 */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>반입 반려</DialogTitle>
+            <DialogDescription>
+              반입을 반려하면 반출 중 상태로 되돌아가며, 재검사 후 반입 처리가 필요합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedCheckout && (
+              <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
+                <p>
+                  <span className="text-muted-foreground">반출 목적: </span>
+                  <span className="font-medium">
+                    {PURPOSE_LABELS[selectedCheckout.purpose] || selectedCheckout.purpose}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">장비: </span>
+                  <span className="font-medium">
+                    {selectedCheckout.equipment && selectedCheckout.equipment.length > 0
+                      ? selectedCheckout.equipment[0].name
+                      : '장비 정보 없음'}
+                  </span>
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="reject-reason">반려 사유 (필수)</Label>
+              <Textarea
+                id="reject-reason"
+                placeholder="반려 사유를 입력하세요 (예: 검사 항목 미충족, 작동 확인 미완료 등)"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRejectDialogOpen(false);
+                setRejectReason('');
+                setSelectedCheckout(null);
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectConfirm}
+              disabled={rejectMutation.isPending || !rejectReason.trim()}
+            >
+              {rejectMutation.isPending ? '처리 중...' : '반려'}
             </Button>
           </DialogFooter>
         </DialogContent>

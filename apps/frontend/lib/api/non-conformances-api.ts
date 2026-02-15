@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
 // ✅ SSOT: schemas 패키지에서 타입 import
@@ -37,6 +38,10 @@ export interface NonConformance {
   closedBy: string | null;
   closedAt: string | null;
   closureNotes: string | null;
+  rejectedBy: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  version: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -62,8 +67,9 @@ export interface CreateNonConformanceDto {
   actionPlan?: string;
 }
 
-// 부적합 업데이트 DTO
+// 부적합 업데이트 DTO (CAS: version 필수)
 export interface UpdateNonConformanceDto {
+  version: number;
   actionPlan?: string;
   analysisContent?: string;
   correctionContent?: string;
@@ -72,9 +78,9 @@ export interface UpdateNonConformanceDto {
   status?: 'open' | 'analyzing' | 'corrected';
 }
 
-// 부적합 종료 DTO
+// 부적합 종료 DTO (closedBy는 서버에서 JWT로 추출)
 export interface CloseNonConformanceDto {
-  closedBy: string;
+  version: number;
   closureNotes?: string;
 }
 
@@ -103,25 +109,25 @@ const nonConformancesApi = {
       }
     });
 
-    const url = `/api/non-conformances${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.NON_CONFORMANCES.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get(url).then((res) => transformPaginatedResponse<NonConformance>(res));
   },
 
   // 부적합 상세 조회
   getNonConformance: async (id: string): Promise<NonConformance> => {
-    return apiClient.get(`/api/non-conformances/${id}`).then((res) => res.data);
+    return apiClient.get(API_ENDPOINTS.NON_CONFORMANCES.GET(id)).then((res) => res.data);
   },
 
   // 장비별 열린 부적합 조회
   getEquipmentNonConformances: async (equipmentUuid: string): Promise<NonConformance[]> => {
     return apiClient
-      .get(`/api/non-conformances/equipment/${equipmentUuid}`)
+      .get(API_ENDPOINTS.NON_CONFORMANCES.EQUIPMENT(equipmentUuid))
       .then((res) => res.data);
   },
 
   // 부적합 등록
   createNonConformance: async (data: CreateNonConformanceDto): Promise<NonConformance> => {
-    return apiClient.post('/api/non-conformances', data).then((res) => res.data);
+    return apiClient.post(API_ENDPOINTS.NON_CONFORMANCES.CREATE, data).then((res) => res.data);
   },
 
   // 부적합 업데이트 (원인분석/조치 기록)
@@ -129,7 +135,7 @@ const nonConformancesApi = {
     id: string,
     data: UpdateNonConformanceDto
   ): Promise<NonConformance> => {
-    return apiClient.patch(`/api/non-conformances/${id}`, data).then((res) => res.data);
+    return apiClient.patch(API_ENDPOINTS.NON_CONFORMANCES.UPDATE(id), data).then((res) => res.data);
   },
 
   // 부적합 종료 (기술책임자)
@@ -137,18 +143,28 @@ const nonConformancesApi = {
     id: string,
     data: CloseNonConformanceDto
   ): Promise<NonConformance> => {
-    return apiClient.patch(`/api/non-conformances/${id}/close`, data).then((res) => res.data);
+    return apiClient.patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(id), data).then((res) => res.data);
+  },
+
+  // 부적합 조치 반려 (기술책임자: corrected → analyzing)
+  rejectCorrection: async (
+    id: string,
+    data: { version: number; rejectionReason: string }
+  ): Promise<NonConformance> => {
+    return apiClient
+      .patch(API_ENDPOINTS.NON_CONFORMANCES.REJECT_CORRECTION(id), data)
+      .then((res) => res.data);
   },
 
   // 부적합 삭제 (소프트 삭제)
   deleteNonConformance: async (id: string): Promise<{ id: string; deleted: boolean }> => {
-    return apiClient.delete(`/api/non-conformances/${id}`).then((res) => res.data);
+    return apiClient.delete(API_ENDPOINTS.NON_CONFORMANCES.DELETE(id)).then((res) => res.data);
   },
 
   // 종료 대기 중인 부적합 목록 (corrected 상태)
   getPendingCloseNonConformances: async (): Promise<PaginatedResponse<NonConformance>> => {
     return apiClient
-      .get('/api/non-conformances?status=corrected')
+      .get(`${API_ENDPOINTS.NON_CONFORMANCES.LIST}?status=corrected`)
       .then((res) => transformPaginatedResponse<NonConformance>(res));
   },
 };

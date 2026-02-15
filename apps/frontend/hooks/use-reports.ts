@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { queryKeys } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import {
   ReportType,
@@ -39,7 +40,7 @@ export const useEquipmentUsage = (
   departmentId?: string
 ) => {
   return useQuery({
-    queryKey: ['reports', 'equipment-usage', startDate, endDate, equipmentId, departmentId],
+    queryKey: queryKeys.reports.equipmentUsage({ startDate, endDate, equipmentId, departmentId }),
     queryFn: () => getEquipmentUsage(startDate, endDate, equipmentId, departmentId),
     enabled: !!startDate && !!endDate,
   });
@@ -48,7 +49,7 @@ export const useEquipmentUsage = (
 // 교정 상태 보고서 조회 hook
 export const useCalibrationStatus = (status?: string, timeframe?: string) => {
   return useQuery({
-    queryKey: ['reports', 'calibration-status', status, timeframe],
+    queryKey: queryKeys.reports.calibrationStatus({ status, timeframe }),
     queryFn: () => getCalibrationStatus(status, timeframe),
   });
 };
@@ -62,7 +63,7 @@ export const useCheckoutStatistics = (
   departmentId?: string
 ) => {
   return useQuery({
-    queryKey: ['reports', 'checkout-statistics', startDate, endDate, departmentId],
+    queryKey: queryKeys.reports.checkoutStatistics({ startDate, endDate, departmentId }),
     queryFn: () => getCheckoutStatistics(startDate, endDate, departmentId),
     enabled: !!startDate && !!endDate,
   });
@@ -80,7 +81,7 @@ export const useUtilizationRate = (
   categoryId?: string
 ) => {
   return useQuery({
-    queryKey: ['reports', 'utilization-rate', period, equipmentId, categoryId],
+    queryKey: queryKeys.reports.utilizationRate({ period, equipmentId, categoryId }),
     queryFn: () => getUtilizationRate(period, equipmentId, categoryId),
   });
 };
@@ -92,7 +93,7 @@ export const useEquipmentDowntime = (
   equipmentId?: string
 ) => {
   return useQuery({
-    queryKey: ['reports', 'equipment-downtime', startDate, endDate, equipmentId],
+    queryKey: queryKeys.reports.equipmentDowntime({ startDate, endDate, equipmentId }),
     queryFn: () => getEquipmentDowntime(startDate, endDate, equipmentId),
     enabled: !!startDate && !!endDate,
   });

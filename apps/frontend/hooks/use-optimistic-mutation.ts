@@ -1,28 +1,42 @@
 /**
- * ✅ TanStack Query Optimistic Update Pattern
+ * ✅ TanStack Query Optimistic Update Pattern (SSOT)
  *
  * 사용자 경험 개선을 위한 Optimistic Update 패턴 구현
  *
- * ## 문제 해결
- * 1. **즉시 UI 피드백**: 서버 응답 대기 없이 0ms 만에 UI 업데이트
- * 2. **자동 롤백**: 에러 발생 시 스냅샷으로 자동 복구
- * 3. **캐시 직접 업데이트**: invalidateQueries의 전체 재조회 방지
+ * ## 핵심 원칙
+ * 1. **즉시 UI 피드백**: 서버 응답 대기 없이 0ms 만에 UI 업데이트 (onMutate)
+ * 2. **서버 = 유일한 진실의 소스**: 성공/실패 무관하게 항상 서버 데이터로 동기화 (onSettled)
+ * 3. **타입 안전**: TData(서버 응답)와 TCachedData(캐시)를 절대 혼용하지 않음
  *
- * ## TanStack Query 생명주기
+ * ## TanStack Query 생명주기 (공식 Optimistic Update 패턴)
  * ```
  * 사용자 클릭
  *   ↓
  * onMutate (0ms)
- *   - 진행 중인 쿼리 취소
+ *   - 진행 중인 쿼리 취소 (race condition 방지)
  *   - 현재 데이터 스냅샷 저장
  *   - 캐시 즉시 업데이트 (optimistic)
  *   ↓
  * API 요청 (백그라운드)
  *   ↓
- * onSuccess / onError
- *   - Success: 서버 데이터로 확정
- *   - Error: 스냅샷으로 롤백
+ * onSuccess → 성공 토스트 + 콜백
+ * onError   → 에러 토스트 + 콜백
+ *   ↓
+ * onSettled (항상 실행)
+ *   - queryKey 무효화 → 서버에서 최신 데이터 조회 (SSOT)
+ *   - invalidateKeys 무효화 → 관련 쿼리 백그라운드 재조회
  * ```
+ *
+ * ## ⚠️ 타입 안전 주의사항 (TData vs TCachedData)
+ *
+ * TData(서버 응답 타입)와 TCachedData(캐시 데이터 타입)는 다른 타입일 수 있습니다:
+ * - bulkApprove: TData = { success: string[]; failed: string[] }, TCachedData = ApprovalItem[]
+ * - approve(void): TData = void, TCachedData = ApprovalItem[]
+ * - createEquipment: TData = Equipment, TCachedData = { data: Equipment[] }
+ *
+ * 따라서 onSuccess에서 setQueryData(queryKey, data)를 절대 사용하면 안 됩니다.
+ * 이는 TCachedData 캐시에 TData를 기록하여 타입 불일치 런타임 에러를 유발합니다.
+ * (예: items.map is not a function)
  *
  * @example
  * ```tsx
@@ -34,32 +48,8 @@
  *   invalidateKeys: [['approval-counts']],
  *   successMessage: '승인되었습니다.',
  * });
- *
- * // 상태 변경 (목록에서 항목 수정)
- * const updateStatusMutation = useOptimisticMutation({
- *   mutationFn: ({ id, status }) => equipmentApi.updateStatus(id, status),
- *   queryKey: ['equipment', 'list'],
- *   optimisticUpdate: (old, { id, status }) => ({
- *     ...old,
- *     data: old.data.map(item => item.id === id ? { ...item, status } : item),
- *   }),
- *   successMessage: '상태가 변경되었습니다.',
- * });
- *
- * // 항목 추가 (목록에 새 항목 추가)
- * const createMutation = useOptimisticMutation({
- *   mutationFn: (data) => nonConformanceApi.create(data),
- *   queryKey: ['non-conformances'],
- *   optimisticUpdate: (old, data) => [
- *     ...(old || []),
- *     { id: 'temp-' + Date.now(), ...data, createdAt: new Date().toISOString() }
- *   ],
- *   successMessage: '등록되었습니다.',
- * });
  * ```
  *
- * @see apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx - 승인/반려 패턴
- * @see apps/frontend/components/approvals/ApprovalsClient.tsx - 목록 제거 패턴
  * @see https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates
  */
 'use client';
@@ -164,40 +154,21 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
 }
 
 /**
- * Optimistic Update 패턴을 적용한 useMutation 래퍼
+ * Optimistic Update 패턴을 적용한 useMutation 래퍼 (SSOT)
  *
  * @description
- * TanStack Query의 onMutate/onError/onSuccess 생명주기를 활용하여
- * 즉시 UI 업데이트 + 자동 롤백 + 서버 확정 패턴을 구현합니다.
+ * TanStack Query의 onMutate/onError/onSuccess/onSettled 생명주기를 활용하여
+ * 즉시 UI 업데이트 + 서버 동기화 패턴을 구현합니다.
  *
- * ## 성능 개선
- * - **Before**: 200-500ms (서버 응답 대기 + 전체 재조회)
- * - **After**: 0ms (즉시 캐시 업데이트 + 백그라운드 확정)
+ * ## 4단계 생명주기
+ * 1. **onMutate**: 즉시 캐시 업데이트 (0ms UI 피드백)
+ * 2. **onSuccess**: 성공 토스트 + 콜백
+ * 3. **onError**: 에러 토스트 + 콜백 (409 충돌 전용 메시지 포함)
+ * 4. **onSettled**: 쿼리 무효화 → 서버 최신 데이터로 동기화 (SSOT)
  *
- * ## 에러 처리
- * - 자동 롤백: onError에서 스냅샷으로 복구
- * - 에러 토스트: getErrorMessage()로 사용자 친화적 메시지
- * - 커스텀 에러 처리: onErrorCallback으로 추가 로직
- *
- * @template TData - 서버 응답 데이터 타입
+ * @template TData - 서버 응답 데이터 타입 (mutationFn 반환값)
  * @template TVariables - Mutation 입력 변수 타입
- * @template TCachedData - 쿼리 캐시 데이터 타입
- *
- * @param options - Optimistic mutation 옵션
- * @returns TanStack Query의 useMutation 반환값
- *
- * @example
- * ```tsx
- * const approveMutation = useOptimisticMutation({
- *   mutationFn: (item) => checkoutApi.approve(item.id),
- *   queryKey: ['approvals'],
- *   optimisticUpdate: (old, item) => old?.filter(i => i.id !== item.id) || [],
- *   successMessage: '승인되었습니다.',
- * });
- *
- * // 사용
- * approveMutation.mutate(item);
- * ```
+ * @template TCachedData - 쿼리 캐시 데이터 타입 (TData와 다를 수 있음!)
  */
 export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
   mutationFn,
@@ -239,30 +210,18 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
     },
 
     /**
-     * ✅ Phase 2: onError - 서버 상태 동기화
+     * ✅ Phase 2: onError - 에러 알림
      *
-     * 서버 에러 발생 시 서버에서 최신 데이터를 가져와 동기화합니다.
+     * 서버 에러 발생 시 사용자에게 알림을 표시합니다.
+     * 쿼리 무효화는 onSettled에서 일괄 처리합니다 (중복 제거).
      *
-     * ⚠️ 중요: 스냅샷 롤백 대신 invalidate를 사용하는 이유
+     * ⚠️ 스냅샷 롤백을 사용하지 않는 이유:
      * - 에러 발생 = "서버 상태가 예상과 다름"을 의미
      * - 스냅샷은 mutation 전 로컬 데이터이므로 실제 서버 상태와 다를 수 있음
-     * - 다른 사용자나 프로세스가 상태를 변경했을 가능성 존재
-     * - SSOT 원칙: 서버가 유일한 진실의 소스
-     *
-     * @see Vercel rule: client-swr-dedup (automatic revalidation)
+     * - SSOT 원칙: onSettled의 invalidateQueries가 서버 최신 데이터로 동기화
      */
-    onError: (error, variables, context) => {
-      // 1. 서버에서 최신 데이터 가져오기 (SSOT 동기화)
-      // ❌ 기존: 스냅샷 롤백 (로컬 데이터로 복구)
-      // ✅ 개선: 서버 revalidation (실제 상태로 동기화)
-      queryClient.invalidateQueries({ queryKey });
-
-      // 추가 관련 쿼리도 무효화 (409 시 다른 목록도 갱신)
-      if (invalidateKeys.length > 0) {
-        invalidateKeys.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
-      }
-
-      // 2. 에러 토스트 표시 (409 충돌은 전용 메시지)
+    onError: (error, variables) => {
+      // 1. 에러 토스트 표시 (409 충돌은 전용 메시지)
       if (isConflictError(error)) {
         toast({
           title: '데이터 충돌',
@@ -283,28 +242,25 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
         });
       }
 
-      // 3. 커스텀 에러 콜백
+      // 2. 커스텀 에러 콜백
       onErrorCallback?.(error, variables);
     },
 
     /**
-     * ✅ Phase 3: onSuccess - 서버 데이터로 확정
+     * ✅ Phase 3: onSuccess - 성공 알림
      *
-     * 서버 응답 성공 시 실제 데이터로 캐시를 업데이트합니다.
+     * 서버 응답 성공 시 사용자에게 알림을 표시합니다.
+     * 쿼리 무효화는 onSettled에서 일괄 처리합니다.
+     *
+     * ⚠️ CRITICAL: setQueryData(queryKey, data) 사용 금지!
+     * TData(서버 응답)와 TCachedData(캐시)는 다른 타입일 수 있습니다:
+     *   - bulkApprove: TData = { success, failed } → TCachedData = ApprovalItem[] (crash!)
+     *   - approve(void): TData = void → TCachedData = ApprovalItem[] (cache 삭제!)
+     *   - create: TData = Equipment → TCachedData = { data: Equipment[] } (crash!)
+     * setQueryData는 unknown을 수용하므로 TypeScript가 이 불일치를 잡지 못합니다.
      */
-    onSuccess: async (data, variables) => {
-      // 1. 서버 응답으로 캐시 확정
-      //    (이미 optimistic update로 업데이트되었지만, 서버 데이터가 더 정확함)
-      queryClient.setQueryData(queryKey, data);
-
-      // 2. 관련 쿼리 무효화 (백그라운드 재조회)
-      if (invalidateKeys.length > 0) {
-        await Promise.all(
-          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
-        );
-      }
-
-      // 3. 성공 토스트 표시
+    onSuccess: (data, variables) => {
+      // 1. 성공 토스트 표시
       if (successMessage) {
         const message =
           typeof successMessage === 'function' ? successMessage(data, variables) : successMessage;
@@ -314,8 +270,33 @@ export function useOptimisticMutation<TData, TVariables, TCachedData = TData>({
         });
       }
 
-      // 4. 커스텀 성공 콜백
+      // 2. 커스텀 성공 콜백
       onSuccessCallback?.(data, variables);
+    },
+
+    /**
+     * ✅ Phase 4: onSettled - 서버 동기화 (SSOT)
+     *
+     * 성공/실패 무관하게 항상 실행됩니다.
+     * 서버에서 최신 데이터를 가져와 optimistic 캐시를 확정/교정합니다.
+     *
+     * 이 패턴의 장점:
+     * 1. 성공 시: optimistic 데이터가 서버 데이터로 확정됨
+     * 2. 실패 시: 잘못된 optimistic 데이터가 서버 데이터로 교정됨
+     * 3. 관련 쿼리 무효화가 성공/실패 경로에서 중복되지 않음
+     *
+     * @see https://tanstack.com/query/latest/docs/framework/react/guides/optimistic-updates
+     */
+    onSettled: async () => {
+      // 1. 주 쿼리 무효화 → 서버 최신 데이터로 동기화
+      await queryClient.invalidateQueries({ queryKey });
+
+      // 2. 관련 쿼리도 무효화 (승인 카운트, 대시보드 등)
+      if (invalidateKeys.length > 0) {
+        await Promise.all(
+          invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
+        );
+      }
     },
   });
 }

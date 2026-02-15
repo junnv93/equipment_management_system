@@ -1,14 +1,19 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import {
   Package,
-  FileSpreadsheet,
-  ArrowRightLeft,
-  Calculator,
-  Monitor,
+  FileCheck,
+  ClipboardCheck,
+  ArrowUpFromLine,
+  ArrowDownToLine,
+  AlertTriangle,
+  Trash2,
+  Calendar,
+  Code,
   AlertCircle,
   ArrowRight,
 } from 'lucide-react';
@@ -17,98 +22,49 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { dashboardApi, type PendingApprovalCounts } from '@/lib/api/dashboard-api';
+import {
+  approvalsApi,
+  type PendingCountsByCategory,
+  type ApprovalCategory,
+} from '@/lib/api/approvals-api';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import {
+  computeApprovalTotal,
+  getDashboardApprovalCategories,
+} from '@/lib/utils/approval-count-utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
-interface ApprovalCategory {
-  key: keyof Omit<PendingApprovalCounts, 'total'>;
-  label: string;
-  icon: React.ElementType;
-  href: string;
-  color: string;
-  bgColor: string;
-  description: string;
-}
+/**
+ * 아이콘 매핑
+ *
+ * TAB_META의 icon 문자열 → 실제 lucide-react 컴포넌트
+ * ApprovalsClient.tsx의 ICONS와 동일한 패턴
+ */
+const ICONS: Record<string, React.ElementType> = {
+  Package,
+  FileCheck,
+  ClipboardCheck,
+  ArrowUpFromLine,
+  ArrowDownToLine,
+  AlertTriangle,
+  Trash2,
+  Calendar,
+  Code,
+};
 
-// SSOT: FRONTEND_ROUTES 사용
-// ✅ 모든 승인 링크를 통합 승인 페이지로 변경 (탭 파라미터로 구분)
-const categories: ApprovalCategory[] = [
-  {
-    key: 'equipment',
-    label: '장비',
-    icon: Package,
-    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=equipment`,
-    color: 'text-blue-700 dark:text-blue-300',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-    description: '장비 등록/수정/삭제 승인',
-  },
-  {
-    key: 'calibration',
-    label: '교정',
-    icon: FileSpreadsheet,
-    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=calibration`,
-    color: 'text-green-700 dark:text-green-300',
-    bgColor: 'bg-green-100 dark:bg-green-900/30',
-    description: '교정 기록 승인',
-  },
-  {
-    key: 'checkout',
-    label: '반출',
-    icon: ArrowRightLeft,
-    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=checkout`,
-    color: 'text-orange-700 dark:text-orange-300',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-    description: '반출/반입 승인 (교정, 수리, 대여 포함)',
-  },
-  {
-    key: 'calibrationFactor',
-    label: '보정계수',
-    icon: Calculator,
-    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=calibrationFactor`,
-    color: 'text-teal-700 dark:text-teal-300',
-    bgColor: 'bg-teal-100 dark:bg-teal-900/30',
-    description: '보정계수 변경 승인',
-  },
-  {
-    key: 'software',
-    label: '소프트웨어',
-    icon: Monitor,
-    href: `${FRONTEND_ROUTES.ADMIN.APPROVALS}?tab=software`,
-    color: 'text-pink-700 dark:text-pink-300',
-    bgColor: 'bg-pink-100 dark:bg-pink-900/30',
-    description: '소프트웨어 등록/변경 승인',
-  },
-];
+/**
+ * TAB_META.icon 이름 → lucide 컴포넌트 매핑
+ * (TAB_META에서 아이콘 이름을 가져와 컴포넌트로 변환)
+ */
+import { TAB_META } from '@/lib/api/approvals-api';
+
+function getCategoryIcon(category: ApprovalCategory): React.ElementType {
+  const iconName = TAB_META[category]?.icon;
+  return ICONS[iconName] || Package;
+}
 
 interface PendingApprovalCardProps {
   className?: string;
-}
-
-/**
- * 역할별 표시 카테고리 필터링
- * - test_engineer: 자신의 요청만 표시 (장비, 교정, 대여, 반출)
- * - technical_manager: 팀 내 대기 항목 (장비, 교정, 반출, 보정계수)
- * - lab_manager: 시험소 전체 대기 항목
- * - system_admin: 전체 시스템 대기 항목
- * ✅ 대여(rental)는 반출(checkout)로 통합됨
- */
-function getVisibleCategories(role: string): Array<keyof Omit<PendingApprovalCounts, 'total'>> {
-  switch (role.toLowerCase()) {
-    case 'test_engineer':
-      // 시험실무자: 본인이 신청한 항목의 상태 확인
-      return ['equipment', 'calibration', 'checkout'];
-    case 'technical_manager':
-      // 기술책임자: 팀 내 승인 대기 항목
-      return ['equipment', 'calibration', 'checkout', 'calibrationFactor'];
-    case 'lab_manager':
-      // 시험소 관리자: 해당 시험소 전체 승인 대기
-      return ['equipment', 'calibration', 'checkout', 'calibrationFactor', 'software'];
-    case 'system_admin':
-      // 시스템 관리자: 전체 시스템 승인 대기
-      return ['equipment', 'calibration', 'checkout', 'calibrationFactor', 'software'];
-    default:
-      return ['equipment', 'checkout'];
-  }
 }
 
 /**
@@ -120,10 +76,10 @@ function getCardTitle(role: string): string {
       return '내 요청 현황';
     case 'technical_manager':
       return '팀 승인 대기';
+    case 'quality_manager':
+      return '검토 대기';
     case 'lab_manager':
       return '시험소 승인 대기';
-    case 'system_admin':
-      return '전체 승인 대기';
     default:
       return '승인 대기';
   }
@@ -138,10 +94,10 @@ function getCardDescription(role: string): string {
       return '본인이 신청한 항목의 처리 현황';
     case 'technical_manager':
       return '팀 내 승인이 필요한 항목';
+    case 'quality_manager':
+      return '검토가 필요한 항목';
     case 'lab_manager':
       return '시험소 내 승인이 필요한 항목';
-    case 'system_admin':
-      return '전체 시스템 승인이 필요한 항목';
     default:
       return '승인 대기 중인 항목';
   }
@@ -151,20 +107,27 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
   const { data: session } = useSession();
   const userRole = session?.user?.role || 'user';
 
-  // 승인 대기 카운트 조회 - 실제 API 호출
+  // SSOT: ApprovalsService (GET /api/approvals/counts)
+  // 네비 뱃지, 대시보드 카드, 승인 페이지가 동일 query key 공유
   const {
     data: counts,
     isLoading,
     error,
-  } = useQuery<PendingApprovalCounts>({
-    queryKey: ['pending-approval-counts', userRole],
-    queryFn: () => dashboardApi.getPendingApprovalCounts(userRole),
-    staleTime: 30000, // 30초
-    refetchInterval: 60000, // 1분마다 자동 새로고침
+  } = useQuery<PendingCountsByCategory>({
+    queryKey: queryKeys.approvals.counts(userRole),
+    queryFn: () => approvalsApi.getPendingCounts(),
+    staleTime: CACHE_TIMES.SHORT,
+    refetchInterval: 60000,
   });
 
-  const visibleCategories = getVisibleCategories(userRole);
-  const filteredCategories = categories.filter((cat) => visibleCategories.includes(cat.key));
+  // SSOT: ROLE_TABS에서 파생된 카테고리 목록
+  const dashboardCategories = useMemo(
+    () => getDashboardApprovalCategories(userRole, FRONTEND_ROUTES.ADMIN.APPROVALS),
+    [userRole]
+  );
+
+  // SSOT: ROLE_TABS 기반 총합 계산
+  const totalPending = computeApprovalTotal(counts, userRole);
 
   if (isLoading) {
     return (
@@ -173,8 +136,8 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-5 w-16" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-lg" />
           ))}
         </div>
@@ -193,10 +156,21 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
     );
   }
 
-  const totalPending = filteredCategories.reduce((sum, cat) => sum + (counts?.[cat.key] || 0), 0);
+  // 승인 권한이 없는 역할(test_engineer 등)은 카테고리가 빈 배열
+  if (dashboardCategories.length === 0) {
+    return null;
+  }
 
   const cardTitle = getCardTitle(userRole);
   const cardDescription = getCardDescription(userRole);
+
+  // 카테고리 수에 맞는 그리드 컬럼 결정
+  const gridCols =
+    dashboardCategories.length <= 3
+      ? 'grid-cols-2 md:grid-cols-3'
+      : dashboardCategories.length <= 5
+        ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
+        : 'grid-cols-2 md:grid-cols-4 lg:grid-cols-7';
 
   return (
     <div
@@ -242,9 +216,9 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {filteredCategories.map((category) => {
-          const Icon = category.icon;
+      <div className={cn('grid gap-4', gridCols)}>
+        {dashboardCategories.map((category) => {
+          const Icon = getCategoryIcon(category.key);
           const count = counts?.[category.key] || 0;
           const hasItems = count > 0;
 
@@ -253,7 +227,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
               key={category.key}
               href={category.href}
               className="block group"
-              aria-label={`${category.label} ${count}건 - ${category.description}`}
+              aria-label={`${category.label} ${count}건`}
             >
               <Card
                 className={cn(

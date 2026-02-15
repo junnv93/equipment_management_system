@@ -9,6 +9,8 @@
  * - gcTime: 캐시에서 데이터가 유지되는 시간 (garbage collection time)
  */
 
+import type { Site } from '@equipment-management/schemas';
+
 /**
  * 캐시 시간 상수 (밀리초)
  */
@@ -61,6 +63,19 @@ export const QUERY_CONFIG = {
     staleTime: CACHE_TIMES.SHORT,
     gcTime: CACHE_TIMES.MEDIUM,
     refetchInterval: 60 * 1000, // 1분마다 자동 refetch
+  },
+
+  /** 교정 요약 통계 - 비교적 자주 갱신 */
+  CALIBRATION_SUMMARY: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+  },
+
+  /** 교정 이력 목록 */
+  CALIBRATION_LIST: {
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
+    retry: 2,
   },
 
   /** 교정 계획 목록 */
@@ -129,15 +144,31 @@ export const queryKeys = {
     all: ['equipment'] as const,
     lists: () => [...queryKeys.equipment.all, 'list'] as const,
     list: (filters: Record<string, any>) => [...queryKeys.equipment.lists(), filters] as const,
+    search: (term?: string) => [...queryKeys.equipment.all, 'search', term] as const,
+    checkoutSearch: (search?: string, purpose?: string, teamId?: string) =>
+      [...queryKeys.equipment.all, 'checkout-search', search, purpose, teamId] as const,
     details: () => [...queryKeys.equipment.all, 'detail'] as const,
     detail: (id: string | number) => [...queryKeys.equipment.details(), id] as const,
     history: (id: string, type: string) =>
       [...queryKeys.equipment.detail(id), 'history', type] as const,
+    managementNumberCheck: (value?: string, excludeId?: string) =>
+      [...queryKeys.equipment.all, 'management-number-check', value, excludeId] as const,
     // Sub-resources (nested under detail)
     nonConformances: (id: string) =>
       [...queryKeys.equipment.detail(id), 'non-conformances'] as const,
+    openNonConformances: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'open-non-conformances'] as const,
     incidentHistory: (id: string) =>
       [...queryKeys.equipment.detail(id), 'incident-history'] as const,
+    repairHistory: (id: string) => [...queryKeys.equipment.detail(id), 'repair-history'] as const,
+    locationHistory: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'location-history'] as const,
+    maintenanceHistory: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'maintenance-history'] as const,
+    checkoutHistory: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'checkout-history'] as const,
+    calibrationFactors: (id: string) =>
+      [...queryKeys.equipment.detail(id), 'calibration-factors'] as const,
     disposalRequests: (id: string) =>
       [...queryKeys.equipment.detail(id), 'disposal-requests'] as const,
     currentDisposalRequest: (id: string) =>
@@ -150,40 +181,64 @@ export const queryKeys = {
       [...queryKeys.calibrationPlans.lists(), filters] as const,
     details: () => [...queryKeys.calibrationPlans.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.calibrationPlans.details(), id] as const,
+    pending: () => [...queryKeys.calibrationPlans.all, 'pending'] as const,
+    versions: (planId: string) =>
+      [...queryKeys.calibrationPlans.detail(planId), 'versions'] as const,
+    externalEquipment: (year?: string, site?: string, teamId?: string) =>
+      [...queryKeys.calibrationPlans.all, 'external-equipment', year, site, teamId] as const,
+  },
+  calibrationFactors: {
+    all: ['calibration-factors'] as const,
+    lists: () => [...queryKeys.calibrationFactors.all, 'list'] as const,
+    byEquipment: (equipmentId: string) =>
+      [...queryKeys.calibrationFactors.all, 'equipment', equipmentId] as const,
+    allByEquipment: (equipmentId: string) =>
+      [...queryKeys.calibrationFactors.all, 'all-by-equipment', equipmentId] as const,
+    pending: () => [...queryKeys.calibrationFactors.all, 'pending'] as const,
+    registry: () => [...queryKeys.calibrationFactors.all, 'registry'] as const,
   },
   dashboard: {
     all: ['dashboard'] as const,
-    summary: (role?: string) => [...queryKeys.dashboard.all, 'summary', role] as const,
-    equipmentByTeam: (role?: string) =>
-      [...queryKeys.dashboard.all, 'equipmentByTeam', role] as const,
-    overdueCalibrations: (role?: string) =>
-      [...queryKeys.dashboard.all, 'overdueCalibrations', role] as const,
-    upcomingCalibrations: (role?: string, days?: number) =>
-      [...queryKeys.dashboard.all, 'upcomingCalibrations', role, days] as const,
-    overdueCheckouts: (role?: string) =>
-      [...queryKeys.dashboard.all, 'overdueCheckouts', role] as const,
+    summary: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'summary', role, teamId] as const,
+    equipmentByTeam: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'equipmentByTeam', role, teamId] as const,
+    overdueCalibrations: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'overdueCalibrations', role, teamId] as const,
+    upcomingCalibrations: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'upcomingCalibrations', role, teamId] as const,
+    overdueCheckouts: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'overdueCheckouts', role, teamId] as const,
     recentActivities: (role?: string) =>
       [...queryKeys.dashboard.all, 'recentActivities', role] as const,
-    equipmentStatusStats: (role?: string) =>
-      [...queryKeys.dashboard.all, 'equipmentStatusStats', role] as const,
+    equipmentStatusStats: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'equipmentStatusStats', role, teamId] as const,
     pendingApprovalCounts: (role?: string) =>
       [...queryKeys.dashboard.all, 'pendingApprovalCounts', role] as const,
+    equipmentSummary: () => [...queryKeys.dashboard.all, 'equipmentSummary'] as const,
   },
   teams: {
     all: ['teams'] as const,
-    list: () => [...queryKeys.teams.all, 'list'] as const,
+    lists: () => [...queryKeys.teams.all, 'list'] as const,
+    list: (filters?: Record<string, any>) => [...queryKeys.teams.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.teams.all, 'detail', id] as const,
+    members: (teamId: string) => [...queryKeys.teams.detail(teamId), 'members'] as const,
+    filterOptions: (site?: string) => [...queryKeys.teams.all, 'filter-options', site] as const,
+    bySite: (site?: string) => [...queryKeys.teams.all, 'by-site', site] as const,
   },
   users: {
     all: ['users'] as const,
     list: () => [...queryKeys.users.all, 'list'] as const,
     detail: (id: string) => [...queryKeys.users.all, 'detail', id] as const,
+    search: (params: Record<string, string | undefined>) =>
+      [...queryKeys.users.all, 'search', params] as const,
   },
   notifications: {
     all: ['notifications'] as const,
     list: (filters?: Record<string, unknown>) =>
       [...queryKeys.notifications.all, 'list', filters] as const,
     unreadCount: () => [...queryKeys.notifications.all, 'unreadCount'] as const,
+    preferences: () => [...queryKeys.notifications.all, 'preferences'] as const,
   },
   nonConformances: {
     all: ['non-conformances'] as const,
@@ -205,39 +260,106 @@ export const queryKeys = {
     lists: () => [...queryKeys.checkouts.all, 'list'] as const,
     list: (filters: Record<string, any>) => [...queryKeys.checkouts.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.checkouts.all, 'detail', id] as const,
+    byEquipment: (equipmentId: string) =>
+      [...queryKeys.checkouts.all, 'equipment', equipmentId] as const,
     outbound: (teamId?: string, status?: string, location?: string) =>
-      ['checkouts-outbound', teamId, status, location] as const,
-    inbound: (teamId?: string, status?: string) => ['checkouts-inbound', teamId, status] as const,
-    destinations: () => ['checkout-destinations'] as const,
+      [...queryKeys.checkouts.all, 'outbound', teamId, status, location] as const,
+    inbound: (filters: Record<string, unknown> = {}) =>
+      [...queryKeys.checkouts.all, 'inbound', filters] as const,
+    destinations: () => [...queryKeys.checkouts.all, 'destinations'] as const,
+    pending: () => [...queryKeys.checkouts.all, 'pending'] as const,
+    returnPending: () => [...queryKeys.checkouts.all, 'return-pending'] as const,
   },
   calibrations: {
     all: ['calibrations'] as const,
+    summary: (teamId?: string, site?: string) =>
+      teamId || site
+        ? ([...queryKeys.calibrations.all, 'summary', { teamId, site }] as const)
+        : ([...queryKeys.calibrations.all, 'summary'] as const),
+    overdue: (teamId?: string, site?: string) =>
+      teamId || site
+        ? ([...queryKeys.calibrations.all, 'overdue', { teamId, site }] as const)
+        : ([...queryKeys.calibrations.all, 'overdue'] as const),
+    upcoming: (days?: number, teamId?: string, site?: string) =>
+      teamId || site
+        ? ([...queryKeys.calibrations.all, 'upcoming', days, { teamId, site }] as const)
+        : ([...queryKeys.calibrations.all, 'upcoming', days] as const),
+    historyList: (filters?: Record<string, unknown>) =>
+      [...queryKeys.calibrations.all, 'history', filters] as const,
+    pending: () => [...queryKeys.calibrations.all, 'pending'] as const,
     byEquipment: (equipmentId: string) =>
       [...queryKeys.calibrations.all, 'equipment', equipmentId] as const,
-    intermediateChecks: () => ['intermediate-checks'] as const,
+    intermediateChecks: (teamId?: string, site?: string) =>
+      teamId || site
+        ? ([...queryKeys.calibrations.all, 'intermediate-checks', { teamId, site }] as const)
+        : ([...queryKeys.calibrations.all, 'intermediate-checks'] as const),
   },
   maintenance: {
     all: ['maintenance'] as const,
-    summary: () => ['maintenance-summary'] as const,
+    summary: () => [...queryKeys.maintenance.all, 'summary'] as const,
+    lists: () => [...queryKeys.maintenance.all, 'list'] as const,
     list: (tab?: string, typeFilter?: string, search?: string) =>
-      ['maintenances', tab, typeFilter, search] as const,
+      [...queryKeys.maintenance.lists(), tab, typeFilter, search] as const,
     detail: (id: string) => [...queryKeys.maintenance.all, 'detail', id] as const,
+    byEquipment: (equipmentId: string) =>
+      [...queryKeys.maintenance.all, 'equipment', equipmentId] as const,
+  },
+  reports: {
+    all: ['reports'] as const,
+    equipmentUsage: (filters?: Record<string, unknown>) =>
+      [...queryKeys.reports.all, 'equipment-usage', filters] as const,
+    calibrationStatus: (filters?: Record<string, unknown>) =>
+      [...queryKeys.reports.all, 'calibration-status', filters] as const,
+    checkoutStatistics: (filters?: Record<string, unknown>) =>
+      [...queryKeys.reports.all, 'checkout-statistics', filters] as const,
+    utilizationRate: (filters?: Record<string, unknown>) =>
+      [...queryKeys.reports.all, 'utilization-rate', filters] as const,
+    equipmentDowntime: (filters?: Record<string, unknown>) =>
+      [...queryKeys.reports.all, 'equipment-downtime', filters] as const,
   },
   software: {
     all: ['software'] as const,
-    registry: () => ['software-registry'] as const,
+    registry: () => [...queryKeys.software.all, 'registry'] as const,
     byEquipment: (equipmentId: string) => [...queryKeys.software.all, equipmentId] as const,
     history: (equipmentId: string) => [...queryKeys.software.all, 'history', equipmentId] as const,
+    pending: () => [...queryKeys.software.all, 'pending'] as const,
+  },
+  equipmentImports: {
+    all: ['equipment-imports'] as const,
+    lists: () => [...queryKeys.equipmentImports.all, 'list'] as const,
+    list: (filters: Record<string, any>) =>
+      [...queryKeys.equipmentImports.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.equipmentImports.all, 'detail', id] as const,
+    bySourceType: (sourceType: string, filters: Record<string, unknown> = {}) =>
+      [...queryKeys.equipmentImports.all, sourceType, filters] as const,
+  },
+  equipmentRequests: {
+    all: ['equipment-requests'] as const,
+    lists: () => [...queryKeys.equipmentRequests.all, 'list'] as const,
+    pending: () => [...queryKeys.equipmentRequests.all, 'pending'] as const,
+    detail: (id: string) => [...queryKeys.equipmentRequests.all, 'detail', id] as const,
   },
   approvals: {
     all: ['approvals'] as const,
     list: (category?: string, teamId?: string) =>
       [...queryKeys.approvals.all, category, teamId] as const,
+    /** SSOT: 네비 뱃지, 대시보드 카드, 승인 페이지 공용 */
     counts: (role?: string) => ['approval-counts', role] as const,
-    pendingCounts: () => ['pending-approval-counts'] as const,
   },
   auditLogs: {
     all: ['audit-logs'] as const,
     list: (filters: Record<string, any>) => [...queryKeys.auditLogs.all, filters] as const,
+  },
+  settings: {
+    all: ['settings'] as const,
+    profile: () => [...queryKeys.settings.all, 'profile'] as const,
+    preferences: () => [...queryKeys.settings.all, 'preferences'] as const,
+    calibration: (site?: Site) => [...queryKeys.settings.all, 'calibration', site] as const,
+    system: () => [...queryKeys.settings.all, 'system'] as const,
+  },
+  breadcrumbs: {
+    all: ['breadcrumb'] as const,
+    equipment: (id?: string) => [...queryKeys.breadcrumbs.all, 'equipment', id] as const,
+    resource: (type: string, id?: string) => [...queryKeys.breadcrumbs.all, type, id] as const,
   },
 } as const;

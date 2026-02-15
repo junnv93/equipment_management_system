@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,20 +28,28 @@ import {
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { TeamTypeEnum, SiteEnum } from '@equipment-management/schemas';
 import teamsApi, { type Team, SITE_CONFIG, TEAM_TYPE_CONFIG } from '@/lib/api/teams-api';
+import { queryKeys } from '@/lib/api/query-config';
+import { LeaderCombobox } from './LeaderCombobox';
+import { TeamTypeIcon } from './TeamTypeIcon';
 
-// 팀 유형 enum (스키마와 동기화)
-// ✅ RF→E, EMC→R, SAR→S, AUTO→A, SOFTWARE→P
-const TeamTypeEnum = z.enum(['RF', 'SAR', 'EMC', 'AUTO', 'SOFTWARE']);
-type TeamTypeValue = z.infer<typeof TeamTypeEnum>;
+// 드롭다운에 표시할 주요 팀 유형 (레거시 제외)
+const PRIMARY_TEAM_TYPES = [
+  'FCC_EMC_RF',
+  'GENERAL_EMC',
+  'GENERAL_RF',
+  'SAR',
+  'AUTOMOTIVE_EMC',
+  'SOFTWARE',
+] as const;
 
-// 폼 검증 스키마
+// 폼 검증 스키마 — SSOT enums from @equipment-management/schemas
 const teamFormSchema = z.object({
-  id: z.string().min(1, '팀 ID는 필수입니다').max(20, '팀 ID는 20자 이내여야 합니다'),
   name: z.string().min(1, '팀 이름은 필수입니다').max(100, '팀 이름은 100자 이내여야 합니다'),
   type: TeamTypeEnum,
   description: z.string().max(500, '팀 설명은 500자 이내여야 합니다').optional(),
-  site: z.enum(['suwon', 'uiwang']),
+  site: SiteEnum,
   leaderId: z.string().uuid('유효한 사용자 ID가 아닙니다').optional().or(z.literal('')),
 });
 
@@ -74,11 +83,10 @@ export function TeamForm({ team, mode }: TeamFormProps) {
   const form = useForm<TeamFormValues>({
     resolver: zodResolver(teamFormSchema),
     defaultValues: {
-      id: team?.id || '',
       name: team?.name || '',
-      type: (team?.type as TeamTypeValue) || 'RF',
+      type: (team?.type as TeamFormValues['type']) || 'FCC_EMC_RF',
       description: team?.description || '',
-      site: (team?.site as 'suwon' | 'uiwang') || 'suwon',
+      site: (team?.site as TeamFormValues['site']) || 'suwon',
       leaderId: team?.leaderId || '',
     },
   });
@@ -94,12 +102,14 @@ export function TeamForm({ team, mode }: TeamFormProps) {
         leaderId: data.leaderId || undefined,
       }),
     onSuccess: (newTeam) => {
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
       toast({
         title: '팀이 생성되었습니다',
         description: `${newTeam.name} 팀이 성공적으로 생성되었습니다.`,
       });
       router.push(`/teams/${newTeam.id}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.lists() });
     },
     onError: (error: Error) => {
       toast({
@@ -121,13 +131,15 @@ export function TeamForm({ team, mode }: TeamFormProps) {
         leaderId: data.leaderId || undefined,
       }),
     onSuccess: (updatedTeam) => {
-      queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['team', team!.id] });
       toast({
         title: '팀이 수정되었습니다',
         description: `${updatedTeam.name} 팀 정보가 성공적으로 수정되었습니다.`,
       });
       router.push(`/teams/${team!.id}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.teams.detail(team!.id) });
     },
     onError: (error: Error) => {
       toast({
@@ -139,6 +151,19 @@ export function TeamForm({ team, mode }: TeamFormProps) {
   });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const isDirty = form.formState.isDirty;
+
+  // 미저장 변경 경고
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
 
   const onSubmit = (data: TeamFormValues) => {
     if (isEditMode) {
@@ -156,30 +181,6 @@ export function TeamForm({ team, mode }: TeamFormProps) {
             <CardTitle>기본 정보</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* 팀 ID (생성 시에만 입력 가능) */}
-            <FormField
-              control={form.control}
-              name="id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>팀 ID *</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      value={field.value || ''}
-                      placeholder="예: rf, emc, sar"
-                      disabled={isEditMode}
-                      aria-describedby="id-description"
-                    />
-                  </FormControl>
-                  <FormDescription id="id-description">
-                    팀 식별을 위한 고유 ID입니다. 영문 소문자로 입력해주세요.
-                  </FormDescription>
-                  <FormMessage role="alert" />
-                </FormItem>
-              )}
-            />
-
             {/* 팀 이름 */}
             <FormField
               control={form.control}
@@ -215,9 +216,12 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(TEAM_TYPE_CONFIG).map(([key, config]) => (
+                      {PRIMARY_TEAM_TYPES.map((key) => (
                         <SelectItem key={key} value={key}>
-                          {config.label}
+                          <span className="flex items-center gap-2">
+                            <TeamTypeIcon type={key} size="sm" />
+                            {TEAM_TYPE_CONFIG[key]?.label || key}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -277,6 +281,30 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                   </FormControl>
                   <FormDescription id="description-description">
                     최대 500자까지 입력할 수 있습니다.
+                  </FormDescription>
+                  <FormMessage role="alert" />
+                </FormItem>
+              )}
+            />
+
+            {/* 팀장 선택 */}
+            <FormField
+              control={form.control}
+              name="leaderId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>팀장 (선택)</FormLabel>
+                  <FormControl>
+                    <LeaderCombobox
+                      value={field.value || undefined}
+                      onChange={(val) => field.onChange(val || '')}
+                      site={form.watch('site')}
+                      teamId={team?.id}
+                      disabled={isPending}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    팀을 이끌 책임자를 선택합니다. 선택하지 않으면 비워둡니다.
                   </FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>

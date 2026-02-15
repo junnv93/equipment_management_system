@@ -20,6 +20,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi, { CreateCalibrationDto, Calibration } from '@/lib/api/calibration-api';
 import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
@@ -43,18 +44,17 @@ export function CalibrationRegisterContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(equipmentIdFromUrl);
 
-  // 폼 상태
+  // 폼 상태 (calibrationCycle은 UI 계산용으로만 사용, API에는 전송하지 않음)
   const [formData, setFormData] = useState<
     Omit<CreateCalibrationDto, 'equipmentId'> & {
-      registrarComment?: string;
-      intermediateCheckDate?: string;
+      calibrationCycle: number;
     }
   >({
     calibrationDate: format(new Date(), 'yyyy-MM-dd'),
     nextCalibrationDate: '',
     calibrationAgency: '',
     calibrationCycle: 12,
-    calibrationResult: 'PASS',
+    result: 'pass',
     notes: '',
     registrarComment: '',
     intermediateCheckDate: '',
@@ -66,11 +66,12 @@ export function CalibrationRegisterContent() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['equipment'],
+    queryKey: queryKeys.equipment.lists(),
     queryFn: () =>
       equipmentApi.getEquipmentList({
         pageSize: 100,
       }),
+    ...QUERY_CONFIG.EQUIPMENT_LIST,
   });
 
   // 선택된 장비 정보
@@ -155,7 +156,9 @@ export function CalibrationRegisterContent() {
     Equipment
   >({
     mutationFn: (data) => calibrationApi.createCalibration(data),
-    queryKey: selectedEquipmentId ? ['equipment', selectedEquipmentId] : ['equipment'],
+    queryKey: selectedEquipmentId
+      ? queryKeys.equipment.detail(selectedEquipmentId)
+      : queryKeys.equipment.all,
     optimisticUpdate: (oldEquipment, data): Equipment => {
       // ✅ oldEquipment가 없으면 원본 그대로 반환 (빈 객체 대신)
       if (!oldEquipment) {
@@ -167,13 +170,14 @@ export function CalibrationRegisterContent() {
         ...oldEquipment,
         lastCalibrationDate: data.calibrationDate,
         nextCalibrationDate: data.nextCalibrationDate,
-        calibrationCycle: data.calibrationCycle,
         status: 'available', // 교정 완료 후 사용 가능 상태로
       } as unknown as Equipment;
     },
     invalidateKeys: [
-      ['calibration-history'], // 이력만 재조회
-      ['calibration-summary'], // 요약만 재조회
+      queryKeys.calibrations.historyList(),
+      queryKeys.calibrations.summary(),
+      queryKeys.calibrations.overdue(),
+      queryKeys.calibrations.upcoming(),
     ],
     successMessage: isTechnicalManager
       ? '교정 정보가 등록 및 승인되었습니다.'
@@ -185,6 +189,15 @@ export function CalibrationRegisterContent() {
   // 폼 제출 처리
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!session?.user?.id) {
+      toast({
+        title: '세션 오류',
+        description: '로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     if (!selectedEquipmentId) {
       toast({
@@ -210,10 +223,10 @@ export function CalibrationRegisterContent() {
       calibrationDate: formData.calibrationDate,
       nextCalibrationDate: formData.nextCalibrationDate,
       calibrationAgency: formData.calibrationAgency,
-      calibrationCycle: formData.calibrationCycle,
-      calibrationResult: formData.calibrationResult,
+      result: formData.result,
       notes: formData.notes,
-      registeredBy: session?.user?.id as string,
+      calibrationManagerId: session.user.id,
+      registeredBy: session.user.id,
       registeredByRole: isTechnicalManager ? 'technical_manager' : 'test_engineer',
       registrarComment: formData.registrarComment,
       intermediateCheckDate: formData.intermediateCheckDate,
@@ -412,18 +425,18 @@ export function CalibrationRegisterContent() {
 
                   {/* 교정 결과 */}
                   <div className="space-y-2">
-                    <Label htmlFor="calibrationResult">교정 결과</Label>
+                    <Label htmlFor="result">교정 결과</Label>
                     <Select
-                      value={formData.calibrationResult}
-                      onValueChange={(value) => updateFormData('calibrationResult', value)}
+                      value={formData.result}
+                      onValueChange={(value) => updateFormData('result', value)}
                     >
-                      <SelectTrigger id="calibrationResult">
+                      <SelectTrigger id="result">
                         <SelectValue placeholder="교정 결과 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="PASS">적합</SelectItem>
-                        <SelectItem value="FAIL">부적합</SelectItem>
-                        <SelectItem value="CONDITIONAL">조건부 적합</SelectItem>
+                        <SelectItem value="pass">적합</SelectItem>
+                        <SelectItem value="fail">부적합</SelectItem>
+                        <SelectItem value="conditional">조건부 적합</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

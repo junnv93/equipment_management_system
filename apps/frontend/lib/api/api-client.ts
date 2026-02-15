@@ -146,10 +146,9 @@ apiClient.interceptors.response.use(
         const session = await getSession();
 
         if (session?.error === 'RefreshAccessTokenError') {
-          // Refresh token도 만료됨 — 재로그인 리다이렉트
+          // Refresh token도 만료됨 — AuthSync SSOT 핸들러로 위임
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('auth:session-expired'));
-            window.location.href = '/login';
           }
           return Promise.reject(error);
         }
@@ -163,10 +162,9 @@ apiClient.interceptors.response.use(
         console.error('[API Client] 토큰 갱신 실패:', refreshError);
       }
 
-      // 토큰 갱신 실패 시 로그인 페이지로 리다이렉트
+      // 토큰 갱신 실패 — AuthSync SSOT 핸들러로 위임
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth:session-expired'));
-        window.location.href = '/login';
       }
       return Promise.reject(error);
     }

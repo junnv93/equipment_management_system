@@ -16,6 +16,16 @@ import {
 } from './route-metadata';
 
 /**
+ * UUID 형식 감지 (8-4-4-4-12 패턴)
+ *
+ * @param str - 검사할 문자열
+ * @returns UUID 형식 여부
+ */
+function isUUID(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+/**
  * 브레드크럼 아이템 인터페이스
  */
 export interface BreadcrumbItem {
@@ -92,10 +102,13 @@ export function generateBreadcrumbs(
         actualHref = actualHref.replace(`[${paramName}]`, dynamicParams[paramName]);
       });
 
-      // 커스텀 라벨이 제공된 경우 사용
+      // 커스텀 라벨이 제공된 경우 사용, 없으면 UUID 감지
       const paramValue = Object.values(dynamicParams)[0]; // 첫 번째 파라미터 값
       if (dynamicLabels && paramValue && dynamicLabels[paramValue]) {
         actualLabel = dynamicLabels[paramValue];
+      } else if (paramValue && isUUID(paramValue)) {
+        // UUID가 직접 표시되는 것을 방지 (BreadcrumbProvider가 동적으로 로드)
+        actualLabel = routeMetadata.label; // 기본 라벨 유지 (예: "상세", "편집")
       }
 
       isDynamic = true;
@@ -150,9 +163,7 @@ export function generateBreadcrumbLabel(breadcrumbs: BreadcrumbItem[]): string {
  * //   { label: '편집', href: '/equipment/abc-123/edit', current: true }
  * // ]
  */
-export function generateMobileBreadcrumbs(
-  breadcrumbs: BreadcrumbItem[]
-): BreadcrumbItem[] {
+export function generateMobileBreadcrumbs(breadcrumbs: BreadcrumbItem[]): BreadcrumbItem[] {
   if (breadcrumbs.length <= 2) {
     return breadcrumbs;
   }

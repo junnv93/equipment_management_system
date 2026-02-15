@@ -24,6 +24,7 @@ import softwareApi, {
   SOFTWARE_APPROVAL_STATUS_LABELS,
   SOFTWARE_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/software-api';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Monitor, ArrowRight, FileText, Clock } from 'lucide-react';
 import { useSession } from 'next-auth/react';
@@ -40,7 +41,7 @@ export default function SoftwareApprovalsContent() {
 
   // 승인 대기 소프트웨어 변경 목록 조회
   const { data: pendingData, isLoading } = useQuery({
-    queryKey: ['software-pending'],
+    queryKey: queryKeys.software.pending(),
     queryFn: () => softwareApi.getPendingSoftwareChanges(),
   });
 
@@ -62,9 +63,6 @@ export default function SoftwareApprovalsContent() {
         title: '승인 완료',
         description: '소프트웨어 변경이 승인되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['software-pending'] });
-      queryClient.invalidateQueries({ queryKey: ['software-history'] });
-      queryClient.invalidateQueries({ queryKey: ['software-registry'] });
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedChange(null);
@@ -75,6 +73,9 @@ export default function SoftwareApprovalsContent() {
         description: error.message || '소프트웨어 변경 승인 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.software.all });
     },
   });
 
@@ -96,7 +97,6 @@ export default function SoftwareApprovalsContent() {
         title: '반려 완료',
         description: '소프트웨어 변경이 반려되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['software-pending'] });
       setIsRejectDialogOpen(false);
       setSelectedChange(null);
     },
@@ -106,6 +106,9 @@ export default function SoftwareApprovalsContent() {
         description: error.message || '소프트웨어 변경 반려 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.software.pending() });
     },
   });
 

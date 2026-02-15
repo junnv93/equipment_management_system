@@ -36,6 +36,9 @@ import calibrationPlansApi, {
   CALIBRATION_PLAN_STATUS_COLORS,
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
+import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { formatDate } from '@/lib/utils/date';
 import {
   ArrowLeft,
@@ -91,15 +94,19 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   const [showReviewComment, setShowReviewComment] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
+  // ✅ queryKeys 팩토리 사용
+  const planQueryKey = queryKeys.calibrationPlans.detail(planUuid);
+
   // 계획서 상세 조회
   const {
     data: plan,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ['calibration-plan', planUuid],
+    queryKey: planQueryKey,
     queryFn: () => calibrationPlansApi.getCalibrationPlan(planUuid),
     enabled: !!planUuid,
+    ...QUERY_CONFIG.CALIBRATION_PLAN_DETAIL,
   });
 
   // 브레드크럼 동적 라벨 설정
@@ -119,18 +126,26 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
     };
   }, [plan, planUuid, setDynamicLabel, clearDynamicLabel]);
 
+  /**
+   * 상태 변경 후 공통 캐시 무효화
+   */
+  const invalidateAfterChange = () =>
+    CalibrationPlansCacheInvalidation.invalidateAfterStatusChange(queryClient, planUuid);
+
+  // ✅ userId 제거 (서버에서 JWT 추출), casVersion 추가
+
   // 검토 요청 뮤테이션 (기술책임자 → 품질책임자)
   const submitForReviewMutation = useMutation({
     mutationFn: () =>
       calibrationPlansApi.submitForReview(planUuid, {
-        submittedBy: session?.user?.id as string,
+        casVersion: plan?.casVersion ?? 0,
       }),
     onSuccess: () => {
       toast({
         title: '검토 요청 완료',
         description: '교정계획서가 품질책임자에게 검토 요청되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      invalidateAfterChange();
       setIsSubmitDialogOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
@@ -139,6 +154,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         description: error.response?.data?.message || '검토 요청 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+      invalidateAfterChange();
     },
   });
 
@@ -146,7 +162,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   const reviewMutation = useMutation({
     mutationFn: () =>
       calibrationPlansApi.reviewCalibrationPlan(planUuid, {
-        reviewedBy: session?.user?.id as string,
+        casVersion: plan?.casVersion ?? 0,
         reviewComment: reviewComment || undefined,
       }),
     onSuccess: () => {
@@ -154,7 +170,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         title: '확인 완료',
         description: '품질책임자 확인이 완료되어 시험소장에게 승인 요청되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      invalidateAfterChange();
       setShowReviewComment(false);
       setReviewComment('');
     },
@@ -164,6 +180,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         description: error.response?.data?.message || '확인 처리 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+      invalidateAfterChange();
     },
   });
 
@@ -171,14 +188,14 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   const approveMutation = useMutation({
     mutationFn: () =>
       calibrationPlansApi.approveCalibrationPlan(planUuid, {
-        approvedBy: session?.user?.id as string,
+        casVersion: plan?.casVersion ?? 0,
       }),
     onSuccess: () => {
       toast({
         title: '승인 완료',
         description: '교정계획서가 최종 승인되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      invalidateAfterChange();
       setIsApproveDialogOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
@@ -187,6 +204,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         description: error.response?.data?.message || '승인 처리 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+      invalidateAfterChange();
     },
   });
 
@@ -194,7 +212,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   const rejectMutation = useMutation({
     mutationFn: () =>
       calibrationPlansApi.rejectCalibrationPlan(planUuid, {
-        rejectedBy: session?.user?.id as string,
+        casVersion: plan?.casVersion ?? 0,
         rejectionReason,
       }),
     onSuccess: () => {
@@ -202,7 +220,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         title: '반려 완료',
         description: '교정계획서가 반려되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      invalidateAfterChange();
       setIsRejectDialogOpen(false);
       setRejectionReason('');
     },
@@ -212,6 +230,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         description: error.response?.data?.message || '반려 처리 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+      invalidateAfterChange();
     },
   });
 
@@ -248,7 +267,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         title: '항목 수정 완료',
         description: '항목이 수정되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
       setEditingItemUuid(null);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
@@ -264,14 +283,14 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   const confirmItemMutation = useMutation({
     mutationFn: (itemUuid: string) =>
       calibrationPlansApi.confirmPlanItem(planUuid, itemUuid, {
-        confirmedBy: session?.user?.id as string,
+        casVersion: plan?.casVersion ?? 0,
       }),
     onSuccess: () => {
       toast({
         title: '확인 완료',
         description: '항목이 확인되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['calibration-plan', planUuid] });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
@@ -279,6 +298,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         description: error.response?.data?.message || '항목 확인 중 오류가 발생했습니다.',
         variant: 'destructive',
       });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
     },
   });
 
@@ -340,11 +360,12 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
     );
   }
 
-  const isDraft = plan.status === 'draft';
-  const isRejected = plan.status === 'rejected';
-  const isPendingReview = plan.status === 'pending_review';
-  const isPendingApproval = plan.status === 'pending_approval';
-  const isApproved = plan.status === 'approved';
+  // ✅ SSOT 상태 상수 사용
+  const isDraft = plan.status === CPStatus.DRAFT;
+  const isRejected = plan.status === CPStatus.REJECTED;
+  const isPendingReview = plan.status === CPStatus.PENDING_REVIEW;
+  const isPendingApproval = plan.status === CPStatus.PENDING_APPROVAL;
+  const isApproved = plan.status === CPStatus.APPROVED;
   const items = plan.items || [];
 
   // 사용자 역할 확인

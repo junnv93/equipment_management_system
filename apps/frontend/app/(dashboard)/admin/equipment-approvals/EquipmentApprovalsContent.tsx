@@ -13,6 +13,7 @@ import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkele
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle } from 'lucide-react';
 
@@ -63,7 +64,7 @@ export default function EquipmentApprovalsContent() {
 
   // 승인 대기 요청 목록 조회
   const { data: requests, isLoading } = useQuery<EquipmentRequest[]>({
-    queryKey: ['equipment-requests', 'pending'],
+    queryKey: queryKeys.equipmentRequests.pending(),
     queryFn: async () => {
       const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING);
       return response.data || [];
@@ -72,7 +73,7 @@ export default function EquipmentApprovalsContent() {
 
   // 요청 상세 조회
   const { data: requestDetail } = useQuery<EquipmentRequest>({
-    queryKey: ['equipment-request', selectedRequest?.id],
+    queryKey: queryKeys.equipmentRequests.detail(selectedRequest?.id ?? ''),
     queryFn: async () => {
       if (!selectedRequest) return null;
       const response = await apiClient.get(
@@ -93,8 +94,6 @@ export default function EquipmentApprovalsContent() {
         title: '승인 완료',
         description: '요청이 승인되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['equipment-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['equipment'] });
       setSelectedRequest(null);
     },
     onError: (error: unknown) => {
@@ -103,6 +102,10 @@ export default function EquipmentApprovalsContent() {
         description: getErrorMessage(error, '요청 승인 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentRequests.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipment.all });
     },
   });
 
@@ -118,7 +121,6 @@ export default function EquipmentApprovalsContent() {
         title: '반려 완료',
         description: '요청이 반려되었습니다.',
       });
-      queryClient.invalidateQueries({ queryKey: ['equipment-requests'] });
       setIsRejectDialogOpen(false);
       setSelectedRequest(null);
     },
@@ -128,6 +130,9 @@ export default function EquipmentApprovalsContent() {
         description: getErrorMessage(error, '요청 반려 중 오류가 발생했습니다.'),
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipmentRequests.all });
     },
   });
 

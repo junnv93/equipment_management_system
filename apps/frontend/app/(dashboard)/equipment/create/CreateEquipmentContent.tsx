@@ -78,8 +78,7 @@ async function saveHistoryInParallel(
         calibrationDate: item.calibrationDate,
         nextCalibrationDate: item.nextCalibrationDate,
         calibrationAgency: item.calibrationAgency,
-        calibrationCycle: item.calibrationCycle,
-        calibrationResult: item.calibrationResult,
+        result: item.result,
         notes: item.notes,
       })
       .then(() => ({ type: 'calibration' as const, index, status: 'fulfilled' as const }))

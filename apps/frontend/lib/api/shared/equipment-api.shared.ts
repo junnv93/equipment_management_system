@@ -17,6 +17,7 @@
  */
 
 import type { AxiosInstance } from 'axios';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
   transformPaginatedResponse,
   transformSingleResponse,
@@ -63,10 +64,10 @@ import type {
  * 백엔드 응답 구조에 따라 다양한 형태를 지원
  */
 type CalibrationHistoryResponse =
-  | { data: { items: unknown[] } }  // 페이지네이션 응답
-  | { items: unknown[] }            // 직접 아이템 배열
-  | { data: unknown[] }             // 래핑된 배열
-  | unknown[];                      // 직접 배열
+  | { data: { items: unknown[] } } // 페이지네이션 응답
+  | { items: unknown[] } // 직접 아이템 배열
+  | { data: unknown[] } // 래핑된 배열
+  | unknown[]; // 직접 배열
 
 /**
  * 교정 이력 응답에서 아이템 배열을 안전하게 추출
@@ -80,7 +81,12 @@ function extractCalibrationItems(response: CalibrationHistoryResponse): unknown[
   // 객체인 경우 다양한 구조 처리
   if (response && typeof response === 'object') {
     // { data: { items: [...] } }
-    if ('data' in response && response.data && typeof response.data === 'object' && 'items' in response.data) {
+    if (
+      'data' in response &&
+      response.data &&
+      typeof response.data === 'object' &&
+      'items' in response.data
+    ) {
       return Array.isArray(response.data.items) ? response.data.items : [];
     }
     // { items: [...] }
@@ -106,7 +112,10 @@ export interface EquipmentApiMethods {
   getEquipmentList: (query?: EquipmentQuery) => Promise<PaginatedResponse<Equipment>>;
   getEquipment: (id: string | number) => Promise<Equipment>;
   createEquipment: (data: CreateEquipmentDto) => Promise<EquipmentMutationResponse>;
-  updateEquipment: (id: string | number, data: UpdateEquipmentDto) => Promise<EquipmentMutationResponse>;
+  updateEquipment: (
+    id: string | number,
+    data: UpdateEquipmentDto
+  ) => Promise<EquipmentMutationResponse>;
   deleteEquipment: (id: string | number) => Promise<void>;
   updateEquipmentStatus: (id: string | number, status: EquipmentStatus) => Promise<Equipment>;
 
@@ -122,13 +131,22 @@ export interface EquipmentApiMethods {
 
   // 이력 관리
   getLocationHistory: (equipmentUuid: string) => Promise<LocationHistoryItem[]>;
-  createLocationHistory: (equipmentUuid: string, data: CreateLocationHistoryInput) => Promise<LocationHistoryItem>;
+  createLocationHistory: (
+    equipmentUuid: string,
+    data: CreateLocationHistoryInput
+  ) => Promise<LocationHistoryItem>;
   deleteLocationHistory: (historyId: string) => Promise<void>;
   getMaintenanceHistory: (equipmentUuid: string) => Promise<MaintenanceHistoryItem[]>;
-  createMaintenanceHistory: (equipmentUuid: string, data: CreateMaintenanceHistoryInput) => Promise<MaintenanceHistoryItem>;
+  createMaintenanceHistory: (
+    equipmentUuid: string,
+    data: CreateMaintenanceHistoryInput
+  ) => Promise<MaintenanceHistoryItem>;
   deleteMaintenanceHistory: (historyId: string) => Promise<void>;
   getIncidentHistory: (equipmentUuid: string) => Promise<IncidentHistoryItem[]>;
-  createIncidentHistory: (equipmentUuid: string, data: CreateIncidentHistoryInput) => Promise<IncidentHistoryItem>;
+  createIncidentHistory: (
+    equipmentUuid: string,
+    data: CreateIncidentHistoryInput
+  ) => Promise<IncidentHistoryItem>;
   deleteIncidentHistory: (historyId: string) => Promise<void>;
   getCalibrationHistory: (equipmentUuid: string) => Promise<unknown[]>;
 }
@@ -145,7 +163,9 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
   return {
     // ========== 기본 CRUD ==========
 
-    getEquipmentList: async (query: EquipmentQuery = {} as EquipmentQuery): Promise<PaginatedResponse<Equipment>> => {
+    getEquipmentList: async (
+      query: EquipmentQuery = {} as EquipmentQuery
+    ): Promise<PaginatedResponse<Equipment>> => {
       const params = new URLSearchParams();
       Object.entries(query).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
@@ -153,66 +173,76 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
         }
       });
 
-      const url = `/api/equipment${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `${API_ENDPOINTS.EQUIPMENT.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
       const response = await apiClient.get(url);
       return transformPaginatedResponse<Equipment>(response);
     },
 
     getEquipment: async (id: string | number): Promise<Equipment> => {
-      const response = await apiClient.get(`/api/equipment/${id}`);
+      const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.GET(String(id)));
       return transformSingleResponse<Equipment>(response);
     },
 
     createEquipment: async (data: CreateEquipmentDto): Promise<EquipmentMutationResponse> => {
-      const response = await apiClient.post('/api/equipment', data);
+      const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.CREATE, data);
       return transformSingleResponse<EquipmentMutationResponse>(response);
     },
 
-    updateEquipment: async (id: string | number, data: UpdateEquipmentDto): Promise<EquipmentMutationResponse> => {
-      const response = await apiClient.patch(`/api/equipment/${id}`, data);
+    updateEquipment: async (
+      id: string | number,
+      data: UpdateEquipmentDto
+    ): Promise<EquipmentMutationResponse> => {
+      const response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT.UPDATE(String(id)), data);
       return transformSingleResponse<EquipmentMutationResponse>(response);
     },
 
     deleteEquipment: async (id: string | number): Promise<void> => {
-      await apiClient.delete(`/api/equipment/${id}`);
+      await apiClient.delete(API_ENDPOINTS.EQUIPMENT.DELETE(String(id)));
     },
 
-    updateEquipmentStatus: async (id: string | number, status: EquipmentStatus): Promise<Equipment> => {
-      const response = await apiClient.patch(`/api/equipment/${id}/status`, { status });
+    updateEquipmentStatus: async (
+      id: string | number,
+      status: EquipmentStatus
+    ): Promise<Equipment> => {
+      const response = await apiClient.patch(API_ENDPOINTS.EQUIPMENT.STATUS(String(id)), {
+        status,
+      });
       return transformSingleResponse<Equipment>(response);
     },
 
     // ========== 특수 조회 ==========
 
     getCalibrationDueEquipment: async (days: number = 30): Promise<Equipment[]> => {
-      const response = await apiClient.get(`/api/equipment/calibration/due?days=${days}`);
+      const response = await apiClient.get(
+        `${API_ENDPOINTS.EQUIPMENT.CALIBRATION_DUE}?days=${days}`
+      );
       return response.data;
     },
 
     getTeamEquipment: async (teamId: string): Promise<Equipment[]> => {
-      const response = await apiClient.get(`/api/equipment/team/${teamId}`);
+      const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.TEAM(teamId));
       return response.data;
     },
 
     // ========== 승인 프로세스 ==========
 
     getPendingRequests: async (): Promise<unknown[]> => {
-      const response = await apiClient.get('/api/equipment/requests/pending');
+      const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.PENDING);
       return response.data || [];
     },
 
     getRequestByUuid: async (requestUuid: string): Promise<unknown> => {
-      const response = await apiClient.get(`/api/equipment/requests/${requestUuid}`);
+      const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.REQUESTS.GET(requestUuid));
       return response.data;
     },
 
     approveRequest: async (requestUuid: string): Promise<unknown> => {
-      const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/approve`);
+      const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.APPROVE(requestUuid));
       return response.data;
     },
 
     rejectRequest: async (requestUuid: string, rejectionReason: string): Promise<unknown> => {
-      const response = await apiClient.post(`/api/equipment/requests/${requestUuid}/reject`, {
+      const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.REQUESTS.REJECT(requestUuid), {
         rejectionReason,
       });
       return response.data;
@@ -221,7 +251,9 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
     // ========== 이력 관리 ==========
 
     getLocationHistory: async (equipmentUuid: string): Promise<LocationHistoryItem[]> => {
-      const response = await apiClient.get(`/api/equipment/${equipmentUuid}/location-history`);
+      const response = await apiClient.get(
+        API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.LIST(equipmentUuid)
+      );
       return transformArrayResponse<LocationHistoryItem>(response);
     },
 
@@ -229,16 +261,21 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
       equipmentUuid: string,
       data: CreateLocationHistoryInput
     ): Promise<LocationHistoryItem> => {
-      const response = await apiClient.post(`/api/equipment/${equipmentUuid}/location-history`, data);
+      const response = await apiClient.post(
+        API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.CREATE(equipmentUuid),
+        data
+      );
       return transformSingleResponse<LocationHistoryItem>(response);
     },
 
     deleteLocationHistory: async (historyId: string): Promise<void> => {
-      await apiClient.delete(`/api/equipment/location-history/${historyId}`);
+      await apiClient.delete(API_ENDPOINTS.EQUIPMENT.LOCATION_HISTORY.DELETE(historyId));
     },
 
     getMaintenanceHistory: async (equipmentUuid: string): Promise<MaintenanceHistoryItem[]> => {
-      const response = await apiClient.get(`/api/equipment/${equipmentUuid}/maintenance-history`);
+      const response = await apiClient.get(
+        API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.LIST(equipmentUuid)
+      );
       return transformArrayResponse<MaintenanceHistoryItem>(response);
     },
 
@@ -247,18 +284,20 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
       data: CreateMaintenanceHistoryInput
     ): Promise<MaintenanceHistoryItem> => {
       const response = await apiClient.post(
-        `/api/equipment/${equipmentUuid}/maintenance-history`,
+        API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.CREATE(equipmentUuid),
         data
       );
       return transformSingleResponse<MaintenanceHistoryItem>(response);
     },
 
     deleteMaintenanceHistory: async (historyId: string): Promise<void> => {
-      await apiClient.delete(`/api/equipment/maintenance-history/${historyId}`);
+      await apiClient.delete(API_ENDPOINTS.EQUIPMENT.MAINTENANCE_HISTORY.DELETE(historyId));
     },
 
     getIncidentHistory: async (equipmentUuid: string): Promise<IncidentHistoryItem[]> => {
-      const response = await apiClient.get(`/api/equipment/${equipmentUuid}/incident-history`);
+      const response = await apiClient.get(
+        API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.LIST(equipmentUuid)
+      );
       return transformArrayResponse<IncidentHistoryItem>(response);
     },
 
@@ -266,16 +305,21 @@ export function createEquipmentApiMethods(apiClient: AxiosInstance): EquipmentAp
       equipmentUuid: string,
       data: CreateIncidentHistoryInput
     ): Promise<IncidentHistoryItem> => {
-      const response = await apiClient.post(`/api/equipment/${equipmentUuid}/incident-history`, data);
+      const response = await apiClient.post(
+        API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.CREATE(equipmentUuid),
+        data
+      );
       return transformSingleResponse<IncidentHistoryItem>(response);
     },
 
     deleteIncidentHistory: async (historyId: string): Promise<void> => {
-      await apiClient.delete(`/api/equipment/incident-history/${historyId}`);
+      await apiClient.delete(API_ENDPOINTS.EQUIPMENT.INCIDENT_HISTORY.DELETE(historyId));
     },
 
     getCalibrationHistory: async (equipmentUuid: string): Promise<unknown[]> => {
-      const response = await apiClient.get(`/api/calibrations?equipmentId=${equipmentUuid}`);
+      const response = await apiClient.get(
+        `${API_ENDPOINTS.CALIBRATIONS.LIST}?equipmentId=${equipmentUuid}`
+      );
       // 타입 안전한 응답 데이터 추출
       const responseData: CalibrationHistoryResponse = response.data ?? response;
       return extractCalibrationItems(responseData);
