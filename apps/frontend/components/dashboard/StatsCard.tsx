@@ -2,7 +2,7 @@
 
 import { useMemo, memo } from 'react';
 import { Card, CardContent, CardDescription } from '@/components/ui/card';
-import { IconType } from 'react-icons';
+import { type LucideIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface StatsCardProps {
@@ -10,7 +10,7 @@ interface StatsCardProps {
   value: number;
   description?: string;
   loading?: boolean;
-  icon?: IconType;
+  icon?: LucideIcon;
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'primary';
 }
 

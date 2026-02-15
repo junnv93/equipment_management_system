@@ -36,6 +36,7 @@ import { ClientOnly } from '@/components/shared/ClientOnly';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { dashboardApi } from '@/lib/api/dashboard-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import type {
   DashboardSummary,
   EquipmentByTeam,
@@ -45,14 +46,7 @@ import type {
   RecentActivity,
 } from '@/lib/api/dashboard-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  FiBox,
-  FiCheckCircle,
-  FiAlertCircle,
-  FiClock,
-  FiAlertTriangle,
-  FiTool,
-} from 'react-icons/fi';
+import { Package, CheckCircle2, AlertCircle, Clock, AlertTriangle, Wrench } from 'lucide-react';
 
 // 큰 컴포넌트는 dynamic import로 지연 로딩
 const EquipmentStatusChart = dynamic(
@@ -68,8 +62,6 @@ const EquipmentStatusChart = dynamic(
 const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
 
 // 캐시 설정
-const GC_TIME = 1000 * 60 * 5; // 5분
-const STALE_TIME = 1000 * 30; // 30초
 
 // 역할별 탭 정의
 const ROLE_TABS: Record<string, Array<{ value: string; label: string }>> = {
@@ -157,20 +149,18 @@ function DashboardClientComponent({
     },
     isLoading: summaryLoading,
   } = useQuery({
-    queryKey: ['dashboard-summary', userRole, selectedTeamId],
+    queryKey: queryKeys.dashboard.summary(userRole, selectedTeamId),
     queryFn: () => dashboardApi.getSummary(selectedTeamId),
     placeholderData: initialSummary,
-    gcTime: GC_TIME,
-    staleTime: STALE_TIME,
+    ...QUERY_CONFIG.DASHBOARD,
   });
 
   const { data: equipmentByTeam = initialEquipmentByTeam || [], isLoading: teamLoading } = useQuery(
     {
-      queryKey: ['equipment-by-team', userRole, selectedTeamId],
+      queryKey: queryKeys.dashboard.equipmentByTeam(userRole, selectedTeamId),
       queryFn: () => dashboardApi.getEquipmentByTeam(selectedTeamId),
       placeholderData: initialEquipmentByTeam,
-      gcTime: GC_TIME,
-      staleTime: STALE_TIME,
+      ...QUERY_CONFIG.DASHBOARD,
     }
   );
 
@@ -178,63 +168,76 @@ function DashboardClientComponent({
     data: overdueCalibrations = initialOverdueCalibrations || [],
     isLoading: calibrationLoading,
   } = useQuery({
-    queryKey: ['overdue-calibrations', userRole, selectedTeamId],
+    queryKey: queryKeys.dashboard.overdueCalibrations(userRole, selectedTeamId),
     queryFn: () => dashboardApi.getOverdueCalibrations(selectedTeamId),
     placeholderData: initialOverdueCalibrations,
-    gcTime: GC_TIME,
-    staleTime: STALE_TIME,
+    ...QUERY_CONFIG.DASHBOARD,
   });
 
   const {
     data: upcomingCalibrations = initialUpcomingCalibrations || [],
     isLoading: upcomingLoading,
   } = useQuery({
-    queryKey: ['upcoming-calibrations', userRole, selectedTeamId],
+    queryKey: queryKeys.dashboard.upcomingCalibrations(userRole, selectedTeamId),
     queryFn: () => dashboardApi.getUpcomingCalibrations(30, selectedTeamId),
     placeholderData: initialUpcomingCalibrations,
-    gcTime: GC_TIME,
-    staleTime: STALE_TIME,
+    ...QUERY_CONFIG.DASHBOARD,
   });
 
   const { data: overdueCheckouts = initialOverdueCheckouts || [], isLoading: checkoutsLoading } =
     useQuery({
-      queryKey: ['overdue-checkouts', userRole, selectedTeamId],
+      queryKey: queryKeys.dashboard.overdueCheckouts(userRole, selectedTeamId),
       queryFn: () => dashboardApi.getOverdueCheckouts(selectedTeamId),
       placeholderData: initialOverdueCheckouts,
-      gcTime: GC_TIME,
-      staleTime: STALE_TIME,
+      ...QUERY_CONFIG.DASHBOARD,
     });
 
   const { data: recentActivities = initialRecentActivities || [], isLoading: activitiesLoading } =
     useQuery({
-      queryKey: ['recent-activities', userRole],
+      queryKey: queryKeys.dashboard.recentActivities(userRole),
       queryFn: () => dashboardApi.getRecentActivitiesByRole(userRole),
       placeholderData: initialRecentActivities,
-      gcTime: GC_TIME,
-      staleTime: STALE_TIME,
+      ...QUERY_CONFIG.DASHBOARD,
     });
 
   const {
     data: equipmentStatusStats = initialEquipmentStatusStats || {},
     isLoading: statsLoading,
   } = useQuery({
-    queryKey: ['equipment-status-stats', userRole, selectedTeamId],
+    queryKey: queryKeys.dashboard.equipmentStatusStats(userRole, selectedTeamId),
     queryFn: () => dashboardApi.getEquipmentStatusStats(selectedTeamId),
     placeholderData: initialEquipmentStatusStats,
-    gcTime: GC_TIME,
-    staleTime: STALE_TIME,
+    ...QUERY_CONFIG.DASHBOARD,
   });
 
   // 웹소켓 업데이트 핸들러
   const handleDashboardUpdate = useCallback(
     (data: DashboardUpdateEvent) => {
-      queryClient.setQueryData(['dashboard-summary', userRole], data.summary);
-      queryClient.setQueryData(['equipment-by-team', userRole], data.equipmentByTeam);
-      queryClient.setQueryData(['overdue-calibrations', userRole], data.overdueCalibrations);
-      queryClient.setQueryData(['upcoming-calibrations', userRole], data.upcomingCalibrations);
-      queryClient.setQueryData(['overdue-checkouts', userRole], data.overdueCheckouts);
-      queryClient.setQueryData(['recent-activities', userRole], data.recentActivities);
-      queryClient.setQueryData(['equipment-status-stats', userRole], data.equipmentStatusStats);
+      queryClient.setQueryData(queryKeys.dashboard.summary(userRole, selectedTeamId), data.summary);
+      queryClient.setQueryData(
+        queryKeys.dashboard.equipmentByTeam(userRole, selectedTeamId),
+        data.equipmentByTeam
+      );
+      queryClient.setQueryData(
+        queryKeys.dashboard.overdueCalibrations(userRole, selectedTeamId),
+        data.overdueCalibrations
+      );
+      queryClient.setQueryData(
+        queryKeys.dashboard.upcomingCalibrations(userRole, selectedTeamId),
+        data.upcomingCalibrations
+      );
+      queryClient.setQueryData(
+        queryKeys.dashboard.overdueCheckouts(userRole, selectedTeamId),
+        data.overdueCheckouts
+      );
+      queryClient.setQueryData(
+        queryKeys.dashboard.recentActivities(userRole),
+        data.recentActivities
+      );
+      queryClient.setQueryData(
+        queryKeys.dashboard.equipmentStatusStats(userRole, selectedTeamId),
+        data.equipmentStatusStats
+      );
 
       setUpdateCount((prev) => prev + 1);
 
@@ -244,10 +247,10 @@ function DashboardClientComponent({
         duration: 3000,
       });
     },
-    [queryClient, toast, userRole]
+    [queryClient, toast, userRole, selectedTeamId]
   );
 
-  // 웹소켓 연결 (선택적)
+  // 웹소켓 연결 (선택적) - 현재 미사용 (SSE 기반 알림으로 대체)
   useEffect(() => {
     if (
       !process.env.NEXT_PUBLIC_ENABLE_WEBSOCKET ||
@@ -256,27 +259,9 @@ function DashboardClientComponent({
       return;
     }
 
-    import('socket.io-client')
-      .then(({ io }) => {
-        const socket = io(SOCKET_URL, {
-          transports: ['websocket'],
-          autoConnect: true,
-        });
-
-        socket.on('connect', () => {
-          console.log('WebSocket connected');
-        });
-
-        socket.on('dashboard-update', handleDashboardUpdate);
-
-        return () => {
-          socket.disconnect();
-        };
-      })
-      .catch((error) => {
-        console.warn('WebSocket 연결 실패 (선택적 기능):', error);
-      });
-  }, [handleDashboardUpdate]);
+    // socket.io-client 제거됨 - SSE 기반 알림 사용
+    console.log('WebSocket disabled - using SSE-based notifications');
+  }, []);
 
   // 역할별 탭
   const tabs = ROLE_TABS[userRole] || ROLE_TABS['test_engineer'];
@@ -288,14 +273,14 @@ function DashboardClientComponent({
         key: 'total',
         title: userRole === 'test_engineer' ? '내 장비' : '전체 장비',
         value: summary?.totalEquipment || 0,
-        icon: FiBox,
+        icon: Package,
         variant: undefined,
       },
       {
         key: 'available',
         title: '사용 가능',
         value: summary?.availableEquipment || 0,
-        icon: FiCheckCircle,
+        icon: CheckCircle2,
         variant: 'success' as const,
       },
     ];
@@ -307,14 +292,14 @@ function DashboardClientComponent({
           key: 'calibration',
           title: '교정 예정',
           value: summary?.upcomingCalibrations || 0,
-          icon: FiAlertCircle,
+          icon: AlertCircle,
           variant: 'warning' as const,
         },
         {
           key: 'checkouts',
           title: '반출 중',
           value: summary?.activeCheckouts || 0,
-          icon: FiClock,
+          icon: Clock,
           variant: 'primary' as const,
         },
       ];
@@ -326,14 +311,14 @@ function DashboardClientComponent({
         key: 'calibration',
         title: '교정 예정',
         value: summary?.upcomingCalibrations || 0,
-        icon: FiAlertTriangle,
+        icon: AlertTriangle,
         variant: 'warning' as const,
       },
       {
         key: 'checkout',
         title: '반출 중',
         value: summary?.activeCheckouts || 0,
-        icon: FiTool,
+        icon: Wrench,
         variant: 'primary' as const,
       },
     ];

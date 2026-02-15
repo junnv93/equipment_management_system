@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { z } from 'zod';
+import dynamic from 'next/dynamic';
 import {
   type EquipmentStatus,
   type CalibrationMethod,
@@ -26,29 +27,57 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { type UploadedFile } from '@/components/shared/FileUpload';
-import { BasicInfoSection, FormValues } from './BasicInfoSection';
-import { CalibrationInfoSection } from './CalibrationInfoSection';
-import { StatusLocationSection } from './StatusLocationSection';
-import { AttachmentSection } from './AttachmentSection';
-import { LocationHistorySection } from './LocationHistorySection';
-import { MaintenanceHistorySection } from './MaintenanceHistorySection';
-import { IncidentHistorySection } from './IncidentHistorySection';
-import {
-  CalibrationHistorySection,
-  type CreateCalibrationHistoryInput,
-  type CalibrationRecord,
-} from './CalibrationHistorySection';
+import { BasicInfoSection, type FormValues } from './BasicInfoSection';
 import { CalibrationValidityChecker } from './CalibrationValidityChecker';
 import { AlertCircle, CheckCircle2, Clock, Shield } from 'lucide-react';
 import { formatDate, toDate } from '@/lib/utils/date';
-import equipmentApi, {
-  type LocationHistoryItem,
-  type MaintenanceHistoryItem,
-  type IncidentHistoryItem,
-  type CreateLocationHistoryInput,
-  type CreateMaintenanceHistoryInput,
-  type CreateIncidentHistoryInput,
+import type { CreateCalibrationHistoryInput, CalibrationRecord } from './CalibrationHistorySection';
+
+// ✅ Dynamic import로 무거운 섹션 지연 로딩 (초기 번들 크기 감소)
+const CalibrationInfoSection = dynamic(
+  () => import('./CalibrationInfoSection').then((mod) => mod.CalibrationInfoSection),
+  { loading: () => <Skeleton className="h-64 w-full" />, ssr: false }
+);
+
+const StatusLocationSection = dynamic(
+  () => import('./StatusLocationSection').then((mod) => mod.StatusLocationSection),
+  { loading: () => <Skeleton className="h-48 w-full" />, ssr: false }
+);
+
+const AttachmentSection = dynamic(
+  () => import('./AttachmentSection').then((mod) => mod.AttachmentSection),
+  { loading: () => <Skeleton className="h-32 w-full" />, ssr: false }
+);
+
+const LocationHistorySection = dynamic(
+  () => import('./LocationHistorySection').then((mod) => mod.LocationHistorySection),
+  { loading: () => <Skeleton className="h-40 w-full" />, ssr: false }
+);
+
+const MaintenanceHistorySection = dynamic(
+  () => import('./MaintenanceHistorySection').then((mod) => mod.MaintenanceHistorySection),
+  { loading: () => <Skeleton className="h-40 w-full" />, ssr: false }
+);
+
+const IncidentHistorySection = dynamic(
+  () => import('./IncidentHistorySection').then((mod) => mod.IncidentHistorySection),
+  { loading: () => <Skeleton className="h-40 w-full" />, ssr: false }
+);
+
+const CalibrationHistorySection = dynamic(
+  () => import('./CalibrationHistorySection').then((mod) => mod.CalibrationHistorySection),
+  { loading: () => <Skeleton className="h-40 w-full" />, ssr: false }
+);
+import equipmentApi from '@/lib/api/equipment-api';
+import type {
+  LocationHistoryItem,
+  MaintenanceHistoryItem,
+  IncidentHistoryItem,
+  CreateLocationHistoryInput,
+  CreateMaintenanceHistoryInput,
+  CreateIncidentHistoryInput,
 } from '@/lib/api/equipment-api';
 import { useToast } from '@/components/ui/use-toast';
 import { ApiError } from '@/lib/errors/equipment-errors';
@@ -641,7 +670,7 @@ export function EquipmentForm({
         calibrationDate: data.calibrationDate,
         nextCalibrationDate: data.nextCalibrationDate,
         calibrationAgency: data.calibrationAgency,
-        calibrationResult: data.calibrationResult,
+        result: data.result,
         status: 'completed',
         approvalStatus: 'approved',
       };
