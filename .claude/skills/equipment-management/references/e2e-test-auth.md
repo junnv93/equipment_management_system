@@ -1,394 +1,308 @@
 # E2E 테스트 인증 가이드
 
-**작성일**: 2026-01-22
-**작성자**: Claude Sonnet 4.5
+**작성일**: 2026-02-12
+**아키텍처**: Setup Project + storageState (Playwright 공식 패턴)
 
 ---
 
 ## 개요
 
-이 문서는 Playwright E2E 테스트에서 NextAuth 기반 인증을 올바르게 처리하는 방법을 설명합니다.
+Playwright E2E 테스트는 **Setup Project + storageState** 기반 인증을 사용합니다.
 
-**핵심 원칙**: NextAuth를 "단일 인증 소스(Single Source of Truth)"로 사용하여 실제 프로덕션 환경과 동일한 인증 플로우를 테스트합니다.
+**핵심 원칙**: NextAuth를 "단일 인증 소스(SSOT)"로 사용하며, 실제 프로덕션과 동일한 browser-native 로그인 플로우를 통해 인증 상태를 생성합니다.
 
----
+### 실행 순서
 
-## 문제 상황
-
-### ❌ 잘못된 접근 방식
-
-E2E 테스트에서 백엔드 JWT를 직접 쿠키에 저장하는 방식:
-
-```typescript
-// ❌ 이렇게 하지 마세요!
-const response = await page.request.get(
-  'http://localhost:3001/api/auth/test-login?role=test_engineer'
-);
-const data = await response.json();
-
-await page.context().addCookies([
-  {
-    name: 'auth-token',
-    value: data.access_token,
-    domain: 'localhost',
-    path: '/',
-  },
-]);
+```
+globalSetup (health check, seed data, .auth/ 디렉토리)
+  → setup project (auth.setup.ts — 5개 역할 browser-native 로그인)
+    → browser projects (chromium, firefox, webkit — storageState 로드)
+      → globalTeardown (cleanup)
 ```
 
-**문제점**:
-
-1. NextAuth의 인증 플로우를 완전히 우회
-2. NextAuth는 자체 세션 토큰(`next-auth.session-token`)을 사용
-3. 백엔드 JWT(`auth-token`)를 NextAuth가 인식하지 못함
-4. Middleware와 Server Components가 인증 실패로 판단
-5. 로그인 페이지로 리다이렉트 발생
-
-**테스트 결과**: 20/24 테스트 실패 (83.3% 실패율)
-
 ---
 
-## 해결 방법
+## 기존 방식의 근본 결함 (loginAs)
 
-### ✅ 올바른 접근 방식
+기존 `loginAs()` API 기반 인증에는 3가지 근본적 문제가 있었습니다:
 
-NextAuth의 Credentials callback API를 직접 호출하는 방식:
-
-```typescript
-// ✅ 이렇게 하세요!
-async function loginAs(page: Page, role: string) {
-  // 1. CSRF 토큰 획득
-  const csrfResponse = await page.request.get('http://localhost:3000/api/auth/csrf');
-  const { csrfToken } = await csrfResponse.json();
-
-  // 2. NextAuth callback API로 POST 요청
-  const loginResponse = await page.request.post(
-    'http://localhost:3000/api/auth/callback/test-login?callbackUrl=/',
-    {
-      form: {
-        role: role,
-        csrfToken: csrfToken,
-        json: 'true',
-      },
-    }
-  );
-
-  // 3. 메인 페이지로 이동하여 세션 확인
-  await page.goto('/');
-}
-```
-
-**장점**:
-
-1. ✅ NextAuth의 정상적인 인증 플로우 사용
-2. ✅ NextAuth가 세션 생성 및 쿠키 관리 (`next-auth.session-token`)
-3. ✅ Middleware, Server Components, Client Components 모두에서 세션 인식
-4. ✅ 실제 프로덕션 환경과 동일한 인증 플로우 테스트
-5. ✅ "단일 인증 소스(SSOT)" 아키텍처 원칙 준수
-
-**테스트 결과**: 인증 문제 해결, 테스트 통과율 향상
-
----
-
-## 구현 단계
-
-### 1단계: NextAuth에 테스트용 Provider 추가
-
-**파일**: `apps/frontend/lib/auth.ts`
+### 1. Per-test 로그인 반복
 
 ```typescript
-// 환경 변수 확인
-const isTest = process.env.NODE_ENV === 'test';
-
-export const authOptions = {
-  providers: [
-    // ... 기존 providers
-
-    // ✅ E2E 테스트 전용 Provider
-    ...(isTest || isDevelopment
-      ? [
-          CredentialsProvider({
-            id: 'test-login',
-            name: 'Test Login',
-            credentials: {
-              role: {
-                label: 'Role',
-                type: 'text',
-                placeholder: 'test_engineer | technical_manager | lab_manager | system_admin',
-              },
-            },
-            async authorize(credentials) {
-              if (!credentials?.role) {
-                return null;
-              }
-
-              // 백엔드 test-login 엔드포인트 호출
-              const response = await fetch(
-                `${API_BASE_URL}/api/auth/test-login?role=${credentials.role}`
-              );
-
-              if (!response.ok) {
-                return null;
-              }
-
-              const data = await response.json();
-
-              // NextAuth 세션에 저장할 사용자 정보 반환
-              return {
-                id: data.user.id || data.user.uuid,
-                name: data.user.name,
-                email: data.user.email,
-                role: data.user.role,
-                roles: [data.user.role],
-                department: data.user.department,
-                site: data.user.site,
-                teamId: data.user.teamId,
-                accessToken: data.access_token,
-              };
-            },
-          }),
-        ]
-      : []),
-  ],
-  // ... 나머지 설정
+// ❌ 기존: 매 테스트마다 ~2초 로그인 오버헤드
+testOperatorPage: async ({ browser }, use) => {
+  const page = await context.newPage();
+  await loginAs(page, 'test_engineer'); // CSRF + callback + goto + waitForTimeout
+  await use(page);
 };
 ```
 
-**중요 사항**:
+256개 테스트 × 2초 = **~8분 순수 로그인 대기 시간**.
 
-- `test-login` provider는 테스트/개발 환경에서만 활성화
-- 백엔드 `/api/auth/test-login` 엔드포인트를 호출
-- `authorize` 함수에서 백엔드 JWT를 받아서 NextAuth 사용자 객체로 변환
-- `site`, `teamId` 등 프로젝트별 필드도 포함
+### 2. 수동 쿠키 파싱
 
-### 2단계: auth.fixture.ts 작성
+```typescript
+// ❌ 기존: Set-Cookie 헤더를 직접 파싱 — 브라우저 구현 차이로 깨짐
+const setCookieHeaders = loginResponse.headers()['set-cookie'];
+const cookies = setCookieHeaders.split('\n').map((cookieStr: string) => {
+  const parts = cookieStr.split(';');
+  const [name, ...valueParts] = parts[0].split('=');
+  return { name: name.trim(), value: valueParts.join('='), domain: 'localhost', path: '/' };
+});
+await page.context().addCookies(cookies);
+```
 
-**파일**: `apps/frontend/tests/e2e/fixtures/auth.fixture.ts`
+### 3. 비결정적 대기
+
+```typescript
+// ❌ 기존: 하드코딩된 1초 대기 — CI에서 간헐적 실패
+await page.goto('/');
+await page.waitForTimeout(1000);
+```
+
+---
+
+## 해결 방법: Setup Project + storageState
+
+### 아키텍처 개요
+
+| 파일                                        | 역할                                                 | 실행 시점           |
+| ------------------------------------------- | ---------------------------------------------------- | ------------------- |
+| `tests/e2e/global-setup.ts`                 | Health check, 시드 데이터, `.auth/` 디렉토리 보장    | 최초 1회            |
+| `tests/e2e/auth.setup.ts`                   | 5개 역할 browser-native 로그인 → `.auth/*.json` 저장 | setup project (1회) |
+| `tests/e2e/shared/fixtures/auth.fixture.ts` | storageState 파일 로드 → 역할별 인증된 Page 제공     | 테스트마다 (~30ms)  |
+| `playwright.config.ts`                      | `setup` project 정의 + `dependencies: ['setup']`     | 설정                |
+
+### 장점
+
+| 항목              | 기존 (loginAs)         | 현재 (storageState)  |
+| ----------------- | ---------------------- | -------------------- |
+| 로그인 횟수       | 테스트당 1회           | 전체 1회 (5개 역할)  |
+| 쿠키 처리         | 수동 Set-Cookie 파싱   | 브라우저 자체 처리   |
+| CSRF 관리         | 수동 GET + form submit | signIn()이 자동 처리 |
+| 대기 방식         | `waitForTimeout(1000)` | `waitForURL('/')`    |
+| 테스트당 오버헤드 | ~2초                   | ~30ms (파일 로드)    |
+
+---
+
+## 구현 상세
+
+### 1. auth.setup.ts (Setup Project)
+
+**파일**: `apps/frontend/tests/e2e/auth.setup.ts`
+
+5개 역할에 대해 browser-native 로그인을 수행하고 storageState를 저장합니다.
+
+```typescript
+import { test as setup, expect } from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
+
+const AUTH_DIR = path.join(__dirname, '.auth');
+
+const ROLES = [
+  { role: 'test_engineer', label: '시험실무자', file: 'test-engineer.json' },
+  { role: 'technical_manager', label: '기술책임자', file: 'technical-manager.json' },
+  { role: 'quality_manager', label: '품질책임자', file: 'quality-manager.json' },
+  { role: 'lab_manager', label: '시험소장', file: 'lab-manager.json' },
+  { role: 'system_admin', label: '시스템 관리자', file: 'system-admin.json' },
+] as const;
+
+if (!fs.existsSync(AUTH_DIR)) {
+  fs.mkdirSync(AUTH_DIR, { recursive: true });
+}
+
+for (const { role, label, file } of ROLES) {
+  const outputPath = path.join(AUTH_DIR, file);
+
+  setup(`authenticate as ${role}`, async ({ page }) => {
+    // 1. 로그인 페이지 이동
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+
+    // 2. DevLoginButtons의 역할 버튼 클릭
+    const button = page.getByRole('button', { name: label });
+    await expect(button).toBeVisible({ timeout: 10000 });
+    await button.click();
+
+    // 3. NextAuth redirect 완료 대기 (로그인 → 대시보드)
+    await page.waitForURL('/', { timeout: 15000 });
+    await expect(page).not.toHaveURL(/\/login/);
+
+    // 4. storageState 저장 (쿠키 + localStorage)
+    await page.context().storageState({ path: outputPath });
+  });
+}
+```
+
+**핵심 포인트**:
+
+- `page.goto('/login')` → DevLoginButtons 렌더링 대기
+- `getByRole('button', { name: label })` → 한국어 역할명 매칭
+- `waitForURL('/')` → NextAuth redirect 완료의 결정적 감지
+- `storageState({ path })` → 쿠키 + localStorage를 JSON으로 저장
+
+### 2. playwright.config.ts
+
+```typescript
+projects: [
+  // Setup Project: auth.setup.ts 1회 실행
+  {
+    name: 'setup',
+    testMatch: /auth\.setup\.ts/,
+  },
+  // Browser projects: setup 완료 후 실행
+  {
+    name: 'chromium',
+    use: { ...devices['Desktop Chrome'] },
+    dependencies: ['setup'],
+  },
+  // firefox, webkit, Mobile Chrome, Mobile Safari도 동일
+],
+```
+
+**`dependencies: ['setup']`**: 모든 browser project는 setup project 완료를 보장한 후 실행됩니다.
+
+### 3. auth.fixture.ts (테스트 Fixture)
+
+**파일**: `apps/frontend/tests/e2e/shared/fixtures/auth.fixture.ts`
+
+storageState 파일을 로드하여 역할별 인증된 Page를 제공합니다.
 
 ```typescript
 import { test as base, Page } from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
 
-async function loginAs(page: Page, role: string) {
-  try {
-    console.log(`[Auth Fixture] Logging in as ${role}...`);
+const AUTH_DIR = path.join(__dirname, '../../.auth');
 
-    // 1. CSRF 토큰 획득
-    const csrfResponse = await page.request.get('http://localhost:3000/api/auth/csrf');
-    const { csrfToken } = await csrfResponse.json();
+const STORAGE_STATE = {
+  test_engineer: path.join(AUTH_DIR, 'test-engineer.json'),
+  technical_manager: path.join(AUTH_DIR, 'technical-manager.json'),
+  quality_manager: path.join(AUTH_DIR, 'quality-manager.json'),
+  lab_manager: path.join(AUTH_DIR, 'lab-manager.json'),
+  system_admin: path.join(AUTH_DIR, 'system-admin.json'),
+} as const;
 
-    // 2. NextAuth callback API로 POST 요청
-    const loginResponse = await page.request.post(
-      'http://localhost:3000/api/auth/callback/test-login?callbackUrl=/',
-      {
-        form: {
-          role: role,
-          csrfToken: csrfToken,
-          json: 'true',
-        },
-      }
+interface AuthFixtures {
+  testOperatorPage: Page; // 시험실무자
+  techManagerPage: Page; // 기술책임자
+  qualityManagerPage: Page; // 품질책임자
+  siteAdminPage: Page; // 시험소 관리자
+  systemAdminPage: Page; // 시스템 관리자
+}
+
+async function createAuthenticatedPage(
+  browser: import('@playwright/test').Browser,
+  storageStatePath: string
+) {
+  if (!fs.existsSync(storageStatePath)) {
+    throw new Error(
+      `[Auth Fixture] storageState 파일 없음: ${storageStatePath}\n` +
+        `Setup project가 실행되지 않았습니다.\n` +
+        `실행: npx playwright test --project=setup`
     );
-
-    if (!loginResponse.ok()) {
-      throw new Error(`Login callback failed: ${loginResponse.status()}`);
-    }
-
-    // 2-1. Set-Cookie 헤더 파싱 및 쿠키 수동 설정
-    // Playwright의 page.request는 API 요청의 Set-Cookie를 브라우저에 자동 저장하지 않음
-    const setCookieHeaders = loginResponse.headers()['set-cookie'];
-    if (setCookieHeaders) {
-      const cookies = setCookieHeaders.split('\n').map((cookieStr: string) => {
-        const parts = cookieStr.split(';');
-        const [name, ...valueParts] = parts[0].split('=');
-        return {
-          name: name.trim(),
-          value: valueParts.join('='),
-          domain: 'localhost',
-          path: '/',
-        };
-      });
-      await page.context().addCookies(cookies);
-    }
-
-    // 3. 메인 페이지로 이동하여 세션 확인
-    await page.goto('/');
-    await page.waitForTimeout(1000);
-
-    const currentUrl = page.url();
-    if (currentUrl.includes('/login')) {
-      throw new Error('Login failed: redirected to login page');
-    }
-
-    console.log(`[Auth Fixture] Successfully logged in as ${role}`);
-  } catch (error) {
-    console.error(`[Auth Fixture] Failed to login as ${role}:`, error);
-    throw error;
   }
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+  const context = await browser.newContext({ baseURL, storageState: storageStatePath });
+  const page = await context.newPage();
+  return { context, page };
 }
 
 export const test = base.extend<AuthFixtures>({
   testOperatorPage: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await loginAs(page, 'test_engineer');
+    const { context, page } = await createAuthenticatedPage(browser, STORAGE_STATE.test_engineer);
     await use(page);
     await context.close();
   },
-  // ... 다른 역할 fixtures
+  techManagerPage: async ({ browser }, use) => {
+    const { context, page } = await createAuthenticatedPage(
+      browser,
+      STORAGE_STATE.technical_manager
+    );
+    await use(page);
+    await context.close();
+  },
+  // qualityManagerPage, siteAdminPage, systemAdminPage도 동일 패턴
 });
 
 export { expect } from '@playwright/test';
 ```
 
-**플로우**:
+**핵심 포인트**:
 
-1. `/api/auth/csrf`에서 CSRF 토큰 획득
-2. `/api/auth/callback/test-login`으로 POST 요청 (form data로 role + csrfToken 전달)
-3. NextAuth가 `authorize` 함수 실행 → 백엔드 호출 → 세션 생성
-4. NextAuth가 `next-auth.session-token` 쿠키 저장
-5. 메인 페이지 이동하여 세션 확인
+- `browser.newContext({ storageState })`: 파일에서 쿠키/localStorage를 로드한 새 컨텍스트 생성
+- 각 fixture는 독립적인 브라우저 컨텍스트 → 테스트 간 격리
+- `await context.close()`: 테스트 완료 후 리소스 정리
 
-### 3단계: .env.test 설정
+### 4. global-setup.ts
 
-**파일**: `apps/frontend/.env.test`
-
-```bash
-# 환경 설정
-NODE_ENV=test
-
-# NextAuth.js 설정
-NEXTAUTH_URL=http://localhost:3002
-NEXTAUTH_SECRET=test_super_secret_key_for_e2e_testing_32chars
-
-# 백엔드 API URL
-NEXT_PUBLIC_API_URL=http://localhost:3001
-
-# 로컬 인증 활성화 (테스트 환경)
-ENABLE_LOCAL_AUTH=true
-```
-
-### 4단계: 백엔드 테스트 로그인 엔드포인트
-
-**파일**: `apps/backend/src/modules/auth/auth.controller.ts`
+**파일**: `apps/frontend/tests/e2e/global-setup.ts`
 
 ```typescript
-/**
- * 테스트 전용 로그인 엔드포인트
- * E2E 테스트에서 사용됩니다.
- */
-@Get('test-login')
-@Public()
-async testLogin(@Query('role') role: string) {
-  if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
-    throw new ForbiddenException('Test login is only available in development and test environments');
+async function globalSetup(config: FullConfig) {
+  // 1. .auth 디렉토리 보장
+  if (!fs.existsSync(AUTH_DIR)) {
+    fs.mkdirSync(AUTH_DIR, { recursive: true });
   }
 
-  // 주의: id, uuid, teamId는 반드시 유효한 UUID 형식이어야 함
-  const testUsers: Record<string, any> = {
-    test_engineer: {
-      id: '00000000-0000-0000-0000-000000000001',
-      uuid: '00000000-0000-0000-0000-000000000001',
-      email: 'test.engineer@example.com',
-      name: '테스트 시험실무자',
-      role: 'test_engineer',
-      site: 'suwon',
-      teamId: '00000000-0000-0000-0000-000000000099',
-    },
-    technical_manager: {
-      id: '00000000-0000-0000-0000-000000000002',
-      uuid: '00000000-0000-0000-0000-000000000002',
-      email: 'tech.manager@example.com',
-      name: '테스트 기술책임자',
-      role: 'technical_manager',
-      site: 'suwon',
-      teamId: '00000000-0000-0000-0000-000000000099',
-    },
-    lab_manager: {
-      id: '00000000-0000-0000-0000-000000000003',
-      uuid: '00000000-0000-0000-0000-000000000003',
-      email: 'lab.manager@example.com',
-      name: '테스트 시험소장',
-      role: 'lab_manager',
-      site: 'suwon',
-      teamId: '00000000-0000-0000-0000-000000000099',
-    },
-    system_admin: {
-      id: '00000000-0000-0000-0000-000000000004',
-      uuid: '00000000-0000-0000-0000-000000000004',
-      email: 'system.admin@example.com',
-      name: '테스트 시스템 관리자',
-      role: 'system_admin',
-      site: 'suwon',
-      teamId: '00000000-0000-0000-0000-000000000099',
-    },
-  };
+  // 2. Health checks (Backend 5회 재시도 — 필수, Frontend 3회 — 필수)
+  await checkHealth(`${apiURL}/api/monitoring/health`, 'Backend API', 5, 3000, true);
+  await checkHealth(`${baseURL}/login`, 'Frontend', 3, 2000, true);
 
-  const testUser = testUsers[role];
-  if (!testUser) {
-    throw new ForbiddenException(`Invalid role: ${role}`);
-  }
-
-  return this.authService.generateTestToken(testUser);
+  // 3. 테스트 시드 데이터 로딩
+  execSync(`cd ../backend && npx ts-node src/database/seed-test-new.ts`, { ... });
 }
 ```
 
-**파일**: `apps/backend/src/modules/auth/auth.service.ts`
-
-```typescript
-/**
- * 테스트 전용 토큰 생성
- */
-generateTestToken(testUser: any): AuthResponse {
-  const user: UserDto = {
-    id: testUser.id || testUser.uuid,
-    email: testUser.email,
-    name: testUser.name,
-    roles: [testUser.role as UserRole],
-    department: testUser.department,
-    site: testUser.site,
-    teamId: testUser.teamId,
-  };
-
-  return this.generateToken(user);
-}
-```
+**실행 순서**: globalSetup → setup project (auth.setup.ts) → browser projects
 
 ---
 
 ## 인증 플로우 다이어그램
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Playwright │────▶│  NextAuth   │────▶│   Backend    │────▶│  NextAuth    │
-│    Test     │     │  /csrf      │     │ /test-login  │     │   Session    │
-└─────────────┘     └─────────────┘     └──────────────┘     └──────────────┘
-      │                    │                     │                    │
-      │ 1. GET csrf        │                     │                    │
-      │◀───────────────────┤                     │                    │
-      │                    │                     │                    │
-      │ 2. POST /callback/test-login             │                    │
-      │────────────────────▶│                     │                    │
-      │    (role + csrf)   │                     │                    │
-      │                    │                     │                    │
-      │                    │ 3. authorize(role)  │                    │
-      │                    │────────────────────▶│                    │
-      │                    │                     │                    │
-      │                    │ 4. Return user+JWT  │                    │
-      │                    │◀────────────────────┤                    │
-      │                    │                     │                    │
-      │                    │ 5. Create session   │                    │
-      │                    │─────────────────────────────────────────▶│
-      │                    │     Set cookie      │                    │
-      │                    │◀─────────────────────────────────────────┤
-      │                    │                     │                    │
-      │ 6. Session ready   │                     │                    │
-      │◀────────────────────                     │                    │
-      │                    │                     │                    │
-      │ 7. goto('/')       │                     │                    │
-      │────────────────────▶│                     │                    │
-      │    (with session)  │                     │                    │
-      │                    │                     │                    │
-      │ 8. Authenticated!  │                     │                    │
-      │◀────────────────────                     │                    │
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ auth.setup  │     │  /login 페이지 │     │   NextAuth   │     │   Backend    │
+│ (1회 실행)   │     │ DevLoginBtns │     │  Callback    │     │ /test-login  │
+└──────┬──────┘     └──────┬───────┘     └──────┬───────┘     └──────┬───────┘
+       │                    │                     │                    │
+       │ 1. goto('/login')  │                     │                    │
+       │───────────────────▶│                     │                    │
+       │                    │                     │                    │
+       │ 2. click('시험실무자') │                   │                    │
+       │───────────────────▶│                     │                    │
+       │                    │                     │                    │
+       │                    │ 3. signIn('test-login', { role })        │
+       │                    │────────────────────▶│                    │
+       │                    │                     │                    │
+       │                    │                     │ 4. authorize(role) │
+       │                    │                     │───────────────────▶│
+       │                    │                     │                    │
+       │                    │                     │ 5. user + JWT      │
+       │                    │                     │◀───────────────────┤
+       │                    │                     │                    │
+       │                    │ 6. Set-Cookie (session-token)            │
+       │◀────────────────────────────────────────┤                    │
+       │                    │                     │                    │
+       │ 7. waitForURL('/') │                     │                    │
+       │  (redirect 감지)    │                     │                    │
+       │                    │                     │                    │
+       │ 8. storageState({ path: '.auth/test-engineer.json' })        │
+       │  (쿠키 + localStorage 저장)               │                    │
+       │                    │                     │                    │
+       ▼                    │                     │                    │
+  ┌────────────────┐        │                     │                    │
+  │ .auth/*.json   │        │                     │                    │
+  │ (5개 파일)      │        │                     │                    │
+  └────────┬───────┘        │                     │                    │
+           │                │                     │                    │
+           ▼                │                     │                    │
+  ┌────────────────┐        │                     │                    │
+  │ auth.fixture   │        │                     │                    │
+  │ (storageState  │        │                     │                    │
+  │  파일 로드)     │        │                     │                    │
+  └────────────────┘
 ```
 
 ---
@@ -398,163 +312,223 @@ generateTestToken(testUser: any): AuthResponse {
 ### 1. NextAuth = 단일 인증 소스 (SSOT)
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                   NextAuth 세션                         │
-│            (httpOnly 쿠키에 JWT 저장)                   │
-│                                                         │
-│  ┌───────────────┬──────────────────┬─────────────────┐│
-│  ▼               ▼                  ▼                 ││
-│ Server        Client           API Client             ││
-│ Component     Component                               ││
-│ getServer     useSession()    getSession()            ││
-│ Session                                               ││
-└────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────┐
+│                   NextAuth 세션                      │
+│            (httpOnly 쿠키에 JWT 저장)                 │
+│                                                      │
+│  ┌───────────────┬──────────────────┬──────────────┐│
+│  ▼               ▼                  ▼              ││
+│ Server        Client           API Client          ││
+│ Component     Component                            ││
+│ getServer     useSession()    getSession()         ││
+│ Session                                            ││
+└────────────────────────────────────────────────────┘
 ```
 
 **절대 금지 사항**:
 
-- ❌ `localStorage.getItem('token')` - NextAuth 세션과 동기화 불가
-- ❌ `localStorage.setItem('token')` - 이중 인증 소스 발생
-- ❌ 쿠키 직접 설정 - NextAuth 우회
+- ❌ `localStorage.getItem('token')` — NextAuth 세션과 동기화 불가
+- ❌ `localStorage.setItem('token')` — 이중 인증 소스 발생
+- ❌ 쿠키 직접 설정 (`addCookies`) — NextAuth 우회
 
 **권장 사항**:
 
-- ✅ `getSession().accessToken` - NextAuth 세션과 동기화
-- ✅ `getServerSession().accessToken` - 서버 사이드에서 안전
-- ✅ NextAuth Provider를 통한 인증 - 정상적인 플로우
+- ✅ `getSession().accessToken` — NextAuth 세션과 동기화
+- ✅ `getServerSession().accessToken` — 서버 사이드에서 안전
+- ✅ storageState 기반 인증 — 브라우저가 쿠키 자체 관리
 
-### 2. 테스트 환경에서도 동일한 원칙 적용
+### 2. Setup Project = 1회 실행
 
-E2E 테스트는 실제 프로덕션 환경과 동일한 인증 플로우를 사용해야 합니다.
+auth.setup.ts는 전체 테스트 스위트에서 **1번만** 실행됩니다. browser project들은 `dependencies: ['setup']`으로 setup 완료를 보장합니다.
 
-**이유**:
+---
 
-- 실제 사용자가 경험하는 인증 플로우를 테스트
-- Middleware, Server/Client Components가 모두 정상 작동 확인
-- 인증 관련 버그를 조기에 발견
+## 역할/팀 추가 가이드
+
+### 새 역할 추가
+
+**1. `auth.setup.ts`의 ROLES 배열에 추가**:
+
+```typescript
+const ROLES = [
+  // ... 기존 역할
+  { role: 'new_role', label: '새 역할 버튼 텍스트', file: 'new-role.json' },
+];
+```
+
+**2. `auth.fixture.ts`에 추가**:
+
+```typescript
+// STORAGE_STATE에 추가
+const STORAGE_STATE = {
+  // ... 기존
+  new_role: path.join(AUTH_DIR, 'new-role.json'),
+};
+
+// AuthFixtures 인터페이스에 추가
+interface AuthFixtures {
+  // ... 기존
+  newRolePage: Page;
+}
+
+// test.extend에 fixture 추가
+export const test = base.extend<AuthFixtures>({
+  // ... 기존
+  newRolePage: async ({ browser }, use) => {
+    const { context, page } = await createAuthenticatedPage(browser, STORAGE_STATE.new_role);
+    await use(page);
+    await context.close();
+  },
+});
+```
+
+**3. DevLoginButtons에 해당 역할 버튼이 있는지 확인** (없으면 추가)
+
+### 다른 팀으로 로그인
+
+현재 모든 테스트 사용자는 **수원 FCC EMC/RF** 팀 소속입니다. 다른 팀으로 로그인이 필요한 경우:
+
+1. `auth.setup.ts`에 별도 setup 테스트 추가
+2. DevLoginButtons에서 팀 선택 후 로그인
+3. 별도 storageState 파일로 저장 (예: `tech-manager-uiwang.json`)
+
+---
+
+## Backend API 직접 호출
+
+storageState는 브라우저 인증을 위한 것입니다. 테스트 내에서 Backend API를 직접 호출해야 할 때는 `getBackendToken()`을 사용합니다.
+
+**파일**: `tests/e2e/features/checkouts/helpers/checkout-helpers.ts`
+
+```typescript
+// Backend test-login으로 raw JWT 획득
+export async function getBackendToken(role: string = 'technical_manager'): Promise<string> {
+  const response = await fetch(`http://localhost:3001/api/auth/test-login?role=${role}`);
+  const data = await response.json();
+  return data.data.access_token;
+}
+
+// 사용 예: 테스트 상태 리셋
+const token = await getBackendToken('technical_manager');
+await fetch(`http://localhost:3001/api/checkouts/${id}/status`, {
+  method: 'PATCH',
+  headers: {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ status: 'pending', version: 1 }),
+});
+```
+
+**주의**: `getBackendToken()`은 NextAuth 세션과 별개입니다. 브라우저 인증에는 storageState fixture를, Backend 직접 호출에는 `getBackendToken()`을 사용하세요.
 
 ---
 
 ## 트러블슈팅
 
-### 문제 1: "Login failed: redirected to login page"
+### 문제 1: Setup project 실패 — "Timeout exceeded"
 
-**증상**: 로그인 후에도 계속 로그인 페이지로 리다이렉트
+**증상**: `authenticate as test_engineer` 테스트가 타임아웃
 
-**원인**: NextAuth 세션이 생성되지 않음
+**원인**: Frontend 또는 Backend가 실행되지 않음
 
-**해결 방법**:
-
-1. CSRF 토큰이 올바르게 전달되었는지 확인
-2. NextAuth Provider ID가 올바른지 확인 (`test-login`)
-3. 백엔드 test-login 엔드포인트가 작동하는지 확인
-4. NextAuth callbacks에서 accessToken이 전달되는지 확인
+**해결**:
 
 ```bash
-# 백엔드 엔드포인트 확인
-curl http://localhost:3001/api/auth/test-login?role=test_engineer
+# 서비스 상태 확인
+curl http://localhost:3000/login      # Frontend
+curl http://localhost:3001/api/monitoring/health  # Backend
 
-# NextAuth providers 확인
-curl http://localhost:3000/api/auth/providers
+# 서비스 시작
+pnpm dev  # 또는 개별 시작
 ```
 
-### 문제 2: "TypeError: Failed to resolve module specifier"
+### 문제 2: storageState 파일 없음
 
-**증상**: `page.evaluate`에서 `import('next-auth/react')` 실패
+**증상**: `[Auth Fixture] storageState 파일 없음: .auth/test-engineer.json`
 
-**원인**: 브라우저 컨텍스트에서는 Node.js 모듈을 import할 수 없음
+**원인**: Setup project가 실행되지 않았거나 실패
 
-**해결 방법**: NextAuth callback API를 직접 POST로 호출 (현재 방식 사용)
+**해결**:
 
-### 문제 3: 세션은 있지만 API 호출 실패
+```bash
+# Setup project만 재실행
+npx playwright test --project=setup
 
-**증상**: 로그인은 성공하지만 API 요청 시 401 에러
-
-**원인 1**: `accessToken`이 NextAuth 세션에 포함되지 않음
-
-**해결 방법**: `lib/auth.ts`의 callbacks 확인
-
-```typescript
-callbacks: {
-  async jwt({ token, user, account }) {
-    // test-login provider도 포함
-    if ((account?.provider === 'credentials' || account?.provider === 'test-login') && user) {
-      token.accessToken = (user as any).accessToken; // ✅ 토큰 저장
-    }
-    return token;
-  },
-  async session({ session, token }) {
-    (session as any).accessToken = token.accessToken; // ✅ 세션에 전달
-    return session;
-  },
-}
+# .auth/ 디렉토리 확인
+ls tests/e2e/.auth/
+# test-engineer.json  technical-manager.json  quality-manager.json
+# lab-manager.json    system-admin.json       site-admin.json
 ```
 
-**원인 2**: Server Component에서 Client API 사용
+### 문제 3: 인증은 되지만 API 호출 실패 (401)
 
-**증상**: NextAuth 세션은 정상이지만 Server Component에서 API 호출 시 401 에러
+**증상**: 페이지 로드는 성공하지만 API 요청이 401 반환
 
-**해결 방법**: Server Component용 API 클라이언트 사용
+**원인**: storageState의 토큰이 만료됨 (Access Token 15분 수명)
 
-```typescript
-// ❌ Before - Client API in Server Component
-import equipmentApi from '@/lib/api/equipment-api';
-const equipment = await equipmentApi.getEquipment(id); // 401 에러!
+**해결**:
 
-// ✅ After - Server API in Server Component
-import * as equipmentApiServer from '@/lib/api/equipment-api-server';
-const equipment = await equipmentApiServer.getEquipment(id); // ✅ 성공!
+```bash
+# storageState 재생성
+rm -rf tests/e2e/.auth/
+npx playwright test --project=setup
 ```
 
-**상세 가이드**: `docs/development/AUTH_API_CLIENT_GUIDE.md`
+### 문제 4: DevLoginButtons가 표시되지 않음
+
+**증상**: Setup project에서 역할 버튼을 찾지 못함
+
+**원인**: `NODE_ENV`가 `production`이거나 `ENABLE_LOCAL_AUTH`가 비활성화
+
+**해결**:
+
+```bash
+# .env 확인
+ENABLE_LOCAL_AUTH=true
+NODE_ENV=development
+```
+
+### 문제 5: 특정 browser project에서만 인증 실패
+
+**증상**: chromium은 통과하지만 firefox/webkit에서 실패
+
+**원인**: storageState 파일이 있지만 해당 브라우저에서 쿠키 형식 비호환
+
+**해결**: `.auth/` 디렉토리를 삭제하고 setup project 재실행
 
 ---
 
 ## 체크리스트
 
-새로운 E2E 테스트 작성 시 확인 사항:
+새 E2E 테스트 작성 시:
 
-- [ ] `NODE_ENV=test`로 실행
-- [ ] NextAuth test-login provider가 활성화되어 있음
-- [ ] 백엔드 `/api/auth/test-login` 엔드포인트가 작동함
-- [ ] auth.fixture.ts를 사용하여 로그인
-- [ ] `localStorage` 토큰 사용하지 않음
-- [ ] NextAuth callback API를 직접 호출
-- [ ] CSRF 토큰을 올바르게 전달
-- [ ] 세션 확인 후 테스트 진행
+- [ ] `auth.fixture.ts`에서 `test`와 `expect`를 import
+- [ ] 역할별 fixture 사용 (`testOperatorPage`, `techManagerPage` 등)
+- [ ] spec 파일에서 직접 로그인하지 않음
+- [ ] `waitForTimeout` 사용하지 않음
+- [ ] `localStorage`에 토큰 저장하지 않음
+- [ ] 상태 변경 테스트는 `test.describe.configure({ mode: 'serial' })`
+- [ ] Backend API 직접 호출 시 `getBackendToken()` 사용
+
+새 역할 추가 시:
+
+- [ ] `auth.setup.ts` ROLES 배열에 추가
+- [ ] `auth.fixture.ts` STORAGE_STATE + AuthFixtures + test.extend에 추가
+- [ ] DevLoginButtons에 해당 역할 버튼 존재 확인
 
 ---
 
 ## 참고 자료
 
-- **인증 아키텍처 가이드**: `/equipment-management` 스킬 - `references/auth-architecture.md`
-- **NextAuth 공식 문서**: https://next-auth.js.org/configuration/providers/credentials
-- **Playwright 공식 문서**: https://playwright.dev/docs/auth
+- **Playwright 공식 문서 (Authentication)**: https://playwright.dev/docs/auth
+- **인증 아키텍처 가이드**: `references/auth-architecture.md`
 - **프로젝트 인증 설정**: `apps/frontend/lib/auth.ts`
-- **테스트 픽스처**: `apps/frontend/tests/e2e/fixtures/auth.fixture.ts`
+- **테스트 Setup**: `apps/frontend/tests/e2e/auth.setup.ts`
+- **테스트 Fixture**: `apps/frontend/tests/e2e/shared/fixtures/auth.fixture.ts`
 
 ---
 
-## 결론
-
-E2E 테스트에서 NextAuth 인증을 올바르게 처리하려면:
-
-1. ✅ NextAuth의 정상적인 인증 플로우를 사용
-2. ✅ test-login Provider를 NextAuth에 등록
-3. ✅ NextAuth callback API를 직접 POST로 호출
-4. ✅ NextAuth가 세션을 생성하고 쿠키를 관리하도록 함
-5. ✅ "단일 인증 소스(SSOT)" 원칙 준수
-
-**절대 금지**:
-
-- ❌ 백엔드 JWT를 직접 쿠키에 저장
-- ❌ NextAuth를 우회하는 어떤 방법도 사용하지 않음
-- ❌ `localStorage`에 토큰 저장
-
-이 가이드를 따르면 **실제 프로덕션 환경과 동일한 인증 플로우를 테스트**하여 높은 신뢰성을 확보할 수 있습니다.
-
----
-
-**최종 수정일**: 2026-01-22
-**작성자**: Claude Sonnet 4.5
-**버전**: 1.0.0
+**최종 수정일**: 2026-02-12
+**아키텍처**: Setup Project + storageState
+**버전**: 2.0.0

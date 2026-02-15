@@ -161,6 +161,910 @@ lsof -ti:3001 | xargs kill -9
 
 ---
 
+## 현대적 아키텍처 패턴 (2026-02)
+
+> **이 섹션의 목적**: 2026-02 현재 운영 중인 프로덕션급 아키텍처 패턴을 문서화하여, AI가 시니어급 사고력으로 시니어급 코드를 작성할 수 있도록 "왜(Why)"를 중심으로 설명합니다.
+
+### 패턴 개요
+
+이 프로젝트는 12가지 현대적 패턴으로 구성된 정교한 아키텍처를 갖추고 있습니다:
+
+**Backend (4 patterns)**:
+
+1. Optimistic Locking (CAS) - 동시성 제어
+2. Token Refresh - 보안 + UX 균형
+3. Server-Driven UI - UI 로직 중앙화
+4. Unified Error Handling - 표준화된 에러 응답
+
+**Frontend (5 patterns)**:
+
+5. Optimistic Update Hook - 즉시 UI 반응
+6. Server/Client API Separation - 환경별 최적화
+7. Cache Invalidation Strategies - 계층화된 캐시 전략
+8. Discriminated Union APIs - 타입 안전한 다형성
+9. Query Key Factory - 중앙화된 쿼리 키 관리
+
+**Transaction (1 pattern)**:
+
+10. Multi-Table Atomic Updates - 원자성 보장
+
+---
+
+### Backend Pattern 1: Optimistic Locking (CAS)
+
+#### 문제 정의
+
+**Lost Update Problem**: 두 사용자가 동시에 같은 엔티티를 조회 → 각자 수정 → 나중 요청이 먼저 요청을 덮어씀
+
+```
+User A: 조회(version: 1, status: pending) → 승인 → UPDATE SET status='approved'
+User B: 조회(version: 1, status: pending) → 반려 → UPDATE SET status='rejected'
+결과: B의 변경사항만 반영 (A의 승인 손실!) ← Lost Update
+```
+
+#### 해결: Compare-And-Swap (CAS)
+
+**핵심 파일**: `apps/backend/src/common/base/versioned-base.service.ts`
+
+모든 엔티티에 `version` 필드 추가 → UPDATE 시 WHERE 절에 `version = expectedVersion` 조건
+
+```typescript
+// ✅ 올바른 패턴 - VersionedBaseService 상속
+export class CheckoutsService extends VersionedBaseService {
+  async approve(uuid: string, approverId: string, currentVersion: number) {
+    // version 체크와 함께 업데이트
+    return this.updateWithVersion(
+      checkouts,
+      uuid,
+      currentVersion,
+      {
+        status: 'approved',
+        approvedBy: approverId,
+        approvedAt: new Date(),
+      },
+      'checkout'
+    );
+    // SQL: UPDATE checkouts
+    //      SET version = version + 1, status = 'approved', ...
+    //      WHERE id = ? AND version = ?
+    // → 0 rows affected? → 409 Conflict { code: 'VERSION_CONFLICT' }
+  }
+}
+
+// updateWithVersion 내부 로직 (VersionedBaseService)
+protected async updateWithVersion<T>(
+  table,
+  id: string,
+  expectedVersion: number,
+  updateData: Record<string, unknown>,
+  entityName: string
+): Promise<T> {
+  const [updated] = await this.db
+    .update(table)
+    .set({ ...updateData, version: sql`${table.version} + 1` })
+    .where(and(eq(table.id, id), eq(table.version, expectedVersion)))
+    .returning();
+
+  if (!updated) {
+    // 0 rows affected → 엔티티 없음 or 버전 충돌
+    const existing = await this.db.query[table].findFirst({
+      where: eq(table.id, id),
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`${entityName} not found`);
+    }
+
+    // 버전 충돌 → 409 + 커스텀 코드
+    throw new ConflictException({
+      code: 'VERSION_CONFLICT',
+      message: '다른 사용자가 먼저 처리했습니다',
+      currentVersion: existing.version,
+      expectedVersion,
+    });
+  }
+
+  return updated as T;
+}
+```
+
+#### DTO 규칙: versionedSchema 포함
+
+**파일**: `apps/backend/src/common/dto/base-versioned.dto.ts`
+
+```typescript
+// Base Zod schema
+export const versionedSchema = {
+  version: z.number().int().positive(),
+};
+
+// 사용 예
+export const approveCheckoutSchema = z.object({
+  ...versionedSchema, // ← version 필드 필수
+  comment: z.string().optional(),
+});
+
+export type ApproveCheckoutDto = z.infer<typeof approveCheckoutSchema>;
+export const ApproveCheckoutPipe = new ZodValidationPipe(approveCheckoutSchema);
+
+// Controller
+@Patch(':uuid/approve')
+@UsePipes(ApproveCheckoutPipe)
+async approve(@Param('uuid') uuid: string, @Body() dto: ApproveCheckoutDto) {
+  return this.service.approve(uuid, userId, dto.version); // ← version 전달
+}
+```
+
+#### Cache Coherence: CAS 실패 시 캐시 삭제
+
+**문제**: `findOne`이 `cacheService.getOrSet`으로 캐시 사용 → CAS 실패 후 stale cache 잔존 → 재시도도 계속 409
+
+**해결**: CAS 실패(409) 시 detail 캐시 반드시 삭제
+
+```typescript
+// ✅ 올바른 패턴 - CheckoutsService.updateCheckoutStatus
+async updateCheckoutStatus(uuid: string, status: string, version: number) {
+  const detailCacheKey = `checkout:detail:${uuid}`;
+
+  try {
+    return await this.updateWithVersion(checkouts, uuid, version, { status }, 'checkout');
+  } catch (error) {
+    // CAS 실패 시 캐시 무효화 (stale cache 방지)
+    if (error instanceof ConflictException) {
+      this.cacheService.delete(detailCacheKey);
+    }
+    throw error;
+  }
+}
+```
+
+#### 적용 엔티티 (8개)
+
+| Table              | Service                 | Key File                                         |
+| ------------------ | ----------------------- | ------------------------------------------------ |
+| equipment          | EquipmentService        | `modules/equipment/equipment.service.ts`         |
+| checkouts          | CheckoutsService        | `modules/checkouts/checkouts.service.ts`         |
+| calibrations       | CalibrationService      | `modules/calibration/calibration.service.ts`     |
+| non_conformances   | NonConformancesService  | `modules/non-conformances/...service.ts`         |
+| disposal_requests  | DisposalService         | `modules/equipment/services/disposal.service.ts` |
+| equipment_imports  | EquipmentImportsService | `modules/equipment-imports/...service.ts`        |
+| equipment_requests | EquipmentService        | `modules/equipment/equipment.service.ts`         |
+| software_history   | SoftwareService         | `modules/software/software.service.ts`           |
+
+---
+
+### Backend Pattern 2: Token Refresh Architecture
+
+#### 설계 원칙
+
+**문제**: Access Token이 너무 길면(1일) 탈취 시 위험, 너무 짧으면(5분) UX 저하
+
+**해결**: Access Token 짧게(15분) + Refresh Token 길게(7일) → 보안과 UX 균형
+
+#### Token 구조
+
+```typescript
+// Access Token Payload
+{
+  userId: string,
+  email: string,
+  role: UserRole,
+  site: string,
+  teamId: string,
+  type: 'access',
+  iat: number,
+  exp: number, // ← 15분 후
+}
+
+// Refresh Token Payload
+{
+  userId: string,
+  type: 'refresh', // ← 타입 구분 중요
+  iat: number,
+  exp: number, // ← 7일 후
+  absoluteExpiry: number, // ← 절대 만료 (30일)
+}
+```
+
+#### 자동 갱신 로직
+
+**파일**: `apps/frontend/app/api/auth/[...nextauth]/auth-config.ts`
+
+```typescript
+// JWT 콜백 - 매 세션 조회마다 실행
+jwt: async ({ token, user, account }) => {
+  // 초기 로그인
+  if (account && user) {
+    return {
+      accessToken: account.access_token,
+      refreshToken: account.refresh_token,
+      accessTokenExpires: Date.now() + 15 * 60 * 1000, // 15분
+      absoluteExpiry: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30일
+      user,
+    };
+  }
+
+  // 토큰 체크
+  const now = Date.now();
+
+  // 절대 만료 체크
+  if (now > token.absoluteExpiry) {
+    return { ...token, error: 'RefreshAccessTokenError' };
+  }
+
+  // 60초 이내 만료 예정 → refresh
+  const timeUntilExpiry = token.accessTokenExpires - now;
+  if (timeUntilExpiry < 60 * 1000) {
+    try {
+      const newAccessToken = await refreshAccessToken(token.refreshToken);
+      return {
+        ...token,
+        accessToken: newAccessToken,
+        accessTokenExpires: Date.now() + 15 * 60 * 1000,
+      };
+    } catch {
+      return { ...token, error: 'RefreshAccessTokenError' };
+    }
+  }
+
+  return token;
+};
+```
+
+#### SessionProvider 설정
+
+```typescript
+// ✅ 5분마다 JWT 콜백 트리거 (자동 갱신 체크)
+<SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={true}>
+  {children}
+</SessionProvider>
+```
+
+#### API 클라이언트 통합
+
+**파일**: `apps/frontend/lib/api/api-client.ts`
+
+```typescript
+// ✅ 토큰 캐시 제거, 401 시 getSession() 재조회
+apiClient.interceptors.request.use(async (config) => {
+  const session = await getSession(); // ← 매번 최신 세션 조회 (JWT 콜백 트리거)
+  if (session?.accessToken) {
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // 401 → getSession() 재조회로 JWT 콜백 트리거
+      const session = await getSession();
+      if (session?.error === 'RefreshAccessTokenError') {
+        // Refresh 실패 → 로그아웃
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+```
+
+---
+
+### Backend Pattern 3: Server-Driven UI
+
+#### 핵심 개념
+
+**문제**: 권한 로직이 백엔드와 프론트엔드에 중복 → 정책 변경 시 양측 수정 필요 → 불일치 위험
+
+**해결**: 백엔드가 각 엔티티의 **가능한 액션**을 계산하여 프론트엔드에 전달
+
+#### Response 구조
+
+```typescript
+// Backend Response
+{
+  id: '123',
+  status: 'pending',
+  createdBy: 'user1',
+  availableActions: ['approve', 'reject', 'cancel'], // ← 백엔드 계산
+}
+
+// Backend Service - 권한 로직 중앙화
+calculateAvailableActions(checkout: Checkout, userId: string, userRole: string): string[] {
+  const actions: string[] = [];
+
+  if (checkout.status === 'pending') {
+    // 기술책임자 이상 → 승인/반려 가능
+    if (['technical_manager', 'lab_manager'].includes(userRole)) {
+      actions.push('approve', 'reject');
+    }
+    // 본인 → 취소 가능
+    if (checkout.createdBy === userId) {
+      actions.push('cancel');
+    }
+  }
+
+  if (checkout.status === 'approved') {
+    // 시험실무자 이상 → 반출 시작 가능
+    actions.push('start_checkout');
+  }
+
+  return actions;
+}
+```
+
+#### Frontend 렌더링 - 단순 조건문
+
+```typescript
+// ✅ 프론트엔드 - 단순 렌더링만
+export function CheckoutActions({ checkout }: Props) {
+  const { availableActions } = checkout;
+
+  return (
+    <>
+      {availableActions.includes('approve') && (
+        <Button onClick={() => approve(checkout.id)}>승인</Button>
+      )}
+      {availableActions.includes('reject') && (
+        <Button onClick={() => reject(checkout.id)}>반려</Button>
+      )}
+      {availableActions.includes('cancel') && (
+        <Button onClick={() => cancel(checkout.id)}>취소</Button>
+      )}
+      {availableActions.includes('start_checkout') && (
+        <Button onClick={() => startCheckout(checkout.id)}>반출 시작</Button>
+      )}
+    </>
+  );
+}
+
+// ❌ 잘못된 패턴 - 프론트엔드에서 권한 로직 중복
+export function CheckoutActions({ checkout, user }: Props) {
+  const canApprove =
+    checkout.status === 'pending' &&
+    ['technical_manager', 'lab_manager'].includes(user.role);
+  const canReject =
+    checkout.status === 'pending' &&
+    ['technical_manager', 'lab_manager'].includes(user.role);
+  // → 백엔드 로직과 불일치 위험!
+}
+```
+
+#### 장점
+
+- ✅ 권한 로직 중복 제거 (백엔드 단일 소스)
+- ✅ UI 일관성 보장 (조건 분기 최소화)
+- ✅ 백엔드 정책 변경 시 프론트엔드 수정 불필요
+- ✅ 테스트 용이 (백엔드만 테스트)
+
+---
+
+### Backend Pattern 4: Unified Error Handling
+
+#### GlobalExceptionFilter
+
+**파일**: `apps/backend/src/common/filters/error.filter.ts`
+
+**처리 순서**: `AppError` → `ZodError` → `HttpException` → `unknown`
+
+#### 표준 에러 응답
+
+```typescript
+// Response 형식 - 커스텀 code 필드 보존
+{
+  code: string,          // 'VERSION_CONFLICT', 'VALIDATION_ERROR', 커스텀 코드
+  message: string,
+  timestamp: string,
+  currentVersion?: number, // CAS 실패 시 추가 필드
+  expectedVersion?: number
+}
+```
+
+#### 커스텀 에러 생성
+
+```typescript
+// ✅ 올바른 패턴 - code 필드로 에러 구분
+throw new ConflictException({
+  code: 'VERSION_CONFLICT',
+  message: '다른 사용자가 먼저 처리했습니다',
+  currentVersion: 5,
+  expectedVersion: 4,
+});
+
+// Frontend에서
+if (error.code === 'VERSION_CONFLICT') {
+  toast.error('다른 사용자가 먼저 처리했습니다. 페이지를 새로고침합니다.', {
+    duration: 3000,
+  });
+  await queryClient.refetchQueries({ queryKey: ['checkout', id] });
+}
+```
+
+#### Error Code SSOT
+
+**파일**: `apps/frontend/lib/errors/equipment-errors.ts`
+
+```typescript
+// Frontend Error Code Enum (21개)
+export enum EquipmentErrorCode {
+  VERSION_CONFLICT = 'VERSION_CONFLICT',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  DUPLICATE_ERROR = 'DUPLICATE_ERROR',
+  NOT_FOUND = 'NOT_FOUND',
+  // ... 17 more codes
+}
+
+// Backend code → Frontend EquipmentErrorCode 매핑
+export function mapBackendErrorCode(
+  backendCode: string | undefined,
+  httpStatus: number
+): EquipmentErrorCode {
+  // 1순위: Backend code 우선
+  if (backendCode === 'VERSION_CONFLICT') {
+    return EquipmentErrorCode.VERSION_CONFLICT;
+  }
+
+  // 2순위: HTTP status 폴백
+  return httpStatusToErrorCode(httpStatus);
+}
+```
+
+---
+
+### Frontend Pattern 5: Optimistic Update Hook
+
+#### 핵심 파일
+
+`apps/frontend/hooks/use-optimistic-mutation.ts`
+
+#### 전략: 서버 재검증 (Revalidation)
+
+**잘못된 이해**: "에러 시 스냅샷 롤백"
+
+**올바른 이해**: "에러 = 서버 상태 불일치 → 서버에서 최신 데이터 가져오기"
+
+```typescript
+// ✅ 올바른 패턴
+const mutation = useOptimisticMutation({
+  mutationFn: (vars) => checkoutApi.approve(vars),
+  queryKey: queryKeys.checkouts.detail(id),
+  optimisticUpdate: (old, vars) => ({ ...old, status: 'approved' }),
+  invalidateKeys: [queryKeys.checkouts.lists()],
+});
+
+// Lifecycle:
+// 1. onMutate: 즉시 UI 업데이트 (0ms 체감)
+//    → setQueryData로 낙관적 업데이트
+// 2. onSuccess: 서버 확정
+//    → invalidateQueries로 관련 쿼리 무효화
+// 3. onError: 스냅샷 롤백이 아닌 서버 재검증
+//    → invalidateQueries로 서버 최신 데이터 가져오기
+```
+
+#### useOptimisticMutation 내부 구현
+
+```typescript
+export function useOptimisticMutation<TData, TVariables>({
+  mutationFn,
+  queryKey,
+  optimisticUpdate,
+  invalidateKeys,
+}: Options<TData, TVariables>) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn,
+    onMutate: async (variables) => {
+      // 진행 중인 쿼리 취소
+      await queryClient.cancelQueries({ queryKey });
+
+      // 스냅샷 저장
+      const previousData = queryClient.getQueryData<TData>(queryKey);
+
+      // 낙관적 업데이트
+      if (optimisticUpdate && previousData) {
+        queryClient.setQueryData<TData>(queryKey, (old) =>
+          optimisticUpdate(old as TData, variables)
+        );
+      }
+
+      return { previousData };
+    },
+    onSuccess: async () => {
+      // 성공 → 관련 쿼리 무효화
+      await Promise.all(
+        invalidateKeys.map((key) => queryClient.invalidateQueries({ queryKey: key }))
+      );
+    },
+    onError: (error, variables, context) => {
+      // ⚠️ 핵심: 스냅샷 롤백이 아닌 서버 재검증!
+      queryClient.invalidateQueries({ queryKey });
+
+      // VERSION_CONFLICT 특별 처리
+      if (isConflictError(error)) {
+        toast.error('다른 사용자가 먼저 처리했습니다. 페이지가 자동으로 새로고침됩니다.', {
+          duration: 3000,
+        });
+      }
+    },
+  });
+}
+```
+
+#### 왜 스냅샷 롤백이 아닌가?
+
+**논리적 근거**:
+
+1. 에러 = "내가 본 데이터가 최신이 아님"
+2. 스냅샷 복원 = "stale state로 되돌리기" → 또 다른 stale state 생성
+3. 올바른 접근 = "서버에서 최신 데이터 가져오기" (invalidateQueries)
+
+**Vercel Best Practices 근거**:
+
+- `client-swr-dedup`: 자동 revalidation으로 stale state 방지
+- `async-parallel`: invalidateQueries + router.refresh() 병렬 실행
+
+---
+
+### Frontend Pattern 6: Server/Client API Separation
+
+#### 3-Tier 구조
+
+| Layer         | File                                        | Context                    | Use Case                        |
+| ------------- | ------------------------------------------- | -------------------------- | ------------------------------- |
+| Client-side   | `lib/api/api-client.ts`                     | `getSession()` interceptor | API hooks, mutations            |
+| Context-based | `lib/api/authenticated-client-provider.tsx` | `useSession()` hook        | 세션 동기화 필요 시             |
+| Server-side   | `lib/api/server-api-client.ts`              | `getServerAuthSession()`   | Server Component, Route Handler |
+
+#### 왜 분리하는가?
+
+**환경별 제약사항**:
+
+| 함수                     | Server Component | Client Component |
+| ------------------------ | ---------------- | ---------------- |
+| `getSession()`           | ❌ 불가          | ✅ OK            |
+| `getServerAuthSession()` | ✅ OK            | ❌ 불가          |
+| `useSession()` hook      | ❌ 불가          | ✅ OK            |
+
+#### Server Component에서 API 호출
+
+```typescript
+// ✅ 올바른 패턴 - server-api-client 사용
+// app/equipment/page.tsx (Server Component)
+import { equipmentApiServer } from '@/lib/api/server-api-client';
+
+export default async function EquipmentPage(props: PageProps) {
+  const searchParams = await props.searchParams;
+  const equipment = await equipmentApiServer.getEquipmentList(searchParams);
+  // → getServerAuthSession()으로 서버 세션 읽기
+
+  return <EquipmentListClient initialData={equipment} />;
+}
+```
+
+#### Client Component에서 API 호출
+
+```typescript
+// ✅ 올바른 패턴 - api-client 사용
+// components/equipment/EquipmentList.tsx ('use client')
+import equipmentApi from '@/lib/api/equipment-api';
+
+export function EquipmentList() {
+  const { data } = useQuery({
+    queryKey: ['equipmentList'],
+    queryFn: () => equipmentApi.getEquipmentList(),
+    // → getSession()으로 클라이언트 세션 읽기 (interceptor)
+  });
+}
+```
+
+---
+
+### Frontend Pattern 7: Cache Invalidation Strategies
+
+#### staleTime 계층화
+
+**파일**: `apps/frontend/lib/api/query-config.ts`
+
+| Preset    | staleTime | Use Case                 | Example                      |
+| --------- | --------- | ------------------------ | ---------------------------- |
+| SHORT     | 30s       | Dashboard, Notifications | `queryKeys.dashboard.all`    |
+| MEDIUM    | 2min      | Detail pages             | `queryKeys.equipment.detail` |
+| LONG      | 5min      | List pages               | `queryKeys.equipment.lists`  |
+| VERY_LONG | 10min     | Rarely changing data     | Calibration history          |
+| REFERENCE | 30min     | Teams, status codes      | `queryKeys.teams.all`        |
+
+#### 교차 엔티티 무효화
+
+**파일**: `apps/frontend/lib/api/cache-invalidation.ts`
+
+```typescript
+// ✅ 올바른 패턴 - 정적 메서드로 교차 엔티티 무효화
+export class EquipmentCacheInvalidation {
+  static async invalidateAfterNonConformanceCreation(
+    queryClient: QueryClient,
+    equipmentId: string
+  ) {
+    await Promise.all([
+      // Equipment 관련
+      queryClient.invalidateQueries({ queryKey: ['equipment', equipmentId] }),
+      queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] }),
+
+      // Non-Conformances 관련
+      queryClient.invalidateQueries({ queryKey: ['non-conformances', 'list'] }),
+
+      // Dashboard 관련 (장비 상태 변경 → 통계 영향)
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+    ]);
+  }
+
+  static async invalidateAfterDisposal(queryClient: QueryClient, equipmentId: string) {
+    await Promise.all([
+      // Equipment 관련
+      queryClient.invalidateQueries({ queryKey: ['equipment', equipmentId] }),
+      queryClient.invalidateQueries({ queryKey: ['equipment', 'list'] }),
+
+      // Checkouts 관련 (폐기 → 반출 취소)
+      queryClient.invalidateQueries({ queryKey: ['checkouts', 'list'] }),
+
+      // Dashboard 관련
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+    ]);
+  }
+}
+
+// ❌ 잘못된 패턴 - 수동으로 개별 무효화 (누락 위험)
+await queryClient.invalidateQueries(['equipment', equipmentId]);
+// → 다른 쿼리는 stale state 유지!
+```
+
+#### invalidateQueries vs refetchQueries
+
+```typescript
+// ✅ 즉시 refetch 필요 (현재 페이지에 표시 중)
+await queryClient.refetchQueries({
+  queryKey: ['equipment', id],
+  type: 'active', // ← 마운트된 쿼리만
+});
+
+// ✅ 다음 접근 시 refetch (백그라운드, 다른 페이지)
+await queryClient.invalidateQueries({
+  queryKey: ['equipmentList'],
+});
+```
+
+---
+
+### Frontend Pattern 8: Discriminated Union APIs
+
+#### 문제 정의
+
+반출 목적(purpose)에 따라 필요한 필드가 다름:
+
+- `calibration` → `calibrationAgency` 필수
+- `repair` → `repairDescription` 필수
+- `rental` → `borrowerSite`, `borrowerTeam` 필수
+
+#### 해결: TypeScript Discriminated Union
+
+```typescript
+// ✅ 올바른 패턴 - Discriminated Union
+type CheckoutRequest =
+  | {
+      purpose: 'calibration';
+      calibrationAgency: string;
+      expectedReturnDate: Date;
+    }
+  | {
+      purpose: 'repair';
+      repairDescription: string;
+      expectedReturnDate: Date;
+    }
+  | {
+      purpose: 'rental';
+      borrowerSite: string;
+      borrowerTeam: string;
+      expectedReturnDate: Date;
+    };
+
+// TypeScript가 자동으로 타입 좁히기
+function processCheckout(req: CheckoutRequest) {
+  if (req.purpose === 'calibration') {
+    console.log(req.calibrationAgency); // ✅ OK - 타입 안전
+    console.log(req.repairDescription); // ❌ 컴파일 에러 (해당 필드 없음)
+  }
+
+  if (req.purpose === 'repair') {
+    console.log(req.repairDescription); // ✅ OK
+    console.log(req.borrowerSite); // ❌ 컴파일 에러
+  }
+}
+```
+
+#### Zod Schema 구현
+
+```typescript
+// Backend Zod schema
+export const createCheckoutSchema = z.discriminatedUnion('purpose', [
+  z.object({
+    purpose: z.literal('calibration'),
+    equipmentId: z.string().uuid(),
+    calibrationAgency: z.string().min(1),
+    expectedReturnDate: z.coerce.date(),
+  }),
+  z.object({
+    purpose: z.literal('repair'),
+    equipmentId: z.string().uuid(),
+    repairDescription: z.string().min(10),
+    expectedReturnDate: z.coerce.date(),
+  }),
+  z.object({
+    purpose: z.literal('rental'),
+    equipmentId: z.string().uuid(),
+    borrowerSite: z.enum(['suwon', 'uiwang', 'pyeongtaek']),
+    borrowerTeam: z.string().uuid(),
+    expectedReturnDate: z.coerce.date(),
+  }),
+]);
+
+export type CreateCheckoutDto = z.infer<typeof createCheckoutSchema>;
+```
+
+#### 장점
+
+- ✅ 컴파일 타임에 타입 안전성 보장
+- ✅ 필수 필드 누락 방지 (Zod 검증)
+- ✅ 런타임 오류 제거
+
+---
+
+### Frontend Pattern 9: Query Key Factory
+
+#### 문제
+
+쿼리 키를 각 파일에서 하드코딩 → 타입 안전하지 않고, 무효화 시 누락 위험
+
+```typescript
+// ❌ 잘못된 패턴 - 하드코딩
+useQuery({ queryKey: ['equipment', id] }); // 타입 안전하지 않음
+queryClient.invalidateQueries(['equipment', 'list']); // 오타 위험
+```
+
+#### 해결: 중앙화된 팩토리
+
+**파일**: `apps/frontend/lib/api/query-config.ts`
+
+```typescript
+// ✅ SSOT - Query Key Factory
+export const queryKeys = {
+  equipment: {
+    all: () => ['equipment'] as const,
+    lists: () => [...queryKeys.equipment.all(), 'list'] as const,
+    list: (filters: EquipmentFilters) => [...queryKeys.equipment.lists(), filters] as const,
+    details: () => [...queryKeys.equipment.all(), 'detail'] as const,
+    detail: (id: string) => [...queryKeys.equipment.details(), id] as const,
+  },
+  checkouts: {
+    all: () => ['checkouts'] as const,
+    lists: () => [...queryKeys.checkouts.all(), 'list'] as const,
+    list: (filters: CheckoutFilters) => [...queryKeys.checkouts.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.checkouts.all(), 'detail', id] as const,
+  },
+  calibrations: {
+    all: () => ['calibrations'] as const,
+    lists: () => [...queryKeys.calibrations.all(), 'list'] as const,
+    detail: (id: string) => [...queryKeys.calibrations.all(), 'detail', id] as const,
+    history: (equipmentId: string) =>
+      [...queryKeys.calibrations.all(), 'history', equipmentId] as const,
+  },
+  dashboard: {
+    all: () => ['dashboard'] as const,
+    stats: () => [...queryKeys.dashboard.all(), 'stats'] as const,
+    notifications: () => [...queryKeys.dashboard.all(), 'notifications'] as const,
+  },
+  // ... 다른 리소스
+};
+
+// 사용 예
+useQuery({ queryKey: queryKeys.equipment.detail(id) });
+// → ['equipment', 'detail', '123']
+
+queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
+// → ['equipment', 'list']를 prefix로 갖는 모든 쿼리 무효화
+// → ['equipment', 'list'], ['equipment', 'list', { site: 'suwon' }] 등
+```
+
+#### 계층적 무효화
+
+```typescript
+// 특정 장비 detail만 무효화
+await queryClient.invalidateQueries({ queryKey: queryKeys.equipment.detail('123') });
+// → ['equipment', 'detail', '123']만 무효화
+
+// 모든 장비 목록 무효화 (필터 조합 포함)
+await queryClient.invalidateQueries({ queryKey: queryKeys.equipment.lists() });
+// → ['equipment', 'list', ...] 모든 변형 무효화
+
+// 장비 관련 모든 쿼리 무효화
+await queryClient.invalidateQueries({ queryKey: queryKeys.equipment.all() });
+// → ['equipment', ...] 모든 하위 쿼리 무효화
+```
+
+#### 장점
+
+- ✅ 타입 안전한 쿼리 키
+- ✅ 계층적 무효화 (lists() → 모든 목록 무효화)
+- ✅ 중복 방지 (단일 소스)
+- ✅ 오타 방지 (IDE 자동완성)
+
+---
+
+### Transaction Pattern 10: Multi-Table Atomic Updates
+
+#### 원칙
+
+**다중 테이블 업데이트 → 트랜잭션 필수**
+
+**CAS 단일 테이블 업데이트 → 트랜잭션 불필요**
+
+#### 다중 테이블 → 트랜잭션
+
+```typescript
+// ✅ 올바른 패턴 - 트랜잭션으로 원자성 보장
+await db.transaction(async (tx) => {
+  // 1. 장비 상태 변경
+  await tx.update(equipment).set({ status: 'disposed' }).where(eq(equipment.id, id));
+
+  // 2. 감사 로그 기록
+  await tx.insert(auditLogs).values({
+    action: 'dispose',
+    entityType: 'equipment',
+    entityId: id,
+    performedBy: userId,
+  });
+
+  // 3. 관련 반출 취소
+  await tx
+    .update(checkouts)
+    .set({ status: 'canceled' })
+    .where(and(eq(checkouts.equipmentId, id), eq(checkouts.status, 'pending')));
+});
+
+// → 3개 작업 모두 성공 or 모두 롤백 (원자성)
+```
+
+#### CAS 단일 테이블 → 트랜잭션 불필요
+
+```typescript
+// ✅ 올바른 패턴 - WHERE version = ? 자체가 원자성 보장
+await db
+  .update(equipment)
+  .set({ status: 'approved', version: sql`${equipment.version} + 1` })
+  .where(and(eq(equipment.id, id), eq(equipment.version, expectedVersion)));
+
+// → 0 rows affected? → 충돌 감지 (409)
+// → 트랜잭션 오버헤드 불필요!
+```
+
+#### 왜 CAS는 트랜잭션 불필요한가?
+
+**논리적 근거**:
+
+1. `WHERE version = ?` 조건 자체가 원자성 보장
+2. 단일 UPDATE 문 = 원자 연산 (DB 엔진 보장)
+3. 0 rows affected → 충돌 감지 (즉시 409 응답)
+4. 트랜잭션 오버헤드 제거 → 성능 향상
+
+**트랜잭션 오버헤드**:
+
+- BEGIN/COMMIT 추가 왕복
+- Lock 유지 시간 증가
+- 동시성 저하
+
+---
+
 ## 핵심 용어 (UL-QP-18 기준)
 
 | 용어                     | 정의                                                         |
@@ -569,6 +1473,62 @@ async update(@Req() req?: AuthenticatedRequest) {
 }
 ```
 
+### 7. Optimistic Locking 없이 상태 변경
+
+```typescript
+// ❌ 금지 - version 체크 없이 UPDATE (Lost Update 위험)
+async approve(uuid: string, approverId: string) {
+  await db.update(checkouts)
+    .set({ status: 'approved', approvedBy: approverId })
+    .where(eq(checkouts.id, uuid));
+  // → 다른 사용자의 변경사항 덮어쓰기 가능!
+}
+
+// ✅ 권장 - CAS 패턴 사용 (VersionedBaseService)
+async approve(uuid: string, approverId: string, currentVersion: number) {
+  return this.updateWithVersion(
+    checkouts,
+    uuid,
+    currentVersion,
+    { status: 'approved', approvedBy: approverId },
+    'checkout'
+  );
+  // → WHERE version = ? 조건으로 동시성 제어
+  // → 0 rows affected? → 409 Conflict
+}
+```
+
+### 8. 수동 캐시 조작 (스냅샷 롤백)
+
+```typescript
+// ❌ 금지 - 에러 시 스냅샷 롤백 (또 다른 stale state 생성)
+useMutation({
+  onMutate: async (variables) => {
+    const previousData = queryClient.getQueryData(queryKey);
+    queryClient.setQueryData(queryKey, optimisticUpdate(previousData, variables));
+    return { previousData };
+  },
+  onError: (error, variables, context) => {
+    // ❌ 스냅샷 복원 - stale state로 되돌림!
+    queryClient.setQueryData(queryKey, context.previousData);
+  },
+});
+
+// ✅ 권장 - 에러 시 서버 재검증 (invalidateQueries)
+useMutation({
+  onMutate: async (variables) => {
+    await queryClient.cancelQueries({ queryKey });
+    const previousData = queryClient.getQueryData(queryKey);
+    queryClient.setQueryData(queryKey, optimisticUpdate(previousData, variables));
+    return { previousData };
+  },
+  onError: () => {
+    // ✅ 서버에서 최신 데이터 가져오기
+    queryClient.invalidateQueries({ queryKey });
+  },
+});
+```
+
 ---
 
 ## 핵심 규칙
@@ -938,12 +1898,75 @@ export function EquipmentListClient({ initialData }) {
 }
 ```
 
+### 캐시 전략 (TanStack Query)
+
+#### staleTime 계층화 원칙
+
+**파일**: `apps/frontend/lib/api/query-config.ts`
+
+| Resource Type           | staleTime         | Rationale                  | Example Queries                      |
+| ----------------------- | ----------------- | -------------------------- | ------------------------------------ |
+| Dashboard/Notifications | 30s (SHORT)       | 자주 변경, 실시간성 중요   | Dashboard stats, notification counts |
+| Detail Pages            | 2min (MEDIUM)     | 자주 조회, 적당한 실시간성 | Equipment detail, checkout detail    |
+| List Pages              | 5min (LONG)       | 필터 조합 다양, 캐시 효율  | Equipment list, checkout list        |
+| Rarely Changing         | 10min (VERY_LONG) | 드물게 변경                | Calibration history                  |
+| Reference Data          | 30min (REFERENCE) | 거의 불변                  | Teams, sites, status codes           |
+
+#### Mutation vs Read-only Page 전략
+
+**Mutation이 있는 페이지** (상세 페이지, 승인 페이지):
+
+```typescript
+// ✅ Server Component props + useQuery 연동 (SSOT)
+const { data: equipment } = useQuery({
+  queryKey: queryKeys.equipment.detail(id),
+  queryFn: () => equipmentApi.getEquipment(id),
+  initialData: serverPropsEquipment, // ← Server Component 초기 데이터
+  staleTime: 0, // ← mutation 후 즉시 반영
+});
+
+// Mutation 후 자동 refetch
+onSuccess: async () => {
+  await queryClient.refetchQueries({ queryKey: queryKeys.equipment.detail(id) });
+};
+```
+
+**Read-only Page** (목록 페이지):
+
+```typescript
+// ✅ 긴 staleTime으로 캐시 활용
+const { data: equipmentList } = useQuery({
+  queryKey: queryKeys.equipment.list(filters),
+  queryFn: () => equipmentApi.getEquipmentList(filters),
+  staleTime: CACHE_TIME.LONG, // ← 5분
+});
+```
+
+#### Prefetching 전략
+
+```typescript
+// ✅ 목록 → 상세 이동 시 prefetch
+<Link
+  href={`/equipment/${equipment.id}`}
+  onMouseEnter={() => {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.equipment.detail(equipment.id),
+      queryFn: () => equipmentApi.getEquipment(equipment.id),
+    });
+  }}
+>
+  {equipment.name}
+</Link>
+```
+
 ### 필수 규칙
 
 1. **params/searchParams는 Promise** - 반드시 await 사용
 2. **useActionState** 사용 (useFormState 아님)
 3. **Form action은 void 반환** - revalidatePath 사용
 4. **any 타입 금지**
+5. **Mutation 페이지는 staleTime: 0** - 즉시 UI 반영
+6. **Read-only 페이지는 적절한 staleTime** - 캐시 효율
 
 ```typescript
 // ✅ Next.js 16 올바른 패턴
@@ -1112,46 +2135,42 @@ onSuccess: async () => {
 
 ## E2E 테스트
 
-> **중요**: Playwright E2E 테스트에서 NextAuth 인증을 올바르게 처리하는 방법
+> **중요**: Playwright E2E 테스트는 Setup Project + storageState 기반 인증을 사용합니다.
 
-### 핵심 원칙
+### 아키텍처
+
+1. **`auth.setup.ts`** (Setup Project): 5개 역할에 대해 browser-native 로그인 수행 → `.auth/*.json` 저장
+2. **`auth.fixture.ts`**: storageState 파일 로드 → 역할별 인증된 Page fixture 제공
+3. **`playwright.config.ts`**: `setup` project + 모든 browser project에 `dependencies: ['setup']`
+
+### 핵심 규칙
 
 **절대 금지**:
 
-- ❌ 백엔드 JWT를 직접 쿠키에 저장
-- ❌ NextAuth를 우회하는 어떤 방법
+- ❌ spec 파일에서 직접 로그인 (`loginAs`, `signIn`, `page.goto('/login')`)
+- ❌ 수동 쿠키 파싱 (`Set-Cookie` 헤더 split)
+- ❌ `waitForTimeout` (시간 기반 대기)
 - ❌ `localStorage`에 토큰 저장
 
 **권장 사항**:
 
-- ✅ NextAuth Provider를 통한 인증 (test-login)
-- ✅ NextAuth callback API 직접 호출
-- ✅ "단일 인증 소스(SSOT)" 원칙 준수
+- ✅ `auth.fixture.ts`의 fixture 사용 (`testOperatorPage`, `techManagerPage` 등)
+- ✅ 새 역할 추가 시 `auth.setup.ts` ROLES + `auth.fixture.ts` STORAGE_STATE에 추가
+- ✅ locator 기반 assertion (`waitForURL`, `expect(locator).toBeVisible()`)
 
-### 올바른 인증 플로우
+### 테스트 작성 예제
 
 ```typescript
-// ✅ 올바른 E2E 테스트 로그인 방식
-async function loginAs(page: Page, role: string) {
-  // 1. CSRF 토큰 획득
-  const csrfResponse = await page.request.get('http://localhost:3000/api/auth/csrf');
-  const { csrfToken } = await csrfResponse.json();
+import { test, expect } from '../../shared/fixtures/auth.fixture';
 
-  // 2. NextAuth callback API로 POST 요청
-  const loginResponse = await page.request.post(
-    'http://localhost:3000/api/auth/callback/test-login?callbackUrl=/',
-    {
-      form: {
-        role: role,
-        csrfToken: csrfToken,
-        json: 'true',
-      },
-    }
-  );
-
-  // 3. 메인 페이지로 이동하여 세션 확인
-  await page.goto('/');
-}
+test.describe('Feature Name', () => {
+  test('TC-01: 기술책임자가 승인한다', async ({ techManagerPage: page }) => {
+    await page.goto('/target-page');
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: '승인' }).click();
+    await expect(page.getByText('성공')).toBeVisible();
+  });
+});
 ```
 
 **상세 가이드**: [references/e2e-test-auth.md](references/e2e-test-auth.md)
@@ -1205,6 +2224,22 @@ pnpm dev            # 개발 서버
 - **프론트엔드 UI 패턴**: [references/frontend-patterns.md](references/frontend-patterns.md)
 - **인증 아키텍처**: [references/auth-architecture.md](references/auth-architecture.md) - NextAuth 토큰 관리, localStorage 금지 정책
 - **E2E 테스트 인증**: [references/e2e-test-auth.md](references/e2e-test-auth.md) - Playwright E2E 테스트에서 NextAuth 인증 처리, 잘못된 접근 vs 올바른 접근
+
+### 아키텍처 패턴 파일
+
+**Backend Patterns:**
+
+- **Optimistic Locking**: `apps/backend/src/common/base/versioned-base.service.ts` - CAS 구현, updateWithVersion 메서드
+- **Token Refresh**: `apps/backend/src/modules/auth/auth.service.ts` - Access/Refresh Token 발급 로직
+- **Unified Error Handling**: `apps/backend/src/common/filters/error.filter.ts` - GlobalExceptionFilter
+
+**Frontend Patterns:**
+
+- **Optimistic Update Hook**: `apps/frontend/hooks/use-optimistic-mutation.ts` - 서버 재검증 전략
+- **Server/Client API**: `apps/frontend/lib/api/server-api-client.ts`, `apps/frontend/lib/api/api-client.ts` - 환경별 API 클라이언트
+- **Cache Invalidation**: `apps/frontend/lib/api/cache-invalidation.ts` - 교차 엔티티 무효화 헬퍼
+- **Query Keys Factory**: `apps/frontend/lib/api/query-config.ts` - 중앙화된 쿼리 키 관리
+- **Error Mapping**: `apps/frontend/lib/errors/equipment-errors.ts` - Backend code → Frontend EquipmentErrorCode 매핑
 
 ### 연관 스킬
 

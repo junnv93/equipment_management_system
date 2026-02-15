@@ -1,4 +1,7 @@
 {
+  "env": {
+    "ENABLE_TOOL_SEARCH": "AUTO:5"
+  },
   "permissions": {
     "allow": [
       "Read",
@@ -11,13 +14,13 @@
       "mcp__sequential-thinking",
       "mcp__shadcn__search_items_in_registries",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "mcp__playwright-test__browser_navigate",
+      "mcp__playwright-test__planner_setup_page",
+      "mcp__playwright-test__browser_snapshot"
     ],
     "deny": [],
     "ask": []
-  },
-  "env": {
-    "ENABLE_TOOL_SEARCH": "AUTO:5"
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": ["playwright"],
