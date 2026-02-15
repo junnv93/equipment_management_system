@@ -65,6 +65,30 @@ export class AuthController {
   }
 
   /**
+   * 로그아웃 — 토큰 블랙리스트 등록
+   *
+   * 클라이언트는 Authorization 헤더 (access token) +
+   * Body의 refresh_token을 전송합니다.
+   */
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(
+    @Req() req: AuthenticatedRequest,
+    @Body('refresh_token') refreshToken?: string
+  ): Promise<{ success: boolean; message: string }> {
+    // Authorization 헤더에서 access token 추출
+    const authHeader = (req.headers as Record<string, string | undefined>).authorization;
+    const accessToken = authHeader?.replace('Bearer ', '') || '';
+
+    await this.authService.logout(accessToken, refreshToken);
+
+    return {
+      success: true,
+      message: '로그아웃되었습니다.',
+    };
+  }
+
+  /**
    * Refresh Token으로 새 Access Token 발급
    * Access Token 만료 시 호출되므로 @Public() 필수 (JWT Guard 우회)
    */

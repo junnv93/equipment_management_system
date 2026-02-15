@@ -19,7 +19,9 @@ export interface AuditLogMetadata {
     | 'return'
     | 'cancel'
     | 'login'
-    | 'logout';
+    | 'logout'
+    | 'close'
+    | 'reject_correction';
   entityType:
     | 'equipment'
     | 'calibration'
@@ -31,7 +33,12 @@ export interface AuditLogMetadata {
     | 'non_conformance'
     | 'software'
     | 'calibration_plan'
-    | 'repair_history';
+    | 'repair_history'
+    | 'equipment_import'
+    | 'location_history'
+    | 'maintenance_history'
+    | 'incident_history'
+    | 'settings';
   /**
    * 엔티티 ID를 추출하는 함수 또는 파라미터 경로
    * - 함수: (request, response) => entityId

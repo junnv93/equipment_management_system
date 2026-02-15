@@ -91,7 +91,7 @@ export const USERS_SEED_DATA: (typeof users.$inferInsert)[] = [
     id: USER_SYSTEM_ADMIN_ID,
     email: 'system.admin@example.com',
     name: '시스템 관리자',
-    role: 'lab_manager' as UserRole, // system_admin inherits lab_manager permissions
+    role: 'system_admin' as UserRole,
     teamId: TEAM_FCC_EMC_RF_SUWON_ID,
     site: 'suwon',
     location: '수원랩',

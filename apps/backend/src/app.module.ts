@@ -1,6 +1,7 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { validateEnv } from './config/env.validation';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -28,6 +29,7 @@ import { HelmetConfigService } from './common/middleware/helmet-config';
 import { AuditModule } from './modules/audit/audit.module';
 import { EquipmentImportsModule } from './modules/equipment-imports/equipment-imports.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -37,6 +39,7 @@ import { ApprovalsModule } from './modules/approvals/approvals.module';
       validate: validateEnv,
     }),
     ScheduleModule.forRoot(), // 스케줄러 모듈 등록 (교정 기한 초과 자동 점검)
+    EventEmitterModule.forRoot({ wildcard: false, maxListeners: 20 }), // 도메인 이벤트 버스
 
     // 공통 모듈
     CacheModule,
@@ -64,6 +67,7 @@ import { ApprovalsModule } from './modules/approvals/approvals.module';
     DashboardModule,
     EquipmentImportsModule, // Unified rental + internal shared imports
     ApprovalsModule, // Unified approval counts API
+    SettingsModule, // System + calibration settings
   ],
   controllers: [],
   providers: [

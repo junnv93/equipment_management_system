@@ -3,6 +3,35 @@ import { ZodSchema, ZodError } from 'zod';
 import { getErrorMessage } from '../utils/error';
 
 /**
+ * 검증 대상 파라미터 타입
+ *
+ * - 'body': 요청 본문 (기본값, 가장 일반적)
+ * - 'query': URL 쿼리 파라미터 (QueryDto 검증용)
+ * - 'param': 경로 파라미터 (개별 param 검증 시에만 사용)
+ */
+export type ValidationTarget = 'body' | 'query' | 'param';
+
+export interface ZodValidationPipeOptions {
+  /**
+   * 검증할 파라미터 타입을 명시적으로 지정합니다.
+   *
+   * @default ['body']
+   *
+   * ✅ SSOT 원칙: 파이프 인스턴스 생성 시점(DTO 파일)에서 검증 의도를 선언.
+   * @UsePipes()가 메서드 레벨에서 모든 파라미터에 적용되더라도,
+   * 파이프가 자신의 검증 대상만 처리합니다.
+   *
+   * @example
+   * // Body 검증 (기본값 — 대부분의 DTO)
+   * new ZodValidationPipe(createSchema)
+   *
+   * // Query 검증 (명시적 타겟)
+   * new ZodValidationPipe(querySchema, { targets: ['query'] })
+   */
+  targets?: ValidationTarget[];
+}
+
+/**
  * Zod 기반 검증 파이프
  *
  * ✅ Single Source of Truth 원칙: 모든 검증은 Zod 스키마를 사용합니다.
@@ -12,36 +41,37 @@ import { getErrorMessage } from '../utils/error';
  * - 전역 ValidationPipe는 제거되어 충돌 없음
  * - 타입 안전성과 일관성 보장
  *
- * 사용법:
- * - 컨트롤러에서 @UsePipes(ZodValidationPipe) 데코레이터 사용
- * - 또는 DTO에서 export된 ValidationPipe 인스턴스 사용
+ * 사용법 (SSOT 패턴):
+ * - Body DTO: `new ZodValidationPipe(schema)` (기본값: body만 검증)
+ * - Query DTO: `new ZodValidationPipe(schema, { targets: ['query'] })`
+ * - 컨트롤러에서 `@UsePipes(pipe)` 또는 `@Body(pipe)` 데코레이터 사용
  *
  * @example
  * ```typescript
- * @UsePipes(UpdateEquipmentValidationPipe)
- * update(@Body() dto: UpdateEquipmentDto) { ... }
- * ```
+ * // DTO 파일에서 파이프 생성 (검증 의도를 SSOT로 선언)
+ * export const UpdateEquipmentPipe = new ZodValidationPipe(updateSchema);
+ * export const EquipmentQueryPipe = new ZodValidationPipe(querySchema, { targets: ['query'] });
  *
- * 장점:
- * - 타입 안전성: Zod 스키마에서 TypeScript 타입 자동 추론
- * - 일관성: 프론트엔드와 백엔드가 동일한 스키마 사용
- * - 유지보수성: 한 곳에서 스키마 관리
+ * // 컨트롤러에서 사용 — @UsePipes도 안전 (@Param에 적용되지 않음)
+ * @UsePipes(UpdateEquipmentPipe)
+ * update(@Param('uuid') uuid: string, @Body() dto: DTO) { ... }
+ * ```
  */
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private schema: ZodSchema) {}
+  private readonly validationTargets: Set<string>;
+
+  constructor(
+    private schema: ZodSchema,
+    options?: ZodValidationPipeOptions
+  ) {
+    this.validationTargets = new Set(options?.targets ?? ['body']);
+  }
 
   transform(value: unknown, metadata: ArgumentMetadata): unknown {
-    // ✅ SSOT 원칙: Zod 스키마의 변환 로직을 body, query, param 모두에 적용
-    // - body: 요청 본문 검증 및 변환
-    // - query: 쿼리 파라미터 타입 변환 (문자열 → boolean, number 등)
-    // - param: 경로 파라미터 검증 (UUID 등은 ParseUUIDPipe로 우선 처리)
-    // - custom: 커스텀 데코레이터용
-    //
-    // ⚠️ 주의: @Param에서 ParseUUIDPipe와 같이 사용 시 충돌 방지
-    // → ParseUUIDPipe가 먼저 실행되므로 문제없음
-    const allowedTypes = ['body', 'query', 'param'];
-    if (!allowedTypes.includes(metadata.type)) {
+    // ✅ SSOT: 파이프 인스턴스 생성 시 지정된 타겟만 검증
+    // 기본값 ['body'] — @UsePipes() 메서드 레벨에서도 @Param/@Request 안전
+    if (!this.validationTargets.has(metadata.type)) {
       return value;
     }
 

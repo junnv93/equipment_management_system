@@ -101,7 +101,8 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     }
   ),
 
-  // Corrected + Repair Link (조치 완료, 수리 완료)
+  // Corrected + Repair Link (조치 완료, 승인 대기 중)
+  // ⚠️ PENDING APPROVAL: corrected 상태 = 기술책임자 승인 대기
   createNC(
     NC_006_ID,
     EQUIP_HARNESS_COUPLER_SUW_A_ID,
@@ -120,7 +121,8 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     }
   ),
 
-  // Corrected (조치 완료, 수리 완료)
+  // Corrected (조치 완료, 승인 대기 중)
+  // ⚠️ PENDING APPROVAL: corrected 상태 = 기술책임자 승인 대기
   createNC(
     NC_007_ID,
     EQUIP_CURRENT_PROBE_SUW_A_ID,
@@ -138,7 +140,8 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     }
   ),
 
-  // Corrected + Recalibration
+  // Corrected + Recalibration (조치 완료, 승인 대기 중)
+  // ⚠️ PENDING APPROVAL: corrected 상태 = 기술책임자 승인 대기
   createNC(
     NC_008_ID,
     EQUIP_EMC_RECEIVER_SUW_E_ID,
@@ -155,7 +158,9 @@ export const NON_CONFORMANCES_SEED_DATA: (typeof nonConformances.$inferInsert)[]
     }
   ),
 
-  // Corrected + Replacement
+  // Corrected + Replacement (조치 완료, 승인 대기 중 - Uiwang 사이트)
+  // ⚠️ PENDING APPROVAL: corrected 상태 = 기술책임자 승인 대기
+  // 🌐 CROSS-SITE: Uiwang General RF 팀 소속 장비 (크로스 사이트 워크플로우 테스트용)
   createNC(
     NC_009_ID,
     EQUIP_RECEIVER_UIW_W_ID,

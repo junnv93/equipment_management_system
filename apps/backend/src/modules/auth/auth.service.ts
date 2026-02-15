@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { UserRole } from './rbac/roles.enum';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 
 // 인터페이스 추가
 export interface UserDto {
@@ -74,10 +75,13 @@ export interface TestUser {
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
+  private static readonly BLACKLIST_PREFIX = 'token_blacklist:';
+
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
-    private usersService: UsersService
+    private usersService: UsersService,
+    private cacheService: SimpleCacheService
   ) {}
 
   // 로컬 로그인 (개발/테스트 환경 전용, 프로덕션에서는 Azure AD만 사용)
@@ -364,6 +368,11 @@ export class AuthService {
    * - 새 access_token + 새 refresh_token 발급
    */
   async refreshTokens(refreshToken: string): Promise<AuthResponse> {
+    // 블랙리스트 확인 (로그아웃된 토큰 거부)
+    if (this.isTokenBlacklisted(refreshToken)) {
+      throw new UnauthorizedException('이 리프레시 토큰은 로그아웃으로 무효화되었습니다.');
+    }
+
     try {
       const refreshSecret =
         this.configService.get<string>('REFRESH_TOKEN_SECRET') ||
@@ -417,6 +426,69 @@ export class AuthService {
       this.logger.warn(`refreshTokens() 실패: ${(error as Error).message}`);
       throw new UnauthorizedException('리프레시 토큰이 만료되었거나 유효하지 않습니다.');
     }
+  }
+
+  /**
+   * 로그아웃 처리 — Access Token + Refresh Token 블랙리스트 등록
+   *
+   * 토큰의 남은 TTL만큼 블랙리스트에 유지하여 메모리 낭비를 방지합니다.
+   * Access Token (최대 15분) + Refresh Token (최대 7일)
+   */
+  async logout(accessToken: string, refreshToken?: string): Promise<void> {
+    // Access Token 블랙리스트 등록
+    try {
+      const jwtSecret = this.configService.get<string>('JWT_SECRET');
+      const accessPayload = this.jwtService.verify(accessToken, {
+        secret: jwtSecret,
+        ignoreExpiration: true, // 만료된 토큰도 블랙리스트 등록 (이중 안전)
+      });
+
+      const accessTtl = this.getRemainingTtlMs(accessPayload.exp);
+      if (accessTtl > 0) {
+        this.cacheService.set(`${AuthService.BLACKLIST_PREFIX}${accessToken}`, true, accessTtl);
+      }
+    } catch {
+      this.logger.warn('logout(): access token 디코딩 실패 (이미 만료된 토큰일 수 있음)');
+    }
+
+    // Refresh Token 블랙리스트 등록
+    if (refreshToken) {
+      try {
+        const refreshSecret =
+          this.configService.get<string>('REFRESH_TOKEN_SECRET') ||
+          this.configService.get<string>('JWT_SECRET') + '_refresh';
+
+        const refreshPayload = this.jwtService.verify(refreshToken, {
+          secret: refreshSecret,
+          ignoreExpiration: true,
+        });
+
+        const refreshTtl = this.getRemainingTtlMs(refreshPayload.exp);
+        if (refreshTtl > 0) {
+          this.cacheService.set(`${AuthService.BLACKLIST_PREFIX}${refreshToken}`, true, refreshTtl);
+        }
+      } catch {
+        this.logger.warn('logout(): refresh token 디코딩 실패');
+      }
+    }
+
+    this.logger.log('사용자 로그아웃 처리 완료 (토큰 블랙리스트 등록)');
+  }
+
+  /**
+   * 토큰이 블랙리스트에 등록되었는지 확인
+   */
+  isTokenBlacklisted(token: string): boolean {
+    return this.cacheService.get<boolean>(`${AuthService.BLACKLIST_PREFIX}${token}`) === true;
+  }
+
+  /**
+   * JWT exp 클레임으로부터 남은 TTL(ms) 계산
+   */
+  private getRemainingTtlMs(exp?: number): number {
+    if (!exp) return 0;
+    const remaining = exp * 1000 - Date.now();
+    return Math.max(remaining, 0);
   }
 
   // JWT 토큰 생성 (Access Token 15분 + Refresh Token 7일)

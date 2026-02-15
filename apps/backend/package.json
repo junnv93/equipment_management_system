@@ -8,6 +8,7 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "nest build",
+    "predev": "pnpm --filter @equipment-management/db run build",
     "dev": "nest start --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -41,6 +42,7 @@
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/mapped-types": "^2.0.0",
     "@nestjs/passport": "^10.0.0",

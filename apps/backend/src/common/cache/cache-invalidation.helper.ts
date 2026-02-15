@@ -127,18 +127,43 @@ export class CacheInvalidationHelper {
    * 부적합(NC) 생성 시 캐시 무효화
    *
    * 부적합은 장비 상태를 'non_conforming'으로 변경하므로:
-   * - 장비 상세 캐시 무효화
-   * - 장비 목록 캐시 무효화 (상태 필터링 영향)
-   * - NC 목록 캐시도 무효화
+   * - 장비 상세/목록 캐시 무효화 (상태 변경)
+   *
+   * Note: NC detail 캐시는 서비스 레벨에서 개별 삭제됨 (buildCacheKey)
    */
   async invalidateAfterNonConformanceCreation(equipmentId: string): Promise<void> {
-    await Promise.all([
-      this.invalidateAfterEquipmentUpdate(equipmentId, true, false),
-      // NC 목록 캐시도 무효화
-      this.cacheService.deleteByPattern(`non-conformances:equipment:${equipmentId}*`),
-    ]);
+    await this.invalidateAfterEquipmentUpdate(equipmentId, true, false);
 
     this.logger.debug(`✓ Invalidated caches after NC creation for equipment: ${equipmentId}`);
+  }
+
+  /**
+   * 부적합(NC) 상태 변경 시 캐시 무효화
+   *
+   * 반려(corrected→analyzing), 종료(corrected→closed) 시:
+   * - 장비 상세/목록 캐시 무효화 (장비 상태가 변경될 수 있음)
+   *
+   * Note: NC detail 캐시는 서비스 레벨에서 개별 삭제됨 (buildCacheKey)
+   *
+   * @param equipmentId - 장비 UUID
+   * @param equipmentStatusChanged - 장비 상태가 변경되었는가? (close 시 available 복원 등)
+   */
+  async invalidateAfterNonConformanceStatusChange(
+    equipmentId: string,
+    equipmentStatusChanged: boolean = false
+  ): Promise<void> {
+    // 장비 상태가 변경된 경우 (close 시 available 복원): 상세 + 목록 무효화
+    // 변경되지 않은 경우 (rejection): 상세만 무효화
+    if (equipmentStatusChanged) {
+      await this.invalidateAfterEquipmentUpdate(equipmentId, true, false);
+    } else {
+      await this.invalidateEquipmentDetail(equipmentId);
+    }
+
+    this.logger.debug(
+      `✓ Invalidated caches after NC status change for equipment: ${equipmentId} ` +
+        `(equipmentStatusChanged: ${equipmentStatusChanged})`
+    );
   }
 
   /**
@@ -155,5 +180,21 @@ export class CacheInvalidationHelper {
     ]);
 
     this.logger.debug(`✓ Invalidated caches after disposal for equipment: ${equipmentId}`);
+  }
+
+  /**
+   * 교정계획서 업데이트 후 캐시 무효화
+   *
+   * 무효화 대상:
+   * - 특정 계획 상세 캐시
+   * - 모든 목록 캐시 (상태/필터 변경 영향)
+   */
+  async invalidateAfterCalibrationPlanUpdate(planId: string): Promise<void> {
+    await Promise.all([
+      this.cacheService.delete(`calibration-plans:detail:${planId}`),
+      this.cacheService.deleteByPattern('calibration-plans:list:*'),
+    ]);
+
+    this.logger.debug(`✓ Invalidated calibration plan caches: ${planId}`);
   }
 }
