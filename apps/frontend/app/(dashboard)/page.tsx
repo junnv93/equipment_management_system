@@ -1,31 +1,83 @@
 import { Suspense } from 'react';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import DashboardLoading from './loading';
+import { getServerAuthSession } from '@/lib/auth/server-session';
+import {
+  getDashboardSummary,
+  getDashboardEquipmentByTeam,
+  getDashboardOverdueCalibrations,
+  getDashboardUpcomingCalibrations,
+  getDashboardOverdueCheckouts,
+  getDashboardEquipmentStatusStats,
+} from '@/lib/api/dashboard-api-server';
 
 /**
- * 대시보드 페이지 (Server Component + Cache Components)
+ * 대시보드 페이지 (PPR Non-Blocking 패턴)
  *
- * Cache Components (cacheComponents: true in next.config.js):
- * - Suspense 경계를 기준으로 정적 셸(fallback)과 동적 홀(children)을 자동 분리
- * - 정적 셸: DashboardLoading → 빌드 시 프리렌더 → CDN 즉시 제공
- * - 동적 홀: DashboardClient → 요청 시 서버에서 스트리밍
- * - FCP: ~1200ms → ~200ms (정적 셸 즉시 렌더)
- *
- * 아키텍처:
- * - Server Component: Suspense 래퍼 (정적/동적 분할점 역할)
- * - DashboardClient (CSC): 역할별 데이터 관리 (React Query + useSession)
- * - DashboardLoading: 정적 셸 (스켈레톤 UI)
+ * Architecture:
+ * - Page: sync — 정적 셸 (Suspense fallback → CDN 즉시 제공)
+ * - DashboardAsync: async — 동적 홀 (서버에서 스트리밍)
+ * - DashboardClient: CSC — 클라이언트 상호작용
  *
  * 데이터 전략:
- * - 클라이언트에서 React Query로 역할별 데이터 fetch
- * - 실시간 WebSocket 업데이트 처리
- * - 세션 기반 역할 분기 → 서버 프리페치보다 CSC 패턴이 적합
+ * - 서버에서 Promise.allSettled로 6개 API 병렬 프리페치
+ * - 개별 API 실패가 전체 대시보드를 차단하지 않음
+ * - DashboardClient에서 placeholderData로 받아 React Query hydration
+ * - recentActivities 제외 (백엔드가 항상 [] 반환)
  */
 export default function DashboardPage() {
   return (
     <Suspense fallback={<DashboardLoading />}>
-      <DashboardClient />
+      <DashboardAsync />
     </Suspense>
+  );
+}
+
+async function DashboardAsync() {
+  const session = await getServerAuthSession();
+  const teamId = undefined; // 초기 로드 시 teamId 없음 (URL params는 클라이언트에서 처리)
+
+  // 세션이 없으면 초기 데이터 없이 클라이언트 렌더링
+  if (!session?.user) {
+    return <DashboardClient />;
+  }
+
+  // 6개 API 병렬 프리페치 (개별 실패 허용)
+  const [
+    summaryResult,
+    equipmentByTeamResult,
+    overdueCalibResult,
+    upcomingCalibResult,
+    overdueCheckoutsResult,
+    statusStatsResult,
+  ] = await Promise.allSettled([
+    getDashboardSummary(teamId),
+    getDashboardEquipmentByTeam(teamId),
+    getDashboardOverdueCalibrations(teamId),
+    getDashboardUpcomingCalibrations(30, teamId),
+    getDashboardOverdueCheckouts(teamId),
+    getDashboardEquipmentStatusStats(teamId),
+  ]);
+
+  return (
+    <DashboardClient
+      initialSummary={summaryResult.status === 'fulfilled' ? summaryResult.value : undefined}
+      initialEquipmentByTeam={
+        equipmentByTeamResult.status === 'fulfilled' ? equipmentByTeamResult.value : undefined
+      }
+      initialOverdueCalibrations={
+        overdueCalibResult.status === 'fulfilled' ? overdueCalibResult.value : undefined
+      }
+      initialUpcomingCalibrations={
+        upcomingCalibResult.status === 'fulfilled' ? upcomingCalibResult.value : undefined
+      }
+      initialOverdueCheckouts={
+        overdueCheckoutsResult.status === 'fulfilled' ? overdueCheckoutsResult.value : undefined
+      }
+      initialEquipmentStatusStats={
+        statusStatsResult.status === 'fulfilled' ? statusStatsResult.value : undefined
+      }
+    />
   );
 }
 
