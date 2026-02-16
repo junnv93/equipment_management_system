@@ -26,6 +26,9 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['var(--font-sans)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -155,6 +158,30 @@ module.exports = {
           from: { opacity: '0', transform: 'scale(0.8)' },
           to: { opacity: '1', transform: 'scale(1)' },
         },
+        // Notification-specific animations
+        'badge-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.1)', opacity: '0.8' },
+        },
+        'checkmark-pop': {
+          '0%': { transform: 'scale(0) rotate(-45deg)', opacity: '0' },
+          '50%': { transform: 'scale(1.2) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
+        },
+        'gentle-bounce': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-5px)' },
+        },
+        // Auth-specific animations
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-8px)' },
+          '75%': { transform: 'translateX(8px)' },
+        },
+        'fade-in-up': {
+          from: { opacity: '0', transform: 'translateY(30px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -165,8 +192,42 @@ module.exports = {
         'slide-up': 'slide-up 0.4s ease-out forwards',
         'slide-down': 'slide-down 0.3s ease-out forwards',
         'scale-in': 'scale-in 0.5s ease-out forwards',
+        // Notification animations
+        'badge-pulse': 'badge-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'checkmark-pop': 'checkmark-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'gentle-bounce': 'gentle-bounce 2s ease-in-out infinite',
+        // Auth animations
+        shake: 'shake 0.5s ease-in-out',
+        'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [
+    require('tailwindcss-animate'),
+    // Animation Delay Plugin
+    function ({ matchUtilities, theme }) {
+      matchUtilities(
+        {
+          'animation-delay': (value) => ({
+            animationDelay: value,
+          }),
+        },
+        {
+          values: {
+            0: '0ms',
+            100: '100ms',
+            200: '200ms',
+            300: '300ms',
+            400: '400ms',
+            500: '500ms',
+            600: '600ms',
+            700: '700ms',
+            800: '800ms',
+            900: '900ms',
+            1000: '1000ms',
+          },
+        }
+      );
+    },
+  ],
 };
