@@ -1,116 +1,57 @@
-'use client';
+import type { ReactNode } from 'react';
+import { SettingsNavigationClient } from './SettingsNavigationClient';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { ReactNode } from 'react';
-import { User, Bell, Monitor, Calendar, Cog } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import {
-  isTechnicalManagerOrAbove,
-  hasPermission,
-  Permission,
-  FRONTEND_ROUTES,
-} from '@equipment-management/shared-constants';
-import type { UserRole } from '@equipment-management/schemas';
-
-interface SettingsNavItem {
-  href: string;
-  label: string;
-  icon: ReactNode;
-  section?: 'admin';
-}
-
-function getSettingsNavItems(role?: string): SettingsNavItem[] {
-  const items: SettingsNavItem[] = [
-    {
-      href: FRONTEND_ROUTES.SETTINGS.PROFILE,
-      label: '내 프로필',
-      icon: <User className="h-4 w-4" />,
-    },
-    {
-      href: FRONTEND_ROUTES.SETTINGS.NOTIFICATIONS,
-      label: '알림 설정',
-      icon: <Bell className="h-4 w-4" />,
-    },
-    {
-      href: FRONTEND_ROUTES.SETTINGS.DISPLAY,
-      label: '표시 설정',
-      icon: <Monitor className="h-4 w-4" />,
-    },
-  ];
-
-  if (role && isTechnicalManagerOrAbove(role as UserRole)) {
-    items.push({
-      href: FRONTEND_ROUTES.SETTINGS.ADMIN_CALIBRATION,
-      label: '교정 알림 설정',
-      icon: <Calendar className="h-4 w-4" />,
-      section: 'admin',
-    });
-  }
-
-  if (role && hasPermission(role as UserRole, Permission.MANAGE_SYSTEM_SETTINGS)) {
-    items.push({
-      href: FRONTEND_ROUTES.SETTINGS.ADMIN_SYSTEM,
-      label: '시스템 설정',
-      icon: <Cog className="h-4 w-4" />,
-      section: 'admin',
-    });
-  }
-
-  return items;
-}
-
+/**
+ * 설정 레이아웃 (Server Component — Non-Blocking)
+ *
+ * cacheComponents 호환 아키텍처:
+ * - async 없음 → 정적 셸로 즉시 프리렌더 가능
+ * - 인증 가드: middleware.ts에서 처리 (렌더링 전 JWT 검증)
+ * - 역할 기반 네비게이션: SettingsNavigationClient에서 useSession()으로 자체 접근
+ *
+ * 크로스 사이트 워크플로우:
+ * - 역할 기반 네비게이션 항목은 SessionProvider에서 제공
+ * - middleware가 인증 보장 → useSession()은 항상 유효한 세션 반환
+ * - technical_manager+ 역할만 관리 섹션 노출
+ */
 export default function SettingsLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const { data: session } = useSession();
-  const userRole = session?.user?.role;
-  const navItems = getSettingsNavItems(userRole);
-
-  const hasAdminSection = navItems.some((item) => item.section === 'admin');
-
   return (
-    <div className="container mx-auto px-4 py-6 max-w-6xl">
-      <h1 className="text-2xl font-bold mb-6">설정</h1>
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Settings Sidebar */}
-        <nav className="md:w-56 flex-shrink-0" aria-label="설정 네비게이션">
-          <ul className="space-y-1">
-            {navItems.map((item, index) => {
-              const isActive = pathname === item.href;
-              const showSeparator =
-                item.section === 'admin' && index > 0 && navItems[index - 1].section !== 'admin';
+    <div className="container mx-auto px-4 py-6 max-w-7xl">
+      {/* 정적 헤더 — RSC에서 렌더링 (클라이언트 번들 미포함) */}
+      <div className="relative mb-8 overflow-hidden rounded-lg bg-gradient-to-br from-primary/5 via-background to-background p-8 border border-primary/10">
+        <div className="absolute inset-0 opacity-[0.015]">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, hsl(var(--primary)) 1px, transparent 1px),
+                linear-gradient(to bottom, hsl(var(--primary)) 1px, transparent 1px)
+              `,
+              backgroundSize: '24px 24px',
+            }}
+          />
+        </div>
+        <div className="relative">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">설정</h1>
+          <p className="text-muted-foreground text-sm">
+            시스템 환경설정 및 개인화 옵션을 관리합니다
+          </p>
+        </div>
+      </div>
 
-              return (
-                <li key={item.href}>
-                  {showSeparator && <div className="my-2 border-t border-border" />}
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm',
-                      'motion-safe:transition-colors',
-                      isActive
-                        ? 'bg-accent text-accent-foreground font-medium'
-                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                    )}
-                    aria-current={isActive ? 'page' : undefined}
-                  >
-                    <span aria-hidden="true">{item.icon}</span>
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-          {hasAdminSection && (
-            <p className="mt-1 px-3 text-xs text-muted-foreground/60">
-              관리 설정은 권한에 따라 표시됩니다
-            </p>
-          )}
-        </nav>
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* CSC 네비게이션: useSession()으로 역할 자체 접근 */}
+        <SettingsNavigationClient />
 
-        {/* Settings Content */}
-        <div className="flex-1 min-w-0">{children}</div>
+        {/* 콘텐츠 영역 */}
+        <div className="flex-1 min-w-0">
+          <div
+            className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+            style={{ animationFillMode: 'backwards' }}
+          >
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -37,6 +37,9 @@
 
     --radius: 0.5rem;
 
+    /* Accessibility - Touch Target (WCAG 2.5.5 AAA: 44px, 2.5.8 AA: 24px) */
+    --touch-target-min: 44px;
+
     /* Semantic Colors */
     --success: 151 100% 32%;          /* #00A451 - UL Bright Green */
     --success-foreground: 0 0% 100%;
@@ -145,6 +148,22 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* 알림 전용 애니메이션 */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+  50% { box-shadow: 0 0 0 3px hsl(var(--primary) / 0.08); }
+}
+
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes staggerFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* 공통 유틸리티 클래스 */
 .bg-grid-pattern {
   background-image: 
@@ -237,7 +256,88 @@
 .animation-delay-500 { animation-delay: 500ms; }
 .animation-delay-600 { animation-delay: 600ms; }
 
+/* Settings Page Enhanced Styles */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .fade-in,
+  .slide-right,
+  .slide-left,
+  .slide-up,
+  .slide-down,
+  .scale-in,
+  .hover\:translate-x-1:hover,
+  .hover\:scale-105:hover,
+  .active\:scale-95:active {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 /* UL Red background */
 .bg-ul-red {
   background-color: #CA0123 !important;
+}
+
+/* ============================================================================
+   Print Styles - 품질 심사 보고서용
+   ============================================================================ */
+@media print {
+  /* 페이지 설정 */
+  @page {
+    margin: 2cm;
+    size: A4;
+  }
+
+  /* 인쇄 시 숨김 */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* 인쇄 시 표시 */
+  .print\:block {
+    display: block !important;
+  }
+
+  /* 인쇄 시 여백 */
+  .print\:mb-8 {
+    margin-bottom: 2rem !important;
+  }
+
+  .print\:mt-8 {
+    margin-top: 2rem !important;
+  }
+
+  /* 페이지 나누기 방지 */
+  .print\:break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  /* 색상 보존 (중요: 배지, 그래프 색상 유지) */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 링크 URL 표시 (선택적) */
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #666;
+  }
+
+  /* 버튼 등 불필요한 요소 숨김 */
+  button,
+  [role="button"],
+  .no-print {
+    display: none !important;
+  }
+
+  /* 배경색 보존 */
+  .bg-red-50,
+  .bg-green-50,
+  .bg-gray-50 {
+    background-color: currentColor !important;
+    print-color-adjust: exact;
+  }
 } 

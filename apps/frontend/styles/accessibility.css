@@ -66,29 +66,34 @@
   }
 }
 
-/* 충분한 터치 타겟 크기 (최소 44x44px) */
-button,
-[role="button"],
-a,
-input[type="checkbox"],
-input[type="radio"] {
-  min-height: 44px;
-  min-width: 44px;
-}
+/*
+ * 터치 타겟 전략 (WCAG 2.5.5 / 2.5.8)
+ *
+ * 시각적 크기: 디자인 시스템(shadcn/ui + Tailwind)이 결정 — 간섭하지 않음
+ * 터치 영역: 필요한 요소에 .touch-target 클래스로 투명하게 확장
+ * SSOT: --touch-target-min (globals.css :root 정의)
+ *
+ * ❌ 기존 blanket min-height/min-width 접근법은 디자인 시스템과 충돌하여 제거됨
+ *    (button h-8→44px 강제, switch h-6→44px 정사각형=원형 등)
+ *
+ * 사용법:
+ *   <button class="h-8 w-8 touch-target">  → 시각적 32px, 터치 영역 44px
+ *   <Switch />                              → shadcn/ui가 자체 크기 관리
+ */
 
-/* 작은 버튼/링크에 터치 영역 확장 */
-.touch-target-sm {
+/* 투명 터치 영역 확장 — 시각적 레이아웃에 영향 없음 */
+.touch-target {
   position: relative;
 }
 
-.touch-target-sm::after {
+.touch-target::after {
   content: "";
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: max(100%, 44px);
-  height: max(100%, 44px);
+  width: max(100%, var(--touch-target-min, 44px));
+  height: max(100%, var(--touch-target-min, 44px));
 }
 
 /* 텍스트 선택 가능 유지 */

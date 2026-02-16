@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, ShieldAlert } from 'lucide-react';
+import { Loader2, Check, ShieldAlert, Cog } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api/api-client';
@@ -90,14 +90,14 @@ export default function SystemSettingsContent() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-4 w-64 mt-1" />
+      <Card className="overflow-hidden">
+        <CardHeader className="space-y-2">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-72" />
         </CardHeader>
         <CardContent className="space-y-6">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-10 w-full" />
+            <Skeleton key={i} className="h-16 w-full" />
           ))}
         </CardContent>
       </Card>
@@ -105,107 +105,159 @@ export default function SystemSettingsContent() {
   }
 
   return (
-    <div className="space-y-4">
-      <Alert>
-        <ShieldAlert className="h-4 w-4" />
-        <AlertDescription>
-          시스템 설정은 전체 시스템에 영향을 미칩니다. 변경 시 주의하세요.
+    <div className="space-y-6">
+      {/* Warning Alert */}
+      <Alert
+        variant="default"
+        className="border-warning/40 bg-warning/10 animate-in fade-in slide-in-from-top-2 duration-300"
+      >
+        <ShieldAlert className="h-5 w-5 text-warning-foreground" aria-hidden="true" />
+        <AlertDescription className="text-sm font-medium leading-relaxed">
+          <strong className="font-bold">주의:</strong> 시스템 설정은 전체 시스템에 영향을 미칩니다.
+          변경 시 신중하게 검토하세요.
         </AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>시스템 설정</CardTitle>
-          <CardDescription>시스템 전반에 적용되는 관리 설정을 변경합니다.</CardDescription>
+      {/* Settings Card */}
+      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md transition-all duration-300">
+        <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
+              <Cog className="h-6 w-6 text-primary" aria-hidden="true" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-xl mb-1.5">시스템 설정</CardTitle>
+              <CardDescription>시스템 전반에 적용되는 관리 설정을 변경합니다.</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-6">
+            <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-8">
+              {/* Audit Log Retention */}
               <FormField
                 control={form.control}
                 name="auditLogRetentionDays"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>감사 로그 보관 기간</FormLabel>
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">감사 로그 보관 기간</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="transition-all hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="0">무제한</SelectItem>
-                        <SelectItem value="90">90일</SelectItem>
-                        <SelectItem value="180">180일</SelectItem>
-                        <SelectItem value="365">365일</SelectItem>
+                        <SelectItem value="0">
+                          <span className="font-mono">∞</span>
+                          <span className="ml-2">무제한</span>
+                        </SelectItem>
+                        <SelectItem value="90">
+                          <span className="font-mono">90</span>
+                          <span className="ml-2">일</span>
+                        </SelectItem>
+                        <SelectItem value="180">
+                          <span className="font-mono">180</span>
+                          <span className="ml-2">일 (권장)</span>
+                        </SelectItem>
+                        <SelectItem value="365">
+                          <span className="font-mono">365</span>
+                          <span className="ml-2">일</span>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>
-                      감사 로그를 보관할 기간입니다. 0은 무제한입니다.
+                    <FormDescription className="text-xs leading-relaxed">
+                      감사 로그를 보관할 기간입니다.{' '}
+                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">0</code>은 무제한
+                      보관을 의미합니다.
                     </FormDescription>
                   </FormItem>
                 )}
               />
 
+              {/* Notification Retention */}
               <FormField
                 control={form.control}
                 name="notificationRetentionDays"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>알림 보관 기간</FormLabel>
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">알림 보관 기간</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="transition-all hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="30">30일</SelectItem>
-                        <SelectItem value="60">60일</SelectItem>
-                        <SelectItem value="90">90일</SelectItem>
-                        <SelectItem value="180">180일</SelectItem>
+                        <SelectItem value="30">
+                          <span className="font-mono">30</span>
+                          <span className="ml-2">일</span>
+                        </SelectItem>
+                        <SelectItem value="60">
+                          <span className="font-mono">60</span>
+                          <span className="ml-2">일 (권장)</span>
+                        </SelectItem>
+                        <SelectItem value="90">
+                          <span className="font-mono">90</span>
+                          <span className="ml-2">일</span>
+                        </SelectItem>
+                        <SelectItem value="180">
+                          <span className="font-mono">180</span>
+                          <span className="ml-2">일</span>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>만료된 알림은 자동으로 정리됩니다.</FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="maintenanceMessage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>시스템 공지 메시지</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="시스템 점검 예정 등의 공지 사항을 입력하세요..."
-                        className="resize-y"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      입력된 메시지는 대시보드 상단에 배너로 표시됩니다. 비워두면 배너가 표시되지
-                      않습니다. (최대 500자)
+                    <FormDescription className="text-xs leading-relaxed">
+                      만료된 알림은 자동으로 정리됩니다. 시스템 성능 최적화를 위해 적절한 기간을
+                      설정하세요.
                     </FormDescription>
                   </FormItem>
                 )}
               />
 
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    저장 중...
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" />
-                    저장
-                  </>
+              {/* Maintenance Message */}
+              <FormField
+                control={form.control}
+                name="maintenanceMessage"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">시스템 공지 메시지</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="시스템 점검 예정 등의 공지 사항을 입력하세요…"
+                        className="resize-y min-h-[100px] transition-all hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs leading-relaxed">
+                      입력된 메시지는 대시보드 상단에 배너로 표시됩니다. 비워두면 배너가 표시되지
+                      않습니다. <span className="text-muted-foreground/70">(최대 500자)</span>
+                    </FormDescription>
+                  </FormItem>
                 )}
-              </Button>
+              />
+
+              {/* Submit Button */}
+              <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">변경 사항은 즉시 적용됩니다</p>
+                <Button
+                  type="submit"
+                  disabled={mutation.isPending}
+                  className="min-w-[120px] transition-all hover:scale-105 active:scale-95"
+                >
+                  {mutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                      저장 중…
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+                      저장
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>

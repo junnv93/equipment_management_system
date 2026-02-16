@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertCircle, Info, User as UserIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -34,10 +34,12 @@ interface UserProfile {
 
 function ProfileField({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-border last:border-0">
-      <dt className="text-sm font-medium text-muted-foreground sm:w-32 flex-shrink-0">{label}</dt>
-      <dd className="text-sm mt-1 sm:mt-0">
-        {value || <span className="text-muted-foreground/50">-</span>}
+    <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 last:border-0 transition-colors hover:bg-accent/30">
+      <dt className="text-sm font-medium text-muted-foreground sm:w-40 flex-shrink-0 mb-1 sm:mb-0">
+        {label}
+      </dt>
+      <dd className="text-sm font-mono text-foreground">
+        {value || <span className="text-muted-foreground/50 italic font-sans">미등록</span>}
       </dd>
     </div>
   );
@@ -45,16 +47,16 @@ function ProfileField({ label, value }: { label: string; value?: string | null }
 
 function ProfileSkeleton() {
   return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-4 w-64 mt-1" />
+    <Card className="overflow-hidden">
+      <CardHeader className="space-y-2">
+        <Skeleton className="h-7 w-32" />
+        <Skeleton className="h-4 w-72" />
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="flex gap-4">
-              <Skeleton className="h-4 w-24" />
+        <div className="space-y-1">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex gap-4 py-4">
+              <Skeleton className="h-4 w-28" />
               <Skeleton className="h-4 w-48" />
             </div>
           ))}
@@ -76,13 +78,17 @@ export default function ProfileContent() {
   });
 
   if (isLoading) {
-    return <ProfileSkeleton />;
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <ProfileSkeleton />
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
+      <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2 duration-300">
+        <AlertCircle className="h-4 w-4" aria-hidden="true" />
         <AlertDescription>프로필 정보를 불러오는데 실패했습니다.</AlertDescription>
       </Alert>
     );
@@ -97,23 +103,41 @@ export default function ProfileContent() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>내 프로필</CardTitle>
-          <CardDescription>현재 로그인한 사용자의 정보입니다.</CardDescription>
+      {/* Profile Card with Enhanced Design */}
+      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md transition-shadow duration-300">
+        <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
+          <div className="flex items-start gap-4">
+            <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
+              <UserIcon className="h-6 w-6 text-primary" aria-hidden="true" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-xl mb-1.5">내 프로필</CardTitle>
+              <CardDescription>
+                현재 로그인한 사용자의 정보입니다. Azure AD에서 동기화됩니다.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <dl>
+        <CardContent className="pt-6">
+          <dl className="divide-y divide-border/30">
             <ProfileField label="이름" value={profile.name} />
             <ProfileField label="이메일" value={profile.email} />
-            <div className="flex flex-col sm:flex-row sm:items-center py-3 border-b border-border">
-              <dt className="text-sm font-medium text-muted-foreground sm:w-32 flex-shrink-0">
+
+            {/* Role with special styling */}
+            <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 transition-colors hover:bg-accent/30">
+              <dt className="text-sm font-medium text-muted-foreground sm:w-40 flex-shrink-0 mb-1 sm:mb-0">
                 역할
               </dt>
-              <dd className="mt-1 sm:mt-0">
-                <Badge variant="secondary">{roleLabel}</Badge>
+              <dd>
+                <Badge
+                  variant="secondary"
+                  className="font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors"
+                >
+                  {roleLabel}
+                </Badge>
               </dd>
             </div>
+
             <ProfileField label="사이트" value={siteLabel} />
             <ProfileField label="팀" value={profile.teamName} />
             <ProfileField label="직위" value={profile.position} />
@@ -124,10 +148,15 @@ export default function ProfileContent() {
         </CardContent>
       </Card>
 
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          프로필 정보는 Azure AD에서 동기화됩니다. 수정이 필요한 경우 IT 관리자에게 문의하세요.
+      {/* Info Alert */}
+      <Alert
+        className="border-info/30 bg-info/5 animate-in fade-in slide-in-from-bottom-2 duration-500"
+        style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}
+      >
+        <Info className="h-4 w-4 text-info-foreground" aria-hidden="true" />
+        <AlertDescription className="text-sm leading-relaxed">
+          프로필 정보는 <strong className="font-semibold">Azure AD</strong>에서 동기화됩니다. 수정이
+          필요한 경우 IT 관리자에게 문의하세요.
         </AlertDescription>
       </Alert>
     </div>
