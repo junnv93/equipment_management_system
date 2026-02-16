@@ -28,26 +28,26 @@ import {
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { TeamTypeEnum, SiteEnum } from '@equipment-management/schemas';
-import teamsApi, { type Team, SITE_CONFIG, TEAM_TYPE_CONFIG } from '@/lib/api/teams-api';
+import { ClassificationEnum, SiteEnum } from '@equipment-management/schemas';
+import teamsApi, { type Team, SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { LeaderCombobox } from './LeaderCombobox';
 import { TeamTypeIcon } from './TeamTypeIcon';
 
-// 드롭다운에 표시할 주요 팀 유형 (레거시 제외)
-const PRIMARY_TEAM_TYPES = [
-  'FCC_EMC_RF',
-  'GENERAL_EMC',
-  'GENERAL_RF',
-  'SAR',
-  'AUTOMOTIVE_EMC',
-  'SOFTWARE',
+// 드롭다운에 표시할 주요 팀 분류 (소문자_언더스코어)
+const PRIMARY_CLASSIFICATIONS = [
+  'fcc_emc_rf',
+  'general_emc',
+  'general_rf',
+  'sar',
+  'automotive_emc',
+  'software',
 ] as const;
 
 // 폼 검증 스키마 — SSOT enums from @equipment-management/schemas
 const teamFormSchema = z.object({
   name: z.string().min(1, '팀 이름은 필수입니다').max(100, '팀 이름은 100자 이내여야 합니다'),
-  type: TeamTypeEnum,
+  classification: ClassificationEnum, // ✅ type → classification
   description: z.string().max(500, '팀 설명은 500자 이내여야 합니다').optional(),
   site: SiteEnum,
   leaderId: z.string().uuid('유효한 사용자 ID가 아닙니다').optional().or(z.literal('')),
@@ -84,7 +84,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
     resolver: zodResolver(teamFormSchema),
     defaultValues: {
       name: team?.name || '',
-      type: (team?.type as TeamFormValues['type']) || 'FCC_EMC_RF',
+      classification: (team?.classification as TeamFormValues['classification']) || 'fcc_emc_rf',
       description: team?.description || '',
       site: (team?.site as TeamFormValues['site']) || 'suwon',
       leaderId: team?.leaderId || '',
@@ -96,7 +96,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
     mutationFn: (data: TeamFormValues) =>
       teamsApi.createTeam({
         name: data.name,
-        type: data.type,
+        classification: data.classification,
         description: data.description,
         site: data.site,
         leaderId: data.leaderId || undefined,
@@ -125,7 +125,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
     mutationFn: (data: TeamFormValues) =>
       teamsApi.updateTeam(team!.id, {
         name: data.name,
-        type: data.type, // UpdateTeamInput은 partial이므로 undefined도 허용
+        classification: data.classification, // UpdateTeamInput은 partial이므로 undefined도 허용
         description: data.description,
         site: data.site,
         leaderId: data.leaderId || undefined,
@@ -202,31 +202,31 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               )}
             />
 
-            {/* 팀 유형 */}
+            {/* 팀 분류 */}
             <FormField
               control={form.control}
-              name="type"
+              name="classification"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>팀 유형</FormLabel>
+                  <FormLabel>팀 분류</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger aria-describedby="type-description">
-                        <SelectValue placeholder="팀 유형 선택" />
+                      <SelectTrigger aria-describedby="classification-description">
+                        <SelectValue placeholder="팀 분류 선택" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {PRIMARY_TEAM_TYPES.map((key) => (
+                      {PRIMARY_CLASSIFICATIONS.map((key) => (
                         <SelectItem key={key} value={key}>
                           <span className="flex items-center gap-2">
-                            <TeamTypeIcon type={key} size="sm" />
-                            {TEAM_TYPE_CONFIG[key]?.label || key}
+                            <TeamTypeIcon classification={key} size="sm" />
+                            {CLASSIFICATION_CONFIG[key]?.label || key}
                           </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription id="type-description">
+                  <FormDescription id="classification-description">
                     RF, EMC, SAR 등 팀의 전문 분야입니다.
                   </FormDescription>
                   <FormMessage role="alert" />

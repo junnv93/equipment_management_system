@@ -101,9 +101,6 @@ export function useUpdateNotificationPreferences() {
   return useMutation({
     mutationFn: (prefs: Parameters<typeof notificationsApi.updatePreferences>[0]) =>
       notificationsApi.updatePreferences(prefs),
-    onSuccess: () => {
-      toast.success('알림 설정이 저장되었습니다.');
-    },
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.notifications.preferences(),

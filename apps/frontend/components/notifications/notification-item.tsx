@@ -81,15 +81,19 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
   const content = (
     <>
       {!notification.isRead && (
-        <div className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary" />
+        <div className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary" aria-hidden="true">
+          <span className="sr-only">읽지 않음</span>
+        </div>
       )}
       <div className="flex items-start">
         <div className="mr-3 mt-1">
           <Icon className={cn('h-4 w-4', style.color)} aria-hidden="true" />
         </div>
         <div className="flex-1">
-          <div className="font-medium text-sm">{notification.title}</div>
-          <div className="text-sm text-muted-foreground mt-1">{notification.content}</div>
+          <div className="font-medium text-sm line-clamp-2">{notification.title}</div>
+          <div className="text-sm text-muted-foreground mt-1 line-clamp-3">
+            {notification.content}
+          </div>
           <div className="text-xs text-muted-foreground/60 mt-2">{formattedDate}</div>
         </div>
       </div>
@@ -99,7 +103,10 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
   const baseClassName = cn(
     'p-4 mb-2 rounded shadow-sm relative border-l-4 block w-full text-left',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-    notification.isRead ? 'opacity-60 bg-muted' : 'bg-card',
+    'transition-colors duration-200',
+    notification.isRead
+      ? 'bg-muted/80'
+      : 'bg-card motion-safe:animate-[pulseGlow_3s_ease-in-out_infinite]',
     style.borderColor
   );
 
@@ -134,12 +141,7 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
 
   // 링크 없으면 button (읽음 처리만)
   return (
-    <button
-      type="button"
-      className={cn(baseClassName, 'cursor-default')}
-      title={fullDate}
-      onClick={handleMarkAsRead}
-    >
+    <button type="button" className={baseClassName} title={fullDate} onClick={handleMarkAsRead}>
       {content}
     </button>
   );

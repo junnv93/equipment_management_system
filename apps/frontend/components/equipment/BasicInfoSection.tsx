@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Control, useFormContext } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import {
   type EquipmentStatus,
   type CalibrationMethod,
@@ -33,6 +34,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api/api-client';
 import { type ManagementNumberCheckResult } from '@/lib/api/equipment-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   SITE_OPTIONS,
   CLASSIFICATION_OPTIONS,
@@ -43,48 +45,46 @@ import {
 } from '@/lib/constants/management-number';
 
 /**
- * 팀 타입 → 분류코드 매핑
- * ✅ 팀 이름 = 분류 이름 (통일)
- */
-const TEAM_TYPE_TO_CLASSIFICATION: Record<string, Classification> = {
-  FCC_EMC_RF: 'fcc_emc_rf', // E
-  GENERAL_EMC: 'general_emc', // R
-  GENERAL_RF: 'general_rf', // W
-  SAR: 'sar', // S
-  AUTOMOTIVE_EMC: 'automotive_emc', // A
-  SOFTWARE: 'software', // P
-  // 레거시 호환성
-  RF: 'fcc_emc_rf',
-  EMC: 'general_emc',
-  AUTO: 'automotive_emc',
-};
-
-/**
  * 사이트별 팀 매핑 (폴백용 - API 응답이 없을 때 사용)
- * ✅ 팀 이름 = 분류 이름 (통일)
+ * ✅ 팀 분류 = 소문자_언더스코어 (fcc_emc_rf, general_emc, ...)
  * - 수원(SUW): FCC EMC/RF, General EMC, SAR, Automotive EMC
  * - 의왕(UIW): General RF
  * - 평택(PYT): Automotive EMC
  */
-const SITE_TEAMS: Record<Site, Array<{ value: string; label: string; type: string }>> = {
+const SITE_TEAMS: Record<
+  Site,
+  Array<{ value: string; label: string; classification: Classification }>
+> = {
   suwon: [
-    { value: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', label: 'FCC EMC/RF', type: 'FCC_EMC_RF' },
-    { value: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289', label: 'General EMC', type: 'GENERAL_EMC' },
-    { value: '7fd28076-fd5e-4d36-b051-bbf8a97b82db', label: 'SAR', type: 'SAR' },
+    {
+      value: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+      label: 'FCC EMC/RF',
+      classification: 'fcc_emc_rf',
+    },
+    {
+      value: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
+      label: 'General EMC',
+      classification: 'general_emc',
+    },
+    { value: '7fd28076-fd5e-4d36-b051-bbf8a97b82db', label: 'SAR', classification: 'sar' },
     {
       value: 'f0a32655-00f9-4ecd-b43c-af4faed499b6',
       label: 'Automotive EMC',
-      type: 'AUTOMOTIVE_EMC',
+      classification: 'automotive_emc',
     },
   ],
   uiwang: [
-    { value: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', label: 'General RF', type: 'GENERAL_RF' },
+    {
+      value: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
+      label: 'General RF',
+      classification: 'general_rf',
+    },
   ],
   pyeongtaek: [
     {
       value: 'b2c3d4e5-f6a7-4890-bcde-f01234567890',
       label: 'Automotive EMC',
-      type: 'AUTOMOTIVE_EMC',
+      classification: 'automotive_emc',
     },
   ],
 };
@@ -135,7 +135,7 @@ interface Team {
   id: string; // UUID 형식
   uuid?: string; // 하위 호환성
   name: string;
-  type: string; // RF, SAR, EMC, AUTO, SOFTWARE
+  classification: string; // fcc_emc_rf, general_emc, sar, automotive_emc, etc
   site: Site;
   classificationCode?: string; // E, R, S, A, P
 }
@@ -170,11 +170,35 @@ export function BasicInfoSection({
 }: BasicInfoSectionProps) {
   // lab_manager만 사이트/팀 자유 선택 가능, 나머지는 자기 팀만
   const teamRestricted = userRole ? isTeamRestricted(userRole as UserRole) : false;
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [isLoadingTeams, setIsLoadingTeams] = useState(false);
-  const [filteredTeams, setFilteredTeams] = useState<
-    Array<{ value: string; label: string; type: string }>
-  >([]);
+
+  // 팀 목록 로드 — useQuery SSOT 패턴
+  const { data: teams = [], isLoading: isLoadingTeams } = useQuery({
+    queryKey: queryKeys.teams.lists(),
+    queryFn: async () => {
+      const response = await apiClient.get('/api/teams');
+      const teamData = response.data || response;
+      return Array.isArray(teamData) ? teamData : [];
+    },
+    ...QUERY_CONFIG.TEAMS,
+  });
+
+  // 사이트별 팀 필터링 (useMemo로 최적화)
+  const filteredTeams = useMemo(() => {
+    if (selectedSite && teams.length > 0) {
+      const siteTeams = teams
+        .filter((team) => team.site === selectedSite)
+        .map((team) => ({
+          value: String(team.id),
+          label: team.name,
+          classification: team.classification as Classification,
+        }));
+      return siteTeams.length > 0 ? siteTeams : SITE_TEAMS[selectedSite] || [];
+    } else if (selectedSite) {
+      return SITE_TEAMS[selectedSite] || [];
+    } else {
+      return [];
+    }
+  }, [selectedSite, teams]);
 
   // 관리번호 자동 생성용 상태
   const [selectedClassification, setSelectedClassification] = useState<
@@ -192,10 +216,10 @@ export function BasicInfoSection({
       // API에서 가져온 팀 목록에서 찾기
       const selectedTeam = teams.find((t) => t.id === teamId);
       if (selectedTeam) {
-        const classification = TEAM_TYPE_TO_CLASSIFICATION[selectedTeam.type];
+        const classification = selectedTeam.classification;
         if (classification) {
-          setSelectedClassification(classification);
-          setValue('classification', classification);
+          setSelectedClassification(classification as Classification);
+          setValue('classification', classification as Classification);
         }
         return;
       }
@@ -204,7 +228,7 @@ export function BasicInfoSection({
       if (selectedSite) {
         const fallbackTeam = SITE_TEAMS[selectedSite]?.find((t) => t.value === teamId);
         if (fallbackTeam) {
-          const classification = TEAM_TYPE_TO_CLASSIFICATION[fallbackTeam.type];
+          const classification = fallbackTeam.classification;
           if (classification) {
             setSelectedClassification(classification);
             setValue('classification', classification);
@@ -236,43 +260,6 @@ export function BasicInfoSection({
       onManagementNumberChange?.(managementNumberPreview);
     }
   }, [managementNumberPreview, isEdit, setValue, selectedClassification, onManagementNumberChange]);
-
-  // 팀 목록 로드
-  useEffect(() => {
-    const fetchTeams = async () => {
-      setIsLoadingTeams(true);
-      try {
-        const response = await apiClient.get('/api/teams');
-        const teamData = response.data || response;
-        setTeams(Array.isArray(teamData) ? teamData : []);
-      } catch (error) {
-        console.error('Failed to fetch teams:', error);
-        setTeams([]);
-      } finally {
-        setIsLoadingTeams(false);
-      }
-    };
-
-    fetchTeams();
-  }, []);
-
-  // 사이트 변경 시 팀 필터링
-  useEffect(() => {
-    if (selectedSite && teams.length > 0) {
-      const siteTeams = teams
-        .filter((team) => team.site === selectedSite)
-        .map((team) => ({
-          value: String(team.id),
-          label: team.name,
-          type: team.type,
-        }));
-      setFilteredTeams(siteTeams.length > 0 ? siteTeams : SITE_TEAMS[selectedSite] || []);
-    } else if (selectedSite) {
-      setFilteredTeams(SITE_TEAMS[selectedSite] || []);
-    } else {
-      setFilteredTeams([]);
-    }
-  }, [selectedSite, teams]);
 
   // test_engineer: 팀 자동 선택 (userTeamId가 있으면 자동 설정)
   useEffect(() => {
@@ -608,8 +595,7 @@ export function BasicInfoSection({
                   <SelectContent>
                     {filteredTeams.map((team) => (
                       <SelectItem key={team.value} value={team.value}>
-                        {team.label} (
-                        {CLASSIFICATION_TO_CODE[TEAM_TYPE_TO_CLASSIFICATION[team.type]] || '?'})
+                        {team.label} ({CLASSIFICATION_TO_CODE[team.classification] || '?'})
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -4,7 +4,8 @@
  * ⚠️ IMPORTANT: Server Component 전용
  *
  * 사용처:
- * - app/(dashboard)/calibration-plans/page.tsx (Server Component)
+ * - app/(dashboard)/calibration-plans/page.tsx (Server Component - 목록)
+ * - app/(dashboard)/calibration-plans/[uuid]/page.tsx (Server Component - 상세)
  * - 기타 Server Component에서 교정계획 데이터 fetch가 필요한 경우
  *
  * 절대로 'use client' 컴포넌트에서 import하지 마세요!
@@ -17,6 +18,7 @@ import { createServerApiClient } from './server-api-client';
 import { transformPaginatedResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
 import type { CalibrationPlan } from './calibration-plans-api';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 export interface CalibrationPlansQuery {
   year?: string;
@@ -47,4 +49,19 @@ export async function getCalibrationPlansList(
   const url = `/api/calibration-plans${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await apiClient.get(url);
   return transformPaginatedResponse<CalibrationPlan>(response);
+}
+
+/**
+ * 교정계획서 상세 조회 (Server Component용)
+ *
+ * React.cache()는 page.tsx에서 적용합니다 (generateMetadata와 Page 간 dedup).
+ * 이 함수 자체는 순수 fetch로 유지하여 캐시 전략을 호출부에서 결정합니다.
+ *
+ * @param uuid - 교정계획서 UUID
+ * @returns 교정계획서 상세 (항목 포함)
+ */
+export async function getCalibrationPlan(uuid: string): Promise<CalibrationPlan> {
+  const apiClient = await createServerApiClient();
+  const response = await apiClient.get(API_ENDPOINTS.CALIBRATION_PLANS.GET(uuid));
+  return response.data;
 }

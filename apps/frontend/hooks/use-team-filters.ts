@@ -25,7 +25,7 @@ import {
   countActiveFilters,
   DEFAULT_UI_FILTERS,
 } from '@/lib/utils/team-filter-utils';
-import type { Site, TeamType } from '@equipment-management/schemas';
+import type { Site, Classification } from '@equipment-management/schemas';
 
 /**
  * 팀 필터 관리 훅
@@ -75,9 +75,9 @@ export function useTeamFilters(initialFilters?: UITeamFilters) {
       params.set('site', newFilters.site || '_all');
     }
 
-    // ✅ type: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
-    if ('type' in updates || newFilters.type) {
-      params.set('type', newFilters.type || '_all');
+    // ✅ classification: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
+    if ('classification' in updates || newFilters.classification) {
+      params.set('classification', newFilters.classification || '_all');
     }
 
     const queryString = params.toString();
@@ -101,10 +101,10 @@ export function useTeamFilters(initialFilters?: UITeamFilters) {
   };
 
   /**
-   * 팀 유형 필터 업데이트 헬퍼
+   * 팀 분류 필터 업데이트 헬퍼
    */
-  const updateType = (type: TeamType | '') => {
-    updateFilters({ type });
+  const updateClassification = (classification: Classification | '') => {
+    updateFilters({ classification });
   };
 
   /**
@@ -127,8 +127,8 @@ export function useTeamFilters(initialFilters?: UITeamFilters) {
     updateSearch,
     /** 사이트 필터 업데이트 */
     updateSite,
-    /** 팀 유형 필터 업데이트 */
-    updateType,
+    /** 팀 분류 필터 업데이트 */
+    updateClassification,
     /** 필터 초기화 */
     clearFilters,
   };

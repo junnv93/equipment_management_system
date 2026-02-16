@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { type Site, EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
 import {
   FormControl,
@@ -25,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { FormValues } from './BasicInfoSection';
 import { apiClient } from '@/lib/api/api-client';
 import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 // EQUIPMENT_STATUS_LABELS는 @equipment-management/schemas에서 import (SSOT)
 // 색상 스타일은 @/lib/constants/equipment-status-styles에서 import (SSOT)
@@ -53,8 +55,6 @@ export function StatusLocationSection({
   selectedSite,
   selectedTeamId,
 }: StatusLocationSectionProps) {
-  const [technicalManagers, setTechnicalManagers] = useState<TechnicalManager[]>([]);
-  const [isLoadingManagers, setIsLoadingManagers] = useState(false);
   const { setValue } = useFormContext<FormValues>();
 
   // 폼에서 사이트와 팀 감시
@@ -75,37 +75,32 @@ export function StatusLocationSection({
     setValue('technicalManager', '');
   }, [currentTeamId, setValue]);
 
-  // 기술책임자 목록 로드 (사이트/팀 기준 필터링)
-  useEffect(() => {
-    const fetchTechnicalManagers = async () => {
-      if (!currentSite) return;
-
-      setIsLoadingManagers(true);
-      try {
-        // API에서 기술책임자 역할을 가진 사용자 조회
-        // 백엔드 DTO: roles(쉼표구분), teams(쉼표구분), site
-        const params = new URLSearchParams();
-        params.append('roles', 'technical_manager');
-        params.append('site', currentSite);
-        if (currentTeamId) {
-          params.append('teams', String(currentTeamId));
-        }
-
-        const response = await apiClient.get(`/api/users?${params.toString()}`);
-        type UserResponse = { data?: { items?: TechnicalManager[] }; items?: TechnicalManager[] };
-        const responseData = response as UserResponse;
-        const userData = responseData.data?.items || responseData.items || [];
-        setTechnicalManagers(Array.isArray(userData) ? userData : []);
-      } catch (error) {
-        console.error('Failed to fetch technical managers:', error);
-        setTechnicalManagers([]);
-      } finally {
-        setIsLoadingManagers(false);
+  // 기술책임자 목록 로드 (사이트/팀 기준 필터링) — useQuery SSOT 패턴
+  const { data: technicalManagers = [], isLoading: isLoadingManagers } = useQuery({
+    queryKey: queryKeys.users.search({
+      roles: 'technical_manager',
+      site: currentSite,
+      teams: currentTeamId ? String(currentTeamId) : undefined,
+    }),
+    queryFn: async () => {
+      // API에서 기술책임자 역할을 가진 사용자 조회
+      // 백엔드 DTO: roles(쉼표구분), teams(쉼표구분), site
+      const params = new URLSearchParams();
+      params.append('roles', 'technical_manager');
+      params.append('site', currentSite!);
+      if (currentTeamId) {
+        params.append('teams', String(currentTeamId));
       }
-    };
 
-    fetchTechnicalManagers();
-  }, [currentSite, currentTeamId]);
+      const response = await apiClient.get(`/api/users?${params.toString()}`);
+      type UserResponse = { data?: { items?: TechnicalManager[] }; items?: TechnicalManager[] };
+      const responseData = response as UserResponse;
+      const userData = responseData.data?.items || responseData.items || [];
+      return Array.isArray(userData) ? userData : [];
+    },
+    enabled: !!currentSite,
+    ...QUERY_CONFIG.USERS,
+  });
 
   return (
     <Card>

@@ -24,6 +24,7 @@ import {
   Settings,
   Wrench,
   FileText,
+  FileSearch,
 } from 'lucide-react';
 import { ReactNode, memo, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
@@ -167,6 +168,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
           const total = computeApprovalTotal(pendingCounts, role);
           return total > 0 ? total : undefined;
         })(),
+      },
+      {
+        icon: <FileSearch className="h-5 w-5" />,
+        href: FRONTEND_ROUTES.ADMIN.AUDIT_LOGS,
+        label: '감사 로그',
+        requiredPermission: Permission.VIEW_AUDIT_LOGS,
       },
       {
         icon: <Users className="h-5 w-5" />,

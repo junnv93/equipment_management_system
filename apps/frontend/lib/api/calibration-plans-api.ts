@@ -13,8 +13,9 @@ import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 export type { CalibrationPlanStatus, Site };
 
 // 장비 정보 (항목에 포함)
+// SSOT: Backend equipment.id = uuid type → string
 export interface EquipmentInfo {
-  uuid: string;
+  id: string;
   name: string;
   managementNumber: string;
   modelName: string | null;
@@ -27,11 +28,11 @@ export interface EquipmentInfo {
 }
 
 // 교정계획서 항목 인터페이스
+// SSOT: Backend calibration_plan_items.id/planId/equipmentId = uuid type → string
 export interface CalibrationPlanItem {
-  id: number;
-  uuid: string;
-  planId: number;
-  equipmentId: number;
+  id: string;
+  planId: string;
+  equipmentId: string;
   sequenceNumber: number;
   // 현황 스냅샷
   snapshotValidityDate: string | null;
@@ -54,9 +55,9 @@ export interface CalibrationPlanItem {
 }
 
 // 교정계획서 인터페이스 (3단계 승인 워크플로우)
+// SSOT: Backend calibration_plans.id = uuid('id') → string
 export interface CalibrationPlan {
-  id: number;
-  uuid: string;
+  id: string;
   year: number;
   siteId: Site; // ✅ SSOT: Site 타입 사용
   teamId: string | null;
@@ -121,9 +122,9 @@ export interface ExternalEquipmentQuery {
 }
 
 // 외부교정 대상 장비 인터페이스
+// SSOT: Backend equipment.id = uuid type → string
 export interface ExternalEquipment {
-  id: string; // Backend는 id를 반환 (uuid와 동일한 값)
-  uuid?: string; // 하위 호환성
+  id: string;
   name: string;
   managementNumber: string;
   modelName: string | null;
@@ -240,7 +241,7 @@ const calibrationPlansApi = {
   },
 
   // 계획서 삭제
-  deleteCalibrationPlan: async (uuid: string): Promise<{ uuid: string; deleted: boolean }> => {
+  deleteCalibrationPlan: async (uuid: string): Promise<{ id: string; deleted: boolean }> => {
     return apiClient.delete(API_ENDPOINTS.CALIBRATION_PLANS.DELETE(uuid)).then((res) => res.data);
   },
 

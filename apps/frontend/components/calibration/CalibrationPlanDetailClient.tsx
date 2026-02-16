@@ -31,7 +31,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import calibrationPlansApi, {
-  CalibrationPlanItem,
+  type CalibrationPlan,
+  type CalibrationPlanItem,
   CALIBRATION_PLAN_STATUS_LABELS,
   CALIBRATION_PLAN_STATUS_COLORS,
   SITE_LABELS,
@@ -67,6 +68,11 @@ interface CalibrationPlanDetailClientProps {
    * Server Component에서 전달받은 교정계획서 UUID
    */
   planUuid: string;
+  /**
+   * Server Component에서 프리페치한 초기 데이터
+   * placeholderData로 사용 → 항상 stale 취급 → 백그라운드 refetch 보장
+   */
+  initialData?: CalibrationPlan;
 }
 
 /**
@@ -76,14 +82,17 @@ interface CalibrationPlanDetailClientProps {
  * - Server Component(page.tsx)에서 planUuid를 전달받음
  * - 모든 인터랙티브 로직(useState, useMutation)을 담당
  */
-export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailClientProps) {
+export function CalibrationPlanDetailClient({
+  planUuid,
+  initialData,
+}: CalibrationPlanDetailClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
-  const [editingItemUuid, setEditingItemUuid] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingAgency, setEditingAgency] = useState('');
   const [editingNotes, setEditingNotes] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -106,6 +115,9 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
     queryKey: planQueryKey,
     queryFn: () => calibrationPlansApi.getCalibrationPlan(planUuid),
     enabled: !!planUuid,
+    // 서버 프리페치 데이터를 placeholderData로 사용
+    // placeholderData는 항상 stale 취급 → 백그라운드에서 최신 데이터 refetch 보장
+    placeholderData: initialData,
     ...QUERY_CONFIG.CALIBRATION_PLAN_DETAIL,
   });
 
@@ -268,7 +280,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
         description: '항목이 수정되었습니다.',
       });
       CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
-      setEditingItemUuid(null);
+      setEditingItemId(null);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
@@ -303,15 +315,15 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   });
 
   const handleStartEdit = (item: CalibrationPlanItem) => {
-    setEditingItemUuid(item.uuid);
+    setEditingItemId(item.id);
     setEditingAgency(item.plannedCalibrationAgency || '');
     setEditingNotes(item.notes || '');
   };
 
   const handleSaveEdit = () => {
-    if (!editingItemUuid) return;
+    if (!editingItemId) return;
     updateItemMutation.mutate({
-      itemUuid: editingItemUuid,
+      itemUuid: editingItemId,
       data: {
         plannedCalibrationAgency: editingAgency,
         notes: editingNotes,
@@ -320,7 +332,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
   };
 
   const handleCancelEdit = () => {
-    setEditingItemUuid(null);
+    setEditingItemId(null);
     setEditingAgency('');
     setEditingNotes('');
   };
@@ -426,7 +438,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
               {canSubmitForReview && (
                 <Button
                   onClick={() => setIsSubmitDialogOpen(true)}
-                  disabled={submitForReviewMutation.isPending}
+                  disabled={submitForReviewMutation.isPending || !plan}
                 >
                   <Send className="h-4 w-4 mr-2" />
                   검토 요청
@@ -441,14 +453,14 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
               <Button
                 variant="outline"
                 onClick={() => setIsRejectDialogOpen(true)}
-                disabled={rejectMutation.isPending}
+                disabled={rejectMutation.isPending || !plan}
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 반려
               </Button>
               <Button
                 onClick={() => setIsApproveDialogOpen(true)}
-                disabled={approveMutation.isPending}
+                disabled={approveMutation.isPending || !plan}
               >
                 <UserCheck className="h-4 w-4 mr-2" />
                 최종 승인
@@ -460,7 +472,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
             <Button
               variant="outline"
               onClick={() => setIsRejectDialogOpen(true)}
-              disabled={rejectMutation.isPending}
+              disabled={rejectMutation.isPending || !plan}
             >
               <XCircle className="h-4 w-4 mr-2" />
               반려
@@ -535,7 +547,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                   <Button
                     size="sm"
                     onClick={() => reviewMutation.mutate()}
-                    disabled={reviewMutation.isPending}
+                    disabled={reviewMutation.isPending || !plan}
                     className="w-24"
                     aria-label="교정계획서 확인 완료"
                   >
@@ -578,7 +590,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                     type="button"
                     onClick={() => setIsRejectDialogOpen(true)}
                     className="text-xs text-muted-foreground hover:text-destructive underline mt-1"
-                    disabled={rejectMutation.isPending}
+                    disabled={rejectMutation.isPending || !plan}
                   >
                     반려
                   </button>
@@ -705,7 +717,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                 </TableHeader>
                 <TableBody>
                   {items.map((item: CalibrationPlanItem) => (
-                    <TableRow key={item.uuid}>
+                    <TableRow key={item.id}>
                       <TableCell>{item.sequenceNumber}</TableCell>
                       <TableCell className="font-mono">
                         {item.equipment?.managementNumber || '-'}
@@ -728,7 +740,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                           : '-'}
                       </TableCell>
                       <TableCell>
-                        {editingItemUuid === item.uuid ? (
+                        {editingItemId === item.id ? (
                           <Input
                             value={editingAgency}
                             onChange={(e) => setEditingAgency(e.target.value)}
@@ -749,7 +761,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                         )}
                       </TableCell>
                       <TableCell>
-                        {editingItemUuid === item.uuid ? (
+                        {editingItemId === item.id ? (
                           <Input
                             value={editingNotes}
                             onChange={(e) => setEditingNotes(e.target.value)}
@@ -766,7 +778,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                       </TableCell>
                       {(isDraft || isApproved) && (
                         <TableCell>
-                          {editingItemUuid === item.uuid ? (
+                          {editingItemId === item.id ? (
                             <div className="flex gap-1">
                               <Button
                                 variant="ghost"
@@ -795,7 +807,7 @@ export function CalibrationPlanDetailClient({ planUuid }: CalibrationPlanDetailC
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => confirmItemMutation.mutate(item.uuid)}
+                                  onClick={() => confirmItemMutation.mutate(item.id)}
                                   disabled={confirmItemMutation.isPending}
                                   title="확인"
                                 >

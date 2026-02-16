@@ -67,7 +67,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
           </Button>
 
           <div className="flex items-center gap-3">
-            <TeamTypeIcon type={team.type || team.id} size="lg" />
+            <TeamTypeIcon classification={team.classification || team.id} size="lg" />
             <div>
               <h1 className="text-2xl font-bold">{team.name}</h1>
               {siteInfo && (
@@ -100,7 +100,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
       <Card>
         <CardContent className="py-4">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-            <TeamTypeBadge type={team.type || team.id} />
+            <TeamTypeBadge classification={team.classification || team.id} />
             {siteInfo && (
               <span className="text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3" aria-hidden="true" />

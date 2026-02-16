@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
-import teamsApi, { type Team, SITE_CONFIG, TEAM_TYPE_CONFIG } from '@/lib/api/teams-api';
+import teamsApi, { type Team, SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { TeamCard, TeamCardSkeleton } from './TeamCard';
@@ -25,14 +25,14 @@ import { useTeamFilters } from '@/hooks/use-team-filters';
 import type { UITeamFilters } from '@/lib/utils/team-filter-utils';
 import type { Site } from '@equipment-management/schemas';
 
-// 드롭다운에 표시할 주요 팀 유형 (레거시 제외)
-const PRIMARY_TEAM_TYPES = [
-  'FCC_EMC_RF',
-  'GENERAL_EMC',
-  'GENERAL_RF',
-  'SAR',
-  'AUTOMOTIVE_EMC',
-  'SOFTWARE',
+// 드롭다운에 표시할 주요 팀 분류 (소문자_언더스코어)
+const PRIMARY_CLASSIFICATIONS = [
+  'fcc_emc_rf',
+  'general_emc',
+  'general_rf',
+  'sar',
+  'automotive_emc',
+  'software',
 ] as const;
 
 interface TeamListContentProps {
@@ -59,8 +59,15 @@ interface TeamListContentProps {
 export function TeamListContent({ initialData, initialFilters }: TeamListContentProps) {
   const router = useRouter();
   const { hasRole } = useAuth();
-  const { filters, apiFilters, activeCount, updateSearch, updateSite, updateType, clearFilters } =
-    useTeamFilters(initialFilters);
+  const {
+    filters,
+    apiFilters,
+    activeCount,
+    updateSearch,
+    updateSite,
+    updateClassification,
+    clearFilters,
+  } = useTeamFilters(initialFilters);
 
   // 검색어 로컬 상태 (디바운스용)
   const [searchInput, setSearchInput] = useState(filters.search);
@@ -151,21 +158,23 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
           </SelectContent>
         </Select>
 
-        {/* 팀 유형 필터 */}
+        {/* 팀 분류 필터 */}
         <Select
-          value={filters.type || '_all'}
+          value={filters.classification || '_all'}
           onValueChange={(value: string) =>
-            updateType(value === '_all' ? '' : (value as Parameters<typeof updateType>[0]))
+            updateClassification(
+              value === '_all' ? '' : (value as Parameters<typeof updateClassification>[0])
+            )
           }
         >
-          <SelectTrigger className="w-[180px]" aria-label="팀 유형 필터">
-            <SelectValue placeholder="전체 유형" />
+          <SelectTrigger className="w-[180px]" aria-label="팀 분류 필터">
+            <SelectValue placeholder="전체 분류" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">전체 유형</SelectItem>
-            {PRIMARY_TEAM_TYPES.map((key) => (
+            <SelectItem value="_all">전체 분류</SelectItem>
+            {PRIMARY_CLASSIFICATIONS.map((key) => (
               <SelectItem key={key} value={key}>
-                {TEAM_TYPE_CONFIG[key]?.label || key}
+                {CLASSIFICATION_CONFIG[key]?.label || key}
               </SelectItem>
             ))}
           </SelectContent>
@@ -211,9 +220,10 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
                   사이트: {SITE_CONFIG[filters.site as keyof typeof SITE_CONFIG]?.label}
                 </Badge>
               )}
-              {filters.type && (
+              {filters.classification && (
                 <Badge variant="secondary" className="text-xs">
-                  유형: {TEAM_TYPE_CONFIG[filters.type]?.label || filters.type}
+                  분류:{' '}
+                  {CLASSIFICATION_CONFIG[filters.classification]?.label || filters.classification}
                 </Badge>
               )}
             </div>

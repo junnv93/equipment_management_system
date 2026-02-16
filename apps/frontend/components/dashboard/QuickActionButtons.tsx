@@ -50,12 +50,6 @@ const actionsByRole: Record<string, QuickAction[]> = {
       icon: CheckSquare,
       variant: 'default',
     },
-    {
-      label: '교정 등록',
-      href: FRONTEND_ROUTES.CALIBRATION.REGISTER,
-      icon: FileSpreadsheet,
-      variant: 'outline',
-    },
     { label: '장비 등록', href: FRONTEND_ROUTES.EQUIPMENT.CREATE, icon: Plus, variant: 'outline' },
   ],
   lab_manager: [

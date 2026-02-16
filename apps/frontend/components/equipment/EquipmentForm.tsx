@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import {
@@ -79,6 +80,7 @@ import type {
   CreateMaintenanceHistoryInput,
   CreateIncidentHistoryInput,
 } from '@/lib/api/equipment-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useToast } from '@/components/ui/use-toast';
 import { ApiError } from '@/lib/errors/equipment-errors';
 import { useManagementNumberCheck } from '@/hooks/use-management-number-check';
@@ -313,12 +315,87 @@ export function EquipmentForm({
   // 파일 업로드 상태
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
-  // 이력 데이터 상태 (수정 모드: 실제 데이터, 등록 모드: 임시 데이터)
+  // 이력 데이터 로드 (수정 모드: useQuery SSOT 패턴)
+  const { data: serverLocationHistory = [], isLoading: isLocationHistoryLoading } = useQuery({
+    queryKey: queryKeys.equipment.locationHistory(initialData?.uuid ?? ''),
+    queryFn: () => equipmentApi.getLocationHistory(initialData!.uuid!),
+    enabled: isEdit && !!initialData?.uuid,
+    ...QUERY_CONFIG.HISTORY,
+  });
+
+  const { data: serverMaintenanceHistory = [], isLoading: isMaintenanceHistoryLoading } = useQuery({
+    queryKey: queryKeys.equipment.maintenanceHistory(initialData?.uuid ?? ''),
+    queryFn: () => equipmentApi.getMaintenanceHistory(initialData!.uuid!),
+    enabled: isEdit && !!initialData?.uuid,
+    ...QUERY_CONFIG.HISTORY,
+  });
+
+  const { data: serverIncidentHistory = [], isLoading: isIncidentHistoryLoading } = useQuery({
+    queryKey: queryKeys.equipment.incidentHistory(initialData?.uuid ?? ''),
+    queryFn: () => equipmentApi.getIncidentHistory(initialData!.uuid!),
+    enabled: isEdit && !!initialData?.uuid,
+    ...QUERY_CONFIG.HISTORY,
+  });
+
+  const { data: serverCalibrationHistory = [], isLoading: isCalibrationHistoryLoading } = useQuery({
+    queryKey: queryKeys.calibrations.byEquipment(initialData?.uuid ?? ''),
+    queryFn: async () => {
+      const calibrations = await equipmentApi.getCalibrationHistory(initialData!.uuid!);
+      // CalibrationHistoryItem → CalibrationRecord 변환
+      return calibrations.map((item) => ({
+        id: item.id,
+        calibrationDate: item.calibrationDate,
+        nextCalibrationDate: item.nextCalibrationDate,
+        calibrationAgency: item.calibrationAgency,
+        result: item.result,
+        approvalStatus: item.approvalStatus,
+        status: 'completed' as const, // API 응답에서는 완료된 이력만 반환
+      }));
+    },
+    enabled: isEdit && !!initialData?.uuid,
+    ...QUERY_CONFIG.HISTORY,
+  });
+
+  const isHistoryLoading =
+    isLocationHistoryLoading ||
+    isMaintenanceHistoryLoading ||
+    isIncidentHistoryLoading ||
+    isCalibrationHistoryLoading;
+
+  // 로컬 변경 상태 (Form State, NOT server state)
+  // - 수정 모드: useQuery로 로드한 서버 데이터를 1회 복사 → 로컬 뮤테이션 (add/delete)
+  // - 등록 모드: 순수 로컬 상태 (pending 배열)
+  // - 제출 시: 모든 pending 이력을 서버로 전송
+  // ✅ 예외: verify-frontend-state Exception #6 (폼 상태 useState)
   const [locationHistory, setLocationHistory] = useState<LocationHistoryItem[]>([]);
   const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceHistoryItem[]>([]);
   const [incidentHistory, setIncidentHistory] = useState<IncidentHistoryItem[]>([]);
   const [calibrationHistory, setCalibrationHistory] = useState<CalibrationRecord[]>([]);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+
+  // 수정 모드: 서버 데이터로 초기화 (1회만)
+  useEffect(() => {
+    if (isEdit && serverLocationHistory.length > 0 && locationHistory.length === 0) {
+      setLocationHistory(serverLocationHistory);
+    }
+  }, [isEdit, serverLocationHistory, locationHistory.length]);
+
+  useEffect(() => {
+    if (isEdit && serverMaintenanceHistory.length > 0 && maintenanceHistory.length === 0) {
+      setMaintenanceHistory(serverMaintenanceHistory);
+    }
+  }, [isEdit, serverMaintenanceHistory, maintenanceHistory.length]);
+
+  useEffect(() => {
+    if (isEdit && serverIncidentHistory.length > 0 && incidentHistory.length === 0) {
+      setIncidentHistory(serverIncidentHistory);
+    }
+  }, [isEdit, serverIncidentHistory, incidentHistory.length]);
+
+  useEffect(() => {
+    if (isEdit && serverCalibrationHistory.length > 0 && calibrationHistory.length === 0) {
+      setCalibrationHistory(serverCalibrationHistory);
+    }
+  }, [isEdit, serverCalibrationHistory, calibrationHistory.length]);
 
   /**
    * ★ Best Practice: Map 기반 임시 이력 관리
@@ -429,42 +506,6 @@ export function EquipmentForm({
       }
     }
   }, [user, userSite, userTeamId, isEdit, userDefaults, form]);
-
-  // 수정 모드일 때 이력 데이터 로드
-  useEffect(() => {
-    if (isEdit && initialData?.uuid) {
-      const loadHistory = async () => {
-        setIsHistoryLoading(true);
-        try {
-          const [locations, maintenance, incidents, calibrations] = await Promise.all([
-            equipmentApi.getLocationHistory(initialData.uuid!).catch(() => []),
-            equipmentApi.getMaintenanceHistory(initialData.uuid!).catch(() => []),
-            equipmentApi.getIncidentHistory(initialData.uuid!).catch(() => []),
-            equipmentApi.getCalibrationHistory(initialData.uuid!).catch(() => []),
-          ]);
-          setLocationHistory(locations);
-          setMaintenanceHistory(maintenance);
-          setIncidentHistory(incidents);
-          // CalibrationHistoryItem → CalibrationRecord 변환
-          const calibrationRecords: CalibrationRecord[] = calibrations.map((item) => ({
-            id: item.id,
-            calibrationDate: item.calibrationDate,
-            nextCalibrationDate: item.nextCalibrationDate,
-            calibrationAgency: item.calibrationAgency,
-            result: item.result,
-            approvalStatus: item.approvalStatus,
-            status: 'completed', // API 응답에서는 완료된 이력만 반환
-          }));
-          setCalibrationHistory(calibrationRecords);
-        } catch (error) {
-          console.error('Failed to load history:', error);
-        } finally {
-          setIsHistoryLoading(false);
-        }
-      };
-      loadHistory();
-    }
-  }, [isEdit, initialData?.uuid]);
 
   /**
    * 이력 저장 에러 핸들러

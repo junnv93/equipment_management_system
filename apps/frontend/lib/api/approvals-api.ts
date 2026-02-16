@@ -14,6 +14,7 @@ import {
   type UserRole,
   type UnifiedApprovalStatus,
   UNIFIED_APPROVAL_STATUS_LABELS,
+  SITE_LABELS,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
@@ -434,7 +435,7 @@ class ApprovalsApi {
    */
   private async getPendingSoftwareApprovals(): Promise<ApprovalItem[]> {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.SOFTWARE.CHANGES.PENDING);
+      const response = await apiClient.get(API_ENDPOINTS.SOFTWARE.PENDING);
       const items = transformArrayResponse<Record<string, unknown>>(response);
 
       return items.map((item) => this.mapSoftwareToApprovalItem(item));
@@ -692,7 +693,7 @@ class ApprovalsApi {
         await apiClient.patch(API_ENDPOINTS.CALIBRATION_PLANS.APPROVE(id), { comment });
         break;
       case 'software':
-        await apiClient.patch(API_ENDPOINTS.SOFTWARE.CHANGES.APPROVE(id), { comment });
+        await apiClient.patch(API_ENDPOINTS.SOFTWARE.APPROVE(id), { comment });
         break;
       default:
         throw new Error(`Unsupported category: ${category}`);
@@ -793,7 +794,7 @@ class ApprovalsApi {
         });
         break;
       case 'software':
-        await apiClient.patch(API_ENDPOINTS.SOFTWARE.CHANGES.REJECT(id), {
+        await apiClient.patch(API_ENDPOINTS.SOFTWARE.REJECT(id), {
           reason,
         });
         break;
@@ -998,35 +999,34 @@ class ApprovalsApi {
     plan: Record<string, unknown>,
     category: 'plan_review' | 'plan_final'
   ): ApprovalItem {
-    const author = plan.author as Record<string, unknown> | undefined;
-    const site = plan.site as Record<string, unknown> | undefined;
+    // 백엔드 findAll()이 LEFT JOIN으로 플랫 필드 반환: authorName, teamName
+    const siteId = String(plan.siteId || '');
+    const siteLabel = SITE_LABELS[siteId as keyof typeof SITE_LABELS] || siteId;
 
     return {
       id: String(plan.id),
       category,
       status: this.mapPlanStatus(String(plan.status)),
       requesterId: String(plan.createdBy || ''),
-      requesterName: author?.name ? String(author.name) : '알 수 없음',
-      requesterTeam: site?.name ? String(site.name) : '',
+      requesterName: plan.authorName ? String(plan.authorName) : '알 수 없음',
+      requesterTeam: plan.teamName ? String(plan.teamName) : '',
       requestedAt: String(plan.createdAt || ''),
-      summary: `${plan.year || ''}년 ${site?.name || ''} 교정계획서`,
+      summary: `${plan.year || ''}년 ${siteLabel} 교정계획서`,
       details: plan,
       originalData: plan,
     };
   }
 
   private mapSoftwareToApprovalItem(item: Record<string, unknown>): ApprovalItem {
-    const requester = item.requester as Record<string, unknown> | undefined;
-    const team = requester?.team as Record<string, unknown> | undefined;
-
+    // 백엔드 findHistory()가 LEFT JOIN으로 플랫 필드 반환: changerName, teamName, equipmentName
     return {
       id: String(item.id),
       category: 'software',
       status: 'pending_review',
-      requesterId: String(item.requestedBy || ''),
-      requesterName: requester?.name ? String(requester.name) : '알 수 없음',
-      requesterTeam: team?.name ? String(team.name) : '',
-      requestedAt: String(item.createdAt || ''),
+      requesterId: String(item.changedBy || ''),
+      requesterName: item.changerName ? String(item.changerName) : '알 수 없음',
+      requesterTeam: item.teamName ? String(item.teamName) : '',
+      requestedAt: String(item.changedAt || item.createdAt || ''),
       summary: `${item.softwareName || '소프트웨어'} 변경 요청`,
       details: item,
       originalData: item,
@@ -1034,14 +1034,14 @@ class ApprovalsApi {
   }
 
   private mapNonConformanceToApprovalItem(nc: NonConformance): ApprovalItem {
-    // correctedByUser 관계를 통해 사용자 정보 추출
-    const correctedByUser = (nc as unknown as Record<string, unknown>).correctedByUser as
+    // 백엔드 relation 이름: corrector, discoverer (correctedByUser/discoveredByUser가 아님)
+    const corrector = (nc as unknown as Record<string, unknown>).corrector as
       | Record<string, unknown>
       | undefined;
-    const discoveredByUser = (nc as unknown as Record<string, unknown>).discoveredByUser as
+    const discoverer = (nc as unknown as Record<string, unknown>).discoverer as
       | Record<string, unknown>
       | undefined;
-    const user = correctedByUser || discoveredByUser;
+    const user = corrector || discoverer;
     const team = user?.team as Record<string, unknown> | undefined;
 
     return {
@@ -1070,19 +1070,16 @@ class ApprovalsApi {
   }
 
   private mapInspectionToApprovalItem(item: Record<string, unknown>): ApprovalItem {
-    const equipment = item.equipment as Record<string, unknown> | undefined;
-    // equipment.team 관계를 통해 팀 정보 추출
-    const team = equipment?.team as Record<string, unknown> | undefined;
-
+    // 백엔드 findAllIntermediateChecks()가 플랫 필드 반환: equipmentName, team, teamName
     return {
       id: String(item.calibrationId || item.id),
       category: 'inspection',
       status: 'pending',
       requesterId: '',
       requesterName: '자동 알림',
-      requesterTeam: team?.name ? String(team.name) : '',
+      requesterTeam: item.teamName ? String(item.teamName) : item.team ? String(item.team) : '',
       requestedAt: String(item.nextIntermediateCheckDate || item.createdAt || ''),
-      summary: `${equipment?.name || '장비'} 중간점검`,
+      summary: `${item.equipmentName || '장비'} 중간점검`,
       details: item,
       originalData: item,
     };

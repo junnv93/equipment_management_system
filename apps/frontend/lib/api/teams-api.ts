@@ -32,32 +32,19 @@ export type Team = Omit<SchemaTeam, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
 };
 
 /**
- * 팀 유형 정의 — SSOT from @equipment-management/schemas
+ * 팀 분류 정의 — SSOT from @equipment-management/schemas
+ * ✅ TeamType 제거 → Classification 사용 (소문자_언더스코어)
  */
-import type { TeamType } from '@equipment-management/schemas';
-export type { TeamType };
+import type { Classification } from '@equipment-management/schemas';
+import { CLASSIFICATION_TO_CODE } from '@equipment-management/schemas';
+export type { Classification };
 
 /**
- * 팀 유형 → 분류코드 매핑
- */
-export const TEAM_TYPE_TO_CLASSIFICATION: Record<string, string> = {
-  FCC_EMC_RF: 'E', // FCC EMC/RF
-  GENERAL_EMC: 'R', // General EMC
-  GENERAL_RF: 'W', // General RF
-  SAR: 'S', // SAR
-  AUTOMOTIVE_EMC: 'A', // Automotive EMC
-  SOFTWARE: 'P', // Software Program
-  // 레거시 호환성
-  RF: 'E',
-  EMC: 'R',
-  AUTO: 'A',
-};
-
-/**
- * 팀 유형별 메타데이터 (UL 색상 팔레트 기반)
+ * 팀 분류별 메타데이터 (UL 색상 팔레트 기반)
+ * ✅ SSOT: 소문자_언더스코어 키 사용 (fcc_emc_rf, general_emc, ...)
  * ✅ 팀 이름 = 분류 이름 (통일)
  */
-export const TEAM_TYPE_CONFIG: Record<
+export const CLASSIFICATION_CONFIG: Record<
   string,
   {
     color: string;
@@ -68,7 +55,7 @@ export const TEAM_TYPE_CONFIG: Record<
     classificationCode: string;
   }
 > = {
-  FCC_EMC_RF: {
+  fcc_emc_rf: {
     color: '#122C49', // UL Midnight Blue
     bgColor: 'bg-[#122C49]/10',
     borderColor: 'border-[#122C49]',
@@ -76,7 +63,7 @@ export const TEAM_TYPE_CONFIG: Record<
     label: 'FCC EMC/RF',
     classificationCode: 'E',
   },
-  GENERAL_EMC: {
+  general_emc: {
     color: '#577E9E', // UL Fog
     bgColor: 'bg-[#577E9E]/10',
     borderColor: 'border-[#577E9E]',
@@ -84,7 +71,7 @@ export const TEAM_TYPE_CONFIG: Record<
     label: 'General EMC',
     classificationCode: 'R',
   },
-  GENERAL_RF: {
+  general_rf: {
     color: '#4A90D9', // Blue
     bgColor: 'bg-blue-100',
     borderColor: 'border-blue-300',
@@ -92,7 +79,7 @@ export const TEAM_TYPE_CONFIG: Record<
     label: 'General RF',
     classificationCode: 'W',
   },
-  SAR: {
+  sar: {
     color: '#FF9D55', // UL Warning
     bgColor: 'bg-[#FF9D55]/10',
     borderColor: 'border-[#FF9D55]',
@@ -100,7 +87,7 @@ export const TEAM_TYPE_CONFIG: Record<
     label: 'SAR',
     classificationCode: 'S',
   },
-  AUTOMOTIVE_EMC: {
+  automotive_emc: {
     color: '#00A451', // UL Green
     bgColor: 'bg-[#00A451]/10',
     borderColor: 'border-[#00A451]',
@@ -108,7 +95,7 @@ export const TEAM_TYPE_CONFIG: Record<
     label: 'Automotive EMC',
     classificationCode: 'A',
   },
-  SOFTWARE: {
+  software: {
     color: '#8B5CF6', // Purple
     bgColor: 'bg-purple-100',
     borderColor: 'border-purple-300',
@@ -116,32 +103,10 @@ export const TEAM_TYPE_CONFIG: Record<
     label: 'Software Program',
     classificationCode: 'P',
   },
-  // 레거시 호환성 (기존 타입 지원)
-  RF: {
-    color: '#122C49',
-    bgColor: 'bg-[#122C49]/10',
-    borderColor: 'border-[#122C49]',
-    icon: 'Radio',
-    label: 'FCC EMC/RF',
-    classificationCode: 'E',
-  },
-  EMC: {
-    color: '#577E9E',
-    bgColor: 'bg-[#577E9E]/10',
-    borderColor: 'border-[#577E9E]',
-    icon: 'Zap',
-    label: 'General EMC',
-    classificationCode: 'R',
-  },
-  AUTO: {
-    color: '#00A451',
-    bgColor: 'bg-[#00A451]/10',
-    borderColor: 'border-[#00A451]',
-    icon: 'Car',
-    label: 'Automotive EMC',
-    classificationCode: 'A',
-  },
 };
+
+/** @deprecated 레거시 호환성 - CLASSIFICATION_CONFIG 사용 권장 */
+export const TEAM_TYPE_CONFIG = CLASSIFICATION_CONFIG;
 
 /**
  * 사이트 정보
@@ -161,7 +126,7 @@ export interface TeamQuery {
   ids?: string;
   search?: string;
   site?: Site;
-  type?: TeamType;
+  classification?: Classification; // ✅ type → classification
   sort?: string;
   page?: number;
   pageSize?: number;

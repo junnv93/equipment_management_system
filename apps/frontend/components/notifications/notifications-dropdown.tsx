@@ -61,7 +61,7 @@ export function NotificationsDropdown() {
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -right-1 -top-1 h-4 min-w-4 px-1 text-xs"
+              className="absolute -right-1 -top-1 h-4 min-w-4 px-1 text-xs tabular-nums"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -86,21 +86,35 @@ export function NotificationsDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup className="overflow-y-auto max-h-[60vh] min-h-[100px]">
           {isLoading ? (
-            <div className="py-4 text-center text-sm text-muted-foreground">
-              알림을 불러오는 중...
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-16 rounded bg-muted/50 animate-pulse"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                />
+              ))}
             </div>
           ) : notifications.length === 0 ? (
-            <div className="py-4 text-center text-sm text-muted-foreground">
-              새로운 알림이 없습니다.
+            <div className="py-8 text-center">
+              <div className="relative inline-block mb-3">
+                <Bell className="h-10 w-10 mx-auto text-muted-foreground/30" aria-hidden="true" />
+                <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-success flex items-center justify-center">
+                  <span className="text-xs text-success-foreground">✓</span>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">새로운 알림이 없습니다</p>
             </div>
           ) : (
             <div className="p-2">
-              {notifications.map((notification) => (
-                <NotificationItem
+              {notifications.map((notification, index) => (
+                <div
                   key={notification.id}
-                  notification={notification}
-                  onMarkAsRead={handleMarkAsRead}
-                />
+                  className="motion-safe:animate-[staggerFadeIn_0.2s_ease-out_forwards]"
+                  style={{ animationDelay: `${index * 40}ms` }}
+                >
+                  <NotificationItem notification={notification} onMarkAsRead={handleMarkAsRead} />
+                </div>
               ))}
             </div>
           )}

@@ -34,7 +34,7 @@
  * ============================================================================
  */
 
-import type { Site, TeamType } from '@equipment-management/schemas';
+import type { Site, Classification } from '@equipment-management/schemas';
 
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
@@ -42,7 +42,7 @@ import type { Site, TeamType } from '@equipment-management/schemas';
 export interface UITeamFilters {
   search: string; // 검색어 (팀 이름, 설명)
   site: Site | ''; // 사이트 ('' = 전체)
-  type: TeamType | ''; // 팀 유형 ('' = 전체)
+  classification: Classification | ''; // ✅ type → classification (소문자_언더스코어)
 }
 
 /**
@@ -51,7 +51,7 @@ export interface UITeamFilters {
 export interface ApiTeamFilters {
   search?: string;
   site?: Site;
-  type?: TeamType;
+  classification?: Classification; // ✅ type → classification
   pageSize?: number; // 팀은 보통 많지 않으므로 한 번에 로드
 }
 
@@ -61,7 +61,7 @@ export interface ApiTeamFilters {
 export const DEFAULT_UI_FILTERS: UITeamFilters = {
   search: '',
   site: '',
-  type: '',
+  classification: '',
 };
 
 /**
@@ -99,13 +99,15 @@ export function parseTeamFiltersFromSearchParams(
   const siteRaw = get('site') || DEFAULT_UI_FILTERS.site;
   const site = (siteRaw === '_all' ? '' : siteRaw) as Site | '';
 
-  const typeRaw = get('type') || DEFAULT_UI_FILTERS.type;
-  const type = (typeRaw === '_all' ? '' : typeRaw) as TeamType | '';
+  const classificationRaw = get('classification') || DEFAULT_UI_FILTERS.classification;
+  const classification = (classificationRaw === '_all' ? '' : classificationRaw) as
+    | Classification
+    | '';
 
   return {
     search,
     site,
-    type,
+    classification,
   };
 }
 
@@ -119,7 +121,7 @@ export function convertFiltersToApiParams(filters: UITeamFilters): ApiTeamFilter
   return {
     search: filters.search || undefined,
     site: filters.site || undefined,
-    type: filters.type || undefined,
+    classification: filters.classification || undefined,
     pageSize: 50, // 팀은 보통 많지 않으므로 한 번에 로드
   };
 }
@@ -134,6 +136,6 @@ export function countActiveFilters(filters: UITeamFilters): number {
   let count = 0;
   if (filters.search) count++;
   if (filters.site) count++;
-  if (filters.type) count++;
+  if (filters.classification) count++;
   return count;
 }

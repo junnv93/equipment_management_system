@@ -61,7 +61,7 @@ export function TeamCard({ team, className }: TeamCardProps) {
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <TeamTypeIcon type={team.type || team.id} size="lg" />
+            <TeamTypeIcon classification={team.classification || team.id} size="lg" />
             <div>
               <h3
                 id={`team-name-${team.id}`}
@@ -83,9 +83,7 @@ export function TeamCard({ team, className }: TeamCardProps) {
       <CardContent className="pt-0 space-y-4">
         {/* 팀 설명 */}
         {team.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {team.description}
-          </p>
+          <p className="text-sm text-muted-foreground line-clamp-2">{team.description}</p>
         )}
 
         {/* 통계 정보 */}
@@ -108,11 +106,7 @@ export function TeamCard({ team, className }: TeamCardProps) {
 
         {/* 팀원 아바타 그리드 */}
         {team.memberCount && team.memberCount > 0 && (
-          <TeamMemberAvatars
-            teamId={team.id}
-            memberCount={team.memberCount}
-            maxDisplay={5}
-          />
+          <TeamMemberAvatars teamId={team.id} memberCount={team.memberCount} maxDisplay={5} />
         )}
       </CardContent>
     </Card>
@@ -147,10 +141,7 @@ export function TeamCardSkeleton() {
         </div>
         <div className="flex -space-x-2">
           {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-8 w-8 rounded-full bg-muted border-2 border-background"
-            />
+            <div key={i} className="h-8 w-8 rounded-full bg-muted border-2 border-background" />
           ))}
         </div>
       </CardContent>
