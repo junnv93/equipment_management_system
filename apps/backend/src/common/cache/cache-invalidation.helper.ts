@@ -14,12 +14,29 @@ import { SimpleCacheService } from './simple-cache.service';
  * - CalibrationOverdueScheduler
  * - DisposalService
  * - NonConformancesService
+ * - DashboardService (dashboard:* 패턴)
  */
 @Injectable()
 export class CacheInvalidationHelper {
   private readonly logger = new Logger(CacheInvalidationHelper.name);
 
   constructor(private readonly cacheService: SimpleCacheService) {}
+
+  /**
+   * 모든 대시보드 캐시 무효화
+   *
+   * 사용 시점:
+   * - 장비 상태 변경 (equipment update, NC 생성, 폐기 등)
+   * - 체크아웃 상태 변경 (승인, 반출, 반입 등)
+   * - 교정 변경
+   *
+   * 패턴: dashboard:*
+   * 영향: 모든 대시보드 통계, 팀별 현황, 교정 현황, 승인 카운트 캐시
+   */
+  async invalidateAllDashboard(): Promise<void> {
+    await this.cacheService.deleteByPattern('dashboard:*');
+    this.logger.debug('✓ Invalidated all dashboard caches');
+  }
 
   /**
    * 모든 장비 관련 캐시 무효화
@@ -103,14 +120,16 @@ export class CacheInvalidationHelper {
     const tasks: Promise<void>[] = [
       // 1. 특정 장비 상세 무효화 (항상)
       this.invalidateEquipmentDetail(equipmentId),
+      // 2. 대시보드 캐시 무효화 (장비 변경은 통계에 영향)
+      this.invalidateAllDashboard(),
     ];
 
-    // 2. 상태 변경 시 모든 목록 무효화
+    // 3. 상태 변경 시 모든 목록 무효화
     if (statusChanged) {
       tasks.push(this.invalidateEquipmentLists());
     }
 
-    // 3. 팀 변경 시 팀별 캐시 무효화
+    // 4. 팀 변경 시 팀별 캐시 무효화
     if (teamIdChanged) {
       tasks.push(Promise.resolve(this.cacheService.deleteByPattern('equipment:team:*')));
     }
@@ -175,7 +194,7 @@ export class CacheInvalidationHelper {
    */
   async invalidateAfterDisposal(equipmentId: string): Promise<void> {
     await Promise.all([
-      this.invalidateAfterEquipmentUpdate(equipmentId, true, false),
+      this.invalidateAfterEquipmentUpdate(equipmentId, true, false), // 대시보드 무효화 포함
       this.cacheService.deleteByPattern('disposal-requests:*'),
     ]);
 

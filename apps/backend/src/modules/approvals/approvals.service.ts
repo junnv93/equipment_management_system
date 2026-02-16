@@ -2,7 +2,45 @@ import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, and, isNull } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
-import { CalibrationApprovalStatusEnum } from '@equipment-management/schemas';
+import {
+  CalibrationApprovalStatusEnum,
+  CalibrationPlanStatusValues,
+  SoftwareApprovalStatusValues,
+  CheckoutStatusValues,
+  CheckoutPurposeValues,
+  EquipmentImportStatusValues,
+  EquipmentImportSourceEnum,
+  NonConformanceStatusValues,
+  NonConformanceTypeValues,
+  DisposalReviewStatusValues,
+  ApprovalStatusEnum,
+  type UserRole,
+} from '@equipment-management/schemas';
+import { isLabManager as checkIsLabManager } from '@equipment-management/shared-constants';
+
+/**
+ * 역할별 승인 카테고리 매핑
+ *
+ * SSOT: 프론트엔드 ROLE_TABS (approvals-api.ts)와 동기화
+ *
+ * 역할에 해당하지 않는 카테고리는 DB 쿼리 생략 (0 반환)
+ */
+const ROLE_CATEGORIES: Record<UserRole, ReadonlySet<string>> = {
+  test_engineer: new Set(),
+  technical_manager: new Set([
+    'outgoing',
+    'incoming',
+    'equipment',
+    'calibration',
+    'inspection',
+    'nonconformity',
+    'disposal_review',
+    'software',
+  ]),
+  quality_manager: new Set(['plan_review']),
+  lab_manager: new Set(['disposal_final', 'plan_final', 'incoming']),
+  system_admin: new Set(),
+};
 
 /**
  * 카테고리별 승인 대기 개수
@@ -54,13 +92,17 @@ export class ApprovalsService {
    * @param userRole - 사용자 역할 (technical_manager, lab_manager, quality_manager)
    * @returns 카테고리별 대기 개수
    */
-  async getPendingCountsByRole(userId: string, userRole: string): Promise<PendingCountsByCategory> {
-    // Get user's team for filtering
+  async getPendingCountsByRole(
+    userId: string,
+    userRole: UserRole
+  ): Promise<PendingCountsByCategory> {
+    // Get user's team and site for filtering
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
       columns: {
         id: true,
         teamId: true,
+        site: true,
       },
     });
 
@@ -72,9 +114,14 @@ export class ApprovalsService {
     }
 
     const userTeamId = user.teamId;
-    const isLabManager = userRole === 'lab_manager';
+    const userSite = user.site;
+    const isLabManager = checkIsLabManager(userRole);
 
-    // Parallel execution for efficiency
+    // Role-based category gating
+    const allowedCategories = ROLE_CATEGORIES[userRole] ?? new Set();
+    const shouldQuery = (category: string) => allowedCategories.has(category);
+
+    // Parallel execution for efficiency (with role gating)
     const [
       // Direction-based counts (consolidated)
       outgoingCheckouts,
@@ -96,31 +143,58 @@ export class ApprovalsService {
     ] = await Promise.all([
       // === Outgoing (반출) ===
       // Regular checkouts (calibration, repair, rental, etc.)
-      this.getCheckoutCount('pending', undefined, userTeamId, isLabManager),
+      shouldQuery('outgoing')
+        ? this.getCheckoutCount(CheckoutStatusValues.PENDING, undefined, userTeamId, isLabManager)
+        : Promise.resolve(0),
 
-      // Equipment being returned to vendors
-      this.getCheckoutCount('pending', 'return_to_vendor', userTeamId, isLabManager),
+      // Equipment being returned to vendors (part of outgoing)
+      shouldQuery('outgoing')
+        ? this.getCheckoutCount(
+            CheckoutStatusValues.PENDING,
+            CheckoutPurposeValues.RETURN_TO_VENDOR,
+            userTeamId,
+            isLabManager
+          )
+        : Promise.resolve(0),
 
       // === Incoming (반입) ===
       // Equipment returning from calibration/repair
-      this.getCheckoutCount('returned', undefined, userTeamId, isLabManager),
+      shouldQuery('incoming')
+        ? this.getCheckoutCount(CheckoutStatusValues.RETURNED, undefined, userTeamId, isLabManager)
+        : Promise.resolve(0),
 
       // Rental equipment arriving from vendors
-      this.getEquipmentImportCount('pending', 'rental'),
+      shouldQuery('incoming')
+        ? this.getEquipmentImportCount(
+            EquipmentImportStatusValues.PENDING,
+            EquipmentImportSourceEnum.enum.rental,
+            userSite
+          )
+        : Promise.resolve(0),
 
       // Shared equipment arriving from other teams
-      this.getEquipmentImportCount('pending', 'internal_shared'),
+      shouldQuery('incoming')
+        ? this.getEquipmentImportCount(
+            EquipmentImportStatusValues.PENDING,
+            EquipmentImportSourceEnum.enum.internal_shared,
+            userSite
+          )
+        : Promise.resolve(0),
 
       // === Specialized (not movement) ===
-      this.getEquipmentRequestCount(),
-      this.getCalibrationCount(),
-      this.getIntermediateCheckCount(),
-      this.getNonConformanceCount(userTeamId, isLabManager),
-      this.getDisposalReviewCount(userId, isLabManager, userTeamId),
-      this.getDisposalFinalCount(),
-      this.getCalibrationPlanReviewCount(),
-      this.getCalibrationPlanFinalCount(),
-      this.getSoftwareCount(),
+      shouldQuery('equipment') ? this.getEquipmentRequestCount(userSite) : Promise.resolve(0),
+      shouldQuery('calibration') ? this.getCalibrationCount(userSite) : Promise.resolve(0),
+      shouldQuery('inspection') ? this.getIntermediateCheckCount() : Promise.resolve(0),
+      shouldQuery('nonconformity')
+        ? this.getNonConformanceCount(userTeamId, isLabManager)
+        : Promise.resolve(0),
+      shouldQuery('disposal_review')
+        ? this.getDisposalReviewCount(userId, isLabManager, userTeamId)
+        : Promise.resolve(0),
+      shouldQuery('disposal_final') ? this.getDisposalFinalCount(userSite) : Promise.resolve(0),
+      shouldQuery('plan_review') ? this.getCalibrationPlanReviewCount() : Promise.resolve(0), // Cross-site
+      shouldQuery('plan_final') ? this.getCalibrationPlanFinalCount() : Promise.resolve(0),
+      shouldQuery('software') ? this.getSoftwareCount() : Promise.resolve(0),
     ]);
 
     return {
@@ -187,12 +261,23 @@ export class ApprovalsService {
 
   /**
    * 장비 반입 승인 대기 개수 조회
+   *
+   * Site filtering: equipmentImports has direct site column
    */
-  private async getEquipmentImportCount(status: string, sourceType: string): Promise<number> {
+  private async getEquipmentImportCount(
+    status: string,
+    sourceType: string,
+    userSite?: string | null
+  ): Promise<number> {
     try {
       const items = await this.db.query.equipmentImports.findMany({
-        where: (imports, { eq: eqFn, and: andFn }) =>
-          andFn(eqFn(imports.status, status), eqFn(imports.sourceType, sourceType)),
+        where: (imports, { eq: eqFn, and: andFn }) => {
+          const conditions = [eqFn(imports.status, status), eqFn(imports.sourceType, sourceType)];
+          if (userSite) {
+            conditions.push(eqFn(imports.site, userSite));
+          }
+          return andFn(...conditions);
+        },
         columns: {
           id: true,
         },
@@ -206,11 +291,31 @@ export class ApprovalsService {
 
   /**
    * 장비 등록/수정/삭제 승인 대기 개수
+   *
+   * Site filtering: JOIN users via requestedBy, filter by users.site
+   * Pattern: DashboardService.getPendingApprovalCounts
    */
-  private async getEquipmentRequestCount(): Promise<number> {
+  private async getEquipmentRequestCount(userSite?: string | null): Promise<number> {
     try {
+      if (userSite) {
+        const result = await this.db
+          .select({ id: schema.equipmentRequests.id })
+          .from(schema.equipmentRequests)
+          .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
+          .where(
+            and(
+              eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval),
+              eq(schema.users.site, userSite)
+            )
+          );
+        return result.length;
+      }
+
       const items = await this.db.query.equipmentRequests.findMany({
-        where: eq(schema.equipmentRequests.approvalStatus, 'pending_approval'),
+        where: eq(
+          schema.equipmentRequests.approvalStatus,
+          ApprovalStatusEnum.enum.pending_approval
+        ),
         columns: {
           id: true,
         },
@@ -224,9 +329,28 @@ export class ApprovalsService {
 
   /**
    * 교정 기록 승인 대기 개수
+   *
+   * Site filtering: JOIN equipment, filter by equipment.site
    */
-  private async getCalibrationCount(): Promise<number> {
+  private async getCalibrationCount(userSite?: string | null): Promise<number> {
     try {
+      if (userSite) {
+        const result = await this.db
+          .select({ id: schema.calibrations.id })
+          .from(schema.calibrations)
+          .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+          .where(
+            and(
+              eq(
+                schema.calibrations.approvalStatus,
+                CalibrationApprovalStatusEnum.enum.pending_approval
+              ),
+              eq(schema.equipment.site, userSite)
+            )
+          );
+        return result.length;
+      }
+
       const items = await this.db.query.calibrations.findMany({
         where: eq(
           schema.calibrations.approvalStatus,
@@ -267,7 +391,7 @@ export class ApprovalsService {
     try {
       const items = await this.db.query.nonConformances.findMany({
         where: (nc, { eq: eqFn, and: andFn, isNull: isNullFn }) =>
-          andFn(eqFn(nc.status, 'corrected'), isNullFn(nc.deletedAt)),
+          andFn(eqFn(nc.status, NonConformanceStatusValues.CORRECTED), isNullFn(nc.deletedAt)),
         columns: {
           id: true,
           ncType: true,
@@ -284,7 +408,9 @@ export class ApprovalsService {
 
       // Filter out items that require repair but don't have repair history
       let validItems = items.filter((item) => {
-        const requiresRepair = ['damage', 'malfunction'].includes(item.ncType);
+        const requiresRepair =
+          item.ncType === NonConformanceTypeValues.DAMAGE ||
+          item.ncType === NonConformanceTypeValues.MALFUNCTION;
         return !requiresRepair || item.repairHistoryId !== null;
       });
 
@@ -309,7 +435,7 @@ export class ApprovalsService {
   ): Promise<number> {
     try {
       const requests = await this.db.query.disposalRequests.findMany({
-        where: eq(schema.disposalRequests.reviewStatus, 'pending'),
+        where: eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING),
         columns: {
           id: true,
         },
@@ -335,11 +461,27 @@ export class ApprovalsService {
 
   /**
    * 폐기 최종 승인 대기 개수 (시험소장)
+   *
+   * Site filtering: JOIN equipment, filter by equipment.site
    */
-  private async getDisposalFinalCount(): Promise<number> {
+  private async getDisposalFinalCount(userSite?: string | null): Promise<number> {
     try {
+      if (userSite) {
+        const result = await this.db
+          .select({ id: schema.disposalRequests.id })
+          .from(schema.disposalRequests)
+          .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
+          .where(
+            and(
+              eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED),
+              eq(schema.equipment.site, userSite)
+            )
+          );
+        return result.length;
+      }
+
       const items = await this.db.query.disposalRequests.findMany({
-        where: eq(schema.disposalRequests.reviewStatus, 'reviewed'),
+        where: eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED),
         columns: {
           id: true,
         },
@@ -353,31 +495,54 @@ export class ApprovalsService {
 
   /**
    * 교정계획서 검토 대기 개수 (품질책임자)
-   *
-   * TODO: Implement when calibration plan approval flow is defined
-   * Currently returns 0 as placeholder
    */
   private async getCalibrationPlanReviewCount(): Promise<number> {
-    return 0;
+    try {
+      const items = await this.db.query.calibrationPlans.findMany({
+        where: (plans, { eq: eqFn, and: andFn }) =>
+          andFn(
+            eqFn(plans.status, CalibrationPlanStatusValues.PENDING_REVIEW),
+            eqFn(plans.isLatestVersion, true)
+          ),
+        columns: { id: true },
+      });
+      return items.length;
+    } catch {
+      return 0;
+    }
   }
 
   /**
    * 교정계획서 최종 승인 대기 개수 (시험소장)
-   *
-   * TODO: Implement when calibration plan approval flow is defined
-   * Currently returns 0 as placeholder
    */
   private async getCalibrationPlanFinalCount(): Promise<number> {
-    return 0;
+    try {
+      const items = await this.db.query.calibrationPlans.findMany({
+        where: (plans, { eq: eqFn, and: andFn }) =>
+          andFn(
+            eqFn(plans.status, CalibrationPlanStatusValues.PENDING_APPROVAL),
+            eqFn(plans.isLatestVersion, true)
+          ),
+        columns: { id: true },
+      });
+      return items.length;
+    } catch {
+      return 0;
+    }
   }
 
   /**
    * 소프트웨어 검증 승인 대기 개수
-   *
-   * TODO: Implement when software approval is migrated to database
-   * Currently returns 0 as placeholder (service uses in-memory data)
    */
   private async getSoftwareCount(): Promise<number> {
-    return 0;
+    try {
+      const items = await this.db.query.softwareHistory.findMany({
+        where: eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING),
+        columns: { id: true },
+      });
+      return items.length;
+    } catch {
+      return 0;
+    }
   }
 }
