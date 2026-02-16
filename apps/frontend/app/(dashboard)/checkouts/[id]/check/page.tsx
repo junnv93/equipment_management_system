@@ -51,20 +51,28 @@ function getNextCheckStep(status: CheckoutStatus): ConditionCheckStep | null {
 }
 
 /**
- * 상태 확인 페이지 - Server Component
+ * 상태 확인 페이지 - PPR Non-Blocking
  *
  * 비즈니스 로직 (UL-QP-18):
  * - 대여 목적 반출 시 양측 4단계 확인
  * - 현재 상태에 따라 적절한 확인 단계를 결정
  * - 이전 확인 기록과 비교하여 변경 사항 추적
  *
- * Next.js 16 패턴:
- * - params는 Promise 타입
- * - Server Component에서 데이터 fetching
- * - Client Component로 UI 렌더링 위임
+ * PPR 패턴:
+ * - Page 함수 동기 → 즉시 static shell 전송
+ * - Suspense 자식에서 params await + 데이터 fetching
+ * - ConditionCheckSkeleton 즉시 표시 → 데이터 로드 후 콘텐츠 스트리밍
  */
-export default async function ConditionCheckPage(props: PageProps) {
-  const { id } = await props.params;
+export default function ConditionCheckPage(props: PageProps) {
+  return (
+    <Suspense fallback={<ConditionCheckSkeleton />}>
+      <ConditionCheckAsync paramsPromise={props.params} />
+    </Suspense>
+  );
+}
+
+async function ConditionCheckAsync({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
+  const { id } = await paramsPromise;
 
   let checkout;
   let conditionChecks;
@@ -109,14 +117,12 @@ export default async function ConditionCheckPage(props: PageProps) {
   });
 
   return (
-    <Suspense fallback={<ConditionCheckSkeleton />}>
-      <ConditionCheckClient
-        checkout={checkout}
-        nextStep={nextStep}
-        previousCheck={previousCheck}
-        conditionChecks={conditionChecks}
-      />
-    </Suspense>
+    <ConditionCheckClient
+      checkout={checkout}
+      nextStep={nextStep}
+      previousCheck={previousCheck}
+      conditionChecks={conditionChecks}
+    />
   );
 }
 

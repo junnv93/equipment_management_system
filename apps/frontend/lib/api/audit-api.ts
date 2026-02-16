@@ -23,9 +23,9 @@ export interface AuditLog {
   action: string;
   entityType: string;
   entityId: string;
-  entityName?: string;
-  details?: AuditLogDetails;
-  ipAddress?: string;
+  entityName: string | null;
+  details: AuditLogDetails | null;
+  ipAddress: string | null;
   createdAt: string;
 }
 

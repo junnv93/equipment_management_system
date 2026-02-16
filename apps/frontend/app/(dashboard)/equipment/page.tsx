@@ -34,35 +34,61 @@ type PageProps = {
  */
 
 /**
- * 장비 목록 페이지 (Server Component)
+ * 장비 목록 페이지 — PPR Non-Blocking Pattern
  *
- * Next.js 16 패턴:
- * - Server Component로 초기 데이터 fetch (FCP 최적화)
- * - Client Component(EquipmentListContent)에 initialData 전달
- * - ClientOnly wrapper로 hydration mismatch 방지
- * - Suspense로 스트리밍 지원
- *
- * ✅ SSOT: getServerAuthSession() 래퍼 사용 (lib/auth/server-session.ts)
- * ✅ 역할별 기본 필터는 서버 사이드 redirect로 URL에 반영 (URL = 유일한 진실의 소스)
+ * ✅ Static Shell: 헤더 + 등록 버튼 (즉시 렌더링)
+ * ✅ Dynamic Hole: 필터/데이터 (Suspense로 서버 스트리밍)
  */
-export default async function EquipmentPage(props: PageProps) {
-  const searchParams = await props.searchParams;
+export default function EquipmentPage(props: PageProps) {
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Static Shell: 페이지 헤더 */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
+          <p className="text-muted-foreground mt-1">시험소 장비를 검색하고 관리합니다</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/equipment/create-shared">공용장비 등록</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/equipment/create">
+              <Plus className="h-4 w-4 mr-2" />
+              장비 등록
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-  // ============================================================================
+      {/* Dynamic Hole: 메인 컨텐츠 */}
+      <Suspense fallback={<EquipmentListSkeleton />}>
+        <EquipmentListAsync searchParamsPromise={props.searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+/**
+ * 비동기 데이터 로딩 컴포넌트 (Suspense 내부에서 실행)
+ *
+ * 역할별 기본 필터 → 필터 파싱 → 서버 fetch → ClientOnly 래핑
+ */
+async function EquipmentListAsync({
+  searchParamsPromise,
+}: {
+  searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const searchParams = await searchParamsPromise;
+
   // ✅ 역할별 기본 필터 적용 (서버 사이드 redirect)
-  // SSOT: getServerAuthSession() → lib/auth/server-session.ts
-  // ============================================================================
   const session = await getServerAuthSession();
   if (session?.user) {
     const redirectUrl = buildRoleBasedRedirectUrl('/equipment', searchParams, session.user);
     if (redirectUrl) redirect(redirectUrl);
   }
 
-  // ============================================================================
-  // 🔴 SSOT: 직접 searchParams 파싱 금지!
-  // 반드시 equipment-filter-utils.ts의 공유 함수를 사용하세요.
-  // @see lib/utils/equipment-filter-utils.ts
-  // ============================================================================
+  // 🔴 SSOT: 직접 searchParams 파싱 금지! equipment-filter-utils.ts 사용
   const uiFilters = parseEquipmentFiltersFromSearchParams(searchParams);
   const initialQuery = convertFiltersToApiParams(uiFilters);
 
@@ -83,33 +109,9 @@ export default async function EquipmentPage(props: PageProps) {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* 페이지 헤더 */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
-          <p className="text-muted-foreground mt-1">시험소 장비를 검색하고 관리합니다</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/equipment/create-shared">공용장비 등록</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/equipment/create">
-              <Plus className="h-4 w-4 mr-2" />
-              장비 등록
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* 메인 컨텐츠 */}
-      <Suspense fallback={<EquipmentListSkeleton />}>
-        <ClientOnly fallback={<EquipmentListSkeleton />}>
-          <EquipmentListContent initialData={initialData} />
-        </ClientOnly>
-      </Suspense>
-    </div>
+    <ClientOnly fallback={<EquipmentListSkeleton />}>
+      <EquipmentListContent initialData={initialData} />
+    </ClientOnly>
   );
 }
 

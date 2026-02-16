@@ -1,24 +1,10 @@
 /**
- * 교정계획서 목록 페이지 (Server Component)
+ * 교정계획서 목록 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Next.js 16 Best Practice:
- * - Server Component에서 초기 데이터 fetch
- * - Suspense + ClientOnly wrapper로 hydration mismatch 방지
- * - Client Component에 initialData 전달
- * - FCP 개선 및 SEO 최적화
- *
- * ✅ SSOT 패턴 (2026-02-14)
- * - calibration-plans-filter-utils.ts에서 모든 필터 파싱/변환
- * - calibration-plans-api-server.ts로 서버 사이드 fetch 중앙화
- *
- * ✅ 역할별 기본 필터 (2026-02-15)
- * - technical_manager: 자기 팀만 조회 (site + teamId 필터)
- * - quality_manager, lab_manager: site 필터만 (전체 팀 조회 가능)
- * - system_admin: 필터 미적용 (전체 조회)
- *
- * 비즈니스 로직:
- * - 연간 외부교정 대상 장비의 교정 계획을 관리
- * - 연도/시험소/팀/상태별 필터링 지원
+ * ✅ Static Shell: 없음 (CalibrationPlansContent가 전체 UI)
+ * ✅ Dynamic Hole: Suspense로 전체 컨텐츠 서버 스트리밍
+ * ✅ SSOT 패턴: calibration-plans-filter-utils.ts + calibration-plans-api-server.ts
+ * ✅ 역할별 기본 필터 (buildRoleBasedRedirectUrl)
  */
 
 import { Suspense } from 'react';
@@ -57,8 +43,23 @@ function CalibrationPlansLoadingFallback() {
   );
 }
 
-export default async function CalibrationPlansPage(props: PageProps) {
-  const searchParams = await props.searchParams;
+export default function CalibrationPlansPage(props: PageProps) {
+  return (
+    <Suspense fallback={<CalibrationPlansLoadingFallback />}>
+      <CalibrationPlansAsync searchParamsPromise={props.searchParams} />
+    </Suspense>
+  );
+}
+
+/**
+ * 비동기 데이터 로딩 컴포넌트 (Suspense 내부에서 실행)
+ */
+async function CalibrationPlansAsync({
+  searchParamsPromise,
+}: {
+  searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const searchParams = await searchParamsPromise;
 
   // 1️⃣ 역할별 기본 필터 적용 (서버 사이드 redirect)
   const session = await getServerAuthSession();
@@ -100,10 +101,8 @@ export default async function CalibrationPlansPage(props: PageProps) {
   }
 
   return (
-    <Suspense fallback={<CalibrationPlansLoadingFallback />}>
-      <ClientOnly fallback={<CalibrationPlansLoadingFallback />}>
-        <CalibrationPlansContent initialData={initialData} initialFilters={uiFilters} />
-      </ClientOnly>
-    </Suspense>
+    <ClientOnly fallback={<CalibrationPlansLoadingFallback />}>
+      <CalibrationPlansContent initialData={initialData} initialFilters={uiFilters} />
+    </ClientOnly>
   );
 }

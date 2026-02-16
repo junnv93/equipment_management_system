@@ -1,10 +1,7 @@
 /**
- * 반출입 관리 페이지 (Server Component)
+ * 반출입 관리 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Next.js 16 Best Practice:
- * - Server Component에서 초기 데이터 fetch
- * - Client Component에 initialData 전달
- * - FCP 개선 및 SEO 최적화
+ * ✅ Dynamic Hole: Suspense로 전체 컨텐츠 서버 스트리밍
  *
  * 비즈니스 로직 (UL-QP-18):
  * - 장비 반출 요청 및 현황 관리
@@ -16,9 +13,11 @@
  * - ?tab=rental_imports (레거시 호환 → inbound로 매핑)
  */
 
+import { Suspense } from 'react';
 import { createServerApiClient } from '@/lib/api/server-api-client';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import CheckoutsContent from './CheckoutsContent';
+import { RouteLoading } from '@/components/layout/RouteLoading';
 import type { Checkout } from '@/lib/api/checkout-api';
 
 // Next.js 16 PageProps 타입 정의
@@ -26,9 +25,23 @@ type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default async function CheckoutsPage(props: PageProps) {
-  // ✅ Next.js 16: searchParams는 Promise
-  const searchParams = await props.searchParams;
+export default function CheckoutsPage(props: PageProps) {
+  return (
+    <Suspense fallback={<RouteLoading variant="table" showHeader />}>
+      <CheckoutsContentAsync searchParamsPromise={props.searchParams} />
+    </Suspense>
+  );
+}
+
+/**
+ * 비동기 데이터 로딩 컴포넌트 (Suspense 내부에서 실행)
+ */
+async function CheckoutsContentAsync({
+  searchParamsPromise,
+}: {
+  searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const searchParams = await searchParamsPromise;
 
   // URL 파라미터에서 view 모드 결정
   // 기존 ?tab=rental_imports → ?view=inbound 호환
@@ -45,7 +58,6 @@ export default async function CheckoutsPage(props: PageProps) {
 
   try {
     // ✅ 성능 최적화: includeSummary=true로 목록+요약을 단일 요청으로 조회
-    // 이전: 2개 요청 (목록 + 클라이언트 재계산), 이후: 1개 요청
     const listResponse = await apiClient.get('/api/checkouts?pageSize=100&includeSummary=true');
     initialData = transformPaginatedResponse<Checkout>(listResponse);
 

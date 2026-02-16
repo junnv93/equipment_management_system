@@ -17,24 +17,35 @@ type PageProps = {
 /**
  * 팀 수정 페이지 (Server Component)
  *
- * Next.js 16 패턴:
- * - params는 Promise이므로 await 필수
- * - Client Component에서 데이터 fetch 및 폼 처리
+ * PPR 패턴:
+ * - Page 함수는 sync (정적 셸: 제목 + 설명)
+ * - await params는 Suspense 자식 내부에서 수행 (동적 홀: 뒤로가기 링크 + 폼)
  *
  * 권한:
  * - technical_manager, lab_manager, system_admin만 수정 가능
  */
-export default async function EditTeamPage(props: PageProps) {
-  const { id } = await props.params;
+export default function EditTeamPage(props: PageProps) {
+  return (
+    <div className="container mx-auto py-6 space-y-6 max-w-2xl">
+      <Suspense fallback={<EditTeamPageSkeleton />}>
+        <EditTeamContentAsync paramsPromise={props.params} />
+      </Suspense>
+    </div>
+  );
+}
 
-  // UUID 형식 검증 (detail 페이지와 동일 패턴)
+/** Suspense 내부 비동기 RSC — params await + UUID 검증 + 헤더 + 폼 */
+async function EditTeamContentAsync({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
+  const { id } = await paramsPromise;
+
+  // UUID 형식 검증
   const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!UUID_REGEX.test(id)) {
     notFound();
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-2xl">
+    <>
       {/* 헤더 */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
@@ -49,10 +60,8 @@ export default async function EditTeamPage(props: PageProps) {
       </div>
 
       {/* 폼 (Client Component) */}
-      <Suspense fallback={<EditTeamFormSkeleton />}>
-        <EditTeamFormWrapper teamId={id} />
-      </Suspense>
-    </div>
+      <EditTeamFormWrapper teamId={id} />
+    </>
   );
 }
 
@@ -65,27 +74,39 @@ async function EditTeamFormWrapper({ teamId }: { teamId: string }) {
 }
 
 /**
- * 폼 스켈레톤
+ * 페이지 전체 스켈레톤 (헤더 + 폼)
  */
-function EditTeamFormSkeleton() {
+function EditTeamPageSkeleton() {
   return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-6 w-24" />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="space-y-2">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ))}
-        <div className="flex justify-end gap-3 pt-4">
-          <Skeleton className="h-10 w-20" />
-          <Skeleton className="h-10 w-20" />
+    <>
+      {/* 헤더 스켈레톤 */}
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-10 w-10 rounded-md" />
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-24" />
+          <Skeleton className="h-5 w-40" />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* 폼 스켈레톤 */}
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-24" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+          <div className="flex justify-end gap-3 pt-4">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-20" />
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 

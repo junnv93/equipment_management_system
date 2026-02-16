@@ -17,26 +17,34 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 /**
  * 팀 상세 페이지 (Server Component)
  *
- * Next.js 16 패턴:
- * - params는 Promise이므로 await 필수
- * - UUID 형식 검증 (하드코딩된 팀 ID 제거)
- * - Client Component(TeamDetailWrapper)에 데이터 fetch 위임
+ * PPR 패턴:
+ * - Page 함수는 sync (정적 셸)
+ * - await params는 Suspense 자식 내부에서 수행 (동적 홀)
  */
-export default async function TeamDetailPage(props: PageProps) {
-  const { id } = await props.params;
+export default function TeamDetailPage(props: PageProps) {
+  return (
+    <div className="container mx-auto py-6">
+      <Suspense fallback={<TeamDetailLoading />}>
+        <TeamDetailContentAsync paramsPromise={props.params} />
+      </Suspense>
+    </div>
+  );
+}
+
+/** Suspense 내부 비동기 RSC — params await + UUID 검증 */
+async function TeamDetailContentAsync({
+  paramsPromise,
+}: {
+  paramsPromise: Promise<{ id: string }>;
+}) {
+  const { id } = await paramsPromise;
 
   // UUID 형식 검증
   if (!UUID_REGEX.test(id)) {
     notFound();
   }
 
-  return (
-    <div className="container mx-auto py-6">
-      <Suspense fallback={<TeamDetailLoading />}>
-        <TeamDetailClient teamId={id} />
-      </Suspense>
-    </div>
-  );
+  return <TeamDetailClient teamId={id} />;
 }
 
 /**

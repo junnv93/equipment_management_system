@@ -1,23 +1,12 @@
 /**
- * 교정 관리 페이지 (Server Component)
+ * 교정 관리 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Next.js 16 Best Practice:
- * - Server Component에서 초기 summary 데이터 fetch
- * - Client Component(CalibrationContent)에 initialData 전달
- * - FCP 개선 및 client bundle 분리
- *
+ * ✅ Dynamic Hole: Suspense로 전체 컨텐츠 서버 스트리밍
  * ✅ 역할별 기본 필터 적용 (SSOT: buildRoleBasedRedirectUrl)
- * - test_engineer, technical_manager: 사이트 + 팀 필터
- * - quality_manager, lab_manager: 사이트 필터만
- * - system_admin: 필터 미적용
- *
- * ✅ SSOT 패턴 (2026-02-14)
- * - calibration-filter-utils.ts에서 모든 필터 파싱/변환
- * - calibration-api-server.ts로 서버 사이드 fetch 중앙화
- *
- * 레퍼런스: teams/page.tsx 패턴
+ * ✅ SSOT 패턴: calibration-filter-utils.ts + calibration-api-server.ts
  */
 
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { buildRoleBasedRedirectUrl } from '@/lib/utils/role-filter-utils';
@@ -27,13 +16,44 @@ import {
 } from '@/lib/utils/calibration-filter-utils';
 import * as calibrationApiServer from '@/lib/api/calibration-api-server';
 import CalibrationContent from './CalibrationContent';
+import { ListPageSkeleton } from '@/components/ui/list-page-skeleton';
 
 type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default async function CalibrationPage(props: PageProps) {
-  const searchParams = await props.searchParams;
+function CalibrationLoadingFallback() {
+  return (
+    <ListPageSkeleton
+      title="교정 관리"
+      description="장비 교정 기록을 관리하고 승인합니다"
+      showFilters={true}
+      filterCount={7}
+      showSearch={true}
+      gridCols={{ base: 1 }}
+      cardCount={10}
+      showActionButton={true}
+    />
+  );
+}
+
+export default function CalibrationPage(props: PageProps) {
+  return (
+    <Suspense fallback={<CalibrationLoadingFallback />}>
+      <CalibrationContentAsync searchParamsPromise={props.searchParams} />
+    </Suspense>
+  );
+}
+
+/**
+ * 비동기 데이터 로딩 컴포넌트 (Suspense 내부에서 실행)
+ */
+async function CalibrationContentAsync({
+  searchParamsPromise,
+}: {
+  searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const searchParams = await searchParamsPromise;
 
   // 1️⃣ 역할별 기본 필터 적용 (서버 사이드 redirect)
   const session = await getServerAuthSession();

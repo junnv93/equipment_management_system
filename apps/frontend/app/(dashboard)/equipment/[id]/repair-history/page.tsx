@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { RepairHistoryClient } from '@/components/equipment/RepairHistoryClient';
 
 // Next.js 16 PageProps 타입 정의
@@ -11,24 +13,48 @@ type PageProps = {
 /**
  * 수리 이력 페이지 - Server Component
  *
- * Next.js 16 패턴:
- * - params는 Promise 타입 → await 필수
- * - searchParams로 context 전달 (부적합 페이지에서 넘어올 때)
- * - Client Component로 인터랙티브 UI 위임
+ * PPR 패턴: sync page → Suspense → async child (params + searchParams)
  */
-export default async function RepairHistoryPage(props: PageProps) {
-  // ✅ Next.js 16: params와 searchParams는 Promise, await 필수
-  const { id } = await props.params;
-  const searchParams = await props.searchParams;
+export default function RepairHistoryPage(props: PageProps) {
+  return (
+    <Suspense fallback={<RepairHistorySkeleton />}>
+      <RepairHistoryContentAsync
+        paramsPromise={props.params}
+        searchParamsPromise={props.searchParams}
+      />
+    </Suspense>
+  );
+}
+
+async function RepairHistoryContentAsync({
+  paramsPromise,
+  searchParamsPromise,
+}: {
+  paramsPromise: Promise<{ id: string }>;
+  searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { id } = await paramsPromise;
+  const searchParams = await searchParamsPromise;
 
   // Query params 추출
   const ncId = typeof searchParams.ncId === 'string' ? searchParams.ncId : undefined;
   const autoOpen = searchParams.autoOpen === 'true';
 
+  return <RepairHistoryClient equipmentId={id} initialNcId={ncId} autoOpen={autoOpen} />;
+}
+
+function RepairHistorySkeleton() {
   return (
-    <Suspense fallback={null}>
-      <RepairHistoryClient equipmentId={id} initialNcId={ncId} autoOpen={autoOpen} />
-    </Suspense>
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-36" />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

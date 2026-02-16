@@ -1,10 +1,7 @@
 /**
- * 점검 관리 페이지 (Server Component)
+ * 점검 관리 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Next.js 16 Best Practice:
- * - Server Component에서 초기 데이터 fetch
- * - Client Component에 initialData 전달
- * - FCP 개선 및 SEO 최적화
+ * ✅ Dynamic Hole: Suspense로 전체 컨텐츠 서버 스트리밍
  *
  * 비즈니스 로직 (UL-QP-18):
  * - 장비 점검 일정 및 결과 관리
@@ -12,9 +9,11 @@
  * - 점검 상태 추적 (예정/진행중/완료/지연)
  */
 
+import { Suspense } from 'react';
 import { createServerApiClient } from '@/lib/api/server-api-client';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import MaintenanceContent from './MaintenanceContent';
+import { RouteLoading } from '@/components/layout/RouteLoading';
 import type { Maintenance } from '@/lib/api/maintenance-api';
 
 // Next.js 16 PageProps 타입 정의
@@ -22,7 +21,18 @@ type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default async function MaintenancePage(_props: PageProps) {
+export default function MaintenancePage(_props: PageProps) {
+  return (
+    <Suspense fallback={<RouteLoading variant="table" showHeader />}>
+      <MaintenanceContentAsync />
+    </Suspense>
+  );
+}
+
+/**
+ * 비동기 데이터 로딩 컴포넌트 (Suspense 내부에서 실행)
+ */
+async function MaintenanceContentAsync() {
   // ✅ Server-side 데이터 fetch
   const apiClient = await createServerApiClient();
 

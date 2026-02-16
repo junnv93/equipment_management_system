@@ -44,20 +44,28 @@ function canReturn(status: string, purpose: string): boolean {
 }
 
 /**
- * 반입 처리 페이지 - Server Component
+ * 반입 처리 페이지 - PPR Non-Blocking
  *
  * 비즈니스 로직 (UL-QP-18):
  * - 교정/수리: 반출 중 상태에서 직접 반입 처리
  * - 대여: 양측 4단계 확인 완료 후 반입 처리
  * - 반입 시 검사 항목 확인 (교정확인, 수리확인, 작동여부)
  *
- * Next.js 16 패턴:
- * - params는 Promise 타입
- * - Server Component에서 데이터 fetching
- * - Client Component로 UI 렌더링 위임
+ * PPR 패턴:
+ * - Page 함수 동기 → 즉시 static shell 전송
+ * - Suspense 자식에서 params await + 데이터 fetching
+ * - ReturnSkeleton 즉시 표시 → 데이터 로드 후 콘텐츠 스트리밍
  */
-export default async function ReturnCheckoutPage(props: PageProps) {
-  const { id } = await props.params;
+export default function ReturnCheckoutPage(props: PageProps) {
+  return (
+    <Suspense fallback={<ReturnSkeleton />}>
+      <ReturnCheckoutAsync paramsPromise={props.params} />
+    </Suspense>
+  );
+}
+
+async function ReturnCheckoutAsync({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
+  const { id } = await paramsPromise;
 
   let checkout;
   let conditionChecks;
@@ -84,11 +92,7 @@ export default async function ReturnCheckoutPage(props: PageProps) {
     notFound();
   }
 
-  return (
-    <Suspense fallback={<ReturnSkeleton />}>
-      <ReturnCheckoutClient checkout={checkout} conditionChecks={conditionChecks || []} />
-    </Suspense>
-  );
+  return <ReturnCheckoutClient checkout={checkout} conditionChecks={conditionChecks || []} />;
 }
 
 /**

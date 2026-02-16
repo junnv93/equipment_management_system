@@ -321,7 +321,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
  * 세션 복원 중(status === 'loading') 표시되는 레이아웃 스켈레톤.
  * 사이드바 구조는 정적으로 렌더링하고, 메인 콘텐츠 영역만 스켈레톤 처리.
  */
-function DashboardShellSkeleton() {
+export function DashboardShellSkeleton() {
   return (
     <div className="flex min-h-screen bg-background">
       {/* 데스크톱 사이드바 스켈레톤 */}

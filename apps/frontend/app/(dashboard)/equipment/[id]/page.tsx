@@ -7,10 +7,6 @@ import * as disposalApiServer from '@/lib/api/disposal-api-server';
 import { isNotFoundError } from '@/lib/api/error';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 
-// ✅ Force dynamic rendering to prevent caching stale data
-// This is critical for E2E tests that modify equipment state
-export const dynamic = 'force-dynamic';
-
 /**
  * ✅ React.cache()로 같은 render pass에서 중복 호출 방지
  *
@@ -53,16 +49,24 @@ type PageProps = {
 };
 
 /**
- * 장비 상세 페이지 - Server Component
+ * 장비 상세 페이지 - Server Component (PPR Non-Blocking)
  *
- * Next.js 16 패턴:
- * - params는 Promise 타입
- * - Server Component에서 데이터 fetching
- * - Client Component로 UI 렌더링 위임
+ * PPR 패턴:
+ * - Page 함수는 동기 (non-async) → 즉시 static shell 전송
+ * - Suspense 자식에서 params await + 데이터 fetching
+ * - EquipmentDetailSkeleton이 즉시 표시 → 데이터 로드 후 콘텐츠 스트리밍
  */
-export default async function EquipmentDetailPage(props: PageProps) {
+export default function EquipmentDetailPage(props: PageProps) {
+  return (
+    <Suspense fallback={<EquipmentDetailSkeleton />}>
+      <EquipmentDetailAsync paramsPromise={props.params} />
+    </Suspense>
+  );
+}
+
+async function EquipmentDetailAsync({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
   // ✅ Next.js 16: params는 Promise, await 필수
-  const { id } = await props.params;
+  const { id } = await paramsPromise;
 
   let equipment;
   try {
@@ -82,11 +86,7 @@ export default async function EquipmentDetailPage(props: PageProps) {
   // ✅ 폐기 요청 정보 가져오기 (병렬 fetch 가능하지만 equipment가 필요하므로 순차 실행)
   const disposalRequest = await getDisposalRequestCached(id);
 
-  return (
-    <Suspense fallback={<EquipmentDetailSkeleton />}>
-      <EquipmentDetailClient equipment={equipment} disposalRequest={disposalRequest} />
-    </Suspense>
-  );
+  return <EquipmentDetailClient equipment={equipment} disposalRequest={disposalRequest} />;
 }
 
 /**

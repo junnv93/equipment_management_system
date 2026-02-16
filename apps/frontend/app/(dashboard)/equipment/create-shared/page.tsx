@@ -1,17 +1,49 @@
 /**
- * 공용/렌탈 장비 임시등록 페이지 (Server Component)
+ * 공용/렌탈 장비 임시등록 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Next.js 16 Best Practice:
- * - Server Component에서 세션 읽고 사용자 기본값을 Client Component로 전달
- * - Client bundle 분리를 통해 컴파일 성능 개선
- *
- * @see Vercel Best Practice: server-serialization
+ * ✅ Dynamic Hole: Suspense로 세션 로딩 서버 스트리밍
  */
 
+import { Suspense } from 'react';
 import { getCurrentUser } from '@/lib/auth/server-session';
 import CreateSharedEquipmentContent from './CreateSharedEquipmentContent';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
-export default async function CreateSharedEquipmentPage() {
+function CreateSharedEquipmentFormSkeleton() {
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <Skeleton className="h-9 w-48" />
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+          <Skeleton className="h-10 w-32" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function CreateSharedEquipmentPage() {
+  return (
+    <Suspense fallback={<CreateSharedEquipmentFormSkeleton />}>
+      <CreateSharedEquipmentAsync />
+    </Suspense>
+  );
+}
+
+/**
+ * 비동기 세션 로딩 + 폼 렌더링 (Suspense 내부에서 실행)
+ */
+async function CreateSharedEquipmentAsync() {
   const user = await getCurrentUser();
 
   const userDefaults = {

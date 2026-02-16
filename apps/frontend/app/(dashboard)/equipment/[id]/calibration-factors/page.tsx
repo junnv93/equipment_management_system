@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { CalibrationFactorsClient } from '@/components/equipment/CalibrationFactorsClient';
 
 // Next.js 16 PageProps 타입 정의
@@ -11,19 +13,37 @@ type PageProps = {
 /**
  * 보정계수 관리 페이지 - Server Component
  *
- * Next.js 16 패턴:
- * - params는 Promise 타입 → await 필수
- * - Server Component에서 equipmentId 추출
- * - Client Component로 인터랙티브 UI 위임
+ * PPR 패턴: sync page → Suspense → async child
  */
-export default async function CalibrationFactorsPage(props: PageProps) {
-  // ✅ Next.js 16: params는 Promise, await 필수
-  const { id } = await props.params;
-
+export default function CalibrationFactorsPage(props: PageProps) {
   return (
-    <Suspense fallback={null}>
-      <CalibrationFactorsClient equipmentId={id} />
+    <Suspense fallback={<CalibrationFactorsSkeleton />}>
+      <CalibrationFactorsContentAsync paramsPromise={props.params} />
     </Suspense>
+  );
+}
+
+async function CalibrationFactorsContentAsync({
+  paramsPromise,
+}: {
+  paramsPromise: Promise<{ id: string }>;
+}) {
+  const { id } = await paramsPromise;
+  return <CalibrationFactorsClient equipmentId={id} />;
+}
+
+function CalibrationFactorsSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-40" />
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

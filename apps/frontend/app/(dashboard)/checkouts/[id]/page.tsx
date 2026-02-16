@@ -1,6 +1,7 @@
-import { cache } from 'react';
+import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import CheckoutDetailClient from './CheckoutDetailClient';
+import { RouteLoading } from '@/components/layout/RouteLoading';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
 
 /**
@@ -19,7 +20,7 @@ type PageProps = {
 };
 
 /**
- * 반출 상세 페이지 - Server Component
+ * 반출 상세 페이지 - PPR Non-Blocking
  *
  * 비즈니스 로직 (UL-QP-18):
  * - 반출 상세 정보 표시 (장비, 목적, 반출지, 상태 등)
@@ -27,14 +28,22 @@ type PageProps = {
  * - 대여 목적: 양측 4단계 확인 이력 표시
  * - 역할별 액션 버튼 (승인, 반려, 반입 처리 등)
  *
- * Next.js 16 패턴:
- * - params는 Promise 타입
- * - Server Component에서 데이터 fetching
- * - Client Component로 UI 렌더링 위임
+ * PPR 패턴:
+ * - Page 함수 동기 → 즉시 static shell 전송
+ * - Suspense 자식에서 params await + 데이터 fetching
+ * - RouteLoading(detail) 즉시 표시 → 데이터 로드 후 콘텐츠 스트리밍
  */
-export default async function CheckoutDetailPage(props: PageProps) {
+export default function CheckoutDetailPage(props: PageProps) {
+  return (
+    <Suspense fallback={<RouteLoading variant="detail" />}>
+      <CheckoutDetailAsync paramsPromise={props.params} />
+    </Suspense>
+  );
+}
+
+async function CheckoutDetailAsync({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
   // Next.js 16: params는 Promise, await 필수
-  const { id } = await props.params;
+  const { id } = await paramsPromise;
 
   let checkout;
   let conditionChecks;
@@ -64,7 +73,6 @@ export default async function CheckoutDetailPage(props: PageProps) {
     throw error;
   }
 
-  // Data is already fetched above, no need for Suspense boundary
   return <CheckoutDetailClient checkout={checkout} conditionChecks={conditionChecks || []} />;
 }
 

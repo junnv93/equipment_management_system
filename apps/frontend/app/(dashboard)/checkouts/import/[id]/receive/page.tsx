@@ -1,4 +1,7 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { ReceiveEquipmentImportForm } from '@/components/equipment-imports';
 
 export const metadata: Metadata = {
@@ -13,12 +16,39 @@ interface PageProps {
 /**
  * Equipment Import Receive Page - Unified for rental and internal shared
  *
- * Allows users to confirm receipt of imported equipment with condition checks.
- * The form is identical for both rental and internal shared imports.
- * Upon confirmation, equipment is automatically registered in the system.
+ * PPR 패턴: sync page → Suspense → async child
  */
-export default async function ReceiveEquipmentImportPage(props: PageProps) {
-  const { id } = await props.params;
+export default function ReceiveEquipmentImportPage(props: PageProps) {
+  return (
+    <Suspense fallback={<ReceiveFormSkeleton />}>
+      <ReceiveContentAsync paramsPromise={props.params} />
+    </Suspense>
+  );
+}
 
+async function ReceiveContentAsync({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
+  const { id } = await paramsPromise;
   return <ReceiveEquipmentImportForm id={id} />;
+}
+
+function ReceiveFormSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-8 w-36" />
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-32" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+          <Skeleton className="h-10 w-28 mt-4" />
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

@@ -1,8 +1,18 @@
+import { Suspense, cache } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { EditEquipmentClient } from '@/components/equipment/EditEquipmentClient';
 import * as equipmentApiServer from '@/lib/api/equipment-api-server';
 import { isNotFoundError } from '@/lib/api/error';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+
+/**
+ * React.cache()로 같은 render pass에서 중복 호출 방지
+ */
+const getEquipmentCached = cache(async (id: string) => {
+  return equipmentApiServer.getEquipment(id);
+});
 
 /**
  * Next.js 16 PageProps 타입 정의
@@ -12,28 +22,31 @@ type PageProps = {
 };
 
 /**
- * 장비 수정 페이지 (Server Component)
+ * 장비 수정 페이지 (PPR Non-Blocking)
  *
- * Next.js 16 패턴:
- * - params는 Promise 타입, await 필수
- * - Server Component에서 데이터 fetching
- * - Client Component(EditEquipmentClient)로 UI/인터랙션 위임
- * - notFound() 호출로 404 처리
+ * PPR 패턴:
+ * - Page 함수는 동기 (non-async) → 즉시 static shell 전송
+ * - Suspense 자식에서 params await + 데이터 fetching
+ * - EditEquipmentSkeleton이 즉시 표시 → 데이터 로드 후 콘텐츠 스트리밍
  */
-export default async function EditEquipmentPage(props: PageProps) {
-  // Next.js 16: params는 Promise, await 필수
-  const { id } = await props.params;
+export default function EditEquipmentPage(props: PageProps) {
+  return (
+    <Suspense fallback={<EditEquipmentSkeleton />}>
+      <EditEquipmentAsync paramsPromise={props.params} />
+    </Suspense>
+  );
+}
+
+async function EditEquipmentAsync({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
+  const { id } = await paramsPromise;
 
   let equipment;
   try {
-    // Server Component에서 데이터 fetching
-    equipment = await equipmentApiServer.getEquipment(id);
+    equipment = await getEquipmentCached(id);
   } catch (error) {
-    // 404 에러인 경우 not-found 페이지로
     if (isNotFoundError(error)) {
       notFound();
     }
-    // 그 외 에러는 error.tsx에서 처리
     throw error;
   }
 
@@ -47,7 +60,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const { id } = await props.params;
 
   try {
-    const equipment = await equipmentApiServer.getEquipment(id);
+    const equipment = await getEquipmentCached(id);
     return {
       title: `${equipment.name} 수정`,
       description: `${equipment.name} (${equipment.managementNumber})의 정보를 수정합니다.`,
@@ -58,4 +71,35 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       description: '장비 정보를 수정합니다.',
     };
   }
+}
+
+/**
+ * 폼 스켈레톤 (PPR fallback)
+ */
+function EditEquipmentSkeleton() {
+  return (
+    <div className="container mx-auto py-6 max-w-4xl space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-32" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+          <div className="flex justify-end gap-2 pt-4">
+            <Skeleton className="h-10 w-20" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
