@@ -34,7 +34,7 @@ interface UserProfile {
 
 function ProfileField({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 last:border-0 transition-colors hover:bg-accent/30">
+    <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 last:border-0 motion-safe:transition-colors motion-reduce:transition-none hover:bg-accent/30">
       <dt className="text-sm font-medium text-muted-foreground sm:w-40 flex-shrink-0 mb-1 sm:mb-0">
         {label}
       </dt>
@@ -79,7 +79,7 @@ export default function ProfileContent() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="space-y-6 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
         <ProfileSkeleton />
       </div>
     );
@@ -87,7 +87,10 @@ export default function ProfileContent() {
 
   if (error) {
     return (
-      <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2 duration-300">
+      <Alert
+        variant="destructive"
+        className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300"
+      >
         <AlertCircle className="h-4 w-4" aria-hidden="true" />
         <AlertDescription>프로필 정보를 불러오는데 실패했습니다.</AlertDescription>
       </Alert>
@@ -104,7 +107,7 @@ export default function ProfileContent() {
   return (
     <div className="space-y-6">
       {/* Profile Card with Enhanced Design */}
-      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md transition-shadow duration-300">
+      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-shadow motion-safe:duration-300 motion-reduce:transition-none">
         <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
           <div className="flex items-start gap-4">
             <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
@@ -124,14 +127,14 @@ export default function ProfileContent() {
             <ProfileField label="이메일" value={profile.email} />
 
             {/* Role with special styling */}
-            <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 transition-colors hover:bg-accent/30">
+            <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 motion-safe:transition-colors motion-reduce:transition-none hover:bg-accent/30">
               <dt className="text-sm font-medium text-muted-foreground sm:w-40 flex-shrink-0 mb-1 sm:mb-0">
                 역할
               </dt>
               <dd>
                 <Badge
                   variant="secondary"
-                  className="font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-colors"
+                  className="font-medium bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 motion-safe:transition-colors motion-reduce:transition-none"
                 >
                   {roleLabel}
                 </Badge>
@@ -150,7 +153,7 @@ export default function ProfileContent() {
 
       {/* Info Alert */}
       <Alert
-        className="border-info/30 bg-info/5 animate-in fade-in slide-in-from-bottom-2 duration-500"
+        className="border-info/30 bg-info/5 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-500"
         style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}
       >
         <Info className="h-4 w-4 text-info-foreground" aria-hidden="true" />

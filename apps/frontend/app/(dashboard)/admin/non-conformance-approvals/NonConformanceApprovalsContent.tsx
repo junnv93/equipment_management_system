@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle, AlertTriangle, Clock, ExternalLink } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Clock, ExternalLink, RefreshCw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import nonConformancesApi, {
   NonConformance,
@@ -12,6 +12,11 @@ import nonConformancesApi, {
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function NonConformanceApprovalsContent() {
   const queryClient = useQueryClient();
@@ -19,11 +24,12 @@ export default function NonConformanceApprovalsContent() {
   const [closingId, setClosingId] = useState<string | null>(null);
   const [closureNotes, setClosureNotes] = useState<Record<string, string>>({});
 
-  // ✅ TanStack Query로 서버 상태 관리 (useState + useEffect 패턴 제거)
+  // TanStack Query로 서버 상태 관리
   const {
     data: nonConformances = [],
     isLoading: loading,
     isError,
+    refetch,
   } = useQuery<NonConformance[]>({
     queryKey: [...queryKeys.nonConformances.lists(), { status: 'corrected' }],
     queryFn: async () => {
@@ -33,7 +39,7 @@ export default function NonConformanceApprovalsContent() {
     ...QUERY_CONFIG.PENDING_APPROVALS,
   });
 
-  // ✅ useMutation으로 종료 처리
+  // useMutation으로 종료 처리
   const closeMutation = useMutation({
     mutationFn: async ({ id, version, notes }: { id: string; version: number; notes?: string }) => {
       return nonConformancesApi.closeNonConformance(id, {
@@ -58,7 +64,7 @@ export default function NonConformanceApprovalsContent() {
     },
     onSettled: () => {
       setClosingId(null);
-      // ✅ SSOT: 서버 동기화는 onSettled에서
+      // SSOT: 서버 동기화는 onSettled에서
       queryClient.invalidateQueries({ queryKey: queryKeys.nonConformances.all });
     },
   });
@@ -76,18 +82,58 @@ export default function NonConformanceApprovalsContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="p-6 max-w-6xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <Skeleton className="h-20 w-full rounded-lg" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Skeleton className="h-6 w-24 rounded-full" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            </div>
+            <div className="pt-4 border-t border-border flex gap-4">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </Card>
+        ))}
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          데이터를 불러오는데 실패했습니다.
-        </div>
+      <div className="p-6 max-w-6xl mx-auto">
+        <Card className="p-6 bg-destructive/10 border-destructive/20 dark:bg-destructive/5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
+              </div>
+              <div>
+                <h3 className="font-medium text-foreground">데이터 로딩 실패</h3>
+                <p className="text-sm text-muted-foreground">데이터를 불러오는데 실패했습니다.</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+              재시도
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -96,36 +142,52 @@ export default function NonConformanceApprovalsContent() {
     <div className="p-6 max-w-6xl mx-auto">
       {/* 헤더 */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">부적합 재개 승인</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">부적합 재개 승인</h1>
+        <p className="text-muted-foreground mt-1 leading-relaxed">
           조치 완료된 부적합 장비의 사용 재개를 승인합니다. (기술책임자 전용)
         </p>
       </div>
 
       {/* 안내 메시지 */}
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r-lg">
-        <div className="flex items-start">
-          <AlertTriangle className="h-5 w-5 text-blue-500 mt-0.5" />
-          <div className="ml-3">
-            <p className="text-sm text-blue-700">
-              아래 목록은 조치 완료(corrected) 상태인 부적합 기록입니다.
-              <br />
-              종료 승인 시 해당 장비는 다시 사용 가능 상태로 변경됩니다.
-            </p>
+      <Card className="p-4 mb-6 border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20 dark:border-l-blue-400">
+        <div className="flex items-start gap-3">
+          <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+            <AlertTriangle
+              className="h-4 w-4 text-blue-600 dark:text-blue-400"
+              aria-hidden="true"
+            />
           </div>
+          <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed">
+            아래 목록은 조치 완료(corrected) 상태인 부적합 기록입니다.
+            <br />
+            종료 승인 시 해당 장비는 다시 사용 가능 상태로 변경됩니다.
+          </p>
         </div>
-      </div>
+      </Card>
 
       {/* 부적합 목록 */}
       {nonConformances.length === 0 ? (
-        <div className="bg-gray-50 text-gray-500 p-8 rounded-lg text-center">
-          <Clock className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p>승인 대기 중인 부적합 기록이 없습니다.</p>
-        </div>
+        <Card className="p-8 text-center">
+          <div className="inline-block motion-safe:animate-gentle-bounce">
+            <div className="h-12 w-12 mx-auto rounded-full bg-muted flex items-center justify-center">
+              <Clock className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+            </div>
+          </div>
+          <h3 className="mt-4 text-base font-medium tracking-tight text-foreground">
+            승인 대기 없음
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+            승인 대기 중인 부적합 기록이 없습니다.
+          </p>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {nonConformances.map((nc) => (
-            <div key={nc.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+          {nonConformances.map((nc, index) => (
+            <Card
+              key={nc.id}
+              className="p-6 motion-safe:animate-[staggerFadeIn_0.3s_ease-out_forwards]"
+              style={{ animationDelay: `${index * 60}ms` }}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
@@ -134,58 +196,57 @@ export default function NonConformanceApprovalsContent() {
                     >
                       {NON_CONFORMANCE_STATUS_LABELS[nc.status]}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <time dateTime={nc.discoveryDate} className="text-sm text-muted-foreground">
                       발견일: {new Date(nc.discoveryDate).toLocaleDateString('ko-KR')}
-                    </span>
+                    </time>
                   </div>
                   <Link
                     href={`/equipment/${nc.equipmentId}`}
-                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                    className="text-primary hover:underline inline-flex items-center gap-1 text-sm"
                   >
                     장비 상세 보기
-                    <ExternalLink className="h-4 w-4" />
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                   </Link>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700">부적합 원인</h4>
-                  <p className="text-gray-900 mt-1">{nc.cause}</p>
+                  <h4 className="text-sm font-medium text-muted-foreground">부적합 원인</h4>
+                  <p className="text-foreground mt-1 leading-relaxed">{nc.cause}</p>
                 </div>
 
                 {nc.analysisContent && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700">원인 분석</h4>
-                    <p className="text-gray-900 mt-1">{nc.analysisContent}</p>
+                    <h4 className="text-sm font-medium text-muted-foreground">원인 분석</h4>
+                    <p className="text-foreground mt-1 leading-relaxed">{nc.analysisContent}</p>
                   </div>
                 )}
 
                 {nc.correctionContent && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700">조치 내용</h4>
-                    <p className="text-gray-900 mt-1">{nc.correctionContent}</p>
+                    <h4 className="text-sm font-medium text-muted-foreground">조치 내용</h4>
+                    <p className="text-foreground mt-1 leading-relaxed">{nc.correctionContent}</p>
                   </div>
                 )}
 
                 {nc.correctionDate && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700">조치 완료일</h4>
-                    <p className="text-gray-900 mt-1">
+                    <h4 className="text-sm font-medium text-muted-foreground">조치 완료일</h4>
+                    <time dateTime={nc.correctionDate} className="text-foreground mt-1 block">
                       {new Date(nc.correctionDate).toLocaleDateString('ko-KR')}
-                    </p>
+                    </time>
                   </div>
                 )}
               </div>
 
               {/* 종료 승인 영역 */}
-              <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="mt-4 pt-4 border-t border-border">
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      종료 메모 (선택)
-                    </label>
-                    <input
+                    <Label htmlFor={`closure-notes-${nc.id}`}>종료 메모 (선택)</Label>
+                    <Input
+                      id={`closure-notes-${nc.id}`}
                       type="text"
                       value={closureNotes[nc.id] || ''}
                       onChange={(e) =>
@@ -194,32 +255,35 @@ export default function NonConformanceApprovalsContent() {
                           [nc.id]: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className="mt-1.5"
                       placeholder="종료 메모를 입력하세요."
                     />
                   </div>
                   <div className="flex items-end">
-                    <button
+                    <Button
                       onClick={() => handleClose(nc.id)}
                       disabled={closingId === nc.id}
-                      className="inline-flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                      className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-500 text-white"
                     >
                       {closingId === nc.id ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          <RefreshCw
+                            className="h-4 w-4 mr-2 motion-safe:animate-spin"
+                            aria-hidden="true"
+                          />
                           처리 중...
                         </>
                       ) : (
                         <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
+                          <CheckCircle className="h-4 w-4 mr-2" aria-hidden="true" />
                           사용 재개 승인
                         </>
                       )}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

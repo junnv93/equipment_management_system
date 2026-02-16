@@ -46,7 +46,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
         {/* 콘텐츠 영역 */}
         <div className="flex-1 min-w-0">
           <div
-            className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+            className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500"
             style={{ animationFillMode: 'backwards' }}
           >
             {children}

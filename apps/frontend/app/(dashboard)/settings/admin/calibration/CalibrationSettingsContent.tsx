@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, X, Plus } from 'lucide-react';
+import { Loader2, Check, X, Plus, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/api-client';
@@ -126,12 +126,19 @@ export default function CalibrationSettingsContent() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>교정 알림 설정</CardTitle>
-        <CardDescription>
-          교정 및 중간점검 기한 임박 시 알림을 발송할 시점을 설정합니다. 선택한 D-day에 해당하는
-          날짜에 알림이 발송됩니다.
-        </CardDescription>
+      <CardHeader className="bg-gradient-to-r from-primary/5 via-primary/3 to-transparent dark:from-primary/10 dark:via-primary/5 border-b">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20">
+            <Calendar className="h-5 w-5 text-primary" aria-hidden="true" />
+          </div>
+          <div>
+            <CardTitle>교정 알림 설정</CardTitle>
+            <CardDescription>
+              교정 및 중간점검 기한 임박 시 알림을 발송할 시점을 설정합니다. 선택한 D-day에 해당하는
+              날짜에 알림이 발송됩니다.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* 사이트 셀렉터 — URL-driven SSOT */}
@@ -167,7 +174,7 @@ export default function CalibrationSettingsContent() {
                   key={day}
                   type="button"
                   className={cn(
-                    'inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium select-none transition-colors',
+                    'inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium select-none motion-safe:transition-colors motion-reduce:transition-none',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                     isSelected
                       ? 'bg-primary text-primary-foreground'
@@ -209,7 +216,7 @@ export default function CalibrationSettingsContent() {
         >
           {mutation.isPending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
               저장 중...
             </>
           ) : (

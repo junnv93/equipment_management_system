@@ -109,7 +109,7 @@ export default function SystemSettingsContent() {
       {/* Warning Alert */}
       <Alert
         variant="default"
-        className="border-warning/40 bg-warning/10 animate-in fade-in slide-in-from-top-2 duration-300"
+        className="border-warning/40 bg-warning/10 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300"
       >
         <ShieldAlert className="h-5 w-5 text-warning-foreground" aria-hidden="true" />
         <AlertDescription className="text-sm font-medium leading-relaxed">
@@ -119,7 +119,7 @@ export default function SystemSettingsContent() {
       </Alert>
 
       {/* Settings Card */}
-      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md transition-all duration-300">
+      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-all motion-safe:duration-300 motion-reduce:transition-none">
         <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
           <div className="flex items-start gap-4">
             <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
@@ -143,7 +143,7 @@ export default function SystemSettingsContent() {
                     <FormLabel className="text-base font-semibold">감사 로그 보관 기간</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="transition-all hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -184,7 +184,7 @@ export default function SystemSettingsContent() {
                     <FormLabel className="text-base font-semibold">알림 보관 기간</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="transition-all hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -225,7 +225,7 @@ export default function SystemSettingsContent() {
                     <FormControl>
                       <Textarea
                         placeholder="시스템 점검 예정 등의 공지 사항을 입력하세요…"
-                        className="resize-y min-h-[100px] transition-all hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        className="resize-y min-h-[100px] motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20"
                         {...field}
                       />
                     </FormControl>
@@ -243,11 +243,14 @@ export default function SystemSettingsContent() {
                 <Button
                   type="submit"
                   disabled={mutation.isPending}
-                  className="min-w-[120px] transition-all hover:scale-105 active:scale-95"
+                  className="min-w-[120px] motion-safe:transition-all motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
                 >
                   {mutation.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                      <Loader2
+                        className="mr-2 h-4 w-4 motion-safe:animate-spin"
+                        aria-hidden="true"
+                      />
                       저장 중…
                     </>
                   ) : (

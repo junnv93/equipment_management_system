@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,6 +46,7 @@ const CATEGORY_OPTIONS = [
  */
 export default function NotificationsListContent() {
   const { filters, apiFilters, updateFilters } = useNotificationFilters();
+  const [searchInput, setSearchInput] = useState(filters.search);
 
   const { data: unreadCount = 0 } = useUnreadCount();
   const { data: notificationData, isLoading } = useNotificationList(apiFilters);
@@ -56,6 +58,15 @@ export default function NotificationsListContent() {
   const notifications = notificationData?.items ?? [];
   const total = notificationData?.total ?? 0;
   const totalPages = notificationData?.totalPages ?? 1;
+
+  // Debounced search (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      updateFilters({ search: searchInput });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput, updateFilters]);
 
   const handleMarkAsRead = (id: string) => {
     markAsReadMutation.mutate(id);
@@ -139,8 +150,8 @@ export default function NotificationsListContent() {
               name="search"
               aria-label="알림 검색"
               placeholder="알림 검색…"
-              value={filters.search}
-              onChange={(e) => updateFilters({ search: e.target.value })}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-[200px]"
             />
           </div>
@@ -231,14 +242,14 @@ function NotificationsList({
   if (notifications.length === 0) {
     return (
       <div className="py-16 text-center">
-        <div className="relative inline-block mb-4">
+        <div className="relative inline-block mb-4 motion-safe:animate-gentle-bounce">
           <Bell className="h-16 w-16 mx-auto text-muted-foreground/30" aria-hidden="true" />
-          <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-success flex items-center justify-center">
-            <span className="text-xs text-success-foreground">✓</span>
+          <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-success flex items-center justify-center motion-safe:animate-checkmark-pop shadow-lg">
+            <span className="text-xs text-success-foreground font-bold">✓</span>
           </div>
         </div>
-        <h3 className="text-lg font-semibold mb-2">모든 알림을 확인했습니다</h3>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+        <h3 className="text-lg font-semibold mb-2 tracking-tight">모든 알림을 확인했습니다</h3>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
           새로운 알림이 있을 때 이곳에 표시됩니다.
         </p>
       </div>
