@@ -22,6 +22,7 @@
 import { useEffect, useCallback, useMemo, memo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import dynamic from 'next/dynamic';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardDescription, CardTitle } from '@/components/ui/card';
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -47,6 +48,7 @@ import type {
 } from '@/lib/api/dashboard-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package, CheckCircle2, AlertCircle, Clock, AlertTriangle, Wrench } from 'lucide-react';
+import { DASHBOARD_MOTION, DASHBOARD_FOCUS, getDashboardStaggerDelay } from '@/lib/design-tokens';
 
 // 큰 컴포넌트는 dynamic import로 지연 로딩
 const EquipmentStatusChart = dynamic(
@@ -57,9 +59,6 @@ const EquipmentStatusChart = dynamic(
     ssr: false,
   }
 );
-
-// 웹소켓 URL
-const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
 
 // 캐시 설정
 
@@ -76,6 +75,11 @@ const ROLE_TABS: Record<string, Array<{ value: string; label: string }>> = {
     { value: 'calibration', label: '교정' },
     { value: 'approvals', label: '승인 관리' },
   ],
+  quality_manager: [
+    { value: 'overview', label: '개요' },
+    { value: 'equipment', label: '장비 현황' },
+    { value: 'calibration', label: '교정' },
+  ],
   lab_manager: [
     { value: 'overview', label: '개요' },
     { value: 'equipment', label: '장비 현황' },
@@ -90,16 +94,11 @@ const ROLE_TABS: Record<string, Array<{ value: string; label: string }>> = {
   ],
 };
 
-// 웹소켓 이벤트 타입
-interface DashboardUpdateEvent {
-  summary: DashboardSummary;
-  equipmentByTeam: EquipmentByTeam[];
-  overdueCalibrations: OverdueCalibration[];
-  upcomingCalibrations: UpcomingCalibration[];
-  overdueCheckouts: OverdueCheckout[];
-  recentActivities: RecentActivity[];
-  equipmentStatusStats: Record<string, number>;
-}
+// [WebSocket dead code] SSE 기반 알림으로 대체됨 — 백엔드 WebSocket 구현 시 활성화
+// const SOCKET_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+
+// [WebSocket dead code] SSE 기반 알림으로 대체됨
+// interface DashboardUpdateEvent { ... }
 
 // Props 타입
 export interface DashboardClientProps {
@@ -134,9 +133,28 @@ function DashboardClientComponent({
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [updateCount, setUpdateCount] = useState(0);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | undefined>(undefined);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const userRole = session?.user?.role?.toLowerCase() || 'test_engineer';
+
+  // URL-driven 팀 필터 (SSOT: URL 파라미터가 유일한 진실의 소스)
+  const selectedTeamId = useMemo(() => {
+    return searchParams.get('teamId') || undefined;
+  }, [searchParams]);
+
+  const handleTeamChange = useCallback(
+    (teamId: string | undefined) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (!teamId) {
+        params.delete('teamId');
+      } else {
+        params.set('teamId', teamId);
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router]
+  );
 
   // React Query - 초기 데이터가 있으면 사용, 없으면 클라이언트에서 fetch
   const {
@@ -210,61 +228,27 @@ function DashboardClientComponent({
     ...QUERY_CONFIG.DASHBOARD,
   });
 
-  // 웹소켓 업데이트 핸들러
-  const handleDashboardUpdate = useCallback(
-    (data: DashboardUpdateEvent) => {
-      queryClient.setQueryData(queryKeys.dashboard.summary(userRole, selectedTeamId), data.summary);
-      queryClient.setQueryData(
-        queryKeys.dashboard.equipmentByTeam(userRole, selectedTeamId),
-        data.equipmentByTeam
-      );
-      queryClient.setQueryData(
-        queryKeys.dashboard.overdueCalibrations(userRole, selectedTeamId),
-        data.overdueCalibrations
-      );
-      queryClient.setQueryData(
-        queryKeys.dashboard.upcomingCalibrations(userRole, selectedTeamId),
-        data.upcomingCalibrations
-      );
-      queryClient.setQueryData(
-        queryKeys.dashboard.overdueCheckouts(userRole, selectedTeamId),
-        data.overdueCheckouts
-      );
-      queryClient.setQueryData(
-        queryKeys.dashboard.recentActivities(userRole),
-        data.recentActivities
-      );
-      queryClient.setQueryData(
-        queryKeys.dashboard.equipmentStatusStats(userRole, selectedTeamId),
-        data.equipmentStatusStats
-      );
-
-      setUpdateCount((prev) => prev + 1);
-
-      toast({
-        title: '대시보드 업데이트',
-        description: '대시보드 데이터가 업데이트되었습니다.',
-        duration: 3000,
-      });
-    },
-    [queryClient, toast, userRole, selectedTeamId]
-  );
-
-  // 웹소켓 연결 (선택적) - 현재 미사용 (SSE 기반 알림으로 대체)
-  useEffect(() => {
-    if (
-      !process.env.NEXT_PUBLIC_ENABLE_WEBSOCKET ||
-      process.env.NEXT_PUBLIC_ENABLE_WEBSOCKET !== 'true'
-    ) {
-      return;
-    }
-
-    // socket.io-client 제거됨 - SSE 기반 알림 사용
-    console.log('WebSocket disabled - using SSE-based notifications');
-  }, []);
-
   // 역할별 탭
   const tabs = ROLE_TABS[userRole] || ROLE_TABS['test_engineer'];
+
+  // URL-driven 탭 상태 (Web Interface Guidelines: deep-linking 지원)
+  const activeTab = useMemo(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam && tabs.some((t) => t.value === tabParam) ? tabParam : 'overview';
+  }, [searchParams, tabs]);
+
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === 'overview') {
+        params.delete('tab');
+      } else {
+        params.set('tab', value);
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router]
+  );
 
   // 역할별 통계 카드
   const statsCards = useMemo(() => {
@@ -285,7 +269,9 @@ function DashboardClientComponent({
       },
     ];
 
-    if (['technical_manager', 'lab_manager', 'system_admin'].includes(userRole)) {
+    if (
+      ['technical_manager', 'quality_manager', 'lab_manager', 'system_admin'].includes(userRole)
+    ) {
       return [
         ...baseCards,
         {
@@ -372,19 +358,21 @@ function DashboardClientComponent({
         <ClientOnly
           fallback={
             <div className="space-y-4">
-              <Skeleton className="h-10 w-full max-w-md" />
-              <Skeleton className="h-64 w-full" />
+              <Skeleton
+                className="h-10 w-full max-w-md"
+                style={{ animationDelay: getDashboardStaggerDelay(0, 'list') }}
+              />
+              <Skeleton
+                className="h-64 w-full"
+                style={{ animationDelay: getDashboardStaggerDelay(1, 'list') }}
+              />
             </div>
           }
         >
-          <Tabs defaultValue="overview" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
             <TabsList className="w-full justify-start overflow-x-auto" aria-label="대시보드 탭">
               {tabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                >
+                <TabsTrigger key={tab.value} value={tab.value} className={DASHBOARD_FOCUS.default}>
                   {tab.label}
                 </TabsTrigger>
               ))}
@@ -411,7 +399,7 @@ function DashboardClientComponent({
             <TabsContent value="equipment" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">
+                  <CardTitle className="text-lg tracking-tight">
                     {userRole === 'test_engineer' ? '내 장비 현황' : '장비 현황'}
                   </CardTitle>
                   <CardDescription>
@@ -439,15 +427,16 @@ function DashboardClientComponent({
                             .map((_, i) => (
                               <div
                                 key={`loading-${i}`}
-                                className="h-10 bg-muted rounded animate-pulse"
+                                className="h-10 bg-muted rounded motion-safe:animate-pulse"
+                                style={{ animationDelay: getDashboardStaggerDelay(i, 'grid') }}
                                 aria-hidden="true"
                               />
                             ))
                         ) : (
                           <>
                             <button
-                              onClick={() => setSelectedTeamId(undefined)}
-                              className={`w-full flex items-center justify-between p-2.5 bg-card rounded-lg border hover:bg-muted/50 transition-colors ${
+                              onClick={() => handleTeamChange(undefined)}
+                              className={`w-full flex items-center justify-between p-2.5 bg-card rounded-lg border hover:bg-muted/50 ${DASHBOARD_MOTION.listItem} ${
                                 selectedTeamId === undefined ? 'bg-primary/10 border-primary' : ''
                               }`}
                             >
@@ -462,9 +451,7 @@ function DashboardClientComponent({
                                 team={team}
                                 selected={selectedTeamId === team.id}
                                 onClick={() =>
-                                  setSelectedTeamId(
-                                    selectedTeamId === team.id ? undefined : team.id
-                                  )
+                                  handleTeamChange(selectedTeamId === team.id ? undefined : team.id)
                                 }
                               />
                             ))}
@@ -503,12 +490,12 @@ function DashboardClientComponent({
                 <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">반출 현황</CardTitle>
+                    <CardTitle className="text-lg tracking-tight">반출 현황</CardTitle>
                     <CardDescription>현재 반출 중인 장비</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="text-center py-8">
-                      <p className="text-3xl font-bold text-primary">
+                      <p className="text-3xl font-bold text-primary tracking-tight tabular-nums">
                         {summary?.activeCheckouts || 0}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">건 반출 중</p>
@@ -522,7 +509,7 @@ function DashboardClientComponent({
             <TabsContent value="approvals" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">승인 대기 항목</CardTitle>
+                  <CardTitle className="text-lg tracking-tight">승인 대기 항목</CardTitle>
                   <CardDescription>
                     팀 내 승인이 필요한 항목들입니다. 클릭하여 상세 페이지로 이동합니다.
                   </CardDescription>

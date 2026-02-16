@@ -143,7 +143,7 @@ const SortableHeader = memo(function SortableHeader({
  */
 const SkeletonRow = memo(function SkeletonRow() {
   return (
-    <TableRow className="animate-pulse">
+    <TableRow className="motion-safe:animate-pulse">
       <TableCell>
         <Skeleton className="h-4 w-20" />
       </TableCell>
@@ -250,7 +250,7 @@ const EquipmentRow = memo(function EquipmentRow({
 
   return (
     <TableRow
-      className="hover:bg-muted/50 transition-colors"
+      className="hover:bg-muted/50 motion-safe:transition-colors motion-reduce:transition-none"
       role="row"
       aria-selected={false}
       data-testid="equipment-row"
@@ -318,7 +318,7 @@ function EquipmentTableComponent({
   };
 
   return (
-    <div className="border rounded-lg overflow-hidden dark:border-gray-700">
+    <div className="border rounded-lg overflow-hidden border-border">
       <Table role="grid" aria-label="장비 목록">
         <TableHeader>
           <TableRow role="row" className="bg-muted/50">

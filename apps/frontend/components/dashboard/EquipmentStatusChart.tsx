@@ -5,22 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
-
-// 상태별 색상 정의 (UL-QP-18 equipment status enum 기준)
-const STATUS_COLORS: Record<string, string> = {
-  available: '#16a34a', // 사용 가능 - 녹색
-  in_use: '#2563eb', // 사용 중 - 파란색
-  checked_out: '#f59e0b', // 반출 중 - 주황색
-  calibration_scheduled: '#8b5cf6', // 교정 예정 - 보라색
-  calibration_overdue: '#dc2626', // 교정 기한 초과 - 빨강
-  non_conforming: '#ef4444', // 부적합 - 진한 빨강
-  spare: '#94a3b8', // 여분 - 회색
-  retired: '#64748b', // 폐기 - 진한 회색
-  pending_disposal: '#f59e0b', // 폐기대기 - 주황색
-  disposed: '#64748b', // 폐기완료 - 진한 회색
-  temporary: '#94a3b8', // 임시등록 - 회색
-  inactive: '#94a3b8', // 비활성 - 회색
-};
+import { DASHBOARD_STATUS_COLORS } from '@/lib/design-tokens';
 
 interface EquipmentStatusChartProps {
   data: Record<string, number>;
@@ -36,7 +21,7 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
     const formattedData = Object.entries(data).map(([status, count]) => ({
       name: EQUIPMENT_STATUS_LABELS[status as keyof typeof EQUIPMENT_STATUS_LABELS] || status,
       value: count,
-      color: STATUS_COLORS[status] || '#e5e7eb', // 기본 색상
+      color: DASHBOARD_STATUS_COLORS[status] || '#D8D9DA', // UL Gray 1 fallback
       key: status,
     }));
 

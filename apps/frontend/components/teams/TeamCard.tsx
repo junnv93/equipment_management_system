@@ -51,9 +51,9 @@ export function TeamCard({ team, className }: TeamCardProps) {
       onKeyDown={handleKeyDown}
       data-testid="team-card"
       className={cn(
-        'cursor-pointer transition-all duration-200',
+        'cursor-pointer motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none',
         'hover:shadow-lg hover:-translate-y-1',
-        'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         'active:scale-[0.99]',
         className
       )}
@@ -83,7 +83,9 @@ export function TeamCard({ team, className }: TeamCardProps) {
       <CardContent className="pt-0 space-y-4">
         {/* 팀 설명 */}
         {team.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{team.description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            {team.description}
+          </p>
         )}
 
         {/* 통계 정보 */}
@@ -92,14 +94,18 @@ export function TeamCard({ team, className }: TeamCardProps) {
             className="flex items-center gap-1.5 text-muted-foreground"
             aria-label={`팀원 ${team.memberCount || 0}명`}
           >
-            <Users className="h-4 w-4" aria-hidden="true" />
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted">
+              <Users className="h-3.5 w-3.5" aria-hidden="true" />
+            </div>
             <span>{team.memberCount || 0}명</span>
           </div>
           <div
             className="flex items-center gap-1.5 text-muted-foreground"
             aria-label={`장비 ${team.equipmentCount || 0}개`}
           >
-            <Settings className="h-4 w-4" aria-hidden="true" />
+            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-muted">
+              <Settings className="h-3.5 w-3.5" aria-hidden="true" />
+            </div>
             <span>{team.equipmentCount || 0}개</span>
           </div>
         </div>
@@ -118,7 +124,7 @@ export function TeamCard({ team, className }: TeamCardProps) {
  */
 export function TeamCardSkeleton() {
   return (
-    <Card className="animate-pulse">
+    <Card className="motion-safe:animate-pulse">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">

@@ -9,6 +9,15 @@ import { Loader2, Mail, Lock, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import {
+  getAuthInputClasses,
+  getAuthButtonClasses,
+  getAuthErrorClasses,
+  AUTH_CONTENT,
+  AUTH_LAYOUT_TOKENS,
+  AUTH_MOTION_TOKENS,
+  MOTION_PRIMITIVES,
+} from '@/lib/design-tokens';
 
 const loginSchema = z.object({
   email: z.string().min(1, '이메일을 입력하세요').email('유효한 이메일을 입력하세요'),
@@ -24,6 +33,16 @@ interface LoginFormProps {
   disabled?: boolean;
 }
 
+/**
+ * LoginForm - Refined Corporate Design
+ *
+ * 디자인 컨셉: 절제된 기업용 SaaS 수준의 신뢰감
+ * - 과도한 장식 제거
+ * - 명확한 레이블과 에러 메시지
+ * - WCAG AAA 접근성 준수
+ *
+ * 디자인 토큰: lib/design-tokens/components/auth.ts 사용
+ */
 export function LoginForm({
   callbackUrl = '/',
   onSuccess,
@@ -49,7 +68,7 @@ export function LoginForm({
 
   const triggerShake = () => {
     setShakeError(true);
-    setTimeout(() => setShakeError(false), 500);
+    setTimeout(() => setShakeError(false), AUTH_MOTION_TOKENS.errorShake.duration);
   };
 
   const onSubmit = async (data: LoginFormValues) => {
@@ -64,24 +83,20 @@ export function LoginForm({
       });
 
       if (result?.error) {
-        const errorMessage = '이메일 또는 비밀번호가 일치하지 않습니다.';
-        setError(errorMessage);
+        setError(AUTH_CONTENT.error.authFailed);
         triggerShake();
-        onError?.(errorMessage);
+        onError?.(AUTH_CONTENT.error.authFailed);
       } else if (result?.ok) {
         setIsSuccess(true);
         onSuccess?.();
-        // 세션이 완전히 초기화될 시간을 주고 리다이렉트
-        // window.location.href는 새로운 세션 쿠키가 적용되도록 전체 페이지 새로고침
         setTimeout(() => {
           window.location.href = callbackUrl.startsWith('/') ? callbackUrl : '/';
-        }, 300);
+        }, MOTION_PRIMITIVES.duration.moderate);
       }
     } catch (err) {
-      const errorMessage = '로그인 중 오류가 발생했습니다.';
-      setError(errorMessage);
+      setError(AUTH_CONTENT.error.systemError);
       triggerShake();
-      onError?.(errorMessage);
+      onError?.(AUTH_CONTENT.error.systemError);
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);
@@ -89,136 +104,180 @@ export function LoginForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className={cn('space-y-5', shakeError && 'animate-shake')}
-      aria-label="로그인 폼"
-      data-testid="login-form"
-      noValidate
-    >
-      {/* 이메일 필드 */}
-      <div className="space-y-2">
-        <label
-          htmlFor="email"
-          className="text-sm font-medium text-foreground"
-        >
-          이메일
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Mail className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-          </div>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            disabled={isLoading || disabled || isSuccess}
-            placeholder="admin@example.com"
-            aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? 'email-error' : undefined}
-            {...register('email')}
-            className={cn(
-              'pl-10 h-12 bg-white dark:bg-card border-border',
-              'focus:border-primary focus:ring-2 focus:ring-primary/20',
-              'transition-all duration-200',
-              errors.email && 'border-destructive focus:border-destructive focus:ring-destructive/20'
-            )}
-          />
-        </div>
-        {errors.email && (
-          <p
-            id="email-error"
-            className="text-sm text-destructive flex items-center gap-1"
-            role="alert"
-          >
-            <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
-            {errors.email.message}
-          </p>
-        )}
-      </div>
-
-      {/* 비밀번호 필드 */}
-      <div className="space-y-2">
-        <label
-          htmlFor="password"
-          className="text-sm font-medium text-foreground"
-        >
-          비밀번호
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Lock className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
-          </div>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            disabled={isLoading || disabled || isSuccess}
-            placeholder="••••••••"
-            aria-invalid={!!errors.password}
-            aria-describedby={errors.password ? 'password-error' : undefined}
-            {...register('password')}
-            className={cn(
-              'pl-10 h-12 bg-white dark:bg-card border-border',
-              'focus:border-primary focus:ring-2 focus:ring-primary/20',
-              'transition-all duration-200',
-              errors.password && 'border-destructive focus:border-destructive focus:ring-destructive/20'
-            )}
-          />
-        </div>
-        {errors.password && (
-          <p
-            id="password-error"
-            className="text-sm text-destructive flex items-center gap-1"
-            role="alert"
-          >
-            <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
-            {errors.password.message}
-          </p>
-        )}
-      </div>
-
-      {/* 에러 메시지 */}
-      {error && (
-        <div
-          className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg"
-          role="alert"
-          aria-live="polite"
-          data-testid="login-error"
-        >
-          <span className="flex-shrink-0 w-1.5 h-1.5 bg-destructive rounded-full" />
-          {error}
-        </div>
-      )}
-
-      {/* 로그인 버튼 - UL Midnight Blue */}
-      <Button
-        type="submit"
+    <div className="relative">
+      {/* Main Form Container */}
+      <form
+        onSubmit={handleSubmit(onSubmit)}
         className={cn(
-          'w-full h-12 text-base font-medium',
-          'bg-ul-midnight hover:bg-ul-midnight-dark text-white',
-          'focus:ring-2 focus:ring-ul-midnight/50 focus:ring-offset-2',
-          'transition-all duration-200',
-          'hover:scale-[1.01] active:scale-[0.99]',
-          isSuccess && 'bg-ul-green hover:bg-ul-green'
+          'relative',
+          AUTH_LAYOUT_TOKENS.card,
+          'space-y-6',
+          'motion-safe:transition-transform motion-safe:duration-300 motion-reduce:transition-none',
+          shakeError && 'animate-shake'
         )}
-        disabled={isLoading || disabled || isSuccess}
-        data-testid="login-button"
+        aria-label="로그인 폼"
+        data-testid="login-form"
+        noValidate
       >
-        {isSuccess ? (
-          <>
-            <CheckCircle2 className="mr-2 h-5 w-5 animate-scale-in" aria-hidden="true" />
-            로그인 성공
-          </>
-        ) : isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
-            로그인 중...
-          </>
-        ) : (
-          '로그인'
+        {/* Header: Simple Title */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-foreground tracking-tight">
+            {AUTH_CONTENT.login.formHeading}
+          </h2>
+          <p className="text-sm text-muted-foreground">{AUTH_CONTENT.login.description}</p>
+        </div>
+
+        {/* Email Field */}
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-medium text-foreground">
+            이메일 주소
+          </label>
+          <div className="relative group">
+            {/* Icon Container */}
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none z-10">
+              <Mail
+                className={cn(
+                  'w-5 h-5 motion-safe:transition-colors motion-safe:duration-200 motion-reduce:transition-none',
+                  errors.email
+                    ? 'text-destructive'
+                    : 'text-muted-foreground group-focus-within:text-primary'
+                )}
+                aria-hidden="true"
+              />
+            </div>
+
+            {/* Input Field */}
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              spellCheck={false}
+              disabled={isLoading || disabled || isSuccess}
+              placeholder="equipment@ulsolutions.com"
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'email-error' : undefined}
+              {...register('email')}
+              className={cn(getAuthInputClasses(!!errors.email), 'text-sm')}
+            />
+          </div>
+
+          {/* Error Message */}
+          {errors.email && (
+            <div className="flex items-center gap-2 pl-0.5" aria-live="polite">
+              <div
+                className="w-1 h-1 rounded-full bg-destructive motion-safe:animate-pulse motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              <p id="email-error" className="text-xs text-destructive font-medium">
+                {errors.email.message}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Password Field */}
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm font-medium text-foreground">
+            비밀번호
+          </label>
+          <div className="relative group">
+            {/* Icon Container */}
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none z-10">
+              <Lock
+                className={cn(
+                  'w-5 h-5 motion-safe:transition-colors motion-safe:duration-200 motion-reduce:transition-none',
+                  errors.password
+                    ? 'text-destructive'
+                    : 'text-muted-foreground group-focus-within:text-primary'
+                )}
+                aria-hidden="true"
+              />
+            </div>
+
+            {/* Input Field */}
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              disabled={isLoading || disabled || isSuccess}
+              placeholder="••••••••••••"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'password-error' : undefined}
+              {...register('password')}
+              className={cn(getAuthInputClasses(!!errors.password), 'text-sm tracking-wider')}
+            />
+          </div>
+
+          {/* Error Message */}
+          {errors.password && (
+            <div className="flex items-center gap-2 pl-0.5" aria-live="polite">
+              <div
+                className="w-1 h-1 rounded-full bg-destructive motion-safe:animate-pulse motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              <p id="password-error" className="text-xs text-destructive font-medium">
+                {errors.password.message}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* System Error Message */}
+        {error && (
+          <div
+            className={cn(
+              getAuthErrorClasses(),
+              'motion-safe:animate-slide-down motion-reduce:animate-none'
+            )}
+            role="alert"
+            aria-live="polite"
+            data-testid="login-error"
+          >
+            <div className="flex-shrink-0 w-1.5 h-1.5 bg-destructive rounded-full motion-safe:animate-pulse motion-reduce:animate-none" />
+            <div className="flex-1">
+              <div className="text-sm font-medium">{error}</div>
+            </div>
+          </div>
         )}
-      </Button>
-    </form>
+
+        {/* Login Button */}
+        <div className="pt-2">
+          <Button
+            type="submit"
+            className={cn(
+              getAuthButtonClasses(isSuccess ? 'success' : 'primary'),
+              'relative overflow-hidden'
+            )}
+            disabled={isLoading || disabled || isSuccess}
+            data-testid="login-button"
+          >
+            {/* Button Content */}
+            <div className="relative flex items-center justify-center gap-2">
+              {isSuccess ? (
+                <>
+                  <CheckCircle2
+                    className="h-5 w-5 motion-safe:animate-scale-in motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  <span className="font-semibold">{AUTH_CONTENT.button.loginSuccess}</span>
+                </>
+              ) : isLoading ? (
+                <>
+                  <Loader2
+                    className="h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  <span className="font-semibold">{AUTH_CONTENT.button.loginLoading}</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold">{AUTH_CONTENT.button.login}</span>
+                </>
+              )}
+            </div>
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

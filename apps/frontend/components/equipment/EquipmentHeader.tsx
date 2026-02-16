@@ -320,7 +320,7 @@ export function EquipmentHeader({
                     <Button
                       variant="default"
                       className="bg-white text-ul-midnight hover:bg-gray-100 shadow-lg font-semibold
-                        transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                        motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:scale-[1.02] active:scale-[0.98]"
                       aria-label="반출 신청하기"
                     >
                       <FileOutput className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -334,7 +334,7 @@ export function EquipmentHeader({
                       variant="outline"
                       className="bg-white/10 border-white/60 text-white hover:bg-white/20 hover:border-white
                         font-medium shadow-md backdrop-blur-sm
-                        transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                        motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:scale-[1.02] active:scale-[0.98]"
                       aria-label="장비 정보 수정하기"
                     >
                       <Edit className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -363,7 +363,7 @@ export function EquipmentHeader({
                     className="bg-red-500/10 border-red-300/70 text-red-100
                       hover:bg-red-500/30 hover:border-red-200 hover:text-white
                       font-medium shadow-md backdrop-blur-sm
-                      transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                      motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:scale-[1.02] active:scale-[0.98]"
                     aria-label="장비 삭제하기"
                   >
                     <Trash2 className="h-4 w-4 mr-2" aria-hidden="true" />
@@ -396,7 +396,7 @@ export function EquipmentHeader({
                   variant="outline"
                   className={cn(
                     'px-3 py-1.5 text-sm font-semibold border-2 inline-flex items-center gap-1.5',
-                    'animate-pulse',
+                    'motion-safe:animate-pulse',
                     calibrationStatus.bg,
                     calibrationStatus.color
                   )}

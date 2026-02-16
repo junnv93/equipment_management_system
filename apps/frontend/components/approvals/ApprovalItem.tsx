@@ -75,7 +75,7 @@ export function ApprovalItemCard({
 
   return (
     <Card
-      className={`border-l-4 ${borderColor} transition-all hover:shadow-md`}
+      className={`border-l-4 ${borderColor} motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:shadow-md hover:scale-[1.01] hover:-translate-y-0.5`}
       data-testid="approval-item"
     >
       <CardContent className="pt-6">
@@ -102,24 +102,34 @@ export function ApprovalItemCard({
             {/* 요청 정보 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                </div>
                 <div>
                   <p className="text-muted-foreground">요청자</p>
                   <p className="font-medium">{item.requesterName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2" data-testid="requester-team">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                </div>
                 <div>
                   <p className="text-muted-foreground">팀</p>
                   <p className="font-medium">{item.requesterTeam || '-'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                </div>
                 <div>
                   <p className="text-muted-foreground">요청일시</p>
-                  <p className="font-medium">{formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}</p>
+                  <p className="font-medium">
+                    <time dateTime={item.requestedAt}>
+                      {formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}
+                    </time>
+                  </p>
                 </div>
               </div>
             </div>

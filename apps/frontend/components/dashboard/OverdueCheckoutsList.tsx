@@ -7,6 +7,7 @@ import { OverdueCheckout } from '@/lib/api/dashboard-api';
 import { AlertCircle, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { DASHBOARD_SIZES, DASHBOARD_FOCUS } from '@/lib/design-tokens';
 
 /**
  * 반납 기한 초과 반출 목록 컴포넌트
@@ -85,7 +86,7 @@ export function OverdueCheckoutsList({ data, loading = false }: OverdueCheckouts
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 ml-1"
+                    className={`${DASHBOARD_SIZES.minTouchTarget} ml-1 ${DASHBOARD_FOCUS.default}`}
                     onClick={() => handleViewCheckout(checkout.id)}
                   >
                     <ChevronRight className="h-4 w-4" />

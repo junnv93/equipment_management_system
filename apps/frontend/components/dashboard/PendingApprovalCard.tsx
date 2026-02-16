@@ -23,6 +23,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
+  DASHBOARD_MOTION,
+  DASHBOARD_SIZES,
+  DASHBOARD_FOCUS,
+  getDashboardStaggerDelay,
+} from '@/lib/design-tokens';
+import {
   approvalsApi,
   type PendingCountsByCategory,
   type ApprovalCategory,
@@ -138,7 +144,11 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-lg" />
+            <Skeleton
+              key={i}
+              className="h-28 rounded-lg"
+              style={{ animationDelay: getDashboardStaggerDelay(i, 'grid') }}
+            />
           ))}
         </div>
       </div>
@@ -182,7 +192,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
     >
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 id="pending-approval-title" className="text-lg font-semibold">
+          <h2 id="pending-approval-title" className="text-lg font-semibold tracking-tight">
             {cardTitle}
           </h2>
           <p id="pending-approval-description" className="text-sm text-muted-foreground">
@@ -194,7 +204,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
             <>
               <Badge
                 variant="secondary"
-                className="bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300 animate-pulse"
+                className="bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300 motion-safe:animate-pulse"
                 aria-live="polite"
                 aria-atomic="true"
               >
@@ -231,20 +241,20 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
             >
               <Card
                 className={cn(
-                  'transition-all duration-200',
-                  'hover:shadow-md hover:scale-[1.02]',
+                  DASHBOARD_MOTION.cardHover,
+                  'motion-reduce:transition-none hover:shadow-md hover:scale-[1.02]',
                   'cursor-pointer',
-                  'focus-within:ring-2 focus-within:ring-ul-info focus-within:ring-offset-2',
+                  DASHBOARD_FOCUS.brand,
                   hasItems && 'ring-2 ring-ul-red/30 dark:ring-ul-red/50'
                 )}
               >
                 <CardContent className="p-4 flex flex-col items-center text-center">
                   <div
                     className={cn(
-                      'w-12 h-12 rounded-full flex items-center justify-center mb-2',
-                      'transition-colors duration-200',
+                      `${DASHBOARD_SIZES.approvalIcon} rounded-full flex items-center justify-center mb-2`,
+                      `${DASHBOARD_MOTION.iconTransition} motion-reduce:transition-none`,
                       category.bgColor,
-                      'group-hover:scale-110 transition-transform'
+                      'group-hover:scale-110'
                     )}
                   >
                     <Icon className={cn('h-6 w-6', category.color)} aria-hidden="true" />
@@ -252,8 +262,8 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
                   <span className="text-sm font-medium text-foreground">{category.label}</span>
                   <span
                     className={cn(
-                      'text-2xl font-bold mt-1',
-                      'transition-colors duration-200',
+                      'text-2xl font-bold mt-1 tracking-tight tabular-nums',
+                      DASHBOARD_MOTION.textColor,
                       hasItems ? 'text-ul-red dark:text-red-400' : 'text-muted-foreground'
                     )}
                   >

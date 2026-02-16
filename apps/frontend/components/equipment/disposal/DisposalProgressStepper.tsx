@@ -28,7 +28,8 @@ export function DisposalProgressStepper({ currentStep, className }: DisposalProg
                   'flex h-8 w-8 items-center justify-center rounded-full border-2',
                   isCompleted && 'border-green-500 bg-green-500 text-white',
                   isCurrent && 'border-orange-500 bg-orange-500 text-white',
-                  isPending && 'border-gray-200 bg-white text-gray-400'
+                  isPending &&
+                    'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
                 )}
                 aria-current={isCurrent ? 'step' : undefined}
               >
@@ -37,8 +38,8 @@ export function DisposalProgressStepper({ currentStep, className }: DisposalProg
               <span
                 className={cn(
                   'text-xs font-medium',
-                  isCompleted && 'text-green-700',
-                  isCurrent && 'text-orange-700',
+                  isCompleted && 'text-green-700 dark:text-green-400',
+                  isCurrent && 'text-orange-700 dark:text-orange-400',
                   isPending && 'text-gray-400'
                 )}
               >
@@ -49,7 +50,7 @@ export function DisposalProgressStepper({ currentStep, className }: DisposalProg
               <div
                 className={cn(
                   'mx-2 h-[2px] w-12',
-                  step.id < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                  step.id < currentStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
                 )}
               />
             )}

@@ -352,8 +352,8 @@ export function ApprovalsClient({
   if (!mounted) {
     return (
       <div className="space-y-4">
-        <div className="h-10 bg-muted animate-pulse rounded" />
-        <div className="h-64 bg-muted animate-pulse rounded" />
+        <div className="h-10 bg-muted motion-safe:animate-pulse rounded" />
+        <div className="h-64 bg-muted motion-safe:animate-pulse rounded" />
       </div>
     );
   }

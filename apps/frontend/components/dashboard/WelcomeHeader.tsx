@@ -4,12 +4,8 @@ import { useSession } from 'next-auth/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import {
-  User,
-  Shield,
-  ShieldCheck,
-  Crown,
-} from 'lucide-react';
+import { User, Shield, ShieldCheck, Crown } from 'lucide-react';
+import { DASHBOARD_ROLE_BADGES } from '@/lib/design-tokens';
 
 interface WelcomeHeaderProps {
   className?: string;
@@ -27,43 +23,43 @@ interface RoleInfo {
 const roleInfo: Record<string, RoleInfo> = {
   test_engineer: {
     label: '시험실무자',
-    color: 'text-blue-700 dark:text-blue-300',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+    ...DASHBOARD_ROLE_BADGES.test_engineer,
     icon: User,
     description: '장비 등록/수정 요청, 대여/반출 신청',
   },
   technical_manager: {
     label: '기술책임자',
-    color: 'text-green-700 dark:text-green-300',
-    bgColor: 'bg-green-100 dark:bg-green-900/30',
+    ...DASHBOARD_ROLE_BADGES.technical_manager,
     icon: Shield,
     description: '요청 승인/반려, 팀 내 장비 관리',
   },
+  quality_manager: {
+    label: '품질책임자',
+    ...DASHBOARD_ROLE_BADGES.quality_manager,
+    icon: ShieldCheck,
+    description: '교정계획서 검토, 소프트웨어 검증',
+  },
   lab_manager: {
     label: '시험소 관리자',
-    color: 'text-purple-700 dark:text-purple-300',
-    bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+    ...DASHBOARD_ROLE_BADGES.lab_manager,
     icon: ShieldCheck,
     description: '시험소 전체 관리, 교정계획서 승인',
   },
   system_admin: {
     label: '시스템 관리자',
-    color: 'text-orange-700 dark:text-orange-300',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+    ...DASHBOARD_ROLE_BADGES.system_admin,
     icon: Crown,
     description: '전체 시스템 관리, 모든 권한',
   },
   admin: {
     label: '관리자',
-    color: 'text-red-700 dark:text-red-300',
-    bgColor: 'bg-red-100 dark:bg-red-900/30',
+    ...DASHBOARD_ROLE_BADGES.admin,
     icon: Crown,
     description: '시스템 관리 권한',
   },
   user: {
     label: '사용자',
-    color: 'text-gray-700 dark:text-gray-300',
-    bgColor: 'bg-gray-100 dark:bg-gray-900/30',
+    ...DASHBOARD_ROLE_BADGES.user,
     icon: User,
     description: '기본 사용자',
   },
@@ -125,11 +121,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
         {/* 역할 배지 */}
         <Badge
           variant="secondary"
-          className={cn(
-            'flex items-center gap-1.5 py-1 px-2.5',
-            role.bgColor,
-            role.color
-          )}
+          className={cn('flex items-center gap-1.5 py-1 px-2.5', role.bgColor, role.color)}
           aria-label={`현재 역할: ${role.label}`}
         >
           <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -139,7 +131,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
         {/* 온라인 상태 표시 */}
         <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
           <span
-            className="inline-block w-2 h-2 rounded-full bg-ul-green animate-pulse"
+            className="inline-block w-2 h-2 rounded-full bg-ul-green motion-safe:animate-pulse"
             aria-hidden="true"
           />
           <span className="sr-only">온라인 상태</span>
@@ -152,16 +144,13 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
         </span>
 
         {/* 날짜 */}
-        <time
-          dateTime={new Date().toISOString()}
-          className="text-sm text-muted-foreground"
-        >
+        <time dateTime={new Date().toISOString()} className="text-sm text-muted-foreground">
           {today}
         </time>
       </div>
 
       {/* 역할 설명 (작은 텍스트) */}
-      <p className="text-xs text-muted-foreground/70 hidden md:block">
+      <p className="text-xs text-muted-foreground/70 hidden md:block leading-relaxed">
         {role.description}
       </p>
     </div>

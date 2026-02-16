@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AUTH_CONTENT, getAuthInteractiveScaleClasses } from '@/lib/design-tokens';
 
 interface AzureAdButtonProps {
   callbackUrl?: string;
@@ -40,17 +41,22 @@ export function AzureAdButton({
       className={cn(
         'w-full h-12 text-base font-medium',
         'bg-white hover:bg-slate-50 border-slate-200',
+        'dark:bg-card dark:hover:bg-card/90 dark:border-border',
         'text-slate-700 hover:text-slate-900',
-        'transition-all duration-200',
-        'hover:scale-[1.02] active:scale-[0.98]',
+        'dark:text-foreground dark:hover:text-foreground',
+        'motion-safe:transition-[background-color,border-color,color,box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none',
+        getAuthInteractiveScaleClasses(),
         'hover:border-slate-300 hover:shadow-sm',
         className
       )}
-      aria-label="Microsoft 계정으로 로그인"
+      aria-label={AUTH_CONTENT.button.azureAd}
       data-testid="azure-ad-button"
     >
       {isLoading ? (
-        <Loader2 className="mr-3 h-5 w-5 animate-spin text-slate-500" aria-hidden="true" />
+        <Loader2
+          className="mr-3 h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none text-slate-500 dark:text-muted-foreground"
+          aria-hidden="true"
+        />
       ) : (
         <svg
           className="mr-3 h-5 w-5"
@@ -65,7 +71,7 @@ export function AzureAdButton({
           <rect x="11" y="11" width="10" height="10" fill="#FFB900" />
         </svg>
       )}
-      {isLoading ? '연결 중...' : 'Microsoft 계정으로 로그인'}
+      {isLoading ? AUTH_CONTENT.button.azureAdLoading : AUTH_CONTENT.button.azureAd}
     </Button>
   );
 }

@@ -4,7 +4,16 @@ import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { X, Upload, File, FileImage, FileText, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  X,
+  Upload,
+  File,
+  FileImage,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface UploadedFile {
@@ -79,20 +88,25 @@ export function FileUpload({
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const validateFile = useCallback((file: File): string | null => {
-    if (file.size > maxSize) {
-      return `파일 크기는 ${Math.round(maxSize / 1024 / 1024)}MB를 초과할 수 없습니다.`;
-    }
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      if (file.size > maxSize) {
+        return `파일 크기는 ${Math.round(maxSize / 1024 / 1024)}MB를 초과할 수 없습니다.`;
+      }
 
-    // 파일 확장자 검증
-    const allowedExtensions = accept.split(',').map((ext) => ext.trim().toLowerCase().replace('.', ''));
-    const fileExt = file.name.split('.').pop()?.toLowerCase();
-    if (fileExt && !allowedExtensions.includes(fileExt)) {
-      return `지원하지 않는 파일 형식입니다. (${accept})`;
-    }
+      // 파일 확장자 검증
+      const allowedExtensions = accept
+        .split(',')
+        .map((ext) => ext.trim().toLowerCase().replace('.', ''));
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (fileExt && !allowedExtensions.includes(fileExt)) {
+        return `지원하지 않는 파일 형식입니다. (${accept})`;
+      }
 
-    return null;
-  }, [accept, maxSize]);
+      return null;
+    },
+    [accept, maxSize]
+  );
 
   const handleFileSelect = useCallback(
     (selectedFiles: FileList | null) => {
@@ -108,7 +122,9 @@ export function FileUpload({
         }
 
         // 중복 파일 체크
-        const isDuplicate = files.some((f) => f.file.name === file.name && f.file.size === file.size);
+        const isDuplicate = files.some(
+          (f) => f.file.name === file.name && f.file.size === file.size
+        );
         if (isDuplicate) {
           newErrors.push(`${file.name}: 이미 추가된 파일입니다.`);
           return;
@@ -197,7 +213,7 @@ export function FileUpload({
       case 'uploading':
         return (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
             <span>업로드 중...</span>
           </div>
         );
@@ -234,7 +250,7 @@ export function FileUpload({
       {/* 드래그 앤 드롭 영역 */}
       <div
         className={cn(
-          'relative border-2 border-dashed rounded-lg p-8 transition-all duration-200',
+          'relative border-2 border-dashed rounded-lg p-8 motion-safe:transition-[border-color,background-color,transform] motion-safe:duration-200 motion-reduce:transition-none',
           dragActive
             ? 'border-primary bg-primary/5 scale-[1.01]'
             : 'border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/30',
@@ -248,13 +264,13 @@ export function FileUpload({
         <div className="flex flex-col items-center justify-center space-y-4">
           <div
             className={cn(
-              'p-4 rounded-full transition-colors',
+              'p-4 rounded-full motion-safe:transition-colors motion-reduce:transition-none',
               dragActive ? 'bg-primary/10' : 'bg-muted'
             )}
           >
             <Upload
               className={cn(
-                'h-8 w-8 transition-colors',
+                'h-8 w-8 motion-safe:transition-colors motion-reduce:transition-none',
                 dragActive ? 'text-primary' : 'text-muted-foreground'
               )}
             />
@@ -293,7 +309,10 @@ export function FileUpload({
       {errors.length > 0 && (
         <div className="space-y-1">
           {errors.map((error, index) => (
-            <p key={index} className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+            <p
+              key={index}
+              className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1"
+            >
               <AlertCircle className="h-4 w-4" />
               {error}
             </p>
@@ -329,12 +348,12 @@ export function FileUpload({
               return (
                 <div
                   key={`${uploadedFile.file.name}-${index}`}
-                  className="group relative flex items-center justify-between p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  className="group relative flex items-center justify-between p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 motion-safe:transition-colors motion-reduce:transition-none"
                 >
                   <div className="flex items-center space-x-3 flex-1 min-w-0">
                     {/* 이미지 미리보기 또는 아이콘 */}
                     {uploadedFile.preview ? (
-                      <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden border bg-white">
+                      <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden border bg-card">
                         {/* eslint-disable-next-line @next/next/no-img-element -- blob URL 미리보기는 next/image 미지원 */}
                         <img
                           src={uploadedFile.preview}
@@ -343,7 +362,7 @@ export function FileUpload({
                         />
                       </div>
                     ) : (
-                      <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded border bg-white dark:bg-muted">
+                      <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded border bg-card">
                         <FileIcon className={cn('h-6 w-6', fileColor)} />
                       </div>
                     )}
@@ -358,10 +377,7 @@ export function FileUpload({
 
                       {/* 진행률 표시 */}
                       {showProgress && uploadedFile.status === 'uploading' && (
-                        <Progress
-                          value={uploadedFile.progress || 0}
-                          className="h-1 mt-2"
-                        />
+                        <Progress value={uploadedFile.progress || 0} className="h-1 mt-2" />
                       )}
                     </div>
                   </div>
@@ -373,7 +389,7 @@ export function FileUpload({
                     size="icon"
                     onClick={() => handleRemove(index)}
                     disabled={disabled || uploadedFile.status === 'uploading'}
-                    className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="flex-shrink-0 opacity-0 group-hover:opacity-100 motion-safe:transition-opacity motion-reduce:transition-none"
                   >
                     <X className="h-4 w-4" />
                     <span className="sr-only">파일 삭제</span>

@@ -84,21 +84,27 @@ export default function CheckoutStatusStepper({
         <div
           className={cn(
             'p-4 rounded-full',
-            currentStatus === 'rejected' && 'bg-red-100',
-            currentStatus === 'canceled' && 'bg-gray-100',
-            currentStatus === 'overdue' && 'bg-orange-100'
+            currentStatus === 'rejected' && 'bg-red-100 dark:bg-red-900/30',
+            currentStatus === 'canceled' && 'bg-gray-100 dark:bg-gray-800',
+            currentStatus === 'overdue' && 'bg-orange-100 dark:bg-orange-900/30'
           )}
         >
-          {currentStatus === 'rejected' && <XCircle className="h-8 w-8 text-red-600" />}
-          {currentStatus === 'canceled' && <XCircle className="h-8 w-8 text-gray-600" />}
-          {currentStatus === 'overdue' && <Clock className="h-8 w-8 text-orange-600" />}
+          {currentStatus === 'rejected' && (
+            <XCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          )}
+          {currentStatus === 'canceled' && (
+            <XCircle className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+          )}
+          {currentStatus === 'overdue' && (
+            <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+          )}
         </div>
         <p
           className={cn(
             'mt-3 text-lg font-medium',
-            currentStatus === 'rejected' && 'text-red-800',
-            currentStatus === 'canceled' && 'text-gray-800',
-            currentStatus === 'overdue' && 'text-orange-800'
+            currentStatus === 'rejected' && 'text-red-800 dark:text-red-300',
+            currentStatus === 'canceled' && 'text-gray-800 dark:text-gray-300',
+            currentStatus === 'overdue' && 'text-orange-800 dark:text-orange-300'
           )}
         >
           {CHECKOUT_STATUS_LABELS[currentStatus] || currentStatus}
@@ -129,13 +135,17 @@ export default function CheckoutStatusStepper({
               <div
                 className={cn(
                   'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-                  isCompleted && 'bg-green-100',
-                  isCurrent && 'bg-blue-100',
-                  isPending && 'bg-gray-100'
+                  isCompleted && 'bg-green-100 dark:bg-green-900/30',
+                  isCurrent && 'bg-blue-100 dark:bg-blue-900/30',
+                  isPending && 'bg-gray-100 dark:bg-gray-800'
                 )}
               >
-                {isCompleted && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                {isCurrent && <Circle className="h-5 w-5 text-blue-600 fill-blue-600" />}
+                {isCompleted && (
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                )}
+                {isCurrent && (
+                  <Circle className="h-5 w-5 text-blue-600 fill-blue-600 dark:text-blue-400 dark:fill-blue-400" />
+                )}
                 {isPending && <Circle className="h-5 w-5 text-gray-400" />}
               </div>
 
@@ -143,9 +153,9 @@ export default function CheckoutStatusStepper({
               <span
                 className={cn(
                   'text-sm',
-                  isCompleted && 'text-green-800',
-                  isCurrent && 'font-medium text-blue-800',
-                  isPending && 'text-gray-500'
+                  isCompleted && 'text-green-800 dark:text-green-300',
+                  isCurrent && 'font-medium text-blue-800 dark:text-blue-300',
+                  isPending && 'text-gray-500 dark:text-gray-400'
                 )}
               >
                 {step.label}
@@ -175,13 +185,18 @@ export default function CheckoutStatusStepper({
                 <div
                   className={cn(
                     'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
-                    isCompleted && 'bg-green-100',
-                    isCurrent && 'bg-blue-100 ring-2 ring-blue-500 ring-offset-2',
-                    isPending && 'bg-gray-100'
+                    isCompleted && 'bg-green-100 dark:bg-green-900/30',
+                    isCurrent &&
+                      'bg-blue-100 dark:bg-blue-900/30 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900',
+                    isPending && 'bg-gray-100 dark:bg-gray-800'
                   )}
                 >
-                  {isCompleted && <CheckCircle2 className="h-6 w-6 text-green-600" />}
-                  {isCurrent && <Circle className="h-6 w-6 text-blue-600 fill-blue-600" />}
+                  {isCompleted && (
+                    <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  )}
+                  {isCurrent && (
+                    <Circle className="h-6 w-6 text-blue-600 fill-blue-600 dark:text-blue-400 dark:fill-blue-400" />
+                  )}
                   {isPending && <Circle className="h-6 w-6 text-gray-400" />}
                 </div>
 
@@ -189,9 +204,9 @@ export default function CheckoutStatusStepper({
                 <span
                   className={cn(
                     'mt-2 text-xs text-center max-w-[80px]',
-                    isCompleted && 'text-green-800',
-                    isCurrent && 'font-medium text-blue-800',
-                    isPending && 'text-gray-500'
+                    isCompleted && 'text-green-800 dark:text-green-300',
+                    isCurrent && 'font-medium text-blue-800 dark:text-blue-300',
+                    isPending && 'text-gray-500 dark:text-gray-400'
                   )}
                 >
                   {step.label}
@@ -201,7 +216,10 @@ export default function CheckoutStatusStepper({
               {/* 연결선 */}
               {!isLast && (
                 <div
-                  className={cn('flex-1 h-0.5 mx-2', isCompleted ? 'bg-green-400' : 'bg-gray-200')}
+                  className={cn(
+                    'flex-1 h-0.5 mx-2',
+                    isCompleted ? 'bg-green-400 dark:bg-green-600' : 'bg-gray-200 dark:bg-gray-700'
+                  )}
                 />
               )}
             </div>

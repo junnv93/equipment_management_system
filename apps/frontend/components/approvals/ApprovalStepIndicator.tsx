@@ -77,7 +77,7 @@ export function ApprovalStepIndicator({
                     ? 'border-ul-green bg-ul-green text-white'
                     : isCurrent
                       ? 'border-ul-blue bg-ul-blue text-white'
-                      : 'border-gray-300 bg-white text-gray-400'
+                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
               )}
               aria-current={isCurrent ? 'step' : undefined}
             >
@@ -113,7 +113,7 @@ export function ApprovalStepIndicator({
               <div
                 className={cn(
                   'w-8 h-0.5 mx-2',
-                  currentOrder > stepOrder ? 'bg-ul-green' : 'bg-gray-200'
+                  currentOrder > stepOrder ? 'bg-ul-green' : 'bg-gray-200 dark:bg-gray-700'
                 )}
                 aria-hidden="true"
               />

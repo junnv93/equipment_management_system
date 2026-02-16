@@ -250,7 +250,10 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
           {teams.map((team, index) => (
             <div
               key={team.id}
-              className={cn('animate-in fade-in slide-in-from-bottom-4', 'fill-mode-forwards')}
+              className={cn(
+                'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4',
+                'fill-mode-forwards'
+              )}
               style={{
                 animationDelay: `${index * 50}ms`,
                 animationDuration: '300ms',
@@ -327,8 +330,8 @@ export function TeamListSkeleton() {
     <div className="space-y-6" aria-busy="true" aria-live="polite">
       {/* 검색/필터 스켈레톤 */}
       <div className="flex gap-4">
-        <div className="h-10 flex-1 max-w-md bg-muted rounded-md animate-pulse" />
-        <div className="h-10 w-[160px] bg-muted rounded-md animate-pulse" />
+        <div className="h-10 flex-1 max-w-md bg-muted rounded-md motion-safe:animate-pulse" />
+        <div className="h-10 w-[160px] bg-muted rounded-md motion-safe:animate-pulse" />
       </div>
 
       {/* 카드 그리드 스켈레톤 */}

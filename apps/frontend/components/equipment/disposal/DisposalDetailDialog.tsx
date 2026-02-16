@@ -120,14 +120,14 @@ export function DisposalDetailDialog({
         <DialogHeader>
           <DialogTitle>폐기 상세 내역</DialogTitle>
           <DialogDescription>
-            <span className="font-medium text-gray-900">{equipmentName}</span> 장비의 폐기 진행
-            내역입니다.
+            <span className="font-medium text-gray-900 dark:text-gray-100">{equipmentName}</span>{' '}
+            장비의 폐기 진행 내역입니다.
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-medium text-gray-500">진행 상태</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">진행 상태</h3>
             <Badge
               variant={
                 disposalRequest.reviewStatus === 'approved'
@@ -153,7 +153,7 @@ export function DisposalDetailDialog({
                   {!isLast && (
                     <div
                       className={`absolute left-[18px] top-[36px] h-full w-[2px] ${
-                        stage.completed ? 'bg-green-500' : 'bg-gray-200'
+                        stage.completed ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
                       }`}
                     />
                   )}
@@ -165,7 +165,7 @@ export function DisposalDetailDialog({
                           ? 'border-red-500 bg-red-500 text-white'
                           : stage.completed
                             ? 'border-green-500 bg-green-500 text-white'
-                            : 'border-gray-200 bg-white text-gray-400'
+                            : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
                       }`}
                     >
                       {stage.icon}
@@ -176,16 +176,16 @@ export function DisposalDetailDialog({
                         <h3
                           className={`font-medium ${
                             isRejected
-                              ? 'text-red-700'
+                              ? 'text-red-700 dark:text-red-400'
                               : stage.completed
-                                ? 'text-green-700'
+                                ? 'text-green-700 dark:text-green-400'
                                 : 'text-gray-400'
                           }`}
                         >
                           {stage.title}
                         </h3>
                         {stage.data && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {stage.data.person} |{' '}
                             {stage.data.time && formatDateTime(stage.data.time)}
                           </p>
@@ -195,24 +195,28 @@ export function DisposalDetailDialog({
                       {stage.data && (
                         <Card
                           className={
-                            isRejected ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+                            isRejected
+                              ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30'
+                              : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'
                           }
                         >
                           <CardContent className="pt-4 pb-4">
                             {stage.data.content && (
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                                 {stage.data.content}
                               </p>
                             )}
                             {stage.data.attachments && stage.data.attachments.length > 0 && (
                               <div className="mt-3 space-y-1">
-                                <p className="text-xs font-medium text-gray-600">첨부 파일:</p>
+                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  첨부 파일:
+                                </p>
                                 {stage.data.attachments.map((file) => (
                                   <a
                                     key={file.id}
                                     href={file.url}
                                     download={file.filename}
-                                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800"
+                                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                     aria-label={`다운로드: ${file.filename}`}
                                   >
                                     <Download className="h-4 w-4" />

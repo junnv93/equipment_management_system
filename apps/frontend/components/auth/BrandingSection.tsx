@@ -1,104 +1,117 @@
 import { Settings, Calendar, Shield, Wrench } from 'lucide-react';
+import {
+  AUTH_CONTENT,
+  AUTH_BACKGROUND_TOKENS,
+  AUTH_LAYOUT_TOKENS,
+  getAuthStaggerDelay,
+} from '@/lib/design-tokens';
 
-const features = [
-  {
-    icon: Settings,
-    title: '체계적인 장비 관리',
-    description: '장비 등록부터 폐기까지 전 생애주기 관리',
-  },
-  {
-    icon: Calendar,
-    title: '실시간 교정 추적',
-    description: '교정 일정 알림 및 이력 관리',
-  },
-  {
-    icon: Shield,
-    title: '역할 기반 승인',
-    description: '안전한 다단계 승인 워크플로우',
-  },
-];
+const ICON_MAP = {
+  Settings,
+  Calendar,
+  Shield,
+} as const;
+
+interface BrandingSectionProps {
+  currentYear: number;
+}
 
 /**
- * 브랜딩 섹션 (Server Component)
+ * BrandingSection - Refined Corporate Authority
+ *
+ * 디자인 컨셉:
+ * - 절제된 권위: 과도한 장식 제거, 강한 브랜드 존재감
+ * - 글로벌 기업 SaaS 수준: IBM, Siemens, Bosch의 신뢰감
+ * - UL Solutions Brand: Midnight Blue 중심의 절제된 컬러 팔레트
  *
  * 성능 최적화:
- * - 'use client' 제거: 정적 콘텐츠이므로 서버에서 렌더링
- * - CSS 애니메이션만 사용 (JavaScript 애니메이션 불필요)
- * - 번들 크기 0 (서버 컴포넌트는 클라이언트 번들에 포함되지 않음)
- *
- * 접근성:
- * - aria-hidden="true": 스크린 리더에서 제외 (장식 목적)
- * - 로그인 폼에 집중할 수 있도록 보조
+ * - Server Component: 클라이언트 번들 크기 0 (lucide-react 아이콘도 SSR)
+ * - CSS-only animations: JavaScript 불필요
+ * - Design Token SSOT: AUTH_CONTENT, AUTH_BACKGROUND_TOKENS, AUTH_LAYOUT_TOKENS
  */
-export function BrandingSection() {
+export function BrandingSection({ currentYear }: BrandingSectionProps) {
   return (
     <aside
-      className="relative hidden lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-ul-midnight"
+      className={`relative hidden lg:flex lg:w-1/2 flex-col justify-between overflow-hidden ${AUTH_BACKGROUND_TOKENS.gradient}`}
       aria-hidden="true"
     >
-      {/* 미세한 그리드 패턴 */}
+      {/* Single Subtle Grid Pattern */}
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0"
         style={{
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-          backgroundSize: '40px 40px',
+          opacity: AUTH_BACKGROUND_TOKENS.grid.opacity,
+          backgroundImage: `
+            linear-gradient(${AUTH_BACKGROUND_TOKENS.grid.lineColor} 1px, transparent 1px),
+            linear-gradient(90deg, ${AUTH_BACKGROUND_TOKENS.grid.lineColor} 1px, transparent 1px)
+          `,
+          backgroundSize: `${AUTH_BACKGROUND_TOKENS.grid.size}px ${AUTH_BACKGROUND_TOKENS.grid.size}px`,
         }}
       />
 
-      {/* 미세한 그라데이션 오버레이 */}
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-ul-midnight-dark/30 to-ul-midnight-dark/50" />
-
-      {/* 콘텐츠 */}
+      {/* Content Container */}
       <div className="relative z-10 flex flex-col h-full p-10 lg:p-12">
-        {/* 로고 영역 - UL Solutions 스타일 */}
-        <div className="flex items-center gap-3 animate-fade-in">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-ul-red shadow-lg">
-            <Wrench className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              장비 관리 시스템
-            </h1>
-            <p className="text-sm text-white/60">
-              Equipment Management System
-            </p>
+        {/* Header: Logo & System Name */}
+        <div className="space-y-4">
+          {/* Logo Area */}
+          <div className="flex items-center gap-3 motion-safe:animate-fade-in motion-reduce:animate-none">
+            <div
+              className={`flex items-center justify-center ${AUTH_LAYOUT_TOKENS.logo.container} ${AUTH_LAYOUT_TOKENS.logo.borderRadius} bg-ul-red shadow-xl`}
+            >
+              <Wrench className={`${AUTH_LAYOUT_TOKENS.logo.iconSize} text-white`} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white tracking-tight">
+                {AUTH_CONTENT.brand.systemName}
+              </h1>
+              <p className="text-sm text-white/60 uppercase tracking-wide">
+                {AUTH_CONTENT.brand.systemNameEn}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* 중앙 영역 */}
-        <div className="flex-1 flex flex-col justify-center py-12">
-          <div className="animate-fade-in-up animation-delay-200">
-            <h2 className="text-3xl lg:text-4xl font-bold text-white leading-tight mb-4">
-              효율적인 장비 관리를
+        {/* Center: Value Proposition */}
+        <div className="flex-1 flex flex-col justify-center py-12 space-y-8">
+          {/* Main Headline */}
+          <div className="motion-safe:animate-fade-in-up motion-safe:animation-delay-200 motion-reduce:animate-none">
+            <div className="mb-3 flex items-center gap-2">
+              <div className="w-8 h-px bg-ul-info" />
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
+              {AUTH_CONTENT.branding.headline}
               <br />
-              <span className="text-ul-info">
-                통합 솔루션
-              </span>
-              으로
+              <span className="text-ul-info">{AUTH_CONTENT.branding.headlineAccent}</span>
+              {AUTH_CONTENT.branding.headlineSuffix}
             </h2>
-            <p className="text-lg text-white/70 max-w-md">
-              시험소 장비의 등록, 교정, 대여, 반출을 한 곳에서 관리하세요.
+            <p className="mt-4 text-lg text-white/70 max-w-md leading-relaxed">
+              {AUTH_CONTENT.branding.subtitle}
             </p>
           </div>
 
-          {/* 기능 하이라이트 */}
-          <div className="mt-12 space-y-4">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
+          {/* Feature List (Simple) */}
+          <div className="space-y-3">
+            {AUTH_CONTENT.features.map((feature, index) => {
+              const Icon = ICON_MAP[feature.icon];
               return (
                 <div
                   key={feature.title}
-                  className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10
-                           hover:bg-white/10 hover:border-white/20 transition-all duration-300
-                           animate-fade-in-up"
-                  style={{ animationDelay: `${300 + index * 100}ms` }}
+                  className="flex items-center gap-4 p-4 rounded-xl
+                           bg-white/5 border border-white/10
+                           motion-safe:animate-fade-in-up motion-reduce:animate-none"
+                  style={{ animationDelay: getAuthStaggerDelay(index, 300, 100) }}
                 >
-                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-ul-info/20">
-                    <Icon className="w-5 h-5 text-ul-info" />
+                  {/* Icon Container */}
+                  <div className="flex-shrink-0">
+                    <div
+                      className={`${AUTH_LAYOUT_TOKENS.featureIcon.container} flex items-center justify-center rounded-lg bg-ul-info/20`}
+                    >
+                      <Icon className={`${AUTH_LAYOUT_TOKENS.featureIcon.iconSize} text-ul-info`} />
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-white">{feature.title}</h3>
-                    <p className="text-sm text-white/50">{feature.description}</p>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-white text-sm">{feature.title}</h3>
                   </div>
                 </div>
               );
@@ -106,15 +119,32 @@ export function BrandingSection() {
           </div>
         </div>
 
-        {/* 하단 - UL Solutions 브랜드 */}
-        <div className="animate-fade-in animation-delay-600">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-ul-red font-bold text-sm">UL Solutions</span>
-            <span className="text-white/30">|</span>
-            <span className="text-white/50 text-sm italic">Working for a safer world.</span>
+        {/* Footer: UL Solutions Branding */}
+        <div className="space-y-4 motion-safe:animate-fade-in motion-safe:animation-delay-600 motion-reduce:animate-none">
+          {/* Decorative Separator */}
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <div className="w-1.5 h-1.5 rounded-full bg-ul-info" />
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           </div>
-          <p className="text-sm text-white/30">
-            © 2025 Equipment Management System. All rights reserved.
+
+          {/* Brand Info */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-ul-red font-bold text-sm">
+                {AUTH_CONTENT.brand.companyName}
+              </span>
+              <span className="text-white/20">|</span>
+              <span className="text-white/50 text-xs italic">{AUTH_CONTENT.brand.tagline}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-white/30 uppercase tracking-wide tabular-nums">
+              <span>{currentYear}</span>
+            </div>
+          </div>
+
+          {/* Copyright */}
+          <p className="text-xs text-white/30 tabular-nums">
+            {AUTH_CONTENT.copyright(currentYear)}
           </p>
         </div>
       </div>

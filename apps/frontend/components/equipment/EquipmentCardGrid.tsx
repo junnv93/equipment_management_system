@@ -39,7 +39,7 @@ interface EquipmentCardGridProps {
  */
 const SkeletonCard = memo(function SkeletonCard() {
   return (
-    <Card className="border-l-4 border-l-gray-300 dark:border-l-gray-600 animate-pulse">
+    <Card className="border-l-4 border-l-gray-300 dark:border-l-gray-600 motion-safe:animate-pulse">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="space-y-2">
@@ -157,7 +157,7 @@ const EquipmentCard = memo(function EquipmentCard({
 
   return (
     <Card
-      className={`border-l-4 ${style.borderColor} hover:shadow-md transition-shadow`}
+      className={`border-l-4 ${style.borderColor} hover:shadow-md hover:scale-[1.01] hover:-translate-y-0.5 motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none`}
       role="article"
       aria-labelledby={`equipment-${equipment.id}-name`}
       data-testid="equipment-card"
@@ -296,7 +296,9 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
         aria-live="polite"
       >
         {Array.from({ length: 8 }).map((_, i) => (
-          <SkeletonCard key={i} />
+          <div key={i} style={{ animationDelay: `${i * 100}ms` }}>
+            <SkeletonCard />
+          </div>
         ))}
       </div>
     );
@@ -308,7 +310,10 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
         className="flex flex-col items-center justify-center py-12"
         data-testid="equipment-card-grid"
       >
-        <Package className="h-12 w-12 text-muted-foreground mb-4" />
+        <Package
+          className="h-12 w-12 text-muted-foreground mb-4 motion-safe:animate-gentle-bounce"
+          aria-hidden="true"
+        />
         <p className="text-lg font-medium">표시할 장비가 없습니다</p>
         <p className="text-muted-foreground text-sm mt-1">다른 필터를 적용해보세요</p>
       </div>

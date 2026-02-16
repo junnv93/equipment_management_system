@@ -411,7 +411,8 @@ export function CalibrationPlanDetailClient({
               </Badge>
             </div>
             <p className="text-muted-foreground">
-              작성자: {plan.createdBy} | 작성일: {formatDate(plan.createdAt, 'yyyy-MM-dd')}
+              작성자: {plan.createdBy} | 작성일:{' '}
+              <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
             </p>
           </div>
         </div>
@@ -489,7 +490,9 @@ export function CalibrationPlanDetailClient({
             <div className="flex flex-col items-center flex-1">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  isDraft ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'
+                  isDraft
+                    ? 'bg-blue-500 dark:bg-blue-600 text-white'
+                    : 'bg-green-500 dark:bg-green-600 text-white'
                 }`}
               >
                 {isDraft ? <Circle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
@@ -497,16 +500,18 @@ export function CalibrationPlanDetailClient({
               <span className="mt-2 text-sm font-medium">1. 작성</span>
               <span className="text-xs text-muted-foreground">기술책임자</span>
               {plan.submittedAt && (
-                <span className="text-xs text-muted-foreground">
+                <time dateTime={plan.submittedAt} className="text-xs text-muted-foreground">
                   {formatDate(plan.submittedAt, 'MM/dd HH:mm')}
-                </span>
+                </time>
               )}
             </div>
 
             {/* 연결선 1-2 */}
             <div
               className={`h-0.5 flex-1 ${
-                isPendingReview || isPendingApproval || isApproved ? 'bg-green-500' : 'bg-gray-300'
+                isPendingReview || isPendingApproval || isApproved
+                  ? 'bg-green-500 dark:bg-green-600'
+                  : 'bg-gray-300 dark:bg-gray-600'
               }`}
             />
 
@@ -515,12 +520,12 @@ export function CalibrationPlanDetailClient({
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   isPendingReview
-                    ? 'bg-yellow-500 text-white animate-pulse'
+                    ? 'bg-yellow-500 dark:bg-yellow-600 text-white motion-safe:animate-pulse'
                     : isPendingApproval || isApproved
-                      ? 'bg-green-500 text-white'
+                      ? 'bg-green-500 dark:bg-green-600 text-white'
                       : isRejected && plan.rejectionStage === 'review'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-gray-300 text-gray-500'
+                        ? 'bg-red-500 dark:bg-red-600 text-white'
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
                 }`}
               >
                 {isPendingReview ? (
@@ -536,9 +541,9 @@ export function CalibrationPlanDetailClient({
               <span className="mt-2 text-sm font-medium">2. 확인</span>
               <span className="text-xs text-muted-foreground">품질책임자</span>
               {plan.reviewedAt && (
-                <span className="text-xs text-muted-foreground">
+                <time dateTime={plan.reviewedAt} className="text-xs text-muted-foreground">
                   {formatDate(plan.reviewedAt, 'MM/dd HH:mm')}
-                </span>
+                </time>
               )}
 
               {/* 품질책임자용 인라인 확인 버튼 */}
@@ -552,7 +557,7 @@ export function CalibrationPlanDetailClient({
                     aria-label="교정계획서 확인 완료"
                   >
                     {reviewMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
                     ) : (
                       <>
                         <Check className="h-4 w-4 mr-1" />
@@ -601,7 +606,9 @@ export function CalibrationPlanDetailClient({
             {/* 연결선 2-3 */}
             <div
               className={`h-0.5 flex-1 ${
-                isPendingApproval || isApproved ? 'bg-green-500' : 'bg-gray-300'
+                isPendingApproval || isApproved
+                  ? 'bg-green-500 dark:bg-green-600'
+                  : 'bg-gray-300 dark:bg-gray-600'
               }`}
             />
 
@@ -610,12 +617,12 @@ export function CalibrationPlanDetailClient({
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
                   isPendingApproval
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-blue-500 dark:bg-blue-600 text-white'
                     : isApproved
-                      ? 'bg-green-500 text-white'
+                      ? 'bg-green-500 dark:bg-green-600 text-white'
                       : isRejected && plan.rejectionStage === 'approval'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-gray-300 text-gray-500'
+                        ? 'bg-red-500 dark:bg-red-600 text-white'
+                        : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
                 }`}
               >
                 {isPendingApproval ? (
@@ -631,9 +638,9 @@ export function CalibrationPlanDetailClient({
               <span className="mt-2 text-sm font-medium">3. 승인</span>
               <span className="text-xs text-muted-foreground">시험소장</span>
               {plan.approvedAt && (
-                <span className="text-xs text-muted-foreground">
+                <time dateTime={plan.approvedAt} className="text-xs text-muted-foreground">
                   {formatDate(plan.approvedAt, 'MM/dd HH:mm')}
-                </span>
+                </time>
               )}
             </div>
           </div>
@@ -666,7 +673,12 @@ export function CalibrationPlanDetailClient({
           <CardContent className="pt-6">
             <div className="flex items-center gap-4 text-sm">
               <span>승인자: {plan.approvedBy}</span>
-              <span>승인일: {formatDate(plan.approvedAt, 'yyyy-MM-dd HH:mm')}</span>
+              <span>
+                승인일:{' '}
+                <time dateTime={plan.approvedAt}>
+                  {formatDate(plan.approvedAt, 'yyyy-MM-dd HH:mm')}
+                </time>
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -752,7 +764,7 @@ export function CalibrationPlanDetailClient({
                       </TableCell>
                       <TableCell>
                         {item.confirmedBy ? (
-                          <Badge variant="outline" className="bg-green-50">
+                          <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             확인됨
                           </Badge>

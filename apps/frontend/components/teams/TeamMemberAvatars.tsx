@@ -3,12 +3,7 @@
 import { useState } from 'react';
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TeamMemberAvatarsProps {
   teamId: string;
@@ -44,23 +39,20 @@ export function TeamMemberAvatars({
   const [hoveredMember, setHoveredMember] = useState<string | null>(null);
 
   // 멤버 데이터가 없는 경우 플레이스홀더 생성
-  const displayMembers = members.length > 0
-    ? members.slice(0, maxDisplay)
-    : Array.from({ length: Math.min(memberCount, maxDisplay) }, (_, i) => ({
-        id: `placeholder-${teamId}-${i}`,
-        name: `팀원 ${i + 1}`,
-        avatarUrl: undefined,
-      }));
+  const displayMembers =
+    members.length > 0
+      ? members.slice(0, maxDisplay)
+      : Array.from({ length: Math.min(memberCount, maxDisplay) }, (_, i) => ({
+          id: `placeholder-${teamId}-${i}`,
+          name: `팀원 ${i + 1}`,
+          avatarUrl: undefined,
+        }));
 
   const remainingCount = memberCount - maxDisplay;
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div
-        role="group"
-        aria-label="팀원 목록"
-        className={cn('flex items-center', className)}
-      >
+      <div role="group" aria-label="팀원 목록" className={cn('flex items-center', className)}>
         {/* 아바타 목록 */}
         <div className="flex -space-x-2">
           {displayMembers.map((member, index) => (
@@ -89,10 +81,7 @@ export function TeamMemberAvatars({
                       className="h-full w-full rounded-full object-cover"
                     />
                   ) : (
-                    <User
-                      className="h-4 w-4 text-muted-foreground"
-                      aria-hidden="true"
-                    />
+                    <User className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   )}
                 </div>
               </TooltipTrigger>
@@ -115,7 +104,7 @@ export function TeamMemberAvatars({
                     'bg-primary/10 flex items-center justify-center',
                     'text-xs font-medium text-primary',
                     'hover:bg-primary/20 transition-colors duration-200',
-                    'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
                   )}
                   style={{ zIndex: 0 }}
                 >
@@ -130,9 +119,7 @@ export function TeamMemberAvatars({
         </div>
 
         {/* 총 인원 텍스트 (스크린 리더용) */}
-        <span className="sr-only">
-          총 {memberCount}명의 팀원
-        </span>
+        <span className="sr-only">총 {memberCount}명의 팀원</span>
       </div>
     </TooltipProvider>
   );

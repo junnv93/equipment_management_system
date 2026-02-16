@@ -173,7 +173,7 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
       {/* 탭 리스트 - 스크롤 가능한 반응형 레이아웃 */}
       <div className="overflow-x-auto pb-2 -mb-2">
         <TabsList
-          className="inline-flex h-auto bg-white dark:bg-gray-900 p-1 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 min-w-max"
+          className="inline-flex h-auto bg-card p-1 rounded-lg shadow-sm border border-border min-w-max"
           aria-label="장비 상세 정보 탭"
         >
           {tabs.map(({ value, label, icon: Icon }) => (
@@ -183,12 +183,11 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
               id={`${value}-tab`}
               className={`
                 data-[state=active]:bg-ul-midnight data-[state=active]:text-white
-                data-[state=inactive]:text-gray-700 dark:data-[state=inactive]:text-gray-300
-                px-4 py-2.5 rounded-md transition-all duration-200
-                hover:bg-gray-100 dark:hover:bg-gray-800
+                data-[state=inactive]:text-muted-foreground
+                px-4 py-2.5 rounded-md motion-safe:transition-[background-color,color] motion-safe:duration-200 motion-reduce:transition-none
+                hover:bg-muted
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ul-midnight
-                focus-visible:ring-offset-2 focus-visible:ring-offset-white
-                dark:focus-visible:ring-offset-gray-900
+                focus-visible:ring-offset-2 focus-visible:ring-offset-background
               `}
               aria-label={`${label} 탭`}
             >
@@ -204,7 +203,7 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
         <TabsContent
           key={value}
           value={value}
-          className="space-y-4 animate-in fade-in-50 duration-300 focus-visible:outline-none"
+          className="space-y-4 motion-safe:animate-in motion-safe:fade-in-50 motion-safe:duration-300 focus-visible:outline-none"
           role="tabpanel"
           aria-labelledby={`${value}-tab`}
           aria-label={`${label} 탭 패널`}

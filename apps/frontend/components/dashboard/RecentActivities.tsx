@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { DASHBOARD_MOTION, getDashboardStaggerDelay } from '@/lib/design-tokens';
 
 interface RecentActivitiesProps {
   data: RecentActivity[];
@@ -135,6 +136,7 @@ const ROUTES: Record<string, string> = {
 const ROLE_CATEGORIES: Record<string, string[]> = {
   test_engineer: ['equipment', 'calibration', 'rental', 'checkout'],
   technical_manager: ['equipment', 'calibration', 'rental'],
+  quality_manager: ['calibration', 'equipment'],
   lab_manager: ['equipment', 'calibration', 'rental', 'checkout'],
   system_admin: ['equipment', 'calibration', 'rental', 'checkout'],
 };
@@ -169,17 +171,17 @@ const ActivityItem = memo(function ActivityItem({
   return (
     <div
       className={cn(
-        'flex items-start space-x-4 p-3 rounded-lg transition-colors',
+        `flex items-start space-x-4 p-3 rounded-lg ${DASHBOARD_MOTION.instantBg} motion-reduce:transition-none`,
         'hover:bg-muted/50',
-        isApproval && 'bg-green-50/50 dark:bg-green-900/10',
-        isRejection && 'bg-red-50/50 dark:bg-red-900/10'
+        isApproval && 'bg-ul-green/5 dark:bg-ul-green/10',
+        isRejection && 'bg-ul-red/5 dark:bg-ul-red/10'
       )}
     >
       <div
         className={cn(
           'mt-1 rounded-full p-2',
-          isApproval && 'bg-green-100 dark:bg-green-900/30',
-          isRejection && 'bg-red-100 dark:bg-red-900/30',
+          isApproval && 'bg-ul-green/10 dark:bg-ul-green/20',
+          isRejection && 'bg-ul-red/10 dark:bg-ul-red/20',
           !isApproval && !isRejection && 'bg-muted'
         )}
       >
@@ -190,10 +192,13 @@ const ActivityItem = memo(function ActivityItem({
           <Badge variant={activityInfo.variant} className="py-0.5 text-xs">
             {activityInfo.label}
           </Badge>
-          <span className="text-xs text-muted-foreground flex items-center">
+          <time
+            dateTime={activity.timestamp}
+            className="text-xs text-muted-foreground flex items-center"
+          >
             <Clock className="inline-block h-3 w-3 mr-1" aria-hidden="true" />
             {formatDateTime(activity.timestamp)}
-          </span>
+          </time>
         </div>
         <p className="text-sm truncate">
           <span className="font-medium">{activity.userName}</span>님이{' '}
@@ -261,6 +266,8 @@ export const RecentActivities = memo(function RecentActivities({
         return '내 최근 활동';
       case 'technical_manager':
         return '팀 최근 활동';
+      case 'quality_manager':
+        return '교정 관련 최근 활동';
       case 'lab_manager':
         return '시험소 최근 활동';
       case 'system_admin':
@@ -277,6 +284,8 @@ export const RecentActivities = memo(function RecentActivities({
         return '본인의 최근 7일간 활동 기록입니다';
       case 'technical_manager':
         return '팀 내 최근 7일간 활동 기록입니다';
+      case 'quality_manager':
+        return '교정 및 장비 관련 최근 7일간 활동 기록입니다';
       case 'lab_manager':
         return '시험소 내 최근 7일간 활동 기록입니다';
       case 'system_admin':
@@ -314,7 +323,11 @@ export const RecentActivities = memo(function RecentActivities({
             {Array(5)
               .fill(0)
               .map((_, i) => (
-                <div key={i} className="flex items-start gap-4 p-3">
+                <div
+                  key={i}
+                  className="flex items-start gap-4 p-3 motion-safe:animate-pulse"
+                  style={{ animationDelay: getDashboardStaggerDelay(i, 'list') }}
+                >
                   <Skeleton className="h-9 w-9 rounded-full" />
                   <div className="space-y-2 flex-1">
                     <Skeleton className="h-4 w-full" />
@@ -325,7 +338,10 @@ export const RecentActivities = memo(function RecentActivities({
           </div>
         ) : data.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
-            <Filter className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <Filter
+              className="h-12 w-12 mx-auto mb-4 opacity-30 motion-safe:animate-gentle-bounce"
+              aria-hidden="true"
+            />
             <p className="text-lg font-medium">활동 내역이 없습니다</p>
             <p className="text-sm mt-1">최근 7일간 기록된 활동이 없습니다</p>
           </div>

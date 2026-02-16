@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { DASHBOARD_MOTION, DASHBOARD_FOCUS, getDashboardStaggerDelay } from '@/lib/design-tokens';
 
 interface QuickAction {
   label: string;
@@ -51,6 +52,20 @@ const actionsByRole: Record<string, QuickAction[]> = {
       variant: 'default',
     },
     { label: '장비 등록', href: FRONTEND_ROUTES.EQUIPMENT.CREATE, icon: Plus, variant: 'outline' },
+  ],
+  quality_manager: [
+    {
+      label: '승인 관리',
+      href: FRONTEND_ROUTES.ADMIN.APPROVALS,
+      icon: CheckSquare,
+      variant: 'default',
+    },
+    {
+      label: '교정계획서',
+      href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
+      icon: FileSpreadsheet,
+      variant: 'outline',
+    },
   ],
   lab_manager: [
     {
@@ -94,9 +109,18 @@ export function QuickActionButtons({ className }: QuickActionButtonsProps) {
   if (status === 'loading') {
     return (
       <div className={`flex flex-wrap gap-2 ${className || ''}`}>
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-24" />
-        <Skeleton className="h-10 w-24" />
+        <Skeleton
+          className="h-10 w-24"
+          style={{ animationDelay: getDashboardStaggerDelay(0, 'list') }}
+        />
+        <Skeleton
+          className="h-10 w-24"
+          style={{ animationDelay: getDashboardStaggerDelay(1, 'list') }}
+        />
+        <Skeleton
+          className="h-10 w-24"
+          style={{ animationDelay: getDashboardStaggerDelay(2, 'list') }}
+        />
       </div>
     );
   }
@@ -113,7 +137,7 @@ export function QuickActionButtons({ className }: QuickActionButtonsProps) {
             key={action.href}
             variant={action.variant || 'default'}
             asChild
-            className="gap-2 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className={`gap-2 ${DASHBOARD_FOCUS.default} hover:shadow-sm hover:scale-[1.02] ${DASHBOARD_MOTION.cardHover} motion-reduce:transition-none`}
           >
             <Link href={action.href} aria-label={action.label}>
               <Icon className="h-4 w-4" aria-hidden="true" />

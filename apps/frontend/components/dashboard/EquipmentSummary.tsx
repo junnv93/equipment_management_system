@@ -1,15 +1,16 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, Clock, Wrench, AlertTriangle, Truck } from 'lucide-react';
+import { CheckCircle2, Clock, Wrench, AlertTriangle, Truck, RefreshCw } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-// ✅ 직접 import (barrel import 제거)
 import dashboardApi from '@/lib/api/dashboard-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 // DashboardSummary를 확장한 로컬 타입
-// ✅ 대여(loaned)는 반출(checkout)로 통합됨
+// 대여(loaned)는 반출(checkout)로 통합됨
 type EquipmentSummaryType = {
   total: number;
   available: number;
@@ -31,25 +32,33 @@ interface StatsCardProps {
 
 function StatsCard({ title, value, icon, description, change }: StatsCardProps) {
   return (
-    <Card>
+    <Card hoverable>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="h-4 w-4 text-muted-foreground">{icon}</div>
+        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+          <div className="h-4 w-4 text-muted-foreground" aria-hidden="true">
+            {icon}
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        <div className="text-2xl font-bold tracking-tight tabular-nums">{value}</div>
+        {description && (
+          <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+        )}
         {change && (
           <div className="flex items-center pt-1">
             <span
-              className={`text-xs ${
-                change.type === 'increase' ? 'text-green-500' : 'text-red-500'
+              className={`text-xs tabular-nums ${
+                change.type === 'increase'
+                  ? 'text-ul-green dark:text-ul-green'
+                  : 'text-ul-red dark:text-red-400'
               }`}
             >
               {change.type === 'increase' ? '+' : '-'}
               {change.value}%
             </span>
-            <span className="text-xs text-muted-foreground ml-1">from last month</span>
+            <span className="text-xs text-muted-foreground ml-1">전월 대비</span>
           </div>
         )}
       </CardContent>
@@ -60,14 +69,12 @@ function StatsCard({ title, value, icon, description, change }: StatsCardProps) 
 /**
  * 장비 요약 통계 컴포넌트
  *
- * ✅ Vercel Best Practice: rerender-defer-reads
- * - React Query로 단일 상태 관리 (기존 3개 useState → 1개 useQuery)
- * - 자동 캐싱, 재시도, 백그라운드 리페치 지원
- * - loading/error 상태 자동 관리로 리렌더링 최소화
+ * React Query로 단일 상태 관리 (기존 3개 useState → 1개 useQuery)
+ * 자동 캐싱, 재시도, 백그라운드 리페치 지원
  */
 export default function EquipmentSummary() {
-  // ✅ React Query로 상태 통합 (stats, loading, error → 단일 훅)
-  const { data, isLoading, error } = useQuery({
+  // React Query로 상태 통합
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: queryKeys.dashboard.equipmentSummary(),
     queryFn: () => dashboardApi.getEquipmentSummary(),
     staleTime: CACHE_TIMES.SHORT,
@@ -102,12 +109,12 @@ export default function EquipmentSummary() {
         {Array.from({ length: 5 }).map((_, index) => (
           <Card key={index}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-5 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-              <div className="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-8 w-8 rounded-full" />
             </CardHeader>
             <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-1/3 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+              <Skeleton className="h-8 w-1/3 mb-2" />
+              <Skeleton className="h-4 w-2/3" />
             </CardContent>
           </Card>
         ))}
@@ -118,10 +125,16 @@ export default function EquipmentSummary() {
   // 에러 상태 표시
   if (error) {
     return (
-      <Card className="p-4 bg-red-50 border-red-200">
-        <div className="flex items-center gap-2 text-red-600">
-          <AlertTriangle className="h-5 w-5" />
-          <span>데이터를 불러올 수 없습니다.</span>
+      <Card className="p-4 bg-destructive/10 border-destructive/20 dark:bg-destructive/5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+            <span>데이터를 불러올 수 없습니다.</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+            재시도
+          </Button>
         </div>
       </Card>
     );
