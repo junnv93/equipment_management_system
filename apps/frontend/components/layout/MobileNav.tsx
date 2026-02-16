@@ -21,6 +21,7 @@ import { usePathname } from 'next/navigation';
 import { X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { FOCUS_TOKENS, getTransitionClasses } from '@/lib/design-tokens';
 
 export interface NavItem {
   icon: React.ReactNode;
@@ -60,9 +61,9 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
       href={item.href}
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-3 relative',
-        // prefers-reduced-motion 지원
-        'motion-safe:transition-all motion-reduce:transition-none',
-        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+        // SSOT: design-tokens — motion + focus-visible
+        getTransitionClasses('fast', ['background-color', 'color']),
+        FOCUS_TOKENS.classes.default,
         isActive
           ? 'text-blue-600 bg-blue-50 font-medium dark:text-blue-400 dark:bg-blue-900/20'
           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-gray-800'
@@ -173,7 +174,7 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         ref={menuButtonRef}
         variant="ghost"
         size="icon"
-        className={cn('md:hidden', 'focus:ring-2 focus:ring-blue-500 focus:ring-offset-2')}
+        className={cn('md:hidden', FOCUS_TOKENS.classes.default)}
         onClick={toggleMenu}
         aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
         aria-expanded={isOpen}
@@ -224,7 +225,7 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
             size="icon"
             onClick={closeMenu}
             aria-label="메뉴 닫기"
-            className="focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className={FOCUS_TOKENS.classes.default}
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </Button>

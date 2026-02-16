@@ -53,14 +53,11 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
   const hasMore = maxItems && items.length > maxItems;
 
   return (
-    <nav
-      aria-label="breadcrumb"
-      className={cn('flex items-center gap-1.5', className)}
-    >
+    <nav aria-label="breadcrumb" className={cn('flex items-center gap-1.5', className)}>
       {/* 생략 표시 (maxItems로 인해 숨겨진 항목이 있는 경우) */}
       {hasMore && (
         <>
-          <span className="text-sm text-gray-500" aria-hidden="true">
+          <span className="text-sm text-muted-foreground" aria-hidden="true">
             ...
           </span>
           <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
@@ -76,17 +73,14 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
           <Fragment key={item.href}>
             {!isFirst && (
               <ChevronRight
-                className="h-4 w-4 text-gray-400 shrink-0"
+                className="h-4 w-4 text-muted-foreground/60 shrink-0"
                 aria-hidden="true"
               />
             )}
 
             {item.current ? (
               <span
-                className={cn(
-                  'text-sm font-medium text-gray-900 dark:text-gray-100',
-                  'truncate max-w-[200px]'
-                )}
+                className={cn('text-sm font-medium text-foreground', 'truncate max-w-[200px]')}
                 aria-current="page"
               >
                 {Icon && <Icon className="inline h-3.5 w-3.5 mr-1" aria-hidden="true" />}
@@ -96,12 +90,12 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
               <Link
                 href={item.href}
                 className={cn(
-                  'text-sm text-gray-500 dark:text-gray-400',
-                  'hover:text-gray-900 dark:hover:text-gray-100',
+                  'text-sm text-muted-foreground',
+                  'hover:text-foreground',
                   'hover:underline',
-                  'transition-colors',
+                  'motion-safe:transition-colors motion-reduce:transition-none',
                   'truncate max-w-[200px]',
-                  'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2 rounded'
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ul-info focus-visible:ring-offset-2 rounded'
                 )}
               >
                 {Icon && <Icon className="inline h-3.5 w-3.5 mr-1" aria-hidden="true" />}
@@ -138,11 +132,7 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
   return (
     <nav aria-label="breadcrumb" className={cn('flex items-center gap-1', className)}>
       <span
-        className={cn(
-          'text-sm text-gray-900 dark:text-gray-100',
-          'truncate max-w-[180px]',
-          'font-medium'
-        )}
+        className={cn('text-sm text-foreground', 'truncate max-w-[180px]', 'font-medium')}
         aria-current="page"
       >
         {currentItem.label}
@@ -159,11 +149,7 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
  * @example
  * <ResponsiveBreadcrumb />
  */
-export function ResponsiveBreadcrumb({
-  className,
-  dynamicLabels,
-  maxItems,
-}: BreadcrumbProps) {
+export function ResponsiveBreadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbProps) {
   return (
     <>
       {/* 데스크톱 (≥768px) */}
@@ -187,17 +173,17 @@ export function ResponsiveBreadcrumb({
 export function BreadcrumbSkeleton({ className }: { className?: string }) {
   return (
     <div
-      className={cn('flex items-center gap-1.5 animate-pulse', className)}
+      className={cn('flex items-center gap-1.5 motion-safe:animate-pulse', className)}
       aria-label="브레드크럼 로딩 중"
     >
       {/* 첫 번째 항목 */}
-      <div className="w-16 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
+      <div className="w-16 h-5 bg-muted rounded" />
 
       {/* 구분자 */}
-      <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
 
       {/* 두 번째 항목 */}
-      <div className="w-24 h-5 bg-gray-200 dark:bg-gray-700 rounded" />
+      <div className="w-24 h-5 bg-muted rounded" />
     </div>
   );
 }

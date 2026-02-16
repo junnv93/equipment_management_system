@@ -45,6 +45,12 @@ import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { computeApprovalTotal } from '@/lib/utils/approval-count-utils';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
+import {
+  getHeaderSpacingClass,
+  FOCUS_TOKENS,
+  ANIMATION_PRESETS,
+  getTransitionClasses,
+} from '@/lib/design-tokens';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -67,9 +73,9 @@ const SidebarItem = memo(function SidebarItem({
       href={href}
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2 relative',
-        // prefers-reduced-motion 지원: transition-all 대신 조건부 transition
-        'motion-safe:transition-all motion-reduce:transition-none',
-        'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2 focus:ring-offset-ul-midnight',
+        // SSOT: design-tokens — motion + focus-visible
+        getTransitionClasses('fast', ['background-color', 'color']),
+        FOCUS_TOKENS.classes.onDark,
         isActive
           ? 'text-white bg-white/15 font-medium'
           : 'text-white/70 hover:text-white hover:bg-white/10'
@@ -77,10 +83,13 @@ const SidebarItem = memo(function SidebarItem({
       aria-current={isActive ? 'page' : undefined}
     >
       <span aria-hidden="true">{icon}</span>
-      <span className="flex-1">{label}</span>
+      <span className="flex-1 truncate">{label}</span>
       {badge !== undefined && badge > 0 && (
         <span
-          className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-ul-red text-white animate-pulse"
+          className={cn(
+            'ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-ul-red text-white',
+            ANIMATION_PRESETS.pulse
+          )}
           aria-label={`${badge}건의 알림`}
         >
           {badge}
@@ -243,8 +252,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
               href="/"
               className={cn(
                 'flex items-center gap-2 font-semibold text-white',
-                'focus:outline-none focus:ring-2 focus:ring-ul-info focus:ring-offset-2 focus:ring-offset-ul-midnight rounded-md',
-                'hover:bg-white/10 motion-safe:transition-all motion-safe:duration-200 motion-reduce:transition-none',
+                FOCUS_TOKENS.classes.onDark,
+                'rounded-md',
+                'hover:bg-white/10',
+                getTransitionClasses('fast', ['background-color', 'transform']),
                 'px-2 py-1.5 -mx-2',
                 'group'
               )}
@@ -265,7 +276,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </div>
 
           {/* 네비게이션 링크 */}
-          <nav className="flex flex-col gap-1 p-4" role="menubar">
+          <nav className="flex flex-col gap-1 p-4">
             {navItems.map((item) => (
               <SidebarItem
                 key={item.href}
@@ -301,7 +312,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               />
             }
             rightContent={
-              <div className="flex items-center gap-2">
+              <div className={cn('flex items-center', getHeaderSpacingClass())}>
                 <ThemeToggle />
                 <NotificationsDropdown />
                 <UserProfileDropdown />

@@ -21,14 +21,29 @@ import {
 } from '@/hooks/use-notifications';
 import Link from 'next/link';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import {
+  getHeaderButtonClasses,
+  getHeaderSizeClasses,
+  getNotificationBadgePositionClass,
+  getNotificationBadgeClasses,
+  getNotificationItemAnimation,
+  NOTIFICATION_EMPTY_STATE,
+} from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 
 /**
- * 알림 드롭다운
+ * 알림 드롭다운 (Enhanced with Design System v2)
  *
  * 더미 데이터 → TanStack Query 마이그레이션 완료
  * - useUnreadCount: 30초 폴링 + SSE 실시간 무효화
  * - useNotificationList: 최근 5개 알림 조회
  * - useMarkAsRead / useMarkAllAsRead: 뮤테이션 → onSettled에서 자동 무효화
+ *
+ * Design System v2 (3-Layer Token Architecture):
+ * - SSOT: lib/design-tokens (primitives → semantic → components)
+ * - 반응형: 모바일 44px, 데스크톱 40px (WCAG AAA)
+ * - Visual Hierarchy: 알림 개수 기반 badge variant (기본/주의/긴급)
+ * - Motion: Stagger animation, badge pulse
  */
 export function NotificationsDropdown() {
   const { data: unreadCount = 0 } = useUnreadCount();
@@ -54,14 +69,19 @@ export function NotificationsDropdown() {
         <Button
           variant="ghost"
           size="sm"
-          className="relative h-8 w-8 rounded-full"
+          className={cn('relative', getHeaderButtonClasses())}
           aria-label="알림"
         >
-          <Bell className="h-5 w-5" aria-hidden="true" />
+          <Bell className={getHeaderSizeClasses('icon')} aria-hidden="true" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -right-1 -top-1 h-4 min-w-4 px-1 text-xs tabular-nums"
+              className={cn(
+                'absolute px-1 text-xs tabular-nums',
+                getHeaderSizeClasses('badge'),
+                getNotificationBadgePositionClass(),
+                getNotificationBadgeClasses(unreadCount)
+              )}
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Badge>
@@ -90,17 +110,32 @@ export function NotificationsDropdown() {
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-16 rounded bg-muted/50 animate-pulse"
+                  className="h-16 rounded bg-muted/50 motion-safe:animate-pulse"
                   style={{ animationDelay: `${i * 100}ms` }}
                 />
               ))}
             </div>
           ) : notifications.length === 0 ? (
             <div className="py-8 text-center">
-              <div className="relative inline-block mb-3">
-                <Bell className="h-10 w-10 mx-auto text-muted-foreground/30" aria-hidden="true" />
-                <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-success flex items-center justify-center">
-                  <span className="text-xs text-success-foreground">✓</span>
+              <div className="relative inline-block mb-3 motion-safe:animate-gentle-bounce">
+                <Bell
+                  className={cn(
+                    'mx-auto',
+                    NOTIFICATION_EMPTY_STATE.icon.size,
+                    NOTIFICATION_EMPTY_STATE.icon.color
+                  )}
+                  aria-hidden="true"
+                />
+                <div
+                  className={cn(
+                    NOTIFICATION_EMPTY_STATE.checkmark.size,
+                    NOTIFICATION_EMPTY_STATE.checkmark.position,
+                    NOTIFICATION_EMPTY_STATE.checkmark.background,
+                    NOTIFICATION_EMPTY_STATE.checkmark.shape,
+                    'flex items-center justify-center motion-safe:animate-checkmark-pop shadow-lg'
+                  )}
+                >
+                  <span className="text-xs text-success-foreground font-bold">✓</span>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">새로운 알림이 없습니다</p>
@@ -111,7 +146,7 @@ export function NotificationsDropdown() {
                 <div
                   key={notification.id}
                   className="motion-safe:animate-[staggerFadeIn_0.2s_ease-out_forwards]"
-                  style={{ animationDelay: `${index * 40}ms` }}
+                  style={getNotificationItemAnimation(index)}
                 >
                   <NotificationItem notification={notification} onMarkAsRead={handleMarkAsRead} />
                 </div>

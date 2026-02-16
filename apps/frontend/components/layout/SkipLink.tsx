@@ -18,7 +18,10 @@ interface SkipLinkProps {
   children?: React.ReactNode;
 }
 
-export function SkipLink({ href = '#main-content', children = '메인 콘텐츠로 건너뛰기' }: SkipLinkProps) {
+export function SkipLink({
+  href = '#main-content',
+  children = '메인 콘텐츠로 건너뛰기',
+}: SkipLinkProps) {
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const target = document.querySelector(href);
@@ -39,7 +42,7 @@ export function SkipLink({ href = '#main-content', children = '메인 콘텐츠�
         focus:bg-blue-600 focus:text-white
         focus:rounded-md focus:shadow-lg
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-        motion-safe:transition-all motion-safe:duration-200
+        motion-safe:transition-[opacity,transform] motion-safe:duration-200
         motion-reduce:transition-none
       "
     >

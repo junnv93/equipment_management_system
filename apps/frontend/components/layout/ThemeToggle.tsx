@@ -10,7 +10,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getHeaderButtonClasses, getHeaderSizeClasses } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 
+/**
+ * 테마 토글
+ *
+ * Design System:
+ * - SSOT: lib/design-tokens/header.ts
+ * - 반응형: 모바일 44px, 데스크톱 40px (WCAG AAA)
+ * - 아이콘: 모바일 24px, 데스크톱 20px
+ */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -22,8 +32,8 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="h-9 w-9">
-        <Sun className="h-4 w-4" />
+      <Button variant="ghost" size="icon" className={getHeaderButtonClasses()}>
+        <Sun className={getHeaderSizeClasses('icon')} />
         <span className="sr-only">테마 변경</span>
       </Button>
     );
@@ -35,15 +45,15 @@ export function ThemeToggle() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 text-foreground hover:bg-muted"
+          className={cn('text-foreground', getHeaderButtonClasses())}
           aria-label="테마 변경"
         >
           {theme === 'dark' ? (
-            <Moon className="h-4 w-4" />
+            <Moon className={getHeaderSizeClasses('icon')} />
           ) : theme === 'light' ? (
-            <Sun className="h-4 w-4" />
+            <Sun className={getHeaderSizeClasses('icon')} />
           ) : (
-            <Monitor className="h-4 w-4" />
+            <Monitor className={getHeaderSizeClasses('icon')} />
           )}
           <span className="sr-only">테마 변경</span>
         </Button>
@@ -53,7 +63,7 @@ export function ThemeToggle() {
           onClick={() => setTheme('light')}
           className="flex items-center gap-2 cursor-pointer"
         >
-          <Sun className="h-4 w-4" />
+          <Sun className="h-4 w-4" aria-hidden="true" />
           <span>라이트 모드</span>
           {theme === 'light' && <span className="ml-auto text-ul-green">✓</span>}
         </DropdownMenuItem>
@@ -61,7 +71,7 @@ export function ThemeToggle() {
           onClick={() => setTheme('dark')}
           className="flex items-center gap-2 cursor-pointer"
         >
-          <Moon className="h-4 w-4" />
+          <Moon className="h-4 w-4" aria-hidden="true" />
           <span>다크 모드</span>
           {theme === 'dark' && <span className="ml-auto text-ul-green">✓</span>}
         </DropdownMenuItem>
@@ -69,7 +79,7 @@ export function ThemeToggle() {
           onClick={() => setTheme('system')}
           className="flex items-center gap-2 cursor-pointer"
         >
-          <Monitor className="h-4 w-4" />
+          <Monitor className="h-4 w-4" aria-hidden="true" />
           <span>시스템 설정</span>
           {theme === 'system' && <span className="ml-auto text-ul-green">✓</span>}
         </DropdownMenuItem>
