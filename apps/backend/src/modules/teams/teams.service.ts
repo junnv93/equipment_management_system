@@ -25,8 +25,8 @@ export class TeamsService {
       conditions.push(eq(teamsTable.site, query.site));
     }
 
-    if (query.type) {
-      conditions.push(eq(teamsTable.type, query.type));
+    if (query.classification) {
+      conditions.push(eq(teamsTable.classification, query.classification));
     }
 
     if (query.ids) {
@@ -48,7 +48,7 @@ export class TeamsService {
       .select({
         id: teamsTable.id,
         name: teamsTable.name,
-        type: teamsTable.type,
+        classification: teamsTable.classification,
         site: teamsTable.site,
         classificationCode: teamsTable.classificationCode,
         description: teamsTable.description,
@@ -70,7 +70,7 @@ export class TeamsService {
       .groupBy(
         teamsTable.id,
         teamsTable.name,
-        teamsTable.type,
+        teamsTable.classification,
         teamsTable.site,
         teamsTable.classificationCode,
         teamsTable.description,
@@ -106,7 +106,7 @@ export class TeamsService {
       .select({
         id: teamsTable.id,
         name: teamsTable.name,
-        type: teamsTable.type,
+        classification: teamsTable.classification,
         site: teamsTable.site,
         classificationCode: teamsTable.classificationCode,
         description: teamsTable.description,
@@ -127,7 +127,7 @@ export class TeamsService {
       .groupBy(
         teamsTable.id,
         teamsTable.name,
-        teamsTable.type,
+        teamsTable.classification,
         teamsTable.site,
         teamsTable.classificationCode,
         teamsTable.description,
@@ -157,7 +157,7 @@ export class TeamsService {
       .insert(teamsTable)
       .values({
         name: createTeamDto.name,
-        type: createTeamDto.type,
+        classification: createTeamDto.classification,
         site: createTeamDto.site,
         classificationCode: createTeamDto.classificationCode,
         description: createTeamDto.description,
@@ -203,7 +203,7 @@ export class TeamsService {
   private toTeam(row: {
     id: string;
     name: string;
-    type: string;
+    classification: string;
     site: string;
     classificationCode: string | null;
     description: string | null;
@@ -217,7 +217,7 @@ export class TeamsService {
     return {
       id: row.id,
       name: row.name,
-      type: row.type,
+      classification: row.classification,
       site: row.site,
       classificationCode: row.classificationCode ?? undefined,
       description: row.description ?? undefined,

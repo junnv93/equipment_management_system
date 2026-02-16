@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, ParseUUIDPipe, Param } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, ParseUUIDPipe, Param, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -11,7 +11,13 @@ import { AuditService, AuditLogFilter, PaginationOptions } from './audit.service
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  resolveDataScope,
+  AUDIT_LOG_SCOPE,
+} from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
+import type { AuthenticatedRequest } from '../../types/auth';
 
 /**
  * 감사 로그 조회 컨트롤러
@@ -70,6 +76,7 @@ export class AuditController {
   @ApiResponse({ status: 403, description: '권한 없음 (lab_manager만 조회 가능)' })
   @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   async findAll(
+    @Request() req: AuthenticatedRequest,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('userId') userId?: string,
@@ -78,25 +85,17 @@ export class AuditController {
     @Query('action') action?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string
-  ): Promise<{
-    items: {
-      id: string;
-      timestamp: Date;
-      userId: string;
-      userName: string;
-      userRole: string;
-      action: string;
-      entityType: string;
-      entityId: string;
-      entityName: string | null;
-      details:
-        | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
-        | null;
-      ipAddress: string | null;
-      createdAt: Date;
-    }[];
-    meta: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/audit/audit.service').PaginationMeta;
-  }> {
+  ) {
+    // SSOT: resolveDataScope()로 역할별 스코프 해석 — switch/if 없음
+    const scope = resolveDataScope(
+      {
+        role: req.user.roles[0] as UserRole,
+        site: req.user.site,
+        teamId: req.user.teamId,
+      },
+      AUDIT_LOG_SCOPE
+    );
+
     const filter: AuditLogFilter = {
       userId,
       entityType,
@@ -104,14 +103,47 @@ export class AuditController {
       action,
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
+      // 서버 강제 스코프 — 클라이언트 파라미터로 우회 불가
+      userSite: scope.site,
+      userTeamId: scope.teamId,
     };
 
     const pagination: PaginationOptions = {
       page: page ? parseInt(page, 10) : 1,
-      limit: Math.min(limit ? parseInt(limit, 10) : 20, 100), // 최대 100개
+      limit: Math.min(limit ? parseInt(limit, 10) : 20, 100),
     };
 
     return this.auditService.findAll(filter, pagination);
+  }
+
+  @Get(':id')
+  @ApiOperation({
+    summary: '감사 로그 단건 조회',
+    description: '감사 로그를 ID로 조회합니다.',
+  })
+  @ApiParam({ name: 'id', description: '감사 로그 ID (UUID)' })
+  @ApiResponse({ status: 200, description: '감사 로그 조회 성공' })
+  @ApiResponse({ status: 404, description: '감사 로그를 찾을 수 없음' })
+  @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
+  @ApiResponse({ status: 403, description: '권한 없음' })
+  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{
+    id: string;
+    timestamp: Date;
+    userId: string;
+    userName: string;
+    userRole: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    entityName: string | null;
+    details:
+      | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
+      | null;
+    ipAddress: string | null;
+    createdAt: Date;
+  }> {
+    return this.auditService.findOne(id);
   }
 
   @Get('entity/:entityType/:entityId')

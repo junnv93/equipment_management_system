@@ -2,10 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
-  TeamTypeEnum,
-  ClassificationCodeEnum,
+  ClassificationEnum, // ← TeamTypeEnum → ClassificationEnum
+  CLASSIFICATION_LABELS, // ← SSOT import
   SiteEnum,
-  type TeamType,
+  type Classification, // ← TeamType → Classification
   type ClassificationCode,
   type Site,
 } from '@equipment-management/schemas';
@@ -14,15 +14,15 @@ import {
 
 /**
  * 팀 생성 스키마
- * ✅ SSOT: enums are imported from @equipment-management/schemas
+ * ✅ SSOT: ClassificationEnum은 @equipment-management/schemas에서 import
+ * ✅ 팀의 classification = 장비의 classification (동일 enum)
  * ✅ Best Practice: 팀은 반드시 하나의 사이트에 소속됨
- * ✅ 팀이 장비 분류코드를 결정 (classificationCode)
  */
 export const createTeamSchema = z.object({
   name: z.string().min(1, '팀 이름을 입력해주세요').max(100),
-  type: TeamTypeEnum,
+  classification: ClassificationEnum, // ← type → classification
   site: SiteEnum,
-  classificationCode: ClassificationCodeEnum.optional(),
+  classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(),
   description: z.string().max(500).optional(),
   leaderId: z.string().uuid().optional(),
 });
@@ -40,21 +40,11 @@ export class CreateTeamDto {
   name: string;
 
   @ApiProperty({
-    description: '팀 타입 (분류코드 결정)',
-    enum: [
-      'FCC_EMC_RF',
-      'GENERAL_EMC',
-      'GENERAL_RF',
-      'SAR',
-      'AUTOMOTIVE_EMC',
-      'SOFTWARE',
-      'RF',
-      'EMC',
-      'AUTO',
-    ],
-    example: 'FCC_EMC_RF',
+    description: '팀 분류 (장비 분류와 동일, 소문자_언더스코어)',
+    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'], // ← 소문자 통일
+    example: 'fcc_emc_rf', // ← 소문자
   })
-  type: TeamType;
+  classification: Classification; // ← type → classification
 
   @ApiProperty({
     description: '팀 소속 사이트',

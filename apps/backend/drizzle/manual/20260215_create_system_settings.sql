@@ -7,11 +7,17 @@ CREATE TABLE IF NOT EXISTS system_settings (
   site VARCHAR(20),
   updated_by UUID REFERENCES users(id),
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  UNIQUE(category, key, COALESCE(site, '__global__'))
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_system_settings_lookup ON system_settings(category, site);
+-- UNIQUE constraint with COALESCE expression (requires UNIQUE INDEX, not inline constraint)
+-- Ensures one global setting (site=NULL) OR one site-specific override per (category, key) pair
+CREATE UNIQUE INDEX IF NOT EXISTS idx_system_settings_unique_key
+  ON system_settings(category, key, COALESCE(site, '__global__'));
+
+-- Lookup index for category + site queries
+CREATE INDEX IF NOT EXISTS idx_system_settings_lookup
+  ON system_settings(category, site);
 
 -- Seed default calibration alert days (global)
 INSERT INTO system_settings (category, key, value)

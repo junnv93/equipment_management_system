@@ -1,8 +1,16 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import { auditLogs, NewAuditLog, AuditLog, AuditLogDetails } from '@equipment-management/db/schema';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import {
+  AUDIT_ACTION_LABELS,
+  AUDIT_ENTITY_TYPE_LABELS,
+  type AuditAction,
+  type AuditEntityType,
+} from '@equipment-management/schemas';
+import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 
 /**
  * 감사 로그 생성 DTO
@@ -17,6 +25,10 @@ export interface CreateAuditLogDto {
   entityName?: string;
   details?: AuditLogDetails;
   ipAddress?: string;
+  /** 행위자의 사이트 (RBAC 스코프 필터링용) */
+  userSite?: string;
+  /** 행위자의 팀 ID (RBAC 스코프 필터링용) */
+  userTeamId?: string;
 }
 
 /**
@@ -29,6 +41,10 @@ export interface AuditLogFilter {
   action?: string;
   startDate?: Date;
   endDate?: Date;
+  /** RBAC: 사이트 스코프 (lab_manager) — 서버 강제 */
+  userSite?: string;
+  /** RBAC: 팀 스코프 (technical_manager) — 서버 강제 */
+  userTeamId?: string;
 }
 
 /**
@@ -54,7 +70,14 @@ export interface PaginationMeta {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  constructor(@Inject('DRIZZLE_INSTANCE') private db: PostgresJsDatabase<typeof schema>) {}
+  // Cache TTLs
+  private readonly LIST_CACHE_TTL = 1000 * 60 * 2; // 2분 (리스트는 짧게)
+  private readonly DETAIL_CACHE_TTL = 1000 * 60 * 10; // 10분 (감사 로그는 append-only라 오래 유지)
+
+  constructor(
+    @Inject('DRIZZLE_INSTANCE') private db: PostgresJsDatabase<typeof schema>,
+    private readonly cacheService: SimpleCacheService
+  ) {}
 
   /**
    * 감사 로그 생성 (비동기)
@@ -75,11 +98,16 @@ export class AuditService {
         entityName: dto.entityName,
         details: dto.details,
         ipAddress: dto.ipAddress,
+        userSite: dto.userSite,
+        userTeamId: dto.userTeamId,
         timestamp: new Date(),
         createdAt: new Date(),
       } as NewAuditLog;
 
       await this.db.insert(auditLogs).values(newLog);
+
+      // 캐시 무효화 (append-only이므로 리스트 캐시만 무효화)
+      this.invalidateListCaches(dto.entityType, dto.entityId, dto.userId);
 
       this.logger.debug(
         `Audit log created: ${dto.userName}(${dto.userRole}) - ${dto.action} ${dto.entityType}(${dto.entityId})`
@@ -91,138 +119,178 @@ export class AuditService {
   }
 
   /**
+   * 리스트 캐시 무효화
+   * 새 로그 생성 시 관련 캐시를 삭제합니다.
+   */
+  private invalidateListCaches(entityType: string, entityId: string, userId: string): void {
+    // 전체 리스트 캐시 무효화 (필터 조합이 다양하므로 패턴 매칭)
+    this.cacheService.deleteByPattern('^audit-logs:list:');
+
+    // 특정 엔티티 캐시 무효화
+    this.cacheService.delete(`audit-logs:entity:${entityType}:${entityId}`);
+
+    // 특정 사용자 캐시 무효화
+    this.cacheService.delete(`audit-logs:user:${userId}`);
+  }
+
+  /**
    * 감사 로그 조회 (페이지네이션 지원)
    */
   async findAll(
     filter: AuditLogFilter,
     pagination: PaginationOptions
   ): Promise<{ items: AuditLog[]; meta: PaginationMeta }> {
-    const conditions: SQL[] = [];
+    // 캐시 키 생성 (필터와 페이지네이션 포함)
+    const cacheKey = `audit-logs:list:${JSON.stringify(filter)}:${pagination.page}:${pagination.limit}`;
 
-    if (filter.userId) {
-      conditions.push(eq(auditLogs.userId, filter.userId));
-    }
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const conditions: SQL[] = [];
 
-    if (filter.entityType) {
-      conditions.push(eq(auditLogs.entityType, filter.entityType));
-    }
+        if (filter.userId) {
+          conditions.push(eq(auditLogs.userId, filter.userId));
+        }
 
-    if (filter.entityId) {
-      conditions.push(eq(auditLogs.entityId, filter.entityId));
-    }
+        if (filter.entityType) {
+          conditions.push(eq(auditLogs.entityType, filter.entityType));
+        }
 
-    if (filter.action) {
-      conditions.push(eq(auditLogs.action, filter.action));
-    }
+        if (filter.entityId) {
+          conditions.push(eq(auditLogs.entityId, filter.entityId));
+        }
 
-    if (filter.startDate) {
-      conditions.push(gte(auditLogs.timestamp, filter.startDate));
-    }
+        if (filter.action) {
+          conditions.push(eq(auditLogs.action, filter.action));
+        }
 
-    if (filter.endDate) {
-      conditions.push(lte(auditLogs.timestamp, filter.endDate));
-    }
+        if (filter.startDate) {
+          conditions.push(gte(auditLogs.timestamp, filter.startDate));
+        }
 
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+        if (filter.endDate) {
+          conditions.push(lte(auditLogs.timestamp, filter.endDate));
+        }
 
-    // 총 개수 조회
-    const countResult = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(auditLogs)
-      .where(whereClause);
+        // RBAC 스코프 필터 (서버 강제 — 클라이언트 우회 불가)
+        if (filter.userSite) {
+          conditions.push(eq(auditLogs.userSite, filter.userSite));
+        }
+        if (filter.userTeamId) {
+          conditions.push(eq(auditLogs.userTeamId, filter.userTeamId));
+        }
 
-    const totalItems = Number(countResult[0]?.count || 0);
-    const totalPages = Math.ceil(totalItems / pagination.limit);
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // 페이지네이션 적용하여 조회
-    const items = await this.db
-      .select()
-      .from(auditLogs)
-      .where(whereClause)
-      .orderBy(desc(auditLogs.timestamp))
-      .limit(pagination.limit)
-      .offset((pagination.page - 1) * pagination.limit);
+        // 총 개수 조회
+        const countResult = await this.db
+          .select({ count: sql<number>`count(*)` })
+          .from(auditLogs)
+          .where(whereClause);
 
-    return {
-      items,
-      meta: {
-        totalItems,
-        itemCount: items.length,
-        itemsPerPage: pagination.limit,
-        totalPages,
-        currentPage: pagination.page,
+        const totalItems = Number(countResult[0]?.count || 0);
+        const totalPages = Math.ceil(totalItems / pagination.limit);
+
+        // 페이지네이션 적용하여 조회
+        const items = await this.db
+          .select()
+          .from(auditLogs)
+          .where(whereClause)
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(pagination.limit)
+          .offset((pagination.page - 1) * pagination.limit);
+
+        return {
+          items,
+          meta: {
+            totalItems,
+            itemCount: items.length,
+            itemsPerPage: pagination.limit,
+            totalPages,
+            currentPage: pagination.page,
+          },
+        };
       },
-    };
+      this.LIST_CACHE_TTL
+    );
+  }
+
+  /**
+   * 감사 로그 단건 조회 (ID로 조회)
+   */
+  async findOne(id: string): Promise<AuditLog> {
+    const cacheKey = `audit-logs:detail:${id}`;
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const [log] = await this.db.select().from(auditLogs).where(eq(auditLogs.id, id)).limit(1);
+
+        if (!log) {
+          throw new NotFoundException(`Audit log with ID ${id} not found`);
+        }
+
+        return log;
+      },
+      this.DETAIL_CACHE_TTL
+    );
   }
 
   /**
    * 특정 엔티티의 감사 로그 조회
    */
   async findByEntity(entityType: string, entityId: string): Promise<AuditLog[]> {
-    return this.db
-      .select()
-      .from(auditLogs)
-      .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
-      .orderBy(desc(auditLogs.timestamp));
+    const cacheKey = `audit-logs:entity:${entityType}:${entityId}`;
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return this.db
+          .select()
+          .from(auditLogs)
+          .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
+          .orderBy(desc(auditLogs.timestamp));
+      },
+      this.LIST_CACHE_TTL
+    );
   }
 
   /**
    * 특정 사용자의 감사 로그 조회
    */
   async findByUser(userId: string, limit = 100): Promise<AuditLog[]> {
-    return this.db
-      .select()
-      .from(auditLogs)
-      .where(eq(auditLogs.userId, userId))
-      .orderBy(desc(auditLogs.timestamp))
-      .limit(limit);
+    const cacheKey = `audit-logs:user:${userId}`;
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return this.db
+          .select()
+          .from(auditLogs)
+          .where(eq(auditLogs.userId, userId))
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(limit);
+      },
+      this.LIST_CACHE_TTL
+    );
   }
 
   /**
    * 포맷된 로그 메시지 생성
    *
    * 예: "2025년 5월 09일 09:30, 홍석환(기술책임자)이 '네트워크 분석기(SUW-E0326)' 신규 등록 요청을 '승인'함."
+   *
+   * SSOT 사용: AUDIT_ACTION_LABELS, AUDIT_ENTITY_TYPE_LABELS, USER_ROLE_LABELS
    */
   formatLogMessage(log: AuditLog): string {
     const date = new Date(log.timestamp);
     const formattedDate = `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate().toString().padStart(2, '0')}일 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
-    const roleMap: Record<string, string> = {
-      test_engineer: '시험실무자',
-      technical_manager: '기술책임자',
-      lab_manager: '시험소별 관리자',
-    };
-
-    const actionMap: Record<string, string> = {
-      create: '등록',
-      update: '수정',
-      delete: '삭제',
-      approve: '승인',
-      reject: '반려',
-      checkout: '반출',
-      return: '반입',
-      cancel: '취소',
-      login: '로그인',
-      logout: '로그아웃',
-    };
-
-    const entityTypeMap: Record<string, string> = {
-      equipment: '장비',
-      calibration: '교정',
-      checkout: '반출',
-      rental: '대여',
-      user: '사용자',
-      team: '팀',
-      calibration_factor: '보정계수',
-      non_conformance: '부적합',
-      software: '소프트웨어',
-      calibration_plan: '교정계획서',
-      repair_history: '수리이력',
-    };
-
-    const roleName = roleMap[log.userRole] || log.userRole;
-    const actionName = actionMap[log.action] || log.action;
-    const entityTypeName = entityTypeMap[log.entityType] || log.entityType;
+    // SSOT 레이블 사용
+    const roleName = USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole;
+    const actionName = AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action;
+    const entityTypeName =
+      AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] || log.entityType;
 
     if (log.entityName) {
       return `${formattedDate}, ${log.userName}(${roleName})이 '${log.entityName}' ${entityTypeName}을(를) '${actionName}'함.`;

@@ -1,20 +1,20 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { SiteEnum } from '@equipment-management/schemas';
+import { SiteEnum, ClassificationEnum, type Classification } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
 /**
  * 팀 조회 쿼리 스키마
- * ✅ SSOT: SiteEnum from @equipment-management/schemas
+ * ✅ SSOT: SiteEnum, ClassificationEnum from @equipment-management/schemas
  * ✅ 사이트 필터 추가: 사용자 사이트에 맞는 팀만 조회
  */
 export const teamQuerySchema = z.object({
   ids: z.string().optional(),
   search: z.string().optional(),
   site: SiteEnum.optional(),
-  type: z.string().optional(), // ✅ 팀 유형 필터
+  classification: ClassificationEnum.optional(), // ✅ type → classification (장비 분류와 동일)
   sort: z.string().optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -51,11 +51,11 @@ export class TeamQueryDto {
   site?: 'suwon' | 'uiwang' | 'pyeongtaek';
 
   @ApiPropertyOptional({
-    description:
-      '팀 유형 필터 (FCC_EMC_RF, GENERAL_EMC, GENERAL_RF, SAR, AUTOMOTIVE_EMC, SOFTWARE)',
-    example: 'FCC_EMC_RF',
+    description: '팀 분류 필터 (장비 분류와 동일, 소문자_언더스코어)',
+    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+    example: 'fcc_emc_rf',
   })
-  type?: string;
+  classification?: Classification;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (예: name.asc,createdAt.desc)',
