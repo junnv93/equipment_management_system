@@ -846,11 +846,11 @@ export class CheckoutsService extends VersionedBaseService {
       return; // 사용자 팀 정보를 찾을 수 없으면 체크하지 않음
     }
 
-    // 사용자 팀 타입 확인
-    const userTeamType = userTeam.type?.toUpperCase();
+    // 사용자 팀 분류 확인
+    const userTeamClassification = userTeam.classification;
 
     // EMC팀은 RF팀 장비 반출 신청/승인 불가
-    if (userTeamType === 'EMC') {
+    if (userTeamClassification === 'general_emc') {
       try {
         // ✅ 스키마 일치화: EquipmentService를 사용하여 타입 안전하게 조회
         const equipmentData = await this.equipmentService.findOne(equipmentId, true);
@@ -860,10 +860,10 @@ export class CheckoutsService extends VersionedBaseService {
           return;
         }
 
-        const equipmentTeamType = equipmentData.team?.type?.toUpperCase();
+        const equipmentTeamClassification = equipmentData.team?.classification;
 
         // EMC팀은 RF팀 장비 반출 신청/승인 불가
-        if (equipmentTeamType === 'RF') {
+        if (equipmentTeamClassification === 'general_rf') {
           throw new ForbiddenException('EMC팀은 RF팀 장비에 대한 반출 신청/승인 권한이 없습니다.');
         }
       } catch (error) {

@@ -1328,19 +1328,20 @@ export class EquipmentService {
   }
 
   /**
-   * 장비의 팀 타입 조회
+   * 장비의 팀 분류 조회
    * ✅ 스키마 일치화: Drizzle relations를 사용하여 간단하고 타입 안전하게 조회
+   * ✅ SSOT: classification (소문자_언더스코어)
    */
   async getEquipmentTeamType(equipmentId: string): Promise<string | null> {
     try {
       // ✅ relations를 사용하여 팀 정보 포함 조회
       const equipmentData = await this.findOne(equipmentId, true);
 
-      // ✅ 간단하게 team?.type 접근 가능
-      return equipmentData.team?.type || null;
+      // ✅ 간단하게 team?.classification 접근 가능
+      return equipmentData.team?.classification || null;
     } catch (error) {
       this.logger.error(
-        `장비 팀 타입 조회 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
+        `장비 팀 분류 조회 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
       );
       return null;
     }

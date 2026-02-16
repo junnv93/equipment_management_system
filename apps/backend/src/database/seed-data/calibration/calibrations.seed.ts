@@ -6,7 +6,7 @@
 
 import { calibrations } from '@equipment-management/db/schema';
 import { CalibrationResult } from '@equipment-management/schemas';
-import { daysAgo, monthsAgo } from '../../utils/date-helpers';
+import { daysAgo, daysLater, monthsAgo, toDateString } from '../../utils/date-helpers';
 import {
   // Equipment IDs
   EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
@@ -76,17 +76,20 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
   // Approved Calibrations (10 total)
   // =========================================================================
 
-  // Spectrum Analyzer - passed, approved
+  // Spectrum Analyzer - passed, approved (intermediate check: 5일 초과 — overdue)
   createCalibration(
     EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
     'pass',
     'approved',
     'test_engineer',
     monthsAgo(12),
-    monthsAgo(12)
+    monthsAgo(12),
+    {
+      intermediateCheckDate: toDateString(daysAgo(5)),
+    }
   ),
 
-  // Signal Generator - passed, approved (technical manager direct entry)
+  // Signal Generator - passed, approved (intermediate check: D-3 — 3일 후)
   createCalibration(
     EQUIP_SIGNAL_GEN_SUW_E_ID,
     'pass',
@@ -97,30 +100,37 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
     {
       registrarComment: '기술책임자가 직접 등록하였습니다.',
       approverComment: '자가 승인',
+      intermediateCheckDate: toDateString(daysLater(3)),
     }
   ),
 
-  // Network Analyzer - passed, approved
+  // Network Analyzer - passed, approved (intermediate check: D-14 — 14일 후)
   createCalibration(
     EQUIP_NETWORK_ANALYZER_SUW_E_ID,
     'pass',
     'approved',
     'test_engineer',
     monthsAgo(11),
-    monthsAgo(11)
+    monthsAgo(11),
+    {
+      intermediateCheckDate: toDateString(daysLater(14)),
+    }
   ),
 
-  // Oscilloscope - passed, approved
+  // Oscilloscope - passed, approved (intermediate check: 10일 초과 — overdue)
   createCalibration(
     EQUIP_OSCILLOSCOPE_SUW_R_ID,
     'pass',
     'approved',
     'test_engineer',
     monthsAgo(14),
-    monthsAgo(14)
+    monthsAgo(14),
+    {
+      intermediateCheckDate: toDateString(daysAgo(10)),
+    }
   ),
 
-  // Power Supply - conditional, approved
+  // Power Supply - conditional, approved (intermediate check: D-1 — 내일)
   createCalibration(
     EQUIP_POWER_SUPPLY_SUW_R_ID,
     'conditional',
@@ -130,6 +140,7 @@ export const CALIBRATIONS_SEED_DATA: (typeof calibrations.$inferInsert)[] = [
     monthsAgo(11),
     {
       approverComment: '조건부 적합. 주파수 범위 제한 적용.',
+      intermediateCheckDate: toDateString(daysLater(1)),
     }
   ),
 

@@ -144,10 +144,14 @@ export class NotificationDispatcher {
         category: notification.category,
         priority: notification.priority,
         recipientId: userId,
+        teamId: null, // 개인 알림 (팀 알림이 아님)
+        isSystemWide: false, // 개인 알림 (시스템 전체 알림이 아님)
         equipmentId: notification.equipmentId ?? null,
         entityType: notification.entityType,
         entityId: notification.entityId || null,
         linkUrl: notification.linkUrl,
+        isRead: false, // 명시적 초기값
+        readAt: null,
         actorId: actorId || null,
         actorName: resolvedActorName || null,
         expiresAt,

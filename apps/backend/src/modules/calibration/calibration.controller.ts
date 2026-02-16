@@ -74,8 +74,21 @@ export class CalibrationController {
   @RequirePermissions(Permission.CREATE_CALIBRATION)
   @AuditLog({ action: 'create', entityType: 'calibration', entityIdPath: 'response.id' })
   @UsePipes(CreateCalibrationValidationPipe)
-  create(@Body() createCalibrationDto: CreateCalibrationDto): Promise<CalibrationRecord> {
-    return this.calibrationService.create(createCalibrationDto);
+  create(
+    @Body() createCalibrationDto: CreateCalibrationDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<CalibrationRecord> {
+    // ✅ 보안: registeredBy와 registeredByRole을 JWT 세션에서 추출 (Rule 2)
+    const registeredBy = req.user?.userId || req.user?.sub;
+    // roles는 배열이므로 첫 번째 역할을 사용 (일반적으로 사용자는 하나의 역할만 가짐)
+    const registeredByRole = req.user?.roles?.[0];
+
+    return this.calibrationService.create({
+      ...createCalibrationDto,
+      // 클라이언트가 제공하지 않은 경우에만 서버 값 사용
+      registeredBy: createCalibrationDto.registeredBy || registeredBy,
+      registeredByRole: createCalibrationDto.registeredByRole || registeredByRole,
+    });
   }
 
   @Get()

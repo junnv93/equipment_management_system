@@ -1,5 +1,5 @@
 import { equipment, equipmentStatusEnum } from '@equipment-management/db/schema/equipment';
-import { teams, teamTypes } from '@equipment-management/db/schema/teams';
+import { teams } from '@equipment-management/db/schema/teams';
 import { users, userRoles } from '@equipment-management/db/schema/users';
 import { checkouts, checkoutStatus } from '@equipment-management/db/schema/checkouts';
 import { calibrations, calibrationStatus } from '@equipment-management/db/schema/calibrations';
@@ -27,8 +27,7 @@ describe('Database Schema', () => {
     it('팀 스키마가 올바르게 정의되어 있어야 합니다', () => {
       expect(teams).toBeDefined();
       expect(teams.name).toBeDefined();
-      expect(teamTypes).toBeDefined();
-      expect(teamTypes.length).toBeGreaterThan(0);
+      expect(teams.classification).toBeDefined(); // ✅ type → classification
     });
 
     it('팀 관계가 설정되어 있어야 합니다', () => {

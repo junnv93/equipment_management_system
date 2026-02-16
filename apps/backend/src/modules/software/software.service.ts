@@ -144,16 +144,32 @@ export class SoftwareService extends VersionedBaseService {
           ? schema.softwareHistory.approvalStatus
           : schema.softwareHistory.changedAt; // default
 
-    // Fetch paginated items
+    // Fetch paginated items with LEFT JOIN for user/team/equipment names
     const orderBy = sortDirection === 'asc' ? sortColumn : desc(sortColumn);
 
-    const items = await this.db
-      .select()
+    const rows = await this.db
+      .select({
+        history: schema.softwareHistory,
+        changerName: schema.users.name,
+        teamName: schema.teams.name,
+        equipmentName: schema.equipment.name,
+      })
       .from(schema.softwareHistory)
+      .leftJoin(schema.users, eq(schema.softwareHistory.changedBy, schema.users.id))
+      .leftJoin(schema.teams, eq(schema.users.teamId, schema.teams.id))
+      .leftJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
       .where(whereClause)
       .orderBy(orderBy)
       .limit(pageSize)
       .offset(offset);
+
+    // 플랫 필드로 changerName, teamName, equipmentName 추가
+    const items = rows.map((row) => ({
+      ...row.history,
+      changerName: row.changerName,
+      teamName: row.teamName,
+      equipmentName: row.equipmentName,
+    }));
 
     return {
       items,

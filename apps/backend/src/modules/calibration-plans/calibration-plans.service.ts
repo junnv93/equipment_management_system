@@ -16,6 +16,8 @@ import {
   type NewCalibrationPlanItem,
 } from '@equipment-management/db/schema/calibration-plans';
 import { equipment } from '@equipment-management/db/schema/equipment';
+import { users } from '@equipment-management/db/schema/users';
+import { teams } from '@equipment-management/db/schema/teams';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import type {
@@ -233,23 +235,38 @@ export class CalibrationPlansService {
       conditions.push(eq(calibrationPlans.status, status));
     }
 
-    // 전체 개수 조회
-    const allItems = await this.db
-      .select()
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // COUNT(*) 단일 쿼리로 전체 개수 조회 (기존: 전체 fetch → .length)
+    const [{ count }] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
       .from(calibrationPlans)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      .where(whereClause);
 
-    const totalItems = allItems.length;
+    const totalItems = count;
 
-    // 페이지네이션 적용 조회
+    // LEFT JOIN으로 작성자 이름/팀 이름 포함
     const offset = (page - 1) * pageSize;
-    const items = await this.db
-      .select()
+    const rows = await this.db
+      .select({
+        plan: calibrationPlans,
+        authorName: users.name,
+        teamName: teams.name,
+      })
       .from(calibrationPlans)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .leftJoin(users, eq(calibrationPlans.createdBy, users.id))
+      .leftJoin(teams, eq(calibrationPlans.teamId, teams.id))
+      .where(whereClause)
       .orderBy(desc(calibrationPlans.year), desc(calibrationPlans.createdAt))
       .limit(pageSize)
       .offset(offset);
+
+    // 플랫 필드로 응답에 authorName, teamName 추가
+    const items = rows.map((row) => ({
+      ...row.plan,
+      authorName: row.authorName,
+      teamName: row.teamName,
+    }));
 
     return {
       items,
