@@ -27,17 +27,20 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 ## Related Files
 
-| File                                               | Purpose                                                    |
-| -------------------------------------------------- | ---------------------------------------------------------- |
-| `packages/schemas/src/enums.ts`                    | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)        |
-| `packages/schemas/src/user.ts`                     | UserRole 타입 정의                                         |
-| `packages/schemas/src/settings.ts`                 | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences) |
-| `packages/schemas/src/index.ts`                    | schemas 패키지 내보내기                                    |
-| `packages/shared-constants/src/permissions.ts`     | Permission enum 정의                                       |
-| `packages/shared-constants/src/api-endpoints.ts`   | API_ENDPOINTS 상수                                         |
-| `packages/shared-constants/src/index.ts`           | shared-constants 패키지 내보내기                           |
-| `apps/frontend/lib/api/query-config.ts`            | queryKeys 팩토리                                           |
-| `apps/frontend/components/dashboard/StatsCard.tsx` | lucide-react 타입 참조 (LucideIcon)                        |
+| File                                               | Purpose                                                             |
+| -------------------------------------------------- | ------------------------------------------------------------------- |
+| `packages/schemas/src/enums.ts`                    | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                 |
+| `packages/schemas/src/user.ts`                     | UserRole 타입 정의                                                  |
+| `packages/schemas/src/settings.ts`                 | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)          |
+| `packages/schemas/src/audit-log.ts`                | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails) |
+| `packages/schemas/src/field-labels.ts`             | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                        |
+| `packages/schemas/src/index.ts`                    | schemas 패키지 내보내기                                             |
+| `packages/shared-constants/src/permissions.ts`     | Permission enum 정의                                                |
+| `packages/shared-constants/src/api-endpoints.ts`   | API_ENDPOINTS 상수                                                  |
+| `packages/shared-constants/src/entity-routes.ts`   | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                  |
+| `packages/shared-constants/src/index.ts`           | shared-constants 패키지 내보내기                                    |
+| `apps/frontend/lib/api/query-config.ts`            | queryKeys 팩토리                                                    |
+| `apps/frontend/components/dashboard/StatsCard.tsx` | lucide-react 타입 참조 (LucideIcon)                                 |
 
 ## Workflow
 
@@ -70,6 +73,26 @@ grep -rn "interface SystemSettings\b\|type SystemSettings\s*=" apps/backend/src 
 grep -rn "DEFAULT_SYSTEM_SETTINGS\s*=\|DEFAULT_DISPLAY_PREFERENCES\s*=\|DEFAULT_CALIBRATION_ALERT_DAYS\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
 ```
 
+```bash
+# 로컬 AuditAction 재정의 탐지
+grep -rn "type AuditAction\s*=\|enum AuditAction" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|// "
+```
+
+```bash
+# 로컬 AuditEntityType 재정의 탐지
+grep -rn "type AuditEntityType\s*=\|enum AuditEntityType" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|// "
+```
+
+```bash
+# 로컬 FIELD_LABELS 재정의 탐지
+grep -rn "FIELD_LABELS\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
+```
+
+```bash
+# 로컬 ENTITY_ROUTES 재정의 탐지
+grep -rn "ENTITY_ROUTES\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
+```
+
 **PASS 기준:** 0개 결과 (모든 핵심 타입은 패키지에서 임포트).
 
 **FAIL 기준:** 로컬 타입 정의가 발견되면 패키지 임포트로 변경 필요.
@@ -97,6 +120,41 @@ grep -rn "import.*API_ENDPOINTS" apps/frontend --include="*.ts" --include="*.tsx
 ```
 
 **PASS 기준:** 모든 API_ENDPOINTS 임포트가 `@equipment-management/shared-constants`에서.
+
+### Step 3a: Audit Log 타입 임포트 확인
+
+감사 로그 타입이 올바른 패키지에서 임포트되는지 확인합니다.
+
+```bash
+# AuditAction, AuditEntityType import 소스 확인 (schemas에서 import해야 함)
+grep -rn "import.*\(AuditAction\|AuditEntityType\|AUDIT_ACTION_LABELS\|AUDIT_ENTITY_TYPE_LABELS\)" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "@equipment-management/schemas\|node_modules\|// "
+```
+
+**PASS 기준:** 모든 Audit 타입 임포트가 `@equipment-management/schemas`에서.
+
+**FAIL 기준:** `@equipment-management/shared-constants`나 로컬에서 임포트 시 위반.
+
+### Step 3b: Field Labels 임포트 확인
+
+필드 라벨이 올바른 패키지에서 임포트되는지 확인합니다.
+
+```bash
+# FIELD_LABELS, getFieldLabel import 소스 확인 (schemas에서 import해야 함)
+grep -rn "import.*\(FIELD_LABELS\|getFieldLabel\)" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "@equipment-management/schemas\|node_modules\|// "
+```
+
+**PASS 기준:** 모든 필드 라벨 임포트가 `@equipment-management/schemas`에서.
+
+### Step 3c: Entity Routes 임포트 확인
+
+엔티티 라우팅이 올바른 패키지에서 임포트되는지 확인합니다.
+
+```bash
+# ENTITY_ROUTES, getEntityRoute import 소스 확인 (shared-constants에서 import해야 함)
+grep -rn "import.*\(ENTITY_ROUTES\|getEntityRoute\)" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "@equipment-management/shared-constants\|node_modules\|// "
+```
+
+**PASS 기준:** 모든 엔티티 라우팅 임포트가 `@equipment-management/shared-constants`에서.
 
 ### Step 4: 하드코딩된 API 경로 탐지
 
@@ -168,14 +226,17 @@ import type { IconType } from 'react-icons';
 ## Output Format
 
 ```markdown
-| #   | 검사                 | 상태      | 상세                                  |
-| --- | -------------------- | --------- | ------------------------------------- |
-| 1   | 로컬 타입 재정의     | PASS/FAIL | 재정의 위치 목록                      |
-| 2   | Permission 임포트    | PASS/FAIL | 잘못된 임포트 위치                    |
-| 3   | API_ENDPOINTS 임포트 | PASS/FAIL | 잘못된 임포트 위치                    |
-| 4   | 하드코딩 API 경로    | PASS/FAIL | 하드코딩 위치 목록                    |
-| 5   | queryKeys 팩토리     | PASS/FAIL | 하드코딩 queryKey 위치                |
-| 6   | Icon Library 통합    | PASS/FAIL | react-icons 사용, 비표준 library 위치 |
+| #   | 검사                  | 상태      | 상세                                  |
+| --- | --------------------- | --------- | ------------------------------------- |
+| 1   | 로컬 타입 재정의      | PASS/FAIL | 재정의 위치 목록                      |
+| 2   | Permission 임포트     | PASS/FAIL | 잘못된 임포트 위치                    |
+| 3   | API_ENDPOINTS 임포트  | PASS/FAIL | 잘못된 임포트 위치                    |
+| 3a  | Audit Log 타입 임포트 | PASS/FAIL | 잘못된 임포트 위치                    |
+| 3b  | Field Labels 임포트   | PASS/FAIL | 잘못된 임포트 위치                    |
+| 3c  | Entity Routes 임포트  | PASS/FAIL | 잘못된 임포트 위치                    |
+| 4   | 하드코딩 API 경로     | PASS/FAIL | 하드코딩 위치 목록                    |
+| 5   | queryKeys 팩토리      | PASS/FAIL | 하드코딩 queryKey 위치                |
+| 6   | Icon Library 통합     | PASS/FAIL | react-icons 사용, 비표준 library 위치 |
 ```
 
 ## Exceptions

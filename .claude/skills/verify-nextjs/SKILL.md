@@ -28,15 +28,16 @@ argument-hint: '[선택사항: 특정 라우트 경로]'
 
 ## Related Files
 
-| File                                                       | Purpose                                       |
-| ---------------------------------------------------------- | --------------------------------------------- |
-| `apps/frontend/app/(dashboard)/equipment/page.tsx`         | 서버 컴포넌트 + 필터 리다이렉트 참조 구현     |
-| `apps/frontend/app/(dashboard)/equipment/[id]/page.tsx`    | 동적 라우트 params 참조 구현                  |
-| `apps/frontend/app/(dashboard)/equipment/error.tsx`        | Error Boundary 참조 구현                      |
-| `apps/frontend/app/(dashboard)/equipment/loading.tsx`      | Loading UI 참조 구현                          |
-| `apps/frontend/app/(dashboard)/checkouts/[id]/page.tsx`    | 동적 라우트 참조 구현                         |
-| `apps/frontend/app/(dashboard)/calibration-plans/page.tsx` | searchParams 사용 참조 구현                   |
-| `apps/frontend/components/equipment/EquipmentForm.tsx`     | Dynamic import 코드 분할 참조 구현 (7개 섹션) |
+| File                                                       | Purpose                                                        |
+| ---------------------------------------------------------- | -------------------------------------------------------------- |
+| `apps/frontend/app/(dashboard)/equipment/page.tsx`         | 서버 컴포넌트 + 필터 리다이렉트 참조 구현                      |
+| `apps/frontend/app/(dashboard)/equipment/[id]/page.tsx`    | 동적 라우트 params 참조 구현                                   |
+| `apps/frontend/app/(dashboard)/equipment/error.tsx`        | Error Boundary 참조 구현                                       |
+| `apps/frontend/app/(dashboard)/equipment/loading.tsx`      | Loading UI 참조 구현                                           |
+| `apps/frontend/app/(dashboard)/checkouts/[id]/page.tsx`    | 동적 라우트 참조 구현                                          |
+| `apps/frontend/app/(dashboard)/calibration-plans/page.tsx` | searchParams 사용 참조 구현                                    |
+| `apps/frontend/components/equipment/EquipmentForm.tsx`     | Dynamic import 코드 분할 참조 구현 (7개 섹션)                  |
+| `apps/frontend/middleware.ts`                              | PPR 인증 미들웨어 (cacheComponents 레이아웃 non-blocking 핵심) |
 
 ## Workflow
 
