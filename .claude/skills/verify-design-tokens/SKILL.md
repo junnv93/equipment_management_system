@@ -54,7 +54,7 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/dashboard/CalibrationSchedule.tsx`        | 마이그레이션된 컴포넌트 (Dashboard)    |
 | `apps/frontend/components/dashboard/TeamEquipmentStats.tsx`         | 마이그레이션된 컴포넌트 (Dashboard)    |
 | `apps/frontend/components/dashboard/EquipmentStatusChart.tsx`       | 마이그레이션된 컴포넌트 (Dashboard)    |
-| `apps/frontend/components/dashboard/EquipmentSummary.tsx`           | 마이그레이션된 컴포넌트 (Dashboard)    |
+| `apps/frontend/components/dashboard/EquipmentSummary.tsx`           | Dashboard 컴포넌트 (토큰 미적용)       |
 | `apps/frontend/components/dashboard/CalibrationList.tsx`            | 마이그레이션된 컴포넌트 (Dashboard)    |
 | `apps/frontend/components/dashboard/OverdueCheckoutsList.tsx`       | 마이그레이션된 컴포넌트 (Dashboard)    |
 | `apps/frontend/components/dashboard/DashboardClient.tsx`            | 마이그레이션된 컴포넌트 (Dashboard)    |
