@@ -348,7 +348,9 @@ export const queryKeys = {
   },
   auditLogs: {
     all: ['audit-logs'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.auditLogs.all, filters] as const,
+    lists: () => [...queryKeys.auditLogs.all, 'list'] as const,
+    list: (filters: Record<string, any>) => [...queryKeys.auditLogs.lists(), filters] as const,
+    detail: (id: string) => [...queryKeys.auditLogs.all, 'detail', id] as const,
   },
   settings: {
     all: ['settings'] as const,

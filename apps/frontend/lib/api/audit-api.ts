@@ -26,6 +26,10 @@ export interface AuditLog {
   entityName: string | null;
   details: AuditLogDetails | null;
   ipAddress: string | null;
+  /** 행위자의 사이트 (RBAC 스코프용, nullable — 기존 로그 호환) */
+  userSite: string | null;
+  /** 행위자의 팀 ID (RBAC 스코프용, nullable — 기존 로그 호환) */
+  userTeamId: string | null;
   createdAt: string;
 }
 

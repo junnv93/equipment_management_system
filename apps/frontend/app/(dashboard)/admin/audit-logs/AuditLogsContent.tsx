@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,105 +24,111 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { queryKeys } from '@/lib/api/query-config';
-import { auditApi, type AuditLogFilter } from '@/lib/api/audit-api';
+import { EntityLinkCell } from '@/components/ui/entity-link-cell';
+import { AuditLogDetailDialog } from '@/components/audit-logs/AuditLogDetailDialog';
+import { PrintableAuditReport } from '@/components/audit-logs/PrintableAuditReport';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { auditApi, type AuditLog } from '@/lib/api/audit-api';
+import type { PaginatedResponse } from '@/lib/api/types';
+import {
+  parseAuditLogFiltersFromSearchParams,
+  convertFiltersToApiParams,
+  type UIAuditLogFilters,
+} from '@/lib/utils/audit-log-filter-utils';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Search, RefreshCw, History, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, History, Filter, Printer, Info } from 'lucide-react';
+import {
+  AUDIT_ACTION_LABELS,
+  AUDIT_ACTION_COLORS,
+  AUDIT_ENTITY_TYPE_LABELS,
+  type AuditAction,
+  type AuditEntityType,
+} from '@equipment-management/schemas';
+import {
+  USER_ROLE_LABELS,
+  type UserRole,
+  resolveDataScope,
+  AUDIT_LOG_SCOPE,
+} from '@equipment-management/shared-constants';
+import { useState } from 'react';
 
-const ACTION_LABELS: Record<string, string> = {
-  create: '생성',
-  update: '수정',
-  delete: '삭제',
-  approve: '승인',
-  reject: '반려',
-  checkout: '반출',
-  return: '반입',
-  cancel: '취소',
-  login: '로그인',
-  logout: '로그아웃',
-};
+interface AuditLogsContentProps {
+  initialData: PaginatedResponse<AuditLog> | null;
+  initialFilters: UIAuditLogFilters;
+}
 
-const ACTION_COLORS: Record<string, string> = {
-  create: 'bg-blue-100 text-blue-800',
-  update: 'bg-yellow-100 text-yellow-800',
-  delete: 'bg-red-100 text-red-800',
-  approve: 'bg-green-100 text-green-800',
-  reject: 'bg-orange-100 text-orange-800',
-  checkout: 'bg-purple-100 text-purple-800',
-  return: 'bg-cyan-100 text-cyan-800',
-  cancel: 'bg-gray-100 text-gray-800',
-  login: 'bg-indigo-100 text-indigo-800',
-  logout: 'bg-slate-100 text-slate-800',
-};
+export default function AuditLogsContent({ initialData }: AuditLogsContentProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session } = useSession();
 
-const ENTITY_TYPE_LABELS: Record<string, string> = {
-  equipment: '장비',
-  calibration: '교정',
-  checkout: '반출',
-  rental: '대여',
-  user: '사용자',
-  team: '팀',
-  calibration_factor: '보정계수',
-  non_conformance: '부적합',
-  software: '소프트웨어',
-  calibration_plan: '교정계획서',
-  repair_history: '수리이력',
-};
+  // 현재 URL에서 필터 파싱 (SSOT — URL이 유일한 진실의 소스)
+  const filters = parseAuditLogFiltersFromSearchParams(searchParams);
+  const apiParams = convertFiltersToApiParams(filters);
 
-const ROLE_LABELS: Record<string, string> = {
-  test_engineer: '시험실무자',
-  technical_manager: '기술책임자',
-  lab_manager: '시험소 관리자',
-};
+  // 역할 기반 스코프 해석
+  const userRole = session?.user?.role as UserRole | undefined;
+  const scope = userRole
+    ? resolveDataScope(
+        { role: userRole, site: session?.user?.site, teamId: session?.user?.teamId },
+        AUDIT_LOG_SCOPE
+      )
+    : null;
 
-export default function AuditLogsContent() {
-  const [filter, setFilter] = useState<AuditLogFilter>({
-    page: 1,
-    limit: 20,
-  });
+  // 상세 다이얼로그 상태
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
-  const [searchUserId, setSearchUserId] = useState('');
-  const [searchEntityType, setSearchEntityType] = useState('');
-  const [searchAction, setSearchAction] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
-  // 감사 로그 목록 조회
+  // 감사 로그 목록 조회 (placeholderData: 서버 prefetch 데이터)
   const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: queryKeys.auditLogs.list(filter),
-    queryFn: () => auditApi.getAuditLogs(filter),
+    queryKey: queryKeys.auditLogs.list(apiParams),
+    queryFn: () => auditApi.getAuditLogs(apiParams),
+    placeholderData: initialData ?? undefined,
+    staleTime: CACHE_TIMES.SHORT,
   });
 
-  const handleSearch = () => {
-    setFilter({
-      ...filter,
-      page: 1,
-      userId: searchUserId || undefined,
-      entityType: searchEntityType || undefined,
-      action: searchAction || undefined,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-    });
+  // URL 파라미터 업데이트 (필터 변경)
+  const updateFilters = useCallback(
+    (updates: Partial<UIAuditLogFilters>) => {
+      const newParams = new URLSearchParams(searchParams.toString());
+
+      // 모든 업데이트를 URL에 반영
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === '' || value === undefined || value === null) {
+          newParams.delete(key);
+        } else {
+          newParams.set(key, String(value));
+        }
+      });
+
+      // 필터 변경 시 page를 1로 리셋 (page 자체를 업데이트하는 경우 제외)
+      if (!('page' in updates)) {
+        newParams.delete('page');
+      }
+
+      router.push(`?${newParams.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  const handleReset = useCallback(() => {
+    router.push('?');
+  }, [router]);
+
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      updateFilters({ page: newPage });
+    },
+    [updateFilters]
+  );
+
+  const handleRowClick = (log: AuditLog) => {
+    setSelectedLog(log);
+    setDetailDialogOpen(true);
   };
 
-  const handleReset = () => {
-    setSearchUserId('');
-    setSearchEntityType('');
-    setSearchAction('');
-    setStartDate('');
-    setEndDate('');
-    setFilter({
-      page: 1,
-      limit: 20,
-    });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setFilter({
-      ...filter,
-      page: newPage,
-    });
+  const handlePrint = () => {
+    window.print();
   };
 
   const logs = data?.data || [];
@@ -131,37 +139,28 @@ export default function AuditLogsContent() {
     totalPages: 1,
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-6 space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">감사 로그</h1>
-          <p className="text-muted-foreground">시스템에서 발생한 모든 주요 활동을 기록합니다</p>
+          {scope && (
+            <p className="text-muted-foreground flex items-center gap-1.5">
+              <Info className="h-4 w-4" />
+              {scope.label}
+            </p>
+          )}
         </div>
-        <Button variant="outline" onClick={() => refetch()} disabled={isRefetching}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-          새로고침
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => refetch()} disabled={isRefetching}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+            새로고침
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            인쇄
+          </Button>
+        </div>
       </div>
 
       {/* 필터 섹션 */}
@@ -174,25 +173,31 @@ export default function AuditLogsContent() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="userId">사용자 ID</Label>
-              <Input
-                id="userId"
-                placeholder="UUID..."
-                value={searchUserId}
-                onChange={(e) => setSearchUserId(e.target.value)}
-              />
-            </div>
+            {/* userId 필터: 'all' 스코프에서만 표시 (site/team 스코프에서는 불필요) */}
+            {scope?.type === 'all' && (
+              <div className="space-y-2">
+                <Label htmlFor="userId">사용자 ID</Label>
+                <Input
+                  id="userId"
+                  placeholder="UUID..."
+                  value={filters.userId}
+                  onChange={(e) => updateFilters({ userId: e.target.value })}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="entityType">엔티티 타입</Label>
-              <Select value={searchEntityType} onValueChange={setSearchEntityType}>
+              <Select
+                value={filters.entityType || '_all'}
+                onValueChange={(v) => updateFilters({ entityType: v === '_all' ? '' : v })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="전체" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
-                  {Object.entries(ENTITY_TYPE_LABELS).map(([value, label]) => (
+                  <SelectItem value="_all">전체</SelectItem>
+                  {Object.entries(AUDIT_ENTITY_TYPE_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
@@ -203,13 +208,16 @@ export default function AuditLogsContent() {
 
             <div className="space-y-2">
               <Label htmlFor="action">액션</Label>
-              <Select value={searchAction} onValueChange={setSearchAction}>
+              <Select
+                value={filters.action || '_all'}
+                onValueChange={(v) => updateFilters({ action: v === '_all' ? '' : v })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="전체" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">전체</SelectItem>
-                  {Object.entries(ACTION_LABELS).map(([value, label]) => (
+                  <SelectItem value="_all">전체</SelectItem>
+                  {Object.entries(AUDIT_ACTION_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
@@ -223,8 +231,8 @@ export default function AuditLogsContent() {
               <Input
                 id="startDate"
                 type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                value={filters.startDate}
+                onChange={(e) => updateFilters({ startDate: e.target.value })}
               />
             </div>
 
@@ -233,17 +241,13 @@ export default function AuditLogsContent() {
               <Input
                 id="endDate"
                 type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                value={filters.endDate}
+                onChange={(e) => updateFilters({ endDate: e.target.value })}
               />
             </div>
           </div>
 
           <div className="flex gap-2 mt-4">
-            <Button onClick={handleSearch}>
-              <Search className="h-4 w-4 mr-2" />
-              검색
-            </Button>
             <Button variant="outline" onClick={handleReset}>
               초기화
             </Button>
@@ -283,7 +287,11 @@ export default function AuditLogsContent() {
                   </TableHeader>
                   <TableBody>
                     {logs.map((log) => (
-                      <TableRow key={log.id}>
+                      <TableRow
+                        key={log.id}
+                        onClick={() => handleRowClick(log)}
+                        className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
                         <TableCell className="font-mono text-xs">
                           {format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss')}
                         </TableCell>
@@ -295,25 +303,30 @@ export default function AuditLogsContent() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {ROLE_LABELS[log.userRole] || log.userRole}
+                            {USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={ACTION_COLORS[log.action] || 'bg-gray-100'}>
-                            {ACTION_LABELS[log.action] || log.action}
+                          <Badge
+                            className={
+                              AUDIT_ACTION_COLORS[log.action as AuditAction] || 'bg-gray-100'
+                            }
+                          >
+                            {AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
-                            {ENTITY_TYPE_LABELS[log.entityType] || log.entityType}
+                            {AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] ||
+                              log.entityType}
                           </Badge>
                         </TableCell>
-                        <TableCell className="max-w-[200px] truncate">
-                          {log.entityName || (
-                            <span className="text-muted-foreground text-xs">
-                              {log.entityId.substring(0, 8)}...
-                            </span>
-                          )}
+                        <TableCell className="max-w-[200px]">
+                          <EntityLinkCell
+                            entityType={log.entityType}
+                            entityId={log.entityId}
+                            entityName={log.entityName}
+                          />
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">
                           {log.ipAddress || '-'}
@@ -363,6 +376,18 @@ export default function AuditLogsContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* 감사 로그 상세 다이얼로그 */}
+      {selectedLog && (
+        <AuditLogDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          log={selectedLog}
+        />
+      )}
+
+      {/* 인쇄용 보고서 */}
+      <PrintableAuditReport logs={logs} filters={apiParams} />
     </div>
   );
 }
