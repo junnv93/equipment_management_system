@@ -20,6 +20,8 @@ export * from './checkout';
 export * from './calibration';
 export * from './types/disposal';
 export * from './settings';
+export * from './audit-log';
+export * from './field-labels';
 
 // ============================================================
 // Enums - Single Source of Truth

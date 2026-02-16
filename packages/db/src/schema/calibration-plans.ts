@@ -10,6 +10,8 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
+import { users } from './users';
+import { teams } from './teams';
 
 /**
  * 교정계획서 상태 정의 (3단계 승인 워크플로우)
@@ -174,6 +176,17 @@ export type NewCalibrationPlanItem = typeof calibrationPlanItems.$inferInsert;
 // Relations 정의
 export const calibrationPlansRelations = relations(calibrationPlans, ({ one, many }) => ({
   items: many(calibrationPlanItems),
+  // 작성자 (createdBy → users.id)
+  author: one(users, {
+    fields: [calibrationPlans.createdBy],
+    references: [users.id],
+    relationName: 'calibrationPlanAuthor',
+  }),
+  // 팀 (teamId → teams.id)
+  team: one(teams, {
+    fields: [calibrationPlans.teamId],
+    references: [teams.id],
+  }),
   // 버전 관리 관계
   parentPlan: one(calibrationPlans, {
     fields: [calibrationPlans.parentPlanId],

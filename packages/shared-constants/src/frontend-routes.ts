@@ -77,6 +77,7 @@ export const FRONTEND_ROUTES = {
   ADMIN: {
     EQUIPMENT_APPROVALS: '/admin/equipment-approvals',
     APPROVALS: '/admin/approvals',
+    AUDIT_LOGS: '/admin/audit-logs',
     USERS: '/admin/users',
     SETTINGS: '/admin/settings',
   },

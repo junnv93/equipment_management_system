@@ -70,3 +70,17 @@ export {
   NOTIFICATION_CATEGORY_DESCRIPTIONS,
   NOTIFICATION_CATEGORY_FORM_FIELDS,
 } from './notification-categories';
+
+// 엔티티 라우팅
+export { ENTITY_ROUTES, getEntityRoute, hasEntityRoute } from './entity-routes';
+
+// 데이터 스코프 정책 (역할별 접근 범위)
+export {
+  type DataScopeType,
+  type DataScopePolicy,
+  type FeatureScopePolicy,
+  type UserScopeContext,
+  type ResolvedDataScope,
+  AUDIT_LOG_SCOPE,
+  resolveDataScope,
+} from './data-scope';

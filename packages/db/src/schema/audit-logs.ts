@@ -79,6 +79,11 @@ export const auditLogs = pgTable(
     // 요청 정보
     ipAddress: varchar('ip_address', { length: 50 }),
 
+    // 역할별 접근 범위 (RBAC 스코프 필터링용)
+    // nullable: 기존 로그 호환 (backfill로 보완)
+    userSite: varchar('user_site', { length: 10 }),
+    userTeamId: uuid('user_team_id'),
+
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
@@ -94,6 +99,16 @@ export const auditLogs = pgTable(
     entityIdIdx: index('audit_logs_entity_id_idx').on(table.entityId),
     // 사용자별 감사 추적 (WHERE user_id = ? ORDER BY timestamp DESC)
     userIdTimestampIdx: index('audit_logs_user_id_timestamp_idx').on(table.userId, table.timestamp),
+    // 사이트별 감사 로그 조회 (lab_manager 스코프)
+    userSiteTimestampIdx: index('audit_logs_user_site_timestamp_idx').on(
+      table.userSite,
+      table.timestamp
+    ),
+    // 팀별 감사 로그 조회 (technical_manager 스코프)
+    userTeamIdTimestampIdx: index('audit_logs_user_team_id_timestamp_idx').on(
+      table.userTeamId,
+      table.timestamp
+    ),
   })
 );
 

@@ -124,6 +124,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.APPROVE_EQUIPMENT_IMPORT,
     Permission.COMPLETE_EQUIPMENT_IMPORT,
     Permission.CANCEL_EQUIPMENT_IMPORT,
+    // 감사 로그 (소속 팀 스코프)
+    Permission.VIEW_AUDIT_LOGS,
   ],
 
   // 품질책임자: 교정계획서 검토 권한 (신규)
@@ -150,6 +152,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // 통계
     Permission.VIEW_STATISTICS,
     Permission.EXPORT_REPORTS,
+    // 감사 로그 (전체 스코프)
+    Permission.VIEW_AUDIT_LOGS,
   ],
 
   // 시험소장: 모든 권한 (단, 교정 기록 등록, 시스템 설정 관리 제외)

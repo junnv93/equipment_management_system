@@ -3,49 +3,25 @@ import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { users } from './users';
 
-// 팀 유형 정의 (분류와 1:1 매핑)
-// ✅ 팀 타입 = 분류 타입 (팀 이름을 분류 이름으로 통일)
-export const teamTypes = [
-  'FCC_EMC_RF', // FCC EMC/RF → E
-  'GENERAL_EMC', // General EMC → R
-  'GENERAL_RF', // General RF → W (의왕)
-  'SAR', // SAR → S
-  'AUTOMOTIVE_EMC', // Automotive EMC → A
-  'SOFTWARE', // Software Program → P
-] as const;
-
-// 분류코드 정의 (팀과 1:1 매핑)
-export const classificationCodes = ['E', 'R', 'W', 'S', 'A', 'P'] as const;
-
-// 팀 타입 → 분류코드 매핑
-export const TEAM_TYPE_TO_CLASSIFICATION: Record<string, string> = {
-  FCC_EMC_RF: 'E', // FCC EMC/RF
-  GENERAL_EMC: 'R', // General EMC
-  GENERAL_RF: 'W', // General RF
-  SAR: 'S', // SAR
-  AUTOMOTIVE_EMC: 'A', // Automotive EMC
-  SOFTWARE: 'P', // Software Program
-  // 레거시 호환성
-  RF: 'E',
-  EMC: 'R',
-  AUTO: 'A',
-};
-
-// 사이트 타입 정의 (팀이 소속된 사이트)
-// ✅ 확장: 평택(pyeongtaek) 사이트 추가
-export const siteTypes = ['suwon', 'uiwang', 'pyeongtaek'] as const;
+/**
+ * ⚠️ SSOT 준수: 팀 관련 상수는 @equipment-management/schemas에서 import
+ * - teamTypes 제거 → ClassificationEnum 사용
+ * - TEAM_TYPE_TO_CLASSIFICATION 제거 → CLASSIFICATION_TO_CODE 사용
+ * - siteTypes 제거 → SiteEnum 사용
+ */
 
 // 팀 테이블 스키마
+// ✅ SSOT: classification 필드는 장비의 classification과 동일한 값 사용
 // ✅ Best Practice: 팀은 반드시 하나의 사이트에 소속됨
-// ✅ 팀이 장비 분류코드를 결정함 (classificationCode 필드)
+// ✅ 팀이 장비 분류를 결정함 (classification = classificationCode의 전체 이름)
 export const teams = pgTable(
   'teams',
   {
     id: uuid('id').primaryKey().defaultRandom().notNull(),
     name: varchar('name', { length: 100 }).notNull(),
-    type: varchar('type', { length: 50 }).notNull(), // ✅ 필수 필드: RF, SAR, EMC, AUTO, SOFTWARE
+    classification: varchar('classification', { length: 50 }).notNull(), // ✅ type → classification (소문자 통일)
     site: varchar('site', { length: 20 }).notNull(), // ✅ 필수 필드: 'suwon' | 'uiwang' | 'pyeongtaek'
-    classificationCode: varchar('classification_code', { length: 1 }), // ✅ 분류코드: E, R, S, A, P
+    classificationCode: varchar('classification_code', { length: 1 }), // ✅ 분류코드: E, R, W, S, A, P
     description: varchar('description', { length: 255 }),
     leaderId: uuid('leader_id'),
 
@@ -56,6 +32,8 @@ export const teams = pgTable(
   (table) => ({
     // 사이트별 팀 조회 최적화
     siteIdx: index('teams_site_idx').on(table.site),
+    // 분류별 팀 조회 최적화 (신규)
+    classificationIdx: index('teams_classification_idx').on(table.classification),
   })
 );
 

@@ -1,38 +1,28 @@
 import { z } from 'zod';
-import { SiteEnum } from './enums';
+import { SiteEnum, ClassificationEnum, type Classification } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
 
-// 팀 타입 열거형
-// ✅ 팀 이름 = 분류 이름 (통일)
-export const TeamTypeEnum = z.enum([
-  'FCC_EMC_RF',     // FCC EMC/RF → E
-  'GENERAL_EMC',    // General EMC → R
-  'GENERAL_RF',     // General RF → W (의왕)
-  'SAR',            // SAR → S
-  'AUTOMOTIVE_EMC', // Automotive EMC → A
-  'SOFTWARE',       // Software Program → P
-  // 레거시 호환성 (기존 데이터 지원)
-  'RF',             // → FCC_EMC_RF
-  'EMC',            // → GENERAL_EMC
-  'AUTO',           // → AUTOMOTIVE_EMC
-]);
-export type TeamType = z.infer<typeof TeamTypeEnum>;
+/**
+ * ⚠️ SSOT 준수: ClassificationEnum은 enums.ts에서 import
+ * - TeamType 제거: Classification 사용 (팀 타입 = 장비 분류)
+ * - 레거시 대문자 값 지원 제거: 소문자 통일 (fcc_emc_rf, general_emc, ...)
+ * - ClassificationCodeEnum 제거: CLASSIFICATION_TO_CODE 사용
+ */
 
-// 분류코드 열거형 (팀과 1:1 매핑)
-export const ClassificationCodeEnum = z.enum(['E', 'R', 'W', 'S', 'A', 'P']);
-export type ClassificationCode = z.infer<typeof ClassificationCodeEnum>;
+// 분류코드 타입 (1자리: E, R, W, S, A, P)
+export type ClassificationCode = 'E' | 'R' | 'W' | 'S' | 'A' | 'P';
 
 // 기본 팀 스키마 (공통 필드)
-// ✅ Best Practice: 팀 이름 = 분류 이름 (통일)
+// ✅ SSOT: 팀의 classification = 장비의 classification (동일 enum)
 // ✅ 사이트별 팀 구성:
 //    - 수원: FCC EMC/RF, General EMC, SAR, Automotive EMC
 //    - 의왕: General RF
 //    - 평택: Automotive EMC
 export const baseTeamSchema = z.object({
   name: z.string().min(1).max(100),
-  type: TeamTypeEnum, // ✅ 필수 필드: 팀 타입 (분류와 매핑)
+  classification: ClassificationEnum, // ✅ type → classification (장비 분류와 동일)
   site: SiteEnum, // ✅ 필수 필드: 팀 소속 사이트
-  classificationCode: ClassificationCodeEnum.optional(), // 분류코드 (E, R, W, S, A, P)
+  classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드 (1자리)
   description: z.string().max(500).optional(),
   leaderId: z.string().uuid().optional(),
 });
