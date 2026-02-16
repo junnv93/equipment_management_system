@@ -64,12 +64,21 @@ export default function NotificationsListContent() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <Bell className="h-6 w-6" aria-hidden="true" />
+          <div className="relative">
+            <Bell className="h-6 w-6 text-primary" aria-hidden="true" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive flex items-center justify-center">
+                <span className="text-xs text-destructive-foreground tabular-nums font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              </span>
+            )}
+          </div>
           <div>
             <h1 className="text-2xl font-bold">알림</h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground tabular-nums">
               {unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}건` : '새로운 알림이 없습니다'}
             </p>
           </div>
@@ -114,7 +123,7 @@ export default function NotificationsListContent() {
                 })
               }
             >
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[130px]" aria-label="알림 카테고리 필터">
                 <SelectValue placeholder="카테고리" />
               </SelectTrigger>
               <SelectContent>
@@ -129,7 +138,7 @@ export default function NotificationsListContent() {
             <Input
               name="search"
               aria-label="알림 검색"
-              placeholder="알림 검색..."
+              placeholder="알림 검색…"
               value={filters.search}
               onChange={(e) => updateFilters({ search: e.target.value })}
               className="w-[200px]"
@@ -158,8 +167,8 @@ export default function NotificationsListContent() {
       {/* 페이지네이션 */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            총 {total}건 중 {(filters.page - 1) * 20 + 1}-{Math.min(filters.page * 20, total)}건
+          <p className="text-sm text-muted-foreground tabular-nums">
+            총 {total}건 중 {(filters.page - 1) * 20 + 1}–{Math.min(filters.page * 20, total)}건
           </p>
           <div className="flex gap-2">
             <Button
@@ -200,7 +209,20 @@ function NotificationsList({
     return (
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
+          <div
+            key={i}
+            className="p-4 rounded-lg bg-muted/50 border-l-4 border-muted animate-pulse"
+            style={{ animationDelay: `${i * 100}ms` }}
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-4 w-4 rounded bg-muted-foreground/20 mt-1" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-muted-foreground/20 rounded w-3/4" />
+                <div className="h-3 bg-muted-foreground/10 rounded w-full" />
+                <div className="h-3 bg-muted-foreground/10 rounded w-1/4" />
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -208,22 +230,34 @@ function NotificationsList({
 
   if (notifications.length === 0) {
     return (
-      <div className="py-12 text-center text-muted-foreground">
-        <Bell className="h-12 w-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
-        <p>표시할 알림이 없습니다.</p>
+      <div className="py-16 text-center">
+        <div className="relative inline-block mb-4">
+          <Bell className="h-16 w-16 mx-auto text-muted-foreground/30" aria-hidden="true" />
+          <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-success flex items-center justify-center">
+            <span className="text-xs text-success-foreground">✓</span>
+          </div>
+        </div>
+        <h3 className="text-lg font-semibold mb-2">모든 알림을 확인했습니다</h3>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          새로운 알림이 있을 때 이곳에 표시됩니다.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      {notifications.map((notification) => (
-        <div key={notification.id} className="relative group">
+      {notifications.map((notification, index) => (
+        <div
+          key={notification.id}
+          className="relative group motion-safe:animate-[staggerFadeIn_0.3s_ease-out_forwards]"
+          style={{ animationDelay: `${index * 50}ms` }}
+        >
           <NotificationItem notification={notification} onMarkAsRead={onMarkAsRead} />
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity motion-reduce:transition-none"
             onClick={(e) => {
               e.stopPropagation();
               onDelete(notification.id);

@@ -92,12 +92,12 @@ export default function CalibrationPlansContent({
 
   const plans = data?.data || [];
 
-  // ✅ 방어 코드: uuid 검증 및 경고
+  // ✅ 방어 코드: id 검증 및 경고 (SSOT: backend id = UUID string)
   if (process.env.NODE_ENV === 'development' && plans.length > 0) {
-    const invalidPlans = plans.filter((plan) => !plan.uuid);
+    const invalidPlans = plans.filter((plan) => !plan.id);
     if (invalidPlans.length > 0) {
       console.warn(
-        '[CalibrationPlansContent] UUID 누락된 계획서 발견:',
+        '[CalibrationPlansContent] ID 누락된 계획서 발견:',
         invalidPlans.map((p, idx) => ({ index: idx, year: p.year, siteId: p.siteId }))
       );
     }
@@ -259,8 +259,8 @@ export default function CalibrationPlansContent({
               </TableHeader>
               <TableBody>
                 {plans.map((plan: CalibrationPlan, index: number) => {
-                  // ✅ uuid 검증: 누락 시 fallback key 사용 (프로덕션 안정성)
-                  const key = plan.uuid || `plan-fallback-${plan.year}-${plan.siteId}-${index}`;
+                  // SSOT: backend id = UUID string (fallback key for safety)
+                  const key = plan.id || `plan-fallback-${plan.year}-${plan.siteId}-${index}`;
 
                   return (
                     <TableRow key={key}>
@@ -290,8 +290,8 @@ export default function CalibrationPlansContent({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => router.push(`/calibration-plans/${plan.uuid}`)}
-                          disabled={!plan.uuid} // uuid 없으면 버튼 비활성화
+                          onClick={() => router.push(`/calibration-plans/${plan.id}`)}
+                          disabled={!plan.id}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           상세

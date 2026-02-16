@@ -7,6 +7,16 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   reactStrictMode: true,
 
+  // ✅ Cache Components (Next.js 16 — experimental.ppr 후속)
+  //
+  // Suspense 경계가 있는 라우트에 Partial Prerendering 적용:
+  // - 정적 셸(Suspense fallback)은 빌드 시 프리렌더 → CDN 즉시 제공 (FCP < 200ms)
+  // - 동적 홀(Suspense children)은 요청 시 서버에서 스트리밍
+  //
+  // revalidate(ISR)와 독립적 — ISR 페이지에는 Suspense 경계 없으므로 PPR 미적용
+  // 롤백: false로 변경하면 기존 SSR로 복귀
+  cacheComponents: true,
+
   // Monorepo workspace 패키지를 소스에서 직접 트랜스파일
   // dist/ 빌드 없이 소스 변경 즉시 반영 (HMR 지원)
   transpilePackages: ['@equipment-management/shared-constants', '@equipment-management/schemas'],

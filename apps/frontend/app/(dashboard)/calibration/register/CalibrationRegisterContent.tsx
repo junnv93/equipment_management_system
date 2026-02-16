@@ -38,7 +38,10 @@ export function CalibrationRegisterContent() {
   // 사용자 역할 결정 (기본값: test_engineer)
   const userRole: UserRole =
     (session?.user as { role?: UserRole } | undefined)?.role || 'test_engineer';
-  const isTechnicalManager = userRole === 'technical_manager' || userRole === 'lab_manager';
+
+  // UL-QP-18 직무분리 원칙: 시험실무자만 교정 등록 가능
+  const canRegisterCalibration = userRole === 'test_engineer';
+  const isUnauthorized = !canRegisterCalibration;
 
   // 상태 관리
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,7 +59,6 @@ export function CalibrationRegisterContent() {
     calibrationCycle: 12,
     result: 'pass',
     notes: '',
-    registrarComment: '',
     intermediateCheckDate: '',
   });
 
@@ -179,9 +181,7 @@ export function CalibrationRegisterContent() {
       queryKeys.calibrations.overdue(),
       queryKeys.calibrations.upcoming(),
     ],
-    successMessage: isTechnicalManager
-      ? '교정 정보가 등록 및 승인되었습니다.'
-      : '교정 정보가 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
+    successMessage: '교정 정보가 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
     errorMessage: '교정 정보 등록 중 오류가 발생했습니다.',
     onSuccessCallback: () => router.push('/calibration'),
   });
@@ -208,16 +208,6 @@ export function CalibrationRegisterContent() {
       return;
     }
 
-    // 기술책임자는 등록자 코멘트 필수
-    if (isTechnicalManager && !formData.registrarComment?.trim()) {
-      toast({
-        title: '등록자 코멘트를 입력해주세요',
-        description: '기술책임자는 검토 코멘트를 반드시 입력해야 합니다.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     const calibrationData: CreateCalibrationDto = {
       equipmentId: selectedEquipmentId,
       calibrationDate: formData.calibrationDate,
@@ -227,8 +217,6 @@ export function CalibrationRegisterContent() {
       notes: formData.notes,
       calibrationManagerId: session.user.id,
       registeredBy: session.user.id,
-      registeredByRole: isTechnicalManager ? 'technical_manager' : 'test_engineer',
-      registrarComment: formData.registrarComment,
       intermediateCheckDate: formData.intermediateCheckDate,
     };
 
@@ -245,17 +233,16 @@ export function CalibrationRegisterContent() {
         <h1 className="text-2xl font-bold ml-2">교정 정보 등록</h1>
       </div>
 
-      {/* 역할 안내 */}
-      <Alert
-        variant={isTechnicalManager ? 'default' : 'destructive'}
-        className={!isTechnicalManager ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : ''}
-      >
+      {/* 권한 안내 */}
+      <Alert variant={isUnauthorized ? 'destructive' : 'default'}>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          {isTechnicalManager ? (
+          {isUnauthorized ? (
             <>
-              <strong>기술책임자</strong>로 로그인되어 있습니다. 등록한 교정 정보는{' '}
-              <strong>즉시 승인</strong>됩니다. 검토 코멘트를 반드시 입력해주세요.
+              <strong>교정 등록 권한 없음</strong>: UL-QP-18 절차서에 따라{' '}
+              <strong>시험실무자(test_engineer)만</strong> 교정 기록을 등록할 수 있습니다.
+              <br />
+              현재 역할: <strong>{userRole}</strong> — 교정 <strong>승인</strong>만 가능합니다.
             </>
           ) : (
             <>
@@ -328,9 +315,7 @@ export function CalibrationRegisterContent() {
           <CardHeader>
             <CardTitle>교정 정보 입력</CardTitle>
             <CardDescription>
-              {isTechnicalManager
-                ? '교정 정보를 검토 후 등록하세요. 코멘트 입력은 필수입니다.'
-                : '교정 정보를 입력하세요. 기술책임자의 승인 후 반영됩니다.'}
+              교정 정보를 입력하세요. 기술책임자의 승인 후 반영됩니다.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -454,27 +439,6 @@ export function CalibrationRegisterContent() {
                   />
                 </div>
 
-                {/* 기술책임자 등록자 코멘트 (기술책임자만 표시) */}
-                {isTechnicalManager && (
-                  <div className="space-y-2 border-t pt-4">
-                    <Label htmlFor="registrarComment" className="text-blue-600 font-medium">
-                      등록자 코멘트 (필수)
-                    </Label>
-                    <Textarea
-                      id="registrarComment"
-                      name="registrarComment"
-                      placeholder="교정 결과 검토 내용을 입력해주세요."
-                      value={formData.registrarComment || ''}
-                      onChange={(e) => updateFormData('registrarComment', e.target.value)}
-                      required
-                      className="border-blue-200 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-blue-600">
-                      기술책임자로서 교정 결과 검토 완료를 표시하는 코멘트를 입력해야 합니다.
-                    </p>
-                  </div>
-                )}
-
                 {/* 제출 버튼 */}
                 <div className="flex justify-end gap-2 mt-6">
                   <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -482,13 +446,15 @@ export function CalibrationRegisterContent() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={registerCalibrationMutation.isPending || !selectedEquipmentId}
+                    disabled={
+                      registerCalibrationMutation.isPending ||
+                      !selectedEquipmentId ||
+                      isUnauthorized
+                    }
                   >
                     {registerCalibrationMutation.isPending
                       ? '처리 중...'
-                      : isTechnicalManager
-                        ? '교정 정보 등록 및 승인'
-                        : '교정 정보 등록 (승인 요청)'}
+                      : '교정 정보 등록 (승인 요청)'}
                   </Button>
                 </div>
               </form>

@@ -97,7 +97,7 @@ export default function CreateCalibrationPlanContent() {
         title: '계획서 생성 완료',
         description: `${selectedYear}년 ${SITE_LABELS[selectedSite]} 교정계획서가 생성되었습니다.`,
       });
-      router.push(`/calibration-plans/${data.uuid}`);
+      router.push(`/calibration-plans/${data.id}`);
     },
     onError: (error: unknown) => {
       toast({

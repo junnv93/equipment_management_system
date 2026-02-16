@@ -434,8 +434,8 @@ export default function CalibrationContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">모든 팀</SelectItem>
-              {/* ✅ 동적으로 로드된 팀 데이터 사용 */}
-              {teamsData?.data?.map((team: { id: string; name: string }) => (
+              {/* ✅ 동적으로 로드된 팀 데이터 사용 (teams API: { items: [...] }) */}
+              {teamsData?.items?.map((team: { id: string; name: string }) => (
                 <SelectItem key={team.id} value={team.id}>
                   {team.name}
                 </SelectItem>

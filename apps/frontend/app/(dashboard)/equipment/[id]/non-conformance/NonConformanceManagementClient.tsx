@@ -24,16 +24,23 @@ import nonConformancesApi, {
   NON_CONFORMANCE_TYPE_LABELS,
   RESOLUTION_TYPE_LABELS,
 } from '@/lib/api/non-conformances-api';
-import equipmentApi from '@/lib/api/equipment-api';
+import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
+import type { PaginatedResponse } from '@/lib/api/types';
 
 interface NonConformanceManagementClientProps {
   equipmentId: string;
+  /** 서버 프리페치된 장비 데이터 (placeholderData로 사용) */
+  initialEquipment?: Equipment;
+  /** 서버 프리페치된 부적합 목록 (placeholderData로 사용) */
+  initialNonConformances?: PaginatedResponse<NonConformance>;
 }
 
 export default function NonConformanceManagementClient({
   equipmentId,
+  initialEquipment,
+  initialNonConformances,
 }: NonConformanceManagementClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -43,9 +50,11 @@ export default function NonConformanceManagementClient({
   const currentUserId = session?.user?.id ?? '';
 
   // ✅ React Query로 데이터 조회
+  // 서버 프리페치 데이터를 placeholderData로 사용 → 즉시 표시 + 백그라운드 refetch
   const { data: equipment, isLoading: equipmentLoading } = useQuery({
     queryKey: queryKeys.equipment.detail(equipmentId),
     queryFn: () => equipmentApi.getEquipment(equipmentId),
+    placeholderData: initialEquipment,
   });
 
   const {
@@ -55,6 +64,7 @@ export default function NonConformanceManagementClient({
   } = useQuery({
     queryKey: queryKeys.nonConformances.byEquipment(equipmentId),
     queryFn: () => nonConformancesApi.getNonConformances({ equipmentId }),
+    placeholderData: initialNonConformances,
   });
 
   const nonConformances = nonConformancesData?.data || [];

@@ -49,10 +49,13 @@ export default function CalibrationPlanApprovalsContent() {
   // 승인 뮤테이션
   const approveMutation = useMutation({
     mutationFn: async (planUuid: string) => {
-      const plan = pendingData?.data?.find((p) => p.uuid === planUuid);
-      return calibrationPlansApi.approveCalibrationPlan(planUuid, {
-        casVersion: plan?.casVersion ?? 0,
-      });
+      // ✅ Prefetched detail cache에서 fresh casVersion 사용
+      const cachedPlan = queryClient.getQueryData<CalibrationPlan>(
+        queryKeys.calibrationPlans.detail(planUuid)
+      );
+      const casVersion = cachedPlan?.casVersion ?? 0;
+
+      return calibrationPlansApi.approveCalibrationPlan(planUuid, { casVersion });
     },
     onSuccess: () => {
       toast({
@@ -78,9 +81,14 @@ export default function CalibrationPlanApprovalsContent() {
   // 반려 뮤테이션
   const rejectMutation = useMutation({
     mutationFn: async ({ uuid, reason }: { uuid: string; reason: string }) => {
-      const plan = pendingData?.data?.find((p) => p.uuid === uuid);
+      // ✅ Prefetched detail cache에서 fresh casVersion 사용
+      const cachedPlan = queryClient.getQueryData<CalibrationPlan>(
+        queryKeys.calibrationPlans.detail(uuid)
+      );
+      const casVersion = cachedPlan?.casVersion ?? 0;
+
       return calibrationPlansApi.rejectCalibrationPlan(uuid, {
-        casVersion: plan?.casVersion ?? 0,
+        casVersion,
         rejectionReason: reason,
       });
     },
@@ -105,25 +113,34 @@ export default function CalibrationPlanApprovalsContent() {
     },
   });
 
-  const handleApprove = (plan: CalibrationPlan) => {
+  // ✅ Prefetch plan detail before opening modal (fresh casVersion)
+  const handleApprove = async (plan: CalibrationPlan) => {
+    await queryClient.prefetchQuery({
+      queryKey: queryKeys.calibrationPlans.detail(plan.id),
+      queryFn: () => calibrationPlansApi.getCalibrationPlan(plan.id),
+    });
     setSelectedPlan(plan);
     setIsApproveDialogOpen(true);
   };
 
-  const handleReject = (plan: CalibrationPlan) => {
+  const handleReject = async (plan: CalibrationPlan) => {
+    await queryClient.prefetchQuery({
+      queryKey: queryKeys.calibrationPlans.detail(plan.id),
+      queryFn: () => calibrationPlansApi.getCalibrationPlan(plan.id),
+    });
     setSelectedPlan(plan);
     setIsRejectDialogOpen(true);
   };
 
   const handleApproveConfirm = () => {
     if (!selectedPlan) return;
-    approveMutation.mutate(selectedPlan.uuid);
+    approveMutation.mutate(selectedPlan.id);
   };
 
   const handleRejectConfirm = (reason: string) => {
     if (!selectedPlan) return;
     rejectMutation.mutate({
-      uuid: selectedPlan.uuid,
+      uuid: selectedPlan.id,
       reason,
     });
   };
@@ -154,7 +171,7 @@ export default function CalibrationPlanApprovalsContent() {
           ) : (
             <div className="space-y-4">
               {pendingPlans.map((plan: CalibrationPlan) => (
-                <Card key={plan.uuid} className="border-l-4 border-l-yellow-500">
+                <Card key={plan.id} className="border-l-4 border-l-yellow-500">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">
@@ -205,7 +222,7 @@ export default function CalibrationPlanApprovalsContent() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push(`/calibration-plans/${plan.uuid}`)}
+                          onClick={() => router.push(`/calibration-plans/${plan.id}`)}
                         >
                           <Eye className="h-4 w-4 mr-2" />
                           상세보기
