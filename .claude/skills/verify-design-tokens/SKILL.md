@@ -156,7 +156,6 @@ files=(
   "apps/frontend/components/dashboard/CalibrationSchedule.tsx"
   "apps/frontend/components/dashboard/TeamEquipmentStats.tsx"
   "apps/frontend/components/dashboard/EquipmentStatusChart.tsx"
-  "apps/frontend/components/dashboard/EquipmentSummary.tsx"
   "apps/frontend/components/dashboard/CalibrationList.tsx"
   "apps/frontend/components/dashboard/OverdueCheckoutsList.tsx"
   "apps/frontend/components/dashboard/DashboardClient.tsx"
@@ -175,7 +174,7 @@ for f in "${files[@]}"; do
 done
 ```
 
-**PASS 기준:** 모든 마이그레이션된 19개 컴포넌트에서 design-tokens import가 존재.
+**PASS 기준:** 모든 마이그레이션된 18개 컴포넌트에서 design-tokens import가 존재.
 
 **FAIL 기준:** design-tokens import가 없거나 하드코딩된 값 사용 시 재마이그레이션 필요.
 
