@@ -100,8 +100,9 @@ export const ROLE_TABS: Record<UserRole, ApprovalCategory[]> = {
     'inspection',
     'nonconformity',
     'disposal_review',
+    'software', // ← ADD: TM has APPROVE_SOFTWARE_CHANGE (role-permissions.ts:105)
   ],
-  quality_manager: ['plan_review', 'software'],
+  quality_manager: ['plan_review'], // ← REMOVE software: QM only has VIEW_SOFTWARE (read-only)
   lab_manager: ['disposal_final', 'plan_final', 'incoming'], // lab_manager also sees incoming (rental imports)
   system_admin: [], // 시스템 관리자는 설정 관리 전용, 승인 워크플로우 미참여
 };
@@ -274,23 +275,25 @@ class ApprovalsApi {
    * Combines:
    * - Regular checkouts (calibration, repair, rental, etc.)
    * - Equipment being returned to vendors (purpose='return_to_vendor')
+   *
+   * 팀 필터링: 백엔드에서 역할 기반 자동 필터링 (technical_manager → teamId, others → site)
    */
-  private async getPendingOutgoing(teamId?: string): Promise<ApprovalItem[]> {
+  private async getPendingOutgoing(_teamId?: string): Promise<ApprovalItem[]> {
     try {
       const [regularCheckouts, vendorReturns] = await Promise.all([
-        // Regular checkouts
+        // Regular checkouts - backend filters by team/site automatically
         checkoutApi.getCheckouts({ statuses: 'pending' }),
-        // Vendor returns
+        // Vendor returns - backend filters by team/site automatically
         checkoutApi.getCheckouts({ statuses: 'pending', purpose: 'return_to_vendor' }),
       ]);
 
-      const regularItems = (regularCheckouts.data || [])
-        .filter((item: Checkout) => !teamId || this.isOwnTeamCheckout(item, teamId))
-        .map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'outgoing'));
+      const regularItems = (regularCheckouts.data || []).map((item: Checkout) =>
+        this.mapCheckoutToApprovalItem(item, 'outgoing')
+      );
 
-      const vendorReturnItems = (vendorReturns.data || [])
-        .filter((item: Checkout) => !teamId || this.isOwnTeamCheckout(item, teamId))
-        .map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'outgoing'));
+      const vendorReturnItems = (vendorReturns.data || []).map((item: Checkout) =>
+        this.mapCheckoutToApprovalItem(item, 'outgoing')
+      );
 
       return [...regularItems, ...vendorReturnItems];
     } catch {
@@ -305,21 +308,23 @@ class ApprovalsApi {
    * - Equipment returning from calibration/repair
    * - Rental equipment arriving from vendors
    * - Shared equipment arriving from other teams
+   *
+   * 팀 필터링: 백엔드에서 역할 기반 자동 필터링
    */
-  private async getPendingIncoming(teamId?: string): Promise<ApprovalItem[]> {
+  private async getPendingIncoming(_teamId?: string): Promise<ApprovalItem[]> {
     try {
       const [returns, rentalImports, sharedImports] = await Promise.all([
-        // Equipment returning
+        // Equipment returning - backend filters automatically
         checkoutApi.getPendingReturnApprovals(),
-        // Rental equipment arriving
+        // Rental equipment arriving - backend filters by site (equipmentImports.site)
         equipmentImportApi.getList({ status: 'pending', sourceType: 'rental' }),
-        // Shared equipment arriving
+        // Shared equipment arriving - backend filters by site
         equipmentImportApi.getList({ status: 'pending', sourceType: 'internal_shared' }),
       ]);
 
-      const returnItems = (returns.data || [])
-        .filter((item: Checkout) => !teamId || this.isOwnTeamCheckout(item, teamId))
-        .map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'incoming'));
+      const returnItems = (returns.data || []).map((item: Checkout) =>
+        this.mapCheckoutToApprovalItem(item, 'incoming')
+      );
 
       const rentalItems = (rentalImports.items || []).map((item: EquipmentImport) =>
         this.mapEquipmentImportToApprovalItem(item, 'incoming')
@@ -355,16 +360,16 @@ class ApprovalsApi {
    * 반출 승인 대기 목록 조회
    *
    * @deprecated Use getPendingOutgoing() instead (consolidates checkouts + vendor returns)
+   *
+   * 팀 필터링: 백엔드에서 역할 기반 자동 필터링
    */
-  private async getPendingCheckouts(teamId?: string): Promise<ApprovalItem[]> {
+  private async getPendingCheckouts(_teamId?: string): Promise<ApprovalItem[]> {
     try {
       const response = await checkoutApi.getCheckouts({ statuses: 'pending' });
       // PaginatedResponse uses 'data' field
       const items = response.data || [];
 
-      return items
-        .filter((item: Checkout) => !teamId || this.isOwnTeamCheckout(item, teamId))
-        .map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'outgoing'));
+      return items.map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'outgoing'));
     } catch {
       return [];
     }
@@ -374,16 +379,16 @@ class ApprovalsApi {
    * 반입 승인 대기 목록 조회
    *
    * @deprecated Use getPendingIncoming() instead (consolidates returns + imports)
+   *
+   * 팀 필터링: 백엔드에서 역할 기반 자동 필터링
    */
-  private async getPendingReturns(teamId?: string): Promise<ApprovalItem[]> {
+  private async getPendingReturns(_teamId?: string): Promise<ApprovalItem[]> {
     try {
       const response = await checkoutApi.getPendingReturnApprovals();
       // PaginatedResponse uses 'data' field
       const items = response.data || [];
 
-      return items
-        .filter((item: Checkout) => !teamId || this.isOwnTeamCheckout(item, teamId))
-        .map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'incoming'));
+      return items.map((item: Checkout) => this.mapCheckoutToApprovalItem(item, 'incoming'));
     } catch {
       return [];
     }
@@ -1269,11 +1274,6 @@ class ApprovalsApi {
       },
       originalData: item,
     };
-  }
-
-  private isOwnTeamCheckout(_checkout: Checkout, _teamId: string): boolean {
-    // 실제 구현 시 장비의 팀 ID와 비교
-    return true;
   }
 }
 

@@ -48,7 +48,7 @@ test.describe('Group 6: Responsive Design', () => {
     const container = page.locator('.max-w-7xl').first();
     await expect(container).toBeVisible();
 
-    const containerWidth = await container.evaluate((el) => el.offsetWidth);
+    const containerWidth = await container.evaluate((el) => (el as HTMLElement).offsetWidth);
     // max-w-7xl is 1280px, content should not exceed this significantly
     expect(containerWidth).toBeLessThanOrEqual(1400); // Allow some margin
 
@@ -146,7 +146,9 @@ test.describe('Group 6: Responsive Design', () => {
     await expect(equipmentHeader).toBeVisible();
 
     // Content should still be constrained to max-width
-    const ultraWideContainerWidth = await container.evaluate((el) => el.offsetWidth);
+    const ultraWideContainerWidth = await container.evaluate(
+      (el) => (el as HTMLElement).offsetWidth
+    );
     expect(ultraWideContainerWidth).toBeLessThanOrEqual(1400); // Same max-width
 
     // Content should be centered with larger margins
@@ -178,7 +180,7 @@ test.describe('Group 6: Responsive Design', () => {
 
     if (paragraphCount > 0) {
       const firstParagraph = paragraphs.first();
-      const paragraphWidth = await firstParagraph.evaluate((el) => el.offsetWidth);
+      const paragraphWidth = await firstParagraph.evaluate((el) => (el as HTMLElement).offsetWidth);
 
       // Paragraph width should be reasonable for readability (not full max-width)
       // Ideal line length is 50-75 characters, roughly 600-800px

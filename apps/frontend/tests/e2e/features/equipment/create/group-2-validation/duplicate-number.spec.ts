@@ -89,13 +89,13 @@ test.describe('폼 유효성 검사', () => {
 
     // Verify error message contains duplicate warning
     const hasDuplicateError =
-      pageText.includes('이미 사용 중') ||
-      pageText.includes('중복') ||
-      pageText.includes('SUW-E0001');
+      (pageText ?? '').includes('이미 사용 중') ||
+      (pageText ?? '').includes('중복') ||
+      (pageText ?? '').includes('SUW-E0001');
 
     if (!hasDuplicateError) {
       console.log('❌ Expected duplicate error not found');
-      console.log('Page content snippet:', pageText.substring(0, 800));
+      console.log('Page content snippet:', (pageText ?? '').substring(0, 800));
 
       // Additional debugging: check for any error messages
       const allAlerts = await page.locator('[role="alert"]').all();

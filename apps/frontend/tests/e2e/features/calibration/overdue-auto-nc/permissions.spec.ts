@@ -266,11 +266,10 @@ test.describe('Permission Tests', () => {
     const { access_token } = await loginResponse.json();
 
     // Navigate to equipment detail page with authentication
-    await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
+    await page.setExtraHTTPHeaders({
+      Authorization: `Bearer ${access_token}`,
     });
+    await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
 
     // Wait for page to load
     await page.waitForLoadState('networkidle');
@@ -354,11 +353,10 @@ test.describe('Permission Tests', () => {
     const testEngineerToken = await loginAsRole(request, 'test_engineer');
 
     // 2. Navigate to equipment detail with incident history
-    await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`, {
-      headers: {
-        Authorization: `Bearer ${testEngineerToken}`,
-      },
+    await page.setExtraHTTPHeaders({
+      Authorization: `Bearer ${testEngineerToken}`,
     });
+    await page.goto(`${FRONTEND_URL}/equipment/${equipment.id}`);
 
     await page.waitForLoadState('networkidle');
 

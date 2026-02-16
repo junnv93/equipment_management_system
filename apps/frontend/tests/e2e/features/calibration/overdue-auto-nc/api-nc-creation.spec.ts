@@ -73,7 +73,7 @@ async function createTestEquipment(
     calibrationRequired?: 'required' | 'not_required';
     isActive?: boolean;
   }
-): Promise<{ id: string; managementNumber: string }> {
+): Promise<{ id: string; managementNumber: string; name: string }> {
   const response = await request.post(`${BACKEND_URL}/api/equipment`, {
     headers: {
       Authorization: `Bearer ${token}`,

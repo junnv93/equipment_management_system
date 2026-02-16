@@ -27,15 +27,16 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 
 이 스킬이 순차 실행하는 검증 스킬 목록입니다. `/manage-skills`가 스킬을 생성/삭제할 때 이 목록을 자동 업데이트합니다.
 
-| #   | 스킬                    | 설명                                                                             |
-| --- | ----------------------- | -------------------------------------------------------------------------------- |
-| 1   | `verify-cas`            | CAS(Optimistic Locking) 패턴 — version 필드, VersionedBaseService, 캐시 무효화   |
-| 2   | `verify-auth`           | 서버 사이드 인증/인가 — req.user.userId, @RequirePermissions, @AuditLog          |
-| 3   | `verify-zod`            | Zod 검증 패턴 — ZodValidationPipe, class-validator 금지, Query targets           |
-| 4   | `verify-ssot`           | SSOT 임포트 — 타입/enum 패키지 임포트, 로컬 재정의 금지                          |
-| 5   | `verify-frontend-state` | 프론트엔드 상태 관리 — TanStack Query, onSuccess setQueryData 금지               |
-| 6   | `verify-nextjs`         | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                    |
-| 7   | `verify-filters`        | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱 |
+| #   | 스킬                    | 설명                                                                                     |
+| --- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| 1   | `verify-cas`            | CAS(Optimistic Locking) 패턴 — version 필드, VersionedBaseService, 캐시 무효화           |
+| 2   | `verify-auth`           | 서버 사이드 인증/인가 — req.user.userId, @RequirePermissions, @AuditLog                  |
+| 3   | `verify-zod`            | Zod 검증 패턴 — ZodValidationPipe, class-validator 금지, Query targets                   |
+| 4   | `verify-ssot`           | SSOT 임포트 — 타입/enum 패키지 임포트, 로컬 재정의 금지                                  |
+| 5   | `verify-frontend-state` | 프론트엔드 상태 관리 — TanStack Query, onSuccess setQueryData 금지                       |
+| 6   | `verify-nextjs`         | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                            |
+| 7   | `verify-filters`        | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱         |
+| 8   | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙 |
 
 ## 워크플로우
 
