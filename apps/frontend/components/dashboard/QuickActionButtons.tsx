@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import {
   Plus,
   ClipboardList,
@@ -17,7 +18,7 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { DASHBOARD_MOTION, DASHBOARD_FOCUS, getDashboardStaggerDelay } from '@/lib/design-tokens';
 
 interface QuickAction {
-  label: string;
+  labelKey: string; // i18n key under 'dashboard.quickActions'
   href: string;
   icon: React.ElementType;
   variant?: 'default' | 'outline' | 'secondary';
@@ -27,18 +28,23 @@ interface QuickActionButtonsProps {
   className?: string;
 }
 
-// 역할별 빠른 액션 정의 (SSOT: FRONTEND_ROUTES 사용)
+// 역할별 빠른 액션 정의 (SSOT: FRONTEND_ROUTES 사용, label은 i18n key)
 const actionsByRole: Record<string, QuickAction[]> = {
   test_engineer: [
-    { label: '장비 등록', href: FRONTEND_ROUTES.EQUIPMENT.CREATE, icon: Plus, variant: 'default' },
     {
-      label: '반출 신청',
+      labelKey: 'registerEquipment',
+      href: FRONTEND_ROUTES.EQUIPMENT.CREATE,
+      icon: Plus,
+      variant: 'default',
+    },
+    {
+      labelKey: 'createCheckout',
       href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
       icon: ArrowRightLeft,
       variant: 'outline',
     },
     {
-      label: '대여/반출 현황',
+      labelKey: 'checkoutStatus',
       href: FRONTEND_ROUTES.CHECKOUTS.LIST,
       icon: ClipboardList,
       variant: 'outline',
@@ -46,22 +52,27 @@ const actionsByRole: Record<string, QuickAction[]> = {
   ],
   technical_manager: [
     {
-      label: '승인 관리',
+      labelKey: 'approvalManagement',
       href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
       icon: CheckSquare,
       variant: 'default',
     },
-    { label: '장비 등록', href: FRONTEND_ROUTES.EQUIPMENT.CREATE, icon: Plus, variant: 'outline' },
+    {
+      labelKey: 'registerEquipment',
+      href: FRONTEND_ROUTES.EQUIPMENT.CREATE,
+      icon: Plus,
+      variant: 'outline',
+    },
   ],
   quality_manager: [
     {
-      label: '승인 관리',
+      labelKey: 'approvalManagement',
       href: FRONTEND_ROUTES.ADMIN.APPROVALS,
       icon: CheckSquare,
       variant: 'default',
     },
     {
-      label: '교정계획서',
+      labelKey: 'calibrationPlans',
       href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
       icon: FileSpreadsheet,
       variant: 'outline',
@@ -69,33 +80,53 @@ const actionsByRole: Record<string, QuickAction[]> = {
   ],
   lab_manager: [
     {
-      label: '승인 관리',
+      labelKey: 'approvalManagement',
       href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
       icon: CheckSquare,
       variant: 'default',
     },
-    { label: '사용자 관리', href: FRONTEND_ROUTES.ADMIN.USERS, icon: Users, variant: 'outline' },
-    { label: '시스템 설정', href: '/settings', icon: Settings, variant: 'outline' },
+    {
+      labelKey: 'userManagement',
+      href: FRONTEND_ROUTES.ADMIN.USERS,
+      icon: Users,
+      variant: 'outline',
+    },
+    {
+      labelKey: 'systemSettings',
+      href: FRONTEND_ROUTES.SETTINGS.INDEX,
+      icon: Settings,
+      variant: 'outline',
+    },
   ],
   system_admin: [
     {
-      label: '승인 관리',
+      labelKey: 'approvalManagement',
       href: FRONTEND_ROUTES.ADMIN.EQUIPMENT_APPROVALS,
       icon: CheckSquare,
       variant: 'default',
     },
-    { label: '사용자 관리', href: FRONTEND_ROUTES.ADMIN.USERS, icon: Users, variant: 'outline' },
-    { label: '시스템 설정', href: '/settings', icon: Settings, variant: 'outline' },
+    {
+      labelKey: 'userManagement',
+      href: FRONTEND_ROUTES.ADMIN.USERS,
+      icon: Users,
+      variant: 'outline',
+    },
+    {
+      labelKey: 'systemSettings',
+      href: FRONTEND_ROUTES.SETTINGS.INDEX,
+      icon: Settings,
+      variant: 'outline',
+    },
   ],
   default: [
     {
-      label: '장비 목록',
+      labelKey: 'equipmentList',
       href: FRONTEND_ROUTES.EQUIPMENT.LIST,
       icon: ClipboardList,
       variant: 'default',
     },
     {
-      label: '대여/반출 현황',
+      labelKey: 'checkoutStatus',
       href: FRONTEND_ROUTES.CHECKOUTS.LIST,
       icon: ArrowRightLeft,
       variant: 'outline',
@@ -125,13 +156,15 @@ export function QuickActionButtons({ className }: QuickActionButtonsProps) {
     );
   }
 
+  const t = useTranslations('dashboard.quickActions');
   const userRole = session?.user?.role?.toLowerCase() || 'default';
   const actions = actionsByRole[userRole] || actionsByRole['default'];
 
   return (
-    <nav className={`flex flex-wrap gap-2 ${className || ''}`} aria-label="빠른 액션">
+    <nav className={`flex flex-wrap gap-2 ${className || ''}`} aria-label={t('ariaLabel')}>
       {actions.map((action) => {
         const Icon = action.icon;
+        const label = t(action.labelKey as Parameters<typeof t>[0]);
         return (
           <Button
             key={action.href}
@@ -139,9 +172,9 @@ export function QuickActionButtons({ className }: QuickActionButtonsProps) {
             asChild
             className={`gap-2 ${DASHBOARD_FOCUS.default} hover:shadow-sm hover:scale-[1.02] ${DASHBOARD_MOTION.cardHover} motion-reduce:transition-none`}
           >
-            <Link href={action.href} aria-label={action.label}>
+            <Link href={action.href} aria-label={label}>
               <Icon className="h-4 w-4" aria-hidden="true" />
-              {action.label}
+              {label}
             </Link>
           </Button>
         );

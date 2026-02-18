@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import {
   Package,
   FileCheck,
@@ -27,13 +28,15 @@ import {
   DASHBOARD_SIZES,
   DASHBOARD_FOCUS,
   getDashboardStaggerDelay,
+  getCountBasedUrgency,
+  getUrgencyFeedbackClasses,
 } from '@/lib/design-tokens';
 import {
   approvalsApi,
   type PendingCountsByCategory,
   type ApprovalCategory,
 } from '@/lib/api/approvals-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import {
   computeApprovalTotal,
   getDashboardApprovalCategories,
@@ -73,48 +76,17 @@ interface PendingApprovalCardProps {
   className?: string;
 }
 
-/**
- * 역할별 카드 제목
- */
-function getCardTitle(role: string): string {
-  switch (role.toLowerCase()) {
-    case 'test_engineer':
-      return '내 요청 현황';
-    case 'technical_manager':
-      return '팀 승인 대기';
-    case 'quality_manager':
-      return '검토 대기';
-    case 'lab_manager':
-      return '시험소 승인 대기';
-    default:
-      return '승인 대기';
-  }
-}
-
-/**
- * 역할별 카드 설명
- */
-function getCardDescription(role: string): string {
-  switch (role.toLowerCase()) {
-    case 'test_engineer':
-      return '본인이 신청한 항목의 처리 현황';
-    case 'technical_manager':
-      return '팀 내 승인이 필요한 항목';
-    case 'quality_manager':
-      return '검토가 필요한 항목';
-    case 'lab_manager':
-      return '시험소 내 승인이 필요한 항목';
-    default:
-      return '승인 대기 중인 항목';
-  }
-}
+// 역할별 카드 제목/설명은 i18n에서 가져옴 (dashboard.pending.title.{role})
 
 export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const t = useTranslations('dashboard.pending');
   const userRole = session?.user?.role || 'user';
 
   // SSOT: ApprovalsService (GET /api/approvals/counts)
   // 네비 뱃지, 대시보드 카드, 승인 페이지가 동일 query key 공유
+  // Architecture v3: REFETCH_STRATEGIES.NORMAL 전략 (window focus만)
+  // enabled: 세션 로딩 중 401 방지 (apiClient의 getSession() 타이밍 이슈)
   const {
     data: counts,
     isLoading,
@@ -122,8 +94,8 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
   } = useQuery<PendingCountsByCategory>({
     queryKey: queryKeys.approvals.counts(userRole),
     queryFn: () => approvalsApi.getPendingCounts(),
-    staleTime: CACHE_TIMES.SHORT,
-    refetchInterval: 60000,
+    enabled: status === 'authenticated',
+    ...QUERY_CONFIG.PENDING_APPROVALS, // SSOT: REFETCH_STRATEGIES.NORMAL
   });
 
   // SSOT: ROLE_TABS에서 파생된 카테고리 목록
@@ -135,7 +107,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
   // SSOT: ROLE_TABS 기반 총합 계산
   const totalPending = computeApprovalTotal(counts, userRole);
 
-  if (isLoading) {
+  if (isLoading || status === 'loading') {
     return (
       <div className={cn('space-y-4', className)}>
         <div className="flex items-center justify-between">
@@ -160,7 +132,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
       <Card className={cn('border-destructive', className)}>
         <CardContent className="p-4 flex items-center gap-3 text-destructive">
           <AlertCircle className="h-5 w-5" />
-          <span>승인 대기 정보를 불러오는데 실패했습니다.</span>
+          <span>{t('error')}</span>
         </CardContent>
       </Card>
     );
@@ -171,8 +143,11 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
     return null;
   }
 
-  const cardTitle = getCardTitle(userRole);
-  const cardDescription = getCardDescription(userRole);
+  const roleLower = userRole.toLowerCase();
+  const titleKey = `title.${roleLower}` as Parameters<typeof t>[0];
+  const descKey = `description.${roleLower}` as Parameters<typeof t>[0];
+  const cardTitle = t.has(titleKey) ? t(titleKey) : t('title.default');
+  const cardDescription = t.has(descKey) ? t(descKey) : t('description.default');
 
   // 카테고리 수에 맞는 그리드 컬럼 결정
   const gridCols =
@@ -204,20 +179,23 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
             <>
               <Badge
                 variant="secondary"
-                className="bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300 motion-safe:animate-pulse"
+                className={cn(
+                  'bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300',
+                  getUrgencyFeedbackClasses(getCountBasedUrgency(totalPending), false) // 애니메이션 없음
+                )}
                 aria-live="polite"
                 aria-atomic="true"
               >
-                총 {totalPending}건
+                {t('totalCount', { count: totalPending })}
               </Badge>
               <Link href={FRONTEND_ROUTES.ADMIN.APPROVALS}>
                 <Button
                   variant="outline"
                   size="sm"
                   className="gap-2"
-                  aria-label="전체 승인 관리 페이지로 이동"
+                  aria-label={t('viewAllAriaLabel')}
                 >
-                  전체 보기
+                  {t('viewAll')}
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </Link>
@@ -237,7 +215,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
               key={category.key}
               href={category.href}
               className="block group"
-              aria-label={`${category.label} ${count}건`}
+              aria-label={t('categoryAriaLabel', { label: category.label, count })}
             >
               <Card
                 className={cn(
@@ -270,7 +248,7 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
                     {count}
                   </span>
                   {hasItems && (
-                    <span className="text-xs text-muted-foreground mt-1">클릭하여 확인</span>
+                    <span className="text-xs text-muted-foreground mt-1">{t('clickToView')}</span>
                   )}
                 </CardContent>
               </Card>

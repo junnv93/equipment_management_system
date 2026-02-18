@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useMemo, memo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EQUIPMENT_STATUS_LABELS } from '@equipment-management/schemas';
 import { DASHBOARD_STATUS_COLORS } from '@/lib/design-tokens';
 
 interface EquipmentStatusChartProps {
@@ -16,10 +16,12 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
   data,
   loading = false,
 }: EquipmentStatusChartProps) {
+  const t = useTranslations('dashboard.statusChart');
+  const tStatus = useTranslations('dashboard.equipmentStatusLabels');
   // 데이터 가공 - useMemo로 최적화
   const { chartData, totalEquipment } = useMemo(() => {
     const formattedData = Object.entries(data).map(([status, count]) => ({
-      name: EQUIPMENT_STATUS_LABELS[status as keyof typeof EQUIPMENT_STATUS_LABELS] || status,
+      name: tStatus(status as Parameters<typeof tStatus>[0]),
       value: count,
       color: DASHBOARD_STATUS_COLORS[status] || '#D8D9DA', // UL Gray 1 fallback
       key: status,
@@ -31,7 +33,7 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
       chartData: formattedData,
       totalEquipment: total,
     };
-  }, [data]);
+  }, [data, tStatus]);
 
   // 파이 차트 라벨 렌더링 함수 - 퍼센트만 표시 (오버플로우 방지)
   const renderCustomizedLabel = useCallback(
@@ -78,16 +80,17 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
   // Tooltip formatter 함수도 useCallback으로 최적화
   const tooltipFormatter = useCallback(
     (value: number) => {
-      return [`${value}대 (${((value / totalEquipment) * 100).toFixed(1)}%)`, ''];
+      const percent = ((value / totalEquipment) * 100).toFixed(1);
+      return [t('tooltipUnit', { value, percent }), ''];
     },
-    [totalEquipment]
+    [totalEquipment, t]
   );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>장비 상태</CardTitle>
-        <CardDescription>현재 장비 상태별 분포</CardDescription>
+        <CardTitle>{t('title')}</CardTitle>
+        <CardDescription>{t('description')}</CardDescription>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -98,7 +101,7 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
           </div>
         ) : chartData.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
-            <p>데이터가 없습니다</p>
+            <p>{t('empty')}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -130,7 +133,7 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
             </div>
 
             {/* 커스텀 범례 - 그리드 레이아웃으로 깔끔하게 정렬 */}
-            <div className="grid grid-cols-2 gap-3 px-4">
+            <div className="grid grid-cols-2 gap-3 px-4" role="list">
               {chartData.map((entry) => (
                 <div key={entry.key} className="flex items-center gap-2 text-sm" role="listitem">
                   <div
@@ -146,10 +149,7 @@ export const EquipmentStatusChart = memo(function EquipmentStatusChart({
 
             {/* 총 장비 수 */}
             <div className="text-center text-sm border-t pt-4">
-              <p className="text-muted-foreground">
-                총 <span className="font-semibold text-foreground text-lg">{totalEquipment}</span>
-                대의 장비
-              </p>
+              <p className="text-muted-foreground">{t('total', { count: totalEquipment })}</p>
             </div>
           </div>
         )}

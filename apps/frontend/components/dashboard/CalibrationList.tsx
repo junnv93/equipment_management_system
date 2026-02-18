@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,8 @@ import { OverdueCalibration, UpcomingCalibration } from '@/lib/api/dashboard-api
 import { formatDateTime } from '@/lib/utils/date';
 import { CalendarClock, AlertTriangle, AlertCircle, Calendar, ChevronRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DASHBOARD_SIZES, DASHBOARD_FOCUS } from '@/lib/design-tokens';
+import { DASHBOARD_SIZES, DASHBOARD_FOCUS, getDashboardStaggerDelay } from '@/lib/design-tokens';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 interface CalibrationListProps {
   data: (OverdueCalibration | UpcomingCalibration)[];
@@ -26,12 +28,13 @@ export function CalibrationList({
   type,
 }: CalibrationListProps) {
   const router = useRouter();
+  const t = useTranslations('dashboard.calibrationList');
 
   const getStatusInfo = (item: OverdueCalibration | UpcomingCalibration) => {
     if (type === 'overdue') {
       const overdueItem = item as OverdueCalibration;
       return {
-        label: `${overdueItem.daysOverdue}일 초과`,
+        label: t('daysOverdue', { days: overdueItem.daysOverdue ?? 0 }),
         variant: 'destructive' as const,
         icon: <AlertCircle className="h-3 w-3 mr-1" />,
       };
@@ -39,19 +42,19 @@ export function CalibrationList({
       const upcomingItem = item as UpcomingCalibration;
       if (upcomingItem.daysUntilDue <= 7) {
         return {
-          label: `${upcomingItem.daysUntilDue}일 남음`,
+          label: t('daysRemaining', { days: upcomingItem.daysUntilDue }),
           variant: 'destructive' as const,
           icon: <AlertCircle className="h-3 w-3 mr-1" />,
         };
       } else if (upcomingItem.daysUntilDue <= 15) {
         return {
-          label: `${upcomingItem.daysUntilDue}일 남음`,
+          label: t('daysRemaining', { days: upcomingItem.daysUntilDue }),
           variant: 'warning' as const,
           icon: <Calendar className="h-3 w-3 mr-1" />,
         };
       } else {
         return {
-          label: `${upcomingItem.daysUntilDue}일 남음`,
+          label: t('daysRemaining', { days: upcomingItem.daysUntilDue }),
           variant: 'secondary' as const,
           icon: <Calendar className="h-3 w-3 mr-1" />,
         };
@@ -60,12 +63,16 @@ export function CalibrationList({
   };
 
   const handleViewCalibration = (id: string) => {
-    router.push(`/calibration/${id}`);
+    router.push(FRONTEND_ROUTES.CALIBRATION.DETAIL(id));
   };
 
   const handleViewAll = () => {
-    router.push(`/calibration?tab=${type}`);
+    router.push(`${FRONTEND_ROUTES.CALIBRATION.LIST}?tab=${type}`);
   };
+
+  const EmptyIcon = type === 'upcoming' ? CalendarClock : AlertTriangle;
+  const emptyTitle = type === 'upcoming' ? t('noUpcoming') : t('noOverdue');
+  const emptyDescription = type === 'upcoming' ? t('noUpcomingDesc') : t('noOverdueDesc');
 
   return (
     <Card className="col-span-1">
@@ -91,7 +98,11 @@ export function CalibrationList({
             {Array(3)
               .fill(0)
               .map((_, i) => (
-                <div key={i} className="flex flex-col gap-2">
+                <div
+                  key={i}
+                  className="flex flex-col gap-2"
+                  style={{ animationDelay: getDashboardStaggerDelay(i, 'list') }}
+                >
                   <Skeleton className="h-4 w-4/5" />
                   <Skeleton className="h-3 w-3/5" />
                 </div>
@@ -99,7 +110,15 @@ export function CalibrationList({
           </div>
         ) : data.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {type === 'upcoming' ? '예정된 교정이 없습니다' : '기한이 초과된 교정이 없습니다'}
+            <div className="inline-block motion-safe:animate-gentle-bounce">
+              <div className="h-12 w-12 mx-auto rounded-full bg-muted flex items-center justify-center">
+                <EmptyIcon className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+              </div>
+            </div>
+            <h3 className="mt-4 text-base font-medium tracking-tight text-foreground">
+              {emptyTitle}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{emptyDescription}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -125,6 +144,7 @@ export function CalibrationList({
                       size="icon"
                       className={`${DASHBOARD_SIZES.minTouchTarget} ml-1 ${DASHBOARD_FOCUS.default}`}
                       onClick={() => handleViewCalibration(item.id)}
+                      aria-label={t('viewDetail', { name: item.equipmentName ?? '' })}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -135,7 +155,9 @@ export function CalibrationList({
 
             {data.length > 3 && (
               <Button variant="link" size="sm" className="w-full mt-2" onClick={handleViewAll}>
-                모든 {type === 'overdue' ? '기한 초과' : '예정'} 교정 보기 ({data.length})
+                {type === 'overdue'
+                  ? t('viewAllOverdue', { count: data.length })
+                  : t('viewAllUpcoming', { count: data.length })}
               </Button>
             )}
           </div>

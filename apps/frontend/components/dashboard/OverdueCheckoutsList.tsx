@@ -1,13 +1,16 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDateTime } from '@/lib/utils/date';
 import { OverdueCheckout } from '@/lib/api/dashboard-api';
-import { AlertCircle, ChevronRight } from 'lucide-react';
+import { AlertCircle, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
-import { DASHBOARD_SIZES, DASHBOARD_FOCUS } from '@/lib/design-tokens';
+import { DASHBOARD_SIZES, DASHBOARD_FOCUS, getDashboardStaggerDelay } from '@/lib/design-tokens';
 
 /**
  * 반납 기한 초과 반출 목록 컴포넌트
@@ -21,6 +24,7 @@ interface OverdueCheckoutsListProps {
 
 export function OverdueCheckoutsList({ data, loading = false }: OverdueCheckoutsListProps) {
   const router = useRouter();
+  const t = useTranslations('dashboard.checkouts');
 
   // 반출 상세 페이지로 이동
   const handleViewCheckout = (id: string) => {
@@ -38,14 +42,14 @@ export function OverdueCheckoutsList({ data, loading = false }: OverdueCheckouts
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-base font-medium flex items-center">
-              반납 기한 초과
+              {t('overdueTitle')}
               {!loading && data.length > 0 && (
                 <Badge variant="destructive" className="ml-2">
                   {data.length}
                 </Badge>
               )}
             </CardTitle>
-            <CardDescription>반출 기한이 지난 장비 목록입니다</CardDescription>
+            <CardDescription>{t('overdueDesc')}</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -55,15 +59,29 @@ export function OverdueCheckoutsList({ data, loading = false }: OverdueCheckouts
             {Array(3)
               .fill(0)
               .map((_, i) => (
-                <div key={i} className="flex flex-col gap-2">
+                <div
+                  key={i}
+                  className="flex flex-col gap-2"
+                  style={{ animationDelay: getDashboardStaggerDelay(i, 'list') }}
+                >
                   <Skeleton className="h-4 w-4/5" />
                   <Skeleton className="h-3 w-3/5" />
                 </div>
               ))}
           </div>
         ) : data.length === 0 ? (
-          <div className="py-6 text-center text-muted-foreground">
-            <p>기한이 초과된 반출이 없습니다</p>
+          <div className="py-8 text-center text-muted-foreground">
+            <div className="inline-block motion-safe:animate-gentle-bounce">
+              <div className="h-12 w-12 mx-auto rounded-full bg-muted flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+              </div>
+            </div>
+            <h3 className="mt-4 text-base font-medium tracking-tight text-foreground">
+              {t('noOverdue')}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+              {t('noOverdueDesc')}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -71,23 +89,24 @@ export function OverdueCheckoutsList({ data, loading = false }: OverdueCheckouts
               <div key={checkout.id} className="flex justify-between items-center">
                 <div className="space-y-1">
                   <p className="text-sm font-medium line-clamp-1">
-                    {checkout.equipment?.name || '알 수 없음'}
+                    {checkout.equipment?.name || t('unknown')}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {checkout.user?.name || '알 수 없음'} ·{' '}
+                    {checkout.user?.name || t('unknown')} ·{' '}
                     {formatDateTime(checkout.expectedReturnDate)}
                   </p>
                 </div>
                 <div className="flex items-center">
                   <Badge variant="destructive" className="text-xs flex items-center">
                     <AlertCircle className="h-3 w-3 mr-1" />
-                    {checkout.daysOverdue}일 초과
+                    {t('daysOverdue', { days: checkout.daysOverdue })}
                   </Badge>
                   <Button
                     variant="ghost"
                     size="icon"
                     className={`${DASHBOARD_SIZES.minTouchTarget} ml-1 ${DASHBOARD_FOCUS.default}`}
                     onClick={() => handleViewCheckout(checkout.id)}
+                    aria-label={t('viewDetail')}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -97,7 +116,7 @@ export function OverdueCheckoutsList({ data, loading = false }: OverdueCheckouts
 
             {data.length > 3 && (
               <Button variant="link" size="sm" className="w-full mt-2" onClick={handleViewAll}>
-                모든 기한 초과 반출 보기 ({data.length})
+                {t('viewAllOverdue', { count: data.length })}
               </Button>
             )}
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -11,81 +12,36 @@ interface WelcomeHeaderProps {
   className?: string;
 }
 
-// 역할 정보 정의
+// 역할 정보 정의 (label/description은 i18n에서 가져옴)
 interface RoleInfo {
-  label: string;
   color: string;
   bgColor: string;
   icon: React.ElementType;
-  description: string;
 }
 
 const roleInfo: Record<string, RoleInfo> = {
-  test_engineer: {
-    label: '시험실무자',
-    ...DASHBOARD_ROLE_BADGES.test_engineer,
-    icon: User,
-    description: '장비 등록/수정 요청, 대여/반출 신청',
-  },
-  technical_manager: {
-    label: '기술책임자',
-    ...DASHBOARD_ROLE_BADGES.technical_manager,
-    icon: Shield,
-    description: '요청 승인/반려, 팀 내 장비 관리',
-  },
-  quality_manager: {
-    label: '품질책임자',
-    ...DASHBOARD_ROLE_BADGES.quality_manager,
-    icon: ShieldCheck,
-    description: '교정계획서 검토, 소프트웨어 검증',
-  },
-  lab_manager: {
-    label: '시험소 관리자',
-    ...DASHBOARD_ROLE_BADGES.lab_manager,
-    icon: ShieldCheck,
-    description: '시험소 전체 관리, 교정계획서 승인',
-  },
-  system_admin: {
-    label: '시스템 관리자',
-    ...DASHBOARD_ROLE_BADGES.system_admin,
-    icon: Crown,
-    description: '전체 시스템 관리, 모든 권한',
-  },
-  admin: {
-    label: '관리자',
-    ...DASHBOARD_ROLE_BADGES.admin,
-    icon: Crown,
-    description: '시스템 관리 권한',
-  },
-  user: {
-    label: '사용자',
-    ...DASHBOARD_ROLE_BADGES.user,
-    icon: User,
-    description: '기본 사용자',
-  },
+  test_engineer: { ...DASHBOARD_ROLE_BADGES.test_engineer, icon: User },
+  technical_manager: { ...DASHBOARD_ROLE_BADGES.technical_manager, icon: Shield },
+  quality_manager: { ...DASHBOARD_ROLE_BADGES.quality_manager, icon: ShieldCheck },
+  lab_manager: { ...DASHBOARD_ROLE_BADGES.lab_manager, icon: ShieldCheck },
+  system_admin: { ...DASHBOARD_ROLE_BADGES.system_admin, icon: Crown },
+  admin: { ...DASHBOARD_ROLE_BADGES.admin, icon: Crown },
+  user: { ...DASHBOARD_ROLE_BADGES.user, icon: User },
 };
 
-function getGreeting(): string {
+function getGreetingKey(): string {
   const hour = new Date().getHours();
-  if (hour < 6) return '새벽이네요';
-  if (hour < 12) return '좋은 아침입니다';
-  if (hour < 14) return '점심 식사하셨나요';
-  if (hour < 18) return '좋은 오후입니다';
-  if (hour < 22) return '좋은 저녁입니다';
-  return '늦은 시간까지 수고하세요';
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  });
+  if (hour < 6) return 'dawn';
+  if (hour < 12) return 'morning';
+  if (hour < 14) return 'lunch';
+  if (hour < 18) return 'afternoon';
+  if (hour < 22) return 'evening';
+  return 'night';
 }
 
 export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   const { data: session, status } = useSession();
+  const t = useTranslations('dashboard.welcome');
 
   if (status === 'loading') {
     return (
@@ -99,22 +55,28 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
     );
   }
 
-  const userName = session?.user?.name || '사용자';
+  const userName = session?.user?.name || t('defaultUser');
   const userRole = session?.user?.role?.toLowerCase() || 'user';
   const role = roleInfo[userRole] || roleInfo['user'];
   const RoleIcon = role.icon;
 
-  const greeting = getGreeting();
-  const today = formatDate(new Date());
+  const greetingKey = getGreetingKey();
+  const roleLabel = t(`roles.${userRole}` as Parameters<typeof t>[0]);
+  const roleDescription = t(`roleDescriptions.${userRole}` as Parameters<typeof t>[0]);
+
+  const today = new Date().toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  });
 
   return (
-    <div
-      className={cn('space-y-2', className)}
-      role="banner"
-      aria-label="환영 메시지 및 사용자 정보"
-    >
+    <div className={cn('space-y-2', className)} role="banner" aria-label={t('ariaLabel')}>
       <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-        {greeting}, <span className="text-primary">{userName}</span>님
+        {t(`greeting.${greetingKey}` as Parameters<typeof t>[0])},{' '}
+        <span className="text-primary">{userName}</span>
+        {t('suffix')}
       </h1>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -122,20 +84,17 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
         <Badge
           variant="secondary"
           className={cn('flex items-center gap-1.5 py-1 px-2.5', role.bgColor, role.color)}
-          aria-label={`현재 역할: ${role.label}`}
+          aria-label={t('currentRole', { role: roleLabel })}
         >
           <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />
-          <span>{role.label}</span>
+          <span>{roleLabel}</span>
         </Badge>
 
         {/* 온라인 상태 표시 */}
         <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-          <span
-            className="inline-block w-2 h-2 rounded-full bg-ul-green motion-safe:animate-pulse"
-            aria-hidden="true"
-          />
-          <span className="sr-only">온라인 상태</span>
-          온라인
+          <span className="inline-block w-2 h-2 rounded-full bg-ul-green" aria-hidden="true" />
+          <span className="sr-only">{t('onlineStatus')}</span>
+          {t('online')}
         </span>
 
         {/* 구분선 */}
@@ -151,7 +110,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
 
       {/* 역할 설명 (작은 텍스트) */}
       <p className="text-xs text-muted-foreground/70 hidden md:block leading-relaxed">
-        {role.description}
+        {roleDescription}
       </p>
     </div>
   );
