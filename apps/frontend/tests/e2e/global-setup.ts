@@ -10,6 +10,7 @@
 import { FullConfig } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+import { BASE_URLS } from './shared/constants/shared-test-data';
 
 const AUTH_DIR = path.join(__dirname, '.auth');
 
@@ -73,7 +74,7 @@ async function globalSetup(config: FullConfig) {
 
   // 2. 테스트 환경 정보
   const baseURL = config.projects[0]?.use?.baseURL || 'http://localhost:3000';
-  const apiURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const apiURL = BASE_URLS.BACKEND;
   console.log(`  📍 Frontend: ${baseURL}`);
   console.log(`  📍 Backend: ${apiURL}`);
   console.log(`  🌐 NODE_ENV: ${process.env.NODE_ENV || 'development'}`);

@@ -39,9 +39,10 @@ export const LAB_MANAGER_ID = '00000000-0000-0000-0000-000000000003';
 // Equipment for workflow testing (available state)
 export const WORKFLOW_TEST_EQUIPMENT_ID = 'eeee1003-0003-4003-8003-000000000003'; // EQUIP_NETWORK_ANALYZER_SUW_E_ID
 
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 // Base URLs
-export const FRONTEND_BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
-export const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+export const FRONTEND_BASE_URL = BASE_URLS.FRONTEND;
+export const BACKEND_BASE_URL = BASE_URLS.BACKEND;
 
 /**
  * Expected dropdown label patterns (SSOT from schemas)

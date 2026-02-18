@@ -10,9 +10,10 @@
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
 
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 // Backend API base URL (direct access, bypassing Next.js rewrites)
 // Backend uses app.setGlobalPrefix('api'), so all routes are /api/*
-const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
+const BACKEND_URL = BASE_URLS.BACKEND + '/api';
 
 test.describe('교정기한 초과 자동 부적합 전환', () => {
   test('교정기한 초과 장비가 자동으로 부적합 상태로 전환되어야 함', async ({

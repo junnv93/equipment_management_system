@@ -57,7 +57,20 @@ for (const { role, label, file } of ROLES) {
     await page.waitForURL('/', { timeout: 15000 });
     await expect(page).not.toHaveURL(/\/login/);
 
-    // 4. storageState 저장 (쿠키 + localStorage)
+    // 4. i18n: E2E 테스트는 ko 로케일로 고정 (256개 spec 파일 변경 불필요)
+    //    Playwright addCookies는 maxAge 미지원 → expires (Unix timestamp, 초 단위) 사용
+    await page.context().addCookies([
+      {
+        name: 'NEXT_LOCALE',
+        value: 'ko',
+        domain: 'localhost',
+        path: '/',
+        expires: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60,
+        sameSite: 'Lax',
+      },
+    ]);
+
+    // 5. storageState 저장 (쿠키 + localStorage)
     await page.context().storageState({ path: outputPath });
   });
 }

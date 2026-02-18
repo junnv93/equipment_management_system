@@ -35,7 +35,9 @@ test.describe.serial('Final Rejection Disposal Workflow', () => {
     // 2. Invalidate backend cache via API
     // This is CRITICAL because direct DB updates bypass cache invalidation
     try {
-      const response = await request.post('http://localhost:3001/api/equipment/cache/invalidate');
+      const response = await request.post('http://localhost:3001/api/equipment/cache/invalidate', {
+        headers: { 'X-Internal-Api-Key': process.env.INTERNAL_API_KEY ?? 'dev-internal-key' },
+      });
       if (response.ok()) {
         console.log('✅ Backend cache invalidated via API');
       } else {

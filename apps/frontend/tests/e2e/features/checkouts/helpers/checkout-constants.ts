@@ -125,4 +125,5 @@ export const USERS = TEST_USER_IDS;
 // ============================================================================
 // Backend API Base URL
 // ============================================================================
-export const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+export const BACKEND_URL = BASE_URLS.BACKEND;

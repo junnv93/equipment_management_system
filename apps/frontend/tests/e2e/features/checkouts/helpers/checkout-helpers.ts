@@ -17,7 +17,8 @@ import {
 // Constants
 // ============================================================================
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+const BACKEND_URL = BASE_URLS.BACKEND;
 
 // ============================================================================
 // Database Direct Reset (for test state management)
