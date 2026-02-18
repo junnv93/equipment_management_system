@@ -1,0 +1,17 @@
+# Grafana Dashboard Provisioning
+# Auto-loads dashboard JSON files from the specified directory
+
+apiVersion: 1
+
+providers:
+  - name: 'Equipment Management System'
+    orgId: 1
+    folder: 'Equipment Management'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false

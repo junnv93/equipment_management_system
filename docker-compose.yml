@@ -40,6 +40,27 @@ services:
       timeout: 5s
       retries: 5
 
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: rustfs_equipment
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - rustfs_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:9000/minio/health/live || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 networks:
   app-network:
     driver: bridge
@@ -47,3 +68,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  rustfs_data:

@@ -1,0 +1,110 @@
+groups:
+  # Infrastructure Alerts
+  - name: infrastructure
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '서버 CPU 사용률 과부하'
+          description: 'CPU 사용률이 5분간 {{ $value | printf "%.1f" }}%를 초과했습니다.'
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'CPU 사용률 95% 초과 (긴급)'
+          description: 'CPU 사용률이 {{ $value | printf "%.1f" }}%에 달했습니다.'
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '서버 메모리 부족 경고'
+          description: '메모리 사용률이 {{ $value | printf "%.1f" }}%에 달했습니다.'
+
+      - alert: CriticalMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: '메모리 사용률 95% 초과 (긴급)'
+          description: '메모리 사용률이 {{ $value | printf "%.1f" }}%입니다. 즉시 조치 필요.'
+
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '디스크 공간 부족 경고'
+          description: '루트 파티션 사용률이 {{ $value | printf "%.1f" }}%입니다.'
+
+      - alert: CriticalDiskUsage
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_avail_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: '디스크 공간 부족 (긴급)'
+          description: '루트 파티션 사용률이 {{ $value | printf "%.1f" }}%입니다. 즉시 정리 필요.'
+
+  # Container Alerts
+  - name: containers
+    interval: 30s
+    rules:
+      - alert: ContainerRestarting
+        expr: increase(container_start_time_seconds[15m]) > 1
+        labels:
+          severity: warning
+        annotations:
+          summary: '컨테이너 재시작 감지'
+          description: '{{ $labels.name }} 컨테이너가 15분 내 재시작됐습니다.'
+
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes{name=~".+"} / container_spec_memory_limit_bytes{name=~".+"} * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '컨테이너 메모리 사용률 90% 초과'
+          description: '{{ $labels.name }} 메모리 사용률: {{ $value | printf "%.1f" }}%'
+
+  # Application Alerts (NestJS Backend)
+  - name: application
+    interval: 30s
+    rules:
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: '백엔드 서비스 다운'
+          description: 'NestJS 백엔드가 1분 이상 응답하지 않습니다.'
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'HTTP 에러율 5% 초과'
+          description: '최근 5분 HTTP 5xx 에러율: {{ $value | printf "%.1f" }}%'
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'API 응답 시간 p95 > 3초'
+          description: '최근 5분 p95 응답 시간: {{ $value | printf "%.2f" }}초'

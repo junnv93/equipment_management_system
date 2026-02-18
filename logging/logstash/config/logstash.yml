@@ -1,0 +1,6 @@
+http.host: '0.0.0.0'
+xpack.monitoring.elasticsearch.hosts: ['http://elasticsearch:9200']
+# 파이프라인 워커 수 (단일 서버 - CPU 절약)
+pipeline.workers: 1
+pipeline.batch.size: 125
+pipeline.batch.delay: 50

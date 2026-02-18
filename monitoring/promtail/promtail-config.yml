@@ -1,0 +1,52 @@
+# Promtail Configuration
+# Collects Docker container logs and sends to Loki
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Docker Container Logs
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*-json.log
+
+    pipeline_stages:
+      # Parse Docker JSON log format
+      - docker: {}
+
+      # Extract container name from filename path
+      - regex:
+          source: filename
+          expression: '/var/lib/docker/containers/(?P<container_id>[^/]+)/'
+
+      # Add labels based on container name patterns
+      - match:
+          selector: '{job="docker"}'
+          stages:
+            - regex:
+                source: log
+                expression: '^\{"level":"(?P<level>[^"]+)"'
+            - labels:
+                level:
+
+      # Drop noisy health check logs
+      - match:
+          selector: '{job="docker"} |~ "GET /api/monitoring/health"'
+          action: drop
+
+      # Drop Prometheus scrape logs
+      - match:
+          selector: '{job="docker"} |~ "GET /api/metrics"'
+          action: drop

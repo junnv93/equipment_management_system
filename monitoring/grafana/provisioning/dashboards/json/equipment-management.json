@@ -1,0 +1,76 @@
+{
+  "title": "Equipment Management System",
+  "uid": "ems-main",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP 요청 수 (req/min)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(http_requests_total[1m]) * 60", "legendFormat": "{{method}} {{route}}" }
+      ],
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 2,
+      "title": "API 응답 시간 p95 (초)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 3,
+      "title": "대기 중 승인",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(equipment_pending_approvals_total)" }],
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "value": 0, "color": "green" },
+            { "value": 10, "color": "yellow" },
+            { "value": 20, "color": "red" }
+          ]
+        }
+      },
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 4,
+      "title": "활성 반출",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
+      "targets": [{ "expr": "equipment_active_checkouts_total" }],
+      "options": { "colorMode": "value" },
+      "datasource": "Prometheus"
+    },
+    {
+      "id": 5,
+      "title": "부적합 장비",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "targets": [{ "expr": "equipment_non_conforming_total" }],
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "value": 0, "color": "green" },
+            { "value": 1, "color": "red" }
+          ]
+        }
+      },
+      "datasource": "Prometheus"
+    }
+  ]
+}

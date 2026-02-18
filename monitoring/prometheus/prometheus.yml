@@ -1,0 +1,50 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'equipment-management'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+# Alert rules file (mounted as /etc/prometheus/alert.rules.yml in docker-compose)
+rule_files:
+  - 'alert.rules.yml'
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # NestJS Backend Metrics (prom-client via @Public() endpoint)
+  - job_name: 'backend'
+    metrics_path: '/api/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['backend:3001']
+        labels:
+          service: 'equipment-backend'
+
+  # Node Exporter (Host Metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # cAdvisor (Container Metrics) — keep only essential metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'container_cpu_usage_seconds_total|container_memory_usage_bytes|container_network_.*|container_fs_.*|container_start_time_seconds'
+        action: keep
+
+  # Loki health (Log Aggregation)
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+        labels:
+          service: 'loki'

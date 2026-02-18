@@ -1,0 +1,32 @@
+filebeat.inputs:
+  - type: container
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_docker_metadata:
+          host: 'unix:///var/run/docker.sock'
+      # equipment-management 컨테이너만 수집
+      - drop_event:
+          when:
+            not:
+              or:
+                - contains:
+                    container.name: 'frontend'
+                - contains:
+                    container.name: 'backend'
+                - contains:
+                    container.name: 'nginx'
+
+processors:
+  - add_host_metadata: ~
+  - add_cloud_metadata: ~
+
+output.logstash:
+  hosts: ['logstash:5044']
+
+# 내부 모니터링
+monitoring.enabled: false
+
+# 로그 레벨
+logging.level: warning
+logging.to_files: false
