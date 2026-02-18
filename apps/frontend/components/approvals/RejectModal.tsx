@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/select';
 import { XCircle } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
+import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface RejectModalProps {
   item: ApprovalItem;
@@ -34,28 +36,20 @@ interface RejectFormState {
   success: boolean;
 }
 
-// 반려 사유 템플릿
-const REJECT_TEMPLATES = [
-  { value: '', label: '직접 입력' },
-  {
-    value: '서류 미비: 필수 서류가 누락되어 반려합니다. 해당 서류를 첨부하여 재요청해주세요.',
-    label: '서류 미비',
-  },
-  {
-    value: '정보 오류: 입력된 정보에 오류가 있습니다. 수정 후 재요청해주세요.',
-    label: '정보 오류',
-  },
-  {
-    value: '절차 미준수: 규정된 절차를 따르지 않았습니다. 절차에 따라 재요청해주세요.',
-    label: '절차 미준수',
-  },
-  {
-    value: '타당성 부족: 요청 사유에 대한 타당성이 부족합니다. 추가 설명과 함께 재요청해주세요.',
-    label: '타당성 부족',
-  },
-];
+const TEMPLATE_KEYS = ['spec', 'schedule', 'calibration', 'document', 'other'] as const;
 
 export default function RejectModal({ item, isOpen, onClose, onConfirm }: RejectModalProps) {
+  const t = useTranslations('approvals');
+
+  // 반려 사유 템플릿 (i18n)
+  const rejectTemplates = [
+    { value: '', label: t('rejectModal.directInput') },
+    ...TEMPLATE_KEYS.map((key) => ({
+      value: t(`rejectModal.templates.${key}`),
+      label: t(`rejectModal.templates.${key}`),
+    })),
+  ];
+
   // Local state for real-time validation
   const [reasonValue, setReasonValue] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -75,10 +69,9 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
 
       // 반려 사유 10자 이상 검증
       if (!reason || reason.trim().length < 10) {
-        // Set local validation error state instead
-        setValidationError('반려 사유는 10자 이상 입력해주세요.');
+        setValidationError(t('rejectModal.validation'));
         return {
-          error: null, // Don't set error in state
+          error: null,
           success: false,
         };
       }
@@ -88,7 +81,7 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
         return { error: null, success: true };
       } catch {
         return {
-          error: '반려 처리 중 오류가 발생했습니다.',
+          error: t('toasts.rejectError'),
           success: false,
         };
       }
@@ -122,22 +115,22 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>반려</DialogTitle>
+          <DialogTitle>{t('rejectModal.title')}</DialogTitle>
           <DialogDescription>
-            &quot;{item.summary}&quot; 요청을 반려합니다. 반려 사유를 입력해주세요.
+            {t('rejectModal.description', { summary: item.summary })}
           </DialogDescription>
         </DialogHeader>
 
         <form action={formAction} className="space-y-4">
           {/* 템플릿 선택 */}
           <div className="space-y-2">
-            <Label htmlFor="template">사유 템플릿</Label>
+            <Label htmlFor="template">{t('rejectModal.templatesLabel')}</Label>
             <Select onValueChange={handleTemplateSelect}>
               <SelectTrigger id="template">
-                <SelectValue placeholder="템플릿 선택 (선택사항)" />
+                <SelectValue placeholder={t('rejectModal.templateSelectPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
-                {REJECT_TEMPLATES.map((template) => (
+                {rejectTemplates.map((template) => (
                   <SelectItem key={template.value || 'direct'} value={template.value || 'direct'}>
                     {template.label}
                   </SelectItem>
@@ -148,13 +141,13 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
 
           {/* 반려 사유 */}
           <div className="space-y-2">
-            <Label htmlFor="reject-reason">반려 사유 (10자 이상 필수) *</Label>
+            <Label htmlFor="reject-reason">{t('rejectModal.reasonLabel')} *</Label>
             <Textarea
               id="reject-reason"
               name="reason"
               value={reasonValue}
               onChange={handleReasonChange}
-              placeholder="반려 사유를 입력하세요"
+              placeholder={t('rejectModal.reasonPlaceholder')}
               className="min-h-[120px]"
               aria-describedby={displayError ? 'reject-error' : undefined}
             />
@@ -172,17 +165,17 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-              취소
+              {t('rejectModal.cancel')}
             </Button>
             <Button
               type="submit"
               variant="destructive"
               disabled={isPending}
               aria-busy={isPending}
-              className="bg-ul-red hover:bg-ul-red-hover"
+              className={getApprovalActionButtonClasses('reject')}
             >
               <XCircle className="h-4 w-4 mr-1" />
-              {isPending ? '처리 중...' : '반려'}
+              {isPending ? t('processing') : t('rejectModal.title')}
             </Button>
           </DialogFooter>
         </form>

@@ -15,7 +15,7 @@ import { TeamMemberList } from './TeamMemberList';
 // 삭제 모달은 dynamic import로 지연 로딩
 const DeleteTeamModal = dynamic(
   () => import('./DeleteTeamModal').then((mod) => ({ default: mod.DeleteTeamModal })),
-  { ssr: false }
+  { loading: () => null, ssr: false }
 );
 
 export interface CurrentUserInfo {

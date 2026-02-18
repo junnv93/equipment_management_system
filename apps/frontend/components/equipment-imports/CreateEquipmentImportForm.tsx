@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ interface CreateEquipmentImportFormProps {
 export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmentImportFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations('equipment');
 
   const [form, setForm] = useState({
     equipmentName: '',
@@ -87,14 +89,14 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
     mutationFn: (data: CreateEquipmentImportDto) => equipmentImportApi.create(data),
     onSuccess: (data) => {
       toast({
-        title: '반입 신청이 완료되었습니다.',
-        description: '승인 대기 중입니다.',
+        title: t('equipmentImport.toasts.createSuccess'),
+        description: t('equipmentImport.toasts.createSuccessDesc'),
       });
       router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(data.id));
     },
     onError: (error) => {
       toast({
-        title: '반입 신청 실패',
+        title: t('equipmentImport.toasts.createError'),
         description: getErrorMessage(error),
         variant: 'destructive',
       });
@@ -106,7 +108,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
     if (!form.classification) {
       toast({
-        title: '분류를 선택해주세요.',
+        title: t('equipmentImport.toasts.classificationRequired'),
         variant: 'destructive',
       });
       return;
@@ -114,7 +116,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
     if (!form.usagePeriodStart || !form.usagePeriodEnd) {
       toast({
-        title: '사용 기간을 입력해주세요.',
+        title: t('equipmentImport.toasts.dateRequired'),
         variant: 'destructive',
       });
       return;
@@ -138,7 +140,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
     if (sourceType === 'rental') {
       if (!form.vendorName) {
         toast({
-          title: '렌탈 업체명을 입력해주세요.',
+          title: t('equipmentImport.toasts.vendorRequired'),
           variant: 'destructive',
         });
         return;
@@ -155,7 +157,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
       // internal_shared
       if (!form.ownerDepartment) {
         toast({
-          title: '소유 부서를 입력해주세요.',
+          title: t('equipmentImport.toasts.departmentRequired'),
           variant: 'destructive',
         });
         return;
@@ -174,11 +176,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
   };
 
   const handleBack = () => {
-    if (sourceType === 'rental') {
-      router.push('/checkouts?view=inbound');
-    } else {
-      router.push('/checkouts?view=inbound');
-    }
+    router.push('/checkouts?view=inbound');
   };
 
   const isRental = sourceType === 'rental';
@@ -192,12 +190,14 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
         </Button>
         <div>
           <h1 className="text-2xl font-bold">
-            {isRental ? '외부 렌탈 반입 신청' : '내부 공용장비 반입 신청'}
+            {isRental
+              ? t('equipmentImport.createForm.rentalTitle')
+              : t('equipmentImport.createForm.internalTitle')}
           </h1>
           <p className="text-muted-foreground">
             {isRental
-              ? '외부 업체로부터 렌탈 장비를 반입합니다.'
-              : '타 부서의 공용장비를 임시로 반입합니다.'}
+              ? t('equipmentImport.createForm.rentalSubtitle')
+              : t('equipmentImport.createForm.internalSubtitle')}
           </p>
         </div>
       </div>
@@ -205,27 +205,27 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
       {/* 장비 정보 */}
       <Card>
         <CardHeader>
-          <CardTitle>장비 정보</CardTitle>
-          <CardDescription>반입할 장비의 기본 정보를 입력하세요.</CardDescription>
+          <CardTitle>{t('equipmentImport.equipmentInfo')}</CardTitle>
+          <CardDescription>{t('equipmentImport.equipmentInfoDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label htmlFor="equipmentName">
-                장비명 <span className="text-red-500">*</span>
+                {t('equipmentImport.equipmentName')} <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="equipmentName"
                 value={form.equipmentName}
                 onChange={(e) => setForm({ ...form, equipmentName: e.target.value })}
                 required
-                placeholder="예: Spectrum Analyzer"
+                placeholder={t('equipmentImport.equipmentNamePlaceholder')}
               />
             </div>
 
             <div>
               <Label htmlFor="classification">
-                분류 <span className="text-red-500">*</span>
+                {t('equipmentImport.classificationLabel')} <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={form.classification}
@@ -233,7 +233,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                 required
               >
                 <SelectTrigger id="classification">
-                  <SelectValue placeholder="선택하세요" />
+                  <SelectValue placeholder={t('equipmentImport.classificationPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {classificationOptions.map(([value, label]) => (
@@ -246,43 +246,43 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
             </div>
 
             <div>
-              <Label htmlFor="modelName">모델명</Label>
+              <Label htmlFor="modelName">{t('equipmentImport.modelName')}</Label>
               <Input
                 id="modelName"
                 value={form.modelName}
                 onChange={(e) => setForm({ ...form, modelName: e.target.value })}
-                placeholder="예: RSA5000B"
+                placeholder={t('equipmentImport.modelNamePlaceholder')}
               />
             </div>
 
             <div>
-              <Label htmlFor="manufacturer">제조사</Label>
+              <Label htmlFor="manufacturer">{t('equipmentImport.manufacturer')}</Label>
               <Input
                 id="manufacturer"
                 value={form.manufacturer}
                 onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
-                placeholder="예: Tektronix"
+                placeholder={t('equipmentImport.manufacturerPlaceholder')}
               />
             </div>
 
             <div>
-              <Label htmlFor="serialNumber">일련번호</Label>
+              <Label htmlFor="serialNumber">{t('equipmentImport.serialNumber')}</Label>
               <Input
                 id="serialNumber"
                 value={form.serialNumber}
                 onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
-                placeholder="예: B012345"
+                placeholder={t('equipmentImport.serialNumberPlaceholder')}
               />
             </div>
 
             <div className="sm:col-span-2">
-              <Label htmlFor="description">설명</Label>
+              <Label htmlFor="description">{t('equipmentImport.description')}</Label>
               <Textarea
                 id="description"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={2}
-                placeholder="장비에 대한 추가 설명을 입력하세요."
+                placeholder={t('equipmentImport.descriptionPlaceholder')}
               />
             </div>
           </div>
@@ -292,11 +292,15 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
       {/* Conditional Source Information Card */}
       <Card>
         <CardHeader>
-          <CardTitle>{isRental ? '렌탈 업체 정보' : '소유 부서 정보'}</CardTitle>
+          <CardTitle>
+            {isRental
+              ? t('equipmentImport.rentalVendorInfo')
+              : t('equipmentImport.ownerDepartmentInfo')}
+          </CardTitle>
           <CardDescription>
             {isRental
-              ? '렌탈 업체의 정보를 입력하세요.'
-              : '장비를 소유한 부서의 정보를 입력하세요.'}
+              ? t('equipmentImport.rentalVendorInfoDesc')
+              : t('equipmentImport.ownerDepartmentInfoDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -305,34 +309,36 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
               <>
                 <div className="sm:col-span-2">
                   <Label htmlFor="vendorName">
-                    렌탈 업체명 <span className="text-red-500">*</span>
+                    {t('equipmentImport.vendorName')} <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="vendorName"
                     value={form.vendorName}
                     onChange={(e) => setForm({ ...form, vendorName: e.target.value })}
                     required
-                    placeholder="예: ABC 렌탈"
+                    placeholder={t('equipmentImport.vendorNamePlaceholder')}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="vendorContact">업체 연락처</Label>
+                  <Label htmlFor="vendorContact">{t('equipmentImport.vendorContact')}</Label>
                   <Input
                     id="vendorContact"
                     value={form.vendorContact}
                     onChange={(e) => setForm({ ...form, vendorContact: e.target.value })}
-                    placeholder="예: 02-1234-5678"
+                    placeholder={t('equipmentImport.vendorContactPlaceholder')}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="externalIdentifier">업체 장비번호</Label>
+                  <Label htmlFor="externalIdentifier">
+                    {t('equipmentImport.vendorEquipmentNumber')}
+                  </Label>
                   <Input
                     id="externalIdentifier"
                     value={form.externalIdentifier}
                     onChange={(e) => setForm({ ...form, externalIdentifier: e.target.value })}
-                    placeholder="업체에서 관리하는 장비번호"
+                    placeholder={t('equipmentImport.vendorEquipmentNumberPlaceholder')}
                   />
                 </div>
               </>
@@ -342,24 +348,24 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
               <>
                 <div className="sm:col-span-2">
                   <Label htmlFor="ownerDepartment">
-                    소유 부서 <span className="text-red-500">*</span>
+                    {t('equipmentImport.ownerDepartment')} <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="ownerDepartment"
                     value={form.ownerDepartment}
                     onChange={(e) => setForm({ ...form, ownerDepartment: e.target.value })}
                     required
-                    placeholder="예: Safety Lab, Battery Lab"
+                    placeholder={t('equipmentImport.ownerDepartmentPlaceholder')}
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <Label htmlFor="internalContact">담당자 연락처</Label>
+                  <Label htmlFor="internalContact">{t('equipmentImport.internalContact')}</Label>
                   <Input
                     id="internalContact"
                     value={form.internalContact}
                     onChange={(e) => setForm({ ...form, internalContact: e.target.value })}
-                    placeholder="예: 홍길동 (내선 1234)"
+                    placeholder={t('equipmentImport.internalContactPlaceholder')}
                   />
                 </div>
               </>
@@ -371,36 +377,38 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
       {/* Usage Period & Reason */}
       <Card>
         <CardHeader>
-          <CardTitle>사용 기간 및 사유</CardTitle>
-          <CardDescription>장비를 사용할 기간과 반입 사유를 입력하세요.</CardDescription>
+          <CardTitle>{t('equipmentImport.usagePeriodAndReason')}</CardTitle>
+          <CardDescription>{t('equipmentImport.usagePeriodAndReasonDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="usagePeriodStart">
-                사용 시작일 <span className="text-red-500">*</span>
+                {t('equipmentImport.usagePeriodStart')} <span className="text-red-500">*</span>
               </Label>
               <DatePicker
                 selected={form.usagePeriodStart ?? undefined}
                 onSelect={(date) => setForm({ ...form, usagePeriodStart: date ?? null })}
-                placeholder="시작일 선택"
+                placeholder={t('equipmentImport.startDatePlaceholder')}
               />
             </div>
 
             <div>
               <Label htmlFor="usagePeriodEnd">
-                사용 종료일 <span className="text-red-500">*</span>
+                {t('equipmentImport.usagePeriodEnd')} <span className="text-red-500">*</span>
               </Label>
               <DatePicker
                 selected={form.usagePeriodEnd ?? undefined}
                 onSelect={(date) => setForm({ ...form, usagePeriodEnd: date ?? null })}
-                placeholder="종료일 선택"
+                placeholder={t('equipmentImport.endDatePlaceholder')}
               />
             </div>
 
             <div className="sm:col-span-2">
               <Label htmlFor="reason">
-                {isInternalShared ? '반입 사유 (간략)' : '반입 사유'}{' '}
+                {isInternalShared
+                  ? t('equipmentImport.importReasonBrief')
+                  : t('equipmentImport.importReason')}{' '}
                 <span className="text-red-500">*</span>
               </Label>
               <Textarea
@@ -410,20 +418,24 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                 rows={3}
                 required
                 placeholder={
-                  isRental ? '렌탈 반입 사유를 입력하세요.' : '간략한 반입 사유를 입력하세요.'
+                  isRental
+                    ? t('equipmentImport.rentalReasonPlaceholder')
+                    : t('equipmentImport.internalReasonPlaceholder')
                 }
               />
             </div>
 
             {isInternalShared && (
               <div className="sm:col-span-2">
-                <Label htmlFor="borrowingJustification">반입 사유 (상세)</Label>
+                <Label htmlFor="borrowingJustification">
+                  {t('equipmentImport.detailedReasonLabel')}
+                </Label>
                 <Textarea
                   id="borrowingJustification"
                   value={form.borrowingJustification}
                   onChange={(e) => setForm({ ...form, borrowingJustification: e.target.value })}
                   rows={4}
-                  placeholder="반입이 필요한 상세한 배경과 사유를 입력하세요."
+                  placeholder={t('equipmentImport.detailedReasonPlaceholder')}
                 />
               </div>
             )}
@@ -431,10 +443,12 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={handleBack}>
-            취소
+            {t('equipmentImport.createForm.cancelButton')}
           </Button>
           <Button type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? '신청 중...' : '반입 신청'}
+            {createMutation.isPending
+              ? t('equipmentImport.createForm.submitting')
+              : t('equipmentImport.createForm.submitButton')}
           </Button>
         </CardFooter>
       </Card>

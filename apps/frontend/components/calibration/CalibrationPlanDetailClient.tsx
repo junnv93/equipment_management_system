@@ -62,6 +62,16 @@ import {
   Check,
 } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
+import { useTranslations } from 'next-intl';
+import {
+  getCalibrationPlanTimelineNodeClasses,
+  getCalibrationPlanTimelineConnectorClasses,
+  getActionButtonClasses,
+  getLoadingSpinnerClasses,
+  CALIBRATION_PLAN_TIMELINE_TOKENS,
+  ACTION_BUTTON_TOKENS,
+  COLLAPSIBLE_TOKENS,
+} from '@/lib/design-tokens';
 
 interface CalibrationPlanDetailClientProps {
   /**
@@ -91,6 +101,7 @@ export function CalibrationPlanDetailClient({
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
+  const t = useTranslations('calibration');
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingAgency, setEditingAgency] = useState('');
@@ -127,7 +138,7 @@ export function CalibrationPlanDetailClient({
       // 교정 계획서 정보를 사용해서 의미있는 라벨 생성
       const siteLabel = plan.siteId ? SITE_LABELS[plan.siteId] || plan.siteId : '';
       const yearLabel = plan.year ? `${plan.year}년` : '';
-      const label = `${siteLabel} ${yearLabel} 교정계획서`.trim();
+      const label = `${siteLabel} ${yearLabel} ${t('planDetail.breadcrumbSuffix')}`.trim();
 
       setDynamicLabel(planUuid, label);
     }
@@ -154,16 +165,17 @@ export function CalibrationPlanDetailClient({
       }),
     onSuccess: () => {
       toast({
-        title: '검토 요청 완료',
-        description: '교정계획서가 품질책임자에게 검토 요청되었습니다.',
+        title: t('planDetail.toasts.submitForReviewSuccess'),
+        description: t('planDetail.toasts.submitForReviewSuccessDesc'),
       });
       invalidateAfterChange();
       setIsSubmitDialogOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '검토 요청 실패',
-        description: error.response?.data?.message || '검토 요청 중 오류가 발생했습니다.',
+        title: t('planDetail.toasts.submitForReviewError'),
+        description:
+          error.response?.data?.message || t('planDetail.toasts.submitForReviewErrorDesc'),
         variant: 'destructive',
       });
       invalidateAfterChange();
@@ -179,8 +191,8 @@ export function CalibrationPlanDetailClient({
       }),
     onSuccess: () => {
       toast({
-        title: '확인 완료',
-        description: '품질책임자 확인이 완료되어 시험소장에게 승인 요청되었습니다.',
+        title: t('planDetail.toasts.reviewSuccess'),
+        description: t('planDetail.toasts.reviewSuccessDesc'),
       });
       invalidateAfterChange();
       setShowReviewComment(false);
@@ -188,8 +200,8 @@ export function CalibrationPlanDetailClient({
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '확인 완료 실패',
-        description: error.response?.data?.message || '확인 처리 중 오류가 발생했습니다.',
+        title: t('planDetail.toasts.reviewError'),
+        description: error.response?.data?.message || t('planDetail.toasts.reviewErrorDesc'),
         variant: 'destructive',
       });
       invalidateAfterChange();
@@ -204,16 +216,16 @@ export function CalibrationPlanDetailClient({
       }),
     onSuccess: () => {
       toast({
-        title: '승인 완료',
-        description: '교정계획서가 최종 승인되었습니다.',
+        title: t('planDetail.toasts.approveSuccess'),
+        description: t('planDetail.toasts.approveSuccessDesc'),
       });
       invalidateAfterChange();
       setIsApproveDialogOpen(false);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '승인 실패',
-        description: error.response?.data?.message || '승인 처리 중 오류가 발생했습니다.',
+        title: t('planDetail.toasts.approveError'),
+        description: error.response?.data?.message || t('planDetail.toasts.approveErrorDesc'),
         variant: 'destructive',
       });
       invalidateAfterChange();
@@ -229,8 +241,8 @@ export function CalibrationPlanDetailClient({
       }),
     onSuccess: () => {
       toast({
-        title: '반려 완료',
-        description: '교정계획서가 반려되었습니다.',
+        title: t('planDetail.toasts.rejectSuccess'),
+        description: t('planDetail.toasts.rejectSuccessDesc'),
       });
       invalidateAfterChange();
       setIsRejectDialogOpen(false);
@@ -238,8 +250,8 @@ export function CalibrationPlanDetailClient({
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '반려 실패',
-        description: error.response?.data?.message || '반려 처리 중 오류가 발생했습니다.',
+        title: t('planDetail.toasts.rejectError'),
+        description: error.response?.data?.message || t('planDetail.toasts.rejectErrorDesc'),
         variant: 'destructive',
       });
       invalidateAfterChange();
@@ -251,15 +263,15 @@ export function CalibrationPlanDetailClient({
     mutationFn: () => calibrationPlansApi.deleteCalibrationPlan(planUuid),
     onSuccess: () => {
       toast({
-        title: '삭제 완료',
-        description: '교정계획서가 삭제되었습니다.',
+        title: t('planDetail.toasts.deleteSuccess'),
+        description: t('planDetail.toasts.deleteSuccessDesc'),
       });
       router.push('/calibration-plans');
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '삭제 실패',
-        description: error.response?.data?.message || '삭제 중 오류가 발생했습니다.',
+        title: t('planDetail.toasts.deleteError'),
+        description: error.response?.data?.message || t('planDetail.toasts.deleteErrorDesc'),
         variant: 'destructive',
       });
     },
@@ -276,16 +288,16 @@ export function CalibrationPlanDetailClient({
     }) => calibrationPlansApi.updatePlanItem(planUuid, itemUuid, data),
     onSuccess: () => {
       toast({
-        title: '항목 수정 완료',
-        description: '항목이 수정되었습니다.',
+        title: t('planDetail.toasts.updateItemSuccess'),
+        description: t('planDetail.toasts.updateItemSuccessDesc'),
       });
       CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
       setEditingItemId(null);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '항목 수정 실패',
-        description: error.response?.data?.message || '항목 수정 중 오류가 발생했습니다.',
+        title: t('planDetail.toasts.updateItemError'),
+        description: error.response?.data?.message || t('planDetail.toasts.updateItemErrorDesc'),
         variant: 'destructive',
       });
     },
@@ -299,15 +311,15 @@ export function CalibrationPlanDetailClient({
       }),
     onSuccess: () => {
       toast({
-        title: '확인 완료',
-        description: '항목이 확인되었습니다.',
+        title: t('planDetail.toasts.confirmItemSuccess'),
+        description: t('planDetail.toasts.confirmItemSuccessDesc'),
       });
       CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
     },
     onError: (error: Error & { response?: { data?: { message?: string } } }) => {
       toast({
-        title: '확인 실패',
-        description: error.response?.data?.message || '항목 확인 중 오류가 발생했습니다.',
+        title: t('planDetail.toasts.confirmItemError'),
+        description: error.response?.data?.message || t('planDetail.toasts.confirmItemErrorDesc'),
         variant: 'destructive',
       });
       CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
@@ -365,8 +377,8 @@ export function CalibrationPlanDetailClient({
       <div className="container mx-auto py-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>오류</AlertTitle>
-          <AlertDescription>교정계획서를 불러오는 중 오류가 발생했습니다.</AlertDescription>
+          <AlertTitle>{t('planDetail.error.title')}</AlertTitle>
+          <AlertDescription>{t('planDetail.error.loadFailed')}</AlertDescription>
         </Alert>
       </div>
     );
@@ -404,23 +416,27 @@ export function CalibrationPlanDetailClient({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">
-                {plan.year}년 {SITE_LABELS[plan.siteId]} 교정계획서
+                {plan.year}년 {SITE_LABELS[plan.siteId]} {t('planDetail.breadcrumbSuffix')}
               </h1>
               <Badge className={CALIBRATION_PLAN_STATUS_COLORS[plan.status]}>
                 {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
               </Badge>
             </div>
             <p className="text-muted-foreground">
-              작성자: {plan.createdBy} | 작성일:{' '}
-              <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
+              {t('planDetail.header.author')}: {plan.createdBy} | {t('planDetail.header.createdAt')}
+              : <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
             </p>
           </div>
         </div>
         <div className="flex gap-2">
           {isApproved && (
-            <Button variant="outline" onClick={handlePrintView}>
-              <Download className="h-4 w-4 mr-2" />
-              인쇄/PDF
+            <Button
+              variant="outline"
+              onClick={handlePrintView}
+              className={getActionButtonClasses('ghost')}
+            >
+              <Download className={`${ACTION_BUTTON_TOKENS.ghost.iconSize} mr-2`} />
+              {t('planDetail.actions.printPdf')}
             </Button>
           )}
           {/* 작성 중/반려됨 상태: 삭제 및 검토 요청 (기술책임자/시험소장) */}
@@ -431,18 +447,20 @@ export function CalibrationPlanDetailClient({
                   variant="outline"
                   onClick={() => setIsDeleteDialogOpen(true)}
                   disabled={deleteMutation.isPending}
+                  className={getActionButtonClasses('destructive')}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  삭제
+                  <Trash2 className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
+                  {t('planDetail.actions.delete')}
                 </Button>
               )}
               {canSubmitForReview && (
                 <Button
                   onClick={() => setIsSubmitDialogOpen(true)}
                   disabled={submitForReviewMutation.isPending || !plan}
+                  className={getActionButtonClasses('primary')}
                 >
-                  <Send className="h-4 w-4 mr-2" />
-                  검토 요청
+                  <Send className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
+                  {t('planDetail.actions.submitForReview')}
                 </Button>
               )}
             </>
@@ -455,16 +473,18 @@ export function CalibrationPlanDetailClient({
                 variant="outline"
                 onClick={() => setIsRejectDialogOpen(true)}
                 disabled={rejectMutation.isPending || !plan}
+                className={getActionButtonClasses('destructive')}
               >
-                <XCircle className="h-4 w-4 mr-2" />
-                반려
+                <XCircle className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
+                {t('planDetail.actions.reject')}
               </Button>
               <Button
                 onClick={() => setIsApproveDialogOpen(true)}
                 disabled={approveMutation.isPending || !plan}
+                className={getActionButtonClasses('primary')}
               >
-                <UserCheck className="h-4 w-4 mr-2" />
-                최종 승인
+                <UserCheck className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
+                {t('planDetail.actions.finalApprove')}
               </Button>
             </>
           )}
@@ -474,33 +494,37 @@ export function CalibrationPlanDetailClient({
               variant="outline"
               onClick={() => setIsRejectDialogOpen(true)}
               disabled={rejectMutation.isPending || !plan}
+              className={getActionButtonClasses('destructive')}
             >
-              <XCircle className="h-4 w-4 mr-2" />
-              반려
+              <XCircle className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
+              {t('planDetail.actions.reject')}
             </Button>
           )}
         </div>
       </div>
 
-      {/* 3단계 승인 타임라인 */}
+      {/* 3단계 승인 타임라인 — Design Token v2 적용 */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             {/* 1단계: 작성 */}
             <div className="flex flex-col items-center flex-1">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  isDraft
-                    ? 'bg-blue-500 dark:bg-blue-600 text-white'
-                    : 'bg-green-500 dark:bg-green-600 text-white'
-                }`}
+                className={getCalibrationPlanTimelineNodeClasses(isDraft ? 'active' : 'completed')}
               >
                 {isDraft ? <Circle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
               </div>
-              <span className="mt-2 text-sm font-medium">1. 작성</span>
-              <span className="text-xs text-muted-foreground">기술책임자</span>
+              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
+                {t('planDetail.timeline.step1')}
+              </span>
+              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
+                {t('planDetail.timeline.technicalManager')}
+              </span>
               {plan.submittedAt && (
-                <time dateTime={plan.submittedAt} className="text-xs text-muted-foreground">
+                <time
+                  dateTime={plan.submittedAt}
+                  className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
+                >
                   {formatDate(plan.submittedAt, 'MM/dd HH:mm')}
                 </time>
               )}
@@ -508,25 +532,23 @@ export function CalibrationPlanDetailClient({
 
             {/* 연결선 1-2 */}
             <div
-              className={`h-0.5 flex-1 ${
+              className={getCalibrationPlanTimelineConnectorClasses(
                 isPendingReview || isPendingApproval || isApproved
-                  ? 'bg-green-500 dark:bg-green-600'
-                  : 'bg-gray-300 dark:bg-gray-600'
-              }`}
+              )}
             />
 
             {/* 2단계: 확인 */}
             <div className="flex flex-col items-center flex-1">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                className={getCalibrationPlanTimelineNodeClasses(
                   isPendingReview
-                    ? 'bg-yellow-500 dark:bg-yellow-600 text-white motion-safe:animate-pulse'
+                    ? 'active'
                     : isPendingApproval || isApproved
-                      ? 'bg-green-500 dark:bg-green-600 text-white'
+                      ? 'completed'
                       : isRejected && plan.rejectionStage === 'review'
-                        ? 'bg-red-500 dark:bg-red-600 text-white'
-                        : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
-                }`}
+                        ? 'rejected'
+                        : 'pending'
+                )}
               >
                 {isPendingReview ? (
                   <Circle className="h-5 w-5" />
@@ -538,55 +560,64 @@ export function CalibrationPlanDetailClient({
                   <Circle className="h-5 w-5" />
                 )}
               </div>
-              <span className="mt-2 text-sm font-medium">2. 확인</span>
-              <span className="text-xs text-muted-foreground">품질책임자</span>
+              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
+                {t('planDetail.timeline.step2')}
+              </span>
+              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
+                {t('planDetail.timeline.qualityManager')}
+              </span>
               {plan.reviewedAt && (
-                <time dateTime={plan.reviewedAt} className="text-xs text-muted-foreground">
+                <time
+                  dateTime={plan.reviewedAt}
+                  className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
+                >
                   {formatDate(plan.reviewedAt, 'MM/dd HH:mm')}
                 </time>
               )}
 
-              {/* 품질책임자용 인라인 확인 버튼 */}
+              {/* 품질책임자용 인라인 확인 버튼 — Design Token 적용 */}
               {canReview && (
                 <div className="mt-3 flex flex-col items-center gap-1">
                   <Button
                     size="sm"
                     onClick={() => reviewMutation.mutate()}
                     disabled={reviewMutation.isPending || !plan}
-                    className="w-24"
-                    aria-label="교정계획서 확인 완료"
+                    className={`${ACTION_BUTTON_TOKENS.inline.size} w-24`}
+                    aria-label={t('planDetail.timeline.ariaConfirmReview')}
                   >
                     {reviewMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+                      <Loader2 className={getLoadingSpinnerClasses()} aria-hidden="true" />
                     ) : (
                       <>
-                        <Check className="h-4 w-4 mr-1" />
-                        확인 완료
+                        <Check className={ACTION_BUTTON_TOKENS.inline.iconSize} />
+                        {t('planDetail.actions.confirmReview')}
                       </>
                     )}
                   </Button>
 
-                  {/* 확장 가능한 의견란 */}
+                  {/* 확장 가능한 의견란 — Collapsible Token 적용 */}
                   <Collapsible open={showReviewComment} onOpenChange={setShowReviewComment}>
-                    <CollapsibleTrigger className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mt-1">
+                    <CollapsibleTrigger
+                      className={`${COLLAPSIBLE_TOKENS.trigger.fontSize} ${COLLAPSIBLE_TOKENS.trigger.color} ${COLLAPSIBLE_TOKENS.trigger.gap} ${COLLAPSIBLE_TOKENS.trigger.focus} ${COLLAPSIBLE_TOKENS.trigger.transition} flex items-center mt-1`}
+                    >
                       {showReviewComment ? (
                         <>
-                          <ChevronUp className="h-3 w-3" />
-                          의견 접기
+                          <ChevronUp className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
+                          {t('planDetail.actions.collapseComment')}
                         </>
                       ) : (
                         <>
-                          <Plus className="h-3 w-3" />
-                          의견 추가
+                          <Plus className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
+                          {t('planDetail.actions.addComment')}
                         </>
                       )}
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
+                    <CollapsibleContent className={COLLAPSIBLE_TOKENS.content.marginTop}>
                       <Input
-                        placeholder="간단한 의견 (선택)"
+                        placeholder={t('planDetail.placeholders.reviewComment')}
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
-                        className="w-32 text-xs h-8"
+                        className={`${COLLAPSIBLE_TOKENS.content.input.width} ${COLLAPSIBLE_TOKENS.content.input.fontSize} ${COLLAPSIBLE_TOKENS.content.input.height}`}
                       />
                     </CollapsibleContent>
                   </Collapsible>
@@ -594,10 +625,10 @@ export function CalibrationPlanDetailClient({
                   <button
                     type="button"
                     onClick={() => setIsRejectDialogOpen(true)}
-                    className="text-xs text-muted-foreground hover:text-destructive underline mt-1"
+                    className={`${COLLAPSIBLE_TOKENS.trigger.fontSize} text-muted-foreground hover:text-destructive underline mt-1 ${COLLAPSIBLE_TOKENS.trigger.transition} ${COLLAPSIBLE_TOKENS.trigger.focus}`}
                     disabled={rejectMutation.isPending || !plan}
                   >
-                    반려
+                    {t('planDetail.actions.reject')}
                   </button>
                 </div>
               )}
@@ -605,25 +636,23 @@ export function CalibrationPlanDetailClient({
 
             {/* 연결선 2-3 */}
             <div
-              className={`h-0.5 flex-1 ${
+              className={getCalibrationPlanTimelineConnectorClasses(
                 isPendingApproval || isApproved
-                  ? 'bg-green-500 dark:bg-green-600'
-                  : 'bg-gray-300 dark:bg-gray-600'
-              }`}
+              )}
             />
 
             {/* 3단계: 승인 */}
             <div className="flex flex-col items-center flex-1">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                className={getCalibrationPlanTimelineNodeClasses(
                   isPendingApproval
-                    ? 'bg-blue-500 dark:bg-blue-600 text-white'
+                    ? 'active'
                     : isApproved
-                      ? 'bg-green-500 dark:bg-green-600 text-white'
+                      ? 'completed'
                       : isRejected && plan.rejectionStage === 'approval'
-                        ? 'bg-red-500 dark:bg-red-600 text-white'
-                        : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
-                }`}
+                        ? 'rejected'
+                        : 'pending'
+                )}
               >
                 {isPendingApproval ? (
                   <Circle className="h-5 w-5" />
@@ -635,10 +664,17 @@ export function CalibrationPlanDetailClient({
                   <Circle className="h-5 w-5" />
                 )}
               </div>
-              <span className="mt-2 text-sm font-medium">3. 승인</span>
-              <span className="text-xs text-muted-foreground">시험소장</span>
+              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
+                {t('planDetail.timeline.step3')}
+              </span>
+              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
+                {t('planDetail.timeline.labManager')}
+              </span>
               {plan.approvedAt && (
-                <time dateTime={plan.approvedAt} className="text-xs text-muted-foreground">
+                <time
+                  dateTime={plan.approvedAt}
+                  className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
+                >
                   {formatDate(plan.approvedAt, 'MM/dd HH:mm')}
                 </time>
               )}
@@ -652,7 +688,11 @@ export function CalibrationPlanDetailClient({
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>
-            반려됨 ({plan.rejectionStage === 'review' ? '확인 단계' : '승인 단계'})
+            {t('planDetail.rejection.title')} (
+            {plan.rejectionStage === 'review'
+              ? t('planDetail.rejection.reviewStage')
+              : t('planDetail.rejection.approvalStage')}
+            )
           </AlertTitle>
           <AlertDescription>{plan.rejectionReason}</AlertDescription>
         </Alert>
@@ -662,7 +702,7 @@ export function CalibrationPlanDetailClient({
       {plan.reviewComment && (isPendingApproval || isApproved) && (
         <Alert>
           <ClipboardCheck className="h-4 w-4" />
-          <AlertTitle>확인 의견</AlertTitle>
+          <AlertTitle>{t('planDetail.reviewComment')}</AlertTitle>
           <AlertDescription>{plan.reviewComment}</AlertDescription>
         </Alert>
       )}
@@ -672,9 +712,11 @@ export function CalibrationPlanDetailClient({
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4 text-sm">
-              <span>승인자: {plan.approvedBy}</span>
               <span>
-                승인일:{' '}
+                {t('planDetail.approvalInfo.approver')}: {plan.approvedBy}
+              </span>
+              <span>
+                {t('planDetail.approvalInfo.approvedAt')}:{' '}
                 <time dateTime={plan.approvedAt}>
                   {formatDate(plan.approvedAt, 'yyyy-MM-dd HH:mm')}
                 </time>
@@ -687,43 +729,51 @@ export function CalibrationPlanDetailClient({
       {/* 항목 테이블 */}
       <Card>
         <CardHeader>
-          <CardTitle>교정 계획 항목</CardTitle>
-          <CardDescription>총 {items.length}개의 장비가 포함되어 있습니다</CardDescription>
+          <CardTitle>{t('planDetail.items.title')}</CardTitle>
+          <CardDescription>
+            {t('planDetail.items.description', { count: items.length })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {items.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>계획서에 포함된 장비가 없습니다</p>
+              <p>{t('planDetail.items.empty')}</p>
             </div>
           ) : (
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60px]">순번</TableHead>
-                    <TableHead>관리번호</TableHead>
-                    <TableHead>장비명</TableHead>
+                    <TableHead className="w-[60px]">
+                      {t('planDetail.items.headers.sequence')}
+                    </TableHead>
+                    <TableHead>{t('planDetail.items.headers.managementNumber')}</TableHead>
+                    <TableHead>{t('planDetail.items.headers.equipmentName')}</TableHead>
                     <TableHead className="text-center" colSpan={3}>
-                      현황 (스냅샷)
+                      {t('planDetail.items.headers.snapshot')}
                     </TableHead>
                     <TableHead className="text-center" colSpan={3}>
-                      계획
+                      {t('planDetail.items.headers.plan')}
                     </TableHead>
-                    <TableHead>비고</TableHead>
-                    {(isDraft || isApproved) && <TableHead className="w-[100px]">액션</TableHead>}
+                    <TableHead>{t('planDetail.items.headers.notes')}</TableHead>
+                    {(isDraft || isApproved) && (
+                      <TableHead className="w-[100px]">
+                        {t('planDetail.items.headers.action')}
+                      </TableHead>
+                    )}
                   </TableRow>
                   <TableRow className="bg-muted/50">
                     <TableHead></TableHead>
                     <TableHead></TableHead>
                     <TableHead></TableHead>
-                    <TableHead>유효일자</TableHead>
-                    <TableHead>교정주기</TableHead>
-                    <TableHead>교정기관</TableHead>
-                    <TableHead>교정일자</TableHead>
-                    <TableHead>교정기관</TableHead>
-                    <TableHead>확인</TableHead>
-                    <TableHead>실제교정일</TableHead>
+                    <TableHead>{t('planDetail.items.headers.validityDate')}</TableHead>
+                    <TableHead>{t('planDetail.items.headers.calibrationCycle')}</TableHead>
+                    <TableHead>{t('planDetail.items.headers.calibrationAgency')}</TableHead>
+                    <TableHead>{t('planDetail.items.headers.plannedDate')}</TableHead>
+                    <TableHead>{t('planDetail.items.headers.plannedAgency')}</TableHead>
+                    <TableHead>{t('planDetail.items.headers.confirmation')}</TableHead>
+                    <TableHead>{t('planDetail.items.headers.actualDate')}</TableHead>
                     {(isDraft || isApproved) && <TableHead></TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -742,7 +792,9 @@ export function CalibrationPlanDetailClient({
                       </TableCell>
                       <TableCell>
                         {item.snapshotCalibrationCycle
-                          ? `${item.snapshotCalibrationCycle}개월`
+                          ? t('planDetail.items.monthUnit', {
+                              count: item.snapshotCalibrationCycle,
+                            })
                           : '-'}
                       </TableCell>
                       <TableCell>{item.snapshotCalibrationAgency || '-'}</TableCell>
@@ -766,7 +818,7 @@ export function CalibrationPlanDetailClient({
                         {item.confirmedBy ? (
                           <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            확인됨
+                            {t('planDetail.items.confirmed')}
                           </Badge>
                         ) : (
                           '-'
@@ -777,7 +829,7 @@ export function CalibrationPlanDetailClient({
                           <Input
                             value={editingNotes}
                             onChange={(e) => setEditingNotes(e.target.value)}
-                            placeholder="비고"
+                            placeholder={t('planDetail.placeholders.notes')}
                             className="w-[100px]"
                           />
                         ) : (
@@ -821,7 +873,7 @@ export function CalibrationPlanDetailClient({
                                   size="sm"
                                   onClick={() => confirmItemMutation.mutate(item.id)}
                                   disabled={confirmItemMutation.isPending}
-                                  title="확인"
+                                  title={t('planDetail.items.confirm')}
                                 >
                                   <CheckCircle2 className="h-4 w-4" />
                                 </Button>
@@ -843,21 +895,19 @@ export function CalibrationPlanDetailClient({
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>계획서 삭제</DialogTitle>
-            <DialogDescription>
-              정말로 이 교정계획서를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-            </DialogDescription>
+            <DialogTitle>{t('planDetail.dialogs.delete.title')}</DialogTitle>
+            <DialogDescription>{t('planDetail.dialogs.delete.description')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              취소
+              {t('planDetail.actions.cancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
             >
-              삭제
+              {t('planDetail.actions.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -867,20 +917,18 @@ export function CalibrationPlanDetailClient({
       <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>검토 요청</DialogTitle>
-            <DialogDescription>
-              교정계획서를 품질책임자에게 검토 요청하시겠습니까? 검토 요청 후에는 수정이 불가합니다.
-            </DialogDescription>
+            <DialogTitle>{t('planDetail.dialogs.submit.title')}</DialogTitle>
+            <DialogDescription>{t('planDetail.dialogs.submit.description')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
-              취소
+              {t('planDetail.actions.cancel')}
             </Button>
             <Button
               onClick={() => submitForReviewMutation.mutate()}
               disabled={submitForReviewMutation.isPending}
             >
-              검토 요청
+              {t('planDetail.actions.submitForReview')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -890,17 +938,15 @@ export function CalibrationPlanDetailClient({
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>최종 승인</DialogTitle>
-            <DialogDescription>
-              교정계획서를 최종 승인하시겠습니까? 승인 후에는 계획에 따라 교정이 진행됩니다.
-            </DialogDescription>
+            <DialogTitle>{t('planDetail.dialogs.approve.title')}</DialogTitle>
+            <DialogDescription>{t('planDetail.dialogs.approve.description')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
-              취소
+              {t('planDetail.actions.cancel')}
             </Button>
             <Button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>
-              최종 승인
+              {t('planDetail.actions.finalApprove')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -910,31 +956,31 @@ export function CalibrationPlanDetailClient({
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>반려</DialogTitle>
-            <DialogDescription>
-              교정계획서를 반려하시겠습니까? 반려 사유를 입력해주세요.
-            </DialogDescription>
+            <DialogTitle>{t('planDetail.dialogs.reject.title')}</DialogTitle>
+            <DialogDescription>{t('planDetail.dialogs.reject.description')}</DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <label className="text-sm font-medium">반려 사유 (필수)</label>
+            <label className="text-sm font-medium">
+              {t('planDetail.dialogs.reject.reasonLabel')}
+            </label>
             <textarea
               className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               rows={3}
-              placeholder="반려 사유를 입력하세요"
+              placeholder={t('planDetail.dialogs.reject.reasonPlaceholder')}
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>
-              취소
+              {t('planDetail.actions.cancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={() => rejectMutation.mutate()}
               disabled={rejectMutation.isPending || !rejectionReason.trim()}
             >
-              반려
+              {t('planDetail.actions.reject')}
             </Button>
           </DialogFooter>
         </DialogContent>

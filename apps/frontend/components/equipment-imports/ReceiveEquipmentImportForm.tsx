@@ -26,7 +26,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft } from 'lucide-react';
-import equipmentImportApi, { type ReceivingCondition } from '@/lib/api/equipment-import-api';
+import equipmentImportApi, {
+  type ReceivingCondition,
+  type ReceiveEquipmentImportDto,
+} from '@/lib/api/equipment-import-api';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CALIBRATION_METHOD_LABELS,
@@ -97,7 +100,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
 
   const receiveMutation = useMutation({
     mutationFn: () => {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         receivingCondition: {
           ...condition,
           notes: condition.notes || undefined,
@@ -118,7 +121,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
         };
       }
 
-      return equipmentImportApi.receive(id, payload);
+      return equipmentImportApi.receive(id, payload as unknown as ReceiveEquipmentImportDto);
     },
     onSuccess: () => {
       toast({

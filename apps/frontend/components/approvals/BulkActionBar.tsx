@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { APPROVAL_BULK_BAR_TOKENS, getApprovalActionButtonClasses } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface BulkActionBarProps {
   selectedCount: number;
@@ -38,6 +40,7 @@ export function BulkActionBar({
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const t = useTranslations('approvals');
 
   const isAllSelected = selectedCount === totalCount && totalCount > 0;
   const hasSelection = selectedCount > 0;
@@ -72,17 +75,19 @@ export function BulkActionBar({
   }
 
   return (
-    <div className="flex items-center justify-between py-3 px-4 bg-muted/30 rounded-lg">
+    <div
+      className={`flex items-center justify-between py-3 px-4 rounded-lg ${APPROVAL_BULK_BAR_TOKENS.container}`}
+    >
       {/* 전체 선택 */}
       <div className="flex items-center gap-3">
         <Checkbox
           id="select-all"
           checked={isAllSelected}
           onCheckedChange={onSelectAll}
-          aria-label={isAllSelected ? '전체 선택 해제' : '전체 선택'}
+          aria-label={isAllSelected ? t('bulk.deselectAll') : t('bulk.selectAll')}
         />
         <Label htmlFor="select-all" className="text-sm cursor-pointer">
-          전체 선택 ({selectedCount}/{totalCount})
+          {t('bulk.selectAll')} ({selectedCount}/{totalCount})
         </Label>
       </div>
 
@@ -93,10 +98,10 @@ export function BulkActionBar({
           size="sm"
           disabled={!hasSelection}
           onClick={() => setIsApproveDialogOpen(true)}
-          className="bg-ul-green hover:bg-ul-green-hover text-white"
+          className={getApprovalActionButtonClasses('approve')}
         >
           <CheckCircle2 className="h-4 w-4 mr-1" />
-          일괄 {actionLabel}
+          {t('bulk.action', { action: actionLabel })}
         </Button>
         <Button
           type="button"
@@ -104,10 +109,10 @@ export function BulkActionBar({
           variant="destructive"
           disabled={!hasSelection}
           onClick={() => setIsRejectDialogOpen(true)}
-          className="bg-ul-red hover:bg-ul-red-hover"
+          className={getApprovalActionButtonClasses('reject')}
         >
           <XCircle className="h-4 w-4 mr-1" />
-          일괄 반려
+          {t('bulk.reject')}
         </Button>
       </div>
 
@@ -115,19 +120,19 @@ export function BulkActionBar({
       <AlertDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>일괄 {actionLabel}</AlertDialogTitle>
+            <AlertDialogTitle>{t('bulk.confirmTitle', { action: actionLabel })}</AlertDialogTitle>
             <AlertDialogDescription>
-              선택한 {selectedCount}개 항목을 {actionLabel}하시겠습니까?
+              {t('bulk.confirmDescription', { action: actionLabel, count: selectedCount })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing}>{t('actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkApprove}
               disabled={isProcessing}
-              className="bg-ul-green hover:bg-ul-green-hover"
+              className={getApprovalActionButtonClasses('approve')}
             >
-              {isProcessing ? '처리 중...' : `${actionLabel}`}
+              {isProcessing ? t('processing') : actionLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -137,34 +142,34 @@ export function BulkActionBar({
       <AlertDialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>일괄 반려</AlertDialogTitle>
+            <AlertDialogTitle>{t('bulk.reject')}</AlertDialogTitle>
             <AlertDialogDescription>
-              선택한 {selectedCount}개 항목을 반려합니다. 공통 반려 사유를 입력해주세요.
+              {t('bulk.rejectDescription', { count: selectedCount })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
-            <Label htmlFor="bulk-reject-reason">반려 사유 (10자 이상 필수)</Label>
+            <Label htmlFor="bulk-reject-reason">{t('rejectModal.reasonLabel')}</Label>
             <Textarea
               id="bulk-reject-reason"
-              placeholder="반려 사유를 입력하세요"
+              placeholder={t('rejectModal.reasonPlaceholder')}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               className="mt-2 min-h-[100px]"
             />
             {rejectReason.length > 0 && rejectReason.length < 10 && (
               <p className="text-sm text-destructive mt-1" role="alert">
-                반려 사유는 10자 이상 입력해주세요. ({rejectReason.length}/10)
+                {t('bulk.rejectValidation')} ({rejectReason.length}/10)
               </p>
             )}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>취소</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing}>{t('actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkReject}
               disabled={isProcessing || rejectReason.length < 10}
-              className="bg-ul-red hover:bg-ul-red-hover"
+              className={getApprovalActionButtonClasses('reject')}
             >
-              {isProcessing ? '처리 중...' : '반려'}
+              {isProcessing ? t('processing') : t('actions.reject')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

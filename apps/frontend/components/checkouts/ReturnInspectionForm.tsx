@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
-import { CHECKOUT_PURPOSE_LABELS } from '@equipment-management/schemas';
 
 export interface InspectionFormData {
   calibrationChecked: boolean;
@@ -29,6 +29,7 @@ export default function ReturnInspectionForm({
   onCancel,
   isLoading = false,
 }: ReturnInspectionFormProps) {
+  const t = useTranslations('checkouts');
   const [calibrationChecked, setCalibrationChecked] = useState(false);
   const [repairChecked, setRepairChecked] = useState(false);
   const [workingStatusChecked, setWorkingStatusChecked] = useState(false);
@@ -43,19 +44,19 @@ export default function ReturnInspectionForm({
   const validate = (): boolean => {
     // 모든 유형: workingStatusChecked 필수
     if (!workingStatusChecked) {
-      setValidationError('작동 여부 확인은 필수입니다.');
+      setValidationError(t('returnInspection.validationWorking'));
       return false;
     }
 
     // 교정 목적: calibrationChecked 필수
     if (isCalibrationRequired && !calibrationChecked) {
-      setValidationError('교정 목적 반출의 경우 교정 확인은 필수입니다.');
+      setValidationError(t('returnInspection.validationCalibration'));
       return false;
     }
 
     // 수리 목적: repairChecked 필수
     if (isRepairRequired && !repairChecked) {
-      setValidationError('수리 목적 반출의 경우 수리 확인은 필수입니다.');
+      setValidationError(t('returnInspection.validationRepair'));
       return false;
     }
 
@@ -77,10 +78,8 @@ export default function ReturnInspectionForm({
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground">
-        반출 목적:{' '}
-        <span className="font-medium">
-          {CHECKOUT_PURPOSE_LABELS[purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] || purpose}
-        </span>
+        {t('returnInspection.purposeLabel')}{' '}
+        <span className="font-medium">{t(`purpose.${purpose}`)}</span>
       </div>
 
       {validationError && (
@@ -100,14 +99,14 @@ export default function ReturnInspectionForm({
           />
           <div className="grid gap-1.5 leading-none">
             <Label htmlFor="calibrationChecked" className="flex items-center gap-2">
-              교정 확인
+              {t('returnInspection.calibrationLabel')}
               {isCalibrationRequired && (
-                <span className="text-xs text-red-500 font-medium">* 필수</span>
+                <span className="text-xs text-red-500 font-medium">
+                  {t('returnInspection.required')}
+                </span>
               )}
             </Label>
-            <p className="text-sm text-muted-foreground">
-              교정 성적서 확인 및 교정 결과가 적합한지 검토
-            </p>
+            <p className="text-sm text-muted-foreground">{t('returnInspection.calibrationDesc')}</p>
           </div>
         </div>
 
@@ -120,10 +119,14 @@ export default function ReturnInspectionForm({
           />
           <div className="grid gap-1.5 leading-none">
             <Label htmlFor="repairChecked" className="flex items-center gap-2">
-              수리 확인
-              {isRepairRequired && <span className="text-xs text-red-500 font-medium">* 필수</span>}
+              {t('returnInspection.repairLabel')}
+              {isRepairRequired && (
+                <span className="text-xs text-red-500 font-medium">
+                  {t('returnInspection.required')}
+                </span>
+              )}
             </Label>
-            <p className="text-sm text-muted-foreground">수리 완료 여부 및 수리 내역 확인</p>
+            <p className="text-sm text-muted-foreground">{t('returnInspection.repairDesc')}</p>
           </div>
         </div>
 
@@ -136,20 +139,24 @@ export default function ReturnInspectionForm({
           />
           <div className="grid gap-1.5 leading-none">
             <Label htmlFor="workingStatusChecked" className="flex items-center gap-2">
-              작동 여부 확인
-              <span className="text-xs text-red-500 font-medium">* 필수</span>
+              {t('returnInspection.workingStatusLabel')}
+              <span className="text-xs text-red-500 font-medium">
+                {t('returnInspection.required')}
+              </span>
             </Label>
-            <p className="text-sm text-muted-foreground">장비가 정상적으로 작동하는지 확인</p>
+            <p className="text-sm text-muted-foreground">
+              {t('returnInspection.workingStatusDesc')}
+            </p>
           </div>
         </div>
       </div>
 
       {/* 검사 비고 */}
       <div className="space-y-2">
-        <Label htmlFor="inspectionNotes">검사 비고</Label>
+        <Label htmlFor="inspectionNotes">{t('returnInspection.notesLabel')}</Label>
         <Textarea
           id="inspectionNotes"
-          placeholder="검사 결과에 대한 특이사항을 입력하세요"
+          placeholder={t('returnInspection.notesPlaceholder')}
           value={inspectionNotes}
           onChange={(e) => setInspectionNotes(e.target.value)}
           rows={4}
@@ -158,20 +165,32 @@ export default function ReturnInspectionForm({
 
       {/* 검사 상태 요약 */}
       <div className="bg-muted p-4 rounded-lg">
-        <p className="text-sm font-medium mb-2">검사 상태 요약</p>
+        <p className="text-sm font-medium mb-2">{t('returnInspection.summaryTitle')}</p>
         <div className="space-y-1 text-sm">
           <div className="flex items-center gap-2">
             <CheckCircle2
               className={`h-4 w-4 ${workingStatusChecked ? 'text-green-500' : 'text-gray-300'}`}
             />
-            <span>작동 여부: {workingStatusChecked ? '확인 완료' : '미확인'}</span>
+            <span>
+              {t('returnInspection.workingStatus', {
+                status: workingStatusChecked
+                  ? t('returnInspection.checked')
+                  : t('returnInspection.unchecked'),
+              })}
+            </span>
           </div>
           {(isCalibrationRequired || calibrationChecked) && (
             <div className="flex items-center gap-2">
               <CheckCircle2
                 className={`h-4 w-4 ${calibrationChecked ? 'text-green-500' : 'text-gray-300'}`}
               />
-              <span>교정 확인: {calibrationChecked ? '확인 완료' : '미확인'}</span>
+              <span>
+                {t('returnInspection.calibrationStatus', {
+                  status: calibrationChecked
+                    ? t('returnInspection.checked')
+                    : t('returnInspection.unchecked'),
+                })}
+              </span>
             </div>
           )}
           {(isRepairRequired || repairChecked) && (
@@ -179,7 +198,13 @@ export default function ReturnInspectionForm({
               <CheckCircle2
                 className={`h-4 w-4 ${repairChecked ? 'text-green-500' : 'text-gray-300'}`}
               />
-              <span>수리 확인: {repairChecked ? '확인 완료' : '미확인'}</span>
+              <span>
+                {t('returnInspection.repairStatus', {
+                  status: repairChecked
+                    ? t('returnInspection.checked')
+                    : t('returnInspection.unchecked'),
+                })}
+              </span>
             </div>
           )}
         </div>
@@ -188,10 +213,10 @@ export default function ReturnInspectionForm({
       {/* 버튼 */}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-          취소
+          {t('actions.cancel')}
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isLoading}>
-          {isLoading ? '처리 중...' : '반입 처리'}
+          {isLoading ? t('actions.processing') : t('actions.processReturn')}
         </Button>
       </div>
     </div>

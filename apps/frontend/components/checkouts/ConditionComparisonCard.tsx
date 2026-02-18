@@ -1,16 +1,13 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, ArrowRight, CheckCircle2, Equal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ConditionCheck } from '@/lib/api/checkout-api';
-import {
-  CONDITION_CHECK_STEP_LABELS,
-  CONDITION_STATUS_LABELS,
-  ACCESSORIES_STATUS_LABELS,
-  ConditionCheckStep,
-} from '@equipment-management/schemas';
+import { ConditionCheckStep } from '@equipment-management/schemas';
+import { CONDITION_COMPARISON_TOKENS } from '@/lib/design-tokens';
 
 interface ConditionComparisonCardProps {
   conditionChecks: ConditionCheck[];
@@ -36,6 +33,8 @@ const COMPARISON_PAIRS: [ConditionCheckStep, ConditionCheckStep][] = [
  * 상태가 변경된 경우 강조 표시합니다.
  */
 export default function ConditionComparisonCard({ conditionChecks }: ConditionComparisonCardProps) {
+  const t = useTranslations('checkouts');
+
   // 단계별 확인 기록 찾기
   const getCheckByStep = (step: ConditionCheckStep): ConditionCheck | undefined => {
     return conditionChecks.find((check) => check.step === step);
@@ -75,8 +74,8 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">상태 전후 비교</CardTitle>
-        <CardDescription>대여 전후 장비 상태 비교입니다.</CardDescription>
+        <CardTitle className="text-lg">{t('condition.comparisonTitle')}</CardTitle>
+        <CardDescription>{t('condition.comparisonDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {availablePairs.map(([beforeStep, afterStep]) => {
@@ -89,18 +88,18 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
             <div key={`${beforeStep}-${afterStep}`} className="space-y-4">
               {/* 비교 헤더 */}
               <div className="flex items-center gap-2 pb-2 border-b">
-                <Badge variant="outline">{CONDITION_CHECK_STEP_LABELS[beforeStep]}</Badge>
+                <Badge variant="outline">{t(`condition.stepLabels.${beforeStep}`)}</Badge>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <Badge variant="outline">{CONDITION_CHECK_STEP_LABELS[afterStep]}</Badge>
+                <Badge variant="outline">{t(`condition.stepLabels.${afterStep}`)}</Badge>
                 {hasAnyChange ? (
                   <Badge variant="destructive" className="ml-auto">
                     <AlertTriangle className="h-3 w-3 mr-1" />
-                    변경됨
+                    {t('condition.changed')}
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="ml-auto">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
-                    동일
+                    {t('condition.same')}
                   </Badge>
                 )}
               </div>
@@ -113,19 +112,19 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                     'flex items-center justify-between p-3 rounded-lg',
                     changes.appearance
                       ? isWorsened(beforeCheck.appearanceStatus, afterCheck.appearanceStatus)
-                        ? 'bg-red-50'
-                        : 'bg-yellow-50'
+                        ? CONDITION_COMPARISON_TOKENS.worsened
+                        : CONDITION_COMPARISON_TOKENS.changed
                       : 'bg-muted/50'
                   )}
                 >
-                  <span className="text-sm text-muted-foreground">외관 상태</span>
+                  <span className="text-sm text-muted-foreground">{t('condition.appearance')}</span>
                   <div className="flex items-center gap-2">
                     <Badge
                       variant={
                         beforeCheck.appearanceStatus === 'normal' ? 'default' : 'destructive'
                       }
                     >
-                      {CONDITION_STATUS_LABELS[beforeCheck.appearanceStatus]}
+                      {t(`condition.conditionStatus.${beforeCheck.appearanceStatus}`)}
                     </Badge>
                     {changes.appearance ? (
                       <ArrowRight className="h-4 w-4 text-orange-500" />
@@ -135,7 +134,7 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                     <Badge
                       variant={afterCheck.appearanceStatus === 'normal' ? 'default' : 'destructive'}
                     >
-                      {CONDITION_STATUS_LABELS[afterCheck.appearanceStatus]}
+                      {t(`condition.conditionStatus.${afterCheck.appearanceStatus}`)}
                     </Badge>
                   </div>
                 </div>
@@ -146,17 +145,17 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                     'flex items-center justify-between p-3 rounded-lg',
                     changes.operation
                       ? isWorsened(beforeCheck.operationStatus, afterCheck.operationStatus)
-                        ? 'bg-red-50'
-                        : 'bg-yellow-50'
+                        ? CONDITION_COMPARISON_TOKENS.worsened
+                        : CONDITION_COMPARISON_TOKENS.changed
                       : 'bg-muted/50'
                   )}
                 >
-                  <span className="text-sm text-muted-foreground">작동 상태</span>
+                  <span className="text-sm text-muted-foreground">{t('condition.operation')}</span>
                   <div className="flex items-center gap-2">
                     <Badge
                       variant={beforeCheck.operationStatus === 'normal' ? 'default' : 'destructive'}
                     >
-                      {CONDITION_STATUS_LABELS[beforeCheck.operationStatus]}
+                      {t(`condition.conditionStatus.${beforeCheck.operationStatus}`)}
                     </Badge>
                     {changes.operation ? (
                       <ArrowRight className="h-4 w-4 text-orange-500" />
@@ -166,7 +165,7 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                     <Badge
                       variant={afterCheck.operationStatus === 'normal' ? 'default' : 'destructive'}
                     >
-                      {CONDITION_STATUS_LABELS[afterCheck.operationStatus]}
+                      {t(`condition.conditionStatus.${afterCheck.operationStatus}`)}
                     </Badge>
                   </div>
                 </div>
@@ -178,19 +177,21 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                       'flex items-center justify-between p-3 rounded-lg',
                       changes.accessories
                         ? isWorsened(beforeCheck.accessoriesStatus, afterCheck.accessoriesStatus)
-                          ? 'bg-red-50'
-                          : 'bg-yellow-50'
+                          ? CONDITION_COMPARISON_TOKENS.worsened
+                          : CONDITION_COMPARISON_TOKENS.changed
                         : 'bg-muted/50'
                     )}
                   >
-                    <span className="text-sm text-muted-foreground">부속품 상태</span>
+                    <span className="text-sm text-muted-foreground">
+                      {t('condition.accessories')}
+                    </span>
                     <div className="flex items-center gap-2">
                       <Badge
                         variant={
                           beforeCheck.accessoriesStatus === 'complete' ? 'default' : 'secondary'
                         }
                       >
-                        {ACCESSORIES_STATUS_LABELS[beforeCheck.accessoriesStatus]}
+                        {t(`condition.accessoriesStatusLabels.${beforeCheck.accessoriesStatus}`)}
                       </Badge>
                       {changes.accessories ? (
                         <ArrowRight className="h-4 w-4 text-orange-500" />
@@ -202,7 +203,7 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                           afterCheck.accessoriesStatus === 'complete' ? 'default' : 'secondary'
                         }
                       >
-                        {ACCESSORIES_STATUS_LABELS[afterCheck.accessoriesStatus]}
+                        {t(`condition.accessoriesStatusLabels.${afterCheck.accessoriesStatus}`)}
                       </Badge>
                     </div>
                   </div>
@@ -212,7 +213,9 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
               {/* 비교 메모 */}
               {afterCheck.comparisonWithPrevious && (
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">비교 메모</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {t('condition.comparisonNotes')}
+                  </p>
                   <p className="text-sm">{afterCheck.comparisonWithPrevious}</p>
                 </div>
               )}
@@ -220,7 +223,9 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
               {/* 이상 내용 (후단계) */}
               {afterCheck.abnormalDetails && (
                 <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <p className="text-sm text-red-800 font-medium mb-1">이상 내용</p>
+                  <p className="text-sm text-red-800 font-medium mb-1">
+                    {t('condition.abnormalDetails')}
+                  </p>
                   <p className="text-sm text-red-700">{afterCheck.abnormalDetails}</p>
                 </div>
               )}

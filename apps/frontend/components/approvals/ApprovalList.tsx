@@ -5,6 +5,8 @@ import { Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { ApprovalItemCard } from './ApprovalItem';
+import { APPROVAL_EMPTY_STATE_TOKENS, APPROVAL_MOTION } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface ApprovalListProps {
   items: ApprovalItem[];
@@ -27,15 +29,21 @@ export function ApprovalList({
   onViewDetail,
   actionLabel,
 }: ApprovalListProps) {
+  const t = useTranslations('approvals');
+
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <Skeleton className="h-6 w-32" />
+          <Skeleton className={`h-6 w-32 ${APPROVAL_MOTION.skeleton}`} />
         </CardHeader>
         <CardContent className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="border-l-4 border-l-border">
+            <Card
+              key={i}
+              className="border-l-4 border-l-border"
+              style={{ animationDelay: APPROVAL_MOTION.listStagger(i) }}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-3">
@@ -61,24 +69,24 @@ export function ApprovalList({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>승인 대기 목록</CardTitle>
-        <CardDescription>총 {items.length}개의 승인 대기 요청이 있습니다</CardDescription>
+        <CardTitle>{t('list.title')}</CardTitle>
+        <CardDescription>{t('list.countDescription', { count: items.length })}</CardDescription>
       </CardHeader>
       <CardContent>
         {items.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground" role="status" aria-live="polite">
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-              <Clock className="h-8 w-8 text-muted-foreground/50" />
+          <div className={APPROVAL_EMPTY_STATE_TOKENS.text} role="status" aria-live="polite">
+            <div className={APPROVAL_EMPTY_STATE_TOKENS.iconContainer}>
+              <Clock className={APPROVAL_EMPTY_STATE_TOKENS.icon} />
             </div>
-            <p>승인 대기 중인 요청이 없습니다</p>
+            <p>{t('list.empty')}</p>
           </div>
         ) : (
           <div className="space-y-4" data-testid="approval-list">
             {items.map((item, index) => (
               <div
                 key={item.id}
-                className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-2"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className={APPROVAL_MOTION.listItemEnter}
+                style={{ animationDelay: APPROVAL_MOTION.listStagger(index) }}
               >
                 <ApprovalItemCard
                   item={item}

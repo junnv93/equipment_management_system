@@ -11,11 +11,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { getFieldLabel } from '@equipment-management/schemas';
 import { format } from 'date-fns';
+import { AUDIT_DIFF_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 /**
  * 값 포맷팅 유틸리티
  */
-function formatValue(value: unknown): string {
+function formatValue(
+  value: unknown,
+  boolLabels?: { trueLabel: string; falseLabel: string }
+): string {
   // null, undefined
   if (value === null || value === undefined) {
     return '-';
@@ -23,7 +28,7 @@ function formatValue(value: unknown): string {
 
   // boolean
   if (typeof value === 'boolean') {
-    return value ? '예' : '아니오';
+    return value ? (boolLabels?.trueLabel ?? 'Yes') : (boolLabels?.falseLabel ?? 'No');
   }
 
   // 날짜 (ISO 8601 문자열 or Date 객체)
@@ -88,6 +93,9 @@ export function AuditLogDiffViewer({
   entityType,
   className,
 }: AuditLogDiffViewerProps) {
+  const t = useTranslations('common');
+  const boolLabels = { trueLabel: t('diffViewer.boolTrue'), falseLabel: t('diffViewer.boolFalse') };
+
   // 변경된 필드만 추출
   const allKeys = new Set([...Object.keys(previousValue || {}), ...Object.keys(newValue || {})]);
   const changedFields = Array.from(allKeys).filter((key) => {
@@ -100,7 +108,7 @@ export function AuditLogDiffViewer({
   if (changedFields.length === 0) {
     return (
       <div className={`text-center py-8 text-muted-foreground ${className || ''}`}>
-        <p>변경된 필드가 없습니다.</p>
+        <p>{t('diffViewer.empty')}</p>
       </div>
     );
   }
@@ -110,9 +118,9 @@ export function AuditLogDiffViewer({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px]">필드</TableHead>
-            <TableHead className="w-[40%]">변경 전</TableHead>
-            <TableHead className="w-[40%]">변경 후</TableHead>
+            <TableHead className="w-[200px]">{t('diffViewer.field')}</TableHead>
+            <TableHead className="w-[40%]">{t('diffViewer.before')}</TableHead>
+            <TableHead className="w-[40%]">{t('diffViewer.after')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -125,11 +133,15 @@ export function AuditLogDiffViewer({
                 <TableCell className="font-medium">
                   <Badge variant="outline">{getFieldLabel(entityType, field)}</Badge>
                 </TableCell>
-                <TableCell className="bg-red-50 dark:bg-red-950/20">
-                  <pre className="text-sm whitespace-pre-wrap font-mono">{formatValue(prev)}</pre>
+                <TableCell className={AUDIT_DIFF_TOKENS.removed}>
+                  <pre className="text-sm whitespace-pre-wrap font-mono">
+                    {formatValue(prev, boolLabels)}
+                  </pre>
                 </TableCell>
-                <TableCell className="bg-green-50 dark:bg-green-950/20">
-                  <pre className="text-sm whitespace-pre-wrap font-mono">{formatValue(next)}</pre>
+                <TableCell className={AUDIT_DIFF_TOKENS.added}>
+                  <pre className="text-sm whitespace-pre-wrap font-mono">
+                    {formatValue(next, boolLabels)}
+                  </pre>
                 </TableCell>
               </TableRow>
             );

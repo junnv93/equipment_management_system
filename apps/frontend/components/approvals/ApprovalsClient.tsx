@@ -32,6 +32,7 @@ import {
   PackagePlus,
 } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
+import { useTranslations } from 'next-intl';
 import {
   type ApprovalCategory,
   type ApprovalItem,
@@ -44,6 +45,13 @@ import { ApprovalList } from './ApprovalList';
 import { BulkActionBar } from './BulkActionBar';
 import ApprovalDetailModal from './ApprovalDetailModal';
 import RejectModal from './RejectModal';
+import {
+  APPROVAL_TAB_TOKENS,
+  APPROVAL_MOTION,
+  getApprovalActionButtonClasses,
+  getCountBasedUrgency,
+  getUrgencyFeedbackClasses,
+} from '@/lib/design-tokens';
 
 interface ApprovalsClientProps {
   userRole: UserRole;
@@ -78,6 +86,7 @@ export function ApprovalsClient({
 
   // ✅ Best Practice: useAuthenticatedClient를 통한 인증된 API 클라이언트 사용
   const approvalsApi = useApprovalsApi();
+  const t = useTranslations('approvals');
 
   // ✅ Hydration 에러 방지: 클라이언트 마운트 감지
   const [mounted, setMounted] = useState(false);
@@ -162,8 +171,8 @@ export function ApprovalsClient({
       return old?.filter((i) => i.id !== item.id) || [];
     },
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
-    successMessage: (_, { item }) => `${item.summary}이(가) 승인되었습니다.`,
-    errorMessage: '승인 처리 중 오류가 발생했습니다.',
+    successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
+    errorMessage: t('toasts.approveError'),
     onSuccessCallback: () => {
       setDetailModalItem(null);
       setApproveCommentItem(null);
@@ -220,8 +229,8 @@ export function ApprovalsClient({
       return old?.filter((i) => i.id !== item.id) || [];
     },
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
-    successMessage: (_, { item }) => `${item.summary}이(가) 반려되었습니다.`,
-    errorMessage: '반려 처리 중 오류가 발생했습니다.',
+    successMessage: (_, { item }) => t('toasts.rejectDynamic', { summary: item.summary }),
+    errorMessage: t('toasts.rejectError'),
     onSuccessCallback: () => setRejectModalItem(null),
   });
 
@@ -246,11 +255,14 @@ export function ApprovalsClient({
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
       if (result.failed.length > 0) {
-        return `${result.success.length}건 승인 완료, ${result.failed.length}건 실패`;
+        return t('toasts.bulkApproveResult', {
+          success: result.success.length,
+          failed: result.failed.length,
+        });
       }
-      return `${result.success.length}건이 승인되었습니다.`;
+      return t('toasts.bulkApproveAll', { count: result.success.length });
     },
-    errorMessage: '일괄 승인 중 오류가 발생했습니다.',
+    errorMessage: t('toasts.bulkApproveError'),
     onSuccessCallback: () => {
       setSelectedItems([]);
       setIsBulkApproveCommentOpen(false);
@@ -297,11 +309,14 @@ export function ApprovalsClient({
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
       if (result.failed.length > 0) {
-        return `${result.success.length}건 반려 완료, ${result.failed.length}건 실패`;
+        return t('toasts.bulkRejectResult', {
+          success: result.success.length,
+          failed: result.failed.length,
+        });
       }
-      return `${result.success.length}건이 반려되었습니다.`;
+      return t('toasts.bulkRejectAll', { count: result.success.length });
     },
-    errorMessage: '일괄 반려 중 오류가 발생했습니다.',
+    errorMessage: t('toasts.bulkRejectError'),
     onSuccessCallback: () => setSelectedItems([]),
   });
 
@@ -343,7 +358,7 @@ export function ApprovalsClient({
   if (availableTabs.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        <p>승인 권한이 없습니다.</p>
+        <p>{t('noPermission')}</p>
       </div>
     );
   }
@@ -352,8 +367,8 @@ export function ApprovalsClient({
   if (!mounted) {
     return (
       <div className="space-y-4">
-        <div className="h-10 bg-muted motion-safe:animate-pulse rounded" />
-        <div className="h-64 bg-muted motion-safe:animate-pulse rounded" />
+        <div className={`h-10 bg-muted rounded ${APPROVAL_MOTION.skeleton}`} />
+        <div className={`h-64 bg-muted rounded ${APPROVAL_MOTION.skeleton}`} />
       </div>
     );
   }
@@ -363,28 +378,29 @@ export function ApprovalsClient({
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         {/* 탭 목록 - 접근성 속성 포함 */}
         <TabsList
-          className="flex flex-wrap gap-1 h-auto p-1 bg-muted/50"
+          className={`flex flex-wrap gap-1 h-auto p-1 ${APPROVAL_TAB_TOKENS.listContainer}`}
           role="tablist"
-          aria-label="승인 카테고리"
+          aria-label={t('ariaLabel')}
         >
           {availableTabs.map((tab) => {
             const meta = TAB_META[tab];
             const count = getCount(tab);
+            const urgency = getCountBasedUrgency(count);
 
             return (
               <TabsTrigger
                 key={tab}
                 value={tab}
-                className="flex items-center gap-1.5 data-[state=active]:border-b-2 data-[state=active]:border-ul-red"
+                className={`flex items-center gap-1.5 ${APPROVAL_TAB_TOKENS.activeIndicator}`}
                 aria-selected={activeTab === tab}
               >
                 {getIcon(meta.icon)}
-                <span>{meta.label}</span>
+                <span>{t(`tabMeta.${tab}.label`)}</span>
                 {count > 0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-1 h-5 min-w-5 px-1.5 bg-ul-orange text-white"
-                    aria-label={`대기 ${count}건`}
+                    className={`${APPROVAL_TAB_TOKENS.badge.base} ${getUrgencyFeedbackClasses(urgency, false)}`}
+                    aria-label={t('badge.pending', { count })}
                   >
                     {count}
                   </Badge>
@@ -401,7 +417,7 @@ export function ApprovalsClient({
           onSelectAll={handleSelectAll}
           onBulkApprove={handleBulkApprove}
           onBulkReject={handleBulkReject}
-          actionLabel={TAB_META[activeTab]?.action || '승인'}
+          actionLabel={t(`tabMeta.${activeTab}.action`)}
         />
 
         {/* 탭 콘텐츠 */}
@@ -415,7 +431,7 @@ export function ApprovalsClient({
               onApprove={handleApprove}
               onReject={(item) => setRejectModalItem(item)}
               onViewDetail={(item) => setDetailModalItem(item)}
-              actionLabel={TAB_META[tab]?.action || '승인'}
+              actionLabel={t(`tabMeta.${tab}.action`)}
             />
           </TabsContent>
         ))}
@@ -432,7 +448,7 @@ export function ApprovalsClient({
             setDetailModalItem(null);
             setRejectModalItem(detailModalItem);
           }}
-          actionLabel={TAB_META[detailModalItem.category]?.action || '승인'}
+          actionLabel={t(`tabMeta.${detailModalItem.category}.action`)}
         />
       )}
 
@@ -458,15 +474,23 @@ export function ApprovalsClient({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{commentMeta?.commentDialogTitle || '승인 코멘트'}</DialogTitle>
+            <DialogTitle>
+              {commentMeta?.commentDialogTitle
+                ? t(`tabMeta.${approveCommentItem!.category}.commentDialogTitle`)
+                : t('commentDialog.titleFallback')}
+            </DialogTitle>
             <DialogDescription>{approveCommentItem?.summary}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="approve-comment">검토 코멘트 *</Label>
+              <Label htmlFor="approve-comment">{t('commentDialog.label')} *</Label>
               <Textarea
                 id="approve-comment"
-                placeholder={commentMeta?.commentPlaceholder || '검토 내용을 입력하세요'}
+                placeholder={
+                  commentMeta?.commentPlaceholder
+                    ? t(`tabMeta.${approveCommentItem!.category}.commentPlaceholder`)
+                    : t('commentDialog.placeholderFallback')
+                }
                 value={approveComment}
                 onChange={(e) => setApproveComment(e.target.value)}
                 className="min-h-[100px]"
@@ -482,14 +506,15 @@ export function ApprovalsClient({
                 setApproveComment('');
               }}
             >
-              취소
+              {t('actions.cancel')}
             </Button>
             <Button
               type="button"
               onClick={handleApproveWithComment}
               disabled={!approveComment.trim() || approveMutation.isPending}
+              className={getApprovalActionButtonClasses('approve')}
             >
-              {commentMeta?.action || '승인'}
+              {t(`tabMeta.${approveCommentItem!.category}.action`)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -507,17 +532,25 @@ export function ApprovalsClient({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{activeTabMeta?.commentDialogTitle || '일괄 승인 코멘트'}</DialogTitle>
+            <DialogTitle>
+              {activeTabMeta?.commentDialogTitle
+                ? t(`tabMeta.${activeTab}.commentDialogTitle`)
+                : t('bulkCommentDialog.titleFallback')}
+            </DialogTitle>
             <DialogDescription>
-              선택된 {selectedItems.length}건에 공통 코멘트를 입력하세요.
+              {t('bulkCommentDialog.description', { count: selectedItems.length })}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="bulk-approve-comment">검토 코멘트 *</Label>
+              <Label htmlFor="bulk-approve-comment">{t('bulkCommentDialog.label')} *</Label>
               <Textarea
                 id="bulk-approve-comment"
-                placeholder={activeTabMeta?.commentPlaceholder || '검토 내용을 입력하세요'}
+                placeholder={
+                  activeTabMeta?.commentPlaceholder
+                    ? t(`tabMeta.${activeTab}.commentPlaceholder`)
+                    : t('commentDialog.placeholderFallback')
+                }
                 value={bulkApproveComment}
                 onChange={(e) => setBulkApproveComment(e.target.value)}
                 className="min-h-[100px]"
@@ -533,14 +566,18 @@ export function ApprovalsClient({
                 setBulkApproveComment('');
               }}
             >
-              취소
+              {t('actions.cancel')}
             </Button>
             <Button
               type="button"
               onClick={handleBulkApproveWithComment}
               disabled={!bulkApproveComment.trim() || bulkApproveMutation.isPending}
+              className={getApprovalActionButtonClasses('approve')}
             >
-              {selectedItems.length}건 {activeTabMeta?.action || '승인'}
+              {t('bulkCommentDialog.buttonLabel', {
+                count: selectedItems.length,
+                action: t(`tabMeta.${activeTab}.action`),
+              })}
             </Button>
           </DialogFooter>
         </DialogContent>

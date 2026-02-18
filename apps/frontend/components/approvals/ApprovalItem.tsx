@@ -10,6 +10,15 @@ import { formatDate } from '@/lib/utils/date';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
+import {
+  getApprovalStatusBadgeClasses,
+  getApprovalCardBorderClasses,
+  getApprovalActionButtonClasses,
+  APPROVAL_MOTION,
+  APPROVAL_INFO_GRID_TOKENS,
+  APPROVAL_FOCUS,
+} from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface ApprovalItemCardProps {
   item: ApprovalItem;
@@ -21,24 +30,6 @@ interface ApprovalItemCardProps {
   actionLabel: string;
 }
 
-// 상태별 스타일 (SSOT: Tailwind config UL 브랜드 색상 사용)
-const STATUS_STYLES: Record<string, string> = {
-  pending: 'bg-ul-orange text-white',
-  pending_review: 'bg-ul-orange text-white',
-  reviewed: 'bg-ul-blue text-white',
-  approved: 'bg-ul-green text-white',
-  rejected: 'bg-ul-red text-white',
-};
-
-// 상태별 왼쪽 보더 색상
-const BORDER_COLORS: Record<string, string> = {
-  pending: 'border-l-ul-orange',
-  pending_review: 'border-l-ul-orange',
-  reviewed: 'border-l-ul-blue',
-  approved: 'border-l-ul-green',
-  rejected: 'border-l-ul-red',
-};
-
 export function ApprovalItemCard({
   item,
   isSelected,
@@ -49,6 +40,7 @@ export function ApprovalItemCard({
   actionLabel,
 }: ApprovalItemCardProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const t = useTranslations('approvals');
 
   const handleApprove = async () => {
     setIsProcessing(true);
@@ -63,9 +55,6 @@ export function ApprovalItemCard({
     onReject();
   };
 
-  const statusStyle = STATUS_STYLES[item.status] || STATUS_STYLES.pending;
-  const borderColor = BORDER_COLORS[item.status] || BORDER_COLORS.pending;
-
   // 다단계 승인 여부 확인
   const isMultiStep =
     item.category === 'disposal_review' ||
@@ -75,7 +64,7 @@ export function ApprovalItemCard({
 
   return (
     <Card
-      className={`border-l-4 ${borderColor} motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:shadow-md hover:scale-[1.01] hover:-translate-y-0.5`}
+      className={`border-l-4 ${getApprovalCardBorderClasses(item.status)} ${APPROVAL_MOTION.cardHover} ${APPROVAL_FOCUS.card}`}
       data-testid="approval-item"
     >
       <CardContent className="pt-6">
@@ -85,7 +74,7 @@ export function ApprovalItemCard({
             id={`select-${item.id}`}
             checked={isSelected}
             onCheckedChange={onToggleSelect}
-            aria-label={`${item.summary} 선택`}
+            aria-label={`${item.summary} ${t('item.select')}`}
             className="mt-1"
           />
 
@@ -93,7 +82,7 @@ export function ApprovalItemCard({
           <div className="flex-1 space-y-3">
             {/* 상태 뱃지 및 요약 */}
             <div className="flex items-center gap-3 flex-wrap">
-              <Badge className={statusStyle}>
+              <Badge className={getApprovalStatusBadgeClasses(item.status)}>
                 {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
               </Badge>
               <span className="text-sm font-medium">{item.summary}</span>
@@ -102,30 +91,30 @@ export function ApprovalItemCard({
             {/* 요청 정보 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                <div className={APPROVAL_INFO_GRID_TOKENS.iconContainer}>
+                  <User className={APPROVAL_INFO_GRID_TOKENS.icon} aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground">요청자</p>
-                  <p className="font-medium">{item.requesterName}</p>
+                  <p className={APPROVAL_INFO_GRID_TOKENS.label}>{t('item.requester')}</p>
+                  <p className={APPROVAL_INFO_GRID_TOKENS.value}>{item.requesterName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2" data-testid="requester-team">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                <div className={APPROVAL_INFO_GRID_TOKENS.iconContainer}>
+                  <Building2 className={APPROVAL_INFO_GRID_TOKENS.icon} aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground">팀</p>
-                  <p className="font-medium">{item.requesterTeam || '-'}</p>
+                  <p className={APPROVAL_INFO_GRID_TOKENS.label}>{t('item.team')}</p>
+                  <p className={APPROVAL_INFO_GRID_TOKENS.value}>{item.requesterTeam || '-'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                <div className={APPROVAL_INFO_GRID_TOKENS.iconContainer}>
+                  <Calendar className={APPROVAL_INFO_GRID_TOKENS.icon} aria-hidden="true" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground">요청일시</p>
-                  <p className="font-medium">
+                  <p className={APPROVAL_INFO_GRID_TOKENS.label}>{t('item.requestDate')}</p>
+                  <p className={APPROVAL_INFO_GRID_TOKENS.value}>
                     <time dateTime={item.requestedAt}>
                       {formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}
                     </time>
@@ -151,7 +140,8 @@ export function ApprovalItemCard({
             {item.approvalHistory && item.approvalHistory.length > 0 && (
               <div className="mt-2 p-3 bg-muted/50 rounded-lg text-sm">
                 <p className="text-muted-foreground">
-                  최근 처리: {item.approvalHistory[item.approvalHistory.length - 1].actorName} (
+                  {t('item.recentAction')}{' '}
+                  {item.approvalHistory[item.approvalHistory.length - 1].actorName} (
                   {item.approvalHistory[item.approvalHistory.length - 1].actorRole})
                 </p>
                 {item.approvalHistory[item.approvalHistory.length - 1].comment && (
@@ -173,14 +163,14 @@ export function ApprovalItemCard({
               aria-describedby={`item-${item.id}`}
             >
               <Eye className="h-4 w-4 mr-1" />
-              상세
+              {t('item.detail')}
             </Button>
             <Button
               type="button"
               size="sm"
               onClick={handleApprove}
               disabled={isProcessing}
-              className="bg-ul-green hover:bg-ul-green-hover text-white"
+              className={getApprovalActionButtonClasses('approve')}
               aria-busy={isProcessing}
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -192,10 +182,10 @@ export function ApprovalItemCard({
               variant="destructive"
               onClick={handleReject}
               disabled={isProcessing}
-              className="bg-ul-red hover:bg-ul-red-hover"
+              className={getApprovalActionButtonClasses('reject')}
             >
               <XCircle className="h-4 w-4 mr-1" />
-              반려
+              {t('item.reject')}
             </Button>
           </div>
         </div>

@@ -42,7 +42,7 @@ import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
 import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES, REFETCH_INTERVALS } from '@/lib/api/query-config';
 import { computeApprovalTotal } from '@/lib/utils/approval-count-utils';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
 import {
@@ -51,6 +51,7 @@ import {
   ANIMATION_PRESETS,
   getTransitionClasses,
 } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -68,6 +69,7 @@ const SidebarItem = memo(function SidebarItem({
   isActive,
   badge,
 }: SidebarItemProps) {
+  const t = useTranslations('navigation');
   return (
     <Link
       href={href}
@@ -90,7 +92,7 @@ const SidebarItem = memo(function SidebarItem({
             'ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-ul-red text-white',
             ANIMATION_PRESETS.pulse
           )}
-          aria-label={`${badge}건의 알림`}
+          aria-label={t('layout.notificationCount', { count: badge })}
         >
           {badge}
         </span>
@@ -104,6 +106,7 @@ interface DashboardShellProps {
 }
 
 export function DashboardShell({ children }: DashboardShellProps) {
+  const t = useTranslations('navigation');
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const userRole = session?.user?.role;
@@ -120,7 +123,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     queryFn: () => approvalsApi.getPendingCounts(),
     enabled: !!userRole && hasApprovalPermissions(userRole),
     staleTime: CACHE_TIMES.SHORT,
-    refetchInterval: 60000,
+    refetchInterval: REFETCH_INTERVALS.NEAR_REALTIME,
   });
 
   // 선언적 네비게이션 설정
@@ -140,37 +143,37 @@ export function DashboardShell({ children }: DashboardShellProps) {
       {
         icon: <LayoutDashboard className="h-5 w-5" />,
         href: FRONTEND_ROUTES.DASHBOARD,
-        label: '대시보드',
+        label: t('dashboard'),
         requiredPermission: null, // 모든 역할
       },
       {
         icon: <Package2 className="h-5 w-5" />,
         href: FRONTEND_ROUTES.EQUIPMENT.LIST,
-        label: '장비 관리',
+        label: t('equipment'),
         requiredPermission: Permission.VIEW_EQUIPMENT,
       },
       {
         icon: <ClipboardCheck className="h-5 w-5" />,
         href: FRONTEND_ROUTES.CHECKOUTS.LIST,
-        label: '반출입 관리',
+        label: t('checkouts'),
         requiredPermission: Permission.VIEW_CHECKOUTS,
       },
       {
         icon: <FileSpreadsheet className="h-5 w-5" />,
         href: FRONTEND_ROUTES.CALIBRATION.LIST,
-        label: '교정 관리',
+        label: t('calibration'),
         requiredPermission: Permission.VIEW_CALIBRATIONS,
       },
       {
         icon: <FileText className="h-5 w-5" />,
         href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
-        label: '교정계획서',
+        label: t('calibrationPlans'),
         requiredPermission: Permission.VIEW_CALIBRATION_PLANS,
       },
       {
         icon: <CheckSquare className="h-5 w-5" />,
         href: FRONTEND_ROUTES.ADMIN.APPROVALS,
-        label: '승인 관리',
+        label: t('adminApprovals'),
         requiredPermission: Permission.APPROVE_EQUIPMENT, // 승인 권한 중 하나라도 있으면 표시
         badge: (() => {
           if (!role || !hasApprovalPermissions(role)) return undefined;
@@ -181,25 +184,25 @@ export function DashboardShell({ children }: DashboardShellProps) {
       {
         icon: <FileSearch className="h-5 w-5" />,
         href: FRONTEND_ROUTES.ADMIN.AUDIT_LOGS,
-        label: '감사 로그',
+        label: t('adminAuditLogs'),
         requiredPermission: Permission.VIEW_AUDIT_LOGS,
       },
       {
         icon: <Users className="h-5 w-5" />,
         href: FRONTEND_ROUTES.TEAMS.LIST,
-        label: '팀 관리',
+        label: t('teams'),
         requiredPermission: Permission.VIEW_TEAMS,
       },
       {
         icon: <Bell className="h-5 w-5" />,
         href: FRONTEND_ROUTES.NOTIFICATIONS.LIST,
-        label: '알림',
+        label: t('notifications'),
         requiredPermission: Permission.VIEW_NOTIFICATIONS,
       },
       {
         icon: <Settings className="h-5 w-5" />,
         href: FRONTEND_ROUTES.SETTINGS.INDEX,
-        label: '설정',
+        label: t('settings'),
         requiredPermission: null, // 모든 역할
       },
     ];
@@ -244,7 +247,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <aside
           className="fixed inset-y-0 z-20 hidden w-64 bg-ul-midnight md:block"
           role="navigation"
-          aria-label="메인 네비게이션"
+          aria-label={t('layout.mainNav')}
         >
           {/* 사이드바 헤더 */}
           <div className="flex h-14 items-center border-b border-white/10 px-4">
@@ -259,7 +262,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 'px-2 py-1.5 -mx-2',
                 'group'
               )}
-              aria-label="홈으로 이동"
+              aria-label={t('layout.goHome')}
             >
               <div
                 className={cn(
@@ -270,7 +273,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
               </div>
               <span className="group-hover:text-ul-info motion-safe:transition-colors motion-reduce:transition-none">
-                장비 관리 시스템
+                {t('layout.systemName')}
               </span>
             </Link>
           </div>
@@ -303,11 +306,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <div className="flex flex-col flex-1 md:ml-64">
           {/* 헤더 */}
           <Header
-            title="장비 관리 시스템"
+            title={t('layout.systemName')}
             leftContent={
               <MobileNav
                 navItems={navItems}
-                brandName="장비 관리 시스템"
+                brandName={t('layout.systemName')}
                 brandIcon={<Wrench className="h-6 w-6" aria-hidden="true" />}
               />
             }

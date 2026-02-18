@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { type AuditEntityType, AUDIT_ENTITY_TYPE_LABELS } from '@equipment-management/schemas';
 import { getEntityRoute } from '@equipment-management/shared-constants';
+import { AUDIT_ENTITY_LINK_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 /**
  * 엔티티 타입별 아이콘 매핑
@@ -79,16 +81,19 @@ export function EntityLinkCell({
   entityName,
   className,
 }: EntityLinkCellProps) {
+  const t = useTranslations('common');
   const route = getEntityRoute(entityType, entityId);
+  const entityLabel = AUDIT_ENTITY_TYPE_LABELS[entityType as AuditEntityType] || entityType;
 
   // 라우팅 불가능한 엔티티는 일반 텍스트로 표시
   if (!route) {
     return (
-      <span className={`flex items-center gap-2 text-muted-foreground ${className || ''}`}>
+      <span
+        className={`flex items-center gap-2 ${AUDIT_ENTITY_LINK_TOKENS.inactive} ${className || ''}`}
+      >
         {getEntityIcon(entityType)}
         <span className="truncate">
-          {entityName ||
-            `${AUDIT_ENTITY_TYPE_LABELS[entityType as AuditEntityType] || entityType} (${entityId.substring(0, 8)}...)`}
+          {entityName || `${entityLabel} (${entityId.substring(0, 8)}...)`}
         </span>
       </span>
     );
@@ -97,13 +102,12 @@ export function EntityLinkCell({
   return (
     <Link
       href={route}
-      className={`flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline transition-colors ${className || ''}`}
-      title={`${AUDIT_ENTITY_TYPE_LABELS[entityType as AuditEntityType] || entityType} 상세 보기`}
+      className={`flex items-center gap-2 ${AUDIT_ENTITY_LINK_TOKENS.link} ${className || ''}`}
+      title={t('entity.viewDetail', { type: entityLabel })}
     >
       {getEntityIcon(entityType)}
       <span className="truncate">
-        {entityName ||
-          `${AUDIT_ENTITY_TYPE_LABELS[entityType as AuditEntityType] || entityType} (${entityId.substring(0, 8)}...)`}
+        {entityName || `${entityLabel} (${entityId.substring(0, 8)}...)`}
       </span>
       <ExternalLink className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
     </Link>

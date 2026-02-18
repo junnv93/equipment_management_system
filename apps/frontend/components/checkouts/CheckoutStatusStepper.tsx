@@ -1,8 +1,10 @@
 'use client';
 
 import { CheckCircle2, Circle, Clock, XCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { CheckoutStatus, CHECKOUT_STATUS_LABELS } from '@equipment-management/schemas';
+import { CheckoutStatus } from '@equipment-management/schemas';
+import { CHECKOUT_STEPPER_TOKENS } from '@/lib/design-tokens';
 
 interface CheckoutStatusStepperProps {
   currentStatus: CheckoutStatus;
@@ -19,44 +21,39 @@ interface CheckoutStatusStepperProps {
  * - pending → approved → lender_checked → borrower_received
  * → in_use → borrower_returned → lender_received → return_approved
  */
-const STEPS_BY_TYPE: Record<string, { status: CheckoutStatus; label: string }[]> = {
-  calibration: [
-    { status: 'pending', label: '승인 대기' },
-    { status: 'approved', label: '승인됨' },
-    { status: 'checked_out', label: '반출 중' },
-    { status: 'returned', label: '반입 완료' },
-    { status: 'return_approved', label: '반입 승인' },
-  ],
-  repair: [
-    { status: 'pending', label: '승인 대기' },
-    { status: 'approved', label: '승인됨' },
-    { status: 'checked_out', label: '반출 중' },
-    { status: 'returned', label: '반입 완료' },
-    { status: 'return_approved', label: '반입 승인' },
-  ],
+const STEP_STATUSES: Record<string, CheckoutStatus[]> = {
+  calibration: ['pending', 'approved', 'checked_out', 'returned', 'return_approved'],
+  repair: ['pending', 'approved', 'checked_out', 'returned', 'return_approved'],
   rental: [
-    { status: 'pending', label: '승인 대기' },
-    { status: 'approved', label: '승인됨' },
-    { status: 'lender_checked', label: '반출 확인' },
-    { status: 'borrower_received', label: '인수 확인' },
-    { status: 'in_use', label: '사용 중' },
-    { status: 'borrower_returned', label: '반납 확인' },
-    { status: 'lender_received', label: '반입 확인' },
-    { status: 'return_approved', label: '반입 승인' },
+    'pending',
+    'approved',
+    'lender_checked',
+    'borrower_received',
+    'in_use',
+    'borrower_returned',
+    'lender_received',
+    'return_approved',
   ],
+};
+
+/** status → stepper i18n key mapping */
+const STEPPER_LABEL_MAP: Record<string, string> = {
+  pending: 'pendingApproval',
+  approved: 'approved',
+  checked_out: 'checkedOut',
+  returned: 'returned',
+  return_approved: 'returnApproved',
+  lender_checked: 'lenderCheckout',
+  borrower_received: 'borrowerReceive',
+  in_use: 'inUse',
+  borrower_returned: 'borrowerReturn',
+  lender_received: 'lenderReturn',
 };
 
 /**
  * 특수 상태 (진행 흐름에서 벗어난 상태)
  */
 const SPECIAL_STATUSES: CheckoutStatus[] = ['rejected', 'canceled', 'overdue'];
-
-/**
- * 현재 상태의 단계 인덱스 찾기
- */
-function getStepIndex(steps: { status: CheckoutStatus }[], status: CheckoutStatus): number {
-  return steps.findIndex((step) => step.status === status);
-}
 
 /**
  * 반출 상태 진행 표시기
@@ -73,92 +70,105 @@ export default function CheckoutStatusStepper({
   currentStatus,
   checkoutType,
 }: CheckoutStatusStepperProps) {
-  const steps = STEPS_BY_TYPE[checkoutType] || STEPS_BY_TYPE.calibration;
-  const currentIndex = getStepIndex(steps, currentStatus);
+  const t = useTranslations('checkouts');
+  const steps = STEP_STATUSES[checkoutType] || STEP_STATUSES.calibration;
+  const currentIndex = steps.indexOf(currentStatus);
   const isSpecialStatus = SPECIAL_STATUSES.includes(currentStatus);
+
+  const getStepLabel = (status: CheckoutStatus) =>
+    t(`stepper.${STEPPER_LABEL_MAP[status] || status}`);
 
   // 특수 상태인 경우 별도 표시
   if (isSpecialStatus) {
+    const specialConfig =
+      CHECKOUT_STEPPER_TOKENS.special[
+        currentStatus as keyof typeof CHECKOUT_STEPPER_TOKENS.special
+      ];
+
     return (
       <div className="flex flex-col items-center justify-center p-6" role="status">
-        <div
-          className={cn(
-            'p-4 rounded-full',
-            currentStatus === 'rejected' && 'bg-red-100 dark:bg-red-900/30',
-            currentStatus === 'canceled' && 'bg-gray-100 dark:bg-gray-800',
-            currentStatus === 'overdue' && 'bg-orange-100 dark:bg-orange-900/30'
-          )}
-        >
+        <div className={cn('p-4 rounded-full', specialConfig.container)}>
           {currentStatus === 'rejected' && (
-            <XCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+            <XCircle className={cn(CHECKOUT_STEPPER_TOKENS.icon.special, specialConfig.icon)} />
           )}
           {currentStatus === 'canceled' && (
-            <XCircle className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+            <XCircle className={cn(CHECKOUT_STEPPER_TOKENS.icon.special, specialConfig.icon)} />
           )}
           {currentStatus === 'overdue' && (
-            <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+            <Clock className={cn(CHECKOUT_STEPPER_TOKENS.icon.special, specialConfig.icon)} />
           )}
         </div>
-        <p
-          className={cn(
-            'mt-3 text-lg font-medium',
-            currentStatus === 'rejected' && 'text-red-800 dark:text-red-300',
-            currentStatus === 'canceled' && 'text-gray-800 dark:text-gray-300',
-            currentStatus === 'overdue' && 'text-orange-800 dark:text-orange-300'
-          )}
-        >
-          {CHECKOUT_STATUS_LABELS[currentStatus] || currentStatus}
+        <p className={cn('mt-3 text-lg font-medium', specialConfig.label)}>
+          {t(`status.${currentStatus}`)}
         </p>
         {currentStatus === 'overdue' && (
-          <p className="text-sm text-muted-foreground mt-1">반입 예정일이 초과되었습니다.</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('stepper.overdueMessage')}</p>
         )}
       </div>
     );
   }
 
   return (
-    <div className="w-full" role="group" aria-label="반출 진행 상태">
+    <div className="w-full" role="group" aria-label={t('stepper.ariaLabel')}>
       {/* 모바일: 세로 레이아웃 */}
       <div className="md:hidden space-y-4">
-        {steps.map((step, index) => {
+        {steps.map((status, index) => {
           const isCompleted = currentIndex > index;
           const isCurrent = currentIndex === index;
           const isPending = currentIndex < index;
 
           return (
             <div
-              key={step.status}
+              key={status}
               className="flex items-center gap-3"
               aria-current={isCurrent ? 'step' : undefined}
             >
               {/* 아이콘 */}
               <div
                 className={cn(
-                  'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-                  isCompleted && 'bg-green-100 dark:bg-green-900/30',
-                  isCurrent && 'bg-blue-100 dark:bg-blue-900/30',
-                  isPending && 'bg-gray-100 dark:bg-gray-800'
+                  'flex-shrink-0 rounded-full flex items-center justify-center',
+                  CHECKOUT_STEPPER_TOKENS.node.mobile,
+                  isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.node,
+                  isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.node,
+                  isPending && CHECKOUT_STEPPER_TOKENS.status.pending.node
                 )}
               >
                 {isCompleted && (
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <CheckCircle2
+                    className={cn(
+                      CHECKOUT_STEPPER_TOKENS.icon.mobile,
+                      CHECKOUT_STEPPER_TOKENS.status.completed.icon
+                    )}
+                  />
                 )}
                 {isCurrent && (
-                  <Circle className="h-5 w-5 text-blue-600 fill-blue-600 dark:text-blue-400 dark:fill-blue-400" />
+                  <Circle
+                    className={cn(
+                      CHECKOUT_STEPPER_TOKENS.icon.mobile,
+                      CHECKOUT_STEPPER_TOKENS.status.current.icon
+                    )}
+                  />
                 )}
-                {isPending && <Circle className="h-5 w-5 text-gray-400" />}
+                {isPending && (
+                  <Circle
+                    className={cn(
+                      CHECKOUT_STEPPER_TOKENS.icon.mobile,
+                      CHECKOUT_STEPPER_TOKENS.status.pending.icon
+                    )}
+                  />
+                )}
               </div>
 
               {/* 레이블 */}
               <span
                 className={cn(
-                  'text-sm',
-                  isCompleted && 'text-green-800 dark:text-green-300',
-                  isCurrent && 'font-medium text-blue-800 dark:text-blue-300',
-                  isPending && 'text-gray-500 dark:text-gray-400'
+                  CHECKOUT_STEPPER_TOKENS.label.mobile,
+                  isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.label,
+                  isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.label,
+                  isPending && CHECKOUT_STEPPER_TOKENS.status.pending.label
                 )}
               >
-                {step.label}
+                {getStepLabel(status)}
               </span>
             </div>
           );
@@ -167,7 +177,7 @@ export default function CheckoutStatusStepper({
 
       {/* 데스크톱: 가로 레이아웃 */}
       <div className="hidden md:flex items-center justify-between">
-        {steps.map((step, index) => {
+        {steps.map((status, index) => {
           const isCompleted = currentIndex > index;
           const isCurrent = currentIndex === index;
           const isPending = currentIndex < index;
@@ -175,7 +185,7 @@ export default function CheckoutStatusStepper({
 
           return (
             <div
-              key={step.status}
+              key={status}
               className="flex items-center flex-1"
               aria-current={isCurrent ? 'step' : undefined}
             >
@@ -184,32 +194,50 @@ export default function CheckoutStatusStepper({
                 {/* 아이콘 */}
                 <div
                   className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
-                    isCompleted && 'bg-green-100 dark:bg-green-900/30',
-                    isCurrent &&
-                      'bg-blue-100 dark:bg-blue-900/30 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900',
-                    isPending && 'bg-gray-100 dark:bg-gray-800'
+                    'rounded-full flex items-center justify-center',
+                    CHECKOUT_STEPPER_TOKENS.node.desktop,
+                    isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.node,
+                    isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.node,
+                    isPending && CHECKOUT_STEPPER_TOKENS.status.pending.node
                   )}
                 >
                   {isCompleted && (
-                    <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    <CheckCircle2
+                      className={cn(
+                        CHECKOUT_STEPPER_TOKENS.icon.desktop,
+                        CHECKOUT_STEPPER_TOKENS.status.completed.icon
+                      )}
+                    />
                   )}
                   {isCurrent && (
-                    <Circle className="h-6 w-6 text-blue-600 fill-blue-600 dark:text-blue-400 dark:fill-blue-400" />
+                    <Circle
+                      className={cn(
+                        CHECKOUT_STEPPER_TOKENS.icon.desktop,
+                        CHECKOUT_STEPPER_TOKENS.status.current.icon
+                      )}
+                    />
                   )}
-                  {isPending && <Circle className="h-6 w-6 text-gray-400" />}
+                  {isPending && (
+                    <Circle
+                      className={cn(
+                        CHECKOUT_STEPPER_TOKENS.icon.desktop,
+                        CHECKOUT_STEPPER_TOKENS.status.pending.icon
+                      )}
+                    />
+                  )}
                 </div>
 
                 {/* 레이블 */}
                 <span
                   className={cn(
-                    'mt-2 text-xs text-center max-w-[80px]',
-                    isCompleted && 'text-green-800 dark:text-green-300',
-                    isCurrent && 'font-medium text-blue-800 dark:text-blue-300',
-                    isPending && 'text-gray-500 dark:text-gray-400'
+                    'mt-2 text-center max-w-[80px]',
+                    CHECKOUT_STEPPER_TOKENS.label.desktop,
+                    isCompleted && CHECKOUT_STEPPER_TOKENS.status.completed.label,
+                    isCurrent && CHECKOUT_STEPPER_TOKENS.status.current.label,
+                    isPending && CHECKOUT_STEPPER_TOKENS.status.pending.label
                   )}
                 >
-                  {step.label}
+                  {getStepLabel(status)}
                 </span>
               </div>
 
@@ -218,7 +246,9 @@ export default function CheckoutStatusStepper({
                 <div
                   className={cn(
                     'flex-1 h-0.5 mx-2',
-                    isCompleted ? 'bg-green-400 dark:bg-green-600' : 'bg-gray-200 dark:bg-gray-700'
+                    isCompleted
+                      ? CHECKOUT_STEPPER_TOKENS.connector.completed
+                      : CHECKOUT_STEPPER_TOKENS.connector.pending
                   )}
                 />
               )}

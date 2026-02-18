@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,11 +13,9 @@ import {
   ConditionCheckStep,
   ConditionStatus,
   AccessoriesStatus,
-  CONDITION_CHECK_STEP_LABELS,
-  CONDITION_STATUS_LABELS,
-  ACCESSORIES_STATUS_LABELS,
 } from '@equipment-management/schemas';
 import type { CreateConditionCheckDto } from '@/lib/api/checkout-api';
+import { CHECKOUT_FORM_TOKENS } from '@/lib/design-tokens';
 
 interface EquipmentConditionFormProps {
   /** 상태 확인 단계 */
@@ -54,6 +53,8 @@ export default function EquipmentConditionForm({
   isLoading = false,
   previousCheck,
 }: EquipmentConditionFormProps) {
+  const t = useTranslations('checkouts');
+
   // 폼 상태
   const [appearanceStatus, setAppearanceStatus] = useState<ConditionStatus>('normal');
   const [operationStatus, setOperationStatus] = useState<ConditionStatus>('normal');
@@ -81,7 +82,7 @@ export default function EquipmentConditionForm({
   const validate = (): boolean => {
     // 이상이 있는데 상세 내용이 없는 경우
     if (hasAbnormal && !abnormalDetails.trim()) {
-      setValidationError('이상 내용이 있는 경우 상세 내용을 입력해야 합니다.');
+      setValidationError(t('condition.validationAbnormalRequired'));
       return false;
     }
 
@@ -95,7 +96,7 @@ export default function EquipmentConditionForm({
           previousCheck!.accessoriesStatus !== accessoriesStatus);
 
       if (hasChange && !comparisonWithPrevious.trim()) {
-        setValidationError('이전 확인과 다른 점이 있는 경우 비교 내용을 입력해야 합니다.');
+        setValidationError(t('condition.validationComparisonRequired'));
         return false;
       }
     }
@@ -127,10 +128,8 @@ export default function EquipmentConditionForm({
     <div className="space-y-6">
       {/* 단계 안내 */}
       <div className="p-4 bg-muted rounded-lg">
-        <p className="font-medium">{CONDITION_CHECK_STEP_LABELS[step]}</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          장비의 현재 상태를 확인하고 기록해주세요.
-        </p>
+        <p className="font-medium">{t(`condition.stepLabels.${step}`)}</p>
+        <p className="text-sm text-muted-foreground mt-1">{t('condition.formGuide')}</p>
       </div>
 
       {/* 유효성 검증 에러 */}
@@ -146,9 +145,9 @@ export default function EquipmentConditionForm({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Eye className="h-4 w-4" />
-            외관 상태
+            {t('condition.appearance')}
           </CardTitle>
-          <CardDescription>장비의 외관 상태를 확인해주세요.</CardDescription>
+          <CardDescription>{t('condition.appearanceDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -160,20 +159,22 @@ export default function EquipmentConditionForm({
               <RadioGroupItem value="normal" id="appearance-normal" />
               <Label htmlFor="appearance-normal" className="flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                {CONDITION_STATUS_LABELS.normal}
+                {t('condition.conditionStatus.normal')}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="abnormal" id="appearance-abnormal" />
               <Label htmlFor="appearance-abnormal" className="flex items-center gap-1">
                 <AlertCircle className="h-4 w-4 text-red-600" />
-                {CONDITION_STATUS_LABELS.abnormal}
+                {t('condition.conditionStatus.abnormal')}
               </Label>
             </div>
           </RadioGroup>
           {previousCheck && (
             <p className="text-sm text-muted-foreground mt-2">
-              이전 확인: {CONDITION_STATUS_LABELS[previousCheck.appearanceStatus]}
+              {t('condition.previousCheck', {
+                status: t(`condition.conditionStatus.${previousCheck.appearanceStatus}`),
+              })}
             </p>
           )}
         </CardContent>
@@ -184,9 +185,9 @@ export default function EquipmentConditionForm({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Cog className="h-4 w-4" />
-            작동 상태
+            {t('condition.operation')}
           </CardTitle>
-          <CardDescription>장비가 정상적으로 작동하는지 확인해주세요.</CardDescription>
+          <CardDescription>{t('condition.operationDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -198,20 +199,22 @@ export default function EquipmentConditionForm({
               <RadioGroupItem value="normal" id="operation-normal" />
               <Label htmlFor="operation-normal" className="flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                {CONDITION_STATUS_LABELS.normal}
+                {t('condition.conditionStatus.normal')}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="abnormal" id="operation-abnormal" />
               <Label htmlFor="operation-abnormal" className="flex items-center gap-1">
                 <AlertCircle className="h-4 w-4 text-red-600" />
-                {CONDITION_STATUS_LABELS.abnormal}
+                {t('condition.conditionStatus.abnormal')}
               </Label>
             </div>
           </RadioGroup>
           {previousCheck && (
             <p className="text-sm text-muted-foreground mt-2">
-              이전 확인: {CONDITION_STATUS_LABELS[previousCheck.operationStatus]}
+              {t('condition.previousCheck', {
+                status: t(`condition.conditionStatus.${previousCheck.operationStatus}`),
+              })}
             </p>
           )}
         </CardContent>
@@ -222,9 +225,12 @@ export default function EquipmentConditionForm({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Package2 className="h-4 w-4" />
-            부속품 상태 <span className="text-sm font-normal text-muted-foreground">(선택)</span>
+            {t('condition.accessoriesLabel')}{' '}
+            <span className="text-sm font-normal text-muted-foreground">
+              {t('condition.accessoriesOptional')}
+            </span>
           </CardTitle>
-          <CardDescription>부속품이 모두 있는지 확인해주세요.</CardDescription>
+          <CardDescription>{t('condition.accessoriesDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -238,20 +244,22 @@ export default function EquipmentConditionForm({
               <RadioGroupItem value="complete" id="accessories-complete" />
               <Label htmlFor="accessories-complete" className="flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                {ACCESSORIES_STATUS_LABELS.complete}
+                {t('condition.accessoriesStatusLabels.complete')}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="incomplete" id="accessories-incomplete" />
               <Label htmlFor="accessories-incomplete" className="flex items-center gap-1">
                 <AlertCircle className="h-4 w-4 text-orange-600" />
-                {ACCESSORIES_STATUS_LABELS.incomplete}
+                {t('condition.accessoriesStatusLabels.incomplete')}
               </Label>
             </div>
           </RadioGroup>
           {previousCheck?.accessoriesStatus && (
             <p className="text-sm text-muted-foreground mt-2">
-              이전 확인: {ACCESSORIES_STATUS_LABELS[previousCheck.accessoriesStatus]}
+              {t('condition.previousCheck', {
+                status: t(`condition.accessoriesStatusLabels.${previousCheck.accessoriesStatus}`),
+              })}
             </p>
           )}
         </CardContent>
@@ -261,15 +269,15 @@ export default function EquipmentConditionForm({
       {hasAbnormal && (
         <div className="space-y-2">
           <Label htmlFor="abnormalDetails">
-            이상 내용 상세 <span className="text-red-500">*</span>
+            {t('condition.abnormalDetailsLabel')} <span className="text-red-500">*</span>
           </Label>
           <Textarea
             id="abnormalDetails"
-            placeholder="이상 내용을 상세히 기록해주세요"
+            placeholder={t('condition.abnormalDetailsPlaceholder')}
             value={abnormalDetails}
             onChange={(e) => setAbnormalDetails(e.target.value)}
             rows={3}
-            className="border-red-200 focus:border-red-400"
+            className={`border-red-200 ${CHECKOUT_FORM_TOKENS.abnormalTextarea}`}
           />
         </div>
       )}
@@ -277,26 +285,24 @@ export default function EquipmentConditionForm({
       {/* 이전 확인과 비교 (④단계) */}
       {needsComparison && (
         <div className="space-y-2">
-          <Label htmlFor="comparisonWithPrevious">이전 확인과 비교</Label>
+          <Label htmlFor="comparisonWithPrevious">{t('condition.comparisonLabel')}</Label>
           <Textarea
             id="comparisonWithPrevious"
-            placeholder="반출 전 상태와 비교하여 변경된 점이 있다면 기록해주세요"
+            placeholder={t('condition.comparisonPlaceholder')}
             value={comparisonWithPrevious}
             onChange={(e) => setComparisonWithPrevious(e.target.value)}
             rows={3}
           />
-          <p className="text-sm text-muted-foreground">
-            상태가 변경된 경우 필수로 입력해야 합니다.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('condition.comparisonRequired')}</p>
         </div>
       )}
 
       {/* 추가 메모 */}
       <div className="space-y-2">
-        <Label htmlFor="notes">추가 메모</Label>
+        <Label htmlFor="notes">{t('condition.additionalNotes')}</Label>
         <Textarea
           id="notes"
-          placeholder="추가로 기록할 내용이 있으면 입력해주세요"
+          placeholder={t('condition.additionalNotesPlaceholder')}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
@@ -305,7 +311,7 @@ export default function EquipmentConditionForm({
 
       {/* 상태 요약 */}
       <div className="p-4 bg-muted rounded-lg">
-        <p className="text-sm font-medium mb-2">확인 상태 요약</p>
+        <p className="text-sm font-medium mb-2">{t('condition.statusSummary')}</p>
         <div className="grid gap-2 text-sm">
           <div className="flex items-center gap-2">
             {appearanceStatus === 'normal' ? (
@@ -313,7 +319,9 @@ export default function EquipmentConditionForm({
             ) : (
               <AlertCircle className="h-4 w-4 text-red-600" />
             )}
-            <span>외관 상태: {CONDITION_STATUS_LABELS[appearanceStatus]}</span>
+            <span>
+              {t('condition.appearance')}: {t(`condition.conditionStatus.${appearanceStatus}`)}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             {operationStatus === 'normal' ? (
@@ -321,7 +329,9 @@ export default function EquipmentConditionForm({
             ) : (
               <AlertCircle className="h-4 w-4 text-red-600" />
             )}
-            <span>작동 상태: {CONDITION_STATUS_LABELS[operationStatus]}</span>
+            <span>
+              {t('condition.operation')}: {t(`condition.conditionStatus.${operationStatus}`)}
+            </span>
           </div>
           {accessoriesStatus && (
             <div className="flex items-center gap-2">
@@ -330,7 +340,10 @@ export default function EquipmentConditionForm({
               ) : (
                 <AlertCircle className="h-4 w-4 text-orange-600" />
               )}
-              <span>부속품 상태: {ACCESSORIES_STATUS_LABELS[accessoriesStatus]}</span>
+              <span>
+                {t('condition.accessories')}:{' '}
+                {t(`condition.accessoriesStatusLabels.${accessoriesStatus}`)}
+              </span>
             </div>
           )}
         </div>
@@ -339,10 +352,10 @@ export default function EquipmentConditionForm({
       {/* 버튼 */}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-          취소
+          {t('actions.cancel')}
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isLoading}>
-          {isLoading ? '처리 중...' : '확인 완료'}
+          {isLoading ? t('actions.processing') : t('condition.confirmComplete')}
         </Button>
       </div>
     </div>

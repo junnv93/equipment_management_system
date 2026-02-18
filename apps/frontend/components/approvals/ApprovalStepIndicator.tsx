@@ -3,6 +3,12 @@
 import { Check, Clock, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UnifiedApprovalStatus, ApprovalHistoryEntry } from '@/lib/api/approvals-api';
+import {
+  getApprovalStepperNodeClasses,
+  APPROVAL_STEPPER_TOKENS,
+  getTransitionClasses,
+} from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface ApprovalStepIndicatorProps {
   type: 'disposal' | 'calibration_plan';
@@ -12,22 +18,22 @@ interface ApprovalStepIndicatorProps {
 
 interface Step {
   key: string;
-  label: string;
-  role: string;
+  labelKey: string;
+  roleKey: string;
 }
 
 // 폐기: 2단계
 const disposalSteps: Step[] = [
-  { key: 'pending_review', label: '요청', role: '시험실무자' },
-  { key: 'reviewed', label: '검토', role: '기술책임자' },
-  { key: 'approved', label: '승인', role: '시험소장' },
+  { key: 'pending_review', labelKey: 'steps.request', roleKey: 'steps.roles.test_engineer' },
+  { key: 'reviewed', labelKey: 'steps.review', roleKey: 'steps.roles.technical_manager' },
+  { key: 'approved', labelKey: 'steps.approve', roleKey: 'steps.roles.lab_manager' },
 ];
 
 // 교정계획서: 3단계
 const planSteps: Step[] = [
-  { key: 'pending_review', label: '작성', role: '기술책임자' },
-  { key: 'reviewed', label: '검토', role: '품질책임자' },
-  { key: 'approved', label: '승인', role: '시험소장' },
+  { key: 'pending_review', labelKey: 'steps.draft', roleKey: 'steps.roles.technical_manager' },
+  { key: 'reviewed', labelKey: 'steps.review', roleKey: 'steps.roles.quality_manager' },
+  { key: 'approved', labelKey: 'steps.approve', roleKey: 'steps.roles.lab_manager' },
 ];
 
 const STATUS_ORDER: Record<string, number> = {
@@ -43,6 +49,7 @@ export function ApprovalStepIndicator({
   currentStatus,
   history,
 }: ApprovalStepIndicatorProps) {
+  const t = useTranslations('approvals');
   const steps = type === 'disposal' ? disposalSteps : planSteps;
   const currentOrder = STATUS_ORDER[currentStatus] ?? 0;
   const isRejected = currentStatus === 'rejected';
@@ -56,7 +63,7 @@ export function ApprovalStepIndicator({
     <div
       className="flex items-center gap-2 py-3"
       role="group"
-      aria-label="승인 진행 상태"
+      aria-label={t('steps.ariaLabel')}
       data-testid="step-indicator"
     >
       {steps.map((step, index) => {
@@ -65,42 +72,47 @@ export function ApprovalStepIndicator({
         const isCurrent = currentOrder === stepOrder && !isRejected;
         const historyEntry = getHistoryForStep(index);
 
+        const stepperStatus =
+          isRejected && isCurrent
+            ? 'rejected'
+            : isCompleted
+              ? 'completed'
+              : isCurrent
+                ? 'current'
+                : 'pending';
+
         return (
           <div key={step.key} className="flex items-center">
             {/* 단계 아이콘 */}
             <div
               className={cn(
-                'flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors',
-                isRejected && isCurrent
-                  ? 'border-ul-red bg-ul-red text-white'
-                  : isCompleted
-                    ? 'border-ul-green bg-ul-green text-white'
-                    : isCurrent
-                      ? 'border-ul-blue bg-ul-blue text-white'
-                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
+                getApprovalStepperNodeClasses(stepperStatus),
+                getTransitionClasses('fast', ['border-color', 'background-color', 'color'])
               )}
               aria-current={isCurrent ? 'step' : undefined}
             >
               {isRejected && isCurrent ? (
-                <XCircle className="h-4 w-4" />
+                <XCircle className={APPROVAL_STEPPER_TOKENS.icon} />
               ) : isCompleted ? (
-                <Check className="h-4 w-4" />
+                <Check className={APPROVAL_STEPPER_TOKENS.icon} />
               ) : (
-                <Clock className="h-4 w-4" />
+                <Clock className={APPROVAL_STEPPER_TOKENS.icon} />
               )}
             </div>
 
             {/* 단계 정보 */}
-            <div className="ml-2 min-w-[80px]">
+            <div className={`ml-2 ${APPROVAL_STEPPER_TOKENS.infoWidth}`}>
               <p
                 className={cn(
-                  'text-sm font-medium',
-                  isCurrent ? 'text-[#0067B1]' : 'text-muted-foreground'
+                  APPROVAL_STEPPER_TOKENS.label.base,
+                  isCurrent
+                    ? APPROVAL_STEPPER_TOKENS.label.current
+                    : APPROVAL_STEPPER_TOKENS.label.inactive
                 )}
               >
-                {step.label}
+                {t(step.labelKey)}
               </p>
-              <p className="text-xs text-muted-foreground">{step.role}</p>
+              <p className="text-xs text-muted-foreground">{t(step.roleKey)}</p>
               {historyEntry && (
                 <p className="text-xs text-muted-foreground/70 truncate max-w-[100px]">
                   {historyEntry.actorName}
@@ -112,8 +124,10 @@ export function ApprovalStepIndicator({
             {index < steps.length - 1 && (
               <div
                 className={cn(
-                  'w-8 h-0.5 mx-2',
-                  currentOrder > stepOrder ? 'bg-ul-green' : 'bg-gray-200 dark:bg-gray-700'
+                  APPROVAL_STEPPER_TOKENS.connector.base,
+                  currentOrder > stepOrder
+                    ? APPROVAL_STEPPER_TOKENS.connector.completed
+                    : APPROVAL_STEPPER_TOKENS.connector.pending
                 )}
                 aria-hidden="true"
               />

@@ -14,9 +14,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { CalendarDays, Building, ChevronDown, Package } from 'lucide-react';
-import { CHECKOUT_PURPOSE_LABELS, type CheckoutPurpose } from '@equipment-management/schemas';
+import { useTranslations } from 'next-intl';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
+import { CHECKOUT_INTERACTION_TOKENS, CHECKOUT_MOTION } from '@/lib/design-tokens';
 
 interface CheckoutGroupCardProps {
   group: CheckoutGroup;
@@ -25,6 +26,7 @@ interface CheckoutGroupCardProps {
 
 /** 반출 그룹 1개를 접기/펼치기 카드로 렌더링합니다. */
 function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
+  const t = useTranslations('checkouts');
   const [isOpen, setIsOpen] = useState(false);
 
   // 장비 행 데이터: checkout > equipment[]를 평탄화 (memoized)
@@ -37,7 +39,7 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
           managementNumber: equip.managementNumber,
           purpose: checkout.purpose,
           status: checkout.status,
-          userName: checkout.user?.name || '알 수 없는 사용자',
+          userName: checkout.user?.name || t('groupCard.unknownUser'),
           checkoutId: checkout.id,
         }))
       ),
@@ -51,7 +53,7 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
           <CollapsibleTrigger asChild>
             <button
               type="button"
-              className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+              className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left ${CHECKOUT_INTERACTION_TOKENS.groupCardTrigger}`}
             >
               {/* 왼쪽: 날짜 + 반출지 + 장비 수 */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
@@ -73,7 +75,7 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Package className="h-3.5 w-3.5 shrink-0" />
-                  <span>장비 {group.totalEquipment}대</span>
+                  <span>{t('groupCard.equipmentCount', { count: group.totalEquipment })}</span>
                 </div>
               </div>
 
@@ -89,12 +91,12 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                 <div className="hidden md:flex items-center gap-1">
                   {group.purposes.map((purpose) => (
                     <Badge key={purpose} variant="secondary" className="text-xs">
-                      {CHECKOUT_PURPOSE_LABELS[purpose]}
+                      {t(`purpose.${purpose}`)}
                     </Badge>
                   ))}
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                  className={`h-4 w-4 text-muted-foreground ${CHECKOUT_MOTION.chevronRotate} ${
                     isOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -110,7 +112,7 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
               ))}
               {group.purposes.map((purpose) => (
                 <Badge key={purpose} variant="secondary" className="text-xs">
-                  {CHECKOUT_PURPOSE_LABELS[purpose]}
+                  {t(`purpose.${purpose}`)}
                 </Badge>
               ))}
             </div>
@@ -118,24 +120,24 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
             <div className="border-t">
               {equipmentRows.length === 0 ? (
                 <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                  장비 정보가 없습니다
+                  {t('groupCard.noEquipment')}
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>장비명</TableHead>
-                      <TableHead>관리번호</TableHead>
-                      <TableHead>목적</TableHead>
-                      <TableHead>상태</TableHead>
-                      <TableHead>신청자</TableHead>
+                      <TableHead>{t('groupCard.equipmentName')}</TableHead>
+                      <TableHead>{t('groupCard.managementNumber')}</TableHead>
+                      <TableHead>{t('groupCard.purpose')}</TableHead>
+                      <TableHead>{t('groupCard.status')}</TableHead>
+                      <TableHead>{t('groupCard.requester')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {equipmentRows.map((row) => (
                       <TableRow
                         key={`${row.checkoutId}-${row.equipmentId}`}
-                        className="cursor-pointer hover:bg-muted/50 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+                        className={`${CHECKOUT_INTERACTION_TOKENS.clickableRow} ${CHECKOUT_INTERACTION_TOKENS.rowFocus}`}
                         onClick={() => onCheckoutClick(row.checkoutId)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -145,7 +147,7 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                         }}
                         tabIndex={0}
                         role="button"
-                        aria-label={`${row.equipmentName} 반출 상세 보기`}
+                        aria-label={t('groupCard.viewDetail', { name: row.equipmentName })}
                       >
                         <TableCell className="font-medium">
                           <Tooltip>
@@ -162,7 +164,7 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">
-                            {CHECKOUT_PURPOSE_LABELS[row.purpose as CheckoutPurpose] || row.purpose}
+                            {t(`purpose.${row.purpose}`)}
                           </Badge>
                         </TableCell>
                         <TableCell>
