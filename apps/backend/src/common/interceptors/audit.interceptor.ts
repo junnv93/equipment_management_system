@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AUDIT_LOG_KEY, AuditLogMetadata } from '../decorators/audit-log.decorator';
+import { SKIP_AUDIT_KEY } from '../decorators/skip-audit.decorator';
 import { AuditService, CreateAuditLogDto } from '../../modules/audit/audit.service';
 import { AuditLogDetails } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
@@ -22,25 +23,59 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    // 메타데이터 가져오기
-    const auditMetadata = this.reflector.get<AuditLogMetadata>(AUDIT_LOG_KEY, context.getHandler());
-
-    // 데코레이터가 없으면 패스
-    if (!auditMetadata) {
-      return next.handle();
-    }
-
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
+    // 1. @SkipAudit() 체크 — 명시적 제외
+    const skipAudit = this.reflector.get<boolean>(SKIP_AUDIT_KEY, context.getHandler());
+    if (skipAudit) {
+      return next.handle();
+    }
+
+    // 2. @AuditLog() 메타데이터 가져오기
+    const auditMetadata = this.reflector.get<AuditLogMetadata>(AUDIT_LOG_KEY, context.getHandler());
+
+    // 3. 기본 감사 로직 (POST/PATCH/DELETE → 자동 감사)
+    if (!auditMetadata) {
+      const httpMethod = request.method?.toUpperCase();
+      const shouldAuditByDefault = ['POST', 'PATCH', 'DELETE'].includes(httpMethod);
+
+      if (!shouldAuditByDefault) {
+        return next.handle(); // GET 등 → 감사 안 함
+      }
+
+      // 인증된 사용자가 없으면 패스
+      if (!user) {
+        return next.handle();
+      }
+
+      // 기본 메타데이터 생성 (경로 기반 추론)
+      const defaultMetadata: AuditLogMetadata = this.createDefaultMetadata(request, httpMethod);
+
+      return this.auditResponse(next, defaultMetadata, request, user);
+    }
+
+    // 4. @AuditLog() 커스텀 메타데이터 사용
     // 인증된 사용자가 없으면 패스 (로그인/로그아웃 제외)
     if (!user && !['login', 'logout'].includes(auditMetadata.action)) {
       return next.handle();
     }
 
+    return this.auditResponse(next, auditMetadata, request, user);
+  }
+
+  /**
+   * 응답 후 감사 로그 기록
+   */
+  private auditResponse(
+    next: CallHandler,
+    metadata: AuditLogMetadata,
+    request: AuthenticatedRequest,
+    _user: JwtUser | undefined
+  ): Observable<unknown> {
     // 변경 전 값 저장 (update/delete 시)
     let previousValue: Record<string, unknown> | undefined;
-    if (auditMetadata.trackPreviousValue) {
+    if (metadata.trackPreviousValue) {
       // 비동기로 이전 값을 가져오는 로직은 서비스에서 처리
       // 여기서는 요청 데이터만 저장
     }
@@ -49,7 +84,7 @@ export class AuditInterceptor implements NestInterceptor {
       tap({
         next: (response: unknown) => {
           // 비동기로 감사 로그 기록 (성능 영향 최소화)
-          this.logAuditAsync(auditMetadata, request, response, previousValue).catch((error) => {
+          this.logAuditAsync(metadata, request, response, previousValue).catch((error) => {
             this.logger.error(
               `Audit log failed: ${error instanceof Error ? error.message : String(error)}`,
               error instanceof Error ? error.stack : undefined
@@ -62,6 +97,44 @@ export class AuditInterceptor implements NestInterceptor {
         },
       })
     );
+  }
+
+  /**
+   * 기본 감사 로그 메타데이터 생성 (경로 기반 추론)
+   *
+   * 예: POST /api/equipment → { action: 'create', entityType: 'equipment', entityIdPath: 'response.id' }
+   */
+  private createDefaultMetadata(
+    request: AuthenticatedRequest,
+    httpMethod: string
+  ): AuditLogMetadata {
+    const path = request.route?.path || request.url;
+    const segments = path.split('/').filter(Boolean);
+
+    // 마지막 경로 세그먼트를 엔티티 타입으로 추론
+    const entityType = segments[segments.length - 1]?.replace(/^api$/, 'unknown') || 'unknown';
+
+    // HTTP 메서드를 액션으로 변환
+    const actionMap: Record<
+      string,
+      'create' | 'update' | 'delete' | 'approve' | 'reject' | 'login' | 'logout'
+    > = {
+      POST: 'create',
+      PATCH: 'update',
+      DELETE: 'delete',
+    };
+    const action = (actionMap[httpMethod] || 'create') as AuditLogMetadata['action'];
+
+    // 엔티티 ID 경로 추론
+    // - 응답에 id/uuid가 있으면 사용
+    // - 없으면 params.uuid/params.id 시도
+    const entityIdPath = 'response.id';
+
+    return {
+      action,
+      entityType,
+      entityIdPath,
+    };
   }
 
   /**
@@ -108,8 +181,8 @@ export class AuditInterceptor implements NestInterceptor {
         : details;
 
     const auditLogDto: CreateAuditLogDto = {
-      // SSOT: JwtUser.userId (JWT sub → userId), 레거시 폴백: id
-      userId: user?.userId || user?.id || 'anonymous',
+      // SSOT: JwtUser.userId (JWT sub → userId)
+      userId: user?.userId || 'anonymous',
       userName: user?.name || 'Anonymous User',
       // SSOT: JwtUser.roles (배열의 첫 번째 역할)
       userRole: user?.roles?.[0] || 'unknown',

@@ -30,7 +30,7 @@ export abstract class VersionedBaseService {
    * @throws ConflictException  version 불일치 (동시 수정) (409)
    */
   protected async updateWithVersion<T>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
     table: any,
     id: string,
     expectedVersion: number,
@@ -55,11 +55,14 @@ export abstract class VersionedBaseService {
         .limit(1);
 
       if (!existing) {
-        throw new NotFoundException(`${entityName} UUID ${id}를 찾을 수 없습니다.`);
+        throw new NotFoundException({
+          code: 'ENTITY_NOT_FOUND',
+          message: `${entityName} with UUID ${id} not found`,
+        });
       }
 
       throw new ConflictException({
-        message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+        message: 'This record has been modified by another user. Please refresh the page.',
         code: 'VERSION_CONFLICT',
         currentVersion: existing.version,
         expectedVersion,

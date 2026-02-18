@@ -1,6 +1,21 @@
-import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
+import {
+  PipeTransform,
+  Injectable,
+  ArgumentMetadata,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { ZodSchema, ZodError } from 'zod';
 import { getErrorMessage } from '../utils/error';
+
+const SENSITIVE_FIELDS = new Set([
+  'password',
+  'token',
+  'secret',
+  'apiKey',
+  'refreshToken',
+  'accessToken',
+]);
 
 /**
  * 검증 대상 파라미터 타입
@@ -59,6 +74,7 @@ export interface ZodValidationPipeOptions {
  */
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
+  private static readonly logger = new Logger(ZodValidationPipe.name);
   private readonly validationTargets: Set<string>;
 
   constructor(
@@ -66,6 +82,20 @@ export class ZodValidationPipe implements PipeTransform {
     options?: ZodValidationPipeOptions
   ) {
     this.validationTargets = new Set(options?.targets ?? ['body']);
+  }
+
+  /**
+   * 민감 필드를 [REDACTED]로 마스킹하여 로그 유출 방지
+   */
+  private static redactSensitiveFields(value: unknown): unknown {
+    if (value === null || value === undefined || typeof value !== 'object') {
+      return value;
+    }
+    const redacted: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      redacted[key] = SENSITIVE_FIELDS.has(key) ? '[REDACTED]' : val;
+    }
+    return redacted;
   }
 
   transform(value: unknown, metadata: ArgumentMetadata): unknown {
@@ -91,26 +121,21 @@ export class ZodValidationPipe implements PipeTransform {
     } catch (error: unknown) {
       // Zod 오류를 NestJS BadRequestException으로 변환
       if (error instanceof ZodError) {
-        // ✅ 디버깅을 위해 상세 에러 정보 항상 로깅 (근본 원인 파악)
-        console.error(
-          '🔴 ZodValidationPipe Error:',
-          JSON.stringify(
-            {
-              value,
-              issues: error.issues.map((issue) => ({
-                path: issue.path,
-                message: issue.message,
-                code: issue.code,
-                received:
-                  issue.code === 'invalid_type'
-                    ? (issue as { received?: unknown }).received
-                    : undefined,
-              })),
-              metadata: metadata.type,
-            },
-            null,
-            2
-          )
+        // ✅ NestJS Logger + 민감 필드 마스킹으로 안전한 디버깅
+        ZodValidationPipe.logger.warn(
+          JSON.stringify({
+            value: ZodValidationPipe.redactSensitiveFields(value),
+            issues: error.issues.map((issue) => ({
+              path: issue.path,
+              message: issue.message,
+              code: issue.code,
+              received:
+                issue.code === 'invalid_type'
+                  ? (issue as { received?: unknown }).received
+                  : undefined,
+            })),
+            metadata: metadata.type,
+          })
         );
         throw new BadRequestException({
           message: '입력 데이터 검증 실패',

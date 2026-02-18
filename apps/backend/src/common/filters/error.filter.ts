@@ -12,7 +12,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     exception: unknown,
     host: ArgumentsHost
   ): import('/home/kmjkds/equipment_management_system/node_modules/@types/express/index').Response<
-    any,
+    unknown,
     Record<string, unknown>
   > {
     const ctx = host.switchToHttp();
@@ -46,7 +46,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'object' &&
         exceptionResponse !== null &&
         'message' in exceptionResponse
-          ? (exceptionResponse as any).message || 'HTTP 오류가 발생했습니다'
+          ? (exceptionResponse as Record<string, unknown>).message || 'An HTTP error occurred'
           : exceptionResponse;
 
       // SSOT: Preserve custom error code if present (e.g., VERSION_CONFLICT for optimistic locking)
@@ -54,7 +54,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         typeof exceptionResponse === 'object' &&
         exceptionResponse !== null &&
         'code' in exceptionResponse
-          ? (exceptionResponse as any).code
+          ? ((exceptionResponse as Record<string, unknown>).code as ErrorCode)
           : undefined;
 
       // Build error response with custom fields at top level
@@ -68,7 +68,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
         Object.keys(exceptionResponse).forEach((key) => {
           if (key !== 'message' && key !== 'code' && key !== 'statusCode') {
-            (errorResponse as any)[key] = (exceptionResponse as any)[key];
+            (errorResponse as Record<string, unknown>)[key] = (
+              exceptionResponse as Record<string, unknown>
+            )[key];
           }
         });
       }
@@ -76,8 +78,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       return response.status(status).json(errorResponse);
     } else {
       // 미처리 예외는 서버 오류로 처리
+      // 프로덕션 환경에서는 내부 에러 메시지를 마스킹하여 정보 유출 방지
       const errorMessage =
-        exception instanceof Error ? exception.message : '알 수 없는 서버 오류가 발생했습니다';
+        process.env.NODE_ENV === 'production'
+          ? 'A server error occurred.'
+          : exception instanceof Error
+            ? exception.message
+            : 'An unknown server error occurred';
+
       errorResponse = {
         code: ErrorCode.InternalServerError,
         message: errorMessage,
