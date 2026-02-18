@@ -9,11 +9,13 @@ import {
   ForbiddenException,
   UsePipes,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService, AuthResponse, TestUser } from './auth.service';
 import { LoginDto, LoginValidationPipe } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
+import { SkipPermissions } from './decorators/skip-permissions.decorator';
+import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { AzureADAuthGuard } from './guards/azure-ad-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../types/auth';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 
@@ -25,6 +27,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } }) // 1분당 5회
   @Post('login')
   @UsePipes(LoginValidationPipe)
   async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
@@ -38,7 +41,7 @@ export class AuthController {
     return this.authService.validateAzureADUser(req.user);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @SkipPermissions()
   @Get('profile')
   getProfile(@Req() req: AuthenticatedRequest): {
     id: string;
@@ -70,8 +73,9 @@ export class AuthController {
    * 클라이언트는 Authorization 헤더 (access token) +
    * Body의 refresh_token을 전송합니다.
    */
-  @UseGuards(JwtAuthGuard)
-  @Post('logout')
+  @SkipPermissions()
+  @AuditLog({ action: 'logout', entityType: 'user', entityIdPath: 'user.userId' })
+  @Post('logout') // @BodyPipeExempt: optional single-field extraction, no JSON body schema
   async logout(
     @Req() req: AuthenticatedRequest,
     @Body('refresh_token') refreshToken?: string
@@ -93,7 +97,8 @@ export class AuthController {
    * Access Token 만료 시 호출되므로 @Public() 필수 (JWT Guard 우회)
    */
   @Public()
-  @Post('refresh')
+  @Throttle({ medium: { limit: 10, ttl: 60000 } }) // 1분당 10회
+  @Post('refresh') // @BodyPipeExempt: single JWT string field, JWT validity verified by authService
   async refresh(@Body('refresh_token') refreshToken: string): Promise<AuthResponse> {
     if (!refreshToken) {
       throw new ForbiddenException('refresh_token is required');
@@ -111,6 +116,7 @@ export class AuthController {
    */
   @Get('test-login')
   @Public()
+  @Throttle({ short: { limit: 10, ttl: 60000 } }) // 1분당 10회 (테스트 환경 고려)
   async testLogin(
     @Query('role') role?: string,
     @Query('email') email?: string

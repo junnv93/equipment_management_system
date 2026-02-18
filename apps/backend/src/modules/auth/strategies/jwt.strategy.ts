@@ -1,9 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import type { JwtUser } from '../../../types/auth';
-import { AuthService } from '../auth.service';
+import { TOKEN_BLACKLIST, TokenBlacklistProvider } from '../blacklist/token-blacklist.interface';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { UsersService } from '../../users/users.service';
 
 /**
  * JWT 토큰 페이로드 타입
@@ -44,7 +46,9 @@ interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     configService: ConfigService,
-    private readonly authService: AuthService
+    @Inject(TOKEN_BLACKLIST) private readonly blacklist: TokenBlacklistProvider,
+    private readonly usersService: UsersService,
+    private readonly cacheService: SimpleCacheService
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -66,10 +70,34 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     req: { headers: { authorization?: string } },
     payload: JwtPayload
   ): Promise<JwtUser> {
-    // 토큰 블랙리스트 확인
+    // 1. 토큰 블랙리스트 확인
     const token = req.headers.authorization?.replace('Bearer ', '');
-    if (token && this.authService.isTokenBlacklisted(token)) {
-      throw new UnauthorizedException('이 토큰은 로그아웃으로 무효화되었습니다.');
+    if (token && (await this.blacklist.isBlacklisted(token))) {
+      throw new UnauthorizedException({
+        code: 'AUTH_TOKEN_BLACKLISTED',
+        message: 'This token has been invalidated by logout.',
+      });
+    }
+
+    // 2. 사용자 활성화 상태 확인 (캐시 기반, 60초 TTL)
+    const userId = payload.sub;
+    const cacheKey = `user_active:${userId}`;
+
+    const isActive = await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        // 캐시 미스 시 DB에서 조회
+        const user = await this.usersService.findOne(userId);
+        return user?.isActive ?? false;
+      },
+      60 * 1000 // 60초 TTL - 비활성화 후 최대 60초 지연 (장비 관리 시스템에서 충분)
+    );
+
+    if (!isActive) {
+      throw new UnauthorizedException({
+        code: 'AUTH_USER_INACTIVE',
+        message: 'User account is deactivated.',
+      });
     }
 
     return {
