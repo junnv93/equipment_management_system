@@ -1,7 +1,7 @@
 # ==========================
 # Development Stage
 # ==========================
-FROM node:18-bullseye AS development
+FROM node:20-bullseye AS development
 
 WORKDIR /app
 
@@ -41,7 +41,7 @@ CMD ["pnpm", "--filter", "backend", "run", "start:dev"]
 # ==========================
 # Production Builder
 # ==========================
-FROM node:18-bullseye AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -72,7 +72,7 @@ RUN pnpm --filter backend build
 # ==========================
 # Production Stage
 # ==========================
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 WORKDIR /app
 

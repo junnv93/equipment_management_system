@@ -13,20 +13,16 @@
  */
 
 import { checkouts, checkoutItems } from '@equipment-management/db/schema';
-import { daysAgo, daysLater, monthsAgo } from '../../utils/date-helpers';
+import { daysAgo, daysLater } from '../../utils/date-helpers';
 import {
   // Suwon users
   USER_TEST_ENGINEER_SUWON_ID,
   USER_TECHNICAL_MANAGER_SUWON_ID,
-  USER_LAB_MANAGER_SUWON_ID,
   // Uiwang users
   USER_TECHNICAL_MANAGER_UIWANG_ID,
   USER_TEST_ENGINEER_UIWANG_ID,
   // Suwon teams
   TEAM_FCC_EMC_RF_SUWON_ID,
-  TEAM_GENERAL_EMC_SUWON_ID,
-  TEAM_SAR_SUWON_ID,
-  TEAM_AUTOMOTIVE_EMC_SUWON_ID,
   // Uiwang team
   TEAM_GENERAL_RF_UIWANG_ID,
   // Equipment IDs (Suwon E - FCC EMC/RF)

@@ -2,9 +2,11 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { validateEnv } from './config/env.validation';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
 import { EquipmentModule } from './modules/equipment/equipment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -21,6 +23,7 @@ import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DrizzleModule } from './database/drizzle.module';
 import { CacheModule } from './common/cache/cache.module';
+import { StorageModule } from './common/storage/storage.module';
 import { MetricsModule } from './common/metrics/metrics.module';
 import { MetricsMiddleware } from './common/metrics/metrics.middleware';
 import { LoggerModule } from './common/logger/logger.module';
@@ -30,6 +33,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { EquipmentImportsModule } from './modules/equipment-imports/equipment-imports.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { I18nModule } from './common/i18n/i18n.module';
 
 @Module({
   imports: [
@@ -40,12 +44,31 @@ import { SettingsModule } from './modules/settings/settings.module';
     }),
     ScheduleModule.forRoot(), // 스케줄러 모듈 등록 (교정 기한 초과 자동 점검)
     EventEmitterModule.forRoot({ wildcard: false, maxListeners: 20 }), // 도메인 이벤트 버스
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1초
+        limit: 3, // 1초당 3회
+      },
+      {
+        name: 'medium',
+        ttl: 10000, // 10초
+        limit: 20, // 10초당 20회
+      },
+      {
+        name: 'long',
+        ttl: 60000, // 1분
+        limit: 100, // 1분당 100회 (기본)
+      },
+    ]),
 
     // 공통 모듈
     CacheModule,
+    StorageModule,
     LoggerModule,
     MetricsModule,
     AuditModule,
+    I18nModule, // 글로벌 i18n 서비스 (Accept-Language 기반 로케일)
 
     // 데이터베이스 모듈
     DrizzleModule,
@@ -75,6 +98,14 @@ import { SettingsModule } from './modules/settings/settings.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

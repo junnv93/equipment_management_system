@@ -10,10 +10,10 @@ declare module 'winston-daily-rotate-file' {
     zippedArchive?: boolean;
     maxSize?: string;
     maxFiles?: string;
-    format?: any;
-    options?: any;
+    format?: unknown;
+    options?: unknown;
     // 추가 옵션들
-    [key: string]: any;
+    [key: string]: unknown;
   }
 
   export default class DailyRotateFileTransport extends transport {
