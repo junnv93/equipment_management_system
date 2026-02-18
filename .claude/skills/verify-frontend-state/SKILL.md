@@ -113,16 +113,55 @@ grep -rn "staleTime:" apps/frontend/components apps/frontend/app --include="*.ts
 
 **참고:** staleTime 직접 설정이 반드시 위반은 아니지만, QUERY_CONFIG 프리셋 사용이 권장됨.
 
+### Step 6: REFETCH_STRATEGIES 하드코딩 탐지
+
+refetchInterval을 직접 설정하는 대신 REFETCH_STRATEGIES 프리셋을 사용하는지 확인합니다.
+
+```bash
+# refetchInterval 하드코딩 탐지
+grep -rn "refetchInterval:\s*[0-9]" apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" | grep -v "query-config\|QUERY_CONFIG\|// "
+```
+
+**PASS 기준:** refetchInterval 하드코딩이 없어야 함 (QUERY_CONFIG 프리셋 사용).
+
+**FAIL 기준:** `refetchInterval: 60000` 같은 하드코딩된 ms 값이 발견되면 위반.
+
+**권장 패턴:**
+
+```tsx
+// ❌ WRONG - 하드코딩
+const { data } = useQuery({
+  queryKey: queryKeys.dashboard.stats(),
+  queryFn: () => api.getStats(),
+  refetchInterval: 60000, // 60초
+});
+
+// ✅ CORRECT - SSOT 프리셋 사용
+const { data } = useQuery({
+  queryKey: queryKeys.dashboard.stats(),
+  queryFn: () => api.getStats(),
+  ...QUERY_CONFIG.DASHBOARD, // REFETCH_STRATEGIES.NORMAL
+});
+```
+
+**참고:** Architecture v3에서 4-level 전략 도입:
+
+- `REFETCH_STRATEGIES.CRITICAL` — 30초 폴링 + window focus (SSE 추천, 현재: 폴링)
+- `REFETCH_STRATEGIES.IMPORTANT` — 2분 폴링 + window focus
+- `REFETCH_STRATEGIES.NORMAL` — window focus만 (폴링 없음)
+- `REFETCH_STRATEGIES.STATIC` — 수동 갱신 (refetchOnMount/focus 모두 false)
+
 ## Output Format
 
 ```markdown
-| #   | 검사                       | 상태      | 상세                  |
-| --- | -------------------------- | --------- | --------------------- |
-| 1   | useState 서버 상태         | PASS/FAIL | 위반 위치 목록        |
-| 2   | onSuccess setQueryData     | PASS/FAIL | 위반 위치 목록        |
-| 3   | useOptimisticMutation 사용 | PASS/INFO | 직접 useMutation 위치 |
-| 4   | invalidateQueries 위치     | PASS/FAIL | onSuccess 내 위치     |
-| 5   | QUERY_CONFIG 프리셋        | PASS/INFO | 직접 설정 위치        |
+| #   | 검사                       | 상태      | 상세                          |
+| --- | -------------------------- | --------- | ----------------------------- |
+| 1   | useState 서버 상태         | PASS/FAIL | 위반 위치 목록                |
+| 2   | onSuccess setQueryData     | PASS/FAIL | 위반 위치 목록                |
+| 3   | useOptimisticMutation 사용 | PASS/INFO | 직접 useMutation 위치         |
+| 4   | invalidateQueries 위치     | PASS/FAIL | onSuccess 내 위치             |
+| 5   | QUERY_CONFIG 프리셋        | PASS/INFO | 직접 설정 위치                |
+| 6   | REFETCH_STRATEGIES 사용    | PASS/INFO | refetchInterval 하드코딩 위치 |
 ```
 
 ## Exceptions
@@ -139,3 +178,4 @@ grep -rn "staleTime:" apps/frontend/components apps/frontend/app --include="*.ts
 8. **CreateCheckoutContent의 selectedEquipments** — 폼에서 선택된 장비 목록 관리는 UI 상태
 9. **1-step 승인/완료 워크플로우의 direct useMutation** — `admin/*-approvals/` 및 `IntermediateCheckAlert`, `CalibrationFactorsClient` 등은 optimistic update 불필요 (비동기 확인 플로우). `onSettled`에서 `invalidateQueries` 호출 패턴 준수 시 정상
 10. **SoftwareHistoryClient의 direct useMutation** — 소프트웨어 변경 요청은 신규 생성이므로 optimistic update 불필요
+11. **refetchInterval 직접 설정 (특수 케이스)** — QUERY_CONFIG 프리셋으로 커버되지 않는 특수한 polling 요구사항이 있을 때 직접 설정 가능. 단, 주석으로 이유를 명시해야 함

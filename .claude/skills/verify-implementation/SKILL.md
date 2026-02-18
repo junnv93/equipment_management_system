@@ -37,6 +37,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 6   | `verify-nextjs`         | Next.js 16 패턴 — await params, useActionState, 서버 컴포넌트                            |
 | 7   | `verify-filters`        | URL-driven 필터 SSOT — filter-utils 필수 export, filter hook, page.tsx 서버 파싱         |
 | 8   | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙 |
+| 9   | `verify-security`       | 보안 설정 — Helmet CSP 프로덕션 강화, Next.js Security Headers, @Public 남용 검사        |
 
 ## 워크플로우
 

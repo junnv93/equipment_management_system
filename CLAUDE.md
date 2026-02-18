@@ -766,6 +766,7 @@ This project has custom Claude Code skills in `.claude/skills/`:
 - **verify-frontend-state**: 프론트엔드 상태 관리 검증 — TanStack Query, onSuccess setQueryData 금지
 - **verify-nextjs**: Next.js 16 패턴 검증 — await params, useActionState, 서버 컴포넌트, Dynamic imports(코드 분할)
 - **verify-design-tokens**: Design Token 3-Layer 아키텍처 검증 — transition-all 금지, focus-visible 우선, import 경로, Layer 참조
+- **verify-security**: 보안 설정 검증 — Helmet CSP 프로덕션 강화, Next.js Security Headers, PermissionsGuard DENY 모드, @Public 남용
 - **verify-implementation**: 모든 verify 스킬 통합 실행
 - **manage-skills**: 검증 스킬 유지보수 (커버리지 갭 분석, 스킬 생성/업데이트)
 

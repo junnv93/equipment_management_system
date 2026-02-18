@@ -27,21 +27,26 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 ## Related Files
 
-| File                                               | Purpose                                                               |
-| -------------------------------------------------- | --------------------------------------------------------------------- |
-| `packages/schemas/src/enums.ts`                    | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                   |
-| `packages/schemas/src/user.ts`                     | UserRole 타입 정의                                                    |
-| `packages/schemas/src/settings.ts`                 | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)            |
-| `packages/schemas/src/audit-log.ts`                | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)   |
-| `packages/schemas/src/field-labels.ts`             | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                          |
-| `packages/schemas/src/index.ts`                    | schemas 패키지 내보내기                                               |
-| `packages/shared-constants/src/permissions.ts`     | Permission enum 정의                                                  |
-| `packages/shared-constants/src/api-endpoints.ts`   | API_ENDPOINTS 상수                                                    |
-| `packages/shared-constants/src/entity-routes.ts`   | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                    |
-| `packages/shared-constants/src/data-scope.ts`      | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, AUDIT_LOG_SCOPE) |
-| `packages/shared-constants/src/index.ts`           | shared-constants 패키지 내보내기                                      |
-| `apps/frontend/lib/api/query-config.ts`            | queryKeys 팩토리                                                      |
-| `apps/frontend/components/dashboard/StatsCard.tsx` | lucide-react 타입 참조 (LucideIcon)                                   |
+| File                                                                         | Purpose                                                               |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                   |
+| `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                    |
+| `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)            |
+| `packages/schemas/src/audit-log.ts`                                          | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)   |
+| `packages/schemas/src/field-labels.ts`                                       | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                          |
+| `packages/schemas/src/index.ts`                                              | schemas 패키지 내보내기                                               |
+| `packages/shared-constants/src/permissions.ts`                               | Permission enum 정의                                                  |
+| `packages/shared-constants/src/api-endpoints.ts`                             | API_ENDPOINTS 상수                                                    |
+| `packages/shared-constants/src/entity-routes.ts`                             | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                    |
+| `packages/shared-constants/src/data-scope.ts`                                | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, AUDIT_LOG_SCOPE) |
+| `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                      |
+| `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리                                                      |
+| `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)  |
+| `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)       |
+| `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)     |
+| `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                   |
+| `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등) |
+| `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                            |
 
 ## Workflow
 
@@ -175,6 +180,24 @@ grep -rn "import.*\(DataScopeType\|resolveDataScope\|AUDIT_LOG_SCOPE\|FeatureSco
 
 **FAIL 기준:** 로컬에서 정의하거나 다른 패키지에서 임포트 시 위반.
 
+### Step 3e: Audit Log SSOT 상수 임포트 확인
+
+감사 로그 활동 매핑 상수가 올바른 패키지에서 임포트되는지 확인합니다.
+
+```bash
+# AUDIT_TO_ACTIVITY_TYPE, RENTAL_ACTIVITY_TYPE_OVERRIDES import 소스 확인 (schemas에서 import해야 함)
+grep -rn "import.*\(AUDIT_TO_ACTIVITY_TYPE\|RENTAL_ACTIVITY_TYPE_OVERRIDES\)" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "@equipment-management/schemas\|node_modules\|// "
+```
+
+**PASS 기준:** 모든 audit-log 상수 임포트가 `@equipment-management/schemas`에서.
+
+**FAIL 기준:** 로컬에서 재정의하거나 다른 패키지에서 임포트 시 위반.
+
+**참고:** Architecture v3에서 추가된 SSOT 상수:
+
+- `AUDIT_TO_ACTIVITY_TYPE` — `{action}:{entityType}` → 프론트엔드 활동 타입 매핑 (예: `'create:equipment'` → `'equipment_added'`)
+- `RENTAL_ACTIVITY_TYPE_OVERRIDES` — checkout purpose가 'rental'일 때 활동 타입 오버라이드 (예: `'checkout_created'` → `'rental_created'`)
+
 ### Step 4: 하드코딩된 API 경로 탐지
 
 API 경로가 상수 대신 문자열로 하드코딩되어 있는지 확인합니다.
@@ -242,21 +265,112 @@ import { FiBox, FiCheckCircle } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 ```
 
+### Step 7: Frontend 환경변수 직접 참조 탐지
+
+`process.env.NEXT_PUBLIC_API_URL`을 직접 참조하는 코드가 있는지 확인합니다. 모든 API base URL은 `lib/config/api-config.ts`의 `API_BASE_URL`을 통해 참조해야 합니다.
+
+```bash
+# process.env.NEXT_PUBLIC_API_URL 직접 참조 탐지 (E2E 테스트 파일 제외)
+grep -rn "process\.env\.NEXT_PUBLIC_API_URL" apps/frontend --include="*.ts" --include="*.tsx" | grep -v "api-config.ts\|node_modules\|tests/e2e\|// "
+```
+
+**PASS 기준:** 0개 결과 (`lib/config/api-config.ts`와 `tests/e2e/` 제외 모든 파일에서 직접 참조 없음).
+
+**FAIL 기준:** `api-config.ts` 외 파일에서 직접 참조 시 다음으로 변경 필요:
+
+```typescript
+// ❌ WRONG — 직접 환경변수 참조
+const url = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+// ✅ CORRECT — SSOT에서 import
+import { API_BASE_URL } from '@/lib/config/api-config';
+const url = API_BASE_URL;
+```
+
+**참고:** `lib/config/api-config.ts`가 `API_BASE_URL` SSOT. `lib/config/dashboard-config.ts`가 역할별 대시보드 Config SSOT (`DASHBOARD_ROLE_CONFIG`, `DEFAULT_ROLE`, `DEFAULT_TAB`, `LEGACY_TAB_MAP`).
+
+### Step 7b: E2E 테스트 Backend URL SSOT 확인
+
+E2E 테스트 파일에서 `process.env.NEXT_PUBLIC_API_URL`을 직접 사용하는 경우, `BASE_URLS.BACKEND` (`shared-test-data.ts`)를 통해 참조해야 합니다.
+
+```bash
+# E2E 테스트 내 직접 환경변수 참조 탐지 (shared-test-data.ts는 SSOT이므로 제외)
+grep -rn "process\.env\.NEXT_PUBLIC_API_URL" apps/frontend/tests/e2e --include="*.ts" --include="*.tsx" | grep -v "shared-test-data.ts\|node_modules\|// "
+```
+
+**PASS 기준:** 0개 결과 (모든 E2E 파일은 `BASE_URLS.BACKEND`를 import해서 사용).
+
+**FAIL 기준:** `shared-test-data.ts` 외 E2E 파일에서 직접 참조 시 다음으로 변경 필요:
+
+```typescript
+// ❌ WRONG — E2E 테스트에서 직접 환경변수 참조
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// ✅ CORRECT — shared-test-data.ts SSOT 사용
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
+const BACKEND_URL = BASE_URLS.BACKEND;
+```
+
+### Step 8: 서비스 메서드의 `Promise<unknown>` 안티패턴 탐지
+
+서비스 메서드의 반환 타입이 `Promise<unknown>`으로 선언되어 있으면, 호출자가 타입 단언(`as Type`) 없이는 결과를 안전하게 사용할 수 없습니다. 반환 타입은 Drizzle `$inferSelect` 또는 `Pick<$inferSelect, ...>`으로 파생된 구체적 타입이어야 합니다.
+
+```bash
+# 서비스 메서드의 Promise<unknown> 반환 타입 탐지
+grep -rn "): Promise<unknown>" apps/backend/src/modules --include="*.service.ts" | grep -v "//\|spec\|test"
+```
+
+**PASS 기준:** 0개 결과.
+
+**FAIL 기준:** 서비스 메서드에 `Promise<unknown>` 반환 타입이 있으면 위반.
+
+**수정 패턴:**
+
+```typescript
+// ❌ WRONG — TypeScript가 호출자에게 타입 정보를 전달 못함
+async findOne(uuid: string): Promise<unknown> {
+  return this.cacheService.getOrSet(cacheKey, async () => { ... });
+}
+
+// ✅ CORRECT — Drizzle $inferSelect 기반 SSOT 타입 사용
+// 1. 모듈 *.types.ts 파일에 타입 정의 (Pick<typeof table.$inferSelect, keys>)
+// 2. getOrSet<ConcreteType>()으로 제네릭 명시
+async findOne(uuid: string): Promise<CalibrationPlanDetail> {
+  return this.cacheService.getOrSet<CalibrationPlanDetail>(cacheKey, async () => { ... });
+}
+```
+
+**참고 — 모듈 타입 파일 패턴:**
+
+```typescript
+// apps/backend/src/modules/{feature}/{feature}.types.ts
+import type { featureTable } from '@equipment-management/db/schema/{feature}';
+
+// 하드코딩 금지 — $inferSelect + Pick으로 DB 스키마에서 도출
+export type FeatureDetail = typeof featureTable.$inferSelect & {
+  items: FeatureItemDetail[];
+};
+```
+
 ## Output Format
 
 ```markdown
-| #   | 검사                  | 상태      | 상세                                  |
-| --- | --------------------- | --------- | ------------------------------------- |
-| 1   | 로컬 타입 재정의      | PASS/FAIL | 재정의 위치 목록                      |
-| 2   | Permission 임포트     | PASS/FAIL | 잘못된 임포트 위치                    |
-| 3   | API_ENDPOINTS 임포트  | PASS/FAIL | 잘못된 임포트 위치                    |
-| 3a  | Audit Log 타입 임포트 | PASS/FAIL | 잘못된 임포트 위치                    |
-| 3b  | Field Labels 임포트   | PASS/FAIL | 잘못된 임포트 위치                    |
-| 3c  | Entity Routes 임포트  | PASS/FAIL | 잘못된 임포트 위치                    |
-| 3d  | Data Scope 임포트     | PASS/FAIL | 잘못된 임포트 위치                    |
-| 4   | 하드코딩 API 경로     | PASS/FAIL | 하드코딩 위치 목록                    |
-| 5   | queryKeys 팩토리      | PASS/FAIL | 하드코딩 queryKey 위치                |
-| 6   | Icon Library 통합     | PASS/FAIL | react-icons 사용, 비표준 library 위치 |
+| #   | 검사                       | 상태      | 상세                                   |
+| --- | -------------------------- | --------- | -------------------------------------- |
+| 1   | 로컬 타입 재정의           | PASS/FAIL | 재정의 위치 목록                       |
+| 2   | Permission 임포트          | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3   | API_ENDPOINTS 임포트       | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3a  | Audit Log 타입 임포트      | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3b  | Field Labels 임포트        | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3c  | Entity Routes 임포트       | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3d  | Data Scope 임포트          | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3e  | Audit Log SSOT 상수        | PASS/FAIL | 잘못된 임포트 위치                     |
+| 4   | 하드코딩 API 경로          | PASS/FAIL | 하드코딩 위치 목록                     |
+| 5   | queryKeys 팩토리           | PASS/FAIL | 하드코딩 queryKey 위치                 |
+| 6   | Icon Library 통합          | PASS/FAIL | react-icons 사용, 비표준 library 위치  |
+| 7   | 환경변수 직접 참조         | PASS/FAIL | NEXT_PUBLIC_API_URL 직접 참조 위치     |
+| 7b  | E2E Backend URL SSOT       | PASS/FAIL | E2E 내 직접 env 참조 파일 목록         |
+| 8   | Promise<unknown> 반환 타입 | PASS/FAIL | 서비스 메서드의 unknown 반환 타입 위치 |
 ```
 
 ## Exceptions
@@ -270,3 +384,5 @@ import type { IconType } from 'react-icons';
 5. **NestJS Swagger DTO** — 백엔드 응답 DTO에서 Swagger 문서화용 class 정의는 허용 (enum 재정의가 아닌 경우)
 6. **백엔드 DTO의 re-export** — `export { DEFAULT_SYSTEM_SETTINGS, type SystemSettings } from '@equipment-management/schemas'` 같은 re-export는 SSOT 소비자이므로 정상
 7. **roles.enum.ts의 TypeScript enum** — 백엔드 호환성을 위한 로컬 enum (SSOT 주석 + re-export 동반 시 면제)
+8. **`Promise<unknown>` 허용 케이스** — `private` 헬퍼 메서드(클래스 내부 전용)나 단순 delete/count 반환(`Promise<number>`, `{ deleted: true }`)은 `unknown`이 아닌 추론 타입을 사용하는 한 면제. `Promise<unknown>`은 `public` 메서드에서만 위반으로 간주.
+9. **`shared-test-data.ts`의 `BACKEND` URL 직접 정의** — `tests/e2e/shared/constants/shared-test-data.ts`는 E2E 테스트용 URL SSOT이므로 `process.env.NEXT_PUBLIC_API_URL` 직접 참조가 정상. 다른 E2E 파일은 `BASE_URLS.BACKEND`를 import해서 사용해야 함
