@@ -4,6 +4,7 @@ import { NonConformancesService } from '../non-conformances.service';
 import { NonConformanceStatus } from '../dto/non-conformance-query.dto';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('NonConformancesService', () => {
   let service: NonConformancesService;
@@ -65,6 +66,14 @@ describe('NonConformancesService', () => {
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: CacheInvalidationHelper, useValue: mockCacheInvalidationHelper },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+            emitAsync: jest.fn().mockResolvedValue([]),
+            on: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

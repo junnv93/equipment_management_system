@@ -6,6 +6,8 @@ import { LoginDto } from '../dto/login.dto';
 import { UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '../rbac/roles.enum';
 import { AuthenticatedRequest } from '../../../types/auth';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { createMockCacheService } from '../../../common/testing/mock-providers';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -35,6 +37,10 @@ describe('AuthController', () => {
           useValue: {
             canActivate: jest.fn().mockImplementation(() => true),
           },
+        },
+        {
+          provide: SimpleCacheService,
+          useValue: createMockCacheService(),
         },
       ],
     }).compile();

@@ -2,15 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService, AzureADUser } from '../auth.service';
 import { LoginDto } from '../dto/login.dto';
 import { UserRole } from '../rbac/roles.enum';
 import { UsersService } from '../../users/users.service';
+import { TOKEN_BLACKLIST } from '../blacklist/token-blacklist.interface';
 
 describe('AuthService', () => {
   let service: AuthService;
   let jwtService: JwtService;
-  let configService: ConfigService;
+  let _configService: ConfigService;
   let usersService: UsersService;
 
   const mockDbUser = {
@@ -55,12 +57,25 @@ describe('AuthService', () => {
             findByEmail: jest.fn().mockResolvedValue(null),
           },
         },
+        {
+          provide: TOKEN_BLACKLIST,
+          useValue: {
+            add: jest.fn(),
+            isBlacklisted: jest.fn().mockResolvedValue(false),
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
     jwtService = module.get<JwtService>(JwtService);
-    configService = module.get<ConfigService>(ConfigService);
+    _configService = module.get<ConfigService>(ConfigService);
     usersService = module.get<UsersService>(UsersService);
   });
 
@@ -75,6 +90,7 @@ describe('AuthService', () => {
         email: 'admin@example.com',
         password: 'admin123',
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       jest.spyOn(usersService, 'findByEmail').mockResolvedValue(mockDbUser as any);
 
       // Act
@@ -166,6 +182,53 @@ describe('AuthService', () => {
       // Act & Assert
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
     });
+
+    it('should lock account after MAX_LOGIN_ATTEMPTS consecutive failures', async () => {
+      const wrongDto: LoginDto = { email: 'admin@example.com', password: 'wrong' };
+
+      // 4회 실패 → 각각 'Invalid email or password.'
+      for (let i = 0; i < 4; i++) {
+        await expect(service.login(wrongDto)).rejects.toThrow('Invalid email or password.');
+      }
+
+      // 5번째 실패 → 계정 잠금 메시지
+      await expect(service.login(wrongDto)).rejects.toThrow(
+        'Account is temporarily locked. Please try again in 15 minutes.'
+      );
+    });
+
+    it('should block login attempts when account is locked (even with correct password)', async () => {
+      const wrongDto: LoginDto = { email: 'admin@example.com', password: 'wrong' };
+
+      // 5회 실패로 잠금 설정
+      for (let i = 0; i < 5; i++) {
+        await service.login(wrongDto).catch(() => {});
+      }
+
+      // 잠금 후 올바른 비밀번호도 차단
+      const correctDto: LoginDto = { email: 'admin@example.com', password: 'admin123' };
+      await expect(service.login(correctDto)).rejects.toThrow(
+        'Account is temporarily locked. Please try again in 15 minutes.'
+      );
+    });
+
+    it('should reset failure counter after successful login', async () => {
+      const wrongDto: LoginDto = { email: 'admin@example.com', password: 'wrong' };
+      const correctDto: LoginDto = { email: 'admin@example.com', password: 'admin123' };
+
+      // 4회 실패 (카운터 누적)
+      for (let i = 0; i < 4; i++) {
+        await service.login(wrongDto).catch(() => {});
+      }
+
+      // 성공으로 카운터 리셋
+      await service.login(correctDto);
+
+      // 다시 4회 실패 → 잠금 안 됨 (카운터가 1부터 시작)
+      for (let i = 0; i < 4; i++) {
+        await expect(service.login(wrongDto)).rejects.toThrow('Invalid email or password.');
+      }
+    });
   });
 
   describe('validateAzureADUser', () => {
@@ -227,6 +290,7 @@ describe('AuthService', () => {
       const azureRoles = ['Admin', 'Manager'];
 
       // Using private method through any trick
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const service_any = service as any;
 
       // Act
@@ -241,6 +305,7 @@ describe('AuthService', () => {
       const azureRoles = ['Unknown'];
 
       // Using private method through any trick
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const service_any = service as any;
 
       // Act
@@ -255,6 +320,7 @@ describe('AuthService', () => {
       const azureRoles = ['SiteAdmin', 'TechnicalManager', 'TestOperator'];
 
       // Using private method through any trick
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const service_any = service as any;
 
       // Act
@@ -275,6 +341,7 @@ describe('AuthService', () => {
       const azureGroups = ['LST.SUW.RF'];
 
       // Using private method through any trick
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const service_any = service as any;
 
       // Act
@@ -293,6 +360,7 @@ describe('AuthService', () => {
       const azureGroups = ['LST.UIW.RF'];
 
       // Using private method through any trick
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const service_any = service as any;
 
       // Act
@@ -311,6 +379,7 @@ describe('AuthService', () => {
       const azureGroups = ['InvalidGroup', 'OtherGroup'];
 
       // Using private method through any trick
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const service_any = service as any;
 
       // Act
@@ -325,6 +394,7 @@ describe('AuthService', () => {
       const azureGroups = ['LST.SUW.RF', 'LST.UIW.EMC'];
 
       // Using private method through any trick
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const service_any = service as any;
 
       // Act
