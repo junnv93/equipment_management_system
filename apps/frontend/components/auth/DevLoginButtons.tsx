@@ -12,16 +12,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { useTranslations } from 'next-intl';
 
 interface DevLoginButtonsProps {
   callbackUrl?: string;
-}
-
-interface TestUser {
-  email: string;
-  role: string;
-  label: string;
-  color: string;
 }
 
 const TEST_USERS_BY_TEAM = {
@@ -142,6 +136,7 @@ const TEST_USERS_BY_TEAM = {
  * test-login provider를 사용하여 팀별/역할별로 즉시 로그인
  */
 export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
+  const t = useTranslations('auth');
   const [selectedTeam, setSelectedTeam] = useState<string>('suwon-fcc-emc-rf');
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
 
@@ -166,15 +161,13 @@ export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
   return (
     <div className="space-y-4">
       <div className="text-center">
-        <p className="text-xs font-medium text-muted-foreground mb-2">
-          🔧 개발자 모드 - 빠른 로그인
-        </p>
+        <p className="text-xs font-medium text-muted-foreground mb-2">🔧 {t('devLogin.heading')}</p>
       </div>
 
       {/* Team Selector */}
       <div className="space-y-2">
         <Label htmlFor="team-select" className="text-xs text-muted-foreground">
-          팀 선택
+          {t('devLogin.teamSelect')}
         </Label>
         <Select value={selectedTeam} onValueChange={setSelectedTeam}>
           <SelectTrigger id="team-select" className="w-full">
@@ -192,7 +185,7 @@ export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
 
       {/* Role Buttons for Selected Team */}
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">역할 선택</Label>
+        <Label className="text-xs text-muted-foreground">{t('devLogin.roleSelect')}</Label>
         <div className="grid grid-cols-1 gap-2">
           {currentTeam.users.map((user) => (
             <Button
@@ -206,7 +199,7 @@ export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
               {loadingEmail === user.email ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  로그인 중...
+                  {t('devLogin.loggingIn')}
                 </>
               ) : (
                 user.label
@@ -216,9 +209,7 @@ export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
         </div>
       </div>
 
-      <p className="text-xs text-center text-muted-foreground mt-2">
-        팀과 역할을 선택하여 즉시 로그인됩니다 (개발 환경 전용)
-      </p>
+      <p className="text-xs text-center text-muted-foreground mt-2">{t('devLogin.hint')}</p>
     </div>
   );
 }

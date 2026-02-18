@@ -31,6 +31,7 @@ declare module 'next-auth' {
       department?: string;
       site?: SiteCode;
       teamId?: string;
+      locale?: string;
     };
     accessToken?: string;
     error?: string;
@@ -45,6 +46,7 @@ declare module 'next-auth/jwt' {
     department?: string;
     site?: SiteCode;
     teamId?: string;
+    locale?: string;
     accessToken?: string;
     refreshToken?: string;
     accessTokenExpires?: number;

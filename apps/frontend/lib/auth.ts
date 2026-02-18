@@ -39,13 +39,14 @@ interface AuthorizedUser extends User {
   department?: string;
   site?: 'suwon' | 'uiwang' | 'pyeongtaek';
   teamId?: string;
+  locale?: string;
   accessToken?: string;
   refreshToken?: string;
   accessTokenExpires?: number;
 }
 
-// 백엔드 API 베이스 URL (호스트만 포함, /api는 각 엔드포인트에서 지정)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { DEFAULT_LOCALE } from '@equipment-management/schemas';
+import { API_BASE_URL } from './config/api-config';
 
 // 환경 변수 확인
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -279,37 +280,44 @@ export const authOptions = {
   },
   callbacks: {
     /**
-     * SignIn 콜백 - 로그인 성공 시 사용자 DB 동기화
+     * SignIn 콜백 - Provider별 분기 처리
      *
-     * Azure AD 또는 Credentials 로그인 시 호출되며,
-     * 사용자가 DB에 없으면 자동으로 생성합니다.
+     * Provider 인식(provider-aware) 설계:
+     * - credentials / test-login: 백엔드가 이미 DB에서 사용자를 검증했으므로
+     *   추가 sync 불필요 → 즉시 승인
+     * - azure-ad: AD에서 온 신규 사용자는 DB에 없을 수 있으므로
+     *   POST /api/users/sync로 upsert 필요
      *
      * @param user - authorize에서 반환된 사용자 정보
-     * @param account - OAuth 계정 정보
-     * @param profile - OAuth 프로필 정보
+     * @param account - OAuth 계정 정보 (provider 식별에 사용)
+     * @param profile - OAuth 프로필 정보 (Azure AD 전용)
      * @returns 로그인 허용 여부 (true/false)
      */
     async signIn({
       user,
-      account: _account,
+      account,
       profile,
     }: {
       user: User;
       account: Account | null;
       profile?: Profile;
     }): Promise<boolean> {
-      try {
-        // 사용자 정보가 없으면 차단
-        if (!user?.email) {
-          console.error('[SignIn] No user email provided');
-          return false;
-        }
+      // 사용자 정보가 없으면 차단
+      if (!user?.email) {
+        console.error('[SignIn] No user email provided');
+        return false;
+      }
 
-        // 백엔드에 사용자 존재 여부 확인 및 생성/업데이트
+      // credentials / test-login: 백엔드 DB에서 이미 검증됨 → sync 불필요
+      if (account?.provider === 'credentials' || account?.provider === 'test-login') {
+        return true;
+      }
+
+      // Azure AD: 신규 AD 사용자는 DB에 없을 수 있으므로 upsert 필요
+      try {
         const azureProfile = profile as AzureADProfile | undefined;
         const authUser = user as AuthorizedUser;
 
-        // 사용자 정보 구성
         const userData = {
           id: user.id,
           email: user.email,
@@ -326,29 +334,34 @@ export const authOptions = {
           position: azureProfile?.department,
         };
 
-        // 백엔드 API 호출: 사용자 생성/업데이트 (upsert)
+        const internalApiKey = process.env.INTERNAL_API_KEY;
+        if (!internalApiKey) {
+          // Azure AD 환경에서 INTERNAL_API_KEY가 없으면 sync 불가 — 경고 후 로그인은 허용
+          // (사용자가 DB에 이미 있을 경우 다음 로그인에서 복구)
+          console.warn('[SignIn] INTERNAL_API_KEY not set — skipping Azure AD user sync');
+          return true;
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/users/sync`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-Internal-Api-Key': internalApiKey,
           },
           body: JSON.stringify(userData),
         });
 
         if (!response.ok) {
-          // 사용자 동기화 실패 시에도 로그인은 허용 (기존 동작 유지)
-          console.warn(
-            `[SignIn] Failed to sync user to DB: ${response.status}`,
-            await response.text()
-          );
+          // sync 실패해도 로그인은 허용 (가용성 우선, 이미 DB에 있는 사용자는 정상 접근)
+          console.warn(`[SignIn] Azure AD user sync failed: ${response.status}`);
         } else {
-          console.log(`[SignIn] User synced successfully: ${user.email}`);
+          console.log(`[SignIn] Azure AD user synced: ${user.email}`);
         }
 
         return true;
       } catch (error) {
-        console.error('[SignIn] Error during user sync:', error);
-        // 동기화 실패해도 로그인은 허용 (가용성 우선)
+        console.error('[SignIn] Azure AD user sync error:', error);
+        // 네트워크 오류 시에도 로그인 허용 (가용성 우선)
         return true;
       }
     },
@@ -394,6 +407,7 @@ export const authOptions = {
           token.refreshToken = authUser.refreshToken;
           token.accessTokenExpires = authUser.accessTokenExpires;
           token.sessionStartedAt = Math.floor(Date.now() / 1000);
+          token.locale = authUser.locale ?? DEFAULT_LOCALE;
         }
       }
 
@@ -410,6 +424,7 @@ export const authOptions = {
         token.refreshToken = authUser.refreshToken;
         token.accessTokenExpires = authUser.accessTokenExpires;
         token.sessionStartedAt = Math.floor(Date.now() / 1000);
+        token.locale = authUser.locale ?? DEFAULT_LOCALE;
       }
 
       // 절대 세션 만료 체크: 30일 초과 시 활동 여부와 무관하게 재로그인 강제
@@ -457,6 +472,7 @@ export const authOptions = {
         session.user.department = token.department;
         session.user.site = token.site;
         session.user.teamId = token.teamId;
+        session.user.locale = token.locale;
         session.accessToken = token.accessToken;
       }
       // error 전파 (RefreshAccessTokenError 등)

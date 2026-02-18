@@ -1,5 +1,5 @@
 /**
- * Next.js Middleware — 인증 가드 (SSOT)
+ * Next.js Middleware — 인증 가드 + 로케일 쿠키 동기화 (SSOT)
  *
  * cacheComponents: true 아키텍처에서 레이아웃의 await를 제거하기 위한 핵심 인프라.
  * 레이아웃에서 getServerSession()을 await하면 모든 하위 라우트의 정적 셸 프리렌더가 차단됨.
@@ -9,6 +9,16 @@
  * 1. Middleware (여기): 세션 토큰 존재 확인 → 없으면 /login 리다이렉트
  * 2. Layout (sync): DashboardShell 즉시 렌더 (await 없음)
  * 3. Page (async): Suspense 내에서 세션/데이터 fetch (blocking OK)
+ *
+ * 로케일 결정 우선순위:
+ * 1순위: NEXT_LOCALE 쿠키 (사용자 명시적 선택 — settings 페이지에서 저장)
+ * 2순위: JWT locale 클레임 (DB에 저장된 사용자 선호값)
+ * 3순위: DEFAULT_LOCALE ('ko')
+ *
+ * 왜 쿠키 > JWT?
+ * - DisplayPreferencesContent가 저장 후 setLocaleCookie()를 호출 → 쿠키가 최신 값
+ * - test-login provider는 locale 클레임을 반환하지 않아 JWT = DEFAULT_LOCALE
+ * - 쿠키 우선 시 E2E setLocale() 헬퍼와 실제 Settings UI 모두 정상 동작
  *
  * 보안:
  * - next-auth의 getToken()으로 JWT 유효성 검증 (쿠키 존재만이 아닌 서명 검증)
@@ -22,6 +32,7 @@
 import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE } from '@equipment-management/schemas';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -40,7 +51,36 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    return NextResponse.next();
+    // 로케일 결정: NEXT_LOCALE 쿠키 → JWT locale → DEFAULT_LOCALE 폴백
+    const cookieLocale = request.cookies.get('NEXT_LOCALE')?.value;
+    const tokenLocale = token.locale as string | undefined;
+    const targetLocale =
+      cookieLocale && (SUPPORTED_LOCALES as readonly string[]).includes(cookieLocale)
+        ? cookieLocale
+        : tokenLocale && (SUPPORTED_LOCALES as readonly string[]).includes(tokenLocale)
+          ? tokenLocale
+          : DEFAULT_LOCALE;
+
+    // x-next-intl-locale 헤더를 request에 주입
+    // → i18n/request.ts가 cookies() 없이 requestLocale 파라미터로 locale을 읽을 수 있음
+    // → RootLayout에서 Dynamic API가 제거되어 PPR 정적 셸 블로킹 해소
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-next-intl-locale', targetLocale);
+
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+
+    // 쿠키 동기화 유지 (클라이언트 사이드 locale 접근용)
+    if (cookieLocale !== targetLocale) {
+      response.cookies.set('NEXT_LOCALE', targetLocale, {
+        path: '/',
+        maxAge: 365 * 24 * 60 * 60,
+        sameSite: 'lax',
+      });
+    }
+
+    return response;
   } catch (error) {
     // Fail-closed: 인증 검증 실패 시 보수적으로 로그인 리다이렉트
     // 원인: NEXTAUTH_SECRET 미설정, 쿠키 파싱 오류, 네트워크 이슈 등
