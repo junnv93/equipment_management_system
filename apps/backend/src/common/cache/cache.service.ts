@@ -9,7 +9,7 @@ interface CacheItem<T> {
 @Injectable()
 export class CacheService {
   private readonly logger = new Logger(CacheService.name);
-  private cache: Map<string, CacheItem<any>> = new Map();
+  private cache: Map<string, CacheItem<unknown>> = new Map();
   private readonly defaultTtl = 1000 * 60 * 60; // 기본 1시간
 
   /**
@@ -66,7 +66,7 @@ export class CacheService {
     }
 
     this.logger.debug(`Cache hit for key: ${key}`);
-    return item.value;
+    return item.value as T;
   }
 
   /**

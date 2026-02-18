@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpException } from '@nestjs/common';
 import { getErrorMessage } from '../utils/error';
+import type { ICacheService } from './cache.interface';
 
 interface CacheItem<T> {
   value: T;
@@ -8,7 +9,7 @@ interface CacheItem<T> {
 }
 
 @Injectable()
-export class SimpleCacheService {
+export class SimpleCacheService implements ICacheService {
   private readonly logger = new Logger(SimpleCacheService.name);
   private cache: Map<string, CacheItem<unknown>> = new Map();
   private readonly defaultTtl = 1000 * 60 * 60; // 기본 1시간
