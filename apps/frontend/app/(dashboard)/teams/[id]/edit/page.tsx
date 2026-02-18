@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getTranslations } from 'next-intl/server';
 
 /**
  * Next.js 16 PageProps 타입
@@ -44,18 +45,20 @@ async function EditTeamContentAsync({ paramsPromise }: { paramsPromise: Promise<
     notFound();
   }
 
+  const t = await getTranslations('teams');
+
   return (
     <>
       {/* 헤더 */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
-          <Link href={`/teams/${id}`} aria-label="팀 상세로 돌아가기">
+          <Link href={`/teams/${id}`} aria-label={t('edit.backToDetail')}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">팀 수정</h1>
-          <p className="text-muted-foreground">팀 정보를 수정합니다</p>
+          <h1 className="text-2xl font-bold">{t('edit.title')}</h1>
+          <p className="text-muted-foreground">{t('edit.description')}</p>
         </div>
       </div>
 
@@ -113,11 +116,10 @@ function EditTeamPageSkeleton() {
 /**
  * 동적 메타데이터
  */
-export async function generateMetadata(props: PageProps): Promise<Metadata> {
-  const { id } = await props.params;
-
+export async function generateMetadata(_props: PageProps): Promise<Metadata> {
+  const t = await getTranslations('teams');
   return {
-    title: '팀 수정',
-    description: '팀 정보를 수정합니다.',
+    title: t('edit.title'),
+    description: t('edit.description'),
   };
 }

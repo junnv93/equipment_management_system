@@ -25,10 +25,10 @@ import {
 } from '@/hooks/use-notifications';
 import {
   NOTIFICATION_CATEGORIES,
-  NOTIFICATION_CATEGORY_LABELS,
-  NOTIFICATION_CATEGORY_DESCRIPTIONS,
   NOTIFICATION_CATEGORY_FORM_FIELDS,
+  type NotificationCategory,
 } from '@equipment-management/shared-constants';
+import { useTranslations } from 'next-intl';
 
 /**
  * 알림 설정 폼 스키마
@@ -66,12 +66,14 @@ type BooleanFieldName = {
   [K in keyof NotificationFormValues]: NotificationFormValues[K] extends boolean ? K : never;
 }[keyof NotificationFormValues];
 
-/** SSOT: shared-constants에서 카테고리 정보를 가져와 설정 토글 항목 생성 */
-const CATEGORY_ITEMS = NOTIFICATION_CATEGORIES.map((cat) => ({
-  name: NOTIFICATION_CATEGORY_FORM_FIELDS[cat] as BooleanFieldName,
-  label: NOTIFICATION_CATEGORY_LABELS[cat],
-  description: NOTIFICATION_CATEGORY_DESCRIPTIONS[cat],
-}));
+/** SSOT: 카테고리 토글 항목을 i18n 메시지에서 생성 */
+function useCategoryItems(tNotif: ReturnType<typeof useTranslations>) {
+  return NOTIFICATION_CATEGORIES.map((cat) => ({
+    name: NOTIFICATION_CATEGORY_FORM_FIELDS[cat] as BooleanFieldName,
+    label: tNotif(`category.${cat}.label` as Parameters<typeof tNotif>[0]),
+    description: tNotif(`category.${cat}.description` as Parameters<typeof tNotif>[0]),
+  }));
+}
 
 function LoadingSkeleton() {
   return (
@@ -94,6 +96,9 @@ function LoadingSkeleton() {
 }
 
 export default function NotificationsContent() {
+  const t = useTranslations('settings');
+  const tNotif = useTranslations('notifications');
+  const categoryItems = useCategoryItems(tNotif);
   const { data: preferences, isLoading } = useNotificationPreferences();
   const updateMutation = useUpdateNotificationPreferences();
 
@@ -105,9 +110,9 @@ export default function NotificationsContent() {
     defaultValues,
   });
 
-  // 서버에서 설정을 로드한 후 폼에 반영
+  // 서버에서 설정을 로드한 후 폼에 반영 (isDirty 가드: 사용자 변경 중 리셋 방지)
   useEffect(() => {
-    if (preferences) {
+    if (preferences && !form.formState.isDirty) {
       const categoryValues = Object.fromEntries(
         NOTIFICATION_CATEGORIES.map((cat) => {
           const field = NOTIFICATION_CATEGORY_FORM_FIELDS[cat];
@@ -139,7 +144,7 @@ export default function NotificationsContent() {
             setSavingField(null);
             // 토글 원복
             form.setValue(fieldName as keyof NotificationFormValues, !checked);
-            toast.error('설정 저장에 실패했습니다.');
+            toast.error(t('toasts.notificationSaveError'));
           },
         }
       );
@@ -161,20 +166,20 @@ export default function NotificationsContent() {
               <Bell className="h-6 w-6 text-primary" aria-hidden="true" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-xl mb-1.5">알림 채널</CardTitle>
-              <CardDescription>알림을 수신하는 방법과 빈도를 설정합니다.</CardDescription>
+              <CardTitle className="text-xl mb-1.5">{t('notifications.channelTitle')}</CardTitle>
+              <CardDescription>{t('notifications.channelDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
           <Form {...form}>
             <div className="space-y-4">
-              {/* 이메일 알림 (disabled + 준비중) */}
+              {/* 이메일 알림 (auto-save) */}
               <FormField
                 control={form.control}
                 name="emailEnabled"
                 render={({ field }) => (
-                  <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-all motion-reduce:transition-none opacity-60">
+                  <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
                         <Mail
@@ -182,20 +187,37 @@ export default function NotificationsContent() {
                           aria-hidden="true"
                         />
                         <div className="space-y-1.5">
-                          <FormLabel className="text-base font-semibold cursor-not-allowed">
-                            이메일 알림
-                            <Badge variant="secondary" className="ml-2 text-xs">
-                              준비중
-                            </Badge>
+                          <FormLabel className="text-base font-semibold cursor-pointer">
+                            {t('notifications.emailEnabled')}
                           </FormLabel>
                           <FormDescription className="text-xs leading-relaxed">
-                            중요한 알림을 이메일로 받습니다.
+                            {t('notifications.emailDescription')}
                           </FormDescription>
                         </div>
                       </div>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} disabled />
-                      </FormControl>
+                      <div className="flex items-center gap-2">
+                        {savingField === 'emailEnabled' && (
+                          <Loader2
+                            className="h-4 w-4 motion-safe:animate-spin text-muted-foreground"
+                            aria-hidden="true"
+                          />
+                        )}
+                        {savedField === 'emailEnabled' && (
+                          <Check
+                            className="h-4 w-4 text-green-500 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              handleToggleChange('emailEnabled', checked);
+                            }}
+                          />
+                        </FormControl>
+                      </div>
                     </div>
                   </FormItem>
                 )}
@@ -215,10 +237,10 @@ export default function NotificationsContent() {
                         />
                         <div className="space-y-1.5">
                           <FormLabel className="text-base font-semibold cursor-pointer">
-                            앱 내 알림
+                            {t('notifications.inAppEnabled')}
                           </FormLabel>
                           <FormDescription className="text-xs leading-relaxed">
-                            시스템 내에서 알림을 표시합니다.
+                            {t('notifications.inAppDescription')}
                           </FormDescription>
                         </div>
                       </div>
@@ -261,13 +283,13 @@ export default function NotificationsContent() {
                   />
                   <div className="space-y-1.5">
                     <p className="text-base font-semibold">
-                      알림 빈도
+                      {t('notifications.frequency')}
                       <Badge variant="secondary" className="ml-2 text-xs">
-                        준비중
+                        {t('notifications.comingSoon')}
                       </Badge>
                     </p>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      현재 모든 알림은 즉시 발송됩니다. 향후 일간/주간 요약 기능이 추가됩니다.
+                      {t('notifications.frequencyDescription')}
                     </p>
                   </div>
                 </div>
@@ -282,13 +304,13 @@ export default function NotificationsContent() {
                   />
                   <div className="space-y-1.5">
                     <p className="text-base font-semibold">
-                      요약 발송 시간
+                      {t('notifications.digestTime')}
                       <Badge variant="secondary" className="ml-2 text-xs">
-                        준비중
+                        {t('notifications.comingSoon')}
                       </Badge>
                     </p>
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                      일간/주간 요약 기능 활성화 시 발송 시간을 설정할 수 있습니다.
+                      {t('notifications.digestTimeDescription')}
                     </p>
                   </div>
                 </div>
@@ -306,15 +328,15 @@ export default function NotificationsContent() {
               <SlidersHorizontal className="h-6 w-6 text-primary" aria-hidden="true" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-xl mb-1.5">알림 유형</CardTitle>
-              <CardDescription>수신할 알림 카테고리를 선택하세요.</CardDescription>
+              <CardTitle className="text-xl mb-1.5">{t('notifications.typeTitle')}</CardTitle>
+              <CardDescription>{t('notifications.typeDescription')}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
           <Form {...form}>
             <div className="space-y-4">
-              {CATEGORY_ITEMS.map((item) => (
+              {categoryItems.map((item) => (
                 <FormField
                   key={item.name}
                   control={form.control}

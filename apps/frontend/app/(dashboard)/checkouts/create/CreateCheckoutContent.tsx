@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import { CHECKOUT_FORM_TOKENS } from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,11 +39,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, Plus, Trash2, Ban, Package, FileText, AlertCircle } from 'lucide-react';
+import { Search, Plus, Trash2, Ban, AlertCircle } from 'lucide-react';
 import { addDays } from 'date-fns';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { CreateCheckoutDto } from '@/lib/api/checkout-api';
-import teamsApi, { SITE_CONFIG, type Site } from '@/lib/api/teams-api';
+import teamsApi, { type Site } from '@/lib/api/teams-api';
 import { SITE_LABELS } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
@@ -53,6 +55,7 @@ import {
 } from '@/lib/utils/checkout-selectability';
 
 export default function CreateCheckoutContent() {
+  const t = useTranslations('checkouts');
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -74,7 +77,6 @@ export default function CreateCheckoutContent() {
 
   // 사용자 소속 정보
   const userTeamId = user?.teamId;
-  const userSite = user?.site;
 
   // 외부 대여 시 선택된 사이트의 팀 목록 조회
   const { data: teamsData } = useQuery({
@@ -109,8 +111,8 @@ export default function CreateCheckoutContent() {
     mutationFn: (data: CreateCheckoutDto) => checkoutApi.createCheckout(data),
     onSuccess: () => {
       toast({
-        title: '반출 신청 완료',
-        description: '반출 신청이 성공적으로 접수되었습니다.',
+        title: t('toasts.createSuccessTitle'),
+        description: t('toasts.createSuccessDescription'),
         variant: 'default',
       });
       router.push(FRONTEND_ROUTES.CHECKOUTS.LIST);
@@ -120,8 +122,8 @@ export default function CreateCheckoutContent() {
     },
     onError: (error: unknown) => {
       toast({
-        title: '반출 신청 실패',
-        description: getErrorMessage(error, '반출 신청 중 오류가 발생했습니다.'),
+        title: t('toasts.createErrorTitle'),
+        description: getErrorMessage(error, t('toasts.createError')),
         variant: 'destructive',
       });
       console.error(error);
@@ -157,25 +159,25 @@ export default function CreateCheckoutContent() {
       // 이미 선택된 장비 → 제거
       setSelectedEquipments(selectedEquipments.filter((e) => e.id !== equipment.id));
       toast({
-        title: '장비 제거됨',
-        description: `${equipment.name}이(가) 선택 목록에서 제거되었습니다.`,
+        title: t('toasts.equipmentRemoved'),
+        description: t('toasts.equipmentRemovedDesc', { name: equipment.name }),
         variant: 'default',
       });
     } else {
       // 선택되지 않은 장비 → 추가
       setSelectedEquipments([...selectedEquipments, equipment]);
       toast({
-        title: '장비 선택됨',
-        description: `${equipment.name}이(가) 선택되었습니다.`,
+        title: t('toasts.equipmentSelected'),
+        description: t('toasts.equipmentSelectedDesc', { name: equipment.name }),
         variant: 'default',
       });
     }
   };
 
   // 선택 불가 장비 클릭 시 안내 처리
-  const handleBlockedEquipmentClick = (equipment: Equipment, reason: string) => {
+  const handleBlockedEquipmentClick = (_equipment: Equipment, reason: string) => {
     toast({
-      title: '장비 선택 불가',
+      title: t('toasts.equipmentNotSelectable'),
       description: reason,
       variant: 'destructive',
     });
@@ -192,8 +194,8 @@ export default function CreateCheckoutContent() {
 
     if (selectedEquipments.length === 0) {
       toast({
-        title: '장비를 선택해주세요',
-        description: '최소 1개 이상의 장비를 선택해야 합니다.',
+        title: t('toasts.selectEquipment'),
+        description: t('toasts.selectEquipmentDesc'),
         variant: 'destructive',
       });
       return;
@@ -201,8 +203,8 @@ export default function CreateCheckoutContent() {
 
     if (!destination) {
       toast({
-        title: '반출지를 입력해주세요',
-        description: '장비가 반출될 장소를 입력해주세요.',
+        title: t('toasts.enterDestination'),
+        description: t('toasts.enterDestinationDesc'),
         variant: 'destructive',
       });
       return;
@@ -210,8 +212,8 @@ export default function CreateCheckoutContent() {
 
     if (!reason || !reason.trim()) {
       toast({
-        title: '반출 사유를 입력해주세요',
-        description: '반출 사유는 필수입니다.',
+        title: t('toasts.enterReason'),
+        description: t('toasts.enterReasonDesc'),
         variant: 'destructive',
       });
       return;
@@ -219,8 +221,8 @@ export default function CreateCheckoutContent() {
 
     if (!purpose) {
       toast({
-        title: '반출 목적을 선택해주세요',
-        description: '장비 반출 목적을 선택해주세요.',
+        title: t('toasts.selectPurpose'),
+        description: t('toasts.selectPurposeDesc'),
         variant: 'destructive',
       });
       return;
@@ -248,29 +250,27 @@ export default function CreateCheckoutContent() {
     <div className="container mx-auto py-6 px-4 sm:px-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">장비 반출 신청</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            사용할 장비를 선택하고 반출 정보를 입력하세요.
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('create.title')}</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('create.subtitle')}</p>
         </div>
         <Button
           variant="outline"
           onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.LIST)}
           className="w-full sm:w-auto"
         >
-          반출 목록으로 돌아가기
+          {t('actions.backToCheckouts')}
         </Button>
       </div>
 
       {/* 안내 메시지 */}
       <Alert className="mb-6">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>반출 신청 안내</AlertTitle>
+        <AlertTitle>{t('create.guideTitle')}</AlertTitle>
         <AlertDescription>
           <ul className="list-disc list-inside space-y-1 text-sm">
-            <li>교정/수리 목적: 본인 팀의 장비만 선택 가능</li>
-            <li>외부 대여 목적: 대여할 팀의 사이트와 팀을 선택 후 장비 선택</li>
-            <li>반출 신청 후 관리자의 승인이 필요합니다</li>
+            <li>{t('create.guideCalibration')}</li>
+            <li>{t('create.guideRental')}</li>
+            <li>{t('create.guideApproval')}</li>
           </ul>
         </AlertDescription>
       </Alert>
@@ -283,11 +283,9 @@ export default function CreateCheckoutContent() {
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
                 1
               </span>
-              장비 선택
+              {t('create.step1Title')}
             </CardTitle>
-            <CardDescription className="text-sm">
-              반출할 장비를 검색하여 선택하세요.
-            </CardDescription>
+            <CardDescription className="text-sm">{t('create.step1Desc')}</CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
@@ -295,7 +293,7 @@ export default function CreateCheckoutContent() {
               {purpose === 'rental' && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
                   <p className="text-xs text-amber-800 dark:text-amber-200 font-medium">
-                    외부 대여: 아래에서 사이트와 팀을 선택하면 장비 목록이 표시됩니다
+                    {t('create.rentalNotice')}
                   </p>
                 </div>
               )}
@@ -303,7 +301,7 @@ export default function CreateCheckoutContent() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="장비명 또는 관리번호로 검색"
+                  placeholder={t('create.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 h-10"
@@ -316,8 +314,8 @@ export default function CreateCheckoutContent() {
                   <Table>
                     <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
                       <TableRow>
-                        <TableHead>장비 정보</TableHead>
-                        <TableHead className="w-32">상태</TableHead>
+                        <TableHead>{t('create.equipmentInfo')}</TableHead>
+                        <TableHead className="w-32">{t('create.equipmentStatus')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -326,7 +324,7 @@ export default function CreateCheckoutContent() {
                           <TableCell colSpan={2} className="h-32 text-center text-muted-foreground">
                             <div className="flex flex-col items-center justify-center gap-2">
                               <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-                              <span>장비 목록을 불러오는 중...</span>
+                              <span>{t('create.loading')}</span>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -335,16 +333,14 @@ export default function CreateCheckoutContent() {
                           <TableCell colSpan={2} className="h-32 text-center text-muted-foreground">
                             {searchTerm ? (
                               <div>
-                                <p className="font-medium">검색 결과가 없습니다.</p>
-                                <p className="text-sm mt-1">다른 검색어로 시도해보세요.</p>
+                                <p className="font-medium">{t('create.noResults')}</p>
+                                <p className="text-sm mt-1">{t('create.noResultsHint')}</p>
                               </div>
                             ) : (
                               <div>
-                                <p className="font-medium">장비가 없습니다.</p>
+                                <p className="font-medium">{t('create.noEquipment')}</p>
                                 {purpose === 'rental' && !selectedTeamId && (
-                                  <p className="text-sm mt-1">
-                                    팀을 선택하면 장비 목록이 표시됩니다.
-                                  </p>
+                                  <p className="text-sm mt-1">{t('create.selectTeamHint')}</p>
                                 )}
                               </div>
                             )}
@@ -373,7 +369,7 @@ export default function CreateCheckoutContent() {
                                 } else {
                                   handleBlockedEquipmentClick(
                                     equipment,
-                                    selectability.reason || '선택할 수 없는 장비입니다'
+                                    selectability.reason || t('create.notSelectable')
                                   );
                                 }
                               }}
@@ -388,18 +384,17 @@ export default function CreateCheckoutContent() {
                               }}
                               aria-label={
                                 selectability.selectable
-                                  ? `${equipment.name} ${isAlreadySelected ? '선택됨' : '선택하기'}`
-                                  : `${equipment.name} 선택 불가: ${selectability.reason}`
+                                  ? `${equipment.name} ${isAlreadySelected ? t('create.selected') : t('create.step1Title')}`
+                                  : `${equipment.name} ${t('create.notSelectable')}: ${selectability.reason}`
                               }
                               className={`
-                                transition-all duration-200
                                 ${
                                   selectability.selectable
                                     ? isAlreadySelected
-                                      ? 'bg-primary/5 border-l-4 border-l-primary shadow-sm'
-                                      : 'cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-                                    : 'opacity-50 cursor-not-allowed'
-                                }
+                                      ? `${CHECKOUT_FORM_TOKENS.selectableRow.selected} border-l-4 shadow-sm`
+                                      : CHECKOUT_FORM_TOKENS.selectableRow.hoverable
+                                    : CHECKOUT_FORM_TOKENS.selectableRow.disabled
+                                } ${CHECKOUT_FORM_TOKENS.selectableRow.base}
                               `}
                             >
                               <TableCell className="py-4">
@@ -414,7 +409,7 @@ export default function CreateCheckoutContent() {
                                       </p>
                                       {isAlreadySelected && (
                                         <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                                          선택됨
+                                          {t('create.selected')}
                                         </Badge>
                                       )}
                                     </div>
@@ -464,7 +459,7 @@ export default function CreateCheckoutContent() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-base">
-                    선택된 장비{' '}
+                    {t('create.selectedEquipment')}{' '}
                     <Badge variant="secondary" className="ml-2 text-xs px-2 py-0.5">
                       {selectedEquipments.length}
                     </Badge>
@@ -476,7 +471,7 @@ export default function CreateCheckoutContent() {
                       onClick={() => setSelectedEquipments([])}
                       className="h-8 text-xs text-muted-foreground hover:text-destructive"
                     >
-                      전체 해제
+                      {t('actions.selectAll')}
                     </Button>
                   )}
                 </div>
@@ -484,10 +479,8 @@ export default function CreateCheckoutContent() {
                 {selectedEquipments.length === 0 ? (
                   <div className="border-2 border-dashed rounded-lg p-6 text-center text-muted-foreground">
                     <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm font-medium">선택된 장비가 없습니다</p>
-                    <p className="text-xs mt-1">
-                      위 목록에서 장비를 클릭하거나 Enter 키를 눌러주세요
-                    </p>
+                    <p className="text-sm font-medium">{t('create.noSelectedEquipment')}</p>
+                    <p className="text-xs mt-1">{t('create.noSelectedEquipmentHint')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -525,7 +518,7 @@ export default function CreateCheckoutContent() {
                                 size="icon"
                                 onClick={() => handleRemoveEquipment(equipment.id)}
                                 className="hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
-                                aria-label={`${equipment.name} 제거`}
+                                aria-label={t('create.removeEquipment', { name: equipment.name })}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -548,11 +541,10 @@ export default function CreateCheckoutContent() {
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
                 2
               </span>
-              반출 정보 입력
+              {t('create.step2Title')}
             </CardTitle>
             <CardDescription className="text-sm">
-              반출에 필요한 정보를 입력하세요. <span className="text-red-500">*</span> 표시는 필수
-              항목입니다.
+              {t('create.step2Desc', { required: '*' })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -560,7 +552,7 @@ export default function CreateCheckoutContent() {
               {/* 반출 목적 선택 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="purpose" className="text-sm font-medium">
-                  반출 목적 <span className="text-red-500">*</span>
+                  {t('create.purposeLabel')} <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   value={purpose}
@@ -569,25 +561,31 @@ export default function CreateCheckoutContent() {
                   }
                 >
                   <SelectTrigger id="purpose" className="h-10">
-                    <SelectValue placeholder="반출 목적을 선택하세요" />
+                    <SelectValue placeholder={t('create.purposePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="calibration">
                       <div className="flex flex-col">
-                        <span className="font-medium">교정</span>
-                        <span className="text-xs text-muted-foreground">장비 교정 목적</span>
+                        <span className="font-medium">{t('create.purposeCalibration')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('create.purposeCalibrationDesc')}
+                        </span>
                       </div>
                     </SelectItem>
                     <SelectItem value="repair">
                       <div className="flex flex-col">
-                        <span className="font-medium">수리</span>
-                        <span className="text-xs text-muted-foreground">장비 수리/점검 목적</span>
+                        <span className="font-medium">{t('create.purposeRepair')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('create.purposeRepairDesc')}
+                        </span>
                       </div>
                     </SelectItem>
                     <SelectItem value="rental">
                       <div className="flex flex-col">
-                        <span className="font-medium">외부 대여</span>
-                        <span className="text-xs text-muted-foreground">다른 팀에 장비 대여</span>
+                        <span className="font-medium">{t('create.purposeRental')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('create.purposeRentalDesc')}
+                        </span>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -595,7 +593,7 @@ export default function CreateCheckoutContent() {
                 {purpose === 'rental' && (
                   <p className="text-xs text-muted-foreground flex items-start gap-1">
                     <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                    외부 대여 시 대여받을 팀의 사이트와 팀을 선택해주세요
+                    {t('create.rentalSiteTeamHint')}
                   </p>
                 )}
               </div>
@@ -605,11 +603,11 @@ export default function CreateCheckoutContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="site" className="text-sm font-medium">
-                      대여받을 사이트 <span className="text-red-500">*</span>
+                      {t('create.lenderSite')} <span className="text-red-500">*</span>
                     </Label>
                     <Select value={selectedSite} onValueChange={handleSiteChange}>
                       <SelectTrigger id="site" className="h-10">
-                        <SelectValue placeholder="사이트를 선택하세요" />
+                        <SelectValue placeholder={t('create.selectSitePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {Object.entries(SITE_LABELS).map(([key, label]) => (
@@ -622,7 +620,7 @@ export default function CreateCheckoutContent() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="team" className="text-sm font-medium">
-                      대여받을 팀 <span className="text-red-500">*</span>
+                      {t('create.lenderTeam')} <span className="text-red-500">*</span>
                     </Label>
                     <Select
                       value={selectedTeamId}
@@ -632,7 +630,9 @@ export default function CreateCheckoutContent() {
                       <SelectTrigger id="team" className="h-10">
                         <SelectValue
                           placeholder={
-                            selectedSite ? '팀을 선택하세요' : '사이트를 먼저 선택하세요'
+                            selectedSite
+                              ? t('create.selectTeamPlaceholder')
+                              : t('create.selectSiteFirst')
                           }
                         />
                       </SelectTrigger>
@@ -651,11 +651,11 @@ export default function CreateCheckoutContent() {
               {/* 반출지 입력 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="destination" className="text-sm font-medium">
-                  반출 장소 <span className="text-red-500">*</span>
+                  {t('create.destinationLabel')} <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="destination"
-                  placeholder="반출 장소를 입력하세요 (예: 교정기관 ABC)"
+                  placeholder={t('create.destinationPlaceholder')}
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
                   required
@@ -667,11 +667,11 @@ export default function CreateCheckoutContent() {
               {/* 반출 사유 입력 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="reason" className="text-sm font-medium">
-                  반출 사유 <span className="text-red-500">*</span>
+                  {t('create.reasonLabel')} <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id="reason"
-                  placeholder="반출 사유를 상세히 입력하세요 (예: 교정 기한 도래로 인한 외부 교정기관 의뢰)"
+                  placeholder={t('create.reasonPlaceholder')}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   required
@@ -684,11 +684,11 @@ export default function CreateCheckoutContent() {
                 {/* 연락처 (선택) */}
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber" className="text-sm font-medium">
-                    연락처
+                    {t('create.phoneLabel')}
                   </Label>
                   <Input
                     id="phoneNumber"
-                    placeholder="반출 기간 동안 연락 가능한 번호"
+                    placeholder={t('create.phonePlaceholder')}
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     className="h-10"
@@ -700,11 +700,11 @@ export default function CreateCheckoutContent() {
                 {/* 주소 (선택) */}
                 <div className="space-y-2">
                   <Label htmlFor="address" className="text-sm font-medium">
-                    주소
+                    {t('create.addressLabel')}
                   </Label>
                   <Input
                     id="address"
-                    placeholder="반출 장소의 상세 주소"
+                    placeholder={t('create.addressPlaceholder')}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className="h-10"
@@ -716,7 +716,7 @@ export default function CreateCheckoutContent() {
               {/* 반입 예정일 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="expectedReturnDate" className="text-sm font-medium">
-                  반입 예정일 <span className="text-red-500">*</span>
+                  {t('create.expectedReturnLabel')} <span className="text-red-500">*</span>
                 </Label>
                 <DatePicker
                   selected={expectedReturnDate}
@@ -725,7 +725,7 @@ export default function CreateCheckoutContent() {
                 />
                 <p className="text-xs text-muted-foreground flex items-start gap-1">
                   <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                  반출일은 반출 시작 시점에 자동으로 설정됩니다.
+                  {t('create.expectedReturnNote')}
                 </p>
               </div>
             </form>
@@ -735,7 +735,7 @@ export default function CreateCheckoutContent() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                신청 후 관리자 승인이 필요합니다
+                {t('create.approvalRequired')}
               </p>
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button
@@ -745,7 +745,7 @@ export default function CreateCheckoutContent() {
                   className="flex-1 sm:flex-none"
                   disabled={createCheckoutMutation.isPending}
                 >
-                  취소
+                  {t('actions.cancel')}
                 </Button>
                 <Button
                   type="submit"
@@ -756,10 +756,10 @@ export default function CreateCheckoutContent() {
                   {createCheckoutMutation.isPending ? (
                     <>
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                      처리 중...
+                      {t('actions.processing')}
                     </>
                   ) : (
-                    '반출 신청'
+                    t('actions.create')
                   )}
                 </Button>
               </div>

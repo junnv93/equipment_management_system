@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
+import { getErrorMessage } from '@/lib/api/error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,18 +36,19 @@ export default function SoftwareApprovalsContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const t = useTranslations('approvals.softwareApprovals');
+  const tActions = useTranslations('approvals.actions');
+  const tCommon = useTranslations('common.actions');
   const [selectedChange, setSelectedChange] = useState<SoftwareHistory | null>(null);
   const [comment, setComment] = useState('');
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
-  // 승인 대기 소프트웨어 변경 목록 조회
   const { data: pendingData, isLoading } = useQuery({
     queryKey: queryKeys.software.pending(),
     queryFn: () => softwareApi.getPendingSoftwareChanges(),
   });
 
-  // 승인 뮤테이션
   const approveMutation = useMutation({
     mutationFn: async ({
       id,
@@ -60,17 +63,17 @@ export default function SoftwareApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '승인 완료',
-        description: '소프트웨어 변경이 승인되었습니다.',
+        title: t('toasts.approveSuccess'),
+        description: t('toasts.approveSuccessDesc'),
       });
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedChange(null);
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: '승인 실패',
-        description: error.message || '소프트웨어 변경 승인 중 오류가 발생했습니다.',
+        title: t('toasts.approveError'),
+        description: getErrorMessage(error, t('toasts.approveError')),
         variant: 'destructive',
       });
     },
@@ -79,7 +82,6 @@ export default function SoftwareApprovalsContent() {
     },
   });
 
-  // 반려 뮤테이션
   const rejectMutation = useMutation({
     mutationFn: async ({
       id,
@@ -94,16 +96,16 @@ export default function SoftwareApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '반려 완료',
-        description: '소프트웨어 변경이 반려되었습니다.',
+        title: t('toasts.rejectSuccess'),
+        description: t('toasts.rejectSuccessDesc'),
       });
       setIsRejectDialogOpen(false);
       setSelectedChange(null);
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: '반려 실패',
-        description: error.message || '소프트웨어 변경 반려 중 오류가 발생했습니다.',
+        title: t('toasts.rejectError'),
+        description: getErrorMessage(error, t('toasts.rejectError')),
         variant: 'destructive',
       });
     },
@@ -126,8 +128,8 @@ export default function SoftwareApprovalsContent() {
     if (!selectedChange) return;
     if (!comment.trim()) {
       toast({
-        title: '코멘트 필요',
-        description: '승인 시 검토 코멘트를 입력해주세요.',
+        title: t('toasts.commentRequired'),
+        description: t('toasts.commentRequiredDesc'),
         variant: 'destructive',
       });
       return;
@@ -157,22 +159,20 @@ export default function SoftwareApprovalsContent() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">소프트웨어 변경 승인 관리</h1>
-        <p className="text-muted-foreground">
-          시험실무자가 요청한 소프트웨어 변경을 검토하고 승인합니다
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('description')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>승인 대기 목록</CardTitle>
+          <CardTitle>{t('listTitle')}</CardTitle>
           <CardDescription>
-            총 {pendingChanges.length}개의 승인 대기 요청이 있습니다
+            {t('listDescription', { count: pendingChanges.length })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {pendingChanges.length === 0 ? (
-            <ApprovalEmptyState message="승인 대기 중인 소프트웨어 변경 요청이 없습니다" />
+            <ApprovalEmptyState message={t('emptyState')} />
           ) : (
             <div className="space-y-4">
               {pendingChanges.map((change: SoftwareHistory) => (
@@ -189,7 +189,7 @@ export default function SoftwareApprovalsContent() {
                             href={`/equipment/${change.equipmentId}`}
                             className="text-sm text-primary hover:underline"
                           >
-                            장비 상세 보기
+                            {t('viewEquipment')}
                           </Link>
                         </div>
 
@@ -197,7 +197,7 @@ export default function SoftwareApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <Monitor className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">장비 ID</p>
+                              <p className="text-muted-foreground">{t('fields.equipmentId')}</p>
                               <p className="font-medium font-mono text-xs">
                                 {change.equipmentId.slice(0, 8)}...
                               </p>
@@ -206,16 +206,17 @@ export default function SoftwareApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <ArrowRight className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">버전 변경</p>
+                              <p className="text-muted-foreground">{t('fields.versionChange')}</p>
                               <p className="font-medium">
-                                {change.previousVersion || '(신규)'} -&gt; {change.newVersion}
+                                {change.previousVersion || t('fields.newVersion')} -&gt;{' '}
+                                {change.newVersion}
                               </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">변경일</p>
+                              <p className="text-muted-foreground">{t('fields.changeDate')}</p>
                               <p className="font-medium">
                                 {format(new Date(change.changedAt), 'yyyy-MM-dd HH:mm')}
                               </p>
@@ -223,17 +224,17 @@ export default function SoftwareApprovalsContent() {
                           </div>
                         </div>
 
-                        {/* 검증 기록 */}
                         <div className="p-4 bg-muted rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />
-                            <p className="text-sm font-medium">검증 기록</p>
+                            <p className="text-sm font-medium">{t('fields.verificationRecord')}</p>
                           </div>
                           <p className="text-sm whitespace-pre-wrap">{change.verificationRecord}</p>
                         </div>
 
                         <div className="text-xs text-muted-foreground">
-                          요청일: {format(new Date(change.createdAt), 'yyyy-MM-dd HH:mm')}
+                          {t('fields.requestDate')}:{' '}
+                          {format(new Date(change.createdAt), 'yyyy-MM-dd HH:mm')}
                         </div>
                       </div>
 
@@ -244,7 +245,7 @@ export default function SoftwareApprovalsContent() {
                           disabled={approveMutation.isPending}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          승인
+                          {tActions('approve')}
                         </Button>
                         <Button
                           size="sm"
@@ -253,7 +254,7 @@ export default function SoftwareApprovalsContent() {
                           disabled={rejectMutation.isPending}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
-                          반려
+                          {tActions('reject')}
                         </Button>
                       </div>
                     </div>
@@ -265,35 +266,34 @@ export default function SoftwareApprovalsContent() {
         </CardContent>
       </Card>
 
-      {/* 승인 다이얼로그 */}
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>소프트웨어 변경 승인</DialogTitle>
-            <DialogDescription>
-              소프트웨어 변경 요청을 검토한 후 승인 코멘트를 입력해주세요.
-            </DialogDescription>
+            <DialogTitle>{t('approveDialog.title')}</DialogTitle>
+            <DialogDescription>{t('approveDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {selectedChange && (
               <div className="p-4 bg-muted rounded-lg space-y-2">
                 <p>
-                  <strong>소프트웨어:</strong> {selectedChange.softwareName}
+                  <strong>{t('approveDialog.software')}</strong> {selectedChange.softwareName}
                 </p>
                 <p>
-                  <strong>버전 변경:</strong> {selectedChange.previousVersion || '(신규)'} -&gt;{' '}
+                  <strong>{t('approveDialog.versionChange')}</strong>{' '}
+                  {selectedChange.previousVersion || t('fields.newVersion')} -&gt;{' '}
                   {selectedChange.newVersion}
                 </p>
                 <p>
-                  <strong>검증 기록:</strong> {selectedChange.verificationRecord}
+                  <strong>{t('approveDialog.verificationRecord')}</strong>{' '}
+                  {selectedChange.verificationRecord}
                 </p>
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="comment">검토 코멘트 *</Label>
+              <Label htmlFor="comment">{t('approveDialog.commentLabel')}</Label>
               <Textarea
                 id="comment"
-                placeholder="검토 완료 내용을 입력하세요"
+                placeholder={t('approveDialog.commentPlaceholder')}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 className="min-h-[100px]"
@@ -308,13 +308,13 @@ export default function SoftwareApprovalsContent() {
                 setComment('');
               }}
             >
-              취소
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={handleApproveConfirm}
               disabled={!comment.trim() || approveMutation.isPending}
             >
-              승인
+              {tActions('approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -325,19 +325,21 @@ export default function SoftwareApprovalsContent() {
         onOpenChange={setIsRejectDialogOpen}
         onConfirm={handleRejectConfirm}
         isPending={rejectMutation.isPending}
-        title="소프트웨어 변경 반려"
+        title={t('rejectTitle')}
       >
         {selectedChange && (
           <div className="p-4 bg-muted rounded-lg space-y-2">
             <p>
-              <strong>소프트웨어:</strong> {selectedChange.softwareName}
+              <strong>{t('approveDialog.software')}</strong> {selectedChange.softwareName}
             </p>
             <p>
-              <strong>버전 변경:</strong> {selectedChange.previousVersion || '(신규)'} -&gt;{' '}
+              <strong>{t('approveDialog.versionChange')}</strong>{' '}
+              {selectedChange.previousVersion || t('fields.newVersion')} -&gt;{' '}
               {selectedChange.newVersion}
             </p>
             <p>
-              <strong>검증 기록:</strong> {selectedChange.verificationRecord}
+              <strong>{t('approveDialog.verificationRecord')}</strong>{' '}
+              {selectedChange.verificationRecord}
             </p>
           </div>
         )}

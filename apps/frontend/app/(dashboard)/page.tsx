@@ -9,6 +9,7 @@ import {
   getDashboardUpcomingCalibrations,
   getDashboardOverdueCheckouts,
   getDashboardEquipmentStatusStats,
+  getDashboardRecentActivities,
 } from '@/lib/api/dashboard-api-server';
 
 /**
@@ -20,10 +21,9 @@ import {
  * - DashboardClient: CSC — 클라이언트 상호작용
  *
  * 데이터 전략:
- * - 서버에서 Promise.allSettled로 6개 API 병렬 프리페치
+ * - 서버에서 Promise.allSettled로 7개 API 병렬 프리페치
  * - 개별 API 실패가 전체 대시보드를 차단하지 않음
  * - DashboardClient에서 placeholderData로 받아 React Query hydration
- * - recentActivities 제외 (백엔드가 항상 [] 반환)
  */
 export default function DashboardPage() {
   return (
@@ -42,7 +42,7 @@ async function DashboardAsync() {
     return <DashboardClient />;
   }
 
-  // 6개 API 병렬 프리페치 (개별 실패 허용)
+  // 7개 API 병렬 프리페치 (개별 실패 허용)
   const [
     summaryResult,
     equipmentByTeamResult,
@@ -50,6 +50,7 @@ async function DashboardAsync() {
     upcomingCalibResult,
     overdueCheckoutsResult,
     statusStatsResult,
+    recentActivitiesResult,
   ] = await Promise.allSettled([
     getDashboardSummary(teamId),
     getDashboardEquipmentByTeam(teamId),
@@ -57,6 +58,7 @@ async function DashboardAsync() {
     getDashboardUpcomingCalibrations(30, teamId),
     getDashboardOverdueCheckouts(teamId),
     getDashboardEquipmentStatusStats(teamId),
+    getDashboardRecentActivities(20),
   ]);
 
   return (
@@ -76,6 +78,9 @@ async function DashboardAsync() {
       }
       initialEquipmentStatusStats={
         statusStatsResult.status === 'fulfilled' ? statusStatsResult.value : undefined
+      }
+      initialRecentActivities={
+        recentActivitiesResult.status === 'fulfilled' ? recentActivitiesResult.value : undefined
       }
     />
   );

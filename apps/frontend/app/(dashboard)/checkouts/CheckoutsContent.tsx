@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useCallback, lazy, Suspense } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,7 +32,6 @@ import {
 import checkoutApi, { Checkout } from '@/lib/api/checkout-api';
 import type { PaginatedResponse } from '@/lib/api/types';
 import {
-  CHECKOUT_STATUS_LABELS,
   CHECKOUT_STATUS_FILTER_OPTIONS,
   EQUIPMENT_IMPORT_STATUS_VALUES,
   EQUIPMENT_IMPORT_STATUS_LABELS,
@@ -88,11 +88,8 @@ function resolveInitialView(initialView?: string): ViewMode {
  * - [반출] 우리 팀 장비가 나가는 건 (교정/수리 + 타팀이 우리 장비를 빌려감)
  * - [반입] 외부 장비가 들어오는 건 (타팀 장비 대여 + 외부 업체 렌탈)
  */
-export default function CheckoutsContent({
-  initialData,
-  initialSummary,
-  initialView,
-}: CheckoutsContentProps) {
+export default function CheckoutsContent({ initialSummary, initialView }: CheckoutsContentProps) {
+  const t = useTranslations('checkouts');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -220,7 +217,7 @@ export default function CheckoutsContent({
     }
     return CHECKOUT_STATUS_FILTER_OPTIONS.map((status) => (
       <SelectItem key={status} value={status}>
-        {CHECKOUT_STATUS_LABELS[status]}
+        {t(`status.${status}`)}
       </SelectItem>
     ));
   };
@@ -234,17 +231,17 @@ export default function CheckoutsContent({
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">반출입 관리</h1>
-          <p className="text-muted-foreground">장비 반출입 요청 및 현황을 관리합니다.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
-            <Plus className="mr-2 h-4 w-4" /> 반출 신청
+            <Plus className="mr-2 h-4 w-4" /> {t('actions.create')}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
-                <PackagePlus className="mr-2 h-4 w-4" /> 반입 신청
+                <PackagePlus className="mr-2 h-4 w-4" /> {t('import.requestInbound')}
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -253,13 +250,13 @@ export default function CheckoutsContent({
                 onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
               >
                 <Building className="mr-2 h-4 w-4" />
-                외부 렌탈 반입
+                {t('import.externalRental')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
               >
                 <Users className="mr-2 h-4 w-4" />
-                내부 공용 반입
+                {t('import.internalShared')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -272,51 +269,53 @@ export default function CheckoutsContent({
           <TabsList>
             <TabsTrigger value="outbound" className="gap-1.5">
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-              반출
+              {t('tabs.outbound')}
             </TabsTrigger>
             <TabsTrigger value="inbound" className="gap-1.5">
               <ArrowDownLeft className="h-3.5 w-3.5" aria-hidden="true" />
-              반입
+              {t('tabs.inbound')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
             <Search
-              className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500"
+              className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
               aria-hidden="true"
             />
             <Input
-              placeholder={isInbound ? '장비명 또는 업체명 검색' : '장비 또는 사용자 검색'}
+              placeholder={
+                isInbound ? t('inbound.searchPlaceholder') : t('outbound.searchPlaceholder')
+              }
               value={searchTerm}
               onChange={handleSearchChange}
               className="pl-8"
-              aria-label="검색"
+              aria-label={t('filters.searchLabel')}
             />
           </div>
           <Select value={statusFilter} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[140px]" aria-label="상태 필터">
+            <SelectTrigger className="w-[140px]" aria-label={t('filters.statusFilter')}>
               <div className="flex items-center">
                 <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
-                <span>상태</span>
+                <span>{t('filters.statusLabel')}</span>
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체</SelectItem>
+              <SelectItem value="all">{t('filters.statusAll')}</SelectItem>
               {renderStatusFilterOptions()}
             </SelectContent>
           </Select>
           {/* 반출지 필터 — 반출 탭에서만 표시 */}
           {!isInbound && (
             <Select value={locationFilter} onValueChange={handleLocationChange}>
-              <SelectTrigger className="w-[140px]" aria-label="반출지 필터">
+              <SelectTrigger className="w-[140px]" aria-label={t('filters.destinationFilter')}>
                 <div className="flex items-center">
                   <MapPin className="mr-2 h-4 w-4" aria-hidden="true" />
-                  <span>반출지</span>
+                  <span>{t('filters.destinationLabel')}</span>
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="all">{t('filters.statusAll')}</SelectItem>
                 {destinations?.map((dest) => (
                   <SelectItem key={dest} value={dest}>
                     {dest}

@@ -27,6 +27,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check, ShieldAlert, Cog } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
@@ -47,6 +48,7 @@ const DEFAULTS: SystemSettingsForm = {
 };
 
 export default function SystemSettingsContent() {
+  const t = useTranslations('settings');
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery<SystemSettings>({
@@ -60,8 +62,9 @@ export default function SystemSettingsContent() {
     defaultValues: DEFAULTS,
   });
 
+  // isDirty 가드: 사용자가 변경 중일 때 서버 refetch로 인한 리셋 방지
   useEffect(() => {
-    if (data) {
+    if (data && !form.formState.isDirty) {
       form.reset({
         auditLogRetentionDays: String(data.auditLogRetentionDays),
         notificationRetentionDays: String(data.notificationRetentionDays),
@@ -78,10 +81,10 @@ export default function SystemSettingsContent() {
         maintenanceMessage: formData.maintenanceMessage,
       }),
     onSuccess: () => {
-      toast.success('시스템 설정이 저장되었습니다.');
+      toast.success(t('toasts.systemSaveSuccess'));
     },
     onError: () => {
-      toast.error('설정 저장에 실패했습니다.');
+      toast.error(t('toasts.systemSaveError'));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.system() });
@@ -113,8 +116,7 @@ export default function SystemSettingsContent() {
       >
         <ShieldAlert className="h-5 w-5 text-warning-foreground" aria-hidden="true" />
         <AlertDescription className="text-sm font-medium leading-relaxed">
-          <strong className="font-bold">주의:</strong> 시스템 설정은 전체 시스템에 영향을 미칩니다.
-          변경 시 신중하게 검토하세요.
+          <strong className="font-bold">{t('system.warningPrefix')}</strong> {t('system.warning')}
         </AlertDescription>
       </Alert>
 
@@ -126,8 +128,8 @@ export default function SystemSettingsContent() {
               <Cog className="h-6 w-6 text-primary" aria-hidden="true" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-xl mb-1.5">시스템 설정</CardTitle>
-              <CardDescription>시스템 전반에 적용되는 관리 설정을 변경합니다.</CardDescription>
+              <CardTitle className="text-xl mb-1.5">{t('system.title')}</CardTitle>
+              <CardDescription>{t('system.description')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -140,36 +142,42 @@ export default function SystemSettingsContent() {
                 name="auditLogRetentionDays"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel className="text-base font-semibold">감사 로그 보관 기간</FormLabel>
+                    <FormLabel className="text-base font-semibold">
+                      {t('system.auditLogRetention')}
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="0">
                           <span className="font-mono">∞</span>
-                          <span className="ml-2">무제한</span>
+                          <span className="ml-2">{t('system.unlimited')}</span>
                         </SelectItem>
                         <SelectItem value="90">
                           <span className="font-mono">90</span>
-                          <span className="ml-2">일</span>
+                          <span className="ml-2">{t('system.days')}</span>
                         </SelectItem>
                         <SelectItem value="180">
                           <span className="font-mono">180</span>
-                          <span className="ml-2">일 (권장)</span>
+                          <span className="ml-2">
+                            {t('system.days')} ({t('system.recommended')})
+                          </span>
                         </SelectItem>
                         <SelectItem value="365">
                           <span className="font-mono">365</span>
-                          <span className="ml-2">일</span>
+                          <span className="ml-2">{t('system.days')}</span>
                         </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs leading-relaxed">
-                      감사 로그를 보관할 기간입니다.{' '}
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">0</code>은 무제한
-                      보관을 의미합니다.
+                      {t.rich('system.auditLogRetentionDescription', {
+                        code: (chunks) => (
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{chunks}</code>
+                        ),
+                      })}
                     </FormDescription>
                   </FormItem>
                 )}
@@ -181,35 +189,38 @@ export default function SystemSettingsContent() {
                 name="notificationRetentionDays"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel className="text-base font-semibold">알림 보관 기간</FormLabel>
+                    <FormLabel className="text-base font-semibold">
+                      {t('system.notificationRetention')}
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="30">
                           <span className="font-mono">30</span>
-                          <span className="ml-2">일</span>
+                          <span className="ml-2">{t('system.days')}</span>
                         </SelectItem>
                         <SelectItem value="60">
                           <span className="font-mono">60</span>
-                          <span className="ml-2">일 (권장)</span>
+                          <span className="ml-2">
+                            {t('system.days')} ({t('system.recommended')})
+                          </span>
                         </SelectItem>
                         <SelectItem value="90">
                           <span className="font-mono">90</span>
-                          <span className="ml-2">일</span>
+                          <span className="ml-2">{t('system.days')}</span>
                         </SelectItem>
                         <SelectItem value="180">
                           <span className="font-mono">180</span>
-                          <span className="ml-2">일</span>
+                          <span className="ml-2">{t('system.days')}</span>
                         </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs leading-relaxed">
-                      만료된 알림은 자동으로 정리됩니다. 시스템 성능 최적화를 위해 적절한 기간을
-                      설정하세요.
+                      {t('system.notificationRetentionDescription')}
                     </FormDescription>
                   </FormItem>
                 )}
@@ -221,17 +232,19 @@ export default function SystemSettingsContent() {
                 name="maintenanceMessage"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel className="text-base font-semibold">시스템 공지 메시지</FormLabel>
+                    <FormLabel className="text-base font-semibold">
+                      {t('system.maintenanceMessage')}
+                    </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="시스템 점검 예정 등의 공지 사항을 입력하세요…"
-                        className="resize-y min-h-[100px] motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        placeholder={t('system.maintenanceMessagePlaceholder')}
+                        className="resize-y min-h-[100px] motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
                         {...field}
                       />
                     </FormControl>
                     <FormDescription className="text-xs leading-relaxed">
-                      입력된 메시지는 대시보드 상단에 배너로 표시됩니다. 비워두면 배너가 표시되지
-                      않습니다. <span className="text-muted-foreground/70">(최대 500자)</span>
+                      {t('system.maintenanceMessageDescription')}{' '}
+                      <span className="text-muted-foreground/70">({t('system.maxChars')})</span>
                     </FormDescription>
                   </FormItem>
                 )}
@@ -239,10 +252,12 @@ export default function SystemSettingsContent() {
 
               {/* Submit Button */}
               <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                <p className="text-xs text-muted-foreground">변경 사항은 즉시 적용됩니다</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('system.changesAppliedImmediately')}
+                </p>
                 <Button
                   type="submit"
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || !form.formState.isDirty}
                   className="min-w-[120px] motion-safe:transition-all motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
                 >
                   {mutation.isPending ? (
@@ -251,12 +266,12 @@ export default function SystemSettingsContent() {
                         className="mr-2 h-4 w-4 motion-safe:animate-spin"
                         aria-hidden="true"
                       />
-                      저장 중…
+                      {t('common.saving')}
                     </>
                   ) : (
                     <>
                       <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                      저장
+                      {t('common.save')}
                     </>
                   )}
                 </Button>

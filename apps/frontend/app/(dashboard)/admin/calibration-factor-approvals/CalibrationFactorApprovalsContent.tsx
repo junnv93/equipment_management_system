@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,18 +36,19 @@ export default function CalibrationFactorApprovalsContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const t = useTranslations('approvals.calibrationFactorApprovals');
+  const tActions = useTranslations('approvals.actions');
+  const tCommon = useTranslations('common.actions');
   const [selectedFactor, setSelectedFactor] = useState<CalibrationFactor | null>(null);
   const [comment, setComment] = useState('');
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
-  // 승인 대기 보정계수 목록 조회
   const { data: pendingData, isLoading } = useQuery({
     queryKey: queryKeys.calibrationFactors.pending(),
     queryFn: () => calibrationFactorsApi.getPendingCalibrationFactors(),
   });
 
-  // 승인 뮤테이션
   const approveMutation = useMutation({
     mutationFn: async ({
       id,
@@ -61,8 +63,8 @@ export default function CalibrationFactorApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '승인 완료',
-        description: '보정계수가 승인되었습니다.',
+        title: t('toasts.approveSuccess'),
+        description: t('toasts.approveSuccessDesc'),
       });
       setIsApproveDialogOpen(false);
       setComment('');
@@ -70,8 +72,8 @@ export default function CalibrationFactorApprovalsContent() {
     },
     onError: (error: unknown) => {
       toast({
-        title: '승인 실패',
-        description: getErrorMessage(error, '보정계수 승인 중 오류가 발생했습니다.'),
+        title: t('toasts.approveError'),
+        description: getErrorMessage(error, t('toasts.approveError')),
         variant: 'destructive',
       });
     },
@@ -81,7 +83,6 @@ export default function CalibrationFactorApprovalsContent() {
     },
   });
 
-  // 반려 뮤테이션
   const rejectMutation = useMutation({
     mutationFn: async ({
       id,
@@ -96,16 +97,16 @@ export default function CalibrationFactorApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '반려 완료',
-        description: '보정계수가 반려되었습니다.',
+        title: t('toasts.rejectSuccess'),
+        description: t('toasts.rejectSuccessDesc'),
       });
       setIsRejectDialogOpen(false);
       setSelectedFactor(null);
     },
     onError: (error: unknown) => {
       toast({
-        title: '반려 실패',
-        description: getErrorMessage(error, '보정계수 반려 중 오류가 발생했습니다.'),
+        title: t('toasts.rejectError'),
+        description: getErrorMessage(error, t('toasts.rejectError')),
         variant: 'destructive',
       });
     },
@@ -128,8 +129,8 @@ export default function CalibrationFactorApprovalsContent() {
     if (!selectedFactor) return;
     if (!comment.trim()) {
       toast({
-        title: '코멘트 필요',
-        description: '승인 시 검토 코멘트를 입력해주세요.',
+        title: t('toasts.commentRequired'),
+        description: t('toasts.commentRequiredDesc'),
         variant: 'destructive',
       });
       return;
@@ -159,22 +160,20 @@ export default function CalibrationFactorApprovalsContent() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">보정계수 승인 관리</h1>
-        <p className="text-muted-foreground">
-          시험실무자가 요청한 보정계수 변경을 검토하고 승인합니다
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('description')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>승인 대기 목록</CardTitle>
+          <CardTitle>{t('listTitle')}</CardTitle>
           <CardDescription>
-            총 {pendingFactors.length}개의 승인 대기 요청이 있습니다
+            {t('listDescription', { count: pendingFactors.length })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {pendingFactors.length === 0 ? (
-            <ApprovalEmptyState message="승인 대기 중인 보정계수 변경 요청이 없습니다" />
+            <ApprovalEmptyState message={t('emptyState')} />
           ) : (
             <div className="space-y-4">
               {pendingFactors.map((factor) => (
@@ -187,21 +186,23 @@ export default function CalibrationFactorApprovalsContent() {
                             {APPROVAL_STATUS_LABELS[factor.approvalStatus]}
                           </Badge>
                           <Badge variant="outline">{FACTOR_TYPE_LABELS[factor.factorType]}</Badge>
-                          <span className="text-sm font-medium">장비 ID: {factor.equipmentId}</span>
+                          <span className="text-sm font-medium">
+                            {t('fields.equipmentId')}: {factor.equipmentId}
+                          </span>
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div className="flex items-center gap-2">
                             <Calculator className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">보정계수 이름</p>
+                              <p className="text-muted-foreground">{t('fields.factorName')}</p>
                               <p className="font-medium">{factor.factorName}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Calculator className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">값</p>
+                              <p className="text-muted-foreground">{t('fields.value')}</p>
                               <p className="font-medium font-mono">
                                 {factor.factorValue} {factor.unit}
                               </p>
@@ -210,7 +211,7 @@ export default function CalibrationFactorApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">적용 시작일</p>
+                              <p className="text-muted-foreground">{t('fields.effectiveDate')}</p>
                               <p className="font-medium">
                                 {format(new Date(factor.effectiveDate), 'yyyy-MM-dd')}
                               </p>
@@ -219,11 +220,11 @@ export default function CalibrationFactorApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">만료일</p>
+                              <p className="text-muted-foreground">{t('fields.expiryDate')}</p>
                               <p className="font-medium">
                                 {factor.expiryDate
                                   ? format(new Date(factor.expiryDate), 'yyyy-MM-dd')
-                                  : '없음'}
+                                  : t('fields.noExpiry')}
                               </p>
                             </div>
                           </div>
@@ -231,13 +232,16 @@ export default function CalibrationFactorApprovalsContent() {
 
                         {factor.parameters && (
                           <div className="mt-4 p-4 bg-muted rounded-lg">
-                            <p className="text-sm font-medium mb-2">추가 파라미터:</p>
+                            <p className="text-sm font-medium mb-2">
+                              {t('fields.additionalParams')}
+                            </p>
                             <code className="text-sm">{JSON.stringify(factor.parameters)}</code>
                           </div>
                         )}
 
                         <div className="text-xs text-muted-foreground">
-                          요청일: {format(new Date(factor.requestedAt), 'yyyy-MM-dd HH:mm')}
+                          {t('fields.requestDate')}:{' '}
+                          {format(new Date(factor.requestedAt), 'yyyy-MM-dd HH:mm')}
                         </div>
                       </div>
 
@@ -248,7 +252,7 @@ export default function CalibrationFactorApprovalsContent() {
                           disabled={approveMutation.isPending}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          승인
+                          {tActions('approve')}
                         </Button>
                         <Button
                           size="sm"
@@ -257,7 +261,7 @@ export default function CalibrationFactorApprovalsContent() {
                           disabled={rejectMutation.isPending}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
-                          반려
+                          {tActions('reject')}
                         </Button>
                       </div>
                     </div>
@@ -273,30 +277,30 @@ export default function CalibrationFactorApprovalsContent() {
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>보정계수 승인</DialogTitle>
-            <DialogDescription>
-              보정계수 변경 요청을 검토한 후 승인 코멘트를 입력해주세요.
-            </DialogDescription>
+            <DialogTitle>{t('approveDialog.title')}</DialogTitle>
+            <DialogDescription>{t('approveDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {selectedFactor && (
               <div className="p-4 bg-muted rounded-lg space-y-2">
                 <p>
-                  <strong>이름:</strong> {selectedFactor.factorName}
+                  <strong>{t('approveDialog.name')}</strong> {selectedFactor.factorName}
                 </p>
                 <p>
-                  <strong>값:</strong> {selectedFactor.factorValue} {selectedFactor.unit}
+                  <strong>{t('approveDialog.value')}</strong> {selectedFactor.factorValue}{' '}
+                  {selectedFactor.unit}
                 </p>
                 <p>
-                  <strong>타입:</strong> {FACTOR_TYPE_LABELS[selectedFactor.factorType]}
+                  <strong>{t('approveDialog.type')}</strong>{' '}
+                  {FACTOR_TYPE_LABELS[selectedFactor.factorType]}
                 </p>
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="comment">검토 코멘트 *</Label>
+              <Label htmlFor="comment">{t('approveDialog.commentLabel')}</Label>
               <Textarea
                 id="comment"
-                placeholder="검토 완료 내용을 입력하세요"
+                placeholder={t('approveDialog.commentPlaceholder')}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 className="min-h-[100px]"
@@ -311,13 +315,13 @@ export default function CalibrationFactorApprovalsContent() {
                 setComment('');
               }}
             >
-              취소
+              {tCommon('cancel')}
             </Button>
             <Button
               onClick={handleApproveConfirm}
               disabled={!comment.trim() || approveMutation.isPending}
             >
-              승인
+              {tActions('approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -328,18 +332,20 @@ export default function CalibrationFactorApprovalsContent() {
         onOpenChange={setIsRejectDialogOpen}
         onConfirm={handleRejectConfirm}
         isPending={rejectMutation.isPending}
-        title="보정계수 반려"
+        title={t('rejectTitle')}
       >
         {selectedFactor && (
           <div className="p-4 bg-muted rounded-lg space-y-2">
             <p>
-              <strong>이름:</strong> {selectedFactor.factorName}
+              <strong>{t('approveDialog.name')}</strong> {selectedFactor.factorName}
             </p>
             <p>
-              <strong>값:</strong> {selectedFactor.factorValue} {selectedFactor.unit}
+              <strong>{t('approveDialog.value')}</strong> {selectedFactor.factorValue}{' '}
+              {selectedFactor.unit}
             </p>
             <p>
-              <strong>타입:</strong> {FACTOR_TYPE_LABELS[selectedFactor.factorType]}
+              <strong>{t('approveDialog.type')}</strong>{' '}
+              {FACTOR_TYPE_LABELS[selectedFactor.factorType]}
             </p>
           </div>
         )}

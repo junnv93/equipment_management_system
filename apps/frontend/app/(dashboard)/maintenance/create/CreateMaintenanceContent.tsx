@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,10 @@ export function CreateMaintenanceContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const t = useTranslations('maintenance.create');
+  const tTypes = useTranslations('maintenance.types');
+  const tStatus = useTranslations('maintenance.status');
+  const tResult = useTranslations('maintenance.result');
 
   // URL에서 장비 ID 파라미터 가져오기
   const equipmentIdParam = searchParams.get('equipmentId');
@@ -123,13 +128,12 @@ export function CreateMaintenanceContent() {
     }
   }, [selectedEquipment, useRegularPeriod, maintenanceType]);
 
-  // 점검 등록 mutation
   const createMaintenanceMutation = useMutation({
     mutationFn: (data: CreateMaintenanceDto) => maintenanceApi.createMaintenance(data),
     onSuccess: () => {
       toast({
-        title: '점검 정보 등록 완료',
-        description: '장비 점검 정보가 성공적으로 등록되었습니다.',
+        title: t('toasts.success'),
+        description: t('toasts.successDesc'),
       });
       router.push('/maintenance');
     },
@@ -139,8 +143,8 @@ export function CreateMaintenanceContent() {
     },
     onError: (error: unknown) => {
       toast({
-        title: '점검 정보 등록 실패',
-        description: getErrorMessage(error, '점검 정보 등록 중 오류가 발생했습니다.'),
+        title: t('toasts.error'),
+        description: getErrorMessage(error, t('toasts.error')),
         variant: 'destructive',
       });
       console.error(error);
@@ -168,8 +172,8 @@ export function CreateMaintenanceContent() {
 
     if (!equipmentId) {
       toast({
-        title: '장비를 선택해주세요',
-        description: '점검할 장비를 선택해야 합니다.',
+        title: t('toasts.equipmentRequired'),
+        description: t('toasts.equipmentRequiredDesc'),
         variant: 'destructive',
       });
       return;
@@ -177,8 +181,8 @@ export function CreateMaintenanceContent() {
 
     if (!performedBy) {
       toast({
-        title: '담당자를 입력해주세요',
-        description: '점검 담당자 정보를 입력해야 합니다.',
+        title: t('toasts.performerRequired'),
+        description: t('toasts.performerRequiredDesc'),
         variant: 'destructive',
       });
       return;
@@ -211,21 +215,21 @@ export function CreateMaintenanceContent() {
     <div className="container mx-auto py-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">점검 등록</h1>
-          <p className="text-muted-foreground">장비 점검 정보를 등록합니다.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('subtitle')}</p>
         </div>
         <Button variant="outline" onClick={() => router.push('/maintenance')}>
-          점검 목록으로 돌아가기
+          {t('backToList')}
         </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>장비 선택</CardTitle>
+            <CardTitle>{t('equipmentSelection.title')}</CardTitle>
             <CardDescription>
-              점검할 장비를 선택하세요.{' '}
-              {equipmentIdParam ? 'URL에서 장비가 자동으로 선택되었습니다.' : ''}
+              {t('equipmentSelection.description')}{' '}
+              {equipmentIdParam ? t('equipmentSelection.autoSelected') : ''}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -234,7 +238,7 @@ export function CreateMaintenanceContent() {
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                   <Input
-                    placeholder="장비명 또는 관리번호로 검색"
+                    placeholder={t('equipmentSelection.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-8"
@@ -243,9 +247,9 @@ export function CreateMaintenanceContent() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                   {equipmentLoading ? (
-                    <p>장비 목록을 불러오는 중...</p>
+                    <p>{t('equipmentSelection.loading')}</p>
                   ) : equipmentData?.length === 0 ? (
-                    <p>검색 결과가 없습니다.</p>
+                    <p>{t('equipmentSelection.empty')}</p>
                   ) : (
                     equipmentData?.map((equipment: Equipment) => (
                       <Card
@@ -280,31 +284,41 @@ export function CreateMaintenanceContent() {
 
             {equipmentId && (
               <div className="mt-4 p-4 bg-muted rounded-md">
-                <h3 className="font-medium mb-2">선택된 장비</h3>
+                <h3 className="font-medium mb-2">{t('equipmentSelection.selectedTitle')}</h3>
                 {selectedEquipmentLoading ? (
-                  <p>장비 정보를 불러오는 중...</p>
+                  <p>{t('equipmentSelection.selectedLoading')}</p>
                 ) : selectedEquipment ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">장비명</p>
+                      <p className="text-sm text-muted-foreground">{t('equipmentFields.name')}</p>
                       <p className="font-medium">{selectedEquipment.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">관리번호</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t('equipmentFields.managementNumber')}
+                      </p>
                       <p className="font-medium">{selectedEquipment.managementNumber}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">모델</p>
+                      <p className="text-sm text-muted-foreground">{t('equipmentFields.model')}</p>
                       <p className="font-medium">{selectedEquipment.model}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">제조사</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t('equipmentFields.manufacturer')}
+                      </p>
                       <p className="font-medium">{selectedEquipment.manufacturer}</p>
                     </div>
                     {selectedEquipment.maintenancePeriod && maintenanceType === 'regular' && (
                       <div className="md:col-span-2">
-                        <p className="text-sm text-muted-foreground">정기 점검 주기</p>
-                        <p className="font-medium">{selectedEquipment.maintenancePeriod}개월</p>
+                        <p className="text-sm text-muted-foreground">
+                          {t('equipmentFields.regularPeriod')}
+                        </p>
+                        <p className="font-medium">
+                          {t('equipmentFields.periodUnit', {
+                            count: selectedEquipment.maintenancePeriod,
+                          })}
+                        </p>
                         <div className="flex items-center mt-2">
                           <Checkbox
                             id="useRegularPeriod"
@@ -312,14 +326,14 @@ export function CreateMaintenanceContent() {
                             onCheckedChange={(checked) => setUseRegularPeriod(checked as boolean)}
                           />
                           <label htmlFor="useRegularPeriod" className="ml-2 text-sm">
-                            장비의 정기 점검 주기 사용
+                            {t('equipmentFields.useRegularPeriod')}
                           </label>
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <p>선택된 장비 정보가 없습니다.</p>
+                  <p>{t('equipmentSelection.selectedEmpty')}</p>
                 )}
               </div>
             )}
@@ -328,13 +342,13 @@ export function CreateMaintenanceContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>점검 정보</CardTitle>
-            <CardDescription>점검 유형, 일정, 담당자 등의 정보를 입력하세요.</CardDescription>
+            <CardTitle>{t('info.title')}</CardTitle>
+            <CardDescription>{t('info.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="maintenanceType">점검 유형</Label>
+                <Label htmlFor="maintenanceType">{t('fields.type')}</Label>
                 <Select
                   value={maintenanceType}
                   onValueChange={(value: string) => setMaintenanceType(value as MaintenanceType)}
@@ -342,38 +356,38 @@ export function CreateMaintenanceContent() {
                   <SelectTrigger id="maintenanceType">
                     <div className="flex items-center">
                       <Wrench className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="점검 유형 선택" />
+                      <SelectValue placeholder={t('fields.typePlaceholder')} />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="regular">정기 점검</SelectItem>
-                    <SelectItem value="repair">수리</SelectItem>
-                    <SelectItem value="inspection">검사</SelectItem>
-                    <SelectItem value="other">기타</SelectItem>
+                    <SelectItem value="regular">{tTypes('regular')}</SelectItem>
+                    <SelectItem value="repair">{tTypes('repair')}</SelectItem>
+                    <SelectItem value="inspection">{tTypes('inspection')}</SelectItem>
+                    <SelectItem value="other">{tTypes('other')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="status">상태</Label>
+                <Label htmlFor="status">{t('fields.status')}</Label>
                 <Select
                   value={status}
                   onValueChange={(value: string) => setStatus(value as MaintenanceStatus)}
                 >
                   <SelectTrigger id="status">
-                    <SelectValue placeholder="상태 선택" />
+                    <SelectValue placeholder={t('fields.statusPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="scheduled">예정됨</SelectItem>
-                    <SelectItem value="in_progress">진행 중</SelectItem>
-                    <SelectItem value="completed">완료됨</SelectItem>
-                    <SelectItem value="canceled">취소됨</SelectItem>
+                    <SelectItem value="scheduled">{tStatus('scheduled')}</SelectItem>
+                    <SelectItem value="in_progress">{tStatus('in_progress')}</SelectItem>
+                    <SelectItem value="completed">{tStatus('completed')}</SelectItem>
+                    <SelectItem value="canceled">{tStatus('canceled')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label>점검 일자</Label>
+                <Label>{t('fields.date')}</Label>
                 <DatePicker
                   selected={maintenanceDate}
                   onSelect={(date) => date && setMaintenanceDate(date)}
@@ -382,7 +396,7 @@ export function CreateMaintenanceContent() {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="maintenancePeriod">점검 주기 (개월)</Label>
+                  <Label htmlFor="maintenancePeriod">{t('fields.period')}</Label>
                   {maintenanceType === 'regular' &&
                     selectedEquipment?.maintenancePeriod &&
                     !useRegularPeriod && (
@@ -397,7 +411,7 @@ export function CreateMaintenanceContent() {
                         }}
                         className="text-xs"
                       >
-                        기본값 적용
+                        {t('fields.applyDefault')}
                       </Button>
                     )}
                 </div>
@@ -418,19 +432,21 @@ export function CreateMaintenanceContent() {
                   <div className="text-sm text-muted-foreground mt-1 flex items-center">
                     <Clock className="h-3 w-3 mr-1" />
                     <span>
-                      다음 점검일: {format(calculatedNextDate, 'yyyy-MM-dd', { locale: ko })}
+                      {t('fields.nextDate', {
+                        date: format(calculatedNextDate, 'yyyy-MM-dd', { locale: ko }),
+                      })}
                     </span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="performedBy">담당자</Label>
+                <Label htmlFor="performedBy">{t('fields.performer')}</Label>
                 <div className="relative">
                   <User className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                   <Input
                     id="performedBy"
-                    placeholder="점검 담당자 이름"
+                    placeholder={t('fields.performerPlaceholder')}
                     value={performedBy}
                     onChange={(e) => setPerformedBy(e.target.value)}
                     className="pl-8"
@@ -439,17 +455,17 @@ export function CreateMaintenanceContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="performedByContact">담당자 연락처</Label>
+                <Label htmlFor="performedByContact">{t('fields.performerContact')}</Label>
                 <Input
                   id="performedByContact"
-                  placeholder="연락처 (선택 사항)"
+                  placeholder={t('fields.performerContactPlaceholder')}
                   value={performedByContact}
                   onChange={(e) => setPerformedByContact(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cost">비용 (원)</Label>
+                <Label htmlFor="cost">{t('fields.cost')}</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                   <Input
@@ -457,7 +473,7 @@ export function CreateMaintenanceContent() {
                     type="number"
                     min="0"
                     step="1000"
-                    placeholder="점검 비용 (선택 사항)"
+                    placeholder={t('fields.costPlaceholder')}
                     value={cost}
                     onChange={(e) => setCost(e.target.value)}
                     className="pl-8"
@@ -466,7 +482,7 @@ export function CreateMaintenanceContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="result">점검 결과</Label>
+                <Label htmlFor="result">{t('fields.result')}</Label>
                 <Select
                   value={result}
                   onValueChange={(value: string) => setResult(value as MaintenanceResult)}
@@ -474,28 +490,28 @@ export function CreateMaintenanceContent() {
                   <SelectTrigger id="result">
                     <div className="flex items-center">
                       <ClipboardCheck className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="결과 선택" />
+                      <SelectValue placeholder={t('fields.resultPlaceholder')} />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">보류</SelectItem>
-                    <SelectItem value="completed">통과</SelectItem>
-                    <SelectItem value="failed">불합격</SelectItem>
+                    <SelectItem value="pending">{tResult('pending')}</SelectItem>
+                    <SelectItem value="completed">{tResult('completed')}</SelectItem>
+                    <SelectItem value="failed">{tResult('failed')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="parts">사용 부품</Label>
+                <Label htmlFor="parts">{t('fields.parts')}</Label>
                 <div className="flex space-x-2">
                   <Input
                     id="parts"
-                    placeholder="사용한 부품 또는 자재"
+                    placeholder={t('fields.partsPlaceholder')}
                     value={newPart}
                     onChange={(e) => setNewPart(e.target.value)}
                   />
                   <Button type="button" onClick={handleAddPart} disabled={!newPart.trim()}>
-                    추가
+                    {t('fields.partsAdd')}
                   </Button>
                 </div>
                 {parts.length > 0 && (
@@ -522,10 +538,10 @@ export function CreateMaintenanceContent() {
               </div>
 
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="notes">비고</Label>
+                <Label htmlFor="notes">{t('fields.notes')}</Label>
                 <Textarea
                   id="notes"
-                  placeholder="추가 참고사항이 있으면 입력하세요"
+                  placeholder={t('fields.notesPlaceholder')}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={4}
@@ -535,13 +551,13 @@ export function CreateMaintenanceContent() {
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.push('/maintenance')}>
-              취소
+              {t('actions.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={createMaintenanceMutation.isPending || !equipmentId || !performedBy}
             >
-              {createMaintenanceMutation.isPending ? '등록 중...' : '점검 등록'}
+              {createMaintenanceMutation.isPending ? t('actions.submitting') : t('actions.submit')}
             </Button>
           </CardFooter>
         </Card>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,9 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
+import { ko, enUS } from 'date-fns/locale';
 import { DateRange } from 'react-day-picker';
+import { useLocale } from 'next-intl';
 import { useGenerateReport, ReportGenerationResult } from '@/hooks/use-reports';
 import { ReportType, ReportFormat, ReportPeriod } from '@/lib/api/reports-api';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
@@ -34,6 +37,9 @@ import {
 
 export default function ReportsContent() {
   const { toast } = useToast();
+  const t = useTranslations('common');
+  const currentLocale = useLocale();
+  const dateLocale = currentLocale === 'ko' ? ko : enUS;
 
   const [reportType, setReportType] = useState<ReportType | ''>('');
   const [dateRange, setDateRange] = useState<ReportPeriod>('last_month');
@@ -50,15 +56,15 @@ export default function ReportsContent() {
   const { mutate: generateReportMutation, isPending } = useGenerateReport({
     onSuccess: (data) => {
       toast({
-        title: '보고서 생성 완료',
-        description: '보고서가 성공적으로 생성되었습니다.',
+        title: t('reports.generateComplete'),
+        description: t('reports.fileDownloaded', { fileName: data.fileName }),
       });
       setLastGeneratedReport(data);
     },
     onError: (error: unknown) => {
       toast({
-        title: '보고서 생성 실패',
-        description: getErrorMessage(error, '보고서 생성 중 오류가 발생했습니다.'),
+        title: t('reports.generateError'),
+        description: getErrorMessage(error, t('reports.generateErrorDesc')),
         variant: 'destructive',
       });
     },
@@ -67,8 +73,8 @@ export default function ReportsContent() {
   const handleGenerateReport = () => {
     if (!reportType) {
       toast({
-        title: '보고서 유형 선택 필요',
-        description: '보고서 유형을 선택해주세요.',
+        title: t('reports.reportTypeRequired'),
+        description: t('reports.reportTypeRequiredDesc'),
         variant: 'destructive',
       });
       return;
@@ -76,14 +82,13 @@ export default function ReportsContent() {
 
     if (dateRange === 'custom' && (!customDateRange?.from || !customDateRange?.to)) {
       toast({
-        title: '날짜 범위 선택 필요',
-        description: '사용자 정의 날짜 범위를 선택해주세요.',
+        title: t('reports.dateRangeRequired'),
+        description: t('reports.dateRangeRequiredDesc'),
         variant: 'destructive',
       });
       return;
     }
 
-    // 날짜를 문자열로 변환
     let startDateStr: string | undefined;
     let endDateStr: string | undefined;
 
@@ -92,7 +97,6 @@ export default function ReportsContent() {
       endDateStr = format(customDateRange.to, 'yyyy-MM-dd');
     }
 
-    // 리포트 유형에 따른 추가 파라미터 설정
     const additionalParams: Record<string, string> = {};
 
     if (reportType === 'equipment_inventory' || reportType === 'utilization_report') {
@@ -118,25 +122,10 @@ export default function ReportsContent() {
     });
   };
 
-  // 보고서 유형에 따른 라벨 반환
   const getReportTypeLabel = (type: ReportType) => {
-    switch (type) {
-      case 'equipment_inventory':
-        return '장비 인벤토리';
-      case 'calibration_status':
-        return '교정 상태';
-      case 'utilization_report':
-        return '활용률';
-      case 'team_equipment':
-        return '팀별 장비';
-      case 'maintenance_report':
-        return '점검 보고서';
-      default:
-        return '';
-    }
+    return t(`reports.types.${type}` as Parameters<typeof t>[0]);
   };
 
-  // 리포트 유형에 대한 아이콘 반환
   const getReportIcon = (type: ReportType) => {
     switch (type) {
       case 'equipment_inventory':
@@ -154,25 +143,10 @@ export default function ReportsContent() {
     }
   };
 
-  // 리포트 유형에 대한 설명 반환
   const getReportDescription = (type: ReportType) => {
-    switch (type) {
-      case 'equipment_inventory':
-        return '모든 장비의 현재 상태와 세부 정보가 포함된 인벤토리 보고서입니다.';
-      case 'calibration_status':
-        return '모든 장비의 교정 일정과 상태가 포함된 교정 상태 보고서입니다.';
-      case 'utilization_report':
-        return '장비별 사용 통계와 가용성 분석이 포함된 활용률 보고서입니다.';
-      case 'team_equipment':
-        return '각 팀이 보유한 장비 목록과 현황이 포함된 팀별 장비 보고서입니다.';
-      case 'maintenance_report':
-        return '장비 유지보수 일정 및 이력이 포함된 점검 보고서입니다.';
-      default:
-        return '';
-    }
+    return t(`reports.descriptions.${type}` as Parameters<typeof t>[0]);
   };
 
-  // 포맷에 대한 아이콘 반환
   const getFormatIcon = (fmt: ReportFormat) => {
     switch (fmt) {
       case 'excel':
@@ -186,19 +160,82 @@ export default function ReportsContent() {
     }
   };
 
-  // 날짜 형식 설정
   const formatDate = (date: Date) => {
-    return format(date, 'yyyy년 MM월 dd일');
+    return format(date, 'PPP', { locale: dateLocale });
+  };
+
+  const getPeriodLabel = (period: ReportPeriod) => {
+    switch (period) {
+      case 'last_week':
+        return t('reports.lastWeek');
+      case 'last_month':
+        return t('reports.lastMonth');
+      case 'last_quarter':
+        return t('reports.lastQuarter');
+      case 'last_year':
+        return t('reports.lastYear');
+      case 'custom':
+        return customDateRange?.from && customDateRange?.to
+          ? `${formatDate(customDateRange.from)} - ${formatDate(customDateRange.to)}`
+          : t('reports.custom');
+      default:
+        return '';
+    }
+  };
+
+  const getCategoryLabel = (id: string) => {
+    switch (id) {
+      case 'test':
+        return t('reports.testEquipment');
+      case 'computer':
+        return t('reports.computer');
+      case 'network':
+        return t('reports.networkEquipment');
+      default:
+        return id;
+    }
+  };
+
+  const getCalibrationStatusLabel = (s: string) => {
+    switch (s) {
+      case 'completed':
+        return t('reports.completed');
+      case 'scheduled':
+        return t('reports.scheduled');
+      case 'overdue':
+        return t('reports.overdue');
+      default:
+        return s;
+    }
+  };
+
+  const getDepartmentLabel = (id: string) => {
+    switch (id) {
+      case '1':
+        return t('reports.rdTeam');
+      case '2':
+        return t('reports.qcTeam');
+      case '3':
+        return t('reports.prodTeam');
+      case '4':
+        return t('reports.testTeam');
+      default:
+        return id;
+    }
+  };
+
+  const getReportContents = (type: ReportType): string[] => {
+    const key = `reports.contents.${type}` as Parameters<typeof t>[0];
+    const contents = t.raw(key);
+    return Array.isArray(contents) ? (contents as string[]) : [];
   };
 
   return (
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">보고서 관리</h1>
-          <p className="text-muted-foreground">
-            다양한 유형의 보고서를 생성하고 내보낼 수 있습니다.
-          </p>
+          <h1 className="text-2xl font-bold">{t('reports.title')}</h1>
+          <p className="text-muted-foreground">{t('reports.subtitle')}</p>
         </div>
       </div>
 
@@ -206,8 +243,8 @@ export default function ReportsContent() {
         <div className="mb-6 p-4 border rounded-md bg-green-50 border-green-200 text-green-800 flex items-start space-x-2">
           <CheckCircle2 className="h-5 w-5 mt-0.5" />
           <div>
-            <h4 className="font-medium">보고서 생성 완료</h4>
-            <p>{lastGeneratedReport.fileName} 파일이 다운로드되었습니다.</p>
+            <h4 className="font-medium">{t('reports.generateComplete')}</h4>
+            <p>{t('reports.fileDownloaded', { fileName: lastGeneratedReport.fileName })}</p>
           </div>
         </div>
       )}
@@ -215,49 +252,49 @@ export default function ReportsContent() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>보고서 생성</CardTitle>
-            <CardDescription>원하는 보고서 유형과 옵션을 선택하세요</CardDescription>
+            <CardTitle>{t('reports.generate')}</CardTitle>
+            <CardDescription>{t('reports.generateOptions')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
               <div className="grid gap-3">
-                <Label htmlFor="report-type">보고서 유형</Label>
+                <Label htmlFor="report-type">{t('reports.reportType')}</Label>
                 <Select
                   value={reportType}
                   onValueChange={(value) => setReportType(value as ReportType)}
                 >
                   <SelectTrigger id="report-type">
-                    <SelectValue placeholder="보고서 유형 선택" />
+                    <SelectValue placeholder={t('reports.reportTypePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="equipment_inventory">
                       <div className="flex items-center">
                         <FileText className="mr-2 h-4 w-4" />
-                        장비 인벤토리
+                        {t('reports.types.equipment_inventory')}
                       </div>
                     </SelectItem>
                     <SelectItem value="calibration_status">
                       <div className="flex items-center">
                         <Clipboard className="mr-2 h-4 w-4" />
-                        교정 상태
+                        {t('reports.types.calibration_status')}
                       </div>
                     </SelectItem>
                     <SelectItem value="utilization_report">
                       <div className="flex items-center">
                         <BarChart className="mr-2 h-4 w-4" />
-                        활용률
+                        {t('reports.types.utilization_report')}
                       </div>
                     </SelectItem>
                     <SelectItem value="team_equipment">
                       <div className="flex items-center">
                         <FileText className="mr-2 h-4 w-4" />
-                        팀별 장비
+                        {t('reports.types.team_equipment')}
                       </div>
                     </SelectItem>
                     <SelectItem value="maintenance_report">
                       <div className="flex items-center">
                         <Clipboard className="mr-2 h-4 w-4" />
-                        점검 보고서
+                        {t('reports.types.maintenance_report')}
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -270,16 +307,16 @@ export default function ReportsContent() {
               {reportType === 'equipment_inventory' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="equipment-category">장비 분류</Label>
+                    <Label htmlFor="equipment-category">{t('reports.equipmentCategory')}</Label>
                     <Select value={categoryId} onValueChange={setCategoryId}>
                       <SelectTrigger id="equipment-category">
-                        <SelectValue placeholder="모든 분류" />
+                        <SelectValue placeholder={t('reports.allCategories')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">모든 분류</SelectItem>
-                        <SelectItem value="test">테스트 장비</SelectItem>
-                        <SelectItem value="computer">컴퓨터</SelectItem>
-                        <SelectItem value="network">네트워크 장비</SelectItem>
+                        <SelectItem value="">{t('reports.allCategories')}</SelectItem>
+                        <SelectItem value="test">{t('reports.testEquipment')}</SelectItem>
+                        <SelectItem value="computer">{t('reports.computer')}</SelectItem>
+                        <SelectItem value="network">{t('reports.networkEquipment')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -289,16 +326,18 @@ export default function ReportsContent() {
               {reportType === 'calibration_status' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="calibration-status">교정 상태</Label>
+                    <Label htmlFor="calibration-status">
+                      {t('reports.calibrationStatusLabel')}
+                    </Label>
                     <Select value={status} onValueChange={setStatus}>
                       <SelectTrigger id="calibration-status">
-                        <SelectValue placeholder="모든 상태" />
+                        <SelectValue placeholder={t('reports.allStatuses')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">모든 상태</SelectItem>
-                        <SelectItem value="completed">완료</SelectItem>
-                        <SelectItem value="scheduled">예정됨</SelectItem>
-                        <SelectItem value="overdue">만료됨</SelectItem>
+                        <SelectItem value="">{t('reports.allStatuses')}</SelectItem>
+                        <SelectItem value="completed">{t('reports.completed')}</SelectItem>
+                        <SelectItem value="scheduled">{t('reports.scheduled')}</SelectItem>
+                        <SelectItem value="overdue">{t('reports.overdue')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -308,16 +347,16 @@ export default function ReportsContent() {
               {reportType === 'utilization_report' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="equipment-id">장비 선택</Label>
+                    <Label htmlFor="equipment-id">{t('reports.equipmentSelect')}</Label>
                     <Select value={equipmentId} onValueChange={setEquipmentId}>
                       <SelectTrigger id="equipment-id">
-                        <SelectValue placeholder="모든 장비" />
+                        <SelectValue placeholder={t('reports.allEquipment')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">모든 장비</SelectItem>
-                        <SelectItem value="1">오실로스코프 #1</SelectItem>
-                        <SelectItem value="2">스펙트럼 분석기 #2</SelectItem>
-                        <SelectItem value="3">신호 발생기 #3</SelectItem>
+                        <SelectItem value="">{t('reports.allEquipment')}</SelectItem>
+                        <SelectItem value="1">{t('reports.sampleEquipment1')}</SelectItem>
+                        <SelectItem value="2">{t('reports.sampleEquipment2')}</SelectItem>
+                        <SelectItem value="3">{t('reports.sampleEquipment3')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -327,16 +366,16 @@ export default function ReportsContent() {
               {reportType === 'team_equipment' && (
                 <div className="space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="department-id">부서 선택</Label>
+                    <Label htmlFor="department-id">{t('reports.departmentSelect')}</Label>
                     <Select value={departmentId} onValueChange={setDepartmentId}>
                       <SelectTrigger id="department-id">
-                        <SelectValue placeholder="부서 선택" />
+                        <SelectValue placeholder={t('reports.departmentSelect')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="1">연구개발팀</SelectItem>
-                        <SelectItem value="2">품질관리팀</SelectItem>
-                        <SelectItem value="3">생산팀</SelectItem>
-                        <SelectItem value="4">시험팀</SelectItem>
+                        <SelectItem value="1">{t('reports.rdTeam')}</SelectItem>
+                        <SelectItem value="2">{t('reports.qcTeam')}</SelectItem>
+                        <SelectItem value="3">{t('reports.prodTeam')}</SelectItem>
+                        <SelectItem value="4">{t('reports.testTeam')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -346,7 +385,7 @@ export default function ReportsContent() {
               <Separator />
 
               <div className="grid gap-3">
-                <Label>기간 선택</Label>
+                <Label>{t('reports.periodSelect')}</Label>
                 <Select
                   value={dateRange}
                   onValueChange={(value) => setDateRange(value as ReportPeriod)}
@@ -354,22 +393,22 @@ export default function ReportsContent() {
                   <SelectTrigger>
                     <div className="flex items-center">
                       <Calendar className="mr-2 h-4 w-4" />
-                      <SelectValue placeholder="기간 선택" />
+                      <SelectValue placeholder={t('reports.periodSelect')} />
                     </div>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="last_week">최근 1주일</SelectItem>
-                    <SelectItem value="last_month">최근 1개월</SelectItem>
-                    <SelectItem value="last_quarter">최근 3개월</SelectItem>
-                    <SelectItem value="last_year">최근 1년</SelectItem>
-                    <SelectItem value="custom">사용자 정의</SelectItem>
+                    <SelectItem value="last_week">{t('reports.lastWeek')}</SelectItem>
+                    <SelectItem value="last_month">{t('reports.lastMonth')}</SelectItem>
+                    <SelectItem value="last_quarter">{t('reports.lastQuarter')}</SelectItem>
+                    <SelectItem value="last_year">{t('reports.lastYear')}</SelectItem>
+                    <SelectItem value="custom">{t('reports.custom')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {dateRange === 'custom' && (
                 <div className="grid gap-3">
-                  <Label>사용자 정의 날짜 범위</Label>
+                  <Label>{t('reports.customDateRange')}</Label>
                   <DatePickerWithRange date={customDateRange} setDate={setCustomDateRange} />
                 </div>
               )}
@@ -377,7 +416,7 @@ export default function ReportsContent() {
               <Separator />
 
               <div className="grid gap-3">
-                <Label>출력 형식</Label>
+                <Label>{t('reports.outputFormat')}</Label>
                 <RadioGroup
                   defaultValue={reportFormat}
                   onValueChange={(value) => setReportFormat(value as ReportFormat)}
@@ -430,12 +469,12 @@ export default function ReportsContent() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    보고서 생성 중...
+                    {t('reports.generating')}
                   </span>
                 ) : (
                   <span className="flex items-center">
                     <Download className="mr-2 h-4 w-4" />
-                    보고서 생성
+                    {t('reports.generate')}
                   </span>
                 )}
               </Button>
@@ -450,16 +489,16 @@ export default function ReportsContent() {
               {reportType ? (
                 <div className="flex items-center">
                   {getReportIcon(reportType as ReportType)}
-                  {getReportTypeLabel(reportType as ReportType)} 보고서
+                  {getReportTypeLabel(reportType as ReportType)} {t('reports.reportSuffix')}
                 </div>
               ) : (
-                '보고서 정보'
+                t('reports.reportInfo')
               )}
             </CardTitle>
             <CardDescription>
               {reportType
                 ? getReportDescription(reportType as ReportType)
-                : '보고서 유형을 선택하면 자세한 정보가 표시됩니다.'}
+                : t('reports.reportInfoPlaceholder')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -467,135 +506,68 @@ export default function ReportsContent() {
               {reportType ? (
                 <div className="space-y-6 w-full">
                   <div className="border rounded-lg p-4 bg-slate-50">
-                    <h3 className="font-medium mb-2">보고서 설정 요약</h3>
+                    <h3 className="font-medium mb-2">{t('reports.settingsSummary')}</h3>
                     <ul className="space-y-2 text-sm">
                       <li className="flex justify-between">
-                        <span className="text-muted-foreground">보고서 유형:</span>
+                        <span className="text-muted-foreground">
+                          {t('reports.reportTypeLabel')}
+                        </span>
                         <span className="font-medium">
                           {getReportTypeLabel(reportType as ReportType)}
                         </span>
                       </li>
                       <li className="flex justify-between">
-                        <span className="text-muted-foreground">출력 형식:</span>
+                        <span className="text-muted-foreground">
+                          {t('reports.outputFormatLabel')}
+                        </span>
                         <span className="font-medium flex items-center">
                           {getFormatIcon(reportFormat)}
                           {reportFormat.toUpperCase()}
                         </span>
                       </li>
                       <li className="flex justify-between">
-                        <span className="text-muted-foreground">기간:</span>
-                        <span className="font-medium">
-                          {dateRange === 'custom'
-                            ? customDateRange?.from && customDateRange?.to
-                              ? `${formatDate(customDateRange.from)} - ${formatDate(customDateRange.to)}`
-                              : '사용자 정의'
-                            : dateRange === 'last_week'
-                              ? '최근 1주일'
-                              : dateRange === 'last_month'
-                                ? '최근 1개월'
-                                : dateRange === 'last_quarter'
-                                  ? '최근 3개월'
-                                  : '최근 1년'}
-                        </span>
+                        <span className="text-muted-foreground">{t('reports.periodLabel')}</span>
+                        <span className="font-medium">{getPeriodLabel(dateRange)}</span>
                       </li>
                       {reportType === 'equipment_inventory' && categoryId && (
                         <li className="flex justify-between">
-                          <span className="text-muted-foreground">장비 분류:</span>
-                          <span className="font-medium">
-                            {categoryId === 'test'
-                              ? '테스트 장비'
-                              : categoryId === 'computer'
-                                ? '컴퓨터'
-                                : categoryId === 'network'
-                                  ? '네트워크 장비'
-                                  : categoryId}
+                          <span className="text-muted-foreground">
+                            {t('reports.equipmentCategoryLabel')}
                           </span>
+                          <span className="font-medium">{getCategoryLabel(categoryId)}</span>
                         </li>
                       )}
                       {reportType === 'calibration_status' && status && (
                         <li className="flex justify-between">
-                          <span className="text-muted-foreground">교정 상태:</span>
-                          <span className="font-medium">
-                            {status === 'completed'
-                              ? '완료'
-                              : status === 'scheduled'
-                                ? '예정됨'
-                                : status === 'overdue'
-                                  ? '만료됨'
-                                  : status}
+                          <span className="text-muted-foreground">
+                            {t('reports.calibrationStatusFilterLabel')}
                           </span>
+                          <span className="font-medium">{getCalibrationStatusLabel(status)}</span>
                         </li>
                       )}
                       {reportType === 'team_equipment' && departmentId && (
                         <li className="flex justify-between">
-                          <span className="text-muted-foreground">부서:</span>
-                          <span className="font-medium">
-                            {departmentId === '1'
-                              ? '연구개발팀'
-                              : departmentId === '2'
-                                ? '품질관리팀'
-                                : departmentId === '3'
-                                  ? '생산팀'
-                                  : departmentId === '4'
-                                    ? '시험팀'
-                                    : departmentId}
+                          <span className="text-muted-foreground">
+                            {t('reports.departmentLabel')}
                           </span>
+                          <span className="font-medium">{getDepartmentLabel(departmentId)}</span>
                         </li>
                       )}
                     </ul>
                   </div>
                   <div className="mt-4">
-                    <h3 className="font-medium mb-2">보고서 포함 내용</h3>
+                    <h3 className="font-medium mb-2">{t('reports.includedContent')}</h3>
                     <ul className="list-disc pl-5 space-y-1 text-sm">
-                      {reportType === 'equipment_inventory' && (
-                        <>
-                          <li>장비 기본 정보 (ID, 이름, 모델명)</li>
-                          <li>제조사 및 시리얼 번호</li>
-                          <li>현재 상태 및 위치 정보</li>
-                          <li>구매일 및 관리 담당자</li>
-                        </>
-                      )}
-                      {reportType === 'calibration_status' && (
-                        <>
-                          <li>교정 상태 (완료, 예정, 만료)</li>
-                          <li>교정 주기 및 최근 교정일</li>
-                          <li>다음 교정 예정일</li>
-                          <li>교정 담당자 정보</li>
-                        </>
-                      )}
-                      {reportType === 'utilization_report' && (
-                        <>
-                          <li>장비별 사용률 통계</li>
-                          <li>사용 시간 및 빈도</li>
-                          <li>유휴 시간 분석</li>
-                          <li>사용 패턴 및 추세 분석</li>
-                        </>
-                      )}
-                      {reportType === 'team_equipment' && (
-                        <>
-                          <li>부서별 보유 장비 목록</li>
-                          <li>장비 상태 및 가용성 정보</li>
-                          <li>장비별 담당자 정보</li>
-                          <li>장비 교체 계획 정보</li>
-                        </>
-                      )}
-                      {reportType === 'maintenance_report' && (
-                        <>
-                          <li>정기 점검 일정 및 이력</li>
-                          <li>유지보수 담당자 정보</li>
-                          <li>점검 결과 및 조치 사항</li>
-                          <li>예상 부품 교체 주기</li>
-                        </>
-                      )}
+                      {getReportContents(reportType as ReportType).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
                     </ul>
                   </div>
                 </div>
               ) : (
                 <div className="text-center p-4">
                   <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    왼쪽에서 보고서 유형을 선택하면 여기에 상세 정보가 표시됩니다.
-                  </p>
+                  <p className="text-muted-foreground">{t('reports.selectTypeHint')}</p>
                 </div>
               )}
             </div>

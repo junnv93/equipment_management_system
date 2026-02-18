@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
   Bell,
   Calendar,
@@ -125,24 +126,21 @@ const alertTypeConfig: Record<
   },
 };
 
-// 우선순위별 뱃지 컴포넌트
-const PriorityBadge = ({ priority }: { priority: string }) => {
-  const config: Record<string, { class: string; label: string }> = {
-    high: { class: 'bg-red-100 text-red-800', label: '높음' },
-    medium: { class: 'bg-yellow-100 text-yellow-800', label: '중간' },
-    low: { class: 'bg-green-100 text-green-800', label: '낮음' },
-  };
-
-  const style = config[priority] || { class: 'bg-gray-100 text-gray-800', label: '알 수 없음' };
-
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.class}`}>
-      {style.label}
-    </span>
-  );
+const PRIORITY_BADGE_COLORS: Record<string, string> = {
+  high: 'bg-red-100 text-red-800',
+  medium: 'bg-yellow-100 text-yellow-800',
+  low: 'bg-green-100 text-green-800',
 };
 
+function PriorityBadge({ priority, label }: { priority: string; label: string }) {
+  const colorClass = PRIORITY_BADGE_COLORS[priority] || 'bg-gray-100 text-gray-800';
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>{label}</span>
+  );
+}
+
 export default function AlertsContent() {
+  const t = useTranslations('notifications.alerts');
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -194,24 +192,22 @@ export default function AlertsContent() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* 상단 헤더 */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">알림 센터</h1>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={markAllAsRead}>
             <CheckCircle className="h-4 w-4 mr-2" />
-            모두 읽음 표시
+            {t('markAllRead')}
           </Button>
         </div>
       </div>
 
-      {/* 검색 및 필터 영역 */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <Input
             type="text"
-            placeholder="알림 검색..."
+            placeholder={t('searchPlaceholder')}
             className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -227,12 +223,11 @@ export default function AlertsContent() {
         </div>
       </div>
 
-      {/* 탭 내비게이션 */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="all">전체 알림</TabsTrigger>
-          <TabsTrigger value="unread">읽지 않음</TabsTrigger>
-          <TabsTrigger value="read">읽음</TabsTrigger>
+          <TabsTrigger value="all">{t('tabs.all')}</TabsTrigger>
+          <TabsTrigger value="unread">{t('tabs.unread')}</TabsTrigger>
+          <TabsTrigger value="read">{t('tabs.read')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
@@ -250,13 +245,12 @@ export default function AlertsContent() {
     </div>
   );
 
-  // 알림 목록 렌더링 함수
   function renderAlertList(alerts: typeof mockAlerts) {
     if (alerts.length === 0) {
       return (
         <div className="text-center py-8 text-gray-500">
           <ArchiveX className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-          <p>표시할 알림이 없습니다.</p>
+          <p>{t('emptyState')}</p>
         </div>
       );
     }
@@ -278,36 +272,40 @@ export default function AlertsContent() {
                   alert.status === 'unread' ? 'bg-blue-50' : 'bg-white'
                 }`}
               >
-                {/* 알림 아이콘 */}
                 <div className={`p-2 rounded-full ${typeConfig.bgColor} ${typeConfig.textColor}`}>
                   {typeConfig.icon}
                 </div>
 
-                {/* 알림 내용 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="font-medium truncate">{alert.title}</h3>
                     <div className="flex items-center gap-2 ml-2 shrink-0">
-                      <PriorityBadge priority={alert.priority} />
+                      <PriorityBadge
+                        priority={alert.priority}
+                        label={t(
+                          `priorityLabels.${alert.priority}` as
+                            | 'priorityLabels.high'
+                            | 'priorityLabels.medium'
+                            | 'priorityLabels.low'
+                        )}
+                      />
                       <span className="text-xs text-gray-500">{formatDate(alert.date)}</span>
                     </div>
                   </div>
                   <p className="text-sm text-gray-600">{alert.message}</p>
 
-                  {/* 관련 장비 링크 */}
                   {alert.equipmentId && (
                     <div className="mt-2">
                       <Link
                         href={`/equipment/${alert.equipmentId}`}
                         className="text-sm text-blue-600 hover:text-blue-800"
                       >
-                        장비 상세 보기: {alert.equipmentName}
+                        {t('viewEquipment', { name: alert.equipmentName })}
                       </Link>
                     </div>
                   )}
                 </div>
 
-                {/* 액션 메뉴 */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon">
@@ -318,12 +316,12 @@ export default function AlertsContent() {
                     {alert.status === 'unread' && (
                       <DropdownMenuItem onClick={() => markAsRead(alert.id)}>
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        읽음 표시
+                        {t('markRead')}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onClick={() => deleteAlert(alert.id)}>
                       <Trash className="h-4 w-4 mr-2" />
-                      삭제
+                      {t('delete')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

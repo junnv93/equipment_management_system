@@ -19,6 +19,18 @@ import { transformPaginatedResponse } from '@/lib/api/utils/response-transformer
 import CheckoutsContent from './CheckoutsContent';
 import { RouteLoading } from '@/components/layout/RouteLoading';
 import type { Checkout } from '@/lib/api/checkout-api';
+import type { PaginatedListResponse } from '@equipment-management/schemas';
+
+/**
+ * Checkout 목록 요약 정보 (includeSummary=true 시 반환)
+ */
+interface CheckoutSummary {
+  total: number;
+  pending: number;
+  approved: number;
+  overdue: number;
+  returnedToday: number;
+}
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -58,11 +70,13 @@ async function CheckoutsContentAsync({
 
   try {
     // ✅ 성능 최적화: includeSummary=true로 목록+요약을 단일 요청으로 조회
-    const listResponse = await apiClient.get('/api/checkouts?pageSize=100&includeSummary=true');
+    const listResponse = await apiClient.get<
+      PaginatedListResponse<Checkout> & { summary?: CheckoutSummary }
+    >('/api/checkouts?pageSize=100&includeSummary=true');
     initialData = transformPaginatedResponse<Checkout>(listResponse);
 
     // 백엔드에서 summary를 포함하여 반환하면 사용, 없으면 기본값
-    initialSummary = (listResponse.data as any).summary || {
+    initialSummary = listResponse.data.summary || {
       total: initialData.meta.pagination.total,
       pending: 0,
       approved: 0,

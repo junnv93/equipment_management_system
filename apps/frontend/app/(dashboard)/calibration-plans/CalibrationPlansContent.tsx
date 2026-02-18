@@ -36,8 +36,16 @@ import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filter
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { format } from 'date-fns';
 import { Plus, FileText, Calendar, Building2, Eye, Users } from 'lucide-react';
-import type { CalibrationPlanStatus } from '@equipment-management/schemas';
+import { useTranslations } from 'next-intl';
+import type { CalibrationPlanStatus, UserRole, Site } from '@equipment-management/schemas';
 import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
+import {
+  FILTER_TOKENS,
+  getFilterSelectClasses,
+  getNumericClasses,
+  CARD_TOKENS,
+  getTableRowClasses,
+} from '@/lib/design-tokens';
 
 interface CalibrationPlansContentProps {
   /** 서버에서 가져온 초기 데이터 */
@@ -60,6 +68,7 @@ export default function CalibrationPlansContent({
   const router = useRouter();
   const currentYear = new Date().getFullYear();
   const { data: session } = useSession();
+  const t = useTranslations('calibration');
 
   // ✅ SSOT: URL-driven 필터 (useState 제거)
   const { filters, apiFilters, updateYear, updateSiteId, updateTeamId, updateStatus } =
@@ -67,12 +76,13 @@ export default function CalibrationPlansContent({
 
   // 역할 확인
   const userRole = session?.user?.role;
-  const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as any);
+  const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as UserRole);
 
   // 팀 목록 조회 (필터링용)
   const { data: teamsData } = useQuery({
     queryKey: queryKeys.teams.list({ site: filters.siteId || undefined }),
-    queryFn: () => teamsApi.getTeams({ site: (filters.siteId as any) || undefined, pageSize: 100 }),
+    queryFn: () =>
+      teamsApi.getTeams({ site: (filters.siteId as Site) || undefined, pageSize: 100 }),
     enabled: !!filters.siteId,
   });
 
@@ -110,47 +120,48 @@ export default function CalibrationPlansContent({
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">교정계획서</h1>
-          <p className="text-muted-foreground">연간 외부교정 대상 장비의 교정 계획을 관리합니다</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('plansList.title')}</h1>
+          <p className="text-muted-foreground">{t('plansList.subtitle')}</p>
         </div>
         <Button asChild>
           <Link href="/calibration-plans/create">
-            <Plus className="h-4 w-4 mr-2" />새 계획서 작성
+            <Plus className="h-4 w-4 mr-2" />
+            {t('plansList.createButton')}
           </Link>
         </Button>
       </div>
 
-      {/* 필터 */}
+      {/* 필터 — Design Token 적용 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">필터</CardTitle>
+          <CardTitle className={CARD_TOKENS.header.title}>{t('plansList.filter.title')}</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="w-[150px]">
+        <CardContent className={CARD_TOKENS.content.spacing}>
+          <div className={`flex ${FILTER_TOKENS.container.gap}`}>
+            <div className={FILTER_TOKENS.width.year}>
               <Select value={filters.year || String(currentYear)} onValueChange={updateYear}>
-                <SelectTrigger>
-                  <SelectValue placeholder="연도 선택" />
+                <SelectTrigger className={getFilterSelectClasses()}>
+                  <SelectValue placeholder={t('plansList.filter.yearPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {yearOptions.map((year) => (
                     <SelectItem key={year} value={String(year)}>
-                      {year}년
+                      {t('plansList.yearUnit', { year })}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[150px]">
+            <div className={FILTER_TOKENS.width.site}>
               <Select
                 value={filters.siteId || '_all'}
                 onValueChange={(v) => updateSiteId(v === '_all' ? '' : v)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="시험소 선택" />
+                <SelectTrigger className={getFilterSelectClasses()}>
+                  <SelectValue placeholder={t('plansList.filter.sitePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_all">전체 시험소</SelectItem>
+                  <SelectItem value="_all">{t('plansList.filter.allSites')}</SelectItem>
                   {Object.entries(SITE_LABELS).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label}
@@ -159,24 +170,27 @@ export default function CalibrationPlansContent({
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[180px]">
+            <div className={FILTER_TOKENS.width.team}>
               <Select
                 value={filters.teamId || '_all'}
                 onValueChange={(v) => updateTeamId(v === '_all' ? '' : v)}
                 disabled={!filters.siteId || !!isTeamRestricted}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="팀 선택">
+                <SelectTrigger className={getFilterSelectClasses()}>
+                  <SelectValue placeholder={t('plansList.filter.teamPlaceholder')}>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
                       {filters.teamId
-                        ? teams.find((t) => t.id === filters.teamId)?.name || '팀 선택'
-                        : '전체 팀'}
+                        ? teams.find((tm) => tm.id === filters.teamId)?.name ||
+                          t('plansList.filter.teamPlaceholder')
+                        : t('plansList.filter.allTeams')}
                     </div>
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {!isTeamRestricted && <SelectItem value="_all">전체 팀</SelectItem>}
+                  {!isTeamRestricted && (
+                    <SelectItem value="_all">{t('plansList.filter.allTeams')}</SelectItem>
+                  )}
                   {teams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.name}
@@ -184,22 +198,22 @@ export default function CalibrationPlansContent({
                   ))}
                   {teams.length === 0 && (
                     <div className="p-2 text-sm text-muted-foreground">
-                      시험소를 먼저 선택하세요
+                      {t('plansList.filter.selectSiteFirst')}
                     </div>
                   )}
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-[180px]">
+            <div className={FILTER_TOKENS.width.status}>
               <Select
                 value={filters.status || '_all'}
                 onValueChange={(v) => updateStatus(v === '_all' ? '' : v)}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="상태 선택" />
+                <SelectTrigger className={getFilterSelectClasses()}>
+                  <SelectValue placeholder={t('plansList.filter.statusPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_all">전체 상태</SelectItem>
+                  <SelectItem value="_all">{t('plansList.filter.allStatuses')}</SelectItem>
                   {(
                     Object.entries(CALIBRATION_PLAN_STATUS_LABELS) as [
                       CalibrationPlanStatus,
@@ -217,11 +231,13 @@ export default function CalibrationPlansContent({
         </CardContent>
       </Card>
 
-      {/* 계획서 목록 */}
+      {/* 계획서 목록 — Design Token 적용 */}
       <Card>
         <CardHeader>
-          <CardTitle>계획서 목록</CardTitle>
-          <CardDescription>총 {plans.length}개의 교정계획서가 있습니다</CardDescription>
+          <CardTitle className={CARD_TOKENS.header.title}>{t('plansList.list.title')}</CardTitle>
+          <CardDescription className={CARD_TOKENS.header.description}>
+            {t('plansList.list.description', { count: plans.length })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -232,15 +248,16 @@ export default function CalibrationPlansContent({
             </div>
           ) : isError ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p>계획서 목록을 불러오는 중 오류가 발생했습니다.</p>
+              <p>{t('plansList.list.error')}</p>
             </div>
           ) : plans.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>등록된 교정계획서가 없습니다</p>
+              <p>{t('plansList.list.empty')}</p>
               <Button asChild className="mt-4">
                 <Link href="/calibration-plans/create">
-                  <Plus className="h-4 w-4 mr-2" />새 계획서 작성
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('plansList.createButton')}
                 </Link>
               </Button>
             </div>
@@ -248,13 +265,13 @@ export default function CalibrationPlansContent({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>연도</TableHead>
-                  <TableHead>시험소</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead>작성자</TableHead>
-                  <TableHead>작성일</TableHead>
-                  <TableHead>승인일</TableHead>
-                  <TableHead className="text-right">액션</TableHead>
+                  <TableHead>{t('plansList.table.year')}</TableHead>
+                  <TableHead>{t('plansList.table.site')}</TableHead>
+                  <TableHead>{t('plansList.table.status')}</TableHead>
+                  <TableHead>{t('plansList.table.author')}</TableHead>
+                  <TableHead>{t('plansList.table.createdAt')}</TableHead>
+                  <TableHead>{t('plansList.table.approvedAt')}</TableHead>
+                  <TableHead className="text-right">{t('plansList.table.action')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -263,11 +280,11 @@ export default function CalibrationPlansContent({
                   const key = plan.id || `plan-fallback-${plan.year}-${plan.siteId}-${index}`;
 
                   return (
-                    <TableRow key={key}>
+                    <TableRow key={key} className={getTableRowClasses()}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {plan.year}년
+                          {t('plansList.yearUnit', { year: plan.year })}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -294,7 +311,7 @@ export default function CalibrationPlansContent({
                           disabled={!plan.id}
                         >
                           <Eye className="h-4 w-4 mr-2" />
-                          상세
+                          {t('plansList.detail')}
                         </Button>
                       </TableCell>
                     </TableRow>

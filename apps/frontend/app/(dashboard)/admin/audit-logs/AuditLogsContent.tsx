@@ -39,7 +39,6 @@ import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, RefreshCw, History, Filter, Printer, Info } from 'lucide-react';
 import {
   AUDIT_ACTION_LABELS,
-  AUDIT_ACTION_COLORS,
   AUDIT_ENTITY_TYPE_LABELS,
   type AuditAction,
   type AuditEntityType,
@@ -50,7 +49,16 @@ import {
   resolveDataScope,
   AUDIT_LOG_SCOPE,
 } from '@equipment-management/shared-constants';
+import {
+  AUDIT_ACTION_BADGE_TOKENS,
+  DEFAULT_AUDIT_ACTION_BADGE,
+  AUDIT_TABLE_TOKENS,
+  AUDIT_EMPTY_STATE_TOKENS,
+  AUDIT_PAGINATION_TOKENS,
+  AUDIT_MOTION,
+} from '@/lib/design-tokens';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface AuditLogsContentProps {
   initialData: PaginatedResponse<AuditLog> | null;
@@ -58,6 +66,8 @@ interface AuditLogsContentProps {
 }
 
 export default function AuditLogsContent({ initialData }: AuditLogsContentProps) {
+  const t = useTranslations('audit');
+  const tc = useTranslations('common');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -80,7 +90,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   // 감사 로그 목록 조회 (placeholderData: 서버 prefetch 데이터)
-  const { data, isLoading, refetch, isRefetching } = useQuery({
+  const { data, refetch, isRefetching } = useQuery({
     queryKey: queryKeys.auditLogs.list(apiParams),
     queryFn: () => auditApi.getAuditLogs(apiParams),
     placeholderData: initialData ?? undefined,
@@ -143,7 +153,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">감사 로그</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
           {scope && (
             <p className="text-muted-foreground flex items-center gap-1.5">
               <Info className="h-4 w-4" />
@@ -153,12 +163,12 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => refetch()} disabled={isRefetching}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            새로고침
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? AUDIT_MOTION.refreshSpin : ''}`} />
+            {tc('actions.refresh')}
           </Button>
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
-            인쇄
+            {tc('actions.print')}
           </Button>
         </div>
       </div>
@@ -168,7 +178,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
-            필터
+            {t('filter')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -176,7 +186,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
             {/* userId 필터: 'all' 스코프에서만 표시 (site/team 스코프에서는 불필요) */}
             {scope?.type === 'all' && (
               <div className="space-y-2">
-                <Label htmlFor="userId">사용자 ID</Label>
+                <Label htmlFor="userId">{t('filters.userId')}</Label>
                 <Input
                   id="userId"
                   placeholder="UUID..."
@@ -187,7 +197,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="entityType">엔티티 타입</Label>
+              <Label htmlFor="entityType">{t('filters.entityType')}</Label>
               <Select
                 value={filters.entityType || '_all'}
                 onValueChange={(v) => updateFilters({ entityType: v === '_all' ? '' : v })}
@@ -196,7 +206,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                   <SelectValue placeholder="전체" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_all">전체</SelectItem>
+                  <SelectItem value="_all">{t('filters.all')}</SelectItem>
                   {Object.entries(AUDIT_ENTITY_TYPE_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
@@ -207,7 +217,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="action">액션</Label>
+              <Label htmlFor="action">{t('filters.action')}</Label>
               <Select
                 value={filters.action || '_all'}
                 onValueChange={(v) => updateFilters({ action: v === '_all' ? '' : v })}
@@ -216,7 +226,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                   <SelectValue placeholder="전체" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_all">전체</SelectItem>
+                  <SelectItem value="_all">{t('filters.all')}</SelectItem>
                   {Object.entries(AUDIT_ACTION_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
@@ -227,7 +237,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="startDate">시작일</Label>
+              <Label htmlFor="startDate">{t('filters.startDate')}</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -237,7 +247,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="endDate">종료일</Label>
+              <Label htmlFor="endDate">{t('filters.endDate')}</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -249,7 +259,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
 
           <div className="flex gap-2 mt-4">
             <Button variant="outline" onClick={handleReset}>
-              초기화
+              {tc('actions.reset')}
             </Button>
           </div>
         </CardContent>
@@ -260,15 +270,17 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            로그 목록
+            {t('logList')}
           </CardTitle>
-          <CardDescription>총 {pagination.total.toLocaleString()}개의 로그</CardDescription>
+          <CardDescription>
+            {t('totalLogs', { count: pagination.total.toLocaleString() })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {logs.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>조회된 로그가 없습니다</p>
+            <div className={AUDIT_EMPTY_STATE_TOKENS.container}>
+              <History className={AUDIT_EMPTY_STATE_TOKENS.icon} />
+              <p className={AUDIT_EMPTY_STATE_TOKENS.text}>{t('emptyLogs')}</p>
             </div>
           ) : (
             <>
@@ -276,13 +288,13 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">시간</TableHead>
-                      <TableHead>사용자</TableHead>
-                      <TableHead>역할</TableHead>
-                      <TableHead>액션</TableHead>
-                      <TableHead>대상</TableHead>
-                      <TableHead>대상명</TableHead>
-                      <TableHead>IP</TableHead>
+                      <TableHead className="w-[180px]">{t('table.time')}</TableHead>
+                      <TableHead>{t('table.user')}</TableHead>
+                      <TableHead>{t('table.role')}</TableHead>
+                      <TableHead>{t('table.action')}</TableHead>
+                      <TableHead>{t('table.target')}</TableHead>
+                      <TableHead>{t('table.targetName')}</TableHead>
+                      <TableHead>{t('table.ip')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -290,9 +302,9 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                       <TableRow
                         key={log.id}
                         onClick={() => handleRowClick(log)}
-                        className="cursor-pointer hover:bg-gray-50 transition-colors"
+                        className={AUDIT_TABLE_TOKENS.rowInteractive}
                       >
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className={AUDIT_TABLE_TOKENS.timestamp}>
                           {format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss')}
                         </TableCell>
                         <TableCell>
@@ -309,7 +321,8 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                         <TableCell>
                           <Badge
                             className={
-                              AUDIT_ACTION_COLORS[log.action as AuditAction] || 'bg-gray-100'
+                              AUDIT_ACTION_BADGE_TOKENS[log.action as AuditAction] ||
+                              DEFAULT_AUDIT_ACTION_BADGE
                             }
                           >
                             {AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action}
@@ -328,7 +341,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                             entityName={log.entityName}
                           />
                         </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">
+                        <TableCell className={AUDIT_TABLE_TOKENS.ipAddress}>
                           {log.ipAddress || '-'}
                         </TableCell>
                       </TableRow>
@@ -339,14 +352,18 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
 
               {/* 페이지네이션 */}
               <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-muted-foreground">
-                  {pagination.total.toLocaleString()}개 중{' '}
-                  {((pagination.currentPage - 1) * pagination.pageSize + 1).toLocaleString()}-
-                  {Math.min(
-                    pagination.currentPage * pagination.pageSize,
-                    pagination.total
-                  ).toLocaleString()}
-                  개 표시
+                <div className={AUDIT_PAGINATION_TOKENS.info}>
+                  {t('showingRange', {
+                    total: pagination.total.toLocaleString(),
+                    start: (
+                      (pagination.currentPage - 1) * pagination.pageSize +
+                      1
+                    ).toLocaleString(),
+                    end: Math.min(
+                      pagination.currentPage * pagination.pageSize,
+                      pagination.total
+                    ).toLocaleString(),
+                  })}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -356,10 +373,13 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                     disabled={pagination.currentPage <= 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
-                    이전
+                    {tc('pagination.previous')}
                   </Button>
-                  <span className="text-sm">
-                    {pagination.currentPage} / {pagination.totalPages}
+                  <span className={AUDIT_PAGINATION_TOKENS.pageNumber}>
+                    {tc('pagination.pageOf', {
+                      current: pagination.currentPage,
+                      total: pagination.totalPages,
+                    })}
                   </span>
                   <Button
                     variant="outline"
@@ -367,7 +387,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                     onClick={() => handlePageChange(pagination.currentPage + 1)}
                     disabled={pagination.currentPage >= pagination.totalPages}
                   >
-                    다음
+                    {tc('pagination.next')}
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>

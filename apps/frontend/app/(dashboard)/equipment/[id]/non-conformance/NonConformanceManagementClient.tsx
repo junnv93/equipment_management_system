@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
   Plus,
@@ -58,6 +59,7 @@ export default function NonConformanceManagementClient({
   const router = useRouter();
   const { data: session } = useSession();
   const { isManager } = useAuth();
+  const t = useTranslations('equipment');
 
   // 현재 로그인한 사용자 ID (세션에서 가져옴)
   const currentUserId = session?.user?.id ?? '';
@@ -131,8 +133,8 @@ export default function NonConformanceManagementClient({
       };
     },
     invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
-    successMessage: '부적합이 등록되었습니다.',
-    errorMessage: '부적합 등록에 실패했습니다.',
+    successMessage: t('nonConformanceManagement.toasts.createSuccess'),
+    errorMessage: t('nonConformanceManagement.toasts.createError'),
     onSuccessCallback: () => {
       setShowCreateForm(false);
       setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
@@ -146,7 +148,7 @@ export default function NonConformanceManagementClient({
 
   const handleCreate = () => {
     if (!createForm.cause.trim()) {
-      alert('부적합 원인을 입력해주세요.');
+      alert(t('nonConformanceManagement.form.causeRequired'));
       return;
     }
 
@@ -195,8 +197,8 @@ export default function NonConformanceManagementClient({
       };
     },
     invalidateKeys: [queryKeys.equipment.detail(equipmentId)],
-    successMessage: '부적합 기록이 수정되었습니다.',
-    errorMessage: '업데이트에 실패했습니다.',
+    successMessage: t('nonConformanceManagement.toasts.updateSuccess'),
+    errorMessage: t('nonConformanceManagement.toasts.updateError'),
     onSuccessCallback: () => {
       setEditingId(null);
       setUpdateForm({ analysisContent: '', correctionContent: '', status: '' });
@@ -217,11 +219,7 @@ export default function NonConformanceManagementClient({
       !nc.repairHistoryId &&
       updateForm.status === 'corrected'
     ) {
-      const userChoice = window.confirm(
-        '손상/오작동 유형은 수리 기록 연결이 필요합니다.\n\n' +
-          '수리 이력 페이지로 이동하시겠습니까?\n' +
-          '(취소 시 상태 변경이 진행되지 않습니다)'
-      );
+      const userChoice = window.confirm(t('nonConformanceManagement.confirm.repairRequired'));
 
       if (userChoice) {
         router.push(`/equipment/${equipmentId}/repair-history`);
@@ -316,13 +314,17 @@ export default function NonConformanceManagementClient({
                 <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
               </div>
               <div>
-                <h3 className="font-medium text-foreground">데이터 로딩 실패</h3>
-                <p className="text-sm text-muted-foreground">데이터를 불러오는데 실패했습니다.</p>
+                <h3 className="font-medium text-foreground">
+                  {t('nonConformanceManagement.loadError')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {t('nonConformanceManagement.loadErrorDesc')}
+                </p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
-              재시도
+              {t('nonConformanceManagement.retry')}
             </Button>
           </div>
         </Card>
@@ -339,11 +341,13 @@ export default function NonConformanceManagementClient({
           className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4 motion-safe:transition-colors motion-reduce:transition-none"
         >
           <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
-          장비 상세로 돌아가기
+          {t('nonConformanceManagement.backToEquipment')}
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">부적합 관리</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {t('nonConformanceManagement.title')}
+            </h1>
             {equipment && (
               <p className="text-muted-foreground mt-1">
                 {equipment.name} ({equipment.managementNumber})
@@ -353,7 +357,7 @@ export default function NonConformanceManagementClient({
           {equipment?.status !== 'non_conforming' && (
             <Button variant="destructive" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-              부적합 등록
+              {t('nonConformanceManagement.register')}
             </Button>
           )}
         </div>
@@ -362,11 +366,14 @@ export default function NonConformanceManagementClient({
       {/* 부적합 등록 폼 */}
       {showCreateForm && (
         <Card className="p-6 mb-6">
-          <h2 className="text-lg font-semibold tracking-tight mb-4">부적합 등록</h2>
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
+            {t('nonConformanceManagement.register')}
+          </h2>
           <div className="space-y-4">
             <div>
               <Label htmlFor="nc-type">
-                부적합 유형 <span className="text-destructive">*</span>
+                {t('nonConformanceManagement.form.ncType')}{' '}
+                <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={createForm.ncType}
@@ -375,23 +382,32 @@ export default function NonConformanceManagementClient({
                 }
               >
                 <SelectTrigger id="nc-type" className="mt-1.5">
-                  <SelectValue placeholder="유형 선택" />
+                  <SelectValue placeholder={t('nonConformanceManagement.form.ncTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="damage">손상 (물리적 파손)</SelectItem>
-                  <SelectItem value="malfunction">오작동 (기능 이상)</SelectItem>
-                  <SelectItem value="calibration_failure">교정 실패</SelectItem>
-                  <SelectItem value="measurement_error">측정 오류</SelectItem>
-                  <SelectItem value="other">기타</SelectItem>
+                  <SelectItem value="damage">
+                    {t('nonConformanceManagement.form.damage')}
+                  </SelectItem>
+                  <SelectItem value="malfunction">
+                    {t('nonConformanceManagement.form.malfunction')}
+                  </SelectItem>
+                  <SelectItem value="calibration_failure">
+                    {t('nonConformanceManagement.form.calibrationFailure')}
+                  </SelectItem>
+                  <SelectItem value="measurement_error">
+                    {t('nonConformanceManagement.form.measurementError')}
+                  </SelectItem>
+                  <SelectItem value="other">{t('nonConformanceManagement.form.other')}</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1.5">
-                손상/오작동 유형은 수리 기록이 필요합니다.
+                {t('nonConformanceManagement.form.ncTypeHint')}
               </p>
             </div>
             <div>
               <Label htmlFor="nc-cause">
-                부적합 원인 <span className="text-destructive">*</span>
+                {t('nonConformanceManagement.form.cause')}{' '}
+                <span className="text-destructive">*</span>
               </Label>
               <Textarea
                 id="nc-cause"
@@ -399,23 +415,27 @@ export default function NonConformanceManagementClient({
                 onChange={(e) => setCreateForm({ ...createForm, cause: e.target.value })}
                 rows={3}
                 className="mt-1.5"
-                placeholder="부적합 원인을 상세히 기술해주세요."
+                placeholder={t('nonConformanceManagement.form.causePlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="nc-action-plan">조치 계획</Label>
+              <Label htmlFor="nc-action-plan">
+                {t('nonConformanceManagement.form.actionPlan')}
+              </Label>
               <Textarea
                 id="nc-action-plan"
                 value={createForm.actionPlan}
                 onChange={(e) => setCreateForm({ ...createForm, actionPlan: e.target.value })}
                 rows={2}
                 className="mt-1.5"
-                placeholder="조치 계획을 입력해주세요. (선택)"
+                placeholder={t('nonConformanceManagement.form.actionPlanPlaceholder')}
               />
             </div>
             <div className="flex gap-3">
               <Button variant="destructive" onClick={handleCreate} disabled={creating}>
-                {creating ? '등록 중...' : '등록'}
+                {creating
+                  ? t('nonConformanceManagement.form.registering')
+                  : t('nonConformanceManagement.form.register')}
               </Button>
               <Button
                 variant="outline"
@@ -424,7 +444,7 @@ export default function NonConformanceManagementClient({
                   setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
                 }}
               >
-                취소
+                {t('nonConformanceManagement.form.cancel')}
               </Button>
             </div>
           </div>
@@ -441,10 +461,10 @@ export default function NonConformanceManagementClient({
               </div>
             </div>
             <h3 className="mt-4 text-base font-medium tracking-tight text-foreground">
-              부적합 기록 없음
+              {t('nonConformanceManagement.empty')}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-              등록된 부적합 기록이 없습니다.
+              {t('nonConformanceManagement.emptyDesc')}
             </p>
           </Card>
         ) : (
@@ -466,7 +486,9 @@ export default function NonConformanceManagementClient({
                   </span>
                 </div>
                 <time dateTime={nc.discoveryDate} className="text-sm text-muted-foreground">
-                  발견일: {new Date(nc.discoveryDate).toLocaleDateString('ko-KR')}
+                  {t('nonConformanceManagement.discoveryDate', {
+                    date: new Date(nc.discoveryDate).toLocaleDateString('ko-KR'),
+                  })}
                 </time>
               </div>
 
@@ -477,7 +499,9 @@ export default function NonConformanceManagementClient({
                   </span>
                   {nc.resolutionType && (
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 rounded">
-                      해결: {RESOLUTION_TYPE_LABELS[nc.resolutionType]}
+                      {t('nonConformanceManagement.resolution', {
+                        type: RESOLUTION_TYPE_LABELS[nc.resolutionType],
+                      })}
                     </span>
                   )}
                   {nc.repairHistoryId && (
@@ -485,7 +509,7 @@ export default function NonConformanceManagementClient({
                       href={`/equipment/${equipmentId}/repair-history`}
                       className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 rounded hover:bg-green-200 dark:hover:bg-green-900/30 motion-safe:transition-colors motion-reduce:transition-none"
                     >
-                      수리 기록 연결됨
+                      {t('nonConformanceManagement.repairLinked')}
                     </Link>
                   )}
                 </div>
@@ -499,7 +523,9 @@ export default function NonConformanceManagementClient({
                         aria-hidden="true"
                       />
                       <div>
-                        <p className="font-medium text-red-900 dark:text-red-300">조치 반려됨</p>
+                        <p className="font-medium text-red-900 dark:text-red-300">
+                          {t('nonConformanceManagement.rejectionTitle')}
+                        </p>
                         <p className="text-sm text-red-800 dark:text-red-400 mt-1 leading-relaxed">
                           {nc.rejectionReason}
                         </p>
@@ -508,7 +534,9 @@ export default function NonConformanceManagementClient({
                             dateTime={nc.rejectedAt}
                             className="text-xs text-red-600 dark:text-red-500 mt-1 block"
                           >
-                            반려일: {new Date(nc.rejectedAt).toLocaleDateString('ko-KR')}
+                            {t('nonConformanceManagement.rejectionDate', {
+                              date: new Date(nc.rejectedAt).toLocaleDateString('ko-KR'),
+                            })}
                           </time>
                         )}
                       </div>
@@ -517,34 +545,44 @@ export default function NonConformanceManagementClient({
                 )}
 
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground">부적합 원인</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    {t('nonConformanceManagement.causeLabel')}
+                  </h4>
                   <p className="text-foreground mt-1 leading-relaxed">{nc.cause}</p>
                 </div>
 
                 {nc.actionPlan && (
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">조치 계획</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground">
+                      {t('nonConformanceManagement.actionPlanLabel')}
+                    </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.actionPlan}</p>
                   </div>
                 )}
 
                 {nc.analysisContent && (
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">원인 분석</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground">
+                      {t('nonConformanceManagement.analysisLabel')}
+                    </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.analysisContent}</p>
                   </div>
                 )}
 
                 {nc.correctionContent && (
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">조치 내용</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground">
+                      {t('nonConformanceManagement.correctionLabel')}
+                    </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.correctionContent}</p>
                     {nc.correctionDate && (
                       <time
                         dateTime={nc.correctionDate}
                         className="text-sm text-muted-foreground mt-1 block"
                       >
-                        조치일: {new Date(nc.correctionDate).toLocaleDateString('ko-KR')}
+                        {t('nonConformanceManagement.correctionDate', {
+                          date: new Date(nc.correctionDate).toLocaleDateString('ko-KR'),
+                        })}
                       </time>
                     )}
                   </div>
@@ -552,14 +590,18 @@ export default function NonConformanceManagementClient({
 
                 {nc.closureNotes && (
                   <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">종료 메모</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground">
+                      {t('nonConformanceManagement.closureNotesLabel')}
+                    </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.closureNotes}</p>
                     {nc.closedAt && (
                       <time
                         dateTime={nc.closedAt}
                         className="text-sm text-muted-foreground mt-1 block"
                       >
-                        종료일: {new Date(nc.closedAt).toLocaleDateString('ko-KR')}
+                        {t('nonConformanceManagement.closureDate', {
+                          date: new Date(nc.closedAt).toLocaleDateString('ko-KR'),
+                        })}
                       </time>
                     )}
                   </div>
@@ -578,11 +620,12 @@ export default function NonConformanceManagementClient({
                         />
                         <div className="flex-1">
                           <p className="font-medium text-yellow-900 dark:text-yellow-100">
-                            수리 기록 필요
+                            {t('nonConformanceManagement.repairNeeded')}
                           </p>
                           <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1 leading-relaxed">
-                            {NON_CONFORMANCE_TYPE_LABELS[nc.ncType]} 유형은 부적합 종료 전 수리
-                            기록이 필요합니다.
+                            {t('nonConformanceManagement.repairNeededDesc', {
+                              type: NON_CONFORMANCE_TYPE_LABELS[nc.ncType],
+                            })}
                           </p>
                           <Button
                             variant="default"
@@ -594,7 +637,7 @@ export default function NonConformanceManagementClient({
                               href={`/equipment/${equipmentId}/repair-history?ncId=${nc.id}&autoOpen=true`}
                             >
                               <Wrench className="h-4 w-4 mr-2" aria-hidden="true" />
-                              수리 이력 등록하기
+                              {t('nonConformanceManagement.registerRepair')}
                             </Link>
                           </Button>
                         </div>
@@ -603,12 +646,12 @@ export default function NonConformanceManagementClient({
                   ) : (
                     <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
                       <CheckCircle className="h-4 w-4" aria-hidden="true" />
-                      수리 기록 연결됨 - 종료 승인 가능
+                      {t('nonConformanceManagement.repairLinkedApproval')}
                       <Link
                         href={`/equipment/${equipmentId}/repair-history`}
                         className="text-primary hover:underline ml-2"
                       >
-                        수리 내역 보기 →
+                        {t('nonConformanceManagement.viewRepairHistory')}
                       </Link>
                     </div>
                   )}
@@ -619,7 +662,9 @@ export default function NonConformanceManagementClient({
               {editingId === nc.id && nc.status !== 'closed' && (
                 <div className="mt-4 pt-4 border-t border-border space-y-4">
                   <div>
-                    <Label htmlFor={`analysis-${nc.id}`}>원인 분석</Label>
+                    <Label htmlFor={`analysis-${nc.id}`}>
+                      {t('nonConformanceManagement.update.analysis')}
+                    </Label>
                     <Textarea
                       id={`analysis-${nc.id}`}
                       value={updateForm.analysisContent}
@@ -628,11 +673,13 @@ export default function NonConformanceManagementClient({
                       }
                       rows={2}
                       className="mt-1.5"
-                      placeholder="원인 분석 내용을 입력하세요."
+                      placeholder={t('nonConformanceManagement.update.analysisPlaceholder')}
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`correction-${nc.id}`}>조치 내용</Label>
+                    <Label htmlFor={`correction-${nc.id}`}>
+                      {t('nonConformanceManagement.update.correction')}
+                    </Label>
                     <Textarea
                       id={`correction-${nc.id}`}
                       value={updateForm.correctionContent}
@@ -641,11 +688,13 @@ export default function NonConformanceManagementClient({
                       }
                       rows={2}
                       className="mt-1.5"
-                      placeholder="조치 내용을 입력하세요."
+                      placeholder={t('nonConformanceManagement.update.correctionPlaceholder')}
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`status-${nc.id}`}>상태 변경</Label>
+                    <Label htmlFor={`status-${nc.id}`}>
+                      {t('nonConformanceManagement.update.statusChange')}
+                    </Label>
                     <Select
                       value={updateForm.status || '_keep'}
                       onValueChange={(v) =>
@@ -656,18 +705,28 @@ export default function NonConformanceManagementClient({
                       }
                     >
                       <SelectTrigger id={`status-${nc.id}`} className="mt-1.5">
-                        <SelectValue placeholder="상태 유지" />
+                        <SelectValue
+                          placeholder={t('nonConformanceManagement.update.keepStatus')}
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="_keep">상태 유지</SelectItem>
-                        <SelectItem value="analyzing">분석 중</SelectItem>
-                        <SelectItem value="corrected">조치 완료</SelectItem>
+                        <SelectItem value="_keep">
+                          {t('nonConformanceManagement.update.keepStatus')}
+                        </SelectItem>
+                        <SelectItem value="analyzing">
+                          {t('nonConformanceManagement.update.analyzing')}
+                        </SelectItem>
+                        <SelectItem value="corrected">
+                          {t('nonConformanceManagement.update.corrected')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="flex gap-3">
                     <Button onClick={() => handleUpdate(nc.id)} disabled={updating}>
-                      {updating ? '저장 중...' : '저장'}
+                      {updating
+                        ? t('nonConformanceManagement.update.saving')
+                        : t('nonConformanceManagement.update.save')}
                     </Button>
                     <Button
                       variant="outline"
@@ -676,7 +735,7 @@ export default function NonConformanceManagementClient({
                         setUpdateForm({ analysisContent: '', correctionContent: '', status: '' });
                       }}
                     >
-                      취소
+                      {t('nonConformanceManagement.update.cancel')}
                     </Button>
                   </div>
                 </div>
@@ -687,7 +746,7 @@ export default function NonConformanceManagementClient({
                 <div className="mt-4 pt-4 border-t border-border">
                   <Button variant="secondary" size="sm" onClick={() => startEditing(nc)}>
                     <FileText className="h-4 w-4 mr-2" aria-hidden="true" />
-                    기록 수정
+                    {t('nonConformanceManagement.editRecord')}
                   </Button>
                 </div>
               )}

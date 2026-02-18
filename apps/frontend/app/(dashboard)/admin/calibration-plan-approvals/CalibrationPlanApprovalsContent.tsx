@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,13 +28,13 @@ import calibrationPlansApi, {
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, Building2, User, Eye } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export default function CalibrationPlanApprovalsContent() {
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
-
+  const t = useTranslations('calibration');
   const [selectedPlan, setSelectedPlan] = useState<CalibrationPlan | null>(null);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
@@ -59,16 +58,16 @@ export default function CalibrationPlanApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '승인 완료',
-        description: '교정계획서가 승인되었습니다.',
+        title: t('planApprovals.toasts.approveSuccess'),
+        description: t('planApprovals.toasts.approveSuccessDesc'),
       });
       setIsApproveDialogOpen(false);
       setSelectedPlan(null);
     },
     onError: (error: unknown) => {
       toast({
-        title: '승인 실패',
-        description: getErrorMessage(error, '계획서 승인 중 오류가 발생했습니다.'),
+        title: t('planApprovals.toasts.approveError'),
+        description: getErrorMessage(error, t('planApprovals.toasts.approveErrorDesc')),
         variant: 'destructive',
       });
     },
@@ -94,16 +93,16 @@ export default function CalibrationPlanApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '반려 완료',
-        description: '교정계획서가 반려되었습니다.',
+        title: t('planApprovals.toasts.rejectSuccess'),
+        description: t('planApprovals.toasts.rejectSuccessDesc'),
       });
       setIsRejectDialogOpen(false);
       setSelectedPlan(null);
     },
     onError: (error: unknown) => {
       toast({
-        title: '반려 실패',
-        description: getErrorMessage(error, '계획서 반려 중 오류가 발생했습니다.'),
+        title: t('planApprovals.toasts.rejectError'),
+        description: getErrorMessage(error, t('planApprovals.toasts.rejectErrorDesc')),
         variant: 'destructive',
       });
     },
@@ -154,20 +153,20 @@ export default function CalibrationPlanApprovalsContent() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">교정계획서 승인 관리</h1>
-        <p className="text-muted-foreground">
-          기술책임자가 요청한 교정계획서를 검토하고 승인합니다 (시험소장 전용)
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('planApprovals.title')}</h1>
+        <p className="text-muted-foreground">{t('planApprovals.description')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>승인 대기 목록</CardTitle>
-          <CardDescription>총 {pendingPlans.length}개의 승인 대기 요청이 있습니다</CardDescription>
+          <CardTitle>{t('planApprovals.listTitle')}</CardTitle>
+          <CardDescription>
+            {t('planApprovals.listDescription', { count: pendingPlans.length })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {pendingPlans.length === 0 ? (
-            <ApprovalEmptyState message="승인 대기 중인 교정계획서가 없습니다" />
+            <ApprovalEmptyState message={t('planApprovals.empty')} />
           ) : (
             <div className="space-y-4">
               {pendingPlans.map((plan: CalibrationPlan) => (
@@ -180,7 +179,10 @@ export default function CalibrationPlanApprovalsContent() {
                             {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
                           </Badge>
                           <span className="text-lg font-semibold">
-                            {plan.year}년 {SITE_LABELS[plan.siteId]} 교정계획서
+                            {t('planApprovals.planTitle', {
+                              year: plan.year,
+                              site: SITE_LABELS[plan.siteId],
+                            })}
                           </span>
                         </div>
 
@@ -188,28 +190,38 @@ export default function CalibrationPlanApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">연도</p>
-                              <p className="font-medium">{plan.year}년</p>
+                              <p className="text-muted-foreground">
+                                {t('planApprovals.fields.year')}
+                              </p>
+                              <p className="font-medium">
+                                {t('planApprovals.yearUnit', { year: plan.year })}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">시험소</p>
+                              <p className="text-muted-foreground">
+                                {t('planApprovals.fields.site')}
+                              </p>
                               <p className="font-medium">{SITE_LABELS[plan.siteId]}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">작성자</p>
+                              <p className="text-muted-foreground">
+                                {t('planApprovals.fields.author')}
+                              </p>
                               <p className="font-medium">{plan.createdBy}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">작성일</p>
+                              <p className="text-muted-foreground">
+                                {t('planApprovals.fields.createdAt')}
+                              </p>
                               <p className="font-medium">
                                 {format(new Date(plan.createdAt), 'yyyy-MM-dd')}
                               </p>
@@ -225,7 +237,7 @@ export default function CalibrationPlanApprovalsContent() {
                           onClick={() => router.push(`/calibration-plans/${plan.id}`)}
                         >
                           <Eye className="h-4 w-4 mr-2" />
-                          상세보기
+                          {t('planApprovals.actions.viewDetail')}
                         </Button>
                         <Button
                           size="sm"
@@ -233,7 +245,7 @@ export default function CalibrationPlanApprovalsContent() {
                           disabled={approveMutation.isPending}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          승인
+                          {t('planApprovals.actions.approve')}
                         </Button>
                         <Button
                           size="sm"
@@ -242,7 +254,7 @@ export default function CalibrationPlanApprovalsContent() {
                           disabled={rejectMutation.isPending}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
-                          반려
+                          {t('planApprovals.actions.reject')}
                         </Button>
                       </div>
                     </div>
@@ -258,30 +270,32 @@ export default function CalibrationPlanApprovalsContent() {
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>교정계획서 승인</DialogTitle>
-            <DialogDescription>이 교정계획서를 승인하시겠습니까?</DialogDescription>
+            <DialogTitle>{t('planApprovals.approveDialog.title')}</DialogTitle>
+            <DialogDescription>{t('planApprovals.approveDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {selectedPlan && (
               <div className="p-4 bg-muted rounded-lg space-y-2">
                 <p>
-                  <strong>연도:</strong> {selectedPlan.year}년
+                  <strong>{t('planApprovals.dialogLabels.year')}</strong>{' '}
+                  {t('planApprovals.yearUnit', { year: selectedPlan.year })}
                 </p>
                 <p>
-                  <strong>시험소:</strong> {SITE_LABELS[selectedPlan.siteId]}
+                  <strong>{t('planApprovals.dialogLabels.site')}</strong>{' '}
+                  {SITE_LABELS[selectedPlan.siteId]}
                 </p>
                 <p>
-                  <strong>작성자:</strong> {selectedPlan.createdBy}
+                  <strong>{t('planApprovals.dialogLabels.author')}</strong> {selectedPlan.createdBy}
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)}>
-              취소
+              {t('planApprovals.actions.cancel')}
             </Button>
             <Button onClick={handleApproveConfirm} disabled={approveMutation.isPending}>
-              승인
+              {t('planApprovals.actions.approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -292,18 +306,20 @@ export default function CalibrationPlanApprovalsContent() {
         onOpenChange={setIsRejectDialogOpen}
         onConfirm={handleRejectConfirm}
         isPending={rejectMutation.isPending}
-        title="교정계획서 반려"
+        title={t('planApprovals.rejectDialogTitle')}
       >
         {selectedPlan && (
           <div className="p-4 bg-muted rounded-lg space-y-2">
             <p>
-              <strong>연도:</strong> {selectedPlan.year}년
+              <strong>{t('planApprovals.dialogLabels.year')}</strong>{' '}
+              {t('planApprovals.yearUnit', { year: selectedPlan.year })}
             </p>
             <p>
-              <strong>시험소:</strong> {SITE_LABELS[selectedPlan.siteId]}
+              <strong>{t('planApprovals.dialogLabels.site')}</strong>{' '}
+              {SITE_LABELS[selectedPlan.siteId]}
             </p>
             <p>
-              <strong>작성자:</strong> {selectedPlan.createdBy}
+              <strong>{t('planApprovals.dialogLabels.author')}</strong> {selectedPlan.createdBy}
             </p>
           </div>
         )}

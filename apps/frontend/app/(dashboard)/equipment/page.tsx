@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { Button } from '@/components/ui/button';
 import {
   EquipmentListContent,
@@ -97,6 +98,7 @@ async function EquipmentListAsync({
   try {
     initialData = await equipmentApiServer.getEquipmentList(initialQuery);
   } catch (error) {
+    if (isRedirectError(error)) throw error;
     if (process.env.NODE_ENV === 'development') {
       console.error(
         '[Equipment Page] Server-side fetch 실패\n' +

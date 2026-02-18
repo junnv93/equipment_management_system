@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,12 +51,14 @@ export default function CalibrationApprovalsContent() {
   const _router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const t = useTranslations('approvals.calibrationApprovals');
+  const tActions = useTranslations('approvals.actions');
+  const tCommon = useTranslations('common.actions');
   const [selectedRequest, setSelectedRequest] = useState<CalibrationRequest | null>(null);
   const [comment, setComment] = useState('');
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
-  // 승인 대기 교정 목록 조회
   const { data: requests, isLoading } = useQuery({
     queryKey: queryKeys.calibrations.pending(),
     queryFn: async () => {
@@ -63,7 +66,6 @@ export default function CalibrationApprovalsContent() {
     },
   });
 
-  // 승인 뮤테이션
   const approveMutation = useMutation({
     mutationFn: async ({
       id,
@@ -78,22 +80,21 @@ export default function CalibrationApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '승인 완료',
-        description: '교정 기록이 승인되었습니다.',
+        title: t('toasts.approveSuccess'),
+        description: t('toasts.approveSuccessDesc'),
       });
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedRequest(null);
     },
     onError: (error: unknown) => {
-      const errorMessage = getErrorMessage(error, '교정 승인 중 오류가 발생했습니다.');
+      const errorMessage = getErrorMessage(error, t('toasts.approveError'));
       toast({
-        title: '승인 실패',
+        title: t('toasts.approveError'),
         description: errorMessage,
         variant: 'destructive',
       });
-      // ✅ 409 Conflict 시 자동 새로고침
-      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+      if (errorMessage.includes('VERSION_CONFLICT')) {
         queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
       }
     },
@@ -103,7 +104,6 @@ export default function CalibrationApprovalsContent() {
     },
   });
 
-  // 반려 뮤테이션
   const rejectMutation = useMutation({
     mutationFn: async ({
       id,
@@ -118,21 +118,20 @@ export default function CalibrationApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '반려 완료',
-        description: '교정 기록이 반려되었습니다.',
+        title: t('toasts.rejectSuccess'),
+        description: t('toasts.rejectSuccessDesc'),
       });
       setIsRejectDialogOpen(false);
       setSelectedRequest(null);
     },
     onError: (error: unknown) => {
-      const errorMessage = getErrorMessage(error, '교정 반려 중 오류가 발생했습니다.');
+      const errorMessage = getErrorMessage(error, t('toasts.rejectError'));
       toast({
-        title: '반려 실패',
+        title: t('toasts.rejectError'),
         description: errorMessage,
         variant: 'destructive',
       });
-      // ✅ 409 Conflict 시 자동 새로고침
-      if (errorMessage.includes('다른 사용자가') || errorMessage.includes('VERSION_CONFLICT')) {
+      if (errorMessage.includes('VERSION_CONFLICT')) {
         queryClient.invalidateQueries({ queryKey: queryKeys.calibrations.pending() });
       }
     },
@@ -178,20 +177,20 @@ export default function CalibrationApprovalsContent() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">교정 승인 관리</h1>
-        <p className="text-muted-foreground">시험실무자가 등록한 교정 기록을 검토하고 승인합니다</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('description')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>승인 대기 목록</CardTitle>
+          <CardTitle>{t('listTitle')}</CardTitle>
           <CardDescription>
-            총 {pendingRequests.length}개의 승인 대기 요청이 있습니다
+            {t('listDescription', { count: pendingRequests.length })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {pendingRequests.length === 0 ? (
-            <ApprovalEmptyState message="승인 대기 중인 교정 요청이 없습니다" />
+            <ApprovalEmptyState message={t('emptyState')} />
           ) : (
             <div className="space-y-4">
               {pendingRequests.map((request) => (
@@ -207,7 +206,7 @@ export default function CalibrationApprovalsContent() {
                           >
                             {request.approvalStatus
                               ? STATUS_LABELS[request.approvalStatus]
-                              : '상태 없음'}
+                              : t('noStatus')}
                           </Badge>
                           <Badge
                             className={
@@ -215,10 +214,10 @@ export default function CalibrationApprovalsContent() {
                               'bg-gray-100 text-gray-800'
                             }
                           >
-                            {request.result ? getResultLabel(request.result) : '미입력'}
+                            {request.result ? getResultLabel(request.result) : t('noResult')}
                           </Badge>
                           <span className="text-sm font-medium">
-                            장비 ID: {request.equipmentId}
+                            {t('fields.equipmentId')}: {request.equipmentId}
                           </span>
                         </div>
 
@@ -226,7 +225,7 @@ export default function CalibrationApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">교정일</p>
+                              <p className="text-muted-foreground">{t('fields.calibrationDate')}</p>
                               <p className="font-medium">
                                 {format(new Date(request.calibrationDate), 'yyyy-MM-dd')}
                               </p>
@@ -235,7 +234,9 @@ export default function CalibrationApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">다음 교정일</p>
+                              <p className="text-muted-foreground">
+                                {t('fields.nextCalibrationDate')}
+                              </p>
                               <p className="font-medium">
                                 {format(new Date(request.nextCalibrationDate), 'yyyy-MM-dd')}
                               </p>
@@ -244,18 +245,22 @@ export default function CalibrationApprovalsContent() {
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">교정 기관</p>
+                              <p className="text-muted-foreground">
+                                {t('fields.calibrationAgency')}
+                              </p>
                               <p className="font-medium">{request.calibrationAgency}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-muted-foreground">등록자</p>
+                              <p className="text-muted-foreground">{t('fields.registrant')}</p>
                               <p className="font-medium">
-                                {request.registeredByRole === 'test_engineer'
-                                  ? '시험실무자'
-                                  : '기술책임자'}
+                                {t(
+                                  `fields.roles.${request.registeredByRole}` as
+                                    | 'fields.roles.test_engineer'
+                                    | 'fields.roles.technical_manager'
+                                )}
                               </p>
                             </div>
                           </div>
@@ -263,7 +268,9 @@ export default function CalibrationApprovalsContent() {
 
                         {request.intermediateCheckDate && (
                           <div className="text-sm">
-                            <span className="text-muted-foreground">중간점검일: </span>
+                            <span className="text-muted-foreground">
+                              {t('fields.intermediateCheckDate')}{' '}
+                            </span>
                             <span className="font-medium">
                               {format(new Date(request.intermediateCheckDate), 'yyyy-MM-dd')}
                             </span>
@@ -272,13 +279,14 @@ export default function CalibrationApprovalsContent() {
 
                         {request.notes && (
                           <div className="mt-4 p-4 bg-muted rounded-lg">
-                            <p className="text-sm font-medium mb-2">비고:</p>
+                            <p className="text-sm font-medium mb-2">{t('fields.notes')}</p>
                             <p className="text-sm">{request.notes}</p>
                           </div>
                         )}
 
                         <div className="text-xs text-muted-foreground">
-                          등록일: {format(new Date(request.createdAt), 'yyyy-MM-dd HH:mm')}
+                          {t('fields.registeredDate')}:{' '}
+                          {format(new Date(request.createdAt), 'yyyy-MM-dd HH:mm')}
                         </div>
                       </div>
 
@@ -289,7 +297,7 @@ export default function CalibrationApprovalsContent() {
                           disabled={approveMutation.isPending}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          승인
+                          {tActions('approve')}
                         </Button>
                         <Button
                           size="sm"
@@ -298,7 +306,7 @@ export default function CalibrationApprovalsContent() {
                           disabled={rejectMutation.isPending}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
-                          반려
+                          {tActions('reject')}
                         </Button>
                       </div>
                     </div>
@@ -310,19 +318,18 @@ export default function CalibrationApprovalsContent() {
         </CardContent>
       </Card>
 
-      {/* 승인 다이얼로그 */}
       <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>교정 승인</DialogTitle>
-            <DialogDescription>교정 기록을 승인합니다. 코멘트는 선택사항입니다.</DialogDescription>
+            <DialogTitle>{t('approveDialog.title')}</DialogTitle>
+            <DialogDescription>{t('approveDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="comment">검토 코멘트 (선택)</Label>
+              <Label htmlFor="comment">{t('approveDialog.commentLabel')}</Label>
               <Textarea
                 id="comment"
-                placeholder="검토 코멘트를 입력하세요 (선택사항)"
+                placeholder={t('approveDialog.commentPlaceholder')}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 className="min-h-[100px]"
@@ -337,10 +344,10 @@ export default function CalibrationApprovalsContent() {
                 setComment('');
               }}
             >
-              취소
+              {tCommon('cancel')}
             </Button>
             <Button onClick={handleApproveConfirm} disabled={approveMutation.isPending}>
-              승인
+              {tActions('approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -351,7 +358,7 @@ export default function CalibrationApprovalsContent() {
         onOpenChange={setIsRejectDialogOpen}
         onConfirm={handleRejectConfirm}
         isPending={rejectMutation.isPending}
-        title="교정 반려"
+        title={t('rejectTitle')}
       />
     </div>
   );

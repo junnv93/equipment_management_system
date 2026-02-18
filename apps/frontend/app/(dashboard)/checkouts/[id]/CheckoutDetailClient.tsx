@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
@@ -46,12 +47,11 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import checkoutApi, { Checkout, ConditionCheck } from '@/lib/api/checkout-api';
 import {
-  CHECKOUT_PURPOSE_LABELS,
-  CONDITION_CHECK_STEP_LABELS,
-  CONDITION_STATUS_LABELS,
-  ACCESSORIES_STATUS_LABELS,
-  CheckoutStatus,
-} from '@equipment-management/schemas';
+  CHECKOUT_DETAIL_TOKENS,
+  CHECKOUT_INTERACTION_TOKENS,
+  CONDITION_COMPARISON_TOKENS,
+} from '@/lib/design-tokens';
+import { CheckoutStatus } from '@equipment-management/schemas';
 import { CHECKOUT_PURPOSE_STYLES } from '@equipment-management/shared-constants';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
@@ -75,6 +75,7 @@ export default function CheckoutDetailClient({
   checkout: initialCheckout,
   conditionChecks,
 }: CheckoutDetailClientProps) {
+  const t = useTranslations('checkouts');
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
@@ -92,8 +93,8 @@ export default function CheckoutDetailClient({
   // 브레드크럼 동적 라벨 설정
   useEffect(() => {
     // 반출 정보를 사용해서 의미있는 라벨 생성
-    const purposeLabel = CHECKOUT_PURPOSE_LABELS[checkout.purpose];
-    const label = `${purposeLabel} 반출 - ${checkout.destination}`;
+    const purposeLabel = t(`purpose.${checkout.purpose}`);
+    const label = `${purposeLabel} - ${checkout.destination}`;
     setDynamicLabel(checkout.id, label);
 
     // 컴포넌트 언마운트 시 라벨 제거
@@ -125,8 +126,8 @@ export default function CheckoutDetailClient({
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
     invalidateKeys: CHECKOUT_APPROVAL_INVALIDATE_KEYS,
-    successMessage: '반출 요청이 승인되었습니다.',
-    errorMessage: (error) => getErrorMessage(error, '반출 승인 중 오류가 발생했습니다.'),
+    successMessage: t('toasts.approveSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.approveError')),
     onSuccessCallback: () => {
       router.refresh();
     },
@@ -145,8 +146,8 @@ export default function CheckoutDetailClient({
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
     invalidateKeys: CHECKOUT_APPROVAL_INVALIDATE_KEYS,
-    successMessage: '반출 요청이 반려되었습니다.',
-    errorMessage: (error) => getErrorMessage(error, '반출 반려 중 오류가 발생했습니다.'),
+    successMessage: t('toasts.rejectSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.rejectError')),
     onSuccessCallback: () => {
       setDialogState((prev) => ({ ...prev, reject: false }));
       router.refresh();
@@ -177,8 +178,8 @@ export default function CheckoutDetailClient({
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
     invalidateKeys: [queryKeys.checkouts.all],
-    successMessage: '장비 반출이 시작되었습니다.',
-    errorMessage: (error) => getErrorMessage(error, '반출을 시작할 수 없습니다.'),
+    successMessage: t('toasts.startSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.startError')),
     onSuccessCallback: () => {
       router.refresh();
     },
@@ -199,8 +200,8 @@ export default function CheckoutDetailClient({
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
     invalidateKeys: RETURN_APPROVAL_INVALIDATE_KEYS,
-    successMessage: '장비가 정상적으로 반입되었습니다.',
-    errorMessage: (error) => getErrorMessage(error, '반입 승인 중 오류가 발생했습니다.'),
+    successMessage: t('toasts.returnApproveSuccess'),
+    errorMessage: (error) => getErrorMessage(error, t('toasts.returnApproveError')),
     onSuccessCallback: () => {
       setDialogState((prev) => ({ ...prev, approveReturn: false }));
       router.refresh();
@@ -217,7 +218,7 @@ export default function CheckoutDetailClient({
         variant="outline"
         className={CHECKOUT_PURPOSE_STYLES[purpose as keyof typeof CHECKOUT_PURPOSE_STYLES] || ''}
       >
-        {CHECKOUT_PURPOSE_LABELS[purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] || purpose}
+        {t(`purpose.${purpose}`)}
       </Badge>
     );
   };
@@ -260,10 +261,10 @@ export default function CheckoutDetailClient({
           key="approve"
           onClick={handleApprove}
           disabled={approveMutation.isPending}
-          className="bg-green-600 hover:bg-green-700"
+          className={CHECKOUT_DETAIL_TOKENS.approveButton}
         >
           <CheckCircle2 className="mr-2 h-4 w-4" />
-          승인
+          {t('actions.approve')}
         </Button>,
         <Button
           key="reject"
@@ -272,7 +273,7 @@ export default function CheckoutDetailClient({
           disabled={rejectMutation.isPending}
         >
           <XCircle className="mr-2 h-4 w-4" />
-          반려
+          {t('actions.reject')}
         </Button>
       );
     }
@@ -286,7 +287,7 @@ export default function CheckoutDetailClient({
           disabled={startMutation.isPending}
         >
           <Package className="mr-2 h-4 w-4" />
-          반출 시작
+          {t('actions.startCheckout')}
         </Button>
       );
     }
@@ -297,7 +298,7 @@ export default function CheckoutDetailClient({
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
             <CheckCheck className="mr-2 h-4 w-4" />
-            반입 처리
+            {t('actions.processReturn')}
           </Link>
         </Button>
       );
@@ -314,7 +315,7 @@ export default function CheckoutDetailClient({
         <Button key="check" variant="outline" asChild>
           <Link href={`/checkouts/${checkout.id}/check`}>
             <FileText className="mr-2 h-4 w-4" />
-            상태 확인
+            {t('actions.conditionCheck')}
           </Link>
         </Button>
       );
@@ -326,7 +327,7 @@ export default function CheckoutDetailClient({
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
             <CheckCheck className="mr-2 h-4 w-4" />
-            반입 처리
+            {t('actions.processReturn')}
           </Link>
         </Button>
       );
@@ -339,10 +340,10 @@ export default function CheckoutDetailClient({
           key="approve-return"
           onClick={() => setDialogState((prev) => ({ ...prev, approveReturn: true }))}
           disabled={approveReturnMutation.isPending}
-          className="bg-green-600 hover:bg-green-700"
+          className={CHECKOUT_DETAIL_TOKENS.approveButton}
         >
           <CheckCircle2 className="mr-2 h-4 w-4" />
-          반입 승인
+          {t('actions.returnApprove')}
         </Button>
       );
     }
@@ -358,11 +359,11 @@ export default function CheckoutDetailClient({
           <Button variant="ghost" size="sm" className="mb-2" asChild>
             <Link href="/checkouts">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              목록으로
+              {t('actions.backToList')}
             </Link>
           </Button>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">반출 상세</h1>
+            <h1 className="text-2xl font-bold">{t('detail.title')}</h1>
             <CheckoutStatusBadge status={checkout.status} />
             {renderPurposeBadge(checkout.purpose)}
           </div>
@@ -375,16 +376,14 @@ export default function CheckoutDetailClient({
       {checkout.status === 'overdue' && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            반입 예정일이 초과되었습니다. 빠른 반입 처리가 필요합니다.
-          </AlertDescription>
+          <AlertDescription>{t('detail.overdueWarning')}</AlertDescription>
         </Alert>
       )}
 
       {/* 상태 진행 표시 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">진행 상태</CardTitle>
+          <CardTitle className="text-lg">{t('detail.progressStatus')}</CardTitle>
         </CardHeader>
         <CardContent>
           <CheckoutStatusStepper
@@ -399,19 +398,19 @@ export default function CheckoutDetailClient({
         {/* 반출 정보 */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">반출 정보</CardTitle>
+            <CardTitle className="text-lg">{t('detail.checkoutInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                반출지
+                {t('detail.destination')}
               </span>
               <span className="font-medium">{checkout.destination}</span>
             </div>
             {checkout.address && (
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">주소</span>
+                <span className="text-muted-foreground">{t('detail.address')}</span>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -430,14 +429,14 @@ export default function CheckoutDetailClient({
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground flex items-center gap-2">
                   <Phone className="h-4 w-4" />
-                  연락처
+                  {t('detail.contact')}
                 </span>
                 <span className="font-medium">{checkout.phoneNumber}</span>
               </div>
             )}
             <Separator />
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">반출 사유</span>
+              <span className="text-muted-foreground">{t('detail.reason')}</span>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -457,13 +456,13 @@ export default function CheckoutDetailClient({
         {/* 일정 정보 */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">일정 정보</CardTitle>
+            <CardTitle className="text-lg">{t('detail.scheduleInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                신청일
+                {t('detail.requestDate')}
               </span>
               <span className="font-medium">
                 {format(new Date(checkout.createdAt), 'yyyy년 MM월 dd일', { locale: ko })}
@@ -471,7 +470,7 @@ export default function CheckoutDetailClient({
             </div>
             {checkout.checkoutDate && (
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">반출일</span>
+                <span className="text-muted-foreground">{t('detail.checkoutDate')}</span>
                 <span className="font-medium">
                   {format(new Date(checkout.checkoutDate), 'yyyy년 MM월 dd일', { locale: ko })}
                 </span>
@@ -480,7 +479,7 @@ export default function CheckoutDetailClient({
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                반입 예정일
+                {t('detail.expectedReturn')}
               </span>
               <span className="font-medium">
                 {format(new Date(checkout.expectedReturnDate), 'yyyy년 MM월 dd일', { locale: ko })}
@@ -488,7 +487,7 @@ export default function CheckoutDetailClient({
             </div>
             {checkout.actualReturnDate && (
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">실제 반입일</span>
+                <span className="text-muted-foreground">{t('detail.actualReturn')}</span>
                 <span className="font-medium">
                   {format(new Date(checkout.actualReturnDate), 'yyyy년 MM월 dd일', { locale: ko })}
                 </span>
@@ -501,7 +500,7 @@ export default function CheckoutDetailClient({
       {/* 신청자/승인자 정보 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">담당자 정보</CardTitle>
+          <CardTitle className="text-lg">{t('detail.staffInfo')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2">
@@ -510,8 +509,8 @@ export default function CheckoutDetailClient({
                 <User className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">신청자</p>
-                <p className="font-medium">{checkout.user?.name || '알 수 없음'}</p>
+                <p className="text-sm text-muted-foreground">{t('detail.requestedBy')}</p>
+                <p className="font-medium">{checkout.user?.name || t('detail.unknownUser')}</p>
               </div>
             </div>
             {checkout.approvedBy && (
@@ -520,7 +519,7 @@ export default function CheckoutDetailClient({
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">승인자</p>
+                  <p className="text-sm text-muted-foreground">{t('detail.approver')}</p>
                   <p className="font-medium">{checkout.approvedBy.name}</p>
                 </div>
               </div>
@@ -532,8 +531,8 @@ export default function CheckoutDetailClient({
       {/* 장비 목록 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">반출 장비</CardTitle>
-          <CardDescription>이 반출에 포함된 장비 목록입니다.</CardDescription>
+          <CardTitle className="text-lg">{t('detail.equipmentList')}</CardTitle>
+          <CardDescription>{t('detail.equipmentListDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           {checkout.equipment && checkout.equipment.length > 0 ? (
@@ -541,7 +540,7 @@ export default function CheckoutDetailClient({
               {checkout.equipment.map((equip) => (
                 <div
                   key={equip.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className={`flex items-center justify-between p-4 ${CHECKOUT_INTERACTION_TOKENS.equipmentItem}`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="p-2 bg-muted rounded">
@@ -559,7 +558,7 @@ export default function CheckoutDetailClient({
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-center py-4">장비 정보가 없습니다.</p>
+            <p className="text-muted-foreground text-center py-4">{t('detail.noEquipment')}</p>
           )}
         </CardContent>
       </Card>
@@ -568,51 +567,53 @@ export default function CheckoutDetailClient({
       {checkout.purpose === 'rental' && conditionChecks.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">상태 확인 이력</CardTitle>
-            <CardDescription>대여 목적 양측 4단계 확인 기록입니다.</CardDescription>
+            <CardTitle className="text-lg">{t('detail.conditionHistory')}</CardTitle>
+            <CardDescription>{t('detail.conditionHistoryDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {conditionChecks.map((check) => (
                 <div key={check.id} className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary">
-                      {CONDITION_CHECK_STEP_LABELS[check.step] || check.step}
-                    </Badge>
+                    <Badge variant="secondary">{t(`condition.stepLabels.${check.step}`)}</Badge>
                     <span className="text-sm text-muted-foreground">
                       {format(new Date(check.checkedAt), 'yyyy-MM-dd HH:mm', { locale: ko })}
                     </span>
                   </div>
                   <div className="grid gap-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">외관 상태</span>
+                      <span className="text-muted-foreground">{t('detail.appearanceStatus')}</span>
                       <Badge
                         variant={check.appearanceStatus === 'normal' ? 'default' : 'destructive'}
                       >
-                        {CONDITION_STATUS_LABELS[check.appearanceStatus]}
+                        {t(`condition.conditionStatus.${check.appearanceStatus}`)}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">작동 상태</span>
+                      <span className="text-muted-foreground">{t('detail.operationStatus')}</span>
                       <Badge
                         variant={check.operationStatus === 'normal' ? 'default' : 'destructive'}
                       >
-                        {CONDITION_STATUS_LABELS[check.operationStatus]}
+                        {t(`condition.conditionStatus.${check.operationStatus}`)}
                       </Badge>
                     </div>
                     {check.accessoriesStatus && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">부속품 상태</span>
+                        <span className="text-muted-foreground">
+                          {t('detail.accessoriesStatus')}
+                        </span>
                         <Badge
                           variant={check.accessoriesStatus === 'complete' ? 'default' : 'secondary'}
                         >
-                          {ACCESSORIES_STATUS_LABELS[check.accessoriesStatus]}
+                          {t(`condition.accessoriesStatusLabels.${check.accessoriesStatus}`)}
                         </Badge>
                       </div>
                     )}
                     {check.abnormalDetails && (
-                      <div className="mt-2 p-2 bg-red-50 rounded text-red-800 text-sm">
-                        <strong>이상 내용:</strong> {check.abnormalDetails}
+                      <div
+                        className={`mt-2 p-2 rounded text-sm ${CHECKOUT_DETAIL_TOKENS.abnormalContent} ${CONDITION_COMPARISON_TOKENS.abnormalText}`}
+                      >
+                        <strong>{t('detail.abnormalContent')}</strong> {check.abnormalDetails}
                       </div>
                     )}
                   </div>
@@ -632,7 +633,7 @@ export default function CheckoutDetailClient({
       {['returned', 'return_approved'].includes(checkout.status) && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">반입 검사 결과</CardTitle>
+            <CardTitle className="text-lg">{t('detail.returnInspection')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
@@ -643,7 +644,7 @@ export default function CheckoutDetailClient({
                   ) : (
                     <XCircle className="h-5 w-5 text-red-600" />
                   )}
-                  <span>교정 확인</span>
+                  <span>{t('detail.calibrationCheck')}</span>
                 </div>
               )}
               {checkout.purpose === 'repair' && (
@@ -653,7 +654,7 @@ export default function CheckoutDetailClient({
                   ) : (
                     <XCircle className="h-5 w-5 text-red-600" />
                   )}
-                  <span>수리 확인</span>
+                  <span>{t('detail.repairCheck')}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
@@ -662,12 +663,12 @@ export default function CheckoutDetailClient({
                 ) : (
                   <XCircle className="h-5 w-5 text-red-600" />
                 )}
-                <span>작동 여부 확인</span>
+                <span>{t('detail.operationCheck')}</span>
               </div>
             </div>
             {checkout.inspectionNotes && (
               <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">검사 비고</p>
+                <p className="text-sm text-muted-foreground">{t('detail.inspectionNotes')}</p>
                 <p className="mt-1">{checkout.inspectionNotes}</p>
               </div>
             )}
@@ -677,9 +678,11 @@ export default function CheckoutDetailClient({
 
       {/* 반려 사유 */}
       {checkout.status === 'rejected' && checkout.rejectionReason && (
-        <Card className="border-red-200">
+        <Card className={CHECKOUT_DETAIL_TOKENS.rejectionCard}>
           <CardHeader>
-            <CardTitle className="text-lg text-red-800">반려 사유</CardTitle>
+            <CardTitle className={`text-lg ${CHECKOUT_DETAIL_TOKENS.rejectionTitle}`}>
+              {t('detail.rejectionReason')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p>{checkout.rejectionReason}</p>
@@ -694,11 +697,8 @@ export default function CheckoutDetailClient({
       >
         <DialogContent className="max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>반출 시작</DialogTitle>
-            <DialogDescription>
-              반출을 시작하시겠습니까? 장비 상태가 &apos;반출 중&apos;으로 변경됩니다. 각 장비의
-              반출 전 상태를 기록해주세요.
-            </DialogDescription>
+            <DialogTitle>{t('dialogs.startTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs.startDescription')}</DialogDescription>
           </DialogHeader>
           {checkout.equipment && checkout.equipment.length > 0 && (
             <div className="space-y-3 max-h-[300px] overflow-y-auto">
@@ -708,7 +708,7 @@ export default function CheckoutDetailClient({
                     {equip.name} ({equip.managementNumber})
                   </Label>
                   <Textarea
-                    placeholder="반출 전 상태 (예: 외관 양호, 정상 작동)"
+                    placeholder={t('dialogs.startConditionPlaceholder')}
                     value={itemConditionsBefore[equip.id] || ''}
                     onChange={(e) =>
                       setItemConditionsBefore((prev) => ({
@@ -727,10 +727,10 @@ export default function CheckoutDetailClient({
               variant="outline"
               onClick={() => setDialogState((prev) => ({ ...prev, start: false }))}
             >
-              취소
+              {t('actions.cancel')}
             </Button>
             <Button onClick={handleStart} disabled={startMutation.isPending}>
-              {startMutation.isPending ? '처리 중...' : '확인'}
+              {startMutation.isPending ? t('actions.processing') : t('actions.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -743,20 +743,18 @@ export default function CheckoutDetailClient({
       >
         <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>반입 승인</DialogTitle>
-            <DialogDescription>
-              반입을 승인하시겠습니까? 장비 상태가 &apos;사용 가능&apos;으로 복원됩니다.
-            </DialogDescription>
+            <DialogTitle>{t('dialogs.returnApproveTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs.returnApproveDescription')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setDialogState((prev) => ({ ...prev, approveReturn: false }))}
             >
-              취소
+              {t('actions.cancel')}
             </Button>
             <Button onClick={handleApproveReturn} disabled={approveReturnMutation.isPending}>
-              {approveReturnMutation.isPending ? '처리 중...' : '확인'}
+              {approveReturnMutation.isPending ? t('actions.processing') : t('actions.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -777,15 +775,15 @@ export default function CheckoutDetailClient({
           }}
         >
           <DialogHeader>
-            <DialogTitle>반출 반려</DialogTitle>
-            <DialogDescription>반출 요청을 반려합니다. 반려 사유를 입력해주세요.</DialogDescription>
+            <DialogTitle>{t('dialogs.rejectTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogs.rejectDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="rejectReason">반려 사유</Label>
+              <Label htmlFor="rejectReason">{t('dialogs.rejectReasonLabel')}</Label>
               <Textarea
                 id="rejectReason"
-                placeholder="반려 사유를 입력해주세요"
+                placeholder={t('dialogs.rejectReasonPlaceholder')}
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 rows={4}
@@ -799,14 +797,14 @@ export default function CheckoutDetailClient({
               variant="outline"
               onClick={() => setDialogState((prev) => ({ ...prev, reject: false }))}
             >
-              취소
+              {t('actions.cancel')}
             </Button>
             <Button
               variant="destructive"
               onClick={handleReject}
               disabled={!rejectReason.trim() || rejectMutation.isPending}
             >
-              {rejectMutation.isPending ? '처리 중...' : '반려'}
+              {rejectMutation.isPending ? t('actions.processing') : t('actions.reject')}
             </Button>
           </DialogFooter>
         </DialogContent>

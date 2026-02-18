@@ -24,6 +24,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
@@ -32,10 +33,14 @@ import {
   DEFAULT_DISPLAY_PREFERENCES,
   type DisplayPreferences,
 } from '@equipment-management/schemas';
+import { setLocaleCookie } from '@/lib/i18n/locale-cookie';
+import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 
 export default function DisplayPreferencesContent() {
+  const t = useTranslations('settings');
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: preferences, isLoading } = useQuery<DisplayPreferences>({
     queryKey: queryKeys.settings.preferences(),
@@ -48,9 +53,9 @@ export default function DisplayPreferencesContent() {
     defaultValues: DEFAULT_DISPLAY_PREFERENCES,
   });
 
-  // Sync form when server data arrives
+  // Sync form when server data arrives (isDirty 가드: 사용자 변경 중 리셋 방지)
   useEffect(() => {
-    if (preferences) {
+    if (preferences && !form.formState.isDirty) {
       form.reset({ ...DEFAULT_DISPLAY_PREFERENCES, ...preferences });
     }
   }, [preferences, form]);
@@ -58,11 +63,16 @@ export default function DisplayPreferencesContent() {
   const mutation = useMutation({
     mutationFn: (data: DisplayPreferences) =>
       apiClient.patch(API_ENDPOINTS.USERS.PREFERENCES, data),
-    onSuccess: () => {
-      toast.success('표시 설정이 저장되었습니다.');
+    onSuccess: (_, variables) => {
+      toast.success(t('toasts.saveSuccess'));
+      // 로케일 변경 시 쿠키 동기화 → 페이지 재렌더로 i18n 적용
+      if (variables.locale) {
+        setLocaleCookie(variables.locale);
+        router.refresh();
+      }
     },
     onError: () => {
-      toast.error('설정 저장에 실패했습니다.');
+      toast.error(t('toasts.saveError'));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.preferences() });
@@ -93,37 +103,62 @@ export default function DisplayPreferencesContent() {
             <Monitor className="h-6 w-6 text-primary" aria-hidden="true" />
           </div>
           <div className="flex-1">
-            <CardTitle className="text-xl mb-1.5">표시 설정</CardTitle>
-            <CardDescription>
-              목록 페이지의 기본 표시 옵션을 사용자화할 수 있습니다.
-            </CardDescription>
+            <CardTitle className="text-xl mb-1.5">{t('display.title')}</CardTitle>
+            <CardDescription>{t('display.description')}</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-8">
+            {/* Language / Locale */}
+            <FormField
+              control={form.control}
+              name="locale"
+              render={({ field }) => (
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-base font-semibold">{t('display.language')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="ko">한국어</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription className="text-xs leading-relaxed">
+                    {t('display.languageDescription')}
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
             {/* Items Per Page */}
             <FormField
               control={form.control}
               name="itemsPerPage"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel className="text-base font-semibold">페이지당 항목 수</FormLabel>
+                  <FormLabel className="text-base font-semibold">
+                    {t('display.itemsPerPage')}
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="10">10개</SelectItem>
-                      <SelectItem value="20">20개 (권장)</SelectItem>
-                      <SelectItem value="50">50개</SelectItem>
+                      <SelectItem value="10">{t('display.itemsPerPageOptions.10')}</SelectItem>
+                      <SelectItem value="20">{t('display.itemsPerPageOptions.20')}</SelectItem>
+                      <SelectItem value="50">{t('display.itemsPerPageOptions.50')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription className="text-xs leading-relaxed">
-                    목록 페이지에서 기본으로 표시할 항목 수를 설정합니다.
+                    {t('display.itemsPerPageDescription')}
                   </FormDescription>
                 </FormItem>
               )}
@@ -135,26 +170,32 @@ export default function DisplayPreferencesContent() {
               name="dateFormat"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel className="text-base font-semibold">날짜 형식</FormLabel>
+                  <FormLabel className="text-base font-semibold">
+                    {t('display.dateFormat')}
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="YYYY-MM-DD">
                         <span className="font-mono">2026-02-15</span>
-                        <span className="ml-2 text-xs text-muted-foreground">(ISO 표준)</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({t('display.dateFormatOptions.iso')})
+                        </span>
                       </SelectItem>
                       <SelectItem value="YYYY.MM.DD">
                         <span className="font-mono">2026.02.15</span>
-                        <span className="ml-2 text-xs text-muted-foreground">(한국 관습)</span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({t('display.dateFormatOptions.korean')})
+                        </span>
                       </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription className="text-xs leading-relaxed">
-                    시스템 전체에서 날짜가 표시되는 기본 형식을 선택합니다.
+                    {t('display.dateFormatDescription')}
                   </FormDescription>
                 </FormItem>
               )}
@@ -166,21 +207,25 @@ export default function DisplayPreferencesContent() {
               name="defaultEquipmentSort"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel className="text-base font-semibold">장비 기본 정렬</FormLabel>
+                  <FormLabel className="text-base font-semibold">
+                    {t('display.equipmentSort')}
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="managementNumber">관리번호 순</SelectItem>
-                      <SelectItem value="name">장비명 순</SelectItem>
-                      <SelectItem value="updatedAt">최근 수정일 순</SelectItem>
+                      <SelectItem value="managementNumber">
+                        {t('sortOptions.managementNumber')}
+                      </SelectItem>
+                      <SelectItem value="name">{t('sortOptions.name')}</SelectItem>
+                      <SelectItem value="updatedAt">{t('sortOptions.updatedAt')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription className="text-xs leading-relaxed">
-                    장비 목록 페이지에 처음 진입할 때 적용되는 정렬 기준입니다.
+                    {t('display.equipmentSortDescription')}
                   </FormDescription>
                 </FormItem>
               )}
@@ -195,11 +240,10 @@ export default function DisplayPreferencesContent() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1.5 flex-1">
                       <FormLabel className="text-base font-semibold cursor-pointer">
-                        폐기/비활성 장비 표시
+                        {t('display.showRetiredEquipment')}
                       </FormLabel>
                       <FormDescription className="text-xs leading-relaxed">
-                        장비 목록에서 폐기 및 비활성 상태의 장비를 기본으로 표시합니다. 활성화하면
-                        전체 장비 이력을 확인할 수 있습니다.
+                        {t('display.showRetiredDescription')}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -216,23 +260,21 @@ export default function DisplayPreferencesContent() {
 
             {/* Submit Button */}
             <div className="flex items-center justify-between pt-4 border-t border-border/50">
-              <p className="text-xs text-muted-foreground">
-                설정은 즉시 적용되며 모든 목록 페이지에 반영됩니다
-              </p>
+              <p className="text-xs text-muted-foreground">{t('display.saveNote')}</p>
               <Button
                 type="submit"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || !form.formState.isDirty}
                 className="min-w-[120px] motion-safe:transition-all motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
               >
                 {mutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-                    저장 중…
+                    {t('common.saving')}
                   </>
                 ) : (
                   <>
                     <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                    저장
+                    {t('common.save')}
                   </>
                 )}
               </Button>

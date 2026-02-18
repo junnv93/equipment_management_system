@@ -24,13 +24,20 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi, { CreateCalibrationDto, Calibration } from '@/lib/api/calibration-api';
 import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
 import type { UserRole } from '@equipment-management/schemas';
+import {
+  getEquipmentSelectionClasses,
+  CALIBRATION_SELECTION,
+  CALIBRATION_EMPTY_STATE,
+} from '@/lib/design-tokens';
 
 export function CalibrationRegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const { toast } = useToast();
+  const t = useTranslations('calibration');
 
   // URL 파라미터에서 equipmentId 추출
   const equipmentIdFromUrl = searchParams.get('equipmentId');
@@ -181,8 +188,8 @@ export function CalibrationRegisterContent() {
       queryKeys.calibrations.overdue(),
       queryKeys.calibrations.upcoming(),
     ],
-    successMessage: '교정 정보가 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
-    errorMessage: '교정 정보 등록 중 오류가 발생했습니다.',
+    successMessage: t('toasts.registerSuccess'),
+    errorMessage: t('toasts.registerError'),
     onSuccessCallback: () => router.push('/calibration'),
   });
 
@@ -192,8 +199,8 @@ export function CalibrationRegisterContent() {
 
     if (!session?.user?.id) {
       toast({
-        title: '세션 오류',
-        description: '로그인 정보를 확인할 수 없습니다. 다시 로그인해주세요.',
+        title: t('register.toasts.sessionError'),
+        description: t('register.toasts.sessionErrorDesc'),
         variant: 'destructive',
       });
       return;
@@ -201,8 +208,8 @@ export function CalibrationRegisterContent() {
 
     if (!selectedEquipmentId) {
       toast({
-        title: '장비를 선택해주세요',
-        description: '교정 정보를 등록할 장비를 선택해주세요.',
+        title: t('register.toasts.selectEquipment'),
+        description: t('register.toasts.selectEquipmentDesc'),
         variant: 'destructive',
       });
       return;
@@ -230,7 +237,7 @@ export function CalibrationRegisterContent() {
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold ml-2">교정 정보 등록</h1>
+        <h1 className="text-2xl font-bold ml-2">{t('register.title')}</h1>
       </div>
 
       {/* 권한 안내 */}
@@ -239,15 +246,16 @@ export function CalibrationRegisterContent() {
         <AlertDescription>
           {isUnauthorized ? (
             <>
-              <strong>교정 등록 권한 없음</strong>: UL-QP-18 절차서에 따라{' '}
-              <strong>시험실무자(test_engineer)만</strong> 교정 기록을 등록할 수 있습니다.
+              <strong>{t('register.unauthorized.title')}</strong>:{' '}
+              {t('register.unauthorized.description')}
               <br />
-              현재 역할: <strong>{userRole}</strong> — 교정 <strong>승인</strong>만 가능합니다.
+              {t('register.unauthorized.currentRole')}: <strong>{userRole}</strong> —{' '}
+              {t('register.unauthorized.approvalOnly')}
             </>
           ) : (
             <>
-              <strong>시험실무자</strong>로 로그인되어 있습니다. 등록한 교정 정보는{' '}
-              <strong>기술책임자의 승인</strong> 후 적용됩니다.
+              <strong>{t('register.authorized.role')}</strong>
+              {t('register.authorized.description')}
             </>
           )}
         </AlertDescription>
@@ -257,13 +265,13 @@ export function CalibrationRegisterContent() {
         {/* 장비 선택 패널 */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>장비 선택</CardTitle>
+            <CardTitle>{t('register.equipmentSelection.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="장비명, 관리번호 검색..."
+                placeholder={t('register.equipmentSelection.searchPlaceholder')}
                 className="pl-8"
                 value={searchTerm}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
@@ -273,37 +281,49 @@ export function CalibrationRegisterContent() {
             <div className="border rounded-md h-[350px] overflow-y-auto">
               {isLoading ? (
                 <div className="flex justify-center items-center h-full">
-                  <p>장비 목록을 불러오는 중...</p>
+                  <p>{t('register.equipmentSelection.loading')}</p>
                 </div>
               ) : isError ? (
-                <div className="flex justify-center items-center h-full text-red-500">
-                  <p>장비 목록을 불러오는 중 오류가 발생했습니다.</p>
+                <div className="flex justify-center items-center h-full text-destructive">
+                  <p>{t('register.equipmentSelection.error')}</p>
                 </div>
               ) : filteredEquipment.length === 0 ? (
                 <div className="flex justify-center items-center h-full">
-                  <p>검색 결과가 없습니다.</p>
+                  <p>{t('register.equipmentSelection.noResults')}</p>
                 </div>
               ) : (
-                <ul className="divide-y">
-                  {filteredEquipment.map((equipment: Equipment) => (
-                    <li
-                      key={equipment.id}
-                      className={`p-3 hover:bg-gray-100 cursor-pointer ${
-                        selectedEquipmentId === String(equipment.id)
-                          ? 'bg-blue-50 border-l-4 border-blue-500'
-                          : ''
-                      }`}
-                      onClick={() => setSelectedEquipmentId(String(equipment.id))}
-                    >
-                      <div className="font-medium">{equipment.name}</div>
-                      <div className="text-sm text-gray-500">
-                        관리번호: {equipment.managementNumber}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        현재 상태: {equipment.status === 'available' ? '사용 가능' : '사용 중'}
-                      </div>
-                    </li>
-                  ))}
+                <ul className="divide-y" role="listbox">
+                  {filteredEquipment.map((equipment: Equipment) => {
+                    const isSelected = selectedEquipmentId === String(equipment.id);
+                    return (
+                      <li
+                        key={equipment.id}
+                        className={getEquipmentSelectionClasses(isSelected)}
+                        onClick={() => setSelectedEquipmentId(String(equipment.id))}
+                        role="option"
+                        aria-selected={isSelected}
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedEquipmentId(String(equipment.id));
+                          }
+                        }}
+                      >
+                        <div className="font-medium">{equipment.name}</div>
+                        <div className={CALIBRATION_SELECTION.infoText}>
+                          {t('register.equipmentSelection.managementNumber')}:{' '}
+                          {equipment.managementNumber}
+                        </div>
+                        <div className={CALIBRATION_SELECTION.infoText}>
+                          {t('register.equipmentSelection.currentStatus')}:{' '}
+                          {equipment.status === 'available'
+                            ? t('register.equipmentSelection.statusAvailable')
+                            : t('register.equipmentSelection.statusInUse')}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -313,30 +333,32 @@ export function CalibrationRegisterContent() {
         {/* 교정 정보 등록 폼 */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>교정 정보 입력</CardTitle>
-            <CardDescription>
-              교정 정보를 입력하세요. 기술책임자의 승인 후 반영됩니다.
-            </CardDescription>
+            <CardTitle>{t('register.form.title')}</CardTitle>
+            <CardDescription>{t('register.form.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             {selectedEquipment ? (
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* 선택된 장비 정보 요약 */}
-                <div className="bg-gray-50 p-3 rounded-md mb-4">
-                  <h3 className="font-medium">선택된 장비: {selectedEquipment.name}</h3>
-                  <p className="text-sm">관리번호: {selectedEquipment.managementNumber}</p>
+                <div className="bg-muted p-3 rounded-md mb-4">
+                  <h3 className="font-medium">
+                    {t('register.form.selectedEquipment')}: {selectedEquipment.name}
+                  </h3>
                   <p className="text-sm">
-                    마지막 교정일:{' '}
+                    {t('register.form.managementNumber')}: {selectedEquipment.managementNumber}
+                  </p>
+                  <p className="text-sm">
+                    {t('register.form.lastCalibrationDate')}:{' '}
                     {selectedEquipment.lastCalibrationDate
                       ? format(new Date(selectedEquipment.lastCalibrationDate), 'yyyy-MM-dd')
-                      : '없음'}
+                      : t('register.form.noDate')}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* 교정일 */}
                   <div className="space-y-2">
-                    <Label htmlFor="calibrationDate">교정일</Label>
+                    <Label htmlFor="calibrationDate">{t('register.form.calibrationDate')}</Label>
                     <Input
                       id="calibrationDate"
                       name="calibrationDate"
@@ -349,27 +371,39 @@ export function CalibrationRegisterContent() {
 
                   {/* 교정 주기 */}
                   <div className="space-y-2">
-                    <Label htmlFor="calibrationCycle">교정 주기 (개월)</Label>
+                    <Label htmlFor="calibrationCycle">{t('register.form.calibrationCycle')}</Label>
                     <Select
                       value={formData.calibrationCycle.toString()}
                       onValueChange={handleCalibrationCycleChange}
                     >
                       <SelectTrigger id="calibrationCycle">
-                        <SelectValue placeholder="교정 주기 선택" />
+                        <SelectValue placeholder={t('register.form.calibrationCyclePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="3">3개월</SelectItem>
-                        <SelectItem value="6">6개월</SelectItem>
-                        <SelectItem value="12">12개월</SelectItem>
-                        <SelectItem value="24">24개월</SelectItem>
-                        <SelectItem value="36">36개월</SelectItem>
+                        <SelectItem value="3">
+                          {t('register.form.cycleMonths', { count: 3 })}
+                        </SelectItem>
+                        <SelectItem value="6">
+                          {t('register.form.cycleMonths', { count: 6 })}
+                        </SelectItem>
+                        <SelectItem value="12">
+                          {t('register.form.cycleMonths', { count: 12 })}
+                        </SelectItem>
+                        <SelectItem value="24">
+                          {t('register.form.cycleMonths', { count: 24 })}
+                        </SelectItem>
+                        <SelectItem value="36">
+                          {t('register.form.cycleMonths', { count: 36 })}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {/* 다음 교정일 */}
                   <div className="space-y-2">
-                    <Label htmlFor="nextCalibrationDate">다음 교정일</Label>
+                    <Label htmlFor="nextCalibrationDate">
+                      {t('register.form.nextCalibrationDate')}
+                    </Label>
                     <Input
                       id="nextCalibrationDate"
                       name="nextCalibrationDate"
@@ -382,7 +416,9 @@ export function CalibrationRegisterContent() {
 
                   {/* 중간점검일 */}
                   <div className="space-y-2">
-                    <Label htmlFor="intermediateCheckDate">중간점검일</Label>
+                    <Label htmlFor="intermediateCheckDate">
+                      {t('register.form.intermediateCheckDate')}
+                    </Label>
                     <Input
                       id="intermediateCheckDate"
                       name="intermediateCheckDate"
@@ -390,18 +426,20 @@ export function CalibrationRegisterContent() {
                       value={formData.intermediateCheckDate}
                       onChange={(e) => updateFormData('intermediateCheckDate', e.target.value)}
                     />
-                    <p className="text-xs text-gray-500">
-                      교정 주기의 중간 시점에 점검 알림이 발송됩니다.
+                    <p className="text-xs text-muted-foreground">
+                      {t('register.form.intermediateCheckHint')}
                     </p>
                   </div>
 
                   {/* 교정 기관 */}
                   <div className="space-y-2">
-                    <Label htmlFor="calibrationAgency">교정 기관</Label>
+                    <Label htmlFor="calibrationAgency">
+                      {t('register.form.calibrationAgency')}
+                    </Label>
                     <Input
                       id="calibrationAgency"
                       name="calibrationAgency"
-                      placeholder="교정을 수행한 기관 이름"
+                      placeholder={t('register.form.calibrationAgencyPlaceholder')}
                       value={formData.calibrationAgency}
                       onChange={(e) => updateFormData('calibrationAgency', e.target.value)}
                       required
@@ -410,18 +448,20 @@ export function CalibrationRegisterContent() {
 
                   {/* 교정 결과 */}
                   <div className="space-y-2">
-                    <Label htmlFor="result">교정 결과</Label>
+                    <Label htmlFor="result">{t('register.form.result')}</Label>
                     <Select
                       value={formData.result}
                       onValueChange={(value) => updateFormData('result', value)}
                     >
                       <SelectTrigger id="result">
-                        <SelectValue placeholder="교정 결과 선택" />
+                        <SelectValue placeholder={t('register.form.resultPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pass">적합</SelectItem>
-                        <SelectItem value="fail">부적합</SelectItem>
-                        <SelectItem value="conditional">조건부 적합</SelectItem>
+                        <SelectItem value="pass">{t('register.form.resultPass')}</SelectItem>
+                        <SelectItem value="fail">{t('register.form.resultFail')}</SelectItem>
+                        <SelectItem value="conditional">
+                          {t('register.form.resultConditional')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -429,11 +469,11 @@ export function CalibrationRegisterContent() {
 
                 {/* 비고 */}
                 <div className="space-y-2">
-                  <Label htmlFor="notes">비고</Label>
+                  <Label htmlFor="notes">{t('register.form.notes')}</Label>
                   <Textarea
                     id="notes"
                     name="notes"
-                    placeholder="교정 관련 추가 정보"
+                    placeholder={t('register.form.notesPlaceholder')}
                     value={formData.notes || ''}
                     onChange={(e) => updateFormData('notes', e.target.value)}
                   />
@@ -442,7 +482,7 @@ export function CalibrationRegisterContent() {
                 {/* 제출 버튼 */}
                 <div className="flex justify-end gap-2 mt-6">
                   <Button type="button" variant="outline" onClick={() => router.back()}>
-                    취소
+                    {t('register.actions.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -453,17 +493,17 @@ export function CalibrationRegisterContent() {
                     }
                   >
                     {registerCalibrationMutation.isPending
-                      ? '처리 중...'
-                      : '교정 정보 등록 (승인 요청)'}
+                      ? t('register.actions.processing')
+                      : t('register.actions.submit')}
                   </Button>
                 </div>
               </form>
             ) : (
               <div className="flex flex-col items-center justify-center h-[300px] text-center">
-                <p className="text-gray-500 mb-2">교정 정보를 등록할 장비를 선택해주세요.</p>
-                <p className="text-sm text-gray-400">
-                  좌측 패널에서 장비를 검색하고 선택할 수 있습니다.
+                <p className={`${CALIBRATION_EMPTY_STATE.description} mb-2`}>
+                  {t('register.emptyState.title')}
                 </p>
+                <p className="text-sm text-muted-foreground/70">{t('register.emptyState.hint')}</p>
               </div>
             )}
           </CardContent>

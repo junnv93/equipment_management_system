@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useCallback, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,10 +9,16 @@ import { Button } from '@/components/ui/button';
 import { ClipboardList, Clock, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
-import { CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
+import {
+  CHECKOUT_STATS_VARIANTS,
+  getCheckoutStatsClasses,
+  CHECKOUT_MOTION,
+} from '@/lib/design-tokens';
+import { CONTENT_TOKENS } from '@/lib/design-tokens';
 
 interface OutboundCheckoutsTabProps {
   teamId?: string;
@@ -42,6 +49,7 @@ export default function OutboundCheckoutsTab({
   onStatCardClick,
   onResetFilters,
 }: OutboundCheckoutsTabProps) {
+  const t = useTranslations('checkouts');
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -54,15 +62,14 @@ export default function OutboundCheckoutsTab({
   // 반출 목록 조회 (페이지네이션)
   // ──────────────────────────────────────────────
   const { data: checkoutsData, isLoading: checkoutsLoading } = useQuery({
-    queryKey: [
-      'checkouts',
-      'outbound',
+    queryKey: queryKeys.checkouts.list({
+      direction: 'outbound',
       statusFilter,
       locationFilter,
       searchTerm,
       teamId,
-      currentPage,
-    ],
+      page: currentPage,
+    }),
     queryFn: async () => {
       const query: CheckoutQuery = {
         page: currentPage,
@@ -120,11 +127,11 @@ export default function OutboundCheckoutsTab({
   const renderEmptyState = () => (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <ClipboardList className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
-      <h3 className="text-lg font-medium text-gray-900">반출 정보가 없습니다</h3>
-      <p className="text-sm text-gray-500 mt-2 mb-4">검색 조건에 맞는 정보가 없습니다.</p>
+      <h3 className="text-lg font-medium text-gray-900">{t('outbound.noData')}</h3>
+      <p className="text-sm text-gray-500 mt-2 mb-4">{t('outbound.noDataDesc')}</p>
       <div className="flex gap-2">
         <Button variant="outline" onClick={onResetFilters}>
-          필터 초기화
+          {t('actions.resetFilters')}
         </Button>
       </div>
     </div>
@@ -133,64 +140,93 @@ export default function OutboundCheckoutsTab({
   // ──────────────────────────────────────────────
   // 통계 카드
   // ──────────────────────────────────────────────
-  const renderStats = () => (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-      <Card
-        className={`cursor-pointer transition-colors hover:border-primary/50 ${statusFilter === 'all' && locationFilter === 'all' && !searchTerm ? 'border-primary bg-primary/5' : ''}`}
-        onClick={() => {
-          onResetFilters();
-        }}
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">전체 반출</CardTitle>
-          <ClipboardList className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.total}</div>
-        </CardContent>
-      </Card>
-      <Card
-        className={`cursor-pointer transition-colors hover:border-amber-400 ${statusFilter === 'pending' ? 'border-amber-400 bg-amber-50' : ''}`}
-        onClick={() => onStatCardClick('pending')}
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">승인 대기</CardTitle>
-          <Clock className="h-4 w-4 text-amber-600" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.pending}</div>
-        </CardContent>
-      </Card>
-      <Card
-        className={`cursor-pointer transition-colors hover:border-red-400 ${statusFilter === 'overdue' ? 'border-red-400 bg-red-50' : ''}`}
-        onClick={() => onStatCardClick('overdue')}
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">기한 초과</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.overdue}</div>
-        </CardContent>
-      </Card>
-      <Card
-        className={`cursor-pointer transition-colors hover:border-blue-400 ${statusFilter === 'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received' ? 'border-blue-400 bg-blue-50' : ''}`}
-        onClick={() =>
-          onStatCardClick(
-            'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received'
-          )
-        }
-      >
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium">오늘 반입 예정</CardTitle>
-          <Clock className="h-4 w-4 text-blue-600" aria-hidden="true" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold tabular-nums">{summary.returnedToday}</div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  const renderStats = () => {
+    const isAllActive = statusFilter === 'all' && locationFilter === 'all' && !searchTerm;
+    const isPendingActive = statusFilter === 'pending';
+    const isOverdueActive = statusFilter === 'overdue';
+    const isInProgressActive =
+      statusFilter ===
+      'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received';
+
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card
+          className={`${getCheckoutStatsClasses('total', isAllActive)} ${CHECKOUT_MOTION.statsCard}`}
+          onClick={() => {
+            onResetFilters();
+          }}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">{t('outbound.totalCheckouts')}</CardTitle>
+            <ClipboardList
+              className={`h-4 w-4 ${isAllActive ? CHECKOUT_STATS_VARIANTS.total.iconColor : 'text-muted-foreground'}`}
+              aria-hidden="true"
+            />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
+              {summary.total}
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className={`${getCheckoutStatsClasses('pending', isPendingActive)} ${CHECKOUT_MOTION.statsCard}`}
+          onClick={() => onStatCardClick('pending')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">{t('outbound.pendingApproval')}</CardTitle>
+            <Clock
+              className={`h-4 w-4 ${isPendingActive ? CHECKOUT_STATS_VARIANTS.pending.iconColor : 'text-amber-600'}`}
+              aria-hidden="true"
+            />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
+              {summary.pending}
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className={`${getCheckoutStatsClasses('overdue', isOverdueActive)} ${CHECKOUT_MOTION.statsCard}`}
+          onClick={() => onStatCardClick('overdue')}
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">{t('outbound.overdue')}</CardTitle>
+            <AlertTriangle
+              className={`h-4 w-4 ${isOverdueActive ? CHECKOUT_STATS_VARIANTS.overdue.iconColor : 'text-red-600'}`}
+              aria-hidden="true"
+            />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
+              {summary.overdue}
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className={`${getCheckoutStatsClasses('inProgress', isInProgressActive)} ${CHECKOUT_MOTION.statsCard}`}
+          onClick={() =>
+            onStatCardClick(
+              'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received'
+            )
+          }
+        >
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">{t('outbound.returnToday')}</CardTitle>
+            <Clock
+              className={`h-4 w-4 ${isInProgressActive ? CHECKOUT_STATS_VARIANTS.inProgress.iconColor : 'text-blue-600'}`}
+              aria-hidden="true"
+            />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
+              {summary.returnedToday}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   // ──────────────────────────────────────────────
   // Main render
@@ -224,7 +260,7 @@ export default function OutboundCheckoutsTab({
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1 || checkoutsLoading}
           >
-            이전
+            {t('actions.previous')}
           </Button>
           <span className="text-sm text-muted-foreground">
             {currentPage} / {checkoutsData.meta.pagination.totalPages}
@@ -237,7 +273,7 @@ export default function OutboundCheckoutsTab({
             }
             disabled={currentPage === checkoutsData.meta.pagination.totalPages || checkoutsLoading}
           >
-            다음
+            {t('actions.next')}
           </Button>
         </div>
       )}

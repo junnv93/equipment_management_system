@@ -34,13 +34,16 @@ import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { ArrowLeft, Save, AlertCircle, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
+import type { UserRole, Site } from '@equipment-management/schemas';
 
 export default function CreateCalibrationPlanContent() {
   const router = useRouter();
   const { toast } = useToast();
   const { data: session } = useSession();
+  const t = useTranslations('calibration');
   const currentYear = new Date().getFullYear();
   const nextYear = currentYear + 1;
 
@@ -62,12 +65,12 @@ export default function CreateCalibrationPlanContent() {
 
   // 역할 확인
   const userRole = session?.user?.role;
-  const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as any);
+  const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as UserRole);
 
   // 팀 목록 조회 (사이트 선택 시)
   const { data: teamsData } = useQuery({
     queryKey: queryKeys.teams.list({ site: selectedSite || undefined }),
-    queryFn: () => teamsApi.getTeams({ site: (selectedSite as any) || undefined, pageSize: 100 }),
+    queryFn: () => teamsApi.getTeams({ site: (selectedSite as Site) || undefined, pageSize: 100 }),
     enabled: !!selectedSite,
   });
 
@@ -94,15 +97,18 @@ export default function CreateCalibrationPlanContent() {
     mutationFn: calibrationPlansApi.createCalibrationPlan,
     onSuccess: (data) => {
       toast({
-        title: '계획서 생성 완료',
-        description: `${selectedYear}년 ${SITE_LABELS[selectedSite]} 교정계획서가 생성되었습니다.`,
+        title: t('planCreate.toasts.createSuccess'),
+        description: t('planCreate.toasts.createSuccessDesc', {
+          year: selectedYear,
+          site: SITE_LABELS[selectedSite],
+        }),
       });
       router.push(`/calibration-plans/${data.id}`);
     },
     onError: (error: unknown) => {
       toast({
-        title: '계획서 생성 실패',
-        description: getErrorMessage(error, '계획서 생성 중 오류가 발생했습니다.'),
+        title: t('planCreate.toasts.createError'),
+        description: getErrorMessage(error, t('planCreate.toasts.createError')),
         variant: 'destructive',
       });
     },
@@ -111,8 +117,8 @@ export default function CreateCalibrationPlanContent() {
   const handleCreate = () => {
     if (!selectedYear || !selectedSite) {
       toast({
-        title: '필수 정보 누락',
-        description: '연도와 시험소를 선택해주세요.',
+        title: t('planCreate.toasts.missingInfo'),
+        description: t('planCreate.toasts.selectYearAndSite'),
         variant: 'destructive',
       });
       return;
@@ -121,8 +127,8 @@ export default function CreateCalibrationPlanContent() {
     // TM/TE는 teamId 필수
     if (isTeamRestricted && !selectedTeamId) {
       toast({
-        title: '필수 정보 누락',
-        description: '팀을 선택해주세요.',
+        title: t('planCreate.toasts.missingInfo'),
+        description: t('planCreate.toasts.selectTeam'),
         variant: 'destructive',
       });
       return;
@@ -147,58 +153,56 @@ export default function CreateCalibrationPlanContent() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">교정계획서 작성</h1>
-          <p className="text-muted-foreground">
-            새로운 연간 교정계획서를 작성합니다. 외부교정 대상 장비가 자동으로 로드됩니다.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('planCreate.title')}</h1>
+          <p className="text-muted-foreground">{t('planCreate.description')}</p>
         </div>
       </div>
 
       {/* 기본 정보 선택 */}
       <Card>
         <CardHeader>
-          <CardTitle>기본 정보</CardTitle>
-          <CardDescription>계획서의 연도와 시험소를 선택하세요</CardDescription>
+          <CardTitle>{t('planCreate.basicInfo.title')}</CardTitle>
+          <CardDescription>{t('planCreate.basicInfo.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="year">연도 *</Label>
+              <Label htmlFor="year">{t('planCreate.fields.year')} *</Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger id="year">
-                  <SelectValue placeholder="연도 선택" />
+                  <SelectValue placeholder={t('planCreate.fields.yearPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {yearOptions.map((year) => (
                     <SelectItem key={year} value={String(year)}>
-                      {year}년
+                      {t('planCreate.fields.yearUnit', { year })}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="site">시험소 *</Label>
+              <Label htmlFor="site">{t('planCreate.fields.site')} *</Label>
               <Select
                 value={selectedSite}
                 onValueChange={setSelectedSite}
                 disabled={!!isTeamRestricted && !!session?.user?.site}
               >
                 <SelectTrigger id="site">
-                  <SelectValue placeholder="시험소 선택" />
+                  <SelectValue placeholder={t('planCreate.fields.sitePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="suwon">수원</SelectItem>
-                  <SelectItem value="uiwang">의왕</SelectItem>
+                  <SelectItem value="suwon">{t('planCreate.fields.sites.suwon')}</SelectItem>
+                  <SelectItem value="uiwang">{t('planCreate.fields.sites.uiwang')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="team">
-                팀 {isTeamRestricted && '*'}
+                {t('planCreate.fields.team')} {isTeamRestricted && '*'}
                 {isTeamRestricted && (
                   <span className="text-xs text-muted-foreground ml-2">
-                    (기술책임자는 자기 팀만 선택 가능)
+                    {t('planCreate.fields.teamRestricted')}
                   </span>
                 )}
               </Label>
@@ -208,17 +212,20 @@ export default function CreateCalibrationPlanContent() {
                 disabled={!selectedSite || (!!isTeamRestricted && !!session?.user?.teamId)}
               >
                 <SelectTrigger id="team">
-                  <SelectValue placeholder="팀 선택">
+                  <SelectValue placeholder={t('planCreate.fields.teamPlaceholder')}>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
                       {selectedTeamId
-                        ? teams.find((t) => t.id === selectedTeamId)?.name || '팀 선택'
-                        : '팀 선택'}
+                        ? teams.find((tm) => tm.id === selectedTeamId)?.name ||
+                          t('planCreate.fields.teamPlaceholder')
+                        : t('planCreate.fields.teamPlaceholder')}
                     </div>
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {!isTeamRestricted && <SelectItem value="">전체 팀 (팀 없음)</SelectItem>}
+                  {!isTeamRestricted && (
+                    <SelectItem value="">{t('planCreate.fields.allTeams')}</SelectItem>
+                  )}
                   {teams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.name}
@@ -226,7 +233,7 @@ export default function CreateCalibrationPlanContent() {
                   ))}
                   {teams.length === 0 && (
                     <div className="p-2 text-sm text-muted-foreground">
-                      시험소를 먼저 선택하세요
+                      {t('planCreate.fields.selectSiteFirst')}
                     </div>
                   )}
                 </SelectContent>
@@ -240,10 +247,12 @@ export default function CreateCalibrationPlanContent() {
       {selectedYear && selectedSite && (
         <Card>
           <CardHeader>
-            <CardTitle>외부교정 대상 장비 (미리보기)</CardTitle>
+            <CardTitle>{t('planCreate.preview.title')}</CardTitle>
             <CardDescription>
-              {selectedYear}년 {SITE_LABELS[selectedSite]} 시험소의 외부교정 예정 장비 목록입니다.
-              계획서 생성 시 자동으로 포함됩니다.
+              {t('planCreate.preview.description', {
+                year: selectedYear,
+                site: SITE_LABELS[selectedSite],
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -256,27 +265,27 @@ export default function CreateCalibrationPlanContent() {
             ) : !equipment || equipment.length === 0 ? (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>장비 없음</AlertTitle>
+                <AlertTitle>{t('planCreate.preview.noEquipment.title')}</AlertTitle>
                 <AlertDescription>
-                  해당 연도에 교정 예정인 외부교정 대상 장비가 없습니다.
+                  {t('planCreate.preview.noEquipment.description')}
                 </AlertDescription>
               </Alert>
             ) : (
               <>
                 <div className="mb-4 text-sm text-muted-foreground">
-                  총 {equipment.length}개의 장비가 포함됩니다.
+                  {t('planCreate.preview.totalCount', { count: equipment.length })}
                 </div>
                 <div className="max-h-[400px] overflow-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>순번</TableHead>
-                        <TableHead>관리번호</TableHead>
-                        <TableHead>장비명</TableHead>
-                        <TableHead>최종교정일</TableHead>
-                        <TableHead>교정주기</TableHead>
-                        <TableHead>차기교정일</TableHead>
-                        <TableHead>교정기관</TableHead>
+                        <TableHead>{t('planCreate.preview.headers.sequence')}</TableHead>
+                        <TableHead>{t('planCreate.preview.headers.managementNumber')}</TableHead>
+                        <TableHead>{t('planCreate.preview.headers.equipmentName')}</TableHead>
+                        <TableHead>{t('planCreate.preview.headers.lastCalibrationDate')}</TableHead>
+                        <TableHead>{t('planCreate.preview.headers.calibrationCycle')}</TableHead>
+                        <TableHead>{t('planCreate.preview.headers.nextCalibrationDate')}</TableHead>
+                        <TableHead>{t('planCreate.preview.headers.calibrationAgency')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -291,7 +300,9 @@ export default function CreateCalibrationPlanContent() {
                               : '-'}
                           </TableCell>
                           <TableCell>
-                            {eq.calibrationCycle ? `${eq.calibrationCycle}개월` : '-'}
+                            {eq.calibrationCycle
+                              ? t('planCreate.preview.cycleMonths', { count: eq.calibrationCycle })
+                              : '-'}
                           </TableCell>
                           <TableCell>
                             {eq.nextCalibrationDate
@@ -313,18 +324,18 @@ export default function CreateCalibrationPlanContent() {
       {/* 액션 버튼 */}
       <div className="flex justify-end gap-4">
         <Button variant="outline" asChild>
-          <Link href="/calibration-plans">취소</Link>
+          <Link href="/calibration-plans">{t('planCreate.actions.cancel')}</Link>
         </Button>
         <Button
           onClick={handleCreate}
           disabled={!selectedYear || !selectedSite || createMutation.isPending}
         >
           {createMutation.isPending ? (
-            <>저장 중...</>
+            <>{t('planCreate.actions.saving')}</>
           ) : (
             <>
               <Save className="h-4 w-4 mr-2" />
-              계획서 생성
+              {t('planCreate.actions.create')}
             </>
           )}
         </Button>

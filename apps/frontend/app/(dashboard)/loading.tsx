@@ -16,12 +16,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
  */
 export default function DashboardLoading() {
   return (
-    <div
-      className="space-y-6 p-4 md:p-6"
-      aria-busy="true"
-      aria-live="polite"
-      role="status"
-    >
+    <div className="space-y-6 p-4 md:p-6" aria-busy="true" aria-live="polite" role="status">
       {/* 스크린 리더용 로딩 메시지 */}
       <span className="sr-only">대시보드를 불러오는 중입니다...</span>
 
@@ -52,10 +47,7 @@ export default function DashboardLoading() {
       </div>
 
       {/* 통계 카드 스켈레톤 */}
-      <div
-        className="grid gap-4 grid-cols-2 lg:grid-cols-4"
-        aria-label="통계 카드 로딩 중"
-      >
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4" aria-label="통계 카드 로딩 중">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} aria-hidden="true">
             <CardHeader className="pb-2">
@@ -63,27 +55,75 @@ export default function DashboardLoading() {
             </CardHeader>
             <CardContent>
               <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-3 w-24 mt-1" />
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Zone D: 상태 분포 바 스켈레톤 */}
+      <div className="space-y-2" aria-hidden="true">
+        <Skeleton className="h-3 w-full rounded-full" />
+        <div className="flex gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-3 w-16" />
+          ))}
+        </div>
+      </div>
+
+      {/* Zone E: AlertPanel + EquipmentStatusBreakdown 스켈레톤 */}
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        aria-label="조치 필요 및 상태 분포 로딩 중"
+      >
+        {/* AlertPanel 스켈레톤 */}
+        <Card aria-hidden="true">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-5 w-12" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {/* EquipmentStatusBreakdown 스켈레톤 */}
+        <Card aria-hidden="true">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-5 w-14" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Skeleton className="h-2.5 w-2.5 rounded-full flex-shrink-0" />
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-1.5 flex-1" />
+                  <Skeleton className="h-3 w-8" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* 탭 및 콘텐츠 스켈레톤 */}
       <div className="space-y-4" aria-label="대시보드 콘텐츠 로딩 중">
         <Skeleton className="h-10 w-80" aria-hidden="true" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card aria-hidden="true">
             <CardHeader>
               <Skeleton className="h-6 w-32" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-48 w-full" />
-            </CardContent>
-          </Card>
-          <Card aria-hidden="true">
-            <CardHeader>
-              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -96,6 +136,7 @@ export default function DashboardLoading() {
           <Card aria-hidden="true">
             <CardHeader>
               <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-48" />
             </CardHeader>
             <CardContent>
               <div className="space-y-2">

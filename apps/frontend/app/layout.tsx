@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import '@/styles/globals.css';
 import { Inter, Noto_Sans_KR } from 'next/font/google';
+import { Suspense } from 'react';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 import { Providers } from '@/lib/providers';
 import { Toaster } from '@/components/ui/toaster';
+import { DEFAULT_LOCALE } from '@equipment-management/schemas';
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
@@ -37,17 +41,51 @@ export const viewport: Viewport = {
   colorScheme: 'light dark',
 };
 
+/**
+ * RootLayout — 정적 셸 (PPR Non-Blocking Pattern)
+ *
+ * Next.js 16 cacheComponents: true 아키텍처:
+ * - sync 함수: Dynamic API 없이 즉시 정적 셸 렌더링 → FCP 최소화
+ * - lang 속성: DEFAULT_LOCALE 정적 기본값 (suppressHydrationWarning으로 hydration 불일치 허용)
+ *   클라이언트 hydration 시 NextIntlClientProvider가 실제 locale로 lang을 업데이트함
+ *
+ * IntlProvider (Dynamic hole):
+ * - Suspense 내부 async 컴포넌트에서 getLocale()/getMessages() 실행
+ * - i18n/request.ts → requestLocale (x-next-intl-locale 헤더) → cookies() 없음
+ * - Dynamic API가 Suspense 내부에서만 실행 → RootLayout 블로킹 없음
+ */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang={DEFAULT_LOCALE} suppressHydrationWarning>
       <body
         className={`${notoSansKR.variable} ${inter.variable} font-sans bg-background text-foreground`}
       >
-        <Providers>
-          <div className="min-h-screen bg-background flex flex-col">{children}</div>
-          <Toaster />
-        </Providers>
+        <Suspense>
+          <IntlProvider>{children}</IntlProvider>
+        </Suspense>
       </body>
     </html>
+  );
+}
+
+/**
+ * IntlProvider — Dynamic hole (Suspense 내부 async 컴포넌트)
+ *
+ * getLocale() → next-intl이 x-next-intl-locale 헤더를 읽음 (Middleware 주입)
+ * getMessages() → i18n/request.ts의 requestLocale 기반 메시지 로딩
+ *
+ * Suspense 내부에서만 실행되므로 Dynamic API 블로킹이 정적 셸에 영향 없음
+ */
+async function IntlProvider({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
+  return (
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <Providers>
+        <div className="min-h-screen bg-background flex flex-col">{children}</div>
+        <Toaster />
+      </Providers>
+    </NextIntlClientProvider>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ export default function MaintenanceContent({
   initialSummary,
 }: MaintenanceContentProps) {
   const router = useRouter();
+  const t = useTranslations('maintenance');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -96,79 +98,39 @@ export default function MaintenanceContent({
     staleTime: CACHE_TIMES.SHORT,
   });
 
-  // 점검 상태에 따른 배지 스타일
-  const getMaintenanceStatusBadge = (status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return (
-          <Badge variant="outline" className="bg-blue-50 text-blue-800 hover:bg-blue-50">
-            예정됨
-          </Badge>
-        );
-      case 'in_progress':
-        return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
-            진행 중
-          </Badge>
-        );
-      case 'completed':
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
-            완료됨
-          </Badge>
-        );
-      case 'canceled':
-        return (
-          <Badge variant="outline" className="bg-gray-50 text-gray-800 hover:bg-gray-50">
-            취소됨
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+  const STATUS_BADGE_COLORS: Record<string, string> = {
+    scheduled: 'bg-blue-50 text-blue-800 hover:bg-blue-50',
+    in_progress: 'bg-yellow-50 text-yellow-800 hover:bg-yellow-50',
+    completed: 'bg-green-50 text-green-800 hover:bg-green-50',
+    canceled: 'bg-gray-50 text-gray-800 hover:bg-gray-50',
   };
 
-  // 점검 결과에 따른 배지 스타일
-  const getMaintenanceResultBadge = (result: string) => {
-    switch (result) {
-      case 'completed':
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-800 hover:bg-green-50">
-            통과
-          </Badge>
-        );
-      case 'pending':
-        return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-50">
-            보류
-          </Badge>
-        );
-      case 'failed':
-        return (
-          <Badge variant="outline" className="bg-red-50 text-red-800 hover:bg-red-50">
-            불합격
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{result}</Badge>;
-    }
+  const RESULT_BADGE_COLORS: Record<string, string> = {
+    completed: 'bg-green-50 text-green-800 hover:bg-green-50',
+    pending: 'bg-yellow-50 text-yellow-800 hover:bg-yellow-50',
+    failed: 'bg-red-50 text-red-800 hover:bg-red-50',
   };
 
-  // 점검 유형에 따른 한글 표시
-  const getMaintenanceTypeText = (type: string) => {
-    switch (type) {
-      case 'regular':
-        return '정기 점검';
-      case 'repair':
-        return '수리';
-      case 'inspection':
-        return '검사';
-      case 'other':
-        return '기타';
-      default:
-        return type;
-    }
-  };
+  const getMaintenanceStatusBadge = (statusKey: string) => (
+    <Badge variant="outline" className={STATUS_BADGE_COLORS[statusKey] || ''}>
+      {t(
+        `status.${statusKey}` as
+          | 'status.scheduled'
+          | 'status.in_progress'
+          | 'status.completed'
+          | 'status.canceled'
+      )}
+    </Badge>
+  );
+
+  const getMaintenanceResultBadge = (resultKey: string) => (
+    <Badge variant="outline" className={RESULT_BADGE_COLORS[resultKey] || ''}>
+      {t(`result.${resultKey}` as 'result.completed' | 'result.pending' | 'result.failed')}
+    </Badge>
+  );
+
+  const getMaintenanceTypeText = (type: string) =>
+    t(`types.${type}` as 'types.regular' | 'types.repair' | 'types.inspection' | 'types.other');
 
   // 검색어 변경 핸들러
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,12 +147,11 @@ export default function MaintenanceContent({
     setCurrentTab(value);
   };
 
-  // 검색 결과가 없는 경우 표시할 UI
   const renderEmptyState = () => (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <ClipboardList className="h-12 w-12 text-gray-400 mb-4" />
-      <h3 className="text-lg font-medium text-gray-900">점검 정보가 없습니다</h3>
-      <p className="text-sm text-gray-500 mt-2 mb-4">검색 조건에 맞는 점검 정보가 없습니다.</p>
+      <h3 className="text-lg font-medium text-gray-900">{t('empty.title')}</h3>
+      <p className="text-sm text-gray-500 mt-2 mb-4">{t('empty.description')}</p>
       <Button
         variant="outline"
         onClick={() => {
@@ -198,7 +159,7 @@ export default function MaintenanceContent({
           setTypeFilter('all');
         }}
       >
-        필터 초기화
+        {t('empty.resetFilters')}
       </Button>
     </div>
   );
@@ -235,19 +196,18 @@ export default function MaintenanceContent({
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">점검 관리</h1>
-          <p className="text-muted-foreground">장비 점검 일정 및 결과를 관리합니다.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('subtitle')}</p>
         </div>
         <Button onClick={() => router.push('/maintenance/create')}>
-          <Plus className="mr-2 h-4 w-4" /> 점검 등록
+          <Plus className="mr-2 h-4 w-4" /> {t('createButton')}
         </Button>
       </div>
 
-      {/* 통계 카드 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">전체 점검</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('stats.total')}</CardTitle>
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -260,7 +220,7 @@ export default function MaintenanceContent({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">예정된 점검</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('stats.scheduled')}</CardTitle>
             <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -273,7 +233,7 @@ export default function MaintenanceContent({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">진행 중인 점검</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('stats.inProgress')}</CardTitle>
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
@@ -286,7 +246,7 @@ export default function MaintenanceContent({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">지연된 점검</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('stats.overdue')}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -299,23 +259,22 @@ export default function MaintenanceContent({
         </Card>
       </div>
 
-      {/* 탭과 필터 */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
         <Tabs defaultValue="all" className="w-full" onValueChange={handleTabChange}>
           <TabsList>
-            <TabsTrigger value="all">전체 점검</TabsTrigger>
-            <TabsTrigger value="scheduled">예정됨</TabsTrigger>
-            <TabsTrigger value="in_progress">진행 중</TabsTrigger>
-            <TabsTrigger value="completed">완료됨</TabsTrigger>
-            <TabsTrigger value="upcoming">다가오는 점검</TabsTrigger>
-            <TabsTrigger value="overdue">지연된 점검</TabsTrigger>
+            <TabsTrigger value="all">{t('tabs.all')}</TabsTrigger>
+            <TabsTrigger value="scheduled">{t('tabs.scheduled')}</TabsTrigger>
+            <TabsTrigger value="in_progress">{t('tabs.inProgress')}</TabsTrigger>
+            <TabsTrigger value="completed">{t('tabs.completed')}</TabsTrigger>
+            <TabsTrigger value="upcoming">{t('tabs.upcoming')}</TabsTrigger>
+            <TabsTrigger value="overdue">{t('tabs.overdue')}</TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
-              placeholder="장비 또는 담당자 검색"
+              placeholder={t('search.placeholder')}
               value={searchTerm}
               onChange={handleSearchChange}
               className="pl-8"
@@ -325,31 +284,30 @@ export default function MaintenanceContent({
             <SelectTrigger className="w-[140px]">
               <div className="flex items-center">
                 <Filter className="mr-2 h-4 w-4" />
-                <span>점검 유형</span>
+                <span>{t('search.typeFilter')}</span>
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체</SelectItem>
-              <SelectItem value="regular">정기 점검</SelectItem>
-              <SelectItem value="repair">수리</SelectItem>
-              <SelectItem value="inspection">검사</SelectItem>
-              <SelectItem value="other">기타</SelectItem>
+              <SelectItem value="all">{t('types.all')}</SelectItem>
+              <SelectItem value="regular">{t('types.regular')}</SelectItem>
+              <SelectItem value="repair">{t('types.repair')}</SelectItem>
+              <SelectItem value="inspection">{t('types.inspection')}</SelectItem>
+              <SelectItem value="other">{t('types.other')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* 점검 목록 테이블 */}
       <div className="border rounded-md">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>장비</TableHead>
-              <TableHead>점검 유형</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>점검 일자</TableHead>
-              <TableHead>담당자</TableHead>
-              <TableHead>결과</TableHead>
+              <TableHead>{t('table.equipment')}</TableHead>
+              <TableHead>{t('table.type')}</TableHead>
+              <TableHead>{t('table.status')}</TableHead>
+              <TableHead>{t('table.date')}</TableHead>
+              <TableHead>{t('table.performer')}</TableHead>
+              <TableHead>{t('table.result')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -371,7 +329,7 @@ export default function MaintenanceContent({
                   <TableCell className="font-medium">
                     {maintenance.equipment
                       ? `${maintenance.equipment.name} (${maintenance.equipment.managementNumber})`
-                      : '장비 정보 없음'}
+                      : t('noEquipmentInfo')}
                   </TableCell>
                   <TableCell>{getMaintenanceTypeText(maintenance.maintenanceType)}</TableCell>
                   <TableCell>{getMaintenanceStatusBadge(maintenance.status)}</TableCell>
