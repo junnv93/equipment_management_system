@@ -143,41 +143,71 @@ export function getAuthErrorClasses(): string {
 export const AUTH_CONTENT = {
   brand: {
     systemName: '장비 관리 시스템',
+    systemNameKey: 'auth.errorPage.systemName',
     systemNameEn: 'Equipment Management System',
     companyName: 'UL Solutions',
     tagline: 'Working for a safer world.',
   },
   login: {
     heading: '시스템 로그인',
+    headingKey: 'auth.login.heading',
     description: '장비 관리 시스템에 접근하려면 인증이 필요합니다',
+    descriptionKey: 'auth.login.description',
     formHeading: '계정 로그인',
+    formHeadingKey: 'auth.login.formHeading',
   },
   branding: {
     headline: '효율적인 장비 관리를',
+    headlineKey: 'auth.branding.headline',
     headlineAccent: '통합 솔루션',
+    headlineAccentKey: 'auth.branding.headlineAccent',
     headlineSuffix: '으로',
+    headlineSuffixKey: 'auth.branding.headlineSuffix',
     subtitle: '시험소 장비의 등록, 교정, 대여, 반출을 한 곳에서 관리하세요.',
+    subtitleKey: 'auth.branding.subtitle',
   },
   button: {
     login: '로그인',
+    loginKey: 'auth.login.submitButton',
     loginLoading: '인증 진행 중\u2026', // WIG Rule 35: Loading states end with …
+    loginLoadingKey: 'auth.login.submitting',
     loginSuccess: '인증 완료',
+    loginSuccessKey: 'auth.login.submitSuccess',
     azureAd: 'Microsoft 계정으로 로그인',
+    azureAdKey: 'auth.login.ssoButton',
     azureAdLoading: '연결 중\u2026',
+    azureAdLoadingKey: 'auth.login.ssoLoading',
     skipToForm: '로그인 폼으로 이동',
+    skipToFormKey: 'auth.login.skipToForm',
   },
   error: {
     authFailed: '이메일 또는 비밀번호가 일치하지 않습니다. 입력 내용을 확인해 주세요.',
+    authFailedKey: 'auth.login.authFailed',
     systemError: '시스템 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+    systemErrorKey: 'auth.login.systemError',
     configRequired: '인증 설정이 필요합니다.',
+    configRequiredKey: 'auth.login.configRequired',
   },
   separator: '또는',
+  separatorKey: 'auth.login.separator',
   copyright: (year: number) =>
     `\u00A9 ${year} ${AUTH_CONTENT.brand.systemNameEn}. All rights reserved.`,
   features: [
-    { icon: 'Settings' as const, title: '체계적인 장비 관리' },
-    { icon: 'Calendar' as const, title: '실시간 교정 추적' },
-    { icon: 'Shield' as const, title: '역할 기반 승인' },
+    {
+      icon: 'Settings' as const,
+      title: '체계적인 장비 관리',
+      titleKey: 'auth.branding.features.management',
+    },
+    {
+      icon: 'Calendar' as const,
+      title: '실시간 교정 추적',
+      titleKey: 'auth.branding.features.tracking',
+    },
+    {
+      icon: 'Shield' as const,
+      title: '역할 기반 승인',
+      titleKey: 'auth.branding.features.approval',
+    },
   ],
 } as const;
 

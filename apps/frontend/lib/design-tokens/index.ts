@@ -64,6 +64,21 @@ export {
 } from './motion';
 
 // ============================================================================
+// Visual Feedback System (Architecture v3)
+// ============================================================================
+
+export {
+  URGENCY_FEEDBACK_MAP,
+  VISUAL_FEEDBACK_TOKENS,
+  getUrgencyFeedbackClasses,
+  getCountBasedUrgency,
+  getTimeBasedUrgency,
+  getStatusBasedUrgency,
+  type UrgencyLevel,
+  type FeedbackMode,
+} from './visual-feedback';
+
+// ============================================================================
 // Layer 3: Components (권장 - 즉시 사용 가능한 조합)
 // ============================================================================
 
@@ -127,6 +142,167 @@ export {
   type DashboardRole,
   type CalibrationStatus,
 } from './components/dashboard';
+
+// Equipment
+export {
+  EQUIPMENT_STATUS_TOKENS,
+  DEFAULT_STATUS_CONFIG,
+  CALIBRATION_BADGE_TOKENS,
+  EQUIPMENT_CARD_TOKENS,
+  getEquipmentCardClasses,
+  EQUIPMENT_HEADER_TOKENS,
+  getEquipmentHeaderButtonClasses,
+  EQUIPMENT_TAB_TOKENS,
+  EQUIPMENT_FILTER_TOKENS,
+  EQUIPMENT_EMPTY_STATE_TOKENS,
+  EQUIPMENT_TABLE_TOKENS,
+  type EquipmentStatusConfig,
+  type CalibrationSeverity,
+  type CalibrationBadgeStyle,
+  type HeaderButtonVariant,
+} from './components/equipment';
+
+// Equipment Timeline
+export {
+  TIMELINE_TOKENS,
+  getTimelineNodeClasses,
+  getTimelineCardClasses,
+  TIMELINE_SKELETON_TOKENS,
+} from './components/equipment-timeline';
+
+// Calibration
+export {
+  CALIBRATION_STATUS_INDICATOR,
+  getCalibrationStatusIndicatorClasses,
+  CALIBRATION_CHECK_BADGE,
+  getIntermediateCheckBadgeClasses,
+  getIntermediateCheckIcon,
+  CALIBRATION_STATS_MAPPING,
+  getCalibrationStatsVariant,
+  CALIBRATION_STATS_TEXT,
+  CALIBRATION_TAB_COLORS,
+  getCalibrationTabClasses,
+  CALIBRATION_MOTION,
+  CALIBRATION_TABLE,
+  CALIBRATION_EMPTY_STATE,
+  CALIBRATION_SELECTION,
+  getEquipmentSelectionClasses,
+  CALIBRATION_DIALOG,
+  CALIBRATION_FOCUS,
+  CALIBRATION_INTERMEDIATE_CHECK_ICON_COLORS,
+  getIntermediateCheckIconColor,
+  CALIBRATION_CARD_BORDER,
+  type CalibrationStatusType,
+  type IntermediateCheckStatus,
+  type CalibrationStatsType,
+  type CalibrationTabType,
+} from './components/calibration';
+
+// Disposal
+export {
+  DISPOSAL_STEPPER_TOKENS,
+  DISPOSAL_TIMELINE_TOKENS,
+  DISPOSAL_PROGRESS_CARD_TOKENS,
+  DISPOSAL_BANNER_TOKENS,
+  DISPOSAL_BUTTON_TOKENS,
+  DISPOSAL_INFO_CARD_TOKENS,
+  REVIEW_OPINION_CARD_TOKENS,
+  FORM_SECTION_TOKENS,
+  DISPOSAL_FILE_LINK_TOKENS,
+  getStepperNodeClasses,
+  getStepperLabelClasses,
+  getTimelineNodeStatusClasses,
+} from './components/disposal';
+
+// Checkout
+export {
+  CHECKOUT_STATUS_BADGE_TOKENS,
+  RENTAL_IMPORT_STATUS_BADGE_TOKENS,
+  DEFAULT_CHECKOUT_BADGE,
+  CHECKOUT_STEPPER_TOKENS,
+  CHECKOUT_STATS_VARIANTS,
+  getCheckoutStatsClasses,
+  CHECKOUT_MOTION,
+  CHECKOUT_INTERACTION_TOKENS,
+  CHECKOUT_DETAIL_TOKENS,
+  CONDITION_COMPARISON_TOKENS,
+  CHECKOUT_FORM_TOKENS,
+  type CheckoutStatsVariant,
+} from './components/checkout';
+
+// Calibration Plans
+export {
+  CALIBRATION_PLAN_STATUS_TOKENS,
+  CALIBRATION_PLAN_TIMELINE_TOKENS,
+  FILTER_TOKENS,
+  TABLE_TOKENS,
+  CARD_TOKENS,
+  ACTION_BUTTON_TOKENS,
+  DIALOG_TOKENS,
+  CALIBRATION_PLAN_MOTION,
+  COLLAPSIBLE_TOKENS,
+  CONFIRMATION_BADGE_TOKENS,
+  ALERT_TOKENS,
+  SKELETON_TOKENS,
+  NUMERIC_TOKENS,
+  getCalibrationPlanStatusBadgeClasses,
+  getCalibrationPlanTimelineNodeClasses,
+  getCalibrationPlanTimelineConnectorClasses,
+  getFilterSelectClasses,
+  getTableRowClasses,
+  getActionButtonClasses,
+  getConfirmationBadgeClasses,
+  getLoadingSpinnerClasses,
+  getNumericClasses,
+  type CalibrationPlanStatusType,
+} from './components/calibration-plans';
+
+// Approval
+export {
+  APPROVAL_STATUS_BADGE_TOKENS,
+  APPROVAL_CARD_BORDER_TOKENS,
+  APPROVAL_STEPPER_TOKENS,
+  APPROVAL_TIMELINE_TOKENS,
+  APPROVAL_ACTION_BUTTON_TOKENS,
+  APPROVAL_TAB_TOKENS,
+  APPROVAL_BULK_BAR_TOKENS,
+  APPROVAL_INFO_GRID_TOKENS,
+  APPROVAL_EMPTY_STATE_TOKENS,
+  APPROVAL_MOTION,
+  APPROVAL_FOCUS,
+  getApprovalStatusBadgeClasses,
+  getApprovalCardBorderClasses,
+  getApprovalStepperNodeClasses,
+  getApprovalActionButtonClasses,
+} from './components/approval';
+
+// Audit
+export {
+  AUDIT_ACTION_BADGE_TOKENS,
+  DEFAULT_AUDIT_ACTION_BADGE,
+  AUDIT_TABLE_TOKENS,
+  AUDIT_DIFF_TOKENS,
+  AUDIT_ENTITY_LINK_TOKENS,
+  AUDIT_DETAIL_TOKENS,
+  AUDIT_EMPTY_STATE_TOKENS,
+  AUDIT_PAGINATION_TOKENS,
+  AUDIT_MOTION,
+} from './components/audit';
+
+// Settings
+export {
+  SETTINGS_CHIP_TOKENS,
+  SETTINGS_CARD_HEADER_TOKENS,
+  SETTINGS_INFO_BOX_TOKENS,
+  SETTINGS_SPACING_TOKENS,
+  SETTINGS_TEXT_TOKENS,
+  getSettingsChipClasses,
+  getSettingsChipIconClasses,
+  getSettingsCardHeaderClasses,
+  getSettingsIconContainerClasses,
+  getSettingsInfoBoxClasses,
+  type SettingsChipState,
+} from './components/settings';
 
 // ============================================================================
 // Usage Guidelines

@@ -15,7 +15,6 @@ import {
   ELEVATION_PRIMITIVES,
   RADIUS_PRIMITIVES,
   TYPOGRAPHY_PRIMITIVES,
-  type ResponsiveValue,
 } from './primitives';
 
 /**

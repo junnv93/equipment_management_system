@@ -1,48 +1,46 @@
 /**
- * Notification Component Tokens
+ * Notification Component Tokens (Architecture v3)
  *
- * 알림 시스템 전용 디자인 토큰
- * - 배지 스타일 (기본/긴급)
- * - 드롭다운 애니메이션
- * - 알림 아이템 스타일
+ * SSOT: Visual Feedback System 기반 알림 디자인
+ * - Count → Urgency Level → Visual Feedback (명시적 매핑)
+ * - 하드코딩 제거, Design Token 참조
+ *
+ * @see ../visual-feedback.ts - SSOT for urgency-based feedback
  */
 
 import { MOTION_TOKENS, ELEVATION_TOKENS } from '../semantic';
 import { getStaggerDelay, ANIMATION_PRESETS } from '../motion';
+import { getCountBasedUrgency, getUrgencyFeedbackClasses } from '../visual-feedback';
 
 /**
- * 배지 시각적 강조 레벨
+ * 배지 시각적 강조 레벨 (DEPRECATED)
  *
- * 알림 개수에 따라 다른 시각적 강도 적용
+ * @deprecated Use getCountBasedUrgency() + getUrgencyFeedbackClasses() instead
+ *
+ * 마이그레이션 예시:
+ * ```tsx
+ * // Before
+ * const variant = NOTIFICATION_BADGE_VARIANTS[getNotificationBadgeVariant(count)];
+ *
+ * // After
+ * const urgency = getCountBasedUrgency(count);
+ * const classes = getUrgencyFeedbackClasses(urgency);
+ * ```
  */
 export const NOTIFICATION_BADGE_VARIANTS = {
-  /** 기본 (1-5개) */
-  default: {
-    scale: 'scale-100',
-    animation: '',
-    ring: '',
-  },
-
-  /** 주의 (6-9개) */
+  default: { scale: 'scale-100', animation: '', ring: '' },
   attention: {
     scale: 'scale-105',
     animation: '',
     ring: 'ring-1 ring-destructive/30 ring-offset-1',
   },
-
-  /** 긴급 (10개 이상) */
-  urgent: {
-    scale: 'scale-110',
-    animation: ANIMATION_PRESETS.pulse,
-    ring: 'ring-2 ring-destructive/50 ring-offset-1',
-  },
+  urgent: { scale: 'scale-110', animation: '', ring: 'ring-2 ring-destructive/50 ring-offset-2' },
 } as const;
 
 /**
- * 알림 개수에 따른 배지 variant 결정
+ * 알림 개수에 따른 배지 variant 결정 (DEPRECATED)
  *
- * @param count - 읽지 않은 알림 개수
- * @returns Variant 키
+ * @deprecated Use getCountBasedUrgency() instead
  */
 export function getNotificationBadgeVariant(
   count: number
@@ -53,19 +51,33 @@ export function getNotificationBadgeVariant(
 }
 
 /**
- * 배지 스타일 클래스 조합
+ * 배지 스타일 클래스 조합 (Architecture v3)
+ *
+ * SSOT: Visual Feedback System 위임
+ * - Count → Urgency Level → Feedback Classes
+ * - 애니메이션 제어 옵션 추가 (기본: 애니메이션 없음)
  *
  * @param count - 읽지 않은 알림 개수
+ * @param includeAnimation - pulse 애니메이션 포함 여부 (기본: false)
  * @returns Tailwind 클래스 문자열
+ *
+ * @example
+ * ```tsx
+ * // 기본 (애니메이션 없음) - 권장
+ * <Badge className={getNotificationBadgeClasses(15)}>15</Badge>
+ *
+ * // 긴급 상황에만 애니메이션 포함
+ * <Badge className={getNotificationBadgeClasses(25, true)}>25</Badge>
+ * ```
  */
-export function getNotificationBadgeClasses(count: number): string {
-  const variant = NOTIFICATION_BADGE_VARIANTS[getNotificationBadgeVariant(count)];
+export function getNotificationBadgeClasses(count: number, includeAnimation = false): string {
+  const urgency = getCountBasedUrgency(count);
+  const feedbackClasses = getUrgencyFeedbackClasses(urgency, includeAnimation);
 
   return [
-    variant.scale,
-    variant.animation,
-    variant.ring,
-    'font-bold', // 가독성 강조
+    feedbackClasses,
+    'font-bold', // 가독성 강조 (알림 전용)
+    'tabular-nums', // 숫자 정렬 (모노스페이스)
   ]
     .filter(Boolean)
     .join(' ');

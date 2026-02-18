@@ -7,7 +7,7 @@
  * SSOT: Header의 모든 스타일은 여기서만 정의
  */
 
-import { INTERACTIVE_TOKENS, CONTENT_TOKENS, MOTION_TOKENS, FOCUS_TOKENS } from '../semantic';
+import { INTERACTIVE_TOKENS, CONTENT_TOKENS } from '../semantic';
 import { toTailwindSize, toTailwindGap } from '../primitives';
 import { getTransitionClasses } from '../motion';
 
