@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -62,6 +63,7 @@ export function MaintenanceHistorySection({
   isLoading: _isLoading = false,
   disabled = false,
 }: MaintenanceHistorySectionProps) {
+  const t = useTranslations('equipment');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -90,7 +92,7 @@ export function MaintenanceHistorySection({
   };
 
   const handleDelete = async (historyId: string) => {
-    if (confirm('이 유지보수 내역을 삭제하시겠습니까?')) {
+    if (confirm(t('formSections.maintenance.deleteConfirm'))) {
       try {
         await onDelete(historyId);
       } catch (error) {
@@ -105,19 +107,21 @@ export function MaintenanceHistorySection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Wrench className="h-5 w-5 text-green-500" />
-            <CardTitle>유지보수 내역</CardTitle>
+            <CardTitle>{t('maintenanceHistoryTab.sectionTitle')}</CardTitle>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button type="button" size="sm" disabled={disabled}>
                 <Plus className="h-4 w-4 mr-1" />
-                추가
+                {t('maintenanceHistoryTab.addButton')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>유지보수 내역 추가</DialogTitle>
-                <DialogDescription>유지보수 수행 정보를 입력하세요.</DialogDescription>
+                <DialogTitle>{t('maintenanceHistoryTab.dialog.title')}</DialogTitle>
+                <DialogDescription>
+                  {t('maintenanceHistoryTab.dialog.description')}
+                </DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form
@@ -132,7 +136,7 @@ export function MaintenanceHistorySection({
                     name="performedAt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>수행 일시 *</FormLabel>
+                        <FormLabel>{t('maintenanceHistoryTab.dialog.performedAt')}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
@@ -145,10 +149,10 @@ export function MaintenanceHistorySection({
                     name="content"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>주요 내용 *</FormLabel>
+                        <FormLabel>{t('maintenanceHistoryTab.dialog.content')}</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="예: 분기별 정기 점검 - 정상 동작 확인"
+                            placeholder={t('maintenanceHistoryTab.dialog.contentPlaceholder')}
                             className="min-h-[100px]"
                             {...field}
                             value={field.value || ''}
@@ -160,10 +164,12 @@ export function MaintenanceHistorySection({
                   />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      취소
+                      {t('maintenanceHistoryTab.dialog.cancel')}
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? '저장 중...' : '저장'}
+                      {isSubmitting
+                        ? t('maintenanceHistoryTab.dialog.saving')
+                        : t('maintenanceHistoryTab.dialog.save')}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -171,18 +177,20 @@ export function MaintenanceHistorySection({
             </DialogContent>
           </Dialog>
         </div>
-        <CardDescription>장비 유지보수 수행 기록입니다.</CardDescription>
+        <CardDescription>{t('maintenanceHistoryTab.sectionDescription')}</CardDescription>
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">유지보수 내역이 없습니다.</div>
+          <div className="text-center text-muted-foreground py-8">
+            {t('maintenanceHistoryTab.empty')}
+          </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>수행 일시</TableHead>
-                <TableHead>주요 내용</TableHead>
-                <TableHead>수행자</TableHead>
+                <TableHead>{t('maintenanceHistoryTab.tableHeaders.performedAt')}</TableHead>
+                <TableHead>{t('maintenanceHistoryTab.tableHeaders.content')}</TableHead>
+                <TableHead>{t('maintenanceHistoryTab.tableHeaders.performedBy')}</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>

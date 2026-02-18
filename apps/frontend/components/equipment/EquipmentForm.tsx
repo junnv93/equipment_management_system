@@ -72,6 +72,7 @@ const CalibrationHistorySection = dynamic(
   { loading: () => <Skeleton className="h-40 w-full" />, ssr: false }
 );
 import equipmentApi from '@/lib/api/equipment-api';
+import { useTranslations } from 'next-intl';
 import type {
   LocationHistoryItem,
   MaintenanceHistoryItem,
@@ -206,59 +207,52 @@ interface EquipmentFormProps {
 }
 
 /**
- * 역할별 권한 정보
+ * 역할별 권한 정보 (i18n 키와 정적 속성만 유지)
  */
 const ROLE_INFO = {
   test_engineer: {
-    label: '시험실무자',
     needsApproval: true,
-    description: '등록/수정 요청 후 기술책임자의 승인이 필요합니다.',
     icon: Clock,
     color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
   },
   technical_manager: {
-    label: '기술책임자',
     needsApproval: false,
-    description: '직접 등록/수정이 가능합니다. (승인 불필요)',
     icon: CheckCircle2,
     color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   },
   lab_manager: {
-    label: '시험소 관리자',
     needsApproval: false,
-    description: '전체 권한으로 직접 등록/수정이 가능합니다.',
     icon: Shield,
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   },
   system_admin: {
-    label: '시스템 관리자',
     needsApproval: false,
-    description: '전체 시스템 권한으로 직접 등록/수정이 가능합니다.',
     icon: Shield,
     color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
   },
 };
 
 /**
- * ✅ SSOT: 필드명 한글 매핑 (사용자 친화적 에러 메시지용)
+ * ✅ SSOT: 필드명 i18n 키 매핑 (사용자 친화적 에러 메시지용)
+ * 실제 라벨은 t('form.fieldLabels.{key}')로 가져옴
  */
-const FIELD_LABELS: Record<string, string> = {
-  name: '장비명',
-  managementNumber: '관리번호',
-  site: '사이트',
-  teamId: '팀',
-  modelName: '모델명',
-  manufacturer: '제조사',
-  serialNumber: '일련번호',
-  location: '현재 위치',
-  calibrationCycle: '교정 주기',
-  lastCalibrationDate: '최종 교정일',
-  nextCalibrationDate: '차기 교정일',
-  calibrationAgency: '교정 기관',
-  calibrationMethod: '관리 방법',
-  lastIntermediateCheckDate: '최종 중간 점검일',
-  intermediateCheckCycle: '중간점검 주기',
-  technicalManager: '기술책임자',
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  name: 'name',
+  managementNumber: 'managementNumber',
+  site: 'site',
+  teamId: 'teamId',
+  modelName: 'modelName',
+  manufacturer: 'manufacturer',
+  serialNumber: 'serialNumber',
+  location: 'location',
+  calibrationCycle: 'calibrationCycle',
+  lastCalibrationDate: 'lastCalibrationDate',
+  nextCalibrationDate: 'nextCalibrationDate',
+  calibrationAgency: 'calibrationAgency',
+  calibrationMethod: 'calibrationMethod',
+  lastIntermediateCheckDate: 'lastIntermediateCheckDate',
+  intermediateCheckCycle: 'intermediateCheckCycle',
+  technicalManager: 'technicalManager',
 };
 
 export function EquipmentForm({
@@ -271,6 +265,7 @@ export function EquipmentForm({
   existingAttachments = [],
   userDefaults,
 }: EquipmentFormProps) {
+  const t = useTranslations('equipment');
   // 임시등록 모드 여부
   const isTemporary = mode === 'temporary';
   // 사용자 정보 가져오기
@@ -517,15 +512,15 @@ export function EquipmentForm({
           ? error.getUserMessage()
           : error instanceof Error
             ? error.message
-            : '알 수 없는 오류가 발생했습니다.';
+            : t('form.toasts.unknownError');
 
       toast({
-        title: `${historyType} 저장 실패`,
+        title: t('form.toasts.historyError', { type: historyType }),
         description: errorMessage,
         variant: 'destructive',
       });
     },
-    [toast]
+    [toast, t]
   );
 
   /**
@@ -545,11 +540,11 @@ export function EquipmentForm({
           const newItem = await equipmentApi.createLocationHistory(initialData.uuid, data);
           setLocationHistory((prev) => [newItem, ...prev]);
           toast({
-            title: '위치 변동 이력 추가',
-            description: '이력이 저장되었습니다.',
+            title: t('form.toasts.locationHistoryAdd'),
+            description: t('form.toasts.historySaved'),
           });
         } catch (error) {
-          handleHistoryError(error, '위치 변동 이력');
+          handleHistoryError(error, t('form.toasts.locationHistoryError'));
           throw error; // 상위 컴포넌트에서 처리할 수 있도록 재throw
         }
       } else {
@@ -589,7 +584,7 @@ export function EquipmentForm({
           setPendingLocationHistory((prev) => prev.filter((item) => item.tempId !== historyId));
         }
       } catch (error) {
-        handleHistoryError(error, '위치 변동 이력 삭제');
+        handleHistoryError(error, t('form.toasts.locationHistoryError'));
         throw error;
       }
     },
@@ -604,11 +599,11 @@ export function EquipmentForm({
           const newItem = await equipmentApi.createMaintenanceHistory(initialData.uuid, data);
           setMaintenanceHistory((prev) => [newItem, ...prev]);
           toast({
-            title: '유지보수 내역 추가',
-            description: '이력이 저장되었습니다.',
+            title: t('form.toasts.maintenanceHistoryAdd'),
+            description: t('form.toasts.historySaved'),
           });
         } catch (error) {
-          handleHistoryError(error, '유지보수 내역');
+          handleHistoryError(error, t('form.toasts.maintenanceHistoryError'));
           throw error;
         }
       } else {
@@ -641,7 +636,7 @@ export function EquipmentForm({
           setPendingMaintenanceHistory((prev) => prev.filter((item) => item.tempId !== historyId));
         }
       } catch (error) {
-        handleHistoryError(error, '유지보수 내역 삭제');
+        handleHistoryError(error, t('form.toasts.maintenanceHistoryError'));
         throw error;
       }
     },
@@ -656,11 +651,11 @@ export function EquipmentForm({
           const newItem = await equipmentApi.createIncidentHistory(initialData.uuid, data);
           setIncidentHistory((prev) => [newItem, ...prev]);
           toast({
-            title: '손상/수리 내역 추가',
-            description: '이력이 저장되었습니다.',
+            title: t('form.toasts.incidentHistoryAdd'),
+            description: t('form.toasts.historySaved'),
           });
         } catch (error) {
-          handleHistoryError(error, '손상/수리 내역');
+          handleHistoryError(error, t('form.toasts.incidentHistoryError'));
           throw error;
         }
       } else {
@@ -694,7 +689,7 @@ export function EquipmentForm({
           setPendingIncidentHistory((prev) => prev.filter((item) => item.tempId !== historyId));
         }
       } catch (error) {
-        handleHistoryError(error, '손상/수리 내역 삭제');
+        handleHistoryError(error, t('form.toasts.incidentHistoryError'));
         throw error;
       }
     },
@@ -718,8 +713,8 @@ export function EquipmentForm({
       setCalibrationHistory((prev) => [tempItem, ...prev]);
       setPendingCalibrationHistory((prev) => [...prev, { tempId, data }]);
       toast({
-        title: '교정 이력 추가',
-        description: '임시로 추가되었습니다. 장비 등록 시 함께 저장됩니다.',
+        title: t('form.toasts.calibrationHistoryAdd'),
+        description: t('form.toasts.calibrationHistoryTempSaved'),
       });
     },
     [toast, generateTempId]
@@ -768,13 +763,16 @@ export function EquipmentForm({
         // Zod 검증 에러를 사용자 친화적 메시지로 변환
         const firstError = error.issues[0];
         const fieldPath = firstError.path.join('.');
-        const fieldLabel = FIELD_LABELS[fieldPath] || fieldPath || '알 수 없는 필드';
+        const fieldLabelKey = FIELD_LABEL_KEYS[fieldPath];
+        const fieldLabel = fieldLabelKey
+          ? t(`form.fieldLabels.${fieldLabelKey}`)
+          : fieldPath || t('form.fieldLabels.unknown');
         toast({
-          title: '입력 데이터 검증 실패',
+          title: t('form.toasts.validationFailed'),
           description: `${fieldLabel}: ${firstError.message}`,
           variant: 'destructive',
         });
-        console.error('🔴 프론트엔드 Zod 검증 실패:', error.issues);
+        console.error('🔴 Frontend Zod validation failed:', error.issues);
         return;
       }
       throw error;
@@ -932,12 +930,14 @@ export function EquipmentForm({
         <Alert className={roleInfo.color}>
           <RoleIcon className="h-4 w-4" />
           <AlertTitle className="flex items-center gap-2">
-            현재 권한: {roleInfo.label}
+            {t('form.roleHeader.currentRole')} {t(`form.roles.${userRole}.label`)}
             <Badge variant="outline" className={roleInfo.color}>
-              {needsApproval ? '승인 필요' : '직접 처리'}
+              {needsApproval
+                ? t('form.roleHeader.approvalRequired')
+                : t('form.roleHeader.directProcess')}
             </Badge>
           </AlertTitle>
-          <AlertDescription>{roleInfo.description}</AlertDescription>
+          <AlertDescription>{t(`form.roles.${userRole}.description`)}</AlertDescription>
         </Alert>
 
         {/* 섹션 1: 기본 정보 */}
@@ -960,14 +960,14 @@ export function EquipmentForm({
         {isTemporary && !isEdit && (
           <Card>
             <CardHeader>
-              <CardTitle>임시등록 장비 정보</CardTitle>
-              <CardDescription>공용/렌탈 장비의 임시등록 정보를 입력하세요.</CardDescription>
+              <CardTitle>{t('form.temporary.title')}</CardTitle>
+              <CardDescription>{t('form.temporary.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* 1. 장비 유형 선택 */}
               <div className="space-y-2">
                 <Label htmlFor="equipmentType">
-                  장비 유형 <span className="text-red-500">*</span>
+                  {t('form.temporary.equipmentType')} <span className="text-red-500">*</span>
                 </Label>
                 <div className="flex gap-4">
                   <div className="flex items-center space-x-2">
@@ -981,7 +981,7 @@ export function EquipmentForm({
                       className="h-4 w-4"
                     />
                     <Label htmlFor="type-common" className="font-normal cursor-pointer">
-                      공용장비 (타 팀)
+                      {t('form.temporary.commonEquipment')}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -995,7 +995,7 @@ export function EquipmentForm({
                       className="h-4 w-4"
                     />
                     <Label htmlFor="type-rental" className="font-normal cursor-pointer">
-                      렌탈장비 (외부)
+                      {t('form.temporary.rentalEquipment')}
                     </Label>
                   </div>
                 </div>
@@ -1004,7 +1004,7 @@ export function EquipmentForm({
               {/* 2. 소유처 */}
               <div className="space-y-2">
                 <Label htmlFor="owner">
-                  소유처 <span className="text-red-500">*</span>
+                  {t('form.temporary.owner')} <span className="text-red-500">*</span>
                 </Label>
                 {equipmentType === 'common' ? (
                   <select
@@ -1014,15 +1014,15 @@ export function EquipmentForm({
                     className="w-full px-3 py-2 border rounded-md"
                     required
                   >
-                    <option value="">선택하세요</option>
-                    <option value="Safety팀">Safety팀</option>
-                    <option value="Battery팀">Battery팀</option>
-                    <option value="기타">기타</option>
+                    <option value="">{t('form.temporary.ownerPlaceholder')}</option>
+                    <option value="Safety팀">{t('form.temporary.ownerTeam1')}</option>
+                    <option value="Battery팀">{t('form.temporary.ownerTeam2')}</option>
+                    <option value="기타">{t('form.temporary.ownerOther')}</option>
                   </select>
                 ) : (
                   <Input
                     id="owner"
-                    placeholder="렌탈업체명을 입력하세요"
+                    placeholder={t('form.temporary.ownerRentalPlaceholder')}
                     value={owner}
                     onChange={(e) => setOwner(e.target.value)}
                     required
@@ -1032,21 +1032,23 @@ export function EquipmentForm({
 
               {/* 2-1. 소유처 원본 식별번호 (선택) */}
               <div className="space-y-2">
-                <Label htmlFor="externalIdentifier">소유처 원본 식별번호 (선택)</Label>
+                <Label htmlFor="externalIdentifier">
+                  {t('form.temporary.externalIdentifierLabel')}
+                </Label>
                 <Input
                   id="externalIdentifier"
                   name="externalIdentifier"
                   placeholder={
                     equipmentType === 'common'
-                      ? '예: SAF-EQ-1234 (Safety팀 장비번호)'
-                      : '예: RNT-2024-001 (렌탈업체 번호)'
+                      ? t('form.temporary.externalIdentifierCommonPlaceholder')
+                      : t('form.temporary.externalIdentifierRentalPlaceholder')
                   }
                   className="w-full"
                 />
                 <p className="text-xs text-muted-foreground">
                   {equipmentType === 'common'
-                    ? '소유 팀에서 사용하는 장비 식별번호를 입력하세요.'
-                    : '렌탈업체에서 부여한 장비 식별번호를 입력하세요.'}
+                    ? t('form.temporary.externalIdentifierCommonHelp')
+                    : t('form.temporary.externalIdentifierRentalHelp')}
                 </p>
               </div>
 
@@ -1054,7 +1056,7 @@ export function EquipmentForm({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="usagePeriodStart">
-                    사용 시작일 <span className="text-red-500">*</span>
+                    {t('form.temporary.usagePeriodStart')} <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     type="date"
@@ -1066,7 +1068,7 @@ export function EquipmentForm({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="usagePeriodEnd">
-                    사용 종료일 <span className="text-red-500">*</span>
+                    {t('form.temporary.usagePeriodEnd')} <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     type="date"
@@ -1081,7 +1083,8 @@ export function EquipmentForm({
               {/* 4. 교정성적서 업로드 */}
               <div className="space-y-2">
                 <Label htmlFor="calibrationCertificate">
-                  교정성적서 <span className="text-red-500">*</span>
+                  {t('form.temporary.calibrationCertificate')}{' '}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   type="file"
@@ -1098,12 +1101,10 @@ export function EquipmentForm({
                 />
                 {calibrationCertificateFile && (
                   <p className="text-xs text-muted-foreground">
-                    선택된 파일: {calibrationCertificateFile.name}
+                    {t('form.temporary.selectedFile', { name: calibrationCertificateFile.name })}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground">
-                  PDF 파일만 업로드 가능합니다. (필수)
-                </p>
+                <p className="text-xs text-muted-foreground">{t('form.temporary.pdfOnly')}</p>
               </div>
 
               {/* 5. 교정 유효성 자동 검증 */}
@@ -1139,10 +1140,8 @@ export function EquipmentForm({
         {!isEdit && (
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>이력 관리 안내</AlertTitle>
-            <AlertDescription>
-              아래에서 이력 정보를 미리 입력할 수 있습니다. 장비 등록 완료 시 함께 저장됩니다.
-            </AlertDescription>
+            <AlertTitle>{t('form.historyGuide.title')}</AlertTitle>
+            <AlertDescription>{t('form.historyGuide.description')}</AlertDescription>
           </Alert>
         )}
 
@@ -1191,12 +1190,16 @@ export function EquipmentForm({
         <div className="flex justify-end gap-4 pt-4 border-t">
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-              취소
+              {t('form.actions.cancel')}
             </Button>
           )}
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? '처리 중...' : isEdit ? '수정' : '등록'}
-            {needsApproval && !isLoading && ' (승인 요청)'}
+            {isLoading
+              ? t('form.actions.saving')
+              : isEdit
+                ? t('form.actions.edit')
+                : t('form.actions.create')}
+            {needsApproval && !isLoading && t('form.actions.approvalSuffix')}
           </Button>
         </div>
       </form>
@@ -1207,22 +1210,24 @@ export function EquipmentForm({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-yellow-500" />
-              {isEdit ? '수정 요청 확인' : '등록 요청 확인'}
+              {isEdit ? t('form.confirmDialog.editTitle') : t('form.confirmDialog.createTitle')}
             </DialogTitle>
             <DialogDescription>
-              {isEdit ? '장비 정보 수정을 요청하시겠습니까?' : '새 장비 등록을 요청하시겠습니까?'}
+              {isEdit
+                ? t('form.confirmDialog.editDescription')
+                : t('form.confirmDialog.createDescription')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
             <Alert>
               <Clock className="h-4 w-4" />
-              <AlertTitle>승인 프로세스 안내</AlertTitle>
+              <AlertTitle>{t('form.confirmDialog.approvalProcessTitle')}</AlertTitle>
               <AlertDescription className="mt-2">
                 <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>요청 후 기술책임자의 승인이 필요합니다.</li>
-                  <li>승인 전까지 장비 정보는 반영되지 않습니다.</li>
-                  <li>요청 상태는 알림에서 확인할 수 있습니다.</li>
+                  <li>{t('form.confirmDialog.approvalProcessStep1')}</li>
+                  <li>{t('form.confirmDialog.approvalProcessStep2')}</li>
+                  <li>{t('form.confirmDialog.approvalProcessStep3')}</li>
                 </ul>
               </AlertDescription>
             </Alert>
@@ -1230,10 +1235,10 @@ export function EquipmentForm({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
-              취소
+              {t('form.confirmDialog.cancel')}
             </Button>
             <Button onClick={handleConfirmSubmit} disabled={isLoading}>
-              {isLoading ? '처리 중...' : '요청하기'}
+              {isLoading ? t('form.confirmDialog.saving') : t('form.confirmDialog.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

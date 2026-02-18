@@ -44,6 +44,8 @@ import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
 import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { getErrorMessage } from '@/lib/api/error';
 
 interface CalibrationFactorsClientProps {
   /**
@@ -63,6 +65,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const t = useTranslations('equipment.calibrationFactorsClient');
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newFactor, setNewFactor] = useState({
@@ -94,16 +97,16 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
     mutationFn: calibrationFactorsApi.createCalibrationFactor,
     onSuccess: () => {
       toast({
-        title: '변경 요청 완료',
-        description: '보정계수 변경 요청이 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
+        title: t('toastSuccess'),
+        description: t('toastSuccessDesc'),
       });
       setIsCreateDialogOpen(false);
       resetForm();
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: '요청 실패',
-        description: error.message || '보정계수 변경 요청 중 오류가 발생했습니다.',
+        title: t('toastError'),
+        description: getErrorMessage(error, t('toastErrorDesc')),
         variant: 'destructive',
       });
     },
@@ -133,8 +136,8 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
       !newFactor.effectiveDate
     ) {
       toast({
-        title: '입력 오류',
-        description: '필수 항목을 모두 입력해주세요.',
+        title: t('toastValidationError'),
+        description: t('toastRequiredFields'),
         variant: 'destructive',
       });
       return;
@@ -146,8 +149,8 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
         parameters = JSON.parse(newFactor.parameters);
       } catch {
         toast({
-          title: '입력 오류',
-          description: '파라미터 형식이 올바르지 않습니다. JSON 형식으로 입력해주세요.',
+          title: t('toastValidationError'),
+          description: t('toastInvalidJson'),
           variant: 'destructive',
         });
         return;
@@ -179,33 +182,31 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild aria-label="장비 상세로 돌아가기">
+          <Button variant="ghost" size="icon" asChild aria-label={t('backAriaLabel')}>
             <Link href={`/equipment/${equipmentId}`}>
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">보정계수 관리</h1>
-            <p className="text-muted-foreground">장비 ID: {equipmentId}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+            <p className="text-muted-foreground">{t('equipmentId', { id: equipmentId })}</p>
           </div>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              보정계수 변경 요청
+              {t('requestButton')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>보정계수 변경 요청</DialogTitle>
-              <DialogDescription>
-                새로운 보정계수를 등록합니다. 기술책임자의 승인 후 적용됩니다.
-              </DialogDescription>
+              <DialogTitle>{t('requestDialogTitle')}</DialogTitle>
+              <DialogDescription>{t('requestDialogDescription')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="factorType">보정계수 타입 *</Label>
+                <Label htmlFor="factorType">{t('formFactorType')}</Label>
                 <Select
                   value={newFactor.factorType}
                   onValueChange={(value) =>
@@ -213,7 +214,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="타입 선택" />
+                    <SelectValue placeholder={t('formFactorTypePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(FACTOR_TYPE_LABELS).map(([value, label]) => (
@@ -225,17 +226,17 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="factorName">보정계수 이름 *</Label>
+                <Label htmlFor="factorName">{t('formFactorName')}</Label>
                 <Input
                   id="factorName"
-                  placeholder="예: 3GHz 안테나 이득"
+                  placeholder={t('formFactorNamePlaceholder')}
                   value={newFactor.factorName}
                   onChange={(e) => setNewFactor({ ...newFactor, factorName: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="factorValue">값 *</Label>
+                  <Label htmlFor="factorValue">{t('formFactorValue')}</Label>
                   <Input
                     id="factorValue"
                     type="number"
@@ -246,10 +247,10 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unit">단위 *</Label>
+                  <Label htmlFor="unit">{t('formUnit')}</Label>
                   <Input
                     id="unit"
-                    placeholder="dB, dBi, dBm"
+                    placeholder={t('formUnitPlaceholder')}
                     value={newFactor.unit}
                     onChange={(e) => setNewFactor({ ...newFactor, unit: e.target.value })}
                   />
@@ -257,7 +258,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="effectiveDate">적용 시작일 *</Label>
+                  <Label htmlFor="effectiveDate">{t('formEffectiveDate')}</Label>
                   <Input
                     id="effectiveDate"
                     type="date"
@@ -266,7 +267,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="expiryDate">만료일</Label>
+                  <Label htmlFor="expiryDate">{t('formExpiryDate')}</Label>
                   <Input
                     id="expiryDate"
                     type="date"
@@ -276,7 +277,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="parameters">추가 파라미터 (JSON)</Label>
+                <Label htmlFor="parameters">{t('formParameters')}</Label>
                 <Textarea
                   id="parameters"
                   placeholder='{"frequency": "3GHz", "temperature": "25C"}'
@@ -288,10 +289,10 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                취소
+                {t('cancel')}
               </Button>
               <Button onClick={handleCreate} disabled={createMutation.isPending}>
-                {createMutation.isPending ? '요청 중...' : '변경 요청'}
+                {createMutation.isPending ? t('requesting') : t('submitRequest')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -304,22 +305,20 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-yellow-800">
               <Clock className="h-5 w-5" />
-              승인 대기 중인 변경 요청
+              {t('pendingTitle')}
             </CardTitle>
-            <CardDescription className="text-yellow-700">
-              기술책임자의 승인을 기다리는 보정계수 변경 요청입니다
-            </CardDescription>
+            <CardDescription className="text-yellow-700">{t('pendingDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>타입</TableHead>
-                  <TableHead>이름</TableHead>
-                  <TableHead>값</TableHead>
-                  <TableHead>적용 시작일</TableHead>
-                  <TableHead>요청일</TableHead>
-                  <TableHead>상태</TableHead>
+                  <TableHead>{t('pendingTableType')}</TableHead>
+                  <TableHead>{t('pendingTableName')}</TableHead>
+                  <TableHead>{t('pendingTableValue')}</TableHead>
+                  <TableHead>{t('pendingTableEffectiveDate')}</TableHead>
+                  <TableHead>{t('pendingTableRequestDate')}</TableHead>
+                  <TableHead>{t('pendingTableStatus')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -352,29 +351,29 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5" />
-            현재 적용 중인 보정계수
+            {t('currentTitle')}
           </CardTitle>
           <CardDescription>
-            승인되어 현재 적용 중인 보정계수 목록입니다 (총 {currentFactors.length}개)
+            {t('currentDescription', { count: currentFactors.length })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {currentFactors.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>적용 중인 보정계수가 없습니다</p>
-              <p className="text-sm mt-2">새로운 보정계수를 등록해주세요</p>
+              <p>{t('emptyTitle')}</p>
+              <p className="text-sm mt-2">{t('emptyDescription')}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>타입</TableHead>
-                  <TableHead>이름</TableHead>
-                  <TableHead>값</TableHead>
-                  <TableHead>파라미터</TableHead>
-                  <TableHead>적용 기간</TableHead>
-                  <TableHead>승인일</TableHead>
+                  <TableHead>{t('currentTableType')}</TableHead>
+                  <TableHead>{t('currentTableName')}</TableHead>
+                  <TableHead>{t('currentTableValue')}</TableHead>
+                  <TableHead>{t('currentTableParameters')}</TableHead>
+                  <TableHead>{t('currentTablePeriod')}</TableHead>
+                  <TableHead>{t('currentTableApprovedDate')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

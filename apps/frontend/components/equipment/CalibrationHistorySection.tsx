@@ -34,6 +34,7 @@ import { Plus, CalendarCheck, ExternalLink, Trash2, AlertCircle } from 'lucide-r
 import { addMonths, isAfter } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ApiError } from '@/lib/errors/equipment-errors';
 
 export interface CalibrationRecord {
@@ -67,24 +68,11 @@ interface CalibrationHistorySectionProps {
   isCreateMode?: boolean; // 등록 모드 여부
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: '예정됨',
-  in_progress: '진행 중',
-  completed: '완료됨',
-  failed: '실패',
-};
-
 const STATUS_COLORS: Record<string, string> = {
   scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
   completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-};
-
-const APPROVAL_STATUS_LABELS: Record<string, string> = {
-  pending_approval: '승인 대기',
-  approved: '승인됨',
-  rejected: '반려됨',
 };
 
 const APPROVAL_STATUS_COLORS: Record<string, string> = {
@@ -93,25 +81,30 @@ const APPROVAL_STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
-// 교정 결과 라벨 및 색상 (SSOT: DB 값 pass/fail/conditional 직접 매핑)
-const RESULT_LABELS: Record<string, string> = {
-  pass: '적합',
-  fail: '부적합',
-  conditional: '조건부 적합',
-};
-
 const RESULT_COLORS: Record<string, string> = {
   pass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   fail: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
   conditional: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
 };
 
-// 교정 결과 옵션 (lowercase — 백엔드 Zod 스키마 SSOT)
-const CALIBRATION_RESULT_OPTIONS = [
-  { value: 'pass', label: '적합' },
-  { value: 'fail', label: '부적합' },
-  { value: 'conditional', label: '조건부 적합' },
-];
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  scheduled: 'statusScheduled',
+  in_progress: 'statusInProgress',
+  completed: 'statusCompleted',
+  failed: 'statusFailed',
+};
+
+const APPROVAL_LABEL_KEYS: Record<string, string> = {
+  pending_approval: 'approvalPending',
+  approved: 'approvalApproved',
+  rejected: 'approvalRejected',
+};
+
+const RESULT_LABEL_KEYS: Record<string, string> = {
+  pass: 'resultPass',
+  fail: 'resultFail',
+  conditional: 'resultConditional',
+};
 
 export function CalibrationHistorySection({
   equipmentUuid,
@@ -122,6 +115,7 @@ export function CalibrationHistorySection({
   disabled = false,
   isCreateMode = false,
 }: CalibrationHistorySectionProps) {
+  const t = useTranslations('equipment.calibrationHistorySection');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<CreateCalibrationHistoryInput>({
@@ -158,27 +152,26 @@ export function CalibrationHistorySection({
     const errors: Record<string, string> = {};
 
     if (!formData.calibrationDate) {
-      errors.calibrationDate = '교정일을 입력하세요.';
+      errors.calibrationDate = t('validationCalDate');
     }
 
     if (!formData.calibrationAgency.trim()) {
-      errors.calibrationAgency = '교정기관을 입력하세요.';
+      errors.calibrationAgency = t('validationAgency');
     }
 
     if (!formData.calibrationCycle || formData.calibrationCycle < 1) {
-      errors.calibrationCycle = '유효한 교정 주기를 입력하세요.';
+      errors.calibrationCycle = t('validationCycle');
     }
 
     if (!formData.nextCalibrationDate) {
-      errors.nextCalibrationDate = '차기 교정일을 입력하세요.';
+      errors.nextCalibrationDate = t('validationNextCalDate');
     }
 
-    // 교정일이 차기 교정일 이후인지 확인
     if (formData.calibrationDate && formData.nextCalibrationDate) {
       const calDate = toDate(formData.calibrationDate);
       const nextCalDate = toDate(formData.nextCalibrationDate);
       if (calDate && nextCalDate && isAfter(calDate, nextCalDate)) {
-        errors.nextCalibrationDate = '차기 교정일은 교정일 이후여야 합니다.';
+        errors.nextCalibrationDate = t('validationNextCalDateOrder');
       }
     }
 
@@ -200,7 +193,7 @@ export function CalibrationHistorySection({
           ? error.getUserMessage()
           : error instanceof Error
             ? error.message
-            : '교정 이력 저장 중 오류가 발생했습니다.';
+            : t('saveError');
       setSaveError(errorMessage);
       console.error('Failed to add calibration history:', error);
     } finally {
@@ -233,7 +226,7 @@ export function CalibrationHistorySection({
           ? error.getUserMessage()
           : error instanceof Error
             ? error.message
-            : '삭제 중 오류가 발생했습니다.';
+            : t('deleteError');
       setDeleteError(errorMessage);
       console.error('Failed to delete calibration history:', error);
     } finally {
@@ -271,9 +264,8 @@ export function CalibrationHistorySection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalendarCheck className="h-5 w-5 text-purple-500" />
-            <CardTitle>장비 교정 이력</CardTitle>
+            <CardTitle>{t('title')}</CardTitle>
           </div>
-          {/* 등록 모드: 직접 추가 버튼, 수정 모드: 교정 등록 페이지 링크 */}
           {isCreateMode || onAdd ? (
             <Button
               type="button"
@@ -283,34 +275,32 @@ export function CalibrationHistorySection({
               disabled={disabled}
             >
               <Plus className="h-4 w-4 mr-1" />
-              추가
+              {t('addButton')}
             </Button>
           ) : equipmentUuid ? (
             <Button size="sm" variant="outline" asChild disabled={disabled}>
               <Link href={`/calibrations/create?equipmentId=${equipmentUuid}`}>
                 <Plus className="h-4 w-4 mr-1" />
-                교정 등록
+                {t('registerButton')}
               </Link>
             </Button>
           ) : null}
         </div>
-        <CardDescription>
-          장비의 교정 이력입니다. 교정 관리 페이지에서 상세 정보를 확인할 수 있습니다.
-        </CardDescription>
+        <CardDescription>{t('description')}</CardDescription>
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">교정 이력이 없습니다.</div>
+          <div className="text-center text-muted-foreground py-8">{t('emptyState')}</div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>교정일</TableHead>
-                <TableHead>교정 결과</TableHead>
-                <TableHead>차기 교정일</TableHead>
-                <TableHead>교정기관</TableHead>
-                <TableHead>상태</TableHead>
-                <TableHead>승인</TableHead>
+                <TableHead>{t('tableCalDate')}</TableHead>
+                <TableHead>{t('tableResult')}</TableHead>
+                <TableHead>{t('tableNextCalDate')}</TableHead>
+                <TableHead>{t('tableAgency')}</TableHead>
+                <TableHead>{t('tableStatus')}</TableHead>
+                <TableHead>{t('tableApproval')}</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -326,7 +316,14 @@ export function CalibrationHistorySection({
                         variant="outline"
                         className={RESULT_COLORS[resultKey] || 'bg-gray-100 text-gray-800'}
                       >
-                        {RESULT_LABELS[resultKey] || '-'}
+                        {RESULT_LABEL_KEYS[resultKey]
+                          ? t(
+                              RESULT_LABEL_KEYS[resultKey] as
+                                | 'resultPass'
+                                | 'resultFail'
+                                | 'resultConditional'
+                            )
+                          : '-'}
                       </Badge>
                     </TableCell>
                     <TableCell>{formatDate(item.nextCalibrationDate, 'yyyy-MM-dd')}</TableCell>
@@ -336,7 +333,15 @@ export function CalibrationHistorySection({
                         variant="outline"
                         className={STATUS_COLORS[item.status] || 'bg-gray-100'}
                       >
-                        {STATUS_LABELS[item.status] || item.status}
+                        {STATUS_LABEL_KEYS[item.status]
+                          ? t(
+                              STATUS_LABEL_KEYS[item.status] as
+                                | 'statusScheduled'
+                                | 'statusInProgress'
+                                | 'statusCompleted'
+                                | 'statusFailed'
+                            )
+                          : item.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -345,7 +350,14 @@ export function CalibrationHistorySection({
                           variant="outline"
                           className={APPROVAL_STATUS_COLORS[item.approvalStatus] || 'bg-gray-100'}
                         >
-                          {APPROVAL_STATUS_LABELS[item.approvalStatus] || item.approvalStatus}
+                          {APPROVAL_LABEL_KEYS[item.approvalStatus]
+                            ? t(
+                                APPROVAL_LABEL_KEYS[item.approvalStatus] as
+                                  | 'approvalPending'
+                                  | 'approvalApproved'
+                                  | 'approvalRejected'
+                              )
+                            : item.approvalStatus}
                         </Badge>
                       )}
                     </TableCell>
@@ -358,14 +370,19 @@ export function CalibrationHistorySection({
                             size="icon"
                             onClick={() => handleDeleteClick(item.id)}
                             disabled={disabled}
-                            aria-label="교정 기록 삭제"
+                            aria-label={t('deleteAriaLabel')}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" aria-hidden="true" />
                           </Button>
                         )}
                         {/* 실제 저장된 항목은 상세 페이지 링크 */}
                         {!isTempItem && (
-                          <Button variant="ghost" size="icon" asChild aria-label="교정 상세 보기">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            asChild
+                            aria-label={t('detailAriaLabel')}
+                          >
                             <Link href={`/calibrations/${item.id}`}>
                               <ExternalLink className="h-4 w-4" aria-hidden="true" />
                             </Link>
@@ -385,8 +402,8 @@ export function CalibrationHistorySection({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>교정 이력 추가</DialogTitle>
-            <DialogDescription>장비의 교정 이력 정보를 입력하세요.</DialogDescription>
+            <DialogTitle>{t('dialogTitle')}</DialogTitle>
+            <DialogDescription>{t('dialogDescription')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -400,7 +417,7 @@ export function CalibrationHistorySection({
 
             {/* 교정일 */}
             <div className="space-y-2">
-              <Label htmlFor="calibrationDate">교정일 *</Label>
+              <Label htmlFor="calibrationDate">{t('formCalDate')}</Label>
               <Input
                 id="calibrationDate"
                 type="date"
@@ -422,7 +439,7 @@ export function CalibrationHistorySection({
 
             {/* 교정 결과 */}
             <div className="space-y-2">
-              <Label htmlFor="result">교정 결과 *</Label>
+              <Label htmlFor="result">{t('formResult')}</Label>
               <Select
                 value={formData.result}
                 onValueChange={(value) =>
@@ -434,21 +451,19 @@ export function CalibrationHistorySection({
                 disabled={isSaving}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="결과 선택" />
+                  <SelectValue placeholder={t('formResultPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {CALIBRATION_RESULT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="pass">{t('resultPass')}</SelectItem>
+                  <SelectItem value="fail">{t('resultFail')}</SelectItem>
+                  <SelectItem value="conditional">{t('resultConditional')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* 교정기관 */}
             <div className="space-y-2">
-              <Label htmlFor="calibrationAgency">교정기관 *</Label>
+              <Label htmlFor="calibrationAgency">{t('formAgency')}</Label>
               <Input
                 id="calibrationAgency"
                 value={formData.calibrationAgency}
@@ -456,7 +471,7 @@ export function CalibrationHistorySection({
                   setFormData((prev) => ({ ...prev, calibrationAgency: e.target.value }));
                   setFormErrors((prev) => ({ ...prev, calibrationAgency: '' }));
                 }}
-                placeholder="예: 한국표준과학연구원"
+                placeholder={t('formAgencyPlaceholder')}
                 disabled={isSaving}
                 className={formErrors.calibrationAgency ? 'border-destructive' : ''}
               />
@@ -470,7 +485,7 @@ export function CalibrationHistorySection({
 
             {/* 교정 주기 */}
             <div className="space-y-2">
-              <Label htmlFor="calibrationCycle">교정 주기 (개월) *</Label>
+              <Label htmlFor="calibrationCycle">{t('formCycle')}</Label>
               <Input
                 id="calibrationCycle"
                 type="number"
@@ -494,7 +509,7 @@ export function CalibrationHistorySection({
 
             {/* 차기 교정일 (자동 계산) */}
             <div className="space-y-2">
-              <Label htmlFor="nextCalibrationDate">차기 교정일</Label>
+              <Label htmlFor="nextCalibrationDate">{t('formNextCalDate')}</Label>
               <Input
                 id="nextCalibrationDate"
                 type="date"
@@ -512,19 +527,17 @@ export function CalibrationHistorySection({
                   {formErrors.nextCalibrationDate}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                교정일과 주기를 기준으로 자동 계산됩니다.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('formNextCalDateHint')}</p>
             </div>
 
             {/* 비고 */}
             <div className="space-y-2">
-              <Label htmlFor="notes">비고</Label>
+              <Label htmlFor="notes">{t('formNotes')}</Label>
               <Textarea
                 id="notes"
                 value={formData.notes || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                placeholder="추가 정보를 입력하세요"
+                placeholder={t('formNotesPlaceholder')}
                 rows={2}
                 disabled={isSaving}
               />
@@ -533,10 +546,10 @@ export function CalibrationHistorySection({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
-              취소
+              {t('cancel')}
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? '저장 중...' : '저장'}
+              {isSaving ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -546,10 +559,8 @@ export function CalibrationHistorySection({
       <Dialog open={!!deleteTargetId} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>삭제 확인</DialogTitle>
-            <DialogDescription>
-              이 교정 이력을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-            </DialogDescription>
+            <DialogTitle>{t('deleteConfirmTitle')}</DialogTitle>
+            <DialogDescription>{t('deleteConfirmDescription')}</DialogDescription>
           </DialogHeader>
 
           {deleteError && (
@@ -561,10 +572,10 @@ export function CalibrationHistorySection({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTargetId(null)} disabled={isDeleting}>
-              취소
+              {t('cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
-              {isDeleting ? '삭제 중...' : '삭제'}
+              {isDeleting ? t('deleting') : t('delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

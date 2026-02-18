@@ -2,13 +2,15 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { Package, SearchX } from 'lucide-react';
+import { Package, SearchX, FilterX, Plus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { EQUIPMENT_EMPTY_STATE_TOKENS } from '@/lib/design-tokens';
 import equipmentApi from '@/lib/api/equipment-api';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
+import { useTranslations } from 'next-intl';
 import { useEquipmentFilters } from '@/hooks/useEquipmentFilters';
 import { EquipmentFilters } from '@/components/equipment/EquipmentFilters';
 import { EquipmentSearchBar } from '@/components/equipment/EquipmentSearchBar';
@@ -32,18 +34,24 @@ function EmptySearchResults({
   searchTerm?: string;
   onClearFilters: () => void;
 }) {
+  const t = useTranslations('equipment');
+  const Icon = searchTerm ? SearchX : FilterX;
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <SearchX className="h-12 w-12 text-muted-foreground mb-4" />
-      <h3 className="text-lg font-semibold">검색 결과가 없습니다</h3>
-      <p className="text-muted-foreground mt-1 max-w-md">
+    <div className={`${EQUIPMENT_EMPTY_STATE_TOKENS.container} py-16`}>
+      <Icon className={EQUIPMENT_EMPTY_STATE_TOKENS.icon} aria-hidden="true" />
+      <h3 className={EQUIPMENT_EMPTY_STATE_TOKENS.title}>
+        {searchTerm ? t('list.noSearchResults') : t('list.noFilterResults')}
+      </h3>
+      <p className={`${EQUIPMENT_EMPTY_STATE_TOKENS.description} max-w-md mx-auto`}>
         {searchTerm
-          ? `"${searchTerm}"에 대한 검색 결과가 없습니다.`
-          : '현재 필터 조건에 맞는 장비가 없습니다.'}
+          ? t('list.noSearchResultsDesc', { term: searchTerm })
+          : t('list.noFilterResultsDesc')}
       </p>
       {hasActiveFilters && (
         <Button variant="outline" className="mt-4" onClick={onClearFilters} type="button">
-          필터 초기화
+          <FilterX className="h-4 w-4 mr-1.5" aria-hidden="true" />
+          {t('list.clearFilters')}
         </Button>
       )}
     </div>
@@ -54,14 +62,28 @@ function EmptySearchResults({
  * 빈 상태 컴포넌트 (데이터 없음)
  */
 function EmptyState() {
+  const t = useTranslations('equipment');
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Package className="h-12 w-12 text-muted-foreground mb-4" />
-      <h3 className="text-lg font-semibold">등록된 장비가 없습니다</h3>
-      <p className="text-muted-foreground mt-1">첫 번째 장비를 등록해보세요.</p>
-      <Button className="mt-4" asChild>
-        <Link href="/equipment/create">장비 등록</Link>
-      </Button>
+    <div className={`${EQUIPMENT_EMPTY_STATE_TOKENS.container} py-16`}>
+      <Package className={EQUIPMENT_EMPTY_STATE_TOKENS.icon} aria-hidden="true" />
+      <h3 className={EQUIPMENT_EMPTY_STATE_TOKENS.title}>{t('list.empty')}</h3>
+      <p className={`${EQUIPMENT_EMPTY_STATE_TOKENS.description} max-w-md mx-auto`}>
+        {t('list.emptyDescription')}
+      </p>
+      <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
+        <Button asChild>
+          <Link href="/equipment/create">
+            <Plus className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            {t('list.createButton')}
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/equipment/create-shared">
+            <Package className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            {t('list.createSharedButton')}
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }
@@ -70,29 +92,72 @@ function EmptyState() {
  * 스켈레톤 로딩 컴포넌트
  */
 export function EquipmentListSkeleton() {
+  const t = useTranslations('equipment');
   return (
-    <div className="space-y-4" aria-busy="true" aria-live="polite">
-      {/* 필터 스켈레톤 */}
-      <Skeleton className="h-[120px] w-full rounded-lg" />
-
-      {/* 검색바 & 뷰 토글 스켈레톤 */}
-      <div className="flex gap-4">
-        <Skeleton className="h-10 flex-1" />
-        <Skeleton className="h-10 w-[120px]" />
+    <div
+      className="space-y-6"
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label={t('list.loading')}
+    >
+      {/* 필터 패널 스켈레톤 — 실제 필터 레이아웃과 유사 */}
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-8 w-20 rounded-md" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <Skeleton className="h-9 w-full rounded-md" />
+          <Skeleton className="h-9 w-full rounded-md" />
+          <Skeleton className="h-9 w-full rounded-md" />
+          <Skeleton className="h-9 w-full rounded-md hidden lg:block" />
+        </div>
       </div>
 
-      {/* 테이블 스켈레톤 */}
-      <div className="space-y-2">
-        {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-16 w-full" />
+      {/* 검색바 & 뷰 토글 스켈레톤 */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <Skeleton className="h-10 w-full sm:max-w-md rounded-md" />
+        <Skeleton className="h-10 w-[100px] rounded-md" />
+      </div>
+
+      {/* 테이블 스켈레톤 — 7개 컬럼 */}
+      <div className="border rounded-lg overflow-hidden">
+        {/* 테이블 헤더 */}
+        <div className="bg-muted/50 px-4 py-3 flex items-center gap-4">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-4 w-20 hidden sm:block" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-24 hidden md:block" />
+          <Skeleton className="h-4 w-16 hidden md:block" />
+          <Skeleton className="h-4 w-12 ml-auto" />
+        </div>
+        {/* 테이블 행 */}
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="px-4 py-3 border-t flex items-center gap-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-4 w-24 hidden sm:block" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-4 w-24 hidden md:block" />
+            <Skeleton className="h-4 w-20 hidden md:block" />
+            <Skeleton className="h-8 w-16 ml-auto rounded-md" />
+          </div>
         ))}
       </div>
 
       {/* 페이지네이션 스켈레톤 */}
-      <div className="flex justify-between">
-        <Skeleton className="h-8 w-[200px]" />
-        <Skeleton className="h-8 w-[300px]" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-[160px]" />
+        <div className="flex gap-1">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-8 rounded-md" />
+          ))}
+        </div>
       </div>
+
+      <span className="sr-only">{t('list.loadingText')}</span>
     </div>
   );
 }
@@ -119,6 +184,7 @@ interface EquipmentListContentProps {
  * - page.tsx에서 <ClientOnly> wrapper 적용
  */
 export function EquipmentListContent({ initialData }: EquipmentListContentProps) {
+  const t = useTranslations('equipment');
   // URL 상태 관리 훅
   const {
     filters,
@@ -182,7 +248,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
 
   // 에러 상태 처리
   if (error) {
-    return <ErrorAlert error={error} title="장비 목록 로드 실패" onRetry={() => refetch()} />;
+    return <ErrorAlert error={error} title={t('list.loadError')} onRetry={() => refetch()} />;
   }
 
   // 초기 로딩 상태 (initialData가 없는 경우에만)
@@ -192,6 +258,17 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
 
   return (
     <div className="space-y-6" aria-live="polite" aria-busy={isFetching}>
+      {/* 진행 표시줄 — 백그라운드 데이터 갱신 시 thin indeterminate bar */}
+      {isFetching && !isLoading && (
+        <div
+          className="fixed top-0 left-0 right-0 h-0.5 bg-primary/20 z-50 overflow-hidden"
+          role="progressbar"
+          aria-label={t('list.refreshing')}
+        >
+          <div className="h-full bg-primary w-1/3 rounded-r motion-safe:animate-progress-indeterminate motion-reduce:hidden" />
+        </div>
+      )}
+
       {/* 필터 패널 */}
       <EquipmentFilters
         filters={filters}
@@ -220,19 +297,19 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
           {/* 정렬 표시 */}
           {filters.sortBy && filters.sortBy !== 'managementNumber' && (
             <Badge variant="outline" className="text-xs">
-              정렬:{' '}
+              {t('sort.label')}{' '}
               {filters.sortBy === 'name'
-                ? '이름순'
+                ? t('sort.name')
                 : filters.sortBy === 'lastCalibrationDate'
-                  ? '교정일순'
+                  ? t('sort.lastCalibrationDate')
                   : filters.sortBy === 'nextCalibrationDate'
-                    ? '교정기한순'
+                    ? t('sort.nextCalibrationDate')
                     : filters.sortBy === 'status'
-                      ? '상태순'
+                      ? t('sort.status')
                       : filters.sortBy === 'createdAt'
-                        ? '등록일순'
+                        ? t('sort.createdAt')
                         : ''}
-              ({filters.sortOrder === 'asc' ? '오름차순' : '내림차순'})
+              ({filters.sortOrder === 'asc' ? t('sort.asc') : t('sort.desc')})
             </Badge>
           )}
 

@@ -1,21 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import {
-  ArrowLeft,
-  Edit,
-  Trash2,
-  FileOutput,
-  Package,
-  CheckCircle,
-  Play,
-  AlertCircle,
-  AlertTriangle,
-  XCircle,
-  Archive,
-  Ban,
-  Calendar,
-} from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, Edit, Trash2, FileOutput } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +19,14 @@ import { DisposalApprovalDialog } from './disposal/DisposalApprovalDialog';
 import { DisposalCancelDialog } from './disposal/DisposalCancelDialog';
 import { useDisposalPermissions } from '@/hooks/use-disposal-permissions';
 import type { DisposalRequest } from '@equipment-management/schemas';
+import {
+  EQUIPMENT_STATUS_TOKENS,
+  DEFAULT_STATUS_CONFIG,
+  CALIBRATION_BADGE_TOKENS,
+  EQUIPMENT_HEADER_TOKENS,
+  getEquipmentHeaderButtonClasses,
+  ANIMATION_PRESETS,
+} from '@/lib/design-tokens';
 
 interface EquipmentHeaderProps {
   equipment: Equipment;
@@ -55,6 +50,7 @@ export function EquipmentHeader({
   equipment: initialEquipment,
   disposalRequest,
 }: EquipmentHeaderProps) {
+  const t = useTranslations('equipment');
   const { hasRole } = useAuth();
 
   // 폐기 관련 다이얼로그 상태
@@ -110,11 +106,10 @@ export function EquipmentHeader({
    * 기본 상태(가용성)와 별도로 교정 상태를 계산하여 복합 상태 표현 가능
    * - 폐기(retired) 장비는 교정 상태 표시 안함
    * - 부적합(non_conforming) 상태에서도 교정기한 초과인 경우 일수 배지 표시
+   *
+   * SSOT: CALIBRATION_BADGE_TOKENS (design-tokens) 사용
    */
   const calibrationStatus = useMemo(() => {
-    // 특수 케이스: non_conforming 상태에서 교정기한 초과인 경우
-    // 교정 상태 표시가 의미 없는 장비 상태 체크 (SSOT: equipment-status-styles.ts)
-    // 단, non_conforming 상태에서 교정기한 초과인 경우는 일수 배지 표시
     const isNonConforming = equipment.status === 'non_conforming';
     const shouldSkipCalibration = !shouldDisplayCalibrationStatus(equipment.status);
 
@@ -122,7 +117,6 @@ export function EquipmentHeader({
       return null;
     }
 
-    // 교정 불필요 장비
     if (!equipment.calibrationRequired || equipment.calibrationMethod === 'not_applicable') {
       return null;
     }
@@ -143,35 +137,34 @@ export function EquipmentHeader({
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
-      // 교정 기한 초과
       const overdueDays = Math.abs(diffDays);
+      const token = CALIBRATION_BADGE_TOKENS.overdue;
       return {
         type: 'overdue' as const,
         days: overdueDays,
-        label: `D+${overdueDays} (${overdueDays}일 초과)`,
-        color: 'text-red-100',
-        bg: 'bg-red-600/90 border-red-400',
-        icon: AlertCircle,
+        label: t('calibration.overdaysDays', { days: overdueDays }),
+        color: token.header.textColor,
+        bg: token.header.bgClasses,
+        icon: token.icon,
       };
     } else if (isNonConforming) {
-      // non_conforming 상태이지만 교정기한이 초과되지 않은 경우 - 교정 상태 숨김
       return null;
     } else if (diffDays <= 30) {
-      // 30일 이내 교정 만료
+      const severity = diffDays <= 7 ? 'urgent' : 'warning';
+      const token = CALIBRATION_BADGE_TOKENS[severity];
       return {
         type: 'upcoming' as const,
         days: diffDays,
-        label: diffDays === 0 ? '오늘 교정 만료' : `${diffDays}일 후 교정 만료`,
-        color: diffDays <= 7 ? 'text-orange-100' : 'text-yellow-100',
-        bg:
-          diffDays <= 7
-            ? 'bg-orange-500/90 border-orange-400'
-            : 'bg-yellow-600/90 border-yellow-400',
-        icon: diffDays <= 7 ? AlertTriangle : Calendar,
+        label:
+          diffDays === 0
+            ? t('calibration.expiresToday')
+            : t('calibration.expiresInDays', { days: diffDays }),
+        color: token.header.textColor,
+        bg: token.header.bgClasses,
+        icon: token.icon,
       };
     }
 
-    // 30일 초과 - 정상
     return null;
   }, [
     equipment.status,
@@ -183,100 +176,37 @@ export function EquipmentHeader({
   /**
    * 기본 상태 설정 (가용성 기준)
    *
-   * calibration_scheduled는 별도 배지로 표시하므로 기본 상태는 available
-   * calibration_overdue는 non_conforming으로 표시 (교정기한 초과 = 부적합)
+   * SSOT: EQUIPMENT_STATUS_TOKENS (design-tokens)
+   * - calibration_scheduled → available (교정 상태는 별도 배지)
+   * - calibration_overdue → non_conforming (부적합 + 교정 일수 배지)
    */
-  const getStatusConfig = (status: string) => {
-    // calibration_scheduled는 available로 처리 (교정 상태는 별도 배지)
+  const getStatusToken = (status: string) => {
     const normalizedStatus = status === 'calibration_scheduled' ? 'available' : status;
-    // calibration_overdue는 non_conforming으로 처리 (부적합 + 교정 일수 배지)
     const finalStatus =
       normalizedStatus === 'calibration_overdue' ? 'non_conforming' : normalizedStatus;
 
-    const configs: Record<
-      string,
-      {
-        color: string;
-        bg: string;
-        label: string;
-        icon: React.ComponentType<{ className?: string }>;
-      }
-    > = {
-      available: {
-        color: 'text-green-800 dark:text-green-300',
-        bg: 'bg-green-100 dark:bg-green-900/30 border-green-500',
-        label: '사용 가능',
-        icon: CheckCircle,
-      },
-      in_use: {
-        color: 'text-blue-800 dark:text-blue-300',
-        bg: 'bg-blue-100 dark:bg-blue-900/30 border-blue-500',
-        label: '사용 중',
-        icon: Play,
-      },
-      checked_out: {
-        color: 'text-ul-midnight dark:text-blue-300',
-        bg: 'bg-blue-50 dark:bg-blue-950/30 border-blue-400',
-        label: '반출 중',
-        icon: FileOutput,
-      },
-      non_conforming: {
-        color: 'text-red-700 dark:text-red-300',
-        bg: 'bg-red-100 dark:bg-red-900/30 border-red-500',
-        label: '부적합',
-        icon: XCircle,
-      },
-      spare: {
-        color: 'text-gray-700 dark:text-gray-300',
-        bg: 'bg-gray-100 dark:bg-gray-800/30 border-gray-400',
-        label: '여분',
-        icon: Archive,
-      },
-      retired: {
-        color: 'text-gray-600 dark:text-gray-400',
-        bg: 'bg-gray-200 dark:bg-gray-800/50 border-gray-500',
-        label: '폐기',
-        icon: Ban,
-      },
-      pending_disposal: {
-        color: 'text-orange-700 dark:text-orange-300',
-        bg: 'bg-orange-100 dark:bg-orange-900/30 border-orange-500',
-        label: '폐기 진행 중',
-        icon: AlertCircle,
-      },
-      disposed: {
-        color: 'text-gray-600 dark:text-gray-400',
-        bg: 'bg-gray-200 dark:bg-gray-800/50 border-gray-500',
-        label: '폐기 완료',
-        icon: Ban,
-      },
+    const token = EQUIPMENT_STATUS_TOKENS[finalStatus] || DEFAULT_STATUS_CONFIG;
+    return {
+      color: token.header.textColor,
+      bg: token.header.bgClasses,
+      label: token.label,
+      icon: token.icon,
     };
-
-    return (
-      configs[finalStatus] || {
-        color: 'text-gray-800 dark:text-gray-300',
-        bg: 'bg-gray-100 dark:bg-gray-800 border-gray-400',
-        label: status,
-        icon: Package,
-      }
-    );
   };
 
-  const statusConfig = getStatusConfig(equipment.status || 'available');
+  const statusConfig = getStatusToken(equipment.status || 'available');
 
   return (
-    <div className="bg-gradient-to-r from-ul-midnight via-ul-midnight-dark to-ul-midnight text-white shadow-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className={cn(EQUIPMENT_HEADER_TOKENS.background, EQUIPMENT_HEADER_TOKENS.text, 'shadow-xl')}
+    >
+      <div className={cn(EQUIPMENT_HEADER_TOKENS.container, EQUIPMENT_HEADER_TOKENS.padding)}>
         {/* 목록으로 버튼 */}
         <div className="mb-6">
           <Link href="/equipment">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white/80 hover:text-white hover:bg-white/10"
-            >
+            <Button variant="ghost" size="sm" className={getEquipmentHeaderButtonClasses('back')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              목록으로
+              {t('detail.backToList')}
             </Button>
           </Link>
         </div>
@@ -287,14 +217,17 @@ export function EquipmentHeader({
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
               {/* 왼쪽: 장비명, 모델명, 관리번호 */}
               <div className="space-y-3 flex-1">
-                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{equipment.name}</h1>
+                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-balance">
+                  {equipment.name}
+                </h1>
                 <div className="flex flex-wrap items-center gap-3 text-white/80">
                   <span className="text-base">
-                    모델: <span className="font-medium text-white">{equipment.modelName}</span>
+                    {t('header.model')}{' '}
+                    <span className="font-medium text-white">{equipment.modelName}</span>
                   </span>
                   <span className="text-white/40">•</span>
                   <span className="text-base">
-                    관리번호:{' '}
+                    {t('header.managementNumber')}{' '}
                     <span className="font-mono font-medium text-white">
                       {equipment.managementNumber}
                     </span>
@@ -303,7 +236,7 @@ export function EquipmentHeader({
                     <>
                       <span className="text-white/40">•</span>
                       <span className="text-base">
-                        S/N:{' '}
+                        {t('header.serialNumber')}{' '}
                         <span className="font-mono font-medium text-white">
                           {equipment.serialNumber}
                         </span>
@@ -319,12 +252,11 @@ export function EquipmentHeader({
                   <Link href={`/equipment/${equipmentId}/checkout`}>
                     <Button
                       variant="default"
-                      className="bg-white text-ul-midnight hover:bg-gray-100 shadow-lg font-semibold
-                        motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:scale-[1.02] active:scale-[0.98]"
-                      aria-label="반출 신청하기"
+                      className="bg-white text-ul-midnight hover:bg-gray-100 shadow-lg font-semibold hover:scale-[1.02] active:scale-[0.98]"
+                      aria-label={t('header.checkoutAriaLabel')}
                     >
                       <FileOutput className="h-4 w-4 mr-2" aria-hidden="true" />
-                      반출 신청
+                      {t('header.checkoutRequest')}
                     </Button>
                   </Link>
                 )}
@@ -332,13 +264,14 @@ export function EquipmentHeader({
                   <Link href={`/equipment/${equipmentId}/edit`}>
                     <Button
                       variant="outline"
-                      className="bg-white/10 border-white/60 text-white hover:bg-white/20 hover:border-white
-                        font-medium shadow-md backdrop-blur-sm
-                        motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:scale-[1.02] active:scale-[0.98]"
-                      aria-label="장비 정보 수정하기"
+                      className={cn(
+                        getEquipmentHeaderButtonClasses('primary'),
+                        'border-white/60 hover:border-white font-medium shadow-md backdrop-blur-sm'
+                      )}
+                      aria-label={t('header.editAriaLabel')}
                     >
                       <Edit className="h-4 w-4 mr-2" aria-hidden="true" />
-                      수정
+                      {t('header.edit')}
                     </Button>
                   </Link>
                 )}
@@ -360,14 +293,14 @@ export function EquipmentHeader({
                 {canDelete && (
                   <Button
                     variant="outline"
-                    className="bg-red-500/10 border-red-300/70 text-red-100
-                      hover:bg-red-500/30 hover:border-red-200 hover:text-white
-                      font-medium shadow-md backdrop-blur-sm
-                      motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none hover:scale-[1.02] active:scale-[0.98]"
-                    aria-label="장비 삭제하기"
+                    className={cn(
+                      getEquipmentHeaderButtonClasses('destructive'),
+                      'border-red-300/70 font-medium shadow-md backdrop-blur-sm'
+                    )}
+                    aria-label={t('header.deleteAriaLabel')}
                   >
                     <Trash2 className="h-4 w-4 mr-2" aria-hidden="true" />
-                    삭제
+                    {t('header.delete')}
                   </Button>
                 )}
               </div>
@@ -384,7 +317,7 @@ export function EquipmentHeader({
                   statusConfig.color
                 )}
                 role="status"
-                aria-label={`장비 상태: ${statusConfig.label}`}
+                aria-label={t('header.statusAriaLabel', { status: statusConfig.label })}
               >
                 <statusConfig.icon className="h-4 w-4" aria-hidden="true" />
                 <span>{statusConfig.label}</span>
@@ -396,12 +329,14 @@ export function EquipmentHeader({
                   variant="outline"
                   className={cn(
                     'px-3 py-1.5 text-sm font-semibold border-2 inline-flex items-center gap-1.5',
-                    'motion-safe:animate-pulse',
+                    ANIMATION_PRESETS.pulse,
                     calibrationStatus.bg,
                     calibrationStatus.color
                   )}
                   role="status"
-                  aria-label={`교정 상태: ${calibrationStatus.label}`}
+                  aria-label={t('header.calibrationStatusAriaLabel', {
+                    status: calibrationStatus.label,
+                  })}
                 >
                   <calibrationStatus.icon className="h-4 w-4" aria-hidden="true" />
                   <span>{calibrationStatus.label}</span>

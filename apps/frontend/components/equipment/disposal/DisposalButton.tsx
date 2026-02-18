@@ -5,6 +5,8 @@ import { Trash2, CheckCircle2 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { DisposalRequest } from '@equipment-management/schemas';
 import { DisposalDropdownMenu } from './DisposalDropdownMenu';
+import { DISPOSAL_BUTTON_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalButtonProps {
   equipment: Equipment;
@@ -34,12 +36,14 @@ export function DisposalButton({
   onDetailOpen,
   permissions,
 }: DisposalButtonProps) {
+  const t = useTranslations('disposal');
+
   // Disposed state - disabled button
   if (equipment.status === 'disposed') {
     return (
-      <Button variant="outline" disabled className="border-gray-300 text-gray-500">
+      <Button variant="outline" disabled className={DISPOSAL_BUTTON_TOKENS.completed}>
         <CheckCircle2 className="mr-2 h-4 w-4" />
-        폐기 완료
+        {t('button.completed')}
       </Button>
     );
   }
@@ -61,13 +65,9 @@ export function DisposalButton({
   // Available - request button
   if (equipment.status === 'available' && permissions.canRequestDisposal) {
     return (
-      <Button
-        variant="outline"
-        onClick={onRequestOpen}
-        className="border-red-500 text-red-600 hover:bg-red-50"
-      >
+      <Button variant="outline" onClick={onRequestOpen} className={DISPOSAL_BUTTON_TOKENS.request}>
         <Trash2 className="mr-2 h-4 w-4" />
-        폐기 요청
+        {t('button.request')}
       </Button>
     );
   }

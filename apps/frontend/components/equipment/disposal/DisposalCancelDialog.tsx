@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { cancelDisposalRequest } from '@/lib/api/disposal-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { useTranslations } from 'next-intl';
 
 interface DisposalCancelDialogProps {
   open: boolean;
@@ -36,13 +37,14 @@ export function DisposalCancelDialog({
 }: DisposalCancelDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const t = useTranslations('disposal');
 
   const mutation = useMutation({
     mutationFn: () => cancelDisposalRequest(equipmentId),
     onSuccess: async () => {
       toast({
-        title: '취소 완료',
-        description: '폐기 요청이 취소되었습니다. 장비 상태가 사용 가능으로 변경되었습니다.',
+        title: t('cancelDialog.toasts.successTitle'),
+        description: t('cancelDialog.toasts.successDesc'),
       });
       // Invalidate equipment cache to refresh UI
       await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
@@ -50,7 +52,7 @@ export function DisposalCancelDialog({
     },
     onError: (error: Error) => {
       toast({
-        title: '취소 실패',
+        title: t('cancelDialog.toasts.errorTitle'),
         description: error.message,
         variant: 'destructive',
       });
@@ -63,15 +65,17 @@ export function DisposalCancelDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-600" />
-            폐기 요청 취소
+            {t('cancelDialog.title')}
           </DialogTitle>
-          <DialogDescription>정말 폐기 요청을 취소하시겠습니까?</DialogDescription>
+          <DialogDescription>{t('cancelDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
           <p className="text-sm text-gray-600">
-            <span className="font-semibold">{equipmentName}</span>의 폐기 요청이 취소되고, 장비
-            상태가 <span className="font-semibold text-green-600">사용 가능</span>으로 변경됩니다.
+            {t.rich('cancelDialog.message', {
+              name: equipmentName,
+              status: t('cancelDialog.available'),
+            })}
           </p>
         </div>
 
@@ -81,7 +85,7 @@ export function DisposalCancelDialog({
             onClick={() => onOpenChange(false)}
             disabled={mutation.isPending}
           >
-            닫기
+            {t('cancelDialog.close')}
           </Button>
           <Button
             variant="destructive"
@@ -89,7 +93,7 @@ export function DisposalCancelDialog({
             disabled={mutation.isPending}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            확인
+            {t('cancelDialog.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

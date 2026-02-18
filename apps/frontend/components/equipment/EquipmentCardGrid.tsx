@@ -2,17 +2,9 @@
 
 import { memo, useMemo } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
-import {
-  Calendar,
-  MapPin,
-  Tag,
-  Package,
-  ArrowRight,
-  Wrench,
-  AlertCircle,
-  AlertTriangle,
-} from 'lucide-react';
+import { Calendar, MapPin, Tag, Package, ArrowRight, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,9 +15,15 @@ import { UsagePeriodBadge } from './UsagePeriodBadge';
 import { HighlightText } from '@/components/shared/HighlightText';
 import { cn } from '@/lib/utils';
 import {
-  getEquipmentStatusStyle,
-  shouldDisplayCalibrationStatus,
-} from '@/lib/constants/equipment-status-styles';
+  EQUIPMENT_STATUS_TOKENS,
+  DEFAULT_STATUS_CONFIG,
+  CALIBRATION_BADGE_TOKENS,
+  getEquipmentCardClasses,
+  EQUIPMENT_EMPTY_STATE_TOKENS,
+  getStaggerDelay,
+} from '@/lib/design-tokens';
+import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
+import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
 import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
@@ -82,82 +80,37 @@ const EquipmentCard = memo(function EquipmentCard({
   equipment: Equipment;
   searchTerm?: string;
 }) {
+  const t = useTranslations('equipment');
   // 실시간 교정기한 초과 체크 포함
   const style = getEquipmentStatusStyle(equipment.status, equipment.nextCalibrationDate);
 
-  // formatDate from '@/lib/utils/date' 사용 (SSOT)
+  // Design Token: 상태별 카드 스타일
+  const statusToken =
+    EQUIPMENT_STATUS_TOKENS[equipment.status || 'available'] || DEFAULT_STATUS_CONFIG;
 
-  /**
-   * 교정 상태 계산 (동적)
-   * - 폐기(retired), 여분(spare) 상태는 표시 안함
-   * - 부적합(non_conforming) 상태에서도 교정기한 초과인 경우 일수 배지 표시
-   * - 교정 불필요 장비는 표시 안함
-   * - 30일 이내 교정 만료 또는 기한 초과 시 D-day 형식으로 표시
-   */
-  const calibrationStatus = useMemo(() => {
-    // 교정 상태 표시를 건너뛸 장비 상태 확인
-    if (!shouldDisplayCalibrationStatus(equipment.status)) {
-      return null;
-    }
-
-    // 교정 불필요 장비
-    if (!equipment.calibrationRequired || equipment.calibrationMethod === 'not_applicable') {
-      return null;
-    }
-
-    const nextCalibrationDate = equipment.nextCalibrationDate
-      ? new Date(equipment.nextCalibrationDate)
-      : null;
-
-    if (!nextCalibrationDate) {
-      return null;
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    nextCalibrationDate.setHours(0, 0, 0, 0);
-
-    const diffTime = nextCalibrationDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      // 교정 기한 초과
-      const overdueDays = Math.abs(diffDays);
-      return {
-        type: 'overdue' as const,
-        days: overdueDays,
-        label: `D+${overdueDays}`,
-        fullLabel: `교정 기한 ${overdueDays}일 초과`,
-        className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-        icon: AlertCircle,
-      };
-    } else if (diffDays <= 30) {
-      // 30일 이내 교정 만료
-      const isUrgent = diffDays <= 7;
-      return {
-        type: 'upcoming' as const,
-        days: diffDays,
-        label: diffDays === 0 ? 'D-Day' : `D-${diffDays}`,
-        fullLabel: diffDays === 0 ? '오늘 교정 만료' : `${diffDays}일 후 교정 만료`,
-        className: isUrgent
-          ? 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300'
-          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300',
-        icon: isUrgent ? AlertTriangle : Calendar,
-      };
-    }
-
-    // 30일 초과 - 정상
-    return null;
-  }, [
-    equipment.status,
-    equipment.calibrationRequired,
-    equipment.calibrationMethod,
-    equipment.nextCalibrationDate,
-  ]);
+  // SSOT: calculateCalibrationStatus로 교정 상태 계산 통합
+  const calibrationStatus = useMemo(
+    () =>
+      calculateCalibrationStatus(
+        equipment.status,
+        !!equipment.calibrationRequired,
+        equipment.calibrationMethod as CalibrationMethod | undefined,
+        equipment.nextCalibrationDate
+      ),
+    [
+      equipment.status,
+      equipment.calibrationRequired,
+      equipment.calibrationMethod,
+      equipment.nextCalibrationDate,
+    ]
+  );
 
   return (
     <Card
-      className={`border-l-4 ${style.borderColor} hover:shadow-md hover:scale-[1.01] hover:-translate-y-0.5 motion-safe:transition-[box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none`}
+      className={cn(
+        getEquipmentCardClasses(statusToken.card.borderColor),
+        'hover:scale-[1.01] hover:-translate-y-0.5'
+      )}
       role="article"
       aria-labelledby={`equipment-${equipment.id}-name`}
       data-testid="equipment-card"
@@ -170,7 +123,7 @@ const EquipmentCard = memo(function EquipmentCard({
               className="text-base font-semibold truncate flex items-center gap-2"
               data-testid="equipment-name"
             >
-              <HighlightText text={equipment.name || '이름 없음'} search={searchTerm} />
+              <HighlightText text={equipment.name || t('card.noName')} search={searchTerm} />
               {equipment.isShared && (
                 <SharedEquipmentBadge sharedSource={equipment.sharedSource} size="sm" />
               )}
@@ -192,7 +145,7 @@ const EquipmentCard = memo(function EquipmentCard({
                 variant="outline"
                 className={cn(
                   'border-0 text-xs inline-flex items-center gap-1',
-                  calibrationStatus.className
+                  CALIBRATION_BADGE_TOKENS[calibrationStatus.severity].card
                 )}
                 title={calibrationStatus.fullLabel}
               >
@@ -218,7 +171,7 @@ const EquipmentCard = memo(function EquipmentCard({
         <dl className="space-y-1.5 text-sm">
           {equipment.modelName && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <dt className="sr-only">모델명</dt>
+              <dt className="sr-only">{t('card.modelSrOnly')}</dt>
               <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <dd className="truncate">
                 <HighlightText text={equipment.modelName} search={searchTerm} />
@@ -228,7 +181,7 @@ const EquipmentCard = memo(function EquipmentCard({
 
           {equipment.location && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <dt className="sr-only">위치</dt>
+              <dt className="sr-only">{t('card.locationSrOnly')}</dt>
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <dd className="truncate">{equipment.location}</dd>
             </div>
@@ -237,9 +190,12 @@ const EquipmentCard = memo(function EquipmentCard({
           {/* 소유처 원본 번호 (공용/렌탈 장비) */}
           {equipment.isShared && equipment.externalIdentifier && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <dt className="sr-only">소유처 번호</dt>
+              <dt className="sr-only">{t('card.ownerNumberSrOnly')}</dt>
               <Package className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <dd className="truncate" title={`소유처 번호: ${equipment.externalIdentifier}`}>
+              <dd
+                className="truncate"
+                title={t('card.ownerNumberTitle', { number: equipment.externalIdentifier })}
+              >
                 {equipment.externalIdentifier}
               </dd>
             </div>
@@ -247,15 +203,18 @@ const EquipmentCard = memo(function EquipmentCard({
 
           {equipment.lastCalibrationDate && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <dt className="sr-only">마지막 교정일</dt>
+              <dt className="sr-only">{t('card.lastCalibrationSrOnly')}</dt>
               <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <dd>교정: {formatDate(equipment.lastCalibrationDate)}</dd>
+              <dd>
+                {t('card.calibrationPrefix')}
+                {formatDate(equipment.lastCalibrationDate)}
+              </dd>
             </div>
           )}
 
           {equipment.calibrationMethod && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <dt className="sr-only">교정 방법</dt>
+              <dt className="sr-only">{t('card.calibrationMethodSrOnly')}</dt>
               <Wrench className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <dd>
                 {CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod] ||
@@ -268,8 +227,11 @@ const EquipmentCard = memo(function EquipmentCard({
 
       <CardFooter className="pt-2">
         <Button variant="outline" size="sm" className="w-full group" asChild>
-          <Link href={`/equipment/${equipment.id}`} aria-label={`${equipment.name} 상세 보기`}>
-            상세 보기
+          <Link
+            href={`/equipment/${equipment.id}`}
+            aria-label={t('card.viewDetailAriaLabel', { name: equipment.name || '' })}
+          >
+            {t('detail.viewDetail')}
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </Button>
@@ -287,6 +249,7 @@ const EquipmentCard = memo(function EquipmentCard({
  * - 스켈레톤 로딩
  */
 function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentCardGridProps) {
+  const t = useTranslations('equipment');
   if (isLoading) {
     return (
       <div
@@ -296,7 +259,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
         aria-live="polite"
       >
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} style={{ animationDelay: `${i * 100}ms` }}>
+          <div key={i} style={{ animationDelay: getStaggerDelay(i, 'grid') }}>
             <SkeletonCard />
           </div>
         ))}
@@ -306,16 +269,13 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
 
   if (items.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center justify-center py-12"
-        data-testid="equipment-card-grid"
-      >
+      <div className={EQUIPMENT_EMPTY_STATE_TOKENS.container} data-testid="equipment-card-grid">
         <Package
-          className="h-12 w-12 text-muted-foreground mb-4 motion-safe:animate-gentle-bounce"
+          className={cn(EQUIPMENT_EMPTY_STATE_TOKENS.icon, 'motion-safe:animate-gentle-bounce')}
           aria-hidden="true"
         />
-        <p className="text-lg font-medium">표시할 장비가 없습니다</p>
-        <p className="text-muted-foreground text-sm mt-1">다른 필터를 적용해보세요</p>
+        <p className={EQUIPMENT_EMPTY_STATE_TOKENS.title}>{t('list.noItems')}</p>
+        <p className={EQUIPMENT_EMPTY_STATE_TOKENS.description}>{t('list.tryOtherFilters')}</p>
       </div>
     );
   }
@@ -325,7 +285,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
       data-testid="equipment-card-grid"
       role="feed"
-      aria-label="장비 목록"
+      aria-label={t('card.gridAriaLabel')}
       aria-busy={isLoading}
     >
       {items.map((equipment) => (

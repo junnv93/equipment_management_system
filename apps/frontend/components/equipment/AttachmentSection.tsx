@@ -1,9 +1,11 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, FileCheck } from 'lucide-react';
+import { FORM_SECTION_TOKENS, FOCUS_TOKENS } from '@/lib/design-tokens';
 
 interface AttachmentSectionProps {
   files: UploadedFile[];
@@ -26,20 +28,17 @@ export function AttachmentSection({
   isLoading = false,
   existingAttachments = [],
 }: AttachmentSectionProps) {
+  const t = useTranslations('equipment.attachmentSection');
   const attachmentType = isEdit ? 'history_card' : 'inspection_report';
-  const attachmentLabel = isEdit ? '이력카드' : '검수보고서';
-  const attachmentDescription = isEdit
-    ? '기존 장비 수정 시 이력카드를 첨부하세요'
-    : '신규 장비 등록 시 검수보고서를 첨부하세요';
+  const attachmentLabel = isEdit ? t('historyCard') : t('inspectionReport');
+  const attachmentDescription = isEdit ? t('editDescription') : t('createDescription');
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-            4
-          </span>
-          파일 첨부
+          <span className={FORM_SECTION_TOKENS.badge}>4</span>
+          {t('sectionTitle')}
         </CardTitle>
         <CardDescription>{attachmentDescription}</CardDescription>
       </CardHeader>
@@ -47,13 +46,13 @@ export function AttachmentSection({
         {/* 첨부 파일 안내 */}
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>파일 첨부 안내</AlertTitle>
+          <AlertTitle>{t('guideTitle')}</AlertTitle>
           <AlertDescription>
             <ul className="list-disc list-inside space-y-1 mt-2 text-sm">
-              <li>지원 형식: PDF, 이미지(JPG, PNG), 문서(DOC, DOCX, XLS, XLSX)</li>
-              <li>파일 크기: 최대 10MB</li>
-              <li>파일 개수: 최대 10개</li>
-              <li>드래그 앤 드롭으로 쉽게 업로드할 수 있습니다</li>
+              <li>{t('guideFormats')}</li>
+              <li>{t('guideSize')}</li>
+              <li>{t('guideCount')}</li>
+              <li>{t('guideDragDrop')}</li>
             </ul>
           </AlertDescription>
         </Alert>
@@ -63,7 +62,7 @@ export function AttachmentSection({
           <div className="space-y-2">
             <h4 className="text-sm font-medium flex items-center gap-2">
               <FileCheck className="h-4 w-4" />
-              기존 첨부파일
+              {t('existingFiles')}
             </h4>
             <div className="grid gap-2">
               {existingAttachments.map((attachment) => (
@@ -86,9 +85,9 @@ export function AttachmentSection({
                     href={`/api/equipment/attachments/${attachment.uuid}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
+                    className={`text-sm text-primary hover:underline ${FOCUS_TOKENS.classes.default}`}
                   >
-                    다운로드
+                    {t('download')}
                   </a>
                 </div>
               ))}
@@ -99,7 +98,7 @@ export function AttachmentSection({
         {/* 새 파일 업로드 */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium">
-            {isEdit ? '새 파일 추가' : attachmentLabel + ' 첨부'}
+            {isEdit ? t('addFile') : t('attachFile', { label: attachmentLabel })}
           </h4>
           <FileUpload
             files={files}

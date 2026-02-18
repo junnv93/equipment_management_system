@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { ArrowLeft, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ interface EditEquipmentClientProps {
  * - 폼 제출, 에러 처리 등 클라이언트 로직 담당
  */
 export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
+  const t = useTranslations('equipment');
   const router = useRouter();
   const { toast } = useToast();
   const updateEquipment = useUpdateEquipment();
@@ -53,13 +55,13 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
       // 승인 요청이 생성된 경우
       if ((result as { requestUuid?: string }).requestUuid) {
         toast({
-          title: '수정 요청 완료',
-          description: '장비 수정 요청이 제출되었습니다. 기술책임자의 승인을 기다려주세요.',
+          title: t('editToast.requestTitle'),
+          description: t('editToast.requestDescription'),
         });
       } else {
         toast({
-          title: '수정 완료',
-          description: '장비 정보가 성공적으로 수정되었습니다.',
+          title: t('editToast.successTitle'),
+          description: t('editToast.successDescription'),
         });
       }
 
@@ -73,19 +75,14 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
       } else if (error instanceof Error) {
         setSubmitError(error);
       } else {
-        setSubmitError(
-          new ApiError(
-            '장비 수정 중 알 수 없는 오류가 발생했습니다.',
-            EquipmentErrorCode.UNKNOWN_ERROR
-          )
-        );
+        setSubmitError(new ApiError(t('editToast.unknownError'), EquipmentErrorCode.UNKNOWN_ERROR));
       }
 
       // 간단한 toast도 표시
       toast({
-        title: '수정 실패',
+        title: t('editToast.errorTitle'),
         description:
-          error instanceof ApiError ? error.getUserMessage() : '장비 수정 중 오류가 발생했습니다.',
+          error instanceof ApiError ? error.getUserMessage() : t('editToast.errorDescription'),
         variant: 'destructive',
       });
     }
@@ -161,9 +158,11 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Edit3 className="h-6 w-6 text-primary" />
-            장비 수정
+            {t('editPage.title')}
           </h1>
-          <p className="text-muted-foreground text-sm">{equipment.name}의 정보를 수정합니다</p>
+          <p className="text-muted-foreground text-sm">
+            {t('editPage.description', { name: equipment.name })}
+          </p>
         </div>
       </div>
 

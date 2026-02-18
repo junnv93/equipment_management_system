@@ -1,19 +1,25 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { EQUIPMENT_HEADER_TOKENS, TIMELINE_SKELETON_TOKENS } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 
 /**
  * 장비 상세 페이지 로딩 스켈레톤
  *
  * UL Solutions 브랜딩:
- * - 헤더: UL Midnight Blue 배경
+ * - 헤더: EQUIPMENT_HEADER_TOKENS 배경
  * - 탭 및 컨텐츠: 스켈레톤 애니메이션
  */
 export function EquipmentDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-ul-gray-light dark:bg-gray-950" aria-busy="true" aria-live="polite">
+    <div
+      className="min-h-screen bg-ul-gray-light dark:bg-gray-950"
+      aria-busy="true"
+      aria-live="polite"
+    >
       {/* 헤더 스켈레톤 */}
-      <div className="bg-gradient-to-r from-ul-midnight to-ul-midnight-dark text-white p-8">
-        <div className="max-w-7xl mx-auto space-y-4">
+      <div className={cn(EQUIPMENT_HEADER_TOKENS.background, EQUIPMENT_HEADER_TOKENS.text, 'p-8')}>
+        <div className={cn(EQUIPMENT_HEADER_TOKENS.container, 'space-y-4')}>
           <div className="flex items-center justify-between">
             <div className="space-y-3 flex-1">
               <Skeleton className="h-10 w-96 bg-white/20" />
@@ -69,10 +75,10 @@ export function EquipmentDetailSkeleton() {
           <CardContent className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex gap-4">
-                <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+                <Skeleton className={cn(TIMELINE_SKELETON_TOKENS.node, 'flex-shrink-0')} />
                 <div className="flex-1 space-y-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className={cn(TIMELINE_SKELETON_TOKENS.line, 'w-3/4')} />
+                  <Skeleton className={cn(TIMELINE_SKELETON_TOKENS.line, 'w-full')} />
                 </div>
               </div>
             ))}

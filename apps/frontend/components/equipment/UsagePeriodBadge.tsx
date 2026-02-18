@@ -1,6 +1,9 @@
+'use client';
+
 import { Badge } from '@/components/ui/badge';
 import { differenceInDays, isBefore } from 'date-fns';
 import { toDate, formatDate } from '@/lib/utils/date';
+import { useTranslations } from 'next-intl';
 
 interface UsagePeriodBadgeProps {
   startDate: string | Date;
@@ -25,6 +28,7 @@ interface UsagePeriodBadgeProps {
  * />
  */
 export function UsagePeriodBadge({ startDate, endDate, className }: UsagePeriodBadgeProps) {
+  const t = useTranslations('equipment.usagePeriodBadge');
   const now = new Date();
   const start = toDate(startDate);
   const end = toDate(endDate);
@@ -35,8 +39,8 @@ export function UsagePeriodBadge({ startDate, endDate, className }: UsagePeriodB
   // 사용 시작 전
   if (isBefore(now, start)) {
     return (
-      <Badge variant="outline" className={className} aria-label="사용 시작 전">
-        시작 예정: {formatDate(start, 'MM/dd')}
+      <Badge variant="outline" className={className} aria-label={t('beforeStart')}>
+        {t('startDate', { date: formatDate(start, 'MM/dd') })}
       </Badge>
     );
   }
@@ -57,7 +61,7 @@ export function UsagePeriodBadge({ startDate, endDate, className }: UsagePeriodB
         : `D-${daysRemaining}`;
 
   return (
-    <Badge variant={variant} className={className} aria-label={`사용 기간 ${label}`}>
+    <Badge variant={variant} className={className} aria-label={t('ariaLabel', { label })}>
       {label}
     </Badge>
   );

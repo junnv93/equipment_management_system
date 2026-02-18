@@ -1,9 +1,11 @@
 'use client';
 
 import { memo } from 'react';
+import { useTranslations } from 'next-intl';
 import { LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getTransitionClasses, FOCUS_TOKENS } from '@/lib/design-tokens';
 import type { ViewType } from '@/hooks/useEquipmentFilters';
 
 interface ViewToggleProps {
@@ -20,31 +22,32 @@ interface ViewToggleProps {
  * - 툴팁 지원
  */
 function ViewToggleComponent({ view, onChange, className = '' }: ViewToggleProps) {
+  const t = useTranslations('equipment');
   return (
     <TooltipProvider>
       <div
         className={`inline-flex items-center rounded-lg border bg-background p-1 ${className}`}
         role="radiogroup"
-        aria-label="보기 방식 선택"
+        aria-label={t('viewToggle.ariaLabel')}
       >
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant={view === 'table' ? 'secondary' : 'ghost'}
               size="sm"
-              className="h-8 px-3"
+              className={`h-8 px-3 ${getTransitionClasses('fast', ['background-color', 'color'])} ${FOCUS_TOKENS.classes.default}`}
               onClick={() => onChange('table')}
               type="button"
               role="radio"
               aria-checked={view === 'table'}
-              aria-label="테이블 뷰"
+              aria-label={t('viewToggle.tableAriaLabel')}
             >
               <List className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-2">테이블</span>
+              <span className="sr-only sm:not-sr-only sm:ml-2">{t('viewToggle.table')}</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>테이블 뷰로 보기</p>
+            <p>{t('viewToggle.tableTooltip')}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -53,19 +56,19 @@ function ViewToggleComponent({ view, onChange, className = '' }: ViewToggleProps
             <Button
               variant={view === 'card' ? 'secondary' : 'ghost'}
               size="sm"
-              className="h-8 px-3"
+              className={`h-8 px-3 ${getTransitionClasses('fast', ['background-color', 'color'])} ${FOCUS_TOKENS.classes.default}`}
               onClick={() => onChange('card')}
               type="button"
               role="radio"
               aria-checked={view === 'card'}
-              aria-label="카드 뷰"
+              aria-label={t('viewToggle.cardAriaLabel')}
             >
               <LayoutGrid className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:ml-2">카드</span>
+              <span className="sr-only sm:not-sr-only sm:ml-2">{t('viewToggle.card')}</span>
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>카드 뷰로 보기</p>
+            <p>{t('viewToggle.cardTooltip')}</p>
           </TooltipContent>
         </Tooltip>
       </div>

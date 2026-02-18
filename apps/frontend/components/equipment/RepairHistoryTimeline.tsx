@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { Wrench, CheckCircle, AlertTriangle, Clock, Trash2, Edit } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { RepairHistory } from '@/lib/api/repair-history-api';
+import { getTransitionClasses } from '@/lib/design-tokens';
 
 interface RepairHistoryTimelineProps {
   repairs: RepairHistory[];
@@ -12,12 +14,7 @@ interface RepairHistoryTimelineProps {
   canEdit?: boolean;
 }
 
-// 수리 결과 라벨
-const REPAIR_RESULT_LABELS: Record<string, string> = {
-  completed: '수리 완료',
-  partial: '부분 수리',
-  failed: '수리 실패',
-};
+// REPAIR_RESULT_LABELS are now provided via useTranslations
 
 // 수리 결과 색상 (dark mode 지원)
 const REPAIR_RESULT_COLORS: Record<string, string> = {
@@ -34,6 +31,7 @@ export default function RepairHistoryTimeline({
   canEdit = false,
 }: RepairHistoryTimelineProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const t = useTranslations('equipment');
 
   const toggleExpanded = (uuid: string) => {
     const newExpanded = new Set(expandedItems);
@@ -96,9 +94,11 @@ export default function RepairHistoryTimeline({
             <Wrench className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
           </div>
         </div>
-        <h3 className="mt-4 text-lg font-medium tracking-tight text-foreground">수리 이력 없음</h3>
+        <h3 className="mt-4 text-lg font-medium tracking-tight text-foreground">
+          {t('repairHistory.empty')}
+        </h3>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          이 장비의 수리 이력이 없습니다.
+          {t('repairHistory.emptyDescription')}
         </p>
       </div>
     );
@@ -130,7 +130,9 @@ export default function RepairHistoryTimeline({
 
                   {/* 내용 */}
                   <div className="min-w-0 flex-1">
-                    <div className="bg-card rounded-lg border border-border p-4 hover:shadow-md motion-safe:transition-shadow motion-safe:duration-200 motion-reduce:transition-none">
+                    <div
+                      className={`bg-card rounded-lg border border-border p-4 hover:shadow-md ${getTransitionClasses('fast', ['box-shadow'])}`}
+                    >
                       {/* 헤더 */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -144,7 +146,9 @@ export default function RepairHistoryTimeline({
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${REPAIR_RESULT_COLORS[repair.repairResult]}`}
                             >
-                              {REPAIR_RESULT_LABELS[repair.repairResult]}
+                              {t(
+                                `repairHistory.result${repair.repairResult.charAt(0).toUpperCase() + repair.repairResult.slice(1)}` as const
+                              )}
                             </span>
                           )}
                         </div>
@@ -154,9 +158,9 @@ export default function RepairHistoryTimeline({
                               {onEdit && (
                                 <button
                                   onClick={() => onEdit(repair)}
-                                  className="p-1 text-muted-foreground hover:text-blue-500 dark:hover:text-blue-400 rounded motion-safe:transition-colors motion-reduce:transition-none"
-                                  title="수정"
-                                  aria-label="수리 이력 수정"
+                                  className={`p-1 text-muted-foreground hover:text-blue-500 dark:hover:text-blue-400 rounded ${getTransitionClasses('fast', ['color'])}`}
+                                  title={t('repairHistory.edit')}
+                                  aria-label={t('repairHistory.editAriaLabel')}
                                 >
                                   <Edit className="h-4 w-4" aria-hidden="true" />
                                 </button>
@@ -164,9 +168,9 @@ export default function RepairHistoryTimeline({
                               {onDelete && (
                                 <button
                                   onClick={() => onDelete(repair)}
-                                  className="p-1 text-muted-foreground hover:text-red-500 dark:hover:text-red-400 rounded motion-safe:transition-colors motion-reduce:transition-none"
-                                  title="삭제"
-                                  aria-label="수리 이력 삭제"
+                                  className={`p-1 text-muted-foreground hover:text-red-500 dark:hover:text-red-400 rounded ${getTransitionClasses('fast', ['color'])}`}
+                                  title={t('repairHistory.delete')}
+                                  aria-label={t('repairHistory.deleteAriaLabel')}
                                 >
                                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                                 </button>
@@ -189,14 +193,16 @@ export default function RepairHistoryTimeline({
                           onClick={() => toggleExpanded(repair.uuid)}
                           className="mt-1 text-xs text-primary hover:underline"
                         >
-                          {expandedItems.has(repair.uuid) ? '간략히' : '더 보기'}
+                          {expandedItems.has(repair.uuid)
+                            ? t('repairHistory.less')
+                            : t('repairHistory.more')}
                         </button>
                       )}
 
                       {/* 비고 */}
                       {repair.notes && (
                         <div className="mt-2 p-2 bg-muted rounded text-xs text-muted-foreground">
-                          <span className="font-medium">비고: </span>
+                          <span className="font-medium">{t('repairHistory.notes')}</span>
                           {repair.notes}
                         </div>
                       )}

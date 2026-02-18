@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,6 +47,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
+import { CONTENT_TOKENS, TIMELINE_TOKENS } from '@/lib/design-tokens';
 import calibrationApi, {
   type CreateCalibrationDto,
   type Calibration,
@@ -92,6 +94,7 @@ const getResultLabel = (result: string): string => {
  * - 승인 프로세스 포함 (시험실무자 등록 → 기술책임자 승인)
  */
 export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps) {
+  const t = useTranslations('equipment');
   const { hasRole, user: _user } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -141,8 +144,8 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
     // 파일 업로드 검증
     if (!certificateFile) {
       toast({
-        title: '파일 필요',
-        description: '교정성적서 파일을 첨부해주세요.',
+        title: t('calibrationHistoryTab.toasts.fileRequired'),
+        description: t('calibrationHistoryTab.toasts.fileRequiredDesc'),
         variant: 'destructive',
       });
       return;
@@ -182,14 +185,14 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
         notes: '',
       });
       toast({
-        title: '교정 이력 등록 완료',
-        description: '교정 이력이 성공적으로 등록되었습니다. 승인을 기다리고 있습니다.',
+        title: t('calibrationHistoryTab.toasts.success'),
+        description: t('calibrationHistoryTab.toasts.successDesc'),
       });
     } catch (error: unknown) {
-      console.error('교정 이력 등록 실패:', error);
+      console.error('Calibration registration failed:', error);
       toast({
-        title: '등록 실패',
-        description: getErrorMessage(error, '교정 이력 등록 중 오류가 발생했습니다.'),
+        title: t('calibrationHistoryTab.toasts.error'),
+        description: getErrorMessage(error, t('calibrationHistoryTab.toasts.errorDesc')),
         variant: 'destructive',
       });
     }
@@ -227,15 +230,13 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4 mr-2" />
-          교정 등록
+          {t('calibrationHistoryTab.register')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>교정 이력 등록</DialogTitle>
-          <DialogDescription>
-            교정 정보를 입력하세요. 등록 후 기술책임자의 승인이 필요합니다.
-          </DialogDescription>
+          <DialogTitle>{t('calibrationHistoryTab.dialog.title')}</DialogTitle>
+          <DialogDescription>{t('calibrationHistoryTab.dialog.description')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -245,7 +246,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 name="calibrationDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>교정일 *</FormLabel>
+                    <FormLabel>{t('calibrationHistoryTab.dialog.calibrationDate')}</FormLabel>
                     <FormControl>
                       <Input
                         type="date"
@@ -266,7 +267,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                 name="calibrationCycle"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>교정 주기 (개월) *</FormLabel>
+                    <FormLabel>{t('calibrationHistoryTab.dialog.calibrationCycle')}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -289,7 +290,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
               name="nextCalibrationDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>다음 교정일 *</FormLabel>
+                  <FormLabel>{t('calibrationHistoryTab.dialog.nextCalibrationDate')}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
@@ -302,10 +303,10 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
               name="calibrationAgency"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>교정 기관 *</FormLabel>
+                  <FormLabel>{t('calibrationHistoryTab.dialog.calibrationAgency')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="예: 한국표준과학연구원(KRISS)"
+                      placeholder={t('calibrationHistoryTab.dialog.calibrationAgencyPlaceholder')}
                       {...field}
                       value={field.value || ''}
                     />
@@ -319,9 +320,13 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
               name="certificateNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>교정성적서 번호 *</FormLabel>
+                  <FormLabel>{t('calibrationHistoryTab.dialog.certificateNumber')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="예: CAL-2026-0001" {...field} value={field.value || ''} />
+                    <Input
+                      placeholder={t('calibrationHistoryTab.dialog.certificateNumberPlaceholder')}
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -332,11 +337,13 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
               name="result"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>교정 결과 *</FormLabel>
+                  <FormLabel>{t('calibrationHistoryTab.dialog.result')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="결과 선택" />
+                        <SelectValue
+                          placeholder={t('calibrationHistoryTab.dialog.resultPlaceholder')}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -352,7 +359,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
               )}
             />
             <FormItem>
-              <FormLabel>교정성적서 파일 *</FormLabel>
+              <FormLabel>{t('calibrationHistoryTab.dialog.certificateFile')}</FormLabel>
               <FormControl>
                 <Input
                   type="file"
@@ -360,9 +367,13 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
                   onChange={(e) => setCertificateFile(e.target.files?.[0] || null)}
                 />
               </FormControl>
-              <p className="text-xs text-muted-foreground">PDF 또는 이미지 파일 (최대 10MB)</p>
+              <p className="text-xs text-muted-foreground">
+                {t('calibrationHistoryTab.dialog.certificateFileHint')}
+              </p>
               {!certificateFile && (
-                <p className="text-xs text-destructive">교정성적서 파일을 첨부해주세요</p>
+                <p className="text-xs text-destructive">
+                  {t('calibrationHistoryTab.dialog.certificateFileRequired')}
+                </p>
               )}
             </FormItem>
             <FormField
@@ -370,10 +381,10 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>비고</FormLabel>
+                  <FormLabel>{t('calibrationHistoryTab.dialog.notes')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="교정 관련 특이사항"
+                      placeholder={t('calibrationHistoryTab.dialog.notesPlaceholder')}
                       rows={3}
                       {...field}
                       value={field.value || ''}
@@ -385,10 +396,12 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                취소
+                {t('calibrationHistoryTab.dialog.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? '저장 중...' : '등록 (승인 요청)'}
+                {isSubmitting
+                  ? t('calibrationHistoryTab.dialog.submitting')
+                  : t('calibrationHistoryTab.dialog.submit')}
               </Button>
             </DialogFooter>
           </form>
@@ -418,14 +431,14 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-ul-midnight" />
-            교정 이력
+            {t('calibrationHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p>등록된 교정 이력이 없습니다.</p>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <Calendar className={TIMELINE_TOKENS.empty.icon} />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('calibrationHistoryTab.empty')}</p>
           </div>
         </CardContent>
       </Card>
@@ -437,7 +450,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-ul-midnight" />
-          교정 이력
+          {t('calibrationHistoryTab.title')}
         </CardTitle>
         {canCreate && RegisterDialog}
       </CardHeader>
@@ -445,19 +458,23 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>교정일</TableHead>
-              <TableHead>다음 교정일</TableHead>
-              <TableHead>교정 기관</TableHead>
-              <TableHead>결과</TableHead>
-              <TableHead>승인 상태</TableHead>
-              <TableHead>비고</TableHead>
+              <TableHead>{t('calibrationHistoryTab.tableHeaders.calibrationDate')}</TableHead>
+              <TableHead>{t('calibrationHistoryTab.tableHeaders.nextCalibrationDate')}</TableHead>
+              <TableHead>{t('calibrationHistoryTab.tableHeaders.calibrationAgency')}</TableHead>
+              <TableHead>{t('calibrationHistoryTab.tableHeaders.result')}</TableHead>
+              <TableHead>{t('calibrationHistoryTab.tableHeaders.approvalStatus')}</TableHead>
+              <TableHead>{t('calibrationHistoryTab.tableHeaders.notes')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {calibrations.map((cal: Calibration) => (
               <TableRow key={cal.id}>
-                <TableCell>{formatDate(cal.calibrationDate, 'yyyy-MM-dd')}</TableCell>
-                <TableCell>{formatDate(cal.nextCalibrationDate, 'yyyy-MM-dd')}</TableCell>
+                <TableCell className={CONTENT_TOKENS.numeric.tabular}>
+                  {formatDate(cal.calibrationDate, 'yyyy-MM-dd')}
+                </TableCell>
+                <TableCell className={CONTENT_TOKENS.numeric.tabular}>
+                  {formatDate(cal.nextCalibrationDate, 'yyyy-MM-dd')}
+                </TableCell>
                 <TableCell>{cal.calibrationAgency}</TableCell>
                 <TableCell>
                   <Badge

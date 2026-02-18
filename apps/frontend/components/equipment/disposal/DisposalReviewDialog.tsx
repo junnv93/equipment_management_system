@@ -17,11 +17,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Download } from 'lucide-react';
 import { reviewDisposal } from '@/lib/api/disposal-api';
-import { DISPOSAL_REASON_LABELS, type DisposalRequest } from '@equipment-management/schemas';
+import { type DisposalRequest } from '@equipment-management/schemas';
 import { formatDateTime } from '@/lib/utils/date';
 import { EquipmentHistorySummary } from './EquipmentHistorySummary';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
+import {
+  DISPOSAL_BUTTON_TOKENS,
+  DISPOSAL_INFO_CARD_TOKENS,
+  DISPOSAL_FILE_LINK_TOKENS,
+  CONTENT_TOKENS,
+} from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalReviewDialogProps {
   open: boolean;
@@ -42,17 +49,22 @@ export function DisposalReviewDialog({
   const [showRejectInput, setShowRejectInput] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const t = useTranslations('disposal');
+  const tReason = useTranslations('disposal.reason');
 
   const mutation = useMutation({
     mutationFn: (decision: 'approve' | 'reject') =>
       reviewDisposal(equipmentId, { version: disposalRequest.version, decision, opinion }),
     onSuccess: async (_, decision) => {
       toast({
-        title: decision === 'approve' ? '검토 완료' : '요청 반려',
+        title:
+          decision === 'approve'
+            ? t('reviewDialog.toasts.approveTitle')
+            : t('reviewDialog.toasts.rejectTitle'),
         description:
           decision === 'approve'
-            ? '폐기 검토가 완료되었습니다. 시험소장의 최종 승인을 기다립니다.'
-            : '폐기 요청이 반려되었습니다.',
+            ? t('reviewDialog.toasts.approveDesc')
+            : t('reviewDialog.toasts.rejectDesc'),
       });
       // ✅ 중앙화된 캐시 무효화 헬퍼 사용
       await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
@@ -61,7 +73,7 @@ export function DisposalReviewDialog({
     onError: async (error: Error) => {
       const errorMessage = error.message;
       toast({
-        title: '처리 실패',
+        title: t('common.error'),
         description: errorMessage,
         variant: 'destructive',
       });
@@ -96,44 +108,47 @@ export function DisposalReviewDialog({
         aria-modal="true"
       >
         <DialogHeader>
-          <DialogTitle>폐기 검토</DialogTitle>
-          <DialogDescription>폐기 요청 내용을 검토하고 의견을 작성해주세요.</DialogDescription>
+          <DialogTitle>{t('reviewDialog.title')}</DialogTitle>
+          <DialogDescription>{t('reviewDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className={DISPOSAL_INFO_CARD_TOKENS.container}>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-blue-900">폐기 요청 정보</CardTitle>
+              <CardTitle className={DISPOSAL_INFO_CARD_TOKENS.title}>
+                {t('reviewDialog.infoTitle')}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div>
-                <span className="font-medium text-gray-700">장비명:</span> {equipment.name}
+                <span className="font-medium text-gray-700">{t('common.equipmentName')}</span>{' '}
+                {equipment.name}
               </div>
               <div>
-                <span className="font-medium text-gray-700">요청자:</span>{' '}
+                <span className="font-medium text-gray-700">{t('common.requester')}</span>{' '}
                 {disposalRequest.requestedByName} | {formatDateTime(disposalRequest.requestedAt)}
               </div>
               <div>
-                <span className="font-medium text-gray-700">폐기 사유:</span>{' '}
-                {DISPOSAL_REASON_LABELS[disposalRequest.reason]}
+                <span className="font-medium text-gray-700">{t('common.disposalReason')}</span>{' '}
+                {tReason(disposalRequest.reason)}
               </div>
               <div>
-                <span className="font-medium text-gray-700">상세 사유:</span>
+                <span className="font-medium text-gray-700">{t('common.reasonDetail')}</span>
                 <p className="mt-1 text-gray-600 whitespace-pre-wrap">
                   {disposalRequest.reasonDetail}
                 </p>
               </div>
               {disposalRequest.attachments && disposalRequest.attachments.length > 0 && (
                 <div>
-                  <span className="font-medium text-gray-700">첨부 파일:</span>
+                  <span className="font-medium text-gray-700">{t('common.attachments')}</span>
                   <div className="mt-1 space-y-1">
                     {disposalRequest.attachments.map((file) => (
                       <a
                         key={file.id}
                         href={file.url}
                         download={file.filename}
-                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                        aria-label={`다운로드: ${file.filename}`}
+                        className={DISPOSAL_FILE_LINK_TOKENS.base}
+                        aria-label={t('common.downloadAriaLabel', { name: file.filename })}
                       >
                         <Download className="h-4 w-4" />
                         {file.filename}
@@ -149,7 +164,7 @@ export function DisposalReviewDialog({
 
           <div className="space-y-2">
             <Label htmlFor="opinion">
-              검토 의견 <span className="text-red-500">*</span>
+              {t('reviewDialog.opinionLabel')} <span className="text-red-500">*</span>
             </Label>
             <Textarea
               id="opinion"
@@ -157,47 +172,48 @@ export function DisposalReviewDialog({
               onChange={(e) => setOpinion(e.target.value)}
               placeholder={
                 showRejectInput
-                  ? '반려 사유를 10자 이상 상세히 입력해주세요'
-                  : '검토 의견을 10자 이상 입력해주세요'
+                  ? t('reviewDialog.rejectPlaceholder')
+                  : t('reviewDialog.opinionPlaceholder')
               }
               rows={4}
               className="resize-none"
               aria-describedby="opinion-hint"
             />
-            <p id="opinion-hint" className="text-xs text-gray-500">
-              {opinion.length}/10자 이상 (현재: {opinion.length}자)
+            <p
+              id="opinion-hint"
+              className={`text-xs text-gray-500 ${CONTENT_TOKENS.numeric.tabular}`}
+            >
+              {t('common.charCount', { count: opinion.length })}
             </p>
           </div>
 
           {showRejectInput && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-3">
-              <p className="text-sm text-red-800">
-                요청을 반려하려면 구체적인 사유를 입력하고 다시 반려 버튼을 클릭해주세요.
-              </p>
+            <div className={DISPOSAL_INFO_CARD_TOKENS.rejectNotice}>
+              <p className={DISPOSAL_INFO_CARD_TOKENS.rejectText}>{t('common.rejectNotice')}</p>
             </div>
           )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>
-            취소
+            {t('common.cancel')}
           </Button>
           <Button
             variant="outline"
             onClick={handleReject}
             disabled={mutation.isPending || (showRejectInput && !isValid)}
-            className="border-red-300 text-red-700 hover:bg-red-50"
+            className={DISPOSAL_BUTTON_TOKENS.reject}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            반려
+            {t('common.reject')}
           </Button>
           <Button
             onClick={() => mutation.mutate('approve')}
             disabled={!isValid || mutation.isPending || showRejectInput}
-            className="bg-blue-600 hover:bg-blue-700"
+            className={DISPOSAL_BUTTON_TOKENS.review}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            검토 완료
+            {t('reviewDialog.reviewComplete')}
           </Button>
         </DialogFooter>
       </DialogContent>

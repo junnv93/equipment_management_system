@@ -1,9 +1,9 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react';
-import { differenceInDays } from 'date-fns';
+import { useTranslations } from 'next-intl';
 import { toDate, formatDate } from '@/lib/utils/date';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,10 +20,10 @@ import type { Equipment } from '@/lib/api/equipment-api';
 import type { EquipmentFilters } from '@/hooks/useEquipmentFilters';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
 import { HighlightText } from '@/components/shared/HighlightText';
-import {
-  getEquipmentStatusStyle,
-  shouldDisplayCalibrationStatus,
-} from '@/lib/constants/equipment-status-styles';
+import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
+import { CALIBRATION_BADGE_TOKENS, EQUIPMENT_TABLE_TOKENS } from '@/lib/design-tokens';
+import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
+import type { CalibrationMethod } from '@equipment-management/schemas';
 
 /**
  * 테이블 열 정의
@@ -45,13 +45,13 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'managementNumber', label: '관리번호', sortable: true },
-  { key: 'name', label: '장비명', sortable: true },
-  { key: 'modelName', label: '모델명', sortable: false, hideOnMobile: true },
-  { key: 'status', label: '상태', sortable: true },
-  { key: 'nextCalibrationDate', label: '교정 기한', sortable: true, hideOnMobile: true },
-  { key: 'location', label: '위치', sortable: false, hideOnMobile: true },
-  { key: 'actions', label: '상세', sortable: false, className: 'text-right' },
+  { key: 'managementNumber', label: 'table.managementNumber', sortable: true },
+  { key: 'name', label: 'table.name', sortable: true },
+  { key: 'modelName', label: 'table.modelName', sortable: false, hideOnMobile: true },
+  { key: 'status', label: 'table.status', sortable: true },
+  { key: 'nextCalibrationDate', label: 'table.calibrationDue', sortable: true, hideOnMobile: true },
+  { key: 'location', label: 'table.location', sortable: false, hideOnMobile: true },
+  { key: 'actions', label: 'table.actions', sortable: false, className: 'text-right' },
 ];
 
 interface EquipmentTableProps {
@@ -103,6 +103,7 @@ const SortableHeader = memo(function SortableHeader({
   onSort: (column: EquipmentFilters['sortBy'], order: 'asc' | 'desc') => void;
   className?: string;
 }) {
+  const t = useTranslations('equipment');
   const isActive = currentSortBy === column;
 
   const handleClick = useCallback(() => {
@@ -121,7 +122,7 @@ const SortableHeader = memo(function SortableHeader({
         className="-ml-3 h-8 data-[state=open]:bg-accent"
         onClick={handleClick}
         type="button"
-        aria-label={`${label}로 정렬${isActive ? (currentSortOrder === 'asc' ? ', 내림차순으로 변경' : ', 오름차순으로 변경') : ''}`}
+        aria-label={`${t('sort.ariaLabel', { label })}${isActive ? (currentSortOrder === 'asc' ? t('sort.changeToDesc') : t('sort.changeToAsc')) : ''}`}
       >
         {label}
         {isActive ? (
@@ -179,78 +180,67 @@ const EquipmentRow = memo(function EquipmentRow({
   equipment: Equipment;
   searchTerm?: string;
 }) {
+  const t = useTranslations('equipment');
+  // SSOT: calculateCalibrationStatus로 교정 상태 계산 통합
+  const calStatus = useMemo(
+    () =>
+      calculateCalibrationStatus(
+        equipment.status,
+        !!equipment.calibrationRequired,
+        equipment.calibrationMethod as CalibrationMethod | undefined,
+        equipment.nextCalibrationDate
+      ),
+    [
+      equipment.status,
+      equipment.calibrationRequired,
+      equipment.calibrationMethod,
+      equipment.nextCalibrationDate,
+    ]
+  );
+
   /**
    * 교정 기한 표시 (D-day 형식) - 테이블형 전용
-   *
-   * 모든 장비의 차기 교정일을 표시하되, 색상과 D-day 배지로 상태 구분:
-   * - 기한 초과: 빨간색 + "D+N" 배지
-   * - 7일 이내: 주황색 + "D-N" 배지 (긴급)
-   * - 30일 이내: 노란색 + "D-N" 배지 (경고)
-   * - 정상: 기본 날짜 표시
-   *
-   * 예외 상태 (교정 불필요):
-   * - 폐기(retired), 여분(spare), 비활성 등: "-" 표시
+   * calculateCalibrationStatus SSOT로 통합된 결과를 렌더링
    */
-  const formatCalibrationDue = (date?: string | Date | null, status?: string) => {
-    if (!date) return '-';
+  const renderCalibrationDue = () => {
+    if (!equipment.nextCalibrationDate) return '-';
 
-    // 교정 상태 표시가 의미 없는 장비 (폐기, 여분 등)
-    // calibration_overdue는 항상 D+N 형식으로 표시해야 함
-    if (!shouldDisplayCalibrationStatus(status)) {
-      return <span className="text-muted-foreground">-</span>;
-    }
-
-    const dueDate = toDate(date);
+    const dueDate = toDate(equipment.nextCalibrationDate);
     if (!dueDate) return '-';
-    const today = new Date();
-    const diff = differenceInDays(dueDate, today);
 
-    if (diff < 0) {
-      // 기한 초과 - 빨간색 강조
+    if (!calStatus) {
+      // 정상 또는 비표시 상태
       return (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-red-700 dark:text-red-400 font-semibold text-sm">
-            {formatDate(dueDate, 'yyyy-MM-dd')}
-          </span>
-          <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 px-1.5 py-0.5 rounded w-fit font-semibold">
-            D+{Math.abs(diff)} (초과)
-          </span>
-        </div>
+        <span className={EQUIPMENT_TABLE_TOKENS.numericColumn}>
+          {formatDate(dueDate, 'yyyy-MM-dd')}
+        </span>
       );
     }
-    if (diff <= 7) {
-      // 7일 이내 (긴급) - 주황색 강조
-      return (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-orange-700 dark:text-orange-400 font-semibold text-sm">
-            {formatDate(dueDate, 'yyyy-MM-dd')}
-          </span>
-          <span className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 px-1.5 py-0.5 rounded w-fit font-medium">
-            D-{diff} (긴급)
-          </span>
-        </div>
-      );
-    }
-    if (diff <= 30) {
-      // 30일 이내 (경고) - 노란색 강조
-      return (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-yellow-700 dark:text-yellow-400 font-medium text-sm">
-            {formatDate(dueDate, 'yyyy-MM-dd')}
-          </span>
-          <span className="text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 px-1.5 py-0.5 rounded w-fit">
-            D-{diff}
-          </span>
-        </div>
-      );
-    }
-    // 정상 (30일 초과)
-    return <span className="text-sm">{formatDate(dueDate, 'yyyy-MM-dd')}</span>;
+
+    const badgeStyle = CALIBRATION_BADGE_TOKENS[calStatus.severity].table;
+    const suffixLabel =
+      calStatus.type === 'overdue'
+        ? t('table.overdueLabel')
+        : calStatus.severity === 'urgent'
+          ? t('table.urgentLabel')
+          : '';
+
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className={`font-semibold text-sm ${EQUIPMENT_TABLE_TOKENS.numericColumn}`}>
+          {formatDate(dueDate, 'yyyy-MM-dd')}
+        </span>
+        <span className={`text-xs ${badgeStyle} px-1.5 py-0.5 rounded w-fit font-medium`}>
+          {calStatus.label}
+          {suffixLabel}
+        </span>
+      </div>
+    );
   };
 
   return (
     <TableRow
-      className="hover:bg-muted/50 motion-safe:transition-colors motion-reduce:transition-none"
+      className={`${EQUIPMENT_TABLE_TOKENS.rowHover} focus-within:bg-accent/50`}
       role="row"
       aria-selected={false}
       data-testid="equipment-row"
@@ -276,16 +266,19 @@ const EquipmentRow = memo(function EquipmentRow({
         />
       </TableCell>
       <TableCell role="gridcell" className="hidden md:table-cell">
-        {formatCalibrationDue(equipment.nextCalibrationDate, equipment.status)}
+        {renderCalibrationDue()}
       </TableCell>
       <TableCell role="gridcell" className="hidden md:table-cell">
         {equipment.location || '-'}
       </TableCell>
       <TableCell role="gridcell" className="text-right">
         <Button variant="outline" size="sm" asChild data-testid="equipment-item">
-          <Link href={`/equipment/${equipment.id}`} aria-label={`${equipment.name} 상세 보기`}>
+          <Link
+            href={`/equipment/${equipment.id}`}
+            aria-label={t('card.viewDetailAriaLabel', { name: equipment.name || '' })}
+          >
             <Eye className="h-4 w-4 mr-1" />
-            상세
+            {t('detail.viewDetailShort')}
           </Link>
         </Button>
       </TableCell>
@@ -310,6 +303,7 @@ function EquipmentTableComponent({
   onSort,
   searchTerm,
 }: EquipmentTableProps) {
+  const t = useTranslations('equipment');
   const _getSortDirection = (column: string): 'ascending' | 'descending' | 'none' => {
     if (sortBy === column) {
       return sortOrder === 'asc' ? 'ascending' : 'descending';
@@ -319,7 +313,7 @@ function EquipmentTableComponent({
 
   return (
     <div className="border rounded-lg overflow-hidden border-border">
-      <Table role="grid" aria-label="장비 목록">
+      <Table role="grid" aria-label={t('table.ariaLabel')}>
         <TableHeader>
           <TableRow role="row" className="bg-muted/50">
             {COLUMNS.map((col) => {
@@ -328,7 +322,7 @@ function EquipmentTableComponent({
                   <SortableHeader
                     key={col.key}
                     column={col.key as SortableColumn}
-                    label={col.label}
+                    label={t(col.label)}
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={onSort}
@@ -344,7 +338,7 @@ function EquipmentTableComponent({
                   scope="col"
                   className={`${col.className || ''} ${col.hideOnMobile ? 'hidden md:table-cell' : col.key === 'modelName' ? 'hidden sm:table-cell' : ''}`}
                 >
-                  {col.label}
+                  {t(col.label)}
                 </TableHead>
               );
             })}
@@ -358,7 +352,7 @@ function EquipmentTableComponent({
             // 빈 상태
             <TableRow>
               <TableCell colSpan={COLUMNS.length} className="h-24 text-center">
-                <p className="text-muted-foreground">표시할 장비가 없습니다</p>
+                <p className="text-muted-foreground">{t('list.noItems')}</p>
               </TableCell>
             </TableRow>
           ) : (

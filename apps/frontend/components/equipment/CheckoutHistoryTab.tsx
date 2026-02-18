@@ -40,11 +40,13 @@ import { Plus, FileOutput, Calendar, ArrowRight, User } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import checkoutApi, { type CreateCheckoutDto, type Checkout } from '@/lib/api/checkout-api';
 import { addDays } from 'date-fns';
+import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
+import { TIMELINE_TOKENS, getTimelineCardClasses } from '@/lib/design-tokens';
 
 // 반출 신청 스키마
 const checkoutSchema = z.object({
@@ -63,11 +65,7 @@ interface CheckoutHistoryTabProps {
   equipment: Equipment;
 }
 
-const PURPOSE_LABELS: Record<string, string> = {
-  calibration: '교정',
-  repair: '수리',
-  rental: '외부 대여',
-};
+// PURPOSE_LABELS are now provided via useTranslations('equipment').checkoutHistoryTab.purpose
 
 /**
  * 반출 이력 탭 - 테이블 + 타임라인 UI
@@ -81,6 +79,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const t = useTranslations('equipment');
 
   // 폼 설정
   const form = useForm<CheckoutFormData>({
@@ -121,8 +120,8 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         notes: '',
       });
       toast({
-        title: '반출 신청 완료',
-        description: '반출 신청이 성공적으로 등록되었습니다. 승인을 기다리고 있습니다.',
+        title: t('checkoutHistoryTab.toasts.success'),
+        description: t('checkoutHistoryTab.toasts.successDesc'),
       });
     },
     onSettled: () => {
@@ -131,8 +130,8 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
     onError: (error: unknown) => {
       console.error('반출 신청 실패:', error);
       toast({
-        title: '신청 실패',
-        description: getErrorMessage(error, '반출 신청 중 오류가 발생했습니다.'),
+        title: t('checkoutHistoryTab.toasts.error'),
+        description: getErrorMessage(error, t('checkoutHistoryTab.toasts.errorDesc')),
         variant: 'destructive',
       });
     },
@@ -144,9 +143,8 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
     const equipmentStatus = equipment.status || 'available';
     if (STATUS_ONLY_CALIBRATION_REPAIR.includes(equipmentStatus) && data.purpose === 'rental') {
       toast({
-        title: '반출 불가',
-        description:
-          '부적합 또는 교정기한 초과 장비는 외부 대여가 불가능합니다. 교정 또는 수리 목적으로만 반출할 수 있습니다.',
+        title: t('checkoutHistoryTab.toasts.rentalNotAllowed'),
+        description: t('checkoutHistoryTab.toasts.rentalNotAllowedDesc'),
         variant: 'destructive',
       });
       return;
@@ -191,9 +189,10 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   // 버튼 비활성화 사유 메시지
   const getDisabledReason = (): string | null => {
     if (!canCheckoutAnyPurpose) {
-      if (currentStatus === 'checked_out') return '이미 반출 중인 장비입니다';
-      if (currentStatus === 'retired') return '폐기된 장비입니다';
-      if (currentStatus === 'in_use') return '사용 중인 장비입니다';
+      if (currentStatus === 'checked_out')
+        return t('checkoutHistoryTab.disabledReasons.checked_out');
+      if (currentStatus === 'retired') return t('checkoutHistoryTab.disabledReasons.retired');
+      if (currentStatus === 'in_use') return t('checkoutHistoryTab.disabledReasons.in_use');
     }
     return null;
   };
@@ -206,18 +205,19 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       <DialogTrigger asChild>
         <Button size="sm" disabled={!canCheckoutAnyPurpose} title={disabledReason || undefined}>
           <Plus className="h-4 w-4 mr-2" />
-          반출 신청
+          {t('checkoutHistoryTab.register')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>반출 신청</DialogTitle>
+          <DialogTitle>{t('checkoutHistoryTab.dialog.title')}</DialogTitle>
           <DialogDescription>
-            장비 반출 정보를 입력하세요. 승인 후 반출이 가능합니다.
+            {t('checkoutHistoryTab.dialog.description')}
             {canCheckoutOnlyForCalibrationRepair && (
               <span className="block mt-2 text-amber-600 dark:text-amber-400">
-                ⚠️ 현재 장비 상태({currentStatus === 'non_conforming' ? '부적합' : '교정기한 초과'}
-                )로 인해 교정/수리 목적으로만 반출 가능합니다.
+                {t('checkoutHistoryTab.dialog.restrictedWarning', {
+                  status: t(`status.${currentStatus}`),
+                })}
               </span>
             )}
           </DialogDescription>
@@ -229,18 +229,26 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
               name="purpose"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>반출 목적 *</FormLabel>
+                  <FormLabel>{t('checkoutHistoryTab.dialog.purpose')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="목적 선택" />
+                        <SelectValue
+                          placeholder={t('checkoutHistoryTab.dialog.purposePlaceholder')}
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="calibration">교정</SelectItem>
-                      <SelectItem value="repair">수리</SelectItem>
+                      <SelectItem value="calibration">
+                        {t('checkoutHistoryTab.purpose.calibration')}
+                      </SelectItem>
+                      <SelectItem value="repair">
+                        {t('checkoutHistoryTab.purpose.repair')}
+                      </SelectItem>
                       <SelectItem value="rental" disabled={canCheckoutOnlyForCalibrationRepair}>
-                        외부 대여 {canCheckoutOnlyForCalibrationRepair && '(현재 상태에서 불가)'}
+                        {canCheckoutOnlyForCalibrationRepair
+                          ? t('checkoutHistoryTab.dialog.rentalDisabled')
+                          : t('checkoutHistoryTab.purpose.rental')}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -253,10 +261,10 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
               name="destination"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>반출 장소 *</FormLabel>
+                  <FormLabel>{t('checkoutHistoryTab.dialog.destination')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="예: 한국표준과학연구원"
+                      placeholder={t('checkoutHistoryTab.dialog.destinationPlaceholder')}
                       {...field}
                       value={field.value || ''}
                     />
@@ -270,10 +278,10 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>반출 사유 *</FormLabel>
+                  <FormLabel>{t('checkoutHistoryTab.dialog.reason')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="반출 사유를 상세히 입력하세요"
+                      placeholder={t('checkoutHistoryTab.dialog.reasonPlaceholder')}
                       rows={3}
                       {...field}
                       value={field.value || ''}
@@ -288,7 +296,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
               name="expectedReturnDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>반입 예정일 *</FormLabel>
+                  <FormLabel>{t('checkoutHistoryTab.dialog.expectedReturnDate')}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
@@ -302,9 +310,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                 name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>연락처</FormLabel>
+                    <FormLabel>{t('checkoutHistoryTab.dialog.phoneNumber')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="010-1234-5678" {...field} value={field.value || ''} />
+                      <Input
+                        placeholder={t('checkoutHistoryTab.dialog.phonePlaceholder')}
+                        {...field}
+                        value={field.value || ''}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -315,9 +327,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>주소</FormLabel>
+                    <FormLabel>{t('checkoutHistoryTab.dialog.address')}</FormLabel>
                     <FormControl>
-                      <Input placeholder="반출지 주소" {...field} value={field.value || ''} />
+                      <Input
+                        placeholder={t('checkoutHistoryTab.dialog.addressPlaceholder')}
+                        {...field}
+                        value={field.value || ''}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -329,10 +345,10 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>비고</FormLabel>
+                  <FormLabel>{t('checkoutHistoryTab.dialog.notes')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="추가 참고사항"
+                      placeholder={t('checkoutHistoryTab.dialog.notesPlaceholder')}
                       rows={2}
                       {...field}
                       value={field.value || ''}
@@ -344,10 +360,12 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                취소
+                {t('checkoutHistoryTab.dialog.cancel')}
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '신청 중...' : '반출 신청'}
+                {createMutation.isPending
+                  ? t('checkoutHistoryTab.dialog.submitting')
+                  : t('checkoutHistoryTab.dialog.submit')}
               </Button>
             </DialogFooter>
           </form>
@@ -363,7 +381,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileOutput className="h-5 w-5" />
-            반출 이력
+            {t('checkoutHistoryTab.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -380,13 +398,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <FileOutput className="h-5 w-5 text-ul-midnight" />
-            반출 이력
+            {t('checkoutHistoryTab.title')}
           </CardTitle>
           {canCreate && (
             <div className="flex items-center gap-2">
               {!isEquipmentAvailable && (
                 <span className="text-sm text-muted-foreground">
-                  장비가 사용 가능 상태가 아닙니다
+                  {t('checkoutHistoryTab.notAvailable')}
                 </span>
               )}
               {RegisterDialog}
@@ -394,9 +412,9 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
           )}
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <FileOutput className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p>등록된 반출 이력이 없습니다.</p>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <FileOutput className={TIMELINE_TOKENS.empty.icon} />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('checkoutHistoryTab.empty')}</p>
           </div>
         </CardContent>
       </Card>
@@ -422,27 +440,31 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
         )}
       </CardHeader>
       <CardContent>
-        <div className="relative space-y-6">
+        <div className={`relative ${TIMELINE_TOKENS.spacing.itemGap}`}>
           {/* 타임라인 세로선 */}
-          <div className="absolute left-6 top-3 bottom-3 w-0.5 bg-gray-200 dark:bg-gray-800" />
+          <div className={`${TIMELINE_TOKENS.line.container} ${TIMELINE_TOKENS.line.color}`} />
 
           {checkouts.map((checkout: Checkout, index: number) => (
             <div key={checkout.id} className="relative flex gap-4">
               {/* 타임라인 점 */}
               <div className="relative flex-shrink-0">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ul-midnight text-white shadow-lg">
-                  <FileOutput className="h-6 w-6" />
+                <div
+                  className={`${TIMELINE_TOKENS.node.container} bg-ul-midnight text-white shadow-lg`}
+                >
+                  <FileOutput className={TIMELINE_TOKENS.node.icon} />
                 </div>
                 {index === 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-ul-red text-white px-1.5 py-0.5 text-xs">
-                    최신
+                  <Badge
+                    className={`absolute -top-2 -right-2 ${TIMELINE_TOKENS.latestBadge.classes}`}
+                  >
+                    {t('checkoutHistoryTab.latest')}
                   </Badge>
                 )}
               </div>
 
               {/* 컨텐츠 */}
               <div className="flex-1 pb-8">
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <Card className={getTimelineCardClasses()}>
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       {/* 헤더: 목적 및 상태 */}
@@ -450,7 +472,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                         <div className="space-y-1 flex-1">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="text-xs">
-                              {PURPOSE_LABELS[checkout.purpose] || checkout.purpose}
+                              {t(`checkoutHistoryTab.purpose.${checkout.purpose}` as const)}
                             </Badge>
                             <CheckoutStatusBadge status={checkout.status} />
                           </div>
@@ -472,20 +494,28 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                         {checkout.checkoutDate && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            <span>반출: {formatDate(checkout.checkoutDate, 'yyyy-MM-dd')}</span>
+                            <span>
+                              {t('checkoutHistoryTab.dates.checkout', {
+                                date: formatDate(checkout.checkoutDate, 'yyyy-MM-dd'),
+                              })}
+                            </span>
                           </div>
                         )}
                         <div className="flex items-center gap-1">
                           <ArrowRight className="h-4 w-4" />
                           <span>
-                            반입 예정: {formatDate(checkout.expectedReturnDate, 'yyyy-MM-dd')}
+                            {t('checkoutHistoryTab.dates.expectedReturn', {
+                              date: formatDate(checkout.expectedReturnDate, 'yyyy-MM-dd'),
+                            })}
                           </span>
                         </div>
                         {checkout.actualReturnDate && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
                             <span>
-                              실제 반입: {formatDate(checkout.actualReturnDate, 'yyyy-MM-dd')}
+                              {t('checkoutHistoryTab.dates.actualReturn', {
+                                date: formatDate(checkout.actualReturnDate, 'yyyy-MM-dd'),
+                              })}
                             </span>
                           </div>
                         )}
@@ -495,7 +525,9 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                       {checkout.user && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <User className="h-4 w-4" />
-                          <span>신청자: {checkout.user.name}</span>
+                          <span>
+                            {t('checkoutHistoryTab.applicant', { name: checkout.user.name })}
+                          </span>
                         </div>
                       )}
                     </div>

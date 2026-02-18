@@ -32,10 +32,16 @@ import {
 import { Plus, Wrench, Calendar, User } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateMaintenanceHistoryInput } from '@/lib/api/equipment-api';
+import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import {
+  TIMELINE_TOKENS,
+  getTimelineCardClasses,
+  TIMELINE_SKELETON_TOKENS,
+} from '@/lib/design-tokens';
 
 // 유지보수 이력 등록 스키마
 const maintenanceHistorySchema = z.object({
@@ -57,6 +63,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const t = useTranslations('equipment');
 
   // 폼 설정
   const form = useForm<MaintenanceHistoryFormData>({
@@ -88,8 +95,8 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
         content: '',
       });
       toast({
-        title: '유지보수 등록 완료',
-        description: '유지보수 내역이 성공적으로 등록되었습니다.',
+        title: t('maintenanceHistoryTab.toasts.success'),
+        description: t('maintenanceHistoryTab.toasts.successDesc'),
       });
     },
     onSettled: () => {
@@ -100,8 +107,8 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     onError: (error: unknown) => {
       console.error('유지보수 이력 등록 실패:', error);
       toast({
-        title: '등록 실패',
-        description: getErrorMessage(error, '유지보수 내역 등록 중 오류가 발생했습니다.'),
+        title: t('maintenanceHistoryTab.toasts.error'),
+        description: getErrorMessage(error, t('maintenanceHistoryTab.toasts.errorDesc')),
         variant: 'destructive',
       });
     },
@@ -112,8 +119,8 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     mutationFn: (historyId: string) => equipmentApi.deleteMaintenanceHistory(historyId),
     onSuccess: () => {
       toast({
-        title: '삭제 완료',
-        description: '유지보수 내역이 삭제되었습니다.',
+        title: t('maintenanceHistoryTab.toasts.deleteSuccess'),
+        description: t('maintenanceHistoryTab.toasts.deleteSuccessDesc'),
       });
     },
     onSettled: () => {
@@ -124,8 +131,8 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     onError: (error: unknown) => {
       console.error('유지보수 이력 삭제 실패:', error);
       toast({
-        title: '삭제 실패',
-        description: getErrorMessage(error, '유지보수 내역 삭제 중 오류가 발생했습니다.'),
+        title: t('maintenanceHistoryTab.toasts.deleteError'),
+        description: getErrorMessage(error, t('maintenanceHistoryTab.toasts.deleteErrorDesc')),
         variant: 'destructive',
       });
     },
@@ -139,7 +146,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   };
 
   const handleDelete = async (historyId: string) => {
-    if (confirm('이 유지보수 이력을 삭제하시겠습니까?')) {
+    if (confirm(t('maintenanceHistoryTab.deleteConfirm'))) {
       await deleteMutation.mutateAsync(historyId);
     }
   };
@@ -154,13 +161,13 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4 mr-2" />
-          유지보수 등록
+          {t('maintenanceHistoryTab.register')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>유지보수 등록</DialogTitle>
-          <DialogDescription>장비의 유지보수 내역을 입력하세요.</DialogDescription>
+          <DialogTitle>{t('maintenanceHistoryTab.dialog.title')}</DialogTitle>
+          <DialogDescription>{t('maintenanceHistoryTab.dialog.description')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -169,7 +176,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
               name="performedAt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>수행 일시 *</FormLabel>
+                  <FormLabel>{t('maintenanceHistoryTab.dialog.performedAt')}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
@@ -182,10 +189,10 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
               name="content"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>내용 *</FormLabel>
+                  <FormLabel>{t('maintenanceHistoryTab.dialog.content')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="예: 정기 점검, 부품 교체, 청소 등"
+                      placeholder={t('maintenanceHistoryTab.dialog.contentPlaceholder')}
                       rows={4}
                       {...field}
                       value={field.value || ''}
@@ -197,10 +204,12 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                취소
+                {t('maintenanceHistoryTab.dialog.cancel')}
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '저장 중...' : '저장'}
+                {createMutation.isPending
+                  ? t('maintenanceHistoryTab.dialog.saving')
+                  : t('maintenanceHistoryTab.dialog.save')}
               </Button>
             </DialogFooter>
           </form>
@@ -216,16 +225,16 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wrench className="h-5 w-5" />
-            유지보수 이력
+            {t('maintenanceHistoryTab.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex gap-4">
-              <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+              <Skeleton className={`${TIMELINE_SKELETON_TOKENS.node} flex-shrink-0`} />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full" />
+                <Skeleton className={`${TIMELINE_SKELETON_TOKENS.line} w-3/4`} />
+                <Skeleton className={`${TIMELINE_SKELETON_TOKENS.line} w-full`} />
               </div>
             </div>
           ))}
@@ -241,14 +250,14 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Wrench className="h-5 w-5 text-ul-midnight" />
-            유지보수 이력
+            {t('maintenanceHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <Wrench className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p>등록된 유지보수 이력이 없습니다.</p>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <Wrench className={TIMELINE_TOKENS.empty.icon} />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('maintenanceHistoryTab.empty')}</p>
           </div>
         </CardContent>
       </Card>
@@ -265,24 +274,28 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
         {canCreate && RegisterDialog}
       </CardHeader>
       <CardContent>
-        <div className="relative space-y-6">
-          <div className="absolute left-6 top-3 bottom-3 w-0.5 bg-gray-200 dark:bg-gray-800" />
+        <div className={`relative ${TIMELINE_TOKENS.spacing.itemGap}`}>
+          <div className={`${TIMELINE_TOKENS.line.container} ${TIMELINE_TOKENS.line.color}`} />
 
           {history.map((item, index) => (
             <div key={item.id} className="relative flex gap-4">
               <div className="relative flex-shrink-0">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ul-green text-white shadow-lg">
-                  <Wrench className="h-6 w-6" />
+                <div
+                  className={`${TIMELINE_TOKENS.node.container} bg-ul-green text-white shadow-lg`}
+                >
+                  <Wrench className={TIMELINE_TOKENS.node.icon} />
                 </div>
                 {index === 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-ul-red text-white px-1.5 py-0.5 text-xs">
-                    최신
+                  <Badge
+                    className={`absolute -top-2 -right-2 ${TIMELINE_TOKENS.latestBadge.classes}`}
+                  >
+                    {t('maintenanceHistoryTab.latest')}
                   </Badge>
                 )}
               </div>
 
               <div className="flex-1 pb-8">
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <Card className={getTimelineCardClasses()}>
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       <div className="flex items-start justify-between">
@@ -302,7 +315,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                             onClick={() => handleDelete(item.id)}
                             disabled={deleteMutation.isPending}
                           >
-                            삭제
+                            {t('maintenanceHistoryTab.delete')}
                           </Button>
                         )}
                       </div>
@@ -310,7 +323,11 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                       {(item.performedBy || item.performedByName) && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <User className="h-4 w-4" />
-                          <span>담당자: {item.performedByName || item.performedBy}</span>
+                          <span>
+                            {t('maintenanceHistoryTab.performedBy', {
+                              name: item.performedByName || item.performedBy || '',
+                            })}
+                          </span>
                         </div>
                       )}
                     </div>

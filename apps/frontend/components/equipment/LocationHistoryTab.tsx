@@ -32,10 +32,16 @@ import {
 import { Plus, MapPin, Calendar, User, FileText } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
 import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipment-api';
+import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import {
+  TIMELINE_TOKENS,
+  getTimelineCardClasses,
+  TIMELINE_SKELETON_TOKENS,
+} from '@/lib/design-tokens';
 
 // 위치 변동 이력 등록 스키마
 const locationHistorySchema = z.object({
@@ -62,6 +68,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const t = useTranslations('equipment');
 
   // 개발 환경에서만 세션 디버그 출력
   if (process.env.NODE_ENV === 'development') {
@@ -106,8 +113,8 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
         notes: '',
       });
       toast({
-        title: '위치 변동 등록 완료',
-        description: '위치 변동 이력이 성공적으로 등록되었습니다.',
+        title: t('locationHistoryTab.toasts.success'),
+        description: t('locationHistoryTab.toasts.successDesc'),
       });
     },
     onSettled: () => {
@@ -116,8 +123,8 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     onError: (error: unknown) => {
       console.error('위치 변동 이력 등록 실패:', error);
       toast({
-        title: '등록 실패',
-        description: getErrorMessage(error, '위치 변동 이력 등록 중 오류가 발생했습니다.'),
+        title: t('locationHistoryTab.toasts.error'),
+        description: getErrorMessage(error, t('locationHistoryTab.toasts.errorDesc')),
         variant: 'destructive',
       });
     },
@@ -128,8 +135,8 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     mutationFn: (historyId: string) => equipmentApi.deleteLocationHistory(historyId),
     onSuccess: () => {
       toast({
-        title: '삭제 완료',
-        description: '위치 변동 이력이 삭제되었습니다.',
+        title: t('locationHistoryTab.toasts.deleteSuccess'),
+        description: t('locationHistoryTab.toasts.deleteSuccessDesc'),
       });
     },
     onSettled: () => {
@@ -138,8 +145,8 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     onError: (error: unknown) => {
       console.error('위치 변동 이력 삭제 실패:', error);
       toast({
-        title: '삭제 실패',
-        description: getErrorMessage(error, '위치 변동 이력 삭제 중 오류가 발생했습니다.'),
+        title: t('locationHistoryTab.toasts.deleteError'),
+        description: getErrorMessage(error, t('locationHistoryTab.toasts.deleteErrorDesc')),
         variant: 'destructive',
       });
     },
@@ -158,7 +165,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   };
 
   const handleDelete = async (historyId: string) => {
-    if (confirm('이 위치 변동 이력을 삭제하시겠습니까?')) {
+    if (confirm(t('locationHistoryTab.deleteConfirm'))) {
       await deleteMutation.mutateAsync(historyId);
     }
   };
@@ -187,13 +194,13 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4 mr-2" />
-          위치 변경 등록
+          {t('locationHistoryTab.register')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>위치 변경 등록</DialogTitle>
-          <DialogDescription>장비의 위치 변동 정보를 입력하세요.</DialogDescription>
+          <DialogTitle>{t('locationHistoryTab.dialog.title')}</DialogTitle>
+          <DialogDescription>{t('locationHistoryTab.dialog.description')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -202,7 +209,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
               name="changedAt"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>변동 일시 *</FormLabel>
+                  <FormLabel>{t('locationHistoryTab.dialog.changedAt')}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
@@ -215,10 +222,10 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
               name="newLocation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>설치 위치 *</FormLabel>
+                  <FormLabel>{t('locationHistoryTab.dialog.newLocation')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="예: RF1 Room, 2층 시험실 등"
+                      placeholder={t('locationHistoryTab.dialog.newLocationPlaceholder')}
                       {...field}
                       value={field.value || ''}
                     />
@@ -232,10 +239,10 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>비고</FormLabel>
+                  <FormLabel>{t('locationHistoryTab.dialog.notes')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="변동 사유나 특이사항"
+                      placeholder={t('locationHistoryTab.dialog.notesPlaceholder')}
                       {...field}
                       value={field.value || ''}
                     />
@@ -246,10 +253,12 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                취소
+                {t('locationHistoryTab.dialog.cancel')}
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '저장 중...' : '저장'}
+                {createMutation.isPending
+                  ? t('locationHistoryTab.dialog.saving')
+                  : t('locationHistoryTab.dialog.save')}
               </Button>
             </DialogFooter>
           </form>
@@ -265,16 +274,16 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5" />
-            위치 변동 이력
+            {t('locationHistoryTab.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex gap-4">
-              <Skeleton className="h-12 w-12 rounded-full flex-shrink-0" />
+              <Skeleton className={`${TIMELINE_SKELETON_TOKENS.node} flex-shrink-0`} />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full" />
+                <Skeleton className={`${TIMELINE_SKELETON_TOKENS.line} w-3/4`} />
+                <Skeleton className={`${TIMELINE_SKELETON_TOKENS.line} w-full`} />
               </div>
             </div>
           ))}
@@ -290,14 +299,14 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-ul-midnight" />
-            위치 변동 이력
+            {t('locationHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p>등록된 위치 변동 이력이 없습니다.</p>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <MapPin className={TIMELINE_TOKENS.empty.icon} />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('locationHistoryTab.empty')}</p>
           </div>
         </CardContent>
       </Card>
@@ -315,27 +324,31 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       </CardHeader>
       <CardContent>
         {/* 타임라인 */}
-        <div className="relative space-y-6">
+        <div className={`relative ${TIMELINE_TOKENS.spacing.itemGap}`}>
           {/* 타임라인 세로선 */}
-          <div className="absolute left-6 top-3 bottom-3 w-0.5 bg-gray-200 dark:bg-gray-800" />
+          <div className={`${TIMELINE_TOKENS.line.container} ${TIMELINE_TOKENS.line.color}`} />
 
           {history.map((item, index) => (
             <div key={item.id} className="relative flex gap-4">
               {/* 타임라인 점 */}
               <div className="relative flex-shrink-0">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ul-midnight text-white shadow-lg">
-                  <MapPin className="h-6 w-6" />
+                <div
+                  className={`${TIMELINE_TOKENS.node.container} bg-ul-midnight text-white shadow-lg`}
+                >
+                  <MapPin className={TIMELINE_TOKENS.node.icon} />
                 </div>
                 {index === 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-ul-red text-white px-1.5 py-0.5 text-xs">
-                    최신
+                  <Badge
+                    className={`absolute -top-2 -right-2 ${TIMELINE_TOKENS.latestBadge.classes}`}
+                  >
+                    {t('locationHistoryTab.latest')}
                   </Badge>
                 )}
               </div>
 
               {/* 컨텐츠 */}
               <div className="flex-1 pb-8">
-                <Card className="shadow-sm hover:shadow-md transition-shadow">
+                <Card className={getTimelineCardClasses()}>
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       {/* 헤더: 날짜 및 위치 */}
@@ -356,7 +369,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                             onClick={() => handleDelete(item.id)}
                             disabled={deleteMutation.isPending}
                           >
-                            삭제
+                            {t('locationHistoryTab.delete')}
                           </Button>
                         )}
                       </div>
@@ -373,7 +386,11 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                       {(item.changedBy || item.changedByName) && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <User className="h-4 w-4" />
-                          <span>변경자: {item.changedByName || item.changedBy}</span>
+                          <span>
+                            {t('locationHistoryTab.changedBy', {
+                              name: item.changedByName || item.changedBy || '',
+                            })}
+                          </span>
                         </div>
                       )}
                     </div>

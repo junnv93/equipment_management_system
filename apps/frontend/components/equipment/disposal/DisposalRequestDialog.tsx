@@ -20,6 +20,8 @@ import { DisposalReasonSelector } from './DisposalReasonSelector';
 import { requestDisposal } from '@/lib/api/disposal-api';
 import type { DisposalReason } from '@equipment-management/schemas';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { DISPOSAL_BUTTON_TOKENS, CONTENT_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalRequestDialogProps {
   open: boolean;
@@ -39,6 +41,7 @@ export function DisposalRequestDialog({
   const [attachments, setAttachments] = useState<File[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const t = useTranslations('disposal');
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -49,8 +52,8 @@ export function DisposalRequestDialog({
       }),
     onSuccess: async () => {
       toast({
-        title: '폐기 요청 완료',
-        description: '폐기 요청이 성공적으로 등록되었습니다.',
+        title: t('requestDialog.toasts.successTitle'),
+        description: t('requestDialog.toasts.successDesc'),
       });
       // ✅ 중앙화된 캐시 무효화 헬퍼 사용
       await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
@@ -58,7 +61,7 @@ export function DisposalRequestDialog({
     },
     onError: (error: Error) => {
       toast({
-        title: '폐기 요청 실패',
+        title: t('requestDialog.toasts.errorTitle'),
         description: error.message,
         variant: 'destructive',
       });
@@ -89,10 +92,9 @@ export function DisposalRequestDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl" role="dialog" aria-modal="true">
         <DialogHeader>
-          <DialogTitle>장비 폐기 요청</DialogTitle>
+          <DialogTitle>{t('requestDialog.title')}</DialogTitle>
           <DialogDescription>
-            <span className="font-medium text-gray-900">{equipmentName}</span> 장비의 폐기를
-            요청합니다.
+            {t('requestDialog.description', { name: equipmentName })}
           </DialogDescription>
         </DialogHeader>
 
@@ -101,24 +103,27 @@ export function DisposalRequestDialog({
 
           <div className="space-y-2">
             <Label htmlFor="reasonDetail">
-              상세 사유 <span className="text-red-500">*</span>
+              {t('requestDialog.reasonDetailLabel')} <span className="text-red-500">*</span>
             </Label>
             <Textarea
               id="reasonDetail"
               value={reasonDetail}
               onChange={(e) => setReasonDetail(e.target.value)}
-              placeholder="폐기 사유를 10자 이상 상세히 입력해주세요"
+              placeholder={t('requestDialog.reasonDetailPlaceholder')}
               rows={4}
               className="resize-none"
               aria-describedby="reasonDetail-hint"
             />
-            <p id="reasonDetail-hint" className="text-xs text-gray-500">
-              {reasonDetail.length}/10자 이상 (현재: {reasonDetail.length}자)
+            <p
+              id="reasonDetail-hint"
+              className={`text-xs text-gray-500 ${CONTENT_TOKENS.numeric.tabular}`}
+            >
+              {t('common.charCount', { count: reasonDetail.length })}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="attachments">첨부 파일 (선택)</Label>
+            <Label htmlFor="attachments">{t('requestDialog.attachmentsLabel')}</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="attachments"
@@ -134,10 +139,10 @@ export function DisposalRequestDialog({
                 variant="outline"
                 onClick={() => document.getElementById('attachments')?.click()}
                 className="w-full"
-                aria-label="파일 선택"
+                aria-label={t('requestDialog.selectFileAriaLabel')}
               >
                 <Upload className="mr-2 h-4 w-4" />
-                파일 선택
+                {t('requestDialog.selectFile')}
               </Button>
             </div>
             {attachments.length > 0 && (
@@ -154,7 +159,7 @@ export function DisposalRequestDialog({
                       size="sm"
                       onClick={() => removeFile(index)}
                       className="h-6 w-6 p-0"
-                      aria-label={`파일 제거: ${file.name}`}
+                      aria-label={t('requestDialog.removeFileAriaLabel', { name: file.name })}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -167,15 +172,15 @@ export function DisposalRequestDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>
-            취소
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={() => mutation.mutate()}
             disabled={!isValid || mutation.isPending}
-            className="bg-red-600 hover:bg-red-700"
+            className={DISPOSAL_BUTTON_TOKENS.submit}
           >
             {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            폐기 요청
+            {t('requestDialog.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

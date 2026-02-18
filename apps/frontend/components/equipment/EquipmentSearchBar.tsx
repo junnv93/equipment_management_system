@@ -1,9 +1,11 @@
 'use client';
 
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { getTransitionClasses, FOCUS_TOKENS } from '@/lib/design-tokens';
 import debounce from 'lodash/debounce';
 
 interface EquipmentSearchBarProps {
@@ -34,9 +36,11 @@ function EquipmentSearchBarComponent({
   onChange,
   isLoading = false,
   debounceDelay = 300,
-  placeholder = '장비명, 모델명, 관리번호로 검색',
+  placeholder,
   className = '',
 }: EquipmentSearchBarProps) {
+  const t = useTranslations('equipment');
+  const defaultPlaceholder = t('search.placeholder');
   // 로컬 입력값 상태 (즉시 UI 업데이트용)
   const [localValue, setLocalValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,7 +104,7 @@ function EquipmentSearchBarComponent({
   );
 
   return (
-    <div className={`relative ${className}`} role="search" aria-label="장비 검색">
+    <div className={`relative ${className}`} role="search" aria-label={t('search.ariaLabel')}>
       <div className="relative">
         {/* 검색 아이콘 또는 로딩 스피너 */}
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -118,9 +122,9 @@ function EquipmentSearchBarComponent({
           value={localValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="pl-10 pr-10"
-          aria-label="장비명, 모델명, 관리번호 검색"
+          placeholder={placeholder ?? defaultPlaceholder}
+          className={`pl-10 pr-10 ${FOCUS_TOKENS.classes.default}`}
+          aria-label={t('search.inputAriaLabel')}
           aria-describedby="search-hint"
         />
 
@@ -130,9 +134,9 @@ function EquipmentSearchBarComponent({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+            className={`absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground ${getTransitionClasses('fast', ['color', 'opacity'])}`}
             onClick={handleClear}
-            aria-label="검색어 지우기"
+            aria-label={t('search.clearAriaLabel')}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -141,7 +145,7 @@ function EquipmentSearchBarComponent({
 
       {/* 스크린 리더용 안내 텍스트 */}
       <span id="search-hint" className="sr-only">
-        Enter를 눌러 검색하거나 검색어를 입력하면 자동으로 검색됩니다
+        {t('search.hint')}
       </span>
     </div>
   );

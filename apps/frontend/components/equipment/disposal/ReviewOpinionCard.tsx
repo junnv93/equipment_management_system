@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { formatDateTime } from '@/lib/utils/date';
+import { REVIEW_OPINION_CARD_TOKENS } from '@/lib/design-tokens';
 
 interface ReviewOpinionCardProps {
   reviewerName: string;
@@ -9,15 +10,13 @@ interface ReviewOpinionCardProps {
 
 export function ReviewOpinionCard({ reviewerName, reviewedAt, opinion }: ReviewOpinionCardProps) {
   return (
-    <Card className="border-l-4 border-l-blue-500 bg-blue-50">
+    <Card className={REVIEW_OPINION_CARD_TOKENS.container}>
       <CardContent className="pt-4">
         <div className="flex items-baseline justify-between mb-2">
-          <span className="text-sm font-semibold text-blue-900">{reviewerName}</span>
-          <span className="text-xs text-blue-600">{formatDateTime(reviewedAt)}</span>
+          <span className={REVIEW_OPINION_CARD_TOKENS.reviewerName}>{reviewerName}</span>
+          <span className={REVIEW_OPINION_CARD_TOKENS.timestamp}>{formatDateTime(reviewedAt)}</span>
         </div>
-        <blockquote className="border-l-2 border-blue-300 pl-3 text-sm text-gray-700 italic">
-          {opinion}
-        </blockquote>
+        <blockquote className={REVIEW_OPINION_CARD_TOKENS.blockquote}>{opinion}</blockquote>
       </CardContent>
     </Card>
   );

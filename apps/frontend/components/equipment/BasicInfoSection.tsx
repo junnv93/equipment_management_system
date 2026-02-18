@@ -43,6 +43,8 @@ import {
   generateManagementNumber,
   formatSerialNumber,
 } from '@/lib/constants/management-number';
+import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 /**
  * 사이트별 팀 매핑 (폴백용 - API 응답이 없을 때 사용)
@@ -131,15 +133,6 @@ export interface FormValues {
   externalIdentifier?: string; // 소유처 원본 식별번호 (공용/렌탈 장비)
 }
 
-interface Team {
-  id: string; // UUID 형식
-  uuid?: string; // 하위 호환성
-  name: string;
-  classification: string; // fcc_emc_rf, general_emc, sar, automotive_emc, etc
-  site: Site;
-  classificationCode?: string; // E, R, S, A, P
-}
-
 interface BasicInfoSectionProps {
   control: Control<FormValues>;
   isEdit?: boolean;
@@ -168,6 +161,8 @@ export function BasicInfoSection({
   managementNumberCheckResult,
   isCheckingManagementNumber = false,
 }: BasicInfoSectionProps) {
+  const t = useTranslations('equipment');
+
   // lab_manager만 사이트/팀 자유 선택 가능, 나머지는 자기 팀만
   const teamRestricted = userRole ? isTeamRestricted(userRole as UserRole) : false;
 
@@ -214,7 +209,7 @@ export function BasicInfoSection({
   const handleTeamChange = useCallback(
     (teamId: string) => {
       // API에서 가져온 팀 목록에서 찾기
-      const selectedTeam = teams.find((t) => t.id === teamId);
+      const selectedTeam = teams.find((tm) => tm.id === teamId);
       if (selectedTeam) {
         const classification = selectedTeam.classification;
         if (classification) {
@@ -226,7 +221,7 @@ export function BasicInfoSection({
 
       // 폴백: SITE_TEAMS에서 찾기
       if (selectedSite) {
-        const fallbackTeam = SITE_TEAMS[selectedSite]?.find((t) => t.value === teamId);
+        const fallbackTeam = SITE_TEAMS[selectedSite]?.find((tm) => tm.value === teamId);
         if (fallbackTeam) {
           const classification = fallbackTeam.classification;
           if (classification) {
@@ -251,12 +246,10 @@ export function BasicInfoSection({
   }, [selectedSite, selectedClassification, serialNumberInput]);
 
   // 관리번호 자동 업데이트 (새 장비 등록 시만)
-  // 주의: managementSerialNumberStr는 여기서 업데이트하지 않음 (입력 중 값 덮어쓰기 방지)
   useEffect(() => {
     if (!isEdit && managementNumberPreview) {
       setValue('managementNumber', managementNumberPreview);
       setValue('classification', selectedClassification);
-      // ★ Best Practice: 자동 생성된 관리번호도 실시간 중복 검사
       onManagementNumberChange?.(managementNumberPreview);
     }
   }, [managementNumberPreview, isEdit, setValue, selectedClassification, onManagementNumberChange]);
@@ -264,7 +257,7 @@ export function BasicInfoSection({
   // test_engineer: 팀 자동 선택 (userTeamId가 있으면 자동 설정)
   useEffect(() => {
     if (teamRestricted && userTeamId && filteredTeams.length > 0) {
-      const matchingTeam = filteredTeams.find((t) => t.value === userTeamId);
+      const matchingTeam = filteredTeams.find((tm) => tm.value === userTeamId);
       if (matchingTeam) {
         setValue('teamId', userTeamId);
         handleTeamChange(userTeamId);
@@ -276,12 +269,10 @@ export function BasicInfoSection({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-            1
-          </span>
-          기본 정보
+          <span className={FORM_SECTION_TOKENS.badge}>1</span>
+          {t('form.basicInfo.title')}
         </CardTitle>
-        <CardDescription>장비의 기본 정보를 입력하세요</CardDescription>
+        <CardDescription>{t('form.basicInfo.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -292,12 +283,16 @@ export function BasicInfoSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  장비명 <span className="text-destructive">*</span>
+                  {t('fields.name')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: Receiver" {...field} value={field.value || ''} />
+                  <Input
+                    placeholder={t('form.basicInfo.namePlaceholder')}
+                    {...field}
+                    value={field.value || ''}
+                  />
                 </FormControl>
-                <FormDescription>장비의 이름을 입력하세요</FormDescription>
+                <FormDescription>{t('form.basicInfo.nameDescription')}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -312,12 +307,12 @@ export function BasicInfoSection({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    관리번호 <span className="text-destructive">*</span>
+                    {t('fields.managementNumber')} <span className="text-destructive">*</span>
                   </FormLabel>
                   <div className="relative">
                     <FormControl>
                       <Input
-                        placeholder="예: SUW-E0001"
+                        placeholder={t('form.basicInfo.managementNumberPlaceholder')}
                         {...field}
                         onChange={(e) => {
                           field.onChange(e);
@@ -349,14 +344,18 @@ export function BasicInfoSection({
                       {managementNumberCheckResult.message}
                       {managementNumberCheckResult.existingEquipment && (
                         <span className="ml-1 font-medium">
-                          (기존 장비: {managementNumberCheckResult.existingEquipment.name})
+                          {t('form.basicInfo.existingEquipment', {
+                            name: managementNumberCheckResult.existingEquipment.name,
+                          })}
                         </span>
                       )}
                     </p>
                   ) : managementNumberCheckResult?.available === true ? (
                     <p className="text-sm text-green-600">{managementNumberCheckResult.message}</p>
                   ) : (
-                    <FormDescription>고유한 관리번호 (형식: XXX-XYYYY)</FormDescription>
+                    <FormDescription>
+                      {t('form.basicInfo.managementNumberDescription')}
+                    </FormDescription>
                   )}
                   <FormMessage />
                 </FormItem>
@@ -366,7 +365,7 @@ export function BasicInfoSection({
             // 등록 모드: 자동 생성 UI + 중복 검사
             <div className="space-y-2">
               <FormLabel>
-                관리번호 <span className="text-destructive">*</span>
+                {t('fields.managementNumber')} <span className="text-destructive">*</span>
               </FormLabel>
               {/* 프리뷰 및 자동 조합 표시 */}
               <div
@@ -418,7 +417,9 @@ export function BasicInfoSection({
                   {managementNumberCheckResult.message}
                   {managementNumberCheckResult.existingEquipment && (
                     <span className="ml-1 font-medium">
-                      (기존 장비: {managementNumberCheckResult.existingEquipment.name})
+                      {t('form.basicInfo.existingEquipment', {
+                        name: managementNumberCheckResult.existingEquipment.name,
+                      })}
                     </span>
                   )}
                 </p>
@@ -448,7 +449,7 @@ export function BasicInfoSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  사이트 <span className="text-destructive">*</span>
+                  {t('fields.site')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <Select
                   onValueChange={(value) => {
@@ -461,7 +462,7 @@ export function BasicInfoSection({
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="사이트를 선택하세요" />
+                      <SelectValue placeholder={t('form.basicInfo.sitePlaceholder')} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -474,8 +475,8 @@ export function BasicInfoSection({
                 </Select>
                 <FormDescription>
                   {teamRestricted
-                    ? '소속 사이트의 장비만 등록할 수 있습니다'
-                    : '장비가 위치한 사이트를 선택하세요'}
+                    ? t('form.basicInfo.siteDescriptionRestricted')
+                    : t('form.basicInfo.siteDescription')}
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -489,7 +490,7 @@ export function BasicInfoSection({
               name="classification"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>분류 (자동)</FormLabel>
+                  <FormLabel>{t('form.basicInfo.classificationLabel')}</FormLabel>
                   <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50">
                     {selectedClassification ? (
                       <>
@@ -505,7 +506,7 @@ export function BasicInfoSection({
                       </>
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        팀을 선택하면 자동 설정됩니다
+                        {t('form.basicInfo.classificationAutoSet')}
                       </span>
                     )}
                   </div>
@@ -515,7 +516,7 @@ export function BasicInfoSection({
                     ref={field.ref}
                     value={field.value ?? ''}
                   />
-                  <FormDescription>팀 선택에 따라 분류코드가 자동 결정됩니다</FormDescription>
+                  <FormDescription>{t('form.basicInfo.classificationDescription')}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -530,13 +531,14 @@ export function BasicInfoSection({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    관리번호 일련번호 <span className="text-destructive">*</span>
+                    {t('form.basicInfo.managementSerialNumber')}{' '}
+                    <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="text"
                       inputMode="numeric"
-                      placeholder="예: 0001"
+                      placeholder={t('form.basicInfo.serialNumberPlaceholder')}
                       maxLength={4}
                       {...field}
                       onChange={(e) => {
@@ -545,7 +547,6 @@ export function BasicInfoSection({
                         setSerialNumberInput(value);
                       }}
                       onBlur={(e) => {
-                        // 포커스가 벗어날 때만 4자리로 포맷팅 (입력 중 방해 방지)
                         const formatted = formatSerialNumber(e.target.value);
                         if (formatted) {
                           field.onChange(formatted);
@@ -555,7 +556,7 @@ export function BasicInfoSection({
                       }}
                     />
                   </FormControl>
-                  <FormDescription>관리번호 마지막 4자리 숫자 (0001~9999)</FormDescription>
+                  <FormDescription>{t('form.basicInfo.serialNumberDescription')}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -569,7 +570,7 @@ export function BasicInfoSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  팀 <span className="text-destructive">*</span>
+                  {t('fields.team')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <Select
                   onValueChange={(value) => {
@@ -584,10 +585,10 @@ export function BasicInfoSection({
                       <SelectValue
                         placeholder={
                           !selectedSite
-                            ? '먼저 사이트를 선택하세요'
+                            ? t('form.basicInfo.teamPlaceholderNoSite')
                             : isLoadingTeams
-                              ? '로딩 중...'
-                              : '팀을 선택하세요'
+                              ? t('form.basicInfo.teamLoading')
+                              : t('form.basicInfo.teamPlaceholder')
                         }
                       />
                     </SelectTrigger>
@@ -602,8 +603,8 @@ export function BasicInfoSection({
                 </Select>
                 <FormDescription>
                   {teamRestricted
-                    ? '소속 팀의 장비만 등록할 수 있습니다'
-                    : '팀 선택 시 분류코드가 자동 설정됩니다'}
+                    ? t('form.basicInfo.teamDescriptionRestricted')
+                    : t('form.basicInfo.teamDescription')}
                   {selectedClassification && (
                     <span className="ml-2 font-medium text-primary">
                       → {CLASSIFICATION_TO_CODE[selectedClassification]}
@@ -621,9 +622,13 @@ export function BasicInfoSection({
             name="assetNumber"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>자산번호</FormLabel>
+                <FormLabel>{t('fields.assetNumber')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: ASSET-001" {...field} value={field.value || ''} />
+                  <Input
+                    placeholder={t('form.basicInfo.assetNumberPlaceholder')}
+                    {...field}
+                    value={field.value || ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -637,10 +642,14 @@ export function BasicInfoSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  모델명 <span className="text-destructive">*</span>
+                  {t('fields.modelName')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: MS2720A" {...field} value={field.value || ''} />
+                  <Input
+                    placeholder={t('form.basicInfo.modelNamePlaceholder')}
+                    {...field}
+                    value={field.value || ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -654,44 +663,59 @@ export function BasicInfoSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  제조사 <span className="text-destructive">*</span>
+                  {t('fields.manufacturer')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: Anritsu" {...field} value={field.value || ''} />
+                  <Input
+                    placeholder={t('form.basicInfo.manufacturerPlaceholder')}
+                    {...field}
+                    value={field.value || ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          {/* 제조사 연락처 (신규) */}
+          {/* 제조사 연락처 */}
           <FormField
             control={control}
             name="manufacturerContact"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>제조사 연락처</FormLabel>
+                <FormLabel>{t('fields.manufacturerContact')}</FormLabel>
                 <FormControl>
-                  <Input placeholder="예: 02-1234-5678" {...field} value={field.value || ''} />
+                  <Input
+                    placeholder={t('form.basicInfo.manufacturerContactPlaceholder')}
+                    {...field}
+                    value={field.value || ''}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          {/* 제조사 시리얼번호 (장비 고유 식별번호) */}
+          {/* 제조사 시리얼번호 */}
           <FormField
             control={control}
             name="serialNumber"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  제조사 시리얼번호 <span className="text-destructive">*</span>
+                  {t('form.basicInfo.serialNumberLabel')}{' '}
+                  <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="예: SN123456" {...field} value={field.value || ''} />
+                  <Input
+                    placeholder={t('form.basicInfo.serialNumberInputPlaceholder')}
+                    {...field}
+                    value={field.value || ''}
+                  />
                 </FormControl>
-                <FormDescription>제조사에서 부여한 고유 식별번호</FormDescription>
+                <FormDescription>
+                  {t('form.basicInfo.serialNumberInputDescription')}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -703,11 +727,11 @@ export function BasicInfoSection({
             name="purchaseYear"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>구입년도</FormLabel>
+                <FormLabel>{t('fields.purchaseYear')}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="예: 2023"
+                    placeholder={t('form.basicInfo.purchaseYearPlaceholder')}
                     min={1990}
                     max={2100}
                     {...field}
@@ -723,16 +747,16 @@ export function BasicInfoSection({
           />
         </div>
 
-        {/* 장비사양 (라벨 변경: 설명 → 장비사양) */}
+        {/* 장비사양 */}
         <FormField
           control={control}
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>장비사양</FormLabel>
+              <FormLabel>{t('fields.description')}</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="장비의 상세 사양을 입력하세요 (주요 기능, 성능 등)"
+                  placeholder={t('form.basicInfo.descriptionPlaceholder')}
                   className="min-h-[100px]"
                   value={typeof field.value === 'string' ? field.value : ''}
                   onChange={field.onChange}
@@ -754,19 +778,21 @@ export function BasicInfoSection({
             name="specMatch"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>시방일치 여부</FormLabel>
+                <FormLabel>{t('fields.specMatch')}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="시방일치 여부를 선택하세요" />
+                      <SelectValue placeholder={t('form.basicInfo.specMatchPlaceholder')} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="match">일치</SelectItem>
-                    <SelectItem value="mismatch">불일치</SelectItem>
+                    <SelectItem value="match">{t('form.basicInfo.specMatchMatch')}</SelectItem>
+                    <SelectItem value="mismatch">
+                      {t('form.basicInfo.specMatchMismatch')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                <FormDescription>장비 사양이 시방과 일치하는지 여부</FormDescription>
+                <FormDescription>{t('form.basicInfo.specMatchDescription')}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -778,19 +804,27 @@ export function BasicInfoSection({
             name="calibrationRequired"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>교정필요 여부</FormLabel>
+                <FormLabel>{t('fields.calibrationRequired')}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="교정필요 여부를 선택하세요" />
+                      <SelectValue
+                        placeholder={t('form.basicInfo.calibrationRequiredPlaceholder')}
+                      />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="required">필요</SelectItem>
-                    <SelectItem value="not_required">불필요</SelectItem>
+                    <SelectItem value="required">
+                      {t('form.basicInfo.calibrationRequiredYes')}
+                    </SelectItem>
+                    <SelectItem value="not_required">
+                      {t('form.basicInfo.calibrationRequiredNo')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                <FormDescription>장비에 교정이 필요한지 여부</FormDescription>
+                <FormDescription>
+                  {t('form.basicInfo.calibrationRequiredDescription')}
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

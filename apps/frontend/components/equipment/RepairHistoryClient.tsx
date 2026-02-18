@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -56,27 +56,20 @@ import RepairHistoryTimeline from '@/components/equipment/RepairHistoryTimeline'
 import { formatDate } from '@/lib/utils/date';
 import { ArrowLeft, Plus, Wrench, Hash, Info } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { getErrorMessage } from '@/lib/api/error';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
 
-const REPAIR_RESULT_OPTIONS = [
-  { value: 'completed', label: '수리 완료' },
-  { value: 'partial', label: '부분 수리' },
-  { value: 'failed', label: '수리 실패' },
-];
-
-/**
- * 수리 이력 폼 검증 스키마
- * 백엔드 createRepairHistorySchema와 일치
- */
-const repairHistoryFormSchema = z.object({
-  repairDate: z.string().min(1, '수리 일자를 입력하세요'),
-  repairDescription: z.string().min(10, '수리 내용은 최소 10자 이상 입력해야 합니다'),
-  repairResult: z.enum(['completed', 'partial', 'failed']).optional(),
-  notes: z.string().optional(),
-  nonConformanceId: z.string().uuid().optional(),
-});
-
-type RepairHistoryFormValues = z.infer<typeof repairHistoryFormSchema>;
+function createRepairHistoryFormSchema(t: (key: string) => string) {
+  return z.object({
+    repairDate: z.string().min(1, t('validationRepairDate')),
+    repairDescription: z.string().min(10, t('validationDescriptionMin')),
+    repairResult: z.enum(['completed', 'partial', 'failed']).optional(),
+    notes: z.string().optional(),
+    nonConformanceId: z.string().uuid().optional(),
+  });
+}
+type RepairHistoryFormValues = z.infer<ReturnType<typeof createRepairHistoryFormSchema>>;
 
 interface RepairHistoryClientProps {
   /**
@@ -108,6 +101,9 @@ export function RepairHistoryClient({
 }: RepairHistoryClientProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const t = useTranslations('equipment.repairHistory');
+  const tCommon = useTranslations('equipment.common');
+  const repairHistoryFormSchema = useMemo(() => createRepairHistoryFormSchema(t), [t]);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -174,9 +170,9 @@ export function RepairHistoryClient({
   const createMutation = useMutation({
     mutationFn: (dto: CreateRepairHistoryDto) => createRepairHistory(equipmentId, dto),
     onSuccess: () => {
-      toast({ title: '성공', description: '수리 이력이 등록되었습니다.' });
+      toast({ title: t('toastSuccess'), description: t('toastCreateSuccess') });
       setIsCreateDialogOpen(false);
-      form.reset(); // ✅ form.reset() 사용
+      form.reset();
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipment.repairHistory(equipmentId) });
@@ -187,10 +183,10 @@ export function RepairHistoryClient({
         queryKey: queryKeys.equipment.openNonConformances(equipmentId),
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: '오류',
-        description: error.message || '수리 이력 등록 중 오류가 발생했습니다.',
+        title: t('toastError'),
+        description: getErrorMessage(error, t('toastCreateError')),
         variant: 'destructive',
       });
     },
@@ -201,10 +197,10 @@ export function RepairHistoryClient({
     mutationFn: (params: { uuid: string; dto: Partial<CreateRepairHistoryDto> }) =>
       updateRepairHistory(params.uuid, params.dto),
     onSuccess: () => {
-      toast({ title: '성공', description: '수리 이력이 수정되었습니다.' });
+      toast({ title: t('toastSuccess'), description: t('toastUpdateSuccess') });
       setIsEditDialogOpen(false);
       setSelectedRepair(null);
-      form.reset(); // ✅ form.reset() 사용
+      form.reset();
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipment.repairHistory(equipmentId) });
@@ -215,10 +211,10 @@ export function RepairHistoryClient({
         queryKey: queryKeys.equipment.openNonConformances(equipmentId),
       });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: '오류',
-        description: error.message || '수리 이력 수정 중 오류가 발생했습니다.',
+        title: t('toastError'),
+        description: getErrorMessage(error, t('toastUpdateError')),
         variant: 'destructive',
       });
     },
@@ -228,17 +224,17 @@ export function RepairHistoryClient({
   const deleteMutation = useMutation({
     mutationFn: (uuid: string) => deleteRepairHistory(uuid),
     onSuccess: () => {
-      toast({ title: '성공', description: '수리 이력이 삭제되었습니다.' });
+      toast({ title: t('toastSuccess'), description: t('toastDeleteSuccess') });
       setIsDeleteDialogOpen(false);
       setSelectedRepair(null);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.equipment.repairHistory(equipmentId) });
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       toast({
-        title: '오류',
-        description: error.message || '수리 이력 삭제 중 오류가 발생했습니다.',
+        title: t('toastError'),
+        description: getErrorMessage(error, t('toastDeleteError')),
         variant: 'destructive',
       });
     },
@@ -320,31 +316,31 @@ export function RepairHistoryClient({
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild aria-label="장비 상세로 돌아가기">
+          <Button variant="ghost" size="icon" asChild aria-label={t('backAriaLabel')}>
             <Link href={`/equipment/${equipmentId}`}>
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">수리 이력</h1>
-            <p className="text-muted-foreground">장비 ID: {equipmentId}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+            <p className="text-muted-foreground">{t('equipmentId', { id: equipmentId })}</p>
           </div>
         </div>
         <Button onClick={handleOpenCreate}>
           <Plus className="h-4 w-4 mr-2" />
-          수리 이력 추가
+          {t('addButton')}
         </Button>
       </div>
 
       {/* 요약 카드 */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">총 수리 횟수</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('summaryTitle')}</CardTitle>
           <Hash className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{repairs.length}회</div>
-          <p className="text-xs text-muted-foreground mt-1">전체 수리 이력 건수</p>
+          <div className="text-2xl font-bold">{t('summaryCount', { count: repairs.length })}</div>
+          <p className="text-xs text-muted-foreground mt-1">{t('summaryDescription')}</p>
         </CardContent>
       </Card>
 
@@ -353,9 +349,9 @@ export function RepairHistoryClient({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wrench className="h-5 w-5" />
-            수리 이력 타임라인
+            {t('timelineTitle')}
           </CardTitle>
-          <CardDescription>장비의 수리 이력을 시간순으로 확인합니다</CardDescription>
+          <CardDescription>{t('timelineDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <RepairHistoryTimeline
@@ -371,20 +367,19 @@ export function RepairHistoryClient({
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>수리 이력 등록</DialogTitle>
-            <DialogDescription>새로운 수리 이력을 등록합니다.</DialogDescription>
+            <DialogTitle>{t('createTitle')}</DialogTitle>
+            <DialogDescription>{t('createDescription')}</DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid gap-4 py-4">
-                {/* 수리 일자 */}
                 <FormField
                   control={form.control}
                   name="repairDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>수리 일자 *</FormLabel>
+                      <FormLabel>{t('formRepairDate')}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} value={field.value || ''} />
                       </FormControl>
@@ -393,16 +388,15 @@ export function RepairHistoryClient({
                   )}
                 />
 
-                {/* 수리 내용 */}
                 <FormField
                   control={form.control}
                   name="repairDescription"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>수리 내용 *</FormLabel>
+                      <FormLabel>{t('formDescription')}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="수리 내용을 자세히 입력하세요 (최소 10자)"
+                          placeholder={t('formDescriptionPlaceholder')}
                           className="min-h-[100px]"
                           {...field}
                           value={field.value || ''}
@@ -413,25 +407,22 @@ export function RepairHistoryClient({
                   )}
                 />
 
-                {/* 수리 결과 */}
                 <FormField
                   control={form.control}
                   name="repairResult"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>수리 결과</FormLabel>
+                      <FormLabel>{t('formResult')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value ?? ''}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="수리 결과 선택" />
+                            <SelectValue placeholder={t('formResultPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {REPAIR_RESULT_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="completed">{t('resultCompleted')}</SelectItem>
+                          <SelectItem value="partial">{t('resultPartial')}</SelectItem>
+                          <SelectItem value="failed">{t('resultFailed')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -439,13 +430,12 @@ export function RepairHistoryClient({
                   )}
                 />
 
-                {/* 부적합 연결 */}
                 <FormField
                   control={form.control}
                   name="nonConformanceId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>연결된 부적합 (선택)</FormLabel>
+                      <FormLabel>{t('formNcLabel')}</FormLabel>
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value === '__none__' ? undefined : value);
@@ -454,14 +444,14 @@ export function RepairHistoryClient({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="부적합 선택 (선택사항)" />
+                            <SelectValue placeholder={t('formNcPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="__none__">선택 안 함</SelectItem>
+                          <SelectItem value="__none__">{t('formNcNone')}</SelectItem>
                           {openNonConformances && openNonConformances.length === 0 && (
                             <SelectItem value="__empty__" disabled>
-                              열린 부적합이 없습니다
+                              {t('formNcEmpty')}
                             </SelectItem>
                           )}
                           {openNonConformances?.map((nc) => (
@@ -473,38 +463,32 @@ export function RepairHistoryClient({
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">
-                        손상/오작동 부적합을 선택하면 수리 완료 시 자동으로 "조치 완료" 상태로
-                        변경됩니다.
-                      </p>
+                      <p className="text-xs text-muted-foreground">{t('formNcDescription')}</p>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* 자동 연동 안내 */}
                 {form.watch('nonConformanceId') && openNonConformances && (
                   <div className="rounded-md border p-3 bg-blue-50 dark:bg-blue-950 border-blue-200">
                     <div className="flex items-start gap-2">
                       <Info className="h-4 w-4 text-blue-600 mt-0.5" />
                       <div className="text-sm text-blue-800 dark:text-blue-200">
-                        <strong>자동 연동:</strong> 수리 결과를 "수리 완료"로 설정하면 부적합 상태가
-                        자동으로 "조치 완료"로 변경됩니다.
+                        {t('formAutoLinkInfo')}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* 비고 */}
                 <FormField
                   control={form.control}
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>비고</FormLabel>
+                      <FormLabel>{t('formNotes')}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="추가 메모"
+                          placeholder={t('formNotesPlaceholder')}
                           className="min-h-[80px]"
                           {...field}
                           value={field.value || ''}
@@ -522,10 +506,10 @@ export function RepairHistoryClient({
                   variant="outline"
                   onClick={() => setIsCreateDialogOpen(false)}
                 >
-                  취소
+                  {tCommon('cancel')}
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? '등록 중...' : '등록'}
+                  {createMutation.isPending ? tCommon('registering') : tCommon('register')}
                 </Button>
               </DialogFooter>
             </form>
@@ -537,20 +521,19 @@ export function RepairHistoryClient({
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>수리 이력 수정</DialogTitle>
-            <DialogDescription>수리 이력을 수정합니다.</DialogDescription>
+            <DialogTitle>{t('editDialogTitle')}</DialogTitle>
+            <DialogDescription>{t('editDialogDescription')}</DialogDescription>
           </DialogHeader>
 
           <Form {...form}>
             <form onSubmit={handleUpdate} className="space-y-4">
               <div className="grid gap-4 py-4">
-                {/* 수리 일자 */}
                 <FormField
                   control={form.control}
                   name="repairDate"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>수리 일자 *</FormLabel>
+                      <FormLabel>{t('formRepairDate')}</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} value={field.value || ''} />
                       </FormControl>
@@ -559,16 +542,15 @@ export function RepairHistoryClient({
                   )}
                 />
 
-                {/* 수리 내용 */}
                 <FormField
                   control={form.control}
                   name="repairDescription"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>수리 내용 *</FormLabel>
+                      <FormLabel>{t('formDescription')}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="수리 내용을 자세히 입력하세요 (최소 10자)"
+                          placeholder={t('formDescriptionPlaceholder')}
                           className="min-h-[100px]"
                           {...field}
                           value={field.value || ''}
@@ -579,25 +561,22 @@ export function RepairHistoryClient({
                   )}
                 />
 
-                {/* 수리 결과 */}
                 <FormField
                   control={form.control}
                   name="repairResult"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>수리 결과</FormLabel>
+                      <FormLabel>{t('formResult')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value ?? ''}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="수리 결과 선택" />
+                            <SelectValue placeholder={t('formResultPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {REPAIR_RESULT_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="completed">{t('resultCompleted')}</SelectItem>
+                          <SelectItem value="partial">{t('resultPartial')}</SelectItem>
+                          <SelectItem value="failed">{t('resultFailed')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -605,13 +584,12 @@ export function RepairHistoryClient({
                   )}
                 />
 
-                {/* 부적합 연결 (수정 시 변경 불가) */}
                 <FormField
                   control={form.control}
                   name="nonConformanceId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>연결된 부적합 (수정 불가)</FormLabel>
+                      <FormLabel>{t('formNcLabelReadonly')}</FormLabel>
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value === '__none__' ? undefined : value);
@@ -621,11 +599,11 @@ export function RepairHistoryClient({
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="부적합 선택 (선택사항)" />
+                            <SelectValue placeholder={t('formNcPlaceholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="__none__">선택 안 함</SelectItem>
+                          <SelectItem value="__none__">{t('formNcNone')}</SelectItem>
                           {openNonConformances?.map((nc) => (
                             <SelectItem key={nc.id} value={nc.id}>
                               [{NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}] {nc.cause.substring(0, 30)}
@@ -636,23 +614,22 @@ export function RepairHistoryClient({
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        부적합 연결은 수정 시 변경할 수 없습니다.
+                        {t('formNcReadonlyDescription')}
                       </p>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* 비고 */}
                 <FormField
                   control={form.control}
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>비고</FormLabel>
+                      <FormLabel>{t('formNotes')}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="추가 메모"
+                          placeholder={t('formNotesPlaceholder')}
                           className="min-h-[80px]"
                           {...field}
                           value={field.value || ''}
@@ -666,10 +643,10 @@ export function RepairHistoryClient({
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  취소
+                  {tCommon('cancel')}
                 </Button>
                 <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? '수정 중...' : '수정'}
+                  {updateMutation.isPending ? tCommon('saving') : tCommon('edit')}
                 </Button>
               </DialogFooter>
             </form>
@@ -681,15 +658,13 @@ export function RepairHistoryClient({
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>수리 이력 삭제</AlertDialogTitle>
-            <AlertDialogDescription>
-              이 수리 이력을 삭제하시겠습니까? 삭제된 이력은 복구할 수 없습니다.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t('deleteDialogTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('deleteDialogDescription')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              {deleteMutation.isPending ? '삭제 중...' : '삭제'}
+              {deleteMutation.isPending ? tCommon('deleting') : tCommon('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

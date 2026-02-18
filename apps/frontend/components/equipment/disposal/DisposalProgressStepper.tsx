@@ -1,56 +1,54 @@
+'use client';
+
 import { Check, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DISPOSAL_STEPPER_TOKENS,
+  getStepperNodeClasses,
+  getStepperLabelClasses,
+} from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalProgressStepperProps {
   currentStep: number;
   className?: string;
 }
 
-const steps = [
-  { id: 1, label: '요청' },
-  { id: 2, label: '검토' },
-  { id: 3, label: '승인' },
-];
+const STEP_KEYS = ['request', 'review', 'approval'] as const;
 
 export function DisposalProgressStepper({ currentStep, className }: DisposalProgressStepperProps) {
+  const t = useTranslations('disposal.stepper');
   return (
     <div className={cn('flex items-center justify-center gap-2', className)}>
-      {steps.map((step, index) => {
-        const isCompleted = step.id < currentStep;
-        const isCurrent = step.id === currentStep;
-        const isPending = step.id > currentStep;
+      {STEP_KEYS.map((key, index) => {
+        const stepId = index + 1;
+        const isCompleted = stepId < currentStep;
+        const isCurrent = stepId === currentStep;
+
+        const status = isCompleted ? 'completed' : isCurrent ? 'current' : 'pending';
 
         return (
-          <div key={step.id} className="flex items-center">
+          <div key={key} className="flex items-center">
             <div className="flex flex-col items-center gap-1">
               <div
-                className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-full border-2',
-                  isCompleted && 'border-green-500 bg-green-500 text-white',
-                  isCurrent && 'border-orange-500 bg-orange-500 text-white',
-                  isPending &&
-                    'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
-                )}
+                className={getStepperNodeClasses(status)}
                 aria-current={isCurrent ? 'step' : undefined}
               >
-                {isCompleted ? <Check className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
-              </div>
-              <span
-                className={cn(
-                  'text-xs font-medium',
-                  isCompleted && 'text-green-700 dark:text-green-400',
-                  isCurrent && 'text-orange-700 dark:text-orange-400',
-                  isPending && 'text-gray-400'
+                {isCompleted ? (
+                  <Check className={DISPOSAL_STEPPER_TOKENS.icon} />
+                ) : (
+                  <Circle className={DISPOSAL_STEPPER_TOKENS.icon} />
                 )}
-              >
-                {step.label}
-              </span>
+              </div>
+              <span className={getStepperLabelClasses(status)}>{t(key)}</span>
             </div>
-            {index < steps.length - 1 && (
+            {index < STEP_KEYS.length - 1 && (
               <div
                 className={cn(
-                  'mx-2 h-[2px] w-12',
-                  step.id < currentStep ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+                  DISPOSAL_STEPPER_TOKENS.connector.base,
+                  stepId < currentStep
+                    ? DISPOSAL_STEPPER_TOKENS.connector.completed
+                    : DISPOSAL_STEPPER_TOKENS.connector.pending
                 )}
               />
             )}

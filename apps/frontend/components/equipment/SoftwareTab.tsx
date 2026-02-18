@@ -2,19 +2,22 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Code } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { Equipment } from '@/lib/api/equipment-api';
+import { TIMELINE_TOKENS } from '@/lib/design-tokens';
 
 interface SoftwareTabProps {
   equipment: Equipment;
 }
 
 export function SoftwareTab({ equipment }: SoftwareTabProps) {
+  const t = useTranslations('equipment');
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Code className="h-5 w-5 text-ul-midnight" />
-          소프트웨어
+          {t('softwareTab.title')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -22,21 +25,21 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
           <div className="space-y-4">
             {equipment.softwareVersion && (
               <div>
-                <p className="text-sm text-muted-foreground">소프트웨어 버전</p>
+                <p className="text-sm text-muted-foreground">{t('softwareTab.softwareVersion')}</p>
                 <p className="font-medium">{equipment.softwareVersion}</p>
               </div>
             )}
             {equipment.firmwareVersion && (
               <div>
-                <p className="text-sm text-muted-foreground">펌웨어 버전</p>
+                <p className="text-sm text-muted-foreground">{t('softwareTab.firmwareVersion')}</p>
                 <p className="font-medium">{equipment.firmwareVersion}</p>
               </div>
             )}
           </div>
         ) : (
-          <div className="text-center py-12 text-muted-foreground">
-            <Code className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p>등록된 소프트웨어 정보가 없습니다.</p>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <Code className={TIMELINE_TOKENS.empty.icon} />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('softwareTab.empty')}</p>
           </div>
         )}
       </CardContent>

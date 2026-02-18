@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,6 +61,7 @@ export function LocationHistorySection({
   isLoading: _isLoading = false,
   disabled = false,
 }: LocationHistorySectionProps) {
+  const t = useTranslations('equipment');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -90,7 +92,7 @@ export function LocationHistorySection({
   };
 
   const handleDelete = async (historyId: string) => {
-    if (confirm('이 위치 변동 이력을 삭제하시겠습니까?')) {
+    if (confirm(t('formSections.location.deleteConfirm'))) {
       try {
         await onDelete(historyId);
       } catch (error) {
@@ -105,19 +107,19 @@ export function LocationHistorySection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-blue-500" />
-            <CardTitle>위치 변동 이력</CardTitle>
+            <CardTitle>{t('locationHistoryTab.title')}</CardTitle>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button type="button" size="sm" disabled={disabled}>
                 <Plus className="h-4 w-4 mr-1" />
-                추가
+                {t('calibrationHistorySection.addButton')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>위치 변동 이력 추가</DialogTitle>
-                <DialogDescription>장비의 위치 변동 정보를 입력하세요.</DialogDescription>
+                <DialogTitle>{t('form.toasts.locationHistoryAdd')}</DialogTitle>
+                <DialogDescription>{t('locationHistoryTab.dialog.description')}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form
@@ -132,7 +134,7 @@ export function LocationHistorySection({
                     name="changedAt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>변동 일시 *</FormLabel>
+                        <FormLabel>{t('locationHistoryTab.dialog.changedAt')}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
@@ -145,9 +147,13 @@ export function LocationHistorySection({
                     name="newLocation"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>설치 위치 *</FormLabel>
+                        <FormLabel>{t('locationHistoryTab.dialog.newLocation')}</FormLabel>
                         <FormControl>
-                          <Input placeholder="예: RF1 Room" {...field} value={field.value || ''} />
+                          <Input
+                            placeholder={t('locationHistoryTab.dialog.newLocationPlaceholder')}
+                            {...field}
+                            value={field.value || ''}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -158,10 +164,10 @@ export function LocationHistorySection({
                     name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>비고</FormLabel>
+                        <FormLabel>{t('locationHistoryTab.dialog.notes')}</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="변동 사유나 특이사항"
+                            placeholder={t('locationHistoryTab.dialog.notesPlaceholder')}
                             {...field}
                             value={field.value || ''}
                           />
@@ -172,10 +178,12 @@ export function LocationHistorySection({
                   />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      취소
+                      {t('locationHistoryTab.dialog.cancel')}
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? '저장 중...' : '저장'}
+                      {isSubmitting
+                        ? t('locationHistoryTab.dialog.saving')
+                        : t('locationHistoryTab.dialog.save')}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -183,18 +191,20 @@ export function LocationHistorySection({
             </DialogContent>
           </Dialog>
         </div>
-        <CardDescription>장비 위치 변동 기록입니다.</CardDescription>
+        <CardDescription>{t('locationHistoryTab.dialog.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">위치 변동 이력이 없습니다.</div>
+          <div className="text-center text-muted-foreground py-8">
+            {t('locationHistoryTab.empty')}
+          </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>변동 일시</TableHead>
-                <TableHead>설치 위치</TableHead>
-                <TableHead>비고</TableHead>
+                <TableHead>{t('locationHistoryTab.tableHeaders.changedAt')}</TableHead>
+                <TableHead>{t('locationHistoryTab.tableHeaders.location')}</TableHead>
+                <TableHead>{t('locationHistoryTab.tableHeaders.notes')}</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -49,12 +50,7 @@ import type {
   IncidentType,
 } from '@/lib/api/equipment-api';
 
-const INCIDENT_TYPE_LABELS: Record<IncidentType, string> = {
-  damage: '손상',
-  malfunction: '오작동',
-  change: '변경',
-  repair: '수리',
-};
+const INCIDENT_TYPES: IncidentType[] = ['damage', 'malfunction', 'change', 'repair'];
 
 const INCIDENT_TYPE_COLORS: Record<IncidentType, string> = {
   damage: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
@@ -86,6 +82,7 @@ export function IncidentHistorySection({
   isLoading: _isLoading = false,
   disabled = false,
 }: IncidentHistorySectionProps) {
+  const t = useTranslations('equipment');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -116,7 +113,7 @@ export function IncidentHistorySection({
   };
 
   const handleDelete = async (historyId: string) => {
-    if (confirm('이 손상/수리 내역을 삭제하시겠습니까?')) {
+    if (confirm(t('formSections.incident.deleteConfirm'))) {
       try {
         await onDelete(historyId);
       } catch (error) {
@@ -131,19 +128,21 @@ export function IncidentHistorySection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
-            <CardTitle>손상/오작동/변경/수리 내역</CardTitle>
+            <CardTitle>{t('incidentHistoryTab.sectionTitle')}</CardTitle>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button type="button" size="sm" disabled={disabled}>
                 <Plus className="h-4 w-4 mr-1" />
-                추가
+                {t('incidentHistoryTab.addButton')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>손상/수리 내역 추가</DialogTitle>
-                <DialogDescription>손상, 오작동, 변경, 수리 정보를 입력하세요.</DialogDescription>
+                <DialogTitle>{t('incidentHistoryTab.dialog.title')}</DialogTitle>
+                <DialogDescription>
+                  {t('incidentHistoryTab.dialog.descriptionDefault')}
+                </DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form
@@ -158,7 +157,7 @@ export function IncidentHistorySection({
                     name="occurredAt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>발생 일시 *</FormLabel>
+                        <FormLabel>{t('incidentHistoryTab.dialog.occurredAt')}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
@@ -171,21 +170,20 @@ export function IncidentHistorySection({
                     name="incidentType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>유형 *</FormLabel>
+                        <FormLabel>{t('incidentHistoryTab.dialog.typeLabel')}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="유형을 선택하세요" />
+                              <SelectValue
+                                placeholder={t('incidentHistoryTab.dialog.typePlaceholder')}
+                              />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {Object.entries(INCIDENT_TYPE_LABELS).map(([value, label]) => (
-                              <SelectItem key={value} value={value}>
-                                <Badge
-                                  variant="outline"
-                                  className={INCIDENT_TYPE_COLORS[value as IncidentType]}
-                                >
-                                  {label}
+                            {INCIDENT_TYPES.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                <Badge variant="outline" className={INCIDENT_TYPE_COLORS[type]}>
+                                  {t(`incidentHistoryTab.types.${type}` as Parameters<typeof t>[0])}
                                 </Badge>
                               </SelectItem>
                             ))}
@@ -200,10 +198,10 @@ export function IncidentHistorySection({
                     name="content"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>주요 내용 *</FormLabel>
+                        <FormLabel>{t('incidentHistoryTab.dialog.content')}</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="예: 전원부 손상으로 인한 전원 보드 교체 필요"
+                            placeholder={t('incidentHistoryTab.dialog.contentPlaceholder')}
                             className="min-h-[100px]"
                             {...field}
                             value={field.value || ''}
@@ -215,10 +213,12 @@ export function IncidentHistorySection({
                   />
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                      취소
+                      {t('incidentHistoryTab.dialog.cancel')}
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? '저장 중...' : '저장'}
+                      {isSubmitting
+                        ? t('incidentHistoryTab.dialog.saving')
+                        : t('incidentHistoryTab.dialog.save')}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -226,19 +226,21 @@ export function IncidentHistorySection({
             </DialogContent>
           </Dialog>
         </div>
-        <CardDescription>장비 손상, 오작동, 변경, 수리 기록입니다.</CardDescription>
+        <CardDescription>{t('incidentHistoryTab.sectionDescription')}</CardDescription>
       </CardHeader>
       <CardContent>
         {history.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">손상/수리 내역이 없습니다.</div>
+          <div className="text-center text-muted-foreground py-8">
+            {t('incidentHistoryTab.empty')}
+          </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>발생 일시</TableHead>
-                <TableHead>유형</TableHead>
-                <TableHead>주요 내용</TableHead>
-                <TableHead>보고자</TableHead>
+                <TableHead>{t('incidentHistoryTab.tableHeaders.occurredAt')}</TableHead>
+                <TableHead>{t('incidentHistoryTab.tableHeaders.type')}</TableHead>
+                <TableHead>{t('incidentHistoryTab.tableHeaders.content')}</TableHead>
+                <TableHead>{t('incidentHistoryTab.tableHeaders.reporter')}</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -248,7 +250,9 @@ export function IncidentHistorySection({
                   <TableCell>{formatDate(item.occurredAt, 'yyyy-MM-dd')}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={INCIDENT_TYPE_COLORS[item.incidentType]}>
-                      {INCIDENT_TYPE_LABELS[item.incidentType]}
+                      {t(
+                        `incidentHistoryTab.types.${item.incidentType}` as Parameters<typeof t>[0]
+                      )}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-[250px] truncate">{item.content}</TableCell>

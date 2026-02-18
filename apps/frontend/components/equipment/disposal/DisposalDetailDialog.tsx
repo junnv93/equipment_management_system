@@ -10,12 +10,10 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Clock, XCircle, Download } from 'lucide-react';
-import {
-  DISPOSAL_REASON_LABELS,
-  DISPOSAL_REVIEW_STATUS_LABELS,
-  type DisposalRequest,
-} from '@equipment-management/schemas';
+import { type DisposalRequest } from '@equipment-management/schemas';
 import { formatDateTime } from '@/lib/utils/date';
+import { DISPOSAL_TIMELINE_TOKENS, DISPOSAL_FILE_LINK_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalDetailDialogProps {
   open: boolean;
@@ -43,22 +41,26 @@ export function DisposalDetailDialog({
   disposalRequest,
   equipmentName,
 }: DisposalDetailDialogProps) {
+  const t = useTranslations('disposal');
+  const tReason = useTranslations('disposal.reason');
+  const tStatus = useTranslations('disposal.status');
+
   const stages: TimelineStage[] = [
     {
       id: 'request',
-      title: '폐기 요청',
+      title: t('detailDialog.stages.request'),
       icon: <Clock className="h-5 w-5" />,
       completed: true,
       data: {
         person: disposalRequest.requestedByName,
         time: disposalRequest.requestedAt,
-        content: `${DISPOSAL_REASON_LABELS[disposalRequest.reason]}\n\n${disposalRequest.reasonDetail}`,
+        content: `${tReason(disposalRequest.reason)}\n\n${disposalRequest.reasonDetail}`,
         attachments: disposalRequest.attachments,
       },
     },
     {
       id: 'review',
-      title: '기술책임자 검토',
+      title: t('detailDialog.stages.review'),
       icon:
         disposalRequest.reviewStatus === 'rejected' &&
         disposalRequest.rejectionStep === 'review' ? (
@@ -72,7 +74,9 @@ export function DisposalDetailDialog({
           ? {
               person: disposalRequest.rejectedByName,
               time: disposalRequest.rejectedAt,
-              content: `반려 사유:\n${disposalRequest.rejectionReason}`,
+              content: t('detailDialog.rejectionReason', {
+                reason: disposalRequest.rejectionReason || '',
+              }),
             }
           : disposalRequest.reviewedByName
             ? {
@@ -84,7 +88,7 @@ export function DisposalDetailDialog({
     },
     {
       id: 'approval',
-      title: '시험소장 최종 승인',
+      title: t('detailDialog.stages.approval'),
       icon:
         disposalRequest.reviewStatus === 'rejected' &&
         disposalRequest.rejectionStep === 'approval' ? (
@@ -98,13 +102,15 @@ export function DisposalDetailDialog({
           ? {
               person: disposalRequest.rejectedByName,
               time: disposalRequest.rejectedAt,
-              content: `반려 사유:\n${disposalRequest.rejectionReason}`,
+              content: t('detailDialog.rejectionReason', {
+                reason: disposalRequest.rejectionReason || '',
+              }),
             }
           : disposalRequest.approvedByName
             ? {
                 person: disposalRequest.approvedByName,
                 time: disposalRequest.approvedAt,
-                content: disposalRequest.approvalComment || '승인 완료',
+                content: disposalRequest.approvalComment || t('detailDialog.approvalComplete'),
               }
             : undefined,
     },
@@ -118,16 +124,17 @@ export function DisposalDetailDialog({
         aria-modal="true"
       >
         <DialogHeader>
-          <DialogTitle>폐기 상세 내역</DialogTitle>
+          <DialogTitle>{t('detailDialog.title')}</DialogTitle>
           <DialogDescription>
-            <span className="font-medium text-gray-900 dark:text-gray-100">{equipmentName}</span>{' '}
-            장비의 폐기 진행 내역입니다.
+            {t('detailDialog.description', { name: equipmentName })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">진행 상태</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              {t('detailDialog.progressStatus')}
+            </h3>
             <Badge
               variant={
                 disposalRequest.reviewStatus === 'approved'
@@ -137,7 +144,7 @@ export function DisposalDetailDialog({
                     : 'secondary'
               }
             >
-              {DISPOSAL_REVIEW_STATUS_LABELS[disposalRequest.reviewStatus]}
+              {tStatus(disposalRequest.reviewStatus)}
             </Badge>
           </div>
 
@@ -152,20 +159,22 @@ export function DisposalDetailDialog({
                 <div key={stage.id} className="relative">
                   {!isLast && (
                     <div
-                      className={`absolute left-[18px] top-[36px] h-full w-[2px] ${
-                        stage.completed ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+                      className={`${DISPOSAL_TIMELINE_TOKENS.connector.base} ${
+                        stage.completed
+                          ? DISPOSAL_TIMELINE_TOKENS.connector.completed
+                          : DISPOSAL_TIMELINE_TOKENS.connector.pending
                       }`}
                     />
                   )}
 
                   <div className="flex gap-4">
                     <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 ${
+                      className={`${DISPOSAL_TIMELINE_TOKENS.node.base} ${DISPOSAL_TIMELINE_TOKENS.node.size} ${
                         isRejected
-                          ? 'border-red-500 bg-red-500 text-white'
+                          ? DISPOSAL_TIMELINE_TOKENS.node.rejected
                           : stage.completed
-                            ? 'border-green-500 bg-green-500 text-white'
-                            : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400'
+                            ? DISPOSAL_TIMELINE_TOKENS.node.completed
+                            : DISPOSAL_TIMELINE_TOKENS.node.pending
                       }`}
                     >
                       {stage.icon}
@@ -176,10 +185,10 @@ export function DisposalDetailDialog({
                         <h3
                           className={`font-medium ${
                             isRejected
-                              ? 'text-red-700 dark:text-red-400'
+                              ? DISPOSAL_TIMELINE_TOKENS.title.rejected
                               : stage.completed
-                                ? 'text-green-700 dark:text-green-400'
-                                : 'text-gray-400'
+                                ? DISPOSAL_TIMELINE_TOKENS.title.completed
+                                : DISPOSAL_TIMELINE_TOKENS.title.pending
                           }`}
                         >
                           {stage.title}
@@ -196,8 +205,8 @@ export function DisposalDetailDialog({
                         <Card
                           className={
                             isRejected
-                              ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30'
-                              : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50'
+                              ? DISPOSAL_TIMELINE_TOKENS.card.rejected
+                              : DISPOSAL_TIMELINE_TOKENS.card.default
                           }
                         >
                           <CardContent className="pt-4 pb-4">
@@ -209,15 +218,17 @@ export function DisposalDetailDialog({
                             {stage.data.attachments && stage.data.attachments.length > 0 && (
                               <div className="mt-3 space-y-1">
                                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                                  첨부 파일:
+                                  {t('common.attachments')}
                                 </p>
                                 {stage.data.attachments.map((file) => (
                                   <a
                                     key={file.id}
                                     href={file.url}
                                     download={file.filename}
-                                    className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                    aria-label={`다운로드: ${file.filename}`}
+                                    className={DISPOSAL_FILE_LINK_TOKENS.base}
+                                    aria-label={t('common.downloadAriaLabel', {
+                                      name: file.filename,
+                                    })}
                                   >
                                     <Download className="h-4 w-4" />
                                     {file.filename}

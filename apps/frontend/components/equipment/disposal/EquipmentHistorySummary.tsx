@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, Calendar, Wrench, AlertTriangle, Clock } from '
 import type { Equipment } from '@/lib/api/equipment-api';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { differenceInDays } from 'date-fns';
+import { useTranslations } from 'next-intl';
 
 interface EquipmentHistorySummaryProps {
   equipment: Equipment;
@@ -14,6 +15,7 @@ interface EquipmentHistorySummaryProps {
 
 export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const t = useTranslations('disposal.historySummary');
 
   const purchaseDate = toDate(equipment.purchaseDate);
   const usagePeriod = purchaseDate ? differenceInDays(new Date(), purchaseDate) : 0;
@@ -25,14 +27,14 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
     <Card className="border-gray-200">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-gray-700">장비 이력 요약</CardTitle>
+          <CardTitle className="text-sm font-medium text-gray-700">{t('title')}</CardTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
             className="h-8 w-8 p-0"
             aria-expanded={isExpanded}
-            aria-label={isExpanded ? '장비 이력 접기' : '장비 이력 펼치기'}
+            aria-label={isExpanded ? t('collapse') : t('expand')}
           >
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
@@ -44,11 +46,11 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
             <div className="flex items-start gap-2">
               <Calendar className="h-4 w-4 text-blue-600 mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">마지막 교정</p>
+                <p className="text-xs text-gray-500">{t('lastCalibration')}</p>
                 <p className="text-sm font-medium">
                   {equipment.lastCalibrationDate
                     ? formatDate(equipment.lastCalibrationDate)
-                    : '기록 없음'}
+                    : t('noRecord')}
                 </p>
               </div>
             </div>
@@ -56,27 +58,27 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
             <div className="flex items-start gap-2">
               <Wrench className="h-4 w-4 text-orange-600 mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">수리 이력</p>
-                <p className="text-sm font-medium">정보 없음</p>
+                <p className="text-xs text-gray-500">{t('repairHistory')}</p>
+                <p className="text-sm font-medium">{t('noInfo')}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">부적합 이력</p>
-                <p className="text-sm font-medium">정보 없음</p>
+                <p className="text-xs text-gray-500">{t('ncHistory')}</p>
+                <p className="text-sm font-medium">{t('noInfo')}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
               <Clock className="h-4 w-4 text-green-600 mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">사용 기간</p>
+                <p className="text-xs text-gray-500">{t('usagePeriod')}</p>
                 <p className="text-sm font-medium">
-                  {usageYears > 0 && `${usageYears}년 `}
-                  {usageMonths > 0 && `${usageMonths}개월`}
-                  {usagePeriod === 0 && '정보 없음'}
+                  {usageYears > 0 && t('years', { count: usageYears })}
+                  {usageMonths > 0 && t('months', { count: usageMonths })}
+                  {usagePeriod === 0 && t('noInfo')}
                 </p>
               </div>
             </div>

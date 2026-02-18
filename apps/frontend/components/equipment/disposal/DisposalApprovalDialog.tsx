@@ -27,12 +27,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { approveDisposal } from '@/lib/api/disposal-api';
-import { DISPOSAL_REASON_LABELS, type DisposalRequest } from '@equipment-management/schemas';
+import { type DisposalRequest } from '@equipment-management/schemas';
 import { formatDateTime } from '@/lib/utils/date';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
+import {
+  DISPOSAL_BUTTON_TOKENS,
+  DISPOSAL_INFO_CARD_TOKENS,
+  CONTENT_TOKENS,
+} from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalApprovalDialogProps {
   open: boolean;
@@ -54,6 +60,8 @@ export function DisposalApprovalDialog({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const t = useTranslations('disposal');
+  const tReason = useTranslations('disposal.reason');
 
   const mutation = useMutation({
     mutationFn: (decision: 'approve' | 'reject') =>
@@ -64,11 +72,14 @@ export function DisposalApprovalDialog({
       }),
     onSuccess: async (_, decision) => {
       toast({
-        title: decision === 'approve' ? '최종 승인 완료' : '요청 반려',
+        title:
+          decision === 'approve'
+            ? t('approvalDialog.toasts.approveTitle')
+            : t('approvalDialog.toasts.rejectTitle'),
         description:
           decision === 'approve'
-            ? '장비 폐기가 최종 승인되었습니다.'
-            : '폐기 요청이 반려되었습니다.',
+            ? t('approvalDialog.toasts.approveDesc')
+            : t('approvalDialog.toasts.rejectDesc'),
       });
       // ✅ 중앙화된 캐시 무효화 헬퍼 사용
       await EquipmentCacheInvalidation.invalidateAfterDisposal(queryClient, equipmentId);
@@ -77,7 +88,7 @@ export function DisposalApprovalDialog({
     onError: async (error: Error) => {
       const errorMessage = error.message;
       toast({
-        title: '처리 실패',
+        title: t('common.error'),
         description: errorMessage,
         variant: 'destructive',
       });
@@ -121,40 +132,41 @@ export function DisposalApprovalDialog({
           aria-modal="true"
         >
           <DialogHeader>
-            <DialogTitle>폐기 최종 승인</DialogTitle>
-            <DialogDescription>
-              폐기 요청 및 검토 내용을 확인하고 최종 승인해주세요.
-            </DialogDescription>
+            <DialogTitle>{t('approvalDialog.title')}</DialogTitle>
+            <DialogDescription>{t('approvalDialog.description')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* currentStep=3: steps 1-2 complete, step 3 (승인) is current */}
             <DisposalProgressStepper currentStep={3} />
 
-            <Card className="border-blue-200 bg-blue-50">
+            <Card className={DISPOSAL_INFO_CARD_TOKENS.container}>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-blue-900">
-                  장비 및 폐기 정보
+                <CardTitle className={DISPOSAL_INFO_CARD_TOKENS.title}>
+                  {t('approvalDialog.infoTitle')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium text-gray-700">장비명:</span> {equipment.name}
+                  <span className="font-medium text-gray-700">{t('common.equipmentName')}</span>{' '}
+                  {equipment.name}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">관리번호:</span>{' '}
+                  <span className="font-medium text-gray-700">
+                    {t('approvalDialog.managementNumber')}
+                  </span>{' '}
                   {equipment.managementNumber}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">요청자:</span>{' '}
+                  <span className="font-medium text-gray-700">{t('common.requester')}</span>{' '}
                   {disposalRequest.requestedByName} | {formatDateTime(disposalRequest.requestedAt)}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">폐기 사유:</span>{' '}
-                  {DISPOSAL_REASON_LABELS[disposalRequest.reason]}
+                  <span className="font-medium text-gray-700">{t('common.disposalReason')}</span>{' '}
+                  {tReason(disposalRequest.reason)}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">상세 사유:</span>
+                  <span className="font-medium text-gray-700">{t('common.reasonDetail')}</span>
                   <p className="mt-1 text-gray-600 whitespace-pre-wrap">
                     {disposalRequest.reasonDetail}
                   </p>
@@ -166,7 +178,7 @@ export function DisposalApprovalDialog({
               disposalRequest.reviewedAt &&
               disposalRequest.reviewOpinion && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">검토 의견</Label>
+                  <Label className="text-sm font-medium">{t('approvalDialog.reviewOpinion')}</Label>
                   <ReviewOpinionCard
                     reviewerName={disposalRequest.reviewedByName}
                     reviewedAt={disposalRequest.reviewedAt}
@@ -176,56 +188,57 @@ export function DisposalApprovalDialog({
               )}
 
             <div className="space-y-2">
-              <Label htmlFor="comment">승인 코멘트 (선택)</Label>
+              <Label htmlFor="comment">{t('approvalDialog.commentLabel')}</Label>
               <Textarea
                 id="comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder={
                   showRejectInput
-                    ? '반려 사유를 10자 이상 상세히 입력해주세요 (필수)'
-                    : '승인 코멘트를 입력해주세요 (선택사항)'
+                    ? t('approvalDialog.rejectPlaceholder')
+                    : t('approvalDialog.approvePlaceholder')
                 }
                 rows={3}
                 className="resize-none"
                 aria-describedby={showRejectInput ? 'comment-hint' : undefined}
               />
               {showRejectInput && (
-                <p id="comment-hint" className="text-xs text-red-500">
-                  {comment.length}/10자 이상 (현재: {comment.length}자)
+                <p
+                  id="comment-hint"
+                  className={`${DISPOSAL_INFO_CARD_TOKENS.rejectCount} ${CONTENT_TOKENS.numeric.tabular}`}
+                >
+                  {t('common.charCount', { count: comment.length })}
                 </p>
               )}
             </div>
 
             {showRejectInput && (
-              <div className="rounded-md bg-red-50 border border-red-200 p-3">
-                <p className="text-sm text-red-800">
-                  요청을 반려하려면 구체적인 사유를 입력하고 다시 반려 버튼을 클릭해주세요.
-                </p>
+              <div className={DISPOSAL_INFO_CARD_TOKENS.rejectNotice}>
+                <p className={DISPOSAL_INFO_CARD_TOKENS.rejectText}>{t('common.rejectNotice')}</p>
               </div>
             )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={handleClose} disabled={mutation.isPending}>
-              취소
+              {t('common.cancel')}
             </Button>
             <Button
               variant="outline"
               onClick={handleReject}
               disabled={mutation.isPending || (showRejectInput && comment.length < 10)}
-              className="border-red-300 text-red-700 hover:bg-red-50"
+              className={DISPOSAL_BUTTON_TOKENS.reject}
             >
               {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              반려
+              {t('common.reject')}
             </Button>
             <Button
               onClick={handleApprove}
               disabled={mutation.isPending || showRejectInput}
-              className="bg-green-600 hover:bg-green-700"
+              className={DISPOSAL_BUTTON_TOKENS.approve}
             >
               {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              최종 승인
+              {t('approvalDialog.approve')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -236,25 +249,19 @@ export function DisposalApprovalDialog({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-orange-600" />
-              최종 승인 확인
+              {t('approvalDialog.confirmTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               <div className="space-y-2">
-                <p>
-                  <span className="font-medium text-gray-900">{equipment.name}</span> 장비의 폐기를
-                  최종 승인하시겠습니까?
-                </p>
-                <p className="text-red-600 font-medium">⚠️ 이 작업은 되돌릴 수 없습니다.</p>
+                <p>{t('approvalDialog.confirmDescription', { name: equipment.name })}</p>
+                <p className="text-red-600 font-medium">{t('approvalDialog.confirmWarning')}</p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmApproval}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              최종 승인
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmApproval} className={DISPOSAL_BUTTON_TOKENS.approve}>
+              {t('approvalDialog.approve')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

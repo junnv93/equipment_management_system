@@ -1,5 +1,7 @@
 'use client';
 
+'use client';
+
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Eye, XCircle } from 'lucide-react';
@@ -7,6 +9,8 @@ import type { DisposalRequest } from '@equipment-management/schemas';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
 import { formatDateTime } from '@/lib/utils/date';
+import { DISPOSAL_PROGRESS_CARD_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalProgressCardProps {
   disposalRequest: DisposalRequest;
@@ -23,28 +27,32 @@ export function DisposalProgressCard({
   onCancel,
   canCancel,
 }: DisposalProgressCardProps) {
+  const t = useTranslations('disposal');
+
   const getCurrentStageText = () => {
     if (disposalRequest.reviewStatus === 'pending') {
-      return '기술책임자 검토 대기 중';
+      return t('progressCard.pendingReview');
     }
     if (disposalRequest.reviewStatus === 'reviewed') {
-      return '시험소장 승인 대기 중';
+      return t('progressCard.pendingApproval');
     }
-    return '처리 완료';
+    return t('progressCard.complete');
   };
 
   return (
-    <Alert className="border-l-4 border-l-orange-500 bg-orange-50 border-orange-200">
+    <Alert className={DISPOSAL_PROGRESS_CARD_TOKENS.container}>
       <AlertCircle className="h-5 w-5 text-orange-600" />
-      <AlertTitle className="text-orange-900 font-semibold">장비 폐기 진행 중</AlertTitle>
+      <AlertTitle className={DISPOSAL_PROGRESS_CARD_TOKENS.title}>
+        {t('progressCard.title')}
+      </AlertTitle>
       <AlertDescription>
         <div className="mt-4 space-y-4">
           <DisposalProgressStepper currentStep={currentStep} />
 
-          <div className="text-sm text-orange-800">
+          <div className={DISPOSAL_PROGRESS_CARD_TOKENS.text}>
             <p className="font-medium">{getCurrentStageText()}</p>
-            <p className="text-xs text-orange-600 mt-1">
-              요청자: {disposalRequest.requestedByName} |{' '}
+            <p className={`${DISPOSAL_PROGRESS_CARD_TOKENS.subtext} mt-1`}>
+              {t('common.requester')} {disposalRequest.requestedByName} |{' '}
               {formatDateTime(disposalRequest.requestedAt)}
             </p>
           </div>
@@ -65,20 +73,20 @@ export function DisposalProgressCard({
               variant="outline"
               size="sm"
               onClick={onViewDetails}
-              className="border-orange-300 text-orange-700 hover:bg-orange-100"
+              className={DISPOSAL_PROGRESS_CARD_TOKENS.viewButton}
             >
               <Eye className="mr-2 h-4 w-4" />
-              상세 보기
+              {t('progressCard.viewDetails')}
             </Button>
             {canCancel && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onCancel}
-                className="border-red-300 text-red-700 hover:bg-red-100"
+                className={DISPOSAL_PROGRESS_CARD_TOKENS.cancelButton}
               >
                 <XCircle className="mr-2 h-4 w-4" />
-                요청 취소
+                {t('progressCard.cancelRequest')}
               </Button>
             )}
           </div>

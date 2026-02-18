@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { EquipmentHeader } from './EquipmentHeader';
 import { EquipmentTabs } from './EquipmentTabs';
@@ -46,6 +47,7 @@ export function EquipmentDetailClient({
   equipment: initialEquipment,
   disposalRequest: initialDisposalRequest,
 }: EquipmentDetailClientProps) {
+  const t = useTranslations('equipment');
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'basic';
   const { user } = useAuth();
@@ -166,7 +168,7 @@ export function EquipmentDetailClient({
           >
             <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             <AlertTitle className="text-blue-800 dark:text-blue-200 flex items-center gap-2">
-              공용장비 안내
+              {t('sharedBanner.title')}
               {/* 임시등록 장비이고 사용 기간이 있는 경우 D-day 표시 */}
               {equipment.status === 'temporary' &&
                 equipment.usagePeriodStart &&
@@ -180,15 +182,11 @@ export function EquipmentDetailClient({
             <AlertDescription className="text-blue-700 dark:text-blue-300">
               {equipment.status === 'temporary' ? (
                 <>
-                  이 장비는 임시등록된 {equipment.sharedSource === 'safety_lab' ? '공용' : '렌탈'}
-                  장비입니다.
-                  {equipment.usagePeriodEnd && <> 사용 기간이 종료되면 자동으로 비활성화됩니다.</>}
+                  {t('sharedBanner.temporaryDesc', { source: equipment.sharedSource || 'other' })}
+                  {equipment.usagePeriodEnd && <> {t('sharedBanner.expiryNotice')}</>}
                 </>
               ) : (
-                <>
-                  이 장비는 공용장비로 등록되어 있습니다. 수정 및 반출은 가능하나, 삭제는
-                  불가능합니다.
-                </>
+                t('sharedBanner.sharedDesc')
               )}
             </AlertDescription>
           </Alert>

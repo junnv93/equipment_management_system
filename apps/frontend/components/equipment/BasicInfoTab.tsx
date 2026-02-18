@@ -3,8 +3,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { MapPin, Tag, Package, Calendar, Wrench } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
+import { CONTENT_TOKENS } from '@/lib/design-tokens';
 
 interface BasicInfoTabProps {
   equipment: Equipment;
@@ -18,22 +20,29 @@ interface BasicInfoTabProps {
  * - 아이콘과 라벨로 가독성 향상
  */
 export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
+  const t = useTranslations('equipment');
   // 정보 필드 컴포넌트
   const InfoField = ({
     label,
     value,
     icon: Icon,
+    numeric = false,
   }: {
     label: string;
     value?: string | number | null;
     icon?: React.ComponentType<{ className?: string }>;
+    numeric?: boolean;
   }) => (
     <div className="space-y-1">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {Icon && <Icon className="h-4 w-4" />}
         <span>{label}</span>
       </div>
-      <p className="font-medium text-gray-900 dark:text-gray-100">{value || '-'}</p>
+      <p
+        className={`font-medium text-gray-900 dark:text-gray-100 ${numeric ? CONTENT_TOKENS.numeric.tabular : ''}`}
+      >
+        {value || '-'}
+      </p>
     </div>
   );
 
@@ -44,30 +53,33 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Package className="h-5 w-5 text-ul-midnight" />
-            장비 기본 정보
+            {t('basicInfoTab.equipmentBasicInfo')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <InfoField label="장비명" value={equipment.name} />
-            <InfoField label="모델명" value={equipment.modelName} />
-            <InfoField label="관리번호" value={equipment.managementNumber} />
-            <InfoField label="일련번호" value={equipment.serialNumber} />
-            {/* 소유처 원본 번호 (공용/렌탈 장비만 표시) */}
+            <InfoField label={t('fields.name')} value={equipment.name} />
+            <InfoField label={t('fields.modelName')} value={equipment.modelName} />
+            <InfoField
+              label={t('fields.managementNumber')}
+              value={equipment.managementNumber}
+              numeric
+            />
+            <InfoField label={t('fields.serialNumber')} value={equipment.serialNumber} numeric />
             {equipment.isShared && equipment.externalIdentifier && (
               <InfoField
-                label="소유처 원본 번호"
+                label={t('fields.externalIdentifier')}
                 value={equipment.externalIdentifier}
                 icon={Package}
               />
             )}
-            <InfoField label="제조사" value={equipment.manufacturer} />
-            <InfoField label="구입년도" value={equipment.purchaseYear} />
+            <InfoField label={t('fields.manufacturer')} value={equipment.manufacturer} />
+            <InfoField label={t('fields.purchaseYear')} value={equipment.purchaseYear} numeric />
           </div>
 
           {equipment.description && (
             <div className="pt-4 border-t">
-              <InfoField label="장비사양" value={equipment.description} />
+              <InfoField label={t('fields.description')} value={equipment.description} />
             </div>
           )}
         </CardContent>
@@ -78,28 +90,28 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <MapPin className="h-5 w-5 text-ul-midnight" />
-            위치 및 관리 정보
+            {t('basicInfoTab.locationManagement')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <InfoField
-              label="사이트"
+              label={t('fields.site')}
               value={
                 equipment.site === 'suwon'
-                  ? '수원'
+                  ? t('basicInfoTab.site.suwon')
                   : equipment.site === 'uiwang'
-                    ? '의왕'
+                    ? t('basicInfoTab.site.uiwang')
                     : equipment.site === 'pyeongtaek'
-                      ? '평택'
+                      ? t('basicInfoTab.site.pyeongtaek')
                       : '-'
               }
               icon={MapPin}
             />
-            <InfoField label="팀" value={equipment.teamName} icon={Tag} />
-            <InfoField label="현재 위치" value={equipment.location} icon={MapPin} />
+            <InfoField label={t('fields.team')} value={equipment.teamName} icon={Tag} />
+            <InfoField label={t('fields.location')} value={equipment.location} icon={MapPin} />
             <InfoField
-              label="설치 일자"
+              label={t('fields.installationDate')}
               value={formatDate(equipment.installationDate)}
               icon={Calendar}
             />
@@ -114,31 +126,38 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Wrench className="h-5 w-5 text-ul-midnight" />
-            교정 정보
+            {t('basicInfoTab.calibrationInfo')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <InfoField
-              label="교정 방법"
+              label={t('basicInfoTab.calibrationMethod')}
               value={
                 equipment.calibrationMethod
                   ? CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod]
                   : '-'
               }
             />
-            <InfoField label="교정 주기 (개월)" value={equipment.calibrationCycle} />
             <InfoField
-              label="마지막 교정일"
+              label={t('basicInfoTab.calibrationCycle')}
+              value={equipment.calibrationCycle}
+              numeric
+            />
+            <InfoField
+              label={t('basicInfoTab.lastCalibrationDate')}
               value={formatDate(equipment.lastCalibrationDate)}
               icon={Calendar}
             />
             <InfoField
-              label="다음 교정 예정일"
+              label={t('basicInfoTab.nextCalibrationDate')}
               value={formatDate(equipment.nextCalibrationDate)}
               icon={Calendar}
             />
-            <InfoField label="교정 기관" value={equipment.calibrationAgency} />
+            <InfoField
+              label={t('basicInfoTab.calibrationAgency')}
+              value={equipment.calibrationAgency}
+            />
           </div>
         </CardContent>
       </Card>
@@ -149,19 +168,28 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5 text-ul-midnight" />
-              소프트웨어/매뉴얼 정보
+              {t('softwareTab.title')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               {equipment.softwareVersion && (
-                <InfoField label="소프트웨어 버전" value={equipment.softwareVersion} />
+                <InfoField
+                  label={t('softwareTab.softwareVersion')}
+                  value={equipment.softwareVersion}
+                />
               )}
               {equipment.firmwareVersion && (
-                <InfoField label="펌웨어 버전" value={equipment.firmwareVersion} />
+                <InfoField
+                  label={t('softwareTab.firmwareVersion')}
+                  value={equipment.firmwareVersion}
+                />
               )}
               {equipment.manualLocation && (
-                <InfoField label="매뉴얼 보관 위치" value={equipment.manualLocation} />
+                <InfoField
+                  label={t('softwareTab.manualLocation')}
+                  value={equipment.manualLocation}
+                />
               )}
             </div>
           </CardContent>

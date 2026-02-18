@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, CheckCircle, XCircle, Eye } from 'lucide-react';
 import type { DisposalRequest } from '@equipment-management/schemas';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
+import { DISPOSAL_BUTTON_TOKENS } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 interface DisposalDropdownMenuProps {
   disposalRequest: DisposalRequest;
@@ -34,11 +36,13 @@ export function DisposalDropdownMenu({
   onCancelOpen,
   onDetailOpen,
 }: DisposalDropdownMenuProps) {
+  const t = useTranslations('disposal');
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="bg-orange-500 hover:bg-orange-600">
-          폐기 진행 중
+        <Button className={DISPOSAL_BUTTON_TOKENS.inProgress}>
+          {t('button.inProgress')}
           <ChevronDown className="ml-2 h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -51,21 +55,21 @@ export function DisposalDropdownMenu({
         {permissions.canReviewDisposal && (
           <DropdownMenuItem onClick={onReviewOpen}>
             <CheckCircle className="mr-2 h-4 w-4 text-blue-600" />
-            <span className="font-medium">폐기 검토하기</span>
+            <span className="font-medium">{t('dropdown.review')}</span>
           </DropdownMenuItem>
         )}
 
         {permissions.canApproveDisposal && (
           <DropdownMenuItem onClick={onApproveOpen}>
             <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-            <span className="font-medium">최종 승인하기</span>
+            <span className="font-medium">{t('dropdown.approve')}</span>
           </DropdownMenuItem>
         )}
 
         {permissions.canCancelDisposal && (
           <DropdownMenuItem onClick={onCancelOpen} className="text-red-600">
             <XCircle className="mr-2 h-4 w-4" />
-            <span className="font-medium">요청 취소</span>
+            <span className="font-medium">{t('dropdown.cancel')}</span>
           </DropdownMenuItem>
         )}
 
@@ -75,7 +79,7 @@ export function DisposalDropdownMenu({
 
         <DropdownMenuItem onClick={onDetailOpen}>
           <Eye className="mr-2 h-4 w-4 text-gray-600" />
-          상세 보기
+          {t('dropdown.detail')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

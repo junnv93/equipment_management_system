@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Share2, Building2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface SharedEquipmentBadgeProps {
   sharedSource?: 'safety_lab' | 'external' | string | null;
@@ -21,23 +22,25 @@ export function SharedEquipmentBadge({
   size = 'default',
   showIcon = true,
 }: SharedEquipmentBadgeProps) {
+  const t = useTranslations('equipment.sharedBadge');
+
   if (!sharedSource) return null;
 
   const config = {
     safety_lab: {
-      label: '공용장비',
+      label: t('safetyLab'),
       className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
       icon: Building2,
     },
     external: {
-      label: '외부장비',
+      label: t('external'),
       className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
       icon: Share2,
     },
   };
 
   const sourceConfig = config[sharedSource as keyof typeof config] || {
-    label: '공용',
+    label: t('default'),
     className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
     icon: Share2,
   };

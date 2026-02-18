@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Control, useWatch, useFormContext } from 'react-hook-form';
-import { CALIBRATION_METHOD_LABELS } from '@equipment-management/schemas';
+import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
 import {
   FormControl,
   FormDescription,
@@ -24,12 +25,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { addMonths } from 'date-fns';
 import { toDate, formatDate } from '@/lib/utils/date';
 import { FormValues } from './BasicInfoSection';
+import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
 
 interface CalibrationInfoSectionProps {
   control: Control<FormValues>;
 }
 
 export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps) {
+  const t = useTranslations('equipment');
   const { setValue } = useFormContext<FormValues>();
 
   // 교정 주기와 최종 교정일 감시
@@ -75,12 +78,10 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-            2
-          </span>
-          교정 정보
+          <span className={FORM_SECTION_TOKENS.badge}>2</span>
+          {t('form.calibrationInfo.title')}
         </CardTitle>
-        <CardDescription>장비의 교정 관련 정보를 입력하세요</CardDescription>
+        <CardDescription>{t('form.calibrationInfo.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -91,7 +92,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  관리 방법 <span className="text-destructive">*</span>
+                  {t('fields.calibrationMethod')} <span className="text-destructive">*</span>
                 </FormLabel>
                 <Select
                   onValueChange={field.onChange}
@@ -100,15 +101,17 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="관리 방법을 선택하세요" />
+                      <SelectValue placeholder={t('form.calibrationInfo.methodPlaceholder')} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {Object.entries(CALIBRATION_METHOD_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                    {(Object.keys(CALIBRATION_METHOD_LABELS) as CalibrationMethod[]).map(
+                      (value) => (
+                        <SelectItem key={value} value={value}>
+                          {t(`filters.calibrationMethodLabel.${value}` as Parameters<typeof t>[0])}
+                        </SelectItem>
+                      )
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -123,13 +126,13 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  교정 주기 (개월)
+                  {t('fields.calibrationCycle')}
                   {isExternalCalibration && <span className="text-destructive"> *</span>}
                 </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="예: 12"
+                    placeholder={t('form.calibrationInfo.cyclePlaceholder')}
                     min={1}
                     {...field}
                     value={field.value ?? ''}
@@ -138,7 +141,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                     }
                   />
                 </FormControl>
-                <FormDescription>교정 주기를 개월 단위로 입력하세요</FormDescription>
+                <FormDescription>{t('form.calibrationInfo.cycleDescription')}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -151,15 +154,13 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  최종 교정일
+                  {t('fields.lastCalibrationDate')}
                   {isExternalCalibration && <span className="text-destructive"> *</span>}
                 </FormLabel>
                 <FormControl>
                   <Input type="date" {...field} value={field.value || ''} />
                 </FormControl>
-                <FormDescription>
-                  교정 주기와 함께 입력하면 차기 교정일이 자동 계산됩니다
-                </FormDescription>
+                <FormDescription>{t('form.calibrationInfo.lastDateDescription')}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -171,11 +172,11 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
             name="nextCalibrationDate"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>차기 교정 예정일</FormLabel>
+                <FormLabel>{t('form.calibrationInfo.nextDateLabel')}</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} value={field.value || ''} />
                 </FormControl>
-                <FormDescription>교정 주기 기반으로 자동 계산되거나 직접 입력 가능</FormDescription>
+                <FormDescription>{t('form.calibrationInfo.nextDateDescription')}</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -188,7 +189,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  교정 기관
+                  {t('fields.calibrationAgency')}
                   {isExternalCalibration && <span className="text-destructive"> *</span>}
                 </FormLabel>
                 <FormControl>
@@ -210,9 +211,9 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                 <Checkbox checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>중간점검 대상</FormLabel>
+                <FormLabel>{t('form.calibrationInfo.intermediateCheck')}</FormLabel>
                 <FormDescription>
-                  교정 주기 중간에 점검이 필요한 장비인지 선택하세요
+                  {t('form.calibrationInfo.intermediateCheckDescription')}
                 </FormDescription>
               </div>
             </FormItem>
@@ -229,7 +230,8 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    최종 중간 점검일 <span className="text-destructive">*</span>
+                    {t('form.calibrationInfo.lastIntermediateCheckDate')}{' '}
+                    <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input type="date" {...field} value={field.value || ''} />
@@ -246,12 +248,13 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    중간점검 주기 (개월) <span className="text-destructive">*</span>
+                    {t('form.calibrationInfo.intermediateCheckCycle')}{' '}
+                    <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
-                      placeholder="예: 6"
+                      placeholder={t('form.calibrationInfo.intermediateCheckCyclePlaceholder')}
                       min={1}
                       {...field}
                       value={field.value ?? ''}
@@ -271,11 +274,11 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
               name="nextIntermediateCheckDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>차기 중간 점검일</FormLabel>
+                  <FormLabel>{t('form.calibrationInfo.nextIntermediateCheckDate')}</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
-                  <FormDescription>자동 계산됨</FormDescription>
+                  <FormDescription>{t('form.calibrationInfo.autoCalculated')}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

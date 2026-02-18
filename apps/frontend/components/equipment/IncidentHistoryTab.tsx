@@ -44,6 +44,7 @@ import equipmentApi, {
   type IncidentType,
 } from '@/lib/api/equipment-api';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { isBefore, startOfDay } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
@@ -52,6 +53,11 @@ import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { createRepairHistory, type CreateRepairHistoryDto } from '@/lib/api/repair-history-api';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
+import {
+  TIMELINE_TOKENS,
+  getTimelineCardClasses,
+  TIMELINE_SKELETON_TOKENS,
+} from '@/lib/design-tokens';
 
 // 사고 이력 등록 스키마
 const incidentHistorySchema = z.object({
@@ -77,23 +83,13 @@ const repairHistorySchema = z.object({
 
 type RepairHistoryFormData = z.infer<typeof repairHistorySchema>;
 
-const REPAIR_RESULT_OPTIONS = [
-  { value: 'completed', label: '수리 완료' },
-  { value: 'partial', label: '부분 수리' },
-  { value: 'failed', label: '수리 실패' },
-];
+// REPAIR_RESULT_OPTIONS labels are now provided via useTranslations
 
 interface IncidentHistoryTabProps {
   equipment: Equipment;
 }
 
-const INCIDENT_TYPE_LABELS: Record<string, string> = {
-  damage: '손상',
-  malfunction: '오작동',
-  change: '변경',
-  repair: '수리',
-  calibration_overdue: '교정 기한 초과',
-};
+// INCIDENT_TYPE_LABELS are now provided via useTranslations('equipment').incidentHistoryTab.types
 
 const INCIDENT_TYPE_COLORS: Record<string, string> = {
   damage: 'bg-red-500',
@@ -112,6 +108,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const t = useTranslations('equipment');
 
   // 사고 이력 폼 설정
   const form = useForm<IncidentHistoryFormData>({
@@ -201,8 +198,8 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
         actionPlan: '',
       });
       toast({
-        title: '사고 이력 등록 완료',
-        description: '사고 이력이 성공적으로 등록되었습니다.',
+        title: t('incidentHistoryTab.toasts.success'),
+        description: t('incidentHistoryTab.toasts.successDesc'),
       });
       router.refresh();
     },
@@ -218,7 +215,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
       }
 
       // API 에러 메시지 추출
-      let errorMessage = '사고 이력 등록 중 오류가 발생했습니다.';
+      let errorMessage = t('incidentHistoryTab.toasts.errorDesc');
 
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -228,13 +225,13 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
           const details = (error as { details: Array<{ path: string; message: string }> }).details;
           if (details.length > 0) {
             const fieldErrors = details.map((d) => `${d.path}: ${d.message}`).join('\n');
-            errorMessage = `입력 데이터 검증 실패:\n${fieldErrors}`;
+            errorMessage = `${t('incidentHistoryTab.toasts.validationError')}\n${fieldErrors}`;
           }
         }
       }
 
       toast({
-        title: '등록 실패',
+        title: t('incidentHistoryTab.toasts.error'),
         description: errorMessage,
         variant: 'destructive',
       });
@@ -245,7 +242,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   const createRepairMutation = useMutation({
     mutationFn: (dto: CreateRepairHistoryDto) => createRepairHistory(equipmentId, dto),
     onSuccess: () => {
-      toast({ title: '성공', description: '수리 이력이 등록되었습니다.' });
+      toast({
+        title: t('incidentHistoryTab.toasts.repairSuccess'),
+        description: t('incidentHistoryTab.toasts.repairSuccessDesc'),
+      });
       setIsDialogOpen(false);
       repairForm.reset();
       router.refresh();
@@ -264,8 +264,8 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     },
     onError: (error: Error) => {
       toast({
-        title: '오류',
-        description: error.message || '수리 이력 등록 중 오류가 발생했습니다.',
+        title: t('incidentHistoryTab.toasts.repairError'),
+        description: error.message || t('incidentHistoryTab.toasts.repairErrorDesc'),
         variant: 'destructive',
       });
     },
@@ -274,7 +274,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   // 사고 이력 삭제 (표준화된 mutation 훅 사용)
   const deleteMutation = useDeleteMutation({
     mutationFn: (historyId: string) => equipmentApi.deleteIncidentHistory(historyId),
-    resourceName: '사고 이력',
+    resourceName: t('incidentHistoryTab.title'),
     // React Query 캐시 무효화 (Client Component 갱신)
     invalidateKeys: [
       ['incident-history', equipmentId],
@@ -333,7 +333,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   });
 
   const handleDelete = async (historyId: string) => {
-    if (confirm('이 사고 이력을 삭제하시겠습니까?')) {
+    if (confirm(t('incidentHistoryTab.deleteConfirm'))) {
       await deleteMutation.mutateAsync(historyId);
     }
   };
@@ -348,16 +348,16 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4 mr-2" />
-          사고 등록
+          {t('incidentHistoryTab.register')}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>사고 이력 등록</DialogTitle>
+          <DialogTitle>{t('incidentHistoryTab.dialog.title')}</DialogTitle>
           <DialogDescription>
             {incidentType === 'repair'
-              ? '수리 이력을 상세히 입력하세요. 부적합 연결은 필수입니다.'
-              : '손상, 오작동, 변경, 수리 등의 이력을 입력하세요.'}
+              ? t('incidentHistoryTab.dialog.descriptionRepair')
+              : t('incidentHistoryTab.dialog.descriptionDefault')}
           </DialogDescription>
         </DialogHeader>
 
@@ -368,19 +368,23 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
             name="incidentType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>사고 유형 *</FormLabel>
+                <FormLabel>{t('incidentHistoryTab.dialog.typeLabel')}</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="유형 선택" />
+                      <SelectValue placeholder={t('incidentHistoryTab.dialog.typePlaceholder')} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="damage">손상</SelectItem>
-                    <SelectItem value="malfunction">오작동</SelectItem>
-                    <SelectItem value="change">변경</SelectItem>
-                    <SelectItem value="repair">수리</SelectItem>
-                    <SelectItem value="calibration_overdue">교정 기한 초과</SelectItem>
+                    <SelectItem value="damage">{t('incidentHistoryTab.types.damage')}</SelectItem>
+                    <SelectItem value="malfunction">
+                      {t('incidentHistoryTab.types.malfunction')}
+                    </SelectItem>
+                    <SelectItem value="change">{t('incidentHistoryTab.types.change')}</SelectItem>
+                    <SelectItem value="repair">{t('incidentHistoryTab.types.repair')}</SelectItem>
+                    <SelectItem value="calibration_overdue">
+                      {t('incidentHistoryTab.types.calibration_overdue')}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -393,8 +397,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
         {!incidentType && (
           <div className="rounded-md border p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              <strong>안내:</strong> 사고 유형을 선택하면 해당 유형에 맞는 입력 폼이 표시됩니다.{' '}
-              "수리"를 선택하면 부적합 연결이 필수인 상세 수리 이력 폼이 표시됩니다.
+              {t('incidentHistoryTab.dialog.typeSelectHint')}
             </p>
           </div>
         )}
@@ -409,7 +412,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 name="repairDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>수리 일자 *</FormLabel>
+                    <FormLabel>{t('incidentHistoryTab.repair.repairDate')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value || ''} />
                     </FormControl>
@@ -424,10 +427,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 name="repairDescription"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>수리 내용 *</FormLabel>
+                    <FormLabel>{t('incidentHistoryTab.repair.description')}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="수리 내용을 자세히 입력하세요 (최소 10자)"
+                        placeholder={t('incidentHistoryTab.repair.descriptionPlaceholder')}
                         className="min-h-[100px]"
                         {...field}
                         value={field.value || ''}
@@ -444,19 +447,25 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 name="repairResult"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>수리 결과</FormLabel>
+                    <FormLabel>{t('incidentHistoryTab.repair.result')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="수리 결과 선택" />
+                          <SelectValue
+                            placeholder={t('incidentHistoryTab.repair.resultPlaceholder')}
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {REPAIR_RESULT_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="completed">
+                          {t('incidentHistoryTab.repair.resultCompleted')}
+                        </SelectItem>
+                        <SelectItem value="partial">
+                          {t('incidentHistoryTab.repair.resultPartial')}
+                        </SelectItem>
+                        <SelectItem value="failed">
+                          {t('incidentHistoryTab.repair.resultFailed')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -470,17 +479,17 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 name="nonConformanceId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>연결된 부적합 (필수) *</FormLabel>
+                    <FormLabel>{t('incidentHistoryTab.repair.ncRequired')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? ''}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="부적합 선택 (필수)" />
+                          <SelectValue placeholder={t('incidentHistoryTab.repair.ncPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {openNonConformances && openNonConformances.length === 0 && (
                           <SelectItem value="__empty__" disabled>
-                            열린 부적합이 없습니다
+                            {t('incidentHistoryTab.repair.ncEmpty')}
                           </SelectItem>
                         )}
                         {openNonConformances?.map((nc) => (
@@ -493,8 +502,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      수리 이력은 반드시 부적합과 연결되어야 합니다. 수리 완료 시 부적합 상태가
-                      자동으로 업데이트됩니다.
+                      {t('incidentHistoryTab.repair.ncDescription')}
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -507,10 +515,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>비고</FormLabel>
+                    <FormLabel>{t('incidentHistoryTab.repair.notes')}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="추가 메모"
+                        placeholder={t('incidentHistoryTab.repair.notesPlaceholder')}
                         className="min-h-[80px]"
                         {...field}
                         value={field.value || ''}
@@ -523,10 +531,12 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  취소
+                  {t('incidentHistoryTab.dialog.cancel')}
                 </Button>
                 <Button type="submit" disabled={createRepairMutation.isPending}>
-                  {createRepairMutation.isPending ? '등록 중...' : '등록'}
+                  {createRepairMutation.isPending
+                    ? t('incidentHistoryTab.dialog.registering')
+                    : t('incidentHistoryTab.dialog.register')}
                 </Button>
               </DialogFooter>
             </form>
@@ -542,7 +552,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 name="occurredAt"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>발생 일시 *</FormLabel>
+                    <FormLabel>{t('incidentHistoryTab.dialog.occurredAt')}</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} value={field.value || ''} />
                     </FormControl>
@@ -555,10 +565,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>내용 *</FormLabel>
+                    <FormLabel>{t('incidentHistoryTab.dialog.content')}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="사고 내용을 상세히 기록하세요"
+                        placeholder={t('incidentHistoryTab.dialog.contentPlaceholder')}
                         rows={4}
                         {...field}
                         value={field.value || ''}
@@ -577,12 +587,13 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                       <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                       <div className="space-y-1 flex-1">
                         <p className="font-medium text-orange-900 dark:text-orange-100">
-                          자동 부적합 처리
+                          {t('incidentHistoryTab.calibrationOverdue.autoNcTitle')}
                         </p>
                         <p className="text-sm text-orange-800 dark:text-orange-200">
-                          교정 기한 초과는 자동으로 부적합으로 등록됩니다.
-                          {!isPastIncident && ' 장비 상태가 "부적합"으로 변경됩니다.'} 이미 부적합이
-                          생성된 경우 중복 생성되지 않습니다.
+                          {t('incidentHistoryTab.calibrationOverdue.autoNcDescription')}
+                          {!isPastIncident &&
+                            t('incidentHistoryTab.calibrationOverdue.statusChangeNote')}
+                          {t('incidentHistoryTab.calibrationOverdue.noDuplicateNote')}
                         </p>
                       </div>
                     </div>
@@ -594,8 +605,8 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                       <div className="flex items-start gap-2">
                         <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
                         <div className="text-sm text-blue-800 dark:text-blue-200">
-                          <strong>과거 이력 등록:</strong> 부적합 기록은 생성되지만, 현재 장비
-                          상태는 변경되지 않습니다.
+                          <strong>{t('common.pastIncidentTitle')}</strong>{' '}
+                          {t('incidentHistoryTab.calibrationOverdue.pastIncidentNote')}
                         </div>
                       </div>
                     </div>
@@ -621,18 +632,19 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                         </FormControl>
                         <div className="space-y-1 leading-none flex-1">
                           <FormLabel className="font-medium cursor-pointer">
-                            부적합으로 등록
+                            {t('incidentHistoryTab.nonConformance.registerAsNc')}
                           </FormLabel>
                           <p className="text-sm text-muted-foreground">
-                            부적합 기록이 생성됩니다.
-                            {!isPastIncident && ' 장비 상태가 "부적합"으로 변경됩니다.'} 이후{' '}
+                            {t('incidentHistoryTab.nonConformance.ncWillBeCreated')}
+                            {!isPastIncident &&
+                              t('incidentHistoryTab.calibrationOverdue.statusChangeNote')}{' '}
                             <Link
                               href={`/equipment/${equipmentId}/repair-history`}
                               className="underline text-blue-600 hover:text-blue-800"
                             >
-                              수리 이력 페이지
+                              {t('incidentHistoryTab.nonConformance.repairHistoryLink')}
                             </Link>
-                            에서 수리 기록을 연결하세요.
+                            {t('incidentHistoryTab.nonConformance.connectRepairGuide')}
                           </p>
                         </div>
                       </FormItem>
@@ -644,13 +656,13 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                     <div className="rounded-md border p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                       <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" />
-                        처리 워크플로우
+                        {t('incidentHistoryTab.nonConformance.workflowTitle')}
                       </h4>
                       <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1.5 list-decimal list-inside ml-1">
-                        <li>사고 이력 등록 + 부적합 생성 (현재 단계)</li>
-                        <li>수리 이력 페이지에서 수리 기록 작성 및 부적합 연결</li>
-                        <li>수리 완료 시 부적합 자동으로 "조치 완료" 상태 변경</li>
-                        <li>기술책임자가 부적합 종료 승인 → 장비 상태 복원</li>
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep1')}</li>
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep2')}</li>
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep3')}</li>
+                        <li>{t('incidentHistoryTab.nonConformance.workflowStep4')}</li>
                       </ol>
                     </div>
                   )}
@@ -661,8 +673,8 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                       <div className="flex items-start gap-2">
                         <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
                         <div className="text-sm text-blue-800 dark:text-blue-200">
-                          <strong>과거 이력 등록:</strong> 부적합 기록은 생성되지만, 현재 장비
-                          상태는 변경되지 않습니다.
+                          <strong>{t('common.pastIncidentTitle')}</strong>{' '}
+                          {t('incidentHistoryTab.calibrationOverdue.pastIncidentNote')}
                         </div>
                       </div>
                     </div>
@@ -678,16 +690,16 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        조치 계획 (선택)
+                        {t('incidentHistoryTab.nonConformance.actionPlan')}
                         {incidentType === 'calibration_overdue' &&
-                          ' - 미입력 시 "교정 수행 필요"로 자동 설정'}
+                          t('incidentHistoryTab.nonConformance.actionPlanAutoSet')}
                       </FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder={
                             incidentType === 'calibration_overdue'
-                              ? '예: 외부 교정 예정 (2024-02-15), 내부 점검 후 교정 결정 등'
-                              : '예: 외부 수리 예정, 부품 교체 필요 등'
+                              ? t('incidentHistoryTab.nonConformance.actionPlanPlaceholderOverdue')
+                              : t('incidentHistoryTab.nonConformance.actionPlanPlaceholderDefault')
                           }
                           rows={2}
                           {...field}
@@ -702,10 +714,12 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  취소
+                  {t('incidentHistoryTab.dialog.cancel')}
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? '저장 중...' : '저장'}
+                  {createMutation.isPending
+                    ? t('incidentHistoryTab.dialog.saving')
+                    : t('incidentHistoryTab.dialog.save')}
                 </Button>
               </DialogFooter>
             </form>
@@ -725,10 +739,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
         <CardContent className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex gap-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
+              <Skeleton className={TIMELINE_SKELETON_TOKENS.node} />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full" />
+                <Skeleton className={`${TIMELINE_SKELETON_TOKENS.line} w-3/4`} />
+                <Skeleton className={`${TIMELINE_SKELETON_TOKENS.line} w-full`} />
               </div>
             </div>
           ))}
@@ -744,14 +758,14 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-ul-midnight" />
-            사고 이력
+            {t('incidentHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p>등록된 사고 이력이 없습니다.</p>
+          <div className={TIMELINE_TOKENS.empty.container}>
+            <AlertTriangle className={TIMELINE_TOKENS.empty.icon} />
+            <p className={TIMELINE_TOKENS.empty.text}>{t('incidentHistoryTab.empty')}</p>
           </div>
         </CardContent>
       </Card>
@@ -764,38 +778,40 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-ul-midnight" />
-            사고 이력
+            {t('incidentHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
         </CardHeader>
         <CardContent>
-          <div className="relative space-y-6">
-            <div className="absolute left-6 top-3 bottom-3 w-0.5 bg-gray-200 dark:bg-gray-800" />
+          <div className={`relative ${TIMELINE_TOKENS.spacing.itemGap}`}>
+            <div className={`${TIMELINE_TOKENS.line.container} ${TIMELINE_TOKENS.line.color}`} />
 
             {history.map((item, index) => (
               <div key={item.id} className="relative flex gap-4">
                 <div className="relative flex-shrink-0">
                   <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-full ${INCIDENT_TYPE_COLORS[item.incidentType] || 'bg-gray-500'} text-white shadow-lg`}
+                    className={`${TIMELINE_TOKENS.node.container} ${INCIDENT_TYPE_COLORS[item.incidentType] || 'bg-gray-500'} text-white shadow-lg`}
                   >
-                    <AlertTriangle className="h-6 w-6" />
+                    <AlertTriangle className={TIMELINE_TOKENS.node.icon} />
                   </div>
                   {index === 0 && (
-                    <Badge className="absolute -top-2 -right-2 bg-ul-red text-white px-1.5 py-0.5 text-xs">
-                      최신
+                    <Badge
+                      className={`absolute -top-2 -right-2 ${TIMELINE_TOKENS.latestBadge.classes}`}
+                    >
+                      {t('incidentHistoryTab.latest')}
                     </Badge>
                   )}
                 </div>
 
                 <div className="flex-1 pb-8">
-                  <Card className="shadow-sm hover:shadow-md transition-shadow">
+                  <Card className={getTimelineCardClasses()}>
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div className="flex items-start justify-between">
                           <div className="space-y-1 flex-1">
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs">
-                                {INCIDENT_TYPE_LABELS[item.incidentType] || item.incidentType}
+                                {t(`incidentHistoryTab.types.${item.incidentType}` as const)}
                               </Badge>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                 <Calendar className="h-4 w-4" />
@@ -813,7 +829,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                               onClick={() => handleDelete(item.id)}
                               disabled={deleteMutation.isPending}
                             >
-                              삭제
+                              {t('incidentHistoryTab.delete')}
                             </Button>
                           )}
                         </div>
@@ -821,13 +837,17 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                         {(item.reportedBy || item.reportedByName) && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <User className="h-4 w-4" />
-                            <span>보고자: {item.reportedByName || item.reportedBy}</span>
+                            <span>
+                              {t('incidentHistoryTab.reporter', {
+                                name: item.reportedByName || item.reportedBy || '',
+                              })}
+                            </span>
                           </div>
                         )}
 
                         {item.nonConformanceId && (
                           <Badge variant="destructive" className="text-xs">
-                            부적합 연결됨
+                            {t('incidentHistoryTab.ncLinked')}
                           </Badge>
                         )}
                       </div>

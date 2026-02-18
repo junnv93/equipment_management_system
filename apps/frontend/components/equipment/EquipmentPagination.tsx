@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CONTENT_TOKENS } from '@/lib/design-tokens';
 
 interface EquipmentPaginationProps {
   currentPage: number;
@@ -43,6 +45,7 @@ function EquipmentPaginationComponent({
   onPageSizeChange,
   className = '',
 }: EquipmentPaginationProps) {
+  const t = useTranslations('equipment');
   // 표시할 페이지 번호 계산
   const pageNumbers = useMemo(() => {
     const pages: (number | 'ellipsis')[] = [];
@@ -132,20 +135,24 @@ function EquipmentPaginationComponent({
     <div
       className={`flex flex-col sm:flex-row items-center justify-between gap-4 ${className}`}
       role="navigation"
-      aria-label="페이지 탐색"
+      aria-label={t('pagination.ariaLabel')}
     >
       {/* 왼쪽: 표시 정보 및 페이지 크기 선택 */}
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div
+        className={`flex items-center gap-4 text-sm text-muted-foreground ${CONTENT_TOKENS.numeric.tabular}`}
+      >
         <span>
-          총 <span className="font-medium text-foreground">{totalItems.toLocaleString()}</span>개 중{' '}
-          <span className="font-medium text-foreground">{displayRange.start}</span>-
-          <span className="font-medium text-foreground">{displayRange.end}</span>
+          {t('pagination.totalOf', {
+            total: totalItems.toLocaleString(),
+            start: displayRange.start,
+            end: displayRange.end,
+          })}
         </span>
 
         <div className="flex items-center gap-2">
-          <span>페이지당</span>
+          <span>{t('pagination.perPage')}</span>
           <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-[70px] h-8" aria-label="페이지당 항목 수 선택">
+            <SelectTrigger className="w-[70px] h-8" aria-label={t('pagination.perPageAriaLabel')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -156,7 +163,7 @@ function EquipmentPaginationComponent({
               ))}
             </SelectContent>
           </Select>
-          <span>개</span>
+          <span>{t('pagination.itemUnit')}</span>
         </div>
       </div>
 
@@ -170,7 +177,7 @@ function EquipmentPaginationComponent({
           onClick={handleFirstPage}
           disabled={currentPage === 1}
           type="button"
-          aria-label="첫 페이지로"
+          aria-label={t('pagination.firstPage')}
         >
           <ChevronsLeft className="h-4 w-4" />
         </Button>
@@ -183,13 +190,17 @@ function EquipmentPaginationComponent({
           onClick={handlePreviousPage}
           disabled={currentPage === 1}
           type="button"
-          aria-label="이전 페이지"
+          aria-label={t('pagination.previousPage')}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
         {/* 페이지 번호들 */}
-        <div className="flex items-center gap-1" role="group" aria-label="페이지 번호">
+        <div
+          className="flex items-center gap-1"
+          role="group"
+          aria-label={t('pagination.pageNumbers')}
+        >
           {pageNumbers.map((page, index) => {
             if (page === 'ellipsis') {
               return (
@@ -213,7 +224,7 @@ function EquipmentPaginationComponent({
                 className="h-8 w-8"
                 onClick={() => onPageChange(page)}
                 type="button"
-                aria-label={`${page} 페이지로 이동`}
+                aria-label={t('pagination.goToPage', { page })}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {page}
@@ -230,7 +241,7 @@ function EquipmentPaginationComponent({
           onClick={handleNextPage}
           disabled={currentPage === totalPages}
           type="button"
-          aria-label="다음 페이지"
+          aria-label={t('pagination.nextPage')}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -243,7 +254,7 @@ function EquipmentPaginationComponent({
           onClick={handleLastPage}
           disabled={currentPage === totalPages}
           type="button"
-          aria-label="마지막 페이지로"
+          aria-label={t('pagination.lastPage')}
         >
           <ChevronsRight className="h-4 w-4" />
         </Button>
