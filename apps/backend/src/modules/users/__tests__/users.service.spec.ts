@@ -16,13 +16,14 @@ interface CreateUserWithPasswordDto extends CreateUserDto {
 }
 
 // 랜덤 문자열 생성 헬퍼 함수
-const generateRandomString = (length = 8) => {
+const generateRandomString = (length = 8): string => {
   return crypto.randomBytes(length).toString('hex');
 };
 
 describe('UsersService', () => {
   let service: UsersService;
   let moduleRef: TestingModule;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const testUsers: any[] = [];
 
   beforeAll(async () => {
@@ -69,6 +70,7 @@ describe('UsersService', () => {
         phoneNumber: '010-1234-5678',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await service.create(createUserDto as any);
       testUsers.push(result); // 정리를 위해 추가
 
@@ -91,14 +93,14 @@ describe('UsersService', () => {
         phoneNumber: '010-1234-5678',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const firstUser = await service.create(createUserDto as any);
       testUsers.push(firstUser);
 
       // 동일한 이메일로 다시 생성 시도
       await expect(
-        service.create({
-          ...createUserDto,
-        } as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        service.create({ ...createUserDto } as any)
       ).rejects.toThrow();
     });
   });
@@ -133,6 +135,7 @@ describe('UsersService', () => {
         phoneNumber: '010-1234-5678',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createdUser = await service.create(createUserDto as any);
       testUsers.push(createdUser);
 
@@ -163,6 +166,7 @@ describe('UsersService', () => {
         phoneNumber: '010-1234-5678',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createdUser = await service.create(createUserDto as any);
       testUsers.push(createdUser);
 
@@ -198,6 +202,7 @@ describe('UsersService', () => {
         phoneNumber: '010-1234-5678',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createdUser = await service.create(createUserDto as any);
       testUsers.push(createdUser);
 
@@ -232,6 +237,7 @@ describe('UsersService', () => {
         phoneNumber: '010-1234-5678',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createdUser = await service.create(createUserDto as any);
 
       // 사용자 삭제
@@ -258,6 +264,7 @@ describe('UsersService', () => {
         phoneNumber: '010-1234-5678',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const createdUser = await service.create(createUserDto as any);
       testUsers.push(createdUser);
 

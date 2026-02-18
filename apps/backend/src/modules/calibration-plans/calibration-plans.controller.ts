@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpStatus,
   ParseUUIDPipe,
   Res,
@@ -52,8 +51,6 @@ import {
   RejectCalibrationPlanValidationPipe,
   ConfirmPlanItemValidationPipe,
 } from './dto/approve-calibration-plan.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import type { AuthenticatedRequest } from '../../types/auth';
@@ -65,14 +62,16 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 function extractUserId(req: AuthenticatedRequest): string {
   const userId = req.user?.userId || req.user?.sub;
   if (!userId) {
-    throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+    throw new BadRequestException({
+      code: 'AUTH_USER_INFO_MISSING',
+      message: 'User information not found.',
+    });
   }
   return userId;
 }
 
 @ApiTags('교정계획서')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('calibration-plans')
 export class CalibrationPlansController {
   constructor(
@@ -95,7 +94,10 @@ export class CalibrationPlansController {
   @RequirePermissions(Permission.CREATE_CALIBRATION_PLAN)
   @UsePipes(CreateCalibrationPlanValidationPipe)
   @AuditLog({ action: 'create', entityType: 'calibration_plan', entityIdPath: 'response.id' })
-  create(@Body() createDto: CreateCalibrationPlanDto, @Request() req: AuthenticatedRequest) {
+  create(
+    @Body() createDto: CreateCalibrationPlanDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
     const createdBy = extractUserId(req);
     return this.calibrationPlansService.create({ ...createDto, createdBy });
   }
@@ -108,7 +110,7 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 목록 조회 성공' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
   @UsePipes(CalibrationPlanQueryValidationPipe)
-  findAll(@Query() query: CalibrationPlanQueryInput) {
+  findAll(@Query() query: CalibrationPlanQueryInput): Promise<unknown> {
     return this.calibrationPlansService.findAll(query);
   }
 
@@ -120,7 +122,7 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '외부교정 대상 장비 목록 조회 성공' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
   @UsePipes(ExternalEquipmentQueryValidationPipe)
-  findExternalEquipment(@Query() query: ExternalEquipmentQueryInput) {
+  findExternalEquipment(@Query() query: ExternalEquipmentQueryInput): Promise<unknown> {
     return this.calibrationPlansService.findExternalEquipment(query);
   }
 
@@ -133,7 +135,7 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 상세 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
     return this.calibrationPlansService.findOne(uuid);
   }
 
@@ -149,7 +151,10 @@ export class CalibrationPlansController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION_PLAN)
   @UsePipes(UpdateCalibrationPlanValidationPipe)
   @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  update(@Param('uuid', ParseUUIDPipe) uuid: string, @Body() updateDto: UpdateCalibrationPlanDto) {
+  update(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body() updateDto: UpdateCalibrationPlanDto
+  ): Promise<unknown> {
     return this.calibrationPlansService.update(uuid, updateDto);
   }
 
@@ -164,7 +169,7 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
   @RequirePermissions(Permission.DELETE_CALIBRATION_PLAN)
   @AuditLog({ action: 'delete', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  remove(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
     return this.calibrationPlansService.remove(uuid);
   }
 
@@ -182,7 +187,7 @@ export class CalibrationPlansController {
   submit(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() _submitDto?: SubmitCalibrationPlanDto
-  ) {
+  ): Promise<unknown> {
     return this.calibrationPlansService.submit(uuid);
   }
 
@@ -203,7 +208,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() submitDto: SubmitForReviewDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const submittedBy = extractUserId(req);
     return this.calibrationPlansService.submitForReview(uuid, { ...submitDto, submittedBy });
   }
@@ -225,7 +230,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() reviewDto: ReviewCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const reviewedBy = extractUserId(req);
     return this.calibrationPlansService.review(uuid, { ...reviewDto, reviewedBy });
   }
@@ -246,7 +251,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const approvedBy = extractUserId(req);
     return this.calibrationPlansService.approve(uuid, { ...approveDto, approvedBy });
   }
@@ -268,7 +273,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectDto: RejectCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const rejectedBy = extractUserId(req);
     return this.calibrationPlansService.reject(uuid, { ...rejectDto, rejectedBy });
   }
@@ -291,7 +296,7 @@ export class CalibrationPlansController {
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
     @Body() confirmDto: ConfirmPlanItemDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const confirmedBy = extractUserId(req);
     return this.calibrationPlansService.confirmItem(uuid, itemUuid, { ...confirmDto, confirmedBy });
   }
@@ -313,7 +318,7 @@ export class CalibrationPlansController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
     @Body() updateDto: UpdateCalibrationPlanItemDto
-  ) {
+  ): Promise<unknown> {
     return this.calibrationPlansService.updateItem(uuid, itemUuid, updateDto);
   }
 
@@ -357,7 +362,7 @@ export class CalibrationPlansController {
   createNewVersion(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const createdBy = extractUserId(req);
     return this.calibrationPlansService.createNewVersion(uuid, createdBy);
   }
@@ -371,7 +376,7 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '버전 히스토리 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  getVersionHistory(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  getVersionHistory(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
     return this.calibrationPlansService.getVersionHistory(uuid);
   }
 }

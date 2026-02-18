@@ -15,6 +15,7 @@ import {
 } from '@equipment-management/db/schema';
 import { CreateUserDto, UpdateUserDto, UserQueryDto, ChangeRoleInput } from './dto';
 import { User, UserListResponse, type UserRole } from '@equipment-management/schemas';
+import { getPermissions, Permission } from '@equipment-management/shared-constants';
 import { parseSortString, sortByField } from '../../common/utils/sort';
 
 interface JwtPayload {
@@ -166,7 +167,10 @@ export class UsersService {
     // 이메일 중복 확인
     const existingUser = await this.findByEmail(createUserDto.email);
     if (existingUser) {
-      throw new BadRequestException(`이메일 '${createUserDto.email}'는 이미 사용 중입니다.`);
+      throw new BadRequestException({
+        code: 'USER_EMAIL_ALREADY_EXISTS',
+        message: `Email '${createUserDto.email}' is already in use.`,
+      });
     }
 
     const [createdUser] = await this.db
@@ -264,36 +268,57 @@ export class UsersService {
     // ❶ DB에서 요청자의 현재 역할 재조회 (stale JWT 방어 — Guard는 fast-path일 뿐)
     const requester = await this.findOne(jwtUser.userId);
     if (!requester) {
-      throw new NotFoundException('요청자를 찾을 수 없습니다.');
+      throw new NotFoundException({
+        code: 'USER_REQUESTER_NOT_FOUND',
+        message: 'Requester not found.',
+      });
     }
     if (!['technical_manager', 'lab_manager'].includes(requester.role)) {
-      throw new ForbiddenException('역할 변경 권한이 없습니다.');
+      throw new ForbiddenException({
+        code: 'USER_NO_ROLE_CHANGE_PERMISSION',
+        message: 'No permission to change roles.',
+      });
     }
 
     // ❷ 자기 변경 차단
     if (jwtUser.userId === targetUserId) {
-      throw new ForbiddenException('자신의 역할은 변경할 수 없습니다.');
+      throw new ForbiddenException({
+        code: 'USER_CANNOT_CHANGE_OWN_ROLE',
+        message: 'Cannot change your own role.',
+      });
     }
 
     // ❸ 대상 사용자 조회
     const target = await this.findOne(targetUserId);
     if (!target) {
-      throw new NotFoundException('대상 사용자를 찾을 수 없습니다.');
+      throw new NotFoundException({
+        code: 'USER_TARGET_NOT_FOUND',
+        message: 'Target user not found.',
+      });
     }
 
     // ❹ 대상 역할 범위 검증 (QM/LM은 변경 불가)
     if (!['test_engineer', 'technical_manager'].includes(target.role)) {
-      throw new ForbiddenException('품질책임자/시험소장의 역할은 변경할 수 없습니다.');
+      throw new ForbiddenException({
+        code: 'USER_CANNOT_CHANGE_SENIOR_ROLE',
+        message: 'Cannot change the role of quality manager or lab manager.',
+      });
     }
 
     // ❺ 범위 제한 (requester의 DB 역할 기준)
     if (requester.role === 'technical_manager') {
       if (target.teamId !== requester.teamId) {
-        throw new ForbiddenException('자기 팀 멤버의 역할만 변경할 수 있습니다.');
+        throw new ForbiddenException({
+          code: 'USER_TEAM_SCOPE_ONLY',
+          message: 'Can only change roles of your own team members.',
+        });
       }
     } else if (requester.role === 'lab_manager') {
       if (target.site !== requester.site) {
-        throw new ForbiddenException('같은 사이트 멤버의 역할만 변경할 수 있습니다.');
+        throw new ForbiddenException({
+          code: 'USER_SITE_SCOPE_ONLY',
+          message: 'Can only change roles of members in the same site.',
+        });
       }
     }
 
@@ -311,7 +336,7 @@ export class UsersService {
 
     if (result.length === 0) {
       throw new ConflictException({
-        message: '다른 관리자가 이미 역할을 변경했습니다. 페이지를 새로고침하세요.',
+        message: 'Another administrator has already changed this role. Please refresh the page.',
         code: 'VERSION_CONFLICT',
       });
     }
@@ -364,44 +389,18 @@ export class UsersService {
     userId: string;
     username: string;
     role: UserRole;
-    permissions: string[];
+    permissions: Permission[];
   } | null> {
     const user = await this.findOne(id);
     if (!user) {
       return null;
     }
 
-    // 실제 구현에서는 역할 기반으로 권한을 조회해야 함
-    // 여기서는 임시로 모든 권한 객체를 반환
-    const permissions = [
-      'view:users',
-      'create:users',
-      'update:users',
-      'delete:users',
-      'view:equipment',
-      'create:equipment',
-      'update:equipment',
-      'delete:equipment',
-      'view:calibrations',
-      'create:calibration',
-      'update:calibration',
-      'delete:calibration',
-      'view:rentals',
-      'create:rental',
-      'update:rental',
-      'delete:rental',
-      'view:notifications',
-      'create:notification',
-      'update:notification',
-      'delete:notification',
-    ];
-
-    // 해당 사용자의 권한 필터링 (실제로는 역할에 따라 권한 매핑)
     return {
       userId: id,
       username: user.name,
       role: user.role,
-      permissions,
+      permissions: getPermissions(user.role),
     };
   }
 

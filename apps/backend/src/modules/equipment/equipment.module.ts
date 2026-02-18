@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
 import { EquipmentController } from './equipment.controller';
 import { DisposalController } from './disposal.controller';
 import { DisposalRequestsController } from './disposal-requests.controller';
@@ -35,6 +36,7 @@ import { NonConformancesModule } from '../non-conformances/non-conformances.modu
     RepairHistoryService,
     EquipmentHistoryService,
     DisposalService,
+    InternalApiKeyGuard,
   ],
   exports: [
     EquipmentService,

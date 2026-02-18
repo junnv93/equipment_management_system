@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { DisposalReasonEnum } from '@equipment-management/schemas';
 import { ApiProperty } from '@nestjs/swagger';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ============================================================================
 // Zod 스키마 (SSOT from @equipment-management/schemas)
@@ -16,6 +17,7 @@ export const requestDisposalSchema = z.object({
 });
 
 export type RequestDisposalInput = z.infer<typeof requestDisposalSchema>;
+export const RequestDisposalPipe = new ZodValidationPipe(requestDisposalSchema);
 
 /**
  * 폐기 검토 DTO 스키마 (technical_manager, 같은 팀)
@@ -29,6 +31,7 @@ export const reviewDisposalSchema = z.object({
 });
 
 export type ReviewDisposalInput = z.infer<typeof reviewDisposalSchema>;
+export const ReviewDisposalPipe = new ZodValidationPipe(reviewDisposalSchema);
 
 /**
  * 폐기 승인 DTO 스키마 (lab_manager)
@@ -42,6 +45,7 @@ export const approveDisposalSchema = z.object({
 });
 
 export type ApproveDisposalInput = z.infer<typeof approveDisposalSchema>;
+export const ApproveDisposalPipe = new ZodValidationPipe(approveDisposalSchema);
 
 // ============================================================================
 // NestJS DTO 클래스 (Swagger 문서 생성용)

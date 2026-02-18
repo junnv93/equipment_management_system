@@ -162,10 +162,16 @@ export class CheckoutsService extends VersionedBaseService {
    */
   private validateUuid(uuid: string, fieldName: string): void {
     if (!uuid || typeof uuid !== 'string') {
-      throw new BadRequestException(`${fieldName}는 필수이며 문자열이어야 합니다.`);
+      throw new BadRequestException({
+        code: 'CHECKOUT_INVALID_UUID',
+        message: `${fieldName} is required and must be a string`,
+      });
     }
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-      throw new BadRequestException(`유효하지 않은 ${fieldName} UUID 형식입니다.`);
+      throw new BadRequestException({
+        code: 'CHECKOUT_INVALID_UUID',
+        message: `Invalid ${fieldName} UUID format`,
+      });
     }
   }
 
@@ -788,7 +794,10 @@ export class CheckoutsService extends VersionedBaseService {
             .limit(1);
 
           if (!checkout) {
-            throw new NotFoundException(`UUID ${uuid}의 반출을 찾을 수 없습니다.`);
+            throw new NotFoundException({
+              code: 'CHECKOUT_NOT_FOUND',
+              message: `Checkout with UUID ${uuid} not found`,
+            });
           }
 
           // ✅ 개선: checkoutItems는 별도로 조회 (필요시)
@@ -864,7 +873,10 @@ export class CheckoutsService extends VersionedBaseService {
 
         // EMC팀은 RF팀 장비 반출 신청/승인 불가
         if (equipmentTeamClassification === 'general_rf') {
-          throw new ForbiddenException('EMC팀은 RF팀 장비에 대한 반출 신청/승인 권한이 없습니다.');
+          throw new ForbiddenException({
+            code: 'CHECKOUT_CROSS_TEAM_FORBIDDEN',
+            message: 'EMC team does not have checkout permission for RF team equipment',
+          });
         }
       } catch (error) {
         if (error instanceof ForbiddenException) {
@@ -897,7 +909,7 @@ export class CheckoutsService extends VersionedBaseService {
     userTeamId?: string
   ): Promise<CheckoutAvailableActions> {
     const { status, purpose, lenderTeamId } = checkout;
-    const hasPermission = (p: Permission) => userPermissions.includes(p);
+    const hasPermission = (p: Permission): boolean => userPermissions.includes(p);
 
     return {
       // 승인: pending 상태 + 승인 권한 + (대여의 경우 lender 팀 일치)
@@ -959,13 +971,16 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증 (일관된 검증 로직)
-      this.validateUuid(requesterId, '신청자');
+      this.validateUuid(requesterId, 'requesterId');
 
       if (!createCheckoutDto.equipmentIds || createCheckoutDto.equipmentIds.length === 0) {
-        throw new BadRequestException('반출할 장비를 최소 1개 이상 선택해야 합니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_NO_EQUIPMENT',
+          message: 'At least one equipment must be selected for checkout',
+        });
       }
       for (const equipmentId of createCheckoutDto.equipmentIds) {
-        this.validateUuid(equipmentId, '장비');
+        this.validateUuid(equipmentId, 'equipmentId');
       }
 
       // 장비 존재 여부 및 사용 가능 여부 확인
@@ -975,20 +990,24 @@ export class CheckoutsService extends VersionedBaseService {
           equipment = await this.equipmentService.findOne(equipmentId);
         } catch (error) {
           if (error instanceof NotFoundException) {
-            throw new BadRequestException(`UUID ${equipmentId}의 장비를 찾을 수 없습니다.`);
+            throw new BadRequestException({
+              code: 'CHECKOUT_EQUIPMENT_NOT_FOUND',
+              message: `Equipment with UUID ${equipmentId} not found`,
+            });
           }
           throw error;
         }
 
         // 목적별 허용 상태 검증 (SSOT: shared-constants에서 규칙 import)
         const allowedStatuses = getAllowedStatusesForPurpose(createCheckoutDto.purpose);
-        if (!allowedStatuses.includes(equipment.status as any)) {
+        if (!allowedStatuses.includes(equipment.status as never)) {
           const statusLabel =
             EQUIPMENT_STATUS_LABELS[equipment.status as keyof typeof EQUIPMENT_STATUS_LABELS] ??
             equipment.status;
-          throw new BadRequestException(
-            `장비 ${equipment.name}이(가) 현재 "${statusLabel}" 상태이므로 ${createCheckoutDto.purpose === CPVal.RENTAL ? '대여' : '반출'} 신청할 수 없습니다.`
-          );
+          throw new BadRequestException({
+            code: 'CHECKOUT_EQUIPMENT_STATUS_INVALID',
+            message: `Equipment ${equipment.name} is in "${statusLabel}" status and cannot be checked out`,
+          });
         }
 
         // 목적별 팀 소유권 검증
@@ -996,12 +1015,18 @@ export class CheckoutsService extends VersionedBaseService {
         if (purposeVal === CPVal.CALIBRATION || purposeVal === CPVal.REPAIR) {
           // 교정/수리: 자기 팀 장비만 가능
           if (userTeamId && equipment.teamId && equipment.teamId !== userTeamId) {
-            throw new BadRequestException('교정/수리 목적의 반출은 소속 팀 장비만 가능합니다.');
+            throw new BadRequestException({
+              code: 'CHECKOUT_OWN_TEAM_ONLY',
+              message: 'Calibration/repair checkouts are only allowed for own team equipment',
+            });
           }
         } else if (purposeVal === CPVal.RENTAL) {
           // 외부 대여: 다른 팀 장비만 가능
           if (userTeamId && equipment.teamId && equipment.teamId === userTeamId) {
-            throw new BadRequestException('외부 대여는 다른 팀의 장비만 가능합니다.');
+            throw new BadRequestException({
+              code: 'CHECKOUT_OTHER_TEAM_ONLY',
+              message: 'External rental is only allowed for other team equipment',
+            });
           }
         }
 
@@ -1014,13 +1039,19 @@ export class CheckoutsService extends VersionedBaseService {
 
       // expectedReturnDate 유효성 검증
       if (isNaN(expectedReturnDate.getTime())) {
-        throw new BadRequestException('유효하지 않은 반입 예정일 형식입니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_INVALID_RETURN_DATE',
+          message: 'Invalid expected return date format',
+        });
       }
 
       // 반입 예정일은 현재 시점보다 늦어야 함
       const now = new Date();
       if (expectedReturnDate <= now) {
-        throw new BadRequestException('반입 예정일은 현재 시점보다 늦어야 합니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_RETURN_DATE_PAST',
+          message: 'Expected return date must be in the future',
+        });
       }
 
       // 반출 데이터 생성 (Equipment 모듈의 transformCreateDtoToEntity 패턴과 동일)
@@ -1112,18 +1143,24 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
+      this.validateUuid(uuid, 'checkoutId');
 
       // approverId는 컨트롤러에서 세션으로부터 주입되므로 반드시 존재해야 함
       if (!approveDto.approverId) {
-        throw new BadRequestException('승인자 정보가 필요합니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_APPROVER_REQUIRED',
+          message: 'Approver information is required',
+        });
       }
-      this.validateUuid(approveDto.approverId, '승인자');
+      this.validateUuid(approveDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== CSVal.PENDING) {
-        throw new BadRequestException('대기 중인 반출만 승인할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_PENDING_CAN_APPROVE',
+          message: 'Only pending checkouts can be approved',
+        });
       }
 
       // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크
@@ -1139,7 +1176,10 @@ export class CheckoutsService extends VersionedBaseService {
       // 대여 목적: 장비 소속 팀(lenderTeamId)의 기술책임자만 승인 가능
       if (checkout.purpose === CPVal.RENTAL && checkout.lenderTeamId && approverTeamId) {
         if (approverTeamId !== checkout.lenderTeamId) {
-          throw new ForbiddenException('대여 장비 소속 팀의 기술책임자만 승인할 수 있습니다.');
+          throw new ForbiddenException({
+            code: 'CHECKOUT_LENDER_TEAM_ONLY',
+            message: 'Only the technical manager of the lending team can approve',
+          });
         }
       }
 
@@ -1201,21 +1241,27 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
+      this.validateUuid(uuid, 'checkoutId');
       if (rejectDto.approverId) {
-        this.validateUuid(rejectDto.approverId, '승인자');
+        this.validateUuid(rejectDto.approverId, 'approverId');
       }
 
       const checkout = await this.findOne(uuid);
 
       // 대기 중인 상태만 반려 가능
       if (checkout.status !== CSVal.PENDING) {
-        throw new BadRequestException('대기 중인 반출만 반려할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_PENDING_CAN_REJECT',
+          message: 'Only pending checkouts can be rejected',
+        });
       }
 
       // 반려 사유 필수 검증
       if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
-        throw new BadRequestException('반려 사유는 필수입니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_REJECTION_REASON_REQUIRED',
+          message: 'Rejection reason is required',
+        });
       }
 
       // ✅ Optimistic locking: CAS를 사용한 상태 전환
@@ -1280,12 +1326,15 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
+      this.validateUuid(uuid, 'checkoutId');
 
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== CSVal.APPROVED) {
-        throw new BadRequestException('승인된 반출만 반출할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_APPROVED_CAN_START',
+          message: 'Only approved checkouts can be started',
+        });
       }
 
       // ✅ Optimistic locking: CAS를 사용한 상태 전환 (version 검증 포함)
@@ -1370,13 +1419,16 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
-      this.validateUuid(returnerId, '반입 처리자');
+      this.validateUuid(uuid, 'checkoutId');
+      this.validateUuid(returnerId, 'returnerId');
 
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== CSVal.CHECKED_OUT) {
-        throw new BadRequestException('반출 중인 반출만 반입할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_CHECKED_OUT_CAN_RETURN',
+          message: 'Only checked out equipment can be returned',
+        });
       }
 
       // ✅ 반출 유형별 필수 검사 항목 검증
@@ -1384,17 +1436,26 @@ export class CheckoutsService extends VersionedBaseService {
 
       // 모든 유형: workingStatusChecked 필수
       if (!returnDto.workingStatusChecked) {
-        throw new BadRequestException('작동 여부 확인은 필수입니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_WORKING_STATUS_REQUIRED',
+          message: 'Working status check is required',
+        });
       }
 
       // 교정 목적: calibrationChecked 필수
       if (purpose === CPVal.CALIBRATION && !returnDto.calibrationChecked) {
-        throw new BadRequestException('교정 목적 반출의 경우 교정 확인은 필수입니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_CALIBRATION_CHECK_REQUIRED',
+          message: 'Calibration check is required for calibration purpose checkouts',
+        });
       }
 
       // 수리 목적: repairChecked 필수
       if (purpose === CPVal.REPAIR && !returnDto.repairChecked) {
-        throw new BadRequestException('수리 목적 반출의 경우 수리 확인은 필수입니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_REPAIR_CHECK_REQUIRED',
+          message: 'Repair check is required for repair purpose checkouts',
+        });
       }
 
       // ✅ Optimistic locking: CAS를 사용한 상태 전환
@@ -1477,13 +1538,16 @@ export class CheckoutsService extends VersionedBaseService {
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
-      this.validateUuid(approveReturnDto.approverId, '승인자');
+      this.validateUuid(uuid, 'checkoutId');
+      this.validateUuid(approveReturnDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== CSVal.RETURNED) {
-        throw new BadRequestException('검사 완료된(returned) 반입만 최종 승인할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_RETURNED_CAN_APPROVE',
+          message: 'Only returned checkouts can be finally approved',
+        });
       }
 
       // ✅ Optimistic locking: CAS를 사용한 상태 전환
@@ -1561,17 +1625,23 @@ export class CheckoutsService extends VersionedBaseService {
     rejectReturnDto: RejectReturnDto & { approverId: string; approverTeamId?: string }
   ): Promise<Checkout> {
     try {
-      this.validateUuid(uuid, '반출');
-      this.validateUuid(rejectReturnDto.approverId, '승인자');
+      this.validateUuid(uuid, 'checkoutId');
+      this.validateUuid(rejectReturnDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== CSVal.RETURNED) {
-        throw new BadRequestException('검사 완료된(returned) 반입만 반려할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_RETURNED_CAN_REJECT',
+          message: 'Only returned checkouts can be rejected',
+        });
       }
 
       if (!rejectReturnDto.reason || rejectReturnDto.reason.trim().length === 0) {
-        throw new BadRequestException('반려 사유는 필수입니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_REJECTION_REASON_REQUIRED',
+          message: 'Rejection reason is required',
+        });
       }
 
       // ✅ 팀별 권한 체크 (크로스 사이트 워크플로우 — approve와 동일 패턴)
@@ -1593,9 +1663,10 @@ export class CheckoutsService extends VersionedBaseService {
         rejectReturnDto.approverTeamId
       ) {
         if (rejectReturnDto.approverTeamId !== checkout.lenderTeamId) {
-          throw new BadRequestException(
-            '대여 장비 소속 팀의 기술책임자만 반입을 반려할 수 있습니다.'
-          );
+          throw new BadRequestException({
+            code: 'CHECKOUT_LENDER_TEAM_ONLY',
+            message: 'Only the technical manager of the lending team can reject return',
+          });
         }
       }
 
@@ -1664,14 +1735,17 @@ export class CheckoutsService extends VersionedBaseService {
     checkerId: string
   ): Promise<typeof conditionChecks.$inferSelect> {
     try {
-      this.validateUuid(uuid, '반출');
-      this.validateUuid(checkerId, '확인자');
+      this.validateUuid(uuid, 'checkoutId');
+      this.validateUuid(checkerId, 'checkerId');
 
       const checkout = await this.findOne(uuid);
 
       // 대여 목적만 상태 확인 가능
       if (checkout.purpose !== CPVal.RENTAL) {
-        throw new BadRequestException('상태 확인은 대여 목적 반출에서만 사용할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_CONDITION_CHECK_RENTAL_ONLY',
+          message: 'Condition check is only available for rental purpose checkouts',
+        });
       }
 
       // 단계별 현재 상태 검증 및 상태 전이 매핑
@@ -1687,14 +1761,17 @@ export class CheckoutsService extends VersionedBaseService {
 
       const transition = stepTransitions[dto.step];
       if (!transition) {
-        throw new BadRequestException(`유효하지 않은 상태 확인 단계입니다: ${dto.step}`);
+        throw new BadRequestException({
+          code: 'CHECKOUT_INVALID_CONDITION_STEP',
+          message: `Invalid condition check step: ${dto.step}`,
+        });
       }
 
       if (checkout.status !== transition.requiredStatus) {
-        throw new BadRequestException(
-          `현재 반출 상태(${checkout.status})에서는 ${dto.step} 단계를 수행할 수 없습니다. ` +
-            `필요한 상태: ${transition.requiredStatus}`
-        );
+        throw new BadRequestException({
+          code: 'CHECKOUT_INVALID_STATUS_FOR_STEP',
+          message: `Cannot perform step ${dto.step} in current status (${checkout.status}). Required status: ${transition.requiredStatus}`,
+        });
       }
 
       // condition_checks에 INSERT
@@ -1780,7 +1857,7 @@ export class CheckoutsService extends VersionedBaseService {
       checker?: { id: string; name: string | null; email: string | null };
     })[]
   > {
-    this.validateUuid(uuid, '반출');
+    this.validateUuid(uuid, 'checkoutId');
 
     const checks = await this.db
       .select()
@@ -1819,12 +1896,15 @@ export class CheckoutsService extends VersionedBaseService {
   async cancel(uuid: string): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
+      this.validateUuid(uuid, 'checkoutId');
 
       const checkout = await this.findOne(uuid);
 
       if (checkout.status !== CSVal.PENDING) {
-        throw new BadRequestException('승인 전 반출만 취소할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_PENDING_CAN_CANCEL',
+          message: 'Only pending checkouts can be canceled',
+        });
       }
 
       // ✅ Optimistic locking: CAS를 사용한 상태 전환
@@ -1857,13 +1937,16 @@ export class CheckoutsService extends VersionedBaseService {
   async update(uuid: string, updateCheckoutDto: UpdateCheckoutDto): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
-      this.validateUuid(uuid, '반출');
+      this.validateUuid(uuid, 'checkoutId');
 
       const existingCheckout = await this.findOne(uuid);
 
       // 승인된 반출은 수정 불가
       if (existingCheckout.status !== CSVal.PENDING) {
-        throw new BadRequestException('승인 전 반출만 수정할 수 있습니다.');
+        throw new BadRequestException({
+          code: 'CHECKOUT_ONLY_PENDING_CAN_UPDATE',
+          message: 'Only pending checkouts can be updated',
+        });
       }
 
       // 업데이트할 데이터 준비 (Equipment 모듈의 transformUpdateDtoToEntity 패턴과 동일)
@@ -1877,13 +1960,19 @@ export class CheckoutsService extends VersionedBaseService {
 
         // 날짜 유효성 검증
         if (isNaN(expectedReturnDate.getTime())) {
-          throw new BadRequestException('유효하지 않은 반입 예정일 형식입니다.');
+          throw new BadRequestException({
+            code: 'CHECKOUT_INVALID_RETURN_DATE',
+            message: 'Invalid expected return date format',
+          });
         }
 
         // 반입 예정일은 현재 시점보다 늦어야 함
         const now = new Date();
         if (expectedReturnDate <= now) {
-          throw new BadRequestException('반입 예정일은 현재 시점보다 늦어야 합니다.');
+          throw new BadRequestException({
+            code: 'CHECKOUT_RETURN_DATE_PAST',
+            message: 'Expected return date must be in the future',
+          });
         }
 
         updateFields.expectedReturnDate = expectedReturnDate;
@@ -1900,7 +1989,10 @@ export class CheckoutsService extends VersionedBaseService {
       if (updateCheckoutDto.status !== undefined) {
         const status = updateCheckoutDto.status as CheckoutStatus;
         if (!(CHECKOUT_STATUS_VALUES as readonly string[]).includes(status)) {
-          throw new BadRequestException(`유효하지 않은 상태값: ${status}`);
+          throw new BadRequestException({
+            code: 'CHECKOUT_INVALID_STATUS',
+            message: `Invalid status value: ${status}`,
+          });
         }
         updateFields.status = status;
       }

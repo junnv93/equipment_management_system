@@ -7,13 +7,13 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpStatus,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
   UsePipes,
   Request,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -41,20 +41,20 @@ import {
   ApproveCalibrationValidationPipe,
   RejectCalibrationValidationPipe,
 } from './dto/approve-calibration.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
-import { CalibrationStatus } from '@equipment-management/schemas';
 import { FileUploadService } from '../equipment/services/file-upload.service';
 import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
 import type { CalibrationRecord } from './calibration.service';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import {
+  UpdateCalibrationStatusPipe,
+  type UpdateCalibrationStatusDto,
+} from './dto/update-calibration-status.dto';
 
 @ApiTags('교정 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('calibration')
 export class CalibrationController {
   constructor(
@@ -85,9 +85,9 @@ export class CalibrationController {
 
     return this.calibrationService.create({
       ...createCalibrationDto,
-      // 클라이언트가 제공하지 않은 경우에만 서버 값 사용
-      registeredBy: createCalibrationDto.registeredBy || registeredBy,
-      registeredByRole: createCalibrationDto.registeredByRole || registeredByRole,
+      // 서버에서 강제로 주입 (클라이언트 값 무시)
+      registeredBy,
+      registeredByRole,
     });
   }
 
@@ -122,7 +122,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_REQUESTS)
-  findPendingApprovals() {
+  findPendingApprovals(): Promise<unknown> {
     return this.calibrationService.findPendingApprovals();
   }
 
@@ -154,7 +154,7 @@ export class CalibrationController {
     @Query('managerId') managerId?: string,
     @Query('teamId') teamId?: string,
     @Query('site') site?: string
-  ) {
+  ): Promise<unknown> {
     return this.calibrationService.findAllIntermediateChecks({
       status,
       equipmentId,
@@ -164,7 +164,7 @@ export class CalibrationController {
     });
   }
 
-  @Post(':uuid/intermediate-check/complete')
+  @Post(':uuid/intermediate-check/complete') // @BodyPipeExempt: optional notes string only, no structured schema needed
   @ApiOperation({
     summary: '중간점검 완료 처리',
     description: '특정 교정의 중간점검을 완료 처리하고 관련 알림을 해제합니다.',
@@ -178,14 +178,17 @@ export class CalibrationController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   completeIntermediateCheck(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() body: { notes?: string },
     @Request() req: AuthenticatedRequest
   ): Promise<{ calibration: CalibrationRecord; message: string }> {
     // ✅ 보안: completedBy를 JWT 세션에서 추출 (Rule 2)
     const completedBy = req.user?.userId || req.user?.sub;
     if (!completedBy) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     return this.calibrationService.completeIntermediateCheck(uuid, completedBy, body.notes);
   }
@@ -362,7 +365,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
-  findOne(@Param('uuid') uuid: string): Promise<CalibrationRecord> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<CalibrationRecord> {
     return this.calibrationService.findOne(uuid);
   }
 
@@ -394,7 +397,7 @@ export class CalibrationController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadCertificate(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @UploadedFile() file: MulterFile
   ): Promise<{
     filePath: string;
@@ -407,7 +410,10 @@ export class CalibrationController {
     await this.calibrationService.findOne(uuid);
 
     if (!file) {
-      throw new BadRequestException('파일이 업로드되지 않았습니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_FILE_REQUIRED',
+        message: 'No file was uploaded.',
+      });
     }
 
     // 파일 저장 (calibration/[uuid] 디렉토리에 저장)
@@ -439,7 +445,7 @@ export class CalibrationController {
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   @UsePipes(UpdateCalibrationValidationPipe)
   update(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateCalibrationDto: UpdateCalibrationDto
   ): Promise<CalibrationRecord> {
     return this.calibrationService.update(uuid, updateCalibrationDto);
@@ -454,7 +460,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.DELETE_CALIBRATION)
   @AuditLog({ action: 'delete', entityType: 'calibration', entityIdPath: 'params.uuid' })
-  remove(@Param('uuid') uuid: string): Promise<{ id: string; deleted: boolean }> {
+  remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{ id: string; deleted: boolean }> {
     return this.calibrationService.remove(uuid);
   }
 
@@ -469,10 +475,10 @@ export class CalibrationController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   updateStatus(
-    @Param('uuid') uuid: string,
-    @Body('status') status: CalibrationStatus
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Body(UpdateCalibrationStatusPipe) dto: UpdateCalibrationStatusDto
   ): Promise<CalibrationRecord> {
-    return this.calibrationService.updateStatus(uuid, status);
+    return this.calibrationService.updateStatus(uuid, dto.status);
   }
 
   @Patch(':uuid/complete')
@@ -489,7 +495,7 @@ export class CalibrationController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   completeCalibration(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateCalibrationDto: UpdateCalibrationDto
   ): Promise<CalibrationRecord> {
     return this.calibrationService.completeCalibration(uuid, updateCalibrationDto);
@@ -510,14 +516,17 @@ export class CalibrationController {
   @AuditLog({ action: 'approve', entityType: 'calibration', entityIdPath: 'params.uuid' })
   @UsePipes(ApproveCalibrationValidationPipe)
   async approveCalibration(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveCalibrationDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
     // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     return this.calibrationService.approveCalibration(uuid, { ...approveDto, approverId });
   }
@@ -537,14 +546,17 @@ export class CalibrationController {
   @AuditLog({ action: 'reject', entityType: 'calibration', entityIdPath: 'params.uuid' })
   @UsePipes(RejectCalibrationValidationPipe)
   async rejectCalibration(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectDto: RejectCalibrationDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
     // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     return this.calibrationService.rejectCalibration(uuid, { ...rejectDto, approverId });
   }

@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
-import { eq, ilike, inArray, and, sql, SQL, count } from 'drizzle-orm';
+import { eq, ilike, inArray, and, sql, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -148,9 +148,10 @@ export class TeamsService {
     });
 
     if (existingTeam) {
-      throw new BadRequestException(
-        `팀 이름 '${createTeamDto.name}'는 해당 사이트에서 이미 사용 중입니다.`
-      );
+      throw new BadRequestException({
+        code: 'TEAM_NAME_ALREADY_EXISTS',
+        message: `Team name '${createTeamDto.name}' is already in use at this site.`,
+      });
     }
 
     const [createdTeam] = await this.db

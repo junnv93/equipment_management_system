@@ -157,7 +157,10 @@ export class RepairHistoryService {
   async findOne(uuid: string): Promise<RepairHistoryRecord> {
     const record = repairHistoryStore.find((r) => r.id === uuid && !r.isDeleted);
     if (!record) {
-      throw new NotFoundException(`수리 이력을 찾을 수 없습니다: ${uuid}`);
+      throw new NotFoundException({
+        code: 'REPAIR_HISTORY_NOT_FOUND',
+        message: `Repair history not found: ${uuid}`,
+      });
     }
     return record;
   }
@@ -214,7 +217,10 @@ export class RepairHistoryService {
   async update(uuid: string, dto: UpdateRepairHistoryDto): Promise<RepairHistoryRecord> {
     const index = repairHistoryStore.findIndex((r) => r.id === uuid && !r.isDeleted);
     if (index === -1) {
-      throw new NotFoundException(`수리 이력을 찾을 수 없습니다: ${uuid}`);
+      throw new NotFoundException({
+        code: 'REPAIR_HISTORY_NOT_FOUND',
+        message: `Repair history not found: ${uuid}`,
+      });
     }
 
     const previousRecord = repairHistoryStore[index];
@@ -258,7 +264,10 @@ export class RepairHistoryService {
   async remove(uuid: string, deletedBy: string): Promise<{ deleted: boolean; id: string }> {
     const index = repairHistoryStore.findIndex((r) => r.id === uuid && !r.isDeleted);
     if (index === -1) {
-      throw new NotFoundException(`수리 이력을 찾을 수 없습니다: ${uuid}`);
+      throw new NotFoundException({
+        code: 'REPAIR_HISTORY_NOT_FOUND',
+        message: `Repair history not found: ${uuid}`,
+      });
     }
 
     const now = new Date();

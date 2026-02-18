@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, ParseUUIDPipe, Param, Request } from '@nestjs/common';
+import { Controller, Get, Query, ParseUUIDPipe, Param, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,8 +8,6 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { AuditService, AuditLogFilter, PaginationOptions } from './audit.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import {
   Permission,
@@ -28,7 +26,6 @@ import type { AuthenticatedRequest } from '../../types/auth';
  */
 @ApiTags('감사 로그')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('audit-logs')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
@@ -85,7 +82,7 @@ export class AuditController {
     @Query('action') action?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string
-  ) {
+  ): Promise<unknown> {
     // SSOT: resolveDataScope()로 역할별 스코프 해석 — switch/if 없음
     const scope = resolveDataScope(
       {

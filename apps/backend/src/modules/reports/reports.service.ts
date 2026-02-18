@@ -6,8 +6,8 @@ export class ReportsService {
   async getEquipmentUsage(
     startDate?: string,
     endDate?: string,
-    equipmentId?: string,
-    departmentId?: string
+    _equipmentId?: string,
+    _departmentId?: string
   ): Promise<{
     timeframe: { startDate: string; endDate: string };
     totalUsageHours: number;
@@ -52,8 +52,8 @@ export class ReportsService {
 
   // 교정 상태 보고서
   async getCalibrationStatus(
-    status?: string,
-    timeframe?: string
+    _status?: string,
+    _timeframe?: string
   ): Promise<{
     summary: {
       totalEquipment: number;
@@ -122,7 +122,7 @@ export class ReportsService {
   async getCheckoutStatistics(
     startDate?: string,
     endDate?: string,
-    departmentId?: string
+    _departmentId?: string
   ): Promise<{
     timeframe: { startDate: string; endDate: string };
     summary: {
@@ -175,8 +175,8 @@ export class ReportsService {
   // 장비 활용률 보고서
   async getUtilizationRate(
     period: 'week' | 'month' | 'quarter' | 'year' = 'month',
-    equipmentId?: string,
-    categoryId?: string
+    _equipmentId?: string,
+    _categoryId?: string
   ): Promise<{
     period: 'week' | 'month' | 'quarter' | 'year';
     summary: {
@@ -245,7 +245,7 @@ export class ReportsService {
   async getEquipmentDowntime(
     startDate?: string,
     endDate?: string,
-    equipmentId?: string
+    _equipmentId?: string
   ): Promise<{
     timeframe: { startDate: string; endDate: string };
     summary: {
@@ -300,8 +300,8 @@ export class ReportsService {
   // 장비 사용 보고서 내보내기
   async exportEquipmentUsage(
     format: 'excel' | 'csv',
-    startDate?: string,
-    endDate?: string
+    _startDate?: string,
+    _endDate?: string
   ): Promise<{
     success: boolean;
     format: 'excel' | 'csv';

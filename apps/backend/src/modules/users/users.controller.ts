@@ -13,6 +13,8 @@ import {
   HttpCode,
   UsePipes,
   UseGuards,
+  UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -36,14 +38,17 @@ import { User, UserListResponse } from '../../types/models';
 import type { UserRole } from '@equipment-management/schemas';
 import { AuthenticatedRequest } from '../../types/auth';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { SiteScopeInterceptor } from '../../common/interceptors/site-scope.interceptor';
 import { Permission } from '@equipment-management/shared-constants';
 import { Public } from '../auth/decorators/public.decorator';
+import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
 
 @ApiTags('users')
-@UseGuards(PermissionsGuard)
 @Controller('users')
+@UseInterceptors(SiteScopeInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -60,20 +65,25 @@ export class UsersController {
   }
 
   @Public()
+  @UseGuards(InternalApiKeyGuard)
   @Post('sync')
   @ApiOperation({
     summary: '사용자 동기화 (Upsert)',
     description:
-      'NextAuth 로그인 시 사용자를 DB에 생성 또는 업데이트합니다. (Azure AD/Credentials)',
+      'NextAuth 로그인 시 사용자를 DB에 생성 또는 업데이트합니다. (Azure AD/Credentials). ' +
+      'Internal API Key 인증 필요 (X-Internal-Api-Key 헤더).',
   })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 200, description: '사용자 동기화 성공 (생성 또는 업데이트)' })
+  @ApiResponse({ status: 401, description: '인증 실패 (API 키 누락 또는 잘못됨)' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
   async syncUser(@Body() createUserDto: CreateUserDto): Promise<User> {
     return this.usersService.upsert(createUserDto);
   }
 
   @Get()
+  @SkipPermissions()
+  @SiteScoped({ bypassRoles: ['lab_manager', 'system_admin'] })
   @UsePipes(UserQueryValidationPipe)
   @ApiOperation({
     summary: '사용자 목록 조회',
@@ -85,40 +95,52 @@ export class UsersController {
   }
 
   @Get('me')
+  @SkipPermissions()
   @ApiOperation({
     summary: '내 프로필 조회',
     description: '현재 로그인한 사용자의 상세 정보를 조회합니다. 팀 정보를 포함합니다.',
   })
   @ApiResponse({ status: 200, description: '내 프로필 조회 성공' })
   @ApiResponse({ status: 401, description: '인증 필요' })
-  async getMyProfile(@Request() req: AuthenticatedRequest) {
+  async getMyProfile(@Request() req: AuthenticatedRequest): Promise<unknown> {
     const userId = req.user?.userId;
     if (!userId) {
-      throw new NotFoundException('사용자 정보를 확인할 수 없습니다.');
+      throw new NotFoundException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information could not be verified.',
+      });
     }
     const user = await this.usersService.findOneWithTeam(userId);
     if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found.',
+      });
     }
     return user;
   }
 
   @Get('me/preferences')
+  @SkipPermissions()
   @ApiOperation({
     summary: '내 표시 설정 조회',
     description: '현재 로그인한 사용자의 표시 설정을 조회합니다. 미설정 시 기본값을 반환합니다.',
   })
   @ApiResponse({ status: 200, description: '표시 설정 조회 성공' })
-  async getMyPreferences(@Request() req: AuthenticatedRequest) {
+  async getMyPreferences(@Request() req: AuthenticatedRequest): Promise<unknown> {
     const userId = req.user?.userId;
     if (!userId) {
-      throw new NotFoundException('사용자 정보를 확인할 수 없습니다.');
+      throw new NotFoundException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information could not be verified.',
+      });
     }
     const prefs = await this.usersService.getPreferences(userId);
     return { ...DEFAULT_DISPLAY_PREFERENCES, ...prefs };
   }
 
   @Patch('me/preferences')
+  @SkipPermissions()
   @ApiOperation({
     summary: '내 표시 설정 변경',
     description: '현재 로그인한 사용자의 표시 설정을 변경합니다. 부분 업데이트를 지원합니다.',
@@ -127,16 +149,21 @@ export class UsersController {
   async updateMyPreferences(
     @Request() req: AuthenticatedRequest,
     @Body(UpdatePreferencesValidationPipe) dto: DisplayPreferencesDto
-  ) {
+  ): Promise<unknown> {
     const userId = req.user?.userId;
     if (!userId) {
-      throw new NotFoundException('사용자 정보를 확인할 수 없습니다.');
+      throw new NotFoundException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information could not be verified.',
+      });
     }
     const updated = await this.usersService.updatePreferences(userId, dto);
     return { ...DEFAULT_DISPLAY_PREFERENCES, ...updated };
   }
 
   @Get(':id')
+  @SkipPermissions()
+  @SiteScoped({ bypassRoles: ['lab_manager', 'system_admin'] })
   @ApiOperation({
     summary: '사용자 상세 조회',
     description: '특정 ID를 가진 사용자의 상세 정보를 조회합니다.',
@@ -144,10 +171,13 @@ export class UsersController {
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '사용자 조회 성공' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없음' })
-  async findOne(@Param('id') id: string): Promise<User> {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<User> {
     const user = await this.usersService.findOne(id);
     if (!user) {
-      throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${id} not found.`,
+      });
     }
     return user;
   }
@@ -164,10 +194,16 @@ export class UsersController {
   @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: '사용자 수정 성공' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없음' })
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto): Promise<User> {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateUserDto: UpdateUserDto
+  ): Promise<User> {
     const user = await this.usersService.update(id, updateUserDto);
     if (!user) {
-      throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${id} not found.`,
+      });
     }
     return user;
   }
@@ -180,10 +216,13 @@ export class UsersController {
   @ApiResponse({ status: 204, description: '사용자 삭제 성공' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없음' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     const result = await this.usersService.remove(id);
     if (!result) {
-      throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${id} not found.`,
+      });
     }
   }
 
@@ -202,7 +241,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없음' })
   @ApiResponse({ status: 409, description: '동시 수정 충돌 (이미 다른 관리자가 변경)' })
   async changeRole(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body(ChangeRoleValidationPipe) dto: ChangeRoleInput,
     @Request() req: AuthenticatedRequest
   ): Promise<User> {
@@ -226,11 +265,14 @@ export class UsersController {
   @RequirePermissions(Permission.UPDATE_USERS)
   @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
   async activateUser(
-    @Param('id') id: string
+    @Param('id', ParseUUIDPipe) id: string
   ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
     const user = await this.usersService.toggleActive(id, true);
     if (!user) {
-      throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${id} not found.`,
+      });
     }
     return user;
   }
@@ -246,21 +288,25 @@ export class UsersController {
   @RequirePermissions(Permission.UPDATE_USERS)
   @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
   async deactivateUser(
-    @Param('id') id: string
+    @Param('id', ParseUUIDPipe) id: string
   ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
     const user = await this.usersService.toggleActive(id, false);
     if (!user) {
-      throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${id} not found.`,
+      });
     }
     return user;
   }
 
   @Get(':id/permissions')
+  @RequirePermissions(Permission.VIEW_USERS)
   @ApiOperation({ summary: '사용자 권한 조회', description: '사용자의 모든 권한을 조회합니다.' })
   @ApiParam({ name: 'id', description: '사용자 ID' })
   @ApiResponse({ status: 200, description: '사용자 권한 목록' })
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
-  getUserPermissions(@Param('id') id: string): Promise<{
+  getUserPermissions(@Param('id', ParseUUIDPipe) id: string): Promise<{
     userId: string;
     username: string;
     role: UserRole;
@@ -280,12 +326,15 @@ export class UsersController {
   @RequirePermissions(Permission.UPDATE_USERS)
   @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
   async resetPassword(
-    @Param('id') id: string
+    @Param('id', ParseUUIDPipe) id: string
   ): Promise<{ message: string; temporaryPassword: string | undefined }> {
     // 임시 비밀번호 생성 및 사용자 비밀번호 재설정 로직
     const result = await this.usersService.generateTemporaryPassword(id);
     if (!result) {
-      throw new NotFoundException(`사용자 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User ID ${id} not found.`,
+      });
     }
     return {
       message: '비밀번호가 성공적으로 초기화되었습니다.',

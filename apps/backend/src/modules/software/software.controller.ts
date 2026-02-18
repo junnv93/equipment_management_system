@@ -6,15 +6,18 @@ import {
   Patch,
   Param,
   Query,
-  UseGuards,
   UsePipes,
   HttpStatus,
   BadRequestException,
   Request,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { SoftwareService } from './software.service';
-import { CreateSoftwareChangeDto } from './dto/create-software-change.dto';
+import {
+  CreateSoftwareChangeInput,
+  CreateSoftwareChangeValidationPipe,
+} from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
 import {
   ApproveSoftwareChangeDto,
@@ -22,8 +25,6 @@ import {
   ApproveSoftwareChangeValidationPipe,
   RejectSoftwareChangeValidationPipe,
 } from './dto/approve-software.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { SoftwareHistory } from '@equipment-management/db/schema';
@@ -32,7 +33,6 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('software')
 export class SoftwareController {
   constructor(private readonly softwareService: SoftwareService) {}
@@ -55,8 +55,19 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_SOFTWARE_CHANGE)
   @AuditLog({ action: 'create', entityType: 'software', entityIdPath: 'response.id' })
-  create(@Body() createDto: CreateSoftwareChangeDto): Promise<SoftwareHistory> {
-    return this.softwareService.create(createDto);
+  @UsePipes(CreateSoftwareChangeValidationPipe)
+  async create(
+    @Body() createDto: CreateSoftwareChangeInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<SoftwareHistory> {
+    const changedBy = req.user?.userId || req.user?.sub;
+    if (!changedBy) {
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
+    }
+    return this.softwareService.create(createDto, changedBy);
   }
 
   @Get('history')
@@ -169,7 +180,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
-  findOne(@Param('uuid') uuid: string): Promise<SoftwareHistory> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<SoftwareHistory> {
     return this.softwareService.findOne(uuid);
   }
 
@@ -192,13 +203,16 @@ export class SoftwareController {
   @AuditLog({ action: 'approve', entityType: 'software', entityIdPath: 'params.uuid' })
   @UsePipes(ApproveSoftwareChangeValidationPipe)
   async approve(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() approveDto: ApproveSoftwareChangeDto,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     return this.softwareService.approve(uuid, { ...approveDto, approverId });
   }
@@ -222,13 +236,16 @@ export class SoftwareController {
   @AuditLog({ action: 'reject', entityType: 'software', entityIdPath: 'params.uuid' })
   @UsePipes(RejectSoftwareChangeValidationPipe)
   async reject(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectDto: RejectSoftwareChangeDto,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     return this.softwareService.reject(uuid, { ...rejectDto, approverId });
   }

@@ -318,7 +318,11 @@ export class EquipmentHistoryService {
       else if (dto.createNonConformance === true) {
         // damage/malfunction만 부적합 생성 가능 (검증)
         if (!['damage', 'malfunction'].includes(dto.incidentType)) {
-          throw new BadRequestException('부적합은 손상 또는 오작동 유형에서만 생성할 수 있습니다');
+          throw new BadRequestException({
+            code: 'NC_INVALID_INCIDENT_TYPE',
+            message:
+              'Non-conformance can only be created for damage or malfunction incident types.',
+          });
         }
 
         // userId 검증 (부적합 생성 시 필수)

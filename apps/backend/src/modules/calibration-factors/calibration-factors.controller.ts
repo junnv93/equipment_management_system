@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpStatus,
   UsePipes,
   BadRequestException,
@@ -26,8 +25,6 @@ import {
   ApproveCalibrationFactorValidationPipe,
   RejectCalibrationFactorValidationPipe,
 } from './dto/approve-calibration-factor.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
@@ -35,7 +32,6 @@ import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('보정계수 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('calibration-factors')
 export class CalibrationFactorsController {
   constructor(private readonly calibrationFactorsService: CalibrationFactorsService) {}
@@ -187,7 +183,10 @@ export class CalibrationFactorsController {
   > {
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     return this.calibrationFactorsService.approve(uuid, { ...approveDto, approverId });
   }
@@ -215,7 +214,10 @@ export class CalibrationFactorsController {
   > {
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     return this.calibrationFactorsService.reject(uuid, { ...rejectDto, approverId });
   }

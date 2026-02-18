@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { CalibrationService } from './calibration.service';
 import { CalibrationController } from './calibration.controller';
-import { FileUploadService } from '../equipment/services/file-upload.service';
+import { EquipmentModule } from '../equipment/equipment.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [EquipmentModule],
   controllers: [CalibrationController],
-  providers: [CalibrationService, FileUploadService],
+  providers: [CalibrationService],
   exports: [CalibrationService],
 })
 export class CalibrationModule {}

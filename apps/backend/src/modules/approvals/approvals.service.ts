@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import {
   CalibrationApprovalStatusEnum,
@@ -108,9 +108,10 @@ export class ApprovalsService {
 
     // ✅ 사용자가 존재하지 않는 경우 명확한 에러 반환
     if (!user) {
-      throw new NotFoundException(
-        `사용자를 찾을 수 없습니다 (userId: ${userId}). 세션이 만료되었거나 삭제된 계정입니다.`
-      );
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User not found (userId: ${userId}). Session may be expired or account deleted.`,
+      });
     }
 
     const userTeamId = user.teamId;
@@ -119,7 +120,7 @@ export class ApprovalsService {
 
     // Role-based category gating
     const allowedCategories = ROLE_CATEGORIES[userRole] ?? new Set();
-    const shouldQuery = (category: string) => allowedCategories.has(category);
+    const shouldQuery = (category: string): boolean => allowedCategories.has(category);
 
     // Parallel execution for efficiency (with role gating)
     const [

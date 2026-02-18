@@ -9,7 +9,6 @@ import {
   Query,
   HttpStatus,
   HttpCode,
-  UseGuards,
   UsePipes,
   ParseUUIDPipe,
   BadRequestException,
@@ -26,20 +25,27 @@ import {
 import { CheckoutsService, CheckoutWithMeta } from './checkouts.service';
 import {
   CreateCheckoutDto,
+  CreateCheckoutValidationPipe,
   UpdateCheckoutDto,
+  UpdateCheckoutValidationPipe,
   CheckoutQueryDto,
   CheckoutQueryValidationPipe,
   ApproveCheckoutDto,
+  ApproveCheckoutValidationPipe,
   RejectCheckoutDto,
+  RejectCheckoutValidationPipe,
   ReturnCheckoutDto,
+  ReturnCheckoutValidationPipe,
   ApproveReturnDto,
+  ApproveReturnValidationPipe,
   RejectReturnDto,
+  RejectReturnValidationPipe,
   StartCheckoutDto,
+  StartCheckoutValidationPipe,
   CreateConditionCheckDto,
+  CreateConditionCheckValidationPipe,
   CheckoutResponseDto,
 } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -47,13 +53,13 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('checkouts')
 export class CheckoutsController {
   constructor(private readonly checkoutsService: CheckoutsService) {}
 
   @Post()
   @RequirePermissions(Permission.CREATE_CHECKOUT)
+  @UsePipes(CreateCheckoutValidationPipe)
   @AuditLog({ action: 'create', entityType: 'checkout', entityIdPath: 'response.id' })
   @ApiOperation({ summary: '반출 신청', description: '장비 담당자만 반출을 신청할 수 있습니다.' })
   @ApiBody({ type: CreateCheckoutDto })
@@ -65,10 +71,16 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '잘못된 요청' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
-  async create(@Body() createCheckoutDto: CreateCheckoutDto, @Request() req: AuthenticatedRequest) {
+  async create(
+    @Body() createCheckoutDto: CreateCheckoutDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
     const requesterId = req.user?.userId || req.user?.sub;
     if (!requesterId) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     const userTeamId = req.user?.teamId; // 사용자 팀 ID
     // ✅ UUID 형식 검증 (서비스에서도 검증하지만, 컨트롤러에서도 사전 검증)
@@ -153,6 +165,7 @@ export class CheckoutsController {
 
   @Patch(':uuid')
   @RequirePermissions(Permission.UPDATE_CHECKOUT)
+  @UsePipes(UpdateCheckoutValidationPipe)
   @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 정보 수정',
@@ -212,12 +225,13 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
-  async remove(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  async remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
     return this.checkoutsService.remove(uuid);
   }
 
   @Patch(':uuid/approve')
   @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @UsePipes(ApproveCheckoutValidationPipe)
   @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 승인',
@@ -267,7 +281,10 @@ export class CheckoutsController {
     // 승인자 ID는 인증된 세션에서 추출 (클라이언트 입력 신뢰 금지)
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
 
     const approverTeamId = req.user?.teamId; // 승인자 팀 ID
@@ -278,6 +295,7 @@ export class CheckoutsController {
 
   @Patch(':uuid/reject')
   @RequirePermissions(Permission.REJECT_CHECKOUT)
+  @UsePipes(RejectCheckoutValidationPipe)
   @AuditLog({ action: 'reject', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({ summary: '반출 반려', description: '반출을 반려합니다. 반려 사유는 필수입니다.' })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
@@ -289,21 +307,28 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectDto: RejectCheckoutDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     // 반려 사유 필수 검증 (요구사항)
     if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
-      throw new BadRequestException('반려 사유는 필수입니다.');
+      throw new BadRequestException({
+        code: 'CHECKOUT_REJECTION_REASON_REQUIRED',
+        message: 'Rejection reason is required.',
+      });
     }
     return this.checkoutsService.reject(uuid, { ...rejectDto, approverId });
   }
 
   @Post(':uuid/start')
   @RequirePermissions(Permission.START_CHECKOUT)
+  @UsePipes(StartCheckoutValidationPipe)
   @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반출 시작',
@@ -357,6 +382,7 @@ export class CheckoutsController {
 
   @Post(':uuid/return')
   @RequirePermissions(Permission.COMPLETE_CHECKOUT)
+  @UsePipes(ReturnCheckoutValidationPipe)
   @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반입 처리',
@@ -413,13 +439,17 @@ export class CheckoutsController {
   }> {
     const returnerId = req.user?.userId || req.user?.sub;
     if (!returnerId) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     return this.checkoutsService.returnCheckout(uuid, returnDto, returnerId);
   }
 
   @Patch(':uuid/approve-return')
   @RequirePermissions(Permission.APPROVE_CHECKOUT) // 기술책임자 권한
+  @UsePipes(ApproveReturnValidationPipe)
   @AuditLog({ action: 'approve', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반입 최종 승인',
@@ -477,13 +507,17 @@ export class CheckoutsController {
     // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId });
   }
 
   @Patch(':uuid/reject-return')
   @RequirePermissions(Permission.APPROVE_CHECKOUT)
+  @UsePipes(RejectReturnValidationPipe)
   @AuditLog({ action: 'reject', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '반입 반려',
@@ -507,10 +541,13 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() rejectReturnDto: RejectReturnDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
-      throw new BadRequestException('승인자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_APPROVER_INFO_MISSING',
+        message: 'Approver information not found.',
+      });
     }
     const approverTeamId = req.user?.teamId;
     return this.checkoutsService.rejectReturn(uuid, {
@@ -522,6 +559,7 @@ export class CheckoutsController {
 
   @Post(':uuid/condition-check')
   @RequirePermissions(Permission.COMPLETE_CHECKOUT)
+  @UsePipes(CreateConditionCheckValidationPipe)
   @AuditLog({ action: 'update', entityType: 'checkout', entityIdPath: 'params.uuid' })
   @ApiOperation({
     summary: '상태 확인 등록 (대여 목적)',
@@ -539,10 +577,13 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() dto: CreateConditionCheckDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     const checkerId = req.user?.userId || req.user?.sub;
     if (!checkerId) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     return this.checkoutsService.submitConditionCheck(uuid, dto, checkerId);
   }
@@ -555,7 +596,7 @@ export class CheckoutsController {
   })
   @ApiParam({ name: 'uuid', description: '반출 UUID', type: String, format: 'uuid' })
   @ApiResponse({ status: HttpStatus.OK, description: '상태 확인 이력 조회 성공' })
-  async getConditionChecks(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  async getConditionChecks(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
     return this.checkoutsService.getConditionChecks(uuid);
   }
 
@@ -570,7 +611,7 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.OK, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async cancel(@Param('uuid', ParseUUIDPipe) uuid: string) {
+  async cancel(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
     return this.checkoutsService.cancel(uuid);
   }
 }

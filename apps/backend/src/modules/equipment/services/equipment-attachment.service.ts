@@ -87,7 +87,10 @@ export class EquipmentAttachmentService {
     });
 
     if (!attachment) {
-      throw new NotFoundException(`첨부 파일 UUID ${uuid}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'ATTACHMENT_NOT_FOUND',
+        message: `Attachment UUID ${uuid} not found.`,
+      });
     }
 
     return attachment;

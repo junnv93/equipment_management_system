@@ -16,7 +16,7 @@ export const createSoftwareChangeSchema = z.object({
   previousVersion: z.string().max(50, '이전 버전은 50자 이하여야 합니다').optional(),
   newVersion: z.string().min(1, '새 버전을 입력해주세요').max(50, '새 버전은 50자 이하여야 합니다'),
   verificationRecord: z.string().min(1, '검증 기록은 필수입니다'),
-  changedBy: z.string().uuid({ message: '유효한 변경자 UUID가 아닙니다' }),
+  // changedBy는 서버에서 req.user.userId로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
 });
 
 export type CreateSoftwareChangeInput = z.infer<typeof createSoftwareChangeSchema>;
@@ -55,10 +55,4 @@ export class CreateSoftwareChangeDto {
     example: '변경 후 테스트 완료. 기존 측정 결과와 비교하여 0.1dB 이내 차이 확인.',
   })
   verificationRecord: string;
-
-  @ApiProperty({
-    description: '변경자 UUID',
-    example: '550e8400-e29b-41d4-a716-446655440003',
-  })
-  changedBy: string;
 }

@@ -1,4 +1,5 @@
 import type { EquipmentImport } from '@equipment-management/db/schema/equipment-imports';
+import type { Team } from '@equipment-management/db/schema/teams';
 import type { EquipmentImportSource } from '@equipment-management/schemas';
 
 /**
@@ -79,6 +80,32 @@ export function getOwnerName(equipmentImport: EquipmentImport): string {
   }
   throw new Error(`Unknown source type: ${equipmentImport.sourceType}`);
 }
+
+/** 장비 반입 목록 단건 (findAll 관계 포함 반환 타입) */
+export type EquipmentImportListItem = EquipmentImport & {
+  requester: {
+    id: string;
+    name: string;
+    email: string;
+    team: Team | null;
+  } | null;
+  team: Team | null;
+  approver: { id: string; name: string; email: string } | null;
+  receiver: { id: string; name: string; email: string } | null;
+  equipment: { id: string; name: string; managementNumber: string } | null;
+};
+
+/** 장비 반입 목록 결과 (findAll 반환 타입) */
+export type EquipmentImportListResult = {
+  items: EquipmentImportListItem[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+  };
+};
 
 /**
  * Get sharedSource value for equipment registration based on source type

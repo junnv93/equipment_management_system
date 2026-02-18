@@ -1,7 +1,6 @@
-import { ApiProperty, PartialType, OmitType } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { CreateCheckoutDto } from './create-checkout.dto';
 // ✅ Single Source of Truth: enums.ts에서 import
 import { CheckoutStatus, CHECKOUT_STATUS_VALUES } from '@equipment-management/schemas';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';

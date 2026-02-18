@@ -1,10 +1,8 @@
-import { Controller, Get, UseGuards, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Permission } from '@equipment-management/shared-constants';
 import { DisposalService } from './services/disposal.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../types/auth';
 
 /**
@@ -16,7 +14,6 @@ import { AuthenticatedRequest } from '../../types/auth';
  */
 @ApiTags('폐기 요청 목록')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('disposal-requests')
 export class DisposalRequestsController {
   constructor(private readonly disposalService: DisposalService) {}

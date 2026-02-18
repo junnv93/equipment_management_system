@@ -1,8 +1,14 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, count, gte, lte } from 'drizzle-orm';
+import { eq, and, count, gte, lte, desc, inArray, sql, SQL } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
-import { UserRole } from '@equipment-management/schemas';
+import {
+  UserRole,
+  AUDIT_TO_ACTIVITY_TYPE,
+  RENTAL_ACTIVITY_TYPE_OVERRIDES,
+  AUDIT_ACTION_LABELS,
+  AUDIT_ENTITY_TYPE_LABELS,
+} from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import {
   DashboardSummaryDto,
@@ -80,11 +86,20 @@ export class DashboardService {
 
         const availableEquipment = availableResult?.count || 0;
 
-        // 활성 반출 수 (checkouts 테이블 - 대여 포함)
+        // 활성 반출 수 (checkouts → checkoutItems → equipment 조인, site/team 필터 적용)
+        // COUNT(DISTINCT checkouts.id): checkoutItems 복수로 인한 중복 카운트 방지
         const [checkoutResult] = await this.db
-          .select({ count: count() })
+          .select({ count: sql<number>`COUNT(DISTINCT ${schema.checkouts.id})` })
           .from(schema.checkouts)
-          .where(eq(schema.checkouts.status, 'checked_out'));
+          .innerJoin(schema.checkoutItems, eq(schema.checkouts.id, schema.checkoutItems.checkoutId))
+          .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+          .where(
+            and(
+              eq(schema.checkouts.status, 'checked_out'),
+              teamId ? eq(schema.equipment.teamId, teamId) : undefined,
+              site ? eq(schema.equipment.site, site) : undefined
+            )
+          );
 
         const activeCheckouts = checkoutResult?.count || 0;
 
@@ -349,17 +364,126 @@ export class DashboardService {
   }
 
   /**
-   * 최근 활동 내역 조회 (기본 구현 - 빈 배열 반환)
+   * 최근 활동 내역 조회
+   *
+   * 감사 로그(audit_logs)를 기반으로 7일 이내 활동을 조회합니다.
+   * - entityType: equipment, calibration, checkout만 표시 (대시보드 관련)
+   * - action: create, approve, reject만 표시 (update는 너무 빈번/모호)
+   * - checkout LEFT JOIN으로 purpose 기반 rental/checkout 분기
+   * - RBAC: 역할별로 본인/팀/사이트/전체 스코프 필터링
    */
   async getRecentActivities(
-    _userId: string,
-    _userRole: UserRole,
-    _limit: number,
-    _teamId?: string,
-    _site?: string
+    userId: string,
+    userRole: UserRole,
+    limit = 20,
+    teamId?: string,
+    site?: string
   ): Promise<RecentActivityDto[]> {
-    // 감사 로그 기능 구현 전까지 빈 배열 반환 — DB 쿼리 없으므로 캐싱 불필요
-    return [];
+    const cacheKey = `dashboard:recentActivities:${userRole}:${site || 'all'}:${teamId || 'all'}:${userId}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // RBAC 조건 빌드
+        const rbacConditions: SQL[] = [];
+        if (userRole === 'test_engineer') {
+          // test_engineer: 본인 활동만
+          rbacConditions.push(eq(schema.auditLogs.userId, userId));
+        } else if (userRole === 'technical_manager' && teamId) {
+          // technical_manager: 팀 내 활동
+          rbacConditions.push(eq(schema.auditLogs.userTeamId, teamId));
+        } else if ((userRole === 'quality_manager' || userRole === 'lab_manager') && site) {
+          // quality_manager/lab_manager: 사이트 내 활동
+          rbacConditions.push(eq(schema.auditLogs.userSite, site));
+        }
+        // system_admin: 조건 없음 (전체 조회)
+
+        // audit_logs 쿼리 (checkouts LEFT JOIN으로 purpose 추출)
+        const results = await this.db
+          .select({
+            id: schema.auditLogs.id,
+            action: schema.auditLogs.action,
+            entityType: schema.auditLogs.entityType,
+            entityId: schema.auditLogs.entityId,
+            entityName: schema.auditLogs.entityName,
+            userId: schema.auditLogs.userId,
+            userName: schema.auditLogs.userName,
+            timestamp: schema.auditLogs.timestamp,
+            details: schema.auditLogs.details,
+            checkoutPurpose: schema.checkouts.purpose,
+          })
+          .from(schema.auditLogs)
+          .leftJoin(
+            schema.checkouts,
+            and(
+              eq(schema.auditLogs.entityType, 'checkout'),
+              eq(schema.auditLogs.entityId, schema.checkouts.id)
+            )
+          )
+          .where(
+            and(
+              gte(schema.auditLogs.timestamp, sevenDaysAgo),
+              inArray(schema.auditLogs.entityType, [
+                'equipment',
+                'calibration',
+                'checkout',
+                'non_conformance',
+                'calibration_plan',
+              ]),
+              inArray(schema.auditLogs.action, ['create', 'update', 'approve', 'reject']),
+              ...rbacConditions
+            )
+          )
+          .orderBy(desc(schema.auditLogs.timestamp))
+          .limit(limit);
+
+        // 결과 변환
+        return results.map((row) => {
+          const actionKey = `${row.action}:${row.entityType}`;
+          let activityType = AUDIT_TO_ACTIVITY_TYPE[actionKey] || 'unknown';
+
+          // rental purpose면 오버라이드
+          if (row.entityType === 'checkout' && row.checkoutPurpose === 'rental') {
+            activityType = RENTAL_ACTIVITY_TYPE_OVERRIDES[activityType] || activityType;
+          }
+
+          const details = this.formatActivityDetails(
+            row.action,
+            row.entityType,
+            row.entityName || ''
+          );
+
+          return {
+            id: row.id,
+            type: activityType,
+            equipmentId: row.entityType === 'equipment' ? row.entityId : '',
+            equipmentName: row.entityName || '',
+            userId: row.userId,
+            userName: row.userName,
+            timestamp: row.timestamp.toISOString(),
+            details,
+            entityId: row.entityId,
+            entityName: row.entityName || '',
+          };
+        });
+      },
+      DASHBOARD_CACHE_TTL
+    );
+  }
+
+  /**
+   * 활동 상세 메시지 포매팅 (한국어)
+   */
+  private formatActivityDetails(action: string, entityType: string, entityName: string): string {
+    const actionLabel = AUDIT_ACTION_LABELS[action] || action;
+    const entityLabel = AUDIT_ENTITY_TYPE_LABELS[entityType] || entityType;
+
+    if (entityName) {
+      return `${entityLabel} "${entityName}" ${actionLabel}`;
+    }
+    return `${entityLabel} ${actionLabel}`;
   }
 
   /**

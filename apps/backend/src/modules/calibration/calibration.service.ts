@@ -213,7 +213,10 @@ export class CalibrationService extends VersionedBaseService {
           .limit(1);
 
         if (!row) {
-          throw new NotFoundException(`교정 ID ${id}를 찾을 수 없습니다.`);
+          throw new NotFoundException({
+            code: 'CALIBRATION_NOT_FOUND',
+            message: `Calibration ID ${id} not found`,
+          });
         }
 
         return this.transformDbToRecord(row);
@@ -330,7 +333,7 @@ export class CalibrationService extends VersionedBaseService {
           id,
           updateCalibrationDto.version,
           updateData,
-          '교정 기록'
+          'Calibration record'
         );
       } catch (error) {
         // ✅ CAS 캐시 정합성: 409 시 stale 캐시 제거
@@ -348,7 +351,10 @@ export class CalibrationService extends VersionedBaseService {
         .returning();
 
       if (!updated) {
-        throw new NotFoundException(`교정 ID ${id}를 찾을 수 없습니다.`);
+        throw new NotFoundException({
+          code: 'CALIBRATION_NOT_FOUND',
+          message: `Calibration ID ${id} not found`,
+        });
       }
     }
 
@@ -771,7 +777,10 @@ export class CalibrationService extends VersionedBaseService {
     const calibration = await this.findOne(id);
 
     if (calibration.status !== 'scheduled' && calibration.status !== 'in_progress') {
-      throw new BadRequestException('예정되었거나 진행 중인 교정만 완료 처리할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_INVALID_STATUS_FOR_COMPLETE',
+        message: 'Only scheduled or in-progress calibrations can be completed.',
+      });
     }
 
     return this.update(id, {
@@ -900,7 +909,10 @@ export class CalibrationService extends VersionedBaseService {
     const calibration = await this.findOne(id);
 
     if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
-      throw new BadRequestException('승인 대기 상태인 교정만 승인할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_ONLY_PENDING_CAN_APPROVE',
+        message: 'Only pending calibrations can be approved.',
+      });
     }
 
     // ✅ CAS: DB 기반 optimistic locking
@@ -914,7 +926,7 @@ export class CalibrationService extends VersionedBaseService {
           approvedBy: approveDto.approverId,
           approverComment: approveDto.approverComment,
         },
-        '교정 기록'
+        'Calibration record'
       );
     } catch (error) {
       // ✅ CAS 캐시 정합성: 409 시 stale 캐시 제거 (checkout 패턴)
@@ -1080,11 +1092,17 @@ export class CalibrationService extends VersionedBaseService {
     const calibration = await this.findOne(id);
 
     if (calibration.approvalStatus !== CalibrationApprovalStatusEnum.enum.pending_approval) {
-      throw new BadRequestException('승인 대기 상태인 교정만 반려할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_ONLY_PENDING_CAN_REJECT',
+        message: 'Only pending calibrations can be rejected.',
+      });
     }
 
     if (!rejectDto.rejectionReason) {
-      throw new BadRequestException('반려 사유는 필수입니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_REJECTION_REASON_REQUIRED',
+        message: 'Rejection reason is required.',
+      });
     }
 
     // ✅ CAS: DB 기반 optimistic locking
@@ -1098,7 +1116,7 @@ export class CalibrationService extends VersionedBaseService {
           approvedBy: rejectDto.approverId,
           rejectionReason: rejectDto.rejectionReason,
         },
-        '교정 기록'
+        'Calibration record'
       );
     } catch (error) {
       // ✅ CAS 캐시 정합성: 409 시 stale 캐시 제거
@@ -1183,7 +1201,10 @@ export class CalibrationService extends VersionedBaseService {
     const calibration = await this.findOne(id);
 
     if (!calibration.intermediateCheckDate) {
-      throw new BadRequestException('이 교정에는 중간점검이 예정되어 있지 않습니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_NO_INTERMEDIATE_CHECK',
+        message: 'No intermediate check is scheduled for this calibration.',
+      });
     }
 
     const now = new Date();

@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   ClassificationEnum, // ← TeamTypeEnum → ClassificationEnum
-  CLASSIFICATION_LABELS, // ← SSOT import
   SiteEnum,
   type Classification, // ← TeamType → Classification
   type ClassificationCode,

@@ -3,6 +3,9 @@ import { CalibrationFactorsController } from '../calibration-factors.controller'
 import { CalibrationFactorsService } from '../calibration-factors.service';
 import { CalibrationFactorTypeValues } from '../dto/create-calibration-factor.dto';
 import { CalibrationFactorApprovalStatusValues } from '../dto/calibration-factor-query.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { createMockPermissionsGuard } from '../../../common/testing/mock-providers';
 
 // Backward compatibility aliases for test
 const CalibrationFactorType = CalibrationFactorTypeValues;
@@ -33,7 +36,12 @@ describe('CalibrationFactorsController', () => {
           useValue: mockCalibrationFactorsService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(PermissionsGuard)
+      .useValue(createMockPermissionsGuard())
+      .compile();
 
     controller = module.get<CalibrationFactorsController>(CalibrationFactorsController);
     service = module.get<CalibrationFactorsService>(CalibrationFactorsService);
@@ -205,6 +213,7 @@ describe('CalibrationFactorsController', () => {
       const approveDto = {
         approverComment: '검토 완료',
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockReq = { user: { userId: approverId } } as any;
 
       const expectedResult = {
@@ -216,6 +225,7 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.approve.mockResolvedValue(expectedResult);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await controller.approve(uuid, approveDto as any, mockReq);
 
       expect(service.approve).toHaveBeenCalledWith(uuid, { ...approveDto, approverId });
@@ -231,6 +241,7 @@ describe('CalibrationFactorsController', () => {
       const rejectDto = {
         rejectionReason: '값이 범위를 벗어남',
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockReq = { user: { userId: approverId } } as any;
 
       const expectedResult = {
@@ -242,6 +253,7 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.reject.mockResolvedValue(expectedResult);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await controller.reject(uuid, rejectDto as any, mockReq);
 
       expect(service.reject).toHaveBeenCalledWith(uuid, { ...rejectDto, approverId });

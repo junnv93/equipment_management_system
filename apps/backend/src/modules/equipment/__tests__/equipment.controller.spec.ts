@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EquipmentController } from '../equipment.controller';
 import { EquipmentService } from '../equipment.service';
 import { EquipmentApprovalService } from '../services/equipment-approval.service';
-import { FileUploadService } from '../services/file-upload.service';
 import { EquipmentAttachmentService } from '../services/equipment-attachment.service';
 import { CreateEquipmentDto } from '../dto/create-equipment.dto';
 import { EquipmentQueryDto } from '../dto/equipment-query.dto';
@@ -11,6 +10,7 @@ import { EquipmentStatus } from '@equipment-management/schemas';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/guards/permissions.guard';
+import { InternalApiKeyGuard } from '../../../common/guards/internal-api-key.guard';
 import { AuthenticatedRequest } from '../../../types/common.types';
 
 // 테스트용 mock request 타입 (AuthenticatedRequest의 부분 구현)
@@ -39,6 +39,7 @@ describe('EquipmentController', () => {
     needsIntermediateCheck: false,
     calibrationMethod: null,
     teamId: null,
+    teamName: null,
     managerId: null,
     purchaseDate: null,
     price: null,
@@ -56,6 +57,7 @@ describe('EquipmentController', () => {
     site: 'suwon', // 사이트 정보
     createdAt: new Date(),
     updatedAt: new Date(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 
   const mockEquipmentList = {
@@ -95,14 +97,6 @@ describe('EquipmentController', () => {
           },
         },
         {
-          provide: FileUploadService,
-          useValue: {
-            saveFile: jest.fn(),
-            deleteFile: jest.fn(),
-            getFilePath: jest.fn(),
-          },
-        },
-        {
           provide: EquipmentAttachmentService,
           useValue: {
             createAttachment: jest.fn(),
@@ -111,20 +105,15 @@ describe('EquipmentController', () => {
             deleteAttachment: jest.fn(),
           },
         },
-        {
-          provide: JwtAuthGuard,
-          useValue: {
-            canActivate: jest.fn().mockImplementation(() => true),
-          },
-        },
-        {
-          provide: PermissionsGuard,
-          useValue: {
-            canActivate: jest.fn().mockImplementation(() => true),
-          },
-        },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(PermissionsGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .overrideGuard(InternalApiKeyGuard)
+      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .compile();
 
     controller = module.get<EquipmentController>(EquipmentController);
     equipmentService = module.get<EquipmentService>(EquipmentService);
@@ -186,6 +175,7 @@ describe('EquipmentController', () => {
         approvalStatus: 'pending_approval',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       jest.spyOn(approvalService, 'createEquipmentRequest').mockResolvedValue(mockRequest as any);
 
       // Act - 일반 사용자로 승인 요청 생성
@@ -245,6 +235,7 @@ describe('EquipmentController', () => {
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);
 
       // Act
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockReq = { user: { site: undefined, roles: [] } } as any;
       const result = await controller.findAll(query, mockReq);
 
@@ -266,6 +257,7 @@ describe('EquipmentController', () => {
       // Act
       const result = await controller.findAll(query, {
         user: { site: undefined, roles: [] },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       // Assert
@@ -278,6 +270,7 @@ describe('EquipmentController', () => {
     it('should return an equipment by ID', async () => {
       // Arrange
       const id = '1';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockReq = { user: { site: 'suwon', roles: ['technical_manager'] } } as any;
 
       jest.spyOn(equipmentService, 'findOne').mockResolvedValue(mockEquipment);
@@ -287,7 +280,7 @@ describe('EquipmentController', () => {
 
       // Assert
       expect(result).toEqual(mockEquipment);
-      expect(equipmentService.findOne).toHaveBeenCalledWith(id);
+      expect(equipmentService.findOne).toHaveBeenCalledWith(id, true);
     });
 
     it('should throw NotFoundException when equipment does not exist', async () => {
@@ -299,9 +292,10 @@ describe('EquipmentController', () => {
         .mockRejectedValue(new NotFoundException('장비를 찾을 수 없습니다.'));
 
       // Act & Assert
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockReq = { user: { site: 'suwon', roles: ['technical_manager'] } } as any;
       await expect(controller.findOne(id, mockReq)).rejects.toThrow(NotFoundException);
-      expect(equipmentService.findOne).toHaveBeenCalledWith(id);
+      expect(equipmentService.findOne).toHaveBeenCalledWith(id, true);
     });
   });
 
@@ -309,6 +303,7 @@ describe('EquipmentController', () => {
     it('should update an equipment (admin direct approval)', async () => {
       // Arrange
       const uuid = 'test-uuid';
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       const updateEquipmentDto = {
         name: '업데이트된 장비명',
         location: '새로운 위치',
@@ -319,6 +314,7 @@ describe('EquipmentController', () => {
         ...mockEquipment,
         ...updateEquipmentDto,
       } as any;
+      /* eslint-enable @typescript-eslint/no-explicit-any */
 
       // 공용장비 체크를 위한 findOne mock
       jest.spyOn(equipmentService, 'findOne').mockResolvedValue(mockEquipment);
@@ -342,9 +338,11 @@ describe('EquipmentController', () => {
     it('should throw NotFoundException when equipment does not exist', async () => {
       // Arrange
       const uuid = '999';
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       const updateEquipmentDto = {
         name: '업데이트된 장비명',
       } as any;
+      /* eslint-enable @typescript-eslint/no-explicit-any */
 
       // findOne에서 먼저 NotFoundException 발생
       jest

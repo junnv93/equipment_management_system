@@ -1,17 +1,5 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Body,
-  Query,
-  Request,
-  UseGuards,
-  UsePipes,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Body, Query, Request, UsePipes, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -28,7 +16,6 @@ import {
 
 @ApiTags('설정 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
@@ -42,7 +29,7 @@ export class SettingsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '교정 알림 설정 조회 성공' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION)
-  async getCalibrationSettings(@Query('site') site?: string) {
+  async getCalibrationSettings(@Query('site') site?: string): Promise<unknown> {
     const alertDays = await this.settingsService.getCalibrationAlertDays(site);
     return { alertDays };
   }
@@ -60,7 +47,7 @@ export class SettingsController {
     @Body() dto: UpdateCalibrationSettingsDto,
     @Request() req: AuthenticatedRequest,
     @Query('site') site?: string
-  ) {
+  ): Promise<unknown> {
     const alertDays = await this.settingsService.updateCalibrationAlertDays(
       dto.alertDays,
       req.user.userId,
@@ -78,7 +65,7 @@ export class SettingsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '시스템 설정 조회 성공' })
   @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
-  async getSystemSettings() {
+  async getSystemSettings(): Promise<unknown> {
     return this.settingsService.getSystemSettings();
   }
 
@@ -94,7 +81,7 @@ export class SettingsController {
   async updateSystemSettings(
     @Body() dto: UpdateSystemSettingsDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     return this.settingsService.updateSystemSettings(dto, req.user.userId);
   }
 }

@@ -5,14 +5,11 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
+  ParseUUIDPipe,
   Request,
   HttpStatus,
-  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -32,7 +29,6 @@ import {
 
 @ApiTags('Equipment History')
 @Controller('equipment')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class EquipmentHistoryController {
   constructor(private readonly equipmentHistoryService: EquipmentHistoryService) {}
@@ -40,6 +36,7 @@ export class EquipmentHistoryController {
   // ===================== 위치 변동 이력 =====================
 
   @Get(':uuid/location-history')
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @ApiOperation({ summary: '장비 위치 변동 이력 조회' })
   @ApiParam({ name: 'uuid', description: '장비 UUID' })
   @ApiResponse({
@@ -48,7 +45,7 @@ export class EquipmentHistoryController {
     type: [LocationHistoryResponseDto],
   })
   async getLocationHistory(
-    @Param('uuid') equipmentUuid: string
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string
   ): Promise<LocationHistoryResponseDto[]> {
     return this.equipmentHistoryService.getLocationHistory(equipmentUuid);
   }
@@ -68,7 +65,7 @@ export class EquipmentHistoryController {
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
   @AuditLog({ action: 'create', entityType: 'location_history', entityIdPath: 'params.uuid' })
   async createLocationHistory(
-    @Param('uuid') equipmentUuid: string,
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
     @Body(CreateLocationHistoryValidationPipe) dto: CreateLocationHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<LocationHistoryResponseDto> {
@@ -82,13 +79,14 @@ export class EquipmentHistoryController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
   @RequirePermissions(Permission.DELETE_EQUIPMENT)
   @AuditLog({ action: 'delete', entityType: 'location_history', entityIdPath: 'params.historyId' })
-  async deleteLocationHistory(@Param('historyId') historyId: string): Promise<void> {
+  async deleteLocationHistory(@Param('historyId', ParseUUIDPipe) historyId: string): Promise<void> {
     return this.equipmentHistoryService.deleteLocationHistory(historyId);
   }
 
   // ===================== 유지보수 내역 =====================
 
   @Get(':uuid/maintenance-history')
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @ApiOperation({ summary: '장비 유지보수 내역 조회' })
   @ApiParam({ name: 'uuid', description: '장비 UUID' })
   @ApiResponse({
@@ -97,7 +95,7 @@ export class EquipmentHistoryController {
     type: [MaintenanceHistoryResponseDto],
   })
   async getMaintenanceHistory(
-    @Param('uuid') equipmentUuid: string
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string
   ): Promise<MaintenanceHistoryResponseDto[]> {
     return this.equipmentHistoryService.getMaintenanceHistory(equipmentUuid);
   }
@@ -117,7 +115,7 @@ export class EquipmentHistoryController {
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
   @AuditLog({ action: 'create', entityType: 'maintenance_history', entityIdPath: 'params.uuid' })
   async createMaintenanceHistory(
-    @Param('uuid') equipmentUuid: string,
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
     @Body(CreateMaintenanceHistoryValidationPipe) dto: CreateMaintenanceHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<MaintenanceHistoryResponseDto> {
@@ -135,13 +133,16 @@ export class EquipmentHistoryController {
     entityType: 'maintenance_history',
     entityIdPath: 'params.historyId',
   })
-  async deleteMaintenanceHistory(@Param('historyId') historyId: string): Promise<void> {
+  async deleteMaintenanceHistory(
+    @Param('historyId', ParseUUIDPipe) historyId: string
+  ): Promise<void> {
     return this.equipmentHistoryService.deleteMaintenanceHistory(historyId);
   }
 
   // ===================== 손상/오작동/변경/수리 내역 =====================
 
   @Get(':uuid/incident-history')
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @ApiOperation({ summary: '장비 손상/오작동/변경/수리 내역 조회' })
   @ApiParam({ name: 'uuid', description: '장비 UUID' })
   @ApiResponse({
@@ -150,7 +151,7 @@ export class EquipmentHistoryController {
     type: [IncidentHistoryResponseDto],
   })
   async getIncidentHistory(
-    @Param('uuid') equipmentUuid: string
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string
   ): Promise<IncidentHistoryResponseDto[]> {
     return this.equipmentHistoryService.getIncidentHistory(equipmentUuid);
   }
@@ -170,7 +171,7 @@ export class EquipmentHistoryController {
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
   @AuditLog({ action: 'create', entityType: 'incident_history', entityIdPath: 'params.uuid' })
   async createIncidentHistory(
-    @Param('uuid') equipmentUuid: string,
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
     @Body(CreateIncidentHistoryValidationPipe) dto: CreateIncidentHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<IncidentHistoryResponseDto> {
@@ -184,7 +185,7 @@ export class EquipmentHistoryController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '삭제 성공' })
   @RequirePermissions(Permission.DELETE_EQUIPMENT)
   @AuditLog({ action: 'delete', entityType: 'incident_history', entityIdPath: 'params.historyId' })
-  async deleteIncidentHistory(@Param('historyId') historyId: string): Promise<void> {
+  async deleteIncidentHistory(@Param('historyId', ParseUUIDPipe) historyId: string): Promise<void> {
     return this.equipmentHistoryService.deleteIncidentHistory(historyId);
   }
 }

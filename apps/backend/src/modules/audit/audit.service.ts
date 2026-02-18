@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '@equipment-management/db/schema';
@@ -297,5 +298,41 @@ export class AuditService {
     }
 
     return `${formattedDate}, ${log.userName}(${roleName})이 ${entityTypeName}(${log.entityId})을(를) '${actionName}'함.`;
+  }
+
+  /**
+   * 인증 실패 감사 이벤트 리스너
+   *
+   * 로그인 실패, 리프레시 토큰 거부 등 보안 관련 이벤트를 감사 로그에 기록합니다.
+   * 비동기로 처리하여 인증 흐름에 영향을 주지 않습니다.
+   */
+  @OnEvent('audit.auth.failed', { async: true })
+  async handleAuthFailed(payload: {
+    event: string;
+    email?: string;
+    reason: string;
+    timestamp: string;
+    sessionAge?: number;
+  }): Promise<void> {
+    try {
+      await this.create({
+        userId: 'system',
+        userName: payload.email ?? 'unknown',
+        userRole: 'system',
+        action: payload.event,
+        entityType: 'auth',
+        entityId: payload.email ?? 'unknown',
+        details: {
+          reason: payload.reason,
+          ...(payload.sessionAge !== undefined && { sessionAge: payload.sessionAge }),
+        } as AuditLogDetails,
+      });
+
+      this.logger.warn(
+        `[SECURITY] Auth failed: ${payload.event} - ${payload.reason} (email: ${payload.email ?? 'unknown'})`
+      );
+    } catch (error) {
+      this.logger.error(`Failed to log auth failure event: ${error}`);
+    }
   }
 }

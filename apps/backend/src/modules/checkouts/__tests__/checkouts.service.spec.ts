@@ -3,6 +3,8 @@ import { CheckoutsService } from '../checkouts.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { EquipmentService } from '../../equipment/equipment.service';
 import { TeamsService } from '../../teams/teams.service';
+import { EquipmentImportsService } from '../../equipment-imports/equipment-imports.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('CheckoutsService', () => {
@@ -80,6 +82,23 @@ describe('CheckoutsService', () => {
         {
           provide: TeamsService,
           useValue: mockTeamsService,
+        },
+        {
+          provide: EquipmentImportsService,
+          useValue: {
+            findOne: jest.fn(),
+            findAll: jest.fn(),
+            create: jest.fn(),
+            updateStatus: jest.fn(),
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+            emitAsync: jest.fn().mockResolvedValue([]),
+            on: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -258,8 +277,10 @@ describe('CheckoutsService', () => {
       };
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
-      mockDrizzle.limit.mockResolvedValueOnce([mockPendingCheckout]);
+      mockDrizzle.limit.mockResolvedValueOnce([mockPendingCheckout]); // findOne
       mockDrizzle.returning.mockResolvedValue([mockRejectedCheckout]);
+      // getAffectedTeamIds: select().from().where().limit(1)
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
       mockCacheService.deleteByPattern.mockResolvedValue(undefined);
 
       const result = await service.reject(checkoutId, mockRejectDto);
@@ -307,8 +328,10 @@ describe('CheckoutsService', () => {
       };
 
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
-      mockDrizzle.limit.mockResolvedValueOnce([mockCheckedOutCheckout]);
+      mockDrizzle.limit.mockResolvedValueOnce([mockCheckedOutCheckout]); // findOne
       mockDrizzle.returning.mockResolvedValue([mockReturnedCheckout]);
+      // getAffectedTeamIds: select().from().where().limit(1)
+      mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
       mockCacheService.deleteByPattern.mockResolvedValue(undefined);
 
       const result = await service.returnCheckout(checkoutId, mockReturnDto, returnerId);

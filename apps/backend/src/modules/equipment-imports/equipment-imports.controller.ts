@@ -7,7 +7,6 @@ import {
   Param,
   Query,
   HttpStatus,
-  UseGuards,
   ParseUUIDPipe,
   Request,
   UsePipes,
@@ -15,7 +14,6 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { EquipmentImportsService } from './equipment-imports.service';
 import {
-  CreateEquipmentImportDto,
   CreateEquipmentImportInput,
   CreateEquipmentImportValidationPipe,
   ApproveEquipmentImportDto,
@@ -27,8 +25,6 @@ import {
   EquipmentImportQueryDto,
   EquipmentImportQueryValidationPipe,
 } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -36,7 +32,6 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('장비 반입 관리 (렌탈 + 내부 공용)')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('equipment-imports')
 export class EquipmentImportsController {
   constructor(private readonly equipmentImportsService: EquipmentImportsService) {}
@@ -54,7 +49,10 @@ export class EquipmentImportsController {
     status: HttpStatus.CREATED,
     description: '반입 신청 성공',
   })
-  async create(@Body() dto: CreateEquipmentImportInput, @Request() req: AuthenticatedRequest) {
+  async create(
+    @Body() dto: CreateEquipmentImportInput,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
     return this.equipmentImportsService.create(
       dto,
       req.user.userId,
@@ -71,7 +69,7 @@ export class EquipmentImportsController {
     description: 'sourceType 필터로 렌탈/내부공용 구분 조회 가능',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '목록 조회 성공' })
-  async findAll(@Query() query: EquipmentImportQueryDto) {
+  async findAll(@Query() query: EquipmentImportQueryDto): Promise<unknown> {
     return this.equipmentImportsService.findAll(query);
   }
 
@@ -80,7 +78,7 @@ export class EquipmentImportsController {
   @ApiOperation({ summary: '장비 반입 상세 조회' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '상세 조회 성공' })
-  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<unknown> {
     return this.equipmentImportsService.findOne(id);
   }
 
@@ -95,7 +93,7 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ApproveEquipmentImportDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     return this.equipmentImportsService.approve(id, req.user.userId, dto);
   }
 
@@ -110,7 +108,7 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RejectEquipmentImportDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     return this.equipmentImportsService.reject(id, req.user.userId, dto);
   }
 
@@ -131,7 +129,7 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body(ReceiveEquipmentImportValidationPipe) dto: ReceiveEquipmentImportDto,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     return this.equipmentImportsService.receive(id, req.user.userId, dto);
   }
 
@@ -151,7 +149,7 @@ export class EquipmentImportsController {
   async initiateReturn(
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest
-  ) {
+  ): Promise<unknown> {
     return this.equipmentImportsService.initiateReturn(id, req.user.userId, req.user.teamId);
   }
 
@@ -161,7 +159,10 @@ export class EquipmentImportsController {
   @ApiOperation({ summary: '장비 반입 취소' })
   @ApiParam({ name: 'id', description: '장비 반입 UUID' })
   @ApiResponse({ status: HttpStatus.OK, description: '취소 성공' })
-  async cancel(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
+  async cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
     return this.equipmentImportsService.cancel(id, req.user.userId);
   }
 }

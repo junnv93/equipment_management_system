@@ -1,14 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Inject,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and, desc, like, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
-import { CreateSoftwareChangeDto } from './dto/create-software-change.dto';
+import { CreateSoftwareChangeInput } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
 import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve-software.dto';
 import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
@@ -40,10 +34,16 @@ export class SoftwareService extends VersionedBaseService {
   /**
    * 소프트웨어 변경 요청 (상태: pending)
    */
-  async create(createDto: CreateSoftwareChangeDto): Promise<schema.SoftwareHistory> {
+  async create(
+    createDto: CreateSoftwareChangeInput,
+    changedBy: string
+  ): Promise<schema.SoftwareHistory> {
     // 검증 기록 필수 확인
     if (!createDto.verificationRecord || createDto.verificationRecord.trim() === '') {
-      throw new BadRequestException('검증 기록은 필수입니다.');
+      throw new BadRequestException({
+        code: 'SOFTWARE_VERIFICATION_REQUIRED',
+        message: 'Verification record is required.',
+      });
     }
 
     // 장비 존재 여부 확인
@@ -54,7 +54,10 @@ export class SoftwareService extends VersionedBaseService {
       .limit(1);
 
     if (!equipment) {
-      throw new NotFoundException(`장비 UUID ${createDto.equipmentId}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment UUID ${createDto.equipmentId} not found`,
+      });
     }
 
     const [newRecord] = await this.db
@@ -64,7 +67,7 @@ export class SoftwareService extends VersionedBaseService {
         softwareName: createDto.softwareName,
         previousVersion: createDto.previousVersion || null,
         newVersion: createDto.newVersion,
-        changedBy: createDto.changedBy,
+        changedBy: changedBy,
         verificationRecord: createDto.verificationRecord,
         approvalStatus: SoftwareApprovalStatus.PENDING,
       })
@@ -194,7 +197,10 @@ export class SoftwareService extends VersionedBaseService {
       .limit(1);
 
     if (!record) {
-      throw new NotFoundException(`소프트웨어 변경 이력 UUID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'SOFTWARE_HISTORY_NOT_FOUND',
+        message: `Software change history UUID ${id} not found`,
+      });
     }
 
     return record;
@@ -265,9 +271,10 @@ export class SoftwareService extends VersionedBaseService {
       .orderBy(desc(schema.softwareHistory.approvedAt));
 
     if (records.length === 0) {
-      throw new NotFoundException(
-        `소프트웨어 "${softwareName}"을(를) 사용하는 장비를 찾을 수 없습니다.`
-      );
+      throw new NotFoundException({
+        code: 'SOFTWARE_EQUIPMENT_NOT_FOUND',
+        message: `No equipment found using software "${softwareName}"`,
+      });
     }
 
     // Get unique equipment IDs
@@ -336,7 +343,10 @@ export class SoftwareService extends VersionedBaseService {
     const record = await this.findOne(id);
 
     if (record.approvalStatus !== SoftwareApprovalStatus.PENDING) {
-      throw new BadRequestException('승인 대기 상태인 변경 요청만 승인할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'SOFTWARE_ONLY_PENDING_CAN_APPROVE',
+        message: 'Only pending change requests can be approved.',
+      });
     }
 
     // Use CAS pattern from VersionedBaseService
@@ -350,7 +360,7 @@ export class SoftwareService extends VersionedBaseService {
         approvedAt: new Date(),
         approverComment: approveDto.approverComment,
       },
-      '소프트웨어 변경 이력'
+      'Software change history'
     );
 
     // TODO: Update equipment software version (when equipment schema has software fields)
@@ -373,7 +383,10 @@ export class SoftwareService extends VersionedBaseService {
     const record = await this.findOne(id);
 
     if (record.approvalStatus !== SoftwareApprovalStatus.PENDING) {
-      throw new BadRequestException('승인 대기 상태인 변경 요청만 반려할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'SOFTWARE_ONLY_PENDING_CAN_REJECT',
+        message: 'Only pending change requests can be rejected.',
+      });
     }
 
     // Use CAS pattern from VersionedBaseService
@@ -387,7 +400,7 @@ export class SoftwareService extends VersionedBaseService {
         approvedAt: new Date(),
         approverComment: rejectDto.rejectionReason,
       },
-      '소프트웨어 변경 이력'
+      'Software change history'
     );
 
     return updated;

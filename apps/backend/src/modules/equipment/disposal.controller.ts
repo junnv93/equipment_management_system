@@ -5,7 +5,6 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
   HttpStatus,
   HttpCode,
   ParseUUIDPipe,
@@ -32,8 +31,6 @@ import {
   approveDisposalSchema,
 } from './dto/disposal.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 
@@ -49,7 +46,6 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
  */
 @ApiTags('장비 폐기')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('equipment/:equipmentId/disposal')
 export class DisposalController {
   constructor(private readonly disposalService: DisposalService) {}
@@ -82,7 +78,10 @@ export class DisposalController {
   ): Promise<unknown> {
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     return this.disposalService.requestDisposal(equipmentId, dto, userId);
   }
@@ -120,7 +119,10 @@ export class DisposalController {
   ): Promise<unknown> {
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     return this.disposalService.reviewDisposal(equipmentId, reviewDto, userId);
   }
@@ -160,7 +162,10 @@ export class DisposalController {
   ): Promise<unknown> {
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     return this.disposalService.approveDisposal(equipmentId, approveDto, userId);
   }
@@ -191,7 +196,10 @@ export class DisposalController {
   ): Promise<{ success: boolean; message: string }> {
     const userId = req.user?.userId || req.user?.sub;
     if (!userId) {
-      throw new BadRequestException('사용자 정보를 찾을 수 없습니다.');
+      throw new BadRequestException({
+        code: 'AUTH_USER_INFO_MISSING',
+        message: 'User information not found.',
+      });
     }
     return this.disposalService.cancelDisposalRequest(equipmentId, userId);
   }

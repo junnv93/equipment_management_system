@@ -7,17 +7,15 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   UsePipes,
   HttpStatus,
   HttpCode,
   NotFoundException,
   BadRequestException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { getErrorMessage } from '../../common/utils/error';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { TeamsService } from './teams.service';
@@ -30,7 +28,6 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 @ApiTags('teams')
 @ApiBearerAuth()
 @Controller('teams')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
@@ -39,7 +36,7 @@ export class TeamsController {
   @UsePipes(TeamQueryValidationPipe)
   @ApiOperation({ summary: '모든 팀 조회' })
   @ApiResponse({ status: 200, description: '팀 목록 반환' })
-  async findAll(@Query() query: TeamQueryDto) {
+  async findAll(@Query() query: TeamQueryDto): Promise<unknown> {
     const result = await this.teamsService.findAll(query);
     return {
       items: result.items,
@@ -58,7 +55,7 @@ export class TeamsController {
   @ApiOperation({ summary: '특정 팀 조회' })
   @ApiResponse({ status: 200, description: '팀 정보 반환' })
   @ApiResponse({ status: 404, description: '팀을 찾을 수 없음' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<unknown> {
     const team = await this.teamsService.findOne(id);
 
     if (!team) {
@@ -84,7 +81,7 @@ export class TeamsController {
   @ApiOperation({ summary: '새 팀 등록' })
   @ApiResponse({ status: 201, description: '팀 생성 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
-  async create(@Body() createTeamDto: CreateTeamDto) {
+  async create(@Body() createTeamDto: CreateTeamDto): Promise<unknown> {
     try {
       const team = await this.teamsService.create(createTeamDto);
       return team;
@@ -109,7 +106,10 @@ export class TeamsController {
   @ApiOperation({ summary: '팀 정보 업데이트' })
   @ApiResponse({ status: 200, description: '팀 업데이트 성공' })
   @ApiResponse({ status: 404, description: '팀을 찾을 수 없음' })
-  async update(@Param('id') id: string, @Body() updateTeamDto: UpdateTeamDto) {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateTeamDto: UpdateTeamDto
+  ): Promise<unknown> {
     const team = await this.teamsService.update(id, updateTeamDto);
 
     if (!team) {
@@ -129,7 +129,7 @@ export class TeamsController {
   @ApiOperation({ summary: '팀 삭제' })
   @ApiResponse({ status: 204, description: '팀 삭제 성공' })
   @ApiResponse({ status: 404, description: '팀을 찾을 수 없음' })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     const deleted = await this.teamsService.remove(id);
 
     if (!deleted) {

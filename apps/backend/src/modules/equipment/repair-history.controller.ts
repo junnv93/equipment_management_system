@@ -5,9 +5,9 @@ import {
   Patch,
   Delete,
   Param,
+  ParseUUIDPipe,
   Body,
   Query,
-  UseGuards,
   HttpStatus,
   Request,
   UsePipes,
@@ -20,10 +20,7 @@ import {
   RepairHistoryQueryDto,
   CreateRepairHistoryValidationPipe,
   UpdateRepairHistoryValidationPipe,
-  RepairHistoryQueryValidationPipe,
 } from './dto/repair-history.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -31,7 +28,6 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('수리 이력')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller()
 export class RepairHistoryController {
   constructor(private readonly repairHistoryService: RepairHistoryService) {}
@@ -47,7 +43,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async findByEquipment(
-    @Param('uuid') equipmentUuid: string,
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
     @Query() query: RepairHistoryQueryDto
   ): Promise<{
     items: RepairHistoryRecord[];
@@ -75,7 +71,7 @@ export class RepairHistoryController {
   @AuditLog({ action: 'create', entityType: 'repair_history', entityIdPath: 'params.uuid' })
   @UsePipes(CreateRepairHistoryValidationPipe)
   async create(
-    @Param('uuid') equipmentUuid: string,
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
     @Body() createDto: CreateRepairHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<RepairHistoryRecord> {
@@ -94,7 +90,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   async getRecent(
-    @Param('uuid') equipmentUuid: string,
+    @Param('uuid', ParseUUIDPipe) equipmentUuid: string,
     @Query('limit') limit: number = 5
   ): Promise<RepairHistoryRecord[]> {
     return this.repairHistoryService.getRecentRepairs(equipmentUuid, limit);
@@ -111,7 +107,7 @@ export class RepairHistoryController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
-  async findOne(@Param('uuid') uuid: string): Promise<RepairHistoryRecord> {
+  async findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<RepairHistoryRecord> {
     return this.repairHistoryService.findOne(uuid);
   }
 
@@ -130,7 +126,7 @@ export class RepairHistoryController {
   @AuditLog({ action: 'update', entityType: 'repair_history', entityIdPath: 'params.uuid' })
   @UsePipes(UpdateRepairHistoryValidationPipe)
   async update(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateDto: UpdateRepairHistoryDto
   ): Promise<RepairHistoryRecord> {
     return this.repairHistoryService.update(uuid, updateDto);
@@ -149,7 +145,7 @@ export class RepairHistoryController {
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
   @AuditLog({ action: 'delete', entityType: 'repair_history', entityIdPath: 'params.uuid' })
   async remove(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
   ): Promise<{ deleted: boolean; id: string }> {
     const deletedBy = req.user?.id || 'unknown';

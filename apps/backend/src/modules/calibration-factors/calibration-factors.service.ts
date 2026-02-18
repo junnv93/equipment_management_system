@@ -189,7 +189,10 @@ export class CalibrationFactorsService {
     const factor = calibrationFactors.find((cf) => cf.id === id && cf.deletedAt === null);
 
     if (!factor) {
-      throw new NotFoundException(`보정계수 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'CALIBRATION_FACTOR_NOT_FOUND',
+        message: `Calibration factor ID ${id} not found.`,
+      });
     }
 
     return factor;
@@ -291,7 +294,10 @@ export class CalibrationFactorsService {
     const factor = await this.findOne(id);
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
-      throw new BadRequestException('승인 대기 상태인 보정계수만 승인할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_FACTOR_ONLY_PENDING_CAN_APPROVE',
+        message: 'Only pending calibration factors can be approved.',
+      });
     }
 
     const index = calibrationFactors.findIndex((cf) => cf.id === id);
@@ -319,7 +325,10 @@ export class CalibrationFactorsService {
     const factor = await this.findOne(id);
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
-      throw new BadRequestException('승인 대기 상태인 보정계수만 반려할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'CALIBRATION_FACTOR_ONLY_PENDING_CAN_REJECT',
+        message: 'Only pending calibration factors can be rejected.',
+      });
     }
 
     const index = calibrationFactors.findIndex((cf) => cf.id === id);
@@ -339,7 +348,10 @@ export class CalibrationFactorsService {
 
   // 소프트 삭제
   async remove(id: string): Promise<{ id: string; deleted: boolean }> {
-    const index = calibrationFactors.findIndex((cf) => cf.id === id);
+    // 존재 확인 (findOne은 deletedAt === null인 항목만 검색, 없으면 NotFoundException throw)
+    await this.findOne(id);
+
+    const index = calibrationFactors.findIndex((cf) => cf.id === id && cf.deletedAt === null);
 
     calibrationFactors[index] = {
       ...calibrationFactors[index],

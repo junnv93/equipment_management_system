@@ -200,7 +200,10 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (!equipmentItem) {
-      throw new NotFoundException(`장비를 찾을 수 없습니다. (ID: ${equipmentId})`);
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentId})`,
+      });
     }
 
     // 2. 중복 요청 확인 (진행 중인 요청이 있는지)
@@ -212,7 +215,10 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (existingRequest) {
-      throw new ConflictException('이미 진행 중인 폐기 요청이 있습니다.');
+      throw new ConflictException({
+        code: 'DISPOSAL_ALREADY_IN_PROGRESS',
+        message: 'A disposal request is already in progress.',
+      });
     }
 
     // 3. 트랜잭션: 폐기 요청 생성 + 장비 상태 변경
@@ -421,7 +427,10 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (!request) {
-      throw new NotFoundException('대기 중인 폐기 요청을 찾을 수 없습니다.');
+      throw new NotFoundException({
+        code: 'DISPOSAL_PENDING_NOT_FOUND',
+        message: 'Pending disposal request not found.',
+      });
     }
 
     // 2. 장비 조회 (팀 확인용)
@@ -430,7 +439,10 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (!equipmentItem) {
-      throw new NotFoundException(`장비를 찾을 수 없습니다. (ID: ${equipmentId})`);
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentId})`,
+      });
     }
 
     // 3. 검토자 정보 조회 (팀 확인용)
@@ -439,14 +451,20 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (!reviewer) {
-      throw new NotFoundException(`검토자를 찾을 수 없습니다. (ID: ${reviewedBy})`);
+      throw new NotFoundException({
+        code: 'DISPOSAL_REVIEWER_NOT_FOUND',
+        message: `Reviewer not found. (ID: ${reviewedBy})`,
+      });
     }
 
     // 4. 팀 기반 권한 검증 (같은 팀인지 확인)
     // lab_manager는 모든 팀의 장비를 검토할 수 있음
     const isLabManager = reviewer.role === 'lab_manager';
     if (!isLabManager && equipmentItem.teamId && equipmentItem.teamId !== reviewer.teamId) {
-      throw new ForbiddenException('같은 팀의 장비만 검토할 수 있습니다.');
+      throw new ForbiddenException({
+        code: 'DISPOSAL_TEAM_SCOPE_ONLY',
+        message: 'Can only review equipment from the same team.',
+      });
     }
 
     // 5. 트랜잭션: 검토 처리 (CAS: version 검증)
@@ -715,7 +733,10 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (!request) {
-      throw new NotFoundException('검토 완료된 폐기 요청을 찾을 수 없습니다.');
+      throw new NotFoundException({
+        code: 'DISPOSAL_REVIEWED_NOT_FOUND',
+        message: 'Reviewed disposal request not found.',
+      });
     }
 
     // 2. 트랜잭션: 승인 처리 (CAS: version 검증)
@@ -856,12 +877,18 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (!request) {
-      throw new NotFoundException('대기 중인 폐기 요청을 찾을 수 없습니다.');
+      throw new NotFoundException({
+        code: 'DISPOSAL_PENDING_NOT_FOUND',
+        message: 'Pending disposal request not found.',
+      });
     }
 
     // 2. 권한 검증 (요청자 본인만 취소 가능)
     if (request.requestedBy !== userId) {
-      throw new ForbiddenException('요청자 본인만 취소할 수 있습니다.');
+      throw new ForbiddenException({
+        code: 'DISPOSAL_ONLY_REQUESTER_CAN_CANCEL',
+        message: 'Only the requester can cancel this request.',
+      });
     }
 
     // 3. 트랜잭션: 요청 삭제 + 장비 상태 원복
@@ -1067,7 +1094,10 @@ export class DisposalService extends VersionedBaseService {
     });
 
     if (!currentUser) {
-      throw new NotFoundException(`사용자를 찾을 수 없습니다. (ID: ${userId})`);
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: `User not found. (ID: ${userId})`,
+      });
     }
 
     // 2. lab_manager는 모든 요청 조회, technical_manager는 같은 팀만 조회

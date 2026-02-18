@@ -6,7 +6,7 @@ import {
   Logger,
   forwardRef,
 } from '@nestjs/common';
-import { eq, and, like, desc, asc, sql, SQL, or } from 'drizzle-orm';
+import { eq, and, like, desc, sql, SQL, or } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import * as schema from '@equipment-management/db/schema';
@@ -19,7 +19,6 @@ import {
   generateTemporaryManagementNumber,
   type Classification,
   type Site,
-  type EquipmentImportSource,
 } from '@equipment-management/schemas';
 import { CreateEquipmentImportInput } from './dto/create-equipment-import.dto';
 import { ApproveEquipmentImportDto } from './dto/approve-equipment-import.dto';
@@ -33,10 +32,10 @@ import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events
 import { addMonths } from 'date-fns';
 import {
   isRentalImport,
-  isInternalSharedImport,
   getReturnDestination,
   getOwnerName,
   getSharedSource,
+  type EquipmentImportListResult,
 } from './types/equipment-import.types';
 
 type EquipmentImport = typeof equipmentImports.$inferSelect;
@@ -73,7 +72,10 @@ export class EquipmentImportsService extends VersionedBaseService {
     const usagePeriodEnd = new Date(dto.usagePeriodEnd);
 
     if (usagePeriodEnd <= usagePeriodStart) {
-      throw new BadRequestException('사용 종료일은 시작일보다 늦어야 합니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_END_DATE_BEFORE_START',
+        message: 'Usage end date must be after the start date.',
+      });
     }
 
     // Discriminated union - TypeScript ensures correct fields based on sourceType
@@ -142,7 +144,7 @@ export class EquipmentImportsService extends VersionedBaseService {
   /**
    * 장비 반입 목록 조회 (sourceType 필터 지원)
    */
-  async findAll(query: EquipmentImportQueryDto) {
+  async findAll(query: EquipmentImportQueryDto): Promise<EquipmentImportListResult> {
     const page = query.page || 1;
     const limit = query.limit || 20;
     const offset = (page - 1) * limit;
@@ -262,7 +264,10 @@ export class EquipmentImportsService extends VersionedBaseService {
       .limit(1);
 
     if (result.length === 0) {
-      throw new NotFoundException(`장비 반입 ${id}을(를) 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'IMPORT_NOT_FOUND',
+        message: `Equipment import ${id} not found.`,
+      });
     }
 
     return result[0];
@@ -280,7 +285,10 @@ export class EquipmentImportsService extends VersionedBaseService {
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== EIVal.PENDING) {
-      throw new BadRequestException('승인 대기 상태의 반입 신청만 승인할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_ONLY_PENDING_CAN_APPROVE',
+        message: 'Only pending import requests can be approved.',
+      });
     }
 
     // ✅ CAS: optimistic locking
@@ -293,7 +301,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         approverId,
         approvedAt: new Date(),
       },
-      '장비 반입'
+      'Equipment import'
     );
 
     this.logger.log(`Equipment import approved: ${id} (sourceType: ${updated.sourceType})`);
@@ -326,7 +334,10 @@ export class EquipmentImportsService extends VersionedBaseService {
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== EIVal.PENDING) {
-      throw new BadRequestException('승인 대기 상태의 반입 신청만 거절할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_ONLY_PENDING_CAN_REJECT',
+        message: 'Only pending import requests can be rejected.',
+      });
     }
 
     // ✅ CAS: optimistic locking
@@ -340,7 +351,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         approvedAt: new Date(),
         rejectionReason: dto.rejectionReason,
       },
-      '장비 반입'
+      'Equipment import'
     );
 
     // 📢 알림 이벤트 발행 (장비 반입 거절)
@@ -379,7 +390,10 @@ export class EquipmentImportsService extends VersionedBaseService {
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== EIVal.APPROVED) {
-      throw new BadRequestException('승인된 반입 신청만 수령 처리할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_ONLY_APPROVED_CAN_RECEIVE',
+        message: 'Only approved import requests can be received.',
+      });
     }
 
     // TEMP 관리번호 생성 (중복 시 retry)
@@ -458,7 +472,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         receivingCondition: dto.receivingCondition,
         equipmentId: newEquipment.id,
       },
-      '장비 반입'
+      'Equipment import'
     );
 
     this.logger.log(
@@ -484,11 +498,17 @@ export class EquipmentImportsService extends VersionedBaseService {
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== EIVal.RECEIVED) {
-      throw new BadRequestException('수령 완료된 반입 건만 반납을 시작할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_ONLY_RECEIVED_CAN_RETURN',
+        message: 'Only received imports can initiate a return.',
+      });
     }
 
     if (!equipmentImport.equipmentId) {
-      throw new BadRequestException('연결된 장비가 없습니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_NO_LINKED_EQUIPMENT',
+        message: 'No linked equipment found.',
+      });
     }
 
     // 장비 상태를 'available'로 변경 (checkout 생성 조건 충족)
@@ -496,7 +516,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
     // destination 동적 결정
     const destination = getReturnDestination(equipmentImport);
-    const sourceTypeLabel = isRentalImport(equipmentImport) ? '렌탈' : '내부 공용';
+    const sourceTypeLabel = isRentalImport(equipmentImport) ? 'Rental' : 'Internal shared';
 
     this.logger.log(
       `Initiating return for equipment import: ${id} (sourceType: ${equipmentImport.sourceType}, destination: ${destination})`
@@ -508,7 +528,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         equipmentIds: [equipmentImport.equipmentId],
         purpose: 'return_to_vendor',
         destination,
-        reason: `${sourceTypeLabel} 장비 반납 (반입 신청 #${equipmentImport.id.substring(0, 8)})`,
+        reason: `${sourceTypeLabel} equipment return (import request #${equipmentImport.id.substring(0, 8)})`,
         expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
       } as Parameters<typeof this.checkoutsService.create>[0],
       requesterId,
@@ -537,12 +557,18 @@ export class EquipmentImportsService extends VersionedBaseService {
     const equipmentImport = await this.findOne(id);
 
     if (equipmentImport.status !== EIVal.PENDING && equipmentImport.status !== EIVal.APPROVED) {
-      throw new BadRequestException('승인 대기 또는 승인됨 상태의 반입 신청만 취소할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_ONLY_PENDING_OR_APPROVED_CAN_CANCEL',
+        message: 'Only pending or approved import requests can be canceled.',
+      });
     }
 
     // 본인만 취소 가능
     if (equipmentImport.requesterId !== userId) {
-      throw new BadRequestException('본인이 신청한 반입 건만 취소할 수 있습니다.');
+      throw new BadRequestException({
+        code: 'IMPORT_ONLY_REQUESTER_CAN_CANCEL',
+        message: 'Only the requester can cancel their own import request.',
+      });
     }
 
     const [updated] = await this.db
@@ -639,6 +665,9 @@ export class EquipmentImportsService extends VersionedBaseService {
       }
     }
 
-    throw new BadRequestException('임시 관리번호 생성에 실패했습니다. 관리자에게 문의하세요.');
+    throw new BadRequestException({
+      code: 'IMPORT_TEMP_NUMBER_GENERATION_FAILED',
+      message: 'Failed to generate temporary management number. Please contact administrator.',
+    });
   }
 }

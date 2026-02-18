@@ -7,14 +7,14 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   HttpStatus,
   HttpCode,
   UsePipes,
   ParseUUIDPipe,
   Req,
-  ForbiddenException,
   BadRequestException,
+  ForbiddenException,
+  UseGuards,
   UseInterceptors,
   UploadedFiles,
   UploadedFile,
@@ -44,19 +44,18 @@ import {
 } from './dto/create-shared-equipment.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
 import { Permission } from '@equipment-management/shared-constants';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
-import { EquipmentStatus, UserRoleValues, Site } from '@equipment-management/schemas';
+import { UserRoleValues, Site } from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.dto';
 
 @ApiTags('장비 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('equipment')
 export class EquipmentController {
   constructor(
@@ -192,8 +191,8 @@ export class EquipmentController {
     const userSite = req?.user?.site;
     const userTeamId = req?.user?.teamId;
     const isLabManager = userRoles.includes(UserRoleValues.LAB_MANAGER);
-    const isTechnicalManager = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER);
-    const isTestEngineer = userRoles.includes(UserRoleValues.TEST_ENGINEER);
+    const _isTechnicalManager = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER);
+    const _isTestEngineer = userRoles.includes(UserRoleValues.TEST_ENGINEER);
 
     // 🔒 보안: lab_manager를 제외한 모든 역할은 자신의 사이트/팀 장비만 등록 가능
     // - test_engineer(시험실무자): 자기 팀만
@@ -201,14 +200,20 @@ export class EquipmentController {
     // - lab_manager(시험소장): 제한 없음 (전체 시험소 관리)
     if (!isLabManager) {
       if (userSite && createEquipmentDto.site && createEquipmentDto.site !== userSite) {
-        throw new ForbiddenException(`자신의 사이트(${userSite}) 장비만 등록할 수 있습니다.`);
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_SITE_SCOPE_ONLY',
+          message: `Can only register equipment for your own site (${userSite}).`,
+        });
       }
       if (
         userTeamId &&
         createEquipmentDto.teamId &&
         String(createEquipmentDto.teamId) !== String(userTeamId)
       ) {
-        throw new ForbiddenException('자신의 팀 장비만 등록할 수 있습니다.');
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_TEAM_SCOPE_ONLY',
+          message: 'Can only register equipment for your own team.',
+        });
       }
     }
 
@@ -447,7 +452,10 @@ export class EquipmentController {
     existingEquipment?: { id: string; name: string; managementNumber: string };
   }> {
     if (!managementNumber || managementNumber.trim() === '') {
-      throw new BadRequestException('관리번호를 입력해주세요.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_MANAGEMENT_NUMBER_REQUIRED',
+        message: 'Management number is required.',
+      });
     }
 
     return this.equipmentService.checkManagementNumberAvailability(
@@ -542,7 +550,10 @@ export class EquipmentController {
 
     // 시험실무자이고 자신의 사이트가 아닌 장비를 조회하려는 경우 거부
     if (isTestOperator && !canViewAllSites && userSite && equipmentWithTeam.site !== userSite) {
-      throw new ForbiddenException('다른 사이트의 장비를 조회할 권한이 없습니다.');
+      throw new ForbiddenException({
+        code: 'EQUIPMENT_CROSS_SITE_VIEW_DENIED',
+        message: 'No permission to view equipment from other sites.',
+      });
     }
 
     // ✅ 응답에 teamName 필드 추가 (프론트엔드에서 사용)
@@ -668,7 +679,7 @@ export class EquipmentController {
   > {
     // ✅ 공용장비도 수정 가능하도록 isShared 체크 제거
     // (렌탈 장비는 수령 후 교정 정보 업데이트 필요)
-    const existingEquipment = await this.equipmentService.findOne(uuid);
+    const _existingEquipment = await this.equipmentService.findOne(uuid);
 
     const userRoles = req?.user?.roles ?? [];
     const userId = req?.user?.userId ?? req?.user?.id ?? '';
@@ -726,7 +737,10 @@ export class EquipmentController {
     // 공용장비 삭제 차단
     const existingEquipment = await this.equipmentService.findOne(uuid);
     if (existingEquipment.isShared) {
-      throw new ForbiddenException('공용장비는 삭제할 수 없습니다.');
+      throw new ForbiddenException({
+        code: 'EQUIPMENT_SHARED_CANNOT_DELETE',
+        message: 'Shared equipment cannot be deleted.',
+      });
     }
 
     const userRoles = req?.user?.roles ?? [];
@@ -1249,11 +1263,10 @@ export class EquipmentController {
     entityType: 'equipment',
     entityIdPath: 'params.requestUuid',
   })
-  // ⚠️ ApproveEquipmentRequestValidationPipe 제거 - requestId와 action은 URL/엔드포인트에서 이미 결정됨
-  // rejectionReason만 body에서 수동 검증
+  @UsePipes(RejectRequestPipe)
   async rejectRequest(
     @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
-    @Body() body: { rejectionReason?: string },
+    @Body() dto: RejectRequestDto,
     @Req() req: AuthenticatedRequest
   ): Promise<{
     id: string;
@@ -1271,17 +1284,12 @@ export class EquipmentController {
   }> {
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? req.user?.id ?? '';
-
-    if (!body.rejectionReason) {
-      throw new BadRequestException('반려 사유는 필수입니다.');
-    }
-
-    return this.approvalService.rejectRequest(requestUuid, userId, body.rejectionReason, userRoles);
+    return this.approvalService.rejectRequest(requestUuid, userId, dto.rejectionReason, userRoles);
   }
 
   // ========== 파일 업로드 엔드포인트 ==========
 
-  @Post('attachments')
+  @Post('attachments') // @BodyPipeExempt: multipart/form-data (file upload, not JSON body)
   @ApiOperation({
     summary: '파일 업로드',
     description: '장비 관련 파일(이력카드, 검수보고서 등)을 업로드합니다.',
@@ -1318,11 +1326,17 @@ export class EquipmentController {
     };
   }> {
     if (!file) {
-      throw new BadRequestException('파일이 필요합니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_FILE_REQUIRED',
+        message: 'File is required.',
+      });
     }
 
     if (!attachmentType) {
-      throw new BadRequestException('첨부 파일 타입이 필요합니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_ATTACHMENT_TYPE_REQUIRED',
+        message: 'Attachment type is required.',
+      });
     }
 
     const attachment = await this.attachmentService.createAttachment(
@@ -1358,20 +1372,15 @@ export class EquipmentController {
    */
   @Post('cache/invalidate')
   @HttpCode(HttpStatus.OK)
-  @Public() // ✅ Allow unauthenticated access for E2E tests
+  @Public() // JwtAuthGuard 우회 (서비스간 통신 — JWT 없음)
+  @UseGuards(InternalApiKeyGuard) // X-Internal-Api-Key 헤더로 인가
   @ApiOperation({
-    summary: '장비 캐시 무효화 (E2E 테스트용)',
+    summary: '장비 캐시 무효화 (E2E 테스트 / 내부 서비스용)',
     description:
-      'E2E 테스트에서 직접 데이터베이스를 수정한 후 백엔드 캐시를 무효화합니다. 개발/테스트 환경 전용.',
+      'E2E 테스트 또는 내부 서비스에서 캐시를 무효화합니다. X-Internal-Api-Key 헤더 필요.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '캐시가 무효화되었습니다.' })
   async invalidateCache(): Promise<{ message: string; timestamp: string }> {
-    // ✅ Environment check: Only allow in non-production environments
-    const nodeEnv = process.env.NODE_ENV || 'development';
-    if (nodeEnv === 'production') {
-      throw new ForbiddenException('Cache invalidation is not allowed in production');
-    }
-
     await this.equipmentService.invalidateCachePublic();
     return {
       message: '장비 캐시가 무효화되었습니다.',

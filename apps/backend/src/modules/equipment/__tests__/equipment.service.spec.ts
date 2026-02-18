@@ -16,7 +16,9 @@ const DRIZZLE_INSTANCE = 'DRIZZLE_INSTANCE';
  */
 describe('EquipmentService', () => {
   let service: EquipmentService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDb: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockCacheService: any;
 
   // 테스트용 mock 데이터 (id가 uuid 타입으로 변경됨)
@@ -57,6 +59,9 @@ describe('EquipmentService', () => {
 
     // 캐시 서비스 모킹
     mockCacheService = {
+      get: jest.fn(),
+      set: jest.fn(),
+      delete: jest.fn(),
       getOrSet: jest.fn().mockImplementation((_key, factory) => factory()),
       invalidatePattern: jest.fn(),
       deleteByPattern: jest.fn().mockResolvedValue(undefined),
@@ -156,6 +161,7 @@ describe('EquipmentService', () => {
       };
 
       // Act
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await service.create(createDto as any);
 
       // Assert
@@ -170,6 +176,7 @@ describe('EquipmentService', () => {
 
       // 캐시가 팩토리 함수를 실행하도록 설정
       mockCacheService.getOrSet.mockImplementation(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (_key: string, factory: () => Promise<any>) => {
           return await factory();
         }
@@ -199,6 +206,7 @@ describe('EquipmentService', () => {
       const mockFilteredList = [mockEquipment];
 
       mockCacheService.getOrSet.mockImplementation(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async (_key: string, factory: () => Promise<any>) => {
           return await factory();
         }

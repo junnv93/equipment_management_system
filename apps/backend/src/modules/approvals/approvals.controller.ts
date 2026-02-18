@@ -1,8 +1,8 @@
-import { Controller, Get, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Controller, Get, Req, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedRequest } from '../../types/auth';
 import { UserRole } from '@equipment-management/schemas';
 import { ApprovalsService, PendingCountsByCategory } from './approvals.service';
+import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
 
 /**
  * 승인 관리 컨트롤러
@@ -11,7 +11,6 @@ import { ApprovalsService, PendingCountsByCategory } from './approvals.service';
  * 한 번의 요청으로 모든 승인 배지 개수를 가져올 수 있도록 함
  */
 @Controller('approvals')
-@UseGuards(JwtAuthGuard)
 export class ApprovalsController {
   constructor(private readonly approvalsService: ApprovalsService) {}
 
@@ -42,13 +41,17 @@ export class ApprovalsController {
    * }
    */
   @Get('counts')
+  @SkipPermissions()
   async getCounts(@Req() req: AuthenticatedRequest): Promise<PendingCountsByCategory> {
     const userId = req.user?.userId;
     const userRole = req.user?.roles?.[0] as UserRole;
 
     // ✅ userId 검증: JWT Guard를 통과했지만 userId가 없는 경우 방어
     if (!userId) {
-      throw new UnauthorizedException('인증 정보가 유효하지 않습니다. 다시 로그인해주세요.');
+      throw new UnauthorizedException({
+        code: 'AUTH_INVALID_SESSION',
+        message: 'Authentication info is invalid. Please log in again.',
+      });
     }
 
     return this.approvalsService.getPendingCountsByRole(userId, userRole);

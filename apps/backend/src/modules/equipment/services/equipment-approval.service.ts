@@ -125,7 +125,10 @@ export class EquipmentApprovalService {
         this.logger.error(`Error message: ${error.message}`);
         this.logger.error(`Stack trace: ${error.stack}`);
       }
-      throw new BadRequestException('장비 등록 요청 생성에 실패했습니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_CREATE_FAILED',
+        message: 'Failed to create equipment registration request.',
+      });
     }
   }
 
@@ -142,7 +145,10 @@ export class EquipmentApprovalService {
       // 기존 장비 조회
       const existingEquipment = await this.equipmentService.findOne(equipmentUuid);
       if (!existingEquipment) {
-        throw new NotFoundException('장비를 찾을 수 없습니다.');
+        throw new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: 'Equipment not found.',
+        });
       }
 
       // 요청 데이터를 JSON으로 직렬화
@@ -188,7 +194,10 @@ export class EquipmentApprovalService {
         throw error;
       }
       this.logger.error(`Failed to create equipment update request: ${error}`);
-      throw new BadRequestException('장비 수정 요청 생성에 실패했습니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_UPDATE_FAILED',
+        message: 'Failed to create equipment update request.',
+      });
     }
   }
 
@@ -203,7 +212,10 @@ export class EquipmentApprovalService {
       // 기존 장비 조회
       const existingEquipment = await this.equipmentService.findOne(equipmentUuid);
       if (!existingEquipment) {
-        throw new NotFoundException('장비를 찾을 수 없습니다.');
+        throw new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: 'Equipment not found.',
+        });
       }
 
       // 사용자 존재 여부 확인
@@ -230,7 +242,10 @@ export class EquipmentApprovalService {
         throw error;
       }
       this.logger.error(`Failed to create equipment delete request: ${error}`);
-      throw new BadRequestException('장비 삭제 요청 생성에 실패했습니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_DELETE_FAILED',
+        message: 'Failed to create equipment delete request.',
+      });
     }
   }
 
@@ -248,7 +263,10 @@ export class EquipmentApprovalService {
       const canViewAll = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) || isLabManager;
 
       if (!canViewAll) {
-        throw new ForbiddenException('승인 대기 목록을 조회할 권한이 없습니다.');
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_REQUEST_NO_VIEW_PERMISSION',
+          message: 'No permission to view pending approval list.',
+        });
       }
 
       const requests = await this.db.query.equipmentRequests.findMany({
@@ -278,7 +296,10 @@ export class EquipmentApprovalService {
         throw error;
       }
       this.logger.error(`Failed to find pending requests: ${error}`);
-      throw new BadRequestException('승인 대기 목록 조회에 실패했습니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_LIST_FAILED',
+        message: 'Failed to fetch pending approval list.',
+      });
     }
   }
 
@@ -304,7 +325,10 @@ export class EquipmentApprovalService {
       });
 
       if (!request) {
-        throw new NotFoundException('요청을 찾을 수 없습니다.');
+        throw new NotFoundException({
+          code: 'EQUIPMENT_REQUEST_NOT_FOUND',
+          message: 'Equipment request not found.',
+        });
       }
 
       // 첨부 파일 조회 (테이블 미생성 시에도 승인 플로우 차단 방지)
@@ -326,7 +350,10 @@ export class EquipmentApprovalService {
         throw error;
       }
       this.logger.error(`Failed to find request: ${error}`);
-      throw new BadRequestException('요청 조회에 실패했습니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_FETCH_FAILED',
+        message: 'Failed to fetch equipment request.',
+      });
     }
   }
 
@@ -345,7 +372,10 @@ export class EquipmentApprovalService {
         userRoles.includes(UserRoleValues.LAB_MANAGER);
 
       if (!canApprove) {
-        throw new ForbiddenException('요청을 승인할 권한이 없습니다.');
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_REQUEST_NO_APPROVE_PERMISSION',
+          message: 'No permission to approve this request.',
+        });
       }
 
       // 요청 조회
@@ -353,7 +383,10 @@ export class EquipmentApprovalService {
 
       // 이미 처리된 요청인지 확인
       if (request.approvalStatus !== 'pending_approval') {
-        throw new BadRequestException('이미 처리된 요청입니다.');
+        throw new BadRequestException({
+          code: 'EQUIPMENT_REQUEST_ALREADY_PROCESSED',
+          message: 'This request has already been processed.',
+        });
       }
 
       // 요청 타입에 따라 처리
@@ -362,25 +395,37 @@ export class EquipmentApprovalService {
         await this.equipmentService.create(requestData);
       } else if (request.requestType === 'update') {
         if (!request.equipmentId) {
-          throw new BadRequestException('장비 ID가 없습니다.');
+          throw new BadRequestException({
+            code: 'EQUIPMENT_REQUEST_NO_EQUIPMENT_ID',
+            message: 'Equipment ID is missing.',
+          });
         }
         const equipmentData = await this.db.query.equipment.findFirst({
           where: eq(equipment.id, request.equipmentId),
         });
         if (!equipmentData) {
-          throw new NotFoundException('장비를 찾을 수 없습니다.');
+          throw new NotFoundException({
+            code: 'EQUIPMENT_NOT_FOUND',
+            message: 'Equipment not found.',
+          });
         }
         const requestData = JSON.parse(request.requestData || '{}') as UpdateEquipmentDto;
         await this.equipmentService.update(equipmentData.id, requestData);
       } else if (request.requestType === 'delete') {
         if (!request.equipmentId) {
-          throw new BadRequestException('장비 ID가 없습니다.');
+          throw new BadRequestException({
+            code: 'EQUIPMENT_REQUEST_NO_EQUIPMENT_ID',
+            message: 'Equipment ID is missing.',
+          });
         }
         const equipmentData = await this.db.query.equipment.findFirst({
           where: eq(equipment.id, request.equipmentId),
         });
         if (!equipmentData) {
-          throw new NotFoundException('장비를 찾을 수 없습니다.');
+          throw new NotFoundException({
+            code: 'EQUIPMENT_NOT_FOUND',
+            message: 'Equipment not found.',
+          });
         }
         await this.equipmentService.remove(equipmentData.id);
       }
@@ -407,7 +452,7 @@ export class EquipmentApprovalService {
       this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_APPROVED, {
         requestId: requestUuid,
         equipmentId: request.equipmentId ?? '',
-        equipmentName: requestData.name || '장비',
+        equipmentName: requestData.name || 'Equipment',
         managementNumber: requestData.managementNumber || '',
         requesterId: request.requestedBy,
         requesterTeamId: '',
@@ -427,7 +472,10 @@ export class EquipmentApprovalService {
         throw error;
       }
       this.logger.error(`Failed to approve request: ${error}`);
-      throw new BadRequestException('요청 승인에 실패했습니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_APPROVE_FAILED',
+        message: 'Failed to approve equipment request.',
+      });
     }
   }
 
@@ -447,12 +495,18 @@ export class EquipmentApprovalService {
         userRoles.includes(UserRoleValues.LAB_MANAGER);
 
       if (!canReject) {
-        throw new ForbiddenException('요청을 반려할 권한이 없습니다.');
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_REQUEST_NO_REJECT_PERMISSION',
+          message: 'No permission to reject this request.',
+        });
       }
 
       // 반려 사유 필수
       if (!rejectionReason || rejectionReason.trim().length === 0) {
-        throw new BadRequestException('반려 사유는 필수입니다.');
+        throw new BadRequestException({
+          code: 'EQUIPMENT_REQUEST_REJECTION_REASON_REQUIRED',
+          message: 'Rejection reason is required.',
+        });
       }
 
       // 요청 조회
@@ -460,7 +514,10 @@ export class EquipmentApprovalService {
 
       // 이미 처리된 요청인지 확인
       if (request.approvalStatus !== 'pending_approval') {
-        throw new BadRequestException('이미 처리된 요청입니다.');
+        throw new BadRequestException({
+          code: 'EQUIPMENT_REQUEST_ALREADY_PROCESSED',
+          message: 'This request has already been processed.',
+        });
       }
 
       // 승인자 존재 여부 확인
@@ -486,7 +543,7 @@ export class EquipmentApprovalService {
       this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_REJECTED, {
         requestId: requestUuid,
         equipmentId: request.equipmentId ?? '',
-        equipmentName: rejectRequestData.name || '장비',
+        equipmentName: rejectRequestData.name || 'Equipment',
         managementNumber: rejectRequestData.managementNumber || '',
         requesterId: request.requestedBy,
         requesterTeamId: '',
@@ -507,7 +564,10 @@ export class EquipmentApprovalService {
         throw error;
       }
       this.logger.error(`Failed to reject request: ${error}`);
-      throw new BadRequestException('요청 반려에 실패했습니다.');
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_REJECT_FAILED',
+        message: 'Failed to reject equipment request.',
+      });
     }
   }
 }

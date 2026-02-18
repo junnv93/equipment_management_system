@@ -253,7 +253,10 @@ export class EquipmentService {
       const days = Number(calibrationDue);
 
       if (isNaN(days)) {
-        throw new BadRequestException(`calibrationDue는 숫자여야 합니다: ${calibrationDue}`);
+        throw new BadRequestException({
+          code: 'EQUIPMENT_INVALID_CALIBRATION_DUE',
+          message: `calibrationDue must be a number: ${calibrationDue}`,
+        });
       }
 
       const today = getUtcStartOfDay(); // UTC 기준 오늘 00:00:00
@@ -291,9 +294,10 @@ export class EquipmentService {
       const afterDays = Number(calibrationDueAfter);
 
       if (isNaN(afterDays)) {
-        throw new BadRequestException(
-          `calibrationDueAfter는 숫자여야 합니다: ${calibrationDueAfter}`
-        );
+        throw new BadRequestException({
+          code: 'EQUIPMENT_INVALID_CALIBRATION_DUE_AFTER',
+          message: `calibrationDueAfter must be a number: ${calibrationDueAfter}`,
+        });
       }
 
       const afterDate = getUtcEndOfDay(addDaysUtc(getUtcStartOfDay(), afterDays));
@@ -664,14 +668,18 @@ export class EquipmentService {
       });
 
       if (existingEquipment) {
-        throw new BadRequestException(
-          `관리번호 ${createEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`
-        );
+        throw new BadRequestException({
+          code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
+          message: `Management number ${createEquipmentDto.managementNumber} is already in use.`,
+        });
       }
 
       // 사이트 필드 검증: 필수 필드
       if (!createEquipmentDto.site) {
-        throw new BadRequestException('사이트 정보는 필수입니다.');
+        throw new BadRequestException({
+          code: 'EQUIPMENT_SITE_REQUIRED',
+          message: 'Site information is required.',
+        });
       }
 
       // DTO를 DB 엔티티로 변환
@@ -711,9 +719,10 @@ export class EquipmentService {
       });
 
       if (existingEquipment) {
-        throw new BadRequestException(
-          `관리번호 ${createSharedEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`
-        );
+        throw new BadRequestException({
+          code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
+          message: `Management number ${createSharedEquipmentDto.managementNumber} is already in use.`,
+        });
       }
 
       // 다음 교정일 계산
@@ -928,7 +937,10 @@ export class EquipmentService {
           });
 
           if (!equipmentData) {
-            throw new NotFoundException(`UUID ${uuid}의 장비를 찾을 수 없습니다.`);
+            throw new NotFoundException({
+              code: 'EQUIPMENT_NOT_FOUND',
+              message: `Equipment with UUID ${uuid} not found.`,
+            });
           }
 
           return equipmentData;
@@ -984,12 +996,16 @@ export class EquipmentService {
         .limit(1);
 
       if (!existing) {
-        throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
+        throw new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: `Equipment with UUID ${uuid} not found.`,
+        });
       }
 
       // Version mismatch = concurrent modification
       throw new ConflictException({
-        message: '다른 사용자가 이미 수정했습니다. 페이지가 자동으로 새로고침됩니다.',
+        message:
+          'Another user has already modified this record. The page will automatically refresh.',
         code: 'VERSION_CONFLICT',
         currentVersion: existing.version,
         expectedVersion,
@@ -1022,9 +1038,10 @@ export class EquipmentService {
         });
 
         if (duplicateCheck) {
-          throw new BadRequestException(
-            `관리번호 ${updateEquipmentDto.managementNumber}은(는) 이미 사용 중입니다.`
-          );
+          throw new BadRequestException({
+            code: 'EQUIPMENT_MANAGEMENT_NUMBER_DUPLICATE',
+            message: `Management number ${updateEquipmentDto.managementNumber} is already in use.`,
+          });
         }
       }
 
@@ -1145,10 +1162,10 @@ export class EquipmentService {
       const diffTime = today.getTime() - nextCalibrationDate.getTime();
       const overdueDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      throw new BadRequestException(
-        `교정 기한이 ${overdueDays}일 초과된 장비는 "사용 가능" 상태로 변경할 수 없습니다. ` +
-          `교정 기록을 등록하여 차기 교정일을 갱신해주세요.`
-      );
+      throw new BadRequestException({
+        code: 'EQUIPMENT_CALIBRATION_OVERDUE_STATUS_BLOCK',
+        message: `Equipment overdue by ${overdueDays} day(s) cannot be changed to "available" status. Please register a calibration record to update the next calibration date.`,
+      });
     }
   }
 
@@ -1172,7 +1189,10 @@ export class EquipmentService {
         .returning();
 
       if (!updated) {
-        throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
+        throw new NotFoundException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: `Equipment with UUID ${uuid} not found.`,
+        });
       }
 
       // 캐시 무효화 (삭제된 장비)
@@ -1234,7 +1254,10 @@ export class EquipmentService {
           .returning();
 
         if (!result) {
-          throw new NotFoundException(`장비 UUID ${uuid}를 찾을 수 없습니다.`);
+          throw new NotFoundException({
+            code: 'EQUIPMENT_NOT_FOUND',
+            message: `Equipment with UUID ${uuid} not found.`,
+          });
         }
 
         updated = result;
