@@ -16,6 +16,12 @@
 
 import { z } from 'zod';
 
+// ─── Locale ───────────────────────────────────────────────────────────────────
+
+export const SUPPORTED_LOCALES = ['ko', 'en'] as const;
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export const DEFAULT_LOCALE: SupportedLocale = 'ko';
+
 // ─── System Settings ─────────────────────────────────────────────────────────
 
 export const systemSettingsSchema = z.object({
@@ -43,6 +49,7 @@ export const DATE_FORMAT_OPTIONS = ['YYYY-MM-DD', 'YYYY.MM.DD'] as const;
 export const EQUIPMENT_SORT_OPTIONS = ['managementNumber', 'name', 'updatedAt'] as const;
 
 export const displayPreferencesSchema = z.object({
+  locale: z.enum(SUPPORTED_LOCALES),
   itemsPerPage: z.enum(ITEMS_PER_PAGE_OPTIONS),
   dateFormat: z.enum(DATE_FORMAT_OPTIONS),
   defaultEquipmentSort: z.enum(EQUIPMENT_SORT_OPTIONS),
@@ -52,6 +59,7 @@ export const displayPreferencesSchema = z.object({
 export type DisplayPreferences = z.infer<typeof displayPreferencesSchema>;
 
 export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
+  locale: 'ko',
   itemsPerPage: '20',
   dateFormat: 'YYYY-MM-DD',
   defaultEquipmentSort: 'managementNumber',
@@ -60,4 +68,4 @@ export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
 
 // ─── Calibration Alert Settings ──────────────────────────────────────────────
 
-export const DEFAULT_CALIBRATION_ALERT_DAYS = [30, 7, 0];
+export const DEFAULT_CALIBRATION_ALERT_DAYS = [30, 7, 1, 0];

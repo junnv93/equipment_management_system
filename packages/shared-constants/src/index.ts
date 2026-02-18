@@ -21,6 +21,7 @@ export {
   hasEqualOrHigherRole,
   isTechnicalManagerOrAbove,
   isLabManager,
+  isLabManagerOrAbove,
   isSystemAdmin,
   APPROVAL_ROLES,
   ADMIN_ROLES,

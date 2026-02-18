@@ -44,6 +44,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
 /**
  * 액션별 색상 클래스 (Tailwind CSS)
  * - UI 특화 상수이므로 여기 정의 (프론트엔드 전용)
+ *
+ * @deprecated Dark mode 미지원, border 미지원, Web Interface Guidelines 위반 (transition-all)
+ *             → 대신 @/lib/design-tokens의 AUDIT_ACTION_BADGE_TOKENS 사용 (v3 Architecture)
+ *             하위 호환성 유지를 위해 남겨둠 (삭제하지 말 것)
  */
 export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
   create: 'bg-blue-100 text-blue-800',
@@ -181,3 +185,54 @@ export interface EntityAuditLogsResponse {
   items: AuditLog[];
   formattedLogs: string[];
 }
+
+// ============================================================================
+// Audit Log → Dashboard Activity 매핑
+// ============================================================================
+
+/**
+ * 감사 로그 → 대시보드 활동 타입 매핑
+ *
+ * Key 형식: `{action}:{entityType}` (예: 'create:equipment', 'approve:calibration')
+ * Value: 프론트엔드 RecentActivities.tsx의 활동 타입
+ *
+ * ⚠️ IMPORTANT: checkout purpose='rental'일 때는 RENTAL_ACTIVITY_TYPE_OVERRIDES로 오버라이드됨
+ */
+export const AUDIT_TO_ACTIVITY_TYPE: Record<string, string> = {
+  // Equipment
+  'create:equipment': 'equipment_added',
+  'update:equipment': 'equipment_updated',
+  'approve:equipment': 'equipment_approved',
+  'reject:equipment': 'equipment_rejected',
+  // Calibration
+  'create:calibration': 'calibration_created',
+  'update:calibration': 'calibration_updated',
+  'approve:calibration': 'calibration_approved',
+  // Checkout (purpose='calibration' or 'repair')
+  'create:checkout': 'checkout_created',
+  'approve:checkout': 'checkout_approved',
+  'reject:checkout': 'checkout_rejected',
+  // Non-conformance
+  'create:non_conformance': 'non_conformance_created',
+  'update:non_conformance': 'non_conformance_updated',
+  'approve:non_conformance': 'non_conformance_resolved',
+  // Calibration Plan
+  'create:calibration_plan': 'calibration_plan_created',
+  'approve:calibration_plan': 'calibration_plan_approved',
+  'reject:calibration_plan': 'calibration_plan_rejected',
+  // Rental (purpose='rental') — 런타임에 서비스에서 오버라이드
+  // 'create:rental': 'rental_created',  // 참조용 주석
+  // 'approve:rental': 'rental_approved',
+};
+
+/**
+ * checkout purpose가 'rental'일 때 활동 타입 오버라이드 매핑
+ *
+ * checkout_created → rental_created 등으로 변환
+ * 프론트엔드 RecentActivities의 탭 필터(대여/반출)가 정확히 동작하도록 보장
+ */
+export const RENTAL_ACTIVITY_TYPE_OVERRIDES: Record<string, string> = {
+  checkout_created: 'rental_created',
+  checkout_approved: 'rental_approved',
+  checkout_rejected: 'rental_rejected', // 프론트엔드에 없지만 fallback 처리됨
+};

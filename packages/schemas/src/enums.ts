@@ -995,6 +995,30 @@ export const EQUIPMENT_STATUS_LABELS: Record<EquipmentStatus, string> = {
 };
 
 /**
+ * 장비 상태 i18n 키 맵 (Phase 1+: LABELS 대체 예정)
+ *
+ * 사용법:
+ * ```tsx
+ * const t = useTranslations('equipment');
+ * <Badge>{t(EQUIPMENT_STATUS_LABEL_KEYS[status])}</Badge>
+ * ```
+ */
+export const EQUIPMENT_STATUS_LABEL_KEYS: Record<EquipmentStatus, string> = {
+  available: 'status.available',
+  in_use: 'status.in_use',
+  checked_out: 'status.checked_out',
+  calibration_scheduled: 'status.calibration_scheduled',
+  calibration_overdue: 'status.calibration_overdue',
+  non_conforming: 'status.non_conforming',
+  spare: 'status.spare',
+  retired: 'status.retired',
+  pending_disposal: 'status.pending_disposal',
+  disposed: 'status.disposed',
+  temporary: 'status.temporary',
+  inactive: 'status.inactive',
+};
+
+/**
  * UI 필터에 표시할 장비 상태 목록
  * - deprecated, 시스템 생성, 내부 전용 상태는 제외
  * - retired: deprecated (disposed로 대체)

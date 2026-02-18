@@ -72,6 +72,13 @@ export function isLabManager(role: UserRole): boolean {
 }
 
 /**
+ * 역할이 시험소장 이상인지 확인
+ */
+export function isLabManagerOrAbove(role: UserRole): boolean {
+  return hasEqualOrHigherRole(role, 'lab_manager');
+}
+
+/**
  * 역할이 시스템 관리자인지 확인
  */
 export function isSystemAdmin(role: UserRole): boolean {
