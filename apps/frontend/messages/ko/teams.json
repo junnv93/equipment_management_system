@@ -1,0 +1,40 @@
+{
+  "title": "팀 관리",
+  "subtitle": "팀 구성원 및 담당 장비 관리",
+  "toasts": {
+    "createSuccess": "팀이 생성되었습니다.",
+    "createError": "팀 생성 중 오류가 발생했습니다.",
+    "updateSuccess": "팀 정보가 수정되었습니다.",
+    "updateError": "팀 정보 수정 중 오류가 발생했습니다.",
+    "deleteSuccess": "팀이 삭제되었습니다.",
+    "deleteError": "팀 삭제 중 오류가 발생했습니다.",
+    "addMemberSuccess": "팀원이 추가되었습니다.",
+    "addMemberError": "팀원 추가 중 오류가 발생했습니다.",
+    "removeMemberSuccess": "팀원이 제거되었습니다.",
+    "removeMemberError": "팀원 제거 중 오류가 발생했습니다."
+  },
+  "fields": {
+    "name": "팀명",
+    "description": "설명",
+    "site": "사이트",
+    "members": "팀원",
+    "equipment": "담당 장비"
+  },
+  "stats": {
+    "memberCount": "{count}명",
+    "equipmentCount": "{count}대"
+  },
+  "list": {
+    "empty": "팀이 없습니다.",
+    "emptyDescription": "첫 번째 팀을 생성하세요."
+  },
+  "detail": {
+    "members": "팀원 목록",
+    "equipment": "담당 장비 목록"
+  },
+  "edit": {
+    "title": "팀 수정",
+    "description": "팀 정보를 수정합니다",
+    "backToDetail": "팀 상세로 돌아가기"
+  }
+}

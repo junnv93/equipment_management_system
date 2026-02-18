@@ -1,0 +1,149 @@
+{
+  "title": "Notifications",
+  "subtitle": "Manage system notifications",
+  "types": {
+    "checkout_approved": "Checkout Approved",
+    "checkout_rejected": "Checkout Rejected",
+    "checkout_return_due": "Return Due",
+    "checkout_overdue": "Checkout Overdue",
+    "calibration_due": "Calibration Due",
+    "calibration_overdue": "Calibration Overdue",
+    "equipment_registered": "Equipment Registered",
+    "non_conformance_created": "Non-Conformance Registered",
+    "approval_required": "Approval Required",
+    "system": "System Notification"
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "actions": {
+    "markRead": "Mark as Read",
+    "markAllRead": "Mark All as Read",
+    "dismiss": "Dismiss",
+    "viewDetail": "View Detail"
+  },
+  "empty": {
+    "title": "No notifications",
+    "description": "New notifications will appear here when they arrive."
+  },
+  "toasts": {
+    "markReadSuccess": "Notification marked as read.",
+    "markAllReadSuccess": "All notifications marked as read.",
+    "markReadError": "An error occurred while processing the notification.",
+    "saveError": "Failed to save settings."
+  },
+  "settings": {
+    "emailEnabled": "Email Notifications",
+    "pushEnabled": "Push Notifications",
+    "calibrationAlerts": "Calibration Alerts",
+    "approvalAlerts": "Approval Alerts",
+    "checkoutAlerts": "Checkout Alerts"
+  },
+  "channel": {
+    "title": "Notification Channels",
+    "description": "Configure how and how often you receive notifications.",
+    "email": {
+      "label": "Email Notifications",
+      "description": "Receive calibration overdue, calibration due, and checkout overdue notifications via email. (Uses Azure AD account email)"
+    },
+    "inApp": {
+      "label": "In-App Notifications",
+      "description": "Display notifications within the system."
+    },
+    "frequency": {
+      "label": "Notification Frequency",
+      "description": "Currently all notifications are sent immediately. Daily/weekly digest feature coming soon."
+    },
+    "digestTime": {
+      "label": "Digest Send Time",
+      "description": "You can set the send time when daily/weekly digest is enabled."
+    }
+  },
+  "category": {
+    "title": "Notification Types",
+    "description": "Select which notification categories to receive.",
+    "checkout": {
+      "label": "Checkout",
+      "description": "Checkout request, approval, rejection, and return notifications"
+    },
+    "calibration": {
+      "label": "Calibration",
+      "description": "Calibration record registration, approval, due/overdue notifications"
+    },
+    "calibration_plan": {
+      "label": "Calibration Plan",
+      "description": "Calibration plan submission/review/approval/rejection notifications"
+    },
+    "non_conformance": {
+      "label": "Non-Conformance",
+      "description": "Non-conformance registration, correction, closure notifications"
+    },
+    "disposal": {
+      "label": "Disposal",
+      "description": "Disposal request, review, approval notifications"
+    },
+    "equipment_import": {
+      "label": "Equipment Import",
+      "description": "Equipment import request, approval notifications"
+    },
+    "equipment": {
+      "label": "Equipment",
+      "description": "Equipment registration, modification, status change notifications"
+    },
+    "system": { "label": "System", "description": "System maintenance and important announcements" }
+  },
+  "comingSoon": "Coming Soon",
+  "alerts": {
+    "title": "Notification Center",
+    "markAllRead": "Mark All as Read",
+    "searchPlaceholder": "Search notifications...",
+    "tabs": {
+      "all": "All Notifications",
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "emptyState": "No notifications to display.",
+    "viewEquipment": "View equipment: {name}",
+    "markRead": "Mark as Read",
+    "delete": "Delete",
+    "priorityLabels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    },
+    "intermediateCheck": {
+      "title": "Intermediate Check {status}",
+      "statusLabels": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "upcoming": "Upcoming",
+        "future": "Scheduled"
+      },
+      "overdueDays": "{days} days overdue",
+      "equipmentFallback": "Equipment {id}",
+      "checkDateMessage": "'s intermediate check date is {date}.",
+      "completeButton": "Complete Check",
+      "complete": "Complete",
+      "later": "Later",
+      "dismissAriaLabel": "Dismiss notification",
+      "dialog": {
+        "title": "Complete Intermediate Check",
+        "descriptionWithName": "Complete intermediate check for {name}.",
+        "scheduledDate": "Scheduled Date:",
+        "notesLabel": "Check Notes (Optional)",
+        "notesPlaceholder": "Enter check results or notable findings",
+        "cancel": "Cancel",
+        "processing": "Processing...",
+        "submit": "Mark Complete"
+      },
+      "toasts": {
+        "success": "Intermediate Check Complete",
+        "successDesc": "Intermediate check has been completed.",
+        "error": "Completion Failed"
+      }
+    }
+  }
+}

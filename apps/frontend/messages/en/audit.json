@@ -1,0 +1,46 @@
+{
+  "title": "Audit Logs",
+  "refresh": "Refresh",
+  "print": "Print",
+  "filter": "Filter",
+  "logList": "Log List",
+  "totalLogs": "Total {count} logs",
+  "emptyLogs": "No logs found",
+  "showingRange": "Showing {start}-{end} of {total}",
+  "filters": {
+    "userId": "User ID",
+    "entityType": "Entity Type",
+    "action": "Action",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "all": "All"
+  },
+  "table": {
+    "time": "Time",
+    "user": "User",
+    "role": "Role",
+    "action": "Action",
+    "target": "Target",
+    "targetName": "Target Name",
+    "ip": "IP"
+  },
+  "detail": {
+    "title": "Audit Log Detail",
+    "description": "Detailed record of system activity.",
+    "userInfo": "User Information",
+    "userName": "User:",
+    "userRole": "Role:",
+    "userId": "User ID:",
+    "ipAddress": "IP Address:",
+    "targetInfo": "Target Information",
+    "targetType": "Target Type:",
+    "targetId": "Target ID:",
+    "changes": "Changes",
+    "additionalInfo": "Additional Information",
+    "metadata": "Metadata",
+    "logId": "Log ID:",
+    "createdAt": "Created At:",
+    "requestId": "Request ID:",
+    "auditLogDetail": "{type} Audit Log Detail"
+  }
+}

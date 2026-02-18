@@ -1,0 +1,461 @@
+{
+  "title": "Calibration Management",
+  "subtitle": "Register and manage calibration records",
+  "status": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "completed": "Completed"
+  },
+  "method": {
+    "external_calibration": "External Calibration",
+    "self_inspection": "Self-Inspection",
+    "not_applicable": "Not Applicable"
+  },
+  "result": {
+    "pass": "Pass",
+    "fail": "Fail",
+    "not_applicable": "Not Applicable"
+  },
+  "toasts": {
+    "registerSuccess": "Calibration record registered.",
+    "registerError": "An error occurred while registering the calibration record.",
+    "approveSuccess": "Calibration approved.",
+    "approveError": "An error occurred during approval.",
+    "rejectSuccess": "Calibration rejected.",
+    "rejectError": "An error occurred during rejection.",
+    "updateSuccess": "Calibration record updated.",
+    "updateError": "An error occurred during update.",
+    "deleteSuccess": "Calibration record deleted.",
+    "deleteError": "An error occurred during deletion.",
+    "overdueCheckSuccess": "Overdue calibration check completed."
+  },
+  "fields": {
+    "calibrationDate": "Calibration Date",
+    "nextCalibrationDate": "Next Calibration Date",
+    "calibrationAgency": "Calibration Agency",
+    "calibrationMethod": "Calibration Method",
+    "result": "Calibration Result",
+    "certificate": "Calibration Certificate",
+    "notes": "Notes"
+  },
+  "list": {
+    "empty": "No calibration records found.",
+    "emptyDescription": "Register the first calibration record."
+  },
+  "planStatus": {
+    "draft": "Draft",
+    "pending_review": "Pending Review",
+    "pending_approval": "Pending Approval",
+    "approved": "Approved",
+    "rejected": "Rejected"
+  },
+  "dday": {
+    "today": "D-Day",
+    "overdue": "D+{days}",
+    "upcoming": "D-{days}"
+  },
+  "planDetail": {
+    "breadcrumbSuffix": "Calibration Plan",
+    "error": {
+      "title": "Error",
+      "loadFailed": "An error occurred while loading the calibration plan."
+    },
+    "header": {
+      "author": "Author",
+      "createdAt": "Created"
+    },
+    "actions": {
+      "printPdf": "Print/PDF",
+      "delete": "Delete",
+      "submitForReview": "Submit for Review",
+      "reject": "Reject",
+      "finalApprove": "Final Approve",
+      "confirmReview": "Confirm Review",
+      "cancel": "Cancel",
+      "collapseComment": "Collapse Comment",
+      "addComment": "Add Comment"
+    },
+    "timeline": {
+      "step1": "1. Draft",
+      "step2": "2. Review",
+      "step3": "3. Approve",
+      "technicalManager": "Technical Manager",
+      "qualityManager": "Quality Manager",
+      "labManager": "Lab Manager",
+      "ariaConfirmReview": "Confirm calibration plan review"
+    },
+    "rejection": {
+      "title": "Rejected",
+      "reviewStage": "Review Stage",
+      "approvalStage": "Approval Stage"
+    },
+    "reviewComment": "Review Comment",
+    "approvalInfo": {
+      "approver": "Approver",
+      "approvedAt": "Approved"
+    },
+    "items": {
+      "title": "Calibration Plan Items",
+      "description": "{count} equipment included",
+      "empty": "No equipment in this plan",
+      "headers": {
+        "sequence": "No.",
+        "managementNumber": "Mgmt No.",
+        "equipmentName": "Equipment",
+        "snapshot": "Current Status (Snapshot)",
+        "plan": "Plan",
+        "notes": "Notes",
+        "action": "Action",
+        "validityDate": "Valid Until",
+        "calibrationCycle": "Cycle",
+        "calibrationAgency": "Agency",
+        "plannedDate": "Planned Date",
+        "plannedAgency": "Planned Agency",
+        "confirmation": "Confirm",
+        "actualDate": "Actual Date"
+      },
+      "monthUnit": "{count} months",
+      "confirmed": "Confirmed",
+      "confirm": "Confirm"
+    },
+    "placeholders": {
+      "reviewComment": "Brief comment (optional)",
+      "notes": "Notes"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Delete Plan",
+        "description": "Are you sure you want to delete this calibration plan? This action cannot be undone."
+      },
+      "submit": {
+        "title": "Submit for Review",
+        "description": "Submit this plan for quality manager review? Modifications will not be allowed after submission."
+      },
+      "approve": {
+        "title": "Final Approval",
+        "description": "Approve this calibration plan? Calibration will proceed according to the plan after approval."
+      },
+      "reject": {
+        "title": "Reject",
+        "description": "Reject this calibration plan? Please enter the reason for rejection.",
+        "reasonLabel": "Rejection Reason (Required)",
+        "reasonPlaceholder": "Enter rejection reason"
+      }
+    },
+    "toasts": {
+      "submitForReviewSuccess": "Review Requested",
+      "submitForReviewSuccessDesc": "The calibration plan has been submitted for quality manager review.",
+      "submitForReviewError": "Review Request Failed",
+      "submitForReviewErrorDesc": "An error occurred while requesting review.",
+      "reviewSuccess": "Review Completed",
+      "reviewSuccessDesc": "Quality manager review completed. Submitted for lab manager approval.",
+      "reviewError": "Review Failed",
+      "reviewErrorDesc": "An error occurred during review.",
+      "approveSuccess": "Approved",
+      "approveSuccessDesc": "The calibration plan has been approved.",
+      "approveError": "Approval Failed",
+      "approveErrorDesc": "An error occurred during approval.",
+      "rejectSuccess": "Rejected",
+      "rejectSuccessDesc": "The calibration plan has been rejected.",
+      "rejectError": "Rejection Failed",
+      "rejectErrorDesc": "An error occurred during rejection.",
+      "deleteSuccess": "Deleted",
+      "deleteSuccessDesc": "The calibration plan has been deleted.",
+      "deleteError": "Deletion Failed",
+      "deleteErrorDesc": "An error occurred during deletion.",
+      "updateItemSuccess": "Item Updated",
+      "updateItemSuccessDesc": "The item has been updated.",
+      "updateItemError": "Update Failed",
+      "updateItemErrorDesc": "An error occurred while updating the item.",
+      "confirmItemSuccess": "Confirmed",
+      "confirmItemSuccessDesc": "The item has been confirmed.",
+      "confirmItemError": "Confirmation Failed",
+      "confirmItemErrorDesc": "An error occurred during confirmation."
+    }
+  },
+  "content": {
+    "registerButton": "Register Calibration",
+    "stats": {
+      "total": "Total Calibration Equipment",
+      "compliant": "Compliant Equipment",
+      "overdue": "Calibration Overdue",
+      "upcoming": "Due Within 30 Days",
+      "unit": "{count} units",
+      "viewDetails": "View Details"
+    },
+    "search": {
+      "placeholder": "Search equipment name, management number...",
+      "teamFilter": "Team Filter",
+      "allTeams": "All Teams"
+    },
+    "tabs": {
+      "all": "All",
+      "overdue": "Overdue",
+      "upcoming": "Due Within 30 Days",
+      "intermediateChecks": "Intermediate Checks"
+    },
+    "loading": "Loading data...",
+    "error": "An error occurred while loading data.",
+    "empty": {
+      "title": "No calibration records",
+      "all": "No calibration records found.",
+      "overdue": "No overdue equipment.",
+      "upcoming": "No equipment due within 30 days.",
+      "registerButton": "Register Calibration"
+    },
+    "table": {
+      "equipmentName": "Equipment",
+      "managementNumber": "Mgmt No.",
+      "team": "Team",
+      "calibrationDate": "Calibration Date",
+      "nextCalibrationDate": "Next Calibration",
+      "calibrationAgency": "Agency",
+      "status": "Status",
+      "action": "Action",
+      "registerCalibration": "Register"
+    },
+    "statusText": {
+      "none": "Unregistered",
+      "overdue": "Overdue",
+      "upcoming": "{days} days remaining",
+      "ok": "Normal"
+    },
+    "intermediateChecks": {
+      "empty": {
+        "title": "No intermediate checks scheduled",
+        "description": "No intermediate checks are scheduled."
+      },
+      "stats": {
+        "total": "Total Checks",
+        "overdue": "Overdue",
+        "pending": "Scheduled",
+        "unit": "{count} items"
+      },
+      "table": {
+        "status": "Status",
+        "checkDate": "Scheduled Date",
+        "equipmentName": "Equipment",
+        "managementNumber": "Mgmt No.",
+        "team": "Team",
+        "nextCalibrationDate": "Next Calibration",
+        "action": "Action",
+        "complete": "Complete"
+      },
+      "statusText": {
+        "overdue": "{days} days overdue",
+        "today": "Today"
+      }
+    },
+    "completeDialog": {
+      "title": "Complete Intermediate Check",
+      "descriptionWithName": "Complete the intermediate check for \"{name}\".",
+      "descriptionWithId": "Complete the intermediate check for equipment {id}.",
+      "scheduledDate": "Scheduled Date",
+      "agency": "Calibration Agency",
+      "notesLabel": "Check Notes (Optional)",
+      "notesPlaceholder": "Enter check results or special notes",
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "submit": "Complete"
+    },
+    "toasts": {
+      "completeSuccess": "Check Completed",
+      "completeSuccessDesc": "The intermediate check has been completed.",
+      "completeError": "Completion Failed"
+    }
+  },
+  "register": {
+    "title": "Register Calibration",
+    "unauthorized": {
+      "title": "No Registration Permission",
+      "description": "Per UL-QP-18 procedures, only test engineers can register calibration records.",
+      "currentRole": "Current Role",
+      "approvalOnly": "Only calibration approval is available."
+    },
+    "authorized": {
+      "role": "Test Engineer",
+      "description": " — logged in. Registered calibration information will be applied after technical manager approval."
+    },
+    "equipmentSelection": {
+      "title": "Select Equipment",
+      "searchPlaceholder": "Search equipment name, management number...",
+      "loading": "Loading equipment list...",
+      "error": "An error occurred while loading the equipment list.",
+      "noResults": "No results found.",
+      "managementNumber": "Mgmt No.",
+      "currentStatus": "Current Status",
+      "statusAvailable": "Available",
+      "statusInUse": "In Use"
+    },
+    "form": {
+      "title": "Calibration Information",
+      "description": "Enter calibration information. It will be applied after technical manager approval.",
+      "selectedEquipment": "Selected Equipment",
+      "managementNumber": "Management Number",
+      "lastCalibrationDate": "Last Calibration Date",
+      "noDate": "None",
+      "calibrationDate": "Calibration Date",
+      "calibrationCycle": "Calibration Cycle (Months)",
+      "calibrationCyclePlaceholder": "Select cycle",
+      "cycleMonths": "{count} months",
+      "nextCalibrationDate": "Next Calibration Date",
+      "intermediateCheckDate": "Intermediate Check Date",
+      "intermediateCheckHint": "A check notification will be sent at the midpoint of the calibration cycle.",
+      "calibrationAgency": "Calibration Agency",
+      "calibrationAgencyPlaceholder": "Name of the calibration agency",
+      "result": "Calibration Result",
+      "resultPlaceholder": "Select result",
+      "resultPass": "Pass",
+      "resultFail": "Fail",
+      "resultConditional": "Conditional Pass",
+      "notes": "Notes",
+      "notesPlaceholder": "Additional calibration information"
+    },
+    "emptyState": {
+      "title": "Select equipment to register calibration information.",
+      "hint": "Search and select equipment from the left panel."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "submit": "Register Calibration (Request Approval)"
+    },
+    "toasts": {
+      "sessionError": "Session Error",
+      "sessionErrorDesc": "Unable to verify login information. Please log in again.",
+      "selectEquipment": "Select Equipment",
+      "selectEquipmentDesc": "Please select equipment to register calibration information."
+    }
+  },
+  "planApprovals": {
+    "title": "Calibration Plan Approval",
+    "description": "Review and approve calibration plans submitted by technical managers (Lab Manager only)",
+    "listTitle": "Pending Approvals",
+    "listDescription": "{count} pending approval requests",
+    "empty": "No pending calibration plan approvals",
+    "planTitle": "{year} {site} Calibration Plan",
+    "yearUnit": "{year}",
+    "fields": {
+      "year": "Year",
+      "site": "Laboratory",
+      "author": "Author",
+      "createdAt": "Created"
+    },
+    "actions": {
+      "viewDetail": "View Detail",
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel"
+    },
+    "approveDialog": {
+      "title": "Approve Calibration Plan",
+      "description": "Do you want to approve this calibration plan?"
+    },
+    "rejectDialogTitle": "Reject Calibration Plan",
+    "dialogLabels": {
+      "year": "Year:",
+      "site": "Laboratory:",
+      "author": "Author:"
+    },
+    "toasts": {
+      "approveSuccess": "Approved",
+      "approveSuccessDesc": "The calibration plan has been approved.",
+      "approveError": "Approval Failed",
+      "approveErrorDesc": "An error occurred during plan approval.",
+      "rejectSuccess": "Rejected",
+      "rejectSuccessDesc": "The calibration plan has been rejected.",
+      "rejectError": "Rejection Failed",
+      "rejectErrorDesc": "An error occurred during plan rejection."
+    }
+  },
+  "plansList": {
+    "title": "Calibration Plans",
+    "subtitle": "Manage annual calibration plans for external calibration equipment",
+    "createButton": "Create New Plan",
+    "filter": {
+      "title": "Filters",
+      "yearPlaceholder": "Select Year",
+      "sitePlaceholder": "Select Laboratory",
+      "allSites": "All Laboratories",
+      "teamPlaceholder": "Select Team",
+      "allTeams": "All Teams",
+      "selectSiteFirst": "Select a laboratory first",
+      "statusPlaceholder": "Select Status",
+      "allStatuses": "All Statuses"
+    },
+    "list": {
+      "title": "Plan List",
+      "description": "{count} calibration plans",
+      "error": "An error occurred while loading the plan list.",
+      "empty": "No calibration plans found"
+    },
+    "yearUnit": "{year}",
+    "table": {
+      "year": "Year",
+      "site": "Laboratory",
+      "status": "Status",
+      "author": "Author",
+      "createdAt": "Created",
+      "approvedAt": "Approved",
+      "action": "Action"
+    },
+    "detail": "Detail"
+  },
+  "planCreate": {
+    "title": "Create Calibration Plan",
+    "description": "Create a new annual calibration plan. External calibration equipment will be loaded automatically.",
+    "basicInfo": {
+      "title": "Basic Information",
+      "description": "Select the year and laboratory for the plan"
+    },
+    "fields": {
+      "year": "Year",
+      "yearPlaceholder": "Select year",
+      "yearUnit": "{year}",
+      "site": "Laboratory",
+      "sitePlaceholder": "Select laboratory",
+      "sites": {
+        "suwon": "Suwon",
+        "uiwang": "Uiwang"
+      },
+      "team": "Team",
+      "teamPlaceholder": "Select team",
+      "teamRestricted": "(Technical managers can only select their own team)",
+      "allTeams": "All Teams (No team)",
+      "selectSiteFirst": "Select a laboratory first"
+    },
+    "preview": {
+      "title": "External Calibration Equipment (Preview)",
+      "description": "List of external calibration equipment scheduled for {year} at {site} laboratory. Automatically included when plan is created.",
+      "noEquipment": {
+        "title": "No Equipment",
+        "description": "No external calibration equipment is scheduled for the selected year."
+      },
+      "totalCount": "{count} equipment will be included.",
+      "headers": {
+        "sequence": "No.",
+        "managementNumber": "Mgmt No.",
+        "equipmentName": "Equipment",
+        "lastCalibrationDate": "Last Calibration",
+        "calibrationCycle": "Cycle",
+        "nextCalibrationDate": "Next Calibration",
+        "calibrationAgency": "Agency"
+      },
+      "cycleMonths": "{count} months"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "create": "Create Plan"
+    },
+    "toasts": {
+      "createSuccess": "Plan Created",
+      "createSuccessDesc": "{year} {site} calibration plan has been created.",
+      "createError": "Creation Failed",
+      "missingInfo": "Missing Information",
+      "selectYearAndSite": "Please select a year and laboratory.",
+      "selectTeam": "Please select a team."
+    }
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "back": "Back",
+    "close": "Close",
+    "submit": "Submit",
+    "approve": "Approve",
+    "reject": "Reject",
+    "download": "Download",
+    "upload": "Upload",
+    "view": "View",
+    "add": "Add",
+    "remove": "Remove",
+    "backToList": "Back to List",
+    "refresh": "Refresh",
+    "print": "Print"
+  },
+  "status": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "empty": "No data available",
+    "success": "Success",
+    "saving": "Saving...",
+    "deleting": "Deleting...",
+    "processing": "Processing..."
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "{current} / {total}",
+    "itemsPerPage": "Items per page",
+    "totalItems": "Total {count} items"
+  },
+  "table": {
+    "noData": "No data found",
+    "total": "Total: {count} items"
+  },
+  "validation": {
+    "required": "This field is required",
+    "minLength": "Minimum {min} characters required",
+    "maxLength": "Maximum {max} characters allowed",
+    "email": "Please enter a valid email address",
+    "number": "Please enter a number",
+    "positiveNumber": "Please enter a positive number"
+  },
+  "errors": {
+    "generic": "An unexpected error occurred. Please try again later.",
+    "notFound": "The requested resource was not found.",
+    "unauthorized": "You do not have permission to access this.",
+    "serverError": "A server error occurred.",
+    "networkError": "A network error occurred.",
+    "versionConflict": "Another user made changes at the same time. Please refresh and try again.",
+    "tryAgain": "Try Again"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{count} days ago",
+    "hoursAgo": "{count} hours ago",
+    "minutesAgo": "{count} minutes ago",
+    "justNow": "Just now"
+  },
+  "reports": {
+    "title": "Report Management",
+    "subtitle": "Generate and export various types of reports.",
+    "generateComplete": "Report Generated",
+    "fileDownloaded": "{fileName} has been downloaded.",
+    "generate": "Generate Report",
+    "generateOptions": "Select the report type and options",
+    "reportInfo": "Report Information",
+    "reportInfoPlaceholder": "Select a report type for more details.",
+    "selectTypeHint": "Select a report type on the left to view details here.",
+    "reportType": "Report Type",
+    "reportTypePlaceholder": "Select report type",
+    "reportTypeRequired": "Report Type Required",
+    "reportTypeRequiredDesc": "Please select a report type.",
+    "dateRangeRequired": "Date Range Required",
+    "dateRangeRequiredDesc": "Please select a custom date range.",
+    "generating": "Generating report...",
+    "generateError": "Report Generation Failed",
+    "generateErrorDesc": "An error occurred while generating the report.",
+    "settingsSummary": "Report Settings Summary",
+    "reportTypeLabel": "Report Type:",
+    "outputFormat": "Output Format",
+    "outputFormatLabel": "Output Format:",
+    "periodLabel": "Period:",
+    "periodSelect": "Select period",
+    "lastWeek": "Last Week",
+    "lastMonth": "Last Month",
+    "lastQuarter": "Last 3 Months",
+    "lastYear": "Last Year",
+    "custom": "Custom",
+    "customDateRange": "Custom Date Range",
+    "types": {
+      "equipment_inventory": "Equipment Inventory",
+      "calibration_status": "Calibration Status",
+      "utilization_report": "Utilization",
+      "team_equipment": "Team Equipment",
+      "maintenance_report": "Maintenance Report"
+    },
+    "descriptions": {
+      "equipment_inventory": "An inventory report with current status and details of all equipment.",
+      "calibration_status": "A calibration status report with schedules and status of all equipment.",
+      "utilization_report": "A utilization report with usage statistics and availability analysis.",
+      "team_equipment": "A team equipment report with equipment lists and status by team.",
+      "maintenance_report": "A maintenance report with schedules and history."
+    },
+    "reportSuffix": "Report",
+    "includedContent": "Report Contents",
+    "equipmentCategory": "Equipment Category",
+    "equipmentCategoryLabel": "Category:",
+    "allCategories": "All Categories",
+    "testEquipment": "Test Equipment",
+    "computer": "Computer",
+    "networkEquipment": "Network Equipment",
+    "calibrationStatusLabel": "Calibration Status",
+    "calibrationStatusFilterLabel": "Cal. Status:",
+    "allStatuses": "All Statuses",
+    "completed": "Completed",
+    "scheduled": "Scheduled",
+    "overdue": "Overdue",
+    "equipmentSelect": "Select Equipment",
+    "allEquipment": "All Equipment",
+    "departmentSelect": "Select Department",
+    "departmentLabel": "Department:",
+    "rdTeam": "R&D Team",
+    "qcTeam": "QC Team",
+    "prodTeam": "Production Team",
+    "testTeam": "Test Team",
+    "sampleEquipment1": "Oscilloscope #1",
+    "sampleEquipment2": "Spectrum Analyzer #2",
+    "sampleEquipment3": "Signal Generator #3",
+    "contents": {
+      "equipment_inventory": [
+        "Equipment info (ID, name, model)",
+        "Manufacturer & serial number",
+        "Current status & location",
+        "Purchase date & manager"
+      ],
+      "calibration_status": [
+        "Calibration status (completed, scheduled, overdue)",
+        "Calibration cycle & last date",
+        "Next calibration date",
+        "Calibration manager info"
+      ],
+      "utilization_report": [
+        "Equipment usage statistics",
+        "Usage time & frequency",
+        "Idle time analysis",
+        "Usage patterns & trends"
+      ],
+      "team_equipment": [
+        "Equipment list by department",
+        "Status & availability info",
+        "Equipment managers",
+        "Replacement plans"
+      ],
+      "maintenance_report": [
+        "Scheduled inspection history",
+        "Maintenance manager info",
+        "Inspection results & actions",
+        "Expected parts replacement cycle"
+      ]
+    }
+  },
+  "diffViewer": {
+    "empty": "No changed fields.",
+    "field": "Field",
+    "before": "Before",
+    "after": "After",
+    "boolTrue": "Yes",
+    "boolFalse": "No"
+  },
+  "entity": {
+    "viewDetail": "View {type} detail"
+  },
+  "datePicker": {
+    "selectDate": "Select date",
+    "selectRange": "Select date range"
+  }
+}

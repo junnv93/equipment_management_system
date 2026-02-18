@@ -1,0 +1,188 @@
+{
+  "actions": {
+    "save": "저장",
+    "cancel": "취소",
+    "delete": "삭제",
+    "edit": "수정",
+    "create": "생성",
+    "search": "검색",
+    "reset": "초기화",
+    "confirm": "확인",
+    "back": "뒤로",
+    "close": "닫기",
+    "submit": "제출",
+    "approve": "승인",
+    "reject": "반려",
+    "download": "다운로드",
+    "upload": "업로드",
+    "view": "보기",
+    "add": "추가",
+    "remove": "제거",
+    "backToList": "목록으로",
+    "refresh": "새로고침",
+    "print": "인쇄"
+  },
+  "status": {
+    "loading": "로딩 중...",
+    "error": "오류가 발생했습니다",
+    "empty": "데이터가 없습니다",
+    "success": "성공",
+    "saving": "저장 중...",
+    "deleting": "삭제 중...",
+    "processing": "처리 중..."
+  },
+  "pagination": {
+    "previous": "이전",
+    "next": "다음",
+    "pageOf": "{current} / {total}",
+    "itemsPerPage": "페이지당 항목",
+    "totalItems": "총 {count}건"
+  },
+  "table": {
+    "noData": "조회된 데이터가 없습니다",
+    "total": "총 {count}건"
+  },
+  "validation": {
+    "required": "필수 항목입니다",
+    "minLength": "최소 {min}자 이상 입력하세요",
+    "maxLength": "최대 {max}자까지 입력 가능합니다",
+    "email": "유효한 이메일 주소를 입력하세요",
+    "number": "숫자를 입력하세요",
+    "positiveNumber": "양수를 입력하세요"
+  },
+  "errors": {
+    "generic": "예상치 못한 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+    "notFound": "요청한 리소스를 찾을 수 없습니다.",
+    "unauthorized": "접근 권한이 없습니다.",
+    "serverError": "서버 오류가 발생했습니다.",
+    "networkError": "네트워크 오류가 발생했습니다.",
+    "versionConflict": "다른 사용자가 동시에 수정했습니다. 페이지를 새로고침 후 다시 시도해주세요.",
+    "tryAgain": "다시 시도"
+  },
+  "time": {
+    "today": "오늘",
+    "yesterday": "어제",
+    "daysAgo": "{count}일 전",
+    "hoursAgo": "{count}시간 전",
+    "minutesAgo": "{count}분 전",
+    "justNow": "방금"
+  },
+  "reports": {
+    "title": "보고서 관리",
+    "subtitle": "다양한 유형의 보고서를 생성하고 내보낼 수 있습니다.",
+    "generateComplete": "보고서 생성 완료",
+    "fileDownloaded": "{fileName} 파일이 다운로드되었습니다.",
+    "generate": "보고서 생성",
+    "generateOptions": "원하는 보고서 유형과 옵션을 선택하세요",
+    "reportInfo": "보고서 정보",
+    "reportInfoPlaceholder": "보고서 유형을 선택하면 자세한 정보가 표시됩니다.",
+    "selectTypeHint": "왼쪽에서 보고서 유형을 선택하면 여기에 상세 정보가 표시됩니다.",
+    "reportType": "보고서 유형",
+    "reportTypePlaceholder": "보고서 유형 선택",
+    "reportTypeRequired": "보고서 유형 선택 필요",
+    "reportTypeRequiredDesc": "보고서 유형을 선택해주세요.",
+    "dateRangeRequired": "날짜 범위 선택 필요",
+    "dateRangeRequiredDesc": "사용자 정의 날짜 범위를 선택해주세요.",
+    "generating": "보고서 생성 중...",
+    "generateError": "보고서 생성 실패",
+    "generateErrorDesc": "보고서 생성 중 오류가 발생했습니다.",
+    "settingsSummary": "보고서 설정 요약",
+    "reportTypeLabel": "보고서 유형:",
+    "outputFormat": "출력 형식",
+    "outputFormatLabel": "출력 형식:",
+    "periodLabel": "기간:",
+    "periodSelect": "기간 선택",
+    "lastWeek": "최근 1주일",
+    "lastMonth": "최근 1개월",
+    "lastQuarter": "최근 3개월",
+    "lastYear": "최근 1년",
+    "custom": "사용자 정의",
+    "customDateRange": "사용자 정의 날짜 범위",
+    "types": {
+      "equipment_inventory": "장비 인벤토리",
+      "calibration_status": "교정 상태",
+      "utilization_report": "활용률",
+      "team_equipment": "팀별 장비",
+      "maintenance_report": "점검 보고서"
+    },
+    "descriptions": {
+      "equipment_inventory": "모든 장비의 현재 상태와 세부 정보가 포함된 인벤토리 보고서입니다.",
+      "calibration_status": "모든 장비의 교정 일정과 상태가 포함된 교정 상태 보고서입니다.",
+      "utilization_report": "장비별 사용 통계와 가용성 분석이 포함된 활용률 보고서입니다.",
+      "team_equipment": "각 팀이 보유한 장비 목록과 현황이 포함된 팀별 장비 보고서입니다.",
+      "maintenance_report": "장비 유지보수 일정 및 이력이 포함된 점검 보고서입니다."
+    },
+    "reportSuffix": "보고서",
+    "includedContent": "보고서 포함 내용",
+    "equipmentCategory": "장비 분류",
+    "equipmentCategoryLabel": "장비 분류:",
+    "allCategories": "모든 분류",
+    "testEquipment": "테스트 장비",
+    "computer": "컴퓨터",
+    "networkEquipment": "네트워크 장비",
+    "calibrationStatusLabel": "교정 상태",
+    "calibrationStatusFilterLabel": "교정 상태:",
+    "allStatuses": "모든 상태",
+    "completed": "완료",
+    "scheduled": "예정됨",
+    "overdue": "만료됨",
+    "equipmentSelect": "장비 선택",
+    "allEquipment": "모든 장비",
+    "departmentSelect": "부서 선택",
+    "departmentLabel": "부서:",
+    "rdTeam": "연구개발팀",
+    "qcTeam": "품질관리팀",
+    "prodTeam": "생산팀",
+    "testTeam": "시험팀",
+    "sampleEquipment1": "오실로스코프 #1",
+    "sampleEquipment2": "스펙트럼 분석기 #2",
+    "sampleEquipment3": "신호 발생기 #3",
+    "contents": {
+      "equipment_inventory": [
+        "장비 기본 정보 (ID, 이름, 모델명)",
+        "제조사 및 시리얼 번호",
+        "현재 상태 및 위치 정보",
+        "구매일 및 관리 담당자"
+      ],
+      "calibration_status": [
+        "교정 상태 (완료, 예정, 만료)",
+        "교정 주기 및 최근 교정일",
+        "다음 교정 예정일",
+        "교정 담당자 정보"
+      ],
+      "utilization_report": [
+        "장비별 사용률 통계",
+        "사용 시간 및 빈도",
+        "유휴 시간 분석",
+        "사용 패턴 및 추세 분석"
+      ],
+      "team_equipment": [
+        "부서별 보유 장비 목록",
+        "장비 상태 및 가용성 정보",
+        "장비별 담당자 정보",
+        "장비 교체 계획 정보"
+      ],
+      "maintenance_report": [
+        "정기 점검 일정 및 이력",
+        "유지보수 담당자 정보",
+        "점검 결과 및 조치 사항",
+        "예상 부품 교체 주기"
+      ]
+    }
+  },
+  "diffViewer": {
+    "empty": "변경된 필드가 없습니다.",
+    "field": "필드",
+    "before": "변경 전",
+    "after": "변경 후",
+    "boolTrue": "예",
+    "boolFalse": "아니오"
+  },
+  "entity": {
+    "viewDetail": "{type} 상세 보기"
+  },
+  "datePicker": {
+    "selectDate": "날짜 선택",
+    "selectRange": "날짜 범위 선택"
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "title": "폐기 관리",
+  "subtitle": "장비 폐기 신청 및 승인 관리",
+  "status": {
+    "pending": "신청 중",
+    "under_review": "검토 중",
+    "approved": "승인됨",
+    "rejected": "반려됨",
+    "completed": "폐기 완료"
+  },
+  "reason": {
+    "end_of_life": "수명 만료",
+    "beyond_repair": "수리 불가",
+    "obsolete": "구형 장비",
+    "damaged": "손상",
+    "other": "기타"
+  },
+  "fields": {
+    "reason": "폐기 사유",
+    "requestDate": "신청일",
+    "approvalDate": "승인일",
+    "disposalDate": "폐기일",
+    "notes": "비고"
+  },
+  "progress": {
+    "request": "폐기 신청",
+    "review": "검토",
+    "approval": "승인",
+    "complete": "폐기 완료"
+  },
+  "common": {
+    "cancel": "취소",
+    "reject": "반려",
+    "equipmentName": "장비명:",
+    "requester": "요청자:",
+    "disposalReason": "폐기 사유:",
+    "reasonDetail": "상세 사유:",
+    "charCount": "{count}/10자 이상 (현재: {count}자)",
+    "rejectNotice": "요청을 반려하려면 구체적인 사유를 입력하고 다시 반려 버튼을 클릭해주세요.",
+    "error": "처리 실패",
+    "attachments": "첨부 파일:",
+    "downloadAriaLabel": "다운로드: {name}"
+  },
+  "button": {
+    "completed": "폐기 완료",
+    "request": "폐기 요청",
+    "inProgress": "폐기 진행 중"
+  },
+  "banner": {
+    "title": "장비 폐기 완료",
+    "reason": "폐기 사유:",
+    "approver": "승인자:"
+  },
+  "dropdown": {
+    "review": "폐기 검토하기",
+    "approve": "최종 승인하기",
+    "cancel": "요청 취소",
+    "detail": "상세 보기"
+  },
+  "stepper": {
+    "request": "요청",
+    "review": "검토",
+    "approval": "승인"
+  },
+  "requestDialog": {
+    "title": "장비 폐기 요청",
+    "description": "{name} 장비의 폐기를 요청합니다.",
+    "reasonDetailLabel": "상세 사유",
+    "reasonDetailPlaceholder": "폐기 사유를 10자 이상 상세히 입력해주세요",
+    "attachmentsLabel": "첨부 파일 (선택)",
+    "selectFile": "파일 선택",
+    "selectFileAriaLabel": "파일 선택",
+    "removeFileAriaLabel": "파일 제거: {name}",
+    "submit": "폐기 요청",
+    "toasts": {
+      "successTitle": "폐기 요청 완료",
+      "successDesc": "폐기 요청이 성공적으로 등록되었습니다.",
+      "errorTitle": "폐기 요청 실패"
+    }
+  },
+  "approvalDialog": {
+    "title": "폐기 최종 승인",
+    "description": "폐기 요청 및 검토 내용을 확인하고 최종 승인해주세요.",
+    "infoTitle": "장비 및 폐기 정보",
+    "managementNumber": "관리번호:",
+    "reviewOpinion": "검토 의견",
+    "commentLabel": "승인 코멘트 (선택)",
+    "rejectPlaceholder": "반려 사유를 10자 이상 상세히 입력해주세요 (필수)",
+    "approvePlaceholder": "승인 코멘트를 입력해주세요 (선택사항)",
+    "approve": "최종 승인",
+    "confirmTitle": "최종 승인 확인",
+    "confirmDescription": "{name} 장비의 폐기를 최종 승인하시겠습니까?",
+    "confirmWarning": "이 작업은 되돌릴 수 없습니다.",
+    "toasts": {
+      "approveTitle": "최종 승인 완료",
+      "approveDesc": "장비 폐기가 최종 승인되었습니다.",
+      "rejectTitle": "요청 반려",
+      "rejectDesc": "폐기 요청이 반려되었습니다."
+    }
+  },
+  "reviewDialog": {
+    "title": "폐기 검토",
+    "description": "폐기 요청 내용을 검토하고 의견을 작성해주세요.",
+    "infoTitle": "폐기 요청 정보",
+    "opinionLabel": "검토 의견",
+    "rejectPlaceholder": "반려 사유를 10자 이상 상세히 입력해주세요",
+    "opinionPlaceholder": "검토 의견을 10자 이상 입력해주세요",
+    "reviewComplete": "검토 완료",
+    "toasts": {
+      "approveTitle": "검토 완료",
+      "approveDesc": "폐기 검토가 완료되었습니다. 시험소장의 최종 승인을 기다립니다.",
+      "rejectTitle": "요청 반려",
+      "rejectDesc": "폐기 요청이 반려되었습니다."
+    }
+  },
+  "detailDialog": {
+    "title": "폐기 상세 내역",
+    "description": "{name} 장비의 폐기 진행 내역입니다.",
+    "progressStatus": "진행 상태",
+    "stages": {
+      "request": "폐기 요청",
+      "review": "기술책임자 검토",
+      "approval": "시험소장 최종 승인"
+    },
+    "rejectionReason": "반려 사유:\n{reason}",
+    "approvalComplete": "승인 완료"
+  },
+  "progressCard": {
+    "title": "장비 폐기 진행 중",
+    "pendingReview": "기술책임자 검토 대기 중",
+    "pendingApproval": "시험소장 승인 대기 중",
+    "complete": "처리 완료",
+    "viewDetails": "상세 보기",
+    "cancelRequest": "요청 취소"
+  },
+  "cancelDialog": {
+    "title": "폐기 요청 취소",
+    "description": "정말 폐기 요청을 취소하시겠습니까?",
+    "message": "{name}의 폐기 요청이 취소되고, 장비 상태가 {status}으로 변경됩니다.",
+    "available": "사용 가능",
+    "close": "닫기",
+    "confirm": "확인",
+    "toasts": {
+      "successTitle": "취소 완료",
+      "successDesc": "폐기 요청이 취소되었습니다. 장비 상태가 사용 가능으로 변경되었습니다.",
+      "errorTitle": "취소 실패"
+    }
+  },
+  "reasonSelector": {
+    "label": "폐기 사유"
+  },
+  "historySummary": {
+    "title": "장비 이력 요약",
+    "collapse": "장비 이력 접기",
+    "expand": "장비 이력 펼치기",
+    "lastCalibration": "마지막 교정",
+    "repairHistory": "수리 이력",
+    "ncHistory": "부적합 이력",
+    "usagePeriod": "사용 기간",
+    "noRecord": "기록 없음",
+    "noInfo": "정보 없음",
+    "years": "{count}년 ",
+    "months": "{count}개월"
+  }
+}

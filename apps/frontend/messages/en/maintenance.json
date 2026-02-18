@@ -1,0 +1,121 @@
+{
+  "title": "Maintenance Management",
+  "subtitle": "Manage equipment maintenance schedules and results.",
+  "createButton": "Register Maintenance",
+  "stats": {
+    "total": "Total Maintenance",
+    "scheduled": "Scheduled",
+    "inProgress": "In Progress",
+    "overdue": "Overdue"
+  },
+  "tabs": {
+    "all": "All Maintenance",
+    "scheduled": "Scheduled",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "upcoming": "Upcoming",
+    "overdue": "Overdue"
+  },
+  "search": {
+    "placeholder": "Search equipment or performer",
+    "typeFilter": "Maintenance Type"
+  },
+  "types": {
+    "all": "All",
+    "regular": "Regular Inspection",
+    "repair": "Repair",
+    "inspection": "Inspection",
+    "other": "Other"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "canceled": "Canceled"
+  },
+  "result": {
+    "completed": "Pass",
+    "pending": "Pending",
+    "failed": "Failed"
+  },
+  "table": {
+    "equipment": "Equipment",
+    "type": "Type",
+    "status": "Status",
+    "date": "Date",
+    "performer": "Performer",
+    "result": "Result"
+  },
+  "empty": {
+    "title": "No maintenance records",
+    "description": "No maintenance records match the search criteria.",
+    "resetFilters": "Reset Filters"
+  },
+  "noEquipmentInfo": "No equipment info",
+  "create": {
+    "title": "Register Maintenance",
+    "subtitle": "Register equipment maintenance information.",
+    "backToList": "Back to Maintenance List",
+    "equipmentSelection": {
+      "title": "Select Equipment",
+      "description": "Select equipment for maintenance.",
+      "autoSelected": "Equipment was auto-selected from URL.",
+      "searchPlaceholder": "Search by name or management number",
+      "loading": "Loading equipment list...",
+      "empty": "No results found.",
+      "selectedTitle": "Selected Equipment",
+      "selectedLoading": "Loading equipment info...",
+      "selectedEmpty": "No selected equipment info."
+    },
+    "equipmentFields": {
+      "name": "Equipment Name",
+      "managementNumber": "Management Number",
+      "model": "Model",
+      "manufacturer": "Manufacturer",
+      "regularPeriod": "Regular Inspection Period",
+      "periodUnit": "{count} months",
+      "useRegularPeriod": "Use equipment's regular inspection period"
+    },
+    "info": {
+      "title": "Maintenance Information",
+      "description": "Enter maintenance type, schedule, and performer information."
+    },
+    "fields": {
+      "type": "Maintenance Type",
+      "typePlaceholder": "Select type",
+      "status": "Status",
+      "statusPlaceholder": "Select status",
+      "date": "Maintenance Date",
+      "period": "Period (months)",
+      "applyDefault": "Apply Default",
+      "nextDate": "Next maintenance: {date}",
+      "performer": "Performer",
+      "performerPlaceholder": "Performer name",
+      "performerContact": "Performer Contact",
+      "performerContactPlaceholder": "Contact (optional)",
+      "cost": "Cost (KRW)",
+      "costPlaceholder": "Cost (optional)",
+      "result": "Result",
+      "resultPlaceholder": "Select result",
+      "parts": "Parts Used",
+      "partsPlaceholder": "Parts or materials used",
+      "partsAdd": "Add",
+      "notes": "Notes",
+      "notesPlaceholder": "Enter additional notes if any"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "submitting": "Registering...",
+      "submit": "Register Maintenance"
+    },
+    "toasts": {
+      "success": "Maintenance Registered",
+      "successDesc": "Equipment maintenance info has been registered successfully.",
+      "error": "Registration Failed",
+      "equipmentRequired": "Please select equipment",
+      "equipmentRequiredDesc": "You must select equipment for maintenance.",
+      "performerRequired": "Please enter performer",
+      "performerRequiredDesc": "You must enter performer information."
+    }
+  }
+}

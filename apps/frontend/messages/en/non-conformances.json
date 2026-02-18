@@ -1,0 +1,73 @@
+{
+  "title": "Non-Conformance Management",
+  "subtitle": "Register and manage non-conformance items",
+  "status": {
+    "open": "Open",
+    "under_review": "Under Review",
+    "resolved": "Resolved",
+    "closed": "Closed"
+  },
+  "type": {
+    "calibration_overdue": "Calibration Overdue",
+    "equipment_failure": "Equipment Failure",
+    "measurement_error": "Measurement Error",
+    "other": "Other"
+  },
+  "toasts": {
+    "createSuccess": "Non-conformance registered.",
+    "createError": "An error occurred during registration.",
+    "updateSuccess": "Non-conformance updated.",
+    "updateError": "An error occurred during update.",
+    "resolveSuccess": "Non-conformance resolved.",
+    "resolveError": "An error occurred during resolution.",
+    "closeSuccess": "Non-conformance closed.",
+    "closeError": "An error occurred during closure.",
+    "approveSuccess": "Non-conformance approved.",
+    "approveError": "An error occurred during approval.",
+    "rejectSuccess": "Non-conformance rejected.",
+    "rejectError": "An error occurred during rejection."
+  },
+  "fields": {
+    "type": "Non-Conformance Type",
+    "description": "Description",
+    "equipment": "Equipment",
+    "discoveredAt": "Discovery Date",
+    "resolvedAt": "Resolution Date",
+    "resolution": "Resolution Method",
+    "notes": "Notes"
+  },
+  "list": {
+    "empty": "No non-conformances found.",
+    "emptyDescription": "Register a non-conformance item."
+  },
+  "approvals": {
+    "title": "Non-Conformance Closure Approval",
+    "description": "Approve equipment resumption for corrected non-conformances. (Technical Manager only)",
+    "infoMessage": "The list below shows non-conformance records in corrected status.\nUpon closure approval, the equipment will be changed back to available status.",
+    "empty": {
+      "title": "No Pending Approvals",
+      "description": "No non-conformance records pending approval."
+    },
+    "error": {
+      "title": "Data Loading Failed",
+      "description": "Failed to load data."
+    },
+    "retry": "Retry",
+    "discoveryDate": "Discovery Date",
+    "viewEquipment": "View Equipment",
+    "cause": "Non-Conformance Cause",
+    "analysis": "Root Cause Analysis",
+    "correction": "Corrective Action",
+    "correctionDate": "Correction Date",
+    "closureNotesLabel": "Closure Notes (Optional)",
+    "closureNotesPlaceholder": "Enter closure notes.",
+    "processing": "Processing...",
+    "approveButton": "Approve Resumption",
+    "toasts": {
+      "closeSuccess": "Closure Approved",
+      "closeSuccessDesc": "The non-conformance has been closed.",
+      "closeError": "Closure Failed",
+      "closeErrorDesc": "Failed to process closure."
+    }
+  }
+}

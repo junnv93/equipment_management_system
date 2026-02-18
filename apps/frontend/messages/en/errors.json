@@ -1,0 +1,154 @@
+{
+  "VALIDATION_ERROR": {
+    "title": "Validation Error",
+    "message": "The input value is not valid.",
+    "solutions": ["Check the fields highlighted in red", "Fill in all required fields"]
+  },
+  "REQUIRED_FIELD_MISSING": {
+    "title": "Required Field Missing",
+    "message": "Required input fields are missing.",
+    "solutions": ["Fill in all fields marked with *"]
+  },
+  "INVALID_FORMAT": {
+    "title": "Format Error",
+    "message": "The input format is not valid.",
+    "solutions": [
+      "Management number: enter in XXX-XYYYY format",
+      "e.g. SUW-E0001 (Suwon), UIW-E0001 (Uiwang)"
+    ]
+  },
+  "INVALID_DATE": {
+    "title": "Invalid Date",
+    "message": "The date is not valid.",
+    "solutions": ["Use the date picker to select a valid date"]
+  },
+  "DUPLICATE_ERROR": {
+    "title": "Duplicate Error",
+    "message": "This information is already registered.",
+    "solutions": ["Use a different value or check existing data"]
+  },
+  "DUPLICATE_MANAGEMENT_NUMBER": {
+    "title": "Duplicate Management Number",
+    "message": "This management number is already registered.",
+    "solutions": [
+      "Use a different management number",
+      "Search the equipment list to find the existing entry"
+    ],
+    "actionLabel": "Search Equipment List"
+  },
+  "DUPLICATE_SERIAL_NUMBER": {
+    "title": "Duplicate Serial Number",
+    "message": "This serial number is already registered.",
+    "solutions": [
+      "Use a different serial number",
+      "It is recommended to check the existing equipment"
+    ],
+    "actionLabel": "Search Equipment List"
+  },
+  "VERSION_CONFLICT": {
+    "title": "Data Conflict",
+    "message": "Another user has modified this data. Loading the latest data.",
+    "solutions": ["The page will refresh automatically", "Please try again after the refresh"]
+  },
+  "UNAUTHORIZED": {
+    "title": "Authentication Required",
+    "message": "You need to log in.",
+    "solutions": ["Please log in again"],
+    "actionLabel": "Log In"
+  },
+  "PERMISSION_DENIED": {
+    "title": "Permission Denied",
+    "message": "You do not have permission to perform this action.",
+    "solutions": [
+      "Check if you have permission for the relevant site/team",
+      "Contact the system administrator if you need permission"
+    ]
+  },
+  "SESSION_EXPIRED": {
+    "title": "Session Expired",
+    "message": "Your login session has expired.",
+    "solutions": ["Please log in again"],
+    "actionLabel": "Log In"
+  },
+  "NOT_FOUND": {
+    "title": "Not Found",
+    "message": "The requested resource could not be found.",
+    "solutions": ["Check if the information is correct", "It may have already been deleted"]
+  },
+  "EQUIPMENT_NOT_FOUND": {
+    "title": "Equipment Not Found",
+    "message": "The requested equipment could not be found.",
+    "solutions": ["Check if the equipment ID is correct", "The equipment may have been deleted"],
+    "actionLabel": "Go to Equipment List"
+  },
+  "SERVER_ERROR": {
+    "title": "Server Error",
+    "message": "An error occurred on the server.",
+    "solutions": [
+      "Please try again later",
+      "Contact the system administrator if the problem persists"
+    ]
+  },
+  "NETWORK_ERROR": {
+    "title": "Network Error",
+    "message": "Cannot connect to the server.",
+    "solutions": ["Check your internet connection", "Please try again later"]
+  },
+  "TIMEOUT_ERROR": {
+    "title": "Request Timeout",
+    "message": "The server response timed out.",
+    "solutions": ["Please try again later"]
+  },
+  "FILE_TOO_LARGE": {
+    "title": "File Too Large",
+    "message": "The uploaded file size is too large.",
+    "solutions": [
+      "Reduce the file size to 10MB or less",
+      "For PDFs, try compressing or splitting the file"
+    ]
+  },
+  "INVALID_FILE_TYPE": {
+    "title": "Unsupported File Type",
+    "message": "This file type is not allowed.",
+    "solutions": ["Only PDF, JPG, PNG, and Excel files can be uploaded"]
+  },
+  "FILE_UPLOAD_FAILED": {
+    "title": "File Upload Failed",
+    "message": "An error occurred while uploading the file.",
+    "solutions": ["Please try again later", "Check that the file is not corrupted"]
+  },
+  "HISTORY_SAVE_FAILED": {
+    "title": "History Save Failed",
+    "message": "An error occurred while saving the history information.",
+    "solutions": ["Please try again later"]
+  },
+  "CALIBRATION_SAVE_FAILED": {
+    "title": "Calibration History Save Failed",
+    "message": "An error occurred while saving the calibration history.",
+    "solutions": ["Please try again later"],
+    "actionLabel": "Go to Calibration"
+  },
+  "LOCATION_HISTORY_SAVE_FAILED": {
+    "title": "Location History Save Failed",
+    "message": "An error occurred while saving the location history.",
+    "solutions": ["Please try again later"]
+  },
+  "MAINTENANCE_HISTORY_SAVE_FAILED": {
+    "title": "Maintenance History Save Failed",
+    "message": "An error occurred while saving the maintenance history.",
+    "solutions": ["Please try again later"]
+  },
+  "INCIDENT_HISTORY_SAVE_FAILED": {
+    "title": "Incident History Save Failed",
+    "message": "An error occurred while saving the incident history.",
+    "solutions": ["Please try again later"]
+  },
+  "UNKNOWN_ERROR": {
+    "title": "Unknown Error",
+    "message": "An unexpected error occurred.",
+    "solutions": [
+      "Refresh the page and try again",
+      "Contact the system administrator if the problem persists"
+    ]
+  }
+}

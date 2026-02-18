@@ -1,0 +1,102 @@
+{
+  "title": "설정",
+  "nav": {
+    "display": "표시 설정",
+    "notifications": "알림 설정",
+    "profile": "프로필",
+    "calibration": "교정 알림 설정",
+    "system": "시스템 설정"
+  },
+  "display": {
+    "title": "표시 설정",
+    "description": "목록 페이지의 기본 표시 옵션을 사용자화할 수 있습니다.",
+    "language": "언어 / Language",
+    "languageDescription": "시스템 표시 언어를 선택합니다. 변경 후 즉시 적용됩니다.",
+    "itemsPerPage": "페이지당 항목 수",
+    "itemsPerPageDescription": "목록 페이지에서 기본으로 표시할 항목 수를 설정합니다.",
+    "itemsPerPageOptions": {
+      "10": "10개",
+      "20": "20개 (권장)",
+      "50": "50개"
+    },
+    "dateFormat": "날짜 형식",
+    "dateFormatDescription": "시스템 전체에서 날짜가 표시되는 기본 형식을 선택합니다.",
+    "dateFormatOptions": {
+      "iso": "ISO 표준",
+      "korean": "한국 관습"
+    },
+    "equipmentSort": "장비 기본 정렬",
+    "equipmentSortDescription": "장비 목록 페이지에 처음 진입할 때 적용되는 정렬 기준입니다.",
+    "showRetiredEquipment": "폐기/비활성 장비 표시",
+    "showRetiredDescription": "장비 목록에서 폐기 및 비활성 상태의 장비를 기본으로 표시합니다. 활성화하면 전체 장비 이력을 확인할 수 있습니다.",
+    "saveNote": "설정은 즉시 적용되며 모든 목록 페이지에 반영됩니다"
+  },
+  "notifications": {
+    "channelTitle": "알림 채널",
+    "channelDescription": "알림을 수신하는 방법과 빈도를 설정합니다.",
+    "typeTitle": "알림 유형",
+    "typeDescription": "수신할 알림 카테고리를 선택하세요.",
+    "emailEnabled": "이메일 알림",
+    "emailDescription": "교정 기한 초과, 교정 예정, 반출 기한 초과 알림을 이메일로 받습니다. (Azure AD 계정 이메일 사용)",
+    "inAppEnabled": "앱 내 알림",
+    "inAppDescription": "시스템 내에서 알림을 표시합니다.",
+    "frequency": "알림 빈도",
+    "frequencyDescription": "현재 모든 알림은 즉시 발송됩니다. 향후 일간/주간 요약 기능이 추가됩니다.",
+    "digestTime": "요약 발송 시간",
+    "digestTimeDescription": "일간/주간 요약 기능 활성화 시 발송 시간을 설정할 수 있습니다.",
+    "comingSoon": "준비중"
+  },
+  "system": {
+    "title": "시스템 설정",
+    "description": "시스템 전반에 적용되는 관리 설정을 변경합니다.",
+    "warning": "시스템 설정은 전체 시스템에 영향을 미칩니다. 변경 시 신중하게 검토하세요.",
+    "warningPrefix": "주의:",
+    "auditLogRetention": "감사 로그 보관 기간",
+    "auditLogRetentionDescription": "감사 로그를 보관할 기간입니다. {code}은 무제한 보관을 의미합니다.",
+    "notificationRetention": "알림 보관 기간",
+    "notificationRetentionDescription": "만료된 알림은 자동으로 정리됩니다. 시스템 성능 최적화를 위해 적절한 기간을 설정하세요.",
+    "maintenanceMessage": "시스템 공지 메시지",
+    "maintenanceMessagePlaceholder": "시스템 점검 예정 등의 공지 사항을 입력하세요…",
+    "maintenanceMessageDescription": "입력된 메시지는 대시보드 상단에 배너로 표시됩니다. 비워두면 배너가 표시되지 않습니다.",
+    "maxChars": "최대 500자",
+    "unlimited": "무제한",
+    "days": "일",
+    "recommended": "권장",
+    "changesAppliedImmediately": "변경 사항은 즉시 적용됩니다"
+  },
+  "calibration": {
+    "title": "교정 알림 설정",
+    "description": "교정 및 중간점검 기한 임박 시 알림을 발송할 시점을 설정합니다. 선택한 D-day에 해당하는 날짜에 알림이 발송됩니다.",
+    "alertTiming": "알림 발송 시점",
+    "today": "당일 (D-day)",
+    "dDay": "D-{day}",
+    "dayOnly": "당일",
+    "currentSelection": "현재 선택:",
+    "noSelection": "선택 없음",
+    "howItWorks": "알림 동작 방식",
+    "howItWorksItems": {
+      "timing": "선택한 D-day에 교정/중간점검 예정 장비에 대해 알림이 발송됩니다",
+      "dedupe": "중복 알림은 자동으로 방지됩니다 (24시간 이내 동일 알림 차단)",
+      "overdue": "교정 기한 초과 시 장비는 자동으로 부적합으로 전환됩니다 (유예 기간 없음)"
+    }
+  },
+  "toasts": {
+    "saveSuccess": "표시 설정이 저장되었습니다.",
+    "saveError": "설정 저장에 실패했습니다.",
+    "notificationSaveSuccess": "알림 설정이 저장되었습니다.",
+    "notificationSaveError": "알림 설정 저장에 실패했습니다.",
+    "systemSaveSuccess": "시스템 설정이 저장되었습니다.",
+    "systemSaveError": "시스템 설정 저장에 실패했습니다.",
+    "calibrationSaveSuccess": "교정 알림 설정이 저장되었습니다.",
+    "calibrationSaveError": "교정 알림 설정 저장에 실패했습니다."
+  },
+  "sortOptions": {
+    "managementNumber": "관리번호 순",
+    "name": "장비명 순",
+    "updatedAt": "최근 수정일 순"
+  },
+  "common": {
+    "saving": "저장 중…",
+    "save": "저장"
+  }
+}

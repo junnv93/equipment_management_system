@@ -1,0 +1,274 @@
+{
+  "welcome": {
+    "greeting": {
+      "dawn": "Working late?",
+      "morning": "Good morning",
+      "lunch": "Have you had lunch?",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "night": "Thanks for working late"
+    },
+    "roles": {
+      "test_engineer": "Test Engineer",
+      "technical_manager": "Technical Manager",
+      "quality_manager": "Quality Manager",
+      "lab_manager": "Lab Manager",
+      "system_admin": "System Admin",
+      "admin": "Admin",
+      "user": "User"
+    },
+    "roleDescriptions": {
+      "test_engineer": "Equipment registration/modification requests, rental/checkout applications",
+      "technical_manager": "Request approval/rejection, team equipment management",
+      "quality_manager": "Calibration plan review, software verification",
+      "lab_manager": "Lab-wide management, calibration plan approval",
+      "system_admin": "Full system management, all permissions",
+      "admin": "System administration privileges",
+      "user": "Basic user"
+    },
+    "defaultUser": "User",
+    "online": "Online",
+    "onlineStatus": "Online status",
+    "suffix": "",
+    "ariaLabel": "Welcome message and user information",
+    "currentRole": "Current role: {role}"
+  },
+  "stats": {
+    "myEquipment": "My Equipment",
+    "teamEquipment": "Team Equipment",
+    "allEquipment": "All Equipment",
+    "available": "Available",
+    "calibrationOverdue": "Calibration Overdue",
+    "nonConforming": "Non-Conforming",
+    "calibrationScheduled": "Calibration Scheduled",
+    "activeCheckouts": "Checked Out",
+    "pendingDisposal": "Pending Disposal",
+    "percentOfTotal": "{percent}% of {total} total",
+    "immediateAction": "Immediate action required",
+    "unusable": "Unusable state",
+    "within30Days": "Within 30 days",
+    "awaitingApproval": "Awaiting approval",
+    "units": "units",
+    "totalEquipment": "Total Equipment",
+    "availableEquipment": "Available",
+    "calibrationDue": "Calibration Due",
+    "pendingApprovals": "Pending Approvals",
+    "overdueCheckouts": "Overdue Checkouts"
+  },
+  "tabs": {
+    "calibrationSchedule": "Calibration Schedule",
+    "myEquipment": "My Equipment",
+    "teamEquipment": "Team Equipment",
+    "equipmentStatus": "Equipment Status",
+    "checkoutStatus": "Checkout Status",
+    "recentActivity": "Recent Activity",
+    "overview": "Overview",
+    "calibration": "Calibration Schedule",
+    "equipment": "Equipment Status",
+    "checkout": "Checkout Status",
+    "activity": "Recent Activity",
+    "approvals": "Approval Status"
+  },
+  "sections": {
+    "recentActivities": "Recent Activities",
+    "quickActions": "Quick Actions",
+    "pendingApprovals": "Pending Approvals",
+    "overdueCheckouts": "Overdue Checkouts",
+    "upcomingCalibrations": "Upcoming Calibrations",
+    "equipmentStatus": "Equipment Status",
+    "teamEquipment": "Team Equipment Status"
+  },
+  "quickActions": {
+    "registerEquipment": "Register Equipment",
+    "registerCalibration": "Register Calibration",
+    "createCheckout": "Request Checkout",
+    "viewReports": "View Reports",
+    "approvalManagement": "Approval Management",
+    "calibrationPlans": "Calibration Plans",
+    "userManagement": "User Management",
+    "systemSettings": "System Settings",
+    "equipmentList": "Equipment List",
+    "checkoutStatus": "Checkout Status",
+    "ariaLabel": "Quick Actions"
+  },
+  "pending": {
+    "title": {
+      "test_engineer": "My Requests",
+      "technical_manager": "Team Pending Approvals",
+      "quality_manager": "Pending Reviews",
+      "lab_manager": "Lab Pending Approvals",
+      "default": "Pending Approvals"
+    },
+    "description": {
+      "test_engineer": "Status of your submitted requests",
+      "technical_manager": "Items requiring team approval",
+      "quality_manager": "Items requiring review",
+      "lab_manager": "Items requiring lab approval",
+      "default": "Items pending approval"
+    },
+    "error": "Failed to load pending approval information.",
+    "totalCount": "Total {count}",
+    "viewAll": "View All",
+    "clickToView": "Click to view",
+    "viewAllAriaLabel": "Go to approval management page",
+    "categoryAriaLabel": "{label} {count} items"
+  },
+  "calibrationList": {
+    "daysOverdue": "{days} days overdue",
+    "daysRemaining": "{days} days remaining",
+    "noUpcoming": "No upcoming calibrations",
+    "noOverdue": "No overdue calibrations",
+    "noUpcomingDesc": "No equipment is due for calibration within 30 days",
+    "noOverdueDesc": "No calibrations have exceeded their due date",
+    "viewDetail": "View {name} details",
+    "viewAllOverdue": "View all overdue calibrations ({count})",
+    "viewAllUpcoming": "View all upcoming calibrations ({count})",
+    "upcomingTitle": "Upcoming Calibrations",
+    "upcomingDesc": "Due within the next 30 days"
+  },
+  "activities": {
+    "types": {
+      "equipment_added": "Equipment Added",
+      "equipment_updated": "Equipment Updated",
+      "equipment_approved": "Equipment Approved",
+      "equipment_rejected": "Equipment Rejected",
+      "calibration_created": "Calibration Registered",
+      "calibration_approved": "Calibration Approved",
+      "calibration_updated": "Calibration Updated",
+      "non_conformance_created": "Non-Conformance Created",
+      "non_conformance_updated": "Non-Conformance Updated",
+      "non_conformance_resolved": "Non-Conformance Resolved",
+      "calibration_plan_created": "Calibration Plan Created",
+      "calibration_plan_approved": "Calibration Plan Approved",
+      "calibration_plan_rejected": "Calibration Plan Rejected",
+      "rental_created": "Rental Requested",
+      "rental_approved": "Rental Approved",
+      "checkout_created": "Checkout Requested",
+      "checkout_approved": "Checkout Approved"
+    },
+    "other": "Other Activity",
+    "categories": {
+      "all": "All",
+      "equipment": "Equipment",
+      "calibration": "Calibration",
+      "rental": "Rental",
+      "checkout": "Checkout"
+    },
+    "roleTitle": {
+      "test_engineer": "My Recent Activity",
+      "technical_manager": "Team Recent Activity",
+      "quality_manager": "Calibration Related Activity",
+      "lab_manager": "Lab Recent Activity",
+      "system_admin": "All Recent Activity",
+      "default": "Recent Activity"
+    },
+    "roleDescription": {
+      "test_engineer": "Your activity records from the last 7 days",
+      "technical_manager": "Team activity records from the last 7 days",
+      "quality_manager": "Calibration and equipment activity from the last 7 days",
+      "lab_manager": "Lab activity records from the last 7 days",
+      "system_admin": "All system activity from the last 7 days",
+      "default": "Activity records from the last 7 days"
+    },
+    "count": "{count} items",
+    "empty": "No activity found",
+    "emptyDescription": "No activity recorded in the last 7 days",
+    "noCategory": "No activity in this category",
+    "userAction": "{userName}",
+    "viewDetail": "View details →"
+  },
+  "checkouts": {
+    "overdueTitle": "Overdue Returns",
+    "overdueDesc": "Equipment past return due date",
+    "noOverdue": "No overdue items",
+    "noOverdueDesc": "No checkouts have exceeded their due date",
+    "unknown": "Unknown",
+    "daysOverdue": "{days} days overdue",
+    "viewDetail": "View checkout details",
+    "viewAllOverdue": "View all overdue checkouts ({count})",
+    "checkoutStatus": "Checkout Status",
+    "currentCheckouts": "Currently checked out equipment",
+    "activeCount": "checked out",
+    "viewAllCheckouts": "View all checkouts →"
+  },
+  "alert": {
+    "title": "Action Required",
+    "count": "{count} items",
+    "allClear": "No items require attention",
+    "allClearDesc": "All equipment calibrations and checkouts are in normal status",
+    "calibrationOverdue": "Calibration Overdue",
+    "noCalibrationOverdue": "No overdue calibrations",
+    "calibrationViewDetail": "View {name} calibration details",
+    "viewAllCalibrationOverdue": "View all overdue calibrations ({count})",
+    "checkoutOverdue": "Checkout Overdue",
+    "noCheckoutOverdue": "No overdue checkouts",
+    "viewAllCheckoutOverdue": "View all overdue checkouts ({count})"
+  },
+  "statusBreakdown": {
+    "title": "Equipment Status Distribution",
+    "total": "Total {count} units",
+    "empty": "No equipment registered"
+  },
+  "statusChart": {
+    "title": "Equipment Status",
+    "description": "Current equipment status distribution",
+    "empty": "No data available",
+    "tooltipUnit": "{value} units ({percent}%)",
+    "total": "Total {count} equipment"
+  },
+  "equipmentTab": {
+    "myEquipmentStatus": "My Equipment Status",
+    "equipmentStatus": "Equipment Status",
+    "teamStatus": "Equipment by Team",
+    "allEquipmentList": "All Equipment List",
+    "countUnit": "{count} units"
+  },
+  "empty": {
+    "noActivities": "No recent activities.",
+    "noApprovals": "No pending approvals.",
+    "noOverdue": "No overdue checkouts.",
+    "noCalibrations": "No upcoming calibrations."
+  },
+  "status": {
+    "available": "Available",
+    "inUse": "In Use",
+    "checkedOut": "Checked Out",
+    "nonConforming": "Non-Conforming",
+    "calibrationScheduled": "Calibration Scheduled",
+    "retired": "Retired"
+  },
+  "dday": {
+    "today": "D-Day",
+    "overdue": "D+{days}",
+    "upcoming": "D-{days}"
+  },
+  "srOnly": {
+    "pendingApprovals": "Pending approvals status",
+    "equipmentStats": "Equipment statistics",
+    "statusDistribution": "Equipment status distribution",
+    "alertsAndStatus": "Action items and status distribution",
+    "dashboardDetail": "Dashboard details",
+    "dashboardTabs": "Dashboard tabs",
+    "loading": "Loading dashboard..."
+  },
+  "equipmentStatusLabels": {
+    "available": "Available",
+    "in_use": "In Use",
+    "checked_out": "Checked Out",
+    "calibration_scheduled": "Calibration Scheduled",
+    "calibration_overdue": "Calibration Overdue",
+    "non_conforming": "Non-Conforming",
+    "spare": "Spare",
+    "retired": "Retired",
+    "pending_disposal": "Pending Disposal",
+    "disposed": "Disposed",
+    "temporary": "Temporary",
+    "inactive": "Inactive"
+  },
+  "statusBar": {
+    "empty": "No equipment registered",
+    "ariaPrefix": "Equipment status distribution",
+    "statusEntry": "{label} {count} units ({percent}%)",
+    "tooltipEntry": "{label}: {count} units ({percent}%)"
+  }
+}

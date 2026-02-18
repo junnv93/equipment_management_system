@@ -1,0 +1,73 @@
+{
+  "title": "부적합 관리",
+  "subtitle": "부적합 사항 등록 및 처리 관리",
+  "status": {
+    "open": "처리 중",
+    "under_review": "검토 중",
+    "resolved": "해결됨",
+    "closed": "종결"
+  },
+  "type": {
+    "calibration_overdue": "교정 기한 초과",
+    "equipment_failure": "장비 고장",
+    "measurement_error": "측정 오류",
+    "other": "기타"
+  },
+  "toasts": {
+    "createSuccess": "부적합 사항이 등록되었습니다.",
+    "createError": "등록 중 오류가 발생했습니다.",
+    "updateSuccess": "부적합 사항이 수정되었습니다.",
+    "updateError": "수정 중 오류가 발생했습니다.",
+    "resolveSuccess": "부적합 사항이 해결 처리되었습니다.",
+    "resolveError": "해결 처리 중 오류가 발생했습니다.",
+    "closeSuccess": "부적합 사항이 종결되었습니다.",
+    "closeError": "종결 처리 중 오류가 발생했습니다.",
+    "approveSuccess": "부적합이 승인되었습니다.",
+    "approveError": "승인 처리 중 오류가 발생했습니다.",
+    "rejectSuccess": "부적합이 반려되었습니다.",
+    "rejectError": "반려 처리 중 오류가 발생했습니다."
+  },
+  "fields": {
+    "type": "부적합 유형",
+    "description": "부적합 내용",
+    "equipment": "해당 장비",
+    "discoveredAt": "발견일",
+    "resolvedAt": "해결일",
+    "resolution": "처리 방법",
+    "notes": "비고"
+  },
+  "list": {
+    "empty": "부적합 사항이 없습니다.",
+    "emptyDescription": "부적합 사항을 등록하세요."
+  },
+  "approvals": {
+    "title": "부적합 재개 승인",
+    "description": "조치 완료된 부적합 장비의 사용 재개를 승인합니다. (기술책임자 전용)",
+    "infoMessage": "아래 목록은 조치 완료(corrected) 상태인 부적합 기록입니다.\n종료 승인 시 해당 장비는 다시 사용 가능 상태로 변경됩니다.",
+    "empty": {
+      "title": "승인 대기 없음",
+      "description": "승인 대기 중인 부적합 기록이 없습니다."
+    },
+    "error": {
+      "title": "데이터 로딩 실패",
+      "description": "데이터를 불러오는데 실패했습니다."
+    },
+    "retry": "재시도",
+    "discoveryDate": "발견일",
+    "viewEquipment": "장비 상세 보기",
+    "cause": "부적합 원인",
+    "analysis": "원인 분석",
+    "correction": "조치 내용",
+    "correctionDate": "조치 완료일",
+    "closureNotesLabel": "종료 메모 (선택)",
+    "closureNotesPlaceholder": "종료 메모를 입력하세요.",
+    "processing": "처리 중...",
+    "approveButton": "사용 재개 승인",
+    "toasts": {
+      "closeSuccess": "사용 재개 승인 완료",
+      "closeSuccessDesc": "부적합이 종료되었습니다.",
+      "closeError": "종료 처리 실패",
+      "closeErrorDesc": "종료 처리에 실패했습니다."
+    }
+  }
+}

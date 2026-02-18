@@ -1,0 +1,40 @@
+{
+  "title": "Team Management",
+  "subtitle": "Manage team members and assigned equipment",
+  "toasts": {
+    "createSuccess": "Team created.",
+    "createError": "An error occurred while creating the team.",
+    "updateSuccess": "Team information updated.",
+    "updateError": "An error occurred while updating team information.",
+    "deleteSuccess": "Team deleted.",
+    "deleteError": "An error occurred while deleting the team.",
+    "addMemberSuccess": "Team member added.",
+    "addMemberError": "An error occurred while adding the team member.",
+    "removeMemberSuccess": "Team member removed.",
+    "removeMemberError": "An error occurred while removing the team member."
+  },
+  "fields": {
+    "name": "Team Name",
+    "description": "Description",
+    "site": "Site",
+    "members": "Members",
+    "equipment": "Assigned Equipment"
+  },
+  "stats": {
+    "memberCount": "{count} members",
+    "equipmentCount": "{count} equipment"
+  },
+  "list": {
+    "empty": "No teams found.",
+    "emptyDescription": "Create the first team."
+  },
+  "detail": {
+    "members": "Team Members",
+    "equipment": "Assigned Equipment"
+  },
+  "edit": {
+    "title": "Edit Team",
+    "description": "Edit team information",
+    "backToDetail": "Back to team detail"
+  }
+}

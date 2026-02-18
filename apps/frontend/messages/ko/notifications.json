@@ -1,0 +1,131 @@
+{
+  "title": "알림",
+  "subtitle": "시스템 알림 관리",
+  "types": {
+    "checkout_approved": "반출 승인",
+    "checkout_rejected": "반출 반려",
+    "checkout_return_due": "반입 기한 도래",
+    "checkout_overdue": "반출 기한 초과",
+    "calibration_due": "교정 예정",
+    "calibration_overdue": "교정 기한 초과",
+    "equipment_registered": "장비 등록",
+    "non_conformance_created": "부적합 등록",
+    "approval_required": "승인 필요",
+    "system": "시스템 알림"
+  },
+  "priority": {
+    "high": "높음",
+    "medium": "보통",
+    "low": "낮음"
+  },
+  "actions": {
+    "markRead": "읽음 처리",
+    "markAllRead": "모두 읽음",
+    "dismiss": "닫기",
+    "viewDetail": "상세 보기"
+  },
+  "empty": {
+    "title": "알림이 없습니다",
+    "description": "새 알림이 도착하면 여기에 표시됩니다."
+  },
+  "toasts": {
+    "markReadSuccess": "알림이 읽음 처리되었습니다.",
+    "markAllReadSuccess": "모든 알림이 읽음 처리되었습니다.",
+    "markReadError": "알림 처리 중 오류가 발생했습니다.",
+    "saveError": "설정 저장에 실패했습니다."
+  },
+  "settings": {
+    "emailEnabled": "이메일 알림",
+    "pushEnabled": "푸시 알림",
+    "calibrationAlerts": "교정 알림",
+    "approvalAlerts": "승인 알림",
+    "checkoutAlerts": "반출입 알림"
+  },
+  "channel": {
+    "title": "알림 채널",
+    "description": "알림을 수신하는 방법과 빈도를 설정합니다.",
+    "email": {
+      "label": "이메일 알림",
+      "description": "교정 기한 초과, 교정 예정, 반출 기한 초과 알림을 이메일로 받습니다. (Azure AD 계정 이메일 사용)"
+    },
+    "inApp": {
+      "label": "앱 내 알림",
+      "description": "시스템 내에서 알림을 표시합니다."
+    },
+    "frequency": {
+      "label": "알림 빈도",
+      "description": "현재 모든 알림은 즉시 발송됩니다. 향후 일간/주간 요약 기능이 추가됩니다."
+    },
+    "digestTime": {
+      "label": "요약 발송 시간",
+      "description": "일간/주간 요약 기능 활성화 시 발송 시간을 설정할 수 있습니다."
+    }
+  },
+  "category": {
+    "title": "알림 유형",
+    "description": "수신할 알림 카테고리를 선택하세요.",
+    "checkout": { "label": "반출", "description": "반출 요청, 승인, 반려, 반입 관련 알림" },
+    "calibration": { "label": "교정", "description": "교정 기록 등록, 승인, 기한 임박/초과 알림" },
+    "calibration_plan": {
+      "label": "교정계획",
+      "description": "교정계획서 제출/검토/승인/반려 알림"
+    },
+    "non_conformance": { "label": "부적합", "description": "부적합 등록, 조치 완료, 종료 알림" },
+    "disposal": { "label": "폐기", "description": "폐기 요청, 검토, 승인 알림" },
+    "equipment_import": { "label": "장비 반입", "description": "장비 반입 요청, 승인 알림" },
+    "equipment": { "label": "장비", "description": "장비 등록, 수정, 상태 변경 알림" },
+    "system": { "label": "시스템", "description": "시스템 점검 및 중요 공지 알림" }
+  },
+  "comingSoon": "준비중",
+  "alerts": {
+    "title": "알림 센터",
+    "markAllRead": "모두 읽음 표시",
+    "searchPlaceholder": "알림 검색...",
+    "tabs": {
+      "all": "전체 알림",
+      "unread": "읽지 않음",
+      "read": "읽음"
+    },
+    "emptyState": "표시할 알림이 없습니다.",
+    "viewEquipment": "장비 상세 보기: {name}",
+    "markRead": "읽음 표시",
+    "delete": "삭제",
+    "priorityLabels": {
+      "high": "높음",
+      "medium": "중간",
+      "low": "낮음",
+      "unknown": "알 수 없음"
+    },
+    "intermediateCheck": {
+      "title": "중간점검 {status}",
+      "statusLabels": {
+        "overdue": "기한 초과",
+        "today": "오늘",
+        "upcoming": "임박",
+        "future": "예정"
+      },
+      "overdueDays": "{days}일 초과",
+      "equipmentFallback": "장비 {id}",
+      "checkDateMessage": "의 중간점검일이 {date}입니다.",
+      "completeButton": "점검 완료",
+      "complete": "완료",
+      "later": "나중에",
+      "dismissAriaLabel": "알림 닫기",
+      "dialog": {
+        "title": "중간점검 완료",
+        "descriptionWithName": "{name}의 중간점검을 완료합니다.",
+        "scheduledDate": "점검 예정일:",
+        "notesLabel": "점검 내용 (선택)",
+        "notesPlaceholder": "점검 결과나 특이사항을 입력하세요",
+        "cancel": "취소",
+        "processing": "처리 중...",
+        "submit": "완료 처리"
+      },
+      "toasts": {
+        "success": "중간점검 완료",
+        "successDesc": "중간점검이 완료 처리되었습니다.",
+        "error": "완료 처리 실패"
+      }
+    }
+  }
+}

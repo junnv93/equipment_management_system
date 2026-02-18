@@ -1,0 +1,390 @@
+{
+  "title": "승인 관리",
+  "subtitle": "승인 요청을 관리합니다",
+  "tabs": {
+    "checkout": "반출 승인",
+    "return": "반입 승인",
+    "calibration": "교정 승인",
+    "calibrationPlan": "교정계획서 승인",
+    "calibrationFactor": "보정계수 승인",
+    "equipment": "장비 등록 승인",
+    "nonConformance": "부적합 승인",
+    "software": "소프트웨어 승인",
+    "disposal": "폐기 승인"
+  },
+  "status": {
+    "pending": "대기 중",
+    "approved": "승인",
+    "rejected": "반려",
+    "all": "전체"
+  },
+  "actions": {
+    "approve": "승인",
+    "reject": "반려",
+    "bulkApprove": "일괄 승인",
+    "viewDetail": "상세 보기",
+    "cancel": "취소"
+  },
+  "modal": {
+    "rejectTitle": "반려 사유 입력",
+    "rejectPlaceholder": "반려 사유를 입력하세요...",
+    "rejectSubmit": "반려 처리"
+  },
+  "empty": {
+    "noPending": "대기 중인 승인 항목이 없습니다.",
+    "noItems": "승인 항목이 없습니다."
+  },
+  "tabMeta": {
+    "outgoing": { "label": "반출", "action": "승인" },
+    "incoming": { "label": "반입", "action": "승인" },
+    "equipment": { "label": "장비", "action": "승인" },
+    "calibration": { "label": "교정 기록", "action": "승인" },
+    "inspection": { "label": "중간점검", "action": "승인" },
+    "nonconformity": { "label": "부적합 재개", "action": "승인" },
+    "disposal_review": {
+      "label": "폐기 검토",
+      "action": "검토완료",
+      "commentDialogTitle": "폐기 검토 의견",
+      "commentPlaceholder": "검토 의견을 입력하세요"
+    },
+    "disposal_final": { "label": "폐기 승인", "action": "승인" },
+    "plan_review": { "label": "교정계획서 검토", "action": "검토완료" },
+    "plan_final": { "label": "교정계획서 승인", "action": "승인" },
+    "software": { "label": "소프트웨어", "action": "검토완료" }
+  },
+  "toasts": {
+    "approveSuccess": "승인 처리가 완료되었습니다.",
+    "approveError": "승인 처리 중 오류가 발생했습니다.",
+    "rejectSuccess": "반려 처리가 완료되었습니다.",
+    "rejectError": "반려 처리 중 오류가 발생했습니다.",
+    "bulkApproveResult": "{success}건 승인 완료, {failed}건 실패",
+    "bulkRejectSuccess": "일괄 반려 처리가 완료되었습니다.",
+    "bulkRejectError": "일괄 반려 처리 중 오류가 발생했습니다.",
+    "approveDynamic": "{summary}이(가) 승인되었습니다.",
+    "rejectDynamic": "{summary}이(가) 반려되었습니다.",
+    "bulkApproveAll": "{count}건이 승인되었습니다.",
+    "bulkRejectResult": "{success}건 반려 완료, {failed}건 실패",
+    "bulkRejectAll": "{count}건이 반려되었습니다.",
+    "bulkApproveError": "일괄 승인 중 오류가 발생했습니다."
+  },
+  "ariaLabel": "승인 카테고리",
+  "badge": {
+    "pending": "대기 {count}건"
+  },
+  "commentDialog": {
+    "titleFallback": "승인 코멘트",
+    "label": "검토 코멘트",
+    "placeholderFallback": "검토 내용을 입력하세요"
+  },
+  "bulkCommentDialog": {
+    "titleFallback": "일괄 승인 코멘트",
+    "description": "선택된 {count}건에 공통 코멘트를 입력하세요.",
+    "label": "검토 코멘트",
+    "buttonLabel": "{count}건 {action}"
+  },
+  "processing": "처리 중...",
+  "noPermission": "승인 권한이 없습니다.",
+  "list": {
+    "title": "승인 대기 목록",
+    "countDescription": "총 {count}개의 승인 대기 요청이 있습니다",
+    "empty": "승인 대기 중인 요청이 없습니다"
+  },
+  "item": {
+    "requester": "요청자",
+    "team": "팀",
+    "requestDate": "요청일시",
+    "select": "선택",
+    "detail": "상세",
+    "reject": "반려",
+    "recentAction": "최근 처리:"
+  },
+  "bulk": {
+    "selectAll": "전체 선택",
+    "deselectAll": "전체 해제",
+    "action": "일괄 {action}",
+    "reject": "일괄 반려",
+    "rejectReason": "일괄 반려 사유를 입력하세요.",
+    "rejectDescription": "선택한 {count}개 항목을 반려합니다. 공통 반려 사유를 입력해주세요.",
+    "rejectValidation": "반려 사유는 10자 이상 입력해주세요.",
+    "confirmTitle": "일괄 {action} 확인",
+    "confirmDescription": "선택한 {count}건의 요청을 일괄 {action}하시겠습니까?",
+    "commentTitle": "일괄 {action} 의견",
+    "commentPlaceholder": "의견을 입력하세요 (선택사항)"
+  },
+  "rejectModal": {
+    "title": "반려",
+    "templatesLabel": "사유 템플릿",
+    "reasonLabel": "반려 사유 (10자 이상 필수)",
+    "reasonPlaceholder": "반려 사유를 입력하세요...",
+    "validation": "반려 사유는 10자 이상 입력해주세요.",
+    "description": "\"{summary}\" 요청을 반려합니다. 반려 사유를 입력해주세요.",
+    "templateSelectPlaceholder": "템플릿 선택 (선택사항)",
+    "directInput": "직접 입력",
+    "submit": "반려 처리",
+    "cancel": "취소",
+    "templates": {
+      "spec": "장비 사양이 요구 조건에 부합하지 않습니다.",
+      "schedule": "요청 일정이 다른 예약과 충돌합니다.",
+      "calibration": "교정 상태를 먼저 확인해주세요.",
+      "document": "관련 서류가 부족합니다. 보완 후 재신청해주세요.",
+      "other": "기타 사유"
+    }
+  },
+  "detail": {
+    "title": "승인 요청 상세",
+    "description": "요청 내용을 확인하고 승인 또는 반려를 진행하세요.",
+    "requester": "요청자",
+    "department": "소속",
+    "requestDate": "요청일시",
+    "approvalStatus": "승인 진행 상태",
+    "requestDetail": "요청 상세",
+    "attachments": "첨부 파일",
+    "approvalHistory": "승인 이력",
+    "close": "닫기",
+    "reject": "반려"
+  },
+  "history": {
+    "reviewCompleted": "검토 완료",
+    "approved": "승인",
+    "rejected": "반려",
+    "empty": "승인 이력이 없습니다."
+  },
+  "steps": {
+    "ariaLabel": "승인 진행 상태",
+    "request": "요청",
+    "review": "검토",
+    "approve": "승인",
+    "draft": "작성",
+    "roles": {
+      "test_engineer": "시험실무자",
+      "technical_manager": "기술책임자",
+      "quality_manager": "품질책임자",
+      "lab_manager": "시험소장"
+    }
+  },
+  "confirm": {
+    "approveTitle": "승인 확인",
+    "approveDescription": "이 요청을 승인하시겠습니까?",
+    "commentTitle": "승인 의견",
+    "commentPlaceholder": "의견을 입력하세요 (선택사항)"
+  },
+  "detailRows": {
+    "type": "요청 유형",
+    "managementNumber": "관리번호",
+    "equipmentName": "장비명",
+    "modelName": "모델명",
+    "serialNumber": "일련번호",
+    "manufacturer": "제조사",
+    "purchaseYear": "구입년도",
+    "specification": "장비사양",
+    "calibrationDate": "교정일",
+    "nextCalibrationDate": "다음 교정일",
+    "calibrationResult": "교정 결과",
+    "calibrationOrganization": "교정 기관",
+    "certificateNumber": "성적서 번호",
+    "checkoutPurpose": "반출 목적",
+    "destination": "목적지",
+    "expectedReturnDate": "예상 반입일",
+    "reason": "사유",
+    "ncType": "부적합 유형",
+    "ncDescription": "부적합 내용",
+    "resolution": "처리 방법",
+    "disposalReason": "폐기 사유",
+    "disposalMethod": "폐기 방법",
+    "softwareName": "소프트웨어명",
+    "softwareVersion": "버전",
+    "planPeriod": "교정 기간",
+    "planScope": "교정 범위",
+    "equipmentId": "장비 ID",
+    "cause": "원인",
+    "correctionContent": "조치 내용",
+    "correctionDate": "조치일",
+    "analysisContent": "분석 내용",
+    "actionPlan": "조치 계획",
+    "previousRejectionReason": "이전 반려 사유",
+    "rejectionDate": "반려일",
+    "detailedReason": "상세 사유",
+    "reviewOpinion": "검토 의견",
+    "reviewDate": "검토일",
+    "year": "연도",
+    "site": "사이트",
+    "changeReason": "변경 사유",
+    "equipment": "장비",
+    "inspectionDate": "점검 예정일"
+  },
+  "requestTypes": {
+    "create": "등록",
+    "update": "수정",
+    "delete": "삭제"
+  },
+  "calibrationFactorApprovals": {
+    "title": "보정계수 승인 관리",
+    "description": "시험실무자가 요청한 보정계수 변경을 검토하고 승인합니다",
+    "listTitle": "승인 대기 목록",
+    "listDescription": "총 {count}개의 승인 대기 요청이 있습니다",
+    "emptyState": "승인 대기 중인 보정계수 변경 요청이 없습니다",
+    "fields": {
+      "factorName": "보정계수 이름",
+      "value": "값",
+      "effectiveDate": "적용 시작일",
+      "expiryDate": "만료일",
+      "noExpiry": "없음",
+      "additionalParams": "추가 파라미터:",
+      "equipmentId": "장비 ID",
+      "requestDate": "요청일"
+    },
+    "approveDialog": {
+      "title": "보정계수 승인",
+      "description": "보정계수 변경 요청을 검토한 후 승인 코멘트를 입력해주세요.",
+      "name": "이름:",
+      "value": "값:",
+      "type": "타입:",
+      "commentLabel": "검토 코멘트 *",
+      "commentPlaceholder": "검토 완료 내용을 입력하세요"
+    },
+    "rejectTitle": "보정계수 반려",
+    "toasts": {
+      "approveSuccess": "승인 완료",
+      "approveSuccessDesc": "보정계수가 승인되었습니다.",
+      "approveError": "승인 실패",
+      "rejectSuccess": "반려 완료",
+      "rejectSuccessDesc": "보정계수가 반려되었습니다.",
+      "rejectError": "반려 실패",
+      "commentRequired": "코멘트 필요",
+      "commentRequiredDesc": "승인 시 검토 코멘트를 입력해주세요."
+    }
+  },
+  "softwareApprovals": {
+    "title": "소프트웨어 변경 승인 관리",
+    "description": "시험실무자가 요청한 소프트웨어 변경을 검토하고 승인합니다",
+    "listTitle": "승인 대기 목록",
+    "listDescription": "총 {count}개의 승인 대기 요청이 있습니다",
+    "emptyState": "승인 대기 중인 소프트웨어 변경 요청이 없습니다",
+    "viewEquipment": "장비 상세 보기",
+    "fields": {
+      "equipmentId": "장비 ID",
+      "versionChange": "버전 변경",
+      "newVersion": "(신규)",
+      "changeDate": "변경일",
+      "verificationRecord": "검증 기록",
+      "requestDate": "요청일"
+    },
+    "approveDialog": {
+      "title": "소프트웨어 변경 승인",
+      "description": "소프트웨어 변경 요청을 검토한 후 승인 코멘트를 입력해주세요.",
+      "software": "소프트웨어:",
+      "versionChange": "버전 변경:",
+      "verificationRecord": "검증 기록:",
+      "commentLabel": "검토 코멘트 *",
+      "commentPlaceholder": "검토 완료 내용을 입력하세요"
+    },
+    "rejectTitle": "소프트웨어 변경 반려",
+    "toasts": {
+      "approveSuccess": "승인 완료",
+      "approveSuccessDesc": "소프트웨어 변경이 승인되었습니다.",
+      "approveError": "승인 실패",
+      "rejectSuccess": "반려 완료",
+      "rejectSuccessDesc": "소프트웨어 변경이 반려되었습니다.",
+      "rejectError": "반려 실패",
+      "commentRequired": "코멘트 필요",
+      "commentRequiredDesc": "승인 시 검토 코멘트를 입력해주세요."
+    }
+  },
+  "calibrationApprovals": {
+    "title": "교정 승인 관리",
+    "description": "시험실무자가 등록한 교정 기록을 검토하고 승인합니다",
+    "listTitle": "승인 대기 목록",
+    "listDescription": "총 {count}개의 승인 대기 요청이 있습니다",
+    "emptyState": "승인 대기 중인 교정 요청이 없습니다",
+    "noStatus": "상태 없음",
+    "noResult": "미입력",
+    "fields": {
+      "equipmentId": "장비 ID",
+      "calibrationDate": "교정일",
+      "nextCalibrationDate": "다음 교정일",
+      "calibrationAgency": "교정 기관",
+      "registrant": "등록자",
+      "roles": {
+        "test_engineer": "시험실무자",
+        "technical_manager": "기술책임자"
+      },
+      "intermediateCheckDate": "중간점검일:",
+      "notes": "비고:",
+      "registeredDate": "등록일"
+    },
+    "approveDialog": {
+      "title": "교정 승인",
+      "description": "교정 기록을 승인합니다. 코멘트는 선택사항입니다.",
+      "commentLabel": "검토 코멘트 (선택)",
+      "commentPlaceholder": "검토 코멘트를 입력하세요 (선택사항)"
+    },
+    "rejectTitle": "교정 반려",
+    "toasts": {
+      "approveSuccess": "승인 완료",
+      "approveSuccessDesc": "교정 기록이 승인되었습니다.",
+      "approveError": "승인 실패",
+      "rejectSuccess": "반려 완료",
+      "rejectSuccessDesc": "교정 기록이 반려되었습니다.",
+      "rejectError": "반려 실패"
+    }
+  },
+  "returnApprovals": {
+    "title": "반입 승인 관리",
+    "description": "검사 완료된 반입 건을 검토하고 최종 승인하거나 반려합니다",
+    "listTitle": "반입 승인 대기 목록",
+    "listDescription": "총 {count}개의 반입 승인 대기 건이 있습니다",
+    "emptyState": "승인 대기 중인 반입 건이 없습니다",
+    "purpose": {
+      "calibration": "교정",
+      "repair": "수리",
+      "rental": "외부 대여"
+    },
+    "fields": {
+      "equipment": "장비",
+      "equipmentCount": "{name} 외 {count}건",
+      "noEquipment": "장비 정보 없음",
+      "destination": "반출지",
+      "returnDate": "반입일",
+      "returnProcessor": "반입 처리자",
+      "unknown": "알 수 없음",
+      "requestDate": "신청일"
+    },
+    "inspection": {
+      "title": "검사 결과",
+      "working": "작동 확인",
+      "calibration": "교정 확인",
+      "repair": "수리 확인",
+      "complete": "완료",
+      "incomplete": "미완료",
+      "notes": "검사 비고"
+    },
+    "actions": {
+      "reject": "반려",
+      "finalApprove": "최종 승인",
+      "cancel": "취소",
+      "processing": "처리 중..."
+    },
+    "approveDialog": {
+      "title": "반입 최종 승인",
+      "description": "검사 결과를 확인한 후 최종 승인합니다. 승인 시 장비 상태가 자동으로 사용 가능으로 변경됩니다.",
+      "checkoutPurpose": "반출 목적",
+      "destination": "반출지",
+      "inspectionResults": "검사 결과:",
+      "workingCheck": "작동 확인",
+      "calibrationCheck": "교정 확인: 완료",
+      "repairCheck": "수리 확인: 완료",
+      "notesLabel": "비고",
+      "commentLabel": "승인 코멘트 (선택)",
+      "commentPlaceholder": "승인에 대한 코멘트를 입력하세요 (선택사항)"
+    },
+    "rejectDialog": {
+      "title": "반입 반려",
+      "description": "반입을 반려하면 반출 중 상태로 되돌아가며, 재검사 후 반입 처리가 필요합니다.",
+      "checkoutPurpose": "반출 목적",
+      "equipment": "장비",
+      "noEquipment": "장비 정보 없음",
+      "reasonLabel": "반려 사유 (필수)",
+      "reasonPlaceholder": "반려 사유를 입력하세요 (예: 검사 항목 미충족, 작동 확인 미완료 등)"
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "title": "Disposal Management",
+  "subtitle": "Manage equipment disposal requests and approvals",
+  "status": {
+    "pending": "Requested",
+    "under_review": "Under Review",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "completed": "Disposed"
+  },
+  "reason": {
+    "end_of_life": "End of Life",
+    "beyond_repair": "Beyond Repair",
+    "obsolete": "Obsolete",
+    "damaged": "Damaged",
+    "other": "Other"
+  },
+  "fields": {
+    "reason": "Disposal Reason",
+    "requestDate": "Request Date",
+    "approvalDate": "Approval Date",
+    "disposalDate": "Disposal Date",
+    "notes": "Notes"
+  },
+  "progress": {
+    "request": "Disposal Request",
+    "review": "Review",
+    "approval": "Approval",
+    "complete": "Disposal Complete"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "reject": "Reject",
+    "equipmentName": "Equipment:",
+    "requester": "Requester:",
+    "disposalReason": "Disposal Reason:",
+    "reasonDetail": "Reason Detail:",
+    "charCount": "{count}/10 chars min (current: {count})",
+    "rejectNotice": "To reject, enter a specific reason and click the Reject button again.",
+    "error": "Processing Failed",
+    "attachments": "Attachments:",
+    "downloadAriaLabel": "Download: {name}"
+  },
+  "button": {
+    "completed": "Disposed",
+    "request": "Request Disposal",
+    "inProgress": "Disposal In Progress"
+  },
+  "banner": {
+    "title": "Equipment Disposed",
+    "reason": "Disposal Reason:",
+    "approver": "Approver:"
+  },
+  "dropdown": {
+    "review": "Review Disposal",
+    "approve": "Final Approval",
+    "cancel": "Cancel Request",
+    "detail": "View Details"
+  },
+  "stepper": {
+    "request": "Request",
+    "review": "Review",
+    "approval": "Approval"
+  },
+  "requestDialog": {
+    "title": "Request Equipment Disposal",
+    "description": "Request disposal of {name} equipment.",
+    "reasonDetailLabel": "Reason Detail",
+    "reasonDetailPlaceholder": "Enter at least 10 characters describing the disposal reason",
+    "attachmentsLabel": "Attachments (Optional)",
+    "selectFile": "Select File",
+    "selectFileAriaLabel": "Select file",
+    "removeFileAriaLabel": "Remove file: {name}",
+    "submit": "Request Disposal",
+    "toasts": {
+      "successTitle": "Disposal Requested",
+      "successDesc": "Disposal request has been submitted successfully.",
+      "errorTitle": "Disposal Request Failed"
+    }
+  },
+  "approvalDialog": {
+    "title": "Final Disposal Approval",
+    "description": "Review the disposal request and inspection details, then approve.",
+    "infoTitle": "Equipment & Disposal Info",
+    "managementNumber": "Management No.:",
+    "reviewOpinion": "Review Opinion",
+    "commentLabel": "Approval Comment (Optional)",
+    "rejectPlaceholder": "Enter a rejection reason of at least 10 characters (required)",
+    "approvePlaceholder": "Enter an approval comment (optional)",
+    "approve": "Final Approval",
+    "confirmTitle": "Confirm Final Approval",
+    "confirmDescription": "Are you sure you want to approve disposal of {name}?",
+    "confirmWarning": "This action cannot be undone.",
+    "toasts": {
+      "approveTitle": "Approval Complete",
+      "approveDesc": "Equipment disposal has been approved.",
+      "rejectTitle": "Request Rejected",
+      "rejectDesc": "Disposal request has been rejected."
+    }
+  },
+  "reviewDialog": {
+    "title": "Disposal Review",
+    "description": "Review the disposal request and provide your opinion.",
+    "infoTitle": "Disposal Request Info",
+    "opinionLabel": "Review Opinion",
+    "rejectPlaceholder": "Enter a rejection reason of at least 10 characters",
+    "opinionPlaceholder": "Enter your review opinion (at least 10 characters)",
+    "reviewComplete": "Complete Review",
+    "toasts": {
+      "approveTitle": "Review Complete",
+      "approveDesc": "Disposal review complete. Awaiting final approval from lab manager.",
+      "rejectTitle": "Request Rejected",
+      "rejectDesc": "Disposal request has been rejected."
+    }
+  },
+  "detailDialog": {
+    "title": "Disposal Details",
+    "description": "Disposal progress for {name} equipment.",
+    "progressStatus": "Progress Status",
+    "stages": {
+      "request": "Disposal Request",
+      "review": "Technical Manager Review",
+      "approval": "Lab Manager Final Approval"
+    },
+    "rejectionReason": "Rejection Reason:\n{reason}",
+    "approvalComplete": "Approved"
+  },
+  "progressCard": {
+    "title": "Disposal In Progress",
+    "pendingReview": "Awaiting technical manager review",
+    "pendingApproval": "Awaiting lab manager approval",
+    "complete": "Processing Complete",
+    "viewDetails": "View Details",
+    "cancelRequest": "Cancel Request"
+  },
+  "cancelDialog": {
+    "title": "Cancel Disposal Request",
+    "description": "Are you sure you want to cancel the disposal request?",
+    "message": "The disposal request for {name} will be canceled and the equipment status will change to {status}.",
+    "available": "Available",
+    "close": "Close",
+    "confirm": "Confirm",
+    "toasts": {
+      "successTitle": "Cancellation Complete",
+      "successDesc": "Disposal request has been canceled. Equipment status changed to Available.",
+      "errorTitle": "Cancellation Failed"
+    }
+  },
+  "reasonSelector": {
+    "label": "Disposal Reason"
+  },
+  "historySummary": {
+    "title": "Equipment History Summary",
+    "collapse": "Collapse equipment history",
+    "expand": "Expand equipment history",
+    "lastCalibration": "Last Calibration",
+    "repairHistory": "Repair History",
+    "ncHistory": "Non-Conformance History",
+    "usagePeriod": "Usage Period",
+    "noRecord": "No record",
+    "noInfo": "No info",
+    "years": "{count} yr ",
+    "months": "{count} mo"
+  }
+}

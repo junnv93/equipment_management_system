@@ -1,0 +1,274 @@
+{
+  "welcome": {
+    "greeting": {
+      "dawn": "새벽이네요",
+      "morning": "좋은 아침입니다",
+      "lunch": "점심 식사하셨나요",
+      "afternoon": "좋은 오후입니다",
+      "evening": "좋은 저녁입니다",
+      "night": "늦은 시간까지 수고하세요"
+    },
+    "roles": {
+      "test_engineer": "시험실무자",
+      "technical_manager": "기술책임자",
+      "quality_manager": "품질책임자",
+      "lab_manager": "시험소 관리자",
+      "system_admin": "시스템 관리자",
+      "admin": "관리자",
+      "user": "사용자"
+    },
+    "roleDescriptions": {
+      "test_engineer": "장비 등록/수정 요청, 대여/반출 신청",
+      "technical_manager": "요청 승인/반려, 팀 내 장비 관리",
+      "quality_manager": "교정계획서 검토, 소프트웨어 검증",
+      "lab_manager": "시험소 전체 관리, 교정계획서 승인",
+      "system_admin": "전체 시스템 관리, 모든 권한",
+      "admin": "시스템 관리 권한",
+      "user": "기본 사용자"
+    },
+    "defaultUser": "사용자",
+    "online": "온라인",
+    "onlineStatus": "온라인 상태",
+    "suffix": "님",
+    "ariaLabel": "환영 메시지 및 사용자 정보",
+    "currentRole": "현재 역할: {role}"
+  },
+  "stats": {
+    "myEquipment": "내 장비",
+    "teamEquipment": "팀 장비",
+    "allEquipment": "전체 장비",
+    "available": "사용 가능",
+    "calibrationOverdue": "교정 지연",
+    "nonConforming": "부적합",
+    "calibrationScheduled": "교정 예정",
+    "activeCheckouts": "반출 중",
+    "pendingDisposal": "폐기 대기",
+    "percentOfTotal": "총 {total}대 중 {percent}%",
+    "immediateAction": "즉시 조치 필요",
+    "unusable": "사용 불가 상태",
+    "within30Days": "30일 이내",
+    "awaitingApproval": "승인 대기 중",
+    "units": "대",
+    "totalEquipment": "전체 장비",
+    "availableEquipment": "사용 가능",
+    "calibrationDue": "교정 예정",
+    "pendingApprovals": "승인 대기",
+    "overdueCheckouts": "반출 기한 초과"
+  },
+  "tabs": {
+    "calibrationSchedule": "교정 일정",
+    "myEquipment": "내 장비",
+    "teamEquipment": "팀 장비",
+    "equipmentStatus": "장비 현황",
+    "checkoutStatus": "반출 현황",
+    "recentActivity": "최근 활동",
+    "overview": "전체 현황",
+    "calibration": "교정 일정",
+    "equipment": "장비 현황",
+    "checkout": "반출 현황",
+    "activity": "최근 활동",
+    "approvals": "승인 현황"
+  },
+  "sections": {
+    "recentActivities": "최근 활동",
+    "quickActions": "빠른 액션",
+    "pendingApprovals": "승인 대기",
+    "overdueCheckouts": "기한 초과 반출",
+    "upcomingCalibrations": "교정 예정",
+    "equipmentStatus": "장비 현황",
+    "teamEquipment": "팀 장비 현황"
+  },
+  "quickActions": {
+    "registerEquipment": "장비 등록",
+    "registerCalibration": "교정 등록",
+    "createCheckout": "반출 신청",
+    "viewReports": "보고서 조회",
+    "approvalManagement": "승인 관리",
+    "calibrationPlans": "교정계획서",
+    "userManagement": "사용자 관리",
+    "systemSettings": "시스템 설정",
+    "equipmentList": "장비 목록",
+    "checkoutStatus": "대여/반출 현황",
+    "ariaLabel": "빠른 액션"
+  },
+  "pending": {
+    "title": {
+      "test_engineer": "내 요청 현황",
+      "technical_manager": "팀 승인 대기",
+      "quality_manager": "검토 대기",
+      "lab_manager": "시험소 승인 대기",
+      "default": "승인 대기"
+    },
+    "description": {
+      "test_engineer": "본인이 신청한 항목의 처리 현황",
+      "technical_manager": "팀 내 승인이 필요한 항목",
+      "quality_manager": "검토가 필요한 항목",
+      "lab_manager": "시험소 내 승인이 필요한 항목",
+      "default": "승인 대기 중인 항목"
+    },
+    "error": "승인 대기 정보를 불러오는데 실패했습니다.",
+    "totalCount": "총 {count}건",
+    "viewAll": "전체 보기",
+    "clickToView": "클릭하여 확인",
+    "viewAllAriaLabel": "전체 승인 관리 페이지로 이동",
+    "categoryAriaLabel": "{label} {count}건"
+  },
+  "calibrationList": {
+    "daysOverdue": "{days}일 초과",
+    "daysRemaining": "{days}일 남음",
+    "noUpcoming": "예정된 교정 없음",
+    "noOverdue": "기한 초과 교정 없음",
+    "noUpcomingDesc": "30일 이내 교정 예정인 장비가 없습니다",
+    "noOverdueDesc": "기한이 초과된 교정이 없습니다",
+    "viewDetail": "{name} 상세 보기",
+    "viewAllOverdue": "모든 기한 초과 교정 보기 ({count})",
+    "viewAllUpcoming": "모든 예정 교정 보기 ({count})",
+    "upcomingTitle": "교정 예정 장비",
+    "upcomingDesc": "다음 30일 이내 교정 예정"
+  },
+  "activities": {
+    "types": {
+      "equipment_added": "장비 등록",
+      "equipment_updated": "장비 수정",
+      "equipment_approved": "장비 승인",
+      "equipment_rejected": "장비 반려",
+      "calibration_created": "교정 등록",
+      "calibration_approved": "교정 승인",
+      "calibration_updated": "교정 수정",
+      "non_conformance_created": "부적합 등록",
+      "non_conformance_updated": "부적합 수정",
+      "non_conformance_resolved": "부적합 해결",
+      "calibration_plan_created": "교정계획서 생성",
+      "calibration_plan_approved": "교정계획서 승인",
+      "calibration_plan_rejected": "교정계획서 반려",
+      "rental_created": "대여 신청",
+      "rental_approved": "대여 승인",
+      "checkout_created": "반출 신청",
+      "checkout_approved": "반출 승인"
+    },
+    "other": "기타 활동",
+    "categories": {
+      "all": "전체",
+      "equipment": "장비",
+      "calibration": "교정",
+      "rental": "대여",
+      "checkout": "반출"
+    },
+    "roleTitle": {
+      "test_engineer": "내 최근 활동",
+      "technical_manager": "팀 최근 활동",
+      "quality_manager": "교정 관련 최근 활동",
+      "lab_manager": "시험소 최근 활동",
+      "system_admin": "전체 최근 활동",
+      "default": "최근 활동"
+    },
+    "roleDescription": {
+      "test_engineer": "본인의 최근 7일간 활동 기록입니다",
+      "technical_manager": "팀 내 최근 7일간 활동 기록입니다",
+      "quality_manager": "교정 및 장비 관련 최근 7일간 활동 기록입니다",
+      "lab_manager": "시험소 내 최근 7일간 활동 기록입니다",
+      "system_admin": "전체 시스템의 최근 7일간 활동 기록입니다",
+      "default": "최근 7일간 발생한 활동 기록입니다"
+    },
+    "count": "{count}건",
+    "empty": "활동 내역이 없습니다",
+    "emptyDescription": "최근 7일간 기록된 활동이 없습니다",
+    "noCategory": "해당 카테고리에 활동 내역이 없습니다",
+    "userAction": "{userName}님이",
+    "viewDetail": "자세히 보기 →"
+  },
+  "checkouts": {
+    "overdueTitle": "반납 기한 초과",
+    "overdueDesc": "반출 기한이 지난 장비 목록입니다",
+    "noOverdue": "기한 초과 없음",
+    "noOverdueDesc": "기한이 초과된 반출이 없습니다",
+    "unknown": "알 수 없음",
+    "daysOverdue": "{days}일 초과",
+    "viewDetail": "반출 상세 보기",
+    "viewAllOverdue": "모든 기한 초과 반출 보기 ({count})",
+    "checkoutStatus": "반출 현황",
+    "currentCheckouts": "현재 반출 중인 장비",
+    "activeCount": "건 반출 중",
+    "viewAllCheckouts": "전체 반출 목록 보기 →"
+  },
+  "alert": {
+    "title": "조치 필요",
+    "count": "{count}건",
+    "allClear": "주의가 필요한 항목이 없습니다",
+    "allClearDesc": "모든 장비 교정과 반출이 정상 상태입니다",
+    "calibrationOverdue": "교정 지연",
+    "noCalibrationOverdue": "기한 초과 교정 없음",
+    "calibrationViewDetail": "{name} 교정 상세 보기",
+    "viewAllCalibrationOverdue": "기한 초과 교정 모두 보기 ({count})",
+    "checkoutOverdue": "반출 기한 초과",
+    "noCheckoutOverdue": "기한 초과 반출 없음",
+    "viewAllCheckoutOverdue": "기한 초과 반출 모두 보기 ({count})"
+  },
+  "statusBreakdown": {
+    "title": "장비 상태 분포",
+    "total": "총 {count}대",
+    "empty": "등록된 장비가 없습니다"
+  },
+  "statusChart": {
+    "title": "장비 상태",
+    "description": "현재 장비 상태별 분포",
+    "empty": "데이터가 없습니다",
+    "tooltipUnit": "{value}대 ({percent}%)",
+    "total": "총 {count}대의 장비"
+  },
+  "equipmentTab": {
+    "myEquipmentStatus": "내 장비 현황",
+    "equipmentStatus": "장비 현황",
+    "teamStatus": "팀별 장비 현황",
+    "allEquipmentList": "전체 장비 목록",
+    "countUnit": "{count}대"
+  },
+  "empty": {
+    "noActivities": "최근 활동이 없습니다.",
+    "noApprovals": "승인 대기 항목이 없습니다.",
+    "noOverdue": "기한 초과 반출이 없습니다.",
+    "noCalibrations": "예정된 교정이 없습니다."
+  },
+  "status": {
+    "available": "사용 가능",
+    "inUse": "사용 중",
+    "checkedOut": "반출 중",
+    "nonConforming": "부적합",
+    "calibrationScheduled": "교정 예정",
+    "retired": "폐기"
+  },
+  "dday": {
+    "today": "D-Day",
+    "overdue": "D+{days}",
+    "upcoming": "D-{days}"
+  },
+  "srOnly": {
+    "pendingApprovals": "승인 대기 현황",
+    "equipmentStats": "장비 현황 통계",
+    "statusDistribution": "장비 상태 분포",
+    "alertsAndStatus": "조치 필요 항목 및 상태 분포",
+    "dashboardDetail": "대시보드 상세 정보",
+    "dashboardTabs": "대시보드 탭",
+    "loading": "대시보드를 불러오는 중입니다..."
+  },
+  "equipmentStatusLabels": {
+    "available": "사용 가능",
+    "in_use": "사용 중",
+    "checked_out": "반출 중",
+    "calibration_scheduled": "교정 예정",
+    "calibration_overdue": "교정 기한 초과",
+    "non_conforming": "부적합",
+    "spare": "여분",
+    "retired": "폐기",
+    "pending_disposal": "폐기 대기",
+    "disposed": "폐기 완료",
+    "temporary": "임시",
+    "inactive": "비활성"
+  },
+  "statusBar": {
+    "empty": "등록된 장비가 없습니다",
+    "ariaPrefix": "장비 상태 분포",
+    "statusEntry": "{label} {count}대 ({percent}%)",
+    "tooltipEntry": "{label}: {count}대 ({percent}%)"
+  }
+}

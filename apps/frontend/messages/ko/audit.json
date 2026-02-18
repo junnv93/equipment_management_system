@@ -1,0 +1,46 @@
+{
+  "title": "감사 로그",
+  "refresh": "새로고침",
+  "print": "인쇄",
+  "filter": "필터",
+  "logList": "로그 목록",
+  "totalLogs": "총 {count}개의 로그",
+  "emptyLogs": "조회된 로그가 없습니다",
+  "showingRange": "{total}개 중 {start}-{end}개 표시",
+  "filters": {
+    "userId": "사용자 ID",
+    "entityType": "엔티티 타입",
+    "action": "액션",
+    "startDate": "시작일",
+    "endDate": "종료일",
+    "all": "전체"
+  },
+  "table": {
+    "time": "시간",
+    "user": "사용자",
+    "role": "역할",
+    "action": "액션",
+    "target": "대상",
+    "targetName": "대상명",
+    "ip": "IP"
+  },
+  "detail": {
+    "title": "감사 로그 상세",
+    "description": "시스템에서 발생한 활동의 상세 기록입니다.",
+    "userInfo": "사용자 정보",
+    "userName": "사용자:",
+    "userRole": "역할:",
+    "userId": "사용자 ID:",
+    "ipAddress": "IP 주소:",
+    "targetInfo": "대상 정보",
+    "targetType": "대상 타입:",
+    "targetId": "대상 ID:",
+    "changes": "변경 사항",
+    "additionalInfo": "추가 정보",
+    "metadata": "메타데이터",
+    "logId": "로그 ID:",
+    "createdAt": "생성 시간:",
+    "requestId": "요청 ID:",
+    "auditLogDetail": "{type} 감사 로그 상세"
+  }
+}

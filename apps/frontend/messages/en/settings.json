@@ -1,0 +1,102 @@
+{
+  "title": "Settings",
+  "nav": {
+    "display": "Display Settings",
+    "notifications": "Notification Settings",
+    "profile": "Profile",
+    "calibration": "Calibration Alert Settings",
+    "system": "System Settings"
+  },
+  "display": {
+    "title": "Display Settings",
+    "description": "Customize the default display options for list pages.",
+    "language": "언어 / Language",
+    "languageDescription": "Select the system display language. Changes take effect immediately.",
+    "itemsPerPage": "Items Per Page",
+    "itemsPerPageDescription": "Set the default number of items to display on list pages.",
+    "itemsPerPageOptions": {
+      "10": "10 items",
+      "20": "20 items (Recommended)",
+      "50": "50 items"
+    },
+    "dateFormat": "Date Format",
+    "dateFormatDescription": "Select the default date format used throughout the system.",
+    "dateFormatOptions": {
+      "iso": "ISO Standard",
+      "korean": "Korean Convention"
+    },
+    "equipmentSort": "Default Equipment Sort",
+    "equipmentSortDescription": "The sort order applied when first entering the equipment list page.",
+    "showRetiredEquipment": "Show Retired/Inactive Equipment",
+    "showRetiredDescription": "Show retired and inactive equipment in the equipment list by default. When enabled, you can view complete equipment history.",
+    "saveNote": "Settings take effect immediately and apply to all list pages"
+  },
+  "notifications": {
+    "channelTitle": "Notification Channels",
+    "channelDescription": "Configure how and when you receive notifications.",
+    "typeTitle": "Notification Types",
+    "typeDescription": "Select which notification categories to receive.",
+    "emailEnabled": "Email Notifications",
+    "emailDescription": "Receive calibration overdue, calibration due, and checkout overdue notifications via email. (Uses Azure AD account email)",
+    "inAppEnabled": "In-App Notifications",
+    "inAppDescription": "Display notifications within the system.",
+    "frequency": "Notification Frequency",
+    "frequencyDescription": "Currently all notifications are sent immediately. Daily/weekly digest features will be added in the future.",
+    "digestTime": "Digest Send Time",
+    "digestTimeDescription": "You can set the send time when daily/weekly digest feature is enabled.",
+    "comingSoon": "Coming Soon"
+  },
+  "system": {
+    "title": "System Settings",
+    "description": "Change management settings that apply across the entire system.",
+    "warning": "System settings affect the entire system. Please review carefully before making changes.",
+    "warningPrefix": "Warning:",
+    "auditLogRetention": "Audit Log Retention Period",
+    "auditLogRetentionDescription": "How long to keep audit logs. {code} means unlimited retention.",
+    "notificationRetention": "Notification Retention Period",
+    "notificationRetentionDescription": "Expired notifications are automatically cleaned up. Set an appropriate period for optimal system performance.",
+    "maintenanceMessage": "System Announcement",
+    "maintenanceMessagePlaceholder": "Enter announcements such as scheduled maintenance...",
+    "maintenanceMessageDescription": "The message will be displayed as a banner at the top of the dashboard. Leave empty to hide the banner.",
+    "maxChars": "Max 500 characters",
+    "unlimited": "Unlimited",
+    "days": "days",
+    "recommended": "Recommended",
+    "changesAppliedImmediately": "Changes are applied immediately"
+  },
+  "calibration": {
+    "title": "Calibration Alert Settings",
+    "description": "Configure when to send alerts for upcoming calibration and intermediate check deadlines. Alerts are sent on the selected D-day dates.",
+    "alertTiming": "Alert Timing",
+    "today": "Same Day (D-day)",
+    "dDay": "D-{day}",
+    "dayOnly": "Same Day",
+    "currentSelection": "Current selection:",
+    "noSelection": "None selected",
+    "howItWorks": "How Alerts Work",
+    "howItWorksItems": {
+      "timing": "Alerts are sent for equipment with upcoming calibration/intermediate checks on selected D-days",
+      "dedupe": "Duplicate alerts are automatically prevented (same alert blocked within 24 hours)",
+      "overdue": "Equipment is automatically marked as non-conforming when calibration is overdue (no grace period)"
+    }
+  },
+  "toasts": {
+    "saveSuccess": "Display settings saved.",
+    "saveError": "Failed to save settings.",
+    "notificationSaveSuccess": "Notification settings saved.",
+    "notificationSaveError": "Failed to save notification settings.",
+    "systemSaveSuccess": "System settings saved.",
+    "systemSaveError": "Failed to save system settings.",
+    "calibrationSaveSuccess": "Calibration alert settings saved.",
+    "calibrationSaveError": "Failed to save calibration alert settings."
+  },
+  "sortOptions": {
+    "managementNumber": "Management Number",
+    "name": "Equipment Name",
+    "updatedAt": "Last Modified"
+  },
+  "common": {
+    "saving": "Saving…",
+    "save": "Save"
+  }
+}
