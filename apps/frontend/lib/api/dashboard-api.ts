@@ -104,17 +104,9 @@ class DashboardApi {
     return this.getSummary(teamId);
   }
 
-  async getEquipmentSummary(teamId?: string): Promise<DashboardSummary> {
-    return this.getSummary(teamId);
-  }
-
   async getEquipmentList(): Promise<unknown[]> {
     const response = await apiClient.get(`${API_ENDPOINTS.EQUIPMENT.LIST}?limit=10`);
     return transformArrayResponse<unknown>(response);
-  }
-
-  async getCalibrationSchedule(teamId?: string): Promise<UpcomingCalibration[]> {
-    return this.getUpcomingCalibrations(30, teamId);
   }
 
   async getEquipmentByTeam(teamId?: string): Promise<EquipmentByTeam[]> {

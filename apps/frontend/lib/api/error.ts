@@ -79,7 +79,7 @@ export function toApiError(error: unknown): ApiError | null {
     const status = equipmentApiError.statusCode ?? getStatusFromCode(equipmentApiError.code);
 
     return new ApiError(
-      equipmentApiError.message || '알 수 없는 오류가 발생했습니다.',
+      equipmentApiError.message || 'An unknown error occurred.',
       equipmentApiError.code as EquipmentErrorCode,
       status,
       equipmentApiError.details
@@ -192,18 +192,18 @@ function getStatusFromCode(code: string): number {
  */
 function getDefaultMessageForStatus(status: number): string {
   const statusMessages: Record<number, string> = {
-    400: '잘못된 요청입니다.',
-    401: '인증이 필요합니다. 다시 로그인해주세요.',
-    403: '이 작업을 수행할 권한이 없습니다.',
-    404: '요청한 리소스를 찾을 수 없습니다.',
-    409: '다른 사용자가 이 데이터를 수정했습니다. 최신 데이터를 확인해주세요.',
-    413: '파일 크기가 너무 큽니다.',
-    415: '지원하지 않는 파일 형식입니다.',
-    500: '서버 내부 오류가 발생했습니다.',
-    502: '서버와 연결할 수 없습니다.',
-    503: '서버가 일시적으로 사용 불가능합니다.',
+    400: 'Bad request.',
+    401: 'Authentication required. Please log in again.',
+    403: 'You do not have permission to perform this action.',
+    404: 'The requested resource was not found.',
+    409: 'Another user has modified this data. Please check the latest data.',
+    413: 'File size is too large.',
+    415: 'Unsupported file format.',
+    500: 'An internal server error occurred.',
+    502: 'Cannot connect to the server.',
+    503: 'The server is temporarily unavailable.',
   };
-  return statusMessages[status] || '알 수 없는 오류가 발생했습니다.';
+  return statusMessages[status] || 'An unknown error occurred.';
 }
 
 /**
@@ -223,7 +223,7 @@ export function isApiError(error: unknown): error is ApiError {
  * @param defaultMessage - 기본 메시지
  * @returns 사용자에게 표시할 메시지
  */
-export function getErrorMessage(error: unknown, defaultMessage = '오류가 발생했습니다.'): string {
+export function getErrorMessage(error: unknown, defaultMessage = 'An error occurred.'): string {
   // ApiError인 경우 getUserMessage 사용
   if (error instanceof ApiError) {
     return error.getUserMessage();

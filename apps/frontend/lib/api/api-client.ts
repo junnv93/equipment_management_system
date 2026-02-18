@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getSession } from 'next-auth/react';
 // ✅ 일관된 에러 처리: 공통 유틸리티 사용
 import { createApiError } from './utils/response-transformers';
+import { API_BASE_URL } from '../config/api-config';
 
 /**
  * ============================================================================
@@ -48,7 +49,6 @@ import { createApiError } from './utils/response-transformers';
  *
  * 이 규칙을 따르지 않으면 404 에러 또는 '/api/api/...' 중복 오류 발생
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // 개발 모드에서 잘못된 API 경로 감지
 const validateApiPath = (path: string): void => {
@@ -124,6 +124,13 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // i18n: 현재 로케일을 Accept-Language 헤더로 전달 (백엔드 에러 메시지 로케일화)
+    if (typeof document !== 'undefined') {
+      const locale = document.documentElement.lang || 'ko';
+      config.headers['Accept-Language'] = locale;
+    }
+
     return config;
   },
   (error) => {
@@ -133,7 +140,21 @@ apiClient.interceptors.request.use(
 
 // 응답 인터셉터 설정
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // ResponseTransformInterceptor 래핑 해제 (SSOT: 클라이언트 레벨에서 중앙화)
+    // 백엔드가 { success, data, message, timestamp } 형태로 래핑하는 경우 data만 추출
+    const responseData: unknown = response.data;
+    if (
+      responseData &&
+      typeof responseData === 'object' &&
+      'success' in responseData &&
+      (responseData as Record<string, unknown>).success === true &&
+      'data' in responseData
+    ) {
+      response.data = (responseData as Record<string, unknown>).data;
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

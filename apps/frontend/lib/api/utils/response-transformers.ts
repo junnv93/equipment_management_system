@@ -29,34 +29,51 @@ import {
  * @returns 프론트엔드 형식의 페이지네이션 응답
  */
 export function transformPaginatedResponse<T>(
-  response: AxiosResponse<PaginatedListResponse<T> & { summary?: any }>
+  response: AxiosResponse<PaginatedListResponse<T> & { summary?: unknown }>
 ): FrontendPaginatedResponse<T> {
-  const backendData = response.data;
+  // ResponseTransformInterceptor 래핑 해제: { success, data, message, timestamp }
+  // 백엔드 인터셉터가 실제 데이터를 data 필드로 래핑함
+  const rawData = response.data as unknown;
+  const backendData =
+    rawData && typeof rawData === 'object' && 'success' in rawData && 'data' in rawData
+      ? (rawData as { data: unknown }).data
+      : rawData;
 
   // 백엔드 응답 구조 확인
-  if (backendData && 'items' in backendData && 'meta' in backendData) {
+  if (
+    backendData &&
+    typeof backendData === 'object' &&
+    'items' in backendData &&
+    'meta' in backendData
+  ) {
+    const paginated = backendData as PaginatedListResponse<T> & { summary?: unknown };
     const result: FrontendPaginatedResponse<T> = {
-      data: backendData.items || [],
+      data: paginated.items || [],
       meta: {
         pagination: {
-          total: backendData.meta.totalItems,
-          pageSize: backendData.meta.itemsPerPage,
-          currentPage: backendData.meta.currentPage,
-          totalPages: backendData.meta.totalPages,
+          total: paginated.meta.totalItems,
+          pageSize: paginated.meta.itemsPerPage,
+          currentPage: paginated.meta.currentPage,
+          totalPages: paginated.meta.totalPages,
         },
       },
     };
 
     // ✅ 성능 최적화: summary 필드가 있으면 보존
-    if ('summary' in backendData && backendData.summary) {
-      result.meta.summary = backendData.summary;
+    if (paginated.summary) {
+      result.meta.summary = paginated.summary as (typeof result)['meta']['summary'];
     }
 
     return result;
   }
 
   // 레거시 호환성: 이미 변환된 형태인 경우
-  if (backendData && 'data' in backendData && 'meta' in backendData) {
+  if (
+    backendData &&
+    typeof backendData === 'object' &&
+    'data' in backendData &&
+    'meta' in backendData
+  ) {
     return backendData as FrontendPaginatedResponse<T>;
   }
 
@@ -163,38 +180,35 @@ export function createApiError(error: unknown): ApiError {
 
       // 타임아웃 에러
       if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
-        return new ApiError('서버 응답 시간이 초과되었습니다.', EquipmentErrorCode.TIMEOUT_ERROR);
+        return new ApiError('Request timed out.', EquipmentErrorCode.TIMEOUT_ERROR);
       }
 
-      // 네트워크/연결 에러 (브라우저: ERR_NETWORK, Node.js: ECONNREFUSED 등)
       const networkErrorCodes = [
-        'ERR_NETWORK', // Axios 브라우저 네트워크 에러
-        'ECONNREFUSED', // Node.js: 연결 거부 (백엔드 다운)
-        'ECONNRESET', // Node.js: 연결 리셋
-        'ENOTFOUND', // Node.js: DNS 조회 실패
-        'EHOSTUNREACH', // Node.js: 호스트 도달 불가
-        'ENETUNREACH', // Node.js: 네트워크 도달 불가
-        'EPIPE', // Node.js: 파이프 끊김
-        'EAI_AGAIN', // Node.js: DNS 일시 실패
+        'ERR_NETWORK',
+        'ECONNREFUSED',
+        'ECONNRESET',
+        'ENOTFOUND',
+        'EHOSTUNREACH',
+        'ENETUNREACH',
+        'EPIPE',
+        'EAI_AGAIN',
       ];
 
       if (code && networkErrorCodes.includes(code)) {
         return new ApiError(
-          `백엔드 서버에 연결할 수 없습니다 (${code}). 서버가 실행 중인지 확인해주세요.`,
+          `Cannot connect to backend server (${code}).`,
           EquipmentErrorCode.NETWORK_ERROR
         );
       }
 
-      // 기타 응답 없는 에러 (코드가 없거나 알 수 없는 코드)
       return new ApiError(
-        `서버 연결 오류가 발생했습니다${code ? ` (${code})` : ''}. 잠시 후 다시 시도해주세요.`,
+        `Server connection error${code ? ` (${code})` : ''}.`,
         EquipmentErrorCode.NETWORK_ERROR
       );
     }
 
-    // 타임아웃 에러 (응답이 있는 경우에도 코드로 확인)
     if (axiosError.code === 'ECONNABORTED' || axiosError.code === 'ETIMEDOUT') {
-      return new ApiError('서버 응답 시간이 초과되었습니다.', EquipmentErrorCode.TIMEOUT_ERROR);
+      return new ApiError('Request timed out.', EquipmentErrorCode.TIMEOUT_ERROR);
     }
 
     if (errorData && typeof errorData === 'object') {
@@ -207,7 +221,7 @@ export function createApiError(error: unknown): ApiError {
           details?: unknown;
         };
 
-        const message = backendError.message || '알 수 없는 오류가 발생했습니다.';
+        const message = backendError.message || 'An unknown error occurred.';
         const errorCode =
           mapBackendErrorCode(backendError.code) ||
           (status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR);
@@ -220,7 +234,7 @@ export function createApiError(error: unknown): ApiError {
         const backendError = errorData as {
           error: { code?: string; message?: string; details?: unknown };
         };
-        const message = backendError.error.message || '알 수 없는 오류가 발생했습니다.';
+        const message = backendError.error.message || 'An unknown error occurred.';
         const errorCode =
           mapBackendErrorCode(backendError.error.code) ||
           (status ? httpStatusToErrorCode(status) : EquipmentErrorCode.UNKNOWN_ERROR);
@@ -247,12 +261,12 @@ export function createApiError(error: unknown): ApiError {
           const filteredMessages = nestError.message.filter(
             (m): m is string => typeof m === 'string' && m.trim().length > 0
           );
-          message = filteredMessages.join(', ') || '알 수 없는 오류가 발생했습니다.';
+          message = filteredMessages.join(', ') || 'An unknown error occurred.';
           details = filteredMessages.length > 0 ? filteredMessages : undefined;
         } else if (nestError.message && typeof nestError.message === 'string') {
           message = String(nestError.message);
         } else {
-          message = nestError.error || '알 수 없는 오류가 발생했습니다.';
+          message = nestError.error || 'An unknown error occurred.';
         }
 
         // ✅ Zod 검증 에러의 상세 정보 전달
@@ -273,23 +287,25 @@ export function createApiError(error: unknown): ApiError {
     }
 
     // HTTP 상태 코드 기반 메시지
+    // TODO(i18n): Phase 3에서 errors.json의 키(VALIDATION_ERROR, UNAUTHORIZED 등)로 전환
+    // 현재는 순수 유틸리티 함수로 translation context 없음 — 호출자 레벨에서 처리 예정
     if (status) {
       const errorCode = httpStatusToErrorCode(status);
       const statusMessages: Record<number, string> = {
-        400: '잘못된 요청입니다.',
-        401: '인증이 필요합니다. 다시 로그인해주세요.',
-        403: '이 작업을 수행할 권한이 없습니다.',
-        404: '요청한 리소스를 찾을 수 없습니다.',
-        409: '이미 존재하는 데이터입니다.',
-        413: '파일 크기가 너무 큽니다.',
-        415: '지원하지 않는 파일 형식입니다.',
-        500: '서버 내부 오류가 발생했습니다.',
-        502: '서버와 연결할 수 없습니다.',
-        503: '서버가 일시적으로 사용 불가능합니다.',
+        400: 'Bad request.',
+        401: 'Authentication required. Please log in again.',
+        403: 'You do not have permission to perform this action.',
+        404: 'The requested resource was not found.',
+        409: 'The data already exists.',
+        413: 'File size is too large.',
+        415: 'Unsupported file format.',
+        500: 'An internal server error occurred.',
+        502: 'Cannot connect to the server.',
+        503: 'The server is temporarily unavailable.',
       };
 
       return new ApiError(
-        statusMessages[status] || '알 수 없는 오류가 발생했습니다.',
+        statusMessages[status] || 'An unknown error occurred.',
         errorCode,
         status
       );
@@ -301,22 +317,22 @@ export function createApiError(error: unknown): ApiError {
     // 네트워크 관련 에러 메시지 패턴
     if (error.message && (error.message.includes('Network') || error.message.includes('fetch'))) {
       return new ApiError(
-        '네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.',
+        'A network error occurred. Please check your internet connection.',
         EquipmentErrorCode.NETWORK_ERROR
       );
     }
 
     // 🔴 방어적 코드: error.message가 없을 수 있음
     return new ApiError(
-      error.message || '알 수 없는 오류가 발생했습니다.',
+      error.message || 'An unknown error occurred.',
       EquipmentErrorCode.UNKNOWN_ERROR
     );
   }
 
   // 알 수 없는 에러 - 개발 모드에서 디버깅 정보 제공
   if (process.env.NODE_ENV === 'development') {
-    console.error('[createApiError] 알 수 없는 에러 구조:', error);
+    console.error('[createApiError] Unknown error structure:', error);
   }
 
-  return new ApiError('예기치 않은 오류가 발생했습니다.', EquipmentErrorCode.UNKNOWN_ERROR);
+  return new ApiError('An unexpected error occurred.', EquipmentErrorCode.UNKNOWN_ERROR);
 }

@@ -7,6 +7,11 @@
  * 용어 정리:
  * - staleTime: 데이터가 "신선"하다고 간주되는 시간 (이 시간 동안 refetch 안 함)
  * - gcTime: 캐시에서 데이터가 유지되는 시간 (garbage collection time)
+ *
+ * Architecture v2 (2026-02-16):
+ * - Data Fetching Strategy: Real-time 요구사항 4단계 분류
+ * - SSOT: REFETCH_STRATEGIES로 중앙화된 갱신 전략
+ * - Visual Feedback: Urgency Level과 분리 (Design Token으로 이동)
  */
 
 import type { Site } from '@equipment-management/schemas';
@@ -28,10 +33,80 @@ export const CACHE_TIMES = {
 } as const;
 
 /**
- * 기능별 Query 설정
+ * Refetch Interval 상수 (밀리초)
  *
- * 각 기능 영역에 맞는 캐시 설정을 정의합니다.
- * 컴포넌트에서 useQuery 호출 시 이 설정을 스프레드하여 사용합니다.
+ * SSOT: 자동 갱신 주기를 명시적으로 정의
+ */
+export const REFETCH_INTERVALS = {
+  /** 30초 - 실시간 중요 데이터 (알림, 채팅) */
+  REALTIME: 30 * 1000,
+  /** 2분 - 준실시간 데이터 (대시보드 통계) */
+  NEAR_REALTIME: 2 * 60 * 1000,
+  /** 5분 - 주기적 갱신 (모니터링) */
+  PERIODIC: 5 * 60 * 1000,
+  /** 없음 - 사용자 인터랙션 기반 갱신 */
+  NONE: undefined,
+} as const;
+
+/**
+ * Data Fetching Strategy (SSOT)
+ *
+ * 4단계 Real-time 요구사항 분류:
+ * - CRITICAL: SSE/WebSocket 사용 권장 (현재: 30초 폴링)
+ * - IMPORTANT: 준실시간 폴링 (2분)
+ * - NORMAL: 사용자 인터랙션 기반 (window focus)
+ * - STATIC: 수동 갱신 (mutation 후에만)
+ *
+ * 선택 기준:
+ * - 사용자가 즉시 알아야 하는가? → CRITICAL
+ * - 화면에 표시되는 숫자가 정확해야 하는가? → IMPORTANT
+ * - 사용자가 페이지 방문 시 최신이면 되는가? → NORMAL
+ * - 거의 변경되지 않는가? → STATIC
+ */
+export const REFETCH_STRATEGIES = {
+  /** 실시간 (SSE 추천, 현재: 30초 폴링) */
+  CRITICAL: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchInterval: REFETCH_INTERVALS.REALTIME,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
+  /** 준실시간 (2분 폴링) */
+  IMPORTANT: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchInterval: REFETCH_INTERVALS.NEAR_REALTIME,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
+  /** 사용자 인터랙션 기반 (window focus만) */
+  NORMAL: {
+    staleTime: CACHE_TIMES.SHORT,
+    gcTime: CACHE_TIMES.MEDIUM,
+    refetchInterval: REFETCH_INTERVALS.NONE,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
+  /** 정적 (수동 갱신) */
+  STATIC: {
+    staleTime: CACHE_TIMES.REFERENCE,
+    gcTime: CACHE_TIMES.REFERENCE,
+    refetchInterval: REFETCH_INTERVALS.NONE,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  },
+} as const;
+
+/**
+ * 기능별 Query 설정 (SSOT: REFETCH_STRATEGIES 기반)
+ *
+ * 각 기능 영역에 맞는 갱신 전략을 명시적으로 선언합니다.
+ * 하드코딩된 refetchInterval 대신 REFETCH_STRATEGIES를 참조합니다.
  *
  * @example
  * ```typescript
@@ -43,87 +118,76 @@ export const CACHE_TIMES = {
  * ```
  */
 export const QUERY_CONFIG = {
-  /** 장비 목록 - 필터/검색 시 빠른 응답 필요 */
+  /** 장비 목록 - NORMAL (사용자 필터링 시 갱신) */
   EQUIPMENT_LIST: {
     staleTime: CACHE_TIMES.LONG,
     gcTime: CACHE_TIMES.VERY_LONG,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: false, // 필터 조작 시에만 갱신
     retry: 3,
   },
 
-  /** 장비 상세 - 수정 가능하므로 중간 수준의 캐시 */
+  /** 장비 상세 - NORMAL (mutation 후 자동 무효화) */
   EQUIPMENT_DETAIL: {
     staleTime: CACHE_TIMES.MEDIUM,
     gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
     retry: 2,
   },
 
-  /** 대시보드 - 실시간성 중요 */
-  DASHBOARD: {
-    staleTime: CACHE_TIMES.SHORT,
-    gcTime: CACHE_TIMES.MEDIUM,
-    refetchInterval: 60 * 1000, // 1분마다 자동 refetch
-  },
+  /** 대시보드 - NORMAL (탭 전환 시 갱신, 자동 폴링 없음) */
+  DASHBOARD: REFETCH_STRATEGIES.NORMAL,
 
-  /** 교정 요약 통계 - 비교적 자주 갱신 */
-  CALIBRATION_SUMMARY: {
-    staleTime: CACHE_TIMES.SHORT,
-    gcTime: CACHE_TIMES.MEDIUM,
-  },
+  /** 교정 요약 통계 - NORMAL */
+  CALIBRATION_SUMMARY: REFETCH_STRATEGIES.NORMAL,
 
-  /** 교정 이력 목록 */
+  /** 교정 이력 목록 - NORMAL */
   CALIBRATION_LIST: {
     staleTime: CACHE_TIMES.LONG,
     gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
     retry: 2,
   },
 
-  /** 교정 계획 목록 */
+  /** 교정 계획 목록 - NORMAL */
   CALIBRATION_PLANS: {
     staleTime: CACHE_TIMES.LONG,
     gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
     retry: 2,
   },
 
-  /** 교정 계획 상세 */
+  /** 교정 계획 상세 - NORMAL */
   CALIBRATION_PLAN_DETAIL: {
     staleTime: CACHE_TIMES.MEDIUM,
     gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
   },
 
-  /** 알림 - 실시간성 중요 */
-  NOTIFICATIONS: {
-    staleTime: CACHE_TIMES.SHORT,
-    gcTime: CACHE_TIMES.MEDIUM,
-    refetchInterval: 30 * 1000, // 30초마다 자동 refetch
-  },
+  /** 알림 - CRITICAL (SSE 전환 전까지 30초 폴링) */
+  NOTIFICATIONS: REFETCH_STRATEGIES.CRITICAL,
 
-  /** 팀 목록 - 거의 변경되지 않음 */
-  TEAMS: {
-    staleTime: CACHE_TIMES.REFERENCE,
-    gcTime: CACHE_TIMES.REFERENCE,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-  },
+  /** 팀 목록 - STATIC (거의 변경 없음) */
+  TEAMS: REFETCH_STRATEGIES.STATIC,
 
-  /** 사용자 목록 */
+  /** 사용자 목록 - NORMAL */
   USERS: {
     staleTime: CACHE_TIMES.LONG,
     gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
   },
 
-  /** 이력 데이터 (위치, 유지보수, 교정 등) */
+  /** 이력 데이터 - NORMAL */
   HISTORY: {
     staleTime: CACHE_TIMES.MEDIUM,
     gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
   },
 
-  /** 승인 대기 목록 - 실시간성 중요 */
-  PENDING_APPROVALS: {
-    staleTime: CACHE_TIMES.SHORT,
-    gcTime: CACHE_TIMES.MEDIUM,
-    refetchOnWindowFocus: true,
-  },
+  /** 승인 대기 목록 - NORMAL (SSE로 무효화 예정) */
+  PENDING_APPROVALS: REFETCH_STRATEGIES.NORMAL,
 } as const;
 
 /**
@@ -143,7 +207,7 @@ export const queryKeys = {
   equipment: {
     all: ['equipment'] as const,
     lists: () => [...queryKeys.equipment.all, 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.equipment.lists(), filters] as const,
+    list: (filters: object) => [...queryKeys.equipment.lists(), filters] as const,
     search: (term?: string) => [...queryKeys.equipment.all, 'search', term] as const,
     checkoutSearch: (search?: string, purpose?: string, teamId?: string) =>
       [...queryKeys.equipment.all, 'checkout-search', search, purpose, teamId] as const,
@@ -177,8 +241,7 @@ export const queryKeys = {
   calibrationPlans: {
     all: ['calibrationPlans'] as const,
     lists: () => [...queryKeys.calibrationPlans.all, 'list'] as const,
-    list: (filters: Record<string, any>) =>
-      [...queryKeys.calibrationPlans.lists(), filters] as const,
+    list: (filters: object) => [...queryKeys.calibrationPlans.lists(), filters] as const,
     details: () => [...queryKeys.calibrationPlans.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.calibrationPlans.details(), id] as const,
     pending: () => [...queryKeys.calibrationPlans.all, 'pending'] as const,
@@ -209,18 +272,17 @@ export const queryKeys = {
       [...queryKeys.dashboard.all, 'upcomingCalibrations', role, teamId] as const,
     overdueCheckouts: (role?: string, teamId?: string) =>
       [...queryKeys.dashboard.all, 'overdueCheckouts', role, teamId] as const,
-    recentActivities: (role?: string) =>
-      [...queryKeys.dashboard.all, 'recentActivities', role] as const,
+    recentActivities: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'recentActivities', role, teamId] as const,
     equipmentStatusStats: (role?: string, teamId?: string) =>
       [...queryKeys.dashboard.all, 'equipmentStatusStats', role, teamId] as const,
     pendingApprovalCounts: (role?: string) =>
       [...queryKeys.dashboard.all, 'pendingApprovalCounts', role] as const,
-    equipmentSummary: () => [...queryKeys.dashboard.all, 'equipmentSummary'] as const,
   },
   teams: {
     all: ['teams'] as const,
     lists: () => [...queryKeys.teams.all, 'list'] as const,
-    list: (filters?: Record<string, any>) => [...queryKeys.teams.lists(), filters] as const,
+    list: (filters?: object) => [...queryKeys.teams.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.teams.all, 'detail', id] as const,
     members: (teamId: string) => [...queryKeys.teams.detail(teamId), 'members'] as const,
     filterOptions: (site?: string) => [...queryKeys.teams.all, 'filter-options', site] as const,
@@ -235,16 +297,14 @@ export const queryKeys = {
   },
   notifications: {
     all: ['notifications'] as const,
-    list: (filters?: Record<string, unknown>) =>
-      [...queryKeys.notifications.all, 'list', filters] as const,
+    list: (filters?: object) => [...queryKeys.notifications.all, 'list', filters] as const,
     unreadCount: () => [...queryKeys.notifications.all, 'unreadCount'] as const,
     preferences: () => [...queryKeys.notifications.all, 'preferences'] as const,
   },
   nonConformances: {
     all: ['non-conformances'] as const,
     lists: () => [...queryKeys.nonConformances.all, 'list'] as const,
-    list: (filters: Record<string, any>) =>
-      [...queryKeys.nonConformances.lists(), filters] as const,
+    list: (filters: object) => [...queryKeys.nonConformances.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.nonConformances.all, 'detail', id] as const,
     byEquipment: (equipmentId: string) =>
       [...queryKeys.nonConformances.all, 'equipment', equipmentId] as const,
@@ -252,20 +312,19 @@ export const queryKeys = {
   disposal: {
     all: ['disposal-requests'] as const,
     lists: () => [...queryKeys.disposal.all, 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.disposal.lists(), filters] as const,
+    list: (filters: object) => [...queryKeys.disposal.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.disposal.all, 'detail', id] as const,
   },
   checkouts: {
     all: ['checkouts'] as const,
     lists: () => [...queryKeys.checkouts.all, 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.checkouts.lists(), filters] as const,
+    list: (filters: object) => [...queryKeys.checkouts.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.checkouts.all, 'detail', id] as const,
     byEquipment: (equipmentId: string) =>
       [...queryKeys.checkouts.all, 'equipment', equipmentId] as const,
     outbound: (teamId?: string, status?: string, location?: string) =>
       [...queryKeys.checkouts.all, 'outbound', teamId, status, location] as const,
-    inbound: (filters: Record<string, unknown> = {}) =>
-      [...queryKeys.checkouts.all, 'inbound', filters] as const,
+    inbound: (filters: object = {}) => [...queryKeys.checkouts.all, 'inbound', filters] as const,
     destinations: () => [...queryKeys.checkouts.all, 'destinations'] as const,
     pending: () => [...queryKeys.checkouts.all, 'pending'] as const,
     returnPending: () => [...queryKeys.checkouts.all, 'return-pending'] as const,
@@ -284,8 +343,7 @@ export const queryKeys = {
       teamId || site
         ? ([...queryKeys.calibrations.all, 'upcoming', days, { teamId, site }] as const)
         : ([...queryKeys.calibrations.all, 'upcoming', days] as const),
-    historyList: (filters?: Record<string, unknown>) =>
-      [...queryKeys.calibrations.all, 'history', filters] as const,
+    historyList: (filters?: object) => [...queryKeys.calibrations.all, 'history', filters] as const,
     pending: () => [...queryKeys.calibrations.all, 'pending'] as const,
     byEquipment: (equipmentId: string) =>
       [...queryKeys.calibrations.all, 'equipment', equipmentId] as const,
@@ -306,15 +364,15 @@ export const queryKeys = {
   },
   reports: {
     all: ['reports'] as const,
-    equipmentUsage: (filters?: Record<string, unknown>) =>
+    equipmentUsage: (filters?: object) =>
       [...queryKeys.reports.all, 'equipment-usage', filters] as const,
-    calibrationStatus: (filters?: Record<string, unknown>) =>
+    calibrationStatus: (filters?: object) =>
       [...queryKeys.reports.all, 'calibration-status', filters] as const,
-    checkoutStatistics: (filters?: Record<string, unknown>) =>
+    checkoutStatistics: (filters?: object) =>
       [...queryKeys.reports.all, 'checkout-statistics', filters] as const,
-    utilizationRate: (filters?: Record<string, unknown>) =>
+    utilizationRate: (filters?: object) =>
       [...queryKeys.reports.all, 'utilization-rate', filters] as const,
-    equipmentDowntime: (filters?: Record<string, unknown>) =>
+    equipmentDowntime: (filters?: object) =>
       [...queryKeys.reports.all, 'equipment-downtime', filters] as const,
   },
   software: {
@@ -327,10 +385,9 @@ export const queryKeys = {
   equipmentImports: {
     all: ['equipment-imports'] as const,
     lists: () => [...queryKeys.equipmentImports.all, 'list'] as const,
-    list: (filters: Record<string, any>) =>
-      [...queryKeys.equipmentImports.lists(), filters] as const,
+    list: (filters: object) => [...queryKeys.equipmentImports.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.equipmentImports.all, 'detail', id] as const,
-    bySourceType: (sourceType: string, filters: Record<string, unknown> = {}) =>
+    bySourceType: (sourceType: string, filters: object = {}) =>
       [...queryKeys.equipmentImports.all, sourceType, filters] as const,
   },
   equipmentRequests: {
@@ -349,7 +406,7 @@ export const queryKeys = {
   auditLogs: {
     all: ['audit-logs'] as const,
     lists: () => [...queryKeys.auditLogs.all, 'list'] as const,
-    list: (filters: Record<string, any>) => [...queryKeys.auditLogs.lists(), filters] as const,
+    list: (filters: object) => [...queryKeys.auditLogs.lists(), filters] as const,
     detail: (id: string) => [...queryKeys.auditLogs.all, 'detail', id] as const,
   },
   settings: {

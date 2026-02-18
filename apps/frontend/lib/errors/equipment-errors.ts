@@ -73,7 +73,21 @@ export interface ErrorInfo {
 }
 
 /**
+ * i18n 번역 함수 타입
+ *
+ * next-intl의 useTranslations('errors') 반환 타입과 호환
+ * - t('key') → 문자열 반환
+ * - t.raw('key') → JSON 원시값 반환 (배열 등)
+ */
+type TranslationFunction = ((key: string, values?: Record<string, unknown>) => string) & {
+  raw: (key: string) => unknown;
+};
+
+/**
  * 에러 코드별 상세 정보
+ *
+ * @deprecated Phase 3에서 i18n 메시지(messages/ko/errors.json, messages/en/errors.json)로 완전 전환 예정.
+ * 새 코드에서는 getLocalizedErrorInfo(code, t)를 사용하세요.
  */
 export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
   // 검증 에러
@@ -263,6 +277,62 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     severity: 'error',
   },
 };
+
+/**
+ * 로케일화된 에러 정보 조회
+ *
+ * Phase 1: ERROR_MESSAGES 폴백 사용 (i18n 인프라 준비)
+ * Phase 3: useTranslations('errors') 기반 완전 전환
+ *
+ * @overload t 없이 호출 — 기존 ERROR_MESSAGES 폴백 (deprecated 경로)
+ * @overload t 포함 호출 — i18n 메시지 사용
+ *
+ * @example
+ * // Phase 1 (기존 호환)
+ * const info = getLocalizedErrorInfo(code);
+ *
+ * // Phase 3 (i18n)
+ * const t = useTranslations('errors');
+ * const info = getLocalizedErrorInfo(code, t);
+ */
+export function getLocalizedErrorInfo(code: EquipmentErrorCode): ErrorInfo;
+export function getLocalizedErrorInfo(code: EquipmentErrorCode, t: TranslationFunction): ErrorInfo;
+export function getLocalizedErrorInfo(
+  code: EquipmentErrorCode,
+  t?: TranslationFunction
+): ErrorInfo {
+  const fallback = ERROR_MESSAGES[code] || ERROR_MESSAGES[EquipmentErrorCode.UNKNOWN_ERROR];
+
+  // i18n 모드: t 함수가 제공된 경우
+  if (t) {
+    let solutions: string[] = [];
+    try {
+      const rawSolutions = t.raw(`${code}.solutions`);
+      solutions = Array.isArray(rawSolutions) ? (rawSolutions as string[]) : [];
+    } catch {
+      solutions = fallback.solutions;
+    }
+
+    let actionLabel: string | undefined;
+    try {
+      const raw = t.raw(`${code}.actionLabel`);
+      actionLabel = typeof raw === 'string' ? raw : undefined;
+    } catch {
+      actionLabel = fallback.actionLabel;
+    }
+
+    return {
+      title: t(`${code}.title`),
+      message: t(`${code}.message`),
+      solutions,
+      actionLabel,
+      actionHref: fallback.actionHref,
+      severity: fallback.severity,
+    };
+  }
+  // 폴백: 기존 ERROR_MESSAGES 사용
+  return fallback;
+}
 
 /**
  * API 에러 클래스

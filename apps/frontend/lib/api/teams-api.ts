@@ -36,7 +36,6 @@ export type Team = Omit<SchemaTeam, 'createdAt' | 'updatedAt' | 'deletedAt'> & {
  * ✅ TeamType 제거 → Classification 사용 (소문자_언더스코어)
  */
 import type { Classification } from '@equipment-management/schemas';
-import { CLASSIFICATION_TO_CODE } from '@equipment-management/schemas';
 export type { Classification };
 
 /**

@@ -2,12 +2,12 @@ import { apiClient } from './api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import { transformPaginatedResponse } from './utils/response-transformers';
+import type { SoftwareApprovalStatus } from '@equipment-management/schemas';
 
 // 소프트웨어 타입
 export type SoftwareType = 'measurement' | 'analysis' | 'control' | 'other';
 
-// 소프트웨어 변경 승인 상태
-export type SoftwareApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type { SoftwareApprovalStatus };
 
 export interface SoftwareHistory {
   id: string;

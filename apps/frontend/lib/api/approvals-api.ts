@@ -21,30 +21,12 @@ import checkoutApi, { type Checkout } from './checkout-api';
 import nonConformancesApi, { type NonConformance } from './non-conformances-api';
 import equipmentImportApi, { type EquipmentImport } from './equipment-import-api';
 import { reviewDisposal, approveDisposal, getCurrentDisposalRequest } from './disposal-api';
-import { transformArrayResponse, transformPaginatedResponse } from './utils/response-transformers';
+import { transformArrayResponse } from './utils/response-transformers';
 
 // ============================================================================
 // Disposal API 페이로드 타입 (SSOT: 백엔드 DTO와 일치)
 // @see apps/backend/src/modules/equipment/dto/disposal.dto.ts
 // ============================================================================
-
-/**
- * 폐기 검토 API 페이로드
- * Backend DTO: ReviewDisposalDto { decision, opinion }
- */
-interface DisposalReviewPayload {
-  decision: 'approve' | 'reject';
-  opinion: string; // 검토 의견 (승인/반려 모두 필수)
-}
-
-/**
- * 폐기 최종 승인 API 페이로드
- * Backend DTO: ApproveDisposalDto { decision, comment? }
- */
-interface DisposalApprovalPayload {
-  decision: 'approve' | 'reject';
-  comment?: string; // 승인 코멘트 (선택)
-}
 
 // ============================================================================
 // 통합 승인 상태 타입 (프론트엔드 로컬 정의)
@@ -117,39 +99,113 @@ export const ROLE_TABS: Record<UserRole, ApprovalCategory[]> = {
  * - 백엔드 DTO에서도 해당 필드를 .min(1)로 검증
  */
 export interface TabMeta {
+  /** 표시 라벨 (한국어 하드코딩) — deprecated: labelKey로 전환 예정 */
   label: string;
+  /** i18n 키 — Phase 3에서 label 대체. 사용: t(labelKey) with useTranslations('approvals') */
+  labelKey?: string;
   icon: string;
+  /** 액션 라벨 (한국어 하드코딩) — deprecated: actionKey로 전환 예정 */
   action: string;
+  /** i18n 키 — Phase 3에서 action 대체 */
+  actionKey?: string;
   /** 승인 시 코멘트 입력 필수 여부 (기본 false) */
   commentRequired?: boolean;
   /** 코멘트 입력 다이얼로그 제목 (commentRequired일 때 사용) */
   commentDialogTitle?: string;
+  /** i18n 키 — Phase 3에서 commentDialogTitle 대체 */
+  commentDialogTitleKey?: string;
   /** 코멘트 placeholder (commentRequired일 때 사용) */
   commentPlaceholder?: string;
+  /** i18n 키 — Phase 3에서 commentPlaceholder 대체 */
+  commentPlaceholderKey?: string;
 }
 
 export const TAB_META: Record<ApprovalCategory, TabMeta> = {
   // Direction-based
-  outgoing: { label: '반출', icon: 'ArrowUpFromLine', action: '승인' },
-  incoming: { label: '반입', icon: 'ArrowDownToLine', action: '승인' },
+  outgoing: {
+    label: '반출',
+    labelKey: 'tabMeta.outgoing.label',
+    icon: 'ArrowUpFromLine',
+    action: '승인',
+    actionKey: 'tabMeta.outgoing.action',
+  },
+  incoming: {
+    label: '반입',
+    labelKey: 'tabMeta.incoming.label',
+    icon: 'ArrowDownToLine',
+    action: '승인',
+    actionKey: 'tabMeta.incoming.action',
+  },
 
   // Specialized
-  equipment: { label: '장비', icon: 'Package', action: '승인' },
-  calibration: { label: '교정 기록', icon: 'FileCheck', action: '승인' },
-  inspection: { label: '중간점검', icon: 'ClipboardCheck', action: '승인' },
-  nonconformity: { label: '부적합 재개', icon: 'AlertTriangle', action: '승인' },
+  equipment: {
+    label: '장비',
+    labelKey: 'tabMeta.equipment.label',
+    icon: 'Package',
+    action: '승인',
+    actionKey: 'tabMeta.equipment.action',
+  },
+  calibration: {
+    label: '교정 기록',
+    labelKey: 'tabMeta.calibration.label',
+    icon: 'FileCheck',
+    action: '승인',
+    actionKey: 'tabMeta.calibration.action',
+  },
+  inspection: {
+    label: '중간점검',
+    labelKey: 'tabMeta.inspection.label',
+    icon: 'ClipboardCheck',
+    action: '승인',
+    actionKey: 'tabMeta.inspection.action',
+  },
+  nonconformity: {
+    label: '부적합 재개',
+    labelKey: 'tabMeta.nonconformity.label',
+    icon: 'AlertTriangle',
+    action: '승인',
+    actionKey: 'tabMeta.nonconformity.action',
+  },
   disposal_review: {
     label: '폐기 검토',
+    labelKey: 'tabMeta.disposal_review.label',
     icon: 'Trash2',
     action: '검토완료',
+    actionKey: 'tabMeta.disposal_review.action',
     commentRequired: true,
     commentDialogTitle: '폐기 검토 의견',
+    commentDialogTitleKey: 'tabMeta.disposal_review.commentDialogTitle',
     commentPlaceholder: '검토 의견을 입력하세요',
+    commentPlaceholderKey: 'tabMeta.disposal_review.commentPlaceholder',
   },
-  disposal_final: { label: '폐기 승인', icon: 'Trash2', action: '승인' },
-  plan_review: { label: '교정계획서 검토', icon: 'Calendar', action: '검토완료' },
-  plan_final: { label: '교정계획서 승인', icon: 'Calendar', action: '승인' },
-  software: { label: '소프트웨어', icon: 'Code', action: '검토완료' },
+  disposal_final: {
+    label: '폐기 승인',
+    labelKey: 'tabMeta.disposal_final.label',
+    icon: 'Trash2',
+    action: '승인',
+    actionKey: 'tabMeta.disposal_final.action',
+  },
+  plan_review: {
+    label: '교정계획서 검토',
+    labelKey: 'tabMeta.plan_review.label',
+    icon: 'Calendar',
+    action: '검토완료',
+    actionKey: 'tabMeta.plan_review.action',
+  },
+  plan_final: {
+    label: '교정계획서 승인',
+    labelKey: 'tabMeta.plan_final.label',
+    icon: 'Calendar',
+    action: '승인',
+    actionKey: 'tabMeta.plan_final.action',
+  },
+  software: {
+    label: '소프트웨어',
+    labelKey: 'tabMeta.software.label',
+    icon: 'Code',
+    action: '검토완료',
+    actionKey: 'tabMeta.software.action',
+  },
 };
 
 // ============================================================================

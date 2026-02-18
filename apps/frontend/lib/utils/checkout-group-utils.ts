@@ -8,8 +8,12 @@ export interface CheckoutGroup {
   date: string;
   /** 날짜 라벨 ("반출일" | "신청일") — checkoutDate 유무에 따라 결정 */
   dateLabel: string;
+  /** i18n 키 (예: "checkouts.groupCard.checkoutDateLabel") — Phase 3에서 전환 */
+  dateLabelKey: string;
   /** 반출지 */
   destination: string;
+  /** 반출지 i18n 키 (미지정일 때 사용) — Phase 3에서 전환 */
+  destinationKey?: string;
   /** 해당 그룹의 checkout 목록 */
   checkouts: Checkout[];
   /** 그룹 내 전체 장비 수 */
@@ -89,11 +93,16 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
       }
     }
 
+    const isUnspecified = destination === '미지정';
     groups.push({
       key,
       date,
       dateLabel: hasCheckoutDate ? '반출일' : '신청일',
+      dateLabelKey: hasCheckoutDate
+        ? 'checkouts.groupCard.checkoutDateLabel'
+        : 'checkouts.groupCard.requestDateLabel',
       destination,
+      destinationKey: isUnspecified ? 'checkouts.groupCard.unspecifiedDestination' : undefined,
       checkouts: groupCheckouts,
       totalEquipment,
       statuses: Array.from(statusSet),

@@ -66,9 +66,9 @@ export async function getCurrentDisposalRequest(
   try {
     const response = await apiClient.get(`/api/equipment/${equipmentId}/disposal/current`);
     return transformSingleResponse<DisposalRequest | null>(response);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // 404 is expected when there's no disposal request - return null
-    if (error.response?.status === 404) {
+    if ((error as { response?: { status?: number } }).response?.status === 404) {
       return null;
     }
     throw error;

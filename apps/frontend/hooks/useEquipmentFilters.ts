@@ -56,7 +56,7 @@ export interface EquipmentFilters {
  */
 const DEFAULT_FILTERS: EquipmentFilters = {
   ...DEFAULT_UI_FILTERS,
-  sortBy: 'createdAt', // 타입 호환을 위해 명시
+  sortBy: 'managementNumber', // ✅ SSOT: DEFAULT_UI_FILTERS와 동일 (백엔드 기본 정렬 기준)
 } as EquipmentFilters;
 
 /**
@@ -191,7 +191,7 @@ export function useEquipmentFilters() {
       const newURL = queryString ? `${pathname}?${queryString}` : pathname;
       router.push(newURL, { scroll: false });
     },
-    [searchParams, pathname, router, filters]
+    [pathname, router, filters]
   );
 
   // 개별 필터 업데이트

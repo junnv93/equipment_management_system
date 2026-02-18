@@ -21,6 +21,7 @@ import type {
   OverdueCalibration,
   UpcomingCalibration,
   OverdueCheckout,
+  RecentActivity,
 } from './dashboard-api';
 
 /**
@@ -94,4 +95,15 @@ export async function getDashboardEquipmentStatusStats(
     params: teamId ? { teamId } : undefined,
   });
   return response.data;
+}
+
+/**
+ * 최근 활동 내역 조회 (Server Component용)
+ */
+export async function getDashboardRecentActivities(limit = 20): Promise<RecentActivity[]> {
+  const apiClient = await createServerApiClient();
+  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITIES, {
+    params: { limit },
+  });
+  return transformArrayResponse<RecentActivity>(response);
 }

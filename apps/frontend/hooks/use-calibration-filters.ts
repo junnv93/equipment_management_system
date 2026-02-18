@@ -19,7 +19,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import {
   UICalibrationFilters,
-  ApiCalibrationFilters,
   parseCalibrationFiltersFromSearchParams,
   convertFiltersToApiParams,
   countActiveFilters,
@@ -33,7 +32,7 @@ import type { Site } from '@equipment-management/schemas';
  * @param initialFilters - 서버에서 전달받은 초기 필터 (optional)
  * @returns 필터 상태 및 업데이트 함수
  */
-export function useCalibrationFilters(initialFilters?: UICalibrationFilters) {
+export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
   const router = useRouter();
   const searchParams = useSearchParams();
 

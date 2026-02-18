@@ -15,6 +15,18 @@ import {
 import type { Equipment } from '@/lib/api/equipment-api';
 import { format } from 'date-fns';
 
+/** 프론트엔드 전용 확장: i18n 키 포함 */
+export interface EquipmentSelectabilityWithI18n extends EquipmentSelectability {
+  /** i18n 키 for warningMessage — Phase 3에서 전환 */
+  warningMessageKey?: string;
+  /** i18n 보간 파라미터 for warningMessage */
+  warningMessageParams?: Record<string, string | number>;
+  /** i18n 키 for reason — Phase 3에서 전환 */
+  reasonKey?: string;
+  /** i18n 보간 파라미터 for reason */
+  reasonParams?: Record<string, string | number>;
+}
+
 /**
  * 장비의 선택 가능 여부를 목적에 따라 판단
  *
@@ -34,7 +46,7 @@ import { format } from 'date-fns';
 export function getEquipmentSelectability(
   equipment: Equipment,
   purpose: CheckoutPurpose
-): EquipmentSelectability {
+): EquipmentSelectabilityWithI18n {
   const status = equipment.status as EquipmentStatus;
   const allowedStatuses = getAllowedStatusesForPurpose(purpose);
 
@@ -48,6 +60,8 @@ export function getEquipmentSelectability(
         return {
           selectable: true,
           warningMessage: `교정 만료일: ${formatted}`,
+          warningMessageKey: 'checkouts.selectability.calibrationExpiryWarning',
+          warningMessageParams: { date: formatted },
         };
       }
     }
@@ -66,6 +80,8 @@ export function getEquipmentSelectability(
   return {
     selectable: false,
     reason: `${statusLabel} 상태의 장비는 선택할 수 없습니다`,
+    reasonKey: 'checkouts.selectability.statusNotSelectable',
+    reasonParams: { statusLabel },
   };
 }
 

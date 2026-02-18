@@ -36,8 +36,7 @@ import {
   getAccessToken,
   getServerAuthHeaders as getAuthHeaders,
 } from '@/lib/auth/server-session';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { API_BASE_URL } from '../config/api-config';
 
 /**
  * Server Component용 API 클라이언트 생성
@@ -98,9 +97,23 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
     (error) => Promise.reject(error)
   );
 
-  // 응답 인터셉터: 에러 처리
+  // 응답 인터셉터: 래핑 해제 + 에러 처리
   client.interceptors.response.use(
-    (response) => response,
+    (response) => {
+      // ResponseTransformInterceptor 래핑 해제 (SSOT: 클라이언트 레벨에서 중앙화)
+      // 백엔드가 { success, data, message, timestamp } 형태로 래핑하는 경우 data만 추출
+      const responseData: unknown = response.data;
+      if (
+        responseData &&
+        typeof responseData === 'object' &&
+        'success' in responseData &&
+        (responseData as Record<string, unknown>).success === true &&
+        'data' in responseData
+      ) {
+        response.data = (responseData as Record<string, unknown>).data;
+      }
+      return response;
+    },
     async (error) => {
       // ✅ 공통 에러 변환 유틸리티 사용
       const apiError = createApiError(error);

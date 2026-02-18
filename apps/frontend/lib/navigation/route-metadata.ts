@@ -28,8 +28,10 @@ import {
  * 라우트 메타데이터 인터페이스
  */
 export interface RouteMetadata {
-  /** 표시 이름 (예: "장비 관리") */
+  /** 표시 이름 (예: "장비 관리") — 한국어 하드코딩 (deprecated: labelKey로 전환 예정) */
   label: string;
+  /** i18n 키 (예: "navigation.equipment") — Phase 3에서 label 대체 */
+  labelKey?: string;
   /** 선택적 아이콘 */
   icon?: LucideIcon;
   /** 부모 경로 (예: "/") */
@@ -52,6 +54,7 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/': {
     label: '대시보드',
+    labelKey: 'navigation.dashboard',
     icon: Home,
   },
 
@@ -60,44 +63,54 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/equipment': {
     label: '장비 관리',
+    labelKey: 'navigation.equipment',
     parent: '/',
     icon: Package2,
   },
   '/equipment/create': {
     label: '장비 등록',
+    labelKey: 'navigation.equipmentCreate',
     parent: '/equipment',
   },
   '/equipment/create-shared': {
     label: '공유 장비 등록',
+    labelKey: 'navigation.equipmentCreateShared',
     parent: '/equipment',
   },
   '/equipment/[id]': {
     label: '장비 상세',
+    labelKey: 'navigation.equipmentDetail',
     parent: '/equipment',
     dynamic: true,
   },
   '/equipment/[id]/edit': {
     label: '편집',
+    labelKey: 'navigation.equipmentEdit',
     parent: '/equipment/[id]',
   },
   '/equipment/[id]/calibration-factors': {
     label: '보정계수',
+    labelKey: 'navigation.equipmentCalibrationFactors',
     parent: '/equipment/[id]',
   },
   '/equipment/[id]/non-conformance': {
     label: '부적합 관리',
+    labelKey: 'navigation.equipmentNonConformance',
     parent: '/equipment/[id]',
   },
   '/equipment/[id]/rent': {
     label: '대여',
+    labelKey: 'navigation.equipmentRent',
     parent: '/equipment/[id]',
   },
   '/equipment/[id]/repair-history': {
     label: '수리 이력',
+    labelKey: 'navigation.equipmentRepairHistory',
     parent: '/equipment/[id]',
   },
   '/equipment/[id]/software': {
     label: '소프트웨어',
+    labelKey: 'navigation.equipmentSoftware',
     parent: '/equipment/[id]',
   },
 
@@ -106,11 +119,13 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/calibration': {
     label: '교정 관리',
+    labelKey: 'navigation.calibration',
     parent: '/',
     icon: Clipboard,
   },
   '/calibration/register': {
     label: '교정 등록',
+    labelKey: 'navigation.calibrationRegister',
     parent: '/calibration',
   },
 
@@ -119,15 +134,18 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/calibration-plans': {
     label: '교정계획서',
+    labelKey: 'navigation.calibrationPlans',
     parent: '/',
     icon: Calendar,
   },
   '/calibration-plans/create': {
     label: '교정계획서 작성',
+    labelKey: 'navigation.calibrationPlansCreate',
     parent: '/calibration-plans',
   },
   '/calibration-plans/[uuid]': {
     label: '교정계획서 상세',
+    labelKey: 'navigation.calibrationPlansDetail',
     parent: '/calibration-plans',
     dynamic: true,
   },
@@ -137,33 +155,40 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/checkouts': {
     label: '반출입 관리',
+    labelKey: 'navigation.checkouts',
     parent: '/',
     icon: FileText,
   },
   '/checkouts/create': {
     label: '반출입 등록',
+    labelKey: 'navigation.checkoutsCreate',
     parent: '/checkouts',
   },
   '/checkouts/manage': {
     label: '반출입 관리',
+    labelKey: 'navigation.checkoutsManage',
     parent: '/checkouts',
   },
   '/checkouts/[id]': {
     label: '반출 상세',
+    labelKey: 'navigation.checkoutsDetail',
     parent: '/checkouts',
     dynamic: true,
   },
   '/checkouts/[id]/check': {
     label: '반출 확인',
+    labelKey: 'navigation.checkoutsCheck',
     parent: '/checkouts/[id]',
   },
   '/checkouts/[id]/return': {
     label: '반입 처리',
+    labelKey: 'navigation.checkoutsReturn',
     parent: '/checkouts/[id]',
   },
 
   '/checkouts/import/[id]': {
     label: '렌탈 반입 상세',
+    labelKey: 'navigation.checkoutsImportDetail',
     parent: '/checkouts',
     dynamic: true,
   },
@@ -171,14 +196,17 @@ export const routeMap: Record<string, RouteMetadata> = {
   // Equipment Imports (Unified)
   '/checkouts/import/rental': {
     label: '외부 렌탈 반입',
+    labelKey: 'navigation.checkoutsImportRental',
     parent: '/checkouts',
   },
   '/checkouts/import/shared': {
     label: '내부 공용 반입',
+    labelKey: 'navigation.checkoutsImportShared',
     parent: '/checkouts',
   },
   '/checkouts/import/[id]/receive': {
     label: '수령 확인',
+    labelKey: 'navigation.checkoutsImportReceive',
     parent: '/checkouts/import/[id]',
   },
 
@@ -187,11 +215,13 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/maintenance': {
     label: '유지보수',
+    labelKey: 'navigation.maintenance',
     parent: '/',
     icon: Wrench,
   },
   '/maintenance/create': {
     label: '유지보수 등록',
+    labelKey: 'navigation.maintenanceCreate',
     parent: '/maintenance',
   },
 
@@ -200,6 +230,7 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/software': {
     label: '소프트웨어 관리',
+    labelKey: 'navigation.software',
     parent: '/',
     icon: Code,
   },
@@ -209,11 +240,13 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/reports': {
     label: '보고서',
+    labelKey: 'navigation.reports',
     parent: '/',
     icon: BarChart3,
   },
   '/reports/calibration-factors': {
     label: '보정계수 보고서',
+    labelKey: 'navigation.reportsCalibrationFactors',
     parent: '/reports',
   },
 
@@ -222,11 +255,13 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/teams': {
     label: '팀 관리',
+    labelKey: 'navigation.teams',
     parent: '/',
     icon: Users,
   },
   '/teams/[id]': {
     label: '팀 상세',
+    labelKey: 'navigation.teamsDetail',
     parent: '/teams',
     dynamic: true,
   },
@@ -236,6 +271,7 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/notifications': {
     label: '알림',
+    labelKey: 'navigation.notifications',
     parent: '/',
     icon: Bell,
   },
@@ -245,27 +281,33 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/settings': {
     label: '설정',
+    labelKey: 'navigation.settings',
     parent: '/',
     icon: Settings,
   },
   '/settings/profile': {
     label: '내 프로필',
+    labelKey: 'navigation.settingsProfile',
     parent: '/settings',
   },
   '/settings/notifications': {
     label: '알림 설정',
+    labelKey: 'navigation.settingsNotifications',
     parent: '/settings',
   },
   '/settings/display': {
     label: '표시 설정',
+    labelKey: 'navigation.settingsDisplay',
     parent: '/settings',
   },
   '/settings/admin/calibration': {
     label: '교정 알림 설정',
+    labelKey: 'navigation.settingsCalibration',
     parent: '/settings',
   },
   '/settings/admin/system': {
     label: '시스템 설정',
+    labelKey: 'navigation.settingsSystem',
     parent: '/settings',
   },
 
@@ -274,52 +316,62 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/admin': {
     label: '관리자',
+    labelKey: 'navigation.admin',
     parent: '/',
     icon: Shield,
     hidden: true, // 브레드크럼에서 숨김 (하위 페이지만 표시)
   },
   '/admin/approvals': {
     label: '승인 관리',
+    labelKey: 'navigation.adminApprovals',
     parent: '/',
     icon: Shield,
   },
   '/admin/equipment-approvals': {
     label: '장비 등록 승인',
+    labelKey: 'navigation.adminEquipmentApprovals',
     parent: '/',
     icon: Shield,
   },
   '/admin/calibration-approvals': {
     label: '교정 승인',
+    labelKey: 'navigation.adminCalibrationApprovals',
     parent: '/',
     icon: Shield,
   },
   '/admin/calibration-plan-approvals': {
     label: '교정계획서 승인',
+    labelKey: 'navigation.adminCalibrationPlanApprovals',
     parent: '/',
     icon: Shield,
   },
   '/admin/calibration-factor-approvals': {
     label: '보정계수 승인',
+    labelKey: 'navigation.adminCalibrationFactorApprovals',
     parent: '/',
     icon: Shield,
   },
   '/admin/return-approvals': {
     label: '반입 승인',
+    labelKey: 'navigation.adminReturnApprovals',
     parent: '/',
     icon: Shield,
   },
   '/admin/non-conformance-approvals': {
     label: '부적합 승인',
+    labelKey: 'navigation.adminNonConformanceApprovals',
     parent: '/',
     icon: AlertTriangle,
   },
   '/admin/software-approvals': {
     label: '소프트웨어 승인',
+    labelKey: 'navigation.adminSoftwareApprovals',
     parent: '/',
     icon: Shield,
   },
   '/admin/audit-logs': {
     label: '감사 로그',
+    labelKey: 'navigation.adminAuditLogs',
     parent: '/',
     icon: FileText,
   },
@@ -329,10 +381,12 @@ export const routeMap: Record<string, RouteMetadata> = {
   // ========================================
   '/login': {
     label: '로그인',
+    labelKey: 'navigation.login',
     hidden: true,
   },
   '/error': {
     label: '오류',
+    labelKey: 'navigation.error',
     hidden: true,
   },
 };

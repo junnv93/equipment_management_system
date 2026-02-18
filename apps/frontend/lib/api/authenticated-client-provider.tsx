@@ -4,6 +4,7 @@ import { createContext, useContext, useMemo, ReactNode } from 'react';
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { useSession, getSession } from 'next-auth/react';
 import { createApiError } from './utils/response-transformers';
+import { API_BASE_URL } from '../config/api-config';
 
 /**
  * ============================================================================
@@ -29,8 +30,6 @@ import { createApiError } from './utils/response-transformers';
  * ============================================================================
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 const AuthenticatedClientContext = createContext<AxiosInstance | null>(null);
 
 interface AuthenticatedClientProviderProps {
@@ -38,7 +37,7 @@ interface AuthenticatedClientProviderProps {
 }
 
 export function AuthenticatedClientProvider({ children }: AuthenticatedClientProviderProps) {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
 
   /**
    * ✅ 세션 토큰이 변경될 때마다 axios 인스턴스 재생성

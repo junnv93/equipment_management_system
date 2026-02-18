@@ -6,23 +6,9 @@
  *
  * @see packages/schemas/src/team.ts
  */
-import { cookies } from 'next/headers';
 import type { Team, TeamDetail, TeamQuery } from '../teams-api';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-/**
- * 인증 헤더 생성
- */
-async function getAuthHeaders(): Promise<HeadersInit> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
-
-  return {
-    Authorization: token ? `Bearer ${token}` : '',
-    'Content-Type': 'application/json',
-  };
-}
+import { API_BASE_URL } from '../../config/api-config';
+import { getServerAuthHeaders as getAuthHeaders } from '@/lib/auth/server-session';
 
 /**
  * 팀 목록 조회 (Server)
@@ -46,7 +32,7 @@ export async function getTeams(query: TeamQuery = {}): Promise<{
     }
   });
 
-  const url = `${API_URL}/api/teams${params.toString() ? `?${params.toString()}` : ''}`;
+  const url = `${API_BASE_URL}/api/teams${params.toString() ? `?${params.toString()}` : ''}`;
 
   const response = await fetch(url, {
     headers: await getAuthHeaders(),
@@ -81,7 +67,9 @@ export async function getTeams(query: TeamQuery = {}): Promise<{
         total: data.meta?.pagination?.total || data.length || 0,
         pageSize: query.pageSize || 20,
         currentPage: query.page || 1,
-        totalPages: Math.ceil((data.meta?.pagination?.total || data.length || 0) / (query.pageSize || 20)),
+        totalPages: Math.ceil(
+          (data.meta?.pagination?.total || data.length || 0) / (query.pageSize || 20)
+        ),
       },
     },
   };
@@ -91,7 +79,7 @@ export async function getTeams(query: TeamQuery = {}): Promise<{
  * 팀 상세 조회 (Server)
  */
 export async function getTeam(id: string): Promise<TeamDetail | null> {
-  const response = await fetch(`${API_URL}/api/teams/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/api/teams/${id}`, {
     headers: await getAuthHeaders(),
     cache: 'no-store',
   });
@@ -111,15 +99,17 @@ export async function getTeam(id: string): Promise<TeamDetail | null> {
 /**
  * 팀 멤버 조회 (Server)
  */
-export async function getTeamMembers(teamId: string): Promise<Array<{
-  id: string;
-  name: string;
-  email?: string;
-  role: string;
-  position?: string;
-  avatarUrl?: string;
-}>> {
-  const response = await fetch(`${API_URL}/api/v1/users?teamId=${teamId}`, {
+export async function getTeamMembers(teamId: string): Promise<
+  Array<{
+    id: string;
+    name: string;
+    email?: string;
+    role: string;
+    position?: string;
+    avatarUrl?: string;
+  }>
+> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/users?teamId=${teamId}`, {
     headers: await getAuthHeaders(),
     cache: 'no-store',
   });
@@ -136,7 +126,7 @@ export async function getTeamMembers(teamId: string): Promise<Array<{
  * 팀 장비 수 조회 (Server)
  */
 export async function getTeamEquipmentCount(teamId: string): Promise<number> {
-  const response = await fetch(`${API_URL}/api/equipment?teamId=${teamId}&pageSize=1`, {
+  const response = await fetch(`${API_BASE_URL}/api/equipment?teamId=${teamId}&pageSize=1`, {
     headers: await getAuthHeaders(),
     cache: 'no-store',
   });

@@ -27,7 +27,7 @@ export const getEquipmentUsage = async (
     });
     return response.data;
   } catch (error) {
-    console.error('장비 사용 보고서 조회 실패:', error);
+    console.error('Failed to fetch equipment usage report:', error);
     throw error;
   }
 };
@@ -40,7 +40,7 @@ export const getCalibrationStatus = async (status?: string, timeframe?: string) 
     });
     return response.data;
   } catch (error) {
-    console.error('교정 상태 보고서 조회 실패:', error);
+    console.error('Failed to fetch calibration status report:', error);
     throw error;
   }
 };
@@ -60,7 +60,7 @@ export const getCheckoutStatistics = async (
     });
     return response.data;
   } catch (error) {
-    console.error('반출 통계 보고서 조회 실패:', error);
+    console.error('Failed to fetch checkout statistics report:', error);
     throw error;
   }
 };
@@ -82,7 +82,7 @@ export const getUtilizationRate = async (
     });
     return response.data;
   } catch (error) {
-    console.error('장비 활용률 보고서 조회 실패:', error);
+    console.error('Failed to fetch utilization rate report:', error);
     throw error;
   }
 };
@@ -99,7 +99,7 @@ export const getEquipmentDowntime = async (
     });
     return response.data;
   } catch (error) {
-    console.error('장비 가동 중단 보고서 조회 실패:', error);
+    console.error('Failed to fetch equipment downtime report:', error);
     throw error;
   }
 };
@@ -134,7 +134,7 @@ export const exportEquipmentUsage = async (
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error('장비 사용 보고서 내보내기 실패:', error);
+    console.error('Failed to export equipment usage report:', error);
     throw error;
   }
 };
@@ -143,11 +143,11 @@ export const exportEquipmentUsage = async (
 const getReportFileName = (reportType: ReportType, format: ReportFormat): string => {
   const dateStr = new Date().toISOString().split('T')[0];
   const reportNames: Record<ReportType, string> = {
-    equipment_inventory: '장비_인벤토리',
-    calibration_status: '교정_상태',
-    utilization_report: '활용률_보고서',
-    team_equipment: '팀별_장비_현황',
-    maintenance_report: '유지보수_보고서',
+    equipment_inventory: 'Equipment_Inventory',
+    calibration_status: 'Calibration_Status',
+    utilization_report: 'Utilization_Report',
+    team_equipment: 'Team_Equipment',
+    maintenance_report: 'Maintenance_Report',
   };
 
   return `${reportNames[reportType]}_${dateStr}.${format}`;
@@ -211,7 +211,7 @@ export const generateReport = async (
         endpoint = API_ENDPOINTS.REPORTS.EXPORT.MAINTENANCE;
         break;
       default:
-        throw new Error('지원하지 않는 보고서 유형입니다.');
+        throw new Error('Unsupported report type.');
     }
 
     // API 호출
@@ -264,7 +264,7 @@ export const generateReport = async (
       additionalParams,
     };
   } catch (error) {
-    console.error('보고서 생성 실패:', error);
+    console.error('Failed to generate report:', error);
     throw error;
   }
 };
