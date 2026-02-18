@@ -8,7 +8,6 @@ import {
   Query,
   Body,
   Request,
-  UseGuards,
   ParseUUIDPipe,
   UsePipes,
   HttpStatus,
@@ -16,8 +15,6 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { NotificationPreferencesService } from './services/notification-preferences.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -27,6 +24,14 @@ import {
   NotificationQueryValidationPipe,
   type NotificationQueryInput,
 } from './dto/notification-query.dto';
+import {
+  UpdateNotificationSettingsPipe,
+  type UpdateNotificationSettingsDto,
+} from './dto/update-notification-settings.dto';
+import {
+  CreateSystemNotificationPipe,
+  type CreateSystemNotificationDto,
+} from './dto/create-system-notification.dto';
 
 /**
  * 알림 API 컨트롤러
@@ -41,7 +46,6 @@ import {
 
 @ApiTags('알림 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('notifications')
 export class NotificationsController {
   constructor(
@@ -61,7 +65,10 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.OK, description: '알림 목록 조회 성공' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
   @UsePipes(NotificationQueryValidationPipe)
-  findAll(@Request() req: AuthenticatedRequest, @Query() query: NotificationQueryInput) {
+  findAll(
+    @Request() req: AuthenticatedRequest,
+    @Query() query: NotificationQueryInput
+  ): Promise<unknown> {
     const userId = req.user.userId;
     const userTeamId = req.user.teamId ?? null;
 
@@ -83,7 +90,7 @@ export class NotificationsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '미읽음 알림 개수 조회 성공' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  countUnread(@Request() req: AuthenticatedRequest) {
+  countUnread(@Request() req: AuthenticatedRequest): Promise<unknown> {
     const userId = req.user.userId;
     const userTeamId = req.user.teamId ?? null;
     return this.notificationsService.countUnread(userId, userTeamId);
@@ -95,7 +102,7 @@ export class NotificationsController {
     description: '인증된 사용자의 알림 설정을 조회합니다.',
   })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  getSettings(@Request() req: AuthenticatedRequest) {
+  getSettings(@Request() req: AuthenticatedRequest): Promise<unknown> {
     return this.preferencesService.getOrCreate(req.user.userId);
   }
 
@@ -105,8 +112,12 @@ export class NotificationsController {
     description: '인증된 사용자의 알림 설정을 업데이트합니다.',
   })
   @RequirePermissions(Permission.UPDATE_NOTIFICATION)
-  updateSettings(@Request() req: AuthenticatedRequest, @Body() body: Record<string, unknown>) {
-    return this.preferencesService.update(req.user.userId, body);
+  @UsePipes(UpdateNotificationSettingsPipe)
+  updateSettings(
+    @Request() req: AuthenticatedRequest,
+    @Body() dto: UpdateNotificationSettingsDto
+  ): Promise<unknown> {
+    return this.preferencesService.update(req.user.userId, dto);
   }
 
   @Patch('read-all')
@@ -116,7 +127,7 @@ export class NotificationsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '모든 알림 읽음 표시 성공' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  markAllAsRead(@Request() req: AuthenticatedRequest) {
+  markAllAsRead(@Request() req: AuthenticatedRequest): Promise<unknown> {
     const userId = req.user.userId;
     const userTeamId = req.user.teamId ?? null;
     return this.notificationsService.markAllAsRead(userId, userTeamId);
@@ -131,11 +142,9 @@ export class NotificationsController {
   })
   @RequirePermissions(Permission.CREATE_SYSTEM_NOTIFICATION)
   createSystemNotification(
-    @Body('title') title: string,
-    @Body('content') content: string,
-    @Body('priority') priority?: string
-  ) {
-    return this.notificationsService.createSystemNotification(title, content, priority);
+    @Body(CreateSystemNotificationPipe) dto: CreateSystemNotificationDto
+  ): Promise<unknown> {
+    return this.notificationsService.createSystemNotification(dto.title, dto.content, dto.priority);
   }
 
   @Post('trigger-overdue-check')
@@ -144,7 +153,7 @@ export class NotificationsController {
     description: '교정 기한이 초과된 장비를 점검하고 자동으로 부적합으로 전환합니다.',
   })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
-  async triggerOverdueCheck() {
+  async triggerOverdueCheck(): Promise<unknown> {
     return this.calibrationOverdueScheduler.handleCalibrationOverdueCheck();
   }
 
@@ -154,7 +163,7 @@ export class NotificationsController {
     description: '반출 기한이 초과된 반출을 점검하고 overdue 상태로 전환합니다.',
   })
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
-  async triggerCheckoutOverdueCheck() {
+  async triggerCheckoutOverdueCheck(): Promise<unknown> {
     return this.checkoutOverdueScheduler.checkOverdueCheckouts();
   }
 
@@ -169,7 +178,7 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.OK, description: '알림 상세 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '알림을 찾을 수 없음' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<unknown> {
     return this.notificationsService.findOne(id);
   }
 
@@ -181,7 +190,10 @@ export class NotificationsController {
   @ApiParam({ name: 'id', description: '알림 UUID', format: 'uuid' })
   @ApiResponse({ status: HttpStatus.OK, description: '알림 읽음 표시 성공' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  markAsRead(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
+  markAsRead(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
     return this.notificationsService.markAsRead(id, req.user.userId);
   }
 
@@ -193,7 +205,10 @@ export class NotificationsController {
   @ApiParam({ name: 'id', description: '알림 UUID', format: 'uuid' })
   @ApiResponse({ status: HttpStatus.OK, description: '알림 삭제 성공' })
   @RequirePermissions(Permission.DELETE_NOTIFICATION)
-  remove(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
     return this.notificationsService.remove(id, req.user.userId);
   }
 }

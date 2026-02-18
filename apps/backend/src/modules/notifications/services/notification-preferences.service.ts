@@ -129,4 +129,25 @@ export class NotificationPreferencesService {
     // 설정이 없는 사용자는 기본값(활성화)이므로 포함
     return userIds.filter((id) => !disabledUserIds.has(id));
   }
+
+  /**
+   * 이메일 알림이 활성화된 사용자만 필터링한다.
+   * 설정이 없는 사용자는 false(opt-in 모델)로 처리 → 포함하지 않음.
+   */
+  async filterEmailEnabledUsers(userIds: string[]): Promise<string[]> {
+    if (userIds.length === 0) return [];
+
+    const prefs = await this.db
+      .select({
+        userId: schema.notificationPreferences.userId,
+        emailEnabled: schema.notificationPreferences.emailEnabled,
+      })
+      .from(schema.notificationPreferences)
+      .where(inArray(schema.notificationPreferences.userId, userIds));
+
+    // emailEnabled = true인 사용자만 포함 (설정 없는 사용자는 opt-in이므로 제외)
+    const emailEnabledUserIds = new Set(prefs.filter((p) => p.emailEnabled).map((p) => p.userId));
+
+    return userIds.filter((id) => emailEnabledUserIds.has(id));
+  }
 }

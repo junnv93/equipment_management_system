@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, eq, gte, inArray } from 'drizzle-orm';
@@ -201,6 +202,22 @@ export class IntermediateCheckScheduler {
         error instanceof Error ? error.stack : String(error)
       );
       throw error;
+    }
+  }
+
+  /**
+   * 매일 오전 8시 자동 실행 — 교정 예정 + 중간점검 통합 알림
+   */
+  @Cron('0 8 * * *')
+  async handleScheduledCheck(): Promise<void> {
+    this.logger.log('교정 중간점검 예정 알림 자동 점검 시작 (자동 스케줄)');
+    try {
+      await this.handleCombinedCalibrationNotifications();
+    } catch (error) {
+      this.logger.error(
+        '교정 중간점검 예정 알림 자동 점검 실패',
+        error instanceof Error ? error.stack : String(error)
+      );
     }
   }
 

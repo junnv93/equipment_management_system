@@ -7,6 +7,8 @@ import { NotificationTemplateService } from './services/notification-template.se
 import { NotificationRecipientResolver } from './services/notification-recipient-resolver';
 import { NotificationPreferencesService } from './services/notification-preferences.service';
 import { NotificationDispatcher } from './services/notification-dispatcher';
+import { EmailService } from './services/email.service';
+import { EmailTemplateService } from './services/email-template.service';
 import { NotificationEventListener } from './listeners/notification-event-listener';
 import { IntermediateCheckScheduler } from './schedulers/intermediate-check-scheduler';
 import { CalibrationOverdueScheduler } from './schedulers/calibration-overdue-scheduler';
@@ -45,6 +47,8 @@ import { SettingsModule } from '../settings/settings.module';
     NotificationRecipientResolver,
     NotificationPreferencesService,
     NotificationDispatcher,
+    EmailService,
+    EmailTemplateService,
 
     // SSE 실시간 푸시
     NotificationSseService,
@@ -63,6 +67,8 @@ import { SettingsModule } from '../settings/settings.module';
     NotificationsService,
     NotificationDispatcher,
     NotificationSseService,
+    EmailService,
+    EmailTemplateService,
     IntermediateCheckScheduler,
     CalibrationOverdueScheduler,
     CheckoutOverdueScheduler,

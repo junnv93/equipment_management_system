@@ -1,11 +1,14 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { NOTIFICATION_REGISTRY } from '../config/notification-registry';
+import { NOTIFICATION_EVENTS } from '../events/notification-events';
 import { NotificationRecipientResolver } from './notification-recipient-resolver';
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationTemplateService } from './notification-template.service';
+import { EmailService } from './email.service';
+import { EmailTemplateService } from './email-template.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { NotificationSseService, SseNotificationPayload } from '../sse/notification-sse.service';
 import { SettingsService } from '../../settings/settings.service';
@@ -30,6 +33,8 @@ export class NotificationDispatcher {
     private readonly recipientResolver: NotificationRecipientResolver,
     private readonly preferencesService: NotificationPreferencesService,
     private readonly templateService: NotificationTemplateService,
+    private readonly emailService: EmailService,
+    private readonly emailTemplateService: EmailTemplateService,
     private readonly cacheService: SimpleCacheService,
     private readonly sseService: NotificationSseService,
     private readonly settingsService: SettingsService
@@ -200,11 +205,125 @@ export class NotificationDispatcher {
       this.logger.log(
         `${eventName}: ${created.length}건 알림 생성 (수신자: ${enabledIds.length}명)`
       );
+
+      // === Stage 6: 이메일 발송 (config.emailEnabled인 경우만) ===
+      await this.sendEmailNotifications(eventName, config, enabledIds, enrichedPayload);
     } catch (err) {
       this.logger.error(
         `[${eventName}] 예상치 못한 오류`,
         err instanceof Error ? err.stack : String(err)
       );
+    }
+  }
+
+  /**
+   * Stage 6: 이메일 알림 발송
+   *
+   * emailEnabled가 true인 이벤트에 대해서만 동작.
+   * 이메일 수신을 opt-in한 사용자에게만 발송한다.
+   * fire-and-forget: 개별 실패가 다른 수신자에 영향을 주지 않는다.
+   */
+  private async sendEmailNotifications(
+    eventName: string,
+    config: (typeof NOTIFICATION_REGISTRY)[string],
+    enabledIds: string[],
+    enrichedPayload: Record<string, unknown>
+  ): Promise<void> {
+    if (!config.emailEnabled) return;
+
+    try {
+      // 이메일 수신 opt-in 사용자 필터
+      const emailUserIds = await this.preferencesService.filterEmailEnabledUsers(enabledIds);
+      if (emailUserIds.length === 0) {
+        this.logger.debug(`${eventName}: 이메일 수신 활성화된 사용자 없음`);
+        return;
+      }
+
+      // 이메일 주소 일괄 조회
+      const userEmails = await this.db
+        .select({ id: schema.users.id, email: schema.users.email })
+        .from(schema.users)
+        .where(inArray(schema.users.id, emailUserIds));
+
+      const emailMap = new Map(userEmails.map((u) => [u.id, u.email]));
+
+      // 이벤트별 템플릿 빌드
+      const emailContent = this.buildEmailContent(eventName, enrichedPayload);
+      if (!emailContent) {
+        this.logger.warn(`${eventName}: 이메일 템플릿 매핑 없음, 이메일 발송 건너뜀`);
+        return;
+      }
+
+      // 각 사용자에게 이메일 발송 (fire-and-forget, 개별 실패 격리)
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const userId of emailUserIds) {
+        const email = emailMap.get(userId);
+        if (!email) continue;
+
+        try {
+          await this.emailService.sendMail({
+            to: email,
+            subject: emailContent.subject,
+            html: emailContent.html,
+          });
+          successCount++;
+        } catch (err) {
+          failCount++;
+          this.logger.warn(
+            `[${eventName}] 이메일 발송 실패 (userId=${userId}): ${err instanceof Error ? err.message : String(err)}`
+          );
+        }
+      }
+
+      this.logger.log(`${eventName}: 이메일 발송 완료 (성공: ${successCount}, 실패: ${failCount})`);
+    } catch (err) {
+      this.logger.error(
+        `[${eventName}] 이메일 발송 단계 실패`,
+        err instanceof Error ? err.stack : String(err)
+      );
+    }
+  }
+
+  /**
+   * 이벤트명에 따라 적절한 이메일 템플릿을 빌드한다.
+   */
+  private buildEmailContent(
+    eventName: string,
+    payload: Record<string, unknown>
+  ): { subject: string; html: string } | null {
+    const linkUrl = payload.linkUrl as string | undefined;
+
+    switch (eventName) {
+      case NOTIFICATION_EVENTS.CALIBRATION_OVERDUE:
+        return this.emailTemplateService.buildCalibrationOverdueEmail({
+          equipmentName: payload.equipmentName as string,
+          managementNumber: payload.managementNumber as string,
+          nextCalibrationDate: payload.nextCalibrationDate as string,
+          linkUrl: linkUrl ?? '',
+        });
+
+      case NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON:
+        return this.emailTemplateService.buildCalibrationDueSoonEmail({
+          equipmentName: payload.equipmentName as string,
+          managementNumber: payload.managementNumber as string,
+          daysLeft: payload.daysUntil as number,
+          dueDate: (payload.nextCalibrationDate as string) ?? '',
+          linkUrl: linkUrl ?? '',
+        });
+
+      case NOTIFICATION_EVENTS.CHECKOUT_OVERDUE:
+        return this.emailTemplateService.buildCheckoutOverdueEmail({
+          equipmentName: payload.equipmentName as string,
+          managementNumber: payload.managementNumber as string,
+          expectedReturnDate: payload.expectedReturnDate as string,
+          checkoutId: payload.checkoutId as string,
+          linkUrl: linkUrl ?? '',
+        });
+
+      default:
+        return null;
     }
   }
 }

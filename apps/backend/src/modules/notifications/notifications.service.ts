@@ -200,7 +200,10 @@ export class NotificationsService {
       .limit(1);
 
     if (!notification) {
-      throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'NOTIFICATION_NOT_FOUND',
+        message: `Notification ID ${id} not found.`,
+      });
     }
 
     return notification as NotificationRecord;
@@ -219,7 +222,10 @@ export class NotificationsService {
       .returning();
 
     if (!updated) {
-      throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'NOTIFICATION_NOT_FOUND',
+        message: `Notification ID ${id} not found.`,
+      });
     }
 
     this.cacheService.delete(`notification:unread:${userId}`);
@@ -261,7 +267,10 @@ export class NotificationsService {
       .returning({ id: schema.notifications.id });
 
     if (result.length === 0) {
-      throw new NotFoundException(`알림 ID ${id}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'NOTIFICATION_NOT_FOUND',
+        message: `Notification ID ${id} not found.`,
+      });
     }
 
     this.cacheService.delete(`notification:unread:${userId}`);

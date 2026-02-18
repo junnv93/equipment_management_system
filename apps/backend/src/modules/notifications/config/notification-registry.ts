@@ -39,6 +39,8 @@ export interface NotificationConfig {
   entityType: string;
   entityIdField: string;
   equipmentIdField?: string;
+  /** true인 경우 이메일 알림도 함께 발송 (opt-in 사용자만) */
+  emailEnabled?: boolean;
 }
 
 // ============================================================================
@@ -160,6 +162,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'checkout',
     entityIdField: 'checkoutId',
     equipmentIdField: 'equipmentId',
+    emailEnabled: true,
   },
 
   // ─── 교정 (Calibration) ────────────────────────────────────────────────
@@ -216,6 +219,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'calibration',
     entityIdField: 'equipmentId',
     equipmentIdField: 'equipmentId',
+    emailEnabled: true,
   },
 
   [NOTIFICATION_EVENTS.CALIBRATION_OVERDUE]: {
@@ -235,6 +239,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
     entityType: 'calibration',
     entityIdField: 'equipmentId',
     equipmentIdField: 'equipmentId',
+    emailEnabled: true,
   },
 
   // ─── 교정계획 (Calibration Plan) 3-step ────────────────────────────────
