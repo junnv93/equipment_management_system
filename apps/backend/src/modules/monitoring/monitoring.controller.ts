@@ -1,7 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '@equipment-management/shared-constants';
 import { MonitoringService } from './monitoring.service';
 
+@SkipThrottle()
 @Controller('monitoring')
 export class MonitoringController {
   constructor(private readonly monitoringService: MonitoringService) {}
@@ -22,7 +26,9 @@ export class MonitoringController {
 
   /**
    * 시스템 메트릭 조회 엔드포인트
+   * 시스템 설정 조회 권한 필요
    */
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('metrics')
   getMetrics(): {
     hostname: string;
@@ -42,7 +48,9 @@ export class MonitoringController {
 
   /**
    * 상세 진단 정보 조회 엔드포인트
+   * 시스템 설정 조회 권한 필요
    */
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('diagnostics')
   getDiagnostics(): {
     system: {
@@ -97,7 +105,9 @@ export class MonitoringController {
 
   /**
    * 애플리케이션 건강 상태 조회 엔드포인트
+   * 시스템 설정 조회 권한 필요
    */
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('status')
   getStatus(): {
     status: string;
@@ -133,7 +143,9 @@ export class MonitoringController {
 
   /**
    * HTTP 요청 통계 조회 엔드포인트
+   * 시스템 설정 조회 권한 필요
    */
+  @RequirePermissions(Permission.VIEW_SYSTEM_SETTINGS)
   @Get('http-stats')
   getHttpStats(): {
     totalRequests: number;

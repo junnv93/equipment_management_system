@@ -7,6 +7,10 @@ export class MetricsService {
   private readonly httpRequestTotal: Counter;
   private readonly httpRequestDuration: Histogram;
   private readonly httpRequestsInProgress: Gauge;
+  private readonly pendingApprovalsGauge: Gauge;
+  private readonly activeCheckoutsGauge: Gauge;
+  private readonly calibrationOverdueGauge: Gauge;
+  private readonly nonConformingEquipmentGauge: Gauge;
 
   constructor() {
     this.registry = new Registry();
@@ -33,6 +37,31 @@ export class MetricsService {
       labelNames: ['method', 'route'],
       registers: [this.registry],
     });
+
+    this.pendingApprovalsGauge = new Gauge({
+      name: 'equipment_pending_approvals_total',
+      help: '현재 대기 중인 승인 요청 수',
+      labelNames: ['type'],
+      registers: [this.registry],
+    });
+
+    this.activeCheckoutsGauge = new Gauge({
+      name: 'equipment_active_checkouts_total',
+      help: '현재 활성(반출 중인) 체크아웃 수',
+      registers: [this.registry],
+    });
+
+    this.calibrationOverdueGauge = new Gauge({
+      name: 'equipment_calibration_overdue_total',
+      help: '교정 기한이 초과된 장비 수',
+      registers: [this.registry],
+    });
+
+    this.nonConformingEquipmentGauge = new Gauge({
+      name: 'equipment_non_conforming_total',
+      help: '부적합 상태 장비 수',
+      registers: [this.registry],
+    });
   }
 
   incrementHttpRequestTotal(method: string, route: string, status: string): void {
@@ -54,6 +83,22 @@ export class MetricsService {
 
   decrementHttpRequestsInProgress(method: string, route: string): void {
     this.httpRequestsInProgress.dec({ method, route });
+  }
+
+  setPendingApprovals(count: number, type: string = 'all'): void {
+    this.pendingApprovalsGauge.set({ type }, count);
+  }
+
+  setActiveCheckouts(count: number): void {
+    this.activeCheckoutsGauge.set(count);
+  }
+
+  setCalibrationOverdue(count: number): void {
+    this.calibrationOverdueGauge.set(count);
+  }
+
+  setNonConformingEquipment(count: number): void {
+    this.nonConformingEquipmentGauge.set(count);
   }
 
   getMetrics(): Promise<string> {
