@@ -6,7 +6,7 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { eq, and, isNull, desc, asc, like, SQL, ne, sql } from 'drizzle-orm';
+import { eq, and, isNull, like, SQL, ne, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -69,10 +69,10 @@ export class NonConformancesService extends VersionedBaseService {
   private validateTransition(currentStatus: string, targetStatus: string): void {
     const allowed = VALID_TRANSITIONS[currentStatus];
     if (!allowed || !allowed.includes(targetStatus)) {
-      throw new BadRequestException(
-        `상태 전이가 허용되지 않습니다: ${currentStatus} → ${targetStatus}. ` +
-          `허용된 전이: ${currentStatus} → [${allowed?.join(', ') || '없음'}]`
-      );
+      throw new BadRequestException({
+        code: 'NC_INVALID_TRANSITION',
+        message: `Status transition not allowed: ${currentStatus} → ${targetStatus}. Allowed: ${currentStatus} → [${allowed?.join(', ') || 'none'}]`,
+      });
     }
   }
 
@@ -82,7 +82,10 @@ export class NonConformancesService extends VersionedBaseService {
   async create(createDto: CreateNonConformanceDto): Promise<NonConformance> {
     // ncType 필수 검증
     if (!createDto.ncType) {
-      throw new BadRequestException('부적합 유형(ncType)은 필수입니다');
+      throw new BadRequestException({
+        code: 'NC_TYPE_REQUIRED',
+        message: 'Non-conformance type (ncType) is required',
+      });
     }
 
     // 장비 존재 확인
@@ -93,12 +96,18 @@ export class NonConformancesService extends VersionedBaseService {
       .limit(1);
 
     if (equipmentResult.length === 0) {
-      throw new NotFoundException(`장비 UUID ${createDto.equipmentId}를 찾을 수 없습니다.`);
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment UUID ${createDto.equipmentId} not found`,
+      });
     }
 
     // 이미 부적합 상태인지 확인
     if (equipmentResult[0].status === 'non_conforming') {
-      throw new BadRequestException('이미 부적합 상태인 장비입니다.');
+      throw new BadRequestException({
+        code: 'NC_EQUIPMENT_ALREADY_NON_CONFORMING',
+        message: 'Equipment is already in non-conforming status.',
+      });
     }
 
     // 트랜잭션으로 부적합 등록 + 장비 상태 변경
@@ -367,7 +376,10 @@ export class NonConformancesService extends VersionedBaseService {
           .where(and(eq(nonConformances.id, id), isNull(nonConformances.deletedAt)));
 
         if (!nonConformance) {
-          throw new NotFoundException(`부적합 ID ${id}를 찾을 수 없습니다.`);
+          throw new NotFoundException({
+            code: 'NC_NOT_FOUND',
+            message: `Non-conformance ID ${id} not found`,
+          });
         }
 
         return nonConformance;
@@ -423,7 +435,10 @@ export class NonConformancesService extends VersionedBaseService {
     if (updateDto.status && updateDto.status !== nonConformance.status) {
       this.validateTransition(nonConformance.status, updateDto.status);
     } else if (nonConformance.status === NonConformanceStatus.CLOSED) {
-      throw new BadRequestException('종료된 부적합은 수정할 수 없습니다.');
+      throw new BadRequestException({
+        code: 'NC_CLOSED_CANNOT_UPDATE',
+        message: 'Closed non-conformances cannot be updated.',
+      });
     }
 
     // version은 CAS용이므로 SET 절에서 제외
@@ -435,7 +450,7 @@ export class NonConformancesService extends VersionedBaseService {
         id,
         version,
         updateFields,
-        '부적합'
+        'Non-conformance'
       );
 
       // 캐시 무효화: detail 캐시 삭제
@@ -467,7 +482,10 @@ export class NonConformancesService extends VersionedBaseService {
 
     // damage/malfunction 유형은 수리 기록 필수 검증
     if (this.requiresRepair(nonConformance.ncType as string) && !nonConformance.repairHistoryId) {
-      throw new BadRequestException('손상/오작동 유형은 수리 기록이 필요합니다');
+      throw new BadRequestException({
+        code: 'NC_REPAIR_RECORD_REQUIRED',
+        message: 'Damage/malfunction type requires a repair record',
+      });
     }
 
     // CAS + 트랜잭션으로 부적합 종료 + 장비 상태 복원
@@ -499,11 +517,14 @@ export class NonConformancesService extends VersionedBaseService {
             .limit(1);
 
           if (!existing) {
-            throw new NotFoundException(`부적합 UUID ${id}를 찾을 수 없습니다.`);
+            throw new NotFoundException({
+              code: 'NC_NOT_FOUND',
+              message: `Non-conformance UUID ${id} not found`,
+            });
           }
 
           throw new ConflictException({
-            message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
+            message: 'This record has been modified by another user. Please refresh the page.',
             code: 'VERSION_CONFLICT',
             currentVersion: existing.version,
             expectedVersion: closeDto.version,
@@ -596,7 +617,7 @@ export class NonConformancesService extends VersionedBaseService {
           rejectedAt: new Date(),
           rejectionReason: dto.rejectionReason,
         },
-        '부적합'
+        'Non-conformance'
       );
 
       // 성공 시 detail 캐시 삭제
@@ -661,11 +682,17 @@ export class NonConformancesService extends VersionedBaseService {
     const nc = await this.findOne(ncId);
 
     if (nc.status === NonConformanceStatus.CLOSED) {
-      throw new BadRequestException('종료된 부적합에는 수리를 연결할 수 없습니다');
+      throw new BadRequestException({
+        code: 'NC_CLOSED_CANNOT_LINK_REPAIR',
+        message: 'Cannot link repair to a closed non-conformance',
+      });
     }
 
     if (nc.repairHistoryId) {
-      throw new BadRequestException('이미 수리 기록이 연결되어 있습니다 (1:1 관계)');
+      throw new BadRequestException({
+        code: 'NC_REPAIR_ALREADY_LINKED',
+        message: 'A repair record is already linked (1:1 relationship)',
+      });
     }
 
     // 연결
@@ -701,7 +728,10 @@ export class NonConformancesService extends VersionedBaseService {
 
     // damage/malfunction 유형은 수리 연결 필수
     if (this.requiresRepair(nc.ncType as string) && !nc.repairHistoryId) {
-      throw new BadRequestException(`${nc.ncType} 유형은 수리 기록이 필요합니다`);
+      throw new BadRequestException({
+        code: 'NC_REPAIR_RECORD_REQUIRED',
+        message: `${nc.ncType} type requires a repair record`,
+      });
     }
 
     await this.db

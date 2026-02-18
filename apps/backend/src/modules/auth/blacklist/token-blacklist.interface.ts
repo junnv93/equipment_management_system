@@ -16,12 +16,12 @@ export interface TokenBlacklistProvider {
    * @param token - 블랙리스트에 등록할 토큰
    * @param ttlMs - TTL(밀리초). 토큰 만료 시간까지만 유지하여 메모리 낭비 방지
    */
-  add(token: string, ttlMs: number): void;
+  add(token: string, ttlMs: number): void | Promise<void>;
 
   /**
    * 토큰이 블랙리스트에 있는지 확인
    * @param token - 확인할 토큰
    * @returns 블랙리스트에 등록되어 있으면 true
    */
-  isBlacklisted(token: string): boolean;
+  isBlacklisted(token: string): Promise<boolean>;
 }

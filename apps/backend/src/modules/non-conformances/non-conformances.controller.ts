@@ -8,7 +8,7 @@ import {
   Delete,
   Query,
   Request,
-  UseGuards,
+  ParseUUIDPipe,
   HttpStatus,
   UsePipes,
 } from '@nestjs/common';
@@ -29,8 +29,6 @@ import {
 import { RejectCorrectionDto, RejectCorrectionValidationPipe } from './dto/reject-correction.dto';
 import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { type NonConformance } from '@equipment-management/db/schema/non-conformances';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { UserRoleValues } from '@equipment-management/schemas';
@@ -39,7 +37,6 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
 @ApiTags('부적합 관리')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('non-conformances')
 export class NonConformancesController {
   constructor(private readonly nonConformancesService: NonConformancesService) {}
@@ -109,7 +106,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findOne(@Param('uuid') uuid: string): Promise<NonConformance> {
+  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<NonConformance> {
     return this.nonConformancesService.findOne(uuid);
   }
 
@@ -123,7 +120,9 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findOpenByEquipment(@Param('equipmentUuid') equipmentUuid: string): Promise<NonConformance[]> {
+  findOpenByEquipment(
+    @Param('equipmentUuid', ParseUUIDPipe) equipmentUuid: string
+  ): Promise<NonConformance[]> {
     return this.nonConformancesService.findOpenByEquipment(equipmentUuid);
   }
 
@@ -146,7 +145,7 @@ export class NonConformancesController {
   @RequirePermissions(Permission.UPDATE_NON_CONFORMANCE)
   @UsePipes(UpdateNonConformanceValidationPipe)
   update(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateDto: UpdateNonConformanceDto
   ): Promise<NonConformance> {
     return this.nonConformancesService.update(uuid, updateDto);
@@ -172,7 +171,7 @@ export class NonConformancesController {
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
   @UsePipes(CloseNonConformanceValidationPipe)
   close(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest,
     @Body() closeDto: CloseNonConformanceDto
   ): Promise<NonConformance> {
@@ -200,7 +199,7 @@ export class NonConformancesController {
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
   @UsePipes(RejectCorrectionValidationPipe)
   rejectCorrection(
-    @Param('uuid') uuid: string,
+    @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest,
     @Body() dto: RejectCorrectionDto
   ): Promise<NonConformance> {
@@ -220,7 +219,7 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
   @AuditLog({ action: 'delete', entityType: 'non_conformance', entityIdPath: 'params.uuid' })
-  remove(@Param('uuid') uuid: string): Promise<{ id: string; deleted: boolean }> {
+  remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{ id: string; deleted: boolean }> {
     return this.nonConformancesService.remove(uuid);
   }
 }

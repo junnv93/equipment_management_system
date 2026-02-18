@@ -20,7 +20,7 @@ export class InMemoryBlacklistProvider implements TokenBlacklistProvider {
     }
   }
 
-  isBlacklisted(token: string): boolean {
-    return this.cacheService.get<boolean>(`${BLACKLIST_PREFIX}${token}`) === true;
+  isBlacklisted(token: string): Promise<boolean> {
+    return Promise.resolve(this.cacheService.get<boolean>(`${BLACKLIST_PREFIX}${token}`) === true);
   }
 }
