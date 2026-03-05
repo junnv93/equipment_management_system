@@ -260,6 +260,7 @@ export const API_ENDPOINTS = {
   // 대시보드
   // ============================================================================
   DASHBOARD: {
+    AGGREGATE: '/api/dashboard/aggregate',
     SUMMARY: '/api/dashboard/summary',
     EQUIPMENT_BY_TEAM: '/api/dashboard/equipment-by-team',
     EQUIPMENT_STATUS_STATS: '/api/dashboard/equipment-status-stats',

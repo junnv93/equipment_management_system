@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Req, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { DashboardService } from './dashboard.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
@@ -7,6 +8,7 @@ import { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import {
   DashboardSummaryDto,
+  DashboardAggregateDto,
   EquipmentByTeamDto,
   OverdueCalibrationDto,
   UpcomingCalibrationDto,
@@ -23,11 +25,55 @@ import {
  * - 모든 엔드포인트는 JWT 인증 및 권한 검증 필요
  * - 역할에 따라 데이터 범위 자동 필터링
  */
+@SkipThrottle()
 @ApiTags('대시보드')
 @ApiBearerAuth()
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
+
+  /**
+   * 대시보드 전체 집계 (SSR 단일 요청용)
+   *
+   * Next.js Server Component에서 7개의 개별 요청 대신 이 엔드포인트 하나를 사용합니다.
+   * 내부적으로 Promise.allSettled로 병렬 처리하며, 부분 실패 시 null 반환.
+   */
+  @Get('aggregate')
+  @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @ApiOperation({
+    summary: '대시보드 전체 집계 조회 (SSR용)',
+    description:
+      'SSR에서 단일 HTTP 요청으로 대시보드 전체 데이터를 가져옵니다. ' +
+      '내부적으로 7개 서브 쿼리를 병렬 실행하며, 부분 실패 시 해당 필드를 null로 반환합니다.',
+  })
+  @ApiQuery({ name: 'teamId', required: false, description: '팀 필터' })
+  @ApiQuery({ name: 'days', required: false, description: '교정 예정 조회 기간(일)', example: 30 })
+  @ApiQuery({
+    name: 'activitiesLimit',
+    required: false,
+    description: '최근 활동 조회 개수',
+    example: 20,
+  })
+  @ApiResponse({ status: 200, description: '대시보드 집계 데이터', type: DashboardAggregateDto })
+  async getAggregate(
+    @Req() req: AuthenticatedRequest,
+    @Query('teamId') teamId?: string,
+    @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number = 30,
+    @Query('activitiesLimit', new DefaultValuePipe(20), ParseIntPipe) activitiesLimit: number = 20
+  ): Promise<DashboardAggregateDto> {
+    const userId = req.user.userId;
+    const userRole = req.user.roles?.[0] as UserRole;
+    const site = req.user.site;
+
+    return this.dashboardService.getAggregate(
+      userId,
+      userRole,
+      site,
+      teamId,
+      days,
+      activitiesLimit
+    );
+  }
 
   @Get('summary')
   @RequirePermissions(Permission.VIEW_EQUIPMENT)

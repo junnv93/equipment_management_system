@@ -126,8 +126,10 @@ apiClient.interceptors.request.use(
     }
 
     // i18n: 현재 로케일을 Accept-Language 헤더로 전달 (백엔드 에러 메시지 로케일화)
+    // NEXT_LOCALE 쿠키를 우선 읽어 document.lang의 stale 문제 방지
     if (typeof document !== 'undefined') {
-      const locale = document.documentElement.lang || 'ko';
+      const cookieMatch = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
+      const locale = cookieMatch?.[1] || document.documentElement.lang || 'ko';
       config.headers['Accept-Language'] = locale;
     }
 

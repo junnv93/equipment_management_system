@@ -184,3 +184,56 @@ export class PendingApprovalCountsDto {
  * 장비 상태별 통계 DTO
  */
 export type EquipmentStatusStatsDto = Record<string, number>;
+
+/**
+ * 대시보드 집계 DTO (SSR 단일 요청용)
+ *
+ * 7개 서브 요청을 하나의 응답으로 묶습니다.
+ * null 필드 = 해당 데이터 조회 실패 (부분 실패 허용).
+ */
+export class DashboardAggregateDto {
+  @ApiProperty({
+    description: '요약 정보 (null = 조회 실패)',
+    nullable: true,
+    type: () => DashboardSummaryDto,
+  })
+  summary: DashboardSummaryDto | null;
+
+  @ApiProperty({
+    description: '팀별 장비 현황 (null = 조회 실패)',
+    nullable: true,
+    type: () => [EquipmentByTeamDto],
+  })
+  equipmentByTeam: EquipmentByTeamDto[] | null;
+
+  @ApiProperty({
+    description: '교정 지연 장비 (null = 조회 실패)',
+    nullable: true,
+    type: () => [OverdueCalibrationDto],
+  })
+  overdueCalibrations: OverdueCalibrationDto[] | null;
+
+  @ApiProperty({
+    description: '교정 예정 장비 (null = 조회 실패)',
+    nullable: true,
+    type: () => [UpcomingCalibrationDto],
+  })
+  upcomingCalibrations: UpcomingCalibrationDto[] | null;
+
+  @ApiProperty({
+    description: '반출 지연 목록 (null = 조회 실패)',
+    nullable: true,
+    type: () => [OverdueCheckoutDto],
+  })
+  overdueCheckouts: OverdueCheckoutDto[] | null;
+
+  @ApiProperty({ description: '장비 상태별 통계 (null = 조회 실패)', nullable: true })
+  equipmentStatusStats: EquipmentStatusStatsDto | null;
+
+  @ApiProperty({
+    description: '최근 활동 내역 (null = 조회 실패)',
+    nullable: true,
+    type: () => [RecentActivityDto],
+  })
+  recentActivities: RecentActivityDto[] | null;
+}

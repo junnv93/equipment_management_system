@@ -13,97 +13,35 @@
  */
 
 import { createServerApiClient } from './server-api-client';
-import { transformArrayResponse } from './utils/response-transformers';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import type {
-  DashboardSummary,
-  EquipmentByTeam,
-  OverdueCalibration,
-  UpcomingCalibration,
-  OverdueCheckout,
-  RecentActivity,
-} from './dashboard-api';
+// DashboardAggregate는 dashboard-api.ts에서 정의 (SSOT: SSR/CSC 공유 타입)
+import type { DashboardAggregate } from './dashboard-api';
+export type { DashboardAggregate };
 
 /**
- * 대시보드 요약 조회 (Server Component용)
+ * 대시보드 전체 집계 조회 (Server Component용)
+ *
+ * 7개 개별 API 호출 대신 단일 HTTP 요청으로 전체 대시보드 데이터를 가져옵니다.
+ * - HTTP 왕복: 7 → 1
+ * - JWT 파싱: 7회 → 1회
+ * - 부분 실패 지원: 백엔드에서 Promise.allSettled 처리
+ *
+ * @param teamId 팀 필터 (선택)
+ * @param days 교정 예정 조회 기간 (기본 30일)
+ * @param activitiesLimit 최근 활동 조회 개수 (기본 20개)
  */
-export async function getDashboardSummary(teamId?: string): Promise<DashboardSummary> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.SUMMARY, {
-    params: teamId ? { teamId } : undefined,
-  });
-  return response.data;
-}
-
-/**
- * 팀별 장비 현황 조회 (Server Component용)
- */
-export async function getDashboardEquipmentByTeam(teamId?: string): Promise<EquipmentByTeam[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.EQUIPMENT_BY_TEAM, {
-    params: teamId ? { teamId } : undefined,
-  });
-  return transformArrayResponse<EquipmentByTeam>(response);
-}
-
-/**
- * 교정 지연 장비 조회 (Server Component용)
- */
-export async function getDashboardOverdueCalibrations(
-  teamId?: string
-): Promise<OverdueCalibration[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.OVERDUE_CALIBRATIONS, {
-    params: teamId ? { teamId } : undefined,
-  });
-  return transformArrayResponse<OverdueCalibration>(response);
-}
-
-/**
- * 교정 예정 장비 조회 (Server Component용)
- */
-export async function getDashboardUpcomingCalibrations(
+export async function getDashboardAggregate(
+  teamId?: string,
   days = 30,
-  teamId?: string
-): Promise<UpcomingCalibration[]> {
+  activitiesLimit = 20
+): Promise<DashboardAggregate> {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.UPCOMING_CALIBRATIONS, {
-    params: { days, ...(teamId ? { teamId } : {}) },
+  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.AGGREGATE, {
+    params: {
+      ...(teamId && { teamId }),
+      days,
+      activitiesLimit,
+    },
   });
-  return response.data;
-}
-
-/**
- * 반출 지연 목록 조회 (Server Component용)
- */
-export async function getDashboardOverdueCheckouts(teamId?: string): Promise<OverdueCheckout[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.OVERDUE_RENTALS, {
-    params: teamId ? { teamId } : undefined,
-  });
-  return response.data;
-}
-
-/**
- * 장비 상태별 통계 조회 (Server Component용)
- */
-export async function getDashboardEquipmentStatusStats(
-  teamId?: string
-): Promise<Record<string, number>> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.EQUIPMENT_STATUS_STATS, {
-    params: teamId ? { teamId } : undefined,
-  });
-  return response.data;
-}
-
-/**
- * 최근 활동 내역 조회 (Server Component용)
- */
-export async function getDashboardRecentActivities(limit = 20): Promise<RecentActivity[]> {
-  const apiClient = await createServerApiClient();
-  const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.RECENT_ACTIVITIES, {
-    params: { limit },
-  });
-  return transformArrayResponse<RecentActivity>(response);
+  return response.data as DashboardAggregate;
 }

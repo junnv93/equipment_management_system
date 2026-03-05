@@ -188,6 +188,9 @@ export const QUERY_CONFIG = {
 
   /** 승인 대기 목록 - NORMAL (SSE로 무효화 예정) */
   PENDING_APPROVALS: REFETCH_STRATEGIES.NORMAL,
+
+  /** 사용자 설정 - STATIC (mutation onSettled invalidation으로만 갱신) */
+  SETTINGS: REFETCH_STRATEGIES.STATIC,
 } as const;
 
 /**
@@ -262,6 +265,8 @@ export const queryKeys = {
   },
   dashboard: {
     all: ['dashboard'] as const,
+    aggregate: (role?: string, teamId?: string) =>
+      [...queryKeys.dashboard.all, 'aggregate', role, teamId] as const,
     summary: (role?: string, teamId?: string) =>
       [...queryKeys.dashboard.all, 'summary', role, teamId] as const,
     equipmentByTeam: (role?: string, teamId?: string) =>

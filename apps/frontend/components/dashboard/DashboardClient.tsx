@@ -49,6 +49,7 @@ import type {
   UpcomingCalibration,
   OverdueCheckout,
   RecentActivity,
+  DashboardAggregate,
 } from '@/lib/api/dashboard-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DASHBOARD_MOTION, DASHBOARD_FOCUS, getDashboardStaggerDelay } from '@/lib/design-tokens';
@@ -107,76 +108,35 @@ function DashboardClientComponent({
     return searchParams.get('teamId') || undefined;
   }, [searchParams]);
 
-  // React Query - 초기 데이터가 있으면 사용, 없으면 클라이언트에서 fetch
-  const {
-    data: summary = initialSummary || {
-      totalEquipment: 0,
-      availableEquipment: 0,
-      activeCheckouts: 0,
-      upcomingCalibrations: 0,
+  // React Query - 단일 aggregate 쿼리 (SSR과 동일 엔드포인트 SSOT)
+  // 7개 개별 요청 → 1개 요청으로 통합 (throttle 문제 원천 차단, HTTP 왕복 최소화)
+  const { data: aggregate, isLoading } = useQuery<DashboardAggregate>({
+    queryKey: queryKeys.dashboard.aggregate(userRole, selectedTeamId),
+    queryFn: () => dashboardApi.getAggregate(selectedTeamId),
+    placeholderData: {
+      summary: initialSummary ?? null,
+      equipmentByTeam: initialEquipmentByTeam ?? null,
+      overdueCalibrations: initialOverdueCalibrations ?? null,
+      upcomingCalibrations: initialUpcomingCalibrations ?? null,
+      overdueCheckouts: initialOverdueCheckouts ?? null,
+      recentActivities: initialRecentActivities ?? null,
+      equipmentStatusStats: initialEquipmentStatusStats ?? null,
     },
-    isLoading: summaryLoading,
-  } = useQuery({
-    queryKey: queryKeys.dashboard.summary(userRole, selectedTeamId),
-    queryFn: () => dashboardApi.getSummary(selectedTeamId),
-    placeholderData: initialSummary,
     ...QUERY_CONFIG.DASHBOARD,
   });
 
-  const { data: equipmentByTeam = initialEquipmentByTeam || [], isLoading: teamLoading } = useQuery(
-    {
-      queryKey: queryKeys.dashboard.equipmentByTeam(userRole, selectedTeamId),
-      queryFn: () => dashboardApi.getEquipmentByTeam(selectedTeamId),
-      placeholderData: initialEquipmentByTeam,
-      ...QUERY_CONFIG.DASHBOARD,
-    }
-  );
-
-  const {
-    data: overdueCalibrations = initialOverdueCalibrations || [],
-    isLoading: calibrationLoading,
-  } = useQuery({
-    queryKey: queryKeys.dashboard.overdueCalibrations(userRole, selectedTeamId),
-    queryFn: () => dashboardApi.getOverdueCalibrations(selectedTeamId),
-    placeholderData: initialOverdueCalibrations,
-    ...QUERY_CONFIG.DASHBOARD,
-  });
-
-  const {
-    data: upcomingCalibrations = initialUpcomingCalibrations || [],
-    isLoading: upcomingLoading,
-  } = useQuery({
-    queryKey: queryKeys.dashboard.upcomingCalibrations(userRole, selectedTeamId),
-    queryFn: () => dashboardApi.getUpcomingCalibrations(30, selectedTeamId),
-    placeholderData: initialUpcomingCalibrations,
-    ...QUERY_CONFIG.DASHBOARD,
-  });
-
-  const { data: overdueCheckouts = initialOverdueCheckouts || [], isLoading: checkoutsLoading } =
-    useQuery({
-      queryKey: queryKeys.dashboard.overdueCheckouts(userRole, selectedTeamId),
-      queryFn: () => dashboardApi.getOverdueCheckouts(selectedTeamId),
-      placeholderData: initialOverdueCheckouts,
-      ...QUERY_CONFIG.DASHBOARD,
-    });
-
-  const { data: recentActivities = initialRecentActivities || [], isLoading: activitiesLoading } =
-    useQuery({
-      queryKey: queryKeys.dashboard.recentActivities(userRole, selectedTeamId),
-      queryFn: () => dashboardApi.getRecentActivitiesByRole(userRole),
-      placeholderData: initialRecentActivities,
-      ...QUERY_CONFIG.DASHBOARD,
-    });
-
-  const {
-    data: equipmentStatusStats = initialEquipmentStatusStats || {},
-    isLoading: statsLoading,
-  } = useQuery({
-    queryKey: queryKeys.dashboard.equipmentStatusStats(userRole, selectedTeamId),
-    queryFn: () => dashboardApi.getEquipmentStatusStats(selectedTeamId),
-    placeholderData: initialEquipmentStatusStats,
-    ...QUERY_CONFIG.DASHBOARD,
-  });
+  const summary = aggregate?.summary ?? {
+    totalEquipment: 0,
+    availableEquipment: 0,
+    activeCheckouts: 0,
+    upcomingCalibrations: 0,
+  };
+  const equipmentByTeam = aggregate?.equipmentByTeam ?? [];
+  const overdueCalibrations = aggregate?.overdueCalibrations ?? [];
+  const upcomingCalibrations = aggregate?.upcomingCalibrations ?? [];
+  const overdueCheckouts = aggregate?.overdueCheckouts ?? [];
+  const recentActivities = aggregate?.recentActivities ?? [];
+  const equipmentStatusStats = aggregate?.equipmentStatusStats ?? {};
 
   // Config-Driven: 역할별 탭과 StatsCards를 SSOT config에서 읽기
   const config = DASHBOARD_ROLE_CONFIG[userRole] || DASHBOARD_ROLE_CONFIG[DEFAULT_ROLE];
@@ -256,7 +216,7 @@ function DashboardClientComponent({
               title={card.title}
               value={card.value}
               description={card.description}
-              loading={summaryLoading}
+              loading={isLoading}
               icon={card.icon}
               variant={card.variant}
             />
@@ -269,7 +229,7 @@ function DashboardClientComponent({
         <h2 id="status-bar-heading" className="sr-only">
           {t('srOnly.statusDistribution')}
         </h2>
-        <EquipmentStatusBar data={equipmentStatusStats} loading={statsLoading} />
+        <EquipmentStatusBar data={equipmentStatusStats} loading={isLoading} />
       </section>
 
       {/* Zone E: AlertPanel + EquipmentStatusBreakdown (항상 노출) */}
@@ -281,11 +241,11 @@ function DashboardClientComponent({
           <AlertPanel
             overdueCalibrations={overdueCalibrations}
             overdueCheckouts={overdueCheckouts}
-            calibrationLoading={calibrationLoading}
-            checkoutsLoading={checkoutsLoading}
+            calibrationLoading={isLoading}
+            checkoutsLoading={isLoading}
             alertSections={config.alertSections}
           />
-          <EquipmentStatusBreakdown data={equipmentStatusStats} loading={statsLoading} />
+          <EquipmentStatusBreakdown data={equipmentStatusStats} loading={isLoading} />
         </div>
       </section>
 
@@ -326,7 +286,7 @@ function DashboardClientComponent({
                 title={t('calibrationList.upcomingTitle')}
                 description={t('calibrationList.upcomingDesc')}
                 data={upcomingCalibrations}
-                loading={upcomingLoading}
+                loading={isLoading}
                 type="upcoming"
               />
             </TabsContent>
@@ -344,7 +304,7 @@ function DashboardClientComponent({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {teamLoading ? (
+                    {isLoading ? (
                       Array(4)
                         .fill(0)
                         .map((_, i) => (
@@ -393,7 +353,7 @@ function DashboardClientComponent({
             {/* 반출 현황 탭 (시험소장, 시스템 관리자용) */}
             <TabsContent value="checkout" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <OverdueCheckoutsList data={overdueCheckouts} loading={checkoutsLoading} />
+                <OverdueCheckoutsList data={overdueCheckouts} loading={isLoading} />
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg tracking-tight">
@@ -424,7 +384,7 @@ function DashboardClientComponent({
 
             {/* 최근 활동 탭 */}
             <TabsContent value="activity" className="space-y-6">
-              <RecentActivities data={recentActivities} loading={activitiesLoading} />
+              <RecentActivities data={recentActivities} loading={isLoading} />
             </TabsContent>
           </Tabs>
         </ClientOnly>

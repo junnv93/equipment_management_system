@@ -537,8 +537,38 @@ export class DashboardService {
 
         const [equipmentCount] = equipmentCountResult;
 
-        // 교정 승인 대기 (calibrations 테이블 조회 - 추후 approvalStatus 컬럼 추가 필요)
-        const calibration = 0;
+        // 교정 승인 대기 (calibrations.approvalStatus = 'pending_approval')
+        let calibrationCountResult: { count: number }[];
+        if (teamId && !isLabManager) {
+          calibrationCountResult = await this.db
+            .select({ count: count() })
+            .from(schema.calibrations)
+            .innerJoin(schema.users, eq(schema.calibrations.registeredBy, schema.users.id))
+            .where(
+              and(
+                eq(schema.calibrations.approvalStatus, 'pending_approval'),
+                eq(schema.users.teamId, teamId)
+              )
+            );
+        } else if (site) {
+          calibrationCountResult = await this.db
+            .select({ count: count() })
+            .from(schema.calibrations)
+            .innerJoin(schema.users, eq(schema.calibrations.registeredBy, schema.users.id))
+            .where(
+              and(
+                eq(schema.calibrations.approvalStatus, 'pending_approval'),
+                eq(schema.users.site, site)
+              )
+            );
+        } else {
+          calibrationCountResult = await this.db
+            .select({ count: count() })
+            .from(schema.calibrations)
+            .where(eq(schema.calibrations.approvalStatus, 'pending_approval'));
+        }
+        const [calibrationCount] = calibrationCountResult;
+        const calibration = calibrationCount?.count || 0;
 
         // 반출 승인 대기 (checkouts - 대여 포함, 사이트 필터링)
         let checkoutCountResult: { count: number }[];
@@ -615,5 +645,58 @@ export class DashboardService {
       },
       DASHBOARD_CACHE_TTL
     );
+  }
+
+  /**
+   * 대시보드 전체 집계 조회 (SSR 단일 요청용)
+   *
+   * 7개 서브 쿼리를 병렬로 실행하고 결과를 하나의 응답으로 묶습니다.
+   * Promise.allSettled로 부분 실패를 허용합니다 — 일부 데이터 조회 실패 시에도
+   * 나머지 데이터는 정상 반환됩니다 (null로 표시).
+   *
+   * 각 서브 메서드는 이미 SimpleCacheService(30s TTL)로 캐싱되므로
+   * 집계 메서드 자체의 추가 캐시는 불필요합니다.
+   */
+  async getAggregate(
+    userId: string,
+    userRole: UserRole,
+    site: string | undefined,
+    teamId?: string,
+    days = 30,
+    activitiesLimit = 20
+  ): Promise<import('./dto/dashboard-response.dto').DashboardAggregateDto> {
+    const [
+      summaryResult,
+      equipmentByTeamResult,
+      overdueCalibResult,
+      upcomingCalibResult,
+      overdueCheckoutsResult,
+      statusStatsResult,
+      recentActivitiesResult,
+    ] = await Promise.allSettled([
+      this.getSummary(userId, userRole, teamId, site),
+      this.getEquipmentByTeam(userId, userRole, teamId, site),
+      this.getOverdueCalibrations(userId, userRole, teamId, site),
+      this.getUpcomingCalibrations(userId, userRole, days, teamId, site),
+      this.getOverdueCheckouts(userId, userRole, teamId, site),
+      this.getEquipmentStatusStats(userId, userRole, teamId, site),
+      this.getRecentActivities(userId, userRole, activitiesLimit, teamId, site),
+    ]);
+
+    return {
+      summary: summaryResult.status === 'fulfilled' ? summaryResult.value : null,
+      equipmentByTeam:
+        equipmentByTeamResult.status === 'fulfilled' ? equipmentByTeamResult.value : null,
+      overdueCalibrations:
+        overdueCalibResult.status === 'fulfilled' ? overdueCalibResult.value : null,
+      upcomingCalibrations:
+        upcomingCalibResult.status === 'fulfilled' ? upcomingCalibResult.value : null,
+      overdueCheckouts:
+        overdueCheckoutsResult.status === 'fulfilled' ? overdueCheckoutsResult.value : null,
+      equipmentStatusStats:
+        statusStatsResult.status === 'fulfilled' ? statusStatsResult.value : null,
+      recentActivities:
+        recentActivitiesResult.status === 'fulfilled' ? recentActivitiesResult.value : null,
+    };
   }
 }

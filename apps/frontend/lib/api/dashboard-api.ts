@@ -91,7 +91,44 @@ export interface PendingApprovalCounts {
 // UserRole은 @equipment-management/schemas에서 import (SSOT)
 export type { UserRole };
 
+/**
+ * 대시보드 전체 집계 응답 타입
+ *
+ * SSR(dashboard-api-server.ts)과 CSC 모두 사용하는 공유 타입.
+ * null = 해당 데이터 조회 실패 (백엔드 Promise.allSettled 부분 실패 허용).
+ */
+export interface DashboardAggregate {
+  summary: DashboardSummary | null;
+  equipmentByTeam: EquipmentByTeam[] | null;
+  overdueCalibrations: OverdueCalibration[] | null;
+  upcomingCalibrations: UpcomingCalibration[] | null;
+  overdueCheckouts: OverdueCheckout[] | null;
+  equipmentStatusStats: Record<string, number> | null;
+  recentActivities: RecentActivity[] | null;
+}
+
 class DashboardApi {
+  /**
+   * 대시보드 전체 집계 조회 (클라이언트용)
+   *
+   * SSR의 getDashboardAggregate()와 동일한 엔드포인트를 사용합니다.
+   * 7개 개별 요청 대신 단일 HTTP 요청으로 전체 대시보드 데이터를 가져옵니다.
+   */
+  async getAggregate(
+    teamId?: string,
+    days = 30,
+    activitiesLimit = 20
+  ): Promise<DashboardAggregate> {
+    const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.AGGREGATE, {
+      params: {
+        ...(teamId && { teamId }),
+        days,
+        activitiesLimit,
+      },
+    });
+    return response.data as DashboardAggregate;
+  }
+
   async getSummary(teamId?: string): Promise<DashboardSummary> {
     const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.SUMMARY, {
       params: teamId ? { teamId } : undefined,

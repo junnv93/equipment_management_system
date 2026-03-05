@@ -2,7 +2,8 @@ import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { InternalApiThrottlerGuard } from './common/guards/internal-api-throttler.guard';
 import { validateEnv } from './config/env.validation';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -48,17 +49,17 @@ import { I18nModule } from './common/i18n/i18n.module';
       {
         name: 'short',
         ttl: 1000, // 1초
-        limit: 3, // 1초당 3회
+        limit: 20, // 1초당 20회 (대시보드 등 동시 요청 허용)
       },
       {
         name: 'medium',
         ttl: 10000, // 10초
-        limit: 20, // 10초당 20회
+        limit: 100, // 10초당 100회
       },
       {
         name: 'long',
         ttl: 60000, // 1분
-        limit: 100, // 1분당 100회 (기본)
+        limit: 300, // 1분당 300회 (기본)
       },
     ]),
 
@@ -105,7 +106,7 @@ import { I18nModule } from './common/i18n/i18n.module';
     },
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: InternalApiThrottlerGuard,
     },
   ],
 })

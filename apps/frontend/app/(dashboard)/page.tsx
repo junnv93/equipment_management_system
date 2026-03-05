@@ -2,15 +2,7 @@ import { Suspense } from 'react';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import DashboardLoading from './loading';
 import { getServerAuthSession } from '@/lib/auth/server-session';
-import {
-  getDashboardSummary,
-  getDashboardEquipmentByTeam,
-  getDashboardOverdueCalibrations,
-  getDashboardUpcomingCalibrations,
-  getDashboardOverdueCheckouts,
-  getDashboardEquipmentStatusStats,
-  getDashboardRecentActivities,
-} from '@/lib/api/dashboard-api-server';
+import { getDashboardAggregate } from '@/lib/api/dashboard-api-server';
 
 /**
  * 대시보드 페이지 (PPR Non-Blocking 패턴)
@@ -21,9 +13,9 @@ import {
  * - DashboardClient: CSC — 클라이언트 상호작용
  *
  * 데이터 전략:
- * - 서버에서 Promise.allSettled로 7개 API 병렬 프리페치
- * - 개별 API 실패가 전체 대시보드를 차단하지 않음
- * - DashboardClient에서 placeholderData로 받아 React Query hydration
+ * - 서버에서 단일 /api/dashboard/aggregate 호출로 7개 데이터 일괄 프리페치
+ * - 백엔드가 Promise.allSettled로 병렬 처리 → 부분 실패 허용
+ * - HTTP 왕복 7 → 1 (JWT 파싱, DB 커넥션 오버헤드 대폭 감소)
  */
 export default function DashboardPage() {
   return (
@@ -35,53 +27,31 @@ export default function DashboardPage() {
 
 async function DashboardAsync() {
   const session = await getServerAuthSession();
-  const teamId = undefined; // 초기 로드 시 teamId 없음 (URL params는 클라이언트에서 처리)
 
   // 세션이 없으면 초기 데이터 없이 클라이언트 렌더링
   if (!session?.user) {
     return <DashboardClient />;
   }
 
-  // 7개 API 병렬 프리페치 (개별 실패 허용)
-  const [
-    summaryResult,
-    equipmentByTeamResult,
-    overdueCalibResult,
-    upcomingCalibResult,
-    overdueCheckoutsResult,
-    statusStatsResult,
-    recentActivitiesResult,
-  ] = await Promise.allSettled([
-    getDashboardSummary(teamId),
-    getDashboardEquipmentByTeam(teamId),
-    getDashboardOverdueCalibrations(teamId),
-    getDashboardUpcomingCalibrations(30, teamId),
-    getDashboardOverdueCheckouts(teamId),
-    getDashboardEquipmentStatusStats(teamId),
-    getDashboardRecentActivities(20),
-  ]);
+  // 단일 집계 요청 (7개 개별 요청 → 1개)
+  // 실패 시 undefined로 처리 (클라이언트에서 TanStack Query로 재시도)
+  let aggregate;
+  try {
+    aggregate = await getDashboardAggregate();
+  } catch {
+    // 집계 요청 전체 실패 시 클라이언트 렌더링으로 폴백
+    return <DashboardClient />;
+  }
 
   return (
     <DashboardClient
-      initialSummary={summaryResult.status === 'fulfilled' ? summaryResult.value : undefined}
-      initialEquipmentByTeam={
-        equipmentByTeamResult.status === 'fulfilled' ? equipmentByTeamResult.value : undefined
-      }
-      initialOverdueCalibrations={
-        overdueCalibResult.status === 'fulfilled' ? overdueCalibResult.value : undefined
-      }
-      initialUpcomingCalibrations={
-        upcomingCalibResult.status === 'fulfilled' ? upcomingCalibResult.value : undefined
-      }
-      initialOverdueCheckouts={
-        overdueCheckoutsResult.status === 'fulfilled' ? overdueCheckoutsResult.value : undefined
-      }
-      initialEquipmentStatusStats={
-        statusStatsResult.status === 'fulfilled' ? statusStatsResult.value : undefined
-      }
-      initialRecentActivities={
-        recentActivitiesResult.status === 'fulfilled' ? recentActivitiesResult.value : undefined
-      }
+      initialSummary={aggregate.summary ?? undefined}
+      initialEquipmentByTeam={aggregate.equipmentByTeam ?? undefined}
+      initialOverdueCalibrations={aggregate.overdueCalibrations ?? undefined}
+      initialUpcomingCalibrations={aggregate.upcomingCalibrations ?? undefined}
+      initialOverdueCheckouts={aggregate.overdueCheckouts ?? undefined}
+      initialEquipmentStatusStats={aggregate.equipmentStatusStats ?? undefined}
+      initialRecentActivities={aggregate.recentActivities ?? undefined}
     />
   );
 }
