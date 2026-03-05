@@ -109,22 +109,7 @@ export class EquipmentApprovalService {
       this.logger.log(`Equipment create request created: ${request.id}`);
       return request;
     } catch (error) {
-      console.log('\n========================================');
-      console.log('🔴 EQUIPMENT REQUEST CREATION FAILED');
-      console.log('========================================');
-      console.log('Error:', error);
-      if (error instanceof Error) {
-        console.log('Error message:', error.message);
-        console.log('Stack trace:', error.stack);
-      }
-      console.log('========================================\n');
-
-      this.logger.error(`Failed to create equipment request: ${error}`);
-      this.logger.error(`Error details:`, error);
-      if (error instanceof Error) {
-        this.logger.error(`Error message: ${error.message}`);
-        this.logger.error(`Stack trace: ${error.stack}`);
-      }
+      this.logger.error(`Failed to create equipment request`, error);
       throw new BadRequestException({
         code: 'EQUIPMENT_REQUEST_CREATE_FAILED',
         message: 'Failed to create equipment registration request.',
