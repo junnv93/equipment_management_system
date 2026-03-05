@@ -37,11 +37,6 @@ import { setLocaleCookie } from '@/lib/i18n/locale-cookie';
 import { useTranslations, useLocale } from 'next-intl';
 
 export default function DisplayPreferencesContent() {
-  const t = useTranslations('settings');
-  const currentLocale = useLocale();
-  const queryClient = useQueryClient();
-  const router = useRouter();
-
   const { data: preferences, isLoading } = useQuery<DisplayPreferences>({
     queryKey: queryKeys.settings.preferences(),
     queryFn: async () => {
@@ -51,12 +46,46 @@ export default function DisplayPreferencesContent() {
     ...QUERY_CONFIG.SETTINGS,
   });
 
-  // values 옵션: 서버 데이터 동기화를 렌더 사이클과 동기화 (useEffect 타이밍 문제 해결)
-  // resetOptions.keepDirtyValues: true → 사용자가 변경 중인 필드는 서버 refetch로 덮어쓰지 않음
+  if (isLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="space-y-2">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-4 w-72" />
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // 로드 완료 후 형 보장된 초기값을 자식에게 전달
+  // 자식은 defaultValues만 사용 → 첫 렌더부터 동기적으로 올바른 값 보장
+  // (values 옵션의 useEffect 비동기 sync는 Radix Select 포털 렌더링과 충돌)
+  const mergedPreferences: DisplayPreferences = {
+    ...DEFAULT_DISPLAY_PREFERENCES,
+    ...(preferences ?? {}),
+  };
+  return <PreferencesForm initialPreferences={mergedPreferences} />;
+}
+
+/**
+ * 부모가 isLoading=false 이후에만 렌더링 → initialPreferences는 항상 유효한 데이터.
+ * defaultValues만 사용: Radix Select가 마운트 시점에 올바른 value로 초기화됨.
+ * (values useEffect 없음 → 포털이 닫힌 상태에서의 item 텍스트 조회 문제 없음)
+ */
+function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPreferences }) {
+  const t = useTranslations('settings');
+  const currentLocale = useLocale();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
   const form = useForm<DisplayPreferences>({
     resolver: zodResolver(displayPreferencesSchema),
-    values: { ...DEFAULT_DISPLAY_PREFERENCES, ...(preferences ?? {}) },
-    resetOptions: { keepDirtyValues: true },
+    defaultValues: initialPreferences,
   });
 
   const mutation = useMutation({
@@ -79,22 +108,6 @@ export default function DisplayPreferencesContent() {
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.preferences() });
     },
   });
-
-  if (isLoading) {
-    return (
-      <Card className="overflow-hidden">
-        <CardHeader className="space-y-2">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-[box-shadow] motion-safe:duration-300 motion-reduce:transition-none">
