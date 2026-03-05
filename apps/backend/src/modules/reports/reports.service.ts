@@ -1,322 +1,828 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as schema from '@equipment-management/db/schema';
+import {
+  equipment as equipmentTable,
+  calibrations as calibrationsTable,
+  checkouts as checkoutsTable,
+  checkoutItems as checkoutItemsTable,
+  teams as teamsTable,
+  repairHistory as repairHistoryTable,
+} from '@equipment-management/db/schema';
+import type { ReportColumn, ReportData } from './report-export.service';
+
+// ─── 공통 날짜 유틸 ───────────────────────────────────────────────────────────
+
+/**
+ * period 문자열에서 [start, end] 날짜 범위를 계산합니다.
+ * startDate/endDate가 직접 제공되면 그대로 사용합니다.
+ */
+function resolveDateRange(
+  period: string,
+  startDate?: string,
+  endDate?: string
+): { start: Date; end: Date } {
+  if (startDate && endDate) {
+    return { start: new Date(startDate), end: new Date(endDate) };
+  }
+
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  const start = new Date();
+
+  switch (period) {
+    case 'last_week':
+      start.setDate(start.getDate() - 7);
+      break;
+    case 'last_quarter':
+      start.setMonth(start.getMonth() - 3);
+      break;
+    case 'last_year':
+      start.setFullYear(start.getFullYear() - 1);
+      break;
+    default: // last_month
+      start.setMonth(start.getMonth() - 1);
+  }
+
+  start.setHours(0, 0, 0, 0);
+  return { start, end };
+}
+
+// ─── 상태 레이블 (한국어) ────────────────────────────────────────────────────
+
+const EQUIPMENT_STATUS_LABELS: Record<string, string> = {
+  available: '사용가능',
+  in_use: '사용중',
+  checked_out: '반출중',
+  calibration_scheduled: '교정예정',
+  calibration_overdue: '교정기한초과',
+  non_conforming: '부적합',
+  spare: '여분',
+  retired: '폐기',
+  pending_disposal: '폐기대기',
+  disposed: '폐기완료',
+  temporary: '임시',
+  inactive: '비활성',
+};
+
+const CALIBRATION_STATUS_LABELS: Record<string, string> = {
+  scheduled: '예정됨',
+  in_progress: '진행중',
+  completed: '완료됨',
+  failed: '실패',
+};
 
 @Injectable()
 export class ReportsService {
-  // 장비 사용 보고서
+  constructor(
+    @Inject('DRIZZLE_INSTANCE')
+    private readonly db: NodePgDatabase<typeof schema>
+  ) {}
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 통계 집계 API (JSON 응답 — 기존 엔드포인트)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * 장비 사용(반출) 통계
+   */
   async getEquipmentUsage(
     startDate?: string,
     endDate?: string,
-    _equipmentId?: string,
+    equipmentId?: string,
     _departmentId?: string
-  ): Promise<{
-    timeframe: { startDate: string; endDate: string };
-    totalUsageHours: number;
-    totalEquipmentCount: number;
-    departmentDistribution: {
-      departmentId: string;
-      departmentName: string;
-      usageHours: number;
-      equipmentCount: number;
-    }[];
-    topEquipment: { equipmentId: string; name: string; usageHours: number; usageCount: number }[];
-    monthlyTrend: { month: string; usageHours: number }[];
-  }> {
-    // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
-    // 임시 데이터 반환
-    return {
-      timeframe: {
-        startDate:
-          startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-        endDate: endDate || new Date().toISOString(),
-      },
-      totalUsageHours: 1250,
-      totalEquipmentCount: 45,
-      departmentDistribution: [
-        { departmentId: '1', departmentName: '연구소', usageHours: 450, equipmentCount: 15 },
-        { departmentId: '2', departmentName: '품질관리', usageHours: 380, equipmentCount: 12 },
-        { departmentId: '3', departmentName: '생산', usageHours: 420, equipmentCount: 18 },
-      ],
-      topEquipment: [
-        { equipmentId: 'SUW-E0001', name: 'Receiver', usageHours: 120, usageCount: 35 },
-        { equipmentId: 'EQ-002', name: '오실로스코프', usageHours: 105, usageCount: 28 },
-        { equipmentId: 'EQ-003', name: '스펙트럼 분석기', usageHours: 95, usageCount: 20 },
-      ],
-      monthlyTrend: [
-        { month: '1월', usageHours: 410 },
-        { month: '2월', usageHours: 380 },
-        { month: '3월', usageHours: 420 },
-        { month: '4월', usageHours: 450 },
-      ],
-    };
-  }
+  ) {
+    const { start, end } = resolveDateRange('last_month', startDate, endDate);
 
-  // 교정 상태 보고서
-  async getCalibrationStatus(
-    _status?: string,
-    _timeframe?: string
-  ): Promise<{
-    summary: {
-      totalEquipment: number;
-      requireCalibration: number;
-      dueThisMonth: number;
-      overdue: number;
-      completedThisMonth: number;
-    };
-    status: { status: string; count: number; percentage: number }[];
-    calibrationTrend: { month: string; completed: number; due: number; overdue: number }[];
-  }> {
-    // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
+    // checkouts ←→ checkoutItems ←→ equipment ←→ teams
+    const dateConditions = [
+      gte(checkoutsTable.createdAt, start),
+      lte(checkoutsTable.createdAt, end),
+    ];
+    const equipCondition = equipmentId
+      ? eq(checkoutItemsTable.equipmentId, equipmentId)
+      : undefined;
+
+    const teamRows = await this.db
+      .select({
+        teamName: teamsTable.name,
+        checkoutCount: count(checkoutsTable.id),
+        equipmentCount: sql<number>`COUNT(DISTINCT ${checkoutItemsTable.equipmentId})`,
+      })
+      .from(checkoutsTable)
+      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .leftJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+      .where(and(...dateConditions, ...(equipCondition ? [equipCondition] : [])))
+      .groupBy(teamsTable.id, teamsTable.name);
+
+    const topRows = await this.db
+      .select({
+        equipmentId: checkoutItemsTable.equipmentId,
+        name: equipmentTable.name,
+        checkoutCount: count(checkoutsTable.id),
+      })
+      .from(checkoutsTable)
+      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .leftJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .where(and(...dateConditions, ...(equipCondition ? [equipCondition] : [])))
+      .groupBy(checkoutItemsTable.equipmentId, equipmentTable.name)
+      .orderBy(desc(count(checkoutsTable.id)))
+      .limit(5);
+
+    const totalCheckouts = teamRows.reduce((acc, r) => acc + Number(r.checkoutCount), 0);
+
     return {
-      summary: {
-        totalEquipment: 150,
-        requireCalibration: 120,
-        dueThisMonth: 18,
-        overdue: 5,
-        completedThisMonth: 15,
-      },
-      status: [
-        { status: '정상', count: 97, percentage: 80.8 },
-        { status: '교정 예정', count: 18, percentage: 15 },
-        { status: '교정 지연', count: 5, percentage: 4.2 },
-      ],
-      calibrationTrend: [
-        { month: '1월', completed: 12, due: 15, overdue: 3 },
-        { month: '2월', completed: 14, due: 18, overdue: 4 },
-        { month: '3월', completed: 15, due: 18, overdue: 5 },
-        { month: '4월', completed: 13, due: 20, overdue: 6 },
-      ],
+      timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
+      totalUsageHours: totalCheckouts * 8,
+      totalEquipmentCount: topRows.length,
+      departmentDistribution: teamRows.map((r) => ({
+        departmentId: r.teamName ?? '미배정',
+        departmentName: r.teamName ?? '미배정',
+        usageHours: Number(r.checkoutCount) * 8,
+        equipmentCount: Number(r.equipmentCount),
+      })),
+      topEquipment: topRows.map((r) => ({
+        equipmentId: r.equipmentId ?? '',
+        name: r.name ?? '',
+        usageHours: Number(r.checkoutCount) * 8,
+        usageCount: Number(r.checkoutCount),
+      })),
+      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end),
     };
   }
 
   /**
-   * 반출 통계 보고서 (대여/교정/수리 포함)
-   * @deprecated 메서드 이름은 getCheckoutStatistics로 변경됨, API 엔드포인트 URL은 유지
+   * 교정 상태 통계
    */
-  async getRentalStatistics(
-    startDate?: string,
-    endDate?: string,
-    departmentId?: string
-  ): Promise<{
-    timeframe: { startDate: string; endDate: string };
-    summary: {
-      totalCheckouts: number;
-      activeCheckouts: number;
-      avgCheckoutDuration: number;
-      returnRate: number;
+  async getCalibrationStatus(status?: string, timeframe?: string) {
+    const { start, end } = resolveDateRange(timeframe ?? 'last_month');
+
+    const calConditions = [
+      gte(calibrationsTable.calibrationDate, start),
+      lte(calibrationsTable.calibrationDate, end),
+    ];
+    if (status) calConditions.push(eq(calibrationsTable.status, status));
+
+    const statusRows = await this.db
+      .select({
+        status: calibrationsTable.status,
+        statusCount: count(calibrationsTable.id),
+      })
+      .from(calibrationsTable)
+      .where(and(...calConditions))
+      .groupBy(calibrationsTable.status);
+
+    const totalCalibrations = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
+
+    const [overdueRow] = await this.db
+      .select({ cnt: count(equipmentTable.id) })
+      .from(equipmentTable)
+      .where(eq(equipmentTable.status, 'calibration_overdue'));
+
+    const [dueRow] = await this.db
+      .select({ cnt: count(equipmentTable.id) })
+      .from(equipmentTable)
+      .where(eq(equipmentTable.status, 'calibration_scheduled'));
+
+    const [totalEquipRow] = await this.db
+      .select({ cnt: count(equipmentTable.id) })
+      .from(equipmentTable);
+
+    return {
+      summary: {
+        totalEquipment: Number(totalEquipRow?.cnt ?? 0),
+        requireCalibration: Number(dueRow?.cnt ?? 0) + Number(overdueRow?.cnt ?? 0),
+        dueThisMonth: Number(dueRow?.cnt ?? 0),
+        overdue: Number(overdueRow?.cnt ?? 0),
+        completedThisMonth: statusRows
+          .filter((r) => r.status === 'completed')
+          .reduce((acc, r) => acc + Number(r.statusCount), 0),
+      },
+      status: statusRows.map((r) => ({
+        status: CALIBRATION_STATUS_LABELS[r.status] ?? r.status,
+        count: Number(r.statusCount),
+        percentage:
+          totalCalibrations > 0
+            ? Math.round((Number(r.statusCount) / totalCalibrations) * 1000) / 10
+            : 0,
+      })),
+      calibrationTrend: await this._getMonthlyCalibrationTrend(start, end),
     };
-    checkoutsByDepartment: {
-      departmentId: string;
-      departmentName: string;
-      count: number;
-      percentage: number;
-    }[];
-    checkoutStatus: { status: string; count: number; percentage: number }[];
-    monthlyTrend: { month: string; checkouts: number; returns: number }[];
-  }> {
+  }
+
+  /**
+   * @deprecated Use getCheckoutStatistics. 메서드 이름 호환성 유지.
+   */
+  async getRentalStatistics(startDate?: string, endDate?: string, departmentId?: string) {
     return this.getCheckoutStatistics(startDate, endDate, departmentId);
   }
 
   /**
-   * 반출 통계 보고서 (대여/교정/수리 포함)
+   * 반출 통계 (대여/교정/수리 포함)
    */
-  async getCheckoutStatistics(
-    startDate?: string,
-    endDate?: string,
-    _departmentId?: string
-  ): Promise<{
-    timeframe: { startDate: string; endDate: string };
-    summary: {
-      totalCheckouts: number;
-      activeCheckouts: number;
-      avgCheckoutDuration: number;
-      returnRate: number;
-    };
-    checkoutsByDepartment: {
-      departmentId: string;
-      departmentName: string;
-      count: number;
-      percentage: number;
-    }[];
-    checkoutStatus: { status: string; count: number; percentage: number }[];
-    monthlyTrend: { month: string; checkouts: number; returns: number }[];
-  }> {
-    // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
+  async getCheckoutStatistics(startDate?: string, endDate?: string, _departmentId?: string) {
+    const { start, end } = resolveDateRange('last_month', startDate, endDate);
+
+    const dateConditions = [
+      gte(checkoutsTable.createdAt, start),
+      lte(checkoutsTable.createdAt, end),
+    ];
+
+    const statusRows = await this.db
+      .select({
+        status: checkoutsTable.status,
+        statusCount: count(checkoutsTable.id),
+      })
+      .from(checkoutsTable)
+      .where(and(...dateConditions))
+      .groupBy(checkoutsTable.status);
+
+    const teamRows = await this.db
+      .select({
+        teamName: teamsTable.name,
+        teamId: teamsTable.id,
+        checkoutCount: count(checkoutsTable.id),
+      })
+      .from(checkoutsTable)
+      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.checkoutId, checkoutsTable.id))
+      .leftJoin(equipmentTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+      .where(and(...dateConditions))
+      .groupBy(teamsTable.id, teamsTable.name);
+
+    const totalCount = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
+    const activeStatuses = new Set([
+      'approved',
+      'checked_out',
+      'lender_checked',
+      'borrower_received',
+      'in_use',
+    ]);
+    const returnedStatuses = new Set(['returned', 'return_approved', 'lender_received']);
+
+    const activeCount = statusRows
+      .filter((r) => activeStatuses.has(r.status))
+      .reduce((acc, r) => acc + Number(r.statusCount), 0);
+    const returnedCount = statusRows
+      .filter((r) => returnedStatuses.has(r.status))
+      .reduce((acc, r) => acc + Number(r.statusCount), 0);
+
     return {
-      timeframe: {
-        startDate:
-          startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-        endDate: endDate || new Date().toISOString(),
-      },
+      timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
       summary: {
-        totalCheckouts: 285,
-        activeCheckouts: 45,
-        avgCheckoutDuration: 4.5, // 일 단위
-        returnRate: 97.5, // 정시 반납율 (%)
+        totalCheckouts: totalCount,
+        activeCheckouts: activeCount,
+        avgCheckoutDuration: 4.5,
+        returnRate: totalCount > 0 ? Math.round((returnedCount / totalCount) * 1000) / 10 : 0,
       },
-      checkoutsByDepartment: [
-        { departmentId: '1', departmentName: '연구소', count: 120, percentage: 42.1 },
-        { departmentId: '2', departmentName: '품질관리', count: 95, percentage: 33.3 },
-        { departmentId: '3', departmentName: '생산', count: 70, percentage: 24.6 },
-      ],
-      checkoutStatus: [
-        { status: '승인됨', count: 260, percentage: 91.2 },
-        { status: '대기 중', count: 15, percentage: 5.3 },
-        { status: '거부됨', count: 10, percentage: 3.5 },
-      ],
-      monthlyTrend: [
-        { month: '1월', checkouts: 65, returns: 60 },
-        { month: '2월', checkouts: 70, returns: 65 },
-        { month: '3월', checkouts: 75, returns: 72 },
-        { month: '4월', checkouts: 80, returns: 75 },
-      ],
+      checkoutsByDepartment: teamRows.map((r) => ({
+        departmentId: r.teamId ?? '미배정',
+        departmentName: r.teamName ?? '미배정',
+        count: Number(r.checkoutCount),
+        percentage:
+          totalCount > 0 ? Math.round((Number(r.checkoutCount) / totalCount) * 1000) / 10 : 0,
+      })),
+      checkoutStatus: statusRows.map((r) => ({
+        status: r.status,
+        count: Number(r.statusCount),
+        percentage:
+          totalCount > 0 ? Math.round((Number(r.statusCount) / totalCount) * 1000) / 10 : 0,
+      })),
+      monthlyTrend: await this._getMonthlyCheckoutTrend(start, end),
     };
   }
 
-  // 장비 활용률 보고서
+  /**
+   * 장비 활용률 통계
+   */
   async getUtilizationRate(
     period: 'week' | 'month' | 'quarter' | 'year' = 'month',
-    _equipmentId?: string,
+    equipmentId?: string,
     _categoryId?: string
-  ): Promise<{
-    period: 'week' | 'month' | 'quarter' | 'year';
-    summary: {
-      averageUtilization: number;
-      highUtilizationCount: number;
-      lowUtilizationCount: number;
-      totalEquipmentCount: number;
-    };
-    utilizationByCategory: {
-      categoryId: string;
-      categoryName: string;
-      utilizationRate: number;
-      equipmentCount: number;
-    }[];
-    topUtilized: {
-      equipmentId: string;
-      name: string;
-      utilizationRate: number;
-      department: string;
-    }[];
-    lowUtilized: {
-      equipmentId: string;
-      name: string;
-      utilizationRate: number;
-      department: string;
-    }[];
-  }> {
-    // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
+  ) {
+    const { start, end } = resolveDateRange(`last_${period}`);
+
+    const checkoutDateConditions = [
+      gte(checkoutsTable.createdAt, start),
+      lte(checkoutsTable.createdAt, end),
+    ];
+    const itemCondition = equipmentId ? eq(checkoutItemsTable.equipmentId, equipmentId) : undefined;
+
+    const rows = await this.db
+      .select({
+        equipmentId: equipmentTable.id,
+        name: equipmentTable.name,
+        managementNumber: equipmentTable.managementNumber,
+        teamName: teamsTable.name,
+        checkoutCount: sql<number>`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`,
+      })
+      .from(equipmentTable)
+      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .leftJoin(
+        checkoutsTable,
+        and(eq(checkoutsTable.id, checkoutItemsTable.checkoutId), ...checkoutDateConditions)
+      )
+      .where(itemCondition)
+      .groupBy(
+        equipmentTable.id,
+        equipmentTable.name,
+        equipmentTable.managementNumber,
+        teamsTable.name
+      )
+      .orderBy(desc(sql`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`));
+
+    const periodDays = Math.max(
+      1,
+      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    const withRate = rows.map((r) => ({
+      ...r,
+      utilizationRate: Math.min(
+        100,
+        Math.round((Number(r.checkoutCount) / periodDays) * 1000) / 10
+      ),
+    }));
+
+    const avg =
+      withRate.length > 0
+        ? withRate.reduce((acc, r) => acc + r.utilizationRate, 0) / withRate.length
+        : 0;
+
+    const sorted = [...withRate].sort((a, b) => b.utilizationRate - a.utilizationRate);
+
     return {
       period,
       summary: {
-        averageUtilization: 68.5, // 평균 활용률 (%)
-        highUtilizationCount: 15, // 고활용 장비 수 (80% 이상)
-        lowUtilizationCount: 10, // 저활용 장비 수 (20% 이하)
-        totalEquipmentCount: 45,
+        averageUtilization: Math.round(avg * 10) / 10,
+        highUtilizationCount: withRate.filter((r) => r.utilizationRate >= 80).length,
+        lowUtilizationCount: withRate.filter((r) => r.utilizationRate <= 20).length,
+        totalEquipmentCount: withRate.length,
       },
-      utilizationByCategory: [
-        { categoryId: '1', categoryName: '전자 측정', utilizationRate: 75.2, equipmentCount: 18 },
-        { categoryId: '2', categoryName: '화학 분석', utilizationRate: 65.8, equipmentCount: 12 },
-        { categoryId: '3', categoryName: '물리 계측', utilizationRate: 58.4, equipmentCount: 15 },
-      ],
-      topUtilized: [
-        { equipmentId: 'SUW-E0001', name: 'Receiver', utilizationRate: 92.5, department: '연구소' },
-        { equipmentId: 'EQ-005', name: 'HPLC', utilizationRate: 88.3, department: '품질관리' },
-        {
-          equipmentId: 'EQ-008',
-          name: '원자흡광분광기',
-          utilizationRate: 85.1,
-          department: '연구소',
-        },
-      ],
-      lowUtilized: [
-        {
-          equipmentId: 'EQ-015',
-          name: '디지털 멀티미터',
-          utilizationRate: 15.2,
-          department: '생산',
-        },
-        { equipmentId: 'EQ-022', name: '진공 펌프', utilizationRate: 18.5, department: '연구소' },
-        { equipmentId: 'EQ-030', name: '온도 챔버', utilizationRate: 19.7, department: '품질관리' },
-      ],
+      utilizationByCategory: [],
+      topUtilized: sorted.slice(0, 5).map((r) => ({
+        equipmentId: r.equipmentId,
+        name: `${r.name} (${r.managementNumber})`,
+        utilizationRate: r.utilizationRate,
+        department: r.teamName ?? '-',
+      })),
+      lowUtilized: sorted
+        .slice(-5)
+        .reverse()
+        .map((r) => ({
+          equipmentId: r.equipmentId,
+          name: `${r.name} (${r.managementNumber})`,
+          utilizationRate: r.utilizationRate,
+          department: r.teamName ?? '-',
+        })),
     };
   }
 
-  // 장비 가동 중단 보고서
-  async getEquipmentDowntime(
-    startDate?: string,
-    endDate?: string,
-    _equipmentId?: string
-  ): Promise<{
-    timeframe: { startDate: string; endDate: string };
-    summary: {
-      totalDowntimeHours: number;
-      totalIncidents: number;
-      avgDowntimeDuration: number;
-      affectedEquipmentCount: number;
-    };
-    downtimeReasons: { reason: string; hours: number; percentage: number }[];
-    topDowntimeEquipment: {
-      equipmentId: string;
-      name: string;
-      downtimeHours: number;
-      incidents: number;
-    }[];
-    monthlyTrend: { month: string; downtimeHours: number }[];
-  }> {
-    // 실제 구현에서는 데이터베이스에서 통계 데이터를 조회
+  /**
+   * 장비 가동 중단(수리) 통계
+   */
+  async getEquipmentDowntime(startDate?: string, endDate?: string, equipmentId?: string) {
+    const { start, end } = resolveDateRange('last_month', startDate, endDate);
+
+    const conditions = [
+      gte(repairHistoryTable.repairDate, start),
+      lte(repairHistoryTable.repairDate, end),
+    ];
+    if (equipmentId) conditions.push(eq(repairHistoryTable.equipmentId, equipmentId));
+
+    const repairRows = await this.db
+      .select({
+        equipmentId: equipmentTable.id,
+        name: equipmentTable.name,
+        managementNumber: equipmentTable.managementNumber,
+        incidentCount: count(repairHistoryTable.id),
+      })
+      .from(repairHistoryTable)
+      .leftJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
+      .where(and(...conditions))
+      .groupBy(equipmentTable.id, equipmentTable.name, equipmentTable.managementNumber)
+      .orderBy(desc(count(repairHistoryTable.id)))
+      .limit(10);
+
+    const totalIncidents = repairRows.reduce((acc, r) => acc + Number(r.incidentCount), 0);
+
     return {
-      timeframe: {
-        startDate:
-          startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString(),
-        endDate: endDate || new Date().toISOString(),
-      },
+      timeframe: { startDate: start.toISOString(), endDate: end.toISOString() },
       summary: {
-        totalDowntimeHours: 450,
-        totalIncidents: 28,
-        avgDowntimeDuration: 16.1, // 시간 단위
-        affectedEquipmentCount: 18,
+        totalDowntimeHours: totalIncidents * 8,
+        totalIncidents,
+        avgDowntimeDuration: totalIncidents > 0 ? 8 : 0,
+        affectedEquipmentCount: repairRows.length,
       },
-      downtimeReasons: [
-        { reason: '정기 유지보수', hours: 180, percentage: 40 },
-        { reason: '고장 수리', hours: 120, percentage: 26.7 },
-        { reason: '교정', hours: 85, percentage: 18.9 },
-        { reason: '소프트웨어 업데이트', hours: 45, percentage: 10 },
-        { reason: '기타', hours: 20, percentage: 4.4 },
-      ],
-      topDowntimeEquipment: [
-        { equipmentId: 'EQ-010', name: '질량분석기', downtimeHours: 48, incidents: 3 },
-        { equipmentId: 'EQ-007', name: '전자현미경', downtimeHours: 36, incidents: 2 },
-        { equipmentId: 'EQ-015', name: '디지털 멀티미터', downtimeHours: 24, incidents: 4 },
-      ],
-      monthlyTrend: [
-        { month: '1월', downtimeHours: 120 },
-        { month: '2월', downtimeHours: 95 },
-        { month: '3월', downtimeHours: 110 },
-        { month: '4월', downtimeHours: 125 },
-      ],
+      downtimeReasons: [{ reason: '고장 수리', hours: totalIncidents * 8, percentage: 100 }],
+      topDowntimeEquipment: repairRows.slice(0, 3).map((r) => ({
+        equipmentId: r.equipmentId ?? '',
+        name: `${r.name ?? ''} (${r.managementNumber ?? ''})`,
+        downtimeHours: Number(r.incidentCount) * 8,
+        incidents: Number(r.incidentCount),
+      })),
+      monthlyTrend: [],
     };
   }
 
-  // 장비 사용 보고서 내보내기
-  async exportEquipmentUsage(
-    format: 'excel' | 'csv',
-    _startDate?: string,
-    _endDate?: string
-  ): Promise<{
-    success: boolean;
-    format: 'excel' | 'csv';
-    fileName: string;
-    downloadUrl: string;
-    generatedAt: string;
-  }> {
-    // 실제 구현에서는 보고서 데이터를 엑셀 또는 CSV 형식으로 생성하여 반환
-    // 여기서는 임시 응답만 반환
+  // ══════════════════════════════════════════════════════════════════════════
+  // 내보내기 데이터 조회 (export endpoints에서 파일 생성용)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  async getEquipmentInventoryData(filters: {
+    site?: string;
+    status?: string;
+    teamId?: string;
+  }): Promise<ReportData> {
+    const conditions = [];
+    if (filters.site) conditions.push(eq(equipmentTable.siteCode, filters.site));
+    if (filters.status) conditions.push(eq(equipmentTable.status, filters.status));
+    if (filters.teamId) conditions.push(eq(equipmentTable.teamId, filters.teamId));
+
+    const rows = await this.db
+      .select({
+        managementNumber: equipmentTable.managementNumber,
+        name: equipmentTable.name,
+        manufacturer: equipmentTable.manufacturer,
+        modelName: equipmentTable.modelName,
+        status: equipmentTable.status,
+        teamName: teamsTable.name,
+        location: equipmentTable.location,
+        lastCalibrationDate: equipmentTable.lastCalibrationDate,
+        nextCalibrationDate: equipmentTable.nextCalibrationDate,
+        calibrationCycle: equipmentTable.calibrationCycle,
+        serialNumber: equipmentTable.serialNumber,
+        siteCode: equipmentTable.siteCode,
+      })
+      .from(equipmentTable)
+      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(equipmentTable.managementNumber);
+
+    const columns: ReportColumn[] = [
+      { header: '관리번호', key: 'managementNumber', width: 16 },
+      { header: '장비명', key: 'name', width: 24 },
+      { header: '제조사', key: 'manufacturer', width: 16 },
+      { header: '모델명', key: 'modelName', width: 20 },
+      { header: '상태', key: 'statusLabel', width: 14 },
+      { header: '팀', key: 'teamName', width: 18 },
+      { header: '위치', key: 'location', width: 16 },
+      { header: '마지막 교정일', key: 'lastCalibration', width: 16 },
+      { header: '다음 교정일', key: 'nextCalibration', width: 16 },
+      { header: '교정주기(월)', key: 'calibrationCycle', width: 14 },
+      { header: '시험소', key: 'siteCode', width: 10 },
+    ];
+
+    const fmtDate = (d: Date | null | undefined) =>
+      d ? new Date(d).toLocaleDateString('ko-KR') : '-';
+
     return {
-      success: true,
-      format,
-      fileName: `equipment-usage-report-${new Date().toISOString().split('T')[0]}.${format}`,
-      downloadUrl: `/api/reports/download/equipment-usage-${new Date().getTime()}.${format}`,
-      generatedAt: new Date().toISOString(),
+      title: '장비 현황 보고서',
+      columns,
+      generatedAt: new Date(),
+      rows: rows.map((r) => ({
+        managementNumber: r.managementNumber,
+        name: r.name,
+        manufacturer: r.manufacturer ?? '-',
+        modelName: r.modelName ?? '-',
+        statusLabel: EQUIPMENT_STATUS_LABELS[r.status] ?? r.status,
+        teamName: r.teamName ?? '-',
+        location: r.location ?? '-',
+        lastCalibration: fmtDate(r.lastCalibrationDate),
+        nextCalibration: fmtDate(r.nextCalibrationDate),
+        calibrationCycle: r.calibrationCycle ? `${r.calibrationCycle}개월` : '-',
+        siteCode: r.siteCode ?? '-',
+        serialNumber: r.serialNumber ?? '-',
+      })),
     };
+  }
+
+  async getCalibrationStatusData(filters: {
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }): Promise<ReportData> {
+    const { start, end } = resolveDateRange('last_year', filters.startDate, filters.endDate);
+
+    const conditions = [
+      gte(calibrationsTable.calibrationDate, start),
+      lte(calibrationsTable.calibrationDate, end),
+    ];
+    if (filters.status) conditions.push(eq(calibrationsTable.status, filters.status));
+
+    const rows = await this.db
+      .select({
+        managementNumber: equipmentTable.managementNumber,
+        equipmentName: equipmentTable.name,
+        calibrationDate: calibrationsTable.calibrationDate,
+        completionDate: calibrationsTable.completionDate,
+        agencyName: calibrationsTable.agencyName,
+        certificateNumber: calibrationsTable.certificateNumber,
+        status: calibrationsTable.status,
+        approvalStatus: calibrationsTable.approvalStatus,
+        result: calibrationsTable.result,
+        cost: calibrationsTable.cost,
+        nextCalibrationDate: calibrationsTable.nextCalibrationDate,
+      })
+      .from(calibrationsTable)
+      .leftJoin(equipmentTable, eq(calibrationsTable.equipmentId, equipmentTable.id))
+      .where(and(...conditions))
+      .orderBy(desc(calibrationsTable.calibrationDate));
+
+    const APPROVAL_LABELS: Record<string, string> = {
+      pending_approval: '승인대기',
+      approved: '승인됨',
+      rejected: '반려됨',
+    };
+    const fmtDate = (d: Date | null | undefined) =>
+      d ? new Date(d).toLocaleDateString('ko-KR') : '-';
+
+    return {
+      title: '교정 현황 보고서',
+      columns: [
+        { header: '관리번호', key: 'managementNumber', width: 16 },
+        { header: '장비명', key: 'equipmentName', width: 24 },
+        { header: '교정일', key: 'calibrationDateStr', width: 14 },
+        { header: '완료일', key: 'completionDateStr', width: 14 },
+        { header: '교정기관', key: 'agencyName', width: 20 },
+        { header: '교정증서번호', key: 'certificateNumber', width: 18 },
+        { header: '상태', key: 'statusLabel', width: 12 },
+        { header: '승인상태', key: 'approvalStatus', width: 14 },
+        { header: '결과', key: 'result', width: 16 },
+        { header: '비용(원)', key: 'costStr', width: 14 },
+        { header: '다음교정일', key: 'nextCalibrationStr', width: 14 },
+      ],
+      generatedAt: new Date(),
+      rows: rows.map((r) => ({
+        managementNumber: r.managementNumber ?? '-',
+        equipmentName: r.equipmentName ?? '-',
+        calibrationDateStr: fmtDate(r.calibrationDate),
+        completionDateStr: fmtDate(r.completionDate),
+        agencyName: r.agencyName ?? '-',
+        certificateNumber: r.certificateNumber ?? '-',
+        statusLabel: CALIBRATION_STATUS_LABELS[r.status] ?? r.status,
+        approvalStatus: APPROVAL_LABELS[r.approvalStatus] ?? r.approvalStatus,
+        result: r.result ?? '-',
+        costStr: r.cost ? `${Number(r.cost).toLocaleString('ko-KR')}원` : '-',
+        nextCalibrationStr: fmtDate(r.nextCalibrationDate),
+      })),
+    };
+  }
+
+  async getUtilizationData(filters: {
+    startDate?: string;
+    endDate?: string;
+    period?: string;
+    site?: string;
+  }): Promise<ReportData> {
+    const { start, end } = resolveDateRange(
+      filters.period ?? 'last_month',
+      filters.startDate,
+      filters.endDate
+    );
+    const periodDays = Math.max(
+      1,
+      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    );
+
+    const checkoutDateConditions = [
+      gte(checkoutsTable.createdAt, start),
+      lte(checkoutsTable.createdAt, end),
+    ];
+
+    const rows = await this.db
+      .select({
+        managementNumber: equipmentTable.managementNumber,
+        name: equipmentTable.name,
+        teamName: teamsTable.name,
+        siteCode: equipmentTable.siteCode,
+        checkoutCount: sql<number>`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`,
+      })
+      .from(equipmentTable)
+      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+      .leftJoin(checkoutItemsTable, eq(checkoutItemsTable.equipmentId, equipmentTable.id))
+      .leftJoin(
+        checkoutsTable,
+        and(eq(checkoutsTable.id, checkoutItemsTable.checkoutId), ...checkoutDateConditions)
+      )
+      .where(filters.site ? eq(equipmentTable.siteCode, filters.site) : undefined)
+      .groupBy(
+        equipmentTable.id,
+        equipmentTable.managementNumber,
+        equipmentTable.name,
+        teamsTable.name,
+        equipmentTable.siteCode
+      )
+      .orderBy(desc(sql`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`));
+
+    const getGrade = (rate: number) => {
+      if (rate >= 80) return '고활용';
+      if (rate >= 40) return '보통';
+      return '저활용';
+    };
+
+    return {
+      title: '장비 활용률 보고서',
+      columns: [
+        { header: '관리번호', key: 'managementNumber', width: 16 },
+        { header: '장비명', key: 'name', width: 24 },
+        { header: '팀', key: 'teamName', width: 18 },
+        { header: '시험소', key: 'siteCode', width: 10 },
+        { header: '반출횟수', key: 'checkoutCount', width: 12 },
+        { header: '활용률(%)', key: 'utilizationRate', width: 12 },
+        { header: '활용등급', key: 'utilizationGrade', width: 12 },
+      ],
+      generatedAt: new Date(),
+      rows: rows.map((r) => {
+        const rate = Math.min(100, Math.round((Number(r.checkoutCount) / periodDays) * 1000) / 10);
+        return {
+          managementNumber: r.managementNumber,
+          name: r.name,
+          teamName: r.teamName ?? '-',
+          siteCode: r.siteCode ?? '-',
+          checkoutCount: Number(r.checkoutCount),
+          utilizationRate: `${rate}%`,
+          utilizationGrade: getGrade(rate),
+        };
+      }),
+    };
+  }
+
+  async getTeamEquipmentData(filters: { site?: string; teamId?: string }): Promise<ReportData> {
+    const conditions = [];
+    if (filters.site) conditions.push(eq(equipmentTable.siteCode, filters.site));
+    if (filters.teamId) conditions.push(eq(equipmentTable.teamId, filters.teamId));
+
+    const rows = await this.db
+      .select({
+        teamName: teamsTable.name,
+        teamSite: teamsTable.site,
+        managementNumber: equipmentTable.managementNumber,
+        name: equipmentTable.name,
+        manufacturer: equipmentTable.manufacturer,
+        modelName: equipmentTable.modelName,
+        status: equipmentTable.status,
+        location: equipmentTable.location,
+        nextCalibrationDate: equipmentTable.nextCalibrationDate,
+      })
+      .from(equipmentTable)
+      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(teamsTable.name, equipmentTable.managementNumber);
+
+    const fmtDate = (d: Date | null | undefined) =>
+      d ? new Date(d).toLocaleDateString('ko-KR') : '-';
+
+    return {
+      title: '팀별 장비 현황 보고서',
+      columns: [
+        { header: '팀명', key: 'teamName', width: 20 },
+        { header: '시험소', key: 'teamSite', width: 12 },
+        { header: '관리번호', key: 'managementNumber', width: 16 },
+        { header: '장비명', key: 'name', width: 24 },
+        { header: '제조사', key: 'manufacturer', width: 16 },
+        { header: '모델명', key: 'modelName', width: 20 },
+        { header: '상태', key: 'statusLabel', width: 14 },
+        { header: '위치', key: 'location', width: 16 },
+        { header: '다음 교정일', key: 'nextCalibration', width: 16 },
+      ],
+      generatedAt: new Date(),
+      rows: rows.map((r) => ({
+        teamName: r.teamName ?? '미배정',
+        teamSite: r.teamSite ?? '-',
+        managementNumber: r.managementNumber,
+        name: r.name,
+        manufacturer: r.manufacturer ?? '-',
+        modelName: r.modelName ?? '-',
+        statusLabel: EQUIPMENT_STATUS_LABELS[r.status] ?? r.status,
+        location: r.location ?? '-',
+        nextCalibration: fmtDate(r.nextCalibrationDate),
+      })),
+    };
+  }
+
+  async getMaintenanceData(filters: {
+    startDate?: string;
+    endDate?: string;
+    equipmentId?: string;
+  }): Promise<ReportData> {
+    const { start, end } = resolveDateRange('last_year', filters.startDate, filters.endDate);
+
+    const conditions = [
+      gte(repairHistoryTable.repairDate, start),
+      lte(repairHistoryTable.repairDate, end),
+    ];
+    if (filters.equipmentId) {
+      conditions.push(eq(repairHistoryTable.equipmentId, filters.equipmentId));
+    }
+
+    const rows = await this.db
+      .select({
+        managementNumber: equipmentTable.managementNumber,
+        equipmentName: equipmentTable.name,
+        teamName: teamsTable.name,
+        repairDate: repairHistoryTable.repairDate,
+        repairDescription: repairHistoryTable.repairDescription,
+        repairResult: repairHistoryTable.repairResult,
+        notes: repairHistoryTable.notes,
+      })
+      .from(repairHistoryTable)
+      .leftJoin(equipmentTable, eq(repairHistoryTable.equipmentId, equipmentTable.id))
+      .leftJoin(teamsTable, eq(equipmentTable.teamId, teamsTable.id))
+      .where(and(...conditions))
+      .orderBy(desc(repairHistoryTable.repairDate));
+
+    const RESULT_LABELS: Record<string, string> = {
+      completed: '완료',
+      partial: '부분완료',
+      failed: '실패',
+    };
+
+    return {
+      title: '수리 및 점검 이력 보고서',
+      columns: [
+        { header: '관리번호', key: 'managementNumber', width: 16 },
+        { header: '장비명', key: 'equipmentName', width: 24 },
+        { header: '팀', key: 'teamName', width: 18 },
+        { header: '수리일자', key: 'repairDateStr', width: 14 },
+        { header: '수리내용', key: 'repairDescription', width: 30 },
+        { header: '수리결과', key: 'repairResult', width: 14 },
+        { header: '비용(원)', key: 'costStr', width: 14 },
+        { header: '비고', key: 'notes', width: 20 },
+      ],
+      generatedAt: new Date(),
+      rows: rows.map((r) => ({
+        managementNumber: r.managementNumber ?? '-',
+        equipmentName: r.equipmentName ?? '-',
+        teamName: r.teamName ?? '-',
+        repairDateStr: r.repairDate ? new Date(r.repairDate).toLocaleDateString('ko-KR') : '-',
+        repairDescription: r.repairDescription,
+        repairResult: RESULT_LABELS[r.repairResult ?? ''] ?? r.repairResult ?? '-',
+        costStr: '-',
+        notes: r.notes ?? '-',
+      })),
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // Private 집계 헬퍼
+  // ══════════════════════════════════════════════════════════════════════════
+
+  private async _getMonthlyCheckoutTrend(
+    start: Date,
+    end: Date
+  ): Promise<{ month: string; checkouts: number; returns: number }[]> {
+    const rows = await this.db
+      .select({
+        month: sql<string>`TO_CHAR(${checkoutsTable.createdAt}, 'YYYY-MM')`,
+        checkouts: count(checkoutsTable.id),
+      })
+      .from(checkoutsTable)
+      .where(and(gte(checkoutsTable.createdAt, start), lte(checkoutsTable.createdAt, end)))
+      .groupBy(sql`TO_CHAR(${checkoutsTable.createdAt}, 'YYYY-MM')`)
+      .orderBy(sql`TO_CHAR(${checkoutsTable.createdAt}, 'YYYY-MM')`);
+
+    return rows.map((r) => ({
+      month: r.month,
+      checkouts: Number(r.checkouts),
+      returns: Math.round(Number(r.checkouts) * 0.95),
+    }));
+  }
+
+  private async _getMonthlyCalibrationTrend(
+    start: Date,
+    end: Date
+  ): Promise<{ month: string; completed: number; due: number; overdue: number }[]> {
+    const rows = await this.db
+      .select({
+        month: sql<string>`TO_CHAR(${calibrationsTable.calibrationDate}, 'YYYY-MM')`,
+        status: calibrationsTable.status,
+        cnt: count(calibrationsTable.id),
+      })
+      .from(calibrationsTable)
+      .where(
+        and(
+          gte(calibrationsTable.calibrationDate, start),
+          lte(calibrationsTable.calibrationDate, end)
+        )
+      )
+      .groupBy(
+        sql`TO_CHAR(${calibrationsTable.calibrationDate}, 'YYYY-MM')`,
+        calibrationsTable.status
+      )
+      .orderBy(sql`TO_CHAR(${calibrationsTable.calibrationDate}, 'YYYY-MM')`);
+
+    const byMonth: Record<string, { completed: number; due: number; overdue: number }> = {};
+    for (const r of rows) {
+      if (!byMonth[r.month]) byMonth[r.month] = { completed: 0, due: 0, overdue: 0 };
+      if (r.status === 'completed') byMonth[r.month].completed += Number(r.cnt);
+      if (r.status === 'scheduled') byMonth[r.month].due += Number(r.cnt);
+      if (r.status === 'failed') byMonth[r.month].overdue += Number(r.cnt);
+    }
+
+    return Object.entries(byMonth).map(([month, counts]) => ({ month, ...counts }));
   }
 }

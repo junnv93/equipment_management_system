@@ -5,9 +5,10 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { InternalApiThrottlerGuard } from './common/guards/internal-api-throttler.guard';
 import { validateEnv } from './config/env.validation';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
+import { SiteScopeInterceptor } from './common/interceptors/site-scope.interceptor';
 import { EquipmentModule } from './modules/equipment/equipment.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -107,6 +108,11 @@ import { I18nModule } from './common/i18n/i18n.module';
     {
       provide: APP_GUARD,
       useClass: InternalApiThrottlerGuard,
+    },
+    // 전역 사이트 스코프 인터셉터 — @SiteScoped() 데코레이터가 있는 엔드포인트에서만 활성화
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SiteScopeInterceptor,
     },
   ],
 })

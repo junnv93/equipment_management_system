@@ -46,7 +46,17 @@ describe('AuthService', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn().mockImplementation((key: string) => {
+              // Azure AD 팀 ID 매핑 — 서비스의 configService.get() 호출에 대응
+              const AZURE_TEAM_IDS: Record<string, string> = {
+                AZURE_TEAM_ID_SUW_RF: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+                AZURE_TEAM_ID_SUW_SAR: '7fd28076-fd5e-4d36-b051-bbf8a97b82db',
+                AZURE_TEAM_ID_SUW_EMC: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
+                AZURE_TEAM_ID_SUW_AUTO: 'f0a32655-00f9-4ecd-b43c-af4faed499b6',
+                AZURE_TEAM_ID_UIW_RF: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789',
+                AZURE_TEAM_ID_PYT_AUTO: 'b2c3d4e5-f6a7-4890-bcde-f01234567890',
+              };
               if (key === 'JWT_SECRET') return 'test-secret';
+              if (key in AZURE_TEAM_IDS) return AZURE_TEAM_IDS[key];
               return null;
             }),
           },

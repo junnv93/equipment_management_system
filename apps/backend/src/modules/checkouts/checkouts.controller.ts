@@ -47,7 +47,8 @@ import {
   CheckoutResponseDto,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { Permission, CHECKOUT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
@@ -102,38 +103,25 @@ export class CheckoutsController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_CHECKOUTS)
+  @SiteScoped({ policy: CHECKOUT_DATA_SCOPE })
   @UsePipes(CheckoutQueryValidationPipe)
   @ApiOperation({
     summary: '반출 목록 조회',
     description:
       '반출 목록을 조회합니다. 필터링, 정렬, 페이지네이션을 지원합니다. ' +
-      '시험소장(lab_manager)은 전체 조회, 나머지 역할은 소속 팀 기반으로 자동 필터링됩니다. ' +
+      'SiteScopeInterceptor가 CHECKOUT_DATA_SCOPE 정책에 따라 역할별 query.teamId/query.site를 자동 주입합니다. ' +
       '?includeSummary=true 사용 시 요약 정보(total, pending, approved 등)도 함께 반환됩니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 목록 조회 성공' })
   async findAll(
-    @Query() query: CheckoutQueryDto,
-    @Request() req: AuthenticatedRequest
+    @Query() query: CheckoutQueryDto
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/checkouts/checkouts.service').CheckoutListResponse
   > {
-    // 역할 기반 데이터 격리: team_restricted → 팀 필터, site_restricted → 사이트 필터
-    const roles = req.user?.roles || [];
-    const isSystemAdmin = roles.includes('system_admin');
-    const isTeamRestricted = roles.includes('test_engineer') || roles.includes('technical_manager');
-
-    // 🔒 보안: 역할별 강제 필터링 (URL 파라미터 오버라이드 방지)
-    if (!isSystemAdmin) {
-      if (isTeamRestricted && req.user?.teamId) {
-        // test_engineer, technical_manager: 팀 필터 (팀 ⊂ 사이트이므로 사이트 필터 불필요)
-        query.teamId = req.user.teamId;
-      } else if (req.user?.site) {
-        // quality_manager, lab_manager: 사이트 필터 (자기 사이트 전체 조회)
-        query.site = req.user.site;
-      }
-    }
-
-    // ✅ 성능 최적화: includeSummary 파라미터를 서비스에 전달
+    // SiteScopeInterceptor가 CHECKOUT_DATA_SCOPE 정책으로 query를 자동 주입합니다:
+    // test_engineer/technical_manager → query.teamId = user.teamId
+    // quality_manager/lab_manager    → query.site = user.site
+    // system_admin                   → 주입 없음 (전체 접근)
     return this.checkoutsService.findAll(query, query.includeSummary ?? false);
   }
 

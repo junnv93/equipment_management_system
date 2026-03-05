@@ -6,6 +6,7 @@ import { ACCESS_TOKEN_EXPIRES_IN } from '@equipment-management/shared-constants'
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { TestAuthController } from './test-auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AzureADStrategy } from './strategies/azure-ad.strategy';
 import { UsersModule } from '../users/users.module';
@@ -27,7 +28,11 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [
+    AuthController,
+    // 테스트 전용 라우트 — 프로덕션에서는 라우트 자체가 등록되지 않음
+    ...(process.env.NODE_ENV !== 'production' ? [TestAuthController] : []),
+  ],
   providers: [
     AuthService,
     JwtStrategy,

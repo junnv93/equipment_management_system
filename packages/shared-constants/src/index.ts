@@ -94,5 +94,8 @@ export {
   type UserScopeContext,
   type ResolvedDataScope,
   AUDIT_LOG_SCOPE,
+  EQUIPMENT_DATA_SCOPE,
+  CHECKOUT_DATA_SCOPE,
+  NON_CONFORMANCE_DATA_SCOPE,
   resolveDataScope,
 } from './data-scope';

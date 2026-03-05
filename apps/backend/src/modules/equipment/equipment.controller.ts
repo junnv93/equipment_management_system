@@ -43,11 +43,17 @@ import {
   CreateSharedEquipmentValidationPipe,
 } from './dto/create-shared-equipment.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
-import { Permission } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  EQUIPMENT_DATA_SCOPE,
+  resolveDataScope,
+} from '@equipment-management/shared-constants';
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
 import { UserRoleValues, Site } from '@equipment-management/schemas';
+import type { UserRole } from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
@@ -191,8 +197,6 @@ export class EquipmentController {
     const userSite = req?.user?.site;
     const userTeamId = req?.user?.teamId;
     const isLabManager = userRoles.includes(UserRoleValues.LAB_MANAGER);
-    const _isTechnicalManager = userRoles.includes(UserRoleValues.TECHNICAL_MANAGER);
-    const _isTestEngineer = userRoles.includes(UserRoleValues.TEST_ENGINEER);
 
     // 🔒 보안: lab_manager를 제외한 모든 역할은 자신의 사이트/팀 장비만 등록 가능
     // - test_engineer(시험실무자): 자기 팀만
@@ -371,42 +375,16 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
+  @SiteScoped({ policy: EQUIPMENT_DATA_SCOPE })
   @UsePipes(EquipmentQueryValidationPipe)
   findAll(
-    @Query() query: EquipmentQueryDto,
-    @Req() req: AuthenticatedRequest
+    @Query() query: EquipmentQueryDto
   ): Promise<
     import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/equipment/equipment.service').EquipmentListResponse
   > {
-    // 시험실무자는 자신의 사이트 장비만 조회 가능
-    // 기술책임자/관리자는 모든 사이트 조회 가능
-    const userSite = req.user?.site;
-    const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
-    const canViewAllSites =
-      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
-      userRoles.includes(UserRoleValues.LAB_MANAGER);
-
-    // 🔒 보안: test_engineer는 URL 파라미터와 관계없이 무조건 자신의 사이트만 조회
-    // URL에 다른 사이트를 지정해도 무시됨
-    let siteFilter: Site | undefined;
-    if (isTestOperator && !canViewAllSites) {
-      // test_engineer는 강제로 자신의 사이트 필터 적용
-      console.log(
-        `[SECURITY] test_engineer attempting access: userSite=${userSite}, querySite=${query.site}, forcing userSite`
-      );
-      siteFilter = userSite as Site;
-      // 🔒 중요: query 객체의 site를 강제로 덮어씀 (service에서 query.site 우선 사용)
-      query.site = userSite as Site;
-    } else {
-      // 다른 역할은 query.site 사용 가능
-      console.log(
-        `[ACCESS] Role has full site access: roles=${userRoles.join(',')}, querySite=${query.site}`
-      );
-      siteFilter = query.site;
-    }
-
-    return this.equipmentService.findAll(query, siteFilter);
+    // SiteScopeInterceptor가 역할별 query.site를 자동 주입합니다 (EQUIPMENT_DATA_SCOPE 정책).
+    // test_engineer → query.site = user.site, 그 외 → query.site 유지 (전체 접근)
+    return this.equipmentService.findAll(query);
   }
 
   /**
@@ -540,20 +518,19 @@ export class EquipmentController {
     // ✅ includeTeam=true로 팀 정보 포함 조회
     const equipmentWithTeam = await this.equipmentService.findOne(uuid, true);
 
-    // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
-    const userSite = req.user?.site;
-    const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
-    const canViewAllSites =
-      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
-      userRoles.includes(UserRoleValues.LAB_MANAGER);
-
-    // 시험실무자이고 자신의 사이트가 아닌 장비를 조회하려는 경우 거부
-    if (isTestOperator && !canViewAllSites && userSite && equipmentWithTeam.site !== userSite) {
-      throw new ForbiddenException({
-        code: 'EQUIPMENT_CROSS_SITE_VIEW_DENIED',
-        message: 'No permission to view equipment from other sites.',
-      });
+    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 단일 장비 접근 사이트 체크
+    const userRole = req.user?.roles?.[0] as UserRole | undefined;
+    if (userRole) {
+      const scope = resolveDataScope(
+        { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
+        EQUIPMENT_DATA_SCOPE
+      );
+      if (scope.type === 'site' && scope.site && equipmentWithTeam.site !== scope.site) {
+        throw new ForbiddenException({
+          code: 'EQUIPMENT_CROSS_SITE_VIEW_DENIED',
+          message: 'No permission to view equipment from other sites.',
+        });
+      }
     }
 
     // ✅ 응답에 teamName 필드 추가 (프론트엔드에서 사용)
@@ -923,17 +900,16 @@ export class EquipmentController {
   > {
     const equipmentList = await this.equipmentService.findByTeam(teamId);
 
-    // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
-    const userSite = req.user?.site;
-    const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
-    const canViewAllSites =
-      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
-      userRoles.includes(UserRoleValues.LAB_MANAGER);
-
-    // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
-    if (isTestOperator && !canViewAllSites && userSite) {
-      return equipmentList.filter((equipment) => equipment.site === userSite);
+    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
+    const userRole = req.user?.roles?.[0] as UserRole | undefined;
+    if (userRole) {
+      const scope = resolveDataScope(
+        { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
+        EQUIPMENT_DATA_SCOPE
+      );
+      if (scope.type === 'site' && scope.site) {
+        return equipmentList.filter((e) => e.site === scope.site);
+      }
     }
 
     return equipmentList;
@@ -1016,17 +992,16 @@ export class EquipmentController {
   > {
     const equipmentList = await this.equipmentService.findCalibrationDue(days);
 
-    // 사이트별 권한 체크: 시험실무자는 자신의 사이트 장비만 조회 가능
-    const userSite = req.user?.site;
-    const userRoles = req.user?.roles || [];
-    const isTestOperator = userRoles.includes(UserRoleValues.TEST_ENGINEER);
-    const canViewAllSites =
-      userRoles.includes(UserRoleValues.TECHNICAL_MANAGER) ||
-      userRoles.includes(UserRoleValues.LAB_MANAGER);
-
-    // 시험실무자이고 모든 사이트 조회 권한이 없는 경우 필터링
-    if (isTestOperator && !canViewAllSites && userSite) {
-      return equipmentList.filter((equipment) => equipment.site === userSite);
+    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
+    const userRole = req.user?.roles?.[0] as UserRole | undefined;
+    if (userRole) {
+      const scope = resolveDataScope(
+        { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
+        EQUIPMENT_DATA_SCOPE
+      );
+      if (scope.type === 'site' && scope.site) {
+        return equipmentList.filter((e) => e.site === scope.site);
+      }
     }
 
     return equipmentList;

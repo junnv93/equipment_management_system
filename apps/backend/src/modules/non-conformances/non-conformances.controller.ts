@@ -30,8 +30,8 @@ import { RejectCorrectionDto, RejectCorrectionValidationPipe } from './dto/rejec
 import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { type NonConformance } from '@equipment-management/db/schema/non-conformances';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
-import { UserRoleValues } from '@equipment-management/schemas';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { Permission, NON_CONFORMANCE_DATA_SCOPE } from '@equipment-management/shared-constants';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
@@ -73,10 +73,8 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findAll(
-    @Query() query: NonConformanceQueryDto,
-    @Request() req: AuthenticatedRequest
-  ): Promise<{
+  @SiteScoped({ policy: NON_CONFORMANCE_DATA_SCOPE })
+  findAll(@Query() query: NonConformanceQueryDto): Promise<{
     items: NonConformance[];
     meta: {
       totalItems: number;
@@ -86,12 +84,7 @@ export class NonConformancesController {
       currentPage: number;
     };
   }> {
-    // 🔒 보안: lab_manager 외 역할은 자신의 사이트로 강제 필터링
-    const roles = req.user?.roles || [];
-    const isLabManager = roles.includes(UserRoleValues.LAB_MANAGER);
-    if (!isLabManager && req.user?.site) {
-      query.site = req.user.site;
-    }
+    // SiteScopeInterceptor가 NON_CONFORMANCE_DATA_SCOPE 정책으로 query.site를 자동 주입합니다.
     return this.nonConformancesService.findAll(query);
   }
 

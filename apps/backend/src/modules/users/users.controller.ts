@@ -13,7 +13,6 @@ import {
   HttpCode,
   UsePipes,
   UseGuards,
-  UseInterceptors,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
@@ -41,14 +40,12 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
-import { SiteScopeInterceptor } from '../../common/interceptors/site-scope.interceptor';
 import { Permission } from '@equipment-management/shared-constants';
 import { Public } from '../auth/decorators/public.decorator';
 import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
 
 @ApiTags('users')
 @Controller('users')
-@UseInterceptors(SiteScopeInterceptor)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -82,7 +79,7 @@ export class UsersController {
   }
 
   @Get()
-  @SkipPermissions()
+  @RequirePermissions(Permission.VIEW_USERS)
   @SiteScoped({ bypassRoles: ['lab_manager', 'system_admin'] })
   @UsePipes(UserQueryValidationPipe)
   @ApiOperation({
@@ -162,7 +159,7 @@ export class UsersController {
   }
 
   @Get(':id')
-  @SkipPermissions()
+  @RequirePermissions(Permission.VIEW_USERS)
   @SiteScoped({ bypassRoles: ['lab_manager', 'system_admin'] })
   @ApiOperation({
     summary: '사용자 상세 조회',

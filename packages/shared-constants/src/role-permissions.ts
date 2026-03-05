@@ -49,6 +49,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CREATE_SOFTWARE_CHANGE,
     // 폐기
     Permission.REQUEST_DISPOSAL,
+    // 사용자 조회 (장비 담당자 선택 드롭다운, 팀 목록 등에 필요)
+    Permission.VIEW_USERS,
     // 장비 반입 (렌탈 + 내부 공용)
     Permission.VIEW_EQUIPMENT_IMPORTS,
     Permission.CREATE_EQUIPMENT_IMPORT,
@@ -134,8 +136,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.VIEW_EQUIPMENT,
     // 교정 조회
     Permission.VIEW_CALIBRATIONS,
-    // 팀 조회
+    // 팀/사용자 조회 (교정계획서 제출자 확인 등)
     Permission.VIEW_TEAMS,
+    Permission.VIEW_USERS,
     // 알림
     Permission.VIEW_NOTIFICATIONS,
     Permission.UPDATE_NOTIFICATION,

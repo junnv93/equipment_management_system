@@ -234,14 +234,12 @@ describe('EquipmentController', () => {
 
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);
 
-      // Act
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mockReq = { user: { site: undefined, roles: [] } } as any;
-      const result = await controller.findAll(query, mockReq);
+      // Act — SiteScopeInterceptor가 site 주입을 담당 (단위 테스트에서는 통합 생략)
+      const result = await controller.findAll(query);
 
       // Assert
       expect(result).toEqual(mockEquipmentList);
-      expect(equipmentService.findAll).toHaveBeenCalledWith(query, undefined);
+      expect(equipmentService.findAll).toHaveBeenCalledWith(query);
     });
 
     it('should filter equipment by status', async () => {
@@ -254,15 +252,12 @@ describe('EquipmentController', () => {
 
       jest.spyOn(equipmentService, 'findAll').mockResolvedValue(mockEquipmentList);
 
-      // Act
-      const result = await controller.findAll(query, {
-        user: { site: undefined, roles: [] },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any);
+      // Act — SiteScopeInterceptor가 site 주입을 담당 (단위 테스트에서는 통합 생략)
+      const result = await controller.findAll(query);
 
       // Assert
       expect(result).toEqual(mockEquipmentList);
-      expect(equipmentService.findAll).toHaveBeenCalledWith(query, undefined);
+      expect(equipmentService.findAll).toHaveBeenCalledWith(query);
     });
   });
 

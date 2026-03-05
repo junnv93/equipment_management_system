@@ -1,14 +1,22 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { ReportsService } from './reports.service';
+import { ReportExportService, ReportFormat } from './report-export.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import { Permission } from '@equipment-management/shared-constants';
+
+const VALID_FORMATS = new Set<ReportFormat>(['excel', 'csv', 'pdf']);
 
 @ApiTags('보고서')
 @ApiBearerAuth()
 @Controller('reports')
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly reportExportService: ReportExportService
+  ) {}
 
   @Get('equipment-usage')
   @ApiOperation({ summary: '장비 사용 보고서', description: '장비별 사용 통계를 제공합니다.' })
@@ -31,19 +39,7 @@ export class ReportsController {
     @Query('endDate') endDate?: string,
     @Query('equipmentId') equipmentId?: string,
     @Query('departmentId') departmentId?: string
-  ): Promise<{
-    timeframe: { startDate: string; endDate: string };
-    totalUsageHours: number;
-    totalEquipmentCount: number;
-    departmentDistribution: {
-      departmentId: string;
-      departmentName: string;
-      usageHours: number;
-      equipmentCount: number;
-    }[];
-    topEquipment: { equipmentId: string; name: string; usageHours: number; usageCount: number }[];
-    monthlyTrend: { month: string; usageHours: number }[];
-  }> {
+  ) {
     return this.reportsService.getEquipmentUsage(startDate, endDate, equipmentId, departmentId);
   }
 
@@ -60,20 +56,7 @@ export class ReportsController {
   })
   @ApiResponse({ status: 200, description: '교정 상태 통계 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
-  getCalibrationStatus(
-    @Query('status') status?: string,
-    @Query('timeframe') timeframe?: string
-  ): Promise<{
-    summary: {
-      totalEquipment: number;
-      requireCalibration: number;
-      dueThisMonth: number;
-      overdue: number;
-      completedThisMonth: number;
-    };
-    status: { status: string; count: number; percentage: number }[];
-    calibrationTrend: { month: string; completed: number; due: number; overdue: number }[];
-  }> {
+  getCalibrationStatus(@Query('status') status?: string, @Query('timeframe') timeframe?: string) {
     return this.reportsService.getCalibrationStatus(status, timeframe);
   }
 
@@ -92,23 +75,7 @@ export class ReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('departmentId') departmentId?: string
-  ): Promise<{
-    timeframe: { startDate: string; endDate: string };
-    summary: {
-      totalCheckouts: number;
-      activeCheckouts: number;
-      avgCheckoutDuration: number;
-      returnRate: number;
-    };
-    checkoutsByDepartment: {
-      departmentId: string;
-      departmentName: string;
-      count: number;
-      percentage: number;
-    }[];
-    checkoutStatus: { status: string; count: number; percentage: number }[];
-    monthlyTrend: { month: string; checkouts: number; returns: number }[];
-  }> {
+  ) {
     return this.reportsService.getRentalStatistics(startDate, endDate, departmentId);
   }
 
@@ -136,33 +103,7 @@ export class ReportsController {
     @Query('period') period: 'week' | 'month' | 'quarter' | 'year' = 'month',
     @Query('equipmentId') equipmentId?: string,
     @Query('categoryId') categoryId?: string
-  ): Promise<{
-    period: 'week' | 'month' | 'quarter' | 'year';
-    summary: {
-      averageUtilization: number;
-      highUtilizationCount: number;
-      lowUtilizationCount: number;
-      totalEquipmentCount: number;
-    };
-    utilizationByCategory: {
-      categoryId: string;
-      categoryName: string;
-      utilizationRate: number;
-      equipmentCount: number;
-    }[];
-    topUtilized: {
-      equipmentId: string;
-      name: string;
-      utilizationRate: number;
-      department: string;
-    }[];
-    lowUtilized: {
-      equipmentId: string;
-      name: string;
-      utilizationRate: number;
-      department: string;
-    }[];
-  }> {
+  ) {
     return this.reportsService.getUtilizationRate(period, equipmentId, categoryId);
   }
 
@@ -184,52 +125,161 @@ export class ReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('equipmentId') equipmentId?: string
-  ): Promise<{
-    timeframe: { startDate: string; endDate: string };
-    summary: {
-      totalDowntimeHours: number;
-      totalIncidents: number;
-      avgDowntimeDuration: number;
-      affectedEquipmentCount: number;
-    };
-    downtimeReasons: { reason: string; hours: number; percentage: number }[];
-    topDowntimeEquipment: {
-      equipmentId: string;
-      name: string;
-      downtimeHours: number;
-      incidents: number;
-    }[];
-    monthlyTrend: { month: string; downtimeHours: number }[];
-  }> {
+  ) {
     return this.reportsService.getEquipmentDowntime(startDate, endDate, equipmentId);
   }
 
+  // ── 파일 내보내기 엔드포인트 ────────────────────────────────────────────
+  // 공통 패턴: DB 조회 → 파일 생성 → 바이너리 스트리밍 (Content-Disposition 헤더)
+  // @SkipResponseTransform: ResponseTransformInterceptor({success,data}) 래핑 방지
+  // ──────────────────────────────────────────────────────────────────────────
+
   @Get('export/equipment-usage')
-  @ApiOperation({
-    summary: '장비 사용 보고서 내보내기',
-    description: '장비별 사용 통계를 Excel 또는 CSV 형식으로 내보냅니다.',
-  })
-  @ApiQuery({
-    name: 'format',
-    required: true,
-    description: '내보내기 형식 (excel, csv)',
-    enum: ['excel', 'csv'],
-  })
-  @ApiQuery({ name: 'startDate', required: false, description: '시작 날짜 (ISO 형식)' })
-  @ApiQuery({ name: 'endDate', required: false, description: '종료 날짜 (ISO 형식)' })
-  @ApiResponse({ status: 200, description: '보고서 내보내기 성공' })
+  @ApiOperation({ summary: '장비 사용 보고서 내보내기 (구 형식 — 하위 호환)' })
+  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
-  exportEquipmentUsage(
-    @Query('format') format: 'excel' | 'csv',
+  @SkipResponseTransform()
+  async exportEquipmentUsage(
+    @Res() res: Response,
+    @Query('format') format: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string
-  ): Promise<{
-    success: boolean;
-    format: 'excel' | 'csv';
-    fileName: string;
-    downloadUrl: string;
-    generatedAt: string;
-  }> {
-    return this.reportsService.exportEquipmentUsage(format, startDate, endDate);
+  ): Promise<void> {
+    const data = await this.reportsService.getEquipmentInventoryData({ site: undefined });
+    await this._streamFile(res, data, this._resolveFormat(format), startDate, endDate);
+  }
+
+  @Get('export/equipment-inventory')
+  @ApiOperation({ summary: '장비 현황 보고서 내보내기' })
+  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'site', required: false, description: '시험소 코드 (SUW/UIW/PYT)' })
+  @ApiQuery({ name: 'status', required: false, description: '장비 상태' })
+  @ApiQuery({ name: 'teamId', required: false, description: '팀 ID' })
+  @ApiResponse({ status: 200, description: '파일 스트림' })
+  @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SkipResponseTransform()
+  async exportEquipmentInventory(
+    @Res() res: Response,
+    @Query('format') format: string,
+    @Query('site') site?: string,
+    @Query('status') status?: string,
+    @Query('teamId') teamId?: string
+  ): Promise<void> {
+    const data = await this.reportsService.getEquipmentInventoryData({ site, status, teamId });
+    await this._streamFile(res, data, this._resolveFormat(format));
+  }
+
+  @Get('export/calibration-status')
+  @ApiOperation({ summary: '교정 현황 보고서 내보내기' })
+  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: '교정 상태 (scheduled/completed/failed)',
+  })
+  @ApiResponse({ status: 200, description: '파일 스트림' })
+  @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SkipResponseTransform()
+  async exportCalibrationStatus(
+    @Res() res: Response,
+    @Query('format') format: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('status') status?: string
+  ): Promise<void> {
+    const data = await this.reportsService.getCalibrationStatusData({ startDate, endDate, status });
+    await this._streamFile(res, data, this._resolveFormat(format));
+  }
+
+  @Get('export/utilization')
+  @ApiOperation({ summary: '장비 활용률 보고서 내보내기' })
+  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    description: 'last_week|last_month|last_quarter|last_year',
+  })
+  @ApiQuery({ name: 'site', required: false })
+  @ApiResponse({ status: 200, description: '파일 스트림' })
+  @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SkipResponseTransform()
+  async exportUtilization(
+    @Res() res: Response,
+    @Query('format') format: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('period') period?: string,
+    @Query('site') site?: string
+  ): Promise<void> {
+    const data = await this.reportsService.getUtilizationData({ startDate, endDate, period, site });
+    await this._streamFile(res, data, this._resolveFormat(format));
+  }
+
+  @Get('export/team-equipment')
+  @ApiOperation({ summary: '팀별 장비 현황 보고서 내보내기' })
+  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'site', required: false })
+  @ApiQuery({ name: 'teamId', required: false })
+  @ApiResponse({ status: 200, description: '파일 스트림' })
+  @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SkipResponseTransform()
+  async exportTeamEquipment(
+    @Res() res: Response,
+    @Query('format') format: string,
+    @Query('site') site?: string,
+    @Query('teamId') teamId?: string
+  ): Promise<void> {
+    const data = await this.reportsService.getTeamEquipmentData({ site, teamId });
+    await this._streamFile(res, data, this._resolveFormat(format));
+  }
+
+  @Get('export/maintenance')
+  @ApiOperation({ summary: '수리 및 점검 이력 보고서 내보내기' })
+  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'equipmentId', required: false })
+  @ApiResponse({ status: 200, description: '파일 스트림' })
+  @RequirePermissions(Permission.EXPORT_REPORTS)
+  @SkipResponseTransform()
+  async exportMaintenance(
+    @Res() res: Response,
+    @Query('format') format: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('equipmentId') equipmentId?: string
+  ): Promise<void> {
+    const data = await this.reportsService.getMaintenanceData({ startDate, endDate, equipmentId });
+    await this._streamFile(res, data, this._resolveFormat(format));
+  }
+
+  // ── Private 헬퍼 ────────────────────────────────────────────────────────
+
+  private _resolveFormat(raw: string): ReportFormat {
+    return VALID_FORMATS.has(raw as ReportFormat) ? (raw as ReportFormat) : 'excel';
+  }
+
+  private async _streamFile(
+    res: Response,
+    data: Awaited<ReturnType<ReportsService['getEquipmentInventoryData']>>,
+    format: ReportFormat,
+    _startDate?: string,
+    _endDate?: string
+  ): Promise<void> {
+    const { buffer, mimeType, filename } = await this.reportExportService.generate(data, format);
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Length': buffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    });
+    res.end(buffer);
   }
 }

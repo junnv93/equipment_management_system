@@ -57,6 +57,63 @@ export const AUDIT_LOG_SCOPE: FeatureScopePolicy = {
 };
 
 /**
+ * 장비(Equipment) 데이터 스코프 정책
+ *
+ * 장비는 사이트 단위로 관리됩니다 (UL-QP-18 관리번호 체계).
+ * - test_engineer: 소속 사이트 장비만 조회 (사이트 간 접근 불가)
+ * - technical_manager: 전체 사이트 장비 조회 (크로스 사이트 승인/반려 필요)
+ * - quality_manager: 전체 사이트 장비 조회 (교정계획서 검토 역할)
+ * - lab_manager: 전체 사이트 장비 조회 (시험소장은 자기 사이트 관리)
+ * - system_admin: 전체 사이트 장비 조회
+ */
+export const EQUIPMENT_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 장비' },
+  technical_manager: { type: 'all', label: '전체 장비' },
+  quality_manager: { type: 'all', label: '전체 장비' },
+  lab_manager: { type: 'all', label: '전체 장비' },
+  system_admin: { type: 'all', label: '전체 장비' },
+};
+
+/**
+ * 반출(Checkout) 데이터 스코프 정책
+ *
+ * 반출은 팀 단위로 관리됩니다. 크로스 사이트 반출(렌탈) 지원.
+ * - test_engineer: 소속 팀 반출만 조회 (팀 ⊂ 사이트이므로 사이트 필터 불필요)
+ * - technical_manager: 소속 팀 반출만 조회 (자기 팀 장비 승인/관리)
+ * - quality_manager: 소속 사이트 반출 조회 (사이트 전체 가시성 필요)
+ * - lab_manager: 소속 사이트 반출 조회 (사이트 전체 관리)
+ * - system_admin: 전체 반출 조회
+ *
+ * ⚠️ 크로스 사이트 렌탈: 반출 레코드의 borrowerSite는 사이트 필터와 별개.
+ * 팀 필터 적용 시 반출 요청한 팀 기준으로 조회됨.
+ */
+export const CHECKOUT_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'team', label: '소속 팀 반출' },
+  technical_manager: { type: 'team', label: '소속 팀 반출' },
+  quality_manager: { type: 'site', label: '소속 사이트 반출' },
+  lab_manager: { type: 'site', label: '소속 사이트 반출' },
+  system_admin: { type: 'all', label: '전체 반출' },
+};
+
+/**
+ * 부적합(NonConformance) 데이터 스코프 정책
+ *
+ * 부적합은 사이트 단위로 관리됩니다.
+ * - test_engineer: 소속 사이트 부적합만 조회
+ * - technical_manager: 소속 사이트 부적합 조회 (자기 사이트 장비 관리)
+ * - quality_manager: 소속 사이트 부적합 조회
+ * - lab_manager: 전체 부적합 조회 (시험소장은 전체 부적합 가시성 필요)
+ * - system_admin: 전체 부적합 조회
+ */
+export const NON_CONFORMANCE_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 부적합' },
+  technical_manager: { type: 'site', label: '소속 사이트 부적합' },
+  quality_manager: { type: 'site', label: '소속 사이트 부적합' },
+  lab_manager: { type: 'all', label: '전체 부적합' },
+  system_admin: { type: 'all', label: '전체 부적합' },
+};
+
+/**
  * 사용자 스코프 컨텍스트 (해석기 입력)
  */
 export interface UserScopeContext {
