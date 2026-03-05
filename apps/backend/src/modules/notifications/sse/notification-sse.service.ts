@@ -9,8 +9,8 @@ import { Subject, Observable, map, finalize, interval, merge } from 'rxjs';
  * - pushToUser(userId, data): 특정 사용자에게 알림 전송
  * - pushToUsers(userIds, data): 다수 사용자에게 배치 전송
  *
- * EventSource는 자동 재연결을 지원하므로, 커넥션 끊김 시 클라이언트가 자동 복구.
- * 서버 재시작 시 모든 Subject가 해제되므로 메모리 누수 없음.
+ * 다중 탭 지원: 같은 userId → 같은 Subject 재사용 (push 1번 → 모든 탭 수신)
+ * 수명 관리: Reference Counting — 마지막 구독 해제 시 Subject 자동 정리
  */
 
 export interface SseNotificationPayload {
@@ -41,6 +41,10 @@ export class NotificationSseService implements OnModuleDestroy {
   // userId → Subject (각 사용자별 SSE 스트림)
   private readonly connections = new Map<string, Subject<SseNotificationPayload>>();
 
+  // userId → 활성 구독 수 (Reference Counting)
+  // 마지막 구독 해제 시 Subject 정리 트리거
+  private readonly subscriptionCounts = new Map<string, number>();
+
   // heartbeat interval ID
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -55,16 +59,22 @@ export class NotificationSseService implements OnModuleDestroy {
    * 사용자별 SSE 스트림 생성
    *
    * Observable<MessageEvent>를 반환하여 NestJS @Sse()와 호환.
-   * 클라이언트 연결 해제 시 finalize()에서 자동 정리.
+   * 클라이언트 연결 해제 시 finalize()에서 refcount 감소 → 마지막 구독이면 Subject 정리.
+   *
+   * 다중 탭: 같은 userId → 같은 Subject 공유 → push 1번으로 모든 탭에 전달
    */
   createStream(userId: string): Observable<MessageEvent> {
-    // 기존 커넥션이 있으면 재사용 (같은 사용자 다중 탭 = 같은 Subject)
+    // 기존 커넥션이 없으면 생성 (다중 탭 = 같은 Subject 공유)
     if (!this.connections.has(userId)) {
       this.connections.set(userId, new Subject<SseNotificationPayload>());
+      this.subscriptionCounts.set(userId, 0);
       this.logger.debug(`SSE 커넥션 생성: userId=${userId}`);
     }
 
     const subject = this.connections.get(userId)!;
+    const newCount = (this.subscriptionCounts.get(userId) ?? 0) + 1;
+    this.subscriptionCounts.set(userId, newCount);
+    this.logger.debug(`SSE 구독 추가: userId=${userId}, 활성 구독=${newCount}`);
 
     // 알림 스트림
     const notifications$ = subject.pipe(
@@ -83,7 +93,20 @@ export class NotificationSseService implements OnModuleDestroy {
 
     return merge(notifications$, heartbeat$).pipe(
       finalize(() => {
-        this.logger.debug(`SSE 구독 해제: userId=${userId}`);
+        const remaining = (this.subscriptionCounts.get(userId) ?? 1) - 1;
+        this.subscriptionCounts.set(userId, remaining);
+        this.logger.debug(`SSE 구독 해제: userId=${userId}, 남은 구독=${remaining}`);
+
+        // 마지막 구독이 해제되면 Subject를 정리하여 메모리 누수 방지
+        if (remaining <= 0) {
+          const s = this.connections.get(userId);
+          if (s && !s.closed) {
+            s.complete();
+          }
+          this.connections.delete(userId);
+          this.subscriptionCounts.delete(userId);
+          this.logger.debug(`SSE 커넥션 정리 (마지막 구독 해제): userId=${userId}`);
+        }
       })
     );
   }
@@ -123,6 +146,7 @@ export class NotificationSseService implements OnModuleDestroy {
     if (subject) {
       subject.complete();
       this.connections.delete(userId);
+      this.subscriptionCounts.delete(userId);
       this.logger.debug(`SSE 강제 종료: userId=${userId}`);
     }
   }
@@ -130,16 +154,16 @@ export class NotificationSseService implements OnModuleDestroy {
   /**
    * 30초 주기 heartbeat 시작
    *
-   * SSE 커넥션은 프록시/로드밸런서에 의해 타임아웃될 수 있으므로,
-   * 주기적 heartbeat(comment)로 커넥션 유지.
-   * NestJS의 경우 빈 comment는 클라이언트에서 무시됨.
+   * closed된 Subject(예외 상황으로 refcount 오차 발생 시)를 주기적으로 정리.
+   * 정상 흐름에서는 finalize()의 refcount 방식이 처리하므로 이 정리는 안전망 역할.
    */
   private startHeartbeat(): void {
     this.heartbeatInterval = setInterval(() => {
-      // closed된 Subject 정리
       for (const [userId, subject] of this.connections) {
         if (subject.closed) {
           this.connections.delete(userId);
+          this.subscriptionCounts.delete(userId);
+          this.logger.debug(`SSE 정리 (closed Subject): userId=${userId}`);
         }
       }
     }, this.HEARTBEAT_INTERVAL_MS);
@@ -158,6 +182,7 @@ export class NotificationSseService implements OnModuleDestroy {
       subject.complete();
       this.connections.delete(userId);
     }
+    this.subscriptionCounts.clear();
 
     this.logger.log('SSE 서비스 종료: 모든 커넥션 해제');
   }

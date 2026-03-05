@@ -14,6 +14,7 @@
  */
 
 import { Permission, type NotificationCategory } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
 // ============================================================================
@@ -23,8 +24,26 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
 // NotificationCategory는 @equipment-management/shared-constants에서 import (SSOT)
 export type { NotificationCategory };
 
+/** 알림 수신 범위 */
+export type NotificationScope = 'team' | 'site' | 'all';
+
 export type RecipientStrategy =
-  | { type: 'permission'; permission: Permission; scope: 'team' | 'site' | 'all' }
+  | {
+      type: 'permission';
+      permission: Permission;
+      /** 역할별 roleScopes가 없을 때 적용되는 기본 범위 */
+      scope: NotificationScope;
+      /**
+       * 역할별 범위 오버라이드 (SSOT: 역할에 따라 다른 수신 범위 지정)
+       *
+       * 예시:
+       *   roleScopes: { lab_manager: 'site', system_admin: 'all' }
+       * → lab_manager는 소속 사이트 전체, system_admin은 전사 범위로 수신
+       * → 명시되지 않은 역할은 기본 scope 적용
+       * → 'skip': 해당 역할은 이 전략에서 제외 (다른 composite 전략으로 처리 시)
+       */
+      roleScopes?: Partial<Record<UserRole, NotificationScope | 'skip'>>;
+    }
   | { type: 'actor'; field: string }
   | { type: 'team'; field: string }
   | { type: 'composite'; strategies: RecipientStrategy[] };
@@ -60,6 +79,8 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.APPROVE_CHECKOUT,
       scope: 'team',
+      // lab_manager: 소속 사이트 전체 반출 감독, system_admin: 전사 모니터링
+      roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: '/admin/checkout-approvals',
     entityType: 'checkout',
@@ -114,6 +135,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.COMPLETE_CHECKOUT,
       scope: 'team',
+      roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: '/checkouts/{{checkoutId}}',
     entityType: 'checkout',
@@ -155,7 +177,12 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'composite',
       strategies: [
         { type: 'actor', field: 'requesterId' },
-        { type: 'permission', permission: Permission.APPROVE_CHECKOUT, scope: 'team' },
+        {
+          type: 'permission',
+          permission: Permission.APPROVE_CHECKOUT,
+          scope: 'team',
+          roleScopes: { lab_manager: 'site', system_admin: 'all' },
+        },
       ],
     },
     linkTemplate: '/checkouts/{{checkoutId}}',
@@ -177,6 +204,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.APPROVE_CALIBRATION,
       scope: 'team',
+      roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: '/admin/calibration-approvals',
     entityType: 'calibration',
@@ -232,7 +260,17 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'composite',
       strategies: [
         { type: 'team', field: 'teamId' },
-        { type: 'permission', permission: Permission.APPROVE_CALIBRATION, scope: 'team' },
+        {
+          type: 'permission',
+          permission: Permission.APPROVE_CALIBRATION,
+          scope: 'team',
+          // technical_manager는 team 전략에서 이미 처리, lab_manager·system_admin만 추가
+          roleScopes: {
+            technical_manager: 'skip',
+            lab_manager: 'site',
+            system_admin: 'all',
+          },
+        },
       ],
     },
     linkTemplate: '/equipment/{{equipmentId}}',
@@ -253,6 +291,8 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.REVIEW_CALIBRATION_PLAN,
       scope: 'site',
+      // system_admin은 전사 교정계획서를 모니터링
+      roleScopes: { system_admin: 'all' },
     },
     linkTemplate: '/calibration-plans?planId={{planId}}',
     entityType: 'calibration_plan',
@@ -268,6 +308,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.APPROVE_CALIBRATION_PLAN,
       scope: 'site',
+      roleScopes: { system_admin: 'all' },
     },
     linkTemplate: '/calibration-plans?planId={{planId}}',
     entityType: 'calibration_plan',
@@ -319,6 +360,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.CLOSE_NON_CONFORMANCE,
       scope: 'team',
+      roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: '/admin/non-conformance-approvals',
     entityType: 'non_conformance',
@@ -362,6 +404,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.APPROVE_EQUIPMENT,
       scope: 'team',
+      roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: '/admin/equipment-approvals',
     entityType: 'equipment_request',
@@ -406,6 +449,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.REVIEW_DISPOSAL,
       scope: 'team',
+      roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: '/admin/disposal-approvals',
     entityType: 'disposal',
@@ -423,6 +467,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.APPROVE_DISPOSAL,
       scope: 'site',
+      roleScopes: { system_admin: 'all' },
     },
     linkTemplate: '/admin/disposal-approvals',
     entityType: 'disposal',
@@ -466,6 +511,7 @@ export const NOTIFICATION_REGISTRY: Record<string, NotificationConfig> = {
       type: 'permission',
       permission: Permission.APPROVE_EQUIPMENT_IMPORT,
       scope: 'team',
+      roleScopes: { lab_manager: 'site', system_admin: 'all' },
     },
     linkTemplate: '/admin/equipment-import-approvals',
     entityType: 'equipment_import',
