@@ -269,23 +269,22 @@ export class AuthService {
     // Azure AD 그룹 패턴: LST.{SITE}.{TEAM}
     // 예: LST.SUW.RF (수원 FCC EMC/RF팀)
 
-    // ✅ Azure AD 그룹 → 팀 UUID 매핑
+    // ✅ Azure AD 그룹 → 팀 UUID 매핑 (환경변수 기반 — 배포 환경에서 실제 UUID로 교체)
     // 팀 이름은 분류 이름과 동일: FCC EMC/RF, General EMC, General RF, SAR, Automotive EMC
+    const cfg = this.configService;
     const teamMapping: Record<'suwon' | 'uiwang' | 'pyeongtaek', Record<string, string>> = {
       suwon: {
-        // 수원 사이트 팀 (Azure AD 그룹 Object ID 기반)
-        RF: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // LST.SUW.RF → FCC EMC/RF (E)
-        SAR: '7fd28076-fd5e-4d36-b051-bbf8a97b82db', // LST.SUW.SAR → SAR (S)
-        EMC: 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289', // LST.SUW.EMC → General EMC (R)
-        Automotive: 'f0a32655-00f9-4ecd-b43c-af4faed499b6', // LST.SUW.Automotive → Automotive EMC (A)
+        RF: cfg.get<string>('AZURE_TEAM_ID_SUW_RF') ?? '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+        SAR: cfg.get<string>('AZURE_TEAM_ID_SUW_SAR') ?? '7fd28076-fd5e-4d36-b051-bbf8a97b82db',
+        EMC: cfg.get<string>('AZURE_TEAM_ID_SUW_EMC') ?? 'bb6c860d-9d7c-4e2d-b289-2b2e416ec289',
+        Automotive:
+          cfg.get<string>('AZURE_TEAM_ID_SUW_AUTO') ?? 'f0a32655-00f9-4ecd-b43c-af4faed499b6',
       },
       uiwang: {
-        // 의왕 사이트 팀 - General RF만 존재
-        RF: 'a1b2c3d4-e5f6-4789-abcd-ef0123456789', // LST.UIW.RF → General RF (W)
+        RF: cfg.get<string>('AZURE_TEAM_ID_UIW_RF') ?? '',
       },
       pyeongtaek: {
-        // 평택 사이트 팀 - Automotive EMC만 존재
-        Automotive: 'b2c3d4e5-f6a7-4890-bcde-f01234567890', // LST.PYT.Automotive → Automotive EMC (A)
+        Automotive: cfg.get<string>('AZURE_TEAM_ID_PYT_AUTO') ?? '',
       },
     };
 
