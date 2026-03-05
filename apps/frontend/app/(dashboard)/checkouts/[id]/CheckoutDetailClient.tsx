@@ -53,6 +53,7 @@ import {
 } from '@/lib/design-tokens';
 import { CheckoutStatus } from '@equipment-management/schemas';
 import { CHECKOUT_PURPOSE_STYLES } from '@equipment-management/shared-constants';
+import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
@@ -78,6 +79,9 @@ export default function CheckoutDetailClient({
   const t = useTranslations('checkouts');
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
+  const { hasRole } = useAuth();
+  // 승인/반출 시작/반입 승인: technical_manager, lab_manager 전용
+  const canApprove = hasRole(['technical_manager', 'lab_manager']);
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
@@ -245,17 +249,12 @@ export default function CheckoutDetailClient({
     approveReturnMutation.mutate();
   };
 
-  // 액션 버튼 결정
-  // ⚠️ TODO: 역할 기반 버튼 표시 구현 필요
-  // - 현재: 모든 사용자에게 반출 상태에 따라 버튼 표시
-  // - 필요: technical_manager, lab_manager만 "반출 시작", "반출 승인" 버튼 표시
-  // - 참고: Permission.START_CHECKOUT, Permission.APPROVE_CHECKOUT (role-permissions.ts)
-  // - 구현 예: useAuth().hasRole(['technical_manager', 'lab_manager'])
+  // 액션 버튼 결정 (역할 기반)
   const renderActions = () => {
     const buttons: React.ReactNode[] = [];
 
-    // 승인 대기 상태
-    if (checkout.status === 'pending') {
+    // 승인 대기 상태 — technical_manager, lab_manager만 승인/반려 가능
+    if (checkout.status === 'pending' && canApprove) {
       buttons.push(
         <Button
           key="approve"
@@ -279,7 +278,8 @@ export default function CheckoutDetailClient({
     }
 
     // 승인됨 상태 - 교정/수리만 반출 시작 가능 (대여는 상태 확인으로 진행)
-    if (checkout.status === 'approved' && checkout.purpose !== 'rental') {
+    // technical_manager, lab_manager만 반출 시작 가능
+    if (checkout.status === 'approved' && checkout.purpose !== 'rental' && canApprove) {
       buttons.push(
         <Button
           key="start"
@@ -333,8 +333,8 @@ export default function CheckoutDetailClient({
       );
     }
 
-    // 반입 완료 상태 - 최종 승인 가능
-    if (checkout.status === 'returned') {
+    // 반입 완료 상태 - 최종 승인 가능 (technical_manager, lab_manager만)
+    if (checkout.status === 'returned' && canApprove) {
       buttons.push(
         <Button
           key="approve-return"
