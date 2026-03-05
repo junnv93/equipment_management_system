@@ -1,0 +1,35 @@
+{
+  "registry": {
+    "title": "소프트웨어 통합 관리대장",
+    "subtitle": "전체 장비의 소프트웨어 현황을 조회합니다",
+    "stats": {
+      "totalEquipments": "소프트웨어 보유 장비",
+      "equipmentsDesc": "소프트웨어가 등록된 장비",
+      "totalTypes": "소프트웨어 종류",
+      "typesDesc": "고유 소프트웨어 종류",
+      "lastUpdated": "마지막 업데이트",
+      "updatedDesc": "관리대장 생성 시간"
+    },
+    "summary": {
+      "title": "소프트웨어별 현황",
+      "description": "각 소프트웨어를 사용하는 장비 수와 버전 정보",
+      "equipmentCount": "{count}대",
+      "version": "버전: {versions}",
+      "noVersion": "정보 없음"
+    },
+    "table": {
+      "title": "장비별 소프트웨어 상세",
+      "description": "총 {count}개의 소프트웨어가 등록되어 있습니다",
+      "searchPlaceholder": "소프트웨어명 또는 장비명 검색...",
+      "empty": "등록된 소프트웨어가 없습니다",
+      "headers": {
+        "equipmentName": "장비명",
+        "softwareName": "소프트웨어명",
+        "version": "버전",
+        "type": "타입",
+        "lastUpdated": "마지막 업데이트"
+      },
+      "viewHistory": "이력 보기"
+    }
+  }
+}

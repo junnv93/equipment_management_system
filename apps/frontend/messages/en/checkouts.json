@@ -318,5 +318,81 @@
   "list": {
     "empty": "No checkouts found.",
     "emptyDescription": "Start by submitting a checkout request."
+  },
+  "returnPage": {
+    "backToDetail": "Back to Detail",
+    "currentStatus": "Current Status: {status}",
+    "overdueAlert": "Expected return date ({date}) has passed.",
+    "equipmentMore": "and {count} more",
+    "noEquipmentInfo": "No equipment info",
+    "conditionHistoryDesc": "Condition checks recorded during the rental period.",
+    "conditionAppearanceStatus": "Appearance: {status}",
+    "conditionOperationStatus": "Operation: {status}",
+    "returnError": "Failed to process return.",
+    "inspectionTitle": "Return Inspection",
+    "inspectionDesc": "Please verify the inspection items before returning the equipment. Technical manager approval is required after inspection."
+  },
+  "pendingChecks": {
+    "title": "Pending Checks",
+    "subtitle": "List of rental items you need to confirm.",
+    "backToList": "Back to Checkout List",
+    "filters": {
+      "all": "All",
+      "lender": "Lender",
+      "borrower": "Borrower"
+    },
+    "labels": {
+      "preCheckout": "Pre-Checkout Check",
+      "receiveCheck": "Receive Check",
+      "preReturn": "Pre-Return Check",
+      "returnCheck": "Return Check"
+    },
+    "roles": {
+      "lender": "Lender",
+      "borrower": "Borrower"
+    },
+    "badge": {
+      "required": "Check Required"
+    },
+    "fields": {
+      "managementNumber": "Mgmt No.:",
+      "expectedReturn": "Expected Return:"
+    },
+    "noEquipmentInfo": "No equipment info",
+    "equipmentMore": "and {count} more",
+    "loading": "Loading data...",
+    "empty": {
+      "title": "No items to check",
+      "description": "There are no rental items requiring confirmation."
+    },
+    "alertDescription": "{label} is required for this item.",
+    "actionButton": "Proceed with {label}"
+  },
+  "conditionCheck": {
+    "backToDetail": "Back to Detail",
+    "title": "Condition Check",
+    "progressTitle": "Progress Status",
+    "currentStatus": "Current Status: {status}",
+    "previousCheckTitle": "Previous Check Record",
+    "previousCheckDesc": "Condition recorded at {step}.",
+    "appearanceLabel": "Appearance Status",
+    "operationLabel": "Operation Status",
+    "accessoriesLabel": "Accessories Status",
+    "formDescription": "Check and record the current condition of the equipment.",
+    "completedChecksTitle": "Completed Check Records",
+    "abnormalContent": "Abnormal Content:",
+    "submitError": "Failed to register condition check.",
+    "statusNormal": "Normal",
+    "statusAbnormal": "Abnormal",
+    "accessoriesComplete": "Complete",
+    "accessoriesIncomplete": "Incomplete",
+    "appearanceStatus": "Appearance: {status}",
+    "operationStatus": "Operation: {status}",
+    "guidance": {
+      "lender_checkout": "Check and record the current equipment condition before checkout. This record will be used for comparison at return.",
+      "borrower_receive": "You have received the equipment. Check and record the equipment condition at the time of receipt.",
+      "borrower_return": "Check and record the current equipment condition before return. It will be compared with the condition at receipt.",
+      "lender_return": "Check the condition of the returned equipment. Record any changes compared to the pre-checkout condition."
+    }
   }
 }

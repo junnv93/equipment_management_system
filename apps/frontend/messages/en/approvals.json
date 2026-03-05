@@ -113,6 +113,9 @@
   },
   "rejectModal": {
     "title": "Reject",
+    "defaultTitle": "Reject Request",
+    "defaultDescription": "Please enter a rejection reason. A rejection reason is required.",
+    "reasonRequired": "Rejection Reason *",
     "templatesLabel": "Reason Templates",
     "reasonLabel": "Rejection Reason (min. 10 characters)",
     "reasonPlaceholder": "Enter rejection reason...",
@@ -385,6 +388,22 @@
       "noEquipment": "No equipment info",
       "reasonLabel": "Rejection Reason (Required)",
       "reasonPlaceholder": "Enter rejection reason (e.g., inspection items not met, operation check incomplete)"
+    }
+  },
+  "equipmentApprovals": {
+    "title": "Equipment Approval Management",
+    "description": "Manage pending equipment registration/update/deletion requests",
+    "listTitle": "Pending Approval Requests",
+    "requestContent": "Request Content:",
+    "toasts": {
+      "approveSuccess": "Approval Complete",
+      "approveSuccessDesc": "Request has been approved.",
+      "approveError": "Approval Failed",
+      "approveErrorFallback": "An error occurred while approving the request.",
+      "rejectSuccess": "Rejection Complete",
+      "rejectSuccessDesc": "Request has been rejected.",
+      "rejectError": "Rejection Failed",
+      "rejectErrorFallback": "An error occurred while rejecting the request."
     }
   }
 }

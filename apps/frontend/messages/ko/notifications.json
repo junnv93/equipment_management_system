@@ -77,6 +77,30 @@
     "system": { "label": "시스템", "description": "시스템 점검 및 중요 공지 알림" }
   },
   "comingSoon": "준비중",
+  "list": {
+    "unreadCount": "읽지 않은 알림 {count}건",
+    "noUnread": "새로운 알림이 없습니다",
+    "markAllRead": "모두 읽음으로 표시",
+    "categoryAll": "전체",
+    "tabs": {
+      "all": "전체",
+      "unread": "안읽음"
+    },
+    "categoryFilter": "카테고리",
+    "searchPlaceholder": "알림 검색…",
+    "pagination": {
+      "total": "총 {total}건 중 {start}–{end}건",
+      "previous": "이전",
+      "next": "다음"
+    },
+    "allRead": {
+      "title": "모든 알림을 확인했습니다",
+      "description": "새로운 알림이 있을 때 이곳에 표시됩니다."
+    },
+    "deleteAriaLabel": "알림 삭제",
+    "categoryAriaLabel": "알림 카테고리 필터",
+    "searchAriaLabel": "알림 검색"
+  },
   "alerts": {
     "title": "알림 센터",
     "markAllRead": "모두 읽음 표시",

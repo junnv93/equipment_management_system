@@ -57,7 +57,26 @@
     "serverError": "A server error occurred.",
     "networkError": "A network error occurred.",
     "versionConflict": "Another user made changes at the same time. Please refresh and try again.",
-    "tryAgain": "Try Again"
+    "tryAgain": "Try Again",
+    "login": "Login",
+    "details": "Details",
+    "codeLabel": "Code:",
+    "httpStatusLabel": "HTTP Status:",
+    "timestampLabel": "Time:",
+    "detailLabel": "Detail:",
+    "solutionsTitle": "Solutions",
+    "close": "Close",
+    "partialSaveTitle": "Partial Save Complete",
+    "partialSaveFailed": "The following {count} items failed to save:",
+    "viewFailed": "View Failed Items",
+    "partialSaveNote": "Notice",
+    "partialSaveNoteDesc": "You can re-add the failed history on the equipment detail page.",
+    "historyTypeLabels": {
+      "location": "Location History",
+      "maintenance": "Maintenance History",
+      "incident": "Incident History",
+      "calibration": "Calibration History"
+    }
   },
   "time": {
     "today": "Today",
@@ -184,5 +203,22 @@
   "datePicker": {
     "selectDate": "Select date",
     "selectRange": "Select date range"
+  },
+  "fileUpload": {
+    "label": "Attach Files",
+    "description": "You can upload PDF, image, and document files. (Max 10MB)",
+    "sizeTooLarge": "File size cannot exceed {maxSizeMB}MB.",
+    "unsupportedType": "Unsupported file type. ({accept})",
+    "maxFilesExceeded": "You can upload a maximum of {maxFiles} files.",
+    "duplicate": "{fileName}: This file has already been added.",
+    "uploading": "Uploading...",
+    "success": "Complete",
+    "error": "Error",
+    "dropHere": "Drop files here",
+    "dragOrClick": "Drag or click to upload files",
+    "selectFile": "Select File",
+    "uploadedFiles": "Uploaded Files ({count}/{max})",
+    "deleteAll": "Delete All",
+    "deleteFile": "Remove File"
   }
 }

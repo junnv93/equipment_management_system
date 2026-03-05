@@ -53,6 +53,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     'disposal',
     'non-conformances',
     'audit',
+    'software',
   ];
 
   const loadedMessages: Record<string, Record<string, unknown>> = {};

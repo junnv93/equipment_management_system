@@ -1,5 +1,23 @@
 {
   "title": "Settings",
+  "profile": {
+    "title": "My Profile",
+    "description": "Information for the currently logged-in user. Synchronized from Azure AD.",
+    "loadError": "Failed to load profile information.",
+    "notRegistered": "Not registered",
+    "azureAdNote": "Profile information is synchronized from <strong>Azure Active Directory</strong>. For changes, please contact your IT administrator.",
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "site": "Site",
+      "team": "Team",
+      "position": "Position",
+      "department": "Department",
+      "phone": "Office Phone",
+      "employeeId": "Employee ID"
+    }
+  },
   "nav": {
     "display": "Display Settings",
     "notifications": "Notification Settings",
@@ -10,8 +28,12 @@
   "display": {
     "title": "Display Settings",
     "description": "Customize the default display options for list pages.",
-    "language": "언어 / Language",
+    "language": "Language",
     "languageDescription": "Select the system display language. Changes take effect immediately.",
+    "languageOptions": {
+      "ko": "한국어",
+      "en": "English"
+    },
     "itemsPerPage": "Items Per Page",
     "itemsPerPageDescription": "Set the default number of items to display on list pages.",
     "itemsPerPageOptions": {

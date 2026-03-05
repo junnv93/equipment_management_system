@@ -36,5 +36,105 @@
     "title": "Edit Team",
     "description": "Edit team information",
     "backToDetail": "Back to team detail"
+  },
+  "member": {
+    "searchPlaceholder": "Search team members...",
+    "searchAriaLabel": "Search team members",
+    "searchClear": "Clear search",
+    "roleFilterAriaLabel": "Role filter",
+    "allRoles": "All Roles",
+    "count": "{count} members",
+    "empty": {
+      "noResults": "No results found",
+      "noMembers": "No team members registered"
+    },
+    "inactive": "Inactive",
+    "table": {
+      "name": "Name",
+      "role": "Role",
+      "department": "Department",
+      "email": "Email",
+      "actionsLabel": "Actions"
+    },
+    "sendEmail": "Send Email",
+    "viewProfile": "View Profile",
+    "menuAriaLabel": "{name} menu",
+    "changeRoleButton": "Change to {role}",
+    "roleChangeDialog": {
+      "title": "Confirm Role Change",
+      "description": "Are you sure you want to change {name}'s role from {from} to {to}?",
+      "cancel": "Cancel",
+      "confirm": "Change Role"
+    },
+    "roleChangeSuccess": "Role changed successfully.",
+    "errorLoad": "Unable to load team members"
+  },
+  "form": {
+    "basicInfo": "Basic Information",
+    "nameLabel": "Team Name *",
+    "namePlaceholder": "e.g., RF Test Team",
+    "nameDescription": "The display name for this team.",
+    "classificationLabel": "Team Classification",
+    "classificationPlaceholder": "Select classification",
+    "classificationDescription": "The team's area of expertise (RF, EMC, SAR, etc.).",
+    "siteLabel": "Site",
+    "sitePlaceholder": "Select site",
+    "siteDescription": "The laboratory site this team belongs to.",
+    "descriptionLabel": "Team Description",
+    "descriptionPlaceholder": "Describe the team's role and responsibilities",
+    "descriptionHint": "Up to 500 characters.",
+    "leaderLabel": "Team Leader (Optional)",
+    "leaderDescription": "Select a leader for this team. Leave blank if not assigned.",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "submitEdit": "Update",
+    "submitting": "Creating...",
+    "submittingEdit": "Updating...",
+    "createSuccess": "Team Created",
+    "createSuccessDesc": "{name} has been successfully created.",
+    "createError": "Team Creation Failed",
+    "createErrorFallback": "An error occurred while creating the team.",
+    "updateSuccess": "Team Updated",
+    "updateSuccessDesc": "{name} has been successfully updated.",
+    "updateError": "Team Update Failed",
+    "updateErrorFallback": "An error occurred while updating team information.",
+    "validation": {
+      "nameRequired": "Team name is required",
+      "nameMaxLength": "Team name must be 100 characters or less",
+      "descMaxLength": "Team description must be 500 characters or less",
+      "invalidUserId": "Invalid user ID"
+    }
+  },
+  "listContent": {
+    "searchPlaceholder": "Search teams...",
+    "searchAriaLabel": "Search teams",
+    "siteFilterAriaLabel": "Site filter",
+    "siteFilterPlaceholder": "Select site",
+    "allSites": "All Sites",
+    "classificationFilterAriaLabel": "Classification filter",
+    "allClassifications": "All Classifications",
+    "clearFilters": "Clear Filters",
+    "addTeam": "Add Team",
+    "errorLoad": "Unable to load team list",
+    "resultCount": "{count} teams",
+    "withFilter": " (filtered)",
+    "searchBadge": "Search: {term}",
+    "siteBadge": "Site: {site}",
+    "classificationBadge": "Classification: {classification}",
+    "empty": {
+      "noResults": "No results found",
+      "noTeams": "No teams registered",
+      "noResultsForSearch": "No results for \"{term}\".",
+      "noResultsForFilter": "No teams match the selected filters.",
+      "noTeamsDescription": "Register the first team.",
+      "clearFilters": "Clear Filters",
+      "addTeam": "Add Team"
+    }
+  },
+  "avatars": {
+    "memberPlaceholder": "Member {index}",
+    "groupAriaLabel": "Team members",
+    "moreAriaLabel": "View {count} more members",
+    "totalMembers": "{count} team members total"
   }
 }

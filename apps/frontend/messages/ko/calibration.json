@@ -172,6 +172,19 @@
       "confirmItemSuccessDesc": "항목이 확인되었습니다.",
       "confirmItemError": "확인 실패",
       "confirmItemErrorDesc": "항목 확인 중 오류가 발생했습니다."
+    },
+    "yearWithUnit": "{year}년",
+    "versionHistory": {
+      "title": "버전 히스토리",
+      "ariaLabel": "교정계획서 버전 목록",
+      "versionLabel": "버전 {version}",
+      "latestBadge": "최신",
+      "currentBadge": "현재",
+      "createdAt": "작성: {date}",
+      "approvedAt": "승인: {date}",
+      "viewButton": "보기",
+      "viewAriaLabel": "버전 {version} 새 탭에서 보기",
+      "currentSuffix": " - 현재 보고 있는 버전"
     }
   },
   "content": {
@@ -456,6 +469,44 @@
       "missingInfo": "필수 정보 누락",
       "selectYearAndSite": "연도와 시험소를 선택해주세요.",
       "selectTeam": "팀을 선택해주세요."
+    }
+  },
+  "factorsRegistry": {
+    "title": "보정계수 대장",
+    "subtitle": "전체 장비의 현재 적용 중인 보정계수 현황",
+    "csvExport": "CSV 내보내기",
+    "stats": {
+      "totalEquipments": "총 장비 수",
+      "equipmentsDesc": "보정계수가 등록된 장비",
+      "totalFactors": "총 보정계수",
+      "factorsDesc": "현재 적용 중인 보정계수",
+      "generatedAt": "생성일시"
+    },
+    "table": {
+      "title": "장비별 보정계수 현황",
+      "description": "각 장비를 클릭하면 상세 보정계수를 확인할 수 있습니다",
+      "searchPlaceholder": "장비 ID 또는 보정계수 검색...",
+      "expandAll": "모두 펼치기",
+      "collapseAll": "모두 접기",
+      "empty": "등록된 보정계수가 없습니다"
+    },
+    "factorCount": "보정계수 {count}개",
+    "headers": {
+      "type": "타입",
+      "name": "이름",
+      "value": "값",
+      "period": "적용 기간",
+      "approvedAt": "승인일"
+    },
+    "csv": {
+      "equipmentId": "장비 ID",
+      "factorType": "보정계수 타입",
+      "factorName": "보정계수 이름",
+      "value": "값",
+      "unit": "단위",
+      "effectiveDate": "적용 시작일",
+      "expiryDate": "만료일",
+      "approvedAt": "승인일"
     }
   }
 }

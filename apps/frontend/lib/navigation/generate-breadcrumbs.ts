@@ -31,6 +31,8 @@ function isUUID(str: string): boolean {
 export interface BreadcrumbItem {
   /** 표시 라벨 */
   label: string;
+  /** i18n 번역 키 (예: 'navigation.equipment') */
+  labelKey?: string;
   /** 링크 href */
   href: string;
   /** 선택적 아이콘 */
@@ -117,6 +119,7 @@ export function generateBreadcrumbs(
 
     return {
       label: actualLabel,
+      labelKey: routeMetadata.labelKey,
       href: actualHref,
       icon: routeMetadata.icon,
       current: index === parentChain.length - 1,

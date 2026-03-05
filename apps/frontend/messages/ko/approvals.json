@@ -113,6 +113,9 @@
   },
   "rejectModal": {
     "title": "반려",
+    "defaultTitle": "요청 반려",
+    "defaultDescription": "반려 사유를 입력해주세요. 반려 사유는 필수입니다.",
+    "reasonRequired": "반려 사유 *",
     "templatesLabel": "사유 템플릿",
     "reasonLabel": "반려 사유 (10자 이상 필수)",
     "reasonPlaceholder": "반려 사유를 입력하세요...",
@@ -385,6 +388,22 @@
       "noEquipment": "장비 정보 없음",
       "reasonLabel": "반려 사유 (필수)",
       "reasonPlaceholder": "반려 사유를 입력하세요 (예: 검사 항목 미충족, 작동 확인 미완료 등)"
+    }
+  },
+  "equipmentApprovals": {
+    "title": "장비 승인 관리",
+    "description": "승인 대기 중인 장비 등록/수정/삭제 요청을 관리합니다",
+    "listTitle": "승인 대기 요청",
+    "requestContent": "요청 내용:",
+    "toasts": {
+      "approveSuccess": "승인 완료",
+      "approveSuccessDesc": "요청이 승인되었습니다.",
+      "approveError": "승인 실패",
+      "approveErrorFallback": "요청 승인 중 오류가 발생했습니다.",
+      "rejectSuccess": "반려 완료",
+      "rejectSuccessDesc": "요청이 반려되었습니다.",
+      "rejectError": "반려 실패",
+      "rejectErrorFallback": "요청 반려 중 오류가 발생했습니다."
     }
   }
 }

@@ -36,5 +36,105 @@
     "title": "팀 수정",
     "description": "팀 정보를 수정합니다",
     "backToDetail": "팀 상세로 돌아가기"
+  },
+  "member": {
+    "searchPlaceholder": "팀원 검색...",
+    "searchAriaLabel": "팀원 검색",
+    "searchClear": "검색 초기화",
+    "roleFilterAriaLabel": "역할 필터",
+    "allRoles": "전체 역할",
+    "count": "{count}명",
+    "empty": {
+      "noResults": "검색 결과가 없습니다",
+      "noMembers": "등록된 팀원이 없습니다"
+    },
+    "inactive": "비활성",
+    "table": {
+      "name": "이름",
+      "role": "역할",
+      "department": "부서",
+      "email": "이메일",
+      "actionsLabel": "작업"
+    },
+    "sendEmail": "이메일 보내기",
+    "viewProfile": "프로필 보기",
+    "menuAriaLabel": "{name} 메뉴",
+    "changeRoleButton": "{role}로 변경",
+    "roleChangeDialog": {
+      "title": "역할 변경 확인",
+      "description": "{name}님의 역할을 {from}에서 {to}(으)로 변경하시겠습니까?",
+      "cancel": "취소",
+      "confirm": "역할 변경"
+    },
+    "roleChangeSuccess": "역할이 변경되었습니다.",
+    "errorLoad": "팀원 목록을 불러올 수 없습니다"
+  },
+  "form": {
+    "basicInfo": "기본 정보",
+    "nameLabel": "팀 이름 *",
+    "namePlaceholder": "예: RF 테스트팀",
+    "nameDescription": "팀의 표시 이름입니다.",
+    "classificationLabel": "팀 분류",
+    "classificationPlaceholder": "팀 분류 선택",
+    "classificationDescription": "RF, EMC, SAR 등 팀의 전문 분야입니다.",
+    "siteLabel": "소속 사이트",
+    "sitePlaceholder": "사이트 선택",
+    "siteDescription": "팀이 소속된 시험소 사이트입니다.",
+    "descriptionLabel": "팀 설명",
+    "descriptionPlaceholder": "팀의 역할과 담당 업무를 설명해주세요",
+    "descriptionHint": "최대 500자까지 입력할 수 있습니다.",
+    "leaderLabel": "팀장 (선택)",
+    "leaderDescription": "팀을 이끌 책임자를 선택합니다. 선택하지 않으면 비워둡니다.",
+    "cancel": "취소",
+    "submit": "생성",
+    "submitEdit": "수정",
+    "submitting": "생성 중...",
+    "submittingEdit": "수정 중...",
+    "createSuccess": "팀이 생성되었습니다",
+    "createSuccessDesc": "{name} 팀이 성공적으로 생성되었습니다.",
+    "createError": "팀 생성 실패",
+    "createErrorFallback": "팀을 생성하는 중 오류가 발생했습니다.",
+    "updateSuccess": "팀이 수정되었습니다",
+    "updateSuccessDesc": "{name} 팀 정보가 성공적으로 수정되었습니다.",
+    "updateError": "팀 수정 실패",
+    "updateErrorFallback": "팀 정보를 수정하는 중 오류가 발생했습니다.",
+    "validation": {
+      "nameRequired": "팀 이름은 필수입니다",
+      "nameMaxLength": "팀 이름은 100자 이내여야 합니다",
+      "descMaxLength": "팀 설명은 500자 이내여야 합니다",
+      "invalidUserId": "유효한 사용자 ID가 아닙니다"
+    }
+  },
+  "listContent": {
+    "searchPlaceholder": "팀 검색...",
+    "searchAriaLabel": "팀 검색",
+    "siteFilterAriaLabel": "사이트 필터",
+    "siteFilterPlaceholder": "사이트 선택",
+    "allSites": "전체 사이트",
+    "classificationFilterAriaLabel": "팀 분류 필터",
+    "allClassifications": "전체 분류",
+    "clearFilters": "필터 초기화",
+    "addTeam": "팀 추가",
+    "errorLoad": "팀 목록을 불러올 수 없습니다",
+    "resultCount": "{count}개의 팀",
+    "withFilter": " (필터 적용됨)",
+    "searchBadge": "검색: {term}",
+    "siteBadge": "사이트: {site}",
+    "classificationBadge": "분류: {classification}",
+    "empty": {
+      "noResults": "검색 결과가 없습니다",
+      "noTeams": "등록된 팀이 없습니다",
+      "noResultsForSearch": "\"{term}\"에 대한 검색 결과가 없습니다.",
+      "noResultsForFilter": "선택한 필터 조건에 맞는 팀이 없습니다.",
+      "noTeamsDescription": "첫 번째 팀을 등록해보세요.",
+      "clearFilters": "필터 초기화",
+      "addTeam": "팀 추가"
+    }
+  },
+  "avatars": {
+    "memberPlaceholder": "팀원 {index}",
+    "groupAriaLabel": "팀원 목록",
+    "moreAriaLabel": "나머지 {count}명 보기",
+    "totalMembers": "총 {count}명의 팀원"
   }
 }

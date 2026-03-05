@@ -95,6 +95,30 @@
     "system": { "label": "System", "description": "System maintenance and important announcements" }
   },
   "comingSoon": "Coming Soon",
+  "list": {
+    "unreadCount": "{count} unread notifications",
+    "noUnread": "No new notifications",
+    "markAllRead": "Mark all as read",
+    "categoryAll": "All",
+    "tabs": {
+      "all": "All",
+      "unread": "Unread"
+    },
+    "categoryFilter": "Category",
+    "searchPlaceholder": "Search notifications…",
+    "pagination": {
+      "total": "{start}–{end} of {total}",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "allRead": {
+      "title": "All caught up",
+      "description": "New notifications will appear here."
+    },
+    "deleteAriaLabel": "Delete notification",
+    "categoryAriaLabel": "Notification category filter",
+    "searchAriaLabel": "Search notifications"
+  },
   "alerts": {
     "title": "Notification Center",
     "markAllRead": "Mark All as Read",

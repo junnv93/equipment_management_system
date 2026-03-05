@@ -1,5 +1,14 @@
 import { format, parseISO, isValid, formatDistanceToNow } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { ko, enUS, type Locale } from 'date-fns/locale';
+
+/**
+ * 로케일 문자열 → date-fns Locale 객체 매핑
+ * useDateFormatter 훅에서 next-intl useLocale()과 연동하여 사용
+ */
+export const DATE_FNS_LOCALES: Record<string, Locale> = {
+  ko,
+  en: enUS,
+};
 
 /**
  * string | Date 값을 안전하게 Date 객체로 변환합니다.
@@ -32,7 +41,8 @@ export function toDate(value: string | Date | null | undefined): Date | null {
 export function formatDate(
   date: string | Date | undefined | null,
   formatStr?: string,
-  includeTime: boolean = false
+  includeTime: boolean = false,
+  dateFnsLocale?: Locale
 ): string {
   if (!date) return '-';
 
@@ -45,7 +55,8 @@ export function formatDate(
 
     // formatStr이 제공되지 않은 경우 includeTime에 따라 기본 포맷 사용
     const defaultFormat = includeTime ? 'yyyy.MM.dd HH:mm' : 'yyyy.MM.dd';
-    return format(dateObj, formatStr || defaultFormat, { locale: ko });
+    const locale = dateFnsLocale ?? ko;
+    return format(dateObj, formatStr || defaultFormat, { locale });
   } catch (error) {
     console.error('Date formatting error:', error);
     return '-';
@@ -77,13 +88,17 @@ export function formatShortDate(date: string | Date | undefined | null): string 
  * @param date ISO 문자열 또는 Date 객체
  * @returns 상대 시간 문자열, 유효하지 않은 날짜는 '-'로 표시
  */
-export function formatRelativeTime(date: string | Date | undefined | null): string {
+export function formatRelativeTime(
+  date: string | Date | undefined | null,
+  dateFnsLocale?: Locale
+): string {
   if (!date) return '-';
 
   try {
     const dateObj = date instanceof Date ? date : parseISO(date);
     if (!isValid(dateObj)) return '-';
-    return formatDistanceToNow(dateObj, { addSuffix: true, locale: ko });
+    const locale = dateFnsLocale ?? ko;
+    return formatDistanceToNow(dateObj, { addSuffix: true, locale });
   } catch {
     return '-';
   }

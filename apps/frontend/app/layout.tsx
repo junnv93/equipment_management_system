@@ -7,6 +7,7 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { Providers } from '@/lib/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { DEFAULT_LOCALE } from '@equipment-management/schemas';
+import { LocaleHtmlSync } from '@/components/i18n/LocaleHtmlSync';
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
@@ -22,8 +23,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: '장비 관리 시스템',
-  description: '조직 내 장비 관리를 위한 통합 시스템',
+  title: 'Equipment Management System',
+  description: 'Integrated equipment management system for laboratories',
 };
 
 /**
@@ -81,7 +82,8 @@ async function IntlProvider({ children }: { children: React.ReactNode }) {
   const messages = await getMessages();
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider key={locale} locale={locale} messages={messages}>
+      <LocaleHtmlSync />
       <Providers>
         <div className="min-h-screen bg-background flex flex-col">{children}</div>
         <Toaster />

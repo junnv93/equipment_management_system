@@ -1,5 +1,23 @@
 {
   "title": "설정",
+  "profile": {
+    "title": "내 프로필",
+    "description": "현재 로그인한 사용자의 정보입니다. Azure AD에서 동기화됩니다.",
+    "loadError": "프로필 정보를 불러오는데 실패했습니다.",
+    "notRegistered": "미등록",
+    "azureAdNote": "프로필 정보는 <strong>Azure Active Directory</strong>에서 동기화됩니다. 수정이 필요한 경우 IT 관리자에게 문의하세요.",
+    "fields": {
+      "name": "이름",
+      "email": "이메일",
+      "role": "역할",
+      "site": "사이트",
+      "team": "팀",
+      "position": "직위",
+      "department": "부서",
+      "phone": "회사 전화",
+      "employeeId": "사원번호"
+    }
+  },
   "nav": {
     "display": "표시 설정",
     "notifications": "알림 설정",
@@ -10,8 +28,12 @@
   "display": {
     "title": "표시 설정",
     "description": "목록 페이지의 기본 표시 옵션을 사용자화할 수 있습니다.",
-    "language": "언어 / Language",
+    "language": "언어",
     "languageDescription": "시스템 표시 언어를 선택합니다. 변경 후 즉시 적용됩니다.",
+    "languageOptions": {
+      "ko": "한국어",
+      "en": "English"
+    },
     "itemsPerPage": "페이지당 항목 수",
     "itemsPerPageDescription": "목록 페이지에서 기본으로 표시할 항목 수를 설정합니다.",
     "itemsPerPageOptions": {

@@ -1,0 +1,35 @@
+{
+  "registry": {
+    "title": "Software Integrated Registry",
+    "subtitle": "View software status of all equipment",
+    "stats": {
+      "totalEquipments": "Equipment with Software",
+      "equipmentsDesc": "Equipment with registered software",
+      "totalTypes": "Software Types",
+      "typesDesc": "Unique software types",
+      "lastUpdated": "Last Updated",
+      "updatedDesc": "Registry generation time"
+    },
+    "summary": {
+      "title": "Software Status by Type",
+      "description": "Number of equipment and version info per software",
+      "equipmentCount": "{count} units",
+      "version": "Version: {versions}",
+      "noVersion": "No info"
+    },
+    "table": {
+      "title": "Software Detail by Equipment",
+      "description": "{count} software entries registered",
+      "searchPlaceholder": "Search by software name or equipment name...",
+      "empty": "No software registered",
+      "headers": {
+        "equipmentName": "Equipment",
+        "softwareName": "Software",
+        "version": "Version",
+        "type": "Type",
+        "lastUpdated": "Last Updated"
+      },
+      "viewHistory": "View History"
+    }
+  }
+}

@@ -1,5 +1,10 @@
 {
   "title": "Equipment Management",
+  "siteLabel": {
+    "suwon": "Suwon Lab",
+    "uiwang": "Uiwang Lab",
+    "pyeongtaek": "Pyeongtaek Lab"
+  },
   "subtitle": "Register, modify, and manage calibration records",
   "fields": {
     "name": "Equipment Name",
@@ -155,11 +160,6 @@
     "badgeCalibrationDue": "Cal. Due: {label}",
     "badgeTeam": "Team: {label}",
     "allDescription": "All equipment",
-    "siteLabel": {
-      "suwon": "Suwon Lab",
-      "uiwang": "Uiwang Lab",
-      "pyeongtaek": "Pyeongtaek Lab"
-    },
     "calibrationMethodLabel": {
       "external_calibration": "External Calibration",
       "self_inspection": "Self Inspection",
@@ -1143,6 +1143,88 @@
         "change": "Change",
         "repair": "Repair"
       }
+    }
+  },
+  "softwareHistory": {
+    "title": "Software Change History",
+    "back": "Go Back",
+    "createRequest": "Request Change",
+    "equipmentLabel": "{name} ({id})",
+    "dialog": {
+      "title": "Software Change Request",
+      "description": "Enter the software change details and verification record. Verification record is required.",
+      "softwareNameLabel": "Software Name",
+      "softwareNamePlaceholder": "e.g. EMC32",
+      "previousVersionLabel": "Previous Version",
+      "previousVersionPlaceholder": "e.g. 10.2.0",
+      "newVersionLabel": "New Version",
+      "newVersionPlaceholder": "e.g. 10.3.0",
+      "verificationLabel": "Verification Record",
+      "verificationPlaceholder": "Describe the verification performed after the change (e.g. Compared with previous measurement results, confirmed difference within 0.1dB)",
+      "cancel": "Cancel",
+      "submit": "Request Change",
+      "submitting": "Submitting..."
+    },
+    "currentInfo": {
+      "title": "Current Software Info",
+      "name": "Software Name",
+      "version": "Version",
+      "type": "Type",
+      "firmwareVersion": "Firmware Version"
+    },
+    "history": {
+      "title": "Change History",
+      "count": "{count} change record(s)",
+      "empty": "No software change history",
+      "colSoftware": "Software Name",
+      "colVersionChange": "Version Change",
+      "colChangedDate": "Changed Date",
+      "colStatus": "Status",
+      "colVerification": "Verification Record"
+    },
+    "validation": {
+      "softwareNameRequired": "Please enter the software name.",
+      "newVersionRequired": "Please enter the new version.",
+      "verificationRequired": "Verification record is required.",
+      "inputError": "Input Error"
+    },
+    "toast": {
+      "createSuccess": "Request Submitted",
+      "createSuccessDesc": "The software change request has been submitted. Please wait for the technical manager's approval.",
+      "createError": "Request Failed",
+      "createErrorFallback": "An error occurred while submitting the software change request."
+    }
+  },
+  "teamEquipmentList": {
+    "searchPlaceholder": "Search equipment...",
+    "viewAll": "View All Equipment",
+    "createLink": "Register Equipment",
+    "errorLoad": "Unable to load equipment list",
+    "resultCount": "{count} equipment",
+    "searchResultCount": "Search results: {count} equipment"
+  },
+  "receiveEquipmentImport": {
+    "title": "Receive Confirmation",
+    "notFound": "Import information not found.",
+    "conditionCheck": {
+      "title": "Condition Check",
+      "description": "Inspect the condition of the received equipment. Equipment will be automatically registered upon confirmation.",
+      "appearance": "Appearance",
+      "operation": "Operation",
+      "accessories": "Accessories",
+      "normal": "Normal",
+      "abnormal": "Abnormal",
+      "complete": "Complete",
+      "incomplete": "Incomplete",
+      "notesPlaceholder": "Record any special notes."
+    },
+    "nextCalibrationLabel": "Next Calibration Date (Auto-calculated)",
+    "calibrationAgencyPlaceholder": "e.g., HCT, ABC Calibration",
+    "submit": "Confirm Receipt",
+    "toasts": {
+      "success": "Receive confirmation completed.",
+      "successDesc": "Equipment has been automatically registered.",
+      "error": "Receive Confirmation Failed"
     }
   }
 }

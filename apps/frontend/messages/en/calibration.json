@@ -172,6 +172,19 @@
       "confirmItemSuccessDesc": "The item has been confirmed.",
       "confirmItemError": "Confirmation Failed",
       "confirmItemErrorDesc": "An error occurred during confirmation."
+    },
+    "yearWithUnit": "{year}",
+    "versionHistory": {
+      "title": "Version History",
+      "ariaLabel": "Calibration plan version list",
+      "versionLabel": "Version {version}",
+      "latestBadge": "Latest",
+      "currentBadge": "Current",
+      "createdAt": "Created: {date}",
+      "approvedAt": "Approved: {date}",
+      "viewButton": "View",
+      "viewAriaLabel": "View version {version} in new tab",
+      "currentSuffix": " - Currently viewing"
     }
   },
   "content": {
@@ -456,6 +469,44 @@
       "missingInfo": "Missing Information",
       "selectYearAndSite": "Please select a year and laboratory.",
       "selectTeam": "Please select a team."
+    }
+  },
+  "factorsRegistry": {
+    "title": "Calibration Factors Registry",
+    "subtitle": "Current calibration factors applied to all equipment",
+    "csvExport": "Export CSV",
+    "stats": {
+      "totalEquipments": "Total Equipment",
+      "equipmentsDesc": "Equipment with calibration factors",
+      "totalFactors": "Total Factors",
+      "factorsDesc": "Currently applied calibration factors",
+      "generatedAt": "Generated At"
+    },
+    "table": {
+      "title": "Equipment Calibration Factor Status",
+      "description": "Click on equipment to view detailed calibration factors",
+      "searchPlaceholder": "Search equipment ID or calibration factor...",
+      "expandAll": "Expand All",
+      "collapseAll": "Collapse All",
+      "empty": "No calibration factors registered"
+    },
+    "factorCount": "{count} factors",
+    "headers": {
+      "type": "Type",
+      "name": "Name",
+      "value": "Value",
+      "period": "Period",
+      "approvedAt": "Approved"
+    },
+    "csv": {
+      "equipmentId": "Equipment ID",
+      "factorType": "Factor Type",
+      "factorName": "Factor Name",
+      "value": "Value",
+      "unit": "Unit",
+      "effectiveDate": "Effective Date",
+      "expiryDate": "Expiry Date",
+      "approvedAt": "Approved At"
     }
   }
 }

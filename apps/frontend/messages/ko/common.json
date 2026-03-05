@@ -57,7 +57,26 @@
     "serverError": "서버 오류가 발생했습니다.",
     "networkError": "네트워크 오류가 발생했습니다.",
     "versionConflict": "다른 사용자가 동시에 수정했습니다. 페이지를 새로고침 후 다시 시도해주세요.",
-    "tryAgain": "다시 시도"
+    "tryAgain": "다시 시도",
+    "login": "로그인",
+    "details": "상세 정보",
+    "codeLabel": "코드:",
+    "httpStatusLabel": "HTTP 상태:",
+    "timestampLabel": "시간:",
+    "detailLabel": "상세:",
+    "solutionsTitle": "해결 방법",
+    "close": "닫기",
+    "partialSaveTitle": "부분 저장 완료",
+    "partialSaveFailed": "다음 항목은 저장에 실패했습니다 ({count}건):",
+    "viewFailed": "실패 항목 보기",
+    "partialSaveNote": "안내",
+    "partialSaveNoteDesc": "장비 상세 페이지에서 실패한 이력을 다시 추가할 수 있습니다.",
+    "historyTypeLabels": {
+      "location": "위치 변동 이력",
+      "maintenance": "유지보수 내역",
+      "incident": "손상/수리 내역",
+      "calibration": "교정 이력"
+    }
   },
   "time": {
     "today": "오늘",
@@ -184,5 +203,22 @@
   "datePicker": {
     "selectDate": "날짜 선택",
     "selectRange": "날짜 범위 선택"
+  },
+  "fileUpload": {
+    "label": "파일 첨부",
+    "description": "PDF, 이미지, 문서 파일을 업로드할 수 있습니다. (최대 10MB)",
+    "sizeTooLarge": "파일 크기는 {maxSizeMB}MB를 초과할 수 없습니다.",
+    "unsupportedType": "지원하지 않는 파일 형식입니다. ({accept})",
+    "maxFilesExceeded": "최대 {maxFiles}개까지 업로드할 수 있습니다.",
+    "duplicate": "{fileName}: 이미 추가된 파일입니다.",
+    "uploading": "업로드 중...",
+    "success": "완료",
+    "error": "오류",
+    "dropHere": "여기에 파일을 놓으세요",
+    "dragOrClick": "파일을 드래그하거나 클릭하여 업로드",
+    "selectFile": "파일 선택",
+    "uploadedFiles": "업로드된 파일 ({count}/{max})",
+    "deleteAll": "전체 삭제",
+    "deleteFile": "파일 삭제"
   }
 }
