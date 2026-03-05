@@ -8,7 +8,18 @@
  * - 권한 (Permissions): 이 패키지에서 정의
  * - 역할-권한 매핑 (Role-Permissions): 이 패키지에서 정의
  * - API 엔드포인트: 이 패키지에서 정의
+ * - 인증 토큰 라이프사이클: auth-token.ts에서 정의 (FE/BE 공유)
  */
+
+// 인증 토큰 라이프사이클 상수 (프론트엔드 NextAuth + 백엔드 JWT 공유)
+export {
+  ACCESS_TOKEN_TTL_SECONDS,
+  REFRESH_TOKEN_TTL_SECONDS,
+  ABSOLUTE_SESSION_MAX_AGE_SECONDS,
+  REFRESH_BUFFER_SECONDS,
+  ACCESS_TOKEN_EXPIRES_IN,
+  REFRESH_TOKEN_EXPIRES_IN,
+} from './auth-token';
 
 // 역할 관련
 export {

@@ -2,6 +2,12 @@ import { Injectable, Inject, UnauthorizedException, Logger } from '@nestjs/commo
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import {
+  ABSOLUTE_SESSION_MAX_AGE_SECONDS,
+  ACCESS_TOKEN_TTL_SECONDS,
+  ACCESS_TOKEN_EXPIRES_IN,
+  REFRESH_TOKEN_EXPIRES_IN,
+} from '@equipment-management/shared-constants';
 import { UserRole } from './rbac/roles.enum';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
@@ -72,8 +78,8 @@ export interface TestUser {
   teamId?: string;
 }
 
-/** 절대 세션 만료 기간 (30일, 초 단위) */
-const ABSOLUTE_SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+// 토큰 라이프사이클 상수는 @equipment-management/shared-constants/auth-token에서 import
+// ABSOLUTE_SESSION_MAX_AGE_SECONDS, ACCESS_TOKEN_TTL_SECONDS, ACCESS_TOKEN_EXPIRES_IN, REFRESH_TOKEN_EXPIRES_IN
 
 /** 로그인 실패 제한 (dev/test 전용) */
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -641,18 +647,16 @@ export class AuthService {
       sessionStartedAt: sessionStart,
     };
 
-    const accessTokenExpiresInSeconds = 15 * 60; // 15분
-
     return {
       access_token: this.jwtService.sign(accessPayload, {
         secret: jwtSecret,
-        expiresIn: '15m',
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN, // shared-constants: '900s'
       }),
       refresh_token: this.jwtService.sign(refreshPayload, {
         secret: refreshSecret,
-        expiresIn: '7d',
+        expiresIn: REFRESH_TOKEN_EXPIRES_IN, // shared-constants: '604800s'
       }),
-      expires_at: Math.floor(Date.now() / 1000) + accessTokenExpiresInSeconds,
+      expires_at: Math.floor(Date.now() / 1000) + ACCESS_TOKEN_TTL_SECONDS, // shared-constants
       user: {
         id: user.id,
         email: user.email,

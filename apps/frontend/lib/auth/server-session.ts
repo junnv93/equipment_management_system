@@ -19,8 +19,22 @@
  * ============================================================================
  */
 
+import { cache } from 'react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth';
+
+/**
+ * Per-render deduplication: 동일 렌더 트리 내 여러 호출이 단일 Promise를 공유
+ *
+ * 문제: Server Component에서 getServerSession()을 여러 번 병렬 호출하면
+ * 각각 독립적으로 JWT 콜백을 트리거하여 refreshAccessToken()이 중복 실행됨 (429 유발)
+ *
+ * 해법: React cache()는 같은 렌더 패스 내 동일 인자 호출을 memoize하여
+ * JWT 콜백이 단 한 번만 실행되도록 보장
+ *
+ * @see https://react.dev/reference/react/cache
+ */
+const getServerSessionCached = cache(() => getServerSession(authOptions));
 
 /**
  * 서버 컴포넌트에서 현재 세션 가져오기
@@ -39,7 +53,7 @@ import { authOptions } from '../auth';
  * ```
  */
 export async function getServerAuthSession() {
-  return getServerSession(authOptions);
+  return getServerSessionCached();
 }
 
 /**
@@ -59,7 +73,7 @@ export async function getServerAuthSession() {
  * ```
  */
 export async function getCurrentUser() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSessionCached();
   return session?.user || null;
 }
 
@@ -83,7 +97,7 @@ export async function getCurrentUser() {
  * ```
  */
 export async function getAccessToken(): Promise<string | null> {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSessionCached();
   // ✅ Session 타입에 accessToken이 정의됨 (types/next-auth.d.ts)
   return session?.accessToken ?? null;
 }
@@ -131,7 +145,7 @@ export async function getServerAuthHeaders(): Promise<HeadersInit> {
  * ```
  */
 export async function isAuthenticated(): Promise<boolean> {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSessionCached();
   return !!session?.user;
 }
 
@@ -152,7 +166,7 @@ export async function isAuthenticated(): Promise<boolean> {
  * ```
  */
 export async function hasRole(roles: string[]): Promise<boolean> {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSessionCached();
   const userRole = session?.user?.role;
   if (!userRole) return false;
   return roles.includes(userRole.toLowerCase());

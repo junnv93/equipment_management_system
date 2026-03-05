@@ -46,6 +46,11 @@ interface AuthorizedUser extends User {
 }
 
 import { DEFAULT_LOCALE } from '@equipment-management/schemas';
+import {
+  ABSOLUTE_SESSION_MAX_AGE_SECONDS,
+  REFRESH_BUFFER_SECONDS,
+  REFRESH_TOKEN_TTL_SECONDS,
+} from '@equipment-management/shared-constants';
 import { API_BASE_URL } from './config/api-config';
 
 // 환경 변수 확인
@@ -54,41 +59,79 @@ const isTest = process.env.NODE_ENV === 'test';
 const enableLocalAuth = process.env.ENABLE_LOCAL_AUTH === 'true' || isDevelopment;
 const hasAzureAD = !!(process.env.AZURE_AD_CLIENT_ID && process.env.AZURE_AD_CLIENT_SECRET);
 
-// 절대 세션 수명: 활동 여부와 무관하게 이 기간 이후 재로그인 강제 (30일)
-const ABSOLUTE_SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30일 (초)
+// 토큰 라이프사이클 상수는 @equipment-management/shared-constants/auth-token에서 import
+// ABSOLUTE_SESSION_MAX_AGE_SECONDS, REFRESH_BUFFER_SECONDS, REFRESH_TOKEN_TTL_SECONDS
+
+/**
+ * Single-Flight 맵: 동일 refresh token에 대한 진행 중 Promise 공유
+ *
+ * 문제: 동시에 여러 요청이 만료 임박 토큰으로 getServerSession()을 호출하면
+ * (예: 탭 2개 동시 오픈, 병렬 Server Component 렌더, Next.js 다중 인스턴스)
+ * 각각 독립적으로 refreshAccessToken()을 호출하여 백엔드 rate limit(429) 유발
+ *
+ * 해결: 동일 refresh token에 대한 첫 번째 호출만 HTTP 요청을 실행하고
+ * 동시에 들어온 나머지 호출은 해당 Promise를 공유(대기)하여 단일 HTTP 호출 보장
+ *
+ * cache()와의 역할 분리:
+ * - React cache(): 단일 렌더 트리 내 getServerSession() 중복 호출 dedup
+ * - refreshInFlight: 프로세스 레벨에서 동시 요청 간 refresh HTTP 호출 dedup
+ */
+const refreshInFlight = new Map<string, Promise<JWT>>();
 
 /**
  * Refresh Token으로 새 Access Token 발급
  * 백엔드 /api/auth/refresh 엔드포인트 직접 호출
  */
 async function refreshAccessToken(token: JWT): Promise<JWT> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: token.refreshToken }),
-    });
+  const refreshToken = token.refreshToken as string | undefined;
 
-    if (!response.ok) {
-      console.error('[Auth] Token refresh failed:', response.status);
-      return { ...token, error: 'RefreshAccessTokenError' };
-    }
-
-    const data = await response.json();
-
-    console.log('[Auth] Token refreshed successfully for:', token.email);
-
-    return {
-      ...token,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      accessTokenExpires: data.expires_at,
-      error: undefined,
-    };
-  } catch (error) {
-    console.error('[Auth] Token refresh error:', error);
+  // refresh token이 없으면 즉시 에러 반환 (in-flight 등록 불필요)
+  if (!refreshToken) {
     return { ...token, error: 'RefreshAccessTokenError' };
   }
+
+  // 동일 refresh token으로 진행 중인 요청이 있으면 해당 Promise 공유
+  const inflight = refreshInFlight.get(refreshToken);
+  if (inflight) {
+    console.log('[Auth] Token refresh already in-flight, reusing:', token.email);
+    return inflight;
+  }
+
+  const refreshPromise = (async (): Promise<JWT> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        console.error('[Auth] Token refresh failed:', response.status);
+        return { ...token, error: 'RefreshAccessTokenError' };
+      }
+
+      const data = await response.json();
+
+      console.log('[Auth] Token refreshed successfully for:', token.email);
+
+      return {
+        ...token,
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        accessTokenExpires: data.expires_at,
+        error: undefined,
+      };
+    } catch (error) {
+      console.error('[Auth] Token refresh error:', error);
+      return { ...token, error: 'RefreshAccessTokenError' };
+    } finally {
+      // 성공/실패 관계없이 완료 시 맵에서 제거 (다음 refresh 주기 허용)
+      refreshInFlight.delete(refreshToken);
+    }
+  })();
+
+  refreshInFlight.set(refreshToken, refreshPromise);
+  return refreshPromise;
 }
 
 /**
@@ -276,7 +319,7 @@ export const authOptions = {
   },
   session: {
     strategy: 'jwt' as const,
-    maxAge: 7 * 24 * 60 * 60, // 7일 (Refresh Token 수명과 정렬)
+    maxAge: REFRESH_TOKEN_TTL_SECONDS, // Refresh Token 수명과 정렬 (@shared-constants)
   },
   callbacks: {
     /**
@@ -430,7 +473,7 @@ export const authOptions = {
       // 절대 세션 만료 체크: 30일 초과 시 활동 여부와 무관하게 재로그인 강제
       if (token.sessionStartedAt) {
         const now = Math.floor(Date.now() / 1000);
-        if (now - token.sessionStartedAt > ABSOLUTE_SESSION_MAX_AGE) {
+        if (now - token.sessionStartedAt > ABSOLUTE_SESSION_MAX_AGE_SECONDS) {
           console.log('[Auth] Absolute session lifetime exceeded (30d), forcing re-login', {
             email: token.email,
             sessionAgeDays: Math.floor((now - token.sessionStartedAt) / 86400),
@@ -445,8 +488,7 @@ export const authOptions = {
         const now = Math.floor(Date.now() / 1000);
         const timeUntilExpiry = token.accessTokenExpires - now;
 
-        // 만료 60초 전이면 갱신
-        if (timeUntilExpiry < 60) {
+        if (timeUntilExpiry < REFRESH_BUFFER_SECONDS) {
           console.log('[Auth] Access token expiring soon, refreshing...', {
             email: token.email,
             secondsLeft: timeUntilExpiry,
