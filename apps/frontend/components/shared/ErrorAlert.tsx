@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -150,6 +151,7 @@ export function ErrorAlert({
   className = '',
 }: ErrorAlertProps) {
   const router = useRouter();
+  const t = useTranslations('common.errors');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   if (!error) return null;
@@ -177,7 +179,7 @@ export function ErrorAlert({
       actions.push(
         <Button key="retry" variant="outline" size="sm" onClick={onRetry} className="gap-1">
           <RefreshCw className="h-3 w-3" />
-          다시 시도
+          {t('tryAgain')}
         </Button>
       );
     }
@@ -193,7 +195,7 @@ export function ErrorAlert({
           className="gap-1"
         >
           <LogIn className="h-3 w-3" />
-          로그인
+          {t('login')}
         </Button>
       );
     }
@@ -236,28 +238,28 @@ export function ErrorAlert({
             ) : (
               <ChevronDown className="h-3 w-3 mr-1" />
             )}
-            상세 정보
+            {t('details')}
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-2">
           <div className="rounded-md bg-muted/50 p-3 text-xs font-mono space-y-1">
             <div>
-              <span className="text-muted-foreground">코드: </span>
+              <span className="text-muted-foreground">{t('codeLabel')} </span>
               <span>{apiError.code}</span>
             </div>
             {apiError.statusCode && (
               <div>
-                <span className="text-muted-foreground">HTTP 상태: </span>
+                <span className="text-muted-foreground">{t('httpStatusLabel')} </span>
                 <span>{apiError.statusCode}</span>
               </div>
             )}
             <div>
-              <span className="text-muted-foreground">시간: </span>
+              <span className="text-muted-foreground">{t('timestampLabel')} </span>
               <span>{formatDate(apiError.timestamp, 'yyyy-MM-dd HH:mm:ss')}</span>
             </div>
             {apiError.details !== undefined && apiError.details !== null && (
               <div className="mt-2">
-                <span className="text-muted-foreground">상세: </span>
+                <span className="text-muted-foreground">{t('detailLabel')} </span>
                 <pre className="mt-1 whitespace-pre-wrap break-all text-xs">
                   {typeof apiError.details === 'string'
                     ? apiError.details
@@ -279,7 +281,7 @@ export function ErrorAlert({
         {onDismiss && (
           <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={onDismiss}>
             <X className="h-3 w-3" />
-            <span className="sr-only">닫기</span>
+            <span className="sr-only">{t('close')}</span>
           </Button>
         )}
       </AlertTitle>
@@ -291,7 +293,7 @@ export function ErrorAlert({
           <div className="mt-3 pt-3 border-t border-current/10">
             <div className="flex items-center gap-1 text-sm font-medium mb-2">
               <Lightbulb className="h-3 w-3" />
-              해결 방법
+              {t('solutionsTitle')}
             </div>
             <ul className="list-disc list-inside space-y-1 text-sm">
               {info.solutions.map((solution, index) => (
@@ -333,14 +335,8 @@ export function PartialSuccessAlert({
   onDismiss,
   className = '',
 }: PartialSuccessAlertProps) {
+  const t = useTranslations('common.errors');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  const typeLabels: Record<string, string> = {
-    location: '위치 변동 이력',
-    maintenance: '유지보수 내역',
-    incident: '손상/수리 내역',
-    calibration: '교정 이력',
-  };
 
   return (
     <Alert
@@ -348,11 +344,11 @@ export function PartialSuccessAlert({
     >
       <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
       <AlertTitle className="flex items-center justify-between text-yellow-800 dark:text-yellow-200">
-        <span>부분 저장 완료</span>
+        <span>{t('partialSaveTitle')}</span>
         {onDismiss && (
           <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={onDismiss}>
             <X className="h-3 w-3" />
-            <span className="sr-only">닫기</span>
+            <span className="sr-only">{t('close')}</span>
           </Button>
         )}
       </AlertTitle>
@@ -362,7 +358,7 @@ export function PartialSuccessAlert({
         {failedItems.length > 0 && (
           <>
             <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
-              다음 항목은 저장에 실패했습니다 ({failedItems.length}건):
+              {t('partialSaveFailed', { count: failedItems.length })}
             </p>
 
             <Collapsible open={isDetailOpen} onOpenChange={setIsDetailOpen}>
@@ -377,15 +373,18 @@ export function PartialSuccessAlert({
                   ) : (
                     <ChevronDown className="h-3 w-3 mr-1" />
                   )}
-                  실패 항목 보기
+                  {t('viewFailed')}
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
                 <ul className="list-disc list-inside space-y-1 text-sm">
                   {failedItems.map((item, index) => (
                     <li key={index}>
-                      <span className="font-medium">{typeLabels[item.type] || item.type}</span>:{' '}
-                      {item.error}
+                      <span className="font-medium">
+                        {t(`historyTypeLabels.${item.type}` as Parameters<typeof t>[0]) ||
+                          item.type}
+                      </span>
+                      : {item.error}
                     </li>
                   ))}
                 </ul>
@@ -397,9 +396,9 @@ export function PartialSuccessAlert({
         <div className="mt-3 pt-3 border-t border-yellow-200 dark:border-yellow-800">
           <div className="flex items-center gap-1 text-sm font-medium mb-2">
             <Lightbulb className="h-3 w-3" />
-            안내
+            {t('partialSaveNote')}
           </div>
-          <p className="text-sm">장비 상세 페이지에서 실패한 이력을 다시 추가할 수 있습니다.</p>
+          <p className="text-sm">{t('partialSaveNoteDesc')}</p>
         </div>
       </AlertDescription>
     </Alert>

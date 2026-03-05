@@ -7,9 +7,7 @@ import { z } from 'zod';
 import dynamic from 'next/dynamic';
 import {
   type EquipmentStatus,
-  type CalibrationMethod,
   type Site,
-  CalibrationMethodEnum,
   createEquipmentSchema,
   updateEquipmentSchema,
 } from '@equipment-management/schemas';
@@ -86,77 +84,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { ApiError } from '@/lib/errors/equipment-errors';
 import { useManagementNumberCheck } from '@/hooks/use-management-number-check';
 import { sanitizeFormData } from '@/lib/utils/form-data-utils';
-
-// 동적 Zod 스키마 생성 함수 (향후 폼 검증 강화용으로 유지)
-const _createDynamicSchema = (
-  calibrationMethod?: CalibrationMethod,
-  needsIntermediateCheck?: boolean
-) => {
-  return z.object({
-    // 필수 필드
-    name: z.string().min(2, '장비명은 최소 2자 이상이어야 합니다').max(100),
-    managementNumber: z.string().min(2, '관리번호는 최소 2자 이상이어야 합니다').max(50),
-    site: z.enum(['suwon', 'uiwang']),
-    teamId: z.union([z.string(), z.number()]).optional(),
-    modelName: z.string().min(1, '모델명을 입력하세요').optional(),
-    manufacturer: z.string().min(1, '제조사를 입력하세요').optional(),
-    manufacturerContact: z.string().optional(),
-    serialNumber: z.string().min(1, '일련번호를 입력하세요').optional(),
-    location: z.string().min(1, '현재 위치를 입력하세요').optional(),
-    technicalManager: z.string().min(1, '기술책임자를 입력하세요').optional(),
-    calibrationMethod: CalibrationMethodEnum.optional(),
-
-    // 조건부 필수 필드 - 외부 교정일 때
-    ...(calibrationMethod === 'external_calibration' && {
-      calibrationCycle: z.number().int().positive('교정 주기를 입력하세요'),
-      lastCalibrationDate: z.string().min(1, '최종 교정일을 입력하세요'),
-      calibrationAgency: z.string().min(1, '교정 기관을 입력하세요'),
-    }),
-
-    // 조건부 필수 필드 - 중간점검 대상일 때
-    ...(needsIntermediateCheck && {
-      lastIntermediateCheckDate: z.string().min(1, '최종 중간 점검일을 입력하세요'),
-      intermediateCheckCycle: z.number().int().positive('중간점검 주기를 입력하세요'),
-    }),
-
-    // 선택적 필드
-    assetNumber: z.string().optional(),
-    description: z.string().optional(),
-    specMatch: z.enum(['match', 'mismatch']).optional(),
-    calibrationRequired: z.enum(['required', 'not_required']).optional(),
-    calibrationCycle: z.number().int().positive().optional(),
-    lastCalibrationDate: z.string().optional(),
-    nextCalibrationDate: z.string().optional(),
-    calibrationAgency: z.string().optional(),
-    needsIntermediateCheck: z.boolean().optional(),
-    lastIntermediateCheckDate: z.string().optional(),
-    intermediateCheckCycle: z.number().int().positive().optional(),
-    nextIntermediateCheckDate: z.string().optional(),
-    purchaseYear: z.number().int().min(1990).max(2100).optional(),
-    supplier: z.string().optional(),
-    contactInfo: z.string().optional(),
-    softwareVersion: z.string().optional(),
-    firmwareVersion: z.string().optional(),
-    manualLocation: z.string().optional(),
-    accessories: z.string().optional(),
-    initialLocation: z.string().optional(),
-    installationDate: z.string().optional(),
-    status: z
-      .enum([
-        'available',
-        'in_use',
-        'checked_out',
-        'calibration_scheduled',
-        'calibration_overdue',
-        'non_conforming',
-        'spare',
-        'retired',
-      ])
-      .optional(),
-    calibrationResult: z.string().optional(),
-    correctionFactor: z.string().optional(),
-  });
-};
 
 // 임시 이력 타입 (등록 모드에서 사용)
 export interface PendingHistoryData {

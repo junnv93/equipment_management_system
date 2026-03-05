@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -79,19 +80,23 @@ export function FileUpload({
   maxSize = 10 * 1024 * 1024, // 10MB
   maxFiles = 10,
   disabled = false,
-  label = '파일 첨부',
-  description = 'PDF, 이미지, 문서 파일을 업로드할 수 있습니다. (최대 10MB)',
+  label,
+  description,
   attachmentType: _attachmentType = 'other',
   showProgress = true,
 }: FileUploadProps) {
+  const t = useTranslations('common.fileUpload');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
+  const displayLabel = label ?? t('label');
+  const displayDescription = description ?? t('description');
+
   const validateFile = useCallback(
     (file: File): string | null => {
       if (file.size > maxSize) {
-        return `파일 크기는 ${Math.round(maxSize / 1024 / 1024)}MB를 초과할 수 없습니다.`;
+        return t('sizeTooLarge', { maxSizeMB: Math.round(maxSize / 1024 / 1024) });
       }
 
       // 파일 확장자 검증
@@ -100,12 +105,12 @@ export function FileUpload({
         .map((ext) => ext.trim().toLowerCase().replace('.', ''));
       const fileExt = file.name.split('.').pop()?.toLowerCase();
       if (fileExt && !allowedExtensions.includes(fileExt)) {
-        return `지원하지 않는 파일 형식입니다. (${accept})`;
+        return t('unsupportedType', { accept });
       }
 
       return null;
     },
-    [accept, maxSize]
+    [accept, maxSize, t]
   );
 
   const handleFileSelect = useCallback(
@@ -117,7 +122,7 @@ export function FileUpload({
 
       Array.from(selectedFiles).forEach((file) => {
         if (files.length + newFiles.length >= maxFiles) {
-          newErrors.push(`최대 ${maxFiles}개까지 업로드할 수 있습니다.`);
+          newErrors.push(t('maxFilesExceeded', { maxFiles }));
           return;
         }
 
@@ -126,7 +131,7 @@ export function FileUpload({
           (f) => f.file.name === file.name && f.file.size === file.size
         );
         if (isDuplicate) {
-          newErrors.push(`${file.name}: 이미 추가된 파일입니다.`);
+          newErrors.push(t('duplicate', { fileName: file.name }));
           return;
         }
 
@@ -214,21 +219,21 @@ export function FileUpload({
         return (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
-            <span>업로드 중...</span>
+            <span>{t('uploading')}</span>
           </div>
         );
       case 'success':
         return (
           <div className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
             <CheckCircle2 className="h-4 w-4" />
-            <span>완료</span>
+            <span>{t('success')}</span>
           </div>
         );
       case 'error':
         return (
           <div className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
             <AlertCircle className="h-4 w-4" />
-            <span>{uploadedFile.error || '오류'}</span>
+            <span>{uploadedFile.error || t('error')}</span>
           </div>
         );
       default:
@@ -243,8 +248,10 @@ export function FileUpload({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <Label>{label}</Label>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        <Label>{displayLabel}</Label>
+        {displayDescription && (
+          <p className="text-sm text-muted-foreground">{displayDescription}</p>
+        )}
       </div>
 
       {/* 드래그 앤 드롭 영역 */}
@@ -276,9 +283,7 @@ export function FileUpload({
             />
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium">
-              {dragActive ? '여기에 파일을 놓으세요' : '파일을 드래그하거나 클릭하여 업로드'}
-            </p>
+            <p className="text-sm font-medium">{dragActive ? t('dropHere') : t('dragOrClick')}</p>
             <p className="text-xs text-muted-foreground mt-1">
               {accept.split(',').join(', ')} (최대 {formatFileSize(maxSize)}, {maxFiles}개)
             </p>
@@ -290,7 +295,7 @@ export function FileUpload({
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled || files.length >= maxFiles}
           >
-            파일 선택
+            {t('selectFile')}
           </Button>
         </div>
       </div>
@@ -325,7 +330,7 @@ export function FileUpload({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">
-              업로드된 파일 ({files.length}/{maxFiles})
+              {t('uploadedFiles', { count: files.length, max: maxFiles })}
             </p>
             {files.length > 1 && (
               <Button
@@ -336,7 +341,7 @@ export function FileUpload({
                 disabled={disabled}
                 className="text-xs text-muted-foreground hover:text-destructive"
               >
-                전체 삭제
+                {t('deleteAll')}
               </Button>
             )}
           </div>
@@ -392,7 +397,7 @@ export function FileUpload({
                     className="flex-shrink-0 opacity-0 group-hover:opacity-100 motion-safe:transition-opacity motion-reduce:transition-none"
                   >
                     <X className="h-4 w-4" />
-                    <span className="sr-only">파일 삭제</span>
+                    <span className="sr-only">{t('deleteFile')}</span>
                   </Button>
                 </div>
               );

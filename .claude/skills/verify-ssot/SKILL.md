@@ -40,6 +40,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/shared-constants/src/entity-routes.ts`                             | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                    |
 | `packages/shared-constants/src/data-scope.ts`                                | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, AUDIT_LOG_SCOPE) |
 | `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                      |
+| `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 상수 (TTL, buffer, expires_in)            |
 | `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리                                                      |
 | `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)  |
 | `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)       |
@@ -352,6 +353,58 @@ export type FeatureDetail = typeof featureTable.$inferSelect & {
 };
 ```
 
+### Step 9: 인증 토큰 TTL 하드코딩 탐지
+
+토큰 라이프사이클 상수(`ABSOLUTE_SESSION_MAX_AGE_SECONDS`, `ACCESS_TOKEN_TTL_SECONDS` 등)가
+`@equipment-management/shared-constants`에서 임포트되지 않고 auth/session 파일에 직접 하드코딩되어 있는지 확인합니다.
+
+```bash
+# auth/session 관련 파일의 토큰 TTL 하드코딩 탐지 (JWT expiresIn 문자열 포함)
+grep -rn "expiresIn.*['\"]15m['\"]\\|expiresIn.*['\"]7d['\"]\\|30 \\* 24 \\* 60 \\* 60[^*]\\|15 \\* 60[^*]\\|7 \\* 24 \\* 60 \\* 60[^*]" \
+  apps/frontend/lib/auth.ts apps/frontend/lib/auth \
+  apps/backend/src/modules/auth \
+  --include="*.ts" \
+  | grep -v "LOCK_DURATION\\|ATTEMPT_WINDOW\\|shared-constants\\|auth-token\\.ts\\|// "
+```
+
+**PASS 기준:** 0개 결과 (auth/session 파일에 토큰 TTL 하드코딩 없음).
+
+**FAIL 기준:** `'15m'`, `'7d'`, `30 * 24 * 60 * 60` 등이 직접 코드에 있으면 위반.
+
+**수정 패턴:**
+
+```typescript
+// ❌ WRONG — auth 파일에 TTL 하드코딩
+const ABSOLUTE_SESSION_MAX_AGE = 30 * 24 * 60 * 60;
+expiresIn: '15m';
+
+// ✅ CORRECT — shared-constants에서 임포트
+import {
+  ABSOLUTE_SESSION_MAX_AGE_SECONDS,
+  ACCESS_TOKEN_EXPIRES_IN,
+} from '@equipment-management/shared-constants';
+expiresIn: ACCESS_TOKEN_EXPIRES_IN; // '900s'
+```
+
+**참고 — auth-token.ts SSOT 상수 목록 (`packages/shared-constants/src/auth-token.ts`):**
+
+- `ACCESS_TOKEN_TTL_SECONDS` — 900s (15분)
+- `REFRESH_TOKEN_TTL_SECONDS` — 604800s (7일)
+- `ABSOLUTE_SESSION_MAX_AGE_SECONDS` — 2592000s (30일)
+- `REFRESH_BUFFER_SECONDS` — 60s (선제 갱신 버퍼)
+- `ACCESS_TOKEN_EXPIRES_IN` — `'900s'` (NestJS JwtModule용)
+- `REFRESH_TOKEN_EXPIRES_IN` — `'604800s'` (NestJS JwtModule용)
+
+```bash
+# 로컬 재정의 추가 탐지: ABSOLUTE_SESSION_MAX_AGE, accessTokenExpiresInSeconds 패턴
+grep -rn "ABSOLUTE_SESSION_MAX_AGE\s*=\|accessTokenExpiresInSeconds\s*=" \
+  apps/frontend apps/backend/src \
+  --include="*.ts" \
+  | grep -v "shared-constants\\|auth-token\\.ts\\|import\\|// "
+```
+
+**PASS 기준:** 0개 결과.
+
 ## Output Format
 
 ```markdown
@@ -371,6 +424,7 @@ export type FeatureDetail = typeof featureTable.$inferSelect & {
 | 7   | 환경변수 직접 참조         | PASS/FAIL | NEXT_PUBLIC_API_URL 직접 참조 위치     |
 | 7b  | E2E Backend URL SSOT       | PASS/FAIL | E2E 내 직접 env 참조 파일 목록         |
 | 8   | Promise<unknown> 반환 타입 | PASS/FAIL | 서비스 메서드의 unknown 반환 타입 위치 |
+| 9   | 토큰 TTL 하드코딩          | PASS/FAIL | auth 파일 내 하드코딩 위치             |
 ```
 
 ## Exceptions
@@ -386,3 +440,4 @@ export type FeatureDetail = typeof featureTable.$inferSelect & {
 7. **roles.enum.ts의 TypeScript enum** — 백엔드 호환성을 위한 로컬 enum (SSOT 주석 + re-export 동반 시 면제)
 8. **`Promise<unknown>` 허용 케이스** — `private` 헬퍼 메서드(클래스 내부 전용)나 단순 delete/count 반환(`Promise<number>`, `{ deleted: true }`)은 `unknown`이 아닌 추론 타입을 사용하는 한 면제. `Promise<unknown>`은 `public` 메서드에서만 위반으로 간주.
 9. **`shared-test-data.ts`의 `BACKEND` URL 직접 정의** — `tests/e2e/shared/constants/shared-test-data.ts`는 E2E 테스트용 URL SSOT이므로 `process.env.NEXT_PUBLIC_API_URL` 직접 참조가 정상. 다른 E2E 파일은 `BASE_URLS.BACKEND`를 import해서 사용해야 함
+10. **테스트 파일의 날짜 오프셋 계산** — E2E/단위 테스트 파일에서 `7 * 24 * 60 * 60 * 1000` (밀리초 단위) 형태로 체크아웃 `expectedReturnDate` 등 날짜를 계산하는 코드는 토큰 TTL과 무관하므로 Step 9 위반이 아님

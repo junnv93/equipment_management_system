@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -34,10 +35,11 @@ export function RejectReasonDialog({
   onOpenChange,
   onConfirm,
   isPending,
-  title = '요청 반려',
-  description = '반려 사유를 입력해주세요. 반려 사유는 필수입니다.',
+  title,
+  description,
   children,
 }: RejectReasonDialogProps) {
+  const t = useTranslations('approvals');
   const [reason, setReason] = useState('');
 
   const handleClose = useCallback(() => {
@@ -51,20 +53,23 @@ export function RejectReasonDialog({
     setReason('');
   }, [reason, onConfirm]);
 
+  const dialogTitle = title ?? t('rejectModal.defaultTitle');
+  const dialogDescription = description ?? t('rejectModal.defaultDescription');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           {children}
           <div className="space-y-2">
-            <Label htmlFor="rejectionReason">반려 사유 *</Label>
+            <Label htmlFor="rejectionReason">{t('rejectModal.reasonRequired')}</Label>
             <Textarea
               id="rejectionReason"
-              placeholder="반려 사유를 입력하세요"
+              placeholder={t('rejectModal.reasonPlaceholder')}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="min-h-[100px]"
@@ -73,14 +78,14 @@ export function RejectReasonDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
-            취소
+            {t('actions.cancel')}
           </Button>
           <Button
             variant="destructive"
             onClick={handleConfirm}
             disabled={!reason.trim() || isPending}
           >
-            반려
+            {t('actions.reject')}
           </Button>
         </DialogFooter>
       </DialogContent>

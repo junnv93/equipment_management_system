@@ -4,8 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { useTranslations, useFormatter } from 'next-intl';
 import { AlertCircle, ArrowRight, Package, Clock, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,14 +22,31 @@ interface PendingChecksClientProps {
 }
 
 /**
- * 현재 상태에서 필요한 확인 단계 라벨
+ * 현재 상태에서 필요한 확인 단계 i18n key 매핑
  */
-const PENDING_CHECK_LABELS: Partial<Record<CheckoutStatus, { label: string; role: string }>> = {
-  approved: { label: '반출 전 확인', role: '빌려주는 측' },
-  lender_checked: { label: '인수 확인', role: '빌리는 측' },
-  borrower_received: { label: '반납 전 확인', role: '빌리는 측' },
-  in_use: { label: '반납 전 확인', role: '빌리는 측' },
-  borrower_returned: { label: '반입 확인', role: '빌려주는 측' },
+const PENDING_CHECK_KEY_MAP: Partial<
+  Record<CheckoutStatus, { labelKey: string; roleKey: string }>
+> = {
+  approved: {
+    labelKey: 'pendingChecks.labels.preCheckout',
+    roleKey: 'pendingChecks.roles.lender',
+  },
+  lender_checked: {
+    labelKey: 'pendingChecks.labels.receiveCheck',
+    roleKey: 'pendingChecks.roles.borrower',
+  },
+  borrower_received: {
+    labelKey: 'pendingChecks.labels.preReturn',
+    roleKey: 'pendingChecks.roles.borrower',
+  },
+  in_use: {
+    labelKey: 'pendingChecks.labels.preReturn',
+    roleKey: 'pendingChecks.roles.borrower',
+  },
+  borrower_returned: {
+    labelKey: 'pendingChecks.labels.returnCheck',
+    roleKey: 'pendingChecks.roles.lender',
+  },
 };
 
 /**
@@ -40,6 +56,8 @@ const PENDING_CHECK_LABELS: Partial<Record<CheckoutStatus, { label: string; role
  */
 export default function PendingChecksClient({ initialData }: PendingChecksClientProps) {
   const router = useRouter();
+  const t = useTranslations('checkouts');
+  const formatter = useFormatter();
   const [_filter, setFilter] = useState<'all' | 'lender' | 'borrower'>('all');
 
   // 확인 필요 목록 조회
@@ -57,16 +75,19 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
     <Card className="text-center py-12">
       <CardContent>
         <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-lg font-medium mb-2">확인할 항목이 없습니다</h3>
-        <p className="text-muted-foreground">현재 확인이 필요한 대여 건이 없습니다.</p>
+        <h3 className="text-lg font-medium mb-2">{t('pendingChecks.empty.title')}</h3>
+        <p className="text-muted-foreground">{t('pendingChecks.empty.description')}</p>
       </CardContent>
     </Card>
   );
 
   // 확인 항목 카드 렌더링
   const renderCheckItem = (checkout: Checkout) => {
-    const checkInfo = PENDING_CHECK_LABELS[checkout.status];
-    if (!checkInfo) return null;
+    const checkKeys = PENDING_CHECK_KEY_MAP[checkout.status];
+    if (!checkKeys) return null;
+
+    const label = t(checkKeys.labelKey as Parameters<typeof t>[0]);
+    const role = t(checkKeys.roleKey as Parameters<typeof t>[0]);
 
     const purposeLabel =
       CHECKOUT_PURPOSE_LABELS[checkout.purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] ||
@@ -79,17 +100,17 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
                 <AlertCircle className="h-3 w-3 mr-1" />
-                확인 필요
+                {t('pendingChecks.badge.required')}
               </Badge>
-              <Badge variant="secondary">{checkInfo.role}</Badge>
+              <Badge variant="secondary">{role}</Badge>
             </div>
             <CheckoutStatusBadge status={checkout.status} />
           </div>
           <CardTitle className="text-lg mt-2">
-            {checkout.equipment?.[0]?.name || '장비 정보 없음'}
+            {checkout.equipment?.[0]?.name || t('pendingChecks.noEquipmentInfo')}
             {checkout.equipment && checkout.equipment.length > 1 && (
               <span className="text-muted-foreground font-normal text-sm ml-2">
-                외 {checkout.equipment.length - 1}건
+                {t('pendingChecks.equipmentMore', { count: checkout.equipment.length - 1 })}
               </span>
             )}
           </CardTitle>
@@ -102,31 +123,35 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
             {/* 장비 정보 */}
             <div className="flex items-center gap-2 text-sm">
               <Package className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">관리번호:</span>
+              <span className="text-muted-foreground">
+                {t('pendingChecks.fields.managementNumber')}
+              </span>
               <span>{checkout.equipment?.[0]?.managementNumber || '-'}</span>
             </div>
 
             {/* 반입 예정일 */}
             <div className="flex items-center gap-2 text-sm">
               <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">반입 예정일:</span>
+              <span className="text-muted-foreground">
+                {t('pendingChecks.fields.expectedReturn')}
+              </span>
               <span>
-                {format(new Date(checkout.expectedReturnDate), 'yyyy년 MM월 dd일', { locale: ko })}
+                {formatter.dateTime(new Date(checkout.expectedReturnDate), { dateStyle: 'long' })}
               </span>
             </div>
 
             {/* 필요한 확인 안내 */}
             <Alert className="mt-4">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{checkInfo.label}</AlertTitle>
-              <AlertDescription>이 항목에 대해 {checkInfo.label}이 필요합니다.</AlertDescription>
+              <AlertTitle>{label}</AlertTitle>
+              <AlertDescription>{t('pendingChecks.alertDescription', { label })}</AlertDescription>
             </Alert>
 
             {/* 확인 버튼 */}
             <div className="flex justify-end mt-4">
               <Button asChild>
                 <Link href={`/checkouts/${checkout.id}/check`}>
-                  {checkInfo.label} 진행
+                  {t('pendingChecks.actionButton', { label })}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -142,11 +167,11 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">확인 필요 목록</h1>
-          <p className="text-muted-foreground">내가 확인해야 할 대여 건 목록입니다.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('pendingChecks.title')}</h1>
+          <p className="text-muted-foreground">{t('pendingChecks.subtitle')}</p>
         </div>
         <Button variant="outline" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.LIST)}>
-          반출 목록으로
+          {t('pendingChecks.backToList')}
         </Button>
       </div>
 
@@ -157,27 +182,27 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
           size="sm"
           onClick={() => setFilter('all')}
         >
-          전체
+          {t('pendingChecks.filters.all')}
         </Button>
         <Button
           variant={_filter === 'lender' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setFilter('lender')}
         >
-          빌려주는 측
+          {t('pendingChecks.filters.lender')}
         </Button>
         <Button
           variant={_filter === 'borrower' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setFilter('borrower')}
         >
-          빌리는 측
+          {t('pendingChecks.filters.borrower')}
         </Button>
       </div>
 
       {/* 목록 */}
       {isLoading ? (
-        <div className="text-center py-12">데이터를 불러오는 중...</div>
+        <div className="text-center py-12">{t('pendingChecks.loading')}</div>
       ) : checksData?.data?.length === 0 ? (
         renderEmptyState()
       ) : (

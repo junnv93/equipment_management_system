@@ -45,7 +45,10 @@ export default function CalibrationSettingsContent() {
 
   const { data, isLoading } = useQuery<CalibrationSettings>({
     queryKey: queryKeys.settings.calibration(),
-    queryFn: () => apiClient.get(API_ENDPOINTS.SETTINGS.CALIBRATION),
+    queryFn: async () => {
+      const res = await apiClient.get<CalibrationSettings>(API_ENDPOINTS.SETTINGS.CALIBRATION);
+      return res.data;
+    },
     staleTime: CACHE_TIMES.MEDIUM,
   });
 

@@ -99,9 +99,13 @@ export function useEquipmentFilters() {
   // 클라이언트 사이드에서 localStorage 읽기
   useEffect(() => {
     setIsClient(true);
-    const savedView = localStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
-    if (savedView === 'table' || savedView === 'card') {
-      setViewState(savedView);
+    try {
+      const savedView = localStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
+      if (savedView === 'table' || savedView === 'card') {
+        setViewState(savedView);
+      }
+    } catch {
+      // Private Browsing, 스토리지 비활성화 등 예외 무시
     }
   }, []);
 
@@ -289,7 +293,11 @@ export function useEquipmentFilters() {
     (pageSize: number) => {
       updateURL({ pageSize, page: 1 }); // 페이지 크기 변경 시 페이지 초기화
       if (isClient) {
-        localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(pageSize));
+        try {
+          localStorage.setItem(PAGE_SIZE_STORAGE_KEY, String(pageSize));
+        } catch {
+          // QuotaExceededError, 스토리지 비활성화 등 예외 무시
+        }
       }
     },
     [updateURL, isClient]
@@ -300,7 +308,11 @@ export function useEquipmentFilters() {
     (newView: ViewType) => {
       setViewState(newView);
       if (isClient) {
-        localStorage.setItem(VIEW_STORAGE_KEY, newView);
+        try {
+          localStorage.setItem(VIEW_STORAGE_KEY, newView);
+        } catch {
+          // QuotaExceededError, 스토리지 비활성화 등 예외 무시
+        }
       }
     },
     [isClient]

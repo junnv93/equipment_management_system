@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { Search, Filter, Users, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ interface TeamListContentProps {
 export function TeamListContent({ initialData, initialFilters }: TeamListContentProps) {
   const router = useRouter();
   const { hasRole } = useAuth();
+  const t = useTranslations('teams');
   const {
     filters,
     apiFilters,
@@ -113,7 +115,7 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
     return (
       <ErrorAlert
         error={error as Error}
-        title="팀 목록을 불러올 수 없습니다"
+        title={t('listContent.errorLoad')}
         onRetry={() => refetch()}
       />
     );
@@ -131,11 +133,11 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
           />
           <Input
             type="search"
-            placeholder="팀 검색..."
+            placeholder={t('listContent.searchPlaceholder')}
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             className="pl-10"
-            aria-label="팀 검색"
+            aria-label={t('listContent.searchAriaLabel')}
           />
         </div>
 
@@ -144,12 +146,12 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
           value={filters.site || '_all'}
           onValueChange={(value) => updateSite(value === '_all' ? '' : (value as Site))}
         >
-          <SelectTrigger className="w-[160px]" aria-label="사이트 필터">
+          <SelectTrigger className="w-[160px]" aria-label={t('listContent.siteFilterAriaLabel')}>
             <Filter className="h-4 w-4 mr-2" aria-hidden="true" />
-            <SelectValue placeholder="사이트 선택" />
+            <SelectValue placeholder={t('listContent.siteFilterPlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">전체 사이트</SelectItem>
+            <SelectItem value="_all">{t('listContent.allSites')}</SelectItem>
             {Object.entries(SITE_CONFIG).map(([key, config]) => (
               <SelectItem key={key} value={key}>
                 {config.label}
@@ -167,11 +169,14 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
             )
           }
         >
-          <SelectTrigger className="w-[180px]" aria-label="팀 분류 필터">
-            <SelectValue placeholder="전체 분류" />
+          <SelectTrigger
+            className="w-[180px]"
+            aria-label={t('listContent.classificationFilterAriaLabel')}
+          >
+            <SelectValue placeholder={t('listContent.allClassifications')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_all">전체 분류</SelectItem>
+            <SelectItem value="_all">{t('listContent.allClassifications')}</SelectItem>
             {PRIMARY_CLASSIFICATIONS.map((key) => (
               <SelectItem key={key} value={key}>
                 {CLASSIFICATION_CONFIG[key]?.label || key}
@@ -189,14 +194,15 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
             className="shrink-0"
             type="button"
           >
-            필터 초기화
+            {t('listContent.clearFilters')}
           </Button>
         )}
 
         {/* 팀 추가 버튼 (권한 있는 경우만) */}
         {canCreateTeam && (
           <Button onClick={() => router.push('/teams/create')} className="shrink-0 ml-auto">
-            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />팀 추가
+            <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
+            {t('listContent.addTeam')}
           </Button>
         )}
       </div>
@@ -205,25 +211,32 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
       {teams.length > 0 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            {data?.meta?.pagination?.total || teams.length}개의 팀
-            {hasActiveFilters && ' (필터 적용됨)'}
+            {t('listContent.resultCount', {
+              count: data?.meta?.pagination?.total || teams.length,
+            })}
+            {hasActiveFilters && t('listContent.withFilter')}
           </span>
           {hasActiveFilters && (
             <div className="flex gap-2">
               {debouncedSearch && (
                 <Badge variant="secondary" className="text-xs">
-                  검색: {debouncedSearch}
+                  {t('listContent.searchBadge', { term: debouncedSearch })}
                 </Badge>
               )}
               {filters.site && (
                 <Badge variant="secondary" className="text-xs">
-                  사이트: {SITE_CONFIG[filters.site as keyof typeof SITE_CONFIG]?.label}
+                  {t('listContent.siteBadge', {
+                    site: SITE_CONFIG[filters.site as keyof typeof SITE_CONFIG]?.label,
+                  })}
                 </Badge>
               )}
               {filters.classification && (
                 <Badge variant="secondary" className="text-xs">
-                  분류:{' '}
-                  {CLASSIFICATION_CONFIG[filters.classification]?.label || filters.classification}
+                  {t('listContent.classificationBadge', {
+                    classification:
+                      CLASSIFICATION_CONFIG[filters.classification]?.label ||
+                      filters.classification,
+                  })}
                 </Badge>
               )}
             </div>
@@ -283,6 +296,7 @@ function EmptyTeamList({
   canCreate: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations('teams');
 
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -291,30 +305,27 @@ function EmptyTeamList({
       </div>
 
       <h3 className="text-lg font-semibold mb-2">
-        {hasFilters ? '검색 결과가 없습니다' : '등록된 팀이 없습니다'}
+        {hasFilters ? t('listContent.empty.noResults') : t('listContent.empty.noTeams')}
       </h3>
 
       <p className="text-muted-foreground max-w-md mb-6">
-        {hasFilters ? (
-          searchTerm ? (
-            <>"{searchTerm}"에 대한 검색 결과가 없습니다.</>
-          ) : (
-            '선택한 필터 조건에 맞는 팀이 없습니다.'
-          )
-        ) : (
-          '첫 번째 팀을 등록해보세요.'
-        )}
+        {hasFilters
+          ? searchTerm
+            ? t('listContent.empty.noResultsForSearch', { term: searchTerm })
+            : t('listContent.empty.noResultsForFilter')
+          : t('listContent.empty.noTeamsDescription')}
       </p>
 
       <div className="flex gap-3">
         {hasFilters && (
           <Button variant="outline" onClick={onClearFilters} type="button">
-            필터 초기화
+            {t('listContent.empty.clearFilters')}
           </Button>
         )}
         {canCreate && (
           <Button onClick={() => router.push('/teams/create')}>
-            <Plus className="h-4 w-4 mr-2" />팀 추가
+            <Plus className="h-4 w-4 mr-2" />
+            {t('listContent.empty.addTeam')}
           </Button>
         )}
       </div>

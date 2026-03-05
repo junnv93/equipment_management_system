@@ -94,11 +94,7 @@ export function CalibrationInfoSection({ control }: CalibrationInfoSectionProps)
                 <FormLabel>
                   {t('fields.calibrationMethod')} <span className="text-destructive">*</span>
                 </FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  value={field.value || undefined}
-                >
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={t('form.calibrationInfo.methodPlaceholder')} />

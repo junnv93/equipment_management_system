@@ -33,9 +33,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import calibrationPlansApi, {
   type CalibrationPlan,
   type CalibrationPlanItem,
-  CALIBRATION_PLAN_STATUS_LABELS,
   CALIBRATION_PLAN_STATUS_COLORS,
-  SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
@@ -102,6 +100,7 @@ export function CalibrationPlanDetailClient({
   const queryClient = useQueryClient();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const t = useTranslations('calibration');
+  const tEquip = useTranslations('equipment');
 
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingAgency, setEditingAgency] = useState('');
@@ -136,8 +135,10 @@ export function CalibrationPlanDetailClient({
   useEffect(() => {
     if (plan) {
       // 교정 계획서 정보를 사용해서 의미있는 라벨 생성
-      const siteLabel = plan.siteId ? SITE_LABELS[plan.siteId] || plan.siteId : '';
-      const yearLabel = plan.year ? `${plan.year}년` : '';
+      const siteLabel = plan.siteId
+        ? tEquip(`siteLabel.${plan.siteId}` as Parameters<typeof tEquip>[0]) || plan.siteId
+        : '';
+      const yearLabel = plan.year ? t('planDetail.yearWithUnit', { year: plan.year }) : '';
       const label = `${siteLabel} ${yearLabel} ${t('planDetail.breadcrumbSuffix')}`.trim();
 
       setDynamicLabel(planUuid, label);
@@ -416,10 +417,12 @@ export function CalibrationPlanDetailClient({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold tracking-tight">
-                {plan.year}년 {SITE_LABELS[plan.siteId]} {t('planDetail.breadcrumbSuffix')}
+                {t('planDetail.yearWithUnit', { year: plan.year })}{' '}
+                {tEquip(`siteLabel.${plan.siteId}` as Parameters<typeof tEquip>[0])}{' '}
+                {t('planDetail.breadcrumbSuffix')}
               </h1>
               <Badge className={CALIBRATION_PLAN_STATUS_COLORS[plan.status]}>
-                {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
+                {t(`planStatus.${plan.status}` as Parameters<typeof t>[0])}
               </Badge>
             </div>
             <p className="text-muted-foreground">

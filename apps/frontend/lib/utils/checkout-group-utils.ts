@@ -111,11 +111,9 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
   }
 
   // 정렬: 날짜 내림차순, 같은 날짜 내 반출지 가나다순
-  groups.sort((a, b) => {
+  return groups.toSorted((a, b) => {
     const dateCompare = b.date.localeCompare(a.date);
     if (dateCompare !== 0) return dateCompare;
     return a.destination.localeCompare(b.destination, 'ko');
   });
-
-  return groups;
 }

@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ interface NavLinkProps {
 }
 
 const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps) {
+  const t = useTranslations('navigation');
   return (
     <Link
       href={item.href}
@@ -76,7 +78,7 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
       {item.badge !== undefined && item.badge > 0 && (
         <span
           className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-          aria-label={`${item.badge}건의 알림`}
+          aria-label={t('layout.notificationCount', { count: item.badge })}
         >
           {item.badge}
         </span>
@@ -85,9 +87,11 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
   );
 });
 
-export function MobileNav({ navItems, brandName = '장비 관리 시스템', brandIcon }: MobileNavProps) {
+export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const t = useTranslations('navigation');
+  const displayBrandName = brandName ?? t('layout.systemName');
   const drawerRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -139,14 +143,14 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         closeButtonRef.current?.focus();
       });
       // aria-live 영역에 알림
-      announceToScreenReader('메뉴가 열렸습니다');
+      announceToScreenReader(t('layout.menuOpened'));
     } else {
       document.body.style.overflow = '';
     }
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, t]);
 
   const toggleMenu = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -155,8 +159,8 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
   const closeMenu = useCallback(() => {
     setIsOpen(false);
     menuButtonRef.current?.focus(); // 포커스 복귀
-    announceToScreenReader('메뉴가 닫혔습니다');
-  }, []);
+    announceToScreenReader(t('layout.menuClosed'));
+  }, [t]);
 
   // isActive 판별 함수를 useCallback으로 안정화
   const checkIsActive = useCallback(
@@ -176,7 +180,7 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         size="icon"
         className={cn('md:hidden', FOCUS_TOKENS.classes.default)}
         onClick={toggleMenu}
-        aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
+        aria-label={isOpen ? t('layout.menuClose') : t('layout.menuOpen')}
         aria-expanded={isOpen}
         aria-controls="mobile-nav-drawer"
       >
@@ -202,7 +206,7 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         id="mobile-nav-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label="메인 네비게이션"
+        aria-label={t('layout.mainNav')}
         aria-hidden={!isOpen}
         className={cn(
           'fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-gray-900 shadow-xl md:hidden',
@@ -217,14 +221,14 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         <div className="flex h-14 items-center justify-between border-b dark:border-gray-700 px-4">
           <div className="flex items-center gap-2 font-semibold dark:text-white">
             {brandIcon}
-            <span>{brandName}</span>
+            <span>{displayBrandName}</span>
           </div>
           <Button
             ref={closeButtonRef}
             variant="ghost"
             size="icon"
             onClick={closeMenu}
-            aria-label="메뉴 닫기"
+            aria-label={t('layout.menuClose')}
             className={FOCUS_TOKENS.classes.default}
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -234,7 +238,7 @@ export function MobileNav({ navItems, brandName = '장비 관리 시스템', bra
         {/* 네비게이션 링크 */}
         <nav
           role="navigation"
-          aria-label="메인 네비게이션"
+          aria-label={t('layout.mainNav')}
           className="flex flex-col gap-1 p-4 overflow-y-auto max-h-[calc(100vh-3.5rem)]"
         >
           {navItems.map((item) => (

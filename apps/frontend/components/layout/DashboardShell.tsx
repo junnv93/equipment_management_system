@@ -219,7 +219,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
       return hasPermission(role, item.requiredPermission);
     });
-  }, [userRole, pendingCounts]);
+  }, [userRole, pendingCounts, t]);
 
   // isActive를 useCallback으로 안정화 (rerender-functional-setstate)
   const isActive = useCallback(
@@ -343,6 +343,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
  * 사이드바 구조는 정적으로 렌더링하고, 메인 콘텐츠 영역만 스켈레톤 처리.
  */
 export function DashboardShellSkeleton() {
+  const t = useTranslations('navigation');
   return (
     <div className="flex min-h-screen bg-background">
       {/* 데스크톱 사이드바 스켈레톤 */}
@@ -353,7 +354,7 @@ export function DashboardShellSkeleton() {
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red">
               <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
             </div>
-            <span className="font-semibold text-white">장비 관리 시스템</span>
+            <span className="font-semibold text-white">{t('layout.systemName')}</span>
           </div>
         </div>
 

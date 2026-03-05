@@ -73,7 +73,7 @@ function ErrorPageContent() {
         <CardFooter className="flex flex-col gap-3 px-8 pb-8">
           <Button
             asChild
-            className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 motion-safe:transition-all motion-reduce:transition-none duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 motion-safe:transition-[transform,background-color] motion-reduce:transition-none duration-200 hover:scale-[1.02] active:scale-[0.98]"
             aria-label={t('errorPage.backToLogin')}
           >
             <Link href="/login">
@@ -85,7 +85,7 @@ function ErrorPageContent() {
           <Button
             variant="outline"
             onClick={() => window.location.reload()}
-            className="w-full h-12 text-base font-medium border-slate-200 hover:bg-slate-50 motion-safe:transition-all motion-reduce:transition-none duration-200"
+            className="w-full h-12 text-base font-medium border-slate-200 hover:bg-slate-50 motion-safe:transition-colors motion-reduce:transition-none duration-200"
             aria-label={t('errorPage.retry')}
           >
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />

@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,17 +45,6 @@ const PRIMARY_CLASSIFICATIONS = [
   'software',
 ] as const;
 
-// 폼 검증 스키마 — SSOT enums from @equipment-management/schemas
-const teamFormSchema = z.object({
-  name: z.string().min(1, '팀 이름은 필수입니다').max(100, '팀 이름은 100자 이내여야 합니다'),
-  classification: ClassificationEnum, // ✅ type → classification
-  description: z.string().max(500, '팀 설명은 500자 이내여야 합니다').optional(),
-  site: SiteEnum,
-  leaderId: z.string().uuid('유효한 사용자 ID가 아닙니다').optional().or(z.literal('')),
-});
-
-type TeamFormValues = z.infer<typeof teamFormSchema>;
-
 interface TeamFormProps {
   team?: Team;
   mode: 'create' | 'edit';
@@ -76,8 +66,27 @@ export function TeamForm({ team, mode }: TeamFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations('teams');
 
   const isEditMode = mode === 'edit';
+
+  // i18n 적용 Zod 스키마 (컴포넌트 내부에서 생성)
+  const teamFormSchema = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .min(1, t('form.validation.nameRequired'))
+          .max(100, t('form.validation.nameMaxLength')),
+        classification: ClassificationEnum,
+        description: z.string().max(500, t('form.validation.descMaxLength')).optional(),
+        site: SiteEnum,
+        leaderId: z.string().uuid(t('form.validation.invalidUserId')).optional().or(z.literal('')),
+      }),
+    [t]
+  );
+
+  type TeamFormValues = z.infer<typeof teamFormSchema>;
 
   // 폼 초기화
   const form = useForm<TeamFormValues>({
@@ -103,8 +112,8 @@ export function TeamForm({ team, mode }: TeamFormProps) {
       }),
     onSuccess: (newTeam) => {
       toast({
-        title: '팀이 생성되었습니다',
-        description: `${newTeam.name} 팀이 성공적으로 생성되었습니다.`,
+        title: t('form.createSuccess'),
+        description: t('form.createSuccessDesc', { name: newTeam.name }),
       });
       router.push(`/teams/${newTeam.id}`);
     },
@@ -114,8 +123,8 @@ export function TeamForm({ team, mode }: TeamFormProps) {
     onError: (error: Error) => {
       toast({
         variant: 'destructive',
-        title: '팀 생성 실패',
-        description: error.message || '팀을 생성하는 중 오류가 발생했습니다.',
+        title: t('form.createError'),
+        description: error.message || t('form.createErrorFallback'),
       });
     },
   });
@@ -125,15 +134,15 @@ export function TeamForm({ team, mode }: TeamFormProps) {
     mutationFn: (data: TeamFormValues) =>
       teamsApi.updateTeam(team!.id, {
         name: data.name,
-        classification: data.classification, // UpdateTeamInput은 partial이므로 undefined도 허용
+        classification: data.classification,
         description: data.description,
         site: data.site,
         leaderId: data.leaderId || undefined,
       }),
     onSuccess: (updatedTeam) => {
       toast({
-        title: '팀이 수정되었습니다',
-        description: `${updatedTeam.name} 팀 정보가 성공적으로 수정되었습니다.`,
+        title: t('form.updateSuccess'),
+        description: t('form.updateSuccessDesc', { name: updatedTeam.name }),
       });
       router.push(`/teams/${team!.id}`);
     },
@@ -144,8 +153,8 @@ export function TeamForm({ team, mode }: TeamFormProps) {
     onError: (error: Error) => {
       toast({
         variant: 'destructive',
-        title: '팀 수정 실패',
-        description: error.message || '팀 정보를 수정하는 중 오류가 발생했습니다.',
+        title: t('form.updateError'),
+        description: error.message || t('form.updateErrorFallback'),
       });
     },
   });
@@ -178,7 +187,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>기본 정보</CardTitle>
+            <CardTitle>{t('form.basicInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* 팀 이름 */}
@@ -187,16 +196,18 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>팀 이름 *</FormLabel>
+                  <FormLabel>{t('form.nameLabel')}</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       value={field.value || ''}
-                      placeholder="예: RF 테스트팀"
+                      placeholder={t('form.namePlaceholder')}
                       aria-describedby="name-description"
                     />
                   </FormControl>
-                  <FormDescription id="name-description">팀의 표시 이름입니다.</FormDescription>
+                  <FormDescription id="name-description">
+                    {t('form.nameDescription')}
+                  </FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>
               )}
@@ -208,11 +219,11 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               name="classification"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>팀 분류</FormLabel>
+                  <FormLabel>{t('form.classificationLabel')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger aria-describedby="classification-description">
-                        <SelectValue placeholder="팀 분류 선택" />
+                        <SelectValue placeholder={t('form.classificationPlaceholder')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -227,7 +238,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                     </SelectContent>
                   </Select>
                   <FormDescription id="classification-description">
-                    RF, EMC, SAR 등 팀의 전문 분야입니다.
+                    {t('form.classificationDescription')}
                   </FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>
@@ -240,11 +251,11 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               name="site"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>소속 사이트</FormLabel>
+                  <FormLabel>{t('form.siteLabel')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger aria-describedby="site-description">
-                        <SelectValue placeholder="사이트 선택" />
+                        <SelectValue placeholder={t('form.sitePlaceholder')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -256,7 +267,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                     </SelectContent>
                   </Select>
                   <FormDescription id="site-description">
-                    팀이 소속된 시험소 사이트입니다.
+                    {t('form.siteDescription')}
                   </FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>
@@ -269,18 +280,18 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>팀 설명</FormLabel>
+                  <FormLabel>{t('form.descriptionLabel')}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value || ''}
-                      placeholder="팀의 역할과 담당 업무를 설명해주세요"
+                      placeholder={t('form.descriptionPlaceholder')}
                       rows={3}
                       aria-describedby="description-description"
                     />
                   </FormControl>
                   <FormDescription id="description-description">
-                    최대 500자까지 입력할 수 있습니다.
+                    {t('form.descriptionHint')}
                   </FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>
@@ -293,7 +304,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
               name="leaderId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>팀장 (선택)</FormLabel>
+                  <FormLabel>{t('form.leaderLabel')}</FormLabel>
                   <FormControl>
                     <LeaderCombobox
                       value={field.value || undefined}
@@ -303,9 +314,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
                       disabled={isPending}
                     />
                   </FormControl>
-                  <FormDescription>
-                    팀을 이끌 책임자를 선택합니다. 선택하지 않으면 비워둡니다.
-                  </FormDescription>
+                  <FormDescription>{t('form.leaderDescription')}</FormDescription>
                   <FormMessage role="alert" />
                 </FormItem>
               )}
@@ -321,18 +330,18 @@ export function TeamForm({ team, mode }: TeamFormProps) {
             onClick={() => router.back()}
             disabled={isPending}
           >
-            취소
+            {t('form.cancel')}
           </Button>
           <Button type="submit" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {isEditMode ? '수정 중...' : '생성 중...'}
+                {isEditMode ? t('form.submittingEdit') : t('form.submitting')}
               </>
             ) : isEditMode ? (
-              '수정'
+              t('form.submitEdit')
             ) : (
-              '생성'
+              t('form.submit')
             )}
           </Button>
         </div>

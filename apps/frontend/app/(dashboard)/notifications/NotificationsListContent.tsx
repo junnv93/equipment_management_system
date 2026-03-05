@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -22,20 +23,8 @@ import {
   useUnreadCount,
 } from '@/hooks/use-notifications';
 import { useNotificationFilters } from '@/hooks/use-notification-filters';
-import {
-  NOTIFICATION_CATEGORIES,
-  NOTIFICATION_CATEGORY_LABELS,
-} from '@equipment-management/shared-constants';
+import { NOTIFICATION_CATEGORIES } from '@equipment-management/shared-constants';
 import type { UINotificationFilters } from '@/lib/utils/notification-filter-utils';
-
-/** "전체" + SSOT 카테고리로 필터 옵션 생성 */
-const CATEGORY_OPTIONS = [
-  { value: '_all', label: '전체' },
-  ...NOTIFICATION_CATEGORIES.map((cat) => ({
-    value: cat,
-    label: NOTIFICATION_CATEGORY_LABELS[cat],
-  })),
-];
 
 /**
  * 알림 목록 페이지 (클라이언트 컴포넌트)
@@ -45,8 +34,18 @@ const CATEGORY_OPTIONS = [
  * - "전체" 선택 = 파라미터 생략 (프로젝트 통일 규칙)
  */
 export default function NotificationsListContent() {
+  const t = useTranslations('notifications');
   const { filters, apiFilters, updateFilters } = useNotificationFilters();
   const [searchInput, setSearchInput] = useState(filters.search);
+
+  /** "전체" + SSOT 카테고리로 필터 옵션 생성 */
+  const categoryOptions = [
+    { value: '_all', label: t('list.categoryAll') },
+    ...NOTIFICATION_CATEGORIES.map((cat) => ({
+      value: cat,
+      label: t(`category.${cat}.label` as Parameters<typeof t>[0]),
+    })),
+  ];
 
   const { data: unreadCount = 0 } = useUnreadCount();
   const { data: notificationData, isLoading } = useNotificationList(apiFilters);
@@ -88,9 +87,9 @@ export default function NotificationsListContent() {
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold">알림</h1>
+            <h1 className="text-2xl font-bold">{t('title')}</h1>
             <p className="text-sm text-muted-foreground tabular-nums">
-              {unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}건` : '새로운 알림이 없습니다'}
+              {unreadCount > 0 ? t('list.unreadCount', { count: unreadCount }) : t('list.noUnread')}
             </p>
           </div>
         </div>
@@ -102,7 +101,7 @@ export default function NotificationsListContent() {
             disabled={markAllAsReadMutation.isPending}
           >
             <CheckCheck className="h-4 w-4 mr-2" aria-hidden="true" />
-            모두 읽음으로 표시
+            {t('list.markAllRead')}
           </Button>
         )}
       </div>
@@ -114,9 +113,9 @@ export default function NotificationsListContent() {
       >
         <div className="flex items-center justify-between flex-wrap gap-3">
           <TabsList>
-            <TabsTrigger value="all">전체</TabsTrigger>
+            <TabsTrigger value="all">{t('list.tabs.all')}</TabsTrigger>
             <TabsTrigger value="unread">
-              안읽음
+              {t('list.tabs.unread')}
               {unreadCount > 0 && (
                 <span className="ml-1 rounded-full bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground">
                   {unreadCount}
@@ -134,11 +133,11 @@ export default function NotificationsListContent() {
                 })
               }
             >
-              <SelectTrigger className="w-[130px]" aria-label="알림 카테고리 필터">
-                <SelectValue placeholder="카테고리" />
+              <SelectTrigger className="w-[130px]" aria-label={t('list.categoryAriaLabel')}>
+                <SelectValue placeholder={t('list.categoryFilter')} />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORY_OPTIONS.map((opt) => (
+                {categoryOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -148,8 +147,8 @@ export default function NotificationsListContent() {
 
             <Input
               name="search"
-              aria-label="알림 검색"
-              placeholder="알림 검색…"
+              aria-label={t('list.searchAriaLabel')}
+              placeholder={t('list.searchPlaceholder')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="w-[200px]"
@@ -179,7 +178,11 @@ export default function NotificationsListContent() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground tabular-nums">
-            총 {total}건 중 {(filters.page - 1) * 20 + 1}–{Math.min(filters.page * 20, total)}건
+            {t('list.pagination.total', {
+              total,
+              start: (filters.page - 1) * 20 + 1,
+              end: Math.min(filters.page * 20, total),
+            })}
           </p>
           <div className="flex gap-2">
             <Button
@@ -188,7 +191,7 @@ export default function NotificationsListContent() {
               disabled={filters.page <= 1}
               onClick={() => updateFilters({ page: filters.page - 1 })}
             >
-              이전
+              {t('list.pagination.previous')}
             </Button>
             <Button
               variant="outline"
@@ -196,7 +199,7 @@ export default function NotificationsListContent() {
               disabled={filters.page >= totalPages}
               onClick={() => updateFilters({ page: filters.page + 1 })}
             >
-              다음
+              {t('list.pagination.next')}
             </Button>
           </div>
         </div>
@@ -216,6 +219,7 @@ function NotificationsList({
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslations('notifications');
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -248,9 +252,9 @@ function NotificationsList({
             <span className="text-xs text-success-foreground font-bold">✓</span>
           </div>
         </div>
-        <h3 className="text-lg font-semibold mb-2 tracking-tight">모든 알림을 확인했습니다</h3>
+        <h3 className="text-lg font-semibold mb-2 tracking-tight">{t('list.allRead.title')}</h3>
         <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-          새로운 알림이 있을 때 이곳에 표시됩니다.
+          {t('list.allRead.description')}
         </p>
       </div>
     );
@@ -273,7 +277,7 @@ function NotificationsList({
               e.stopPropagation();
               onDelete(notification.id);
             }}
-            aria-label="알림 삭제"
+            aria-label={t('list.deleteAriaLabel')}
           >
             <Trash2 className="h-3 w-3" aria-hidden="true" />
           </Button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { ResponsiveBreadcrumb } from './Breadcrumb';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
@@ -17,13 +18,14 @@ interface HeaderProps {
 }
 
 export function Header({
-  title = '장비 관리 시스템',
+  title,
   leftContent,
   rightContent,
   className,
   showBreadcrumb = true,
   dynamicLabels: propDynamicLabels,
 }: HeaderProps) {
+  const t = useTranslations('navigation');
   // Context에서 동적 라벨 가져오기
   const { dynamicLabels: contextDynamicLabels } = useBreadcrumb();
 
@@ -50,7 +52,9 @@ export function Header({
           <ResponsiveBreadcrumb dynamicLabels={mergedDynamicLabels} />
         </div>
       ) : (
-        <h1 className="text-lg font-semibold truncate hidden sm:block">{title}</h1>
+        <h1 className="text-lg font-semibold truncate hidden sm:block">
+          {title ?? t('layout.systemName')}
+        </h1>
       )}
 
       {/* 오른쪽 영역 */}

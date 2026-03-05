@@ -85,7 +85,7 @@ export function ApprovalList({
             {items.map((item, index) => (
               <div
                 key={item.id}
-                className={APPROVAL_MOTION.listItemEnter}
+                className={`${APPROVAL_MOTION.listItemEnter} [content-visibility:auto] [contain-intrinsic-size:0_120px]`}
                 style={{ animationDelay: APPROVAL_MOTION.listStagger(index) }}
               >
                 <ApprovalItemCard

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { Search, User, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -35,8 +36,8 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { USER_ROLE_LABELS } from '@equipment-management/shared-constants';
 import { cn } from '@/lib/utils';
+import { UserRoleValues } from '@equipment-management/schemas';
 import { MemberProfileDialog } from './MemberProfileDialog';
 import type { CurrentUserInfo } from './TeamDetail';
 
@@ -71,6 +72,9 @@ export function TeamMemberList({
   initialMembers = [],
   currentUser,
 }: TeamMemberListProps) {
+  const t = useTranslations('teams');
+  const tNav = useTranslations('navigation');
+
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [profileMember, setProfileMember] = useState<TeamMember | null>(null);
@@ -111,19 +115,24 @@ export function TeamMemberList({
       queryKeys.users.list(),
       queryKeys.approvals.counts(),
     ],
-    successMessage: '역할이 변경되었습니다.',
+    successMessage: t('member.roleChangeSuccess'),
   });
 
   // 역할 변경 가능 여부 판단
   const canChangeRole = (member: TeamMember): boolean => {
     if (!currentUser) return false;
     if (currentUser.userId === member.id) return false;
-    if (!['test_engineer', 'technical_manager'].includes(member.role)) return false;
+    if (
+      ![UserRoleValues.TEST_ENGINEER, UserRoleValues.TECHNICAL_MANAGER].includes(
+        member.role as typeof UserRoleValues.TEST_ENGINEER
+      )
+    )
+      return false;
 
-    if (currentUser.role === 'technical_manager') {
+    if (currentUser.role === UserRoleValues.TECHNICAL_MANAGER) {
       return member.teamId === currentUser.teamId;
     }
-    if (currentUser.role === 'lab_manager') {
+    if (currentUser.role === UserRoleValues.LAB_MANAGER) {
       return (teamSite || member.site) === currentUser.site;
     }
     return false;
@@ -139,6 +148,10 @@ export function TeamMemberList({
       currentRole: member.role,
     });
     setRoleChangeTarget(null);
+  };
+
+  const getTargetRole = (currentRole: string) => {
+    return currentRole === 'test_engineer' ? 'technical_manager' : 'test_engineer';
   };
 
   // 검색 + 역할 복합 필터링
@@ -159,21 +172,16 @@ export function TeamMemberList({
 
   if (error) {
     return (
-      <ErrorAlert
-        error={error as Error}
-        title="팀원 목록을 불러올 수 없습니다"
-        onRetry={() => refetch()}
-      />
+      <ErrorAlert error={error as Error} title={t('member.errorLoad')} onRetry={() => refetch()} />
     );
   }
 
-  const getTargetRoleLabel = (currentRole: string) => {
-    return currentRole === 'test_engineer' ? '기술책임자' : '시험실무자';
-  };
-
-  const getTargetRole = (currentRole: string) => {
-    return currentRole === 'test_engineer' ? 'technical_manager' : 'test_engineer';
-  };
+  const roleKeys = [
+    'test_engineer',
+    'technical_manager',
+    'quality_manager',
+    'lab_manager',
+  ] as const;
 
   return (
     <div className="space-y-4">
@@ -188,18 +196,18 @@ export function TeamMemberList({
             />
             <Input
               type="search"
-              placeholder="팀원 검색..."
+              placeholder={t('member.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 pr-8"
-              aria-label="팀원 검색"
+              aria-label={t('member.searchAriaLabel')}
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="검색 초기화"
+                aria-label={t('member.searchClear')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -208,15 +216,16 @@ export function TeamMemberList({
 
           {/* 역할 필터 */}
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[160px]" aria-label="역할 필터">
-              <SelectValue placeholder="전체 역할" />
+            <SelectTrigger className="w-[160px]" aria-label={t('member.roleFilterAriaLabel')}>
+              <SelectValue placeholder={t('member.allRoles')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체 역할</SelectItem>
-              <SelectItem value="test_engineer">시험실무자</SelectItem>
-              <SelectItem value="technical_manager">기술책임자</SelectItem>
-              <SelectItem value="quality_manager">품질책임자</SelectItem>
-              <SelectItem value="lab_manager">시험소장</SelectItem>
+              <SelectItem value="all">{t('member.allRoles')}</SelectItem>
+              {roleKeys.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {tNav(`roles.${role}` as Parameters<typeof tNav>[0])}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -226,7 +235,7 @@ export function TeamMemberList({
           className="text-sm text-muted-foreground shrink-0"
           style={{ fontVariantNumeric: 'tabular-nums' }}
         >
-          {filteredMembers.length}명
+          {t('member.count', { count: filteredMembers.length })}
         </span>
       </div>
 
@@ -250,7 +259,9 @@ export function TeamMemberList({
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <User className="h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground">
-                {search || roleFilter !== 'all' ? '검색 결과가 없습니다' : '등록된 팀원이 없습니다'}
+                {search || roleFilter !== 'all'
+                  ? t('member.empty.noResults')
+                  : t('member.empty.noMembers')}
               </p>
             </div>
           ) : (
@@ -258,16 +269,20 @@ export function TeamMemberList({
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-4 font-medium text-muted-foreground">이름</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">역할</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">
+                      {t('member.table.name')}
+                    </th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">
+                      {t('member.table.role')}
+                    </th>
                     <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">
-                      부서
+                      {t('member.table.department')}
                     </th>
                     <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                      이메일
+                      {t('member.table.email')}
                     </th>
                     <th className="text-right p-4 font-medium text-muted-foreground">
-                      <span className="sr-only">작업</span>
+                      <span className="sr-only">{t('member.table.actionsLabel')}</span>
                     </th>
                   </tr>
                 </thead>
@@ -300,7 +315,7 @@ export function TeamMemberList({
                               {member.name}
                               {member.isActive === false && (
                                 <Badge variant="outline" className="ml-2 text-xs">
-                                  비활성
+                                  {t('member.inactive')}
                                 </Badge>
                               )}
                             </p>
@@ -323,8 +338,7 @@ export function TeamMemberList({
                                 ROLE_BADGE_VARIANT[member.role] || 'bg-muted'
                               )}
                             >
-                              {USER_ROLE_LABELS[member.role as keyof typeof USER_ROLE_LABELS] ||
-                                member.role}
+                              {tNav(`roles.${member.role}` as Parameters<typeof tNav>[0])}
                             </span>
                             <Button
                               variant="outline"
@@ -338,7 +352,13 @@ export function TeamMemberList({
                               className="h-7 text-xs"
                             >
                               <ShieldCheck className="h-3 w-3 mr-1" />
-                              {getTargetRoleLabel(member.role)}로 변경
+                              {t('member.changeRoleButton', {
+                                role: tNav(
+                                  `roles.${getTargetRole(member.role)}` as Parameters<
+                                    typeof tNav
+                                  >[0]
+                                ),
+                              })}
                             </Button>
                           </div>
                         ) : (
@@ -348,8 +368,7 @@ export function TeamMemberList({
                               ROLE_BADGE_VARIANT[member.role] || 'bg-muted'
                             )}
                           >
-                            {USER_ROLE_LABELS[member.role as keyof typeof USER_ROLE_LABELS] ||
-                              member.role}
+                            {tNav(`roles.${member.role}` as Parameters<typeof tNav>[0])}
                           </span>
                         )}
                       </td>
@@ -384,7 +403,7 @@ export function TeamMemberList({
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              aria-label={`${member.name} 메뉴`}
+                              aria-label={t('member.menuAriaLabel', { name: member.name })}
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
@@ -394,13 +413,13 @@ export function TeamMemberList({
                               <DropdownMenuItem asChild>
                                 <a href={`mailto:${member.email}`}>
                                   <Mail className="h-4 w-4 mr-2" />
-                                  이메일 보내기
+                                  {t('member.sendEmail')}
                                 </a>
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => setProfileMember(member)}>
                               <User className="h-4 w-4 mr-2" />
-                              프로필 보기
+                              {t('member.viewProfile')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -430,22 +449,20 @@ export function TeamMemberList({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>역할 변경 확인</AlertDialogTitle>
+            <AlertDialogTitle>{t('member.roleChangeDialog.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{roleChangeTarget?.member.name}</strong>님의 역할을{' '}
-              <strong>
-                {USER_ROLE_LABELS[roleChangeTarget?.member.role as keyof typeof USER_ROLE_LABELS]}
-              </strong>
-              에서{' '}
-              <strong>
-                {USER_ROLE_LABELS[roleChangeTarget?.newRole as keyof typeof USER_ROLE_LABELS]}
-              </strong>
-              (으)로 변경하시겠습니까?
+              {t('member.roleChangeDialog.description', {
+                name: roleChangeTarget?.member.name || '',
+                from: tNav(`roles.${roleChangeTarget?.member.role}` as Parameters<typeof tNav>[0]),
+                to: tNav(`roles.${roleChangeTarget?.newRole}` as Parameters<typeof tNav>[0]),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRoleChange}>역할 변경</AlertDialogAction>
+            <AlertDialogCancel>{t('member.roleChangeDialog.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRoleChange}>
+              {t('member.roleChangeDialog.confirm')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -17,7 +17,7 @@ import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
 import { ApprovalHistoryCard } from './ApprovalHistoryCard';
-import { renderCategoryDetails, CategoryBadge } from './detail-renderers';
+import { CategoryDetails, CategoryBadge } from './detail-renderers';
 import { getApprovalStatusBadgeClasses, getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
@@ -108,7 +108,7 @@ export default function ApprovalDetailModal({
             <div>
               <h4 className="text-sm font-semibold mb-3">{t('detail.requestDetail')}</h4>
               <div className="bg-muted/50 rounded-lg p-4 divide-y">
-                {renderCategoryDetails(item.category, item.details)}
+                <CategoryDetails category={item.category} details={item.details} />
               </div>
             </div>
 

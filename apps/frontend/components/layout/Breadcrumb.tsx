@@ -13,10 +13,21 @@
 
 import { Fragment } from 'react';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { generateBreadcrumbs } from '@/lib/navigation/generate-breadcrumbs';
+import { generateBreadcrumbs, type BreadcrumbItem } from '@/lib/navigation/generate-breadcrumbs';
+
+const NAVIGATION_PREFIX = 'navigation.';
+
+/** labelKey에서 'navigation.' 접두어를 제거하여 t() 호출용 키를 반환 */
+function resolveLabelKey(item: BreadcrumbItem): string | undefined {
+  if (!item.labelKey) return undefined;
+  return item.labelKey.startsWith(NAVIGATION_PREFIX)
+    ? item.labelKey.slice(NAVIGATION_PREFIX.length)
+    : item.labelKey;
+}
 
 /**
  * Breadcrumb Props
@@ -41,6 +52,7 @@ export interface BreadcrumbProps {
  */
 export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbProps) {
   const pathname = usePathname();
+  const t = useTranslations('navigation');
   const items = generateBreadcrumbs(pathname, dynamicLabels);
 
   // 브레드크럼이 없으면 렌더링하지 않음
@@ -68,6 +80,8 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
       {displayItems.map((item, index) => {
         const Icon = item.icon;
         const isFirst = index === 0;
+        const resolvedKey = resolveLabelKey(item);
+        const displayLabel = resolvedKey ? t(resolvedKey as Parameters<typeof t>[0]) : item.label;
 
         return (
           <Fragment key={item.href}>
@@ -84,7 +98,7 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
                 aria-current="page"
               >
                 {Icon && <Icon className="inline h-3.5 w-3.5 mr-1" aria-hidden="true" />}
-                {item.label}
+                {displayLabel}
               </span>
             ) : (
               <Link
@@ -99,7 +113,7 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
                 )}
               >
                 {Icon && <Icon className="inline h-3.5 w-3.5 mr-1" aria-hidden="true" />}
-                {item.label}
+                {displayLabel}
               </Link>
             )}
           </Fragment>
@@ -119,6 +133,7 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
  */
 export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) {
   const pathname = usePathname();
+  const t = useTranslations('navigation');
   const allItems = generateBreadcrumbs(pathname, dynamicLabels);
 
   // 브레드크럼이 없으면 렌더링하지 않음
@@ -128,6 +143,8 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
 
   // 현재 페이지 (마지막 항목)
   const currentItem = allItems[allItems.length - 1];
+  const resolvedKey = resolveLabelKey(currentItem);
+  const displayLabel = resolvedKey ? t(resolvedKey as Parameters<typeof t>[0]) : currentItem.label;
 
   return (
     <nav aria-label="breadcrumb" className={cn('flex items-center gap-1', className)}>
@@ -135,7 +152,7 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
         className={cn('text-sm text-foreground', 'truncate max-w-[180px]', 'font-medium')}
         aria-current="page"
       >
-        {currentItem.label}
+        {displayLabel}
       </span>
     </nav>
   );
@@ -171,10 +188,12 @@ export function ResponsiveBreadcrumb({ className, dynamicLabels, maxItems }: Bre
  * 브레드크럼 로딩 중 표시할 스켈레톤입니다.
  */
 export function BreadcrumbSkeleton({ className }: { className?: string }) {
+  const t = useTranslations('navigation');
+
   return (
     <div
       className={cn('flex items-center gap-1.5 motion-safe:animate-pulse', className)}
-      aria-label="브레드크럼 로딩 중"
+      aria-label={t('layout.breadcrumbLoading')}
     >
       {/* 첫 번째 항목 */}
       <div className="w-16 h-5 bg-muted rounded" />

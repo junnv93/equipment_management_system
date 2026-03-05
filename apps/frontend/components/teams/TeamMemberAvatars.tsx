@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -36,6 +37,7 @@ export function TeamMemberAvatars({
   members = [],
   className,
 }: TeamMemberAvatarsProps) {
+  const t = useTranslations('teams');
   const [hoveredMember, setHoveredMember] = useState<string | null>(null);
 
   // 멤버 데이터가 없는 경우 플레이스홀더 생성
@@ -44,7 +46,7 @@ export function TeamMemberAvatars({
       ? members.slice(0, maxDisplay)
       : Array.from({ length: Math.min(memberCount, maxDisplay) }, (_, i) => ({
           id: `placeholder-${teamId}-${i}`,
-          name: `팀원 ${i + 1}`,
+          name: t('avatars.memberPlaceholder', { index: i + 1 }),
           avatarUrl: undefined,
         }));
 
@@ -52,7 +54,11 @@ export function TeamMemberAvatars({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div role="group" aria-label="팀원 목록" className={cn('flex items-center', className)}>
+      <div
+        role="group"
+        aria-label={t('avatars.groupAriaLabel')}
+        className={cn('flex items-center', className)}
+      >
         {/* 아바타 목록 */}
         <div className="flex -space-x-2">
           {displayMembers.map((member, index) => (
@@ -98,7 +104,7 @@ export function TeamMemberAvatars({
                 <button
                   type="button"
                   data-testid="more-members-button"
-                  aria-label={`나머지 ${remainingCount}명 보기`}
+                  aria-label={t('avatars.moreAriaLabel', { count: remainingCount })}
                   className={cn(
                     'relative h-8 w-8 rounded-full border-2 border-background',
                     'bg-primary/10 flex items-center justify-center',
@@ -112,14 +118,14 @@ export function TeamMemberAvatars({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" className="text-xs">
-                나머지 {remainingCount}명 보기
+                {t('avatars.moreAriaLabel', { count: remainingCount })}
               </TooltipContent>
             </Tooltip>
           )}
         </div>
 
         {/* 총 인원 텍스트 (스크린 리더용) */}
-        <span className="sr-only">총 {memberCount}명의 팀원</span>
+        <span className="sr-only">{t('avatars.totalMembers', { count: memberCount })}</span>
       </div>
     </TooltipProvider>
   );

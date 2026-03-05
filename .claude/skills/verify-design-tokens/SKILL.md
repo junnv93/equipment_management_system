@@ -80,8 +80,9 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 `transition-all` 사용을 탐지합니다. Specific property transitions 또는 `getTransitionClasses()` 사용이 권장됩니다.
 
 ```bash
-# transition-all 사용 탐지 (면제: shadcn/ui)
-grep -rn "transition-all" apps/frontend/components --include="*.tsx" --include="*.ts" | grep -v "apps/frontend/components/ui/"
+# transition-all 사용 탐지 (면제: shadcn/ui, 주석)
+grep -rn "transition-all" apps/frontend/components apps/frontend/app --include="*.tsx" --include="*.ts" \
+  | grep -v "apps/frontend/components/ui/\|no transition-all\|transition-all 금지\|transition-all 대신"
 ```
 
 **PASS 기준:** 0개 결과 (shadcn/ui 제외 모든 컴포넌트에서 transition-all 미사용).
@@ -108,7 +109,8 @@ className={cn(
 
 ```bash
 # focus: 사용 탐지 (면제: shadcn/ui, SkipLink)
-grep -rn "focus:ring\|focus:outline" apps/frontend/components --include="*.tsx" | grep -v "apps/frontend/components/ui/\|SkipLink"
+grep -rn "focus:ring\|focus:outline\|focus:bg\|focus:text" apps/frontend/components apps/frontend/app --include="*.tsx" \
+  | grep -v "apps/frontend/components/ui/\|SkipLink"
 ```
 
 **PASS 기준:** shadcn/ui와 SkipLink를 제외한 모든 컴포넌트에서 `focus-visible:` 사용.

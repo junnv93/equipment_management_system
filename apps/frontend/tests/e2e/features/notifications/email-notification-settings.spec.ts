@@ -53,9 +53,10 @@ test.describe('이메일 알림 설정', () => {
   }) => {
     await waitForNotificationsPage(page);
 
-    // 이메일 Switch 요소 찾기 (라벨 근처)
-    const emailFormItem = page.locator('form').filter({ hasText: '이메일 알림' }).first();
-    const emailSwitch = emailFormItem.getByRole('switch');
+    // 이메일 Switch 요소 찾기 — 채널 카드의 첫 번째 switch (이메일)
+    // Note: shadcn Form(FormProvider)은 DOM <form> 태그를 렌더링하지 않으므로
+    //       page.locator('form').filter(...) 대신 role-based locator 사용
+    const emailSwitch = page.getByRole('switch').first();
 
     // 현재 상태 저장
     const initialState = await emailSwitch.getAttribute('data-state');
@@ -63,17 +64,14 @@ test.describe('이메일 알림 설정', () => {
     // 토글 클릭
     await emailSwitch.click();
 
-    // Loader2 아이콘(animate-spin) 또는 Check 아이콘 중 하나가 표시되어야 함
-    // 저장 완료 시: Check 아이콘 표시
-    const checkIcon = emailFormItem
-      .locator('svg')
-      .filter({ has: page.locator('[class*="text-green"]') });
-    // Loader가 사라지고 Check가 표시될 때까지 대기 (최대 5초)
+    // 저장 완료 피드백: Check 아이콘 (text-green-500 클래스가 SVG 요소에 직접 적용)
+    // Note: Check 아이콘이 2초 후 사라지므로 타이밍 허용
+    const checkIcon = page.locator('svg.text-green-500').first();
     await expect(checkIcon)
       .toBeVisible({ timeout: 5000 })
       .catch(() => {
-        // Check 아이콘을 찾지 못한 경우 → 다른 방법으로 저장 확인
-        // 토글 상태가 변경됐는지 확인
+        // auto-save 응답 속도에 따라 Check 아이콘이 2초 이내에 나타났다 사라질 수 있음
+        // 토글 상태 변경으로 저장 성공 여부를 대신 확인
       });
 
     // 토글 상태가 변경됐는지 확인
@@ -90,8 +88,8 @@ test.describe('이메일 알림 설정', () => {
   }) => {
     await waitForNotificationsPage(page);
 
-    const emailFormItem = page.locator('form').filter({ hasText: '이메일 알림' }).first();
-    const emailSwitch = emailFormItem.getByRole('switch');
+    // 채널 카드의 첫 번째 switch (이메일)
+    const emailSwitch = page.getByRole('switch').first();
 
     // 현재 상태 확인
     const beforeState = await emailSwitch.getAttribute('data-state');
@@ -110,11 +108,7 @@ test.describe('이메일 알림 설정', () => {
     await expect(page.getByRole('heading', { name: '알림 채널' })).toBeVisible({ timeout: 15000 });
 
     // 새로고침 후 상태 확인 — 변경된 상태가 유지되어야 함
-    const emailSwitchAfter = page
-      .locator('form')
-      .filter({ hasText: '이메일 알림' })
-      .first()
-      .getByRole('switch');
+    const emailSwitchAfter = page.getByRole('switch').first();
     const afterState = await emailSwitchAfter.getAttribute('data-state');
     expect(afterState).toBe(changedState);
 
@@ -128,17 +122,10 @@ test.describe('이메일 알림 설정', () => {
   }) => {
     await waitForNotificationsPage(page);
 
-    // 두 Switch 찾기
-    const emailSwitch = page
-      .locator('form')
-      .filter({ hasText: '이메일 알림' })
-      .first()
-      .getByRole('switch');
-    const inAppSwitch = page
-      .locator('form')
-      .filter({ hasText: '앱 내 알림' })
-      .first()
-      .getByRole('switch');
+    // 두 Switch 찾기 — 채널 카드: 이메일(0번), 앱 내 알림(1번) 순서
+    // Note: shadcn Form은 DOM <form> 태그 없음 → role-based locator 사용
+    const emailSwitch = page.getByRole('switch').first();
+    const inAppSwitch = page.getByRole('switch').nth(1);
 
     // 앱 내 알림 스위치의 현재 상태 기록
     const inAppStateBefore = await inAppSwitch.getAttribute('data-state');

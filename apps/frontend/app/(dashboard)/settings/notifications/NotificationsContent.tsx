@@ -159,7 +159,7 @@ export default function NotificationsContent() {
   return (
     <div className="space-y-6">
       {/* Card 1: 알림 채널 */}
-      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-all motion-safe:duration-300 motion-reduce:transition-none">
+      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-[box-shadow] motion-safe:duration-300 motion-reduce:transition-none">
         <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
           <div className="flex items-start gap-4">
             <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
@@ -179,7 +179,7 @@ export default function NotificationsContent() {
                 control={form.control}
                 name="emailEnabled"
                 render={({ field }) => (
-                  <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
+                  <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-[border-color,background-color] motion-safe:duration-200 motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
                         <Mail
@@ -228,7 +228,7 @@ export default function NotificationsContent() {
                 control={form.control}
                 name="inAppEnabled"
                 render={({ field }) => (
-                  <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
+                  <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-[border-color,background-color] motion-safe:duration-200 motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
                         <Bell
@@ -321,7 +321,7 @@ export default function NotificationsContent() {
       </Card>
 
       {/* Card 2: 알림 유형 */}
-      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-all motion-safe:duration-300 motion-reduce:transition-none">
+      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-[box-shadow] motion-safe:duration-300 motion-reduce:transition-none">
         <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
           <div className="flex items-start gap-4">
             <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
@@ -342,7 +342,7 @@ export default function NotificationsContent() {
                   control={form.control}
                   name={item.name}
                   render={({ field }) => (
-                    <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
+                    <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-[border-color,background-color] motion-safe:duration-200 motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-1.5 flex-1">
                           <FormLabel className="text-base font-semibold cursor-pointer">

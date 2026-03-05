@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,16 +20,16 @@ export function AzureAdButton({
   className,
   onError,
 }: AzureAdButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleClick = async () => {
-    setIsLoading(true);
-    try {
-      await signIn('azure-ad', { callbackUrl });
-    } catch (error) {
-      onError?.(error as Error);
-      setIsLoading(false);
-    }
+  const handleClick = () => {
+    startTransition(async () => {
+      try {
+        await signIn('azure-ad', { callbackUrl });
+      } catch (error) {
+        onError?.(error as Error);
+      }
+    });
   };
 
   return (
@@ -37,7 +37,7 @@ export function AzureAdButton({
       type="button"
       variant="outline"
       onClick={handleClick}
-      disabled={disabled || isLoading}
+      disabled={disabled || isPending}
       className={cn(
         'w-full h-12 text-base font-medium',
         'bg-white hover:bg-slate-50 border-slate-200',
@@ -52,7 +52,7 @@ export function AzureAdButton({
       aria-label={AUTH_CONTENT.button.azureAd}
       data-testid="azure-ad-button"
     >
-      {isLoading ? (
+      {isPending ? (
         <Loader2
           className="mr-3 h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none text-slate-500 dark:text-muted-foreground"
           aria-hidden="true"
@@ -71,7 +71,7 @@ export function AzureAdButton({
           <rect x="11" y="11" width="10" height="10" fill="#FFB900" />
         </svg>
       )}
-      {isLoading ? AUTH_CONTENT.button.azureAdLoading : AUTH_CONTENT.button.azureAd}
+      {isPending ? AUTH_CONTENT.button.azureAdLoading : AUTH_CONTENT.button.azureAd}
     </Button>
   );
 }

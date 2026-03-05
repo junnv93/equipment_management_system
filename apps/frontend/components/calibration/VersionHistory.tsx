@@ -1,11 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
 import calibrationPlansApi, {
   CalibrationPlanVersion,
-  CALIBRATION_PLAN_STATUS_LABELS,
   CALIBRATION_PLAN_STATUS_COLORS,
 } from '@/lib/api/calibration-plans-api';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +34,7 @@ interface VersionHistoryProps {
  * - 키보드 네비게이션 지원
  */
 export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps) {
+  const t = useTranslations('calibration');
   const {
     data: versions,
     isLoading,
@@ -68,20 +69,26 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
     return null;
   }
 
+  const vh = 'planDetail.versionHistory' as const;
+
   return (
     <div className="mt-6 border-t pt-6">
       <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
         <History className="h-5 w-5" aria-hidden="true" />
-        버전 히스토리
+        {t(`${vh}.title`)}
       </h3>
       <div
         className="space-y-2"
         role="list"
-        aria-label="교정계획서 버전 목록"
+        aria-label={t(`${vh}.ariaLabel`)}
         data-testid="version-history"
       >
         {versions.map((version: CalibrationPlanVersion) => {
           const isCurrent = currentVersion === version.version;
+          const versionAriaLabel =
+            t(`${vh}.versionLabel`, { version: version.version }) +
+            (version.isLatestVersion ? ` (${t(`${vh}.latestBadge`)})` : '') +
+            (isCurrent ? t(`${vh}.currentSuffix`) : '');
 
           return (
             <div
@@ -90,7 +97,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                 isCurrent ? 'bg-ul-green/5 border-ul-green/30' : 'hover:bg-gray-50'
               }`}
               role="listitem"
-              aria-label={`버전 ${version.version}${version.isLatestVersion ? ' (최신)' : ''}${isCurrent ? ' - 현재 보고 있는 버전' : ''}`}
+              aria-label={versionAriaLabel}
               aria-current={isCurrent ? 'true' : undefined}
             >
               <div className="flex items-center gap-3">
@@ -100,27 +107,31 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                 />
                 <div>
                   <div className="font-medium flex items-center gap-2">
-                    버전 {version.version}
+                    {t(`${vh}.versionLabel`, { version: version.version })}
                     {version.isLatestVersion && (
                       <Badge className="bg-ul-green/10 text-ul-green border border-ul-green/20">
-                        최신
+                        {t(`${vh}.latestBadge`)}
                       </Badge>
                     )}
                     {isCurrent && (
                       <Badge variant="outline" className="text-ul-midnight border-ul-midnight/30">
-                        현재
+                        {t(`${vh}.currentBadge`)}
                       </Badge>
                     )}
                     <Badge className={CALIBRATION_PLAN_STATUS_COLORS[version.status]}>
-                      {CALIBRATION_PLAN_STATUS_LABELS[version.status]}
+                      {t(`planStatus.${version.status}` as Parameters<typeof t>[0])}
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    작성: {formatDate(version.createdAt, 'yyyy-MM-dd HH:mm')}
+                    {t(`${vh}.createdAt`, {
+                      date: formatDate(version.createdAt, 'yyyy-MM-dd HH:mm'),
+                    })}
                     {version.approvedAt && (
                       <>
                         {' · '}
-                        승인: {formatDate(version.approvedAt, 'yyyy-MM-dd')}
+                        {t(`${vh}.approvedAt`, {
+                          date: formatDate(version.approvedAt, 'yyyy-MM-dd'),
+                        })}
                       </>
                     )}
                   </div>
@@ -131,10 +142,10 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                   variant="outline"
                   size="sm"
                   onClick={() => window.open(`/calibration-plans/${version.id}`, '_blank')}
-                  aria-label={`버전 ${version.version} 새 탭에서 보기`}
+                  aria-label={t(`${vh}.viewAriaLabel`, { version: version.version })}
                 >
                   <ExternalLink className="h-4 w-4 mr-1" aria-hidden="true" />
-                  보기
+                  {t(`${vh}.viewButton`)}
                 </Button>
               )}
             </div>

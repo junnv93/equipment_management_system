@@ -105,7 +105,7 @@ export function SettingsNavigationClient() {
                   href={item.href}
                   className={cn(
                     'group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-                    'motion-safe:transition-all motion-safe:duration-200 motion-reduce:transition-none',
+                    'motion-safe:transition-[transform,background-color,color] motion-safe:duration-200 motion-reduce:transition-none',
                     'hover:translate-x-1',
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-sm'
@@ -116,7 +116,7 @@ export function SettingsNavigationClient() {
                   <div className="flex items-center gap-3">
                     <span
                       className={cn(
-                        'flex h-7 w-7 items-center justify-center rounded-full motion-safe:transition-transform motion-safe:duration-200 motion-reduce:transition-none',
+                        'flex h-7 w-7 items-center justify-center rounded-full motion-safe:transition-[transform] motion-safe:duration-200 motion-reduce:transition-none',
                         isActive ? 'bg-primary-foreground/20 scale-110' : ''
                       )}
                     >
@@ -126,7 +126,7 @@ export function SettingsNavigationClient() {
                   </div>
                   <ChevronRight
                     className={cn(
-                      'h-4 w-4 motion-safe:transition-all motion-safe:duration-200 motion-reduce:transition-none',
+                      'h-4 w-4 motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-reduce:transition-none',
                       isActive
                         ? 'opacity-100 translate-x-0'
                         : 'opacity-0 -translate-x-2 group-hover:opacity-50 group-hover:translate-x-0'

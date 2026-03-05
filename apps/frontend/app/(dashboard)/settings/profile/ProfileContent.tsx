@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,12 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import {
-  USER_ROLE_LABELS,
-  SITE_LABELS,
-  type UserRole,
-  type Site,
-} from '@equipment-management/schemas';
+import { type UserRole, type Site } from '@equipment-management/schemas';
 
 interface UserProfile {
   id: string;
@@ -33,13 +29,18 @@ interface UserProfile {
 }
 
 function ProfileField({ label, value }: { label: string; value?: string | null }) {
+  const t = useTranslations('settings');
   return (
     <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 last:border-0 motion-safe:transition-colors motion-reduce:transition-none hover:bg-accent/30">
       <dt className="text-sm font-medium text-muted-foreground sm:w-40 flex-shrink-0 mb-1 sm:mb-0">
         {label}
       </dt>
       <dd className="text-sm font-mono text-foreground">
-        {value || <span className="text-muted-foreground/50 italic font-sans">미등록</span>}
+        {value || (
+          <span className="text-muted-foreground/50 italic font-sans">
+            {t('profile.notRegistered')}
+          </span>
+        )}
       </dd>
     </div>
   );
@@ -67,13 +68,20 @@ function ProfileSkeleton() {
 }
 
 export default function ProfileContent() {
+  const t = useTranslations('settings');
+  const tNav = useTranslations('navigation');
+  const tEquip = useTranslations('equipment');
+
   const {
     data: profile,
     isLoading,
     error,
   } = useQuery<UserProfile>({
     queryKey: queryKeys.settings.profile(),
-    queryFn: () => apiClient.get(API_ENDPOINTS.USERS.ME),
+    queryFn: async () => {
+      const res = await apiClient.get<UserProfile>(API_ENDPOINTS.USERS.ME);
+      return res.data;
+    },
     staleTime: CACHE_TIMES.MEDIUM,
   });
 
@@ -92,7 +100,7 @@ export default function ProfileContent() {
         className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:duration-300"
       >
         <AlertCircle className="h-4 w-4" aria-hidden="true" />
-        <AlertDescription>프로필 정보를 불러오는데 실패했습니다.</AlertDescription>
+        <AlertDescription>{t('profile.loadError')}</AlertDescription>
       </Alert>
     );
   }
@@ -101,8 +109,11 @@ export default function ProfileContent() {
     return null;
   }
 
-  const roleLabel = USER_ROLE_LABELS[profile.role] || profile.role;
-  const siteLabel = profile.site ? SITE_LABELS[profile.site] || profile.site : undefined;
+  // i18n을 통한 역할/사이트 라벨 (SSOT: navigation.roles.* / equipment.siteLabel.*)
+  const roleLabel = tNav(`roles.${profile.role}` as Parameters<typeof tNav>[0]);
+  const siteLabel = profile.site
+    ? tEquip(`siteLabel.${profile.site}` as Parameters<typeof tEquip>[0])
+    : undefined;
 
   return (
     <div className="space-y-6">
@@ -114,22 +125,20 @@ export default function ProfileContent() {
               <UserIcon className="h-6 w-6 text-primary" aria-hidden="true" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-xl mb-1.5">내 프로필</CardTitle>
-              <CardDescription>
-                현재 로그인한 사용자의 정보입니다. Azure AD에서 동기화됩니다.
-              </CardDescription>
+              <CardTitle className="text-xl mb-1.5">{t('profile.title')}</CardTitle>
+              <CardDescription>{t('profile.description')}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
           <dl className="divide-y divide-border/30">
-            <ProfileField label="이름" value={profile.name} />
-            <ProfileField label="이메일" value={profile.email} />
+            <ProfileField label={t('profile.fields.name')} value={profile.name} />
+            <ProfileField label={t('profile.fields.email')} value={profile.email} />
 
             {/* Role with special styling */}
             <div className="group flex flex-col sm:flex-row sm:items-center py-4 border-b border-border/50 motion-safe:transition-colors motion-reduce:transition-none hover:bg-accent/30">
               <dt className="text-sm font-medium text-muted-foreground sm:w-40 flex-shrink-0 mb-1 sm:mb-0">
-                역할
+                {t('profile.fields.role')}
               </dt>
               <dd>
                 <Badge
@@ -141,12 +150,12 @@ export default function ProfileContent() {
               </dd>
             </div>
 
-            <ProfileField label="사이트" value={siteLabel} />
-            <ProfileField label="팀" value={profile.teamName} />
-            <ProfileField label="직위" value={profile.position} />
-            <ProfileField label="부서" value={profile.department} />
-            <ProfileField label="회사 전화" value={profile.phoneNumber} />
-            <ProfileField label="사원번호" value={profile.employeeId} />
+            <ProfileField label={t('profile.fields.site')} value={siteLabel} />
+            <ProfileField label={t('profile.fields.team')} value={profile.teamName} />
+            <ProfileField label={t('profile.fields.position')} value={profile.position} />
+            <ProfileField label={t('profile.fields.department')} value={profile.department} />
+            <ProfileField label={t('profile.fields.phone')} value={profile.phoneNumber} />
+            <ProfileField label={t('profile.fields.employeeId')} value={profile.employeeId} />
           </dl>
         </CardContent>
       </Card>
@@ -158,8 +167,9 @@ export default function ProfileContent() {
       >
         <Info className="h-4 w-4 text-info-foreground" aria-hidden="true" />
         <AlertDescription className="text-sm leading-relaxed">
-          프로필 정보는 <strong className="font-semibold">Azure AD</strong>에서 동기화됩니다. 수정이
-          필요한 경우 IT 관리자에게 문의하세요.
+          {t.rich('profile.azureAdNote', {
+            strong: (chunks) => <strong className="font-semibold">{chunks}</strong>,
+          })}
         </AlertDescription>
       </Alert>
     </div>

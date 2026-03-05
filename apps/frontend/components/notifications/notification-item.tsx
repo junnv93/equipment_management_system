@@ -12,9 +12,10 @@ import {
   ArrowLeft,
   Clock,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { getTransitionClasses } from '@/lib/design-tokens';
-import { formatDate, formatRelativeTime } from '@/lib/utils/date';
+import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { NotificationItem as NotificationItemType } from '@/lib/api/notifications-api';
 import type { NotificationCategory } from '@equipment-management/shared-constants';
 
@@ -106,11 +107,13 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onMarkAsRead }: NotificationItemProps) {
+  const t = useTranslations('notifications');
+  const { fmtRelative, fmtDateTime } = useDateFormatter();
   const style = getCategoryStyle(notification.category);
   const Icon = style.icon;
 
-  const formattedDate = formatRelativeTime(notification.createdAt);
-  const fullDate = formatDate(notification.createdAt, 'yyyy년 MM월 dd일 HH:mm');
+  const formattedDate = fmtRelative(notification.createdAt);
+  const fullDate = fmtDateTime(notification.createdAt);
 
   const handleMarkAsRead = () => {
     if (!notification.isRead) {
@@ -125,7 +128,7 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
           className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary motion-safe:animate-badge-pulse"
           aria-hidden="true"
         >
-          <span className="sr-only">읽지 않음</span>
+          <span className="sr-only">{t('alerts.tabs.unread')}</span>
         </div>
       )}
       <div className="flex items-start gap-3">
@@ -169,7 +172,7 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
     getTransitionClasses('moderate', ['box-shadow', 'transform']),
     'motion-safe:hover:shadow-lg motion-safe:hover:scale-[1.01] motion-safe:hover:-translate-y-0.5',
     notification.isRead
-      ? 'bg-muted/80'
+      ? 'bg-muted/80 opacity-60'
       : 'bg-card motion-safe:animate-[pulseGlow_3s_ease-in-out_infinite]',
     style.borderColor
   );

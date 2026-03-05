@@ -121,11 +121,7 @@ export function StatusLocationSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>{t('form.statusLocation.equipmentStatusLabel')}</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  value={field.value || undefined}
-                >
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder={t('form.statusLocation.statusPlaceholder')}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { LogOut, ChevronDown } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,15 +16,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { getHeaderSizeClasses, HEADER_INTERACTIVE_STYLES } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
-
-// 역할 표시 이름 매핑
-const roleDisplayNames: Record<string, string> = {
-  test_engineer: '시험실무자',
-  technical_manager: '기술책임자',
-  quality_manager: '품질책임자',
-  lab_manager: '시험소 관리자',
-  system_admin: '시스템 관리자',
-};
 
 // 역할별 배지 색상
 const roleBadgeColors: Record<string, string> = {
@@ -44,6 +36,7 @@ const roleBadgeColors: Record<string, string> = {
  */
 export function UserProfileDropdown() {
   const { user, isLoading, logout } = useAuth();
+  const t = useTranslations('navigation');
 
   if (isLoading) {
     return (
@@ -59,7 +52,14 @@ export function UserProfileDropdown() {
   }
 
   const userRole = user.role?.toLowerCase() || 'test_engineer';
-  const roleDisplayName = roleDisplayNames[userRole] || userRole;
+  const roleNames: Record<string, string> = {
+    test_engineer: t('roles.test_engineer'),
+    technical_manager: t('roles.technical_manager'),
+    quality_manager: t('roles.quality_manager'),
+    lab_manager: t('roles.lab_manager'),
+    system_admin: t('roles.system_admin'),
+  };
+  const roleDisplayName = roleNames[userRole] ?? userRole;
   const badgeColor = roleBadgeColors[userRole] || roleBadgeColors.test_engineer;
 
   // 이름의 첫 글자 추출 (아바타 fallback용)
@@ -87,7 +87,7 @@ export function UserProfileDropdown() {
             HEADER_INTERACTIVE_STYLES.focus,
             HEADER_INTERACTIVE_STYLES.transition
           )}
-          aria-label="사용자 메뉴"
+          aria-label={t('layout.userMenu')}
         >
           <Avatar
             className={cn(
@@ -100,7 +100,7 @@ export function UserProfileDropdown() {
             </AvatarFallback>
           </Avatar>
           <span className="hidden sm:block text-sm font-medium truncate max-w-[120px]">
-            {user.name || '사용자'}
+            {user.name || t('layout.user')}
           </span>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </Button>
@@ -110,8 +110,10 @@ export function UserProfileDropdown() {
         {/* 사용자 정보 헤더 */}
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium leading-none">{user.name || '사용자'}</p>
-            <p className="text-xs text-muted-foreground truncate">{user.email || '이메일 없음'}</p>
+            <p className="text-sm font-medium leading-none">{user.name || t('layout.user')}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {user.email || t('layout.noEmail')}
+            </p>
             <span
               className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit mt-1 ${badgeColor}`}
             >
@@ -125,10 +127,10 @@ export function UserProfileDropdown() {
         {/* 로그아웃 버튼 */}
         <DropdownMenuItem
           onClick={handleLogout}
-          className="text-ul-red focus:text-ul-red focus:bg-ul-red/10 cursor-pointer"
+          className="text-ul-red focus-visible:text-ul-red focus-visible:bg-ul-red/10 cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>로그아웃</span>
+          <span>{t('layout.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

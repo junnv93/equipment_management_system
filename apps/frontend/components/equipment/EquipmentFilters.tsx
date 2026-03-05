@@ -118,7 +118,7 @@ function EquipmentFiltersComponent({
     () =>
       SITE_VALUES.map((value) => ({
         value,
-        label: t(`filters.siteLabel.${value}` as Parameters<typeof t>[0]),
+        label: t(`siteLabel.${value}` as Parameters<typeof t>[0]),
       })),
     [t]
   );

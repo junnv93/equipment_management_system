@@ -53,7 +53,10 @@ export default function SystemSettingsContent() {
 
   const { data, isLoading } = useQuery<SystemSettings>({
     queryKey: queryKeys.settings.system(),
-    queryFn: () => apiClient.get(API_ENDPOINTS.SETTINGS.SYSTEM),
+    queryFn: async () => {
+      const res = await apiClient.get<SystemSettings>(API_ENDPOINTS.SETTINGS.SYSTEM);
+      return res.data;
+    },
     staleTime: CACHE_TIMES.MEDIUM,
   });
 
@@ -121,7 +124,7 @@ export default function SystemSettingsContent() {
       </Alert>
 
       {/* Settings Card */}
-      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-all motion-safe:duration-300 motion-reduce:transition-none">
+      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-[box-shadow] motion-safe:duration-300 motion-reduce:transition-none">
         <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
           <div className="flex items-start gap-4">
             <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
@@ -147,7 +150,7 @@ export default function SystemSettingsContent() {
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                        <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -194,7 +197,7 @@ export default function SystemSettingsContent() {
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                        <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -238,7 +241,7 @@ export default function SystemSettingsContent() {
                     <FormControl>
                       <Textarea
                         placeholder={t('system.maintenanceMessagePlaceholder')}
-                        className="resize-y min-h-[100px] motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+                        className="resize-y min-h-[100px] motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
                         {...field}
                       />
                     </FormControl>
@@ -258,7 +261,7 @@ export default function SystemSettingsContent() {
                 <Button
                   type="submit"
                   disabled={mutation.isPending || !form.formState.isDirty}
-                  className="min-w-[120px] motion-safe:transition-all motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
+                  className="min-w-[120px] motion-safe:transition-[transform,background-color,opacity] motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
                 >
                   {mutation.isPending ? (
                     <>

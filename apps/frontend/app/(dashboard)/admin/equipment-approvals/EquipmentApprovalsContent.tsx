@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
@@ -44,18 +45,13 @@ interface EquipmentRequest {
   }>;
 }
 
-const REQUEST_TYPE_LABELS: Record<string, string> = {
-  create: '등록',
-  update: '수정',
-  delete: '삭제',
-};
-
 import {
   APPROVAL_STATUS_LABELS as STATUS_LABELS,
   APPROVAL_STATUS_COLORS as STATUS_COLORS,
 } from '@/components/admin/approval-constants';
 
 export default function EquipmentApprovalsContent() {
+  const t = useTranslations('approvals');
   const _router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -91,15 +87,15 @@ export default function EquipmentApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '승인 완료',
-        description: '요청이 승인되었습니다.',
+        title: t('equipmentApprovals.toasts.approveSuccess'),
+        description: t('equipmentApprovals.toasts.approveSuccessDesc'),
       });
       setSelectedRequest(null);
     },
     onError: (error: unknown) => {
       toast({
-        title: '승인 실패',
-        description: getErrorMessage(error, '요청 승인 중 오류가 발생했습니다.'),
+        title: t('equipmentApprovals.toasts.approveError'),
+        description: getErrorMessage(error, t('equipmentApprovals.toasts.approveErrorFallback')),
         variant: 'destructive',
       });
     },
@@ -118,16 +114,16 @@ export default function EquipmentApprovalsContent() {
     },
     onSuccess: () => {
       toast({
-        title: '반려 완료',
-        description: '요청이 반려되었습니다.',
+        title: t('equipmentApprovals.toasts.rejectSuccess'),
+        description: t('equipmentApprovals.toasts.rejectSuccessDesc'),
       });
       setIsRejectDialogOpen(false);
       setSelectedRequest(null);
     },
     onError: (error: unknown) => {
       toast({
-        title: '반려 실패',
-        description: getErrorMessage(error, '요청 반려 중 오류가 발생했습니다.'),
+        title: t('equipmentApprovals.toasts.rejectError'),
+        description: getErrorMessage(error, t('equipmentApprovals.toasts.rejectErrorFallback')),
         variant: 'destructive',
       });
     },
@@ -137,7 +133,7 @@ export default function EquipmentApprovalsContent() {
   });
 
   const handleApprove = (request: EquipmentRequest) => {
-    if (confirm('이 요청을 승인하시겠습니까?')) {
+    if (confirm(t('confirm.approveDescription'))) {
       approveMutation.mutate(request.id);
     }
   };
@@ -164,17 +160,15 @@ export default function EquipmentApprovalsContent() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">장비 승인 관리</h1>
-        <p className="text-muted-foreground">
-          승인 대기 중인 장비 등록/수정/삭제 요청을 관리합니다
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('equipmentApprovals.title')}</h1>
+        <p className="text-muted-foreground">{t('equipmentApprovals.description')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>승인 대기 요청</CardTitle>
+          <CardTitle>{t('equipmentApprovals.listTitle')}</CardTitle>
           <CardDescription>
-            총 {requests?.length || 0}개의 승인 대기 요청이 있습니다
+            {t('list.countDescription', { count: requests?.length || 0 })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -192,7 +186,7 @@ export default function EquipmentApprovalsContent() {
                             {STATUS_LABELS[request.approvalStatus]}
                           </Badge>
                           <Badge variant="outline">
-                            {REQUEST_TYPE_LABELS[request.requestType]}
+                            {t(`requestTypes.${request.requestType}` as Parameters<typeof t>[0])}
                           </Badge>
                           {request.equipment && (
                             <span className="text-sm font-medium">
@@ -203,20 +197,20 @@ export default function EquipmentApprovalsContent() {
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
-                            <p className="text-muted-foreground">요청자</p>
+                            <p className="text-muted-foreground">{t('item.requester')}</p>
                             <p className="font-medium">
                               {request.requester?.name || request.requestedBy}
                             </p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">요청일시</p>
+                            <p className="text-muted-foreground">{t('item.requestDate')}</p>
                             <p className="font-medium">
                               {format(new Date(request.requestedAt), 'yyyy-MM-dd HH:mm')}
                             </p>
                           </div>
                           {request.attachments && request.attachments.length > 0 && (
                             <div>
-                              <p className="text-muted-foreground">첨부 파일</p>
+                              <p className="text-muted-foreground">{t('detail.attachments')}</p>
                               <p className="font-medium">{request.attachments.length}개</p>
                             </div>
                           )}
@@ -224,7 +218,9 @@ export default function EquipmentApprovalsContent() {
 
                         {requestData && (
                           <div className="mt-4 p-4 bg-muted rounded-lg">
-                            <p className="text-sm font-medium mb-2">요청 내용:</p>
+                            <p className="text-sm font-medium mb-2">
+                              {t('equipmentApprovals.requestContent')}
+                            </p>
                             <pre className="text-xs overflow-auto">
                               {JSON.stringify(requestData, null, 2)}
                             </pre>
@@ -239,7 +235,7 @@ export default function EquipmentApprovalsContent() {
                           disabled={approveMutation.isPending}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
-                          승인
+                          {t('actions.approve')}
                         </Button>
                         <Button
                           size="sm"
@@ -248,7 +244,7 @@ export default function EquipmentApprovalsContent() {
                           disabled={rejectMutation.isPending}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
-                          반려
+                          {t('actions.reject')}
                         </Button>
                       </div>
                     </div>
@@ -265,7 +261,6 @@ export default function EquipmentApprovalsContent() {
         onOpenChange={setIsRejectDialogOpen}
         onConfirm={handleRejectConfirm}
         isPending={rejectMutation.isPending}
-        title="요청 반려"
       />
     </div>
   );

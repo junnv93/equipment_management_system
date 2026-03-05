@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 /**
  * SkipLink (Client Component)
  *
@@ -18,10 +20,8 @@ interface SkipLinkProps {
   children?: React.ReactNode;
 }
 
-export function SkipLink({
-  href = '#main-content',
-  children = '메인 콘텐츠로 건너뛰기',
-}: SkipLinkProps) {
+export function SkipLink({ href = '#main-content', children }: SkipLinkProps) {
+  const t = useTranslations('navigation');
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const target = document.querySelector(href);
@@ -46,7 +46,7 @@ export function SkipLink({
         motion-reduce:transition-none
       "
     >
-      {children}
+      {children ?? t('layout.skipToContent')}
     </a>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/api/query-config';
@@ -50,6 +51,8 @@ interface Props {
  * (condition check + calibration info) is the same regardless of source.
  */
 export default function ReceiveEquipmentImportForm({ id }: Props) {
+  const t = useTranslations('equipment');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -125,8 +128,8 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     },
     onSuccess: () => {
       toast({
-        title: '수령 확인이 완료되었습니다.',
-        description: '장비가 자동으로 등록되었습니다.',
+        title: t('receiveEquipmentImport.toasts.success'),
+        description: t('receiveEquipmentImport.toasts.successDesc'),
       });
       router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(id));
     },
@@ -135,7 +138,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
     },
     onError: (error) => {
       toast({
-        title: '수령 확인 실패',
+        title: t('receiveEquipmentImport.toasts.error'),
         description: getErrorMessage(error),
         variant: 'destructive',
       });
@@ -144,14 +147,16 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">로딩 중...</div>
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        {tCommon('status.loading')}
+      </div>
     );
   }
 
   if (!equipmentImport) {
     return (
       <div className="flex h-64 items-center justify-center text-muted-foreground">
-        반입 정보를 찾을 수 없습니다.
+        {t('receiveEquipmentImport.notFound')}
       </div>
     );
   }
@@ -173,7 +178,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">수령 확인</h1>
+          <h1 className="text-2xl font-bold">{t('receiveEquipmentImport.title')}</h1>
           <p className="text-muted-foreground">
             {equipmentImport.equipmentName} — {sourceLabel} ({ownerLabel})
           </p>
@@ -182,15 +187,15 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
 
       <Card>
         <CardHeader>
-          <CardTitle>상태점검</CardTitle>
+          <CardTitle>{t('receiveEquipmentImport.conditionCheck.title')}</CardTitle>
           <CardDescription>
-            수령한 장비의 상태를 점검하세요. 확인 완료 시 장비가 자동으로 시스템에 등록됩니다.
+            {t('receiveEquipmentImport.conditionCheck.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label>외관 상태</Label>
+              <Label>{t('receiveEquipmentImport.conditionCheck.appearance')}</Label>
               <Select
                 value={condition.appearance}
                 onValueChange={(value: 'normal' | 'abnormal') =>
@@ -201,13 +206,17 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="normal">정상</SelectItem>
-                  <SelectItem value="abnormal">이상</SelectItem>
+                  <SelectItem value="normal">
+                    {t('receiveEquipmentImport.conditionCheck.normal')}
+                  </SelectItem>
+                  <SelectItem value="abnormal">
+                    {t('receiveEquipmentImport.conditionCheck.abnormal')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>작동 상태</Label>
+              <Label>{t('receiveEquipmentImport.conditionCheck.operation')}</Label>
               <Select
                 value={condition.operation}
                 onValueChange={(value: 'normal' | 'abnormal') =>
@@ -218,13 +227,17 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="normal">정상</SelectItem>
-                  <SelectItem value="abnormal">이상</SelectItem>
+                  <SelectItem value="normal">
+                    {t('receiveEquipmentImport.conditionCheck.normal')}
+                  </SelectItem>
+                  <SelectItem value="abnormal">
+                    {t('receiveEquipmentImport.conditionCheck.abnormal')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>부속품 상태</Label>
+              <Label>{t('receiveEquipmentImport.conditionCheck.accessories')}</Label>
               <Select
                 value={condition.accessories}
                 onValueChange={(value: 'complete' | 'incomplete') =>
@@ -235,30 +248,36 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="complete">완전</SelectItem>
-                  <SelectItem value="incomplete">불완전</SelectItem>
+                  <SelectItem value="complete">
+                    {t('receiveEquipmentImport.conditionCheck.complete')}
+                  </SelectItem>
+                  <SelectItem value="incomplete">
+                    {t('receiveEquipmentImport.conditionCheck.incomplete')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="notes">비고</Label>
+            <Label htmlFor="notes">{t('fields.notes')}</Label>
             <Textarea
               id="notes"
               value={condition.notes || ''}
               onChange={(e) => setCondition((prev) => ({ ...prev, notes: e.target.value }))}
               rows={3}
-              placeholder="특이사항이 있으면 기록하세요."
+              placeholder={t('receiveEquipmentImport.conditionCheck.notesPlaceholder')}
             />
           </div>
 
           {/* Calibration Information Section */}
           <div className="space-y-4 border-t pt-4">
-            <h3 className="text-lg font-medium">교정 정보</h3>
+            <h3 className="text-lg font-medium">{t('form.calibrationInfo')}</h3>
 
             {/* Calibration Method */}
             <div className="space-y-2">
-              <Label htmlFor="calibrationMethod">관리 방법 *</Label>
+              <Label htmlFor="calibrationMethod">
+                {t('fields.calibrationMethod')} <span className="text-destructive">*</span>
+              </Label>
               <Select
                 value={calibrationInfo.calibrationMethod}
                 onValueChange={(value) =>
@@ -288,7 +307,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                   {/* Calibration Cycle */}
                   <div className="space-y-2">
                     <Label htmlFor="calibrationCycle">
-                      교정 주기 (개월) <span className="text-destructive">*</span>
+                      {t('fields.calibrationCycle')} <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="calibrationCycle"
@@ -308,7 +327,8 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                   {/* Last Calibration Date */}
                   <div className="space-y-2">
                     <Label htmlFor="lastCalibrationDate">
-                      최종 교정일 <span className="text-destructive">*</span>
+                      {t('fieldLabels.lastCalibrationDate')}{' '}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="lastCalibrationDate"
@@ -327,7 +347,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                 {/* Calibration Agency */}
                 <div className="space-y-2">
                   <Label htmlFor="calibrationAgency">
-                    교정 기관 <span className="text-destructive">*</span>
+                    {t('fieldLabels.calibrationAgency')} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="calibrationAgency"
@@ -338,14 +358,16 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
                         calibrationAgency: e.target.value,
                       })
                     }
-                    placeholder="예: HCT, ABC 교정사"
+                    placeholder={t('receiveEquipmentImport.calibrationAgencyPlaceholder')}
                   />
                 </div>
 
                 {/* Next Calibration Date (auto-calculated, read-only) */}
                 {nextCalibrationDate && (
                   <div className="space-y-2">
-                    <Label htmlFor="nextCalibrationDate">다음 교정일 (자동 계산)</Label>
+                    <Label htmlFor="nextCalibrationDate">
+                      {t('receiveEquipmentImport.nextCalibrationLabel')}
+                    </Label>
                     <Input
                       id="nextCalibrationDate"
                       value={nextCalibrationDate}
@@ -363,10 +385,12 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
             variant="outline"
             onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(id))}
           >
-            취소
+            {tCommon('actions.cancel')}
           </Button>
           <Button onClick={() => receiveMutation.mutate()} disabled={receiveMutation.isPending}>
-            {receiveMutation.isPending ? '처리 중...' : '수령 확인'}
+            {receiveMutation.isPending
+              ? tCommon('status.processing')
+              : t('receiveEquipmentImport.submit')}
           </Button>
         </CardFooter>
       </Card>

@@ -26,7 +26,7 @@ import { Loader2, Check, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/api-client';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import {
   displayPreferencesSchema,
@@ -34,39 +34,40 @@ import {
   type DisplayPreferences,
 } from '@equipment-management/schemas';
 import { setLocaleCookie } from '@/lib/i18n/locale-cookie';
-import { useTranslations } from 'next-intl';
-import { useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 export default function DisplayPreferencesContent() {
   const t = useTranslations('settings');
+  const currentLocale = useLocale();
   const queryClient = useQueryClient();
   const router = useRouter();
 
   const { data: preferences, isLoading } = useQuery<DisplayPreferences>({
     queryKey: queryKeys.settings.preferences(),
-    queryFn: () => apiClient.get(API_ENDPOINTS.USERS.PREFERENCES),
-    staleTime: CACHE_TIMES.MEDIUM,
+    queryFn: async () => {
+      const res = await apiClient.get<DisplayPreferences>(API_ENDPOINTS.USERS.PREFERENCES);
+      return res.data;
+    },
+    ...QUERY_CONFIG.SETTINGS,
   });
 
+  // values 옵션: 서버 데이터 동기화를 렌더 사이클과 동기화 (useEffect 타이밍 문제 해결)
+  // resetOptions.keepDirtyValues: true → 사용자가 변경 중인 필드는 서버 refetch로 덮어쓰지 않음
   const form = useForm<DisplayPreferences>({
     resolver: zodResolver(displayPreferencesSchema),
-    defaultValues: DEFAULT_DISPLAY_PREFERENCES,
+    values: { ...DEFAULT_DISPLAY_PREFERENCES, ...(preferences ?? {}) },
+    resetOptions: { keepDirtyValues: true },
   });
-
-  // Sync form when server data arrives (isDirty 가드: 사용자 변경 중 리셋 방지)
-  useEffect(() => {
-    if (preferences && !form.formState.isDirty) {
-      form.reset({ ...DEFAULT_DISPLAY_PREFERENCES, ...preferences });
-    }
-  }, [preferences, form]);
 
   const mutation = useMutation({
     mutationFn: (data: DisplayPreferences) =>
       apiClient.patch(API_ENDPOINTS.USERS.PREFERENCES, data),
     onSuccess: (_, variables) => {
       toast.success(t('toasts.saveSuccess'));
-      // 로케일 변경 시 쿠키 동기화 → 페이지 재렌더로 i18n 적용
-      if (variables.locale) {
+      // dirty 상태 즉시 초기화 (onSettled의 invalidate+refetch 완료 전에도 Save 버튼 비활성화)
+      form.reset(variables);
+      // 로케일이 실제로 변경된 경우에만 쿠키 동기화 + 페이지 재렌더
+      if (variables.locale && variables.locale !== currentLocale) {
         setLocaleCookie(variables.locale);
         router.refresh();
       }
@@ -96,7 +97,7 @@ export default function DisplayPreferencesContent() {
   }
 
   return (
-    <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-all motion-safe:duration-300 motion-reduce:transition-none">
+    <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-[box-shadow] motion-safe:duration-300 motion-reduce:transition-none">
       <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
         <div className="flex items-start gap-4">
           <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
@@ -120,13 +121,13 @@ export default function DisplayPreferencesContent() {
                   <FormLabel className="text-base font-semibold">{t('display.language')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="ko">한국어</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="ko">{t('display.languageOptions.ko')}</SelectItem>
+                      <SelectItem value="en">{t('display.languageOptions.en')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription className="text-xs leading-relaxed">
@@ -147,7 +148,7 @@ export default function DisplayPreferencesContent() {
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -175,7 +176,7 @@ export default function DisplayPreferencesContent() {
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -212,7 +213,7 @@ export default function DisplayPreferencesContent() {
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -236,7 +237,7 @@ export default function DisplayPreferencesContent() {
               control={form.control}
               name="showRetiredEquipment"
               render={({ field }) => (
-                <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-all motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
+                <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-[border-color,background-color] motion-safe:duration-200 motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1.5 flex-1">
                       <FormLabel className="text-base font-semibold cursor-pointer">
@@ -250,7 +251,7 @@ export default function DisplayPreferencesContent() {
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-primary motion-safe:transition-all motion-reduce:transition-none"
+                        className="data-[state=checked]:bg-primary motion-safe:transition-colors motion-reduce:transition-none"
                       />
                     </FormControl>
                   </div>
@@ -264,7 +265,7 @@ export default function DisplayPreferencesContent() {
               <Button
                 type="submit"
                 disabled={mutation.isPending || !form.formState.isDirty}
-                className="min-w-[120px] motion-safe:transition-all motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
+                className="min-w-[120px] motion-safe:transition-[transform,background-color,opacity] motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
               >
                 {mutation.isPending ? (
                   <>

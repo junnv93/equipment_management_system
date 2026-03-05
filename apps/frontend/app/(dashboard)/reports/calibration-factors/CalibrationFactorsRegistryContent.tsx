@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslations } from 'next-intl';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import calibrationFactorsApi, {
   FACTOR_TYPE_LABELS,
@@ -43,6 +44,7 @@ interface CalibrationFactorsRegistryContentProps {
 export default function CalibrationFactorsRegistryContent({
   initialData,
 }: CalibrationFactorsRegistryContentProps) {
+  const t = useTranslations('calibration');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedEquipment, setExpandedEquipment] = useState<Set<string>>(new Set());
 
@@ -95,14 +97,14 @@ export default function CalibrationFactorsRegistryContent({
     if (!registry?.registry) return;
 
     const headers = [
-      '장비 ID',
-      '보정계수 타입',
-      '보정계수 이름',
-      '값',
-      '단위',
-      '적용 시작일',
-      '만료일',
-      '승인일',
+      t('factorsRegistry.csv.equipmentId'),
+      t('factorsRegistry.csv.factorType'),
+      t('factorsRegistry.csv.factorName'),
+      t('factorsRegistry.csv.value'),
+      t('factorsRegistry.csv.unit'),
+      t('factorsRegistry.csv.effectiveDate'),
+      t('factorsRegistry.csv.expiryDate'),
+      t('factorsRegistry.csv.approvedAt'),
     ];
 
     const rows = registry.registry.flatMap((item) =>
@@ -156,12 +158,12 @@ export default function CalibrationFactorsRegistryContent({
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">보정계수 대장</h1>
-          <p className="text-muted-foreground">전체 장비의 현재 적용 중인 보정계수 현황</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('factorsRegistry.title')}</h1>
+          <p className="text-muted-foreground">{t('factorsRegistry.subtitle')}</p>
         </div>
         <Button onClick={exportToCSV} variant="outline">
           <FileDown className="h-4 w-4 mr-2" />
-          CSV 내보내기
+          {t('factorsRegistry.csvExport')}
         </Button>
       </div>
 
@@ -169,27 +171,37 @@ export default function CalibrationFactorsRegistryContent({
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 장비 수</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t('factorsRegistry.stats.totalEquipments')}
+            </CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{registry?.totalEquipments || 0}</div>
-            <p className="text-xs text-muted-foreground">보정계수가 등록된 장비</p>
+            <p className="text-xs text-muted-foreground">
+              {t('factorsRegistry.stats.equipmentsDesc')}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 보정계수</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t('factorsRegistry.stats.totalFactors')}
+            </CardTitle>
             <Calculator className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{registry?.totalFactors || 0}</div>
-            <p className="text-xs text-muted-foreground">현재 적용 중인 보정계수</p>
+            <p className="text-xs text-muted-foreground">
+              {t('factorsRegistry.stats.factorsDesc')}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">생성일시</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t('factorsRegistry.stats.generatedAt')}
+            </CardTitle>
             <Calculator className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -208,26 +220,24 @@ export default function CalibrationFactorsRegistryContent({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>장비별 보정계수 현황</CardTitle>
-              <CardDescription>
-                각 장비를 클릭하면 상세 보정계수를 확인할 수 있습니다
-              </CardDescription>
+              <CardTitle>{t('factorsRegistry.table.title')}</CardTitle>
+              <CardDescription>{t('factorsRegistry.table.description')}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="장비 ID 또는 보정계수 검색..."
+                  placeholder={t('factorsRegistry.table.searchPlaceholder')}
                   className="pl-9 w-[300px]"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Button variant="outline" size="sm" onClick={expandAll}>
-                모두 펼치기
+                {t('factorsRegistry.table.expandAll')}
               </Button>
               <Button variant="outline" size="sm" onClick={collapseAll}>
-                모두 접기
+                {t('factorsRegistry.table.collapseAll')}
               </Button>
             </div>
           </div>
@@ -236,7 +246,7 @@ export default function CalibrationFactorsRegistryContent({
           {!filteredRegistry || filteredRegistry.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>등록된 보정계수가 없습니다</p>
+              <p>{t('factorsRegistry.table.empty')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -263,7 +273,7 @@ export default function CalibrationFactorsRegistryContent({
                             {item.equipmentId}
                           </Link>
                           <p className="text-sm text-muted-foreground">
-                            보정계수 {item.factorCount}개
+                            {t('factorsRegistry.factorCount', { count: item.factorCount })}
                           </p>
                         </div>
                       </div>
@@ -288,11 +298,11 @@ export default function CalibrationFactorsRegistryContent({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>타입</TableHead>
-                            <TableHead>이름</TableHead>
-                            <TableHead>값</TableHead>
-                            <TableHead>적용 기간</TableHead>
-                            <TableHead>승인일</TableHead>
+                            <TableHead>{t('factorsRegistry.headers.type')}</TableHead>
+                            <TableHead>{t('factorsRegistry.headers.name')}</TableHead>
+                            <TableHead>{t('factorsRegistry.headers.value')}</TableHead>
+                            <TableHead>{t('factorsRegistry.headers.period')}</TableHead>
+                            <TableHead>{t('factorsRegistry.headers.approvedAt')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

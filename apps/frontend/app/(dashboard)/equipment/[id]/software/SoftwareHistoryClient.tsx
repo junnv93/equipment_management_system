@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -50,6 +51,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const t = useTranslations('equipment.softwareHistory');
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newChange, setNewChange] = useState({
@@ -85,8 +87,8 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
     },
     onSuccess: () => {
       toast({
-        title: '변경 요청 완료',
-        description: '소프트웨어 변경 요청이 등록되었습니다. 기술책임자의 승인을 기다려주세요.',
+        title: t('toast.createSuccess'),
+        description: t('toast.createSuccessDesc'),
       });
       setIsCreateDialogOpen(false);
       setNewChange({
@@ -98,8 +100,8 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
     },
     onError: (error: Error) => {
       toast({
-        title: '변경 요청 실패',
-        description: error.message || '소프트웨어 변경 요청 중 오류가 발생했습니다.',
+        title: t('toast.createError'),
+        description: error.message || t('toast.createErrorFallback'),
         variant: 'destructive',
       });
     },
@@ -111,24 +113,24 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   const handleCreateSubmit = () => {
     if (!newChange.softwareName.trim()) {
       toast({
-        title: '입력 오류',
-        description: '소프트웨어명을 입력해주세요.',
+        title: t('validation.inputError'),
+        description: t('validation.softwareNameRequired'),
         variant: 'destructive',
       });
       return;
     }
     if (!newChange.newVersion.trim()) {
       toast({
-        title: '입력 오류',
-        description: '새 버전을 입력해주세요.',
+        title: t('validation.inputError'),
+        description: t('validation.newVersionRequired'),
         variant: 'destructive',
       });
       return;
     }
     if (!newChange.verificationRecord.trim()) {
       toast({
-        title: '입력 오류',
-        description: '검증 기록은 필수입니다.',
+        title: t('validation.inputError'),
+        description: t('validation.verificationRequired'),
         variant: 'destructive',
       });
       return;
@@ -171,47 +173,45 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          뒤로가기
+          {t('back')}
         </Button>
       </div>
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">소프트웨어 변경 이력</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-muted-foreground">
-            {equipment?.name || '장비'} ({equipment?.managementNumber || equipmentId})
+            {equipment?.name || ''} ({equipment?.managementNumber || equipmentId})
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              변경 요청
+              {t('createRequest')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>소프트웨어 변경 요청</DialogTitle>
-              <DialogDescription>
-                소프트웨어 변경 내용과 검증 기록을 입력하세요. 검증 기록은 필수입니다.
-              </DialogDescription>
+              <DialogTitle>{t('dialog.title')}</DialogTitle>
+              <DialogDescription>{t('dialog.description')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="softwareName">소프트웨어명 *</Label>
+                <Label htmlFor="softwareName">{t('dialog.softwareNameLabel')} *</Label>
                 <Input
                   id="softwareName"
-                  placeholder="예: EMC32"
+                  placeholder={t('dialog.softwareNamePlaceholder')}
                   value={newChange.softwareName}
                   onChange={(e) => setNewChange({ ...newChange, softwareName: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="previousVersion">이전 버전</Label>
+                  <Label htmlFor="previousVersion">{t('dialog.previousVersionLabel')}</Label>
                   <Input
                     id="previousVersion"
-                    placeholder="예: 10.2.0"
+                    placeholder={t('dialog.previousVersionPlaceholder')}
                     value={newChange.previousVersion}
                     onChange={(e) =>
                       setNewChange({ ...newChange, previousVersion: e.target.value })
@@ -219,20 +219,20 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="newVersion">새 버전 *</Label>
+                  <Label htmlFor="newVersion">{t('dialog.newVersionLabel')} *</Label>
                   <Input
                     id="newVersion"
-                    placeholder="예: 10.3.0"
+                    placeholder={t('dialog.newVersionPlaceholder')}
                     value={newChange.newVersion}
                     onChange={(e) => setNewChange({ ...newChange, newVersion: e.target.value })}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="verificationRecord">검증 기록 *</Label>
+                <Label htmlFor="verificationRecord">{t('dialog.verificationLabel')} *</Label>
                 <Textarea
                   id="verificationRecord"
-                  placeholder="변경 후 검증 내용을 상세히 입력하세요 (예: 기존 측정 결과와 비교하여 0.1dB 이내 차이 확인)"
+                  placeholder={t('dialog.verificationPlaceholder')}
                   value={newChange.verificationRecord}
                   onChange={(e) =>
                     setNewChange({ ...newChange, verificationRecord: e.target.value })
@@ -254,10 +254,10 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
                   });
                 }}
               >
-                취소
+                {t('dialog.cancel')}
               </Button>
               <Button onClick={handleCreateSubmit} disabled={createMutation.isPending}>
-                {createMutation.isPending ? '요청 중...' : '변경 요청'}
+                {createMutation.isPending ? t('dialog.submitting') : t('dialog.submit')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -268,24 +268,24 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
       {equipment?.softwareName && (
         <Card>
           <CardHeader>
-            <CardTitle>현재 소프트웨어 정보</CardTitle>
+            <CardTitle>{t('currentInfo.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">소프트웨어명</p>
+                <p className="text-sm text-muted-foreground">{t('currentInfo.name')}</p>
                 <p className="font-medium">{equipment.softwareName}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">버전</p>
+                <p className="text-sm text-muted-foreground">{t('currentInfo.version')}</p>
                 <p className="font-medium">{equipment.softwareVersion || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">타입</p>
+                <p className="text-sm text-muted-foreground">{t('currentInfo.type')}</p>
                 <p className="font-medium">{equipment.softwareType || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">펌웨어 버전</p>
+                <p className="text-sm text-muted-foreground">{t('currentInfo.firmwareVersion')}</p>
                 <p className="font-medium">{equipment.firmwareVersion || '-'}</p>
               </div>
             </div>
@@ -296,26 +296,26 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
       {/* 변경 이력 테이블 */}
       <Card>
         <CardHeader>
-          <CardTitle>변경 이력</CardTitle>
+          <CardTitle>{t('history.title')}</CardTitle>
           <CardDescription>
-            총 {historyData?.data?.length || 0}개의 변경 이력이 있습니다
+            {t('history.count', { count: historyData?.data?.length || 0 })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!historyData?.data || historyData.data.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>소프트웨어 변경 이력이 없습니다</p>
+              <p>{t('history.empty')}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>소프트웨어명</TableHead>
-                  <TableHead>버전 변경</TableHead>
-                  <TableHead>변경일</TableHead>
-                  <TableHead>상태</TableHead>
-                  <TableHead>검증 기록</TableHead>
+                  <TableHead>{t('history.colSoftware')}</TableHead>
+                  <TableHead>{t('history.colVersionChange')}</TableHead>
+                  <TableHead>{t('history.colChangedDate')}</TableHead>
+                  <TableHead>{t('history.colStatus')}</TableHead>
+                  <TableHead>{t('history.colVerification')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

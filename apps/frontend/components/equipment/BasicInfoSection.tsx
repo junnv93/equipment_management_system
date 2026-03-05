@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Control, useFormContext } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -202,14 +202,26 @@ export function BasicInfoSection({
   const [serialNumberInput, setSerialNumberInput] = useState('');
   const { setValue } = useFormContext<FormValues>();
 
+  // useEffect deps에 함수를 직접 넣으면 매 렌더링마다 새 참조 → 루프 위험
+  // useRef로 최신 값을 유지하여 안정적 deps 구성
+  const teamsRef = useRef(teams);
+  const selectedSiteRef = useRef(selectedSite);
+  useEffect(() => {
+    teamsRef.current = teams;
+    selectedSiteRef.current = selectedSite;
+  });
+
   /**
    * 팀 선택 시 분류코드 자동 설정 핸들러
    * 팀이 분류코드를 결정하므로, 팀 선택 시 자동으로 분류 설정
    */
   const handleTeamChange = useCallback(
     (teamId: string) => {
+      const currentTeams = teamsRef.current;
+      const currentSite = selectedSiteRef.current;
+
       // API에서 가져온 팀 목록에서 찾기
-      const selectedTeam = teams.find((tm) => tm.id === teamId);
+      const selectedTeam = currentTeams.find((tm) => tm.id === teamId);
       if (selectedTeam) {
         const classification = selectedTeam.classification;
         if (classification) {
@@ -220,8 +232,8 @@ export function BasicInfoSection({
       }
 
       // 폴백: SITE_TEAMS에서 찾기
-      if (selectedSite) {
-        const fallbackTeam = SITE_TEAMS[selectedSite]?.find((tm) => tm.value === teamId);
+      if (currentSite) {
+        const fallbackTeam = SITE_TEAMS[currentSite]?.find((tm) => tm.value === teamId);
         if (fallbackTeam) {
           const classification = fallbackTeam.classification;
           if (classification) {
@@ -231,7 +243,7 @@ export function BasicInfoSection({
         }
       }
     },
-    [teams, selectedSite, setValue]
+    [setValue]
   );
 
   // 현재 관리번호 미리보기
@@ -245,14 +257,22 @@ export function BasicInfoSection({
     return null;
   }, [selectedSite, selectedClassification, serialNumberInput]);
 
+  // onManagementNumberChange를 ref로 최신화 (deps 안정화)
+  const onManagementNumberChangeRef = useRef(onManagementNumberChange);
+  useEffect(() => {
+    onManagementNumberChangeRef.current = onManagementNumberChange;
+  });
+
   // 관리번호 자동 업데이트 (새 장비 등록 시만)
+  // selectedClassification은 managementNumberPreview useMemo에 이미 반영됨 → deps 제외
   useEffect(() => {
     if (!isEdit && managementNumberPreview) {
       setValue('managementNumber', managementNumberPreview);
       setValue('classification', selectedClassification);
-      onManagementNumberChange?.(managementNumberPreview);
+      onManagementNumberChangeRef.current?.(managementNumberPreview);
     }
-  }, [managementNumberPreview, isEdit, setValue, selectedClassification, onManagementNumberChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managementNumberPreview, isEdit, setValue]);
 
   // test_engineer: 팀 자동 선택 (userTeamId가 있으면 자동 설정)
   useEffect(() => {
@@ -456,7 +476,6 @@ export function BasicInfoSection({
                     field.onChange(value);
                     onSiteChange?.(value as Site);
                   }}
-                  defaultValue={field.value}
                   value={field.value}
                   disabled={teamRestricted}
                 >

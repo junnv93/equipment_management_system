@@ -27,19 +27,21 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 
 ## Related Files
 
-| File                                                                       | Purpose                                                          |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `apps/backend/src/common/middleware/helmet-config.ts`                      | Helmet CSP 설정                                                  |
-| `apps/frontend/next.config.js`                                             | Next.js Security Headers                                         |
-| `apps/backend/src/modules/auth/guards/permissions.guard.ts`                | PermissionsGuard (AUDIT/DENY)                                    |
-| `apps/backend/src/modules/auth/decorators/public.decorator.ts`             | @Public() 데코레이터                                             |
-| `apps/backend/src/common/guards/internal-api-key.guard.ts`                 | InternalApiKey Guard (서비스 간 인증, X-Internal-Api-Key 헤더)   |
-| `apps/backend/src/common/decorators/site-scoped.decorator.ts`              | @SiteScoped() 데코레이터 (데이터 격리)                           |
-| `apps/backend/src/common/interceptors/site-scope.interceptor.ts`           | SiteScopeInterceptor (JWT site → req.query.site 강제 주입)       |
-| `apps/backend/src/common/metrics/metrics.controller.ts`                    | Prometheus 메트릭 컨트롤러 (@Public() + GET, src/common/ 레이어) |
-| `scripts/check-endpoint-annotations.ts`                                    | CI 보안 검증 스크립트 (190/190 엔드포인트 어노테이션 검증)       |
-| `apps/frontend/tests/e2e/common/security-headers/security-headers.spec.ts` | 보안 헤더 E2E 테스트 (SH-01: Backend, SH-02: Frontend)           |
-| `.env`                                                                     | PERMISSIONS_GUARD_MODE 환경변수                                  |
+| File                                                                       | Purpose                                                                    |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `apps/backend/src/common/middleware/helmet-config.ts`                      | Helmet CSP 설정                                                            |
+| `apps/frontend/next.config.js`                                             | Next.js Security Headers                                                   |
+| `apps/backend/src/modules/auth/guards/permissions.guard.ts`                | PermissionsGuard (AUDIT/DENY)                                              |
+| `apps/backend/src/modules/auth/decorators/public.decorator.ts`             | @Public() 데코레이터                                                       |
+| `apps/backend/src/common/guards/internal-api-key.guard.ts`                 | InternalApiKey Guard (서비스 간 인증, X-Internal-Api-Key 헤더)             |
+| `apps/backend/src/common/guards/internal-api-throttler.guard.ts`           | InternalApiThrottlerGuard (ThrottlerGuard 확장 — SSR 요청 throttle bypass) |
+| `apps/frontend/lib/api/server-api-client.ts`                               | Server Component용 Axios 클라이언트 (X-Internal-Api-Key 헤더 전송)         |
+| `apps/backend/src/common/decorators/site-scoped.decorator.ts`              | @SiteScoped() 데코레이터 (데이터 격리)                                     |
+| `apps/backend/src/common/interceptors/site-scope.interceptor.ts`           | SiteScopeInterceptor (JWT site → req.query.site 강제 주입)                 |
+| `apps/backend/src/common/metrics/metrics.controller.ts`                    | Prometheus 메트릭 컨트롤러 (@Public() + GET, src/common/ 레이어)           |
+| `scripts/check-endpoint-annotations.ts`                                    | CI 보안 검증 스크립트 (190/190 엔드포인트 어노테이션 검증)                 |
+| `apps/frontend/tests/e2e/common/security-headers/security-headers.spec.ts` | 보안 헤더 E2E 테스트 (SH-01: Backend, SH-02: Frontend)                     |
+| `.env`                                                                     | PERMISSIONS_GUARD_MODE 환경변수                                            |
 
 ## Workflow
 
@@ -199,6 +201,58 @@ npx ts-node scripts/check-endpoint-annotations.ts 2>&1 | tail -10
 - `@RequirePermissions(...)` — 역할 기반 권한 검사
 - `@SkipPermissions()` — 인증만 필요 (권한 검사 생략)
 - `@Public()` — 인증/인가 모두 생략
+
+### Step 8: Throttle Guard 등록 검증
+
+IP 기반 `ThrottlerGuard`가 아닌 SSR 요청을 인식하는 `InternalApiThrottlerGuard`가 전역 가드로 등록되어 있는지 확인합니다.
+
+```bash
+# ThrottlerGuard 직접 등록 탐지 (InternalApiThrottlerGuard로 교체되어야 함)
+grep -n "ThrottlerGuard" apps/backend/src/app.module.ts
+```
+
+**PASS 기준:** `ThrottlerGuard` 대신 `InternalApiThrottlerGuard`가 `APP_GUARD`로 등록됨:
+
+```typescript
+{ provide: APP_GUARD, useClass: InternalApiThrottlerGuard }
+```
+
+**FAIL 기준:** `useClass: ThrottlerGuard` 사용 시 위반 — SSR 병렬 요청이 429를 유발.
+
+```bash
+# InternalApiThrottlerGuard의 shouldSkip 로직 확인 (X-Internal-Api-Key 검증)
+grep -n "shouldSkip\|x-internal-api-key\|validInternalKeys" apps/backend/src/common/guards/internal-api-throttler.guard.ts
+```
+
+**PASS 기준:** `shouldSkip()`이 `X-Internal-Api-Key` 헤더를 검증하고, 유효한 경우 `true` 반환.
+
+**FAIL 기준:** `shouldSkip()`이 없거나 헤더 검증이 없으면 throttle bypass가 동작하지 않음.
+
+### Step 9: SSR 클라이언트 X-Internal-Api-Key 헤더 전송 확인
+
+Server Component용 API 클라이언트가 `InternalApiThrottlerGuard`가 인식할 수 있는 헤더를 실제로 전송하는지 확인합니다.
+
+```bash
+# server-api-client.ts의 X-Internal-Api-Key 헤더 전송 확인
+grep -n "X-Internal-Api-Key\|INTERNAL_API_KEY\|x-internal-api-key" apps/frontend/lib/api/server-api-client.ts
+```
+
+**PASS 기준:** `process.env.INTERNAL_API_KEY`를 읽어 `X-Internal-Api-Key` 헤더로 설정:
+
+```typescript
+...(internalApiKey && { 'X-Internal-Api-Key': internalApiKey })
+```
+
+**FAIL 기준:** 헤더 전송 코드 없음 → SSR 병렬 요청이 여전히 IP 기반 throttle에 걸림.
+
+```bash
+# INTERNAL_API_KEY 환경변수가 프론트엔드 .env.local에 존재하는지 확인
+grep -n "INTERNAL_API_KEY" apps/frontend/.env.local 2>/dev/null || echo "MISSING: apps/frontend/.env.local에 INTERNAL_API_KEY 없음"
+```
+
+**PASS 기준:** `INTERNAL_API_KEY=...` 라인 존재.
+
+**FAIL 기준:** 환경변수 없으면 헤더가 전송되지 않아 throttle bypass 실패.
 
 ## Output Format
 

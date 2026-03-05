@@ -2,6 +2,7 @@
 
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils';
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const t = useTranslations('navigation');
 
   // Hydration 이슈 방지
   useEffect(() => {
@@ -34,7 +36,7 @@ export function ThemeToggle() {
     return (
       <Button variant="ghost" size="icon" className={getHeaderButtonClasses()}>
         <Sun className={getHeaderSizeClasses('icon')} />
-        <span className="sr-only">테마 변경</span>
+        <span className="sr-only">{t('layout.themeToggle')}</span>
       </Button>
     );
   }
@@ -46,7 +48,7 @@ export function ThemeToggle() {
           variant="ghost"
           size="icon"
           className={cn('text-foreground', getHeaderButtonClasses())}
-          aria-label="테마 변경"
+          aria-label={t('layout.themeToggle')}
         >
           {theme === 'dark' ? (
             <Moon className={getHeaderSizeClasses('icon')} />
@@ -55,7 +57,7 @@ export function ThemeToggle() {
           ) : (
             <Monitor className={getHeaderSizeClasses('icon')} />
           )}
-          <span className="sr-only">테마 변경</span>
+          <span className="sr-only">{t('layout.themeToggle')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -64,7 +66,7 @@ export function ThemeToggle() {
           className="flex items-center gap-2 cursor-pointer"
         >
           <Sun className="h-4 w-4" aria-hidden="true" />
-          <span>라이트 모드</span>
+          <span>{t('layout.lightMode')}</span>
           {theme === 'light' && <span className="ml-auto text-ul-green">✓</span>}
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -72,7 +74,7 @@ export function ThemeToggle() {
           className="flex items-center gap-2 cursor-pointer"
         >
           <Moon className="h-4 w-4" aria-hidden="true" />
-          <span>다크 모드</span>
+          <span>{t('layout.darkMode')}</span>
           {theme === 'dark' && <span className="ml-auto text-ul-green">✓</span>}
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -80,7 +82,7 @@ export function ThemeToggle() {
           className="flex items-center gap-2 cursor-pointer"
         >
           <Monitor className="h-4 w-4" aria-hidden="true" />
-          <span>시스템 설정</span>
+          <span>{t('layout.systemMode')}</span>
           {theme === 'system' && <span className="ml-auto text-ul-green">✓</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>

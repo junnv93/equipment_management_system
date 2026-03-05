@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations, useFormatter } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,11 +14,7 @@ import checkoutApi, {
   ConditionCheck,
   CreateConditionCheckDto,
 } from '@/lib/api/checkout-api';
-import {
-  ConditionCheckStep,
-  CONDITION_CHECK_STEP_LABELS,
-  CHECKOUT_STATUS_LABELS,
-} from '@equipment-management/schemas';
+import { ConditionCheckStep } from '@equipment-management/schemas';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 
@@ -43,6 +40,8 @@ export default function ConditionCheckClient({
   conditionChecks,
 }: ConditionCheckClientProps) {
   const router = useRouter();
+  const t = useTranslations('checkouts');
+  const formatter = useFormatter();
   const queryClient = useQueryClient();
 
   // 상태 확인 제출 mutation
@@ -72,17 +71,6 @@ export default function ConditionCheckClient({
     router.push(`/checkouts/${checkout.id}`);
   };
 
-  // 단계별 안내 메시지
-  const stepGuidance: Record<ConditionCheckStep, string> = {
-    lender_checkout:
-      '장비를 반출하기 전에 현재 상태를 확인하고 기록해주세요. 이 기록은 반입 시 비교 자료로 사용됩니다.',
-    borrower_receive: '장비를 인수받으셨습니다. 인수 시점의 장비 상태를 확인하고 기록해주세요.',
-    borrower_return:
-      '장비를 반납하기 전에 현재 상태를 확인하고 기록해주세요. 인수 시 상태와 비교됩니다.',
-    lender_return:
-      '반납받은 장비의 상태를 확인해주세요. 반출 전 상태와 비교하여 변경 사항이 있다면 기록해주세요.',
-  };
-
   return (
     <div className="container mx-auto py-6 max-w-2xl space-y-6">
       {/* 헤더 */}
@@ -90,19 +78,21 @@ export default function ConditionCheckClient({
         <Button variant="ghost" size="sm" className="mb-2" asChild>
           <Link href={`/checkouts/${checkout.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            상세로 돌아가기
+            {t('conditionCheck.backToDetail')}
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold">상태 확인</h1>
+        <h1 className="text-2xl font-bold">{t('conditionCheck.title')}</h1>
         <p className="text-muted-foreground">{checkout.destination}</p>
       </div>
 
       {/* 진행 상태 */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">진행 상태</CardTitle>
+          <CardTitle className="text-lg">{t('conditionCheck.progressTitle')}</CardTitle>
           <CardDescription>
-            현재 상태: {CHECKOUT_STATUS_LABELS[checkout.status] || checkout.status}
+            {t('conditionCheck.currentStatus', {
+              status: t(`status.${checkout.status}` as Parameters<typeof t>[0]) || checkout.status,
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,37 +103,56 @@ export default function ConditionCheckClient({
       {/* 안내 메시지 */}
       <Alert>
         <Info className="h-4 w-4" />
-        <AlertDescription>{stepGuidance[nextStep]}</AlertDescription>
+        <AlertDescription>
+          {t(`conditionCheck.guidance.${nextStep}` as Parameters<typeof t>[0])}
+        </AlertDescription>
       </Alert>
 
       {/* 이전 확인 정보 (비교용) */}
       {previousCheck && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">이전 확인 기록</CardTitle>
+            <CardTitle className="text-base">{t('conditionCheck.previousCheckTitle')}</CardTitle>
             <CardDescription>
-              {CONDITION_CHECK_STEP_LABELS[previousCheck.step]} 시 기록된 상태입니다.
+              {t('conditionCheck.previousCheckDesc', {
+                step: t(`condition.stepLabels.${previousCheck.step}` as Parameters<typeof t>[0]),
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">외관 상태</span>
-                <span>{previousCheck.appearanceStatus === 'normal' ? '정상' : '이상'}</span>
+                <span className="text-muted-foreground">{t('conditionCheck.appearanceLabel')}</span>
+                <span>
+                  {previousCheck.appearanceStatus === 'normal'
+                    ? t('conditionCheck.statusNormal')
+                    : t('conditionCheck.statusAbnormal')}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">작동 상태</span>
-                <span>{previousCheck.operationStatus === 'normal' ? '정상' : '이상'}</span>
+                <span className="text-muted-foreground">{t('conditionCheck.operationLabel')}</span>
+                <span>
+                  {previousCheck.operationStatus === 'normal'
+                    ? t('conditionCheck.statusNormal')
+                    : t('conditionCheck.statusAbnormal')}
+                </span>
               </div>
               {previousCheck.accessoriesStatus && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">부속품 상태</span>
-                  <span>{previousCheck.accessoriesStatus === 'complete' ? '완전' : '불완전'}</span>
+                  <span className="text-muted-foreground">
+                    {t('conditionCheck.accessoriesLabel')}
+                  </span>
+                  <span>
+                    {previousCheck.accessoriesStatus === 'complete'
+                      ? t('conditionCheck.accessoriesComplete')
+                      : t('conditionCheck.accessoriesIncomplete')}
+                  </span>
                 </div>
               )}
               {previousCheck.abnormalDetails && (
                 <div className="mt-2 p-2 bg-yellow-50 rounded text-sm">
-                  <strong>이상 내용:</strong> {previousCheck.abnormalDetails}
+                  <strong>{t('conditionCheck.abnormalContent')}</strong>{' '}
+                  {previousCheck.abnormalDetails}
                 </div>
               )}
             </div>
@@ -155,7 +164,7 @@ export default function ConditionCheckClient({
       {submitMutation.isError && (
         <Alert variant="destructive">
           <AlertDescription>
-            상태 확인 등록에 실패했습니다.{' '}
+            {t('conditionCheck.submitError')}{' '}
             {submitMutation.error instanceof Error ? submitMutation.error.message : ''}
           </AlertDescription>
         </Alert>
@@ -164,8 +173,8 @@ export default function ConditionCheckClient({
       {/* 상태 확인 폼 */}
       <Card>
         <CardHeader>
-          <CardTitle>{CONDITION_CHECK_STEP_LABELS[nextStep]}</CardTitle>
-          <CardDescription>장비의 현재 상태를 확인하고 기록해주세요.</CardDescription>
+          <CardTitle>{t(`condition.stepLabels.${nextStep}` as Parameters<typeof t>[0])}</CardTitle>
+          <CardDescription>{t('conditionCheck.formDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <EquipmentConditionForm
@@ -190,7 +199,7 @@ export default function ConditionCheckClient({
       {conditionChecks.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">완료된 확인 기록</CardTitle>
+            <CardTitle className="text-base">{t('conditionCheck.completedChecksTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -200,9 +209,14 @@ export default function ConditionCheckClient({
                   className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                 >
                   <div>
-                    <p className="font-medium text-sm">{CONDITION_CHECK_STEP_LABELS[check.step]}</p>
+                    <p className="font-medium text-sm">
+                      {t(`condition.stepLabels.${check.step}` as Parameters<typeof t>[0])}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(check.checkedAt).toLocaleString('ko-KR')}
+                      {formatter.dateTime(new Date(check.checkedAt), {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
                     </p>
                   </div>
                   <div className="flex gap-2 text-xs">
@@ -211,14 +225,24 @@ export default function ConditionCheckClient({
                         check.appearanceStatus === 'normal' ? 'text-green-600' : 'text-red-600'
                       }
                     >
-                      외관: {check.appearanceStatus === 'normal' ? '정상' : '이상'}
+                      {t('conditionCheck.appearanceStatus', {
+                        status:
+                          check.appearanceStatus === 'normal'
+                            ? t('conditionCheck.statusNormal')
+                            : t('conditionCheck.statusAbnormal'),
+                      })}
                     </span>
                     <span
                       className={
                         check.operationStatus === 'normal' ? 'text-green-600' : 'text-red-600'
                       }
                     >
-                      작동: {check.operationStatus === 'normal' ? '정상' : '이상'}
+                      {t('conditionCheck.operationStatus', {
+                        status:
+                          check.operationStatus === 'normal'
+                            ? t('conditionCheck.statusNormal')
+                            : t('conditionCheck.statusAbnormal'),
+                      })}
                     </span>
                   </div>
                 </div>

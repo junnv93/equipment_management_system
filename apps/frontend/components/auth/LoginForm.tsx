@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { signIn } from 'next-auth/react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -49,7 +49,7 @@ export function LoginForm({
   onError,
   disabled = false,
 }: LoginFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shakeError, setShakeError] = useState(false);
@@ -71,36 +71,34 @@ export function LoginForm({
     setTimeout(() => setShakeError(false), AUTH_MOTION_TOKENS.errorShake.duration);
   };
 
-  const onSubmit = async (data: LoginFormValues) => {
-    setIsLoading(true);
+  const onSubmit = (data: LoginFormValues) => {
     setError(null);
+    startTransition(async () => {
+      try {
+        const result = await signIn('credentials', {
+          email: data.email,
+          password: data.password,
+          redirect: false,
+        });
 
-    try {
-      const result = await signIn('credentials', {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError(AUTH_CONTENT.error.authFailed);
+        if (result?.error) {
+          setError(AUTH_CONTENT.error.authFailed);
+          triggerShake();
+          onError?.(AUTH_CONTENT.error.authFailed);
+        } else if (result?.ok) {
+          setIsSuccess(true);
+          onSuccess?.();
+          setTimeout(() => {
+            window.location.href = callbackUrl.startsWith('/') ? callbackUrl : '/';
+          }, MOTION_PRIMITIVES.duration.moderate);
+        }
+      } catch (err) {
+        setError(AUTH_CONTENT.error.systemError);
         triggerShake();
-        onError?.(AUTH_CONTENT.error.authFailed);
-      } else if (result?.ok) {
-        setIsSuccess(true);
-        onSuccess?.();
-        setTimeout(() => {
-          window.location.href = callbackUrl.startsWith('/') ? callbackUrl : '/';
-        }, MOTION_PRIMITIVES.duration.moderate);
+        onError?.(AUTH_CONTENT.error.systemError);
+        console.error('Login error:', err);
       }
-    } catch (err) {
-      setError(AUTH_CONTENT.error.systemError);
-      triggerShake();
-      onError?.(AUTH_CONTENT.error.systemError);
-      console.error('Login error:', err);
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
@@ -152,7 +150,7 @@ export function LoginForm({
               type="email"
               autoComplete="email"
               spellCheck={false}
-              disabled={isLoading || disabled || isSuccess}
+              disabled={isPending || disabled || isSuccess}
               placeholder="equipment@ulsolutions.com"
               aria-invalid={!!errors.email}
               aria-describedby={errors.email ? 'email-error' : undefined}
@@ -199,7 +197,7 @@ export function LoginForm({
               id="password"
               type="password"
               autoComplete="current-password"
-              disabled={isLoading || disabled || isSuccess}
+              disabled={isPending || disabled || isSuccess}
               placeholder="••••••••••••"
               aria-invalid={!!errors.password}
               aria-describedby={errors.password ? 'password-error' : undefined}
@@ -248,7 +246,7 @@ export function LoginForm({
               getAuthButtonClasses(isSuccess ? 'success' : 'primary'),
               'relative overflow-hidden'
             )}
-            disabled={isLoading || disabled || isSuccess}
+            disabled={isPending || disabled || isSuccess}
             data-testid="login-button"
           >
             {/* Button Content */}
@@ -261,7 +259,7 @@ export function LoginForm({
                   />
                   <span className="font-semibold">{AUTH_CONTENT.button.loginSuccess}</span>
                 </>
-              ) : isLoading ? (
+              ) : isPending ? (
                 <>
                   <Loader2
                     className="h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none"

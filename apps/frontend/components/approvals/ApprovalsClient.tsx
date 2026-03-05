@@ -473,50 +473,55 @@ export function ApprovalsClient({
         }}
       >
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {commentMeta?.commentDialogTitle
-                ? t(`tabMeta.${approveCommentItem!.category}.commentDialogTitle`)
-                : t('commentDialog.titleFallback')}
-            </DialogTitle>
-            <DialogDescription>{approveCommentItem?.summary}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="approve-comment">{t('commentDialog.label')} *</Label>
-              <Textarea
-                id="approve-comment"
-                placeholder={
-                  commentMeta?.commentPlaceholder
-                    ? t(`tabMeta.${approveCommentItem!.category}.commentPlaceholder`)
-                    : t('commentDialog.placeholderFallback')
-                }
-                value={approveComment}
-                onChange={(e) => setApproveComment(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setApproveCommentItem(null);
-                setApproveComment('');
-              }}
-            >
-              {t('actions.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleApproveWithComment}
-              disabled={!approveComment.trim() || approveMutation.isPending}
-              className={getApprovalActionButtonClasses('approve')}
-            >
-              {t(`tabMeta.${approveCommentItem!.category}.action`)}
-            </Button>
-          </DialogFooter>
+          {/* Radix UI exit animation 중 approveCommentItem이 null이 될 수 있으므로 조기 리턴 */}
+          {approveCommentItem && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {commentMeta?.commentDialogTitle
+                    ? t(`tabMeta.${approveCommentItem.category}.commentDialogTitle`)
+                    : t('commentDialog.titleFallback')}
+                </DialogTitle>
+                <DialogDescription>{approveCommentItem.summary}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="approve-comment">{t('commentDialog.label')} *</Label>
+                  <Textarea
+                    id="approve-comment"
+                    placeholder={
+                      commentMeta?.commentPlaceholder
+                        ? t(`tabMeta.${approveCommentItem.category}.commentPlaceholder`)
+                        : t('commentDialog.placeholderFallback')
+                    }
+                    value={approveComment}
+                    onChange={(e) => setApproveComment(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setApproveCommentItem(null);
+                    setApproveComment('');
+                  }}
+                >
+                  {t('actions.cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleApproveWithComment}
+                  disabled={!approveComment.trim() || approveMutation.isPending}
+                  className={getApprovalActionButtonClasses('approve')}
+                >
+                  {t(`tabMeta.${approveCommentItem.category}.action`)}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 

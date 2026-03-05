@@ -289,11 +289,12 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
       aria-busy={isLoading}
     >
       {items.map((equipment) => (
-        <EquipmentCard
+        <div
           key={equipment.id || equipment.uuid}
-          equipment={equipment}
-          searchTerm={searchTerm}
-        />
+          className="[content-visibility:auto] [contain-intrinsic-size:0_220px]"
+        >
+          <EquipmentCard equipment={equipment} searchTerm={searchTerm} />
+        </div>
       ))}
     </div>
   );

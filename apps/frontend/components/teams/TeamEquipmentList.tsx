@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations, useFormatter } from 'next-intl';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Package, Calendar, ExternalLink } from 'lucide-react';
@@ -19,20 +20,17 @@ interface TeamEquipmentListProps {
 }
 
 /**
- * 장비 상태별 배지 설정
+ * 장비 상태별 배지 variant
  */
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
-> = {
-  available: { label: '사용 가능', variant: 'default' },
-  in_use: { label: '사용 중', variant: 'secondary' },
-  checked_out: { label: '반출 중', variant: 'outline' },
-  calibration_scheduled: { label: '교정 예정', variant: 'secondary' },
-  calibration_overdue: { label: '교정 기한 초과', variant: 'destructive' },
-  non_conforming: { label: '부적합', variant: 'destructive' },
-  spare: { label: '여분', variant: 'outline' },
-  retired: { label: '폐기', variant: 'outline' },
+const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  available: 'default',
+  in_use: 'secondary',
+  checked_out: 'outline',
+  calibration_scheduled: 'secondary',
+  calibration_overdue: 'destructive',
+  non_conforming: 'destructive',
+  spare: 'outline',
+  retired: 'outline',
 };
 
 /**
@@ -44,6 +42,8 @@ const STATUS_CONFIG: Record<
  * - 장비 상세 페이지 링크
  */
 export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
+  const t = useTranslations('equipment');
+  const formatter = useFormatter();
   const [search, setSearch] = useState('');
 
   // 팀 장비 목록 조회
@@ -66,17 +66,16 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
     );
   });
 
-  // 날짜 포맷팅
   const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return '-';
-    return new Date(date).toLocaleDateString('ko-KR');
+    return formatter.dateTime(new Date(date), { dateStyle: 'short' });
   };
 
   if (error) {
     return (
       <ErrorAlert
         error={error as Error}
-        title="장비 목록을 불러올 수 없습니다"
+        title={t('teamEquipmentList.errorLoad')}
         onRetry={() => refetch()}
       />
     );
@@ -93,18 +92,18 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
           />
           <Input
             type="search"
-            placeholder="장비 검색..."
+            placeholder={t('teamEquipmentList.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
-            aria-label="장비 검색"
+            aria-label={t('search.ariaLabel')}
           />
         </div>
 
         <Button variant="outline" asChild>
           <Link href={`/equipment?teamId=${teamId}`}>
             <ExternalLink className="h-4 w-4 mr-2" />
-            전체 장비 보기
+            {t('teamEquipmentList.viewAll')}
           </Link>
         </Button>
       </div>
@@ -129,10 +128,10 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Package className="h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-muted-foreground">
-                {search ? '검색 결과가 없습니다' : '등록된 장비가 없습니다'}
+                {search ? t('list.noSearchResults') : t('list.empty')}
               </p>
               <Button variant="outline" className="mt-4" asChild>
-                <Link href="/equipment/create">장비 등록하기</Link>
+                <Link href="/equipment/create">{t('teamEquipmentList.createLink')}</Link>
               </Button>
             </div>
           ) : (
@@ -140,24 +139,27 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
-                    <th className="text-left p-4 font-medium text-muted-foreground">장비명</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">관리번호</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">
+                      {t('table.name')}
+                    </th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">
+                      {t('table.managementNumber')}
+                    </th>
                     <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                      상태
+                      {t('table.status')}
                     </th>
                     <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">
-                      최근 교정일
+                      {t('fields.lastCalibrationDate')}
                     </th>
                     <th className="text-right p-4 font-medium text-muted-foreground">
-                      <span className="sr-only">상세</span>
+                      <span className="sr-only">{t('table.actions')}</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEquipment.map((item, index) => {
-                    const statusConfig = item.status
-                      ? STATUS_CONFIG[item.status]
-                      : STATUS_CONFIG.available;
+                    const statusKey = item.status ?? 'available';
+                    const statusVariant = STATUS_VARIANTS[statusKey] ?? 'outline';
 
                     return (
                       <tr
@@ -190,7 +192,9 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                           </code>
                         </td>
                         <td className="p-4 hidden md:table-cell">
-                          <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                          <Badge variant={statusVariant}>
+                            {t(`status.${statusKey}` as Parameters<typeof t>[0])}
+                          </Badge>
                         </td>
                         <td className="p-4 hidden lg:table-cell">
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -200,7 +204,9 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                         </td>
                         <td className="p-4 text-right">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/equipment/${item.uuid || item.id}`}>상세</Link>
+                            <Link href={`/equipment/${item.uuid || item.id}`}>
+                              {t('viewDetailShort')}
+                            </Link>
                           </Button>
                         </td>
                       </tr>
@@ -216,8 +222,9 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
       {/* 결과 정보 */}
       {filteredEquipment.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          {search && `검색 결과: `}
-          {filteredEquipment.length}개의 장비
+          {search
+            ? t('teamEquipmentList.searchResultCount', { count: filteredEquipment.length })
+            : t('teamEquipmentList.resultCount', { count: filteredEquipment.length })}
         </p>
       )}
     </div>

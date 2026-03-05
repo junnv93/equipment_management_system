@@ -3,8 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { useTranslations, useFormatter } from 'next-intl';
 import { ArrowLeft, Package, MapPin, Calendar, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,6 +43,8 @@ export default function ReturnCheckoutClient({
 }: ReturnCheckoutClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const t = useTranslations('checkouts');
+  const formatter = useFormatter();
 
   // 반입 처리 mutation (cross-page invalidation: 반입 승인 대기 목록 등)
   const returnMutation = useMutation({
@@ -83,6 +84,14 @@ export default function ReturnCheckoutClient({
   // 반입 예정일 초과 여부
   const isOverdue = new Date(checkout.expectedReturnDate) < new Date();
 
+  const formatDate = (dateStr: string) =>
+    formatter.dateTime(new Date(dateStr), { dateStyle: 'long' });
+
+  const conditionStatusLabel = (status: string) =>
+    status === 'normal'
+      ? t('condition.conditionStatus.normal')
+      : t('condition.conditionStatus.abnormal');
+
   return (
     <div className="container mx-auto py-6 max-w-2xl space-y-6">
       {/* 헤더 */}
@@ -90,11 +99,11 @@ export default function ReturnCheckoutClient({
         <Button variant="ghost" size="sm" className="mb-2" asChild>
           <Link href={`/checkouts/${checkout.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            상세로 돌아가기
+            {t('returnPage.backToDetail')}
           </Link>
         </Button>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">반입 처리</h1>
+          <h1 className="text-2xl font-bold">{t('actions.processReturn')}</h1>
           <Badge variant="outline">
             {CHECKOUT_PURPOSE_LABELS[checkout.purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] ||
               checkout.purpose}
@@ -108,9 +117,7 @@ export default function ReturnCheckoutClient({
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            반입 예정일(
-            {format(new Date(checkout.expectedReturnDate), 'yyyy년 MM월 dd일', { locale: ko })})이
-            초과되었습니다.
+            {t('returnPage.overdueAlert', { date: formatDate(checkout.expectedReturnDate) })}
           </AlertDescription>
         </Alert>
       )}
@@ -118,9 +125,11 @@ export default function ReturnCheckoutClient({
       {/* 진행 상태 */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">진행 상태</CardTitle>
+          <CardTitle className="text-lg">{t('detail.progressStatus')}</CardTitle>
           <CardDescription>
-            현재 상태: {CHECKOUT_STATUS_LABELS[checkout.status] || checkout.status}
+            {t('returnPage.currentStatus', {
+              status: CHECKOUT_STATUS_LABELS[checkout.status] || checkout.status,
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -134,43 +143,41 @@ export default function ReturnCheckoutClient({
       {/* 반출 정보 요약 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">반출 정보</CardTitle>
+          <CardTitle className="text-lg">{t('detail.checkoutInfo')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              반출지
+              {t('detail.destination')}
             </span>
             <span className="font-medium">{checkout.destination}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              반출일
+              {t('detail.checkoutDate')}
             </span>
             <span className="font-medium">
-              {checkout.checkoutDate
-                ? format(new Date(checkout.checkoutDate), 'yyyy년 MM월 dd일', { locale: ko })
-                : '-'}
+              {checkout.checkoutDate ? formatDate(checkout.checkoutDate) : '-'}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">반입 예정일</span>
+            <span className="text-muted-foreground">{t('detail.expectedReturn')}</span>
             <span className={isOverdue ? 'font-medium text-red-600' : 'font-medium'}>
-              {format(new Date(checkout.expectedReturnDate), 'yyyy년 MM월 dd일', { locale: ko })}
+              {formatDate(checkout.expectedReturnDate)}
             </span>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground flex items-center gap-2">
               <Package className="h-4 w-4" />
-              반출 장비
+              {t('detail.equipmentList')}
             </span>
             <span className="font-medium">
               {checkout.equipment && checkout.equipment.length > 0
-                ? `${checkout.equipment[0].name}${checkout.equipment.length > 1 ? ` 외 ${checkout.equipment.length - 1}건` : ''}`
-                : '장비 정보 없음'}
+                ? `${checkout.equipment[0].name}${checkout.equipment.length > 1 ? ` ${t('returnPage.equipmentMore', { count: checkout.equipment.length - 1 })}` : ''}`
+                : t('returnPage.noEquipmentInfo')}
             </span>
           </div>
         </CardContent>
@@ -181,8 +188,8 @@ export default function ReturnCheckoutClient({
         <>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">상태 확인 이력</CardTitle>
-              <CardDescription>대여 기간 동안 기록된 상태 확인입니다.</CardDescription>
+              <CardTitle className="text-lg">{t('detail.conditionHistory')}</CardTitle>
+              <CardDescription>{t('returnPage.conditionHistoryDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -196,7 +203,10 @@ export default function ReturnCheckoutClient({
                         {CONDITION_CHECK_STEP_LABELS[check.step]}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(check.checkedAt), 'yyyy-MM-dd HH:mm', { locale: ko })}
+                        {formatter.dateTime(new Date(check.checkedAt), {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -204,13 +214,17 @@ export default function ReturnCheckoutClient({
                         variant={check.appearanceStatus === 'normal' ? 'default' : 'destructive'}
                         className="text-xs"
                       >
-                        외관: {check.appearanceStatus === 'normal' ? '정상' : '이상'}
+                        {t('returnPage.conditionAppearanceStatus', {
+                          status: conditionStatusLabel(check.appearanceStatus),
+                        })}
                       </Badge>
                       <Badge
                         variant={check.operationStatus === 'normal' ? 'default' : 'destructive'}
                         className="text-xs"
                       >
-                        작동: {check.operationStatus === 'normal' ? '정상' : '이상'}
+                        {t('returnPage.conditionOperationStatus', {
+                          status: conditionStatusLabel(check.operationStatus),
+                        })}
                       </Badge>
                     </div>
                   </div>
@@ -230,7 +244,7 @@ export default function ReturnCheckoutClient({
       {returnMutation.isError && (
         <Alert variant="destructive">
           <AlertDescription>
-            반입 처리에 실패했습니다.{' '}
+            {t('returnPage.returnError')}{' '}
             {returnMutation.error instanceof Error ? returnMutation.error.message : ''}
           </AlertDescription>
         </Alert>
@@ -239,10 +253,8 @@ export default function ReturnCheckoutClient({
       {/* 반입 검사 폼 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">반입 검사</CardTitle>
-          <CardDescription>
-            장비 반입 전 검사 항목을 확인해주세요. 검사 완료 후 기술책임자 승인이 필요합니다.
-          </CardDescription>
+          <CardTitle className="text-lg">{t('returnPage.inspectionTitle')}</CardTitle>
+          <CardDescription>{t('returnPage.inspectionDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <ReturnInspectionForm

@@ -68,11 +68,13 @@ async function EquipmentDetailAsync({ paramsPromise }: { paramsPromise: Promise<
   // ✅ Next.js 16: params는 Promise, await 필수
   const { id } = await paramsPromise;
 
+  // ✅ 병렬 fetch: 두 요청 모두 id만 필요하므로 동시 시작 후 await late (Rule 1.3)
+  const equipmentPromise = getEquipmentCached(id);
+  const disposalPromise = getDisposalRequestCached(id);
+
   let equipment;
   try {
-    // ✅ Server Component에서 데이터 fetching (React.cache로 메모이제이션)
-    // ✅ generateMetadata와 동일한 함수를 호출하지만 캐시되어 1회만 fetch
-    equipment = await getEquipmentCached(id);
+    equipment = await equipmentPromise;
   } catch (error: unknown) {
     // ✅ Next.js 16 Best Practice: any 타입 대신 타입 안전한 에러 처리
     // 404 에러인 경우 not-found 페이지로
@@ -83,8 +85,7 @@ async function EquipmentDetailAsync({ paramsPromise }: { paramsPromise: Promise<
     throw error;
   }
 
-  // ✅ 폐기 요청 정보 가져오기 (병렬 fetch 가능하지만 equipment가 필요하므로 순차 실행)
-  const disposalRequest = await getDisposalRequestCached(id);
+  const disposalRequest = await disposalPromise;
 
   return <EquipmentDetailClient equipment={equipment} disposalRequest={disposalRequest} />;
 }

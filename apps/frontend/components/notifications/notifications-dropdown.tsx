@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Bell } from 'lucide-react';
 import {
   DropdownMenu,
@@ -46,6 +47,7 @@ import { cn } from '@/lib/utils';
  * - Motion: Stagger animation, badge pulse
  */
 export function NotificationsDropdown() {
+  const t = useTranslations('navigation');
   const { data: unreadCount = 0 } = useUnreadCount();
   const { data: notificationData, isLoading } = useNotificationList({
     pageSize: 5,
@@ -70,7 +72,7 @@ export function NotificationsDropdown() {
           variant="ghost"
           size="sm"
           className={cn('relative', getHeaderButtonClasses())}
-          aria-label="알림"
+          aria-label={t('layout.notificationsLabel')}
         >
           <Bell className={getHeaderSizeClasses('icon')} aria-hidden="true" />
           {unreadCount > 0 && (
@@ -90,7 +92,7 @@ export function NotificationsDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex justify-between items-center">
-          <span>알림</span>
+          <span>{t('layout.notificationsLabel')}</span>
           {unreadCount > 0 && (
             <Button
               variant="ghost"
@@ -99,7 +101,7 @@ export function NotificationsDropdown() {
               onClick={handleMarkAllAsRead}
               disabled={markAllAsReadMutation.isPending}
             >
-              모두 읽음으로 표시
+              {t('layout.markAllRead')}
             </Button>
           )}
         </DropdownMenuLabel>
@@ -138,7 +140,7 @@ export function NotificationsDropdown() {
                   <span className="text-xs text-success-foreground font-bold">✓</span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">새로운 알림이 없습니다</p>
+              <p className="text-sm text-muted-foreground">{t('layout.noNewNotifications')}</p>
             </div>
           ) : (
             <div className="p-2">
@@ -160,7 +162,7 @@ export function NotificationsDropdown() {
             href={FRONTEND_ROUTES.NOTIFICATIONS.LIST}
             className="justify-center text-xs text-muted-foreground"
           >
-            모든 알림 보기
+            {t('layout.viewAllNotifications')}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
