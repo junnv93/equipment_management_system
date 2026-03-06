@@ -258,9 +258,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
   @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
-  async activateUser(
-    @Param('id', ParseUUIDPipe) id: string
-  ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
+  async activateUser(@Param('id', ParseUUIDPipe) id: string): Promise<User> {
     const user = await this.usersService.toggleActive(id, true);
     if (!user) {
       throw new NotFoundException({
@@ -281,9 +279,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
   @RequirePermissions(Permission.UPDATE_USERS)
   @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
-  async deactivateUser(
-    @Param('id', ParseUUIDPipe) id: string
-  ): Promise<import('/home/kmjkds/equipment_management_system/packages/schemas/src/user').User> {
+  async deactivateUser(@Param('id', ParseUUIDPipe) id: string): Promise<User> {
     const user = await this.usersService.toggleActive(id, false);
     if (!user) {
       throw new NotFoundException({
