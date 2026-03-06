@@ -8,8 +8,13 @@
 import { APPROVAL_ROLES, ADMIN_ROLES, type UserRole } from '@equipment-management/shared-constants';
 
 // Fallback values in case of module resolution issues during HMR
-const FALLBACK_APPROVAL_ROLES: UserRole[] = ['technical_manager', 'quality_manager', 'lab_manager'];
-const FALLBACK_ADMIN_ROLES: UserRole[] = ['lab_manager'];
+const FALLBACK_APPROVAL_ROLES: UserRole[] = [
+  'technical_manager',
+  'quality_manager',
+  'lab_manager',
+  'system_admin',
+];
+const FALLBACK_ADMIN_ROLES: UserRole[] = ['lab_manager', 'system_admin'];
 
 /**
  * 사용자가 승인 권한을 가지고 있는지 확인
@@ -40,17 +45,4 @@ export function hasAdminPermissions(userRole?: string | null): boolean {
 
   const roles = ADMIN_ROLES ?? FALLBACK_ADMIN_ROLES;
   return roles.includes(userRole.toLowerCase() as UserRole);
-}
-
-/**
- * 사용자가 특정 역할인지 확인
- *
- * @param userRole - 사용자 역할
- * @param targetRole - 확인할 대상 역할
- * @returns 역할 일치 여부
- */
-export function hasRole(userRole?: string | null, targetRole?: string): boolean {
-  if (!userRole || !targetRole) return false;
-
-  return userRole.toLowerCase() === targetRole.toLowerCase();
 }

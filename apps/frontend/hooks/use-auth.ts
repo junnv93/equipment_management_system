@@ -50,11 +50,6 @@ export function useAuth() {
     return hasRole(['technical_manager', ...ADMIN_ROLES]);
   }, [hasRole]);
 
-  // 시험실무자 권한 확인
-  const isTestOperator = useCallback(() => {
-    return hasRole(['test_engineer']);
-  }, [hasRole]);
-
   // 로그아웃 함수
   const logout = useCallback(async () => {
     // ✅ API 클라이언트 토큰 캐시 초기화
@@ -74,7 +69,6 @@ export function useAuth() {
     hasRole,
     isAdmin,
     isManager,
-    isTestOperator,
     logout,
   };
 }
