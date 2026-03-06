@@ -135,6 +135,9 @@ export function TeamMemberList({
     if (currentUser.role === UserRoleValues.LAB_MANAGER) {
       return (teamSite || member.site) === currentUser.site;
     }
+    if (currentUser.role === UserRoleValues.SYSTEM_ADMIN) {
+      return true;
+    }
     return false;
   };
 
@@ -443,29 +446,28 @@ export function TeamMemberList({
       )}
 
       {/* 역할 변경 확인 다이얼로그 */}
-      <AlertDialog
-        open={!!roleChangeTarget}
-        onOpenChange={(open) => !open && setRoleChangeTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('member.roleChangeDialog.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('member.roleChangeDialog.description', {
-                name: roleChangeTarget?.member.name || '',
-                from: tNav(`roles.${roleChangeTarget?.member.role}` as Parameters<typeof tNav>[0]),
-                to: tNav(`roles.${roleChangeTarget?.newRole}` as Parameters<typeof tNav>[0]),
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('member.roleChangeDialog.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRoleChange}>
-              {t('member.roleChangeDialog.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {roleChangeTarget && (
+        <AlertDialog open={true} onOpenChange={(open) => !open && setRoleChangeTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('member.roleChangeDialog.title')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('member.roleChangeDialog.description', {
+                  name: roleChangeTarget.member.name,
+                  from: tNav(`roles.${roleChangeTarget.member.role}` as Parameters<typeof tNav>[0]),
+                  to: tNav(`roles.${roleChangeTarget.newRole}` as Parameters<typeof tNav>[0]),
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('member.roleChangeDialog.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRoleChange}>
+                {t('member.roleChangeDialog.confirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

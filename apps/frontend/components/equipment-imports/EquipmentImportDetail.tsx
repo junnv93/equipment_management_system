@@ -177,7 +177,8 @@ export default function EquipmentImportDetail({ id }: Props) {
   const status = equipmentImport.status as EquipmentImportStatus;
   const isRequester = user?.id === equipmentImport.requesterId;
   const userRole = user?.roles?.[0];
-  const canApprove = userRole === 'technical_manager' || userRole === 'lab_manager';
+  const canApprove =
+    userRole === 'technical_manager' || userRole === 'lab_manager' || userRole === 'system_admin';
 
   const isRental = equipmentImport.sourceType === 'rental';
   const isInternalShared = equipmentImport.sourceType === 'internal_shared';

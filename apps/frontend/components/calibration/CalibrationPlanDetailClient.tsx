@@ -398,11 +398,13 @@ export function CalibrationPlanDetailClient({
   const isTechnicalManager = userRole === 'technical_manager';
   const isQualityManager = userRole === 'quality_manager';
   const isLabManager = userRole === 'lab_manager';
+  const isSystemAdmin = userRole === 'system_admin';
 
   // 역할별 액션 가능 여부
-  const canSubmitForReview = (isDraft || isRejected) && (isTechnicalManager || isLabManager);
-  const canReview = isPendingReview && (isQualityManager || isLabManager);
-  const canApprove = isPendingApproval && isLabManager;
+  const canSubmitForReview =
+    (isDraft || isRejected) && (isTechnicalManager || isLabManager || isSystemAdmin);
+  const canReview = isPendingReview && (isQualityManager || isLabManager || isSystemAdmin);
+  const canApprove = isPendingApproval && (isLabManager || isSystemAdmin);
 
   return (
     <div className="container mx-auto py-6 space-y-6">

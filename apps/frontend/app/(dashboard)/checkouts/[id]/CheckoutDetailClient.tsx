@@ -80,8 +80,8 @@ export default function CheckoutDetailClient({
   const router = useRouter();
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const { hasRole } = useAuth();
-  // 승인/반출 시작/반입 승인: technical_manager, lab_manager 전용
-  const canApprove = hasRole(['technical_manager', 'lab_manager']);
+  // 승인/반출 시작/반입 승인: technical_manager, lab_manager, system_admin 전용
+  const canApprove = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)

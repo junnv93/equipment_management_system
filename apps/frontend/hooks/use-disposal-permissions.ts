@@ -9,7 +9,7 @@ export function useDisposalPermissions(
   const { user, hasRole, isAdmin } = useAuth();
 
   const canRequestDisposal =
-    hasRole(['test_engineer', 'technical_manager', 'lab_manager']) &&
+    hasRole(['test_engineer', 'technical_manager', 'lab_manager', 'system_admin']) &&
     equipment.status === 'available' &&
     !equipment.isShared;
 
