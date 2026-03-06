@@ -146,19 +146,16 @@ test.describe('UI: 사이트 필터 고정 표시', () => {
     await page.goto('/equipment');
     await page.waitForLoadState('networkidle');
 
-    // 필터 패널이 열려 있는지 확인 (defaultOpen)
-    const filterPanel = page.getByRole('group', { name: /필터/i });
-    await expect(filterPanel)
-      .toBeVisible({ timeout: 5000 })
-      .catch(() => {
-        // 필터 패널이 없으면 CollapsibleTrigger로 열기
-      });
-
-    // 사이트 필터 select가 disabled 상태인지 확인
+    // 필터 패널이 닫혀 있으면 열기
+    const filterTrigger = page.getByRole('button', { name: /필터/i });
     const siteSelect = page.locator('#filter-site');
-    if (await siteSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await expect(siteSelect).toBeDisabled();
+    if (!(await siteSelect.isVisible({ timeout: 1000 }).catch(() => false))) {
+      await filterTrigger.click();
     }
+
+    // 사이트 필터 select가 존재하고 disabled 상태인지 확인
+    await expect(siteSelect).toBeVisible({ timeout: 5000 });
+    await expect(siteSelect).toBeDisabled();
   });
 
   test('TC-07: lab_manager 장비 목록에서 사이트 필터가 활성화됨', async ({
@@ -167,9 +164,15 @@ test.describe('UI: 사이트 필터 고정 표시', () => {
     await page.goto('/equipment');
     await page.waitForLoadState('networkidle');
 
+    // 필터 패널이 닫혀 있으면 열기
+    const filterTrigger = page.getByRole('button', { name: /필터/i });
     const siteSelect = page.locator('#filter-site');
-    if (await siteSelect.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await expect(siteSelect).toBeEnabled();
+    if (!(await siteSelect.isVisible({ timeout: 1000 }).catch(() => false))) {
+      await filterTrigger.click();
     }
+
+    // 사이트 필터 select가 존재하고 enabled 상태인지 확인
+    await expect(siteSelect).toBeVisible({ timeout: 5000 });
+    await expect(siteSelect).toBeEnabled();
   });
 });

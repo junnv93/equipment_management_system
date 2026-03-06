@@ -78,7 +78,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
     expect(before.status).toBe('approved');
     expect(before.purpose).toBe('rental');
 
-    // condition-check API 호출
+    // condition-check API 호출 (CAS: version 필드 필수)
     const response = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${SUITE_10.STEP1_LENDER}/condition-check`,
       {
@@ -87,6 +87,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
           'Content-Type': 'application/json',
         },
         data: {
+          version: before.version,
           step: 'lender_checkout',
           appearanceStatus: 'normal',
           operationStatus: 'normal',
@@ -122,6 +123,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
           'Content-Type': 'application/json',
         },
         data: {
+          version: before.version,
           step: 'borrower_receive',
           appearanceStatus: 'normal',
           operationStatus: 'normal',
@@ -154,6 +156,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
           'Content-Type': 'application/json',
         },
         data: {
+          version: before.version,
           step: 'borrower_return',
           appearanceStatus: 'normal',
           operationStatus: 'normal',
@@ -186,6 +189,7 @@ test.describe('Suite 10: 대여 4단계 상태 확인', () => {
           'Content-Type': 'application/json',
         },
         data: {
+          version: before.version,
           step: 'lender_return',
           appearanceStatus: 'normal',
           operationStatus: 'normal',
