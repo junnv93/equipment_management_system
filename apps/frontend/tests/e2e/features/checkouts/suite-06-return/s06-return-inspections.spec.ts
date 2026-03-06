@@ -43,6 +43,13 @@ test.describe('Suite 06: 반입 처리', () => {
     await clearBackendCache(); // Ensure fresh data
     const token = await getBackendToken(page, 'technical_manager');
 
+    // CAS: version 필드 필수 (versionedSchema)
+    const getResponse = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${SUITE_06.CALIBRATION}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const { version } = await getResponse.json();
+
     const response = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${SUITE_06.CALIBRATION}/return`,
       {
@@ -51,6 +58,7 @@ test.describe('Suite 06: 반입 처리', () => {
           'Content-Type': 'application/json',
         },
         data: {
+          version,
           calibrationChecked: true,
           workingStatusChecked: true,
           inspectionNotes: '교정 완료, 정상 작동 확인',
@@ -72,6 +80,12 @@ test.describe('Suite 06: 반입 처리', () => {
     await clearBackendCache(); // Ensure fresh data
     const token = await getBackendToken(page, 'technical_manager');
 
+    // CAS: version 필드 필수 (versionedSchema)
+    const getResponse = await page.request.get(`${BACKEND_URL}/api/checkouts/${SUITE_06.REPAIR}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const { version } = await getResponse.json();
+
     const response = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${SUITE_06.REPAIR}/return`,
       {
@@ -80,6 +94,7 @@ test.describe('Suite 06: 반입 처리', () => {
           'Content-Type': 'application/json',
         },
         data: {
+          version,
           repairChecked: true,
           workingStatusChecked: true,
           inspectionNotes: '수리 완료, 정상 작동 확인',

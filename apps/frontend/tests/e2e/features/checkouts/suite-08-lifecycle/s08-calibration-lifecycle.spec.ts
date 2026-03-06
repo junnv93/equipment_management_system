@@ -215,7 +215,7 @@ test.describe('Suite 08: 교정 반출 전체 라이프사이클', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        data: {},
+        data: { version: beforeApprove.version },
       }
     );
 

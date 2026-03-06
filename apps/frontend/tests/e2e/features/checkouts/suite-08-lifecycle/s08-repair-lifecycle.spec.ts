@@ -123,7 +123,13 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
 
     const token = await getBackendToken(page, 'technical_manager');
 
-    // repairChecked 없이 시도 → 400
+    // CAS: version 필드 필수 (versionedSchema)
+    const getResponse = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const { version } = await getResponse.json();
+
+    // repairChecked: false → 400 (비즈니스 로직 에러)
     const failResponse = await page.request.post(
       `${BACKEND_URL}/api/checkouts/${checkoutId}/return`,
       {
@@ -132,6 +138,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
           'Content-Type': 'application/json',
         },
         data: {
+          version,
           repairChecked: false,
           workingStatusChecked: true,
         },
@@ -146,6 +153,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
         'Content-Type': 'application/json',
       },
       data: {
+        version,
         repairChecked: true,
         workingStatusChecked: true,
         inspectionNotes: '수리 완료 - 부품 교체, 정상 작동 확인',
@@ -166,6 +174,12 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
 
     const token = await getBackendToken(page, 'technical_manager');
 
+    // CAS: version 필드 필수 (versionedSchema)
+    const getResponse = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const { version } = await getResponse.json();
+
     const response = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${checkoutId}/approve-return`,
       {
@@ -173,7 +187,7 @@ test.describe('Suite 08: 수리 반출 전체 라이프사이클', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        data: {},
+        data: { version },
       }
     );
 
