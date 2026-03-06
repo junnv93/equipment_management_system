@@ -4,7 +4,7 @@ import { AuthService, AuthResponse } from '../auth.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { LoginDto } from '../dto/login.dto';
 import { UnauthorizedException } from '@nestjs/common';
-import { UserRole } from '../rbac/roles.enum';
+import { UserRoleValues } from '../rbac/roles.enum';
 import { AuthenticatedRequest } from '../../../types/auth';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
@@ -17,7 +17,7 @@ describe('AuthController', () => {
     id: 'test-user-id',
     email: 'test@example.com',
     name: 'Test User',
-    roles: [UserRole.TEST_ENGINEER],
+    roles: [UserRoleValues.TEST_ENGINEER],
     department: 'Testing',
   };
 
@@ -153,7 +153,7 @@ describe('AuthController', () => {
           id: 'azure-id',
           email: 'azure@example.com',
           name: 'Azure User',
-          roles: [UserRole.LAB_MANAGER],
+          roles: [UserRoleValues.LAB_MANAGER],
           department: 'IT',
         },
       };

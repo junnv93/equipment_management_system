@@ -1,17 +1,11 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '../rbac/roles.enum';
+import { UserRoleEnum, USER_ROLE_VALUES, type UserRole } from '../rbac/roles.enum';
 
 /**
  * UserRole Zod 스키마
  */
-export const userRoleSchema = z.enum([
-  UserRole.TEST_ENGINEER,
-  UserRole.TECHNICAL_MANAGER,
-  UserRole.QUALITY_MANAGER,
-  UserRole.LAB_MANAGER,
-  UserRole.SYSTEM_ADMIN,
-]);
+export const userRoleSchema = UserRoleEnum;
 
 /**
  * 사용자 정보 스키마 (Zod)
@@ -54,9 +48,9 @@ export class UserDto implements UserInput {
 
   @ApiProperty({
     description: '사용자 역할 목록',
-    enum: UserRole,
+    enum: USER_ROLE_VALUES,
     isArray: true,
-    example: [UserRole.LAB_MANAGER],
+    example: ['lab_manager'],
   })
   roles: UserRole[];
 

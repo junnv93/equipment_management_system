@@ -7,7 +7,7 @@
  * 향후 마이그레이션: shared-constants에서 직접 import 권장
  */
 
-import { UserRole } from './roles.enum';
+import { UserRoleValues } from './roles.enum';
 import { Permission } from './permissions.enum';
 import { ROLE_PERMISSIONS as SHARED_ROLE_PERMISSIONS } from '@equipment-management/shared-constants';
 
@@ -17,12 +17,12 @@ import { ROLE_PERMISSIONS as SHARED_ROLE_PERMISSIONS } from '@equipment-manageme
  * TypeScript enum 기반 UserRole을 키로 사용하는 버전
  * SHARED_ROLE_PERMISSIONS와 동기화 유지 필요
  */
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.TEST_ENGINEER]: SHARED_ROLE_PERMISSIONS.test_engineer,
-  [UserRole.TECHNICAL_MANAGER]: SHARED_ROLE_PERMISSIONS.technical_manager,
-  [UserRole.QUALITY_MANAGER]: SHARED_ROLE_PERMISSIONS.quality_manager,
-  [UserRole.LAB_MANAGER]: SHARED_ROLE_PERMISSIONS.lab_manager,
-  [UserRole.SYSTEM_ADMIN]: SHARED_ROLE_PERMISSIONS.system_admin,
+export const ROLE_PERMISSIONS: Record<string, Permission[]> = {
+  [UserRoleValues.TEST_ENGINEER]: SHARED_ROLE_PERMISSIONS.test_engineer,
+  [UserRoleValues.TECHNICAL_MANAGER]: SHARED_ROLE_PERMISSIONS.technical_manager,
+  [UserRoleValues.QUALITY_MANAGER]: SHARED_ROLE_PERMISSIONS.quality_manager,
+  [UserRoleValues.LAB_MANAGER]: SHARED_ROLE_PERMISSIONS.lab_manager,
+  [UserRoleValues.SYSTEM_ADMIN]: SHARED_ROLE_PERMISSIONS.system_admin,
 };
 
 // shared-constants의 유틸리티 함수도 re-export

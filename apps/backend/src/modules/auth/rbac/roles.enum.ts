@@ -1,21 +1,12 @@
 /**
- * 사용자 역할 enum
+ * 사용자 역할 — schemas re-export 브릿지
  *
- * ⚠️ SSOT: @equipment-management/schemas의 UserRoleEnum이 원본
- * 이 파일은 백엔드 호환성을 위한 TypeScript enum 형태 제공
- *
- * 향후 마이그레이션: 이 enum 대신 schemas의 UserRole 타입 직접 사용 권장
+ * SSOT: @equipment-management/schemas
+ * 이 파일은 import 경로 호환성을 위해 유지되는 브릿지입니다.
  */
-
-// 백엔드 코드 호환성을 위해 TypeScript enum 유지
-// 값은 schemas의 UserRoleEnum과 동일하게 유지
-export enum UserRole {
-  TEST_ENGINEER = 'test_engineer', // 시험실무자 (Test Engineer)
-  TECHNICAL_MANAGER = 'technical_manager', // 기술책임자 (Technical Manager)
-  QUALITY_MANAGER = 'quality_manager', // 품질책임자 (Quality Manager)
-  LAB_MANAGER = 'lab_manager', // 시험소장 (Lab Manager)
-  SYSTEM_ADMIN = 'system_admin', // 시스템 관리자 (System Admin — 전체 권한 + 시스템 설정)
-}
-
-// schemas 타입과 호환되도록 타입 re-export
-export type { UserRole as UserRoleType } from '@equipment-management/schemas';
+export {
+  UserRoleValues,
+  UserRoleEnum,
+  type UserRole,
+  USER_ROLE_VALUES,
+} from '@equipment-management/schemas';

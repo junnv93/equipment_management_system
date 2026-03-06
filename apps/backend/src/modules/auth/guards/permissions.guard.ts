@@ -12,17 +12,17 @@ import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 import { SKIP_PERMISSIONS_KEY } from '../decorators/skip-permissions.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { ROLE_PERMISSIONS } from '../rbac/role-permissions';
-import { UserRole } from '../rbac/roles.enum';
+import { USER_ROLE_VALUES } from '../rbac/roles.enum';
 import { JwtUser } from '../../../types/auth';
 
 /**
  * 역할 문자열이 유효한 UserRole인지 검증하는 타입 가드
  *
  * @param role - 검증할 역할 문자열
- * @returns role이 UserRole enum 값인지 여부
+ * @returns role이 유효한 역할 값인지 여부
  */
-function isValidUserRole(role: string): role is UserRole {
-  return Object.values(UserRole).includes(role as UserRole);
+function isValidUserRole(role: string): boolean {
+  return (USER_ROLE_VALUES as readonly string[]).includes(role);
 }
 
 /**
@@ -117,8 +117,8 @@ export class PermissionsGuard implements CanActivate {
     // ✅ 타입 안전한 역할 기반 권한 확인
     // 유효하지 않은 역할은 무시하고 유효한 역할만 처리
     const userPermissions = user.roles
-      .filter((role: string): role is UserRole => isValidUserRole(role))
-      .flatMap((validRole: UserRole) => ROLE_PERMISSIONS[validRole] || []);
+      .filter((role: string) => isValidUserRole(role))
+      .flatMap((validRole: string) => ROLE_PERMISSIONS[validRole] || []);
 
     const hasAllRequiredPermissions = requiredPermissions.every((permission) =>
       userPermissions.includes(permission)

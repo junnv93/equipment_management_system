@@ -8,7 +8,7 @@ import {
   ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_TOKEN_EXPIRES_IN,
 } from '@equipment-management/shared-constants';
-import { UserRole } from './rbac/roles.enum';
+import { UserRoleValues, type UserRole } from './rbac/roles.enum';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
 import { TOKEN_BLACKLIST, TokenBlacklistProvider } from './blacklist/token-blacklist.interface';
@@ -137,9 +137,9 @@ export class AuthService {
 
     // 비밀번호 검증용 최소 사용자 정보 (DB 조회 키로만 사용)
     const testUserDefaults: Record<string, { roles: UserRole[]; name: string }> = {
-      'admin@example.com': { roles: [UserRole.LAB_MANAGER], name: '관리자' },
-      'manager@example.com': { roles: [UserRole.TECHNICAL_MANAGER], name: '기술책임자' },
-      'user@example.com': { roles: [UserRole.TEST_ENGINEER], name: '시험실무자' },
+      'admin@example.com': { roles: [UserRoleValues.LAB_MANAGER], name: '관리자' },
+      'manager@example.com': { roles: [UserRoleValues.TECHNICAL_MANAGER], name: '기술책임자' },
+      'user@example.com': { roles: [UserRoleValues.TEST_ENGINEER], name: '시험실무자' },
     };
 
     const defaults = testUserDefaults[loginDto.email];
@@ -331,20 +331,20 @@ export class AuthService {
   // Azure AD 역할을 애플리케이션 역할로 매핑
   private mapAzureRolesToAppRoles(azureRoles: string[]): UserRole[] {
     const roleMap: Record<string, UserRole> = {
-      SiteAdmin: UserRole.LAB_MANAGER,
-      TechnicalManager: UserRole.TECHNICAL_MANAGER,
-      TestOperator: UserRole.TEST_ENGINEER,
+      SiteAdmin: UserRoleValues.LAB_MANAGER,
+      TechnicalManager: UserRoleValues.TECHNICAL_MANAGER,
+      TestOperator: UserRoleValues.TEST_ENGINEER,
       // 하위 호환성을 위한 기존 역할 매핑
-      Admin: UserRole.LAB_MANAGER,
-      Manager: UserRole.TECHNICAL_MANAGER,
-      User: UserRole.TEST_ENGINEER,
+      Admin: UserRoleValues.LAB_MANAGER,
+      Manager: UserRoleValues.TECHNICAL_MANAGER,
+      User: UserRoleValues.TEST_ENGINEER,
     };
 
     const mappedRoles = azureRoles
       .map((role) => roleMap[role])
       .filter((role) => role !== undefined);
 
-    return mappedRoles.length > 0 ? mappedRoles : [UserRole.TEST_ENGINEER]; // 기본값은 시험실무자
+    return mappedRoles.length > 0 ? mappedRoles : [UserRoleValues.TEST_ENGINEER]; // 기본값은 시험실무자
   }
 
   /**

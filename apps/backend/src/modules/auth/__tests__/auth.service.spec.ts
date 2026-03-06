@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService, AzureADUser } from '../auth.service';
 import { LoginDto } from '../dto/login.dto';
-import { UserRole } from '../rbac/roles.enum';
+import { UserRoleValues } from '../rbac/roles.enum';
 import { UsersService } from '../../users/users.service';
 import { TOKEN_BLACKLIST } from '../blacklist/token-blacklist.interface';
 
@@ -137,7 +137,7 @@ describe('AuthService', () => {
       expect(result.user).toMatchObject({
         email: 'admin@example.com',
         name: '관리자',
-        roles: [UserRole.LAB_MANAGER],
+        roles: [UserRoleValues.LAB_MANAGER],
       });
       // Fallback should not have site/teamId
       expect(result.user.site).toBeUndefined();
@@ -159,7 +159,7 @@ describe('AuthService', () => {
       expect(result.user).toMatchObject({
         email: 'manager@example.com',
         name: '기술책임자',
-        roles: [UserRole.TECHNICAL_MANAGER],
+        roles: [UserRoleValues.TECHNICAL_MANAGER],
       });
     });
 
@@ -178,7 +178,7 @@ describe('AuthService', () => {
       expect(result.user).toMatchObject({
         email: 'user@example.com',
         name: '시험실무자',
-        roles: [UserRole.TEST_ENGINEER],
+        roles: [UserRoleValues.TEST_ENGINEER],
       });
     });
 
@@ -263,7 +263,7 @@ describe('AuthService', () => {
         id: 'azure-id',
         email: 'azure@example.com',
         name: 'Azure User',
-        roles: [UserRole.LAB_MANAGER],
+        roles: [UserRoleValues.LAB_MANAGER],
         department: 'IT',
       });
       expect(jwtService.sign).toHaveBeenCalled();
@@ -290,7 +290,7 @@ describe('AuthService', () => {
       const result = service.validateAzureADUser(azureUser);
 
       // Assert
-      expect(result.user.roles).toEqual([UserRole.TEST_ENGINEER]);
+      expect(result.user.roles).toEqual([UserRoleValues.TEST_ENGINEER]);
     });
   });
 
@@ -307,7 +307,7 @@ describe('AuthService', () => {
       const result = service_any.mapAzureRolesToAppRoles(azureRoles);
 
       // Assert
-      expect(result).toEqual([UserRole.LAB_MANAGER, UserRole.TECHNICAL_MANAGER]);
+      expect(result).toEqual([UserRoleValues.LAB_MANAGER, UserRoleValues.TECHNICAL_MANAGER]);
     });
 
     it('should return TEST_ENGINEER role if no mappable roles are found', () => {
@@ -322,7 +322,7 @@ describe('AuthService', () => {
       const result = service_any.mapAzureRolesToAppRoles(azureRoles);
 
       // Assert
-      expect(result).toEqual([UserRole.TEST_ENGINEER]);
+      expect(result).toEqual([UserRoleValues.TEST_ENGINEER]);
     });
 
     it('should map new Azure AD roles correctly', () => {
@@ -338,9 +338,9 @@ describe('AuthService', () => {
 
       // Assert
       expect(result).toEqual([
-        UserRole.LAB_MANAGER,
-        UserRole.TECHNICAL_MANAGER,
-        UserRole.TEST_ENGINEER,
+        UserRoleValues.LAB_MANAGER,
+        UserRoleValues.TECHNICAL_MANAGER,
+        UserRoleValues.TEST_ENGINEER,
       ]);
     });
   });
@@ -439,7 +439,7 @@ describe('AuthService', () => {
         id: 'azure-id',
         email: 'azure@example.com',
         name: 'Azure User',
-        roles: [UserRole.LAB_MANAGER],
+        roles: [UserRoleValues.LAB_MANAGER],
         site: 'suwon',
         location: '수원랩',
         teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1', // 수원 RF팀 UUID
