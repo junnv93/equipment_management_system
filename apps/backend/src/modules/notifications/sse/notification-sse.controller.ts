@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Observable } from 'rxjs';
 import { NotificationSseService, MessageEvent } from './notification-sse.service';
-import { SseAuthenticated } from './sse-authenticated.decorator';
+import { SseAuthenticated } from '../../../common/decorators/sse-authenticated.decorator';
 import { AuthenticatedRequest } from '../../../types/auth';
 
 /**

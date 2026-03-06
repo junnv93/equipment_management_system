@@ -169,15 +169,4 @@ describe('AuthController', () => {
       expect(authService.validateAzureADUser).toHaveBeenCalledWith(azureUserData);
     });
   });
-
-  describe('test', () => {
-    it('should return test message', () => {
-      // Act
-      const result = controller.test();
-
-      // Assert
-      expect(result).toHaveProperty('message');
-      expect(result).toHaveProperty('timestamp');
-    });
-  });
 });

@@ -6,7 +6,6 @@ import {
   Get,
   Req,
   ForbiddenException,
-  NotFoundException,
   UsePipes,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -50,19 +49,6 @@ export class AuthController {
       email: req.user.email,
       roles: req.user.roles,
       department: req.user.department,
-    };
-  }
-
-  // 개발 환경용 테스트 엔드포인트 — 프로덕션에서는 404 (엔드포인트 존재 자체를 숨김)
-  @Get('test')
-  @Public()
-  test(): { message: string; timestamp: string } {
-    if (process.env.NODE_ENV === 'production') {
-      throw new NotFoundException();
-    }
-    return {
-      message: '인증 API가 정상적으로 동작 중입니다.',
-      timestamp: new Date().toISOString(),
     };
   }
 

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { AuthService } from '../../auth/auth.service';
+import { AuthService } from '../../modules/auth/auth.service';
 
 /**
  * SSE 전용 JWT 인증 가드

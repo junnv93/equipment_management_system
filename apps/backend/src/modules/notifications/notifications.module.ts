@@ -16,7 +16,7 @@ import { CheckoutOverdueScheduler } from './schedulers/checkout-overdue-schedule
 import { NotificationCleanupScheduler } from './schedulers/notification-cleanup-scheduler';
 import { NotificationSseService } from './sse/notification-sse.service';
 import { NotificationSseController } from './sse/notification-sse.controller';
-import { SseJwtAuthGuard } from './sse/sse-jwt-auth.guard';
+import { SseJwtAuthGuard } from '../../common/guards/sse-jwt-auth.guard';
 import { CalibrationModule } from '../calibration/calibration.module';
 import { AuthModule } from '../auth/auth.module';
 import { DrizzleModule } from '../../database/drizzle.module';

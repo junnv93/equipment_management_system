@@ -1,6 +1,6 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
-import { Public } from '../../auth/decorators/public.decorator';
-import { SseJwtAuthGuard } from './sse-jwt-auth.guard';
+import { Public } from '../../modules/auth/decorators/public.decorator';
+import { SseJwtAuthGuard } from '../guards/sse-jwt-auth.guard';
 
 /**
  * @SseAuthenticated 데코레이터

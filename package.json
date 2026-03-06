@@ -34,7 +34,7 @@
     "prepare": "husky install",
     "type-check": "type-coverage --detail",
     "type-check:strict": "type-coverage --detail --at-least 90",
-    "security:check": "ts-node scripts/check-endpoint-annotations.ts"
+    "security:check": "ts-node scripts/check-security-decorators.ts && pnpm --filter backend run security:check-endpoints"
   },
   "workspaces": [
     "apps/*",
