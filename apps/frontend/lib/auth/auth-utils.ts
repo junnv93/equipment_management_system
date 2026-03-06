@@ -1,6 +1,7 @@
 /**
  * 인증 관련 유틸리티 함수
  */
+import { ROLE_HIERARCHY } from '@equipment-management/shared-constants';
 
 /**
  * URL이 안전한 콜백 URL인지 확인
@@ -14,8 +15,7 @@ export function isValidCallbackUrl(url: string | null | undefined): boolean {
 
   try {
     const parsedUrl = new URL(url);
-    const currentOrigin =
-      typeof window !== 'undefined' ? window.location.origin : '';
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
     // localhost는 개발 환경에서 허용
     if (parsedUrl.hostname === 'localhost') return true;
@@ -47,10 +47,7 @@ export function getSafeCallbackUrl(
 /**
  * 사용자 역할 확인
  */
-export function hasRole(
-  userRoles: string[] | undefined | null,
-  requiredRole: string
-): boolean {
+export function hasRole(userRoles: string[] | undefined | null, requiredRole: string): boolean {
   if (!userRoles || !Array.isArray(userRoles)) return false;
   const normalizedRequired = requiredRole.toLowerCase();
   return userRoles.some((role) => role.toLowerCase() === normalizedRequired);
@@ -80,39 +77,23 @@ export function hasAllRoles(
  * 관리자 권한 확인
  */
 export function isAdmin(userRoles: string[] | undefined | null): boolean {
-  return hasAnyRole(userRoles, [
-    'admin',
-    'ADMIN',
-    'system_admin',
-    'SYSTEM_ADMIN',
-  ]);
+  return hasAnyRole(userRoles, ['admin', 'ADMIN', 'system_admin', 'SYSTEM_ADMIN']);
 }
 
 /**
  * 시험소 관리자 권한 확인
  */
 export function isSiteAdmin(userRoles: string[] | undefined | null): boolean {
-  return hasAnyRole(userRoles, [
-    'lab_manager',
-    'LAB_MANAGER',
-    'system_admin',
-    'SYSTEM_ADMIN',
-  ]);
+  return hasAnyRole(userRoles, ['lab_manager', 'LAB_MANAGER', 'system_admin', 'SYSTEM_ADMIN']);
 }
 
 /**
  * 기술책임자 권한 확인
  */
-export function isTechnicalManager(
-  userRoles: string[] | undefined | null
-): boolean {
+export function isTechnicalManager(userRoles: string[] | undefined | null): boolean {
   return (
-    hasAnyRole(userRoles, [
-      'technical_manager',
-      'TECHNICAL_MANAGER',
-      'manager',
-      'MANAGER',
-    ]) || isSiteAdmin(userRoles)
+    hasAnyRole(userRoles, ['technical_manager', 'TECHNICAL_MANAGER', 'manager', 'MANAGER']) ||
+    isSiteAdmin(userRoles)
   );
 }
 
@@ -125,19 +106,10 @@ export function isManager(userRoles: string[] | undefined | null): boolean {
 
 /**
  * 역할 레벨 비교
- * 높은 숫자가 더 높은 권한
+ * 높은 숫자가 더 높은 권한 (SSOT: @equipment-management/shared-constants ROLE_HIERARCHY)
  */
 export function getRoleLevel(role: string): number {
-  const roleLevels: Record<string, number> = {
-    test_engineer: 1,
-    technical_manager: 2,
-    manager: 2,
-    lab_manager: 3,
-    system_admin: 4,
-    admin: 4,
-  };
-
-  return roleLevels[role.toLowerCase()] || 0;
+  return (ROLE_HIERARCHY as Record<string, number>)[role.toLowerCase()] ?? 0;
 }
 
 /**
