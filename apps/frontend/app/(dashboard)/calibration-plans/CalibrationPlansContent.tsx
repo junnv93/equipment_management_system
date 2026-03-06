@@ -38,7 +38,11 @@ import { format } from 'date-fns';
 import { Plus, FileText, Calendar, Building2, Eye, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CalibrationPlanStatus, UserRole, Site } from '@equipment-management/schemas';
-import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
+import {
+  TEAM_RESTRICTED_ROLES,
+  CALIBRATION_PLAN_DATA_SCOPE,
+  resolveDataScope,
+} from '@equipment-management/shared-constants';
 import {
   FILTER_TOKENS,
   getFilterSelectClasses,
@@ -77,6 +81,14 @@ export default function CalibrationPlansContent({
   // 역할 확인
   const userRole = session?.user?.role;
   const isTeamRestricted = userRole && TEAM_RESTRICTED_ROLES.includes(userRole as UserRole);
+
+  // 사이트 필터 고정 여부: CALIBRATION_PLAN_DATA_SCOPE에서 scope=site인 역할만 고정
+  const isSiteFixed = userRole
+    ? resolveDataScope(
+        { role: userRole as UserRole, site: session?.user?.site },
+        CALIBRATION_PLAN_DATA_SCOPE
+      ).type === 'site'
+    : false;
 
   // 팀 목록 조회 (필터링용)
   const { data: teamsData } = useQuery({
@@ -156,8 +168,11 @@ export default function CalibrationPlansContent({
               <Select
                 value={filters.siteId || '_all'}
                 onValueChange={(v) => updateSiteId(v === '_all' ? '' : v)}
+                disabled={isSiteFixed}
               >
-                <SelectTrigger className={getFilterSelectClasses()}>
+                <SelectTrigger
+                  className={`${getFilterSelectClasses()}${isSiteFixed ? ' cursor-not-allowed opacity-60' : ''}`}
+                >
                   <SelectValue placeholder={t('plansList.filter.sitePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>

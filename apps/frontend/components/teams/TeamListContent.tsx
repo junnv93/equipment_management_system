@@ -24,7 +24,8 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useTeamFilters } from '@/hooks/use-team-filters';
 import type { UITeamFilters } from '@/lib/utils/team-filter-utils';
-import type { Site } from '@equipment-management/schemas';
+import type { Site, UserRole } from '@equipment-management/schemas';
+import { TEAMS_SITE_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
 
 // 드롭다운에 표시할 주요 팀 분류 (소문자_언더스코어)
 const PRIMARY_CLASSIFICATIONS = [
@@ -59,7 +60,12 @@ interface TeamListContentProps {
  */
 export function TeamListContent({ initialData, initialFilters }: TeamListContentProps) {
   const router = useRouter();
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
+
+  // 사이트 필터 고정 여부: TEAMS_SITE_RESTRICTED_ROLES 역할은 자기 사이트만 조회
+  const isSiteFixed = user?.role
+    ? TEAMS_SITE_RESTRICTED_ROLES.includes(user.role as UserRole)
+    : false;
   const t = useTranslations('teams');
   const {
     filters,
@@ -145,8 +151,12 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
         <Select
           value={filters.site || '_all'}
           onValueChange={(value) => updateSite(value === '_all' ? '' : (value as Site))}
+          disabled={isSiteFixed}
         >
-          <SelectTrigger className="w-[160px]" aria-label={t('listContent.siteFilterAriaLabel')}>
+          <SelectTrigger
+            className={`w-[160px]${isSiteFixed ? ' cursor-not-allowed opacity-60' : ''}`}
+            aria-label={t('listContent.siteFilterAriaLabel')}
+          >
             <Filter className="h-4 w-4 mr-2" aria-hidden="true" />
             <SelectValue placeholder={t('listContent.siteFilterPlaceholder')} />
           </SelectTrigger>
