@@ -1,71 +1,27 @@
 import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '@equipment-management/db/schema';
+import { repairHistory, RepairHistory } from '@equipment-management/db/schema';
 import {
   CreateRepairHistoryDto,
   UpdateRepairHistoryDto,
   RepairHistoryQueryDto,
 } from '../dto/repair-history.dto';
-import { v4 as uuidv4 } from 'uuid';
 import { NonConformancesService } from '../../non-conformances/non-conformances.service';
 import { NonConformanceStatus } from '../../non-conformances/dto/non-conformance-query.dto';
 import { RepairResultValues } from '@equipment-management/schemas';
 
-// Backward compatibility alias
 const RepairResultEnum = RepairResultValues;
 
-// 수리 이력 인터페이스 (UUID PK로 통일됨)
-export interface RepairHistoryRecord {
-  id: string; // UUID
-  equipmentId: string; // UUID
-  repairDate: Date;
-  repairDescription: string;
-  repairResult: string | null;
-  notes: string | null;
-  attachmentPath: string | null;
-  isDeleted: boolean;
-  deletedAt: Date | null;
-  deletedBy: string | null;
-  createdBy: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// 임시 인메모리 저장소 (UUID PK)
-const repairHistoryStore: RepairHistoryRecord[] = [
-  {
-    id: '11111111-1111-1111-1111-111111111111',
-    equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-    repairDate: new Date('2024-01-15'),
-    repairDescription: '전원부 고장으로 인한 전원 보드 교체',
-    repairResult: 'completed',
-    notes: '보증 기간 내 무상 수리',
-    attachmentPath: null,
-    isDeleted: false,
-    deletedAt: null,
-    deletedBy: null,
-    createdBy: '550e8400-e29b-41d4-a716-446655440001',
-    createdAt: new Date('2024-01-15'),
-    updatedAt: new Date('2024-01-15'),
-  },
-  {
-    id: '22222222-2222-2222-2222-222222222222',
-    equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-    repairDate: new Date('2024-06-20'),
-    repairDescription: '프로브 커넥터 불량으로 커넥터 교체',
-    repairResult: 'completed',
-    notes: '자체 수리',
-    attachmentPath: null,
-    isDeleted: false,
-    deletedAt: null,
-    deletedBy: null,
-    createdBy: '550e8400-e29b-41d4-a716-446655440001',
-    createdAt: new Date('2024-06-20'),
-    updatedAt: new Date('2024-06-20'),
-  },
-];
+// 컨트롤러 하위 호환성을 위한 타입 별칭
+export type RepairHistoryRecord = RepairHistory;
 
 @Injectable()
 export class RepairHistoryService {
   constructor(
+    @Inject('DRIZZLE_INSTANCE')
+    private readonly db: PostgresJsDatabase<typeof schema>,
     @Inject(forwardRef(() => NonConformancesService))
     private nonConformancesService: NonConformancesService
   ) {}
@@ -93,60 +49,42 @@ export class RepairHistoryService {
       sort = 'repairDate.desc',
     } = query;
 
-    // 쿼리 파라미터를 숫자로 변환 (문자열로 전달될 수 있음)
     const page = query.page ? Number(query.page) : 1;
     const pageSize = query.pageSize ? Number(query.pageSize) : 20;
 
-    // 임시: equipmentUuid를 equipmentId로 매핑 (실제로는 DB 조회 필요)
-    // 여기서는 모든 레코드를 필터링
-    let filteredRecords = [...repairHistoryStore];
+    const conditions = [eq(repairHistory.equipmentId, equipmentUuid)];
+    if (!includeDeleted) conditions.push(eq(repairHistory.isDeleted, false));
+    if (fromDate) conditions.push(gte(repairHistory.repairDate, new Date(fromDate)));
+    if (toDate) conditions.push(lte(repairHistory.repairDate, new Date(toDate)));
+    if (repairResult) conditions.push(eq(repairHistory.repairResult, repairResult));
 
-    // 삭제된 항목 필터
-    if (!includeDeleted) {
-      filteredRecords = filteredRecords.filter((r) => !r.isDeleted);
-    }
-
-    // 날짜 필터
-    if (fromDate) {
-      const from = new Date(fromDate);
-      filteredRecords = filteredRecords.filter((r) => r.repairDate >= from);
-    }
-    if (toDate) {
-      const to = new Date(toDate);
-      filteredRecords = filteredRecords.filter((r) => r.repairDate <= to);
-    }
-
-    // 수리 결과 필터
-    if (repairResult) {
-      filteredRecords = filteredRecords.filter((r) => r.repairResult === repairResult);
-    }
-
-    // 정렬
     const [sortField, sortOrder] = sort.split('.');
-    const isAsc = sortOrder === 'asc';
-    filteredRecords.sort((a, b) => {
-      const aVal = a[sortField as keyof RepairHistoryRecord];
-      const bVal = b[sortField as keyof RepairHistoryRecord];
-      if (aVal === null) return isAsc ? 1 : -1;
-      if (bVal === null) return isAsc ? -1 : 1;
-      if (aVal < bVal) return isAsc ? -1 : 1;
-      if (aVal > bVal) return isAsc ? 1 : -1;
-      return 0;
-    });
+    const sortColumn =
+      sortField === 'repairDate' ? repairHistory.repairDate : repairHistory.createdAt;
+    const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
-    // 페이지네이션
-    const totalItems = filteredRecords.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-    const offset = (page - 1) * pageSize;
-    const paginatedRecords = filteredRecords.slice(offset, offset + pageSize);
+    const [items, [{ count }]] = await Promise.all([
+      this.db
+        .select()
+        .from(repairHistory)
+        .where(and(...conditions))
+        .orderBy(orderBy)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(repairHistory)
+        .where(and(...conditions)),
+    ]);
 
+    const totalItems = Number(count);
     return {
-      items: paginatedRecords,
+      items,
       meta: {
         totalItems,
         currentPage: page,
         itemsPerPage: pageSize,
-        totalPages,
+        totalPages: Math.ceil(totalItems / pageSize),
       },
     };
   }
@@ -155,7 +93,12 @@ export class RepairHistoryService {
    * 수리 이력 상세 조회
    */
   async findOne(uuid: string): Promise<RepairHistoryRecord> {
-    const record = repairHistoryStore.find((r) => r.id === uuid && !r.isDeleted);
+    const [record] = await this.db
+      .select()
+      .from(repairHistory)
+      .where(and(eq(repairHistory.id, uuid), eq(repairHistory.isDeleted, false)))
+      .limit(1);
+
     if (!record) {
       throw new NotFoundException({
         code: 'REPAIR_HISTORY_NOT_FOUND',
@@ -174,30 +117,22 @@ export class RepairHistoryService {
     dto: CreateRepairHistoryDto,
     createdBy: string
   ): Promise<RepairHistoryRecord> {
-    const now = new Date();
-    const newRecord: RepairHistoryRecord = {
-      id: uuidv4(),
-      equipmentId: equipmentUuid,
-      repairDate: new Date(dto.repairDate),
-      repairDescription: dto.repairDescription,
-      repairResult: dto.repairResult || null,
-      notes: dto.notes || null,
-      attachmentPath: dto.attachmentPath || null,
-      isDeleted: false,
-      deletedAt: null,
-      deletedBy: null,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const [newRecord] = await this.db
+      .insert(repairHistory)
+      .values({
+        equipmentId: equipmentUuid,
+        repairDate: new Date(dto.repairDate),
+        repairDescription: dto.repairDescription,
+        repairResult: dto.repairResult || null,
+        notes: dto.notes || null,
+        attachmentPath: dto.attachmentPath || null,
+        createdBy,
+      })
+      .returning();
 
-    repairHistoryStore.push(newRecord);
-
-    // 부적합 ID가 제공된 경우 연결
     if (dto.nonConformanceId) {
       await this.nonConformancesService.linkRepair(dto.nonConformanceId, newRecord.id);
 
-      // 수리가 완료 상태면 자동으로 부적합을 'corrected'로 변경
       if (dto.repairResult === RepairResultEnum.COMPLETED) {
         await this.nonConformancesService.markCorrected(dto.nonConformanceId, {
           correctionContent: `수리 완료: ${dto.repairDescription}`,
@@ -215,37 +150,27 @@ export class RepairHistoryService {
    * repairResult가 'completed'로 변경되면 연결된 부적합 상태 자동 업데이트
    */
   async update(uuid: string, dto: UpdateRepairHistoryDto): Promise<RepairHistoryRecord> {
-    const index = repairHistoryStore.findIndex((r) => r.id === uuid && !r.isDeleted);
-    if (index === -1) {
-      throw new NotFoundException({
-        code: 'REPAIR_HISTORY_NOT_FOUND',
-        message: `Repair history not found: ${uuid}`,
-      });
-    }
+    const existing = await this.findOne(uuid);
+    const previousResult = existing.repairResult;
 
-    const previousRecord = repairHistoryStore[index];
-    const previousResult = previousRecord.repairResult;
+    const updateData: Partial<typeof repairHistory.$inferInsert> = { updatedAt: new Date() };
+    if (dto.repairDate) updateData.repairDate = new Date(dto.repairDate);
+    if (dto.repairDescription) updateData.repairDescription = dto.repairDescription;
+    if (dto.repairResult !== undefined) updateData.repairResult = dto.repairResult || null;
+    if (dto.notes !== undefined) updateData.notes = dto.notes || null;
+    if (dto.attachmentPath !== undefined) updateData.attachmentPath = dto.attachmentPath || null;
 
-    const now = new Date();
-    const updatedRecord: RepairHistoryRecord = {
-      ...repairHistoryStore[index],
-      ...(dto.repairDate && { repairDate: new Date(dto.repairDate) }),
-      ...(dto.repairDescription && { repairDescription: dto.repairDescription }),
-      ...(dto.repairResult !== undefined && { repairResult: dto.repairResult || null }),
-      ...(dto.notes !== undefined && { notes: dto.notes || null }),
-      ...(dto.attachmentPath !== undefined && { attachmentPath: dto.attachmentPath || null }),
-      updatedAt: now,
-    };
+    const [updatedRecord] = await this.db
+      .update(repairHistory)
+      .set(updateData)
+      .where(eq(repairHistory.id, uuid))
+      .returning();
 
-    repairHistoryStore[index] = updatedRecord;
-
-    // repairResult가 'completed'로 변경되면 연결된 부적합 자동 업데이트
     if (
       dto.repairResult === RepairResultEnum.COMPLETED &&
       previousResult !== RepairResultEnum.COMPLETED
     ) {
       const linkedNC = await this.nonConformancesService.findByRepairId(uuid);
-
       if (linkedNC && linkedNC.status !== NonConformanceStatus.CORRECTED) {
         await this.nonConformancesService.markCorrected(linkedNC.id, {
           correctionContent: `수리 완료: ${updatedRecord.repairDescription}`,
@@ -262,22 +187,13 @@ export class RepairHistoryService {
    * 수리 이력 삭제 (소프트 삭제)
    */
   async remove(uuid: string, deletedBy: string): Promise<{ deleted: boolean; id: string }> {
-    const index = repairHistoryStore.findIndex((r) => r.id === uuid && !r.isDeleted);
-    if (index === -1) {
-      throw new NotFoundException({
-        code: 'REPAIR_HISTORY_NOT_FOUND',
-        message: `Repair history not found: ${uuid}`,
-      });
-    }
+    await this.findOne(uuid);
 
     const now = new Date();
-    repairHistoryStore[index] = {
-      ...repairHistoryStore[index],
-      isDeleted: true,
-      deletedAt: now,
-      deletedBy,
-      updatedAt: now,
-    };
+    await this.db
+      .update(repairHistory)
+      .set({ isDeleted: true, deletedAt: now, deletedBy, updatedAt: now })
+      .where(eq(repairHistory.id, uuid));
 
     return { deleted: true, id: uuid };
   }
@@ -286,9 +202,11 @@ export class RepairHistoryService {
    * 최근 수리 이력 조회
    */
   async getRecentRepairs(equipmentUuid: string, limit: number = 5): Promise<RepairHistoryRecord[]> {
-    return repairHistoryStore
-      .filter((r) => !r.isDeleted)
-      .sort((a, b) => b.repairDate.getTime() - a.repairDate.getTime())
-      .slice(0, limit);
+    return this.db
+      .select()
+      .from(repairHistory)
+      .where(and(eq(repairHistory.equipmentId, equipmentUuid), eq(repairHistory.isDeleted, false)))
+      .orderBy(desc(repairHistory.repairDate))
+      .limit(limit);
   }
 }
