@@ -369,13 +369,26 @@ export class ApprovalsService {
   }
 
   /**
-   * 중간점검 승인 대기 개수
+   * 중간점검 처리 대기 개수
    *
-   * TODO: Implement when intermediate check approval flow is defined
-   * Currently returns 0 as placeholder
+   * intermediateCheckDate가 오늘 이전인 교정 건수를 반환합니다.
+   * 기술책임자가 completeIntermediateCheck()로 완료 처리해야 할 항목입니다.
    */
   private async getIntermediateCheckCount(): Promise<number> {
-    return 0;
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const items = await this.db.query.calibrations.findMany({
+        where: (calibrations, { isNotNull, lt, and: andFn }) =>
+          andFn(
+            isNotNull(calibrations.intermediateCheckDate),
+            lt(calibrations.intermediateCheckDate, today)
+          ),
+        columns: { id: true },
+      });
+      return items.length;
+    } catch {
+      return 0;
+    }
   }
 
   /**
