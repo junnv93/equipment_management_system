@@ -95,6 +95,13 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
   test('S04-03: 반려 사유 필수 (빈 사유 → API 400)', async ({ techManagerPage: page }) => {
     const token = await getBackendToken(page, 'technical_manager');
 
+    // CAS: version 포함해야 "빈 사유" 검증이 실제로 테스트됨 (version 누락으로 인한 400 방지)
+    const getResponse = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${SUITE_04.EMPTY_REASON}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const { version } = await getResponse.json();
+
     // API 직접 호출: 빈 사유로 반려 시도
     const response = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${SUITE_04.EMPTY_REASON}/reject`,
@@ -103,7 +110,7 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        data: { reason: '' },
+        data: { version, reason: '' },
       }
     );
 
@@ -141,8 +148,16 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
   });
 
   test('S04-05: 거절 상태 수정 불가 (API PATCH → 400)', async ({ techManagerPage: page }) => {
-    // SUITE_04.CALIBRATION은 이미 rejected 상태
+    // SUITE_04.CALIBRATION은 이미 rejected 상태 (S04-01에서 전이됨)
     const token = await getBackendToken(page, 'technical_manager');
+
+    // CAS: version 포함해야 상태 전이 불가(비즈니스 로직)로 인한 400이 테스트됨
+    await clearBackendCache();
+    const getResponse = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${SUITE_04.CALIBRATION}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const { version } = await getResponse.json();
 
     const response = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${SUITE_04.CALIBRATION}/approve`,
@@ -151,7 +166,7 @@ test.describe('Suite 04: 반출 반려 워크플로우', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        data: {},
+        data: { version },
       }
     );
 

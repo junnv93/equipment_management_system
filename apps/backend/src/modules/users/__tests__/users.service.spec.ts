@@ -9,8 +9,6 @@ import { UserQueryDto } from '../dto/user-query.dto';
 import { UserRoleEnum } from '@equipment-management/schemas';
 import * as crypto from 'crypto';
 import { getErrorMessage } from '../../../common/utils/error';
-import { EmailService } from '../../notifications/services/email.service';
-import { EmailTemplateService } from '../../notifications/services/email-template.service';
 
 // 테스트용 비밀번호 필드 확장 (실제 DTO에 없지만 서비스에서 처리할 수 있음)
 interface CreateUserWithPasswordDto extends CreateUserDto {
@@ -38,16 +36,7 @@ describe('UsersService', () => {
         DrizzleModule,
         CacheModule,
       ],
-      providers: [
-        UsersService,
-        { provide: EmailService, useValue: { sendMail: jest.fn().mockResolvedValue(undefined) } },
-        {
-          provide: EmailTemplateService,
-          useValue: {
-            buildTemporaryPasswordEmail: jest.fn().mockReturnValue({ subject: '', html: '' }),
-          },
-        },
-      ],
+      providers: [UsersService],
     }).compile();
 
     service = moduleRef.get<UsersService>(UsersService);

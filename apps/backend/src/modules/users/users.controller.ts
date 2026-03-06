@@ -12,7 +12,6 @@ import {
   HttpStatus,
   HttpCode,
   UsePipes,
-  UseGuards,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
@@ -41,8 +40,7 @@ import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { Permission, USER_DATA_SCOPE } from '@equipment-management/shared-constants';
-import { Public } from '../auth/decorators/public.decorator';
-import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
+import { InternalServiceOnly } from '../../common/decorators/internal-service-only.decorator';
 
 @ApiTags('users')
 @Controller('users')
@@ -61,9 +59,9 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  @Public()
-  @UseGuards(InternalApiKeyGuard)
+  @InternalServiceOnly()
   @Post('sync')
+  @UsePipes(CreateUserValidationPipe)
   @ApiOperation({
     summary: '사용자 동기화 (Upsert)',
     description:
@@ -309,32 +307,5 @@ export class UsersController {
     permissions: string[];
   } | null> {
     return this.usersService.findUserPermissions(id);
-  }
-
-  @Post(':id/reset-password')
-  @ApiOperation({
-    summary: '비밀번호 초기화',
-    description: '관리자가 사용자의 비밀번호를 초기화합니다.',
-  })
-  @ApiParam({ name: 'id', description: '사용자 ID' })
-  @ApiResponse({ status: 200, description: '비밀번호가 성공적으로 초기화되었습니다.' })
-  @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
-  @RequirePermissions(Permission.UPDATE_USERS)
-  @AuditLog({ action: 'update', entityType: 'user', entityIdPath: 'params.id' })
-  async resetPassword(
-    @Param('id', ParseUUIDPipe) id: string
-  ): Promise<{ message: string; temporaryPassword: string | undefined }> {
-    // 임시 비밀번호 생성 및 사용자 비밀번호 재설정 로직
-    const result = await this.usersService.generateTemporaryPassword(id);
-    if (!result) {
-      throw new NotFoundException({
-        code: 'USER_NOT_FOUND',
-        message: `User ID ${id} not found.`,
-      });
-    }
-    return {
-      message: '비밀번호가 성공적으로 초기화되었습니다.',
-      temporaryPassword: result.tempPassword,
-    };
   }
 }
