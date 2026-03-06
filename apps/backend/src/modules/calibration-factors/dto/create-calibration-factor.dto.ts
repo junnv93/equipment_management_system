@@ -41,7 +41,8 @@ export const createCalibrationFactorSchema = z.object({
       message: '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)',
     })
     .optional(),
-  requestedBy: z.string().uuid({ message: '유효한 요청자 UUID가 아닙니다' }),
+  // 서버에서 JWT를 통해 추출하므로 클라이언트 전송 불필요 (하위 호환성을 위해 optional 유지)
+  requestedBy: z.string().uuid({ message: '유효한 요청자 UUID가 아닙니다' }).optional(),
 });
 
 export type CreateCalibrationFactorInput = z.infer<typeof createCalibrationFactorSchema>;
@@ -111,8 +112,9 @@ export class CreateCalibrationFactorDto {
   expiryDate?: string;
 
   @ApiProperty({
-    description: '요청자 UUID',
+    description: '요청자 UUID (서버에서 JWT로 자동 추출, 클라이언트 전송 불필요)',
     example: '550e8400-e29b-41d4-a716-446655440003',
+    required: false,
   })
-  requestedBy: string;
+  requestedBy?: string;
 }

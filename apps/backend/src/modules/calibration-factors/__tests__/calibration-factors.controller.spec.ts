@@ -54,7 +54,8 @@ describe('CalibrationFactorsController', () => {
   });
 
   describe('create', () => {
-    it('should create a new calibration factor', () => {
+    it('should create a new calibration factor', async () => {
+      const requestedBy = '550e8400-e29b-41d4-a716-446655440002';
       const createDto = {
         equipmentId: '550e8400-e29b-41d4-a716-446655440001',
         factorType: CalibrationFactorType.ANTENNA_GAIN,
@@ -62,12 +63,14 @@ describe('CalibrationFactorsController', () => {
         factorValue: 12.5,
         unit: 'dBi',
         effectiveDate: '2024-01-15',
-        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockReq = { user: { userId: requestedBy } } as any;
 
       const expectedResult = {
         id: 'new-factor-id',
         ...createDto,
+        requestedBy,
         approvalStatus: 'pending',
         approvedBy: null,
         requestedAt: new Date(),
@@ -75,11 +78,11 @@ describe('CalibrationFactorsController', () => {
         updatedAt: new Date(),
       };
 
-      mockCalibrationFactorsService.create.mockReturnValue(expectedResult);
+      mockCalibrationFactorsService.create.mockResolvedValue(expectedResult);
 
-      const result = controller.create(createDto);
+      const result = await controller.create(createDto as never, mockReq);
 
-      expect(service.create).toHaveBeenCalledWith(createDto);
+      expect(service.create).toHaveBeenCalledWith(createDto, requestedBy);
       expect(result).toEqual(expectedResult);
     });
   });

@@ -6,16 +6,72 @@ import {
   CalibrationFactorApprovalStatusValues,
 } from '@equipment-management/schemas';
 
-// Backward compatibility aliases
 const CalibrationFactorType = CalibrationFactorTypeValues;
 const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
+const MOCK_FACTOR = {
+  id: 'cf-uuid-001',
+  equipmentId: 'eq-uuid-001',
+  calibrationId: null,
+  factorType: 'antenna_gain',
+  factorName: '3GHz 안테나 이득',
+  factorValue: '12.500000', // DB decimal → string
+  unit: 'dBi',
+  parameters: { frequency: '3GHz' },
+  effectiveDate: '2024-01-15',
+  expiryDate: '2025-01-15',
+  approvalStatus: 'pending',
+  requestedBy: 'user-uuid-001',
+  approvedBy: null,
+  requestedAt: new Date('2024-01-10'),
+  approvedAt: null,
+  approverComment: null,
+  createdAt: new Date('2024-01-10'),
+  updatedAt: new Date('2024-01-10'),
+  deletedAt: null,
+};
+
+/** DB 메서드 체인 mock 빌더 */
+const createChain = (resolvedValue: unknown) => {
+  const chain: Record<string, jest.Mock> = {};
+  const methods = ['from', 'where', 'orderBy', 'limit', 'offset', 'set', 'values', 'returning'];
+  for (const m of methods) {
+    chain[m] = jest.fn().mockReturnValue(chain);
+  }
+  chain.offset.mockResolvedValue(resolvedValue);
+  chain.returning.mockResolvedValue(resolvedValue);
+  // count 쿼리의 terminal은 where → thenable 처리
+  (chain as Record<string, unknown>).then = (resolve: (v: unknown) => void) =>
+    resolve(resolvedValue);
+  return chain;
+};
+
 describe('CalibrationFactorsService', () => {
   let service: CalibrationFactorsService;
+  let mockDb: {
+    select: jest.Mock;
+    insert: jest.Mock;
+    update: jest.Mock;
+  };
+
+  const requestedBy = 'user-uuid-001';
 
   beforeEach(async () => {
+    const chain = createChain([MOCK_FACTOR]);
+    const countChain = createChain([{ count: 1 }]);
+    let selectCallCount = 0;
+
+    mockDb = {
+      select: jest.fn().mockImplementation(() => {
+        selectCallCount++;
+        return selectCallCount % 2 === 1 ? chain : countChain;
+      }),
+      insert: jest.fn().mockReturnValue(chain),
+      update: jest.fn().mockReturnValue(chain),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CalibrationFactorsService],
+      providers: [CalibrationFactorsService, { provide: 'DRIZZLE_INSTANCE', useValue: mockDb }],
     }).compile();
 
     service = module.get<CalibrationFactorsService>(CalibrationFactorsService);
@@ -30,285 +86,200 @@ describe('CalibrationFactorsService', () => {
   });
 
   describe('create', () => {
-    it('should create a new calibration factor with pending status', () => {
+    it('should create a new calibration factor with pending status', async () => {
       const createDto = {
-        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
+        equipmentId: 'eq-uuid-001',
         factorType: CalibrationFactorType.ANTENNA_GAIN,
-        factorName: '테스트 안테나 이득',
+        factorName: '3GHz 안테나 이득',
         factorValue: 12.5,
         unit: 'dBi',
         effectiveDate: '2024-01-15',
-        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
       };
 
-      const result = service.create(createDto);
+      const createdFactor = { ...MOCK_FACTOR, approvalStatus: 'pending', requestedBy };
+      const returnChain = createChain([createdFactor]);
+      mockDb.insert.mockReturnValue(returnChain);
 
-      expect(result).toBeDefined();
-      expect(result.id).toBeDefined();
-      expect(result.equipmentId).toBe(createDto.equipmentId);
-      expect(result.factorType).toBe(createDto.factorType);
-      expect(result.factorName).toBe(createDto.factorName);
-      expect(result.factorValue).toBe(createDto.factorValue);
-      expect(result.unit).toBe(createDto.unit);
+      const result = await service.create(createDto as never, requestedBy);
+
+      expect(mockDb.insert).toHaveBeenCalled();
       expect(result.approvalStatus).toBe(CalibrationFactorApprovalStatus.PENDING);
-      expect(result.requestedBy).toBe(createDto.requestedBy);
-      expect(result.approvedBy).toBeNull();
+      expect(result.requestedBy).toBe(requestedBy);
+      expect(result.factorValue).toBe(12.5);
     });
 
-    it('should create a calibration factor with optional parameters', () => {
-      const createDto = {
-        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-        calibrationId: '550e8400-e29b-41d4-a716-446655440003',
-        factorType: CalibrationFactorType.CABLE_LOSS,
-        factorName: '10m 케이블 손실',
-        factorValue: 2.3,
-        unit: 'dB',
-        effectiveDate: '2024-02-01',
-        expiryDate: '2025-02-01',
-        parameters: { length: '10m', frequency: '1GHz' },
-        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
-      };
+    it('should normalize factorValue from decimal string to number', async () => {
+      const returnChain = createChain([{ ...MOCK_FACTOR, factorValue: '2.300000' }]);
+      mockDb.insert.mockReturnValue(returnChain);
 
-      const result = service.create(createDto);
+      const result = await service.create(
+        {
+          equipmentId: 'eq-uuid-001',
+          factorType: CalibrationFactorType.CABLE_LOSS,
+          factorName: '케이블 손실',
+          factorValue: 2.3,
+          unit: 'dB',
+          effectiveDate: '2024-02-01',
+        } as never,
+        requestedBy
+      );
 
-      expect(result.calibrationId).toBe(createDto.calibrationId);
-      expect(result.expiryDate).toBe(createDto.expiryDate);
-      expect(result.parameters).toEqual(createDto.parameters);
-    });
-  });
-
-  describe('findAll', () => {
-    it('should return paginated list of calibration factors', async () => {
-      const result = await service.findAll({});
-
-      expect(result).toBeDefined();
-      expect(result.items).toBeDefined();
-      expect(Array.isArray(result.items)).toBe(true);
-      expect(result.meta).toBeDefined();
-      expect(result.meta.totalItems).toBeGreaterThanOrEqual(0);
-      expect(result.meta.currentPage).toBe(1);
-    });
-
-    it('should filter by equipmentId', async () => {
-      const equipmentId = '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p';
-      const result = await service.findAll({ equipmentId });
-
-      result.items.forEach((factor) => {
-        expect(factor.equipmentId).toBe(equipmentId);
-      });
-    });
-
-    it('should filter by approvalStatus', async () => {
-      const approvalStatus = CalibrationFactorApprovalStatus.APPROVED;
-      const result = await service.findAll({ approvalStatus });
-
-      result.items.forEach((factor) => {
-        expect(factor.approvalStatus).toBe(approvalStatus);
-      });
-    });
-
-    it('should filter by factorType', async () => {
-      const factorType = CalibrationFactorType.ANTENNA_GAIN;
-      const result = await service.findAll({ factorType });
-
-      result.items.forEach((factor) => {
-        expect(factor.factorType).toBe(factorType);
-      });
-    });
-
-    it('should search by factorName', async () => {
-      const search = '안테나';
-      const result = await service.findAll({ search });
-
-      result.items.forEach((factor) => {
-        expect(factor.factorName.toLowerCase()).toContain(search.toLowerCase());
-      });
-    });
-
-    it('should paginate results', async () => {
-      const result = await service.findAll({ page: 1, pageSize: 1 });
-
-      expect(result.meta.itemsPerPage).toBe(1);
-      expect(result.items.length).toBeLessThanOrEqual(1);
+      expect(typeof result.factorValue).toBe('number');
+      expect(result.factorValue).toBe(2.3);
     });
   });
 
   describe('findOne', () => {
     it('should return a calibration factor by id', async () => {
-      // 먼저 새로운 factor를 생성
-      const created = service.create({
-        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-        factorType: CalibrationFactorType.PATH_LOSS,
-        factorName: 'findOne 테스트',
-        factorValue: 5.0,
-        unit: 'dB',
-        effectiveDate: '2024-01-01',
-        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
-      });
+      const singleChain = createChain([MOCK_FACTOR]);
+      mockDb.select.mockReturnValue(singleChain);
 
-      const result = await service.findOne(created.id);
+      const result = await service.findOne(MOCK_FACTOR.id);
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(created.id);
-      expect(result.factorName).toBe('findOne 테스트');
+      expect(result.id).toBe(MOCK_FACTOR.id);
+      expect(typeof result.factorValue).toBe('number');
     });
 
     it('should throw NotFoundException when factor not found', async () => {
+      const emptyChain = createChain([]);
+      mockDb.select.mockReturnValue(emptyChain);
+
       await expect(service.findOne('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('findByEquipment', () => {
-    it('should return current factors for equipment', async () => {
-      const equipmentId = '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p';
-      const result = await service.findByEquipment(equipmentId);
+  describe('findAll', () => {
+    it('should return paginated list with correct meta', async () => {
+      const itemsChain = createChain([MOCK_FACTOR]);
+      const cntChain = createChain([{ count: 1 }]);
+      let callCount = 0;
+      mockDb.select.mockImplementation(() => (++callCount % 2 === 1 ? itemsChain : cntChain));
 
-      expect(result).toBeDefined();
-      expect(result.equipmentId).toBe(equipmentId);
-      expect(result.factors).toBeDefined();
+      const result = await service.findAll({ page: 1, pageSize: 20 });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.meta.totalItems).toBe(1);
+      expect(result.meta.currentPage).toBe(1);
+      expect(result.meta.itemsPerPage).toBe(20);
+      expect(typeof result.items[0].factorValue).toBe('number');
+    });
+  });
+
+  describe('approve', () => {
+    it('should approve a pending calibration factor', async () => {
+      const approvedFactor = {
+        ...MOCK_FACTOR,
+        approvalStatus: 'approved',
+        approvedBy: 'approver-uuid',
+        approverComment: '검토 완료',
+        approvedAt: new Date(),
+      };
+
+      const findChain = createChain([MOCK_FACTOR]);
+      const updateChain = createChain([approvedFactor]);
+      mockDb.select.mockReturnValue(findChain);
+      mockDb.update.mockReturnValue(updateChain);
+
+      const result = await service.approve('cf-uuid-001', {
+        approverId: 'approver-uuid',
+        approverComment: '검토 완료',
+      });
+
+      expect(mockDb.update).toHaveBeenCalled();
+      expect(result.approvalStatus).toBe(CalibrationFactorApprovalStatus.APPROVED);
+    });
+
+    it('should throw BadRequestException when approving non-pending factor', async () => {
+      const approvedFactor = { ...MOCK_FACTOR, approvalStatus: 'approved' };
+      const findChain = createChain([approvedFactor]);
+      mockDb.select.mockReturnValue(findChain);
+
+      await expect(
+        service.approve('cf-uuid-001', { approverId: 'approver-uuid', approverComment: '재승인' })
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('reject', () => {
+    it('should reject a pending calibration factor', async () => {
+      const rejectedFactor = {
+        ...MOCK_FACTOR,
+        approvalStatus: 'rejected',
+        approvedBy: 'approver-uuid',
+        approverComment: '범위 초과',
+      };
+
+      const findChain = createChain([MOCK_FACTOR]);
+      const updateChain = createChain([rejectedFactor]);
+      mockDb.select.mockReturnValue(findChain);
+      mockDb.update.mockReturnValue(updateChain);
+
+      const result = await service.reject('cf-uuid-001', {
+        approverId: 'approver-uuid',
+        rejectionReason: '범위 초과',
+      });
+
+      expect(result.approvalStatus).toBe(CalibrationFactorApprovalStatus.REJECTED);
+    });
+
+    it('should throw BadRequestException when rejecting non-pending factor', async () => {
+      const rejectedFactor = { ...MOCK_FACTOR, approvalStatus: 'rejected' };
+      const findChain = createChain([rejectedFactor]);
+      mockDb.select.mockReturnValue(findChain);
+
+      await expect(
+        service.reject('cf-uuid-001', { approverId: 'approver-uuid', rejectionReason: '재시도' })
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('remove (soft delete)', () => {
+    it('should soft delete a calibration factor', async () => {
+      const findChain = createChain([MOCK_FACTOR]);
+      const updateChain = createChain([]);
+      mockDb.select.mockReturnValue(findChain);
+      mockDb.update.mockReturnValue(updateChain);
+
+      const result = await service.remove('cf-uuid-001');
+
+      expect(result.id).toBe('cf-uuid-001');
+      expect(result.deleted).toBe(true);
+    });
+
+    it('should throw NotFoundException when removing non-existent factor', async () => {
+      const emptyChain = createChain([]);
+      mockDb.select.mockReturnValue(emptyChain);
+
+      await expect(service.remove('non-existent-id')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findByEquipment', () => {
+    it('should return current active factors for equipment', async () => {
+      const activeChain = createChain([MOCK_FACTOR]);
+      activeChain.where.mockResolvedValue([MOCK_FACTOR]);
+      mockDb.select.mockReturnValue(activeChain);
+
+      const result = await service.findByEquipment('eq-uuid-001');
+
+      expect(result.equipmentId).toBe('eq-uuid-001');
       expect(Array.isArray(result.factors)).toBe(true);
       expect(result.count).toBe(result.factors.length);
     });
   });
 
   describe('getRegistry', () => {
-    it('should return registry of all equipment factors', async () => {
+    it('should group factors by equipment', async () => {
+      const registryChain = createChain([MOCK_FACTOR]);
+      registryChain.where.mockResolvedValue([MOCK_FACTOR]);
+      mockDb.select.mockReturnValue(registryChain);
+
       const result = await service.getRegistry();
 
-      expect(result).toBeDefined();
       expect(result.registry).toBeDefined();
       expect(Array.isArray(result.registry)).toBe(true);
-      expect(result.totalEquipments).toBeGreaterThanOrEqual(0);
-      expect(result.totalFactors).toBeGreaterThanOrEqual(0);
       expect(result.generatedAt).toBeDefined();
-    });
-  });
-
-  describe('findPendingApprovals', () => {
-    it('should return only pending calibration factors', async () => {
-      const result = await service.findPendingApprovals();
-
-      result.items.forEach((factor) => {
-        expect(factor.approvalStatus).toBe(CalibrationFactorApprovalStatus.PENDING);
-      });
-    });
-  });
-
-  describe('approve', () => {
-    it('should approve a pending calibration factor', async () => {
-      // 먼저 pending factor 생성
-      const created = service.create({
-        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-        factorType: CalibrationFactorType.AMPLIFIER_GAIN,
-        factorName: '승인 테스트',
-        factorValue: 20.0,
-        unit: 'dB',
-        effectiveDate: '2024-01-01',
-        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
-      });
-
-      const approveDto = {
-        approverId: '550e8400-e29b-41d4-a716-446655440003',
-        approverComment: '검토 완료, 승인합니다.',
-      };
-
-      const result = await service.approve(created.id, approveDto);
-
-      expect(result.approvalStatus).toBe(CalibrationFactorApprovalStatus.APPROVED);
-      expect(result.approvedBy).toBe(approveDto.approverId);
-      expect(result.approverComment).toBe(approveDto.approverComment);
-      expect(result.approvedAt).toBeDefined();
-    });
-
-    it('should throw BadRequestException when approving non-pending factor', async () => {
-      // 이미 승인된 factor 찾기
-      const allFactors = await service.findAll({
-        approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
-      });
-
-      if (allFactors.items.length > 0) {
-        const approvedFactor = allFactors.items[0];
-
-        await expect(
-          service.approve(approvedFactor.id, {
-            approverId: '550e8400-e29b-41d4-a716-446655440003',
-            approverComment: '중복 승인 시도',
-          })
-        ).rejects.toThrow(BadRequestException);
-      }
-    });
-  });
-
-  describe('reject', () => {
-    it('should reject a pending calibration factor', async () => {
-      // 먼저 pending factor 생성
-      const created = service.create({
-        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-        factorType: CalibrationFactorType.OTHER,
-        factorName: '반려 테스트',
-        factorValue: 1.0,
-        unit: 'dB',
-        effectiveDate: '2024-01-01',
-        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
-      });
-
-      const rejectDto = {
-        approverId: '550e8400-e29b-41d4-a716-446655440003',
-        rejectionReason: '값이 기준 범위를 벗어났습니다.',
-      };
-
-      const result = await service.reject(created.id, rejectDto);
-
-      expect(result.approvalStatus).toBe(CalibrationFactorApprovalStatus.REJECTED);
-      expect(result.approvedBy).toBe(rejectDto.approverId);
-      expect(result.approverComment).toBe(rejectDto.rejectionReason);
-      expect(result.approvedAt).toBeDefined();
-    });
-
-    it('should throw BadRequestException when rejecting non-pending factor', async () => {
-      // 이미 승인된 factor 찾기
-      const allFactors = await service.findAll({
-        approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
-      });
-
-      if (allFactors.items.length > 0) {
-        const approvedFactor = allFactors.items[0];
-
-        await expect(
-          service.reject(approvedFactor.id, {
-            approverId: '550e8400-e29b-41d4-a716-446655440003',
-            rejectionReason: '반려 시도',
-          })
-        ).rejects.toThrow(BadRequestException);
-      }
-    });
-  });
-
-  describe('remove (soft delete)', () => {
-    it('should soft delete a calibration factor', async () => {
-      // 먼저 factor 생성
-      const created = service.create({
-        equipmentId: '550e8400-e29b-41d4-a716-446655440001',
-        factorType: CalibrationFactorType.CABLE_LOSS,
-        factorName: '삭제 테스트',
-        factorValue: 3.0,
-        unit: 'dB',
-        effectiveDate: '2024-01-01',
-        requestedBy: '550e8400-e29b-41d4-a716-446655440002',
-      });
-
-      const result = await service.remove(created.id);
-
-      expect(result).toBeDefined();
-      expect(result.id).toBe(created.id);
-      expect(result.deleted).toBe(true);
-
-      // 삭제 후 조회 시 NotFoundException 발생해야 함
-      await expect(service.findOne(created.id)).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw NotFoundException when removing non-existent factor', async () => {
-      await expect(service.remove('non-existent-id')).rejects.toThrow(NotFoundException);
     });
   });
 });

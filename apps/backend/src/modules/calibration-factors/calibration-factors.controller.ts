@@ -51,10 +51,20 @@ export class CalibrationFactorsController {
   @RequirePermissions(Permission.CREATE_CALIBRATION_FACTOR)
   @AuditLog({ action: 'create', entityType: 'calibration_factor', entityIdPath: 'response.id' })
   @UsePipes(CreateCalibrationFactorValidationPipe)
-  create(
-    @Body() createDto: CreateCalibrationFactorDto
-  ): import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord {
-    return this.calibrationFactorsService.create(createDto);
+  async create(
+    @Body() createDto: CreateCalibrationFactorDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<
+    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
+  > {
+    const requestedBy = req.user?.userId || req.user?.sub;
+    if (!requestedBy) {
+      throw new BadRequestException({
+        code: 'AUTH_REQUESTER_INFO_MISSING',
+        message: 'Requester information not found.',
+      });
+    }
+    return this.calibrationFactorsService.create(createDto, requestedBy);
   }
 
   @Get()

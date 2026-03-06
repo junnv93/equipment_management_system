@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { eq, and, asc, desc, sql, isNull, ilike, or, lte, gte } from 'drizzle-orm';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schema from '@equipment-management/db/schema';
+import { calibrationFactors, CalibrationFactor } from '@equipment-management/db/schema';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
 import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';
 import {
@@ -7,10 +11,9 @@ import {
 } from './dto/approve-calibration-factor.dto';
 import { CalibrationFactorApprovalStatusValues } from '@equipment-management/schemas';
 
-// Backward compatibility alias
 const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
-// 보정계수 기록 인터페이스
+// 컨트롤러 하위 호환성을 위한 인터페이스 (decimal → number, jsonb → typed)
 export interface CalibrationFactorRecord {
   id: string;
   equipmentId: string;
@@ -33,85 +36,53 @@ export interface CalibrationFactorRecord {
   deletedAt: Date | null;
 }
 
-// 임시 보정계수 데이터
-const calibrationFactors: CalibrationFactorRecord[] = [
-  {
-    id: 'cf-001-uuid',
-    equipmentId: '1a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p',
-    calibrationId: null,
-    factorType: 'antenna_gain',
-    factorName: '3GHz 안테나 이득',
-    factorValue: 12.5,
-    unit: 'dBi',
-    parameters: { frequency: '3GHz', temperature: '25C' },
-    effectiveDate: '2024-01-15',
-    expiryDate: '2025-01-15',
-    approvalStatus: 'approved',
-    requestedBy: '550e8400-e29b-41d4-a716-446655440001',
-    approvedBy: '550e8400-e29b-41d4-a716-446655440001',
-    requestedAt: new Date('2024-01-10'),
-    approvedAt: new Date('2024-01-12'),
-    approverComment: '검토 완료',
-    createdAt: new Date('2024-01-10'),
-    updatedAt: new Date('2024-01-12'),
-    deletedAt: null,
-  },
-  {
-    id: 'cf-002-uuid',
-    equipmentId: '2b3c4d5e-6f7g-8h9i-0j1k-2l3m4n5o6p7q',
-    calibrationId: null,
-    factorType: 'cable_loss',
-    factorName: '10m 케이블 손실',
-    factorValue: 2.3,
-    unit: 'dB',
-    parameters: { length: '10m', frequency: '1GHz' },
-    effectiveDate: '2024-02-01',
-    expiryDate: null,
-    approvalStatus: 'pending',
-    requestedBy: '770a0600-a40c-63f6-c938-668877660222',
-    approvedBy: null,
-    requestedAt: new Date('2024-02-01'),
-    approvedAt: null,
-    approverComment: null,
-    createdAt: new Date('2024-02-01'),
-    updatedAt: new Date('2024-02-01'),
-    deletedAt: null,
-  },
-];
-
 @Injectable()
 export class CalibrationFactorsService {
-  // 보정계수 변경 요청 (상태: pending)
-  create(createDto: CreateCalibrationFactorDto): CalibrationFactorRecord {
-    const newFactor: CalibrationFactorRecord = {
-      id: `cf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      equipmentId: createDto.equipmentId,
-      calibrationId: createDto.calibrationId || null,
-      factorType: createDto.factorType,
-      factorName: createDto.factorName,
-      factorValue: createDto.factorValue,
-      unit: createDto.unit,
-      parameters: createDto.parameters || null,
-      effectiveDate: createDto.effectiveDate,
-      expiryDate: createDto.expiryDate || null,
-      approvalStatus: CalibrationFactorApprovalStatus.PENDING,
-      requestedBy: createDto.requestedBy,
-      approvedBy: null,
-      requestedAt: new Date(),
-      approvedAt: null,
-      approverComment: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      deletedAt: null,
-    };
+  constructor(
+    @Inject('DRIZZLE_INSTANCE')
+    private readonly db: PostgresJsDatabase<typeof schema>
+  ) {}
 
-    calibrationFactors.push(newFactor);
-    return newFactor;
+  /**
+   * Drizzle CalibrationFactor → CalibrationFactorRecord 변환
+   * - decimal factorValue: string → number
+   * - jsonb parameters: unknown → Record<string, unknown>
+   */
+  private normalize(record: CalibrationFactor): CalibrationFactorRecord {
+    return {
+      ...record,
+      factorValue: Number(record.factorValue),
+      parameters: record.parameters as Record<string, unknown> | null,
+    };
+  }
+
+  // 보정계수 변경 요청 (상태: pending)
+  async create(
+    createDto: CreateCalibrationFactorDto,
+    requestedBy: string
+  ): Promise<CalibrationFactorRecord> {
+    const [newFactor] = await this.db
+      .insert(calibrationFactors)
+      .values({
+        equipmentId: createDto.equipmentId,
+        calibrationId: createDto.calibrationId || null,
+        factorType: createDto.factorType,
+        factorName: createDto.factorName,
+        factorValue: String(createDto.factorValue),
+        unit: createDto.unit,
+        parameters: createDto.parameters || null,
+        effectiveDate: createDto.effectiveDate,
+        expiryDate: createDto.expiryDate || null,
+        requestedBy,
+      })
+      .returning();
+
+    return this.normalize(newFactor);
   }
 
   // 보정계수 목록 조회 (필터: equipmentId, approvalStatus)
   async findAll(query: CalibrationFactorQueryDto): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -130,55 +101,43 @@ export class CalibrationFactorsService {
       pageSize = 20,
     } = query;
 
-    // 삭제되지 않은 항목만 필터
-    let filtered = calibrationFactors.filter((cf) => cf.deletedAt === null);
+    const conditions = [isNull(calibrationFactors.deletedAt)];
+    if (equipmentId) conditions.push(eq(calibrationFactors.equipmentId, equipmentId));
+    if (approvalStatus) conditions.push(eq(calibrationFactors.approvalStatus, approvalStatus));
+    if (factorType) conditions.push(eq(calibrationFactors.factorType, factorType));
+    if (search) conditions.push(ilike(calibrationFactors.factorName, `%${search}%`));
 
-    if (equipmentId) {
-      filtered = filtered.filter((cf) => cf.equipmentId === equipmentId);
-    }
+    const [sortField, sortOrder] = sort.split('.');
+    const sortColumn =
+      sortField === 'effectiveDate'
+        ? calibrationFactors.effectiveDate
+        : sortField === 'requestedAt'
+          ? calibrationFactors.requestedAt
+          : calibrationFactors.createdAt;
+    const orderBy = sortOrder === 'asc' ? asc(sortColumn) : desc(sortColumn);
 
-    if (approvalStatus) {
-      filtered = filtered.filter((cf) => cf.approvalStatus === approvalStatus);
-    }
+    const [items, [{ count }]] = await Promise.all([
+      this.db
+        .select()
+        .from(calibrationFactors)
+        .where(and(...conditions))
+        .orderBy(orderBy)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize),
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(calibrationFactors)
+        .where(and(...conditions)),
+    ]);
 
-    if (factorType) {
-      filtered = filtered.filter((cf) => cf.factorType === factorType);
-    }
-
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter((cf) => cf.factorName.toLowerCase().includes(searchLower));
-    }
-
-    // 정렬
-    if (sort) {
-      const [field, direction] = sort.split('.');
-      const isAsc = direction === 'asc';
-
-      filtered.sort((a, b) => {
-        const aVal = a[field as keyof CalibrationFactorRecord];
-        const bVal = b[field as keyof CalibrationFactorRecord];
-        if (aVal === null) return isAsc ? 1 : -1;
-        if (bVal === null) return isAsc ? -1 : 1;
-        if (aVal < bVal) return isAsc ? -1 : 1;
-        if (aVal > bVal) return isAsc ? 1 : -1;
-        return 0;
-      });
-    }
-
-    // 페이지네이션
-    const totalItems = filtered.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-    const offset = (page - 1) * pageSize;
-    const paginatedItems = filtered.slice(offset, offset + pageSize);
-
+    const totalItems = Number(count);
     return {
-      items: paginatedItems,
+      items: items.map(this.normalize.bind(this)),
       meta: {
         totalItems,
-        itemCount: paginatedItems.length,
+        itemCount: items.length,
         itemsPerPage: pageSize,
-        totalPages,
+        totalPages: Math.ceil(totalItems / pageSize),
         currentPage: page,
       },
     };
@@ -186,7 +145,11 @@ export class CalibrationFactorsService {
 
   // 단일 보정계수 조회
   async findOne(id: string): Promise<CalibrationFactorRecord> {
-    const factor = calibrationFactors.find((cf) => cf.id === id && cf.deletedAt === null);
+    const [factor] = await this.db
+      .select()
+      .from(calibrationFactors)
+      .where(and(eq(calibrationFactors.id, id), isNull(calibrationFactors.deletedAt)))
+      .limit(1);
 
     if (!factor) {
       throw new NotFoundException({
@@ -195,38 +158,39 @@ export class CalibrationFactorsService {
       });
     }
 
-    return factor;
+    return this.normalize(factor);
   }
 
-  // 장비별 현재 적용 중인 보정계수 조회
+  // 장비별 현재 적용 중인 보정계수 조회 (승인됨 + 유효 기간 내)
   async findByEquipment(equipmentUuid: string): Promise<{
     equipmentId: string;
-    factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    factors: CalibrationFactorRecord[];
     count: number;
   }> {
     const today = new Date().toISOString().split('T')[0];
 
-    const factors = calibrationFactors.filter(
-      (cf) =>
-        cf.equipmentId === equipmentUuid &&
-        cf.approvalStatus === CalibrationFactorApprovalStatus.APPROVED &&
-        cf.deletedAt === null &&
-        cf.effectiveDate <= today &&
-        (cf.expiryDate === null || cf.expiryDate >= today)
-    );
+    const records = await this.db
+      .select()
+      .from(calibrationFactors)
+      .where(
+        and(
+          eq(calibrationFactors.equipmentId, equipmentUuid),
+          eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
+          isNull(calibrationFactors.deletedAt),
+          lte(calibrationFactors.effectiveDate, today),
+          or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))
+        )
+      );
 
-    return {
-      equipmentId: equipmentUuid,
-      factors,
-      count: factors.length,
-    };
+    const factors = records.map(this.normalize.bind(this));
+    return { equipmentId: equipmentUuid, factors, count: factors.length };
   }
 
   // 보정계수 대장 조회 (전체 장비의 현재 보정계수)
   async getRegistry(): Promise<{
     registry: {
       equipmentId: string;
-      factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+      factors: CalibrationFactorRecord[];
       factorCount: number;
     }[];
     totalEquipments: number;
@@ -235,42 +199,41 @@ export class CalibrationFactorsService {
   }> {
     const today = new Date().toISOString().split('T')[0];
 
-    // 승인된, 현재 유효한 보정계수만 조회
-    const validFactors = calibrationFactors.filter(
-      (cf) =>
-        cf.approvalStatus === CalibrationFactorApprovalStatus.APPROVED &&
-        cf.deletedAt === null &&
-        cf.effectiveDate <= today &&
-        (cf.expiryDate === null || cf.expiryDate >= today)
-    );
+    const records = await this.db
+      .select()
+      .from(calibrationFactors)
+      .where(
+        and(
+          eq(calibrationFactors.approvalStatus, CalibrationFactorApprovalStatus.APPROVED),
+          isNull(calibrationFactors.deletedAt),
+          lte(calibrationFactors.effectiveDate, today),
+          or(isNull(calibrationFactors.expiryDate), gte(calibrationFactors.expiryDate, today))
+        )
+      );
 
-    // 장비별로 그룹화
-    const groupedByEquipment = validFactors.reduce(
-      (acc, factor) => {
-        if (!acc[factor.equipmentId]) {
-          acc[factor.equipmentId] = [];
-        }
-        acc[factor.equipmentId].push(factor);
-        return acc;
-      },
-      {} as Record<string, CalibrationFactorRecord[]>
-    );
+    const normalized = records.map(this.normalize.bind(this));
+    const grouped = new Map<string, CalibrationFactorRecord[]>();
+    for (const factor of normalized) {
+      const existing = grouped.get(factor.equipmentId) ?? [];
+      existing.push(factor);
+      grouped.set(factor.equipmentId, existing);
+    }
 
     return {
-      registry: Object.entries(groupedByEquipment).map(([equipmentId, factors]) => ({
+      registry: Array.from(grouped.entries()).map(([equipmentId, factors]) => ({
         equipmentId,
         factors,
         factorCount: factors.length,
       })),
-      totalEquipments: Object.keys(groupedByEquipment).length,
-      totalFactors: validFactors.length,
+      totalEquipments: grouped.size,
+      totalFactors: normalized.length,
       generatedAt: new Date(),
     };
   }
 
   // 승인 대기 목록 조회
   async findPendingApprovals(): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -281,16 +244,14 @@ export class CalibrationFactorsService {
   }> {
     return this.findAll({
       approvalStatus: CalibrationFactorApprovalStatus.PENDING,
-    });
+    } as CalibrationFactorQueryDto);
   }
 
   // 보정계수 승인 (기술책임자)
   async approve(
     id: string,
     approveDto: ApproveCalibrationFactorDto & { approverId: string }
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
-  > {
+  ): Promise<CalibrationFactorRecord> {
     const factor = await this.findOne(id);
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
@@ -300,28 +261,27 @@ export class CalibrationFactorsService {
       });
     }
 
-    const index = calibrationFactors.findIndex((cf) => cf.id === id);
     const now = new Date();
+    const [updated] = await this.db
+      .update(calibrationFactors)
+      .set({
+        approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
+        approvedBy: approveDto.approverId,
+        approvedAt: now,
+        approverComment: approveDto.approverComment,
+        updatedAt: now,
+      })
+      .where(eq(calibrationFactors.id, id))
+      .returning();
 
-    calibrationFactors[index] = {
-      ...calibrationFactors[index],
-      approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
-      approvedBy: approveDto.approverId,
-      approvedAt: now,
-      approverComment: approveDto.approverComment,
-      updatedAt: now,
-    };
-
-    return calibrationFactors[index];
+    return this.normalize(updated);
   }
 
   // 보정계수 반려 (기술책임자)
   async reject(
     id: string,
     rejectDto: RejectCalibrationFactorDto & { approverId: string }
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
-  > {
+  ): Promise<CalibrationFactorRecord> {
     const factor = await this.findOne(id);
 
     if (factor.approvalStatus !== CalibrationFactorApprovalStatus.PENDING) {
@@ -331,33 +291,30 @@ export class CalibrationFactorsService {
       });
     }
 
-    const index = calibrationFactors.findIndex((cf) => cf.id === id);
     const now = new Date();
+    const [updated] = await this.db
+      .update(calibrationFactors)
+      .set({
+        approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
+        approvedBy: rejectDto.approverId,
+        approvedAt: now,
+        approverComment: rejectDto.rejectionReason,
+        updatedAt: now,
+      })
+      .where(eq(calibrationFactors.id, id))
+      .returning();
 
-    calibrationFactors[index] = {
-      ...calibrationFactors[index],
-      approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
-      approvedBy: rejectDto.approverId,
-      approvedAt: now,
-      approverComment: rejectDto.rejectionReason,
-      updatedAt: now,
-    };
-
-    return calibrationFactors[index];
+    return this.normalize(updated);
   }
 
   // 소프트 삭제
   async remove(id: string): Promise<{ id: string; deleted: boolean }> {
-    // 존재 확인 (findOne은 deletedAt === null인 항목만 검색, 없으면 NotFoundException throw)
     await this.findOne(id);
 
-    const index = calibrationFactors.findIndex((cf) => cf.id === id && cf.deletedAt === null);
-
-    calibrationFactors[index] = {
-      ...calibrationFactors[index],
-      deletedAt: new Date(),
-      updatedAt: new Date(),
-    };
+    await this.db
+      .update(calibrationFactors)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(calibrationFactors.id, id));
 
     return { id, deleted: true };
   }
