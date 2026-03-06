@@ -11,6 +11,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { clearTokenCache } from '@/lib/api/api-client';
+import { ADMIN_ROLES } from '@equipment-management/shared-constants';
 
 export function useAuth() {
   const { data: session, status } = useSession();
@@ -39,28 +40,19 @@ export function useAuth() {
     [isAuthenticated, session]
   );
 
-  // 시험소별 관리자 권한 확인
+  // 시험소 관리자 권한 확인 (lab_manager, system_admin — SSOT: ADMIN_ROLES)
   const isAdmin = useCallback(() => {
-    return hasRole(['LAB_MANAGER', 'lab_manager', 'ADMIN', 'admin']); // 하위 호환성 유지
+    return hasRole(ADMIN_ROLES);
   }, [hasRole]);
 
-  // 기술책임자 권한 확인
+  // 기술책임자 이상 권한 확인 (technical_manager, lab_manager, system_admin)
   const isManager = useCallback(() => {
-    return hasRole([
-      'TECHNICAL_MANAGER',
-      'technical_manager',
-      'MANAGER',
-      'manager',
-      'LAB_MANAGER',
-      'lab_manager',
-      'ADMIN',
-      'admin',
-    ]); // 하위 호환성 유지
+    return hasRole(['technical_manager', ...ADMIN_ROLES]);
   }, [hasRole]);
 
   // 시험실무자 권한 확인
   const isTestOperator = useCallback(() => {
-    return hasRole(['TEST_ENGINEER', 'test_engineer', 'USER', 'user']); // 하위 호환성 유지
+    return hasRole(['test_engineer']);
   }, [hasRole]);
 
   // 로그아웃 함수

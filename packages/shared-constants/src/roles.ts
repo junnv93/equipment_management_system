@@ -9,6 +9,7 @@
  * - technical_manager: 기술책임자 (승인, 교정 관리, 교정계획서 작성)
  * - quality_manager: 품질책임자 (교정계획서 검토)
  * - lab_manager: 시험소장 (전체 권한, 자가 승인, 교정계획서 최종 승인)
+ * - system_admin: 시스템 관리자 (전체 접근, CREATE_CALIBRATION 제외)
  */
 
 // SSOT에서 re-export
