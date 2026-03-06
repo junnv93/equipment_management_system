@@ -796,13 +796,14 @@ export async function waitForErrorMessage(page: Page, message: string): Promise<
  * Submit a condition check via API (rental 4-step)
  *
  * @example
- * await apiSubmitConditionCheck(page, CHECKOUT_011_ID, 'lender_checkout', { appearanceStatus: 'normal', operationStatus: 'normal' });
+ * await apiSubmitConditionCheck(page, CHECKOUT_011_ID, 'lender_checkout', { version: 1, appearanceStatus: 'normal', operationStatus: 'normal' });
  */
 export async function apiSubmitConditionCheck(
   page: Page,
   checkoutId: string,
   step: string,
   conditions: {
+    version: number;
     appearanceStatus: string;
     operationStatus: string;
     accessoriesStatus?: string;
@@ -927,16 +928,25 @@ export async function resetCheckoutToCheckedOutViaAPI(
   await resetCheckoutToPending(checkoutId);
   await clearBackendCache();
 
-  // Step 2: Approve (approved → triggers ORM update)
+  // Step 2: Approve (CAS: fetch version first, then approve)
+  const pendingData = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const { version: pendingVersion } = await pendingData.json();
   await page.request.patch(`${BACKEND_URL}/api/checkouts/${checkoutId}/approve`, {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    data: {},
+    data: { version: pendingVersion },
   });
   await clearBackendCache();
 
-  // Step 3: Start checkout (checked_out → triggers ORM + equipment status update)
-  await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/start`, {
+  // Step 3: Start checkout (CAS: fetch version after approve, then start)
+  const approvedData = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
     headers: { Authorization: `Bearer ${token}` },
+  });
+  const { version: approvedVersion } = await approvedData.json();
+  await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/start`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { version: approvedVersion },
   });
   await clearBackendCache();
 }
@@ -958,11 +968,26 @@ export async function resetCheckoutToReturnedViaAPI(
   // Step 1: Reset to checked_out (via ORM)
   await resetCheckoutToCheckedOutViaAPI(page, checkoutId, role);
 
-  // Step 2: Return checkout (returned → triggers ORM update)
+  // Step 2: Return checkout (CAS: fetch version after checked_out reset, then return)
+  const checkedOutData = await page.request.get(`${BACKEND_URL}/api/checkouts/${checkoutId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const { version: checkedOutVersion } = await checkedOutData.json();
+
   const returnPayload =
     purpose === 'calibration'
-      ? { calibrationChecked: true, workingStatusChecked: true, inspectionNotes: 'E2E test reset' }
-      : { repairChecked: true, workingStatusChecked: true, inspectionNotes: 'E2E test reset' };
+      ? {
+          version: checkedOutVersion,
+          calibrationChecked: true,
+          workingStatusChecked: true,
+          inspectionNotes: 'E2E test reset',
+        }
+      : {
+          version: checkedOutVersion,
+          repairChecked: true,
+          workingStatusChecked: true,
+          inspectionNotes: 'E2E test reset',
+        };
 
   await page.request.post(`${BACKEND_URL}/api/checkouts/${checkoutId}/return`, {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
