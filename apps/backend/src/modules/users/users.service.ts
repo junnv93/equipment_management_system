@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { eq, ilike, inArray, and, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -17,6 +18,9 @@ import { CreateUserDto, UpdateUserDto, UserQueryDto, ChangeRoleInput } from './d
 import { User, UserListResponse, type UserRole } from '@equipment-management/schemas';
 import { getPermissions, Permission } from '@equipment-management/shared-constants';
 import { parseSortString, sortByField } from '../../common/utils/sort';
+import { EmailService } from '../notifications/services/email.service';
+import { EmailTemplateService } from '../notifications/services/email-template.service';
+import { ConfigService } from '@nestjs/config';
 
 interface JwtPayload {
   userId: string;
@@ -28,9 +32,14 @@ interface JwtPayload {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>
+    private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly emailService: EmailService,
+    private readonly emailTemplateService: EmailTemplateService,
+    private readonly configService: ConfigService
   ) {}
 
   async findAll(query: UserQueryDto): Promise<UserListResponse> {
@@ -404,7 +413,7 @@ export class UsersService {
     };
   }
 
-  // 임시 비밀번호 생성
+  // 임시 비밀번호 생성 및 이메일 발송
   async generateTemporaryPassword(
     id: string
   ): Promise<{ tempPassword?: string | undefined; success: boolean; message: string } | null> {
@@ -413,14 +422,24 @@ export class UsersService {
       return null;
     }
 
-    // 임시 비밀번호 생성 (8자리)
-    const tempPassword = Math.random().toString(36).substring(2, 10);
+    // 임시 비밀번호 생성 (영문+숫자 혼합 10자리)
+    const tempPassword =
+      Math.random().toString(36).substring(2, 7).toUpperCase() +
+      Math.random().toString(36).substring(2, 7);
 
-    // 실제로는 비밀번호 해싱 후 저장
-    // await this.update(id, { password: hashedPassword });
-
-    // TODO: 이메일로 임시 비밀번호 발송 로직 구현 필요
-    // 프로덕션에서는 이메일 서비스를 통해 전송해야 함
+    // 이메일로 임시 비밀번호 발송 (fire-and-forget — 발송 실패가 응답을 막지 않음)
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3000';
+    const emailContent = this.emailTemplateService.buildTemporaryPasswordEmail({
+      userName: user.name,
+      tempPassword,
+      loginUrl: `${frontendUrl}/login`,
+    });
+    this.emailService.sendMail({ to: user.email, ...emailContent }).catch((error) => {
+      this.logger.error(
+        `임시 비밀번호 이메일 발송 실패: userId=${id}, email=${user.email}`,
+        error instanceof Error ? error.stack : String(error)
+      );
+    });
 
     return {
       success: true,
