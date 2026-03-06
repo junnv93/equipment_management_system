@@ -65,6 +65,13 @@ test.describe('Suite 07: 반입 승인', () => {
   test('S07-02: approved 상태 반입 승인 차단 (API 400)', async ({ techManagerPage: page }) => {
     const token = await getBackendToken(page, 'technical_manager');
 
+    // CAS: version 포함해야 상태 전이 불가(비즈니스 로직)로 인한 400이 테스트됨
+    const getResponse = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${SUITE_07.WRONG_STATUS}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const { version } = await getResponse.json();
+
     const response = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${SUITE_07.WRONG_STATUS}/approve-return`,
       {
@@ -72,7 +79,7 @@ test.describe('Suite 07: 반입 승인', () => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        data: {},
+        data: { version },
       }
     );
 

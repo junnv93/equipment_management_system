@@ -87,8 +87,14 @@ test.describe('Suite 09: 반출 취소', () => {
     expect(createResponse.status()).toBe(201);
     approvedCheckoutId = (await createResponse.json()).id;
 
-    // 승인
+    // 승인 (CAS: version 필드 필수)
     const managerToken = await getBackendToken(page, 'technical_manager');
+    const getResponse = await page.request.get(
+      `${BACKEND_URL}/api/checkouts/${approvedCheckoutId}`,
+      { headers: { Authorization: `Bearer ${managerToken}` } }
+    );
+    const { version } = await getResponse.json();
+
     const approveResponse = await page.request.patch(
       `${BACKEND_URL}/api/checkouts/${approvedCheckoutId}/approve`,
       {
@@ -96,7 +102,7 @@ test.describe('Suite 09: 반출 취소', () => {
           Authorization: `Bearer ${managerToken}`,
           'Content-Type': 'application/json',
         },
-        data: {},
+        data: { version },
       }
     );
     expect(approveResponse.ok()).toBeTruthy();
