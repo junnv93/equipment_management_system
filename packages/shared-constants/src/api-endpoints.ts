@@ -337,23 +337,6 @@ export const API_ENDPOINTS = {
   },
 
   // ============================================================================
-  // 점검(유지보수) 관리
-  // ============================================================================
-  MAINTENANCES: {
-    LIST: '/api/maintenances',
-    GET: (id: string) => `/api/maintenances/${id}`,
-    CREATE: '/api/maintenances',
-    UPDATE: (id: string) => `/api/maintenances/${id}`,
-    DELETE: (id: string) => `/api/maintenances/${id}`,
-    SUMMARY: '/api/maintenances/summary',
-    UPCOMING: '/api/maintenances/upcoming',
-    OVERDUE: '/api/maintenances/overdue',
-    CALCULATE_NEXT_DATE: '/api/maintenances/calculate-next-date',
-    EQUIPMENT: (equipmentId: string) => `/api/equipment/${equipmentId}/maintenances`,
-    SET_PERIOD: (equipmentId: string) => `/api/equipment/${equipmentId}/maintenance-period`,
-  },
-
-  // ============================================================================
   // DEPRECATED: Legacy rental imports (proxy to EQUIPMENT_IMPORTS)
   // ============================================================================
   /**

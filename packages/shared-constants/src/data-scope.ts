@@ -114,6 +114,85 @@ export const NON_CONFORMANCE_DATA_SCOPE: FeatureScopePolicy = {
 };
 
 /**
+ * 교정(Calibration) 데이터 스코프 정책
+ *
+ * 교정 기록은 사이트 단위 장비에 종속됩니다.
+ * - test_engineer: 소속 사이트 교정 기록 조회 (직접 등록하는 역할)
+ * - technical_manager: 소속 사이트 교정 기록 조회/승인
+ * - quality_manager: 전체 교정 기록 조회 (교정계획서 검토 역할)
+ * - lab_manager: 전체 교정 기록 조회
+ * - system_admin: 전체 교정 기록 조회
+ */
+export const CALIBRATION_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 교정 기록' },
+  technical_manager: { type: 'site', label: '소속 사이트 교정 기록' },
+  quality_manager: { type: 'all', label: '전체 교정 기록' },
+  lab_manager: { type: 'all', label: '전체 교정 기록' },
+  system_admin: { type: 'all', label: '전체 교정 기록' },
+};
+
+/**
+ * 장비 반입(EquipmentImport) 데이터 스코프 정책
+ *
+ * 장비 반입은 수신 사이트 기준으로 관리됩니다.
+ * - test_engineer: 소속 사이트 반입 기록만 조회
+ * - technical_manager: 소속 사이트 반입 기록 조회/승인
+ * - quality_manager: 소속 사이트 반입 기록 조회
+ * - lab_manager: 전체 반입 기록 조회 (크로스 사이트 반입 관리)
+ * - system_admin: 전체 반입 기록 조회
+ */
+export const EQUIPMENT_IMPORT_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 반입 기록' },
+  technical_manager: { type: 'site', label: '소속 사이트 반입 기록' },
+  quality_manager: { type: 'site', label: '소속 사이트 반입 기록' },
+  lab_manager: { type: 'all', label: '전체 반입 기록' },
+  system_admin: { type: 'all', label: '전체 반입 기록' },
+};
+
+/**
+ * 교정계획서(CalibrationPlan) 데이터 스코프 정책
+ *
+ * 교정계획서는 사이트 단위로 작성됩니다 (UL-QP-18 3단계 승인: TM → QM → LM).
+ * - test_engineer: 소속 사이트 계획서 조회 (계획서에 따라 교정 실행)
+ * - technical_manager: 소속 사이트 계획서 조회/작성/제출
+ * - quality_manager: 전체 계획서 조회 (검토 역할 — 크로스 사이트 가시성 필요)
+ * - lab_manager: 전체 계획서 조회/최종 승인
+ * - system_admin: 전체 계획서 조회
+ *
+ * ⚠️ 주의: CalibrationPlanQueryInput이 `site` 대신 `siteId` 필드를 사용하므로
+ * `@SiteScoped({ policy: CALIBRATION_PLAN_DATA_SCOPE, siteField: 'siteId' })`로 사용합니다.
+ */
+export const CALIBRATION_PLAN_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 교정계획서' },
+  technical_manager: { type: 'site', label: '소속 사이트 교정계획서' },
+  quality_manager: { type: 'all', label: '전체 교정계획서' },
+  lab_manager: { type: 'all', label: '전체 교정계획서' },
+  system_admin: { type: 'all', label: '전체 교정계획서' },
+};
+
+/**
+ * 사용자(User) 데이터 스코프 정책
+ *
+ * 사용자 목록 조회 범위를 역할별로 명시합니다.
+ * - test_engineer: 소속 사이트 사용자만 조회 (동료 조회, 팀 편성 등)
+ * - technical_manager: 소속 사이트 사용자 조회 (사이트 내 팀 관리)
+ * - quality_manager: 전체 사용자 조회 (교정계획서 검토 — 크로스 사이트 가시성 필요)
+ * - lab_manager: 전체 사용자 조회 (시험소 전체 인원 관리)
+ * - system_admin: 전체 사용자 조회
+ *
+ * ⚠️ bypassRoles 레거시 모드에서 마이그레이션:
+ * 기존에 quality_manager는 bypassRoles에 없어 암묵적으로 site 필터를 받았으나,
+ * 교정계획서 검토 역할상 전체 가시성이 필요하므로 `all`로 명시 변경.
+ */
+export const USER_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 사용자' },
+  technical_manager: { type: 'site', label: '소속 사이트 사용자' },
+  quality_manager: { type: 'all', label: '전체 사용자' },
+  lab_manager: { type: 'all', label: '전체 사용자' },
+  system_admin: { type: 'all', label: '전체 사용자' },
+};
+
+/**
  * 사용자 스코프 컨텍스트 (해석기 입력)
  */
 export interface UserScopeContext {
