@@ -60,8 +60,8 @@ test.describe('인가 게이트 (PermissionsGuard DENY)', () => {
   test.beforeAll(async ({ request }) => {
     const res = await request.get(`${API}/auth/test-login?role=test_engineer`);
     expect(res.ok()).toBeTruthy();
-    const body = (await res.json()) as { data: { access_token: string } };
-    testEngineerToken = body.data.access_token;
+    const body = (await res.json()) as { access_token: string };
+    testEngineerToken = body.access_token;
   });
 
   test('test_engineer — 교정계획 승인 시도 → 403', async ({ request }) => {
@@ -77,10 +77,13 @@ test.describe('인가 게이트 (PermissionsGuard DENY)', () => {
   });
 
   test('test_engineer — 사용자 역할 변경 시도 → 403', async ({ request }) => {
-    const res = await request.patch(`${API}/users/00000000-0000-0000-0000-000000000001/role`, {
-      headers: { Authorization: `Bearer ${testEngineerToken}` },
-      data: { role: 'lab_manager', version: 1 },
-    });
+    const res = await request.patch(
+      `${API}/users/00000000-0000-0000-0000-000000000001/change-role`,
+      {
+        headers: { Authorization: `Bearer ${testEngineerToken}` },
+        data: { role: 'lab_manager', version: 1 },
+      }
+    );
     expect(res.status()).toBe(403);
   });
 
@@ -93,7 +96,7 @@ test.describe('인가 게이트 (PermissionsGuard DENY)', () => {
   });
 
   test('test_engineer — 장비 폐기 승인 시도 → 403', async ({ request }) => {
-    const res = await request.patch(
+    const res = await request.post(
       `${API}/equipment/00000000-0000-0000-0000-000000000001/disposal/approve`,
       {
         headers: { Authorization: `Bearer ${testEngineerToken}` },
@@ -132,10 +135,10 @@ test.describe('@InternalServiceOnly 게이트', () => {
     // @InternalServiceOnly는 @Public이므로 JWT를 무시함
     // API 키가 없으면 InternalApiKeyGuard가 401 반환
     const loginRes = await request.get(`${API}/auth/test-login?role=lab_manager`);
-    const loginBody = (await loginRes.json()) as { data: { access_token: string } };
+    const loginBody = (await loginRes.json()) as { access_token: string };
 
     const res = await request.post(`${API}/users/sync`, {
-      headers: { Authorization: `Bearer ${loginBody.data.access_token}` },
+      headers: { Authorization: `Bearer ${loginBody.access_token}` },
       data: { email: 'test@example.com', name: 'Test', role: 'test_engineer' },
     });
     expect(res.status()).toBe(401);
@@ -160,12 +163,10 @@ test.describe('@SseAuthenticated 게이트', () => {
   test('SSE 스트림 — Refresh Token으로 접근 시도 → 401', async ({ request }) => {
     // Access Token만 허용 — Refresh Token은 SseJwtAuthGuard에서 차단
     const loginRes = await request.get(`${API}/auth/test-login?role=test_engineer`);
-    const loginBody = (await loginRes.json()) as {
-      data: { refresh_token: string };
-    };
+    const loginBody = (await loginRes.json()) as { refresh_token: string };
 
     const res = await request.get(`${API}/notifications/stream`, {
-      headers: { Authorization: `Bearer ${loginBody.data.refresh_token}` },
+      headers: { Authorization: `Bearer ${loginBody.refresh_token}` },
     });
     expect(res.status()).toBe(401);
   });
@@ -203,30 +204,60 @@ test.describe('@Public 엔드포인트 정상 동작', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 6. 고권한 역할의 정상 접근 확인 — 권한 구조 전체 동작 검증
+// 6. 토큰 블랙리스트 — 로그아웃 후 재사용 방지
+//    로그아웃된 토큰은 블랙리스트에 등록되어 재사용 시 401
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('토큰 블랙리스트', () => {
+  test('로그아웃 후 같은 토큰으로 API 호출 → 401', async ({ request }) => {
+    // 1. 로그인
+    const loginRes = await request.get(`${API}/auth/test-login?role=test_engineer`);
+    const { access_token, refresh_token } = (await loginRes.json()) as {
+      access_token: string;
+      refresh_token: string;
+    };
+
+    // 2. 로그인 상태에서 API 호출 → 200
+    const beforeLogout = await request.get(`${API}/equipment`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+    expect(beforeLogout.status()).toBe(200);
+
+    // 3. 로그아웃 — 토큰 블랙리스트 등록
+    const logoutRes = await request.post(`${API}/auth/logout`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+      data: { refresh_token },
+    });
+    expect(logoutRes.status()).toBe(201);
+
+    // 4. 로그아웃 후 동일 토큰으로 재호출 → 401 (블랙리스트 차단)
+    const afterLogout = await request.get(`${API}/equipment`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+    expect(afterLogout.status()).toBe(401);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 7. 고권한 역할의 정상 접근 확인 — 권한 구조 전체 동작 검증
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('고권한 역할 정상 접근 (회귀 방지)', () => {
-  test.describe.configure({ mode: 'serial' });
-
-  let labManagerToken: string;
-
-  test.beforeAll(async ({ request }) => {
-    const res = await request.get(`${API}/auth/test-login?role=lab_manager`);
-    expect(res.ok()).toBeTruthy();
-    const body = (await res.json()) as { data: { access_token: string } };
-    labManagerToken = body.data.access_token;
-  });
+  // beforeAll의 request 픽스처는 fullyParallel 환경에서 worker 재사용 시 불안정
+  // → 각 테스트에서 직접 토큰 획득 (테스트 2개라 비용 미미)
 
   test('lab_manager — 장비 목록 조회 → 200', async ({ request }) => {
+    const loginRes = await request.get(`${API}/auth/test-login?role=lab_manager`);
+    const { access_token } = (await loginRes.json()) as { access_token: string };
     const res = await request.get(`${API}/equipment`, {
-      headers: { Authorization: `Bearer ${labManagerToken}` },
+      headers: { Authorization: `Bearer ${access_token}` },
     });
     expect(res.status()).toBe(200);
   });
 
   test('lab_manager — 시스템 메트릭 조회 → 200', async ({ request }) => {
+    const loginRes = await request.get(`${API}/auth/test-login?role=lab_manager`);
+    const { access_token } = (await loginRes.json()) as { access_token: string };
     const res = await request.get(`${API}/monitoring/metrics`, {
-      headers: { Authorization: `Bearer ${labManagerToken}` },
+      headers: { Authorization: `Bearer ${access_token}` },
     });
     expect(res.status()).toBe(200);
   });
