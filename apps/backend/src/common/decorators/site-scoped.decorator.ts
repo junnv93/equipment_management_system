@@ -25,6 +25,21 @@ export interface SiteScopedOptions {
    * ```
    */
   policy?: FeatureScopePolicy;
+  /**
+   * site 값을 주입할 query 필드명. 기본값: `'site'`
+   *
+   * DTO의 사이트 필드명이 표준(`site`)과 다를 때 사용합니다.
+   * @example
+   * // CalibrationPlanQueryInput처럼 `siteId`를 사용하는 경우:
+   * @SiteScoped({ policy: CALIBRATION_PLAN_DATA_SCOPE, siteField: 'siteId' })
+   */
+  siteField?: string;
+  /**
+   * teamId 값을 주입할 query 필드명. 기본값: `'teamId'`
+   *
+   * DTO의 팀 필드명이 표준(`teamId`)과 다를 때 사용합니다.
+   */
+  teamField?: string;
 }
 
 /**

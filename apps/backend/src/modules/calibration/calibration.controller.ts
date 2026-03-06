@@ -42,7 +42,8 @@ import {
   RejectCalibrationValidationPipe,
 } from './dto/approve-calibration.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared-constants';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { FileUploadService } from '../equipment/services/file-upload.service';
 import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
@@ -100,6 +101,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
   findAll(@Query() query: CalibrationQueryDto): Promise<{
     items: CalibrationRecord[];
     meta: {

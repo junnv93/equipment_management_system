@@ -26,7 +26,8 @@ import {
   EquipmentImportQueryValidationPipe,
 } from './dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, EQUIPMENT_IMPORT_DATA_SCOPE } from '@equipment-management/shared-constants';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
@@ -63,6 +64,7 @@ export class EquipmentImportsController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_EQUIPMENT_IMPORTS)
+  @SiteScoped({ policy: EQUIPMENT_IMPORT_DATA_SCOPE })
   @UsePipes(EquipmentImportQueryValidationPipe)
   @ApiOperation({
     summary: '장비 반입 목록 조회',

@@ -79,6 +79,9 @@ export class SiteScopeInterceptor implements NestInterceptor {
         request.query = {};
       }
 
+      const siteField = options.siteField ?? 'site';
+      const teamField = options.teamField ?? 'teamId';
+
       if (scope.type === 'site') {
         if (!scope.site) {
           this.logger.warn(`[SECURITY] User ${user.userId} has no site — blocking access`);
@@ -86,12 +89,12 @@ export class SiteScopeInterceptor implements NestInterceptor {
             '사이트가 할당되지 않은 사용자는 이 리소스에 접근할 수 없습니다.'
           );
         }
-        (request.query as Record<string, string>).site = scope.site;
+        (request.query as Record<string, string>)[siteField] = scope.site;
       } else if (scope.type === 'team') {
         if (!scope.teamId) {
           // 팀이 없으면 site 필터로 폴백 (계정 설정 불완전한 경우 보수적 처리)
-          if (scope.site) {
-            (request.query as Record<string, string>).site = scope.site;
+          if (user.site) {
+            (request.query as Record<string, string>)[siteField] = user.site;
           } else {
             this.logger.warn(
               `[SECURITY] User ${user.userId} has no teamId or site — blocking access`
@@ -101,7 +104,7 @@ export class SiteScopeInterceptor implements NestInterceptor {
             );
           }
         } else {
-          (request.query as Record<string, string>).teamId = scope.teamId;
+          (request.query as Record<string, string>)[teamField] = scope.teamId;
         }
       }
 

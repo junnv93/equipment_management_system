@@ -32,6 +32,7 @@
     "db:studio": "npx drizzle-kit studio",
     "db:test:migrate": "npx ts-node src/database/tests/migrate.test.ts",
     "db:verify": "npx ts-node scripts/verify-migration.ts",
+    "security:check-endpoints": "npx ts-node scripts/check-endpoint-annotations.ts",
     "test:db": "npm run db:test:migrate && jest src/database/tests/*.spec.ts",
     "db:seed:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/equipment_management_test npx ts-node src/database/seed-test.ts",
     "db:migrate:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5434/equipment_management_test npx drizzle-kit push",

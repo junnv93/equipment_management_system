@@ -40,7 +40,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, USER_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { Public } from '../auth/decorators/public.decorator';
 import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
 
@@ -80,7 +80,7 @@ export class UsersController {
 
   @Get()
   @RequirePermissions(Permission.VIEW_USERS)
-  @SiteScoped({ bypassRoles: ['lab_manager', 'system_admin'] })
+  @SiteScoped({ policy: USER_DATA_SCOPE })
   @UsePipes(UserQueryValidationPipe)
   @ApiOperation({
     summary: '사용자 목록 조회',
@@ -160,7 +160,6 @@ export class UsersController {
 
   @Get(':id')
   @RequirePermissions(Permission.VIEW_USERS)
-  @SiteScoped({ bypassRoles: ['lab_manager', 'system_admin'] })
   @ApiOperation({
     summary: '사용자 상세 조회',
     description: '특정 ID를 가진 사용자의 상세 정보를 조회합니다.',

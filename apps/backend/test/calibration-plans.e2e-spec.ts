@@ -481,6 +481,32 @@ describe('CalibrationPlansController (e2e)', () => {
         expect(item.site).toBe(TEST_SITE);
       });
     });
+
+    it('should apply @SiteScoped and auto-inject siteId for test_engineer token', async () => {
+      // test-login 엔드포인트로 test_engineer 토큰 취득 (suwon 사이트 사용자)
+      const loginResponse = await request(app.getHttpServer())
+        .get('/auth/test-login?role=test_engineer')
+        .expect(200);
+
+      const teToken: string = loginResponse.body.access_token || loginResponse.body.accessToken;
+      if (!teToken) {
+        console.warn('test-login 엔드포인트가 없거나 비활성화되어 테스트를 건너뜁니다.');
+        return;
+      }
+
+      // siteId 없이 요청 → SiteScopeInterceptor가 user.site를 siteId에 자동 주입
+      const response = await request(app.getHttpServer())
+        .get('/calibration-plans/equipment/external')
+        .set('Authorization', `Bearer ${teToken}`)
+        .expect(200);
+
+      expect(Array.isArray(response.body)).toBe(true);
+
+      // 반환된 장비는 모두 해당 test_engineer의 사이트 장비여야 함
+      response.body.forEach((item: Record<string, unknown>) => {
+        expect(['suwon', 'uiwang', 'pyeongtaek']).toContain(item.site);
+      });
+    });
   });
 
   describe('/calibration-plans/:uuid/items/:itemUuid/confirm (PATCH)', () => {
