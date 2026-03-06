@@ -25,8 +25,6 @@
   "checkoutsImportRental": "외부 렌탈 반입",
   "checkoutsImportShared": "내부 공용 반입",
   "checkoutsImportReceive": "수령 확인",
-  "maintenance": "유지보수",
-  "maintenanceCreate": "유지보수 등록",
   "software": "소프트웨어 관리",
   "reports": "보고서",
   "reportsCalibrationFactors": "보정계수 보고서",

@@ -17,7 +17,6 @@ import {
   Bell,
   BarChart3,
   Shield,
-  Wrench,
   Calendar,
   AlertTriangle,
   Code,
@@ -208,21 +207,6 @@ export const routeMap: Record<string, RouteMetadata> = {
     label: '수령 확인',
     labelKey: 'navigation.checkoutsImportReceive',
     parent: '/checkouts/import/[id]',
-  },
-
-  // ========================================
-  // 유지보수
-  // ========================================
-  '/maintenance': {
-    label: '유지보수',
-    labelKey: 'navigation.maintenance',
-    parent: '/',
-    icon: Wrench,
-  },
-  '/maintenance/create': {
-    label: '유지보수 등록',
-    labelKey: 'navigation.maintenanceCreate',
-    parent: '/maintenance',
   },
 
   // ========================================

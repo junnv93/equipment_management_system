@@ -27,6 +27,11 @@ import {
   CALIBRATION_METHOD_LABELS,
   CLASSIFICATION_LABELS,
 } from '@equipment-management/schemas';
+import {
+  EQUIPMENT_DATA_SCOPE,
+  resolveDataScope,
+  type UserRole,
+} from '@equipment-management/shared-constants';
 import type {
   EquipmentFilters as FiltersType,
   CalibrationDueFilter,
@@ -103,6 +108,12 @@ function EquipmentFiltersComponent({
 }: EquipmentFiltersProps) {
   const t = useTranslations('equipment');
   const { user } = useAuth();
+
+  // 역할 기반 사이트 필터 고정 여부: EQUIPMENT_DATA_SCOPE 정책에서 scope=site인 역할만 고정
+  const isSiteFixed = user?.role
+    ? resolveDataScope({ role: user.role as UserRole, site: user.site }, EQUIPMENT_DATA_SCOPE)
+        .type === 'site'
+    : false;
 
   // i18n 옵션 생성
   const statusOptions = useMemo(
@@ -292,7 +303,7 @@ function EquipmentFiltersComponent({
               role="list"
               aria-label={t('filters.appliedFilters')}
             >
-              {filters.site && (
+              {filters.site && !isSiteFixed && (
                 <ActiveFilterBadge
                   label={t('filters.badgeSite', { label: getSiteLabel(filters.site) })}
                   onRemove={() => onSiteChange('')}
@@ -354,12 +365,24 @@ function EquipmentFiltersComponent({
             >
               {/* 사이트 필터 */}
               <div className="space-y-2">
-                <Label htmlFor="filter-site">{t('filters.site')}</Label>
+                <Label htmlFor="filter-site" className={isSiteFixed ? 'text-muted-foreground' : ''}>
+                  {t('filters.site')}
+                  {isSiteFixed && (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({t('filters.siteFixed')})
+                    </span>
+                  )}
+                </Label>
                 <Select
                   value={filters.site || '_all'}
                   onValueChange={(value) => onSiteChange(value === '_all' ? '' : (value as Site))}
+                  disabled={isSiteFixed}
                 >
-                  <SelectTrigger id="filter-site" aria-label={t('filters.siteFilter')}>
+                  <SelectTrigger
+                    id="filter-site"
+                    aria-label={t('filters.siteFilter')}
+                    className={isSiteFixed ? 'cursor-not-allowed opacity-60' : ''}
+                  >
                     <SelectValue placeholder={t('filters.allSites')} />
                   </SelectTrigger>
                   <SelectContent>

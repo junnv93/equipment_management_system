@@ -123,6 +123,7 @@
     "filterOptions": "장비 필터 옵션",
     "allStatuses": "모든 상태",
     "allSites": "모든 사이트",
+    "siteFixed": "고정됨",
     "allCalibrationMethods": "모든 교정 방법",
     "allClassifications": "모든 분류",
     "allEquipment": "모든 장비",

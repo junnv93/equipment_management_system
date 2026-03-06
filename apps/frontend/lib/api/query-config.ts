@@ -357,16 +357,6 @@ export const queryKeys = {
         ? ([...queryKeys.calibrations.all, 'intermediate-checks', { teamId, site }] as const)
         : ([...queryKeys.calibrations.all, 'intermediate-checks'] as const),
   },
-  maintenance: {
-    all: ['maintenance'] as const,
-    summary: () => [...queryKeys.maintenance.all, 'summary'] as const,
-    lists: () => [...queryKeys.maintenance.all, 'list'] as const,
-    list: (tab?: string, typeFilter?: string, search?: string) =>
-      [...queryKeys.maintenance.lists(), tab, typeFilter, search] as const,
-    detail: (id: string) => [...queryKeys.maintenance.all, 'detail', id] as const,
-    byEquipment: (equipmentId: string) =>
-      [...queryKeys.maintenance.all, 'equipment', equipmentId] as const,
-  },
   reports: {
     all: ['reports'] as const,
     equipmentUsage: (filters?: object) =>
