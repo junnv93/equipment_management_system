@@ -21,8 +21,15 @@ const CONTROLLERS_DIR = path.resolve(__dirname, '../apps/backend/src/modules');
 /** HTTP 메서드 데코레이터 패턴 */
 const HTTP_METHOD_REGEX = /@(Get|Post|Put|Patch|Delete)\s*\(/;
 
-/** 보안 데코레이터 패턴 */
-const SECURITY_DECORATOR_REGEX = /@(RequirePermissions|SkipPermissions|Public)\s*\(/;
+/**
+ * 보안 데코레이터 패턴
+ *
+ * 컴포저블 데코레이터 포함:
+ * - @InternalServiceOnly() — @Public + InternalApiKeyGuard 조합 (서비스간 통신)
+ * - @SseAuthenticated()    — @Public + SseJwtAuthGuard 조합 (SSE 스트림)
+ */
+const SECURITY_DECORATOR_REGEX =
+  /@(RequirePermissions|SkipPermissions|Public|InternalServiceOnly|SseAuthenticated)\s*\(/;
 
 /** 메서드 선언 패턴 — async foo( 또는 foo( (들여쓰기 있음, 데코레이터 아님) */
 const METHOD_DECL_REGEX = /^\s+(?:async\s+)?(\w+)\s*\(/;

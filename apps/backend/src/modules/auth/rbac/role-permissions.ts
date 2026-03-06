@@ -22,6 +22,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.TECHNICAL_MANAGER]: SHARED_ROLE_PERMISSIONS.technical_manager,
   [UserRole.QUALITY_MANAGER]: SHARED_ROLE_PERMISSIONS.quality_manager,
   [UserRole.LAB_MANAGER]: SHARED_ROLE_PERMISSIONS.lab_manager,
+  [UserRole.SYSTEM_ADMIN]: SHARED_ROLE_PERMISSIONS.system_admin,
 };
 
 // shared-constants의 유틸리티 함수도 re-export

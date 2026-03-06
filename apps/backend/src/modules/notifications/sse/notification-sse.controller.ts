@@ -1,11 +1,10 @@
-import { Controller, Sse, Request, UseGuards, Logger, Get } from '@nestjs/common';
+import { Controller, Sse, Request, Logger, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Observable } from 'rxjs';
 import { NotificationSseService, MessageEvent } from './notification-sse.service';
-import { SseJwtAuthGuard } from './sse-jwt-auth.guard';
+import { SseAuthenticated } from './sse-authenticated.decorator';
 import { AuthenticatedRequest } from '../../../types/auth';
-import { Public } from '../../auth/decorators/public.decorator';
 
 /**
  * SSE 알림 실시간 스트림 컨트롤러
@@ -30,8 +29,7 @@ export class NotificationSseController {
   constructor(private readonly sseService: NotificationSseService) {}
 
   @Sse('stream')
-  @Public() // 글로벌 JwtAuthGuard 바이패스 — SseJwtAuthGuard가 query param JWT 인증 담당
-  @UseGuards(SseJwtAuthGuard)
+  @SseAuthenticated()
   @ApiOperation({
     summary: 'SSE 알림 실시간 스트림',
     description:
@@ -56,8 +54,7 @@ export class NotificationSseController {
    * SSE 커넥션 통계 (모니터링용)
    */
   @Get('stream/stats')
-  @Public() // 글로벌 JwtAuthGuard 바이패스 — SseJwtAuthGuard가 query param JWT 인증 담당
-  @UseGuards(SseJwtAuthGuard)
+  @SseAuthenticated()
   @ApiOperation({
     summary: 'SSE 커넥션 통계',
     description: '현재 활성 SSE 커넥션 수를 반환합니다.',

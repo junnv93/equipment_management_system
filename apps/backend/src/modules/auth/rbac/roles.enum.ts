@@ -14,6 +14,7 @@ export enum UserRole {
   TECHNICAL_MANAGER = 'technical_manager', // 기술책임자 (Technical Manager)
   QUALITY_MANAGER = 'quality_manager', // 품질책임자 (Quality Manager)
   LAB_MANAGER = 'lab_manager', // 시험소장 (Lab Manager)
+  SYSTEM_ADMIN = 'system_admin', // 시스템 관리자 (System Admin — 전체 권한 + 시스템 설정)
 }
 
 // schemas 타입과 호환되도록 타입 re-export

@@ -63,28 +63,41 @@ const EXEMPTED_CONTROLLERS: Record<string, string> = {
 // ─── 2. @Public() 허용 목록 ─────────────────────────────────────────────────
 
 /**
- * @Public() 사용이 허용된 컨트롤러 파일명 패턴.
+ * @Public() 직접 사용이 허용된 컨트롤러 파일명 패턴.
  *
- * @Public()은 글로벌 JwtAuthGuard를 우회하지만, 반드시 대안적 인증/인가 수단이 있어야 합니다:
- * - @UseGuards(InternalApiKeyGuard): X-Internal-Api-Key 헤더로 서비스간 통신 인가
- * - @UseGuards(SseJwtAuthGuard): query param JWT로 SSE 스트림 인증
- * - 로그인/헬스체크: 인증 전 접근이 필요한 공개 엔드포인트
+ * 설계 원칙:
+ * - @Public()은 글로벌 JwtAuthGuard를 우회하므로 최소화해야 합니다.
+ * - "서비스간 통신"과 "SSE" 패턴은 컴포저블 데코레이터로 통일됩니다:
+ *   → @InternalServiceOnly()  (@Public + InternalApiKeyGuard 조합)
+ *   → @SseAuthenticated()     (@Public + SseJwtAuthGuard 조합)
+ *   이 데코레이터들은 소스에 @Public()이 직접 나타나지 않으므로 여기서 제외합니다.
+ *
+ * 이 목록에 추가하려면: 반드시 보안 리뷰 + PR 설명에 사유 명시 필요
  */
 const PUBLIC_WHITELIST_PATTERNS: string[] = [
-  // 인증 관련 — 로그인, 토큰 갱신 등 인증 전 접근 필요
+  // 인증 관련 — 로그인, Azure AD, 토큰 갱신 등 인증 전 접근 필요
   'auth.controller.ts',
-  'test-auth.controller.ts', // 테스트 환경 전용
+  'test-auth.controller.ts', // 테스트 환경 전용 (NODE_ENV !== production 조건부 등록)
 
-  // 헬스체크 — /health 공개 엔드포인트
+  // 헬스체크 — /health 공개 엔드포인트 (로드 밸런서, 모니터링 시스템용)
   'monitoring.controller.ts',
-
-  // 서비스간 통신 — @Public() + @UseGuards(InternalApiKeyGuard)로 보호
-  'equipment.controller.ts',   // POST /cache/invalidate (X-Internal-Api-Key)
-  'users.controller.ts',       // POST /sync (X-Internal-Api-Key)
-
-  // SSE 스트림 — @Public() + @UseGuards(SseJwtAuthGuard)로 보호
-  'notification-sse.controller.ts', // query param JWT 검증
 ];
+
+// ─── 3. 입력 검증 누락 감지 설정 ────────────────────────────────────────────
+
+/**
+ * 입력 검증 없는 뮤테이션 엔드포인트 면제 목록.
+ *
+ * @Body()를 사용하지만 @UsePipes가 없어도 허용되는 파일 패턴.
+ * 단일 필드 추출(@Body('field'))만 사용하는 경우 등록합니다.
+ *
+ * 면제 사유 반드시 기재 — 소스 파일에 // @BodyPipeExempt 주석 추가 권장
+ */
+const BODY_PIPE_EXEMPTED_CONTROLLERS: Record<string, string> = {
+  // auth.controller.ts: @Post('refresh')는 @Body('refresh_token') — 단일 필드 추출 (JWT 자체가 검증됨)
+  // @Post('logout')는 @Body('refresh_token') — 단일 필드 추출
+  'auth/auth.controller.ts': '단일 필드 추출(@Body("refresh_token")) — JWT 서비스가 직접 검증',
+};
 
 // ─── 3. 유틸리티 함수 ───────────────────────────────────────────────────────
 
@@ -107,7 +120,7 @@ function findControllerFiles(dir: string): string[] {
 // ─── 4. 검증 로직 ────────────────────────────────────────────────────────────
 
 interface Violation {
-  type: 'MISSING_SCOPE' | 'UNAUTHORIZED_PUBLIC';
+  type: 'MISSING_SCOPE' | 'UNAUTHORIZED_PUBLIC' | 'MISSING_BODY_VALIDATION';
   severity: 'ERROR' | 'WARNING';
   file: string;
   detail: string;
@@ -136,6 +149,29 @@ function hasBareGetEndpoint(content: string): boolean {
  */
 function hasPublicDecorator(content: string): boolean {
   return /@Public\(\)/.test(content);
+}
+
+/**
+ * 파일에 뮤테이션 HTTP 메서드(@Post, @Put, @Patch)가 있는지 확인
+ */
+function hasMutationMethod(content: string): boolean {
+  return /@Post\(|@Put\(|@Patch\(/.test(content);
+}
+
+/**
+ * 파일에 전체 body 추출(@Body() — 인자 없음)이 있는지 확인
+ * @Body('fieldName') 단일 필드 추출은 제외
+ */
+function hasFullBodyExtraction(content: string): boolean {
+  // @Body() 또는 @Body( ) — 인자 없는 패턴
+  return /@Body\(\s*\)/.test(content);
+}
+
+/**
+ * 파일에 @UsePipes가 있는지 확인 (클래스 레벨 또는 메서드 레벨)
+ */
+function hasValidationPipe(content: string): boolean {
+  return /@UsePipes\(/.test(content);
 }
 
 /**
@@ -220,6 +256,31 @@ function runChecks() {
     }
   }
 
+  // ─── Check 3: 입력 검증 누락 감지 ─────────────────────────────────────
+  // 전체 body 추출(@Body())이 있는 뮤테이션 메서드를 가진 파일이
+  // @UsePipes를 전혀 사용하지 않으면 WARNING
+
+  for (const filePath of controllerFiles) {
+    const relativePath = toRelativePath(filePath);
+
+    // 면제 목록 확인
+    if (relativePath in BODY_PIPE_EXEMPTED_CONTROLLERS) continue;
+
+    const content = fs.readFileSync(filePath, 'utf-8');
+
+    if (hasMutationMethod(content) && hasFullBodyExtraction(content) && !hasValidationPipe(content)) {
+      violations.push({
+        type: 'MISSING_BODY_VALIDATION',
+        severity: 'WARNING',
+        file: relativePath,
+        detail:
+          '@Post/@Put/@Patch 메서드에서 @Body()를 사용하지만 @UsePipes가 없습니다. ' +
+          'ZodValidationPipe 추가 또는 단일 필드 추출만 사용한다면 ' +
+          'BODY_PIPE_EXEMPTED_CONTROLLERS에 사유를 기재하세요.',
+      });
+    }
+  }
+
   // ─── 결과 출력 ──────────────────────────────────────────────────────────
 
   const errors = violations.filter((v) => v.severity === 'ERROR');
@@ -250,6 +311,7 @@ function runChecks() {
   ]);
   console.log(`✅ REQUIRED_SCOPED 검사: ${Object.keys(REQUIRED_SCOPED_CONTROLLERS).length}개`);
   console.log(`✅ EXEMPTED 면제 목록: ${Object.keys(EXEMPTED_CONTROLLERS).length}개`);
+  console.log(`✅ BODY_PIPE 면제 목록: ${Object.keys(BODY_PIPE_EXEMPTED_CONTROLLERS).length}개`);
   console.log(`✅ 총 검사된 컨트롤러: ${controllerFiles.length}개`);
   console.log(`✅ 미분류 컨트롤러: ${controllerFiles.length - checkedFiles.size}개`);
   console.log('');

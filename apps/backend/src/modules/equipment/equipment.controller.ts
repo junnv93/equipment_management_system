@@ -14,7 +14,6 @@ import {
   Req,
   BadRequestException,
   ForbiddenException,
-  UseGuards,
   UseInterceptors,
   UploadedFiles,
   UploadedFile,
@@ -44,8 +43,7 @@ import {
 } from './dto/create-shared-equipment.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
-import { Public } from '../auth/decorators/public.decorator';
-import { InternalApiKeyGuard } from '../../common/guards/internal-api-key.guard';
+import { InternalServiceOnly } from '../../common/decorators/internal-service-only.decorator';
 import {
   Permission,
   EQUIPMENT_DATA_SCOPE,
@@ -1347,8 +1345,7 @@ export class EquipmentController {
    */
   @Post('cache/invalidate')
   @HttpCode(HttpStatus.OK)
-  @Public() // JwtAuthGuard 우회 (서비스간 통신 — JWT 없음)
-  @UseGuards(InternalApiKeyGuard) // X-Internal-Api-Key 헤더로 인가
+  @InternalServiceOnly()
   @ApiOperation({
     summary: '장비 캐시 무효화 (E2E 테스트 / 내부 서비스용)',
     description:
