@@ -165,7 +165,9 @@
       "external_calibration": "External Calibration",
       "self_inspection": "Self Inspection",
       "not_applicable": "Not Applicable"
-    }
+    },
+    "moreFilters": "More filters",
+    "moreFiltersCount": "More filters ({count})"
   },
   "sort": {
     "label": "Sort:",

@@ -21,7 +21,13 @@ import type { EquipmentFilters } from '@/hooks/useEquipmentFilters';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
 import { HighlightText } from '@/components/shared/HighlightText';
 import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
-import { CALIBRATION_BADGE_TOKENS, EQUIPMENT_TABLE_TOKENS } from '@/lib/design-tokens';
+import {
+  CALIBRATION_BADGE_TOKENS,
+  EQUIPMENT_TABLE_TOKENS,
+  EQUIPMENT_STATUS_TOKENS,
+  DEFAULT_STATUS_CONFIG,
+  getManagementNumberClasses,
+} from '@/lib/design-tokens';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
 import type { CalibrationMethod } from '@equipment-management/schemas';
 
@@ -37,7 +43,7 @@ type SortableColumn =
   | 'createdAt';
 
 interface ColumnDef {
-  key: SortableColumn | 'modelName' | 'location' | 'actions';
+  key: SortableColumn | 'statusBar' | 'location' | 'actions';
   label: string;
   sortable: boolean;
   className?: string;
@@ -45,12 +51,12 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
+  { key: 'statusBar', label: '', sortable: false, className: 'w-1 p-0' },
   { key: 'managementNumber', label: 'table.managementNumber', sortable: true },
   { key: 'name', label: 'table.name', sortable: true },
-  { key: 'modelName', label: 'table.modelName', sortable: false, hideOnMobile: true },
-  { key: 'status', label: 'table.status', sortable: true },
-  { key: 'nextCalibrationDate', label: 'table.calibrationDue', sortable: true, hideOnMobile: true },
   { key: 'location', label: 'table.location', sortable: false, hideOnMobile: true },
+  { key: 'nextCalibrationDate', label: 'table.calibrationDue', sortable: true, hideOnMobile: true },
+  { key: 'status', label: 'table.status', sortable: true },
   { key: 'actions', label: 'table.actions', sortable: false, className: 'text-right' },
 ];
 
@@ -64,10 +70,7 @@ interface EquipmentTableProps {
 }
 
 /**
- * 상태 뱃지 컴포넌트 (테이블형 - 상태만 표시)
- *
- * @param status - 장비 상태
- * @param nextCalibrationDate - 차기 교정일 (실시간 교정기한 초과 체크용)
+ * 상태 뱃지 컴포넌트 (테이블형)
  */
 const StatusBadge = memo(function StatusBadge({
   status,
@@ -79,7 +82,7 @@ const StatusBadge = memo(function StatusBadge({
   const style = getEquipmentStatusStyle(status, nextCalibrationDate);
 
   return (
-    <Badge variant="outline" className={`${style.className} border-0`}>
+    <Badge variant="outline" className={`${style.className} ${EQUIPMENT_TABLE_TOKENS.statusBadge}`}>
       {style.label}
     </Badge>
   );
@@ -145,23 +148,26 @@ const SortableHeader = memo(function SortableHeader({
 const SkeletonRow = memo(function SkeletonRow() {
   return (
     <TableRow className="motion-safe:animate-pulse">
-      <TableCell>
-        <Skeleton className="h-4 w-20" />
+      <TableCell className="w-1 p-0">
+        <div className="block w-1 min-h-[2.5rem] bg-muted" />
       </TableCell>
       <TableCell>
-        <Skeleton className="h-4 w-32" />
-      </TableCell>
-      <TableCell className="hidden sm:table-cell">
         <Skeleton className="h-4 w-24" />
       </TableCell>
       <TableCell>
-        <Skeleton className="h-6 w-16 rounded-full" />
+        <div className="space-y-1">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-20" />
+        </div>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <Skeleton className="h-4 w-20" />
       </TableCell>
       <TableCell className="hidden md:table-cell">
         <Skeleton className="h-4 w-24" />
       </TableCell>
-      <TableCell className="hidden md:table-cell">
-        <Skeleton className="h-4 w-20" />
+      <TableCell>
+        <Skeleton className="h-6 w-[4.5rem] rounded-full" />
       </TableCell>
       <TableCell className="text-right">
         <Skeleton className="h-8 w-16 ml-auto rounded-md" />
@@ -181,7 +187,6 @@ const EquipmentRow = memo(function EquipmentRow({
   searchTerm?: string;
 }) {
   const t = useTranslations('equipment');
-  // SSOT: calculateCalibrationStatus로 교정 상태 계산 통합
   const calStatus = useMemo(
     () =>
       calculateCalibrationStatus(
@@ -198,9 +203,12 @@ const EquipmentRow = memo(function EquipmentRow({
     ]
   );
 
+  // 상태 바 색상 (design token SSOT)
+  const statusToken =
+    EQUIPMENT_STATUS_TOKENS[equipment.status || 'available'] || DEFAULT_STATUS_CONFIG;
+
   /**
-   * 교정 기한 표시 (D-day 형식) - 테이블형 전용
-   * calculateCalibrationStatus SSOT로 통합된 결과를 렌더링
+   * 교정 기한 표시 (D-day 형식)
    */
   const renderCalibrationDue = () => {
     if (!equipment.nextCalibrationDate) return '-';
@@ -209,7 +217,6 @@ const EquipmentRow = memo(function EquipmentRow({
     if (!dueDate) return '-';
 
     if (!calStatus) {
-      // 정상 또는 비표시 상태
       return (
         <span className={EQUIPMENT_TABLE_TOKENS.numericColumn}>
           {formatDate(dueDate, 'yyyy-MM-dd')}
@@ -245,32 +252,56 @@ const EquipmentRow = memo(function EquipmentRow({
       aria-selected={false}
       data-testid="equipment-row"
     >
-      <TableCell role="gridcell" className="font-medium">
-        <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
+      {/* 4px 상태 세로 바 */}
+      <TableCell className={EQUIPMENT_TABLE_TOKENS.statusBar.cell} aria-hidden="true">
+        <div
+          className={`${EQUIPMENT_TABLE_TOKENS.statusBar.indicator} ${statusToken.card.statusBarColor}`}
+        />
       </TableCell>
+
+      {/* 관리번호 */}
       <TableCell role="gridcell">
-        <div className="flex items-center gap-2">
-          <span className="truncate max-w-[200px]">
-            <HighlightText text={equipment.name || '-'} search={searchTerm} />
-          </span>
-          {equipment.isShared && <SharedEquipmentBadge sharedSource={equipment.sharedSource} />}
+        <span className={getManagementNumberClasses()}>
+          <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
+        </span>
+      </TableCell>
+
+      {/* 장비명 + 모델명 */}
+      <TableCell role="gridcell">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="truncate max-w-[200px]">
+              <HighlightText text={equipment.name || '-'} search={searchTerm} />
+            </span>
+            {equipment.isShared && <SharedEquipmentBadge sharedSource={equipment.sharedSource} />}
+          </div>
+          {equipment.modelName && (
+            <div className={EQUIPMENT_TABLE_TOKENS.secondaryText}>
+              <HighlightText text={equipment.modelName} search={searchTerm} />
+            </div>
+          )}
         </div>
       </TableCell>
-      <TableCell role="gridcell" className="hidden sm:table-cell">
-        <HighlightText text={equipment.modelName || '-'} search={searchTerm} />
+
+      {/* 위치 */}
+      <TableCell role="gridcell" className="hidden md:table-cell">
+        {equipment.location || '-'}
       </TableCell>
+
+      {/* 교정 기한 */}
+      <TableCell role="gridcell" className="hidden md:table-cell">
+        {renderCalibrationDue()}
+      </TableCell>
+
+      {/* 상태 배지 */}
       <TableCell role="gridcell">
         <StatusBadge
           status={equipment.status || 'available'}
           nextCalibrationDate={equipment.nextCalibrationDate}
         />
       </TableCell>
-      <TableCell role="gridcell" className="hidden md:table-cell">
-        {renderCalibrationDue()}
-      </TableCell>
-      <TableCell role="gridcell" className="hidden md:table-cell">
-        {equipment.location || '-'}
-      </TableCell>
+
+      {/* 상세보기 */}
       <TableCell role="gridcell" className="text-right">
         <Button variant="outline" size="sm" asChild data-testid="equipment-item">
           <Link
@@ -290,10 +321,12 @@ const EquipmentRow = memo(function EquipmentRow({
  * 장비 테이블 컴포넌트
  *
  * - 정렬 가능한 헤더
- * - 상태별 뱃지
+ * - 4px 상태 세로 바 (산업 레지스트리 미학)
+ * - 관리번호: font-mono + tracking-wider
+ * - 장비명 + 모델명 통합 셀
+ * - 상태 배지: 고정폭 텍스트 전용
  * - 검색어 하이라이팅
  * - 스켈레톤 로딩
- * - ARIA 속성
  */
 function EquipmentTableComponent({
   items,
@@ -304,25 +337,27 @@ function EquipmentTableComponent({
   searchTerm,
 }: EquipmentTableProps) {
   const t = useTranslations('equipment');
-  const _getSortDirection = (column: string): 'ascending' | 'descending' | 'none' => {
-    if (sortBy === column) {
-      return sortOrder === 'asc' ? 'ascending' : 'descending';
-    }
-    return 'none';
-  };
 
   return (
-    <div className="border rounded-lg overflow-hidden border-border">
+    <div className="border border-brand-border-subtle bg-brand-bg-surface rounded-lg overflow-hidden">
       <Table role="grid" aria-label={t('table.ariaLabel')}>
         <TableHeader>
-          <TableRow role="row" className="bg-muted/50">
+          <TableRow
+            role="row"
+            className="bg-brand-bg-elevated/50 border-b border-brand-border-subtle"
+          >
             {COLUMNS.map((col) => {
+              // 상태 바 헤더: 빈 셀
+              if (col.key === 'statusBar') {
+                return <TableHead key="statusBar" className="w-1 p-0" aria-hidden="true" />;
+              }
+
               if (col.sortable) {
                 return (
                   <SortableHeader
                     key={col.key}
                     column={col.key as SortableColumn}
-                    label={t(col.label)}
+                    label={t(col.label as Parameters<typeof t>[0])}
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
                     onSort={onSort}
@@ -336,9 +371,9 @@ function EquipmentTableComponent({
                   key={col.key}
                   role="columnheader"
                   scope="col"
-                  className={`${col.className || ''} ${col.hideOnMobile ? 'hidden md:table-cell' : col.key === 'modelName' ? 'hidden sm:table-cell' : ''}`}
+                  className={`${col.className || ''} ${col.hideOnMobile ? 'hidden md:table-cell' : ''}`}
                 >
-                  {t(col.label)}
+                  {t(col.label as Parameters<typeof t>[0])}
                 </TableHead>
               );
             })}
@@ -346,17 +381,14 @@ function EquipmentTableComponent({
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            // 스켈레톤 로딩
             Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
           ) : items.length === 0 ? (
-            // 빈 상태
             <TableRow>
               <TableCell colSpan={COLUMNS.length} className="h-24 text-center">
                 <p className="text-muted-foreground">{t('list.noItems')}</p>
               </TableCell>
             </TableRow>
           ) : (
-            // 데이터 행
             items.map((equipment) => (
               <EquipmentRow
                 key={equipment.id || equipment.uuid}

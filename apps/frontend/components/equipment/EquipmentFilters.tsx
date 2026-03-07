@@ -1,11 +1,10 @@
 'use client';
 
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { EQUIPMENT_FILTER_TOKENS } from '@/lib/design-tokens';
 import {
@@ -15,9 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import {
   type Site,
   type EquipmentStatus,
@@ -85,12 +81,11 @@ const ActiveFilterBadge = memo(function ActiveFilterBadge({
 });
 
 /**
- * 장비 필터 컴포넌트
+ * 장비 필터 컴포넌트 (컴팩트 인라인 바)
  *
- * - 사이트, 상태, 교정방법, 공용장비 필터
- * - 접이식 패널
- * - 활성 필터 뱃지 표시
- * - 필터 초기화 기능
+ * - 1차 필터(Site, Status, CalibrationDue) + "추가 필터" 확장 버튼
+ * - 2차 필터(CalibrationMethod, Classification, IsShared, Team) — 확장 시 표시
+ * - 활성 필터 배지 (하단 행)
  */
 function EquipmentFiltersComponent({
   filters,
@@ -102,14 +97,16 @@ function EquipmentFiltersComponent({
   onCalibrationDueFilterChange,
   onTeamIdChange,
   onClearFilters,
-  activeFilterCount,
   hasActiveFilters,
   className = '',
 }: EquipmentFiltersProps) {
   const t = useTranslations('equipment');
   const { user } = useAuth();
 
-  // 역할 기반 사이트 필터 고정 여부: EQUIPMENT_DATA_SCOPE 정책에서 scope=site인 역할만 고정
+  // UI-only 상태 (서버 상태 아님 → useState 허용)
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // 역할 기반 사이트 필터 고정 여부
   const isSiteFixed = user?.role
     ? resolveDataScope({ role: user.role as UserRole, site: user.site }, EQUIPMENT_DATA_SCOPE)
         .type === 'site'
@@ -191,30 +188,36 @@ function EquipmentFiltersComponent({
     [t]
   );
 
-  // ✅ 사이트 필터링: 선택된 사이트의 팀만 조회
-  // 사이트 필터가 선택되면 해당 사이트의 팀, 아니면 사용자 소속 사이트의 팀
   const teamQuerySite = filters.site || user?.site;
 
-  // 팀 목록을 API에서 동적으로 가져오기
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
     queryKey: queryKeys.teams.filterOptions(teamQuerySite),
     queryFn: () =>
       teamsApi.getTeams({
-        site: teamQuerySite, // ✅ 사이트 필터 적용
+        site: teamQuerySite,
         pageSize: 100,
       }),
     staleTime: CACHE_TIMES.LONG,
     gcTime: CACHE_TIMES.VERY_LONG,
-    enabled: !!teamQuerySite, // 사이트 정보가 있을 때만 조회
+    enabled: !!teamQuerySite,
   });
 
-  // 팀 옵션 메모이제이션
   const teamOptions = useMemo(() => {
     const teams = teamsData?.data || [];
     return teams.map((team) => ({ value: team.id, label: team.name }));
   }, [teamsData?.data]);
 
-  // 라벨 함수들 (활성 필터 배지용)
+  // 2차 필터 활성 개수 (추가 필터 버튼 배지용)
+  const additionalFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.calibrationMethod) count++;
+    if (filters.classification) count++;
+    if (filters.isShared !== 'all') count++;
+    if (filters.teamId) count++;
+    return count;
+  }, [filters.calibrationMethod, filters.classification, filters.isShared, filters.teamId]);
+
+  // 활성 필터 배지 라벨 함수들
   const getStatusLabel = useCallback(
     (status: EquipmentStatus) => {
       return statusOptions.find((opt) => opt.value === status)?.label || status;
@@ -263,301 +266,259 @@ function EquipmentFiltersComponent({
     (teamId: string) => {
       return teamOptions.find((opt) => opt.value === teamId)?.label || t('filters.unknownTeam');
     },
-    [teamOptions]
+    [teamOptions, t]
   );
 
   return (
-    <Collapsible defaultOpen className={className}>
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="gap-2 p-0 h-auto hover:bg-transparent">
-                <SlidersHorizontal className="h-4 w-4" />
-                <CardTitle className="text-base">{t('filters.title')}</CardTitle>
-                {activeFilterCount > 0 && (
-                  <Badge variant="default" className={`ml-2 ${EQUIPMENT_FILTER_TOKENS.count}`}>
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClearFilters}
-                className="gap-1 text-muted-foreground hover:text-foreground"
-                type="button"
-              >
-                <RotateCcw className="h-3 w-3" />
-                {t('filters.reset')}
-              </Button>
-            )}
-          </div>
+    <div
+      className={`flex flex-col gap-3 ${className}`}
+      role="group"
+      aria-label={t('filters.filterOptions')}
+    >
+      {/* 1차 필터: Site, Status, CalibrationDue + 추가 필터 버튼 + 초기화 */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {/* 사이트 필터 */}
+        <Select
+          value={filters.site || '_all'}
+          onValueChange={(value) => onSiteChange(value === '_all' ? '' : (value as Site))}
+          disabled={isSiteFixed}
+        >
+          <SelectTrigger
+            className={`h-9 w-[120px] ${isSiteFixed ? 'cursor-not-allowed opacity-60' : ''}`}
+            aria-label={t('filters.siteFilter')}
+          >
+            <SelectValue placeholder={t('filters.allSites')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">{t('filters.allSites')}</SelectItem>
+            {siteOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          {/* 활성 필터 뱃지 */}
-          {hasActiveFilters && (
-            <div
-              className="flex flex-wrap gap-2 mt-3"
-              role="list"
-              aria-label={t('filters.appliedFilters')}
-            >
-              {filters.site && !isSiteFixed && (
-                <ActiveFilterBadge
-                  label={t('filters.badgeSite', { label: getSiteLabel(filters.site) })}
-                  onRemove={() => onSiteChange('')}
-                />
-              )}
-              {filters.status && (
-                <ActiveFilterBadge
-                  label={t('filters.badgeStatus', { label: getStatusLabel(filters.status) })}
-                  onRemove={() => onStatusChange('')}
-                />
-              )}
-              {filters.calibrationMethod && (
-                <ActiveFilterBadge
-                  label={t('filters.badgeCalibration', {
-                    label: getCalibrationMethodLabel(filters.calibrationMethod),
-                  })}
-                  onRemove={() => onCalibrationMethodChange('')}
-                />
-              )}
-              {filters.classification && (
-                <ActiveFilterBadge
-                  label={t('filters.badgeClassification', {
-                    label: getClassificationLabel(filters.classification),
-                  })}
-                  onRemove={() => onClassificationChange('')}
-                />
-              )}
-              {filters.isShared !== 'all' && (
-                <ActiveFilterBadge
-                  label={t('filters.badgeShared', { label: getSharedLabel(filters.isShared) })}
-                  onRemove={() => onIsSharedChange('all')}
-                />
-              )}
-              {filters.calibrationDueFilter !== 'all' && (
-                <ActiveFilterBadge
-                  label={t('filters.badgeCalibrationDue', {
-                    label: getCalibrationDueLabel(filters.calibrationDueFilter),
-                  })}
-                  onRemove={() => onCalibrationDueFilterChange('all')}
-                />
-              )}
-              {filters.teamId && (
-                <ActiveFilterBadge
-                  label={t('filters.badgeTeam', { label: getTeamLabel(filters.teamId) })}
-                  onRemove={() => onTeamIdChange('')}
-                />
-              )}
-            </div>
-          )}
-        </CardHeader>
+        {/* 상태 필터 */}
+        <Select
+          value={filters.status || '_all'}
+          onValueChange={(value) =>
+            onStatusChange(value === '_all' ? '' : (value as EquipmentStatus))
+          }
+        >
+          <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.statusFilter')}>
+            <SelectValue placeholder={t('filters.allStatuses')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">{t('filters.allStatuses')}</SelectItem>
+            {statusOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <CollapsibleContent>
-          <Separator />
-          <CardContent className="pt-4">
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-              role="group"
-              aria-label={t('filters.filterOptions')}
-            >
-              {/* 사이트 필터 */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-site" className={isSiteFixed ? 'text-muted-foreground' : ''}>
-                  {t('filters.site')}
-                  {isSiteFixed && (
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      ({t('filters.siteFixed')})
-                    </span>
+        {/* 교정 기한 필터 */}
+        <Select
+          value={filters.calibrationDueFilter}
+          onValueChange={(value) => onCalibrationDueFilterChange(value as CalibrationDueFilter)}
+        >
+          <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.calibrationDueFilter')}>
+            <SelectValue placeholder={t('filters.calibrationDueAll')} />
+          </SelectTrigger>
+          <SelectContent>
+            {calibrationDueOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <div className="flex flex-col">
+                  <span>{option.label}</span>
+                  {option.description && (
+                    <span className="text-xs text-muted-foreground">{option.description}</span>
                   )}
-                </Label>
-                <Select
-                  value={filters.site || '_all'}
-                  onValueChange={(value) => onSiteChange(value === '_all' ? '' : (value as Site))}
-                  disabled={isSiteFixed}
-                >
-                  <SelectTrigger
-                    id="filter-site"
-                    aria-label={t('filters.siteFilter')}
-                    className={isSiteFixed ? 'cursor-not-allowed opacity-60' : ''}
-                  >
-                    <SelectValue placeholder={t('filters.allSites')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">{t('filters.allSites')}</SelectItem>
-                    {siteOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-              {/* 상태 필터 */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-status">{t('filters.status')}</Label>
-                <Select
-                  value={filters.status || '_all'}
-                  onValueChange={(value) =>
-                    onStatusChange(value === '_all' ? '' : (value as EquipmentStatus))
-                  }
-                >
-                  <SelectTrigger id="filter-status" aria-label={t('filters.statusFilter')}>
-                    <SelectValue placeholder={t('filters.allStatuses')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">{t('filters.allStatuses')}</SelectItem>
-                    {statusOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* 추가 필터 버튼 */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="h-9 gap-1.5"
+          type="button"
+          aria-expanded={isExpanded}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          {additionalFilterCount > 0
+            ? t('filters.moreFiltersCount', { count: additionalFilterCount })
+            : t('filters.moreFilters')}
+        </Button>
 
-              {/* 교정 방법 필터 */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-calibration">{t('filters.calibrationMethod')}</Label>
-                <Select
-                  value={filters.calibrationMethod || '_all'}
-                  onValueChange={(value) =>
-                    onCalibrationMethodChange(value === '_all' ? '' : (value as CalibrationMethod))
-                  }
-                >
-                  <SelectTrigger
-                    id="filter-calibration"
-                    aria-label={t('filters.calibrationFilter')}
-                  >
-                    <SelectValue placeholder={t('filters.allCalibrationMethods')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">{t('filters.allCalibrationMethods')}</SelectItem>
-                    {calibrationMethodOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* 초기화 버튼 */}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearFilters}
+            className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+            type="button"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {t('filters.reset')}
+          </Button>
+        )}
+      </div>
 
-              {/* 장비 분류 필터 */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-classification">{t('filters.classification')}</Label>
-                <Select
-                  value={filters.classification || '_all'}
-                  onValueChange={(value) =>
-                    onClassificationChange(value === '_all' ? '' : (value as Classification))
-                  }
-                >
-                  <SelectTrigger
-                    id="filter-classification"
-                    aria-label={t('filters.classificationFilter')}
-                  >
-                    <SelectValue placeholder={t('filters.allClassifications')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">{t('filters.allClassifications')}</SelectItem>
-                    {classificationOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* 2차 필터 (확장 시) */}
+      {isExpanded && (
+        <div className="flex flex-wrap gap-2">
+          {/* 교정 방법 필터 */}
+          <Select
+            value={filters.calibrationMethod || '_all'}
+            onValueChange={(value) =>
+              onCalibrationMethodChange(value === '_all' ? '' : (value as CalibrationMethod))
+            }
+          >
+            <SelectTrigger className="h-9 w-[150px]" aria-label={t('filters.calibrationFilter')}>
+              <SelectValue placeholder={t('filters.allCalibrationMethods')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">{t('filters.allCalibrationMethods')}</SelectItem>
+              {calibrationMethodOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              {/* 공용장비 필터 */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-shared">{t('filters.shared')}</Label>
-                <Select
-                  value={filters.isShared}
-                  onValueChange={(value) => onIsSharedChange(value as 'all' | 'shared' | 'normal')}
-                >
-                  <SelectTrigger id="filter-shared" aria-label={t('filters.sharedFilter')}>
-                    <SelectValue placeholder={t('filters.allEquipment')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sharedOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* 장비 분류 필터 */}
+          <Select
+            value={filters.classification || '_all'}
+            onValueChange={(value) =>
+              onClassificationChange(value === '_all' ? '' : (value as Classification))
+            }
+          >
+            <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.classificationFilter')}>
+              <SelectValue placeholder={t('filters.allClassifications')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">{t('filters.allClassifications')}</SelectItem>
+              {classificationOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              {/* 교정 기한 필터 */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-calibration-due">{t('filters.calibrationDue')}</Label>
-                <Select
-                  value={filters.calibrationDueFilter}
-                  onValueChange={(value) =>
-                    onCalibrationDueFilterChange(value as CalibrationDueFilter)
-                  }
-                >
-                  <SelectTrigger
-                    id="filter-calibration-due"
-                    aria-label={t('filters.calibrationDueFilter')}
-                  >
-                    <SelectValue placeholder={t('filters.calibrationDueAll')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {calibrationDueOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex flex-col">
-                          <span>{option.label}</span>
-                          {option.description && (
-                            <span className="text-xs text-muted-foreground">
-                              {option.description}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* 공용장비 필터 */}
+          <Select
+            value={filters.isShared}
+            onValueChange={(value) => onIsSharedChange(value as 'all' | 'shared' | 'normal')}
+          >
+            <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.sharedFilter')}>
+              <SelectValue placeholder={t('filters.allEquipment')} />
+            </SelectTrigger>
+            <SelectContent>
+              {sharedOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-              {/* 팀 필터 */}
-              <div className="space-y-2">
-                <Label htmlFor="filter-team">{t('filters.team')}</Label>
-                <Select
-                  value={filters.teamId || '_all'}
-                  onValueChange={(value) => onTeamIdChange(value === '_all' ? '' : value)}
-                  disabled={isLoadingTeams}
-                >
-                  <SelectTrigger id="filter-team" aria-label={t('filters.teamFilter')}>
-                    {isLoadingTeams ? (
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {t('filters.loading')}
-                      </span>
-                    ) : (
-                      <SelectValue placeholder={t('filters.allTeams')} />
-                    )}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">{t('filters.allTeams')}</SelectItem>
-                    {teamOptions
-                      .filter((opt) => opt.value)
-                      .map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
+          {/* 팀 필터 */}
+          <Select
+            value={filters.teamId || '_all'}
+            onValueChange={(value) => onTeamIdChange(value === '_all' ? '' : value)}
+            disabled={isLoadingTeams}
+          >
+            <SelectTrigger className="h-9 w-[150px]" aria-label={t('filters.teamFilter')}>
+              {isLoadingTeams ? (
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t('filters.loading')}
+                </span>
+              ) : (
+                <SelectValue placeholder={t('filters.allTeams')} />
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">{t('filters.allTeams')}</SelectItem>
+              {teamOptions
+                .filter((opt) => opt.value)
+                .map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* 활성 필터 배지 */}
+      {hasActiveFilters && (
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="list"
+          aria-label={t('filters.appliedFilters')}
+        >
+          {filters.site && !isSiteFixed && (
+            <ActiveFilterBadge
+              label={t('filters.badgeSite', { label: getSiteLabel(filters.site) })}
+              onRemove={() => onSiteChange('')}
+            />
+          )}
+          {filters.status && (
+            <ActiveFilterBadge
+              label={t('filters.badgeStatus', { label: getStatusLabel(filters.status) })}
+              onRemove={() => onStatusChange('')}
+            />
+          )}
+          {filters.calibrationMethod && (
+            <ActiveFilterBadge
+              label={t('filters.badgeCalibration', {
+                label: getCalibrationMethodLabel(filters.calibrationMethod),
+              })}
+              onRemove={() => onCalibrationMethodChange('')}
+            />
+          )}
+          {filters.classification && (
+            <ActiveFilterBadge
+              label={t('filters.badgeClassification', {
+                label: getClassificationLabel(filters.classification),
+              })}
+              onRemove={() => onClassificationChange('')}
+            />
+          )}
+          {filters.isShared !== 'all' && (
+            <ActiveFilterBadge
+              label={t('filters.badgeShared', { label: getSharedLabel(filters.isShared) })}
+              onRemove={() => onIsSharedChange('all')}
+            />
+          )}
+          {filters.calibrationDueFilter !== 'all' && (
+            <ActiveFilterBadge
+              label={t('filters.badgeCalibrationDue', {
+                label: getCalibrationDueLabel(filters.calibrationDueFilter),
+              })}
+              onRemove={() => onCalibrationDueFilterChange('all')}
+            />
+          )}
+          {filters.teamId && (
+            <ActiveFilterBadge
+              label={t('filters.badgeTeam', { label: getTeamLabel(filters.teamId) })}
+              onRemove={() => onTeamIdChange('')}
+            />
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

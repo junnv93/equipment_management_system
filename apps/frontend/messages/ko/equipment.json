@@ -165,7 +165,9 @@
       "external_calibration": "외부 교정",
       "self_inspection": "자체 점검",
       "not_applicable": "비대상"
-    }
+    },
+    "moreFilters": "추가 필터",
+    "moreFiltersCount": "추가 필터 ({count})"
   },
   "sort": {
     "label": "정렬:",

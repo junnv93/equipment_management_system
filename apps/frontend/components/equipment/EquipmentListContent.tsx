@@ -95,54 +95,57 @@ export function EquipmentListSkeleton() {
   const t = useTranslations('equipment');
   return (
     <div
-      className="space-y-6"
+      className="space-y-4"
       role="status"
       aria-busy="true"
       aria-live="polite"
       aria-label={t('list.loading')}
     >
-      {/* 필터 패널 스켈레톤 — 실제 필터 레이아웃과 유사 */}
-      <div className="border rounded-lg p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-8 w-20 rounded-md" />
+      {/* 툴바 스켈레톤 */}
+      <div className="flex flex-col gap-3">
+        {/* Row 1: 검색바 + 뷰 토글 */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <Skeleton className="h-9 w-full sm:max-w-sm rounded-md" />
+          <div className="sm:ml-auto">
+            <Skeleton className="h-9 w-[100px] rounded-md" />
+          </div>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          <Skeleton className="h-9 w-full rounded-md" />
-          <Skeleton className="h-9 w-full rounded-md" />
-          <Skeleton className="h-9 w-full rounded-md" />
-          <Skeleton className="h-9 w-full rounded-md hidden lg:block" />
+        {/* Row 2: 인라인 필터 바 */}
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-9 w-[120px] rounded-md" />
+          <Skeleton className="h-9 w-[130px] rounded-md" />
+          <Skeleton className="h-9 w-[130px] rounded-md" />
+          <Skeleton className="h-9 w-[120px] rounded-md" />
         </div>
       </div>
 
-      {/* 검색바 & 뷰 토글 스켈레톤 */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <Skeleton className="h-10 w-full sm:max-w-md rounded-md" />
-        <Skeleton className="h-10 w-[100px] rounded-md" />
-      </div>
-
-      {/* 테이블 스켈레톤 — 7개 컬럼 */}
+      {/* 테이블 스켈레톤 — 7개 컬럼 (상태 바 포함) */}
       <div className="border rounded-lg overflow-hidden">
         {/* 테이블 헤더 */}
         <div className="bg-muted/50 px-4 py-3 flex items-center gap-4">
+          <div className="w-1 shrink-0" />
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-4 w-20 hidden sm:block" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-24 hidden md:block" />
           <Skeleton className="h-4 w-16 hidden md:block" />
+          <Skeleton className="h-4 w-24 hidden md:block" />
+          <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-12 ml-auto" />
         </div>
         {/* 테이블 행 */}
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="px-4 py-3 border-t flex items-center gap-4">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-4 w-24 hidden sm:block" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="h-4 w-24 hidden md:block" />
-            <Skeleton className="h-4 w-20 hidden md:block" />
-            <Skeleton className="h-8 w-16 ml-auto rounded-md" />
+          <div key={i} className="border-t flex items-stretch">
+            <div className="w-1 bg-muted shrink-0" />
+            <div className="flex items-center gap-4 px-4 py-3 flex-1">
+              <Skeleton className="h-4 w-24" />
+              <div className="space-y-1 flex-1">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-4 w-20 hidden md:block" />
+              <Skeleton className="h-4 w-24 hidden md:block" />
+              <Skeleton className="h-5 w-[4.5rem] rounded-full" />
+              <Skeleton className="h-8 w-16 ml-auto rounded-md" />
+            </div>
           </div>
         ))}
       </div>
@@ -257,7 +260,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   }
 
   return (
-    <div className="space-y-6" aria-live="polite" aria-busy={isFetching}>
+    <div className="space-y-4" aria-live="polite" aria-busy={isFetching}>
       {/* 진행 표시줄 — 백그라운드 데이터 갱신 시 thin indeterminate bar */}
       {isFetching && !isLoading && (
         <div
@@ -269,53 +272,54 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         </div>
       )}
 
-      {/* 필터 패널 */}
-      <EquipmentFilters
-        filters={filters}
-        onSiteChange={setSite}
-        onStatusChange={setStatus}
-        onCalibrationMethodChange={setCalibrationMethod}
-        onClassificationChange={setClassification}
-        onIsSharedChange={setIsShared}
-        onCalibrationDueFilterChange={setCalibrationDueFilter}
-        onTeamIdChange={setTeamId}
-        onClearFilters={clearFilters}
-        activeFilterCount={activeFilterCount}
-        hasActiveFilters={hasActiveFilters}
-      />
-
-      {/* 검색바 & 정렬 & 뷰 전환 */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <EquipmentSearchBar
-          value={filters.search}
-          onChange={setSearch}
-          isLoading={isFetching}
-          className="w-full sm:max-w-md"
-        />
-
-        <div className="flex items-center gap-4">
-          {/* 정렬 표시 */}
-          {filters.sortBy && filters.sortBy !== 'managementNumber' && (
-            <Badge variant="outline" className="text-xs">
-              {t('sort.label')}{' '}
-              {filters.sortBy === 'name'
-                ? t('sort.name')
-                : filters.sortBy === 'lastCalibrationDate'
-                  ? t('sort.lastCalibrationDate')
-                  : filters.sortBy === 'nextCalibrationDate'
-                    ? t('sort.nextCalibrationDate')
-                    : filters.sortBy === 'status'
-                      ? t('sort.status')
-                      : filters.sortBy === 'createdAt'
-                        ? t('sort.createdAt')
-                        : ''}
-              ({filters.sortOrder === 'asc' ? t('sort.asc') : t('sort.desc')})
-            </Badge>
-          )}
-
-          {/* 뷰 전환 */}
-          {isClient && <ViewToggle view={view} onChange={setView} />}
+      {/* 툴바: 검색+정렬+뷰 토글 / 필터 */}
+      <div className="flex flex-col gap-3">
+        {/* Row 1: 검색바 + 정렬 배지 + 뷰 토글 */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <EquipmentSearchBar
+            value={filters.search}
+            onChange={setSearch}
+            isLoading={isFetching}
+            className="w-full sm:max-w-sm"
+          />
+          <div className="flex items-center gap-3 sm:ml-auto">
+            {/* 정렬 표시 */}
+            {filters.sortBy && filters.sortBy !== 'managementNumber' && (
+              <Badge variant="outline" className="text-xs">
+                {t('sort.label')}{' '}
+                {filters.sortBy === 'name'
+                  ? t('sort.name')
+                  : filters.sortBy === 'lastCalibrationDate'
+                    ? t('sort.lastCalibrationDate')
+                    : filters.sortBy === 'nextCalibrationDate'
+                      ? t('sort.nextCalibrationDate')
+                      : filters.sortBy === 'status'
+                        ? t('sort.status')
+                        : filters.sortBy === 'createdAt'
+                          ? t('sort.createdAt')
+                          : ''}
+                ({filters.sortOrder === 'asc' ? t('sort.asc') : t('sort.desc')})
+              </Badge>
+            )}
+            {/* 뷰 전환 */}
+            {isClient && <ViewToggle view={view} onChange={setView} />}
+          </div>
         </div>
+
+        {/* Row 2: 인라인 필터 바 */}
+        <EquipmentFilters
+          filters={filters}
+          onSiteChange={setSite}
+          onStatusChange={setStatus}
+          onCalibrationMethodChange={setCalibrationMethod}
+          onClassificationChange={setClassification}
+          onIsSharedChange={setIsShared}
+          onCalibrationDueFilterChange={setCalibrationDueFilter}
+          onTeamIdChange={setTeamId}
+          onClearFilters={clearFilters}
+          activeFilterCount={activeFilterCount}
+          hasActiveFilters={hasActiveFilters}
+        />
       </div>
 
       {/* 장비 목록 (테이블 또는 카드) */}

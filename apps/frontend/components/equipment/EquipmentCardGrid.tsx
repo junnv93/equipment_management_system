@@ -21,6 +21,7 @@ import {
   getEquipmentCardClasses,
   EQUIPMENT_EMPTY_STATE_TOKENS,
   getStaggerDelay,
+  getManagementNumberClasses,
 } from '@/lib/design-tokens';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
 import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
@@ -128,7 +129,10 @@ const EquipmentCard = memo(function EquipmentCard({
                 <SharedEquipmentBadge sharedSource={equipment.sharedSource} size="sm" />
               )}
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1" data-testid="management-number">
+            <p
+              className={`text-sm mt-1 ${getManagementNumberClasses()}`}
+              data-testid="management-number"
+            >
               <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
             </p>
           </div>

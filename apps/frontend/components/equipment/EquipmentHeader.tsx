@@ -25,7 +25,6 @@ import {
   CALIBRATION_BADGE_TOKENS,
   EQUIPMENT_HEADER_TOKENS,
   getEquipmentHeaderButtonClasses,
-  ANIMATION_PRESETS,
 } from '@/lib/design-tokens';
 
 interface EquipmentHeaderProps {
@@ -329,7 +328,6 @@ export function EquipmentHeader({
                   variant="outline"
                   className={cn(
                     'px-3 py-1.5 text-sm font-semibold border-2 inline-flex items-center gap-1.5',
-                    ANIMATION_PRESETS.pulse,
                     calibrationStatus.bg,
                     calibrationStatus.color
                   )}
