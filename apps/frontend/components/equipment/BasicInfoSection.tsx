@@ -148,6 +148,8 @@ interface BasicInfoSectionProps {
   managementNumberCheckResult?: ManagementNumberCheckResult | null;
   /** 관리번호 중복 검사 중 여부 */
   isCheckingManagementNumber?: boolean;
+  /** 위저드 모드: true면 섹션 번호 배지 숨김 (스테퍼가 대신 표시) */
+  wizardMode?: boolean;
 }
 
 export function BasicInfoSection({
@@ -160,6 +162,7 @@ export function BasicInfoSection({
   onManagementNumberChange,
   managementNumberCheckResult,
   isCheckingManagementNumber = false,
+  wizardMode = false,
 }: BasicInfoSectionProps) {
   const t = useTranslations('equipment');
 
@@ -289,7 +292,7 @@ export function BasicInfoSection({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span className={FORM_SECTION_TOKENS.badge}>1</span>
+          {!wizardMode && <span className={FORM_SECTION_TOKENS.badge}>1</span>}
           {t('form.basicInfo.title')}
         </CardTitle>
         <CardDescription>{t('form.basicInfo.description')}</CardDescription>

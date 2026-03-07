@@ -414,6 +414,16 @@
       "selectedFile": "선택된 파일: {name}",
       "pdfOnly": "PDF 파일만 업로드 가능합니다. (필수)"
     },
+    "wizard": {
+      "step1": "기본 정보",
+      "step2": "상태·위치",
+      "step3": "교정 정보",
+      "step4": "이력·첨부",
+      "next": "다음",
+      "previous": "이전",
+      "managementNumberPreview": "관리번호",
+      "stepValidationError": "필수 항목을 입력해주세요"
+    },
     "historyGuide": {
       "title": "이력 관리 안내",
       "description": "아래에서 이력 정보를 미리 입력할 수 있습니다. 장비 등록 완료 시 함께 저장됩니다."

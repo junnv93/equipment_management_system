@@ -414,6 +414,16 @@
       "selectedFile": "Selected file: {name}",
       "pdfOnly": "Only PDF files are allowed. (Required)"
     },
+    "wizard": {
+      "step1": "Basic Info",
+      "step2": "Status & Location",
+      "step3": "Calibration",
+      "step4": "History & Files",
+      "next": "Next",
+      "previous": "Previous",
+      "managementNumberPreview": "Mgmt #",
+      "stepValidationError": "Please fill in required fields"
+    },
     "historyGuide": {
       "title": "History Management Guide",
       "description": "You can pre-enter history information below. It will be saved together when equipment registration is completed."

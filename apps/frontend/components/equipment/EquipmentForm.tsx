@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import dynamic from 'next/dynamic';
@@ -27,10 +27,21 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { type UploadedFile } from '@/components/shared/FileUpload';
 import { BasicInfoSection, type FormValues } from './BasicInfoSection';
 import { CalibrationValidityChecker } from './CalibrationValidityChecker';
+import { ManagementNumberPreviewBar } from './ManagementNumberPreviewBar';
+import { FormWizardStepper, type WizardStep } from '@/components/shared/FormWizardStepper';
 import { AlertCircle, CheckCircle2, Clock, Shield } from 'lucide-react';
+import { FORM_WIZARD_STEP_TRANSITION, FORM_WIZARD_NAVIGATION_TOKENS } from '@/lib/design-tokens';
 import { formatDate, toDate } from '@/lib/utils/date';
 import type { CreateCalibrationHistoryInput, CalibrationRecord } from './CalibrationHistorySection';
 
@@ -234,6 +245,11 @@ export function EquipmentForm({
   // 사이트 선택 상태 (서버에서 전달된 effectiveSite 사용)
   const [selectedSite, setSelectedSite] = useState<Site | undefined>(effectiveSite);
 
+  // 위저드 스텝 상태
+  const [currentStep, setCurrentStep] = useState(0);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [errorSteps, setErrorSteps] = useState<Set<number>>(new Set());
+
   // 파일 업로드 상태
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
@@ -413,6 +429,15 @@ export function EquipmentForm({
       classification: initialData?.classification,
       managementSerialNumberStr: initialData?.managementSerialNumberStr || '',
     },
+  });
+
+  // ✅ useWatch — form.watch() JSX 직접 호출 대신 훅으로 선언 (구독 명시화)
+  // form.watch() in JSX: 매 렌더마다 구독 재등록, 의존성 추적 불가
+  // useWatch(): 구독이 상단에 명시됨, stable 변수로 JSX에서 참조
+  const watchedTeamId = useWatch({ control: form.control, name: 'teamId' });
+  const watchedNextCalibrationDate = useWatch({
+    control: form.control,
+    name: 'nextCalibrationDate',
   });
 
   // ✅ useAuth() 로딩 완료 후 폼 값 동기화 (Server Component 미경유 시 fallback)
@@ -848,6 +873,58 @@ export function EquipmentForm({
     form.setValue('teamId', undefined);
   };
 
+  // 위저드 스텝 정의 — validationFields가 유일한 SSOT (별도 맵 불필요)
+  const wizardSteps = useMemo<WizardStep[]>(
+    () => [
+      { id: 'basic', label: t('form.wizard.step1'), validationFields: ['name', 'site', 'teamId'] },
+      { id: 'status-location', label: t('form.wizard.step2') },
+      { id: 'calibration', label: t('form.wizard.step3') },
+      { id: 'history-attachment', label: t('form.wizard.step4'), hidden: isEdit },
+    ],
+    [t, isEdit]
+  );
+
+  const visibleStepCount = useMemo(
+    () => wizardSteps.filter((s) => !s.hidden).length,
+    [wizardSteps]
+  );
+  const isFirstStep = currentStep === 0;
+  const isLastStep = currentStep === visibleStepCount - 1;
+
+  // 다음 스텝으로 이동 — wizardSteps.validationFields가 SSOT
+  const handleNext = useCallback(async () => {
+    const fields = (wizardSteps[currentStep]?.validationFields ?? []) as (keyof FormValues)[];
+    if (fields.length > 0) {
+      const valid = await form.trigger(fields);
+      if (!valid) {
+        setErrorSteps((prev) => new Set(prev).add(currentStep));
+        return;
+      }
+    }
+    setCompletedSteps((prev) => new Set(prev).add(currentStep));
+    setErrorSteps((prev) => {
+      const s = new Set(prev);
+      s.delete(currentStep);
+      return s;
+    });
+    setCurrentStep((prev) => prev + 1);
+  }, [currentStep, form, wizardSteps]);
+
+  // 이전 스텝으로 이동
+  const handlePrevious = useCallback(() => {
+    setCurrentStep((prev) => prev - 1);
+  }, []);
+
+  // 완료된 스텝 클릭으로 이동
+  const handleStepClick = useCallback(
+    (index: number) => {
+      if (completedSteps.has(index)) {
+        setCurrentStep(index);
+      }
+    },
+    [completedSteps]
+  );
+
   const RoleIcon = roleInfo.icon;
 
   return (
@@ -867,267 +944,336 @@ export function EquipmentForm({
           <AlertDescription>{t(`form.roles.${userRole}.description`)}</AlertDescription>
         </Alert>
 
-        {/* 섹션 1: 기본 정보 */}
-        <BasicInfoSection
-          control={form.control}
-          isEdit={isEdit}
-          selectedSite={selectedSite}
-          onSiteChange={handleSiteChange}
-          userRole={userRole}
-          userTeamId={(user as { teamId?: string })?.teamId}
-          onManagementNumberChange={checkManagementNumber}
-          managementNumberCheckResult={managementNumberCheckResult}
-          isCheckingManagementNumber={isCheckingManagementNumber}
+        {/* 위저드 스테퍼 + 관리번호 미리보기 바 */}
+        <FormWizardStepper
+          steps={wizardSteps}
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+          errorSteps={errorSteps}
+          onStepClick={handleStepClick}
+          previewBar={<ManagementNumberPreviewBar isEdit={isEdit} />}
         />
 
-        {/* 섹션 2: 교정 정보 */}
-        <CalibrationInfoSection control={form.control} />
-
-        {/* 섹션 2.5: 임시등록 전용 필드 (공용/렌탈 장비) */}
-        {isTemporary && !isEdit && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('form.temporary.title')}</CardTitle>
-              <CardDescription>{t('form.temporary.description')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* 1. 장비 유형 선택 */}
-              <div className="space-y-2">
-                <Label htmlFor="equipmentType">
-                  {t('form.temporary.equipmentType')} <span className="text-red-500">*</span>
-                </Label>
-                <div className="flex gap-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      id="type-common"
-                      name="equipmentType"
-                      value="common"
-                      checked={equipmentType === 'common'}
-                      onChange={(e) => setEquipmentType(e.target.value as 'common' | 'rental')}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor="type-common" className="font-normal cursor-pointer">
-                      {t('form.temporary.commonEquipment')}
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="radio"
-                      id="type-rental"
-                      name="equipmentType"
-                      value="rental"
-                      checked={equipmentType === 'rental'}
-                      onChange={(e) => setEquipmentType(e.target.value as 'common' | 'rental')}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor="type-rental" className="font-normal cursor-pointer">
-                      {t('form.temporary.rentalEquipment')}
-                    </Label>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. 소유처 */}
-              <div className="space-y-2">
-                <Label htmlFor="owner">
-                  {t('form.temporary.owner')} <span className="text-red-500">*</span>
-                </Label>
-                {equipmentType === 'common' ? (
-                  <select
-                    id="owner"
-                    value={owner}
-                    onChange={(e) => setOwner(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md"
-                    required
-                  >
-                    <option value="">{t('form.temporary.ownerPlaceholder')}</option>
-                    <option value="Safety팀">{t('form.temporary.ownerTeam1')}</option>
-                    <option value="Battery팀">{t('form.temporary.ownerTeam2')}</option>
-                    <option value="기타">{t('form.temporary.ownerOther')}</option>
-                  </select>
-                ) : (
-                  <Input
-                    id="owner"
-                    placeholder={t('form.temporary.ownerRentalPlaceholder')}
-                    value={owner}
-                    onChange={(e) => setOwner(e.target.value)}
-                    required
-                  />
-                )}
-              </div>
-
-              {/* 2-1. 소유처 원본 식별번호 (선택) */}
-              <div className="space-y-2">
-                <Label htmlFor="externalIdentifier">
-                  {t('form.temporary.externalIdentifierLabel')}
-                </Label>
-                <Input
-                  id="externalIdentifier"
-                  name="externalIdentifier"
-                  placeholder={
-                    equipmentType === 'common'
-                      ? t('form.temporary.externalIdentifierCommonPlaceholder')
-                      : t('form.temporary.externalIdentifierRentalPlaceholder')
-                  }
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {equipmentType === 'common'
-                    ? t('form.temporary.externalIdentifierCommonHelp')
-                    : t('form.temporary.externalIdentifierRentalHelp')}
-                </p>
-              </div>
-
-              {/* 3. 사용 예정 기간 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="usagePeriodStart">
-                    {t('form.temporary.usagePeriodStart')} <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    type="date"
-                    id="usagePeriodStart"
-                    value={usagePeriodStart}
-                    onChange={(e) => setUsagePeriodStart(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="usagePeriodEnd">
-                    {t('form.temporary.usagePeriodEnd')} <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    type="date"
-                    id="usagePeriodEnd"
-                    value={usagePeriodEnd}
-                    onChange={(e) => setUsagePeriodEnd(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* 4. 교정성적서 업로드 */}
-              <div className="space-y-2">
-                <Label htmlFor="calibrationCertificate">
-                  {t('form.temporary.calibrationCertificate')}{' '}
-                  <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="file"
-                  id="calibrationCertificate"
-                  accept=".pdf"
-                  required
-                  className="cursor-pointer"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setCalibrationCertificateFile(file);
-                    }
-                  }}
-                />
-                {calibrationCertificateFile && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('form.temporary.selectedFile', { name: calibrationCertificateFile.name })}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">{t('form.temporary.pdfOnly')}</p>
-              </div>
-
-              {/* 5. 교정 유효성 자동 검증 */}
-              {form.watch('nextCalibrationDate') && usagePeriodEnd && (
-                <CalibrationValidityChecker
-                  nextCalibrationDate={form.watch('nextCalibrationDate') || ''}
-                  usagePeriodEnd={usagePeriodEnd}
-                />
-              )}
-            </CardContent>
-          </Card>
+        {/* Step 0: 기본 정보 */}
+        {currentStep === 0 && (
+          <div
+            key={0}
+            className={[
+              FORM_WIZARD_STEP_TRANSITION.enter,
+              FORM_WIZARD_STEP_TRANSITION.wrapper,
+            ].join(' ')}
+          >
+            <BasicInfoSection
+              control={form.control}
+              isEdit={isEdit}
+              selectedSite={selectedSite}
+              onSiteChange={handleSiteChange}
+              userRole={userRole}
+              userTeamId={(user as { teamId?: string })?.teamId}
+              onManagementNumberChange={checkManagementNumber}
+              managementNumberCheckResult={managementNumberCheckResult}
+              isCheckingManagementNumber={isCheckingManagementNumber}
+              wizardMode
+            />
+          </div>
         )}
 
-        {/* 섹션 3: 상태 및 위치 */}
-        <StatusLocationSection
-          control={form.control}
-          isEdit={isEdit}
-          selectedSite={selectedSite}
-          selectedTeamId={form.watch('teamId')}
-        />
+        {/* Step 1: 상태·위치 (+ 임시등록 전용 필드) */}
+        {currentStep === 1 && (
+          <div
+            key={1}
+            className={[
+              FORM_WIZARD_STEP_TRANSITION.enter,
+              FORM_WIZARD_STEP_TRANSITION.wrapper,
+            ].join(' ')}
+          >
+            <StatusLocationSection
+              control={form.control}
+              isEdit={isEdit}
+              selectedSite={selectedSite}
+              selectedTeamId={watchedTeamId}
+            />
 
-        {/* 섹션 4: 파일 첨부 */}
-        <AttachmentSection
-          files={uploadedFiles}
-          onChange={setUploadedFiles}
-          isEdit={isEdit}
-          isLoading={isLoading}
-          existingAttachments={existingAttachments}
-        />
+            {/* 임시등록 전용 필드 (공용/렌탈 장비) */}
+            {isTemporary && !isEdit && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('form.temporary.title')}</CardTitle>
+                  <CardDescription>{t('form.temporary.description')}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* 1. 장비 유형 선택 */}
+                  <div className="space-y-2">
+                    <Label>
+                      {t('form.temporary.equipmentType')} <span className="text-red-500">*</span>
+                    </Label>
+                    <RadioGroup
+                      value={equipmentType}
+                      onValueChange={(v) => setEquipmentType(v as 'common' | 'rental')}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="common" id="type-common" />
+                        <Label htmlFor="type-common" className="font-normal cursor-pointer">
+                          {t('form.temporary.commonEquipment')}
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="rental" id="type-rental" />
+                        <Label htmlFor="type-rental" className="font-normal cursor-pointer">
+                          {t('form.temporary.rentalEquipment')}
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
 
-        {/* 섹션 5-8: 이력 관리 (등록/수정 모두 가능) */}
-        {/* 등록 모드 안내 */}
-        {!isEdit && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('form.historyGuide.title')}</AlertTitle>
-            <AlertDescription>{t('form.historyGuide.description')}</AlertDescription>
-          </Alert>
+                  {/* 2. 소유처 */}
+                  <div className="space-y-2">
+                    <Label htmlFor="owner">
+                      {t('form.temporary.owner')} <span className="text-red-500">*</span>
+                    </Label>
+                    {equipmentType === 'common' ? (
+                      <Select value={owner} onValueChange={setOwner} required>
+                        <SelectTrigger id="owner">
+                          <SelectValue placeholder={t('form.temporary.ownerPlaceholder')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Safety팀">{t('form.temporary.ownerTeam1')}</SelectItem>
+                          <SelectItem value="Battery팀">
+                            {t('form.temporary.ownerTeam2')}
+                          </SelectItem>
+                          <SelectItem value="기타">{t('form.temporary.ownerOther')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="owner"
+                        placeholder={t('form.temporary.ownerRentalPlaceholder')}
+                        value={owner}
+                        onChange={(e) => setOwner(e.target.value)}
+                        required
+                      />
+                    )}
+                  </div>
+
+                  {/* 2-1. 소유처 원본 식별번호 (선택) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="externalIdentifier">
+                      {t('form.temporary.externalIdentifierLabel')}
+                    </Label>
+                    <Input
+                      id="externalIdentifier"
+                      name="externalIdentifier"
+                      placeholder={
+                        equipmentType === 'common'
+                          ? t('form.temporary.externalIdentifierCommonPlaceholder')
+                          : t('form.temporary.externalIdentifierRentalPlaceholder')
+                      }
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {equipmentType === 'common'
+                        ? t('form.temporary.externalIdentifierCommonHelp')
+                        : t('form.temporary.externalIdentifierRentalHelp')}
+                    </p>
+                  </div>
+
+                  {/* 3. 사용 예정 기간 */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="usagePeriodStart">
+                        {t('form.temporary.usagePeriodStart')}{' '}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        id="usagePeriodStart"
+                        value={usagePeriodStart}
+                        onChange={(e) => setUsagePeriodStart(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="usagePeriodEnd">
+                        {t('form.temporary.usagePeriodEnd')} <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        id="usagePeriodEnd"
+                        value={usagePeriodEnd}
+                        onChange={(e) => setUsagePeriodEnd(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* 4. 교정성적서 업로드 */}
+                  <div className="space-y-2">
+                    <Label htmlFor="calibrationCertificate">
+                      {t('form.temporary.calibrationCertificate')}{' '}
+                      <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      type="file"
+                      id="calibrationCertificate"
+                      accept=".pdf"
+                      required
+                      className="cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCalibrationCertificateFile(file);
+                        }
+                      }}
+                    />
+                    {calibrationCertificateFile && (
+                      <p className="text-xs text-muted-foreground">
+                        {t('form.temporary.selectedFile', {
+                          name: calibrationCertificateFile.name,
+                        })}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">{t('form.temporary.pdfOnly')}</p>
+                  </div>
+
+                  {/* 5. 교정 유효성 자동 검증 */}
+                  {watchedNextCalibrationDate && usagePeriodEnd && (
+                    <CalibrationValidityChecker
+                      nextCalibrationDate={watchedNextCalibrationDate}
+                      usagePeriodEnd={usagePeriodEnd}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
 
-        {/* 섹션 5: 위치 변동 이력 */}
-        <LocationHistorySection
-          equipmentUuid={initialData?.uuid || 'new'}
-          history={locationHistory}
-          onAdd={handleAddLocationHistory}
-          onDelete={handleDeleteLocationHistory}
-          isLoading={isHistoryLoading}
-          disabled={isLoading}
-        />
+        {/* Step 2: 교정 정보 */}
+        {currentStep === 2 && (
+          <div
+            key={2}
+            className={[
+              FORM_WIZARD_STEP_TRANSITION.enter,
+              FORM_WIZARD_STEP_TRANSITION.wrapper,
+            ].join(' ')}
+          >
+            <CalibrationInfoSection control={form.control} />
+          </div>
+        )}
 
-        {/* 섹션 6: 유지보수 내역 */}
-        <MaintenanceHistorySection
-          equipmentUuid={initialData?.uuid || 'new'}
-          history={maintenanceHistory}
-          onAdd={handleAddMaintenanceHistory}
-          onDelete={handleDeleteMaintenanceHistory}
-          isLoading={isHistoryLoading}
-          disabled={isLoading}
-        />
+        {/* Step 3: 이력·첨부 (create 모드 전용) */}
+        {!isEdit && currentStep === 3 && (
+          <div
+            key={3}
+            className={[
+              FORM_WIZARD_STEP_TRANSITION.enter,
+              FORM_WIZARD_STEP_TRANSITION.wrapper,
+            ].join(' ')}
+          >
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{t('form.historyGuide.title')}</AlertTitle>
+              <AlertDescription>{t('form.historyGuide.description')}</AlertDescription>
+            </Alert>
 
-        {/* 섹션 7: 손상/오작동/변경/수리 내역 */}
-        <IncidentHistorySection
-          equipmentUuid={initialData?.uuid || 'new'}
-          history={incidentHistory}
-          onAdd={handleAddIncidentHistory}
-          onDelete={handleDeleteIncidentHistory}
-          isLoading={isHistoryLoading}
-          disabled={isLoading}
-        />
+            <AttachmentSection
+              files={uploadedFiles}
+              onChange={setUploadedFiles}
+              isEdit={isEdit}
+              isLoading={isLoading}
+              existingAttachments={existingAttachments}
+            />
 
-        {/* 섹션 8: 교정 이력 (등록/수정 모두 가능) */}
-        <CalibrationHistorySection
-          equipmentUuid={initialData?.uuid}
-          history={calibrationHistory}
-          onAdd={!isEdit ? handleAddCalibrationHistory : undefined}
-          onDelete={!isEdit ? handleDeleteCalibrationHistory : undefined}
-          isLoading={isHistoryLoading}
-          disabled={isLoading}
-          isCreateMode={!isEdit}
-        />
+            <LocationHistorySection
+              equipmentUuid={initialData?.uuid || 'new'}
+              history={locationHistory}
+              onAdd={handleAddLocationHistory}
+              onDelete={handleDeleteLocationHistory}
+              isLoading={isHistoryLoading}
+              disabled={isLoading}
+            />
 
-        {/* 버튼 */}
-        <div className="flex justify-end gap-4 pt-4 border-t">
-          {onCancel && (
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-              {t('form.actions.cancel')}
-            </Button>
-          )}
-          <Button type="submit" disabled={isLoading}>
-            {isLoading
-              ? t('form.actions.saving')
-              : isEdit
-                ? t('form.actions.edit')
-                : t('form.actions.create')}
-            {needsApproval && !isLoading && t('form.actions.approvalSuffix')}
-          </Button>
+            <MaintenanceHistorySection
+              equipmentUuid={initialData?.uuid || 'new'}
+              history={maintenanceHistory}
+              onAdd={handleAddMaintenanceHistory}
+              onDelete={handleDeleteMaintenanceHistory}
+              isLoading={isHistoryLoading}
+              disabled={isLoading}
+            />
+
+            <IncidentHistorySection
+              equipmentUuid={initialData?.uuid || 'new'}
+              history={incidentHistory}
+              onAdd={handleAddIncidentHistory}
+              onDelete={handleDeleteIncidentHistory}
+              isLoading={isHistoryLoading}
+              disabled={isLoading}
+            />
+
+            <CalibrationHistorySection
+              equipmentUuid={initialData?.uuid}
+              history={calibrationHistory}
+              onAdd={handleAddCalibrationHistory}
+              onDelete={handleDeleteCalibrationHistory}
+              isLoading={isHistoryLoading}
+              disabled={isLoading}
+              isCreateMode
+            />
+          </div>
+        )}
+
+        {/* 수정 모드: Step 2(교정정보)가 마지막 → 첨부/이력은 상세 페이지에서 관리 */}
+        {isEdit && currentStep === 2 && (
+          <div
+            key="edit-attachment"
+            className={[
+              FORM_WIZARD_STEP_TRANSITION.enter,
+              FORM_WIZARD_STEP_TRANSITION.wrapper,
+            ].join(' ')}
+          >
+            <AttachmentSection
+              files={uploadedFiles}
+              onChange={setUploadedFiles}
+              isEdit={isEdit}
+              isLoading={isLoading}
+              existingAttachments={existingAttachments}
+            />
+          </div>
+        )}
+
+        {/* 위저드 네비게이션 버튼 */}
+        <div className={FORM_WIZARD_NAVIGATION_TOKENS.container}>
+          <div className={FORM_WIZARD_NAVIGATION_TOKENS.leftGroup}>
+            {onCancel && isFirstStep && (
+              <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                {t('form.actions.cancel')}
+              </Button>
+            )}
+            {!isFirstStep && (
+              <Button type="button" variant="outline" onClick={handlePrevious} disabled={isLoading}>
+                {t('form.wizard.previous')}
+              </Button>
+            )}
+          </div>
+
+          <div className={FORM_WIZARD_NAVIGATION_TOKENS.rightGroup}>
+            {!isLastStep ? (
+              <Button type="button" onClick={handleNext} disabled={isLoading}>
+                {t('form.wizard.next')}
+              </Button>
+            ) : (
+              <Button type="submit" disabled={isLoading}>
+                {isLoading
+                  ? t('form.actions.saving')
+                  : isEdit
+                    ? t('form.actions.edit')
+                    : t('form.actions.create')}
+                {needsApproval && !isLoading && t('form.actions.approvalSuffix')}
+              </Button>
+            )}
+          </div>
         </div>
       </form>
 
