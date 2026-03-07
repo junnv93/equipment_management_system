@@ -163,22 +163,21 @@ export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType, string> = {
 // ============================================================================
 
 /**
- * 탭 타입
+ * 탭 타입 (리디자인: 3탭 구조)
+ *
+ * - list: 교정목록 (타임라인 + 테이블 통합)
+ * - intermediate: 중간점검
+ * - self-inspection: 자체점검
  */
-export type CalibrationTabType = 'all' | 'overdue' | 'upcoming' | 'intermediate';
+export type CalibrationTabType = 'list' | 'intermediate' | 'self-inspection';
 
 /**
  * 탭별 색상 (UL Brand 통일)
- *
- * - overdue: UL Red
- * - upcoming: UL Orange
- * - intermediate: UL Fog (purple 대체)
  */
 export const CALIBRATION_TAB_COLORS: Record<CalibrationTabType, string> = {
-  all: 'text-foreground',
-  overdue: 'text-ul-red dark:text-red-400',
-  upcoming: 'text-ul-orange dark:text-orange-400',
+  list: 'text-foreground',
   intermediate: 'text-ul-fog dark:text-ul-info',
+  'self-inspection': 'text-brand-ok',
 };
 
 /**
@@ -222,6 +221,9 @@ export const CALIBRATION_MOTION = {
  * 교정 테이블 스타일 (EQUIPMENT_TABLE_TOKENS 패턴 참조)
  */
 export const CALIBRATION_TABLE = {
+  /** 테이블 외부 컨테이너 */
+  wrapper: 'border rounded-md',
+
   /** Row hover */
   rowHover: ['hover:bg-muted/50 dark:hover:bg-muted/50', CALIBRATION_MOTION.tableRow].join(' '),
 
@@ -339,3 +341,184 @@ export const CALIBRATION_CARD_BORDER: Record<string, string> = {
   pending: 'border-ul-blue/20 dark:border-ul-blue/30',
   default: 'border-border',
 };
+
+// ============================================================================
+// 13. CALIBRATION_TIMELINE — 12개월 수평 타임라인 바
+// ============================================================================
+
+/**
+ * 12개월 타임라인 바 스타일
+ *
+ * 현재월 -2 ~ +10 범위를 월별 세그먼트 바로 표시.
+ * 각 세그먼트 높이 = 해당 월 교정 건수 / 최대 건수 (상대적 부하)
+ * 세그먼트 색상 = 해당 월의 최고 긴급도 (overdue > warning > ok)
+ */
+export const CALIBRATION_TIMELINE = {
+  /** 타임라인 전체 컨테이너 */
+  container: 'relative bg-brand-bg-surface border border-brand-border-subtle rounded-lg px-4 py-3',
+
+  /** 월 레이블 행 (세그먼트 컬럼 정렬 — flex gap-px px-0.5 맞춤) */
+  monthLabels:
+    'flex gap-px px-0.5 mt-1.5 text-xs text-brand-text-muted font-mono tabular-nums select-none',
+
+  /** 트랙 컨테이너 */
+  track: 'relative h-10',
+  /** 트랙 배경 */
+  trackBg: 'absolute inset-0 bg-brand-bg-overlay rounded-sm',
+  /** 오늘 마커 (수직선, 세그먼트 위에 z-10) */
+  todayMarker: 'absolute top-0 bottom-0 w-px bg-brand-border-strong/60 z-10 pointer-events-none',
+
+  /** 월별 세그먼트 바 */
+  segment: {
+    /** 공통 기반 (높이는 인라인 style로) */
+    base: 'w-full rounded-sm motion-safe:transition-opacity motion-safe:duration-150',
+    overdue: 'bg-brand-critical',
+    warning: 'bg-brand-warning',
+    ok: 'bg-brand-ok',
+    /** 활성(호버/포커스) */
+    active: 'opacity-100',
+    /** 기본 */
+    idle: 'opacity-70',
+    /** 데이터 없는 월: 최소 마커 */
+    emptyBar: 'w-full h-px bg-brand-bg-overlay rounded-full',
+  },
+
+  /** 호버 툴팁 */
+  tooltip:
+    'absolute z-20 -translate-x-1/2 bottom-full mb-2 left-1/2 px-3 py-2 text-xs bg-popover border border-border rounded-md shadow-md pointer-events-none min-w-[140px]',
+
+  /** 툴팁 월 헤더 */
+  tooltipDday: 'font-mono tabular-nums font-bold',
+
+  /** 툴팁 장비명 행 */
+  tooltipName: 'flex items-center justify-between gap-2 text-foreground max-w-[200px] mt-0.5',
+
+  /** 툴팁 "N개 더" */
+  tooltipMore: 'text-muted-foreground mt-1',
+
+  /** 툴팁 상태별 텍스트 색상 */
+  tooltipText: {
+    overdue: 'text-brand-critical',
+    warning: 'text-brand-warning',
+    ok: 'text-brand-ok',
+  },
+
+  /** 도트 스타일 (하위 호환 — 현재 미사용) */
+  dot: {
+    overdue: 'bg-brand-critical',
+    warning: 'bg-brand-warning',
+    ok: 'bg-brand-ok',
+    base: 'w-2.5 h-2.5 rounded-full cursor-pointer motion-safe:transition-transform motion-safe:duration-100',
+    active: 'scale-150',
+    idle: 'scale-100',
+  },
+} as const;
+
+/**
+ * 도트 Y 오프셋 간격 (px) — 같은 X 위치 도트 수직 분리
+ * 변경 시 이 상수만 수정
+ */
+export const CALIBRATION_TIMELINE_DOT_Y_OFFSET_PX = 9;
+
+/**
+ * Utility: 타임라인 도트 색상 클래스
+ *
+ * 임계값 SSOT: getCalibrationDdayClasses / getCalibrationDdayLabel과 동일한 0, 30일 기준
+ */
+export function getCalibrationTimelineDotClasses(days: number): string {
+  if (days < 0) return CALIBRATION_TIMELINE.dot.overdue;
+  if (days <= 30) return CALIBRATION_TIMELINE.dot.warning;
+  return CALIBRATION_TIMELINE.dot.ok;
+}
+
+/**
+ * Utility: 타임라인 툴팁 텍스트 색상 클래스
+ */
+export function getCalibrationTimelineTooltipTextClasses(days: number): string {
+  if (days < 0) return CALIBRATION_TIMELINE.tooltipText.overdue;
+  if (days <= 30) return CALIBRATION_TIMELINE.tooltipText.warning;
+  return CALIBRATION_TIMELINE.tooltipText.ok;
+}
+
+// ============================================================================
+// 14. CALIBRATION_DDAY_COLUMN — D-day 테이블 컬럼
+// ============================================================================
+
+/**
+ * D-day 컬럼 스타일
+ *
+ * - overdue: 음수 일수 (예: "-15일") → brand-critical
+ * - warning: 30일 이내 (예: "D-7") → brand-warning
+ * - normal: 30일 초과 (예: "D-120") → brand-text-secondary
+ * - none: 날짜 없음 → muted
+ */
+export const CALIBRATION_DDAY_COLUMN = {
+  base: 'font-mono tabular-nums font-medium text-sm',
+  overdue: 'text-brand-critical',
+  warning: 'text-brand-warning',
+  normal: 'text-brand-text-secondary',
+  none: 'text-muted-foreground',
+} as const;
+
+/**
+ * Utility: D-day 컬럼 클래스 가져오기
+ * @param days 잔여 일수 (음수 = 초과)
+ */
+export function getCalibrationDdayClasses(days: number | null | undefined): string {
+  if (days === null || days === undefined) {
+    return [CALIBRATION_DDAY_COLUMN.base, CALIBRATION_DDAY_COLUMN.none].join(' ');
+  }
+  if (days < 0) {
+    return [CALIBRATION_DDAY_COLUMN.base, CALIBRATION_DDAY_COLUMN.overdue].join(' ');
+  }
+  if (days <= 30) {
+    return [CALIBRATION_DDAY_COLUMN.base, CALIBRATION_DDAY_COLUMN.warning].join(' ');
+  }
+  return [CALIBRATION_DDAY_COLUMN.base, CALIBRATION_DDAY_COLUMN.normal].join(' ');
+}
+
+/**
+ * Utility: D-day 텍스트 레이블 생성
+ * @param days 잔여 일수 (음수 = 초과)
+ */
+export function getCalibrationDdayLabel(days: number | null | undefined): string {
+  if (days === null || days === undefined) return '-';
+  if (days < 0) return `-${Math.abs(days)}일`;
+  if (days === 0) return 'D-Day';
+  return `D-${days}`;
+}
+
+// ============================================================================
+// 15. CALIBRATION_APPROVAL_ROW — 승인 대기 행 강조
+// ============================================================================
+
+/**
+ * 승인 대기 행 스타일
+ *
+ * pending_approval / pending_review 상태의 교정 행에 왼쪽 4px bar + 배경색 적용.
+ */
+export const CALIBRATION_APPROVAL_ROW = {
+  pending: 'border-l-4 border-l-brand-warning bg-brand-warning/5',
+  default: '',
+} as const;
+
+/**
+ * Utility: 승인 상태별 테이블 행 클래스 가져오기
+ */
+export function getCalibrationRowClasses(approvalStatus?: string): string {
+  if (approvalStatus === 'pending_approval' || approvalStatus === 'pending_review') {
+    return CALIBRATION_APPROVAL_ROW.pending;
+  }
+  return CALIBRATION_APPROVAL_ROW.default;
+}
+
+// ============================================================================
+// 16. CALIBRATION_TAB_TRANSITION — 탭 전환 애니메이션
+// ============================================================================
+
+/**
+ * 탭 콘텐츠 전환 클래스
+ *
+ * Web Interface Guidelines: specific property (opacity)만 전환
+ */
+export const CALIBRATION_TAB_TRANSITION = getTransitionClasses('fast', ['opacity']);

@@ -409,17 +409,23 @@ export function getEquipmentHeaderButtonClasses(variant: HeaderButtonVariant = '
 
 /**
  * 장비 탭 스타일
+ *
+ * pill 스타일 탭 (TabsList bg-card 컨테이너 내부)
+ * - base: padding + font + rounded + transition
+ * - active: data-[state=active]: 접두사 포함 → 컴포넌트에서 별도 data-state 지정 불필요
+ * - inactive: muted 텍스트 + hover bg
  */
 export const EQUIPMENT_TAB_TOKENS = {
-  /** Trigger (탭 버튼) */
+  /** Trigger (탭 버튼) — pill 스타일 */
   trigger: {
     base: [
-      'px-4 py-2 text-sm font-medium',
-      'border-b-2 border-transparent',
-      getTransitionClasses('fast', ['color', 'border-color']),
+      'px-3 py-1.5 text-sm font-medium rounded-md',
+      getTransitionClasses('fast', ['background-color', 'color']),
     ].join(' '),
-    active: 'border-ul-midnight text-ul-midnight dark:border-ul-info dark:text-ul-info',
-    inactive: 'text-muted-foreground hover:text-foreground',
+    /** 활성 상태 (Radix UI data-state=active 포함) */
+    active:
+      'data-[state=active]:bg-ul-midnight data-[state=active]:text-white dark:data-[state=active]:bg-ul-info dark:data-[state=active]:text-ul-midnight',
+    inactive: 'text-muted-foreground hover:text-foreground hover:bg-muted',
     focus: FOCUS_TOKENS.classes.brand,
   },
 

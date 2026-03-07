@@ -221,6 +221,17 @@ export {
   CALIBRATION_INTERMEDIATE_CHECK_ICON_COLORS,
   getIntermediateCheckIconColor,
   CALIBRATION_CARD_BORDER,
+  // Section 13-16 (리디자인)
+  CALIBRATION_TIMELINE,
+  CALIBRATION_TIMELINE_DOT_Y_OFFSET_PX,
+  getCalibrationTimelineDotClasses,
+  getCalibrationTimelineTooltipTextClasses,
+  CALIBRATION_DDAY_COLUMN,
+  getCalibrationDdayClasses,
+  getCalibrationDdayLabel,
+  CALIBRATION_APPROVAL_ROW,
+  getCalibrationRowClasses,
+  CALIBRATION_TAB_TRANSITION,
   type CalibrationStatusType,
   type IntermediateCheckStatus,
   type CalibrationStatsType,
@@ -317,6 +328,18 @@ export {
   AUDIT_PAGINATION_TOKENS,
   AUDIT_MOTION,
 } from './components/audit';
+
+// Form Wizard
+export {
+  FORM_WIZARD_STEPPER_TOKENS,
+  FORM_WIZARD_PREVIEW_BAR_TOKENS,
+  FORM_WIZARD_STEP_TRANSITION,
+  FORM_WIZARD_COMPLETION_ANIMATION,
+  FORM_WIZARD_NAVIGATION_TOKENS,
+  getWizardStepperNodeClasses,
+  getWizardStepperLabelClasses,
+  getWizardConnectorClasses,
+} from './components/form-wizard';
 
 // Settings
 export {

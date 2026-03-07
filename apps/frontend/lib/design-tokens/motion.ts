@@ -70,6 +70,18 @@ export const ANIMATION_PRESETS = {
   /** 슬라이드 다운 */
   slideDown: 'motion-safe:animate-in motion-safe:slide-in-from-top-4',
 
+  /**
+   * 슬라이드 업 + 페이드 인 복합 (SSOT)
+   *
+   * 탭 콘텐츠 전환, 타임라인 아이템 입장 등 방향성 있는 등장에 사용.
+   * 단일 animate-in 선언으로 fade + slide를 동시 적용.
+   * duration은 사용처에서 `motion-safe:duration-*`으로 별도 지정.
+   *
+   * @example
+   * className={cn(ANIMATION_PRESETS.slideUpFade, 'motion-safe:duration-200')}
+   */
+  slideUpFade: 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3',
+
   /** 스케일 업 (팝) */
   scaleUp: 'motion-safe:animate-in motion-safe:zoom-in-95',
 
