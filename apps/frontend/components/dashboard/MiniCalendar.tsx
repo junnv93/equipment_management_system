@@ -1,0 +1,260 @@
+'use client';
+
+import { useState, useMemo, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type {
+  OverdueCalibration,
+  UpcomingCalibration,
+  UpcomingCheckoutReturn,
+} from '@/lib/api/dashboard-api';
+import { DASHBOARD_CALENDAR_TOKENS as T } from '@/lib/design-tokens';
+
+type EventType = 'overdue' | 'upcoming' | 'return';
+
+interface CalendarEvent {
+  id: string;
+  label: string;
+  type: EventType;
+}
+
+interface MiniCalendarProps {
+  upcomingCalibrations: UpcomingCalibration[];
+  upcomingCheckoutReturns: UpcomingCheckoutReturn[];
+  overdueCalibrations?: OverdueCalibration[];
+  className?: string;
+}
+
+function toDateKey(dateStr: string): string {
+  return dateStr.slice(0, 10);
+}
+
+const MONTHS_KO = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+const MONTHS_EN = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+export function MiniCalendar({
+  upcomingCalibrations,
+  upcomingCheckoutReturns,
+  overdueCalibrations = [],
+  className,
+}: MiniCalendarProps) {
+  const t = useTranslations('dashboard.calendar');
+
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
+
+  const todayKey = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  // 이벤트 맵 빌드
+  const eventMap = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+
+    const push = (key: string, event: CalendarEvent) => {
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(event);
+    };
+
+    overdueCalibrations.forEach((c) => {
+      if (c.dueDate)
+        push(toDateKey(c.dueDate), { id: c.id, label: c.equipmentName ?? c.name, type: 'overdue' });
+    });
+
+    upcomingCalibrations.forEach((c) => {
+      if (c.dueDate)
+        push(toDateKey(c.dueDate), { id: c.id, label: c.equipmentName, type: 'upcoming' });
+    });
+
+    upcomingCheckoutReturns.forEach((r) => {
+      if (r.expectedReturnDate)
+        push(toDateKey(r.expectedReturnDate), { id: r.id, label: r.equipmentName, type: 'return' });
+    });
+
+    return map;
+  }, [overdueCalibrations, upcomingCalibrations, upcomingCheckoutReturns]);
+
+  // 달력 그리드 생성
+  const calendarCells = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const cells: Array<null | { day: number; dateKey: string; events: CalendarEvent[] }> = [];
+
+    for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      cells.push({ day: d, dateKey, events: eventMap.get(dateKey) ?? [] });
+    }
+
+    return cells;
+  }, [currentMonth, eventMap]);
+
+  const handlePrev = useCallback(() => {
+    setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  }, []);
+
+  const handleNext = useCallback(() => {
+    setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  }, []);
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  // i18n dayLabels는 JSON 배열이므로 직접 처리
+  const dayLabelsRaw = t.raw('dayLabels') as string[];
+
+  const getDotClass = (type: EventType) => {
+    if (type === 'overdue') return T.dotOverdue;
+    if (type === 'upcoming') return T.dotUpcoming;
+    return T.dotReturn;
+  };
+
+  const getPopupDotClass = (type: EventType) => {
+    if (type === 'overdue') return cn(T.popupItemDot, 'bg-ul-red dark:bg-red-400');
+    if (type === 'upcoming') return cn(T.popupItemDot, 'bg-yellow-400 dark:bg-yellow-500');
+    return cn(T.popupItemDot, 'bg-ul-blue dark:bg-ul-info');
+  };
+
+  const getEventTypeLabel = (type: EventType) => {
+    if (type === 'overdue') return t('overdueCalib');
+    if (type === 'upcoming') return t('upcomingCalib');
+    return t('returnDue');
+  };
+
+  // 월 타이틀 포맷
+  const monthTitle = (() => {
+    try {
+      return t('title', { year, month: MONTHS_KO[month] });
+    } catch {
+      return `${year}년 ${MONTHS_EN[month]}`;
+    }
+  })();
+
+  return (
+    <div className={cn(T.container, className)} role="region" aria-label={t('ariaLabel')}>
+      {/* 헤더: 월 이동 */}
+      <div className={T.header}>
+        <button
+          type="button"
+          onClick={handlePrev}
+          className={T.navButton}
+          aria-label={t('prevMonth')}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className={T.title}>{monthTitle}</span>
+        <button
+          type="button"
+          onClick={handleNext}
+          className={T.navButton}
+          aria-label={t('nextMonth')}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* 요일 헤더 */}
+      <div className={T.grid}>
+        {dayLabelsRaw.map((label, i) => (
+          <div key={i} className={T.dayLabel}>
+            {label}
+          </div>
+        ))}
+
+        {/* 날짜 셀 */}
+        {calendarCells.map((cell, idx) => {
+          if (!cell) {
+            return <div key={`empty-${idx}`} />;
+          }
+
+          const isToday = cell.dateKey === todayKey;
+          const hasEvents = cell.events.length > 0;
+          const isHovered = hoveredDate === cell.dateKey;
+
+          // 도트 타입 중복 제거 (같은 타입 도트는 1개만)
+          const uniqueTypes = Array.from(new Set(cell.events.map((e) => e.type)));
+
+          return (
+            <div
+              key={cell.dateKey}
+              className={cn(T.cell, isToday && T.cellToday, hasEvents && 'cursor-pointer')}
+              onMouseEnter={() => hasEvents && setHoveredDate(cell.dateKey)}
+              onMouseLeave={() => setHoveredDate(null)}
+              onFocus={() => hasEvents && setHoveredDate(cell.dateKey)}
+              onBlur={() => setHoveredDate(null)}
+            >
+              <span className={cn(T.cellNumber, isToday && T.cellNumberToday)}>{cell.day}</span>
+
+              {/* 이벤트 도트 */}
+              {uniqueTypes.length > 0 && (
+                <div className={T.dots}>
+                  {uniqueTypes.map((type) => (
+                    <span key={type} className={getDotClass(type)} aria-hidden="true" />
+                  ))}
+                </div>
+              )}
+
+              {/* 호버 팝업 */}
+              {isHovered && cell.events.length > 0 && (
+                <div className={T.popup} role="tooltip">
+                  <div className={T.popupTitle}>{cell.dateKey.slice(5).replace('-', '/')}</div>
+                  {cell.events.slice(0, 5).map((ev, i) => (
+                    <div key={`${ev.id}-${i}`} className={T.popupItem}>
+                      <span className={getPopupDotClass(ev.type)} aria-hidden="true" />
+                      <span className={T.popupItemText} title={ev.label}>
+                        {getEventTypeLabel(ev.type)}: {ev.label}
+                      </span>
+                    </div>
+                  ))}
+                  {cell.events.length > 5 && (
+                    <div className="text-[10px] text-muted-foreground mt-1">
+                      +{cell.events.length - 5}건 더
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 범례 */}
+      <div className={T.legend}>
+        <div className={T.legendItem}>
+          <span className={cn(T.legendDot, 'bg-ul-red dark:bg-red-400')} />
+          <span className={T.legendText}>{t('legendOverdue')}</span>
+        </div>
+        <div className={T.legendItem}>
+          <span className={cn(T.legendDot, 'bg-yellow-400 dark:bg-yellow-500')} />
+          <span className={T.legendText}>{t('legendUpcoming')}</span>
+        </div>
+        <div className={T.legendItem}>
+          <span className={cn(T.legendDot, 'bg-ul-blue dark:bg-ul-info')} />
+          <span className={T.legendText}>{t('legendReturn')}</span>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -52,6 +52,7 @@ async function DashboardAsync() {
       initialOverdueCheckouts={aggregate.overdueCheckouts ?? undefined}
       initialEquipmentStatusStats={aggregate.equipmentStatusStats ?? undefined}
       initialRecentActivities={aggregate.recentActivities ?? undefined}
+      initialUpcomingCheckoutReturns={aggregate.upcomingCheckoutReturns ?? undefined}
     />
   );
 }

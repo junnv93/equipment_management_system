@@ -242,6 +242,20 @@
     "overdue": "D+{days}",
     "upcoming": "D-{days}"
   },
+  "controlCenter": {
+    "overdueTitle": "Calibration Overdue",
+    "overdueEmpty": "No Overdue",
+    "overdueEmptyDesc": "All calibrations are within the normal range",
+    "upcomingTitle": "Calibration Upcoming",
+    "upcomingEmpty": "No Upcoming Calibrations",
+    "upcomingEmptyDesc": "No calibrations scheduled within 30 days",
+    "overdueCount": "{count} overdue",
+    "upcomingCount": "{count} upcoming",
+    "checkoutOverdueCount": "Checkout overdue {count}",
+    "totalEquipment": "Total {count} units",
+    "myEquipment": "My {count} units",
+    "teamEquipment": "Team {count} units"
+  },
   "srOnly": {
     "pendingApprovals": "Pending approvals status",
     "equipmentStats": "Equipment statistics",
@@ -249,7 +263,9 @@
     "alertsAndStatus": "Action items and status distribution",
     "dashboardDetail": "Dashboard details",
     "dashboardTabs": "Dashboard tabs",
-    "loading": "Loading dashboard..."
+    "loading": "Loading dashboard...",
+    "ddayCounters": "Calibration D-day counters",
+    "recentActivity": "Recent activity"
   },
   "equipmentStatusLabels": {
     "available": "Available",
@@ -270,5 +286,54 @@
     "ariaPrefix": "Equipment status distribution",
     "statusEntry": "{label} {count} units ({percent}%)",
     "tooltipEntry": "{label}: {count} units ({percent}%)"
+  },
+  "compactDday": {
+    "title": "Calibration Status",
+    "overdueCount": "{count} overdue",
+    "upcomingCount": "{count} upcoming",
+    "viewAllOverdue": "View all overdue calibrations",
+    "viewAllUpcoming": "View all upcoming calibrations",
+    "viewAll": "View All",
+    "empty": "No Calibration Issues",
+    "emptyDesc": "No overdue or upcoming calibrations",
+    "ariaLabel": "Calibration status compact list"
+  },
+  "overdueCheckouts": {
+    "title": "Overdue Checkouts",
+    "count": "{count} items",
+    "daysOverdue": "D+{days}",
+    "viewDetail": "View detail",
+    "empty": "No Overdue",
+    "emptyDesc": "No checkouts have exceeded their due date",
+    "ariaLabel": "Overdue checkout list"
+  },
+  "calendar": {
+    "title": "{month} {year}",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "legendOverdue": "Calib. Overdue",
+    "legendUpcoming": "Calib. Due",
+    "legendReturn": "Return Due",
+    "overdueCalib": "Calib. Overdue",
+    "upcomingCalib": "Calib. Due",
+    "returnDue": "Return Due",
+    "dayLabels": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+    "ariaLabel": "Mini calendar"
+  },
+  "teamDistribution": {
+    "title": "Equipment by Team",
+    "total": "Total {total} units",
+    "empty": "No team data",
+    "ariaLabel": "Equipment distribution by team bar chart"
+  },
+  "kpi": {
+    "total": "Total Equipment",
+    "utilization": "Utilization",
+    "utilizationSub": "{count} available",
+    "activeCheckouts": "Checked Out",
+    "activeCheckoutsSub": "{percent}% of total",
+    "nonConforming": "Non-Conforming",
+    "nonConformingSub": "Immediate action required",
+    "nonConformingSubNone": "No issues"
   }
 }

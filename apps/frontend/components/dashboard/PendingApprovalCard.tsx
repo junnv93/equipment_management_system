@@ -74,11 +74,13 @@ function getCategoryIcon(category: ApprovalCategory): React.ElementType {
 
 interface PendingApprovalCardProps {
   className?: string;
+  /** 좁은 컨테이너(예: 대시보드 우측 컬럼)에서 그리드 컬럼 수 제한 */
+  compact?: boolean;
 }
 
 // 역할별 카드 제목/설명은 i18n에서 가져옴 (dashboard.pending.title.{role})
 
-export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
+export function PendingApprovalCard({ className, compact = false }: PendingApprovalCardProps) {
   const { data: session, status } = useSession();
   const t = useTranslations('dashboard.pending');
   const userRole = session?.user?.role || 'user';
@@ -150,8 +152,10 @@ export function PendingApprovalCard({ className }: PendingApprovalCardProps) {
   const cardDescription = t.has(descKey) ? t(descKey) : t('description.default');
 
   // 카테고리 수에 맞는 그리드 컬럼 결정
-  const gridCols =
-    dashboardCategories.length <= 3
+  // compact=true: 좁은 컨테이너에서 최대 4열 (lg:grid-cols-7 overflow 방지)
+  const gridCols = compact
+    ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'
+    : dashboardCategories.length <= 3
       ? 'grid-cols-2 md:grid-cols-3'
       : dashboardCategories.length <= 5
         ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'

@@ -242,6 +242,20 @@
     "overdue": "D+{days}",
     "upcoming": "D-{days}"
   },
+  "controlCenter": {
+    "overdueTitle": "교정 기한 초과",
+    "overdueEmpty": "기한 초과 없음",
+    "overdueEmptyDesc": "모든 교정이 정상 범위 내에 있습니다",
+    "upcomingTitle": "교정 임박",
+    "upcomingEmpty": "임박한 교정 없음",
+    "upcomingEmptyDesc": "30일 이내 예정된 교정이 없습니다",
+    "overdueCount": "{count}건 기한 초과",
+    "upcomingCount": "{count}건 교정 예정",
+    "checkoutOverdueCount": "반출 기한 초과 {count}건",
+    "totalEquipment": "전체 {count}대",
+    "myEquipment": "내 장비 {count}대",
+    "teamEquipment": "팀 장비 {count}대"
+  },
   "srOnly": {
     "pendingApprovals": "승인 대기 현황",
     "equipmentStats": "장비 현황 통계",
@@ -249,7 +263,9 @@
     "alertsAndStatus": "조치 필요 항목 및 상태 분포",
     "dashboardDetail": "대시보드 상세 정보",
     "dashboardTabs": "대시보드 탭",
-    "loading": "대시보드를 불러오는 중입니다..."
+    "loading": "대시보드를 불러오는 중입니다...",
+    "ddayCounters": "교정 D-day 카운터",
+    "recentActivity": "최근 활동"
   },
   "equipmentStatusLabels": {
     "available": "사용 가능",
@@ -270,5 +286,54 @@
     "ariaPrefix": "장비 상태 분포",
     "statusEntry": "{label} {count}대 ({percent}%)",
     "tooltipEntry": "{label}: {count}대 ({percent}%)"
+  },
+  "compactDday": {
+    "title": "교정 현황",
+    "overdueCount": "{count}건 초과",
+    "upcomingCount": "{count}건 예정",
+    "viewAllOverdue": "기한 초과 교정 전체 보기",
+    "viewAllUpcoming": "교정 예정 전체 보기",
+    "viewAll": "전체 보기",
+    "empty": "교정 이슈 없음",
+    "emptyDesc": "교정 초과 및 임박 장비가 없습니다",
+    "ariaLabel": "교정 현황 컴팩트 리스트"
+  },
+  "overdueCheckouts": {
+    "title": "반출 기한 초과",
+    "count": "{count}건",
+    "daysOverdue": "D+{days}",
+    "viewDetail": "상세 보기",
+    "empty": "기한 초과 없음",
+    "emptyDesc": "반출 기한이 초과된 장비가 없습니다",
+    "ariaLabel": "반출 기한 초과 목록"
+  },
+  "calendar": {
+    "title": "{year}년 {month}월",
+    "prevMonth": "이전 달",
+    "nextMonth": "다음 달",
+    "legendOverdue": "교정 초과",
+    "legendUpcoming": "교정 예정",
+    "legendReturn": "반납 예정",
+    "overdueCalib": "교정 초과",
+    "upcomingCalib": "교정 예정",
+    "returnDue": "반납 예정",
+    "dayLabels": ["일", "월", "화", "수", "목", "금", "토"],
+    "ariaLabel": "미니 달력"
+  },
+  "teamDistribution": {
+    "title": "팀별 장비 분포",
+    "total": "총 {total}대",
+    "empty": "팀 데이터 없음",
+    "ariaLabel": "팀별 장비 분포 바 차트"
+  },
+  "kpi": {
+    "total": "전체 장비",
+    "utilization": "가동률",
+    "utilizationSub": "가용 {count}대",
+    "activeCheckouts": "반출 중",
+    "activeCheckoutsSub": "전체의 {percent}%",
+    "nonConforming": "부적합",
+    "nonConformingSub": "즉시 조치 필요",
+    "nonConformingSubNone": "이상 없음"
   }
 }

@@ -23,6 +23,8 @@ export type OverdueCalibration = {
   equipmentId: string;
   equipmentName?: string;
   daysOverdue?: number;
+  managementNumber?: string;
+  teamName?: string;
 };
 
 export interface UpcomingCalibration {
@@ -31,6 +33,19 @@ export interface UpcomingCalibration {
   equipmentName: string;
   dueDate: string;
   daysUntilDue: number;
+  managementNumber?: string;
+}
+
+/**
+ * 반납 예정 반출 데이터 (달력용)
+ */
+export interface UpcomingCheckoutReturn {
+  id: string;
+  equipmentName: string;
+  managementNumber: string;
+  expectedReturnDate: string;
+  daysUntilReturn: number;
+  purpose: string;
 }
 
 /**
@@ -105,6 +120,7 @@ export interface DashboardAggregate {
   overdueCheckouts: OverdueCheckout[] | null;
   equipmentStatusStats: Record<string, number> | null;
   recentActivities: RecentActivity[] | null;
+  upcomingCheckoutReturns: UpcomingCheckoutReturn[] | null;
 }
 
 class DashboardApi {

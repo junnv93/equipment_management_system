@@ -29,12 +29,30 @@ export interface StatsCardConfig {
   variant: StatsVariant;
 }
 
+// ─── Control Center 설정 ────────────────────────────────────────
+export interface ControlCenterConfig {
+  /** 승인 대기 카드 표시 여부 */
+  showPendingApprovals: boolean;
+  /** 반출 기한 초과 카드 표시 여부 */
+  showCheckoutOverdue: boolean;
+  /** 교정 D-day 컴팩트 리스트 표시 여부 */
+  showCalibrationDday: boolean;
+  /** 팀별 장비 분포 표시 여부 */
+  showTeamDistribution: boolean;
+  /** 미니 달력 표시 여부 */
+  showMiniCalendar: boolean;
+  /** KPI 총계 레이블 ('my' | 'team' | 'all') */
+  kpiDisplay: 'my' | 'team' | 'all';
+}
+
 // ─── 역할별 대시보드 설정 ───────────────────────────────────────
 export interface DashboardRoleConfig {
   tabs: Array<{ value: string; label: string }>;
   statsCards: StatsCardConfig[];
   /** AlertPanel에서 표시할 항목 */
   alertSections: Array<'overdueCalibrations' | 'overdueCheckouts'>;
+  /** Control Center 3-Tier 레이아웃 설정 */
+  controlCenter: ControlCenterConfig;
 }
 
 // ─── 재사용 가능한 Stats Card 팩토리 ────────────────────────────
@@ -129,6 +147,14 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       STATS.activeCheckouts(),
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
+    controlCenter: {
+      showPendingApprovals: false,
+      showCheckoutOverdue: true,
+      showCalibrationDday: true,
+      showTeamDistribution: false,
+      showMiniCalendar: true,
+      kpiDisplay: 'my',
+    },
   },
 
   technical_manager: {
@@ -144,6 +170,14 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       STATS.activeCheckouts(),
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
+    controlCenter: {
+      showPendingApprovals: true,
+      showCheckoutOverdue: true,
+      showCalibrationDday: true,
+      showTeamDistribution: true,
+      showMiniCalendar: true,
+      kpiDisplay: 'team',
+    },
   },
 
   quality_manager: {
@@ -159,6 +193,14 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       STATS.calibrationOverdue(),
     ],
     alertSections: ['overdueCalibrations'],
+    controlCenter: {
+      showPendingApprovals: true,
+      showCheckoutOverdue: false,
+      showCalibrationDday: true,
+      showTeamDistribution: false,
+      showMiniCalendar: true,
+      kpiDisplay: 'all',
+    },
   },
 
   lab_manager: {
@@ -175,6 +217,14 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       STATS.pendingDisposal(),
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
+    controlCenter: {
+      showPendingApprovals: true,
+      showCheckoutOverdue: true,
+      showCalibrationDday: true,
+      showTeamDistribution: true,
+      showMiniCalendar: true,
+      kpiDisplay: 'all',
+    },
   },
 
   system_admin: {
@@ -191,6 +241,14 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       STATS.activeCheckouts(),
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
+    controlCenter: {
+      showPendingApprovals: true,
+      showCheckoutOverdue: true,
+      showCalibrationDday: true,
+      showTeamDistribution: true,
+      showMiniCalendar: true,
+      kpiDisplay: 'all',
+    },
   },
 };
 
