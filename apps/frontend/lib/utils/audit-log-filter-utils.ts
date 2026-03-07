@@ -10,11 +10,26 @@
  * - app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx (Client Component)
  *
  * 패턴: team-filter-utils.ts와 동일한 SSOT 패턴
+ *
+ * 타입 체인:
+ *   URL searchParams
+ *     ↓ parseAuditLogFiltersFromSearchParams()
+ *   UIAuditLogFilters  (URL state — 빈 문자열 = "전체")  ← 로컬 전용
+ *     ↓ convertFiltersToApiParams()
+ *   AuditLogFilter     (API 파라미터 — undefined = "전체") ← SSOT: schemas
  * ============================================================================
  */
+import type { AuditLogFilter } from '@equipment-management/schemas';
+
+// SSOT re-export: 이 파일을 통해 접근하는 파일들을 위해
+export type { AuditLogFilter };
 
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
+ *
+ * AuditLogFilter(schemas)와 의도적으로 다릅니다:
+ * - 모든 필드가 필수 (URL 파라미터는 항상 문자열)
+ * - 빈 문자열 = "전체" (undefined가 아님)
  */
 export interface UIAuditLogFilters {
   entityType: string;
@@ -24,19 +39,6 @@ export interface UIAuditLogFilters {
   endDate: string;
   page: number;
   limit: number;
-}
-
-/**
- * API에서 사용하는 필터 타입 (백엔드 쿼리 파라미터)
- */
-export interface ApiAuditLogFilters {
-  entityType?: string;
-  action?: string;
-  userId?: string;
-  startDate?: string;
-  endDate?: string;
-  page?: number;
-  limit?: number;
 }
 
 /**
@@ -85,9 +87,9 @@ export function parseAuditLogFiltersFromSearchParams(
 
 /**
  * UI 필터를 API 쿼리 파라미터로 변환
- * 빈 문자열 → undefined (파라미터 생략)
+ * 빈 문자열 → undefined (파라미터 생략) — SSOT: AuditLogFilter (schemas)
  */
-export function convertFiltersToApiParams(filters: UIAuditLogFilters): ApiAuditLogFilters {
+export function convertFiltersToApiParams(filters: UIAuditLogFilters): AuditLogFilter {
   return {
     entityType: filters.entityType || undefined,
     action: filters.action || undefined,

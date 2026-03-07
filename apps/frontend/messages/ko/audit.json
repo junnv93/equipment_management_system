@@ -6,6 +6,7 @@
   "logList": "로그 목록",
   "totalLogs": "총 {count}개의 로그",
   "emptyLogs": "조회된 로그가 없습니다",
+  "systemActor": "시스템",
   "showingRange": "{total}개 중 {start}-{end}개 표시",
   "filters": {
     "userId": "사용자 ID",

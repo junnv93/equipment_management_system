@@ -6,6 +6,7 @@
   "logList": "Log List",
   "totalLogs": "Total {count} logs",
   "emptyLogs": "No logs found",
+  "systemActor": "System",
   "showingRange": "Showing {start}-{end} of {total}",
   "filters": {
     "userId": "User ID",

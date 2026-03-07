@@ -14,18 +14,19 @@
 
 import { createServerApiClient } from './server-api-client';
 import { transformPaginatedResponse } from './utils/response-transformers';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import type { AuditLogFilter } from '@equipment-management/schemas';
 import type { PaginatedResponse } from './types';
 import type { AuditLog } from './audit-api';
-import type { ApiAuditLogFilters } from '@/lib/utils/audit-log-filter-utils';
 
 /**
  * 감사 로그 목록 조회 (Server Component용)
  *
- * @param query - 감사 로그 조회 쿼리 파라미터
+ * @param query - 감사 로그 조회 쿼리 파라미터 (SSOT: AuditLogFilter from schemas)
  * @returns 페이지네이션된 감사 로그 목록
  */
 export async function getAuditLogsList(
-  query: ApiAuditLogFilters = {}
+  query: AuditLogFilter = {}
 ): Promise<PaginatedResponse<AuditLog>> {
   const apiClient = await createServerApiClient();
   const params = new URLSearchParams();
@@ -36,7 +37,9 @@ export async function getAuditLogsList(
     }
   });
 
-  const url = `/api/audit-logs${params.toString() ? `?${params.toString()}` : ''}`;
+  const url = params.toString()
+    ? `${API_ENDPOINTS.AUDIT_LOGS.LIST}?${params.toString()}`
+    : API_ENDPOINTS.AUDIT_LOGS.LIST;
   const response = await apiClient.get(url);
   return transformPaginatedResponse<AuditLog>(response);
 }

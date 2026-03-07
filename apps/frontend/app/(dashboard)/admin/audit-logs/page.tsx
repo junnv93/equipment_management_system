@@ -17,8 +17,8 @@ import { TablePageSkeleton } from '@/components/ui/list-page-skeleton';
 import AuditLogsContent from './AuditLogsContent';
 import { getAuditLogsList } from '@/lib/api/audit-api-server';
 import {
-  parseAuditLogFiltersFromSearchParams,
   convertFiltersToApiParams,
+  parseAuditLogFiltersFromSearchParams,
 } from '@/lib/utils/audit-log-filter-utils';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { AuditLog } from '@/lib/api/audit-api';
@@ -61,5 +61,5 @@ async function AuditLogsAsync({
     // 기타 에러는 클라이언트에서 재시도
   }
 
-  return <AuditLogsContent initialData={initialData} initialFilters={filters} />;
+  return <AuditLogsContent initialData={initialData} />;
 }

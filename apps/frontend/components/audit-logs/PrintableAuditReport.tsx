@@ -26,6 +26,11 @@ interface PrintableAuditReportProps {
  * - 페이지 나누기, 헤더/푸터 포함
  * - 색상 보존 (print-color-adjust: exact)
  *
+ * **i18n 미적용 의도적 예외**:
+ * 이 컴포넌트의 한국어 하드코딩은 의도된 설계 결정입니다.
+ * UL-QP-18 품질 심사 증적 자료는 한국어 고정 규정 문서이며,
+ * 인쇄 전용 출력물로 다국어 지원이 불필요합니다.
+ *
  * @example
  * ```tsx
  * <PrintableAuditReport

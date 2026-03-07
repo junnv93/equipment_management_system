@@ -27,7 +27,7 @@ import {
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import { AuditLogDetailDialog } from '@/components/audit-logs/AuditLogDetailDialog';
 import { PrintableAuditReport } from '@/components/audit-logs/PrintableAuditReport';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { auditApi, type AuditLog } from '@/lib/api/audit-api';
 import type { PaginatedResponse } from '@/lib/api/types';
 import {
@@ -62,8 +62,10 @@ import { useTranslations } from 'next-intl';
 
 interface AuditLogsContentProps {
   initialData: PaginatedResponse<AuditLog> | null;
-  initialFilters: UIAuditLogFilters;
 }
+
+/** nil UUID: 시스템 생성 감사 로그 식별 (Phase 4-1에서 SYSTEM_USER_UUID로 저장됨) */
+const SYSTEM_USER_UUID = '00000000-0000-0000-0000-000000000000';
 
 export default function AuditLogsContent({ initialData }: AuditLogsContentProps) {
   const t = useTranslations('audit');
@@ -94,7 +96,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
     queryKey: queryKeys.auditLogs.list(apiParams),
     queryFn: () => auditApi.getAuditLogs(apiParams),
     placeholderData: initialData ?? undefined,
-    staleTime: CACHE_TIMES.SHORT,
+    ...QUERY_CONFIG.AUDIT_LOGS,
   });
 
   // URL 파라미터 업데이트 (필터 변경)
@@ -310,7 +312,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                         <TableCell>
                           <div className="font-medium">{log.userName}</div>
                           <div className="text-xs text-muted-foreground truncate max-w-[120px]">
-                            {log.userId}
+                            {log.userId === SYSTEM_USER_UUID ? t('systemActor') : log.userId}
                           </div>
                         </TableCell>
                         <TableCell>
