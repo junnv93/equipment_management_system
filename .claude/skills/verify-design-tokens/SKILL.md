@@ -81,6 +81,18 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/equipment/EquipmentPageHeader.tsx`                        | 마이그레이션된 컴포넌트 (Equipment)      |
 | `apps/frontend/app/(dashboard)/calibration/CalibrationContent.tsx`                  | 마이그레이션된 컴포넌트 (Calibration)    |
 | `apps/frontend/app/(dashboard)/calibration/register/CalibrationRegisterContent.tsx` | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/lib/design-tokens/components/form-wizard.ts`                         | Layer 3 Form Wizard 토큰                 |
+| `apps/frontend/components/shared/FormWizardStepper.tsx`                             | 마이그레이션된 컴포넌트 (Form Wizard)    |
+| `apps/frontend/components/equipment/ManagementNumberPreviewBar.tsx`                 | 마이그레이션된 컴포넌트 (Form Wizard)    |
+| `apps/frontend/components/calibration/CalibrationListTable.tsx`                     | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/CalibrationStatsCards.tsx`                    | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/CalibrationTimeline.tsx`                      | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/IntermediateChecksTab.tsx`                    | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/SelfInspectionTab.tsx`                        | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/equipment/shared/EquipmentTimeline.tsx`                   | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/BasicInfoTab.tsx`                               | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentDetailClient.tsx`                      | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentTabs.tsx`                              | 마이그레이션된 컴포넌트 (Equipment)      |
 
 ## Workflow
 
@@ -198,6 +210,17 @@ files=(
   "apps/frontend/components/dashboard/AlertPanel.tsx"
   "apps/frontend/components/dashboard/EquipmentStatusBar.tsx"
   "apps/frontend/components/dashboard/EquipmentStatusBreakdown.tsx"
+  "apps/frontend/components/shared/FormWizardStepper.tsx"
+  "apps/frontend/components/equipment/ManagementNumberPreviewBar.tsx"
+  "apps/frontend/components/calibration/CalibrationListTable.tsx"
+  "apps/frontend/components/calibration/CalibrationStatsCards.tsx"
+  "apps/frontend/components/calibration/CalibrationTimeline.tsx"
+  "apps/frontend/components/calibration/IntermediateChecksTab.tsx"
+  "apps/frontend/components/calibration/SelfInspectionTab.tsx"
+  "apps/frontend/components/equipment/shared/EquipmentTimeline.tsx"
+  "apps/frontend/components/equipment/BasicInfoTab.tsx"
+  "apps/frontend/components/equipment/EquipmentDetailClient.tsx"
+  "apps/frontend/components/equipment/EquipmentTabs.tsx"
 )
 
 for f in "${files[@]}"; do
@@ -213,7 +236,7 @@ for f in "${files[@]}"; do
 done
 ```
 
-**PASS 기준:** 모든 마이그레이션된 33개 컴포넌트에서 design-tokens import가 존재.
+**PASS 기준:** 모든 마이그레이션된 43개 컴포넌트에서 design-tokens import가 존재.
 
 **FAIL 기준:** design-tokens import가 없거나 하드코딩된 값 사용 시 재마이그레이션 필요.
 
