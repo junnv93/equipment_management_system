@@ -35,6 +35,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/common/decorators/skip-audit.decorator.ts`                | @SkipAudit() 데코레이터                                          |
 | `apps/backend/src/common/guards/internal-api-key.guard.ts`                  | InternalApiKey Guard (서비스 간 인증)                            |
 | `apps/backend/src/common/interceptors/audit.interceptor.ts`                 | AuditLog 인터셉터 (JwtUser 필드 접근)                            |
+| `apps/backend/src/database/utils/uuid-constants.ts`                         | SYSTEM_USER_UUID (nil UUID) — 시스템 생성 감사 로그 actor 식별자 |
 | `apps/backend/src/types/auth.ts`                                            | SSOT: JwtUser, AuthenticatedRequest 타입                         |
 | `apps/backend/src/modules/auth/blacklist/token-blacklist.interface.ts`      | ITokenBlacklist 인터페이스 (Redis 전환 준비)                     |
 | `apps/backend/src/modules/auth/blacklist/in-memory-blacklist.provider.ts`   | InMemoryBlacklistProvider (개발/테스트용)                        |
@@ -165,18 +166,50 @@ grep -rn "@SkipAudit" apps/backend/src --include="*.controller.ts" -A 10 | grep 
 - 내부 시스템 스케줄러가 호출하는 배치 엔드포인트 (단, `@InternalApiKeyGuard` 동반 시)
 - `NotificationSseController`처럼 HTTP 상태가 없는 스트리밍 엔드포인트
 
+### Step 8: SYSTEM_USER_UUID 사용 확인
+
+감사 로그 생성 시 시스템 actor를 나타내는 UUID 컬럼에 문자열 리터럴을 직접 사용하지 않는지 확인합니다.
+
+PostgreSQL `uuid` 타입 컬럼에 `'system'`, `'anonymous'` 같은 비-UUID 문자열을 삽입하면 INSERT가 조용히 실패합니다.
+
+```bash
+# UUID 컬럼에 'system'/'anonymous' 하드코딩 탐지 (audit 관련 파일)
+grep -rn "userId:\s*['\"]system['\"]\\|userId:\s*['\"]anonymous['\"]\\|entityId:\s*['\"]system['\"]" \
+  apps/backend/src --include="*.ts" | grep -v "//\|test\|spec"
+```
+
+**PASS 기준:** 0개 결과 (시스템 actor는 `SYSTEM_USER_UUID`에서 import).
+
+**FAIL 기준:** UUID 컬럼에 `'system'`, `'anonymous'` 등 비-UUID 문자열 → INSERT 실패 (audit log 소실).
+
+**올바른 패턴:**
+
+```typescript
+// ❌ WRONG — PostgreSQL uuid 컬럼에 비-UUID 삽입 → 조용한 INSERT 실패
+await this.create({ userId: 'system', entityId: payload.email ?? 'unknown' });
+
+// ✅ CORRECT — nil UUID (RFC 4122 표준) 사용
+import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
+await this.create({
+  userId: SYSTEM_USER_UUID,
+  entityId: SYSTEM_USER_UUID,
+  entityName: payload.email,
+});
+```
+
 ## Output Format
 
 ```markdown
-| #   | 검사                 | 상태      | 상세                            |
-| --- | -------------------- | --------- | ------------------------------- |
-| 1   | Body userId 금지     | PASS/FAIL | 위반 DTO 목록                   |
-| 2   | req.user.userId 추출 | PASS/FAIL | 누락 메서드 목록                |
-| 3   | @RequirePermissions  | PASS/FAIL | 누락 엔드포인트 목록            |
-| 4   | @AuditLog            | PASS/FAIL | 누락 메서드 목록                |
-| 5   | JwtUser 필드 접근    | PASS/FAIL | 레거시 필드 사용 위치           |
-| 6   | Permission import    | PASS/FAIL | 잘못된 import 위치              |
-| 7   | @SkipAudit() 오용    | PASS/FAIL | POST/PATCH/DELETE에 사용된 위치 |
+| #   | 검사                  | 상태      | 상세                            |
+| --- | --------------------- | --------- | ------------------------------- |
+| 1   | Body userId 금지      | PASS/FAIL | 위반 DTO 목록                   |
+| 2   | req.user.userId 추출  | PASS/FAIL | 누락 메서드 목록                |
+| 3   | @RequirePermissions   | PASS/FAIL | 누락 엔드포인트 목록            |
+| 4   | @AuditLog             | PASS/FAIL | 누락 메서드 목록                |
+| 5   | JwtUser 필드 접근     | PASS/FAIL | 레거시 필드 사용 위치           |
+| 6   | Permission import     | PASS/FAIL | 잘못된 import 위치              |
+| 7   | @SkipAudit() 오용     | PASS/FAIL | POST/PATCH/DELETE에 사용된 위치 |
+| 8   | SYSTEM_USER_UUID 사용 | PASS/FAIL | UUID 컬럼에 비-UUID 하드코딩    |
 ```
 
 ## Exceptions

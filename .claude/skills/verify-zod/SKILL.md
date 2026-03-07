@@ -32,6 +32,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/equipment/dto/equipment-query.dto.ts`     | Query DTO 참조 구현                            |
 | `apps/backend/src/modules/checkouts/dto/approve-checkout.dto.ts`    | Body DTO 참조 구현                             |
 | `apps/backend/src/modules/calibration/dto/calibration-query.dto.ts` | Query DTO 참조 구현                            |
+| `apps/backend/src/modules/audit/dto/audit-log-query.dto.ts`         | Query DTO 참조 구현 (targets: ['query'] 포함)  |
 
 ## Workflow
 

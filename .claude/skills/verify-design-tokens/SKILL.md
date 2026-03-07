@@ -33,6 +33,7 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/lib/design-tokens/index.ts`                                          | Public API (Layer 1-3 export)            |
 | `apps/frontend/lib/design-tokens/primitives.ts`                                     | Layer 1 원시값                           |
 | `apps/frontend/lib/design-tokens/semantic.ts`                                       | Layer 2 의미론적 토큰                    |
+| `apps/frontend/lib/design-tokens/brand.ts`                                          | Brand 토큰 (글로벌 디자인 언어 SSOT)     |
 | `apps/frontend/lib/design-tokens/motion.ts`                                         | Motion 유틸리티 (getTransitionClasses)   |
 | `apps/frontend/lib/design-tokens/components/header.ts`                              | Layer 3 Header 토큰                      |
 | `apps/frontend/lib/design-tokens/components/notification.ts`                        | Layer 3 Notification 토큰                |
@@ -58,7 +59,6 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/auth/LoginForm.tsx`                                       | 마이그레이션된 컴포넌트                  |
 | `apps/frontend/components/auth/LoginPageContent.tsx`                                | 마이그레이션된 컴포넌트                  |
 | `apps/frontend/components/auth/AzureAdButton.tsx`                                   | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/auth/BrandingSection.tsx`                                 | 마이그레이션된 컴포넌트                  |
 | `apps/frontend/components/notifications/notification-item.tsx`                      | 마이그레이션된 컴포넌트                  |
 | `apps/frontend/components/dashboard/StatsCard.tsx`                                  | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/WelcomeHeader.tsx`                              | 마이그레이션된 컴포넌트 (Dashboard)      |
@@ -165,7 +165,6 @@ files=(
   "apps/frontend/components/auth/LoginForm.tsx"
   "apps/frontend/components/auth/LoginPageContent.tsx"
   "apps/frontend/components/auth/AzureAdButton.tsx"
-  "apps/frontend/components/auth/BrandingSection.tsx"
   "apps/frontend/components/notifications/notification-item.tsx"
   "apps/frontend/components/dashboard/StatsCard.tsx"
   "apps/frontend/components/dashboard/WelcomeHeader.tsx"
@@ -197,7 +196,7 @@ for f in "${files[@]}"; do
 done
 ```
 
-**PASS 기준:** 모든 마이그레이션된 25개 컴포넌트에서 design-tokens import가 존재.
+**PASS 기준:** 모든 마이그레이션된 24개 컴포넌트에서 design-tokens import가 존재.
 
 **FAIL 기준:** design-tokens import가 없거나 하드코딩된 값 사용 시 재마이그레이션 필요.
 

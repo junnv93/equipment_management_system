@@ -29,6 +29,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 | File                                                                         | Purpose                                                               |
 | ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `packages/db/src/schema/audit-logs.ts`                                       | DB enum 배열 (auditAction, auditEntityType — schemas와 동기화 필수)   |
 | `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                   |
 | `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                    |
 | `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)            |
@@ -79,6 +80,15 @@ grep -rn "interface SystemSettings\b\|type SystemSettings\s*=" apps/backend/src 
 # 로컬 DEFAULT_SYSTEM_SETTINGS/DEFAULT_DISPLAY_PREFERENCES 재정의 탐지
 grep -rn "DEFAULT_SYSTEM_SETTINGS\s*=\|DEFAULT_DISPLAY_PREFERENCES\s*=\|DEFAULT_CALIBRATION_ALERT_DAYS\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
 ```
+
+```bash
+# 로컬 AuditLogFilter 재정의 탐지 (schemas의 AuditLogFilter 재정의 금지)
+grep -rn "interface AuditLogFilter\b\|type AuditLogFilter\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|export type {\|// "
+```
+
+**PASS 기준:** 0개 결과 (AuditLogFilter는 `@equipment-management/schemas`에서 import + 서비스는 `export type { AuditLogFilter }` re-export 패턴).
+
+**FAIL 기준:** `packages/` 외부에서 `interface AuditLogFilter` 또는 `type AuditLogFilter =` 정의 발견 시 위반.
 
 ```bash
 # 로컬 AuditAction 재정의 탐지
