@@ -76,6 +76,7 @@ export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   calibration: '교정',
   checkout: '반출',
   rental: '대여',
+  rental_import: '렌탈 반입',
   user: '사용자',
   team: '팀',
   calibration_factor: '보정계수',
@@ -123,6 +124,10 @@ export interface AuditLog {
   entityName: string | null;
   details: AuditLogDetails | null;
   ipAddress: string | null;
+  /** 행위자의 사이트 (RBAC 스코프용, nullable — 기존 로그 호환) */
+  userSite: string | null;
+  /** 행위자의 팀 ID (RBAC 스코프용, nullable — 기존 로그 호환) */
+  userTeamId: string | null;
   createdAt: string | Date;
 }
 
@@ -139,6 +144,10 @@ export interface CreateAuditLogDto {
   entityName?: string;
   details?: AuditLogDetails;
   ipAddress?: string;
+  /** 행위자의 사이트 (RBAC 스코프 필터링용) */
+  userSite?: string;
+  /** 행위자의 팀 ID (RBAC 스코프 필터링용) */
+  userTeamId?: string;
 }
 
 // ============================================================================
@@ -157,6 +166,10 @@ export interface AuditLogFilter {
   endDate?: string | Date;
   page?: number;
   limit?: number;
+  /** RBAC: 사이트 스코프 (lab_manager) — 서버 강제 */
+  userSite?: string;
+  /** RBAC: 팀 스코프 (technical_manager) — 서버 강제 */
+  userTeamId?: string;
 }
 
 /**

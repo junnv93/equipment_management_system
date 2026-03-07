@@ -622,6 +622,8 @@ export const AUDIT_ACTION_VALUES = [
   'cancel', // 취소
   'login', // 로그인
   'logout', // 로그아웃
+  'close', // 종료 (부적합 종결)
+  'reject_correction', // 조치 반려
 ] as const;
 
 export const AuditActionEnum = z.enum(AUDIT_ACTION_VALUES as unknown as [string, ...string[]]);
@@ -650,7 +652,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'calibration', // 교정
   'checkout', // 반출
   'rental', // 대여
-  'rental_import', // 렌탈 반입
+  'rental_import', // 렌탈 반입 (legacy)
   'user', // 사용자
   'team', // 팀
   'calibration_factor', // 보정계수
@@ -658,6 +660,11 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'software', // 소프트웨어
   'calibration_plan', // 교정계획서
   'repair_history', // 수리이력
+  'equipment_import', // 장비 반입
+  'location_history', // 위치 이력
+  'maintenance_history', // 유지보수 이력
+  'incident_history', // 사고 이력
+  'settings', // 설정
 ] as const;
 
 export const AuditEntityTypeEnum = z.enum(

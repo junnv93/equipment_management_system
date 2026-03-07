@@ -288,6 +288,9 @@ export const API_ENDPOINTS = {
   AUDIT_LOGS: {
     LIST: '/api/audit-logs',
     GET: (id: string) => `/api/audit-logs/${id}`,
+    BY_ENTITY: (entityType: string, entityId: string) =>
+      `/api/audit-logs/entity/${entityType}/${entityId}`,
+    BY_USER: (userId: string) => `/api/audit-logs/user/${userId}`,
   },
 
   // ============================================================================
