@@ -7,8 +7,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { EQUIPMENT_EMPTY_STATE_TOKENS } from '@/lib/design-tokens';
+import {
+  EQUIPMENT_EMPTY_STATE_TOKENS,
+  EQUIPMENT_STATUS_TOKENS,
+  EQUIPMENT_STATS_STRIP_TOKENS,
+} from '@/lib/design-tokens';
 import equipmentApi from '@/lib/api/equipment-api';
+import dashboardApi from '@/lib/api/dashboard-api';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { useTranslations } from 'next-intl';
 import { useEquipmentFilters } from '@/hooks/useEquipmentFilters';
@@ -20,7 +25,7 @@ import { ViewToggle } from '@/components/equipment/ViewToggle';
 import { EquipmentPagination } from '@/components/equipment/EquipmentPagination';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { queryKeys } from '@/lib/api/query-config';
+import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
 /**
  * 빈 상태 컴포넌트 (검색 결과 없음)
@@ -95,12 +100,19 @@ export function EquipmentListSkeleton() {
   const t = useTranslations('equipment');
   return (
     <div
-      className="space-y-4"
+      className="space-y-3"
       role="status"
       aria-busy="true"
       aria-live="polite"
       aria-label={t('list.loading')}
     >
+      {/* 상태 요약 스트립 스켈레톤 */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 rounded-lg border border-border overflow-x-auto">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-4 w-20 shrink-0" />
+        ))}
+      </div>
+
       {/* 툴바 스켈레톤 */}
       <div className="flex flex-col gap-3">
         {/* Row 1: 검색바 + 뷰 토글 */}
@@ -173,6 +185,98 @@ interface EquipmentListContentProps {
   initialData?: PaginatedResponse<Equipment>;
 }
 
+/** 상태 분포 스트립 표시 우선순위 */
+const STATUS_PRIORITY_ORDER = [
+  'available',
+  'in_use',
+  'checked_out',
+  'calibration_scheduled',
+  'non_conforming',
+  'calibration_overdue',
+  'pending_disposal',
+  'spare',
+  'retired',
+  'disposed',
+  'temporary',
+  'inactive',
+] as const;
+
+/**
+ * 상태 분포 요약 스트립 (Dashboard API 재활용)
+ *
+ * scope 설계:
+ * - teamId 있음 → 팀 범위 통계 (test_engineer, technical_manager)
+ * - teamId 없음 → site 전체 통계 (백엔드 @SiteScoped 자동 격리)
+ *
+ * 표시할 상태 우선순위 및 색상 점:
+ * - 전체(totalItems) → 항상 첫 번째
+ * - available → brand-ok (bg-brand-ok)
+ * - in_use → brand-info
+ * - checked_out → brand-warning
+ * - non_conforming / calibration_overdue → brand-critical
+ * - 기타 count > 0인 것만 동적 표시
+ */
+function StatusSummaryStrip({
+  stats,
+  totalItems,
+  isTeamScoped,
+}: {
+  stats: Record<string, number> | undefined;
+  totalItems: number;
+  /** URL ?teamId= 존재 여부 — 레이블 표시 결정 */
+  isTeamScoped: boolean;
+}) {
+  const t = useTranslations('equipment');
+
+  const visibleStats = useMemo(() => {
+    if (!stats) return [];
+    return STATUS_PRIORITY_ORDER.filter((key) => (stats[key] || 0) > 0).map((key) => ({
+      key,
+      count: stats[key] || 0,
+      statusBarColor: EQUIPMENT_STATUS_TOKENS[key]?.card.statusBarColor || 'bg-brand-neutral',
+      label: t(`status.${key}` as Parameters<typeof t>[0]),
+    }));
+  }, [stats, t]);
+
+  // 총계 레이블: 팀 스코프면 "팀 장비", 아니면 "전체 장비"
+  const totalLabel = isTeamScoped ? t('filters.teamEquipment') : t('filters.allEquipment');
+
+  return (
+    <div className={EQUIPMENT_STATS_STRIP_TOKENS.container}>
+      {/* 전체 수 */}
+      <span className={EQUIPMENT_STATS_STRIP_TOKENS.item}>
+        <span className={EQUIPMENT_STATS_STRIP_TOKENS.totalCount}>{totalItems}</span>
+        <span className={EQUIPMENT_STATS_STRIP_TOKENS.label}>{totalLabel}</span>
+      </span>
+
+      {visibleStats.length > 0 && (
+        <span className={EQUIPMENT_STATS_STRIP_TOKENS.divider} aria-hidden="true" />
+      )}
+
+      {visibleStats.map((stat, i) => (
+        <span key={stat.key} className={EQUIPMENT_STATS_STRIP_TOKENS.item}>
+          {i > 0 && <span className={EQUIPMENT_STATS_STRIP_TOKENS.divider} aria-hidden="true" />}
+          <span
+            className={`${EQUIPMENT_STATS_STRIP_TOKENS.dot} ${stat.statusBarColor}`}
+            aria-hidden="true"
+          />
+          <span className={EQUIPMENT_STATS_STRIP_TOKENS.count}>{stat.count}</span>
+          <span className={EQUIPMENT_STATS_STRIP_TOKENS.label}>{stat.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** 정렬 배지 i18n 키 맵 (중첩 삼항 대체) */
+const SORT_LABEL_KEYS = {
+  name: 'sort.name',
+  lastCalibrationDate: 'sort.lastCalibrationDate',
+  nextCalibrationDate: 'sort.nextCalibrationDate',
+  status: 'sort.status',
+  createdAt: 'sort.createdAt',
+} as const;
+
 /**
  * 장비 목록 컨텐츠 컴포넌트 (Client Component)
  *
@@ -210,6 +314,21 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
     queryFilters,
     isClient,
   } = useEquipmentFilters();
+
+  // 장비 상태 분포 (기존 Dashboard API 재활용, 30s TTL)
+  //
+  // ✅ scope 설계: URL ?teamId= (SSOT)를 그대로 전달
+  //   - test_engineer / technical_manager: page.tsx의 buildRoleBasedRedirectUrl이
+  //     이미 ?teamId=자기팀 을 URL에 주입 → filters.teamId = 팀 스코프
+  //   - quality_manager / lab_manager / system_admin: teamId 없음
+  //     → undefined → 백엔드 @SiteScoped 인터셉터가 JWT site로 자동 격리
+  //
+  // ✅ 캐시 격리: teamId가 달라지면 다른 queryKey → 팀A와 팀B 통계 충돌 없음
+  const { data: statusStats } = useQuery({
+    queryKey: queryKeys.dashboard.equipmentStatusStats(undefined, filters.teamId || undefined),
+    queryFn: () => dashboardApi.getEquipmentStatusStats(filters.teamId || undefined),
+    staleTime: CACHE_TIMES.SHORT,
+  });
 
   // 장비 목록 쿼리
   // ✅ Vercel Best Practice: Query Key 객체 사용
@@ -260,7 +379,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
   }
 
   return (
-    <div className="space-y-4" aria-live="polite" aria-busy={isFetching}>
+    <div className="space-y-3" aria-live="polite" aria-busy={isFetching}>
       {/* 진행 표시줄 — 백그라운드 데이터 갱신 시 thin indeterminate bar */}
       {isFetching && !isLoading && (
         <div
@@ -271,6 +390,13 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
           <div className="h-full bg-primary w-1/3 rounded-r motion-safe:animate-progress-indeterminate motion-reduce:hidden" />
         </div>
       )}
+
+      {/* 상태 요약 스트립 (URL ?teamId= SSOT → scope 자동 결정) */}
+      <StatusSummaryStrip
+        stats={statusStats}
+        totalItems={paginationInfo.totalItems}
+        isTeamScoped={!!filters.teamId}
+      />
 
       {/* 툴바: 검색+정렬+뷰 토글 / 필터 */}
       <div className="flex flex-col gap-3">
@@ -284,23 +410,15 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
           />
           <div className="flex items-center gap-3 sm:ml-auto">
             {/* 정렬 표시 */}
-            {filters.sortBy && filters.sortBy !== 'managementNumber' && (
-              <Badge variant="outline" className="text-xs">
-                {t('sort.label')}{' '}
-                {filters.sortBy === 'name'
-                  ? t('sort.name')
-                  : filters.sortBy === 'lastCalibrationDate'
-                    ? t('sort.lastCalibrationDate')
-                    : filters.sortBy === 'nextCalibrationDate'
-                      ? t('sort.nextCalibrationDate')
-                      : filters.sortBy === 'status'
-                        ? t('sort.status')
-                        : filters.sortBy === 'createdAt'
-                          ? t('sort.createdAt')
-                          : ''}
-                ({filters.sortOrder === 'asc' ? t('sort.asc') : t('sort.desc')})
-              </Badge>
-            )}
+            {filters.sortBy &&
+              filters.sortBy !== 'managementNumber' &&
+              filters.sortBy in SORT_LABEL_KEYS && (
+                <Badge variant="outline" className="text-xs">
+                  {t('sort.label')}{' '}
+                  {t(SORT_LABEL_KEYS[filters.sortBy as keyof typeof SORT_LABEL_KEYS])} (
+                  {filters.sortOrder === 'asc' ? t('sort.asc') : t('sort.desc')})
+                </Badge>
+              )}
             {/* 뷰 전환 */}
             {isClient && <ViewToggle view={view} onChange={setView} />}
           </div>

@@ -20,13 +20,13 @@ import type { Equipment } from '@/lib/api/equipment-api';
 import type { EquipmentFilters } from '@/hooks/useEquipmentFilters';
 import { SharedEquipmentBadge } from './SharedEquipmentBadge';
 import { HighlightText } from '@/components/shared/HighlightText';
-import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
 import {
   CALIBRATION_BADGE_TOKENS,
   EQUIPMENT_TABLE_TOKENS,
   EQUIPMENT_STATUS_TOKENS,
   DEFAULT_STATUS_CONFIG,
   getManagementNumberClasses,
+  getEquipmentStatusTokenStyle,
 } from '@/lib/design-tokens';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
 import type { CalibrationMethod } from '@equipment-management/schemas';
@@ -79,7 +79,7 @@ const StatusBadge = memo(function StatusBadge({
   status: string;
   nextCalibrationDate?: string | Date | null;
 }) {
-  const style = getEquipmentStatusStyle(status, nextCalibrationDate);
+  const style = getEquipmentStatusTokenStyle(status, nextCalibrationDate);
 
   return (
     <Badge variant="outline" className={`${style.className} ${EQUIPMENT_TABLE_TOKENS.statusBadge}`}>
@@ -247,7 +247,7 @@ const EquipmentRow = memo(function EquipmentRow({
 
   return (
     <TableRow
-      className={`${EQUIPMENT_TABLE_TOKENS.rowHover} focus-within:bg-accent/50`}
+      className={`${EQUIPMENT_TABLE_TOKENS.rowHover} focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary/20`}
       role="row"
       aria-selected={false}
       data-testid="equipment-row"
@@ -308,8 +308,8 @@ const EquipmentRow = memo(function EquipmentRow({
             href={`/equipment/${equipment.id}`}
             aria-label={t('card.viewDetailAriaLabel', { name: equipment.name || '' })}
           >
-            <Eye className="h-4 w-4 mr-1" />
-            {t('detail.viewDetailShort')}
+            <Eye className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">{t('detail.viewDetailShort')}</span>
           </Link>
         </Button>
       </TableCell>
@@ -340,11 +340,11 @@ function EquipmentTableComponent({
 
   return (
     <div className="border border-brand-border-subtle bg-brand-bg-surface rounded-lg overflow-hidden">
-      <Table role="grid" aria-label={t('table.ariaLabel')}>
+      <Table role="grid" aria-label={t('table.ariaLabel')} className="[&_td]:py-2 [&_td]:px-3">
         <TableHeader>
           <TableRow
             role="row"
-            className="bg-brand-bg-elevated/50 border-b border-brand-border-subtle"
+            className="bg-brand-bg-elevated/80 border-b-2 border-brand-border-default"
           >
             {COLUMNS.map((col) => {
               // 상태 바 헤더: 빈 셀

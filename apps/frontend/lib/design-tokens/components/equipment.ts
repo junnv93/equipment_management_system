@@ -515,10 +515,10 @@ export const EQUIPMENT_TABLE_TOKENS = {
   /** 수치 컬럼 */
   numericColumn: 'tabular-nums',
 
-  /** 4px 상태 바 셀 */
+  /** 3px 상태 바 셀 */
   statusBar: {
-    cell: 'w-1 p-0',
-    indicator: 'block w-1 h-full min-h-[2.5rem]',
+    cell: 'w-[3px] p-0',
+    indicator: 'block w-[3px] h-full min-h-[2.5rem]',
   },
 
   /** 상태 배지 (텍스트 전용, 고정폭) */
@@ -527,3 +527,82 @@ export const EQUIPMENT_TABLE_TOKENS = {
   /** 장비명 하위 2차 텍스트 (모델명) */
   secondaryText: 'text-xs text-muted-foreground mt-0.5 truncate',
 } as const;
+
+// ============================================================================
+// Equipment List Page Tokens
+// ============================================================================
+
+/**
+ * 장비 목록 페이지 헤더 스타일
+ */
+export const EQUIPMENT_LIST_HEADER_TOKENS = {
+  container: 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4',
+  title: 'text-2xl lg:text-3xl font-display font-bold tracking-tight text-brand-text-primary',
+  subtitle: 'text-sm text-brand-text-muted mt-1',
+} as const;
+
+/**
+ * 장비 상태 요약 스트립 스타일
+ *
+ * Dashboard API (GET /api/dashboard/equipment-status-stats) 재활용
+ */
+export const EQUIPMENT_STATS_STRIP_TOKENS = {
+  container:
+    'flex items-center gap-3 px-3 py-2 bg-brand-bg-elevated/50 rounded-lg border border-brand-border-subtle overflow-x-auto',
+  item: 'flex items-center gap-1.5 text-sm whitespace-nowrap',
+  dot: 'h-2 w-2 rounded-full flex-shrink-0',
+  count: 'font-mono tabular-nums font-semibold text-brand-text-primary',
+  label: 'text-brand-text-muted text-xs',
+  divider: 'h-4 w-px bg-brand-border-subtle flex-shrink-0',
+  totalCount: 'font-mono tabular-nums font-bold text-lg text-brand-text-primary',
+} as const;
+
+/**
+ * 장비 필터 툴바 컨테이너 스타일
+ */
+export const EQUIPMENT_TOOLBAR_TOKENS = {
+  filterContainer: 'bg-brand-bg-elevated/50 rounded-lg border border-brand-border-subtle px-3 py-2',
+  filterCount: 'text-xs tabular-nums font-medium text-brand-text-secondary',
+} as const;
+
+/**
+ * 장비 상태 배지 클래스 + 라벨 반환 (SSOT)
+ *
+ * equipment-status-styles.ts의 getEquipmentStatusStyle()를 design token으로 통합.
+ * - 12개 상태의 className/label/borderColor/statusBarColor 반환
+ * - nextCalibrationDate 기반 실시간 교정기한 초과 override
+ * - calibration_scheduled → "사용 가능"으로 표시 (UL-QP-18)
+ * - calibration_overdue → "부적합"으로 표시
+ */
+export function getEquipmentStatusTokenStyle(
+  status: string | undefined | null,
+  nextCalibrationDate?: string | Date | null
+): { className: string; label: string; borderColor: string; statusBarColor: string } {
+  // 실시간 교정기한 초과 체크 (백엔드 스케줄러가 아직 실행되지 않은 경우 대비)
+  if (status === 'available' && nextCalibrationDate && new Date(nextCalibrationDate) < new Date()) {
+    const nonConforming = EQUIPMENT_STATUS_TOKENS.non_conforming;
+    return {
+      className: nonConforming.card.className,
+      label: nonConforming.label,
+      borderColor: nonConforming.card.borderColor,
+      statusBarColor: nonConforming.card.statusBarColor,
+    };
+  }
+
+  const token = status ? EQUIPMENT_STATUS_TOKENS[status] : null;
+  if (token) {
+    return {
+      className: token.card.className,
+      label: token.label,
+      borderColor: token.card.borderColor,
+      statusBarColor: token.card.statusBarColor,
+    };
+  }
+
+  return {
+    className: DEFAULT_STATUS_CONFIG.card.className,
+    label: status || DEFAULT_STATUS_CONFIG.label,
+    borderColor: DEFAULT_STATUS_CONFIG.card.borderColor,
+    statusBarColor: DEFAULT_STATUS_CONFIG.card.statusBarColor,
+  };
+}

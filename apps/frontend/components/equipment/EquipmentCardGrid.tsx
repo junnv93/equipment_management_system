@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { Calendar, MapPin, Tag, Package, ArrowRight, Wrench } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,9 +21,10 @@ import {
   EQUIPMENT_EMPTY_STATE_TOKENS,
   getStaggerDelay,
   getManagementNumberClasses,
+  getEquipmentStatusTokenStyle,
+  getTransitionClasses,
 } from '@/lib/design-tokens';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
 import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
@@ -82,10 +82,10 @@ const EquipmentCard = memo(function EquipmentCard({
   searchTerm?: string;
 }) {
   const t = useTranslations('equipment');
-  // 실시간 교정기한 초과 체크 포함
-  const style = getEquipmentStatusStyle(equipment.status, equipment.nextCalibrationDate);
+  // design token SSOT: 실시간 교정기한 초과 체크 포함
+  const style = getEquipmentStatusTokenStyle(equipment.status, equipment.nextCalibrationDate);
 
-  // Design Token: 상태별 카드 스타일
+  // Design Token: 상태별 카드 border 스타일
   const statusToken =
     EQUIPMENT_STATUS_TOKENS[equipment.status || 'available'] || DEFAULT_STATUS_CONFIG;
 
@@ -110,18 +110,26 @@ const EquipmentCard = memo(function EquipmentCard({
     <Card
       className={cn(
         getEquipmentCardClasses(statusToken.card.borderColor),
-        'hover:scale-[1.01] hover:-translate-y-0.5'
+        'hover:border-brand-border-strong hover:shadow-sm',
+        getTransitionClasses('fast', ['border-color', 'box-shadow'])
       )}
       role="article"
       aria-labelledby={`equipment-${equipment.id}-name`}
       data-testid="equipment-card"
     >
       <CardHeader className="pb-2">
+        {/* 관리번호 1차 식별자 위계 */}
         <div className="flex justify-between items-start gap-2">
           <div className="min-w-0 flex-1">
+            <p
+              className={`text-xs ${getManagementNumberClasses()} tracking-wider`}
+              data-testid="management-number"
+            >
+              <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
+            </p>
             <CardTitle
               id={`equipment-${equipment.id}-name`}
-              className="text-base font-semibold truncate flex items-center gap-2"
+              className="text-base font-semibold truncate flex items-center gap-2 mt-0.5"
               data-testid="equipment-name"
             >
               <HighlightText text={equipment.name || t('card.noName')} search={searchTerm} />
@@ -129,12 +137,6 @@ const EquipmentCard = memo(function EquipmentCard({
                 <SharedEquipmentBadge sharedSource={equipment.sharedSource} size="sm" />
               )}
             </CardTitle>
-            <p
-              className={`text-sm mt-1 ${getManagementNumberClasses()}`}
-              data-testid="management-number"
-            >
-              <HighlightText text={equipment.managementNumber || '-'} search={searchTerm} />
-            </p>
           </div>
           <div className="flex flex-col items-end gap-1 shrink-0">
             <Badge
@@ -172,12 +174,12 @@ const EquipmentCard = memo(function EquipmentCard({
       </CardHeader>
 
       <CardContent className="pb-2">
-        <dl className="space-y-1.5 text-sm">
+        <dl className="space-y-1 text-sm">
           {equipment.modelName && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <dt className="sr-only">{t('card.modelSrOnly')}</dt>
               <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <dd className="truncate">
+              <dd className="line-clamp-1">
                 <HighlightText text={equipment.modelName} search={searchTerm} />
               </dd>
             </div>
@@ -187,7 +189,7 @@ const EquipmentCard = memo(function EquipmentCard({
             <div className="flex items-center gap-2 text-muted-foreground">
               <dt className="sr-only">{t('card.locationSrOnly')}</dt>
               <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <dd className="truncate">{equipment.location}</dd>
+              <dd className="line-clamp-1">{equipment.location}</dd>
             </div>
           )}
 
@@ -229,16 +231,18 @@ const EquipmentCard = memo(function EquipmentCard({
         </dl>
       </CardContent>
 
-      <CardFooter className="pt-2">
-        <Button variant="outline" size="sm" className="w-full group" asChild>
-          <Link
-            href={`/equipment/${equipment.id}`}
-            aria-label={t('card.viewDetailAriaLabel', { name: equipment.name || '' })}
-          >
-            {t('detail.viewDetail')}
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </Button>
+      <CardFooter className="pt-2 justify-end">
+        <Link
+          href={`/equipment/${equipment.id}`}
+          aria-label={t('card.viewDetailAriaLabel', { name: equipment.name || '' })}
+          className={cn(
+            'inline-flex items-center gap-1 text-sm text-brand-text-secondary hover:text-brand-text-primary',
+            getTransitionClasses('fast', ['color'])
+          )}
+        >
+          {t('detail.viewDetail')}
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
       </CardFooter>
     </Card>
   );
@@ -257,7 +261,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
   if (isLoading) {
     return (
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4"
         data-testid="equipment-card-grid"
         aria-busy="true"
         aria-live="polite"
@@ -286,7 +290,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
 
   return (
     <div
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4"
       data-testid="equipment-card-grid"
       role="feed"
       aria-label={t('card.gridAriaLabel')}

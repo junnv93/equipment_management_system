@@ -1,14 +1,12 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
-import { Button } from '@/components/ui/button';
 import {
   EquipmentListContent,
   EquipmentListSkeleton,
 } from '@/components/equipment/EquipmentListContent';
+import { EquipmentPageHeader } from '@/components/equipment/EquipmentPageHeader';
 import { ClientOnly } from '@/components/shared/ClientOnly';
 import * as equipmentApiServer from '@/lib/api/equipment-api-server';
 import {
@@ -43,24 +41,8 @@ type PageProps = {
 export default function EquipmentPage(props: PageProps) {
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Static Shell: 페이지 헤더 */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">장비 관리</h1>
-          <p className="text-muted-foreground mt-1">시험소 장비를 검색하고 관리합니다</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/equipment/create-shared">공용장비 등록</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/equipment/create">
-              <Plus className="h-4 w-4 mr-2" />
-              장비 등록
-            </Link>
-          </Button>
-        </div>
-      </div>
+      {/* Static Shell: 페이지 헤더 (Client Component, i18n 사용) */}
+      <EquipmentPageHeader />
 
       {/* Dynamic Hole: 메인 컨텐츠 */}
       <Suspense fallback={<EquipmentListSkeleton />}>

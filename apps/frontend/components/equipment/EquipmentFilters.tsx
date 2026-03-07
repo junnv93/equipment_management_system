@@ -6,7 +6,7 @@ import { X, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { EQUIPMENT_FILTER_TOKENS } from '@/lib/design-tokens';
+import { EQUIPMENT_FILTER_TOKENS, EQUIPMENT_TOOLBAR_TOKENS } from '@/lib/design-tokens';
 import {
   Select,
   SelectContent,
@@ -271,7 +271,7 @@ function EquipmentFiltersComponent({
 
   return (
     <div
-      className={`flex flex-col gap-3 ${className}`}
+      className={`${EQUIPMENT_TOOLBAR_TOKENS.filterContainer} flex flex-col gap-3 ${className}`}
       role="group"
       aria-label={t('filters.filterOptions')}
     >
@@ -284,7 +284,7 @@ function EquipmentFiltersComponent({
           disabled={isSiteFixed}
         >
           <SelectTrigger
-            className={`h-9 w-[120px] ${isSiteFixed ? 'cursor-not-allowed opacity-60' : ''}`}
+            className={`h-9 w-[120px] text-sm ${isSiteFixed ? 'cursor-not-allowed opacity-60' : ''}`}
             aria-label={t('filters.siteFilter')}
           >
             <SelectValue placeholder={t('filters.allSites')} />
@@ -306,7 +306,7 @@ function EquipmentFiltersComponent({
             onStatusChange(value === '_all' ? '' : (value as EquipmentStatus))
           }
         >
-          <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.statusFilter')}>
+          <SelectTrigger className="h-9 w-[130px] text-sm" aria-label={t('filters.statusFilter')}>
             <SelectValue placeholder={t('filters.allStatuses')} />
           </SelectTrigger>
           <SelectContent>
@@ -324,7 +324,10 @@ function EquipmentFiltersComponent({
           value={filters.calibrationDueFilter}
           onValueChange={(value) => onCalibrationDueFilterChange(value as CalibrationDueFilter)}
         >
-          <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.calibrationDueFilter')}>
+          <SelectTrigger
+            className="h-9 w-[130px] text-sm"
+            aria-label={t('filters.calibrationDueFilter')}
+          >
             <SelectValue placeholder={t('filters.calibrationDueAll')} />
           </SelectTrigger>
           <SelectContent>
@@ -371,103 +374,109 @@ function EquipmentFiltersComponent({
         )}
       </div>
 
-      {/* 2차 필터 (확장 시) */}
-      {isExpanded && (
-        <div className="flex flex-wrap gap-2">
-          {/* 교정 방법 필터 */}
-          <Select
-            value={filters.calibrationMethod || '_all'}
-            onValueChange={(value) =>
-              onCalibrationMethodChange(value === '_all' ? '' : (value as CalibrationMethod))
-            }
-          >
-            <SelectTrigger className="h-9 w-[150px]" aria-label={t('filters.calibrationFilter')}>
-              <SelectValue placeholder={t('filters.allCalibrationMethods')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">{t('filters.allCalibrationMethods')}</SelectItem>
-              {calibrationMethodOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* 장비 분류 필터 */}
-          <Select
-            value={filters.classification || '_all'}
-            onValueChange={(value) =>
-              onClassificationChange(value === '_all' ? '' : (value as Classification))
-            }
-          >
-            <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.classificationFilter')}>
-              <SelectValue placeholder={t('filters.allClassifications')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">{t('filters.allClassifications')}</SelectItem>
-              {classificationOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* 공용장비 필터 */}
-          <Select
-            value={filters.isShared}
-            onValueChange={(value) => onIsSharedChange(value as 'all' | 'shared' | 'normal')}
-          >
-            <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.sharedFilter')}>
-              <SelectValue placeholder={t('filters.allEquipment')} />
-            </SelectTrigger>
-            <SelectContent>
-              {sharedOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* 팀 필터 */}
-          <Select
-            value={filters.teamId || '_all'}
-            onValueChange={(value) => onTeamIdChange(value === '_all' ? '' : value)}
-            disabled={isLoadingTeams}
-          >
-            <SelectTrigger className="h-9 w-[150px]" aria-label={t('filters.teamFilter')}>
-              {isLoadingTeams ? (
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t('filters.loading')}
-                </span>
-              ) : (
-                <SelectValue placeholder={t('filters.allTeams')} />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">{t('filters.allTeams')}</SelectItem>
-              {teamOptions
-                .filter((opt) => opt.value)
-                .map((option) => (
+      {/* 2차 필터 (CSS-only grid-rows 트랜지션) */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-wrap gap-2 pt-1">
+            {/* 교정 방법 필터 */}
+            <Select
+              value={filters.calibrationMethod || '_all'}
+              onValueChange={(value) =>
+                onCalibrationMethodChange(value === '_all' ? '' : (value as CalibrationMethod))
+              }
+            >
+              <SelectTrigger
+                className="h-9 w-[150px] text-sm"
+                aria-label={t('filters.calibrationFilter')}
+              >
+                <SelectValue placeholder={t('filters.allCalibrationMethods')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all">{t('filters.allCalibrationMethods')}</SelectItem>
+                {calibrationMethodOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}
-            </SelectContent>
-          </Select>
+              </SelectContent>
+            </Select>
+
+            {/* 장비 분류 필터 */}
+            <Select
+              value={filters.classification || '_all'}
+              onValueChange={(value) =>
+                onClassificationChange(value === '_all' ? '' : (value as Classification))
+              }
+            >
+              <SelectTrigger
+                className="h-9 w-[130px]"
+                aria-label={t('filters.classificationFilter')}
+              >
+                <SelectValue placeholder={t('filters.allClassifications')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all">{t('filters.allClassifications')}</SelectItem>
+                {classificationOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* 공용장비 필터 */}
+            <Select
+              value={filters.isShared}
+              onValueChange={(value) => onIsSharedChange(value as 'all' | 'shared' | 'normal')}
+            >
+              <SelectTrigger className="h-9 w-[130px]" aria-label={t('filters.sharedFilter')}>
+                <SelectValue placeholder={t('filters.allEquipment')} />
+              </SelectTrigger>
+              <SelectContent>
+                {sharedOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* 팀 필터 */}
+            <Select
+              value={filters.teamId || '_all'}
+              onValueChange={(value) => onTeamIdChange(value === '_all' ? '' : value)}
+              disabled={isLoadingTeams}
+            >
+              <SelectTrigger className="h-9 w-[150px] text-sm" aria-label={t('filters.teamFilter')}>
+                {isLoadingTeams ? (
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('filters.loading')}
+                  </span>
+                ) : (
+                  <SelectValue placeholder={t('filters.allTeams')} />
+                )}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all">{t('filters.allTeams')}</SelectItem>
+                {teamOptions
+                  .filter((opt) => opt.value)
+                  .map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* 활성 필터 배지 */}
       {hasActiveFilters && (
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="list"
-          aria-label={t('filters.appliedFilters')}
-        >
+        <div className="flex flex-wrap gap-1" role="list" aria-label={t('filters.appliedFilters')}>
           {filters.site && !isSiteFixed && (
             <ActiveFilterBadge
               label={t('filters.badgeSite', { label: getSiteLabel(filters.site) })}
