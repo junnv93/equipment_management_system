@@ -123,6 +123,29 @@ export class OverdueCheckoutDto {
 export const OverdueRentalDto = OverdueCheckoutDto;
 
 /**
+ * 반납 예정 반출 DTO (달력용)
+ */
+export class UpcomingCheckoutReturnDto {
+  @ApiProperty({ description: '반출 ID' })
+  id: string;
+
+  @ApiProperty({ description: '장비명' })
+  equipmentName: string;
+
+  @ApiProperty({ description: '관리번호' })
+  managementNumber: string;
+
+  @ApiProperty({ description: '반납 예정일' })
+  expectedReturnDate: string;
+
+  @ApiProperty({ description: '남은 일수' })
+  daysUntilReturn: number;
+
+  @ApiProperty({ description: '반출 목적' })
+  purpose: string;
+}
+
+/**
  * 최근 활동 내역 DTO
  */
 export class RecentActivityDto {
@@ -236,4 +259,11 @@ export class DashboardAggregateDto {
     type: () => [RecentActivityDto],
   })
   recentActivities: RecentActivityDto[] | null;
+
+  @ApiProperty({
+    description: '반납 예정 반출 목록 (null = 조회 실패)',
+    nullable: true,
+    type: () => [UpcomingCheckoutReturnDto],
+  })
+  upcomingCheckoutReturns: UpcomingCheckoutReturnDto[] | null;
 }

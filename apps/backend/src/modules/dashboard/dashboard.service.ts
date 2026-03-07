@@ -16,6 +16,7 @@ import {
   OverdueCalibrationDto,
   UpcomingCalibrationDto,
   OverdueCheckoutDto,
+  UpcomingCheckoutReturnDto,
   RecentActivityDto,
   PendingApprovalCountsDto,
   EquipmentStatusStatsDto,
@@ -364,6 +365,67 @@ export class DashboardService {
   }
 
   /**
+   * 반납 예정 반출 조회 (달력용, 다음 N일 이내)
+   */
+  async getUpcomingCheckoutReturns(
+    _userId: string,
+    _userRole: UserRole,
+    days: number = 30,
+    teamId?: string,
+    site?: string
+  ): Promise<UpcomingCheckoutReturnDto[]> {
+    const cacheKey = `dashboard:upcomingCheckoutReturns:${site || 'all'}:${teamId || 'all'}`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const today = new Date();
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + days);
+
+        const results = await this.db
+          .select({
+            id: schema.checkouts.id,
+            equipmentName: schema.equipment.name,
+            managementNumber: schema.equipment.managementNumber,
+            expectedReturnDate: schema.checkouts.expectedReturnDate,
+            purpose: schema.checkouts.purpose,
+          })
+          .from(schema.checkouts)
+          .innerJoin(schema.checkoutItems, eq(schema.checkouts.id, schema.checkoutItems.checkoutId))
+          .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+          .where(
+            and(
+              eq(schema.checkouts.status, 'checked_out'),
+              gte(schema.checkouts.expectedReturnDate, today),
+              lte(schema.checkouts.expectedReturnDate, futureDate),
+              teamId ? eq(schema.equipment.teamId, teamId) : undefined,
+              site ? eq(schema.equipment.site, site) : undefined
+            )
+          )
+          .orderBy(schema.checkouts.expectedReturnDate)
+          .limit(30);
+
+        return results.map((r) => {
+          const expectedDate = r.expectedReturnDate ? new Date(r.expectedReturnDate) : today;
+          const daysUntilReturn = Math.floor(
+            (expectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          return {
+            id: r.id,
+            equipmentName: r.equipmentName || '',
+            managementNumber: r.managementNumber || '',
+            expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',
+            daysUntilReturn,
+            purpose: r.purpose || '',
+          };
+        });
+      },
+      DASHBOARD_CACHE_TTL
+    );
+  }
+
+  /**
    * 최근 활동 내역 조회
    *
    * 감사 로그(audit_logs)를 기반으로 7일 이내 활동을 조회합니다.
@@ -673,6 +735,7 @@ export class DashboardService {
       overdueCheckoutsResult,
       statusStatsResult,
       recentActivitiesResult,
+      upcomingCheckoutReturnsResult,
     ] = await Promise.allSettled([
       this.getSummary(userId, userRole, teamId, site),
       this.getEquipmentByTeam(userId, userRole, teamId, site),
@@ -681,6 +744,7 @@ export class DashboardService {
       this.getOverdueCheckouts(userId, userRole, teamId, site),
       this.getEquipmentStatusStats(userId, userRole, teamId, site),
       this.getRecentActivities(userId, userRole, activitiesLimit, teamId, site),
+      this.getUpcomingCheckoutReturns(userId, userRole, days, teamId, site),
     ]);
 
     return {
@@ -697,6 +761,10 @@ export class DashboardService {
         statusStatsResult.status === 'fulfilled' ? statusStatsResult.value : null,
       recentActivities:
         recentActivitiesResult.status === 'fulfilled' ? recentActivitiesResult.value : null,
+      upcomingCheckoutReturns:
+        upcomingCheckoutReturnsResult.status === 'fulfilled'
+          ? upcomingCheckoutReturnsResult.value
+          : null,
     };
   }
 }
