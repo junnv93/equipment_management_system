@@ -5,7 +5,7 @@ import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AUTH_CONTENT, getAuthInteractiveScaleClasses } from '@/lib/design-tokens';
+import { AUTH_CONTENT, AUTH_LAYOUT_TOKENS } from '@/lib/design-tokens';
 
 interface AzureAdButtonProps {
   callbackUrl?: string;
@@ -35,26 +35,34 @@ export function AzureAdButton({
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="default"
       onClick={handleClick}
       disabled={disabled || isPending}
       className={cn(
-        'w-full h-12 text-base font-medium',
-        'bg-white hover:bg-slate-50 border-slate-200',
-        'dark:bg-card dark:hover:bg-card/90 dark:border-border',
-        'text-slate-700 hover:text-slate-900',
-        'dark:text-foreground dark:hover:text-foreground',
-        'motion-safe:transition-[background-color,border-color,color,box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none',
-        getAuthInteractiveScaleClasses(),
-        'hover:border-slate-300 hover:shadow-sm',
+        'w-full h-12 text-base font-medium text-white',
+        'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0078D4]/50',
+        'motion-safe:transition-[background-color,box-shadow,transform] motion-safe:duration-150 motion-reduce:transition-none',
+        'hover:scale-[1.01] active:scale-[0.99]',
         className
       )}
+      style={{
+        backgroundColor: isPending
+          ? AUTH_LAYOUT_TOKENS.microsoft.bgHover
+          : AUTH_LAYOUT_TOKENS.microsoft.bg,
+      }}
+      onMouseEnter={(e) => {
+        if (!isPending)
+          e.currentTarget.style.backgroundColor = AUTH_LAYOUT_TOKENS.microsoft.bgHover;
+      }}
+      onMouseLeave={(e) => {
+        if (!isPending) e.currentTarget.style.backgroundColor = AUTH_LAYOUT_TOKENS.microsoft.bg;
+      }}
       aria-label={AUTH_CONTENT.button.azureAd}
       data-testid="azure-ad-button"
     >
       {isPending ? (
         <Loader2
-          className="mr-3 h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none text-slate-500 dark:text-muted-foreground"
+          className="mr-3 h-5 w-5 motion-safe:animate-spin motion-reduce:animate-none text-white/70"
           aria-hidden="true"
         />
       ) : (

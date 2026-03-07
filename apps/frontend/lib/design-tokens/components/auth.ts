@@ -213,38 +213,58 @@ export const AUTH_CONTENT = {
 
 /**
  * Auth Background Tokens
+ *
+ * 다크 테마 전용 — 전체 배경 + 미세 그리드 패턴 (연구소/측정 느낌)
  */
 export const AUTH_BACKGROUND_TOKENS = {
-  /** BrandingSection 그리드 패턴 */
+  /** 전체 페이지 배경 (dark 강제) */
+  page: 'bg-brand-bg-base min-h-screen',
+  /** CSS-only 그리드 패턴 */
   grid: {
-    opacity: 0.03,
+    opacity: 0.04,
     size: 48, // px
-    lineColor: 'rgba(255,255,255,0.1)',
+    lineColor: 'rgba(255,255,255,0.08)',
   },
-  /** BrandingSection 그라데이션 */
-  gradient: 'bg-gradient-to-br from-ul-midnight to-ul-midnight-dark',
+} as const;
+
+/**
+ * Auth Split Screen Tokens
+ *
+ * Split Screen 레이아웃 — 좌 브랜딩 패널 + 우 로그인 폼
+ */
+export const AUTH_SPLIT_TOKENS = {
+  left: {
+    bg: '#122C49',
+    gradient: 'radial-gradient(circle at 30% 70%, #1e3a5f 0%, #122C49 60%, #0a1c30 100%)',
+    grid: { opacity: 0.04, size: 48, lineColor: 'rgba(255,255,255,0.08)' },
+  },
+  right: {
+    grid: { opacity: 0.05, size: 48, lineColor: 'hsl(220 15% 60%)' },
+  },
 } as const;
 
 /**
  * Auth Layout Tokens
+ *
+ * 중앙 카드 레이아웃 — "정밀 계측 연구소 출입 게이트"
  */
 export const AUTH_LAYOUT_TOKENS = {
-  /** 로고 컨테이너 — SSOT (파일 간 w-12 vs w-11 불일치 해결) */
+  /** 로고 컨테이너 */
   logo: {
-    container: 'w-12 h-12',
-    iconSize: 'w-6 h-6',
-    borderRadius: 'rounded-xl',
-  },
-  /** Feature 아이콘 컨테이너 */
-  featureIcon: {
     container: 'w-10 h-10',
     iconSize: 'w-5 h-5',
+    borderRadius: 'rounded-lg',
   },
-  /** 카드 스타일 */
-  card: 'bg-card rounded-2xl border border-border p-8',
+  /** 중앙 카드 */
+  card: 'bg-brand-bg-surface border border-brand-border-subtle rounded-2xl p-8',
   /** 분리선 */
   separator: {
     container: 'relative flex items-center gap-4',
+  },
+  /** Microsoft 버튼 */
+  microsoft: {
+    bg: '#0078D4',
+    bgHover: '#106EBE',
   },
 } as const;
 
