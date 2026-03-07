@@ -1,7 +1,12 @@
 {
   "title": "감사 로그",
   "refresh": "새로고침",
-  "print": "인쇄",
+  "exportBtn": "내보내기",
+  "exporting": "내보내는 중...",
+  "exportExcel": "Excel (.xlsx)",
+  "exportCsv": "CSV",
+  "exportFailed": "내보내기 실패",
+  "exportError": "파일 생성 중 오류가 발생했습니다.",
   "filter": "필터",
   "logList": "로그 목록",
   "totalLogs": "총 {count}개의 로그",

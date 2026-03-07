@@ -1,7 +1,12 @@
 {
   "title": "Audit Logs",
   "refresh": "Refresh",
-  "print": "Print",
+  "exportBtn": "Export",
+  "exporting": "Exporting...",
+  "exportExcel": "Excel (.xlsx)",
+  "exportCsv": "CSV",
+  "exportFailed": "Export failed",
+  "exportError": "An error occurred while generating the file.",
   "filter": "Filter",
   "logList": "Log List",
   "totalLogs": "Total {count} logs",

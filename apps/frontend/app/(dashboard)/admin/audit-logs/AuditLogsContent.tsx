@@ -17,6 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,9 +32,10 @@ import {
 } from '@/components/ui/table';
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import { AuditLogDetailDialog } from '@/components/audit-logs/AuditLogDetailDialog';
-import { PrintableAuditReport } from '@/components/audit-logs/PrintableAuditReport';
+import { useToast } from '@/hooks/use-toast';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { auditApi, type AuditLog } from '@/lib/api/audit-api';
+import { apiClient } from '@/lib/api/api-client';
 import type { PaginatedResponse } from '@/lib/api/types';
 import {
   parseAuditLogFiltersFromSearchParams,
@@ -36,10 +43,19 @@ import {
   type UIAuditLogFilters,
 } from '@/lib/utils/audit-log-filter-utils';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, RefreshCw, History, Filter, Printer, Info } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  History,
+  Filter,
+  Download,
+  Info,
+} from 'lucide-react';
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_TYPE_LABELS,
+  SYSTEM_USER_UUID,
   type AuditAction,
   type AuditEntityType,
 } from '@equipment-management/schemas';
@@ -48,6 +64,7 @@ import {
   type UserRole,
   resolveDataScope,
   AUDIT_LOG_SCOPE,
+  API_ENDPOINTS,
 } from '@equipment-management/shared-constants';
 import {
   AUDIT_ACTION_BADGE_TOKENS,
@@ -64,12 +81,10 @@ interface AuditLogsContentProps {
   initialData: PaginatedResponse<AuditLog> | null;
 }
 
-/** nil UUID: 시스템 생성 감사 로그 식별 (Phase 4-1에서 SYSTEM_USER_UUID로 저장됨) */
-const SYSTEM_USER_UUID = '00000000-0000-0000-0000-000000000000';
-
 export default function AuditLogsContent({ initialData }: AuditLogsContentProps) {
   const t = useTranslations('audit');
   const tc = useTranslations('common');
+  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -90,6 +105,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   // 상세 다이얼로그 상태
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // 감사 로그 목록 조회 (placeholderData: 서버 prefetch 데이터)
   const { data, refetch, isRefetching } = useQuery({
@@ -139,8 +155,38 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
     setDetailDialogOpen(true);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleExport = async (format: 'excel' | 'csv') => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams({ format });
+      if (apiParams.userId) params.append('userId', apiParams.userId);
+      if (apiParams.entityType) params.append('entityType', apiParams.entityType);
+      if (apiParams.action) params.append('action', apiParams.action);
+      if (apiParams.startDate) params.append('startDate', String(apiParams.startDate));
+      if (apiParams.endDate) params.append('endDate', String(apiParams.endDate));
+
+      const response = await apiClient.get(
+        `${API_ENDPOINTS.AUDIT_LOGS.EXPORT}?${params.toString()}`,
+        { responseType: 'blob' }
+      );
+
+      const ext = format === 'excel' ? 'xlsx' : 'csv';
+      const filename = `감사로그_${new Date().toISOString().split('T')[0]}.${ext}`;
+      const url = URL.createObjectURL(response.data as Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      // blob responseType은 인터셉터가 처리하지 않으므로 직접 피드백
+      const message = err instanceof Error ? err.message : t('exportError');
+      toast({ title: t('exportFailed'), description: message, variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const logs = data?.data || [];
@@ -168,10 +214,22 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? AUDIT_MOTION.refreshSpin : ''}`} />
             {tc('actions.refresh')}
           </Button>
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            {tc('actions.print')}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={isExporting}>
+                <Download className="h-4 w-4 mr-2" />
+                {isExporting ? t('exporting') : t('exportBtn')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                {t('exportExcel')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                {t('exportCsv')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -407,9 +465,6 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
           log={selectedLog}
         />
       )}
-
-      {/* 인쇄용 보고서 */}
-      <PrintableAuditReport logs={logs} filters={apiParams} />
     </div>
   );
 }
