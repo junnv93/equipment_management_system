@@ -54,6 +54,28 @@
     --chart-3: 25 100% 67%;           /* Orange */
     --chart-4: 354 98% 40%;           /* Red */
     --chart-5: 206 29% 48%;           /* Fog */
+
+    /* Brand Design Tokens — Light Mode */
+    --brand-bg-base: 220 15% 96%;
+    --brand-bg-surface: 0 0% 100%;
+    --brand-bg-elevated: 220 11% 98%;
+    --brand-bg-overlay: 220 9% 95%;
+
+    --brand-border-subtle: 220 15% 90%;
+    --brand-border-default: 220 15% 82%;
+    --brand-border-strong: 220 15% 70%;
+
+    --brand-text-primary: 220 15% 12%;
+    --brand-text-secondary: 220 10% 40%;
+    --brand-text-muted: 220 8% 60%;
+    --brand-text-inverse: 220 15% 96%;
+
+    --brand-color-ok: 160 84% 39%;
+    --brand-color-warning: 38 92% 50%;
+    --brand-color-critical: 0 84% 60%;
+    --brand-color-info: 217 91% 60%;
+    --brand-color-neutral: 220 9% 46%;
+    --brand-color-purple: 258 90% 66%;
   }
 
   .dark {
@@ -100,6 +122,28 @@
     --chart-3: 25 100% 60%;
     --chart-4: 354 98% 50%;
     --chart-5: 206 50% 60%;
+
+    /* Brand Design Tokens — Dark Mode */
+    --brand-bg-base: 220 15% 8%;
+    --brand-bg-surface: 220 13% 12%;
+    --brand-bg-elevated: 220 11% 16%;
+    --brand-bg-overlay: 220 9% 20%;
+
+    --brand-border-subtle: 220 15% 22%;
+    --brand-border-default: 220 15% 28%;
+    --brand-border-strong: 220 15% 38%;
+
+    --brand-text-primary: 220 15% 92%;
+    --brand-text-secondary: 220 10% 65%;
+    --brand-text-muted: 220 8% 45%;
+    --brand-text-inverse: 220 15% 8%;
+
+    --brand-color-ok: 160 84% 39%;
+    --brand-color-warning: 38 92% 50%;
+    --brand-color-critical: 0 84% 60%;
+    --brand-color-info: 217 91% 60%;
+    --brand-color-neutral: 220 9% 46%;
+    --brand-color-purple: 258 90% 66%;
   }
 }
  

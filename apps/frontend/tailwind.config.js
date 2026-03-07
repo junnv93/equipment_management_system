@@ -5,6 +5,7 @@ module.exports = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './lib/**/*.{ts,tsx}',
   ],
   safelist: [
     // 로그인 페이지 브랜딩 섹션 (UL Solutions)
@@ -28,6 +29,9 @@ module.exports = {
     extend: {
       fontFamily: {
         sans: ['var(--font-sans)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-body)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
         border: 'hsl(var(--border))',
@@ -97,6 +101,32 @@ module.exports = {
           1: '#D8D9DA',
           2: '#B5B7B9',
           3: '#939698',
+        },
+        // Brand Design Tokens
+        brand: {
+          bg: {
+            base: 'hsl(var(--brand-bg-base) / <alpha-value>)',
+            surface: 'hsl(var(--brand-bg-surface) / <alpha-value>)',
+            elevated: 'hsl(var(--brand-bg-elevated) / <alpha-value>)',
+            overlay: 'hsl(var(--brand-bg-overlay) / <alpha-value>)',
+          },
+          border: {
+            subtle: 'hsl(var(--brand-border-subtle) / <alpha-value>)',
+            DEFAULT: 'hsl(var(--brand-border-default) / <alpha-value>)',
+            strong: 'hsl(var(--brand-border-strong) / <alpha-value>)',
+          },
+          text: {
+            primary: 'hsl(var(--brand-text-primary) / <alpha-value>)',
+            secondary: 'hsl(var(--brand-text-secondary) / <alpha-value>)',
+            muted: 'hsl(var(--brand-text-muted) / <alpha-value>)',
+            inverse: 'hsl(var(--brand-text-inverse) / <alpha-value>)',
+          },
+          ok: 'hsl(var(--brand-color-ok) / <alpha-value>)',
+          warning: 'hsl(var(--brand-color-warning) / <alpha-value>)',
+          critical: 'hsl(var(--brand-color-critical) / <alpha-value>)',
+          info: 'hsl(var(--brand-color-info) / <alpha-value>)',
+          neutral: 'hsl(var(--brand-color-neutral) / <alpha-value>)',
+          purple: 'hsl(var(--brand-color-purple) / <alpha-value>)',
         },
         // Semantic colors
         success: {

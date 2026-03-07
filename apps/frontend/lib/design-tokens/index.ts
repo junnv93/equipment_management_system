@@ -36,6 +36,25 @@ export {
 } from './primitives';
 
 // ============================================================================
+// Brand Tokens (글로벌 디자인 언어)
+// ============================================================================
+
+export {
+  BRAND_COLORS_HEX,
+  FONT,
+  BRAND_LAYOUT,
+  getBrandCardClasses,
+  getBrandSectionHeaderClasses,
+  getManagementNumberClasses,
+  getTimestampClasses,
+  getKpiCounterClasses,
+  getSemanticBadgeClasses,
+  getBrandElevatedClasses,
+  getBrandMutedTextClasses,
+  type SemanticColorKey,
+} from './brand';
+
+// ============================================================================
 // Layer 2: Semantic (컴포넌트에서 사용 권장)
 // ============================================================================
 
@@ -116,6 +135,7 @@ export {
   AUTH_CONTENT,
   AUTH_BACKGROUND_TOKENS,
   AUTH_LAYOUT_TOKENS,
+  AUTH_SPLIT_TOKENS,
   getAuthInputClasses,
   getAuthButtonClasses,
   getAuthErrorClasses,
@@ -138,6 +158,11 @@ export {
   getDashboardStaggerDelay,
   DASHBOARD_SIZES,
   DASHBOARD_FOCUS,
+  DASHBOARD_DDAY_TOKENS,
+  DASHBOARD_KPI_TOKENS,
+  DASHBOARD_DDAY_COMPACT_TOKENS,
+  DASHBOARD_CALENDAR_TOKENS,
+  DASHBOARD_TEAM_DISTRIBUTION_TOKENS,
   type StatsVariant,
   type DashboardRole,
   type CalibrationStatus,

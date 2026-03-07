@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import '@/styles/globals.css';
-import { Inter, Noto_Sans_KR } from 'next/font/google';
+import { Inter, Noto_Sans_KR, DM_Sans, IBM_Plex_Sans, JetBrains_Mono } from 'next/font/google';
 import { Suspense } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
@@ -19,6 +19,26 @@ const notoSansKR = Noto_Sans_KR({
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
   display: 'swap',
 });
 
@@ -59,7 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang={DEFAULT_LOCALE} suppressHydrationWarning>
       <body
-        className={`${notoSansKR.variable} ${inter.variable} font-sans bg-background text-foreground`}
+        className={`${notoSansKR.variable} ${inter.variable} ${dmSans.variable} ${ibmPlexSans.variable} ${jetbrainsMono.variable} font-sans bg-background text-foreground`}
       >
         <Suspense>
           <IntlProvider>{children}</IntlProvider>

@@ -44,6 +44,7 @@ export interface EquipmentStatusConfig {
   card: {
     className: string; // Badge 클래스
     borderColor: string; // Card border-left
+    statusBarColor: string; // 테이블 4px 상태 세로 바 (bg-brand-*)
   };
   /** 상세 헤더용 스타일 (dark background) */
   header: {
@@ -68,6 +69,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
       borderColor: 'border-l-green-500',
+      statusBarColor: 'bg-brand-ok',
     },
     header: {
       textColor: 'text-green-800 dark:text-green-300',
@@ -81,6 +83,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
       borderColor: 'border-l-blue-500',
+      statusBarColor: 'bg-brand-info',
     },
     header: {
       textColor: 'text-blue-800 dark:text-blue-300',
@@ -94,6 +97,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300',
       borderColor: 'border-l-orange-500',
+      statusBarColor: 'bg-brand-info/70',
     },
     header: {
       textColor: 'text-ul-midnight dark:text-blue-300',
@@ -108,6 +112,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
       borderColor: 'border-l-green-500',
+      statusBarColor: 'bg-brand-warning',
     },
     header: {
       textColor: 'text-green-800 dark:text-green-300',
@@ -122,6 +127,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
       borderColor: 'border-l-red-600',
+      statusBarColor: 'bg-brand-critical',
     },
     header: {
       textColor: 'text-red-700 dark:text-red-300',
@@ -135,6 +141,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
       borderColor: 'border-l-red-600',
+      statusBarColor: 'bg-brand-critical',
     },
     header: {
       textColor: 'text-red-700 dark:text-red-300',
@@ -148,6 +155,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
       borderColor: 'border-l-slate-500',
+      statusBarColor: 'bg-brand-neutral',
     },
     header: {
       textColor: 'text-gray-700 dark:text-gray-300',
@@ -161,6 +169,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
       borderColor: 'border-l-gray-500',
+      statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
       textColor: 'text-gray-600 dark:text-gray-400',
@@ -174,6 +183,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
       borderColor: 'border-l-orange-500',
+      statusBarColor: 'bg-brand-warning',
     },
     header: {
       textColor: 'text-orange-700 dark:text-orange-300',
@@ -187,6 +197,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
       borderColor: 'border-l-gray-500',
+      statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
       textColor: 'text-gray-600 dark:text-gray-400',
@@ -200,6 +211,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
       borderColor: 'border-l-cyan-500',
+      statusBarColor: 'bg-brand-purple',
     },
     header: {
       textColor: 'text-cyan-700 dark:text-cyan-300',
@@ -213,6 +225,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     card: {
       className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
       borderColor: 'border-l-slate-400',
+      statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
       textColor: 'text-slate-600 dark:text-slate-400',
@@ -231,6 +244,7 @@ export const DEFAULT_STATUS_CONFIG: EquipmentStatusConfig = {
   card: {
     className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
     borderColor: 'border-l-gray-500',
+    statusBarColor: 'bg-brand-neutral',
   },
   header: {
     textColor: 'text-gray-800 dark:text-gray-300',
@@ -500,4 +514,16 @@ export const EQUIPMENT_TABLE_TOKENS = {
 
   /** 수치 컬럼 */
   numericColumn: 'tabular-nums',
+
+  /** 4px 상태 바 셀 */
+  statusBar: {
+    cell: 'w-1 p-0',
+    indicator: 'block w-1 h-full min-h-[2.5rem]',
+  },
+
+  /** 상태 배지 (텍스트 전용, 고정폭) */
+  statusBadge: 'min-w-[4.5rem] text-center text-xs font-medium border-0 inline-flex justify-center',
+
+  /** 장비명 하위 2차 텍스트 (모델명) */
+  secondaryText: 'text-xs text-muted-foreground mt-0.5 truncate',
 } as const;
