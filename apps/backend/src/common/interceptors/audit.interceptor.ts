@@ -4,7 +4,9 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AUDIT_LOG_KEY, AuditLogMetadata } from '../decorators/audit-log.decorator';
 import { SKIP_AUDIT_KEY } from '../decorators/skip-audit.decorator';
-import { AuditService, CreateAuditLogDto } from '../../modules/audit/audit.service';
+import { AuditService } from '../../modules/audit/audit.service';
+import type { CreateAuditLogDto } from '@equipment-management/schemas';
+import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
 import { AuditLogDetails } from '@equipment-management/db/schema';
 import type { AuthenticatedRequest, JwtUser } from '../../types/auth';
 
@@ -182,7 +184,8 @@ export class AuditInterceptor implements NestInterceptor {
 
     const auditLogDto: CreateAuditLogDto = {
       // SSOT: JwtUser.userId (JWT sub → userId)
-      userId: user?.userId || 'anonymous',
+      // nil UUID 폴백: 'anonymous' 문자열은 PostgreSQL uuid 컬럼에 INSERT 실패
+      userId: user?.userId || SYSTEM_USER_UUID,
       userName: user?.name || 'Anonymous User',
       // SSOT: JwtUser.roles (배열의 첫 번째 역할)
       userRole: user?.roles?.[0] || 'unknown',

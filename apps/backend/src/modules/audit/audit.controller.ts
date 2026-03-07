@@ -1,4 +1,4 @@
-import { Controller, Get, Query, ParseUUIDPipe, Param, Request } from '@nestjs/common';
+import { Controller, Get, Query, ParseUUIDPipe, Param, Request, UsePipes } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,13 +8,18 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { AuditService, AuditLogFilter, PaginationOptions } from './audit.service';
+import { AuditLogQueryValidationPipe, type AuditLogQueryInput } from './dto/audit-log-query.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import {
   Permission,
   resolveDataScope,
   AUDIT_LOG_SCOPE,
 } from '@equipment-management/shared-constants';
-import type { UserRole } from '@equipment-management/schemas';
+import {
+  AUDIT_ACTION_VALUES,
+  AUDIT_ENTITY_TYPE_VALUES,
+  type UserRole,
+} from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 
 /**
@@ -23,6 +28,7 @@ import type { AuthenticatedRequest } from '../../types/auth';
  * - lab_manager만 조회 가능
  * - 페이지네이션 지원
  * - 필터링 지원 (userId, entityType, action, dateRange)
+ * - 모든 엔드포인트에 RBAC 스코프 적용 (C-1 보안 수정)
  */
 @ApiTags('감사 로그')
 @ApiBearerAuth()
@@ -31,6 +37,8 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
+  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
+  @UsePipes(AuditLogQueryValidationPipe)
   @ApiOperation({
     summary: '감사 로그 목록 조회',
     description: '감사 로그 목록을 조회합니다. lab_manager만 조회 가능합니다.',
@@ -46,15 +54,15 @@ export class AuditController {
   @ApiQuery({
     name: 'entityType',
     required: false,
-    type: String,
-    description: '엔티티 타입 필터 (equipment, calibration, checkout 등)',
+    enum: AUDIT_ENTITY_TYPE_VALUES,
+    description: '엔티티 타입 필터',
   })
   @ApiQuery({ name: 'entityId', required: false, type: String, description: '엔티티 ID 필터' })
   @ApiQuery({
     name: 'action',
     required: false,
-    type: String,
-    description: '액션 필터 (create, update, delete, approve 등)',
+    enum: AUDIT_ACTION_VALUES,
+    description: '액션 필터',
   })
   @ApiQuery({
     name: 'startDate',
@@ -69,19 +77,12 @@ export class AuditController {
     description: '종료 날짜 (ISO 8601 형식)',
   })
   @ApiResponse({ status: 200, description: '감사 로그 목록 조회 성공' })
+  @ApiResponse({ status: 400, description: '잘못된 쿼리 파라미터' })
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
   @ApiResponse({ status: 403, description: '권한 없음 (lab_manager만 조회 가능)' })
-  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   async findAll(
     @Request() req: AuthenticatedRequest,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('userId') userId?: string,
-    @Query('entityType') entityType?: string,
-    @Query('entityId') entityId?: string,
-    @Query('action') action?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string
+    @Query() query: AuditLogQueryInput
   ): Promise<unknown> {
     // SSOT: resolveDataScope()로 역할별 스코프 해석 — switch/if 없음
     const scope = resolveDataScope(
@@ -94,26 +95,27 @@ export class AuditController {
     );
 
     const filter: AuditLogFilter = {
-      userId,
-      entityType,
-      entityId,
-      action,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      userId: query.userId,
+      entityType: query.entityType,
+      entityId: query.entityId,
+      action: query.action,
+      startDate: query.startDate ? new Date(query.startDate) : undefined,
+      endDate: query.endDate ? new Date(query.endDate) : undefined,
       // 서버 강제 스코프 — 클라이언트 파라미터로 우회 불가
       userSite: scope.site,
       userTeamId: scope.teamId,
     };
 
     const pagination: PaginationOptions = {
-      page: page ? parseInt(page, 10) : 1,
-      limit: Math.min(limit ? parseInt(limit, 10) : 20, 100),
+      page: query.page ?? 1,
+      limit: Math.min(query.limit ?? 20, 100),
     };
 
     return this.auditService.findAll(filter, pagination);
   }
 
   @Get(':id')
+  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   @ApiOperation({
     summary: '감사 로그 단건 조회',
     description: '감사 로그를 ID로 조회합니다.',
@@ -123,27 +125,23 @@ export class AuditController {
   @ApiResponse({ status: 404, description: '감사 로그를 찾을 수 없음' })
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
   @ApiResponse({ status: 403, description: '권한 없음' })
-  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<{
-    id: string;
-    timestamp: Date;
-    userId: string;
-    userName: string;
-    userRole: string;
-    action: string;
-    entityType: string;
-    entityId: string;
-    entityName: string | null;
-    details:
-      | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
-      | null;
-    ipAddress: string | null;
-    createdAt: Date;
-  }> {
-    return this.auditService.findOne(id);
+  async findOne(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', ParseUUIDPipe) id: string
+  ): Promise<unknown> {
+    const scope = resolveDataScope(
+      {
+        role: req.user.roles[0] as UserRole,
+        site: req.user.site,
+        teamId: req.user.teamId,
+      },
+      AUDIT_LOG_SCOPE
+    );
+    return this.auditService.findOne(id, scope);
   }
 
   @Get('entity/:entityType/:entityId')
+  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   @ApiOperation({
     summary: '특정 엔티티의 감사 로그 조회',
     description: '특정 엔티티(장비, 교정 등)의 감사 로그를 조회합니다.',
@@ -151,48 +149,26 @@ export class AuditController {
   @ApiParam({
     name: 'entityType',
     description: '엔티티 타입',
-    enum: [
-      'equipment',
-      'calibration',
-      'checkout',
-      'rental',
-      'user',
-      'team',
-      'calibration_factor',
-      'non_conformance',
-      'software',
-      'calibration_plan',
-      'repair_history',
-    ],
+    enum: AUDIT_ENTITY_TYPE_VALUES,
   })
   @ApiParam({ name: 'entityId', description: '엔티티 ID (UUID)' })
   @ApiResponse({ status: 200, description: '엔티티 감사 로그 조회 성공' })
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
   @ApiResponse({ status: 403, description: '권한 없음' })
-  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   async findByEntity(
+    @Request() req: AuthenticatedRequest,
     @Param('entityType') entityType: string,
     @Param('entityId', ParseUUIDPipe) entityId: string
-  ): Promise<{
-    items: {
-      id: string;
-      timestamp: Date;
-      userId: string;
-      userName: string;
-      userRole: string;
-      action: string;
-      entityType: string;
-      entityId: string;
-      entityName: string | null;
-      details:
-        | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
-        | null;
-      ipAddress: string | null;
-      createdAt: Date;
-    }[];
-    formattedLogs: string[];
-  }> {
-    const logs = await this.auditService.findByEntity(entityType, entityId);
+  ): Promise<unknown> {
+    const scope = resolveDataScope(
+      {
+        role: req.user.roles[0] as UserRole,
+        site: req.user.site,
+        teamId: req.user.teamId,
+      },
+      AUDIT_LOG_SCOPE
+    );
+    const logs = await this.auditService.findByEntity(entityType, entityId, scope);
     return {
       items: logs,
       formattedLogs: logs.map((log) => this.auditService.formatLogMessage(log)),
@@ -200,6 +176,7 @@ export class AuditController {
   }
 
   @Get('user/:userId')
+  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   @ApiOperation({
     summary: '특정 사용자의 감사 로그 조회',
     description: '특정 사용자의 감사 로그를 조회합니다.',
@@ -214,30 +191,21 @@ export class AuditController {
   @ApiResponse({ status: 200, description: '사용자 감사 로그 조회 성공' })
   @ApiResponse({ status: 401, description: '인증되지 않은 요청' })
   @ApiResponse({ status: 403, description: '권한 없음' })
-  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
   async findByUser(
+    @Request() req: AuthenticatedRequest,
     @Param('userId', ParseUUIDPipe) userId: string,
     @Query('limit') limit?: string
-  ): Promise<{
-    items: {
-      id: string;
-      timestamp: Date;
-      userId: string;
-      userName: string;
-      userRole: string;
-      action: string;
-      entityType: string;
-      entityId: string;
-      entityName: string | null;
-      details:
-        | import('/home/kmjkds/equipment_management_system/packages/db/src/schema/audit-logs').AuditLogDetails
-        | null;
-      ipAddress: string | null;
-      createdAt: Date;
-    }[];
-    formattedLogs: string[];
-  }> {
-    const logs = await this.auditService.findByUser(userId, limit ? parseInt(limit, 10) : 100);
+  ): Promise<unknown> {
+    const scope = resolveDataScope(
+      {
+        role: req.user.roles[0] as UserRole,
+        site: req.user.site,
+        teamId: req.user.teamId,
+      },
+      AUDIT_LOG_SCOPE
+    );
+    const parsedLimit = Math.min(parseInt(limit ?? '', 10) || 100, 100);
+    const logs = await this.auditService.findByUser(userId, parsedLimit, scope);
     return {
       items: logs,
       formattedLogs: logs.map((log) => this.auditService.formatLogMessage(log)),

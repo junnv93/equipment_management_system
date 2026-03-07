@@ -10,43 +10,17 @@ import {
   AUDIT_ENTITY_TYPE_LABELS,
   type AuditAction,
   type AuditEntityType,
+  type CreateAuditLogDto,
+  type AuditLogFilter,
 } from '@equipment-management/schemas';
-import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
+import {
+  USER_ROLE_LABELS,
+  type UserRole,
+  type ResolvedDataScope,
+} from '@equipment-management/shared-constants';
+import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
 
-/**
- * 감사 로그 생성 DTO
- */
-export interface CreateAuditLogDto {
-  userId: string;
-  userName: string;
-  userRole: string;
-  action: string;
-  entityType: string;
-  entityId: string;
-  entityName?: string;
-  details?: AuditLogDetails;
-  ipAddress?: string;
-  /** 행위자의 사이트 (RBAC 스코프 필터링용) */
-  userSite?: string;
-  /** 행위자의 팀 ID (RBAC 스코프 필터링용) */
-  userTeamId?: string;
-}
-
-/**
- * 감사 로그 조회 필터
- */
-export interface AuditLogFilter {
-  userId?: string;
-  entityType?: string;
-  entityId?: string;
-  action?: string;
-  startDate?: Date;
-  endDate?: Date;
-  /** RBAC: 사이트 스코프 (lab_manager) — 서버 강제 */
-  userSite?: string;
-  /** RBAC: 팀 스코프 (technical_manager) — 서버 강제 */
-  userTeamId?: string;
-}
+export type { AuditLogFilter };
 
 /**
  * 페이지네이션 옵션
@@ -218,14 +192,29 @@ export class AuditService {
 
   /**
    * 감사 로그 단건 조회 (ID로 조회)
+   *
+   * scope가 있으면 userSite/userTeamId WHERE 조건 추가 — 타 사이트/팀 접근 차단
    */
-  async findOne(id: string): Promise<AuditLog> {
-    const cacheKey = `audit-logs:detail:${id}`;
+  async findOne(id: string, scope?: ResolvedDataScope): Promise<AuditLog> {
+    const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
+    const cacheKey = `audit-logs:detail:${id}:${scopeKey}`;
 
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const [log] = await this.db.select().from(auditLogs).where(eq(auditLogs.id, id)).limit(1);
+        const conditions: SQL[] = [eq(auditLogs.id, id)];
+        if (scope?.type === 'site' && scope.site) {
+          conditions.push(eq(auditLogs.userSite, scope.site));
+        }
+        if (scope?.type === 'team' && scope.teamId) {
+          conditions.push(eq(auditLogs.userTeamId, scope.teamId));
+        }
+
+        const [log] = await this.db
+          .select()
+          .from(auditLogs)
+          .where(and(...conditions))
+          .limit(1);
 
         if (!log) {
           throw new NotFoundException(`Audit log with ID ${id} not found`);
@@ -239,17 +228,35 @@ export class AuditService {
 
   /**
    * 특정 엔티티의 감사 로그 조회
+   *
+   * scope가 있으면 userSite/userTeamId WHERE 조건 추가 — 타 사이트/팀 접근 차단
    */
-  async findByEntity(entityType: string, entityId: string): Promise<AuditLog[]> {
-    const cacheKey = `audit-logs:entity:${entityType}:${entityId}`;
+  async findByEntity(
+    entityType: string,
+    entityId: string,
+    scope?: ResolvedDataScope
+  ): Promise<AuditLog[]> {
+    const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
+    const cacheKey = `audit-logs:entity:${entityType}:${entityId}:${scopeKey}`;
 
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
+        const conditions: SQL[] = [
+          eq(auditLogs.entityType, entityType),
+          eq(auditLogs.entityId, entityId),
+        ];
+        if (scope?.type === 'site' && scope.site) {
+          conditions.push(eq(auditLogs.userSite, scope.site));
+        }
+        if (scope?.type === 'team' && scope.teamId) {
+          conditions.push(eq(auditLogs.userTeamId, scope.teamId));
+        }
+
         return this.db
           .select()
           .from(auditLogs)
-          .where(and(eq(auditLogs.entityType, entityType), eq(auditLogs.entityId, entityId)))
+          .where(and(...conditions))
           .orderBy(desc(auditLogs.timestamp));
       },
       this.LIST_CACHE_TTL
@@ -258,17 +265,28 @@ export class AuditService {
 
   /**
    * 특정 사용자의 감사 로그 조회
+   *
+   * scope가 있으면 userSite/userTeamId WHERE 조건 추가 — 타 사이트/팀 접근 차단
    */
-  async findByUser(userId: string, limit = 100): Promise<AuditLog[]> {
-    const cacheKey = `audit-logs:user:${userId}`;
+  async findByUser(userId: string, limit = 100, scope?: ResolvedDataScope): Promise<AuditLog[]> {
+    const scopeKey = scope ? `${scope.type}:${scope.site ?? ''}:${scope.teamId ?? ''}` : 'all';
+    const cacheKey = `audit-logs:user:${userId}:${scopeKey}`;
 
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
+        const conditions: SQL[] = [eq(auditLogs.userId, userId)];
+        if (scope?.type === 'site' && scope.site) {
+          conditions.push(eq(auditLogs.userSite, scope.site));
+        }
+        if (scope?.type === 'team' && scope.teamId) {
+          conditions.push(eq(auditLogs.userTeamId, scope.teamId));
+        }
+
         return this.db
           .select()
           .from(auditLogs)
-          .where(eq(auditLogs.userId, userId))
+          .where(and(...conditions))
           .orderBy(desc(auditLogs.timestamp))
           .limit(limit);
       },
@@ -316,16 +334,23 @@ export class AuditService {
   }): Promise<void> {
     try {
       await this.create({
-        userId: 'system',
+        // nil UUID: PostgreSQL uuid 컬럼 호환 — 'system'/'anonymous' 문자열은 INSERT 실패
+        userId: SYSTEM_USER_UUID,
         userName: payload.email ?? 'unknown',
         userRole: 'system',
-        action: payload.event,
-        entityType: 'auth',
-        entityId: payload.email ?? 'unknown',
+        action: 'login', // 로그인 시도 실패 — 기존 enum 재사용
+        entityType: 'user', // 인증은 사용자 엔티티 — 기존 enum 재사용
+        entityId: SYSTEM_USER_UUID, // uuid 컬럼 호환; 실제 이메일은 entityName으로
+        entityName: payload.email ?? 'unknown',
         details: {
-          reason: payload.reason,
-          ...(payload.sessionAge !== undefined && { sessionAge: payload.sessionAge }),
-        } as AuditLogDetails,
+          // AuditLogDetails.additionalInfo: 커스텀 필드는 이 아래에 위치해야 함
+          additionalInfo: {
+            reason: payload.reason,
+            event: payload.event, // 원본 이벤트명 보존 (login_failed / refresh_denied)
+            email: payload.email,
+            ...(payload.sessionAge !== undefined && { sessionAge: payload.sessionAge }),
+          },
+        } satisfies AuditLogDetails,
       });
 
       this.logger.warn(
