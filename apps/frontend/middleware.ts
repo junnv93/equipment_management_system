@@ -101,6 +101,6 @@ export const config = {
   matcher: [
     // (dashboard) 그룹의 모든 라우트
     // Next.js route group은 URL에 나타나지 않으므로 실제 경로 패턴 매칭
-    '/((?!login|api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!login|api|_next/static|_next/image|images|favicon.ico).*)',
   ],
 };

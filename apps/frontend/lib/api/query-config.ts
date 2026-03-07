@@ -191,6 +191,14 @@ export const QUERY_CONFIG = {
 
   /** 사용자 설정 - STATIC (mutation onSettled invalidation으로만 갱신) */
   SETTINGS: REFETCH_STRATEGIES.STATIC,
+
+  /** 감사 로그 목록 - append-only, 사용자 명시적 갱신 기반 (window focus 갱신 없음) */
+  AUDIT_LOGS: {
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  },
 } as const;
 
 /**

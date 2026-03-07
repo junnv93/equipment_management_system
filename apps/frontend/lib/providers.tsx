@@ -97,7 +97,7 @@ function AuthSync({ children }: { children: ReactNode }) {
 export function Providers({ children }: ProvidersProps) {
   return (
     <SessionProvider refetchInterval={5 * 60}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
         <QueryClientProvider client={queryClient}>
           {/* ✅ Best Practice: SessionProvider 내부에서 useSession() 사용 */}
           <AuthenticatedClientProvider>
