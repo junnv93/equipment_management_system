@@ -312,8 +312,9 @@ export const DASHBOARD_KPI_TOKENS = {
   count: 'font-mono tabular-nums font-semibold text-3xl text-foreground leading-tight',
   label: 'text-xs text-muted-foreground truncate',
   percent: 'text-xs text-muted-foreground tabular-nums',
-  // 4-컬럼 주요 KPI 카드
-  primaryCard: 'bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2',
+  // 4-컬럼 주요 KPI 카드 (Link 컴포넌트로 사용 — hover/focus 포함)
+  primaryCard:
+    'group bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors',
   primaryCount: 'font-mono tabular-nums font-bold text-4xl text-foreground leading-tight',
   primaryLabel: 'text-sm font-medium text-muted-foreground',
   primarySub: 'text-xs text-muted-foreground tabular-nums',
@@ -375,6 +376,7 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   cellToday: 'bg-ul-blue/10 dark:bg-ul-blue/20',
   cellNumber: 'text-xs text-foreground leading-tight',
   cellNumberToday: 'font-bold text-ul-blue dark:text-ul-info',
+  cellNumberHoliday: 'font-medium text-ul-red dark:text-red-400',
   cellNumberOtherMonth: 'text-muted-foreground/40',
   dots: 'flex gap-0.5 mt-0.5 flex-wrap justify-center max-w-[28px]',
   dotOverdue: 'w-1.5 h-1.5 rounded-full bg-ul-red dark:bg-red-400 flex-shrink-0',

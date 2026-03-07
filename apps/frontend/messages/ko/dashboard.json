@@ -311,6 +311,7 @@
     "title": "{year}년 {month}월",
     "prevMonth": "이전 달",
     "nextMonth": "다음 달",
+    "legendHoliday": "공휴일",
     "legendOverdue": "교정 초과",
     "legendUpcoming": "교정 예정",
     "legendReturn": "반납 예정",
@@ -323,6 +324,7 @@
   "teamDistribution": {
     "title": "팀별 장비 분포",
     "total": "총 {total}대",
+    "count": "{count}대",
     "empty": "팀 데이터 없음",
     "ariaLabel": "팀별 장비 분포 바 차트"
   },

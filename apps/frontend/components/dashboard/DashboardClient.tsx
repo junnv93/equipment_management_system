@@ -34,6 +34,7 @@ import type {
   DashboardAggregate,
 } from '@/lib/api/dashboard-api';
 import { DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE } from '@/lib/config/dashboard-config';
+import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
 
 // Props 타입
 export interface DashboardClientProps {
@@ -63,14 +64,33 @@ function DashboardClientComponent({
 
   const userRole = session?.user?.role?.toLowerCase() || DEFAULT_ROLE;
 
-  const selectedTeamId = useMemo(() => {
-    return searchParams.get('teamId') || undefined;
-  }, [searchParams]);
+  const config = DASHBOARD_ROLE_CONFIG[userRole] || DASHBOARD_ROLE_CONFIG[DEFAULT_ROLE];
+  const { controlCenter } = config;
+
+  // 대시보드 스코프 — API 호출 / queryKey / KPI 링크 세 곳이 동일한 범위를 참조
+  // requiresTeamScope는 dashboard-config(SSOT)가 결정, 이 컴포넌트는 그대로 전달
+  const scope = useMemo(
+    () =>
+      resolveDashboardScope(
+        controlCenter.kpiDisplay,
+        controlCenter.requiresTeamScope,
+        session?.user?.site,
+        session?.user?.teamId,
+        searchParams.get('teamId')
+      ),
+    [
+      controlCenter.kpiDisplay,
+      controlCenter.requiresTeamScope,
+      session?.user?.site,
+      session?.user?.teamId,
+      searchParams,
+    ]
+  );
 
   // 단일 aggregate 쿼리 — SSR placeholderData로 hydration
   const { data: aggregate, isLoading } = useQuery<DashboardAggregate>({
-    queryKey: queryKeys.dashboard.aggregate(userRole, selectedTeamId),
-    queryFn: () => dashboardApi.getAggregate(selectedTeamId),
+    queryKey: queryKeys.dashboard.aggregate(userRole, scope.teamId),
+    queryFn: () => dashboardApi.getAggregate(scope.teamId),
     placeholderData: {
       summary: initialSummary ?? null,
       equipmentByTeam: initialEquipmentByTeam ?? null,
@@ -98,9 +118,6 @@ function DashboardClientComponent({
   const equipmentStatusStats = aggregate?.equipmentStatusStats ?? {};
   const upcomingCheckoutReturns = aggregate?.upcomingCheckoutReturns ?? [];
 
-  const config = DASHBOARD_ROLE_CONFIG[userRole] || DASHBOARD_ROLE_CONFIG[DEFAULT_ROLE];
-  const { controlCenter } = config;
-
   return (
     <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
@@ -114,7 +131,7 @@ function DashboardClientComponent({
           summary={summary}
           equipmentStatusStats={equipmentStatusStats}
           loading={isLoading}
-          kpiDisplay={controlCenter.kpiDisplay}
+          scope={scope}
         />
         {controlCenter.showCalibrationDday && (
           <CalibrationDdayList

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { OverdueCheckout } from '@/lib/api/dashboard-api';
@@ -75,13 +75,10 @@ export function OverdueCheckoutsCard({
                   <div className="text-[10px] text-muted-foreground truncate">{item.user.name}</div>
                 )}
               </div>
-              <span
-                className={cn(
-                  'text-[10px] text-muted-foreground group-hover:text-foreground flex-shrink-0'
-                )}
-              >
-                →
-              </span>
+              <ArrowRight
+                className="h-3 w-3 text-muted-foreground group-hover:text-foreground flex-shrink-0"
+                aria-hidden="true"
+              />
             </Link>
           ))}
         </div>

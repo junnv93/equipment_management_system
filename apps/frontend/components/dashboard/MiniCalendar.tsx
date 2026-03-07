@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import Holidays from 'date-holidays';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import type {
   OverdueCalibration,
   UpcomingCalibration,
@@ -30,22 +32,6 @@ function toDateKey(dateStr: string): string {
   return dateStr.slice(0, 10);
 }
 
-const MONTHS_KO = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-const MONTHS_EN = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 export function MiniCalendar({
   upcomingCalibrations,
   upcomingCheckoutReturns,
@@ -53,12 +39,12 @@ export function MiniCalendar({
   className,
 }: MiniCalendarProps) {
   const t = useTranslations('dashboard.calendar');
+  const locale = useLocale();
 
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
 
   const todayKey = useMemo(() => {
     const d = new Date();
@@ -92,6 +78,19 @@ export function MiniCalendar({
     return map;
   }, [overdueCalibrations, upcomingCalibrations, upcomingCheckoutReturns]);
 
+  // 공휴일 맵 — 연도 단위로 memoize (date-holidays 'KR')
+  const holidayYear = currentMonth.getFullYear();
+  const holidayMap = useMemo(() => {
+    const hd = new Holidays('KR');
+    const map = new Map<string, string>();
+    hd.getHolidays(holidayYear).forEach((h) => {
+      if (h.type === 'public') {
+        map.set(h.date.slice(0, 10), h.name);
+      }
+    });
+    return map;
+  }, [holidayYear]);
+
   // 달력 그리드 생성
   const calendarCells = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -119,9 +118,6 @@ export function MiniCalendar({
     setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
   }, []);
 
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-
   // i18n dayLabels는 JSON 배열이므로 직접 처리
   const dayLabelsRaw = t.raw('dayLabels') as string[];
 
@@ -143,87 +139,100 @@ export function MiniCalendar({
     return t('returnDue');
   };
 
-  // 월 타이틀 포맷
-  const monthTitle = (() => {
-    try {
-      return t('title', { year, month: MONTHS_KO[month] });
-    } catch {
-      return `${year}년 ${MONTHS_EN[month]}`;
-    }
-  })();
+  // 월 타이틀 포맷 — Intl.DateTimeFormat으로 로케일 자동 처리
+  const monthTitle = new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'long',
+  }).format(currentMonth);
 
   return (
-    <div className={cn(T.container, className)} role="region" aria-label={t('ariaLabel')}>
-      {/* 헤더: 월 이동 */}
-      <div className={T.header}>
-        <button
-          type="button"
-          onClick={handlePrev}
-          className={T.navButton}
-          aria-label={t('prevMonth')}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className={T.title}>{monthTitle}</span>
-        <button
-          type="button"
-          onClick={handleNext}
-          className={T.navButton}
-          aria-label={t('nextMonth')}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
+    <TooltipProvider>
+      <div className={cn(T.container, className)} role="region" aria-label={t('ariaLabel')}>
+        {/* 헤더: 월 이동 */}
+        <div className={T.header}>
+          <button
+            type="button"
+            onClick={handlePrev}
+            className={T.navButton}
+            aria-label={t('prevMonth')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className={T.title}>{monthTitle}</span>
+          <button
+            type="button"
+            onClick={handleNext}
+            className={T.navButton}
+            aria-label={t('nextMonth')}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
 
-      {/* 요일 헤더 */}
-      <div className={T.grid}>
-        {dayLabelsRaw.map((label, i) => (
-          <div key={i} className={T.dayLabel}>
-            {label}
-          </div>
-        ))}
+        {/* 요일 헤더 */}
+        <div className={T.grid}>
+          {dayLabelsRaw.map((label, i) => (
+            <div key={i} className={T.dayLabel}>
+              {label}
+            </div>
+          ))}
 
-        {/* 날짜 셀 */}
-        {calendarCells.map((cell, idx) => {
-          if (!cell) {
-            return <div key={`empty-${idx}`} />;
-          }
+          {/* 날짜 셀 */}
+          {calendarCells.map((cell, idx) => {
+            if (!cell) {
+              return <div key={`empty-${idx}`} />;
+            }
 
-          const isToday = cell.dateKey === todayKey;
-          const hasEvents = cell.events.length > 0;
-          const isHovered = hoveredDate === cell.dateKey;
+            const isToday = cell.dateKey === todayKey;
+            const holidayName = holidayMap.get(cell.dateKey);
+            const hasEvents = cell.events.length > 0 || !!holidayName;
 
-          // 도트 타입 중복 제거 (같은 타입 도트는 1개만)
-          const uniqueTypes = Array.from(new Set(cell.events.map((e) => e.type)));
+            // 도트 타입 중복 제거 (같은 타입 도트는 1개만)
+            const uniqueTypes = Array.from(new Set(cell.events.map((e) => e.type)));
 
-          return (
-            <div
-              key={cell.dateKey}
-              className={cn(T.cell, isToday && T.cellToday, hasEvents && 'cursor-pointer')}
-              onMouseEnter={() => hasEvents && setHoveredDate(cell.dateKey)}
-              onMouseLeave={() => setHoveredDate(null)}
-              onFocus={() => hasEvents && setHoveredDate(cell.dateKey)}
-              onBlur={() => setHoveredDate(null)}
-            >
-              <span className={cn(T.cellNumber, isToday && T.cellNumberToday)}>{cell.day}</span>
+            const cellContent = (
+              <div className={cn(T.cell, isToday && T.cellToday, hasEvents && 'cursor-pointer')}>
+                <span
+                  className={cn(
+                    T.cellNumber,
+                    isToday ? T.cellNumberToday : holidayName ? T.cellNumberHoliday : undefined
+                  )}
+                >
+                  {cell.day}
+                </span>
 
-              {/* 이벤트 도트 */}
-              {uniqueTypes.length > 0 && (
-                <div className={T.dots}>
-                  {uniqueTypes.map((type) => (
-                    <span key={type} className={getDotClass(type)} aria-hidden="true" />
-                  ))}
-                </div>
-              )}
+                {/* 이벤트 도트 */}
+                {uniqueTypes.length > 0 && (
+                  <div className={T.dots}>
+                    {uniqueTypes.map((type) => (
+                      <span key={type} className={getDotClass(type)} aria-hidden="true" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
 
-              {/* 호버 팝업 */}
-              {isHovered && cell.events.length > 0 && (
-                <div className={T.popup} role="tooltip">
-                  <div className={T.popupTitle}>{cell.dateKey.slice(5).replace('-', '/')}</div>
+            if (!hasEvents) return <div key={cell.dateKey}>{cellContent}</div>;
+
+            return (
+              <Tooltip key={cell.dateKey}>
+                <TooltipTrigger asChild>{cellContent}</TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  className="max-w-[200px] p-2 bg-popover text-popover-foreground border border-border shadow-md"
+                >
+                  <div className="font-medium text-[11px] mb-1">
+                    {cell.dateKey.slice(5).replace('-', '/')}
+                  </div>
+                  {holidayName && (
+                    <div className="text-[10px] font-medium text-ul-red dark:text-red-400 mb-1">
+                      {holidayName}
+                    </div>
+                  )}
                   {cell.events.slice(0, 5).map((ev, i) => (
-                    <div key={`${ev.id}-${i}`} className={T.popupItem}>
+                    <div key={`${ev.id}-${i}`} className="flex items-center gap-1.5 py-0.5">
                       <span className={getPopupDotClass(ev.type)} aria-hidden="true" />
-                      <span className={T.popupItemText} title={ev.label}>
+                      <span className="text-[10px] truncate max-w-[160px]" title={ev.label}>
                         {getEventTypeLabel(ev.type)}: {ev.label}
                       </span>
                     </div>
@@ -233,28 +242,34 @@ export function MiniCalendar({
                       +{cell.events.length - 5}건 더
                     </div>
                   )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
 
-      {/* 범례 */}
-      <div className={T.legend}>
-        <div className={T.legendItem}>
-          <span className={cn(T.legendDot, 'bg-ul-red dark:bg-red-400')} />
-          <span className={T.legendText}>{t('legendOverdue')}</span>
-        </div>
-        <div className={T.legendItem}>
-          <span className={cn(T.legendDot, 'bg-yellow-400 dark:bg-yellow-500')} />
-          <span className={T.legendText}>{t('legendUpcoming')}</span>
-        </div>
-        <div className={T.legendItem}>
-          <span className={cn(T.legendDot, 'bg-ul-blue dark:bg-ul-info')} />
-          <span className={T.legendText}>{t('legendReturn')}</span>
+        {/* 범례 */}
+        <div className={T.legend}>
+          <div className={T.legendItem}>
+            <span className="text-[10px] font-medium text-ul-red dark:text-red-400 tabular-nums leading-none">
+              1
+            </span>
+            <span className={T.legendText}>{t('legendHoliday')}</span>
+          </div>
+          <div className={T.legendItem}>
+            <span className={cn(T.legendDot, 'bg-ul-red dark:bg-red-400')} />
+            <span className={T.legendText}>{t('legendOverdue')}</span>
+          </div>
+          <div className={T.legendItem}>
+            <span className={cn(T.legendDot, 'bg-yellow-400 dark:bg-yellow-500')} />
+            <span className={T.legendText}>{t('legendUpcoming')}</span>
+          </div>
+          <div className={T.legendItem}>
+            <span className={cn(T.legendDot, 'bg-ul-blue dark:bg-ul-info')} />
+            <span className={T.legendText}>{t('legendReturn')}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

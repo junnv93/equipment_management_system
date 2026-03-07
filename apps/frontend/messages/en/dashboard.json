@@ -311,6 +311,7 @@
     "title": "{month} {year}",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
+    "legendHoliday": "Holiday",
     "legendOverdue": "Calib. Overdue",
     "legendUpcoming": "Calib. Due",
     "legendReturn": "Return Due",
@@ -323,6 +324,7 @@
   "teamDistribution": {
     "title": "Equipment by Team",
     "total": "Total {total} units",
+    "count": "{count} units",
     "empty": "No team data",
     "ariaLabel": "Equipment distribution by team bar chart"
   },

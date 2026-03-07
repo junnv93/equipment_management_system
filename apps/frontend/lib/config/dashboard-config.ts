@@ -43,6 +43,15 @@ export interface ControlCenterConfig {
   showMiniCalendar: boolean;
   /** KPI 총계 레이블 ('my' | 'team' | 'all') */
   kpiDisplay: 'my' | 'team' | 'all';
+  /**
+   * KPI API 호출과 장비 목록 링크에 팀 필터(teamId)를 적용할지 여부.
+   *
+   * true  → session.user.teamId를 API와 링크에 자동 포함 (시험실무자, 기술책임자)
+   * false → 팀 필터 없음, 사이트 전체 조회 (품질책임자, 시험소장, 시스템관리자)
+   *
+   * 이 플래그가 결정 주체 — resolveDashboardScope()는 이것을 그대로 따름.
+   */
+  requiresTeamScope: boolean;
 }
 
 // ─── 역할별 대시보드 설정 ───────────────────────────────────────
@@ -154,6 +163,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showTeamDistribution: false,
       showMiniCalendar: true,
       kpiDisplay: 'my',
+      requiresTeamScope: true,
     },
   },
 
@@ -177,6 +187,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showTeamDistribution: true,
       showMiniCalendar: true,
       kpiDisplay: 'team',
+      requiresTeamScope: true,
     },
   },
 
@@ -200,6 +211,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showTeamDistribution: false,
       showMiniCalendar: true,
       kpiDisplay: 'all',
+      requiresTeamScope: false,
     },
   },
 
@@ -224,6 +236,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showTeamDistribution: true,
       showMiniCalendar: true,
       kpiDisplay: 'all',
+      requiresTeamScope: false,
     },
   },
 
@@ -248,6 +261,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
       showTeamDistribution: true,
       showMiniCalendar: true,
       kpiDisplay: 'all',
+      requiresTeamScope: false,
     },
   },
 };

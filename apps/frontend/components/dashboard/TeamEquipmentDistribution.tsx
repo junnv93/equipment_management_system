@@ -62,7 +62,7 @@ export function TeamEquipmentDistribution({
               <div key={team.id} className={T.row}>
                 <div className={T.rowHeader}>
                   <span className={T.teamName}>{team.name}</span>
-                  <span className={T.teamCount}>{team.count}대</span>
+                  <span className={T.teamCount}>{t('count', { count: team.count })}</span>
                 </div>
                 <div
                   className={T.barTrack}

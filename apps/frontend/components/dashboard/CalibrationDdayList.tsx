@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { OverdueCalibration, UpcomingCalibration } from '@/lib/api/dashboard-api';
 import { DASHBOARD_DDAY_COMPACT_TOKENS as T } from '@/lib/design-tokens';
+import { getTimeBasedUrgency, type UrgencyLevel } from '@/lib/design-tokens/visual-feedback';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 interface CalibrationDdayListProps {
@@ -19,22 +20,25 @@ type DdayItem =
   | { kind: 'overdue'; id: string; name: string; managementNumber?: string; daysOverdue: number }
   | { kind: 'upcoming'; id: string; name: string; managementNumber?: string; daysUntilDue: number };
 
-function getBarClass(item: DdayItem): string {
-  if (item.kind === 'overdue') return T.barOverdue;
-  const d = item.daysUntilDue;
-  if (d <= 1) return T.barOverdue;
-  if (d <= 7) return T.barUrgent;
-  if (d <= 14) return T.barWarning;
-  return T.barOk;
-}
+// visual-feedback.ts SSOT의 UrgencyLevel → 디자인 토큰 매핑
+// getTimeBasedUrgency()와 동일한 임계값을 공유 (D<0/D≤3/D≤7)
+const URGENCY_BAR: Record<UrgencyLevel, string> = {
+  emergency: T.barOverdue,
+  critical: T.barUrgent,
+  warning: T.barWarning,
+  info: T.barOk,
+};
 
-function getDdayClass(item: DdayItem): string {
-  if (item.kind === 'overdue') return T.ddayOverdue;
-  const d = item.daysUntilDue;
-  if (d <= 1) return T.ddayOverdue;
-  if (d <= 7) return T.ddayUrgent;
-  if (d <= 14) return T.ddayWarning;
-  return T.ddayOk;
+const URGENCY_DDAY: Record<UrgencyLevel, string> = {
+  emergency: T.ddayOverdue,
+  critical: T.ddayUrgent,
+  warning: T.ddayWarning,
+  info: T.ddayOk,
+};
+
+function getItemUrgency(item: DdayItem): UrgencyLevel {
+  if (item.kind === 'overdue') return 'emergency';
+  return getTimeBasedUrgency(item.daysUntilDue);
 }
 
 function getDdayLabel(item: DdayItem): string {
@@ -134,12 +138,14 @@ export function CalibrationDdayList({
             {items.map((item) => (
               <Link
                 key={`${item.kind}-${item.id}`}
-                href={FRONTEND_ROUTES.CALIBRATION.DETAIL(item.id)}
+                href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(item.id)}
                 className={cn(T.item, 'hover:bg-muted/70 group')}
                 aria-label={`${item.name} ${getDdayLabel(item)}`}
               >
-                <span className={cn(T.bar, getBarClass(item))} aria-hidden="true" />
-                <span className={cn(T.dday, getDdayClass(item))}>{getDdayLabel(item)}</span>
+                <span className={cn(T.bar, URGENCY_BAR[getItemUrgency(item)])} aria-hidden="true" />
+                <span className={cn(T.dday, URGENCY_DDAY[getItemUrgency(item)])}>
+                  {getDdayLabel(item)}
+                </span>
                 <div className={T.info}>
                   {item.managementNumber && (
                     <div className={T.managementNumber}>{item.managementNumber}</div>
