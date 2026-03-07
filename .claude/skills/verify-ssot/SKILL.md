@@ -27,28 +27,29 @@ argument-hint: '[선택사항: 특정 패키지명]'
 
 ## Related Files
 
-| File                                                                         | Purpose                                                               |
-| ---------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `packages/db/src/schema/audit-logs.ts`                                       | DB enum 배열 (auditAction, auditEntityType — schemas와 동기화 필수)   |
-| `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                   |
-| `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                    |
-| `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)            |
-| `packages/schemas/src/audit-log.ts`                                          | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)   |
-| `packages/schemas/src/field-labels.ts`                                       | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                          |
-| `packages/schemas/src/index.ts`                                              | schemas 패키지 내보내기                                               |
-| `packages/shared-constants/src/permissions.ts`                               | Permission enum 정의                                                  |
-| `packages/shared-constants/src/api-endpoints.ts`                             | API_ENDPOINTS 상수                                                    |
-| `packages/shared-constants/src/entity-routes.ts`                             | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                    |
-| `packages/shared-constants/src/data-scope.ts`                                | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, AUDIT_LOG_SCOPE) |
-| `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                      |
-| `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 상수 (TTL, buffer, expires_in)            |
-| `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리                                                      |
-| `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)  |
-| `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)       |
-| `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)     |
-| `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                   |
-| `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등) |
-| `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                            |
+| File                                                                         | Purpose                                                                                        |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `packages/db/src/schema/audit-logs.ts`                                       | DB enum 배열 (auditAction, auditEntityType — schemas와 동기화 필수)                            |
+| `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                                            |
+| `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                                             |
+| `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)                                     |
+| `packages/schemas/src/audit-log.ts`                                          | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)                            |
+| `packages/schemas/src/field-labels.ts`                                       | SSOT 필드 라벨 (FIELD_LABELS, getFieldLabel)                                                   |
+| `packages/schemas/src/index.ts`                                              | schemas 패키지 내보내기                                                                        |
+| `packages/shared-constants/src/permissions.ts`                               | Permission enum 정의                                                                           |
+| `packages/shared-constants/src/api-endpoints.ts`                             | API_ENDPOINTS 상수                                                                             |
+| `packages/shared-constants/src/entity-routes.ts`                             | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                                             |
+| `packages/shared-constants/src/data-scope.ts`                                | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, AUDIT_LOG_SCOPE)                          |
+| `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                                               |
+| `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 상수 (TTL, buffer, expires_in)                                     |
+| `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리                                                                               |
+| `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)                           |
+| `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)                                |
+| `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)                              |
+| `apps/frontend/lib/utils/dashboard-scope.ts`                                 | SSOT 대시보드 스코프 유틸리티 (DashboardScope, resolveDashboardScope, buildScopedEquipmentUrl) |
+| `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                                            |
+| `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등)                          |
+| `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                                                     |
 
 ## Workflow
 

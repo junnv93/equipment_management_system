@@ -39,6 +39,7 @@ argument-hint: '[선택사항: 특정 스킬 이름 또는 집중할 영역]'
 | `verify-filters`        | URL-driven 필터 SSOT 패턴 검증     | `apps/frontend/lib/utils/*-filter-utils.ts`, `apps/frontend/hooks/use-*-filters.ts`, `apps/frontend/app/**/page.tsx`         |
 | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 검증 | `apps/frontend/lib/design-tokens/**/*.ts`, `apps/frontend/components/**/*.tsx`                                               |
 | `verify-security`       | 보안 설정 검증                     | `apps/backend/src/common/middleware/helmet-config.ts`, `apps/frontend/next.config.js`, `apps/backend/src/**/*.controller.ts` |
+| `verify-i18n`           | i18n 번역 파일 일관성 검증         | `apps/frontend/messages/en/*.json`, `apps/frontend/messages/ko/*.json`                                                       |
 
 ## 워크플로우
 

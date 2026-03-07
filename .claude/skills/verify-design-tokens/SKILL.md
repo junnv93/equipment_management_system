@@ -70,6 +70,15 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/dashboard/CalibrationList.tsx`                            | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/OverdueCheckoutsList.tsx`                       | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/DashboardClient.tsx`                            | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/CalibrationDdayList.tsx`                        | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/KpiStatusGrid.tsx`                              | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/MiniCalendar.tsx`                               | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/TeamEquipmentDistribution.tsx`                  | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/equipment/EquipmentCardGrid.tsx`                          | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentFilters.tsx`                           | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentListContent.tsx`                       | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentTable.tsx`                             | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentPageHeader.tsx`                        | 마이그레이션된 컴포넌트 (Equipment)      |
 | `apps/frontend/app/(dashboard)/calibration/CalibrationContent.tsx`                  | 마이그레이션된 컴포넌트 (Calibration)    |
 | `apps/frontend/app/(dashboard)/calibration/register/CalibrationRegisterContent.tsx` | 마이그레이션된 컴포넌트 (Calibration)    |
 
@@ -152,7 +161,7 @@ import { getHeaderButtonClasses, getHeaderSizeClasses } from '@/lib/design-token
 
 ### Step 4: 마이그레이션된 컴포넌트 토큰 사용
 
-마이그레이션된 19개 컴포넌트가 여전히 design-tokens를 import하는지 확인합니다.
+마이그레이션된 32개 컴포넌트가 여전히 design-tokens를 import하는지 확인합니다.
 
 ```bash
 # 마이그레이션된 컴포넌트의 design-tokens import 확인
@@ -175,7 +184,15 @@ files=(
   "apps/frontend/components/dashboard/EquipmentStatusChart.tsx"
   "apps/frontend/components/dashboard/CalibrationList.tsx"
   "apps/frontend/components/dashboard/OverdueCheckoutsList.tsx"
-  "apps/frontend/components/dashboard/DashboardClient.tsx"
+  "apps/frontend/components/dashboard/CalibrationDdayList.tsx"
+  "apps/frontend/components/dashboard/KpiStatusGrid.tsx"
+  "apps/frontend/components/dashboard/MiniCalendar.tsx"
+  "apps/frontend/components/dashboard/TeamEquipmentDistribution.tsx"
+  "apps/frontend/components/equipment/EquipmentCardGrid.tsx"
+  "apps/frontend/components/equipment/EquipmentFilters.tsx"
+  "apps/frontend/components/equipment/EquipmentListContent.tsx"
+  "apps/frontend/components/equipment/EquipmentTable.tsx"
+  "apps/frontend/components/equipment/EquipmentPageHeader.tsx"
   "apps/frontend/app/(dashboard)/calibration/CalibrationContent.tsx"
   "apps/frontend/app/(dashboard)/calibration/register/CalibrationRegisterContent.tsx"
   "apps/frontend/components/dashboard/AlertPanel.tsx"
@@ -196,7 +213,7 @@ for f in "${files[@]}"; do
 done
 ```
 
-**PASS 기준:** 모든 마이그레이션된 24개 컴포넌트에서 design-tokens import가 존재.
+**PASS 기준:** 모든 마이그레이션된 33개 컴포넌트에서 design-tokens import가 존재.
 
 **FAIL 기준:** design-tokens import가 없거나 하드코딩된 값 사용 시 재마이그레이션 필요.
 
