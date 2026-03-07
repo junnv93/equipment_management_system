@@ -41,7 +41,8 @@ export class AuditController {
   @UsePipes(AuditLogQueryValidationPipe)
   @ApiOperation({
     summary: '감사 로그 목록 조회',
-    description: '감사 로그 목록을 조회합니다. lab_manager만 조회 가능합니다.',
+    description:
+      '감사 로그 목록을 조회합니다. technical_manager(팀), lab_manager(사이트), quality_manager/system_admin(전체) 스코프별로 접근 가능합니다.',
   })
   @ApiQuery({ name: 'page', required: false, type: Number, description: '페이지 번호 (기본값: 1)' })
   @ApiQuery({

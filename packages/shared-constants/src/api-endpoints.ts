@@ -291,6 +291,8 @@ export const API_ENDPOINTS = {
     BY_ENTITY: (entityType: string, entityId: string) =>
       `/api/audit-logs/entity/${entityType}/${entityId}`,
     BY_USER: (userId: string) => `/api/audit-logs/user/${userId}`,
+    /** 파일 내보내기 (excel/csv/pdf) — RBAC 스코프 자동 적용 */
+    EXPORT: '/api/reports/export/audit-logs',
   },
 
   // ============================================================================

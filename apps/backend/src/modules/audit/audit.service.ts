@@ -101,11 +101,11 @@ export class AuditService {
     // 전체 리스트 캐시 무효화 (필터 조합이 다양하므로 패턴 매칭)
     this.cacheService.deleteByPattern('^audit-logs:list:');
 
-    // 특정 엔티티 캐시 무효화
-    this.cacheService.delete(`audit-logs:entity:${entityType}:${entityId}`);
+    // 특정 엔티티 캐시 무효화 (scope suffix 포함 모든 variant 삭제)
+    this.cacheService.deleteByPattern(`^audit-logs:entity:${entityType}:${entityId}:`);
 
-    // 특정 사용자 캐시 무효화
-    this.cacheService.delete(`audit-logs:user:${userId}`);
+    // 특정 사용자 캐시 무효화 (scope suffix 포함 모든 variant 삭제)
+    this.cacheService.deleteByPattern(`^audit-logs:user:${userId}:`);
   }
 
   /**
@@ -140,11 +140,11 @@ export class AuditService {
         }
 
         if (filter.startDate) {
-          conditions.push(gte(auditLogs.timestamp, filter.startDate));
+          conditions.push(gte(auditLogs.timestamp, new Date(filter.startDate)));
         }
 
         if (filter.endDate) {
-          conditions.push(lte(auditLogs.timestamp, filter.endDate));
+          conditions.push(lte(auditLogs.timestamp, new Date(filter.endDate)));
         }
 
         // RBAC 스코프 필터 (서버 강제 — 클라이언트 우회 불가)

@@ -1,11 +1,17 @@
-import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Controller, Get, Query, Res, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportExportService, ReportFormat } from './report-export.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
-import { Permission } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  resolveDataScope,
+  AUDIT_LOG_SCOPE,
+} from '@equipment-management/shared-constants';
+import { type UserRole } from '@equipment-management/schemas';
+import type { AuthenticatedRequest } from '../../types/auth';
 
 const VALID_FORMATS = new Set<ReportFormat>(['excel', 'csv', 'pdf']);
 
@@ -258,6 +264,65 @@ export class ReportsController {
   ): Promise<void> {
     const data = await this.reportsService.getMaintenanceData({ startDate, endDate, equipmentId });
     await this._streamFile(res, data, this._resolveFormat(format));
+  }
+
+  @Get('export/audit-logs')
+  @ApiOperation({
+    summary: '감사 로그 내보내기',
+    description:
+      'RBAC 스코프 적용 감사 로그를 Excel/CSV/PDF로 내보냅니다. 최대 10,000건, 날짜 필터로 분할 권장.',
+  })
+  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'entityType', required: false })
+  @ApiQuery({ name: 'action', required: false })
+  @ApiQuery({ name: 'startDate', required: false, description: 'ISO 8601 형식 (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'ISO 8601 형식 (YYYY-MM-DD)' })
+  @ApiResponse({ status: 200, description: '파일 스트림' })
+  @RequirePermissions(Permission.VIEW_AUDIT_LOGS)
+  @SkipResponseTransform()
+  async exportAuditLogs(
+    @Request() req: AuthenticatedRequest,
+    @Res() res: Response,
+    @Query('format') format: string,
+    @Query('userId') userId?: string,
+    @Query('entityType') entityType?: string,
+    @Query('action') action?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string
+  ): Promise<void> {
+    // SSOT: resolveDataScope()로 역할별 스코프 해석 — audit.controller.ts와 동일 패턴
+    const scope = resolveDataScope(
+      {
+        role: req.user.roles[0] as UserRole,
+        site: req.user.site,
+        teamId: req.user.teamId,
+      },
+      AUDIT_LOG_SCOPE
+    );
+
+    const data = await this.reportsService.getAuditLogExportData({
+      userId,
+      entityType,
+      action,
+      startDate,
+      endDate,
+      userSite: scope.site,
+      userTeamId: scope.teamId,
+    });
+
+    const resolvedFormat = this._resolveFormat(format);
+    const { buffer, mimeType, filename } = await this.reportExportService.generate(
+      data,
+      resolvedFormat
+    );
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      'Content-Length': buffer.length,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+    });
+    res.end(buffer);
   }
 
   // ── Private 헬퍼 ────────────────────────────────────────────────────────

@@ -9,7 +9,16 @@ import {
   checkoutItems as checkoutItemsTable,
   teams as teamsTable,
   repairHistory as repairHistoryTable,
+  auditLogs as auditLogsTable,
 } from '@equipment-management/db/schema';
+import {
+  AUDIT_ACTION_LABELS,
+  AUDIT_ENTITY_TYPE_LABELS,
+  type AuditAction,
+  type AuditEntityType,
+  type AuditLogFilter,
+} from '@equipment-management/schemas';
+import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 import type { ReportColumn, ReportData } from './report-export.service';
 
 // ─── 공통 날짜 유틸 ───────────────────────────────────────────────────────────
@@ -763,6 +772,76 @@ export class ReportsService {
         repairResult: RESULT_LABELS[r.repairResult ?? ''] ?? r.repairResult ?? '-',
         costStr: '-',
         notes: r.notes ?? '-',
+      })),
+    };
+  }
+
+  /**
+   * 감사 로그 내보내기 데이터 조회
+   *
+   * RBAC 스코프 필터(userSite/userTeamId)는 컨트롤러에서 resolveDataScope()로 주입됨.
+   * 최대 10,000건 제한 — 대용량 데이터는 날짜 범위 필터로 분할 내보내기 권장.
+   */
+  async getAuditLogExportData(filter: AuditLogFilter): Promise<ReportData> {
+    const conditions = [];
+
+    if (filter.userId) conditions.push(eq(auditLogsTable.userId, filter.userId));
+    if (filter.entityType) conditions.push(eq(auditLogsTable.entityType, filter.entityType));
+    if (filter.entityId) conditions.push(eq(auditLogsTable.entityId, filter.entityId));
+    if (filter.action) conditions.push(eq(auditLogsTable.action, filter.action));
+    if (filter.startDate)
+      conditions.push(gte(auditLogsTable.timestamp, new Date(filter.startDate)));
+    if (filter.endDate) conditions.push(lte(auditLogsTable.timestamp, new Date(filter.endDate)));
+    // RBAC 서버 강제 스코프
+    if (filter.userSite) conditions.push(eq(auditLogsTable.userSite, filter.userSite));
+    if (filter.userTeamId) conditions.push(eq(auditLogsTable.userTeamId, filter.userTeamId));
+
+    const rows = await this.db
+      .select({
+        timestamp: auditLogsTable.timestamp,
+        userName: auditLogsTable.userName,
+        userRole: auditLogsTable.userRole,
+        action: auditLogsTable.action,
+        entityType: auditLogsTable.entityType,
+        entityName: auditLogsTable.entityName,
+        entityId: auditLogsTable.entityId,
+        ipAddress: auditLogsTable.ipAddress,
+        userSite: auditLogsTable.userSite,
+      })
+      .from(auditLogsTable)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(auditLogsTable.timestamp))
+      .limit(10_000);
+
+    const columns: ReportColumn[] = [
+      { header: '시간', key: 'timestampStr', width: 22 },
+      { header: '사용자명', key: 'userName', width: 16 },
+      { header: '역할', key: 'roleLabel', width: 14 },
+      { header: '액션', key: 'actionLabel', width: 12 },
+      { header: '대상유형', key: 'entityTypeLabel', width: 16 },
+      { header: '대상명', key: 'entityName', width: 24 },
+      { header: '대상ID(앞8자)', key: 'entityIdShort', width: 16 },
+      { header: 'IP주소', key: 'ipAddress', width: 16 },
+      { header: '시험소', key: 'userSite', width: 10 },
+    ];
+
+    const fmtTs = (d: Date | string) =>
+      new Date(d).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+
+    return {
+      title: '감사 로그 보고서',
+      columns,
+      generatedAt: new Date(),
+      rows: rows.map((r) => ({
+        timestampStr: fmtTs(r.timestamp),
+        userName: r.userName,
+        roleLabel: USER_ROLE_LABELS[r.userRole as UserRole] ?? r.userRole,
+        actionLabel: AUDIT_ACTION_LABELS[r.action as AuditAction] ?? r.action,
+        entityTypeLabel: AUDIT_ENTITY_TYPE_LABELS[r.entityType as AuditEntityType] ?? r.entityType,
+        entityName: r.entityName ?? '-',
+        entityIdShort: r.entityId.substring(0, 8),
+        ipAddress: r.ipAddress ?? '-',
+        userSite: r.userSite ?? '-',
       })),
     };
   }
