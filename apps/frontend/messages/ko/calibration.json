@@ -206,7 +206,9 @@
       "all": "전체",
       "overdue": "기한 초과",
       "upcoming": "30일 이내 예정",
-      "intermediateChecks": "중간점검"
+      "intermediateChecks": "중간점검",
+      "list": "교정목록",
+      "selfInspection": "자체점검"
     },
     "loading": "데이터를 불러오는 중...",
     "error": "데이터를 불러오는 중 오류가 발생했습니다.",
@@ -276,6 +278,12 @@
       "completeSuccess": "중간점검 완료",
       "completeSuccessDesc": "중간점검이 완료 처리되었습니다.",
       "completeError": "완료 처리 실패"
+    },
+    "selfInspection": {
+      "empty": {
+        "title": "자체점검 기능 준비 중",
+        "description": "자체점검 기능은 현재 개발 중입니다. 조금만 기다려주세요."
+      }
     }
   },
   "register": {

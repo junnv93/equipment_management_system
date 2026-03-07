@@ -206,7 +206,9 @@
       "all": "All",
       "overdue": "Overdue",
       "upcoming": "Due Within 30 Days",
-      "intermediateChecks": "Intermediate Checks"
+      "intermediateChecks": "Intermediate Checks",
+      "list": "Calibration List",
+      "selfInspection": "Self-Inspection"
     },
     "loading": "Loading data...",
     "error": "An error occurred while loading data.",
@@ -276,6 +278,12 @@
       "completeSuccess": "Check Completed",
       "completeSuccessDesc": "The intermediate check has been completed.",
       "completeError": "Completion Failed"
+    },
+    "selfInspection": {
+      "empty": {
+        "title": "Self-Inspection Coming Soon",
+        "description": "Self-inspection feature is currently under development. Please check back later."
+      }
     }
   },
   "register": {

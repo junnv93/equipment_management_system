@@ -93,6 +93,11 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
       params.set('endDate', newFilters.endDate);
     }
 
+    // ✅ tab: 기본값('list')이 아닐 때만 URL에 포함
+    if (newFilters.tab && newFilters.tab !== DEFAULT_UI_FILTERS.tab) {
+      params.set('tab', newFilters.tab);
+    }
+
     const queryString = params.toString();
     const newUrl = queryString ? `/calibration?${queryString}` : '/calibration';
 
@@ -135,6 +140,13 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
   };
 
   /**
+   * 활성 탭 업데이트 헬퍼
+   */
+  const updateTab = (tab: UICalibrationFilters['tab']) => {
+    updateFilters({ tab });
+  };
+
+  /**
    * 날짜 범위 필터 업데이트 헬퍼
    */
   const updateDateRange = (startDate: string, endDate: string) => {
@@ -167,6 +179,8 @@ export function useCalibrationFilters(_initialFilters?: UICalibrationFilters) {
     updateApprovalStatus,
     /** 교정 결과 필터 업데이트 */
     updateResult,
+    /** 활성 탭 업데이트 */
+    updateTab,
     /** 날짜 범위 필터 업데이트 */
     updateDateRange,
     /** 필터 초기화 */

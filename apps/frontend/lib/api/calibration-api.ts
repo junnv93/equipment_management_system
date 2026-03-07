@@ -111,6 +111,45 @@ export interface CalibrationSummary {
   failCount: number;
 }
 
+// ============================================================================
+// 중간점검 타입 (SSOT: CalibrationContent에서 이동)
+// ============================================================================
+
+/**
+ * 중간점검 항목 타입
+ *
+ * CalibrationRecord SSOT 기반 + 플래튼된 조인 필드
+ */
+export interface IntermediateCheckItem {
+  id: string;
+  equipmentId: string;
+  calibrationManagerId: string;
+  intermediateCheckDate: string;
+  calibrationDate: string;
+  nextCalibrationDate: string;
+  status: string;
+  calibrationAgency: string;
+  notes: string | null;
+  // 플래튼된 조인 필드 (백엔드에서 equipment → flat)
+  equipmentName?: string;
+  managementNumber?: string;
+  team?: string;
+  teamId?: string;
+  teamName?: string;
+}
+
+/**
+ * 중간점검 목록 응답 타입
+ */
+export interface IntermediateChecksResponse {
+  items: IntermediateCheckItem[];
+  meta: {
+    totalItems: number;
+    overdueCount: number;
+    pendingCount: number;
+  };
+}
+
 // 교정 API 객체
 const calibrationApi = {
   // 교정 이력 목록 조회
@@ -236,6 +275,20 @@ const calibrationApi = {
   // 교정 반려
   rejectCalibration: async (id: string, data: RejectCalibrationDto): Promise<Calibration> => {
     const response = await apiClient.patch(API_ENDPOINTS.CALIBRATIONS.REJECT(id), data);
+    return response.data;
+  },
+
+  // 전체 중간점검 목록 조회 (팀/사이트 필터 지원)
+  getAllIntermediateChecks: async (
+    teamId?: string,
+    site?: string
+  ): Promise<IntermediateChecksResponse> => {
+    const params = new URLSearchParams();
+    if (teamId) params.set('teamId', teamId);
+    if (site) params.set('site', site);
+    const qs = params.toString();
+    const url = `${API_ENDPOINTS.CALIBRATIONS.INTERMEDIATE_CHECKS.ALL}${qs ? `?${qs}` : ''}`;
+    const response = await apiClient.get(url);
     return response.data;
   },
 

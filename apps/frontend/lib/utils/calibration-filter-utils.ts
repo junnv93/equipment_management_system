@@ -31,6 +31,7 @@ export interface UICalibrationFilters {
   result: string; // 교정 결과 ('' = 전체)
   startDate: string; // 시작일 ('' = 전체)
   endDate: string; // 종료일 ('' = 전체)
+  tab: 'list' | 'intermediate' | 'self-inspection'; // 활성 탭 (URL 기반 상태)
 }
 
 /**
@@ -59,6 +60,7 @@ export const DEFAULT_UI_FILTERS: UICalibrationFilters = {
   result: '',
   startDate: '',
   endDate: '',
+  tab: 'list',
 };
 
 /**
@@ -103,6 +105,13 @@ export function parseCalibrationFiltersFromSearchParams(
   const startDate = get('startDate') || DEFAULT_UI_FILTERS.startDate;
   const endDate = get('endDate') || DEFAULT_UI_FILTERS.endDate;
 
+  const tabRaw = get('tab') || '';
+  const tab = (['list', 'intermediate', 'self-inspection'] as const).includes(
+    tabRaw as 'list' | 'intermediate' | 'self-inspection'
+  )
+    ? (tabRaw as UICalibrationFilters['tab'])
+    : DEFAULT_UI_FILTERS.tab;
+
   return {
     search,
     site,
@@ -111,6 +120,7 @@ export function parseCalibrationFiltersFromSearchParams(
     result,
     startDate,
     endDate,
+    tab,
   };
 }
 
