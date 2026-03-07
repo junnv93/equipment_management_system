@@ -17,9 +17,9 @@ import {
   FileCheck,
   Settings,
 } from 'lucide-react';
-import { type AuditEntityType, AUDIT_ENTITY_TYPE_LABELS } from '@equipment-management/schemas';
 import { getEntityRoute } from '@equipment-management/shared-constants';
 import { AUDIT_ENTITY_LINK_TOKENS } from '@/lib/design-tokens';
+import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -82,8 +82,10 @@ export function EntityLinkCell({
   className,
 }: EntityLinkCellProps) {
   const t = useTranslations('common');
+  const tAudit = useTranslations('audit');
+  const { getEntityTypeLabel } = createAuditLabelFns(tAudit);
   const route = getEntityRoute(entityType, entityId);
-  const entityLabel = AUDIT_ENTITY_TYPE_LABELS[entityType as AuditEntityType] || entityType;
+  const entityLabel = getEntityTypeLabel(entityType);
 
   // 라우팅 불가능한 엔티티는 일반 텍스트로 표시
   if (!route) {

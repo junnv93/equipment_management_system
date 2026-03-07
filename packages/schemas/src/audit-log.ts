@@ -38,6 +38,12 @@ export type { AuditAction, AuditEntityType };
 /**
  * 액션 한글 라벨 매핑
  */
+/**
+ * 액션 한글 라벨 매핑
+ *
+ * @remarks **서버 사이드 전용** — 알림 문자, 보고서 컬럼 헤더 생성에 사용합니다.
+ * 프론트엔드 UI 표시에는 `lib/utils/audit-label-utils.ts`의 i18n 기반 유틸리티를 사용하세요.
+ */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   create: '생성',
   update: '수정',
@@ -82,13 +88,16 @@ export const AUDIT_ACTION_COLORS: Record<AuditAction, string> = {
 
 /**
  * 엔티티 타입 한글 라벨 매핑
+ *
+ * @remarks **서버 사이드 전용** — 알림 문자, 보고서 컬럼 헤더 생성에 사용합니다.
+ * 프론트엔드 UI 표시에는 `lib/utils/audit-label-utils.ts`의 i18n 기반 유틸리티를 사용하세요.
  */
 export const AUDIT_ENTITY_TYPE_LABELS: Record<AuditEntityType, string> = {
   equipment: '장비',
   calibration: '교정',
   checkout: '반출',
   rental: '대여',
-  rental_import: '렌탈 반입',
+  rental_import: '대여 반입',
   user: '사용자',
   team: '팀',
   calibration_factor: '보정계수',

@@ -53,12 +53,12 @@ import {
   Info,
 } from 'lucide-react';
 import {
-  AUDIT_ACTION_LABELS,
-  AUDIT_ENTITY_TYPE_LABELS,
+  AUDIT_ACTION_VALUES,
+  AUDIT_ENTITY_TYPE_VALUES,
   SYSTEM_USER_UUID,
   type AuditAction,
-  type AuditEntityType,
 } from '@equipment-management/schemas';
+import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
 import {
   USER_ROLE_LABELS,
   type UserRole,
@@ -84,6 +84,7 @@ interface AuditLogsContentProps {
 export default function AuditLogsContent({ initialData }: AuditLogsContentProps) {
   const t = useTranslations('audit');
   const tc = useTranslations('common');
+  const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(t);
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -267,9 +268,9 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_all">{t('filters.all')}</SelectItem>
-                  {Object.entries(AUDIT_ENTITY_TYPE_LABELS).map(([value, label]) => (
+                  {AUDIT_ENTITY_TYPE_VALUES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {label}
+                      {getEntityTypeLabel(value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -287,9 +288,9 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_all">{t('filters.all')}</SelectItem>
-                  {Object.entries(AUDIT_ACTION_LABELS).map(([value, label]) => (
+                  {AUDIT_ACTION_VALUES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {label}
+                      {getActionLabel(value)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -385,14 +386,11 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
                               DEFAULT_AUDIT_ACTION_BADGE
                             }
                           >
-                            {AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action}
+                            {getActionLabel(log.action)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary">
-                            {AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] ||
-                              log.entityType}
-                          </Badge>
+                          <Badge variant="secondary">{getEntityTypeLabel(log.entityType)}</Badge>
                         </TableCell>
                         <TableCell className="max-w-[200px]">
                           <EntityLinkCell

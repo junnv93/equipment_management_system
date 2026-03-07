@@ -15,13 +15,8 @@ import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import { AuditLogDiffViewer } from '@/components/ui/audit-log-diff-viewer';
 import { PrintableAuditReport } from './PrintableAuditReport';
 import { formatDateTime } from '@/lib/utils/date';
-import {
-  type AuditLog,
-  AUDIT_ACTION_LABELS,
-  AUDIT_ENTITY_TYPE_LABELS,
-  type AuditAction,
-  type AuditEntityType,
-} from '@equipment-management/schemas';
+import { type AuditLog, type AuditAction } from '@equipment-management/schemas';
+import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
 import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 import {
   AUDIT_ACTION_BADGE_TOKENS,
@@ -60,6 +55,7 @@ interface AuditLogDetailDialogProps {
 export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetailDialogProps) {
   const t = useTranslations('audit');
   const tc = useTranslations('common');
+  const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(t);
   const handlePrint = () => {
     window.print();
   };
@@ -97,7 +93,7 @@ export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetail
                   AUDIT_ACTION_BADGE_TOKENS[log.action as AuditAction] || DEFAULT_AUDIT_ACTION_BADGE
                 }
               >
-                {AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action}
+                {getActionLabel(log.action)}
               </Badge>
               <span className="text-sm text-muted-foreground">{formatDateTime(log.timestamp)}</span>
             </div>
@@ -149,10 +145,7 @@ export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetail
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-muted-foreground">{t('detail.targetType')}</span>
-                    <span className="ml-2 font-medium">
-                      {AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] ||
-                        log.entityType}
-                    </span>
+                    <span className="ml-2 font-medium">{getEntityTypeLabel(log.entityType)}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">{t('detail.targetId')}</span>
@@ -227,9 +220,7 @@ export function AuditLogDetailDialog({ open, onOpenChange, log }: AuditLogDetail
         {/* 인쇄용 */}
         <PrintableAuditReport
           logs={[log]}
-          title={t('detail.auditLogDetail', {
-            type: AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] || log.entityType,
-          })}
+          title={t('detail.auditLogDetail', { type: getEntityTypeLabel(log.entityType) })}
         />
       </DialogContent>
     </Dialog>

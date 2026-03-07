@@ -652,7 +652,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'calibration', // 교정
   'checkout', // 반출
   'rental', // 대여
-  'rental_import', // 렌탈 반입 (legacy)
+  'rental_import', // 대여 반입 (legacy — equipment_import로 대체됨)
   'user', // 사용자
   'team', // 팀
   'calibration_factor', // 보정계수
