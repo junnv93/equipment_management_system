@@ -20,6 +20,8 @@ import {
   TIMELINE_TOKENS,
   TIMELINE_SKELETON_TOKENS,
   getTimelineNodeClasses,
+  getStaggerDelay,
+  ANIMATION_PRESETS,
 } from '@/lib/design-tokens';
 
 /**
@@ -137,18 +139,23 @@ export function EquipmentTimeline({
 
       {/* 타임라인 아이템 */}
       <div className={TIMELINE_TOKENS.spacing.itemGap}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           const Icon = item.icon;
 
           return (
-            <div key={item.id} className="relative flex gap-4">
+            <div
+              key={item.id}
+              className={`relative flex gap-4 ${ANIMATION_PRESETS.slideUpFade} motion-safe:duration-200`}
+              style={{ animationDelay: getStaggerDelay(index, 'list') }}
+            >
               {/* 타임라인 노드 */}
               <div className="relative flex-shrink-0">
                 <div className={getTimelineNodeClasses(item.iconBg)}>
                   <Icon className={TIMELINE_TOKENS.node.icon} />
                 </div>
+                {/* 최신 배지: 노드 우상단 절대 위치 (기존 block-flow ml-2 → 오버레이) */}
                 {item.isLatest && (
-                  <div className={TIMELINE_TOKENS.latestBadge.container}>
+                  <div className="absolute -top-2 -right-2">
                     <Badge className={TIMELINE_TOKENS.latestBadge.classes}>최신</Badge>
                   </div>
                 )}

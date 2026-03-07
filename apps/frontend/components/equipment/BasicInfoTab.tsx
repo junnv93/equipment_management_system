@@ -2,100 +2,113 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { MapPin, Tag, Package, Calendar, Wrench } from 'lucide-react';
+import { MapPin, Package, Calendar, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
-import { CONTENT_TOKENS } from '@/lib/design-tokens';
+import {
+  getManagementNumberClasses,
+  getTimestampClasses,
+  getBrandSectionHeaderClasses,
+} from '@/lib/design-tokens';
 
 interface BasicInfoTabProps {
   equipment: Equipment;
 }
 
 /**
- * 기본 정보 탭
+ * 기본 정보 탭 — 시험설비이력카드(UL-QP-18-02) 디지털화
  *
- * UL Solutions 브랜딩:
- * - 카드 레이아웃으로 정보 그룹화
- * - 아이콘과 라벨로 가독성 향상
+ * 라벨-값 수평 쌍: 왼쪽 muted 라벨 + 오른쪽 정렬된 값 (서류 양식 모방)
+ * 관리번호/일련번호: font-mono tabular-nums tracking-wider
+ * 날짜 필드: getTimestampClasses() 적용
  */
 export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
   const t = useTranslations('equipment');
-  // 정보 필드 컴포넌트
-  const InfoField = ({
+
+  /** 서류 양식 스타일 수평 라벨-값 행 */
+  const InfoRow = ({
     label,
     value,
-    icon: Icon,
-    numeric = false,
+    valueClassName,
   }: {
     label: string;
     value?: string | number | null;
-    icon?: React.ComponentType<{ className?: string }>;
-    numeric?: boolean;
+    valueClassName?: string;
   }) => (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {Icon && <Icon className="h-4 w-4" />}
-        <span>{label}</span>
-      </div>
-      <p
-        className={`font-medium text-gray-900 dark:text-gray-100 ${numeric ? CONTENT_TOKENS.numeric.tabular : ''}`}
-      >
-        {value || '-'}
-      </p>
+    <div className="flex items-baseline justify-between py-2.5 border-b border-border/40 last:border-0 gap-4">
+      <dt className="text-sm text-muted-foreground shrink-0">{label}</dt>
+      <dd className={`text-sm font-medium text-right ${valueClassName ?? 'text-foreground'}`}>
+        {value ?? '-'}
+      </dd>
     </div>
+  );
+
+  /** 카드 타이틀 (icon + 텍스트, 하단 구분선) */
+  const CardSection = ({
+    icon: Icon,
+    title,
+  }: {
+    icon: React.ComponentType<{ className?: string }>;
+    title: string;
+  }) => (
+    <CardTitle className={`flex items-center gap-2 text-sm ${getBrandSectionHeaderClasses()}`}>
+      <Icon className="h-4 w-4 text-brand-text-muted shrink-0" aria-hidden="true" />
+      {title}
+    </CardTitle>
   );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* 기본 정보 카드 */}
       <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Package className="h-5 w-5 text-ul-midnight" />
-            {t('basicInfoTab.equipmentBasicInfo')}
-          </CardTitle>
+        <CardHeader className="pb-3 border-b border-border">
+          <CardSection icon={Package} title={t('basicInfoTab.equipmentBasicInfo')} />
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <InfoField label={t('fields.name')} value={equipment.name} />
-            <InfoField label={t('fields.modelName')} value={equipment.modelName} />
-            <InfoField
+        <CardContent className="pt-0">
+          <dl className="space-y-0">
+            <InfoRow label={t('fields.name')} value={equipment.name} />
+            <InfoRow label={t('fields.modelName')} value={equipment.modelName} />
+            <InfoRow
               label={t('fields.managementNumber')}
               value={equipment.managementNumber}
-              numeric
+              valueClassName={getManagementNumberClasses()}
             />
-            <InfoField label={t('fields.serialNumber')} value={equipment.serialNumber} numeric />
+            <InfoRow
+              label={t('fields.serialNumber')}
+              value={equipment.serialNumber}
+              valueClassName={getManagementNumberClasses()}
+            />
             {equipment.isShared && equipment.externalIdentifier && (
-              <InfoField
+              <InfoRow
                 label={t('fields.externalIdentifier')}
                 value={equipment.externalIdentifier}
-                icon={Package}
               />
             )}
-            <InfoField label={t('fields.manufacturer')} value={equipment.manufacturer} />
-            <InfoField label={t('fields.purchaseYear')} value={equipment.purchaseYear} numeric />
-          </div>
-
-          {equipment.description && (
-            <div className="pt-4 border-t">
-              <InfoField label={t('fields.description')} value={equipment.description} />
-            </div>
-          )}
+            <InfoRow label={t('fields.manufacturer')} value={equipment.manufacturer} />
+            <InfoRow
+              label={t('fields.purchaseYear')}
+              value={equipment.purchaseYear}
+              valueClassName="font-mono tabular-nums text-foreground"
+            />
+            {equipment.description && (
+              <div className="pt-3 mt-1 border-t border-border/40">
+                <dt className="text-sm text-muted-foreground mb-1">{t('fields.description')}</dt>
+                <dd className="text-sm text-foreground">{equipment.description}</dd>
+              </div>
+            )}
+          </dl>
         </CardContent>
       </Card>
 
       {/* 위치 및 관리 정보 카드 */}
       <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-ul-midnight" />
-            {t('basicInfoTab.locationManagement')}
-          </CardTitle>
+        <CardHeader className="pb-3 border-b border-border">
+          <CardSection icon={MapPin} title={t('basicInfoTab.locationManagement')} />
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <InfoField
+        <CardContent className="pt-0">
+          <dl className="space-y-0">
+            <InfoRow
               label={t('fields.site')}
               value={
                 equipment.site === 'suwon'
@@ -106,32 +119,27 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                       ? t('basicInfoTab.site.pyeongtaek')
                       : '-'
               }
-              icon={MapPin}
             />
-            <InfoField label={t('fields.team')} value={equipment.teamName} icon={Tag} />
-            <InfoField label={t('fields.location')} value={equipment.location} icon={MapPin} />
-            <InfoField
+            <InfoRow label={t('fields.team')} value={equipment.teamName} />
+            <InfoRow label={t('fields.location')} value={equipment.location} />
+            <InfoRow
               label={t('fields.installationDate')}
               value={formatDate(equipment.installationDate)}
-              icon={Calendar}
+              valueClassName={getTimestampClasses()}
             />
-          </div>
-
+          </dl>
           {/* 운영책임자 정보 - 나중에 구현 */}
         </CardContent>
       </Card>
 
       {/* 교정 정보 카드 */}
       <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-ul-midnight" />
-            {t('basicInfoTab.calibrationInfo')}
-          </CardTitle>
+        <CardHeader className="pb-3 border-b border-border">
+          <CardSection icon={Wrench} title={t('basicInfoTab.calibrationInfo')} />
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <InfoField
+        <CardContent className="pt-0">
+          <dl className="space-y-0">
+            <InfoRow
               label={t('basicInfoTab.calibrationMethod')}
               value={
                 equipment.calibrationMethod
@@ -139,59 +147,55 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
                   : '-'
               }
             />
-            <InfoField
+            <InfoRow
               label={t('basicInfoTab.calibrationCycle')}
               value={equipment.calibrationCycle}
-              numeric
+              valueClassName="font-mono tabular-nums text-foreground"
             />
-            <InfoField
+            <InfoRow
               label={t('basicInfoTab.lastCalibrationDate')}
               value={formatDate(equipment.lastCalibrationDate)}
-              icon={Calendar}
+              valueClassName={getTimestampClasses()}
             />
-            <InfoField
+            <InfoRow
               label={t('basicInfoTab.nextCalibrationDate')}
               value={formatDate(equipment.nextCalibrationDate)}
-              icon={Calendar}
+              valueClassName={getTimestampClasses()}
             />
-            <InfoField
+            <InfoRow
               label={t('basicInfoTab.calibrationAgency')}
               value={equipment.calibrationAgency}
             />
-          </div>
+          </dl>
         </CardContent>
       </Card>
 
       {/* 소프트웨어/펌웨어 정보 카드 */}
       {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
         <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Package className="h-5 w-5 text-ul-midnight" />
-              {t('softwareTab.title')}
-            </CardTitle>
+          <CardHeader className="pb-3 border-b border-border">
+            <CardSection icon={Package} title={t('softwareTab.title')} />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="pt-0">
+            <dl className="space-y-0">
               {equipment.softwareVersion && (
-                <InfoField
+                <InfoRow
                   label={t('softwareTab.softwareVersion')}
                   value={equipment.softwareVersion}
+                  valueClassName="font-mono tabular-nums text-foreground"
                 />
               )}
               {equipment.firmwareVersion && (
-                <InfoField
+                <InfoRow
                   label={t('softwareTab.firmwareVersion')}
                   value={equipment.firmwareVersion}
+                  valueClassName="font-mono tabular-nums text-foreground"
                 />
               )}
               {equipment.manualLocation && (
-                <InfoField
-                  label={t('softwareTab.manualLocation')}
-                  value={equipment.manualLocation}
-                />
+                <InfoRow label={t('softwareTab.manualLocation')} value={equipment.manualLocation} />
               )}
-            </div>
+            </dl>
           </CardContent>
         </Card>
       )}

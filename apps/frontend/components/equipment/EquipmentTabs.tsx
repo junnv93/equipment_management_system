@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
@@ -171,6 +172,9 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
     router.push(`${pathname}?tab=${tab}`, { scroll: false });
   };
 
+  // 그룹 경계: 'calibration'(이력 시작), 'factors'(관리 시작) 앞에 구분선 삽입
+  const groupBoundaries = new Set(['calibration', 'factors']);
+
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
       {/* 탭 리스트 - 스크롤 가능한 반응형 레이아웃 */}
@@ -180,40 +184,43 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
           aria-label={t('tabs.ariaLabel')}
         >
           {tabs.map(({ value, label, icon: Icon }) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              id={`${value}-tab`}
-              className={[
-                'data-[state=active]:bg-ul-midnight data-[state=active]:text-white',
-                EQUIPMENT_TAB_TOKENS.trigger.inactive,
-                EQUIPMENT_TAB_TOKENS.trigger.base,
-                'rounded-md hover:bg-muted',
-                EQUIPMENT_TAB_TOKENS.trigger.focus,
-              ].join(' ')}
-              aria-label={t('tabs.tabAriaLabel', { label })}
-            >
-              <Icon
-                className={`${EQUIPMENT_TAB_TOKENS.icon.size} mr-2 shrink-0`}
-                aria-hidden="true"
-              />
-              <span className="text-sm font-medium whitespace-nowrap">{label}</span>
-            </TabsTrigger>
+            <React.Fragment key={value}>
+              {/* 그룹 경계 구분선 (WAI-ARIA: role="separator") */}
+              {groupBoundaries.has(value) && (
+                <div
+                  className="mx-1 h-5 w-px bg-border opacity-60 self-center"
+                  role="separator"
+                  aria-orientation="vertical"
+                />
+              )}
+              <TabsTrigger
+                value={value}
+                id={`${value}-tab`}
+                className={[
+                  EQUIPMENT_TAB_TOKENS.trigger.base,
+                  EQUIPMENT_TAB_TOKENS.trigger.active,
+                  EQUIPMENT_TAB_TOKENS.trigger.inactive,
+                  EQUIPMENT_TAB_TOKENS.trigger.focus,
+                ].join(' ')}
+                aria-label={t('tabs.tabAriaLabel', { label })}
+              >
+                <Icon
+                  className={`${EQUIPMENT_TAB_TOKENS.icon.size} mr-1.5 shrink-0`}
+                  aria-hidden="true"
+                />
+                <span className="text-sm font-medium whitespace-nowrap">{label}</span>
+              </TabsTrigger>
+            </React.Fragment>
           ))}
         </TabsList>
       </div>
 
-      {/* 탭 컨텐츠 */}
+      {/* 탭 컨텐츠 — slideUp+fadeIn 단일 animate-in으로 방향성 있는 전환 */}
       {tabs.map(({ value, label, component: Component }) => (
         <TabsContent
           key={value}
           value={value}
-          className={[
-            'space-y-4',
-            ANIMATION_PRESETS.fadeIn,
-            'motion-safe:fade-in-50 motion-safe:duration-300',
-            'focus-visible:outline-none',
-          ].join(' ')}
+          className={`space-y-4 ${ANIMATION_PRESETS.slideUpFade} motion-safe:duration-200 focus-visible:outline-none`}
           role="tabpanel"
           aria-labelledby={`${value}-tab`}
           aria-label={t('tabs.panelAriaLabel', { label })}

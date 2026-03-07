@@ -20,6 +20,7 @@ import { DisposalDetailDialog } from './disposal/DisposalDetailDialog';
 import type { DisposalRequest } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { queryKeys } from '@/lib/api/query-config';
+import { ANIMATION_PRESETS } from '@/lib/design-tokens';
 
 interface EquipmentDetailClientProps {
   equipment: Equipment;
@@ -142,63 +143,72 @@ export function EquipmentDetailClient({
       <EquipmentHeader equipment={equipment} disposalRequest={disposalRequest} />
 
       {/* 컨텐츠 영역 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
         {/* 폐기 진행 중 배너 */}
         {equipment.status === 'pending_disposal' && disposalRequest && (
-          <DisposalProgressCard
-            disposalRequest={disposalRequest}
-            currentStep={currentStep}
-            onViewDetails={() => setDisposalDetailOpen(true)}
-            onCancel={() => {
-              // TODO: Implement cancel confirmation dialog
-            }}
-            canCancel={disposalRequest.requestedBy === user?.id}
-          />
+          <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
+            <DisposalProgressCard
+              disposalRequest={disposalRequest}
+              currentStep={currentStep}
+              onViewDetails={() => setDisposalDetailOpen(true)}
+              onCancel={() => {
+                // TODO: Implement cancel confirmation dialog
+              }}
+              canCancel={disposalRequest.requestedBy === user?.id}
+            />
+          </div>
         )}
 
         {/* 폐기 완료 배너 */}
         {equipment.status === 'disposed' && disposalRequest && (
-          <DisposedBanner disposalRequest={disposalRequest} />
-        )}
-        {/* 공용장비 안내 배너 */}
-        {equipment.isShared && (
-          <Alert
-            variant="default"
-            className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/50"
-          >
-            <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-800 dark:text-blue-200 flex items-center gap-2">
-              {t('sharedBanner.title')}
-              {/* 임시등록 장비이고 사용 기간이 있는 경우 D-day 표시 */}
-              {equipment.status === 'temporary' &&
-                equipment.usagePeriodStart &&
-                equipment.usagePeriodEnd && (
-                  <UsagePeriodBadge
-                    startDate={equipment.usagePeriodStart}
-                    endDate={equipment.usagePeriodEnd}
-                  />
-                )}
-            </AlertTitle>
-            <AlertDescription className="text-blue-700 dark:text-blue-300">
-              {equipment.status === 'temporary' ? (
-                <>
-                  {t('sharedBanner.temporaryDesc', { source: equipment.sharedSource || 'other' })}
-                  {equipment.usagePeriodEnd && <> {t('sharedBanner.expiryNotice')}</>}
-                </>
-              ) : (
-                t('sharedBanner.sharedDesc')
-              )}
-            </AlertDescription>
-          </Alert>
+          <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
+            <DisposedBanner disposalRequest={disposalRequest} />
+          </div>
         )}
 
-        {/* 부적합 상태 경고 배너 */}
+        {/* 부적합 상태 경고 배너 (폐기 다음, 공용장비보다 우선) */}
         {openNonConformances.length > 0 && (
-          <NonConformanceBanner
-            equipmentId={equipmentId}
-            nonConformances={openNonConformances}
-            showDetails={true}
-          />
+          <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
+            <NonConformanceBanner
+              equipmentId={equipmentId}
+              nonConformances={openNonConformances}
+              showDetails={true}
+            />
+          </div>
+        )}
+
+        {/* 공용장비 안내 배너 */}
+        {equipment.isShared && (
+          <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
+            <Alert
+              variant="default"
+              className="border-brand-info/20 bg-brand-info/5 dark:border-brand-info/30 dark:bg-brand-info/10"
+            >
+              <AlertTriangle className="h-4 w-4 text-brand-info dark:text-brand-info" />
+              <AlertTitle className="text-foreground flex items-center gap-2">
+                {t('sharedBanner.title')}
+                {/* 임시등록 장비이고 사용 기간이 있는 경우 D-day 표시 */}
+                {equipment.status === 'temporary' &&
+                  equipment.usagePeriodStart &&
+                  equipment.usagePeriodEnd && (
+                    <UsagePeriodBadge
+                      startDate={equipment.usagePeriodStart}
+                      endDate={equipment.usagePeriodEnd}
+                    />
+                  )}
+              </AlertTitle>
+              <AlertDescription className="text-muted-foreground">
+                {equipment.status === 'temporary' ? (
+                  <>
+                    {t('sharedBanner.temporaryDesc', { source: equipment.sharedSource || 'other' })}
+                    {equipment.usagePeriodEnd && <> {t('sharedBanner.expiryNotice')}</>}
+                  </>
+                ) : (
+                  t('sharedBanner.sharedDesc')
+                )}
+              </AlertDescription>
+            </Alert>
+          </div>
         )}
 
         {/* 탭 내비게이션 및 컨텐츠 */}
