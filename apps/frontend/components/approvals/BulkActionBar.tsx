@@ -96,6 +96,7 @@ export function BulkActionBar({
         <Button
           type="button"
           size="sm"
+          variant="outline"
           disabled={!hasSelection}
           onClick={() => setIsApproveDialogOpen(true)}
           className={getApprovalActionButtonClasses('approve')}
@@ -106,7 +107,7 @@ export function BulkActionBar({
         <Button
           type="button"
           size="sm"
-          variant="destructive"
+          variant="outline"
           disabled={!hasSelection}
           onClick={() => setIsRejectDialogOpen(true)}
           className={getApprovalActionButtonClasses('reject')}

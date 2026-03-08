@@ -100,6 +100,10 @@ export function ApprovalsClient({
   const [detailModalItem, setDetailModalItem] = useState<ApprovalItem | null>(null);
   const [rejectModalItem, setRejectModalItem] = useState<ApprovalItem | null>(null);
 
+  // 처리 중/퇴장 애니메이션 상태
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
+
   // ✅ 승인 코멘트 다이얼로그 상태 (commentRequired 카테고리용)
   const [approveCommentItem, setApproveCommentItem] = useState<ApprovalItem | null>(null);
   const [approveComment, setApproveComment] = useState('');
@@ -139,6 +143,13 @@ export function ApprovalsClient({
     staleTime: CACHE_TIMES.SHORT,
   });
 
+  // 경과일 내림차순 정렬 (오래된 건 상단)
+  const sortedItems = useMemo(() => {
+    return [...pendingItems].sort(
+      (a, b) => new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime()
+    );
+  }, [pendingItems]);
+
   // 카테고리별 대기 개수 조회
   // SSOT: 네비 뱃지, 대시보드 카드와 동일한 query key 공유
   const { data: pendingCounts } = useQuery({
@@ -166,17 +177,35 @@ export function ApprovalsClient({
       );
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    optimisticUpdate: (old, { item }) => {
-      // ✅ 승인한 항목만 즉시 제거 (전체 재조회 불필요)
-      return old?.filter((i) => i.id !== item.id) || [];
-    },
+    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션(opacity 0)을 위해 DOM 유지
+    optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
     errorMessage: t('toasts.approveError'),
-    onSuccessCallback: () => {
+    onSuccessCallback: (_, { item }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        s.delete(item.id);
+        return s;
+      });
+      setExitingIds((prev) => new Set(prev).add(item.id));
+      setTimeout(() => {
+        setExitingIds((prev) => {
+          const s = new Set(prev);
+          s.delete(item.id);
+          return s;
+        });
+      }, APPROVAL_MOTION.exitDurationMs);
       setDetailModalItem(null);
       setApproveCommentItem(null);
       setApproveComment('');
+    },
+    onErrorCallback: (_, { item }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        s.delete(item.id);
+        return s;
+      });
     },
   });
 
@@ -194,6 +223,7 @@ export function ApprovalsClient({
       setApproveCommentItem(item);
       setApproveComment('');
     } else {
+      setProcessingIds((prev) => new Set(prev).add(item.id));
       approveMutation.mutate({ item });
     }
   };
@@ -203,6 +233,7 @@ export function ApprovalsClient({
    */
   const handleApproveWithComment = () => {
     if (!approveCommentItem || !approveComment.trim()) return;
+    setProcessingIds((prev) => new Set(prev).add(approveCommentItem.id));
     approveMutation.mutate({ item: approveCommentItem, comment: approveComment });
   };
 
@@ -224,17 +255,38 @@ export function ApprovalsClient({
       );
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    optimisticUpdate: (old, { item }) => {
-      // ✅ 반려한 항목만 즉시 제거
-      return old?.filter((i) => i.id !== item.id) || [];
-    },
+    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션을 위해 DOM 유지
+    optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (_, { item }) => t('toasts.rejectDynamic', { summary: item.summary }),
     errorMessage: t('toasts.rejectError'),
-    onSuccessCallback: () => setRejectModalItem(null),
+    onSuccessCallback: (_, { item }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        s.delete(item.id);
+        return s;
+      });
+      setExitingIds((prev) => new Set(prev).add(item.id));
+      setTimeout(() => {
+        setExitingIds((prev) => {
+          const s = new Set(prev);
+          s.delete(item.id);
+          return s;
+        });
+      }, APPROVAL_MOTION.exitDurationMs);
+      setRejectModalItem(null);
+    },
+    onErrorCallback: (_, { item }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        s.delete(item.id);
+        return s;
+      });
+    },
   });
 
   const handleReject = async (item: ApprovalItem, reason: string) => {
+    setProcessingIds((prev) => new Set(prev).add(item.id));
     await rejectMutation.mutateAsync({ item, reason });
   };
 
@@ -248,10 +300,8 @@ export function ApprovalsClient({
       return await approvalsApi.bulkApprove(activeTab, ids, userId, comment);
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    optimisticUpdate: (old, { ids }) => {
-      // ✅ 선택된 항목들만 즉시 제거 (낙관적 - 모두 성공 가정)
-      return old?.filter((item) => !ids.includes(item.id)) || [];
-    },
+    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션을 위해 DOM 유지
+    optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
       if (result.failed.length > 0) {
@@ -263,10 +313,30 @@ export function ApprovalsClient({
       return t('toasts.bulkApproveAll', { count: result.success.length });
     },
     errorMessage: t('toasts.bulkApproveError'),
-    onSuccessCallback: () => {
+    onSuccessCallback: (_, { ids }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        ids.forEach((id) => s.delete(id));
+        return s;
+      });
+      setExitingIds((prev) => new Set(Array.from(prev).concat(ids)));
+      setTimeout(() => {
+        setExitingIds((prev) => {
+          const s = new Set(prev);
+          ids.forEach((id) => s.delete(id));
+          return s;
+        });
+      }, APPROVAL_MOTION.exitDurationMs);
       setSelectedItems([]);
       setIsBulkApproveCommentOpen(false);
       setBulkApproveComment('');
+    },
+    onErrorCallback: (_, { ids }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        ids.forEach((id) => s.delete(id));
+        return s;
+      });
     },
   });
 
@@ -280,6 +350,7 @@ export function ApprovalsClient({
       setIsBulkApproveCommentOpen(true);
       setBulkApproveComment('');
     } else {
+      setProcessingIds((prev) => new Set(Array.from(prev).concat(selectedItems)));
       bulkApproveMutation.mutate({ ids: selectedItems });
     }
   };
@@ -289,6 +360,7 @@ export function ApprovalsClient({
    */
   const handleBulkApproveWithComment = () => {
     if (!bulkApproveComment.trim()) return;
+    setProcessingIds((prev) => new Set(Array.from(prev).concat(selectedItems)));
     bulkApproveMutation.mutate({ ids: selectedItems, comment: bulkApproveComment });
   };
 
@@ -302,10 +374,8 @@ export function ApprovalsClient({
       return await approvalsApi.bulkReject(activeTab, ids, userId, reason);
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    optimisticUpdate: (old, { ids }) => {
-      // ✅ 선택된 항목들만 즉시 제거 (낙관적 - 모두 성공 가정)
-      return old?.filter((item) => !ids.includes(item.id)) || [];
-    },
+    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션을 위해 DOM 유지
+    optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
       if (result.failed.length > 0) {
@@ -317,11 +387,34 @@ export function ApprovalsClient({
       return t('toasts.bulkRejectAll', { count: result.success.length });
     },
     errorMessage: t('toasts.bulkRejectError'),
-    onSuccessCallback: () => setSelectedItems([]),
+    onSuccessCallback: (_, { ids }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        ids.forEach((id) => s.delete(id));
+        return s;
+      });
+      setExitingIds((prev) => new Set(Array.from(prev).concat(ids)));
+      setTimeout(() => {
+        setExitingIds((prev) => {
+          const s = new Set(prev);
+          ids.forEach((id) => s.delete(id));
+          return s;
+        });
+      }, APPROVAL_MOTION.exitDurationMs);
+      setSelectedItems([]);
+    },
+    onErrorCallback: (_, { ids }) => {
+      setProcessingIds((prev) => {
+        const s = new Set(prev);
+        ids.forEach((id) => s.delete(id));
+        return s;
+      });
+    },
   });
 
   const handleBulkReject = async (reason: string) => {
     if (selectedItems.length === 0) return;
+    setProcessingIds((prev) => new Set(Array.from(prev).concat(selectedItems)));
     await bulkRejectMutation.mutateAsync({ ids: selectedItems, reason });
   };
 
@@ -332,12 +425,12 @@ export function ApprovalsClient({
 
   // 전체 선택
   const handleSelectAll = useCallback(() => {
-    if (selectedItems.length === pendingItems.length) {
+    if (selectedItems.length === sortedItems.length) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(pendingItems.map((item) => item.id));
+      setSelectedItems(sortedItems.map((item) => item.id));
     }
-  }, [pendingItems, selectedItems.length]);
+  }, [sortedItems, selectedItems.length]);
 
   // 탭에 표시할 아이콘 컴포넌트 가져오기
   const getIcon = (iconName: string) => {
@@ -413,7 +506,7 @@ export function ApprovalsClient({
         {/* 일괄 처리 바 */}
         <BulkActionBar
           selectedCount={selectedItems.length}
-          totalCount={pendingItems.length}
+          totalCount={sortedItems.length}
           onSelectAll={handleSelectAll}
           onBulkApprove={handleBulkApprove}
           onBulkReject={handleBulkReject}
@@ -424,9 +517,11 @@ export function ApprovalsClient({
         {availableTabs.map((tab) => (
           <TabsContent key={tab} value={tab} className="mt-4">
             <ApprovalList
-              items={activeTab === tab ? pendingItems : []}
+              items={activeTab === tab ? sortedItems : []}
               isLoading={isLoading && activeTab === tab}
               selectedItems={selectedItems}
+              processingIds={processingIds}
+              exitingIds={exitingIds}
               onToggleSelect={handleToggleSelect}
               onApprove={handleApprove}
               onReject={(item) => setRejectModalItem(item)}

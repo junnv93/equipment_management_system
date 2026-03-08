@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CheckCircle2, XCircle, Eye, Calendar, User, Building2 } from 'lucide-react';
-import { formatDate } from '@/lib/utils/date';
+import { CheckCircle2, XCircle, Eye, Calendar, User, Building2, Clock } from 'lucide-react';
+import { formatDate, daysBetween } from '@/lib/utils/date';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { UNIFIED_APPROVAL_STATUS_LABELS } from '@/lib/api/approvals-api';
 import { ApprovalStepIndicator } from './ApprovalStepIndicator';
@@ -14,15 +13,20 @@ import {
   getApprovalStatusBadgeClasses,
   getApprovalCardBorderClasses,
   getApprovalActionButtonClasses,
+  getElapsedDaysClasses,
   APPROVAL_MOTION,
   APPROVAL_INFO_GRID_TOKENS,
   APPROVAL_FOCUS,
+  FONT,
 } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 interface ApprovalItemCardProps {
   item: ApprovalItem;
   isSelected: boolean;
+  isMutating?: boolean;
+  isExiting?: boolean;
   onToggleSelect: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -33,27 +37,16 @@ interface ApprovalItemCardProps {
 export function ApprovalItemCard({
   item,
   isSelected,
+  isMutating = false,
+  isExiting = false,
   onToggleSelect,
   onApprove,
   onReject,
   onViewDetail,
   actionLabel,
 }: ApprovalItemCardProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
   const t = useTranslations('approvals');
-
-  const handleApprove = async () => {
-    setIsProcessing(true);
-    try {
-      await onApprove();
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleReject = () => {
-    onReject();
-  };
+  const elapsedDays = daysBetween(item.requestedAt);
 
   // 다단계 승인 여부 확인
   const isMultiStep =
@@ -64,7 +57,13 @@ export function ApprovalItemCard({
 
   return (
     <Card
-      className={`border-l-4 ${getApprovalCardBorderClasses(item.status)} ${APPROVAL_MOTION.cardHover} ${APPROVAL_FOCUS.card}`}
+      className={cn(
+        `border-l-4 ${getApprovalCardBorderClasses(item.status)}`,
+        APPROVAL_MOTION.cardHover,
+        APPROVAL_FOCUS.card,
+        isMutating && APPROVAL_MOTION.processing,
+        isExiting && APPROVAL_MOTION.exiting
+      )}
       data-testid="approval-item"
     >
       <CardContent className="pt-6">
@@ -85,7 +84,7 @@ export function ApprovalItemCard({
               <Badge className={getApprovalStatusBadgeClasses(item.status)}>
                 {UNIFIED_APPROVAL_STATUS_LABELS[item.status] || item.status}
               </Badge>
-              <span className="text-sm font-medium">{item.summary}</span>
+              <span className={`text-sm font-medium ${FONT.heading}`}>{item.summary}</span>
             </div>
 
             {/* 요청 정보 */}
@@ -114,10 +113,23 @@ export function ApprovalItemCard({
                 </div>
                 <div>
                   <p className={APPROVAL_INFO_GRID_TOKENS.label}>{t('item.requestDate')}</p>
-                  <p className={APPROVAL_INFO_GRID_TOKENS.value}>
+                  <p className={`${APPROVAL_INFO_GRID_TOKENS.value} ${FONT.mono}`}>
                     <time dateTime={item.requestedAt}>
                       {formatDate(item.requestedAt, 'yyyy-MM-dd HH:mm')}
                     </time>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={APPROVAL_INFO_GRID_TOKENS.iconContainer}>
+                  <Clock className={APPROVAL_INFO_GRID_TOKENS.icon} aria-hidden="true" />
+                </div>
+                <div>
+                  <p className={APPROVAL_INFO_GRID_TOKENS.label}>{t('item.elapsedLabel')}</p>
+                  <p className={getElapsedDaysClasses(elapsedDays)}>
+                    {elapsedDays === 0
+                      ? t('item.elapsedToday')
+                      : t('item.elapsedDays', { days: elapsedDays })}
                   </p>
                 </div>
               </div>
@@ -160,6 +172,7 @@ export function ApprovalItemCard({
               size="sm"
               variant="outline"
               onClick={onViewDetail}
+              disabled={isMutating || isExiting}
               aria-describedby={`item-${item.id}`}
             >
               <Eye className="h-4 w-4 mr-1" />
@@ -168,10 +181,11 @@ export function ApprovalItemCard({
             <Button
               type="button"
               size="sm"
-              onClick={handleApprove}
-              disabled={isProcessing}
+              variant="outline"
+              onClick={onApprove}
+              disabled={isMutating || isExiting}
               className={getApprovalActionButtonClasses('approve')}
-              aria-busy={isProcessing}
+              aria-busy={isMutating}
             >
               <CheckCircle2 className="h-4 w-4 mr-1" />
               {actionLabel}
@@ -179,9 +193,9 @@ export function ApprovalItemCard({
             <Button
               type="button"
               size="sm"
-              variant="destructive"
-              onClick={handleReject}
-              disabled={isProcessing}
+              variant="outline"
+              onClick={onReject}
+              disabled={isMutating || isExiting}
               className={getApprovalActionButtonClasses('reject')}
             >
               <XCircle className="h-4 w-4 mr-1" />

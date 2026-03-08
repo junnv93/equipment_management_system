@@ -166,6 +166,7 @@ export default function ApprovalDetailModal({
           </Button>
           <Button
             type="button"
+            variant="outline"
             onClick={onApprove}
             className={getApprovalActionButtonClasses('approve')}
           >
@@ -174,7 +175,7 @@ export default function ApprovalDetailModal({
           </Button>
           <Button
             type="button"
-            variant="destructive"
+            variant="outline"
             onClick={onReject}
             className={getApprovalActionButtonClasses('reject')}
           >

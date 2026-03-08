@@ -12,6 +12,8 @@ interface ApprovalListProps {
   items: ApprovalItem[];
   isLoading: boolean;
   selectedItems: string[];
+  processingIds: Set<string>;
+  exitingIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onApprove: (item: ApprovalItem) => void;
   onReject: (item: ApprovalItem) => void;
@@ -23,6 +25,8 @@ export function ApprovalList({
   items,
   isLoading,
   selectedItems,
+  processingIds,
+  exitingIds,
   onToggleSelect,
   onApprove,
   onReject,
@@ -91,6 +95,8 @@ export function ApprovalList({
                 <ApprovalItemCard
                   item={item}
                   isSelected={selectedItems.includes(item.id)}
+                  isMutating={processingIds.has(item.id)}
+                  isExiting={exitingIds.has(item.id)}
                   onToggleSelect={() => onToggleSelect(item.id)}
                   onApprove={() => onApprove(item)}
                   onReject={() => onReject(item)}
