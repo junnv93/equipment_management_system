@@ -512,7 +512,23 @@
       "calibrationAgency": "Agency",
       "result": "Result",
       "approvalStatus": "Approval Status",
-      "notes": "Notes"
+      "notes": "Notes",
+      "certificate": "Certificate",
+      "actions": "Actions"
+    },
+    "overdueBanner": {
+      "title": "Calibration Overdue",
+      "description": "This equipment's calibration is overdue. Please arrange calibration immediately or review non-conformance handling."
+    },
+    "approval": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveSuccess": "Calibration has been approved.",
+      "rejectSuccess": "Calibration has been rejected."
+    },
+    "certificate": {
+      "download": "Download Certificate",
+      "noFile": "No file"
     },
     "toasts": {
       "fileRequired": "File Required",
@@ -873,6 +889,27 @@
       "createError": "Failed to register non-conformance.",
       "updateSuccess": "Non-conformance record has been updated.",
       "updateError": "Failed to update record."
+    },
+    "ncStatus": {
+      "open": "Open",
+      "analyzing": "Analyzing",
+      "corrected": "Corrected",
+      "closed": "Closed"
+    },
+    "ncType": {
+      "damage": "Damage",
+      "malfunction": "Malfunction",
+      "calibration_failure": "Calibration Failure",
+      "calibration_overdue": "Calibration Overdue",
+      "measurement_error": "Measurement Error",
+      "other": "Other"
+    },
+    "resolutionType": {
+      "repair": "Repair",
+      "recalibration": "Recalibration",
+      "replacement": "Replacement",
+      "disposal": "Disposal",
+      "other": "Other"
     }
   },
   "equipmentImport": {

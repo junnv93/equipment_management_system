@@ -512,7 +512,23 @@
       "calibrationAgency": "교정 기관",
       "result": "결과",
       "approvalStatus": "승인 상태",
-      "notes": "비고"
+      "notes": "비고",
+      "certificate": "성적서",
+      "actions": "액션"
+    },
+    "overdueBanner": {
+      "title": "교정 기한 초과",
+      "description": "이 장비의 교정 기한이 지났습니다. 즉시 교정을 진행하거나 부적합 처리를 검토하세요."
+    },
+    "approval": {
+      "approve": "승인",
+      "reject": "반려",
+      "approveSuccess": "교정이 승인되었습니다.",
+      "rejectSuccess": "교정이 반려되었습니다."
+    },
+    "certificate": {
+      "download": "성적서 다운로드",
+      "noFile": "파일 없음"
     },
     "toasts": {
       "fileRequired": "파일 필요",
@@ -873,6 +889,27 @@
       "createError": "부적합 등록에 실패했습니다.",
       "updateSuccess": "부적합 기록이 수정되었습니다.",
       "updateError": "업데이트에 실패했습니다."
+    },
+    "ncStatus": {
+      "open": "등록됨",
+      "analyzing": "분석 중",
+      "corrected": "조치 완료",
+      "closed": "종료됨"
+    },
+    "ncType": {
+      "damage": "손상",
+      "malfunction": "오작동",
+      "calibration_failure": "교정 실패",
+      "calibration_overdue": "교정 기한 초과",
+      "measurement_error": "측정 오류",
+      "other": "기타"
+    },
+    "resolutionType": {
+      "repair": "수리",
+      "recalibration": "재교정",
+      "replacement": "교체",
+      "disposal": "폐기",
+      "other": "기타"
     }
   },
   "equipmentImport": {

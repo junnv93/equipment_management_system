@@ -57,6 +57,8 @@ import {
   TIMELINE_TOKENS,
   getTimelineCardClasses,
   TIMELINE_SKELETON_TOKENS,
+  getIncidentTypeNodeColor,
+  getSemanticContainerClasses,
 } from '@/lib/design-tokens';
 
 // 사고 이력 등록 스키마
@@ -90,14 +92,6 @@ interface IncidentHistoryTabProps {
 }
 
 // INCIDENT_TYPE_LABELS are now provided via useTranslations('equipment').incidentHistoryTab.types
-
-const INCIDENT_TYPE_COLORS: Record<string, string> = {
-  damage: 'bg-red-500',
-  malfunction: 'bg-orange-500',
-  change: 'bg-blue-500',
-  repair: 'bg-green-500',
-  calibration_overdue: 'bg-purple-500',
-};
 
 /**
  * 사고 이력 탭 - 타임라인 UI
@@ -207,13 +201,6 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
       await EquipmentCacheInvalidation.invalidateAfterIncidentHistory(queryClient, equipmentId);
     },
     onError: (error: unknown) => {
-      console.error('🔴 사고 이력 등록 실패:', error);
-
-      // ✅ ApiError 타입 체크 및 상세 정보 로깅
-      if (error && typeof error === 'object' && 'details' in error) {
-        console.error('📋 에러 상세:', (error as { details?: unknown }).details);
-      }
-
       // API 에러 메시지 추출
       let errorMessage = t('incidentHistoryTab.toasts.errorDesc');
 
@@ -277,10 +264,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     resourceName: t('incidentHistoryTab.title'),
     // React Query 캐시 무효화 (Client Component 갱신)
     invalidateKeys: [
-      ['incident-history', equipmentId],
-      ['non-conformances', 'equipment', equipmentId],
-      ['equipment', equipmentId],
-      ['equipmentList'],
+      queryKeys.equipment.incidentHistory(equipmentId),
+      queryKeys.nonConformances.byEquipment(equipmentId),
+      queryKeys.equipment.detail(equipmentId),
+      queryKeys.equipment.lists(),
     ],
     // Server Component 캐시 갱신 (router.refresh)
     refreshServerCache: true,
@@ -308,13 +295,6 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     if (data.actionPlan && data.actionPlan.trim().length > 0) {
       payload.actionPlan = data.actionPlan;
     }
-
-    // 🔍 디버깅: 전송할 데이터 로깅
-    console.log('📤 사고 이력 등록 요청:', {
-      equipmentId: equipmentId,
-      payload,
-      formData: data,
-    });
 
     createMutation.mutate(payload);
   };
@@ -395,8 +375,8 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
         {/* incidentType이 선택되지 않았을 때 안내 */}
         {!incidentType && (
-          <div className="rounded-md border p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+          <div className={getSemanticContainerClasses('info')}>
+            <p className="text-sm text-muted-foreground">
               {t('incidentHistoryTab.dialog.typeSelectHint')}
             </p>
           </div>
@@ -582,14 +562,14 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
               {/* 교정 기한 초과 자동 부적합 안내 */}
               {incidentType === 'calibration_overdue' && (
                 <div className="space-y-3">
-                  <div className="rounded-md border p-4 bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800">
+                  <div className={getSemanticContainerClasses('warning')}>
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                      <AlertTriangle className="h-5 w-5 text-brand-warning mt-0.5" />
                       <div className="space-y-1 flex-1">
-                        <p className="font-medium text-orange-900 dark:text-orange-100">
+                        <p className="font-medium text-brand-warning">
                           {t('incidentHistoryTab.calibrationOverdue.autoNcTitle')}
                         </p>
-                        <p className="text-sm text-orange-800 dark:text-orange-200">
+                        <p className="text-sm text-muted-foreground">
                           {t('incidentHistoryTab.calibrationOverdue.autoNcDescription')}
                           {!isPastIncident &&
                             t('incidentHistoryTab.calibrationOverdue.statusChangeNote')}
@@ -601,10 +581,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
                   {/* 과거 이력 경고 */}
                   {isPastIncident && (
-                    <div className="rounded-md border p-3 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                    <div className={getSemanticContainerClasses('info')}>
                       <div className="flex items-start gap-2">
-                        <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                        <div className="text-sm text-blue-800 dark:text-blue-200">
+                        <Calendar className="h-4 w-4 text-brand-info mt-0.5" />
+                        <div className="text-sm text-muted-foreground">
                           <strong>{t('common.pastIncidentTitle')}</strong>{' '}
                           {t('incidentHistoryTab.calibrationOverdue.pastIncidentNote')}
                         </div>
@@ -621,7 +601,9 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                     control={form.control}
                     name="createNonConformance"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-yellow-50 dark:bg-yellow-950">
+                      <FormItem
+                        className={`flex flex-row items-start space-x-3 space-y-0 ${getSemanticContainerClasses('warning')}`}
+                      >
                         <FormControl>
                           <input
                             type="checkbox"
@@ -653,12 +635,12 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
                   {/* 워크플로우 안내 */}
                   {createNonConformance && ['damage', 'malfunction'].includes(incidentType) && (
-                    <div className="rounded-md border p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-                      <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
+                    <div className={getSemanticContainerClasses('info')}>
+                      <h4 className="font-medium text-brand-info mb-2 flex items-center gap-2">
                         <Info className="h-4 w-4" />
                         {t('incidentHistoryTab.nonConformance.workflowTitle')}
                       </h4>
-                      <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1.5 list-decimal list-inside ml-1">
+                      <ol className="text-sm text-muted-foreground space-y-1.5 list-decimal list-inside ml-1">
                         <li>{t('incidentHistoryTab.nonConformance.workflowStep1')}</li>
                         <li>{t('incidentHistoryTab.nonConformance.workflowStep2')}</li>
                         <li>{t('incidentHistoryTab.nonConformance.workflowStep3')}</li>
@@ -669,10 +651,10 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
 
                   {/* 과거 이력 경고 (부적합 체크 시만 표시) */}
                   {isPastIncident && createNonConformance && (
-                    <div className="rounded-md border p-3 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                    <div className={getSemanticContainerClasses('info')}>
                       <div className="flex items-start gap-2">
-                        <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
-                        <div className="text-sm text-blue-800 dark:text-blue-200">
+                        <Calendar className="h-4 w-4 text-brand-info mt-0.5" />
+                        <div className="text-sm text-muted-foreground">
                           <strong>{t('common.pastIncidentTitle')}</strong>{' '}
                           {t('incidentHistoryTab.calibrationOverdue.pastIncidentNote')}
                         </div>
@@ -790,7 +772,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
               <div key={item.id} className="relative flex gap-4">
                 <div className="relative flex-shrink-0">
                   <div
-                    className={`${TIMELINE_TOKENS.node.container} ${INCIDENT_TYPE_COLORS[item.incidentType] || 'bg-gray-500'} text-white shadow-lg`}
+                    className={`${TIMELINE_TOKENS.node.container} ${getIncidentTypeNodeColor(item.incidentType)} text-white shadow-lg`}
                   >
                     <AlertTriangle className={TIMELINE_TOKENS.node.icon} />
                   </div>

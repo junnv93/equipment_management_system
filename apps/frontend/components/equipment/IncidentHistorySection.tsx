@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { formatDate } from '@/lib/utils/date';
+import { getIncidentTypeBadgeClasses } from '@/lib/design-tokens';
 import type {
   IncidentHistoryItem,
   CreateIncidentHistoryInput,
@@ -51,13 +52,6 @@ import type {
 } from '@/lib/api/equipment-api';
 
 const INCIDENT_TYPES: IncidentType[] = ['damage', 'malfunction', 'change', 'repair'];
-
-const INCIDENT_TYPE_COLORS: Record<IncidentType, string> = {
-  damage: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  malfunction: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  change: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  repair: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-};
 
 const incidentHistorySchema = z.object({
   occurredAt: z.string().min(1, '발생 일시를 입력하세요'),
@@ -182,7 +176,10 @@ export function IncidentHistorySection({
                           <SelectContent>
                             {INCIDENT_TYPES.map((type) => (
                               <SelectItem key={type} value={type}>
-                                <Badge variant="outline" className={INCIDENT_TYPE_COLORS[type]}>
+                                <Badge
+                                  variant="outline"
+                                  className={getIncidentTypeBadgeClasses(type)}
+                                >
                                   {t(`incidentHistoryTab.types.${type}` as Parameters<typeof t>[0])}
                                 </Badge>
                               </SelectItem>
@@ -249,7 +246,10 @@ export function IncidentHistorySection({
                 <TableRow key={item.id}>
                   <TableCell>{formatDate(item.occurredAt, 'yyyy-MM-dd')}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={INCIDENT_TYPE_COLORS[item.incidentType]}>
+                    <Badge
+                      variant="outline"
+                      className={getIncidentTypeBadgeClasses(item.incidentType)}
+                    >
                       {t(
                         `incidentHistoryTab.types.${item.incidentType}` as Parameters<typeof t>[0]
                       )}

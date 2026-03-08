@@ -41,10 +41,7 @@ export function NonConformanceBanner({
         {showDetails && (
           <div className="space-y-2">
             {nonConformances.map((nc) => (
-              <div
-                key={nc.id}
-                className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-red-200 dark:border-red-800"
-              >
+              <div key={nc.id} className="bg-card p-3 rounded-lg border border-brand-critical/20">
                 <p className="text-sm text-gray-900 dark:text-gray-100">{nc.cause}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {t('discoveryDate', { date: new Date(nc.discoveryDate).toLocaleDateString() })}
