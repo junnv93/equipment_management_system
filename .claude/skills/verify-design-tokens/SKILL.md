@@ -28,71 +28,89 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 
 ## Related Files
 
-| File                                                                                | Purpose                                  |
-| ----------------------------------------------------------------------------------- | ---------------------------------------- |
-| `apps/frontend/lib/design-tokens/index.ts`                                          | Public API (Layer 1-3 export)            |
-| `apps/frontend/lib/design-tokens/primitives.ts`                                     | Layer 1 원시값                           |
-| `apps/frontend/lib/design-tokens/semantic.ts`                                       | Layer 2 의미론적 토큰                    |
-| `apps/frontend/lib/design-tokens/brand.ts`                                          | Brand 토큰 (글로벌 디자인 언어 SSOT)     |
-| `apps/frontend/lib/design-tokens/motion.ts`                                         | Motion 유틸리티 (getTransitionClasses)   |
-| `apps/frontend/lib/design-tokens/components/header.ts`                              | Layer 3 Header 토큰                      |
-| `apps/frontend/lib/design-tokens/components/notification.ts`                        | Layer 3 Notification 토큰                |
-| `apps/frontend/lib/design-tokens/components/auth.ts`                                | Layer 3 Auth 토큰                        |
-| `apps/frontend/lib/design-tokens/components/dashboard.ts`                           | Layer 3 Dashboard 토큰                   |
-| `apps/frontend/lib/design-tokens/visual-feedback.ts`                                | Visual Feedback System (Architecture v3) |
-| `apps/frontend/lib/design-tokens/components/equipment.ts`                           | Layer 3 Equipment 토큰                   |
-| `apps/frontend/lib/design-tokens/components/equipment-timeline.ts`                  | Layer 3 Equipment Timeline 토큰          |
-| `apps/frontend/lib/design-tokens/components/disposal.ts`                            | Layer 3 Disposal 토큰                    |
-| `apps/frontend/lib/design-tokens/components/approval.ts`                            | Layer 3 Approval 토큰                    |
-| `apps/frontend/lib/design-tokens/components/audit.ts`                               | Layer 3 Audit 토큰                       |
-| `apps/frontend/lib/design-tokens/components/calibration-plans.ts`                   | Layer 3 Calibration Plans 토큰           |
-| `apps/frontend/lib/design-tokens/components/calibration.ts`                         | Layer 3 Calibration 토큰                 |
-| `apps/frontend/lib/design-tokens/components/checkout.ts`                            | Layer 3 Checkout 토큰                    |
-| `apps/frontend/lib/design-tokens/components/settings.ts`                            | Layer 3 Settings 토큰                    |
-| `apps/frontend/lib/utils/calibration-status.ts`                                     | 교정 상태 유틸리티 (design-tokens 사용)  |
-| `apps/frontend/lib/design-tokens/README.md`                                         | Design Token 시스템 문서                 |
-| `apps/frontend/components/layout/ThemeToggle.tsx`                                   | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/layout/UserProfileDropdown.tsx`                           | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/layout/DashboardShell.tsx`                                | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/notifications/notifications-dropdown.tsx`                 | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/layout/MobileNav.tsx`                                     | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/auth/LoginForm.tsx`                                       | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/auth/LoginPageContent.tsx`                                | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/auth/AzureAdButton.tsx`                                   | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/notifications/notification-item.tsx`                      | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/dashboard/StatsCard.tsx`                                  | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/WelcomeHeader.tsx`                              | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/PendingApprovalCard.tsx`                        | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/QuickActionButtons.tsx`                         | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/RecentActivities.tsx`                           | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/TeamEquipmentStats.tsx`                         | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/EquipmentStatusChart.tsx`                       | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/CalibrationList.tsx`                            | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/OverdueCheckoutsList.tsx`                       | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/DashboardClient.tsx`                            | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/CalibrationDdayList.tsx`                        | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/KpiStatusGrid.tsx`                              | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/MiniCalendar.tsx`                               | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/TeamEquipmentDistribution.tsx`                  | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/equipment/EquipmentCardGrid.tsx`                          | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/components/equipment/EquipmentFilters.tsx`                           | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/components/equipment/EquipmentListContent.tsx`                       | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/components/equipment/EquipmentTable.tsx`                             | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/components/equipment/EquipmentPageHeader.tsx`                        | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/app/(dashboard)/calibration/CalibrationContent.tsx`                  | 마이그레이션된 컴포넌트 (Calibration)    |
-| `apps/frontend/app/(dashboard)/calibration/register/CalibrationRegisterContent.tsx` | 마이그레이션된 컴포넌트 (Calibration)    |
-| `apps/frontend/lib/design-tokens/components/form-wizard.ts`                         | Layer 3 Form Wizard 토큰                 |
-| `apps/frontend/components/shared/FormWizardStepper.tsx`                             | 마이그레이션된 컴포넌트 (Form Wizard)    |
-| `apps/frontend/components/equipment/ManagementNumberPreviewBar.tsx`                 | 마이그레이션된 컴포넌트 (Form Wizard)    |
-| `apps/frontend/components/calibration/CalibrationListTable.tsx`                     | 마이그레이션된 컴포넌트 (Calibration)    |
-| `apps/frontend/components/calibration/CalibrationStatsCards.tsx`                    | 마이그레이션된 컴포넌트 (Calibration)    |
-| `apps/frontend/components/calibration/CalibrationTimeline.tsx`                      | 마이그레이션된 컴포넌트 (Calibration)    |
-| `apps/frontend/components/calibration/IntermediateChecksTab.tsx`                    | 마이그레이션된 컴포넌트 (Calibration)    |
-| `apps/frontend/components/calibration/SelfInspectionTab.tsx`                        | 마이그레이션된 컴포넌트 (Calibration)    |
-| `apps/frontend/components/equipment/shared/EquipmentTimeline.tsx`                   | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/components/equipment/BasicInfoTab.tsx`                               | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/components/equipment/EquipmentDetailClient.tsx`                      | 마이그레이션된 컴포넌트 (Equipment)      |
-| `apps/frontend/components/equipment/EquipmentTabs.tsx`                              | 마이그레이션된 컴포넌트 (Equipment)      |
+| File                                                                                               | Purpose                                  |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `apps/frontend/lib/design-tokens/index.ts`                                                         | Public API (Layer 1-3 export)            |
+| `apps/frontend/lib/design-tokens/primitives.ts`                                                    | Layer 1 원시값                           |
+| `apps/frontend/lib/design-tokens/semantic.ts`                                                      | Layer 2 의미론적 토큰                    |
+| `apps/frontend/lib/design-tokens/brand.ts`                                                         | Brand 토큰 (글로벌 디자인 언어 SSOT)     |
+| `apps/frontend/lib/design-tokens/motion.ts`                                                        | Motion 유틸리티 (getTransitionClasses)   |
+| `apps/frontend/lib/design-tokens/components/header.ts`                                             | Layer 3 Header 토큰                      |
+| `apps/frontend/lib/design-tokens/components/notification.ts`                                       | Layer 3 Notification 토큰                |
+| `apps/frontend/lib/design-tokens/components/auth.ts`                                               | Layer 3 Auth 토큰                        |
+| `apps/frontend/lib/design-tokens/components/dashboard.ts`                                          | Layer 3 Dashboard 토큰                   |
+| `apps/frontend/lib/design-tokens/visual-feedback.ts`                                               | Visual Feedback System (Architecture v3) |
+| `apps/frontend/lib/design-tokens/components/equipment.ts`                                          | Layer 3 Equipment 토큰                   |
+| `apps/frontend/lib/design-tokens/components/equipment-timeline.ts`                                 | Layer 3 Equipment Timeline 토큰          |
+| `apps/frontend/lib/design-tokens/components/disposal.ts`                                           | Layer 3 Disposal 토큰                    |
+| `apps/frontend/lib/design-tokens/components/approval.ts`                                           | Layer 3 Approval 토큰                    |
+| `apps/frontend/lib/design-tokens/components/audit.ts`                                              | Layer 3 Audit 토큰                       |
+| `apps/frontend/lib/design-tokens/components/calibration-plans.ts`                                  | Layer 3 Calibration Plans 토큰           |
+| `apps/frontend/lib/design-tokens/components/calibration.ts`                                        | Layer 3 Calibration 토큰                 |
+| `apps/frontend/lib/design-tokens/components/checkout.ts`                                           | Layer 3 Checkout 토큰                    |
+| `apps/frontend/lib/design-tokens/components/non-conformance.ts`                                    | Layer 3 Non-Conformance 토큰             |
+| `apps/frontend/lib/design-tokens/components/settings.ts`                                           | Layer 3 Settings 토큰                    |
+| `apps/frontend/styles/globals.css`                                                                 | Brand CSS 변수 정의 (--brand-color-\*)   |
+| `apps/frontend/tailwind.config.js`                                                                 | Tailwind brand 팔레트 확장 설정          |
+| `apps/frontend/lib/utils/calibration-status.ts`                                                    | 교정 상태 유틸리티 (design-tokens 사용)  |
+| `apps/frontend/lib/design-tokens/README.md`                                                        | Design Token 시스템 문서                 |
+| `apps/frontend/components/layout/ThemeToggle.tsx`                                                  | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/layout/UserProfileDropdown.tsx`                                          | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/layout/DashboardShell.tsx`                                               | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/notifications/notifications-dropdown.tsx`                                | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/layout/MobileNav.tsx`                                                    | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/auth/LoginForm.tsx`                                                      | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/auth/LoginPageContent.tsx`                                               | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/auth/AzureAdButton.tsx`                                                  | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/notifications/notification-item.tsx`                                     | 마이그레이션된 컴포넌트                  |
+| `apps/frontend/components/dashboard/StatsCard.tsx`                                                 | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/WelcomeHeader.tsx`                                             | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/PendingApprovalCard.tsx`                                       | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/QuickActionButtons.tsx`                                        | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/RecentActivities.tsx`                                          | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/TeamEquipmentStats.tsx`                                        | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/EquipmentStatusChart.tsx`                                      | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/CalibrationList.tsx`                                           | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/OverdueCheckoutsList.tsx`                                      | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/DashboardClient.tsx`                                           | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/CalibrationDdayList.tsx`                                       | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/KpiStatusGrid.tsx`                                             | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/MiniCalendar.tsx`                                              | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/TeamEquipmentDistribution.tsx`                                 | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/equipment/EquipmentCardGrid.tsx`                                         | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentFilters.tsx`                                          | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentListContent.tsx`                                      | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentTable.tsx`                                            | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentPageHeader.tsx`                                       | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/app/(dashboard)/calibration/CalibrationContent.tsx`                                 | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/app/(dashboard)/calibration/register/CalibrationRegisterContent.tsx`                | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/lib/design-tokens/components/form-wizard.ts`                                        | Layer 3 Form Wizard 토큰                 |
+| `apps/frontend/components/shared/FormWizardStepper.tsx`                                            | 마이그레이션된 컴포넌트 (Form Wizard)    |
+| `apps/frontend/components/equipment/ManagementNumberPreviewBar.tsx`                                | 마이그레이션된 컴포넌트 (Form Wizard)    |
+| `apps/frontend/components/calibration/CalibrationListTable.tsx`                                    | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/CalibrationStatsCards.tsx`                                   | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/CalibrationTimeline.tsx`                                     | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/IntermediateChecksTab.tsx`                                   | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/calibration/SelfInspectionTab.tsx`                                       | 마이그레이션된 컴포넌트 (Calibration)    |
+| `apps/frontend/components/equipment/shared/EquipmentTimeline.tsx`                                  | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/BasicInfoTab.tsx`                                              | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentDetailClient.tsx`                                     | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentTabs.tsx`                                             | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/CalibrationHistoryTab.tsx`                                     | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/IncidentHistorySection.tsx`                                    | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/IncidentHistoryTab.tsx`                                        | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/CalibrationApprovalActions.tsx`                                | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/CalibrationResultBadge.tsx`                                    | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/checkouts/CheckoutGroupCard.tsx`                                         | 마이그레이션된 컴포넌트 (Checkout)       |
+| `apps/frontend/components/checkouts/CheckoutStatusBadge.tsx`                                       | 마이그레이션된 컴포넌트 (Checkout)       |
+| `apps/frontend/components/checkouts/CheckoutMiniProgress.tsx`                                      | 마이그레이션된 컴포넌트 (Checkout)       |
+| `apps/frontend/components/approvals/ApprovalDetailModal.tsx`                                       | 마이그레이션된 컴포넌트 (Approval)       |
+| `apps/frontend/components/approvals/ApprovalItem.tsx`                                              | 마이그레이션된 컴포넌트 (Approval)       |
+| `apps/frontend/components/approvals/ApprovalList.tsx`                                              | 마이그레이션된 컴포넌트 (Approval)       |
+| `apps/frontend/components/approvals/ApprovalsClient.tsx`                                           | 마이그레이션된 컴포넌트 (Approval)       |
+| `apps/frontend/components/approvals/BulkActionBar.tsx`                                             | 마이그레이션된 컴포넌트 (Approval)       |
+| `apps/frontend/app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx`                              | 마이그레이션된 컴포넌트 (Audit)          |
+| `apps/frontend/app/(dashboard)/admin/non-conformance-approvals/NonConformanceApprovalsContent.tsx` | 마이그레이션된 컴포넌트 (Admin)          |
 
 ## Workflow
 
@@ -221,6 +239,21 @@ files=(
   "apps/frontend/components/equipment/BasicInfoTab.tsx"
   "apps/frontend/components/equipment/EquipmentDetailClient.tsx"
   "apps/frontend/components/equipment/EquipmentTabs.tsx"
+  "apps/frontend/components/equipment/CalibrationHistoryTab.tsx"
+  "apps/frontend/components/equipment/IncidentHistorySection.tsx"
+  "apps/frontend/components/equipment/IncidentHistoryTab.tsx"
+  "apps/frontend/components/equipment/CalibrationApprovalActions.tsx"
+  "apps/frontend/components/equipment/CalibrationResultBadge.tsx"
+  "apps/frontend/components/checkouts/CheckoutGroupCard.tsx"
+  "apps/frontend/components/checkouts/CheckoutStatusBadge.tsx"
+  "apps/frontend/components/checkouts/CheckoutMiniProgress.tsx"
+  "apps/frontend/components/approvals/ApprovalDetailModal.tsx"
+  "apps/frontend/components/approvals/ApprovalItem.tsx"
+  "apps/frontend/components/approvals/ApprovalList.tsx"
+  "apps/frontend/components/approvals/ApprovalsClient.tsx"
+  "apps/frontend/components/approvals/BulkActionBar.tsx"
+  "apps/frontend/app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx"
+  "apps/frontend/app/(dashboard)/admin/non-conformance-approvals/NonConformanceApprovalsContent.tsx"
 )
 
 for f in "${files[@]}"; do
@@ -236,7 +269,7 @@ for f in "${files[@]}"; do
 done
 ```
 
-**PASS 기준:** 모든 마이그레이션된 43개 컴포넌트에서 design-tokens import가 존재.
+**PASS 기준:** 모든 마이그레이션된 58개 컴포넌트에서 design-tokens import가 존재.
 
 **FAIL 기준:** design-tokens import가 없거나 하드코딩된 값 사용 시 재마이그레이션 필요.
 
