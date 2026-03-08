@@ -127,6 +127,7 @@ module.exports = {
           info: 'hsl(var(--brand-color-info) / <alpha-value>)',
           neutral: 'hsl(var(--brand-color-neutral) / <alpha-value>)',
           purple: 'hsl(var(--brand-color-purple) / <alpha-value>)',
+          repair: 'hsl(var(--brand-color-repair) / <alpha-value>)',
         },
         // Semantic colors
         success: {

@@ -37,6 +37,7 @@ export const BRAND_COLORS_HEX = {
   info: '#3B82F6',
   neutral: '#6B7280',
   purple: '#8B5CF6',
+  repair: '#F97316',
 } as const;
 
 export type SemanticColorKey = keyof typeof BRAND_COLORS_HEX;
@@ -165,6 +166,7 @@ export function getSemanticBadgeClasses(color: SemanticColorKey): string {
     info: 'text-brand-info bg-brand-info/10 border-brand-info/20',
     neutral: 'text-brand-neutral bg-brand-neutral/10 border-brand-neutral/20',
     purple: 'text-brand-purple bg-brand-purple/10 border-brand-purple/20',
+    repair: 'text-brand-repair bg-brand-repair/10 border-brand-repair/20',
   };
   return `${colorMap[color]} border rounded-md px-2 py-0.5 text-xs font-medium`;
 }
@@ -181,4 +183,70 @@ export function getBrandElevatedClasses(): string {
  */
 export function getBrandMutedTextClasses(): string {
   return 'text-brand-text-muted text-sm';
+}
+
+/**
+ * 시멘틱 색상 컨테이너 — 색상 클래스만 반환 (구조는 호출부가 결정)
+ *
+ * 의도적으로 p-*, rounded-* 없음.
+ * 호출부에서 레이아웃 구조(padding, radius, border-variant)를 결정하고,
+ * 이 함수는 색상 토큰만 담당합니다.
+ *
+ * @example
+ * // 기본 info 박스
+ * <div className={`rounded-md border p-4 ${getSemanticContainerColorClasses('info')}`}>
+ *
+ * // 좌측 강조 notice 박스 (border-l-4 패턴)
+ * <div className={`border-l-4 p-4 ${getSemanticContainerColorClasses('info')}`}>
+ *
+ * // Compact 힌트
+ * <div className={`rounded border p-2 text-xs ${getSemanticContainerColorClasses('warning')}`}>
+ */
+export function getSemanticContainerColorClasses(color: SemanticColorKey): string {
+  const colorMap: Record<SemanticColorKey, string> = {
+    ok: 'bg-brand-ok/10 border-brand-ok/20',
+    warning: 'bg-brand-warning/10 border-brand-warning/20',
+    critical: 'bg-brand-critical/10 border-brand-critical/20',
+    info: 'bg-brand-info/10 border-brand-info/20',
+    neutral: 'bg-brand-neutral/10 border-brand-neutral/20',
+    purple: 'bg-brand-purple/10 border-brand-purple/20',
+    repair: 'bg-brand-repair/10 border-brand-repair/20',
+  };
+  return colorMap[color];
+}
+
+/**
+ * 시멘틱 색상 컨테이너 스타일 — 기본 프리셋 (rounded-md border p-4)
+ *
+ * 가장 일반적인 info box / warning banner 용도의 프리셋.
+ * 좌측 강조(border-l-4), compact, banner 등 변형이 필요하면
+ * getSemanticContainerColorClasses()를 직접 사용하세요.
+ *
+ * @example
+ * getSemanticContainerClasses('info')     // 안내 박스 (파란색)
+ * getSemanticContainerClasses('warning')  // 경고 박스 (주황색)
+ * getSemanticContainerClasses('critical') // 위험 박스 (빨간색)
+ */
+export function getSemanticContainerClasses(color: SemanticColorKey): string {
+  return `rounded-md border p-4 ${getSemanticContainerColorClasses(color)}`;
+}
+
+/**
+ * 시멘틱 컨테이너 내부 강조 텍스트 색상 (제목·아이콘용)
+ *
+ * brand-color-* 변수는 라이트/다크 동일값이므로,
+ * 본문 텍스트에는 text-muted-foreground 사용 권장.
+ * 이 함수는 아이콘, 제목 등 강조 요소에만 사용하세요.
+ */
+export function getSemanticContainerTextClasses(color: SemanticColorKey): string {
+  const colorMap: Record<SemanticColorKey, string> = {
+    ok: 'text-brand-ok',
+    warning: 'text-brand-warning',
+    critical: 'text-brand-critical',
+    info: 'text-brand-info',
+    neutral: 'text-brand-neutral',
+    purple: 'text-brand-purple',
+    repair: 'text-brand-repair',
+  };
+  return colorMap[color];
 }

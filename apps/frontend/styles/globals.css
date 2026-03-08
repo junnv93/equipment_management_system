@@ -76,6 +76,7 @@
     --brand-color-info: 217 91% 60%;
     --brand-color-neutral: 220 9% 46%;
     --brand-color-purple: 258 90% 66%;
+    --brand-color-repair: 24 95% 53%;
   }
 
   .dark {
@@ -144,6 +145,7 @@
     --brand-color-info: 217 91% 60%;
     --brand-color-neutral: 220 9% 46%;
     --brand-color-purple: 258 90% 66%;
+    --brand-color-repair: 24 95% 53%;
   }
 }
  
