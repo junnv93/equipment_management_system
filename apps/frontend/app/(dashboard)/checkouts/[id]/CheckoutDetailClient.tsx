@@ -50,9 +50,9 @@ import {
   CHECKOUT_DETAIL_TOKENS,
   CHECKOUT_INTERACTION_TOKENS,
   CONDITION_COMPARISON_TOKENS,
+  CHECKOUT_PURPOSE_TOKENS,
 } from '@/lib/design-tokens';
 import { CheckoutStatus } from '@equipment-management/schemas';
-import { CHECKOUT_PURPOSE_STYLES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
@@ -220,7 +220,9 @@ export default function CheckoutDetailClient({
     return (
       <Badge
         variant="outline"
-        className={CHECKOUT_PURPOSE_STYLES[purpose as keyof typeof CHECKOUT_PURPOSE_STYLES] || ''}
+        className={
+          CHECKOUT_PURPOSE_TOKENS[purpose as keyof typeof CHECKOUT_PURPOSE_TOKENS]?.badge ?? ''
+        }
       >
         {t(`purpose.${purpose}`)}
       </Badge>
