@@ -10,8 +10,10 @@
  * - 정보 그리드 (요청자/팀/일시)
  */
 
-import { FOCUS_TOKENS } from '../semantic';
-import { getStaggerDelay } from '../motion';
+import { FOCUS_TOKENS, MOTION_TOKENS } from '../semantic';
+import { getStaggerDelay, getTransitionClasses } from '../motion';
+import { getElapsedDaysUrgency } from '../visual-feedback';
+import type { UrgencyLevel } from '../visual-feedback';
 
 // ============================================================================
 // 1. Approval Status Badge Tokens
@@ -148,11 +150,11 @@ export const APPROVAL_TIMELINE_TOKENS = {
  * SSOT: ApprovalItem, BulkActionBar, ApprovalDetailModal, RejectModal 6곳 중복 제거
  */
 export const APPROVAL_ACTION_BUTTON_TOKENS = {
-  /** 승인 버튼 (UL Green) */
-  approve: 'bg-ul-green hover:bg-ul-green-hover text-white',
+  /** 승인 버튼 (UL Green outline) */
+  approve: 'border border-ul-green text-ul-green hover:bg-ul-green/10',
 
-  /** 반려 버튼 (UL Red) */
-  reject: 'bg-ul-red hover:bg-ul-red-hover text-white',
+  /** 반려 버튼 (UL Red outline) */
+  reject: 'border border-ul-red text-ul-red hover:bg-ul-red/10',
 
   /** 상세 보기 버튼 (Outline) */
   detail: 'variant-outline',
@@ -266,6 +268,16 @@ export const APPROVAL_MOTION = {
 
   /** 스켈레톤 pulse */
   skeleton: 'motion-safe:animate-pulse',
+
+  /** 처리 중 (opacity 감소) — transition 없음 = rollback 시 즉시 복원 */
+  processing: 'opacity-40',
+
+  /** 퇴장 애니메이션 (opacity 0 + moderate transition) */
+  exiting: `${getTransitionClasses('moderate', ['opacity'])} opacity-0`,
+
+  /** 퇴장 애니메이션 duration (ms) — JS setTimeout용
+   *  SSOT: getTransitionClasses('moderate') 와 동일 소스(MOTION_TOKENS) 참조 */
+  exitDurationMs: MOTION_TOKENS.transition.moderate.duration,
 } as const;
 
 // ============================================================================
@@ -327,4 +339,32 @@ export function getApprovalStepperNodeClasses(
  */
 export function getApprovalActionButtonClasses(action: 'approve' | 'reject' | 'detail'): string {
   return APPROVAL_ACTION_BUTTON_TOKENS[action];
+}
+
+// ============================================================================
+// 11. Approval Elapsed Days Tokens (경과일 시각화)
+// ============================================================================
+
+/**
+ * 경과일 텍스트 토큰
+ *
+ * 오래된 건일수록 눈에 띄는 색상으로 표시
+ * - info (1-3일): 기본 muted 텍스트
+ * - warning (4-7일): 노란색 + font-medium
+ * - critical (8일+): 빨간색 + font-semibold
+ */
+export const APPROVAL_ELAPSED_DAYS_TOKENS: Record<UrgencyLevel, string> & { base: string } = {
+  base: 'font-mono tabular-nums text-sm',
+  info: 'text-muted-foreground',
+  warning: 'text-brand-warning font-medium',
+  critical: 'text-brand-critical font-semibold',
+  emergency: 'text-brand-critical font-semibold',
+} as const;
+
+/**
+ * 경과일 텍스트 클래스 반환
+ */
+export function getElapsedDaysClasses(elapsedDays: number): string {
+  const urgency = getElapsedDaysUrgency(elapsedDays);
+  return [APPROVAL_ELAPSED_DAYS_TOKENS.base, APPROVAL_ELAPSED_DAYS_TOKENS[urgency]].join(' ');
 }

@@ -2,72 +2,54 @@
  * Audit Component Tokens (Layer 3: Component-Specific)
  *
  * 감사로그 컴포넌트의 모든 디자인 값을 정의하는 SSOT
- * - 12개 액션별 배지 스타일 (light + dark mode, WCAG AA)
+ * - 12개 액션별 배지 스타일 (brand CSS 변수 기반 → 다크모드 자동 지원)
  * - 테이블/상세/Diff/엔티티 링크/빈 상태/페이지네이션 스타일
+ * - 필터 바 / 헤더 토큰 (Layer 3 확장)
  * - Motion system (specific property transitions, no transition-all)
- *
- * CRITICAL: packages/schemas의 AUDIT_ACTION_COLORS를 대체 (deprecated 처리)
  */
 
 import { type AuditAction } from '@equipment-management/schemas';
 import { FOCUS_TOKENS } from '../semantic';
 import { getTransitionClasses } from '../motion';
+import { getSemanticBadgeClasses } from '../brand';
 
 // ============================================================================
 // 1. Audit Action Badge Tokens (12개 액션 색상)
 // ============================================================================
 
 /**
- * 액션별 배지 스타일 (WCAG AA 색상 대비 보장: 4.5:1+, light + dark)
+ * 액션별 배지 스타일
  *
- * SSOT: packages/schemas의 AUDIT_ACTION_COLORS 확장판
- * - Dark mode 추가 (dark:bg-*-900/20 dark:text-*-300)
- * - Border 추가 (light + dark)
+ * brand CSS 변수 기반으로 다크모드를 자동 지원합니다.
+ * getSemanticBadgeClasses()는 brand.ts의 CSS 변수를 사용합니다.
+ *
+ * 4색 체계 (사용자 요청):
+ *   CREATE  → ok(초록)
+ *   UPDATE  → info(파랑)
+ *   DELETE  → critical(빨강)
+ *   APPROVE → purple(보라)
+ *
+ * CRITICAL: 키 이름 변경 금지 (AuditLogDetailDialog, AuditLogsContent 공용)
  */
 export const AUDIT_ACTION_BADGE_TOKENS: Record<AuditAction, string> = {
-  // 생성 (blue)
-  create:
-    'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
-  // 수정 (yellow)
-  update:
-    'bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800',
-  // 삭제 (red)
-  delete:
-    'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
-  // 승인 (green)
-  approve:
-    'bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-  // 반려 (orange)
-  reject:
-    'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800',
-  // 반출 (purple)
-  checkout:
-    'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800',
-  // 반입 (cyan)
-  return:
-    'bg-cyan-50 text-cyan-800 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-300 dark:border-cyan-800',
-  // 취소 (gray)
-  cancel:
-    'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-700',
-  // 로그인 (indigo)
-  login:
-    'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800',
-  // 로그아웃 (slate)
-  logout:
-    'bg-slate-50 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-  // 종료 (teal)
-  close:
-    'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800',
-  // 조치 반려 (rose)
-  reject_correction:
-    'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800',
+  create: getSemanticBadgeClasses('ok'),
+  update: getSemanticBadgeClasses('info'),
+  delete: getSemanticBadgeClasses('critical'),
+  approve: getSemanticBadgeClasses('purple'),
+  reject: getSemanticBadgeClasses('warning'),
+  checkout: getSemanticBadgeClasses('purple'),
+  return: getSemanticBadgeClasses('ok'),
+  cancel: getSemanticBadgeClasses('neutral'),
+  login: getSemanticBadgeClasses('info'),
+  logout: getSemanticBadgeClasses('neutral'),
+  close: getSemanticBadgeClasses('neutral'),
+  reject_correction: getSemanticBadgeClasses('critical'),
 };
 
 /**
- * 기본 액션 배지 스타일 (알 수 없는 액션)
+ * 기본 액션 배지 (알 수 없는 액션)
  */
-export const DEFAULT_AUDIT_ACTION_BADGE =
-  'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
+export const DEFAULT_AUDIT_ACTION_BADGE = getSemanticBadgeClasses('neutral');
 
 // ============================================================================
 // 2. Audit Table Tokens (테이블 스타일)
@@ -85,11 +67,11 @@ export const AUDIT_TABLE_TOKENS = {
     FOCUS_TOKENS.classes.default,
   ].join(' '),
 
-  /** Timestamp column (mono font + tabular-nums) */
-  timestamp: 'font-mono text-xs tabular-nums',
+  /** Timestamp column (mono font + tabular-nums + muted color) */
+  timestamp: 'font-mono text-xs tabular-nums text-brand-text-muted',
 
   /** IP Address column */
-  ipAddress: 'font-mono text-xs text-muted-foreground tabular-nums',
+  ipAddress: 'font-mono text-xs text-brand-text-muted tabular-nums',
 
   /** Numeric content (tabular-nums for alignment) */
   numeric: 'tabular-nums',
@@ -157,10 +139,10 @@ export const AUDIT_DETAIL_TOKENS = {
  */
 export const AUDIT_EMPTY_STATE_TOKENS = {
   /** 전체 컨테이너 */
-  container: 'text-center py-12 text-muted-foreground',
+  container: 'text-center py-16 text-brand-text-muted',
 
   /** 아이콘 */
-  icon: 'h-12 w-12 mx-auto mb-4 opacity-50',
+  icon: 'h-10 w-10 mx-auto mb-3 opacity-30',
 
   /** 텍스트 */
   text: 'text-sm',
@@ -175,10 +157,10 @@ export const AUDIT_EMPTY_STATE_TOKENS = {
  */
 export const AUDIT_PAGINATION_TOKENS = {
   /** 페이지 정보 텍스트 (tabular-nums for alignment) */
-  info: 'text-sm text-muted-foreground tabular-nums',
+  info: 'text-xs text-brand-text-muted tabular-nums font-mono',
 
   /** 현재 페이지 번호 (tabular-nums for alignment) */
-  pageNumber: 'text-sm tabular-nums',
+  pageNumber: 'text-xs tabular-nums font-mono text-brand-text-muted',
 } as const;
 
 // ============================================================================
@@ -199,4 +181,74 @@ export const AUDIT_MOTION = {
 
   /** 새로고침 버튼 회전 */
   refreshSpin: 'motion-safe:animate-spin',
+} as const;
+
+// ============================================================================
+// 9. Audit Filter Tokens (필터 바 — 리디자인)
+// ============================================================================
+
+/**
+ * 감사로그 필터 바 스타일
+ *
+ * 액션 타입 칩 + 보조 필터(엔티티/날짜/사용자)를 하나의 카드로 통합
+ */
+export const AUDIT_FILTER_TOKENS = {
+  /** 전체 필터 카드 */
+  bar: 'p-4 bg-brand-bg-surface border border-brand-border-subtle rounded-lg space-y-3',
+
+  /** 필드 레이블 */
+  fieldLabel: 'text-xs font-medium text-brand-text-muted',
+
+  /** 액션 칩 Row */
+  actionChipsRow: 'flex flex-wrap gap-1.5',
+
+  /** 보조 필터 Row (날짜, 엔티티, 사용자) */
+  secondaryRow: 'flex flex-wrap items-end gap-3 border-t border-brand-border-subtle pt-3',
+} as const;
+
+/**
+ * 액션 타입 필터 칩 클래스 생성
+ *
+ * active 상태: elevated 배경 + default 테두리 + primary 텍스트
+ * inactive 상태: subtle 테두리 + muted 텍스트 (hover 포함)
+ */
+export function getAuditActionChipClasses(active: boolean): string {
+  const base = [
+    'inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md border',
+    getTransitionClasses('instant', ['background-color', 'border-color', 'color']),
+    FOCUS_TOKENS.classes.default,
+  ].join(' ');
+
+  return active
+    ? `${base} bg-brand-bg-elevated border-brand-border-default text-brand-text-primary shadow-sm`
+    : `${base} border-brand-border-subtle text-brand-text-muted hover:border-brand-border-default hover:text-brand-text-primary`;
+}
+
+// ============================================================================
+// 10. Audit Header Tokens (헤더 — 리디자인)
+// ============================================================================
+
+/**
+ * 감사로그 페이지 헤더 스타일
+ */
+export const AUDIT_HEADER_TOKENS = {
+  /** 헤더 레이아웃 컨테이너 */
+  container: 'flex items-start justify-between gap-4',
+
+  /** 제목 그룹 (좌) */
+  titleGroup: 'min-w-0',
+
+  /** 페이지 타이틀 */
+  title:
+    'font-display text-2xl font-semibold tracking-tight text-brand-text-primary flex items-center gap-2',
+
+  /** 스코프 부제목 */
+  subtitle: 'flex items-center gap-1.5 text-sm text-brand-text-muted mt-1',
+
+  /** 액션 그룹 (우) */
+  actionsGroup: 'flex items-center gap-2 shrink-0',
+
+  /** 총 건수 배지 (mono font + terminal aesthetic) */
+  statsBadge:
+    'font-mono tabular-nums text-xs bg-brand-bg-elevated border border-brand-border-subtle px-2.5 py-1.5 rounded-md text-brand-text-muted',
 } as const;

@@ -230,8 +230,11 @@ export const CALIBRATION_TABLE = {
   /** 숫자 컬럼 (tabular-nums for Web Interface Guidelines) */
   numericColumn: 'tabular-nums',
 
-  /** 링크 */
-  link: ['hover:underline', CALIBRATION_MOTION.link].join(' '),
+  /** 링크 (색상 + 아이콘 정렬 + hover 포함) */
+  link: [
+    'inline-flex items-center gap-1 text-sm text-ul-blue hover:underline',
+    CALIBRATION_MOTION.link,
+  ].join(' '),
 } as const;
 
 // ============================================================================
@@ -522,3 +525,67 @@ export function getCalibrationRowClasses(approvalStatus?: string): string {
  * Web Interface Guidelines: specific property (opacity)만 전환
  */
 export const CALIBRATION_TAB_TRANSITION = getTransitionClasses('fast', ['opacity']);
+
+// ============================================================================
+// 17. CALIBRATION_RESULT_BADGE — 교정 결과 배지
+// ============================================================================
+
+/**
+ * 교정 결과 배지 스타일 (design token SSOT)
+ *
+ * - pass: 합격 (UL Green)
+ * - fail: 불합격 (UL Red)
+ * - conditional: 조건부 합격 (Yellow)
+ */
+export const CALIBRATION_RESULT_BADGE: Record<string, string> = {
+  pass: 'bg-ul-green/10 text-ul-green border-ul-green/20 dark:bg-green-900/30 dark:text-green-300',
+  fail: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-red-900/30 dark:text-red-300',
+  conditional:
+    'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
+};
+export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground border-border';
+
+// ============================================================================
+// 18. CALIBRATION_APPROVAL_BADGE — 교정 승인 상태 배지
+// ============================================================================
+
+/**
+ * 교정 승인 상태 배지 스타일 (design token SSOT)
+ *
+ * - pending_approval: 승인 대기 (Yellow)
+ * - approved: 승인됨 (UL Green)
+ * - rejected: 반려됨 (UL Red)
+ */
+export const CALIBRATION_APPROVAL_BADGE: Record<string, string> = {
+  pending_approval:
+    'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
+  approved:
+    'bg-ul-green/10 text-ul-green border-ul-green/20 dark:bg-green-900/30 dark:text-green-300',
+  rejected: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-red-900/30 dark:text-red-300',
+};
+export const DEFAULT_CALIBRATION_APPROVAL_BADGE = 'bg-muted text-muted-foreground border-border';
+
+// ============================================================================
+// 19. CALIBRATION_INLINE_ACTION_BUTTONS — 테이블 행 인라인 승인/반려 버튼
+// ============================================================================
+
+/**
+ * 테이블 행에 인라인으로 표시되는 소형 승인/반려 버튼 스타일
+ *
+ * h-7: 행 높이에 맞는 컴팩트 사이즈
+ * CalibrationApprovalActions, CalibrationApprovalsContent 등에서 SSOT 참조
+ */
+export const CALIBRATION_INLINE_ACTION_BUTTONS = {
+  base: 'h-7 px-2 text-xs',
+  approve: 'text-ul-green border-ul-green/30 hover:bg-ul-green/10',
+  reject: 'text-destructive border-destructive/30 hover:bg-destructive/10',
+} as const;
+
+/**
+ * Utility: 승인/반려 인라인 버튼 클래스 가져오기
+ */
+export function getCalibrationActionButtonClasses(action: 'approve' | 'reject'): string {
+  return [CALIBRATION_INLINE_ACTION_BUTTONS.base, CALIBRATION_INLINE_ACTION_BUTTONS[action]].join(
+    ' '
+  );
+}

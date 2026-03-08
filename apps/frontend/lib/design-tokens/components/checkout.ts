@@ -2,10 +2,11 @@
  * Checkout Component Tokens (Layer 3: Component-Specific)
  *
  * 반출입 관리 컴포넌트의 모든 디자인 값을 정의하는 SSOT
- * - 13개 checkout 상태 + 7개 rental import 상태 스타일
+ * - 13개 checkout 상태 + 7개 rental import 상태 스타일 (brand 시멘틱 토큰)
+ * - 반출 유형별 색상 바 + 행 강조 토큰
+ * - 미니 프로그레스 토큰 (상태 흐름 시각화)
  * - Stepper node/connector/label 스타일 (모바일/데스크톱)
  * - Stats card variants (total/pending/overdue/inProgress)
- * - 상세/폼/조건 비교 스타일
  *
  * CRITICAL: CheckoutStatusBadge.tsx 상수 통합, 하드코딩 제거
  */
@@ -14,89 +15,194 @@ import { FOCUS_TOKENS } from '../semantic';
 import { getTransitionClasses } from '../motion';
 
 // ============================================================================
-// 1. Checkout Status Badge Tokens (20개 상태 스타일)
+// 1. Checkout Status Badge Tokens (13개 상태 스타일 — brand 시멘틱 토큰)
 // ============================================================================
 
 /**
- * Checkout 상태 → 스타일 매핑 (WCAG AA 색상 대비 보장: 4.5:1+, light + dark)
+ * Checkout 상태 → 스타일 매핑 (brand CSS 변수 기반)
  *
+ * brand 변수는 .dark에서 자동 전환 → dark: prefix 불필요
  * SSOT: CheckoutStatusBadge.tsx의 CHECKOUT_STATUS_STYLES 이전
  */
 export const CHECKOUT_STATUS_BADGE_TOKENS = {
-  // 대기 (amber)
-  pending:
-    'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
-  // 승인 (blue)
-  approved:
-    'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
-  // 진행 중 (indigo → teal)
-  checked_out:
-    'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800',
-  lender_checked:
-    'bg-cyan-50 text-cyan-800 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-300 dark:border-cyan-800',
-  borrower_received:
-    'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800',
-  // 사용 중 (violet)
-  in_use:
-    'bg-violet-50 text-violet-800 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800',
-  // 반환 진행 (emerald/lime)
-  borrower_returned:
-    'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
-  lender_received:
-    'bg-lime-50 text-lime-800 border-lime-200 dark:bg-lime-900/20 dark:text-lime-300 dark:border-lime-800',
-  // 완료 (green)
-  returned:
-    'bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-  return_approved:
-    'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
-  // 거절 (red)
-  rejected:
-    'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
-  // 기한 초과 (red 강조)
-  overdue:
-    'bg-red-100 text-red-900 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
-  // 취소 (gray)
-  canceled:
-    'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-700',
+  // 대기 (warning)
+  pending: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
+  // 승인 (info)
+  approved: 'bg-brand-info/10 text-brand-info border-brand-info/20',
+  // 반출중 (purple)
+  checked_out: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
+  // 렌탈 4단계 (purple 계열)
+  lender_checked: 'bg-brand-purple/8 text-brand-purple border-brand-purple/15',
+  borrower_received: 'bg-brand-purple/12 text-brand-purple border-brand-purple/20',
+  // 사용 중 (info)
+  in_use: 'bg-brand-info/10 text-brand-info border-brand-info/20',
+  // 반환 진행 (purple 계열)
+  borrower_returned: 'bg-brand-purple/12 text-brand-purple border-brand-purple/20',
+  lender_received: 'bg-brand-purple/8 text-brand-purple border-brand-purple/15',
+  // 완료 (ok)
+  returned: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
+  return_approved: 'bg-brand-ok/15 text-brand-ok border-brand-ok/25',
+  // 거절 (critical)
+  rejected: 'bg-brand-critical/10 text-brand-critical border-brand-critical/20',
+  // 기한 초과 (critical 강조)
+  overdue: 'bg-brand-critical/15 text-brand-critical border-brand-critical/30',
+  // 취소 (neutral)
+  canceled: 'bg-brand-neutral/10 text-brand-neutral border-brand-neutral/20',
 } as const;
 
 /**
- * Rental import 상태 → 스타일 매핑 (WCAG AA 색상 대비 보장: 4.5:1+, light + dark)
+ * Rental import 상태 → 스타일 매핑 (brand CSS 변수 기반)
  *
  * SSOT: CheckoutStatusBadge.tsx의 RENTAL_STATUS_STYLES 이전
  */
 export const RENTAL_IMPORT_STATUS_BADGE_TOKENS = {
-  // 대기 (amber)
-  pending:
-    'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
-  // 승인 (blue)
-  approved:
-    'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
-  // 거절 (red)
-  rejected:
-    'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800',
-  // 수령 완료 (green)
-  received:
-    'bg-green-50 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800',
-  // 반납 진행 중 (orange)
-  return_requested:
-    'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800',
-  // 반납 완료 (green 강조)
-  returned:
-    'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
-  // 취소 (gray)
-  canceled:
-    'bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-700',
+  // 대기 (warning)
+  pending: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
+  // 승인 (info)
+  approved: 'bg-brand-info/10 text-brand-info border-brand-info/20',
+  // 거절 (critical)
+  rejected: 'bg-brand-critical/10 text-brand-critical border-brand-critical/20',
+  // 수령 완료 (ok)
+  received: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
+  // 반납 진행 중 (repair/warning)
+  return_requested: 'bg-brand-repair/10 text-brand-repair border-brand-repair/20',
+  // 반납 완료 (ok 강조)
+  returned: 'bg-brand-ok/15 text-brand-ok border-brand-ok/25',
+  // 취소 (neutral)
+  canceled: 'bg-brand-neutral/10 text-brand-neutral border-brand-neutral/20',
 } as const;
 
 /**
  * 기본 배지 스타일 (알 수 없는 상태)
  */
 export const DEFAULT_CHECKOUT_BADGE =
-  'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  'bg-brand-neutral/10 text-brand-neutral border-brand-neutral/20';
 
 // ============================================================================
-// 2. Checkout Stepper Tokens (진행 표시기)
+// 2. Checkout Purpose Tokens (반출 유형별 배지 + 색상 바)
+// ============================================================================
+
+/**
+ * 반출 목적(purpose)별 배지 스타일 + 색상 바 클래스
+ *
+ * SSOT: CHECKOUT_PURPOSE_STYLES(shared-constants) 대체
+ * CHECKOUT_PURPOSE_STYLES는 @deprecated → 이 토큰 사용
+ */
+export const CHECKOUT_PURPOSE_TOKENS = {
+  calibration: {
+    badge: 'bg-brand-info/10 text-brand-info border-brand-info/20',
+    colorBar: 'border-l-brand-info',
+  },
+  repair: {
+    badge: 'bg-brand-repair/10 text-brand-repair border-brand-repair/20',
+    colorBar: 'border-l-brand-repair',
+  },
+  rental: {
+    badge: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
+    colorBar: 'border-l-brand-purple',
+  },
+  return_to_vendor: {
+    badge: 'bg-brand-neutral/10 text-brand-neutral border-brand-neutral/20',
+    colorBar: 'border-l-brand-neutral',
+  },
+} as const;
+
+export type CheckoutPurposeKey = keyof typeof CHECKOUT_PURPOSE_TOKENS;
+
+// ============================================================================
+// 3. Checkout Row Tokens (행 색상 바 + overdue 강조)
+// ============================================================================
+
+/**
+ * 반출 그룹 카드 테이블 행 스타일 토큰
+ *
+ * - colorBar: 좌측 4px 세로 색상 바 (반출 유형별)
+ * - overdue: overdue 상태 행 배경/테두리 강조
+ */
+export const CHECKOUT_ROW_TOKENS = {
+  colorBar: {
+    base: 'border-l-4',
+    calibration: 'border-l-brand-info',
+    repair: 'border-l-brand-repair',
+    rental: 'border-l-brand-purple',
+    return_to_vendor: 'border-l-brand-neutral',
+  },
+  overdue: {
+    background: 'bg-brand-critical/8',
+    border: 'border border-brand-critical/30',
+  },
+} as const;
+
+/**
+ * 반출 행 클래스 조합
+ *
+ * @param purpose - 반출 목적 (calibration/repair/rental/return_to_vendor)
+ * @param status  - 반출 상태 (overdue 여부 판단)
+ * @returns 행에 적용할 Tailwind 클래스 문자열
+ */
+export function getCheckoutRowClasses(purpose: string, status: string): string {
+  const colorBarKey = purpose as keyof typeof CHECKOUT_ROW_TOKENS.colorBar;
+  const colorBar =
+    CHECKOUT_ROW_TOKENS.colorBar[colorBarKey] ?? CHECKOUT_ROW_TOKENS.colorBar.calibration;
+
+  if (status === 'overdue') {
+    return [
+      CHECKOUT_ROW_TOKENS.colorBar.base,
+      colorBar,
+      CHECKOUT_ROW_TOKENS.overdue.background,
+      CHECKOUT_ROW_TOKENS.overdue.border,
+    ].join(' ');
+  }
+
+  return `${CHECKOUT_ROW_TOKENS.colorBar.base} ${colorBar}`;
+}
+
+// ============================================================================
+// 4. Checkout Mini Progress Tokens (상태 흐름 시각화)
+// ============================================================================
+
+/**
+ * 미니 프로그레스 도트/커넥터 토큰
+ *
+ * 4개 점(completed/current/future) + 3개 커넥터로 반출 진행 상태를 표현
+ */
+export const CHECKOUT_MINI_PROGRESS = {
+  dot: {
+    size: 'w-2 h-2',
+    completed: 'bg-brand-ok',
+    current: 'border-2 border-brand-info bg-transparent',
+    future: 'bg-brand-neutral/30',
+  },
+  connector: {
+    base: 'h-px w-2',
+    completed: 'bg-brand-ok',
+    pending: 'bg-brand-neutral/30',
+  },
+  special: {
+    overdue: 'text-brand-critical',
+    rejected: 'text-brand-critical',
+    canceled: 'text-brand-neutral',
+  },
+} as const;
+
+/**
+ * 반출 유형별 단계 배열 (SSOT)
+ *
+ * 각 단계의 순서가 CheckoutMiniProgress 컴포넌트의 표시 순서를 결정합니다.
+ */
+export const MINI_PROGRESS_STEPS = {
+  calibration: ['pending', 'approved', 'checked_out', 'returned'] as const,
+  repair: ['pending', 'approved', 'checked_out', 'returned'] as const,
+  rental: ['pending', 'approved', 'checked_out', 'returned'] as const,
+} as const;
+
+/**
+ * 미니 프로그레스에서 특수 표시가 필요한 상태
+ */
+export const MINI_PROGRESS_SPECIAL_STATUSES = ['overdue', 'rejected', 'canceled'] as const;
+
+// ============================================================================
+// 5. Checkout Stepper Tokens (진행 표시기 — 상세 페이지용)
 // ============================================================================
 
 /**
@@ -114,45 +220,45 @@ export const CHECKOUT_STEPPER_TOKENS = {
   /** 노드 상태별 스타일 (completed/current/pending) */
   status: {
     completed: {
-      node: 'bg-green-100 dark:bg-green-900/30',
-      icon: 'text-green-600 dark:text-green-400',
-      label: 'text-green-800 dark:text-green-300',
+      node: 'bg-brand-ok/15',
+      icon: 'text-brand-ok',
+      label: 'text-brand-ok',
     },
     current: {
-      node: 'bg-blue-100 dark:bg-blue-900/30 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900',
-      icon: 'text-blue-600 fill-blue-600 dark:text-blue-400 dark:fill-blue-400',
-      label: 'font-medium text-blue-800 dark:text-blue-300',
+      node: 'bg-brand-info/15 ring-2 ring-brand-info ring-offset-2',
+      icon: 'text-brand-info fill-brand-info',
+      label: 'font-medium text-brand-info',
     },
     pending: {
-      node: 'bg-gray-100 dark:bg-gray-800',
-      icon: 'text-gray-400',
-      label: 'text-gray-500 dark:text-gray-400',
+      node: 'bg-brand-neutral/10',
+      icon: 'text-brand-neutral/50',
+      label: 'text-brand-text-muted',
     },
   },
 
   /** 특수 상태 (rejected/canceled/overdue) */
   special: {
     rejected: {
-      container: 'bg-red-100 dark:bg-red-900/30',
-      icon: 'text-red-600 dark:text-red-400',
-      label: 'text-red-800 dark:text-red-300',
+      container: 'bg-brand-critical/10',
+      icon: 'text-brand-critical',
+      label: 'text-brand-critical',
     },
     canceled: {
-      container: 'bg-gray-100 dark:bg-gray-800',
-      icon: 'text-gray-600 dark:text-gray-400',
-      label: 'text-gray-800 dark:text-gray-300',
+      container: 'bg-brand-neutral/10',
+      icon: 'text-brand-neutral',
+      label: 'text-brand-text-muted',
     },
     overdue: {
-      container: 'bg-orange-100 dark:bg-orange-900/30',
-      icon: 'text-orange-600 dark:text-orange-400',
-      label: 'text-orange-800 dark:text-orange-300',
+      container: 'bg-brand-warning/10',
+      icon: 'text-brand-warning',
+      label: 'text-brand-warning',
     },
   },
 
   /** 연결선 */
   connector: {
-    completed: 'bg-green-400 dark:bg-green-600',
-    pending: 'bg-gray-200 dark:bg-gray-700',
+    completed: 'bg-brand-ok',
+    pending: 'bg-brand-neutral/20',
   },
 
   /** 라벨 크기 */
@@ -170,42 +276,36 @@ export const CHECKOUT_STEPPER_TOKENS = {
 } as const;
 
 // ============================================================================
-// 3. Checkout Stats Variants (통계 카드 4종)
+// 6. Checkout Stats Variants (통계 카드 4종 — brand 토큰)
 // ============================================================================
 
 /**
- * Checkout 통계 카드 variant별 색상
- *
- * 패턴: DASHBOARD_STATS_VARIANTS 참조 + dark mode 추가
+ * Checkout 통계 카드 variant별 색상 (brand 시멘틱 토큰)
  */
 export const CHECKOUT_STATS_VARIANTS = {
   total: {
-    /** Hover border */
-    hoverBorder: 'hover:border-ul-midnight/30 dark:hover:border-ul-info/30',
-    /** Active border (필터 선택 시) */
-    activeBorder: 'border-ul-midnight dark:border-ul-info',
-    /** Active bg */
-    activeBg: 'bg-ul-midnight/10 dark:bg-ul-info/20',
-    /** Icon color */
-    iconColor: 'text-ul-midnight dark:text-ul-info',
+    hoverBorder: 'hover:border-brand-info/30',
+    activeBorder: 'border-brand-info',
+    activeBg: 'bg-brand-info/10',
+    iconColor: 'text-brand-info',
   },
   pending: {
-    hoverBorder: 'hover:border-amber-300 dark:hover:border-amber-700',
-    activeBorder: 'border-amber-500 dark:border-amber-600',
-    activeBg: 'bg-amber-50 dark:bg-amber-900/20',
-    iconColor: 'text-amber-600 dark:text-amber-400',
+    hoverBorder: 'hover:border-brand-warning/30',
+    activeBorder: 'border-brand-warning',
+    activeBg: 'bg-brand-warning/10',
+    iconColor: 'text-brand-warning',
   },
   overdue: {
-    hoverBorder: 'hover:border-red-300 dark:hover:border-red-700',
-    activeBorder: 'border-red-500 dark:border-red-600',
-    activeBg: 'bg-red-50 dark:bg-red-900/20',
-    iconColor: 'text-red-600 dark:text-red-400',
+    hoverBorder: 'hover:border-brand-critical/30',
+    activeBorder: 'border-brand-critical',
+    activeBg: 'bg-brand-critical/10',
+    iconColor: 'text-brand-critical',
   },
   inProgress: {
-    hoverBorder: 'hover:border-blue-300 dark:hover:border-blue-700',
-    activeBorder: 'border-blue-500 dark:border-blue-600',
-    activeBg: 'bg-blue-50 dark:bg-blue-900/20',
-    iconColor: 'text-blue-600 dark:text-blue-400',
+    hoverBorder: 'hover:border-brand-purple/30',
+    activeBorder: 'border-brand-purple',
+    activeBg: 'bg-brand-purple/10',
+    iconColor: 'text-brand-purple',
   },
 } as const;
 
@@ -229,7 +329,7 @@ export function getCheckoutStatsClasses(
 }
 
 // ============================================================================
-// 4. Checkout Motion (애니메이션)
+// 7. Checkout Motion (애니메이션)
 // ============================================================================
 
 /**
@@ -255,7 +355,7 @@ export const CHECKOUT_MOTION = {
 } as const;
 
 // ============================================================================
-// 5. Checkout Interaction Tokens (상호작용 요소)
+// 8. Checkout Interaction Tokens (상호작용 요소)
 // ============================================================================
 
 /**
@@ -288,7 +388,7 @@ export const CHECKOUT_INTERACTION_TOKENS = {
 } as const;
 
 // ============================================================================
-// 6. Checkout Detail Tokens (상세 페이지)
+// 9. Checkout Detail Tokens (상세 페이지)
 // ============================================================================
 
 /**
@@ -302,21 +402,20 @@ export const CHECKOUT_DETAIL_TOKENS = {
   personIconContainer: 'bg-ul-midnight/10 dark:bg-ul-info/20',
 
   /** 이상 내용 영역 */
-  abnormalContent: 'bg-red-50 dark:bg-red-950/30',
+  abnormalContent: 'bg-brand-critical/5',
 
   /** 승인 버튼 */
-  approveButton:
-    'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white',
+  approveButton: 'bg-brand-ok hover:bg-brand-ok/90 text-white',
 
   /** 거절 카드 */
-  rejectionCard: 'border-red-200 dark:border-red-800',
+  rejectionCard: 'border-brand-critical/30',
 
   /** 거절 제목 */
-  rejectionTitle: 'text-red-700 dark:text-red-400',
+  rejectionTitle: 'text-brand-critical',
 } as const;
 
 // ============================================================================
-// 7. Condition Comparison Tokens (조건 비교)
+// 10. Condition Comparison Tokens (조건 비교)
 // ============================================================================
 
 /**
@@ -324,23 +423,23 @@ export const CHECKOUT_DETAIL_TOKENS = {
  */
 export const CONDITION_COMPARISON_TOKENS = {
   /** 악화 (빨강) */
-  worsened: 'bg-red-50 dark:bg-red-950/30',
+  worsened: 'bg-brand-critical/5',
 
   /** 변경 (노랑) */
-  changed: 'bg-yellow-50 dark:bg-yellow-950/30',
+  changed: 'bg-brand-warning/5',
 
   /** 이상 내용 영역 */
-  abnormalDetail: 'bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500',
+  abnormalDetail: 'bg-brand-critical/5 border-l-4 border-brand-critical',
 
   /** 이상 내용 제목 */
-  abnormalTitle: 'text-red-700 dark:text-red-400',
+  abnormalTitle: 'text-brand-critical',
 
   /** 이상 내용 텍스트 */
-  abnormalText: 'text-red-600 dark:text-red-300',
+  abnormalText: 'text-brand-critical',
 } as const;
 
 // ============================================================================
-// 8. Checkout Form Tokens (생성/수정 폼)
+// 11. Checkout Form Tokens (생성/수정 폼)
 // ============================================================================
 
 /**
@@ -353,7 +452,7 @@ export const CHECKOUT_FORM_TOKENS = {
     base: getTransitionClasses('fast', ['background-color', 'opacity', 'border-color']),
 
     /** Selected */
-    selected: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800',
+    selected: 'bg-brand-info/8 border-brand-info/30',
 
     /** Hoverable (selected 아닐 때) */
     hoverable: [
@@ -368,6 +467,5 @@ export const CHECKOUT_FORM_TOKENS = {
   },
 
   /** 이상 내용 textarea (focus → focus-visible) */
-  abnormalTextarea:
-    'focus-visible:border-red-400 focus-visible:ring-red-400 dark:focus-visible:border-red-600 dark:focus-visible:ring-red-600',
+  abnormalTextarea: 'focus-visible:border-brand-critical/60 focus-visible:ring-brand-critical/40',
 } as const;

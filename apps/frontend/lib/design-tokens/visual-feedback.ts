@@ -158,6 +158,21 @@ export function getTimeBasedUrgency(daysUntilDue: number): UrgencyLevel {
 }
 
 /**
+ * Elapsed Days-based Urgency 계산
+ *
+ * 경과 일수 → Urgency Level 매핑
+ * 승인 대기 항목의 "오래된 건일수록 눈에 띈다" 시각화에 사용
+ *
+ * @param elapsedDays - 요청일로부터 경과한 일수
+ * @returns Urgency Level
+ */
+export function getElapsedDaysUrgency(elapsedDays: number): UrgencyLevel {
+  if (elapsedDays >= 8) return 'critical'; // 8일+ → 위험 (빨간색)
+  if (elapsedDays >= 4) return 'warning'; // 4-7일 → 주의 (노란색)
+  return 'info'; // 1-3일 → 정보 (기본)
+}
+
+/**
  * Status-based Urgency 계산
  *
  * 시스템 상태 → Urgency Level 매핑

@@ -49,6 +49,9 @@ export {
   getTimestampClasses,
   getKpiCounterClasses,
   getSemanticBadgeClasses,
+  getSemanticContainerColorClasses,
+  getSemanticContainerClasses,
+  getSemanticContainerTextClasses,
   getBrandElevatedClasses,
   getBrandMutedTextClasses,
   type SemanticColorKey,
@@ -93,6 +96,7 @@ export {
   getCountBasedUrgency,
   getTimeBasedUrgency,
   getStatusBasedUrgency,
+  getElapsedDaysUrgency,
   type UrgencyLevel,
   type FeedbackMode,
 } from './visual-feedback';
@@ -197,7 +201,12 @@ export {
   getTimelineNodeClasses,
   getTimelineCardClasses,
   TIMELINE_SKELETON_TOKENS,
+  getIncidentTypeNodeColor,
+  getIncidentTypeBadgeClasses,
 } from './components/equipment-timeline';
+
+// Non-Conformance
+export { ncStatusToSemantic } from './components/non-conformance';
 
 // Calibration
 export {
@@ -232,6 +241,12 @@ export {
   CALIBRATION_APPROVAL_ROW,
   getCalibrationRowClasses,
   CALIBRATION_TAB_TRANSITION,
+  CALIBRATION_RESULT_BADGE,
+  DEFAULT_CALIBRATION_RESULT_BADGE,
+  CALIBRATION_APPROVAL_BADGE,
+  DEFAULT_CALIBRATION_APPROVAL_BADGE,
+  CALIBRATION_INLINE_ACTION_BUTTONS,
+  getCalibrationActionButtonClasses,
   type CalibrationStatusType,
   type IntermediateCheckStatus,
   type CalibrationStatsType,
@@ -259,6 +274,12 @@ export {
   CHECKOUT_STATUS_BADGE_TOKENS,
   RENTAL_IMPORT_STATUS_BADGE_TOKENS,
   DEFAULT_CHECKOUT_BADGE,
+  CHECKOUT_PURPOSE_TOKENS,
+  CHECKOUT_ROW_TOKENS,
+  getCheckoutRowClasses,
+  CHECKOUT_MINI_PROGRESS,
+  MINI_PROGRESS_STEPS,
+  MINI_PROGRESS_SPECIAL_STATUSES,
   CHECKOUT_STEPPER_TOKENS,
   CHECKOUT_STATS_VARIANTS,
   getCheckoutStatsClasses,
@@ -268,6 +289,7 @@ export {
   CONDITION_COMPARISON_TOKENS,
   CHECKOUT_FORM_TOKENS,
   type CheckoutStatsVariant,
+  type CheckoutPurposeKey,
 } from './components/checkout';
 
 // Calibration Plans
@@ -310,10 +332,12 @@ export {
   APPROVAL_EMPTY_STATE_TOKENS,
   APPROVAL_MOTION,
   APPROVAL_FOCUS,
+  APPROVAL_ELAPSED_DAYS_TOKENS,
   getApprovalStatusBadgeClasses,
   getApprovalCardBorderClasses,
   getApprovalStepperNodeClasses,
   getApprovalActionButtonClasses,
+  getElapsedDaysClasses,
 } from './components/approval';
 
 // Audit
@@ -327,6 +351,9 @@ export {
   AUDIT_EMPTY_STATE_TOKENS,
   AUDIT_PAGINATION_TOKENS,
   AUDIT_MOTION,
+  AUDIT_FILTER_TOKENS,
+  AUDIT_HEADER_TOKENS,
+  getAuditActionChipClasses,
 } from './components/audit';
 
 // Form Wizard

@@ -29,7 +29,7 @@ export const TIMELINE_TOKENS = {
   /** 최신 항목 배지 */
   latestBadge: {
     container: 'ml-2 px-2 py-0.5 text-xs font-medium rounded-full',
-    classes: 'bg-ul-info/10 text-ul-info border border-ul-info/20',
+    classes: 'bg-brand-info/10 text-brand-info border border-brand-info/20',
   },
 
   /** 타임라인 카드 */
@@ -88,3 +88,38 @@ export const TIMELINE_SKELETON_TOKENS = {
   card: 'h-24 rounded-lg',
   line: 'h-4 rounded',
 } as const;
+
+/** 사고 유형 → 시멘틱 배경색 매핑 (SSOT) */
+const INCIDENT_TYPE_COLOR_MAP: Record<string, string> = {
+  damage: 'bg-brand-critical',
+  malfunction: 'bg-brand-repair',
+  change: 'bg-brand-info',
+  repair: 'bg-brand-ok',
+  calibration_overdue: 'bg-brand-purple',
+};
+
+/**
+ * 사고 유형 타임라인 노드 배경색
+ *
+ * IncidentHistoryTab 타임라인 노드 bg 색상 반환.
+ * TIMELINE_TOKENS.node.container + text-white shadow-lg와 함께 사용.
+ */
+export function getIncidentTypeNodeColor(incidentType: string): string {
+  return INCIDENT_TYPE_COLOR_MAP[incidentType] ?? 'bg-brand-neutral';
+}
+
+/** 사고 유형 배지 색상 매핑 */
+const INCIDENT_TYPE_BADGE_MAP: Record<string, string> = {
+  damage: 'bg-brand-critical/10 text-brand-critical',
+  malfunction: 'bg-brand-repair/10 text-brand-repair',
+  change: 'bg-brand-info/10 text-brand-info',
+  repair: 'bg-brand-ok/10 text-brand-ok',
+  calibration_overdue: 'bg-brand-purple/10 text-brand-purple',
+};
+
+/**
+ * 사고 유형 배지 스타일 (IncidentHistorySection Badge용)
+ */
+export function getIncidentTypeBadgeClasses(incidentType: string): string {
+  return INCIDENT_TYPE_BADGE_MAP[incidentType] ?? 'bg-brand-neutral/10 text-brand-neutral';
+}
