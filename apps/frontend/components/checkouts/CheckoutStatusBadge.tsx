@@ -48,7 +48,7 @@ export function CheckoutStatusBadge({
   const style = styleMap[status as keyof typeof styleMap] || DEFAULT_CHECKOUT_BADGE;
 
   return (
-    <Badge variant="outline" className={`${style} ${className}`.trim()}>
+    <Badge variant="outline" className={`text-xs ${style} ${className}`.trim()}>
       {label}
     </Badge>
   );

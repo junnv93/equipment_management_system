@@ -219,7 +219,8 @@
     "viewDetail": "View {name} checkout detail",
     "unspecifiedDestination": "Unspecified",
     "checkoutDateLabel": "Checkout Date",
-    "requestDateLabel": "Request Date"
+    "requestDateLabel": "Request Date",
+    "progressLabel": "Checkout progress: {current} of {total} steps completed"
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",
@@ -308,7 +309,9 @@
     "destinationLabel": "Destination",
     "searchLabel": "Search",
     "statusFilter": "Status Filter",
-    "destinationFilter": "Destination Filter"
+    "destinationFilter": "Destination Filter",
+    "purposeFilter": "Purpose Filter",
+    "purposeLabel": "Purpose"
   },
   "import": {
     "requestInbound": "Request Inbound",

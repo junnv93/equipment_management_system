@@ -341,6 +341,7 @@ export const queryKeys = {
     destinations: () => [...queryKeys.checkouts.all, 'destinations'] as const,
     pending: () => [...queryKeys.checkouts.all, 'pending'] as const,
     returnPending: () => [...queryKeys.checkouts.all, 'return-pending'] as const,
+    summary: (params: object = {}) => [...queryKeys.checkouts.all, 'summary', params] as const,
   },
   calibrations: {
     all: ['calibrations'] as const,

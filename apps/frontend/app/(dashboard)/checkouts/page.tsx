@@ -18,19 +18,8 @@ import { createServerApiClient } from '@/lib/api/server-api-client';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import CheckoutsContent from './CheckoutsContent';
 import { RouteLoading } from '@/components/layout/RouteLoading';
-import type { Checkout } from '@/lib/api/checkout-api';
-import type { PaginatedListResponse } from '@equipment-management/schemas';
-
-/**
- * Checkout 목록 요약 정보 (includeSummary=true 시 반환)
- */
-interface CheckoutSummary {
-  total: number;
-  pending: number;
-  approved: number;
-  overdue: number;
-  returnedToday: number;
-}
+import type { CheckoutSummary } from '@/lib/api/checkout-api';
+import { parseCheckoutFiltersFromSearchParams } from '@/lib/utils/checkout-filter-utils';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -55,48 +44,28 @@ async function CheckoutsContentAsync({
 }) {
   const searchParams = await searchParamsPromise;
 
-  // URL 파라미터에서 view 모드 결정
-  // 기존 ?tab=rental_imports → ?view=inbound 호환
-  let initialView: 'outbound' | 'inbound' = 'outbound';
-  if (searchParams.view === 'inbound' || searchParams.tab === 'rental_imports') {
-    initialView = 'inbound';
-  }
+  // URL 파라미터에서 초기 필터 파싱 (SSOT)
+  const initialFilters = parseCheckoutFiltersFromSearchParams(searchParams);
 
   // ✅ Server-side 데이터 fetch
   const apiClient = await createServerApiClient();
 
-  let initialData;
-  let initialSummary;
+  let initialSummary: CheckoutSummary;
 
   try {
-    // ✅ 성능 최적화: includeSummary=true로 목록+요약을 단일 요청으로 조회
-    const listResponse = await apiClient.get<
-      PaginatedListResponse<Checkout> & { summary?: CheckoutSummary }
-    >('/api/checkouts?pageSize=100&includeSummary=true');
-    initialData = transformPaginatedResponse<Checkout>(listResponse);
-
-    // 백엔드에서 summary를 포함하여 반환하면 사용, 없으면 기본값
-    initialSummary = listResponse.data.summary || {
-      total: initialData.meta.pagination.total,
+    // pageSize=1: 목록 데이터 불필요, summary만 취득
+    const listResponse = await apiClient.get('/api/checkouts?pageSize=1&includeSummary=true');
+    const transformed = transformPaginatedResponse<unknown>(listResponse);
+    initialSummary = transformed.meta.summary ?? {
+      total: 0,
       pending: 0,
       approved: 0,
       overdue: 0,
       returnedToday: 0,
     };
   } catch (error) {
-    // 에러 발생 시 빈 데이터로 시작 (Client에서 재시도)
+    // 에러 발생 시 기본값으로 시작 (Client에서 live query로 갱신)
     console.error('[CheckoutsPage] Initial fetch error:', error);
-    initialData = {
-      data: [],
-      meta: {
-        pagination: {
-          total: 0,
-          pageSize: 20,
-          currentPage: 1,
-          totalPages: 0,
-        },
-      },
-    };
     initialSummary = {
       total: 0,
       pending: 0,
@@ -106,11 +75,5 @@ async function CheckoutsContentAsync({
     };
   }
 
-  return (
-    <CheckoutsContent
-      initialData={initialData}
-      initialSummary={initialSummary}
-      initialView={initialView}
-    />
-  );
+  return <CheckoutsContent initialSummary={initialSummary} initialFilters={initialFilters} />;
 }

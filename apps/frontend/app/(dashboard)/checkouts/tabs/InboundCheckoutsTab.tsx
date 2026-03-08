@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,12 +31,16 @@ import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { EquipmentImportStatusBadge } from '@/components/equipment-imports';
 import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
-import { EQUIPMENT_EMPTY_STATE_TOKENS, CHECKOUT_INTERACTION_TOKENS } from '@/lib/design-tokens';
+import {
+  EQUIPMENT_EMPTY_STATE_TOKENS,
+  CHECKOUT_INTERACTION_TOKENS,
+  getSemanticBadgeClasses,
+} from '@/lib/design-tokens';
+import type { UICheckoutFilters } from '@/lib/utils/checkout-filter-utils';
 
 interface InboundCheckoutsTabProps {
   teamId?: string;
-  statusFilter: string;
-  searchTerm: string;
+  filters: UICheckoutFilters;
   onResetFilters: () => void;
 }
 
@@ -46,27 +50,30 @@ interface InboundCheckoutsTabProps {
  */
 export default function InboundCheckoutsTab({
   teamId,
-  statusFilter,
-  searchTerm,
+  filters,
   onResetFilters,
 }: InboundCheckoutsTabProps) {
   const t = useTranslations('checkouts');
   const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(1);
+  const searchParams = useSearchParams();
 
-  // 필터 변경 시 페이지 초기화
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, searchTerm, teamId]);
+  const { status: statusFilter, search: searchTerm } = filters;
+
+  // URL 페이지 변경 핸들러 (OutboundCheckoutsTab과 동일한 패턴)
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', String(newPage));
+    router.replace(`${FRONTEND_ROUTES.CHECKOUTS.LIST}?${params.toString()}`, { scroll: false });
+  };
 
   // ──────────────────────────────────────────────
   // 반입: 타팀 장비 대여 건 (페이지네이션)
   // ──────────────────────────────────────────────
   const { data: inboundCheckoutsData, isLoading: inboundCheckoutsLoading } = useQuery({
-    queryKey: queryKeys.checkouts.inbound({ statusFilter, searchTerm, teamId, page: currentPage }),
+    queryKey: queryKeys.checkouts.inbound({ statusFilter, searchTerm, teamId, page: filters.page }),
     queryFn: async () => {
       const query: CheckoutQuery = {
-        page: currentPage,
+        page: filters.page,
         pageSize: 20,
         search: searchTerm || undefined,
         teamId,
@@ -202,10 +209,7 @@ export default function InboundCheckoutsTab({
                     <div className="flex items-center gap-2">
                       <EquipmentImportStatusBadge status={item.status as EquipmentImportStatus} />
                       {item.status === 'approved' && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-amber-50 text-amber-700 border-amber-300"
-                        >
+                        <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
                           {t('inbound.receiveRequired')}
                         </Badge>
                       )}
@@ -258,24 +262,24 @@ export default function InboundCheckoutsTab({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1 || inboundCheckoutsLoading}
+                onClick={() => handlePageChange(Math.max(1, filters.page - 1))}
+                disabled={filters.page === 1 || inboundCheckoutsLoading}
               >
                 {t('actions.previous')}
               </Button>
               <span className="text-sm text-muted-foreground">
-                {currentPage} / {inboundCheckoutsData.meta.pagination.totalPages}
+                {filters.page} / {inboundCheckoutsData.meta.pagination.totalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setCurrentPage((p) =>
-                    Math.min(inboundCheckoutsData.meta.pagination.totalPages, p + 1)
+                  handlePageChange(
+                    Math.min(inboundCheckoutsData.meta.pagination.totalPages, filters.page + 1)
                   )
                 }
                 disabled={
-                  currentPage === inboundCheckoutsData.meta.pagination.totalPages ||
+                  filters.page === inboundCheckoutsData.meta.pagination.totalPages ||
                   inboundCheckoutsLoading
                 }
               >
@@ -335,10 +339,7 @@ export default function InboundCheckoutsTab({
                             status={item.status as EquipmentImportStatus}
                           />
                           {item.status === 'approved' && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs bg-amber-50 text-amber-700 border-amber-300"
-                            >
+                            <Badge variant="outline" className={getSemanticBadgeClasses('warning')}>
                               {t('inbound.receiveRequired')}
                             </Badge>
                           )}

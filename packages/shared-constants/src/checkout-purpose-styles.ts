@@ -1,17 +1,17 @@
 /**
- * SINGLE SOURCE OF TRUTH: 반출 목적(Purpose) 배지 스타일
+ * @deprecated CHECKOUT_PURPOSE_TOKENS으로 이전하세요.
  *
- * CheckoutDetailClient, CheckoutGroupCard 등에서 사용하는
- * 목적별 배지 색상 스타일을 중앙 관리합니다.
- *
- * @example
  * ```tsx
+ * // Before (deprecated)
  * import { CHECKOUT_PURPOSE_STYLES } from '@equipment-management/shared-constants';
+ * className={CHECKOUT_PURPOSE_STYLES.calibration}
  *
- * <Badge variant="outline" className={CHECKOUT_PURPOSE_STYLES.calibration}>
- *   교정
- * </Badge>
+ * // After
+ * import { CHECKOUT_PURPOSE_TOKENS } from '@/lib/design-tokens';
+ * className={CHECKOUT_PURPOSE_TOKENS.calibration.badge}
  * ```
+ *
+ * SSOT: apps/frontend/lib/design-tokens/components/checkout.ts
  */
 export const CHECKOUT_PURPOSE_STYLES = {
   /** 교정: 파란색 배지 */

@@ -16,8 +16,15 @@ import {
 import { CalendarDays, Building, ChevronDown, Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
+import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
-import { CHECKOUT_INTERACTION_TOKENS, CHECKOUT_MOTION } from '@/lib/design-tokens';
+import {
+  CHECKOUT_INTERACTION_TOKENS,
+  CHECKOUT_MOTION,
+  CHECKOUT_PURPOSE_TOKENS,
+  getCheckoutRowClasses,
+} from '@/lib/design-tokens';
+import { FONT, getManagementNumberClasses } from '@/lib/design-tokens';
 
 interface CheckoutGroupCardProps {
   group: CheckoutGroup;
@@ -39,11 +46,12 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
           managementNumber: equip.managementNumber,
           purpose: checkout.purpose,
           status: checkout.status,
+          checkoutType: (checkout.purpose ?? 'calibration') as 'calibration' | 'repair' | 'rental',
           userName: checkout.user?.name || t('groupCard.unknownUser'),
           checkoutId: checkout.id,
         }))
       ),
-    [group.checkouts]
+    [group.checkouts, t]
   );
 
   return (
@@ -57,10 +65,12 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
             >
               {/* 왼쪽: 날짜 + 반출지 + 장비 수 */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
-                <div className="flex items-center gap-1.5 text-sm font-medium">
+                <div className={`flex items-center gap-1.5 text-sm font-medium ${FONT.mono}`}>
                   <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span>{group.date}</span>
-                  <span className="text-muted-foreground text-xs">({group.dateLabel})</span>
+                  <span className="text-muted-foreground text-xs font-normal">
+                    ({group.dateLabel})
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-sm min-w-0">
                   <Building className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -87,10 +97,14 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                     <CheckoutStatusBadge key={status} status={status} className="text-xs" />
                   ))}
                 </div>
-                {/* 목적 배지 */}
+                {/* 목적 배지 — brand 토큰 */}
                 <div className="hidden md:flex items-center gap-1">
                   {group.purposes.map((purpose) => (
-                    <Badge key={purpose} variant="secondary" className="text-xs">
+                    <Badge
+                      key={purpose}
+                      variant="outline"
+                      className={`text-xs ${CHECKOUT_PURPOSE_TOKENS[purpose as keyof typeof CHECKOUT_PURPOSE_TOKENS]?.badge ?? ''}`}
+                    >
                       {t(`purpose.${purpose}`)}
                     </Badge>
                   ))}
@@ -111,7 +125,11 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                 <CheckoutStatusBadge key={status} status={status} className="text-xs" />
               ))}
               {group.purposes.map((purpose) => (
-                <Badge key={purpose} variant="secondary" className="text-xs">
+                <Badge
+                  key={purpose}
+                  variant="outline"
+                  className={`text-xs ${CHECKOUT_PURPOSE_TOKENS[purpose as keyof typeof CHECKOUT_PURPOSE_TOKENS]?.badge ?? ''}`}
+                >
                   {t(`purpose.${purpose}`)}
                 </Badge>
               ))}
@@ -137,7 +155,7 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                     {equipmentRows.map((row) => (
                       <TableRow
                         key={`${row.checkoutId}-${row.equipmentId}`}
-                        className={`${CHECKOUT_INTERACTION_TOKENS.clickableRow} ${CHECKOUT_INTERACTION_TOKENS.rowFocus}`}
+                        className={`${getCheckoutRowClasses(row.purpose, row.status)} ${CHECKOUT_INTERACTION_TOKENS.clickableRow} ${CHECKOUT_INTERACTION_TOKENS.rowFocus}`}
                         onClick={() => onCheckoutClick(row.checkoutId)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -159,16 +177,25 @@ function CheckoutGroupCard({ group, onCheckoutClick }: CheckoutGroupCardProps) {
                             </TooltipContent>
                           </Tooltip>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className={getManagementNumberClasses()}>
                           {row.managementNumber}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge
+                            variant="outline"
+                            className={`text-xs ${CHECKOUT_PURPOSE_TOKENS[row.purpose as keyof typeof CHECKOUT_PURPOSE_TOKENS]?.badge ?? ''}`}
+                          >
                             {t(`purpose.${row.purpose}`)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <CheckoutStatusBadge status={row.status} />
+                          <div className="flex items-center gap-1.5">
+                            <CheckoutMiniProgress
+                              currentStatus={row.status}
+                              checkoutType={row.checkoutType}
+                            />
+                            <CheckoutStatusBadge status={row.status} />
+                          </div>
                         </TableCell>
                         <TableCell>{row.userName}</TableCell>
                       </TableRow>

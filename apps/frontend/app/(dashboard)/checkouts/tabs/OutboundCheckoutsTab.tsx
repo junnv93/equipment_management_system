@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,12 +19,14 @@ import {
   CHECKOUT_MOTION,
 } from '@/lib/design-tokens';
 import { CONTENT_TOKENS } from '@/lib/design-tokens';
+import {
+  convertFiltersToApiParams,
+  type UICheckoutFilters,
+} from '@/lib/utils/checkout-filter-utils';
 
 interface OutboundCheckoutsTabProps {
   teamId?: string;
-  statusFilter: string;
-  locationFilter: string;
-  searchTerm: string;
+  filters: UICheckoutFilters;
   summary: {
     total: number;
     pending: number;
@@ -39,55 +41,48 @@ interface OutboundCheckoutsTabProps {
 /**
  * 반출 탭 컴포넌트
  * ✅ 코드 분할: 반출 관련 로직만 포함 (Bundle size optimization)
+ * ✅ URL SSOT: 페이지네이션 포함 모든 필터를 URL에서 읽음
  */
 export default function OutboundCheckoutsTab({
   teamId,
-  statusFilter,
-  locationFilter,
-  searchTerm,
+  filters,
   summary,
   onStatCardClick,
   onResetFilters,
 }: OutboundCheckoutsTabProps) {
   const t = useTranslations('checkouts');
   const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(1);
+  const searchParams = useSearchParams();
 
-  // 필터 변경 시 페이지 초기화
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, locationFilter, searchTerm, teamId]);
+  // URL 페이지 변경 핸들러
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', String(newPage));
+    router.replace(`${FRONTEND_ROUTES.CHECKOUTS.LIST}?${params.toString()}`, { scroll: false });
+  };
 
   // ──────────────────────────────────────────────
-  // 반출 목록 조회 (페이지네이션)
+  // 반출 목록 조회 (URL 필터 기반)
   // ──────────────────────────────────────────────
+  const apiParams = convertFiltersToApiParams(filters);
   const { data: checkoutsData, isLoading: checkoutsLoading } = useQuery({
     queryKey: queryKeys.checkouts.list({
       direction: 'outbound',
-      statusFilter,
-      locationFilter,
-      searchTerm,
+      ...apiParams,
       teamId,
-      page: currentPage,
     }),
     queryFn: async () => {
       const query: CheckoutQuery = {
-        page: currentPage,
-        pageSize: 20,
-        search: searchTerm || undefined,
+        page: apiParams.page,
+        pageSize: apiParams.pageSize,
+        search: apiParams.search,
         teamId,
         direction: 'outbound',
         includeSummary: true,
+        statuses: apiParams.statuses,
+        destination: apiParams.destination,
+        purpose: apiParams.purpose,
       };
-
-      if (statusFilter !== 'all') {
-        query.statuses = statusFilter;
-      }
-
-      if (locationFilter !== 'all') {
-        query.destination = locationFilter;
-      }
-
       return checkoutApi.getCheckouts(query);
     },
     staleTime: CACHE_TIMES.SHORT,
@@ -126,9 +121,9 @@ export default function OutboundCheckoutsTab({
 
   const renderEmptyState = () => (
     <div className="flex flex-col items-center justify-center p-8 text-center">
-      <ClipboardList className="h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
-      <h3 className="text-lg font-medium text-gray-900">{t('outbound.noData')}</h3>
-      <p className="text-sm text-gray-500 mt-2 mb-4">{t('outbound.noDataDesc')}</p>
+      <ClipboardList className="h-12 w-12 text-brand-text-muted mb-4" aria-hidden="true" />
+      <h3 className="text-lg font-medium text-brand-text-primary">{t('outbound.noData')}</h3>
+      <p className="text-sm text-brand-text-muted mt-2 mb-4">{t('outbound.noDataDesc')}</p>
       <div className="flex gap-2">
         <Button variant="outline" onClick={onResetFilters}>
           {t('actions.resetFilters')}
@@ -141,11 +136,12 @@ export default function OutboundCheckoutsTab({
   // 통계 카드
   // ──────────────────────────────────────────────
   const renderStats = () => {
-    const isAllActive = statusFilter === 'all' && locationFilter === 'all' && !searchTerm;
-    const isPendingActive = statusFilter === 'pending';
-    const isOverdueActive = statusFilter === 'overdue';
+    const isAllActive =
+      filters.status === 'all' && filters.destination === 'all' && !filters.search;
+    const isPendingActive = filters.status === 'pending';
+    const isOverdueActive = filters.status === 'overdue';
     const isInProgressActive =
-      statusFilter ===
+      filters.status ===
       'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received';
 
     return (
@@ -176,7 +172,7 @@ export default function OutboundCheckoutsTab({
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('outbound.pendingApproval')}</CardTitle>
             <Clock
-              className={`h-4 w-4 ${isPendingActive ? CHECKOUT_STATS_VARIANTS.pending.iconColor : 'text-amber-600'}`}
+              className={`h-4 w-4 ${isPendingActive ? CHECKOUT_STATS_VARIANTS.pending.iconColor : 'text-brand-warning'}`}
               aria-hidden="true"
             />
           </CardHeader>
@@ -193,7 +189,7 @@ export default function OutboundCheckoutsTab({
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('outbound.overdue')}</CardTitle>
             <AlertTriangle
-              className={`h-4 w-4 ${isOverdueActive ? CHECKOUT_STATS_VARIANTS.overdue.iconColor : 'text-red-600'}`}
+              className={`h-4 w-4 ${isOverdueActive ? CHECKOUT_STATS_VARIANTS.overdue.iconColor : 'text-brand-critical'}`}
               aria-hidden="true"
             />
           </CardHeader>
@@ -214,7 +210,7 @@ export default function OutboundCheckoutsTab({
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{t('outbound.returnToday')}</CardTitle>
             <Clock
-              className={`h-4 w-4 ${isInProgressActive ? CHECKOUT_STATS_VARIANTS.inProgress.iconColor : 'text-blue-600'}`}
+              className={`h-4 w-4 ${isInProgressActive ? CHECKOUT_STATS_VARIANTS.inProgress.iconColor : 'text-brand-purple'}`}
               aria-hidden="true"
             />
           </CardHeader>
@@ -251,27 +247,27 @@ export default function OutboundCheckoutsTab({
               ))}
       </div>
 
-      {/* 페이지네이션 */}
+      {/* 페이지네이션 (URL 기반) */}
       {checkoutsData && checkoutsData.meta.pagination.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-6">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || checkoutsLoading}
+            onClick={() => handlePageChange(Math.max(1, filters.page - 1))}
+            disabled={filters.page === 1 || checkoutsLoading}
           >
             {t('actions.previous')}
           </Button>
           <span className="text-sm text-muted-foreground">
-            {currentPage} / {checkoutsData.meta.pagination.totalPages}
+            {filters.page} / {checkoutsData.meta.pagination.totalPages}
           </span>
           <Button
             variant="outline"
             size="sm"
             onClick={() =>
-              setCurrentPage((p) => Math.min(checkoutsData.meta.pagination.totalPages, p + 1))
+              handlePageChange(Math.min(checkoutsData.meta.pagination.totalPages, filters.page + 1))
             }
-            disabled={currentPage === checkoutsData.meta.pagination.totalPages || checkoutsLoading}
+            disabled={filters.page === checkoutsData.meta.pagination.totalPages || checkoutsLoading}
           >
             {t('actions.next')}
           </Button>

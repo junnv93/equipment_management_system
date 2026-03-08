@@ -219,7 +219,8 @@
     "viewDetail": "{name} 반출 상세 보기",
     "unspecifiedDestination": "미지정",
     "checkoutDateLabel": "반출일",
-    "requestDateLabel": "신청일"
+    "requestDateLabel": "신청일",
+    "progressLabel": "반출 진행: {total}단계 중 {current}단계 완료"
   },
   "selectability": {
     "calibrationExpiryWarning": "교정 만료일: {date}",
@@ -308,7 +309,9 @@
     "destinationLabel": "반출지",
     "searchLabel": "검색",
     "statusFilter": "상태 필터",
-    "destinationFilter": "반출지 필터"
+    "destinationFilter": "반출지 필터",
+    "purposeFilter": "목적 필터",
+    "purposeLabel": "목적"
   },
   "import": {
     "requestInbound": "반입 신청",
