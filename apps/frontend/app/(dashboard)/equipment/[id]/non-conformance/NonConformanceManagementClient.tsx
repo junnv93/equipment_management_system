@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -21,18 +21,23 @@ import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import nonConformancesApi, {
   NonConformance,
   NonConformanceType,
-  NON_CONFORMANCE_STATUS_LABELS,
-  NON_CONFORMANCE_STATUS_COLORS,
-  NON_CONFORMANCE_TYPE_LABELS,
-  RESOLUTION_TYPE_LABELS,
 } from '@/lib/api/non-conformances-api';
+import { formatDate } from '@/lib/utils/date';
+import {
+  getSemanticBadgeClasses,
+  getSemanticContainerClasses,
+  getSemanticContainerTextClasses,
+  ncStatusToSemantic,
+} from '@/lib/design-tokens';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
+import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/use-toast';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -59,7 +64,9 @@ export default function NonConformanceManagementClient({
   const router = useRouter();
   const { data: session } = useSession();
   const { isManager } = useAuth();
+  const { toast } = useToast();
   const t = useTranslations('equipment');
+  const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
 
   // 현재 로그인한 사용자 ID (세션에서 가져옴)
   const currentUserId = session?.user?.id ?? '';
@@ -86,6 +93,20 @@ export default function NonConformanceManagementClient({
   const nonConformances = nonConformancesData?.data || [];
   const loading = equipmentLoading || ncLoading;
 
+  // 브레드크럼 동적 라벨 설정 (EquipmentDetailClient와 동일 패턴)
+  useEffect(() => {
+    if (!equipment) return;
+    const label = `${equipment.name} (${equipment.managementNumber})`;
+    setDynamicLabel(equipmentId, label);
+    return () => clearDynamicLabel(equipmentId);
+  }, [
+    equipmentId,
+    equipment?.name,
+    equipment?.managementNumber,
+    setDynamicLabel,
+    clearDynamicLabel,
+  ]);
+
   // 부적합 등록 폼 상태
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -93,8 +114,6 @@ export default function NonConformanceManagementClient({
     ncType: 'other' as NonConformanceType,
     actionPlan: '',
   });
-  const [creating, setCreating] = useState(false);
-
   // 업데이트 폼 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [updateForm, setUpdateForm] = useState({
@@ -102,7 +121,6 @@ export default function NonConformanceManagementClient({
     correctionContent: '',
     status: '' as 'open' | 'analyzing' | 'corrected' | '',
   });
-  const [updating, setUpdating] = useState(false);
 
   // 부적합 등록 mutation - Optimistic Update 패턴
   const createMutation = useOptimisticMutation<
@@ -138,21 +156,16 @@ export default function NonConformanceManagementClient({
     onSuccessCallback: () => {
       setShowCreateForm(false);
       setCreateForm({ cause: '', ncType: 'other', actionPlan: '' });
-      setCreating(false);
       router.refresh();
-    },
-    onErrorCallback: () => {
-      setCreating(false);
     },
   });
 
   const handleCreate = () => {
     if (!createForm.cause.trim()) {
-      alert(t('nonConformanceManagement.form.causeRequired'));
+      toast({ title: t('nonConformanceManagement.form.causeRequired'), variant: 'destructive' });
       return;
     }
 
-    setCreating(true);
     createMutation.mutate({
       equipmentId,
       discoveryDate: new Date().toISOString().split('T')[0],
@@ -202,11 +215,7 @@ export default function NonConformanceManagementClient({
     onSuccessCallback: () => {
       setEditingId(null);
       setUpdateForm({ analysisContent: '', correctionContent: '', status: '' });
-      setUpdating(false);
       router.refresh();
-    },
-    onErrorCallback: () => {
-      setUpdating(false);
     },
   });
 
@@ -229,7 +238,6 @@ export default function NonConformanceManagementClient({
       }
     }
 
-    setUpdating(true);
     const updateData: {
       version: number;
       analysisContent?: string;
@@ -259,21 +267,16 @@ export default function NonConformanceManagementClient({
   };
 
   const getStatusIcon = (status: string) => {
+    const cls = `h-5 w-5 ${getSemanticContainerTextClasses(ncStatusToSemantic(status))}`;
     switch (status) {
       case 'open':
-        return (
-          <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" aria-hidden="true" />
-        );
+        return <AlertTriangle className={cls} aria-hidden="true" />;
       case 'analyzing':
-        return (
-          <FileText className="h-5 w-5 text-yellow-500 dark:text-yellow-400" aria-hidden="true" />
-        );
+        return <FileText className={cls} aria-hidden="true" />;
       case 'corrected':
-        return <Clock className="h-5 w-5 text-blue-500 dark:text-blue-400" aria-hidden="true" />;
+        return <Clock className={cls} aria-hidden="true" />;
       case 'closed':
-        return (
-          <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" aria-hidden="true" />
-        );
+        return <CheckCircle className={cls} aria-hidden="true" />;
       default:
         return null;
     }
@@ -432,8 +435,12 @@ export default function NonConformanceManagementClient({
               />
             </div>
             <div className="flex gap-3">
-              <Button variant="destructive" onClick={handleCreate} disabled={creating}>
-                {creating
+              <Button
+                variant="destructive"
+                onClick={handleCreate}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending
                   ? t('nonConformanceManagement.form.registering')
                   : t('nonConformanceManagement.form.register')}
               </Button>
@@ -479,15 +486,13 @@ export default function NonConformanceManagementClient({
                   <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                     {getStatusIcon(nc.status)}
                   </div>
-                  <span
-                    className={`px-3 py-1 text-sm font-medium rounded-full ${NON_CONFORMANCE_STATUS_COLORS[nc.status]}`}
-                  >
-                    {NON_CONFORMANCE_STATUS_LABELS[nc.status]}
+                  <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
+                    {t(`nonConformanceManagement.ncStatus.${nc.status}` as Parameters<typeof t>[0])}
                   </span>
                 </div>
                 <time dateTime={nc.discoveryDate} className="text-sm text-muted-foreground">
                   {t('nonConformanceManagement.discoveryDate', {
-                    date: new Date(nc.discoveryDate).toLocaleDateString('ko-KR'),
+                    date: formatDate(nc.discoveryDate, 'yyyy-MM-dd'),
                   })}
                 </time>
               </div>
@@ -495,12 +500,16 @@ export default function NonConformanceManagementClient({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded">
-                    {NON_CONFORMANCE_TYPE_LABELS[nc.ncType]}
+                    {t(`nonConformanceManagement.ncType.${nc.ncType}` as Parameters<typeof t>[0])}
                   </span>
                   {nc.resolutionType && (
-                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 rounded">
+                    <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded">
                       {t('nonConformanceManagement.resolution', {
-                        type: RESOLUTION_TYPE_LABELS[nc.resolutionType],
+                        type: t(
+                          `nonConformanceManagement.resolutionType.${nc.resolutionType}` as Parameters<
+                            typeof t
+                          >[0]
+                        ),
                       })}
                     </span>
                   )}
@@ -516,26 +525,26 @@ export default function NonConformanceManagementClient({
 
                 {/* 반려 사유 배너 */}
                 {nc.status === 'analyzing' && nc.rejectionReason && (
-                  <div className="rounded-md border p-4 bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800">
+                  <div className={getSemanticContainerClasses('critical')}>
                     <div className="flex items-start gap-3">
                       <XCircle
-                        className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"
+                        className={`h-5 w-5 ${getSemanticContainerTextClasses('critical')} mt-0.5 flex-shrink-0`}
                         aria-hidden="true"
                       />
                       <div>
-                        <p className="font-medium text-red-900 dark:text-red-300">
+                        <p className={`font-medium ${getSemanticContainerTextClasses('critical')}`}>
                           {t('nonConformanceManagement.rejectionTitle')}
                         </p>
-                        <p className="text-sm text-red-800 dark:text-red-400 mt-1 leading-relaxed">
+                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                           {nc.rejectionReason}
                         </p>
                         {nc.rejectedAt && (
                           <time
                             dateTime={nc.rejectedAt}
-                            className="text-xs text-red-600 dark:text-red-500 mt-1 block"
+                            className={`text-xs ${getSemanticContainerTextClasses('critical')} mt-1 block`}
                           >
                             {t('nonConformanceManagement.rejectionDate', {
-                              date: new Date(nc.rejectedAt).toLocaleDateString('ko-KR'),
+                              date: formatDate(nc.rejectedAt, 'yyyy-MM-dd'),
                             })}
                           </time>
                         )}
@@ -581,7 +590,7 @@ export default function NonConformanceManagementClient({
                         className="text-sm text-muted-foreground mt-1 block"
                       >
                         {t('nonConformanceManagement.correctionDate', {
-                          date: new Date(nc.correctionDate).toLocaleDateString('ko-KR'),
+                          date: formatDate(nc.correctionDate, 'yyyy-MM-dd'),
                         })}
                       </time>
                     )}
@@ -600,7 +609,7 @@ export default function NonConformanceManagementClient({
                         className="text-sm text-muted-foreground mt-1 block"
                       >
                         {t('nonConformanceManagement.closureDate', {
-                          date: new Date(nc.closedAt).toLocaleDateString('ko-KR'),
+                          date: formatDate(nc.closedAt, 'yyyy-MM-dd'),
                         })}
                       </time>
                     )}
@@ -612,27 +621,28 @@ export default function NonConformanceManagementClient({
               {nc.status !== 'closed' && ['damage', 'malfunction'].includes(nc.ncType) && (
                 <div className="mt-4 pt-4 border-t border-border">
                   {!nc.repairHistoryId ? (
-                    <div className="rounded-md border p-4 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+                    <div className={getSemanticContainerClasses('warning')}>
                       <div className="flex items-start gap-3">
                         <AlertTriangle
-                          className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5"
+                          className={`h-5 w-5 ${getSemanticContainerTextClasses('warning')} mt-0.5`}
                           aria-hidden="true"
                         />
                         <div className="flex-1">
-                          <p className="font-medium text-yellow-900 dark:text-yellow-100">
+                          <p
+                            className={`font-medium ${getSemanticContainerTextClasses('warning')}`}
+                          >
                             {t('nonConformanceManagement.repairNeeded')}
                           </p>
-                          <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1 leading-relaxed">
+                          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                             {t('nonConformanceManagement.repairNeededDesc', {
-                              type: NON_CONFORMANCE_TYPE_LABELS[nc.ncType],
+                              type: t(
+                                `nonConformanceManagement.ncType.${nc.ncType}` as Parameters<
+                                  typeof t
+                                >[0]
+                              ),
                             })}
                           </p>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="mt-3 bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-600 dark:hover:bg-yellow-500"
-                            asChild
-                          >
+                          <Button variant="default" size="sm" className="mt-3" asChild>
                             <Link
                               href={`/equipment/${equipmentId}/repair-history?ncId=${nc.id}&autoOpen=true`}
                             >
@@ -723,8 +733,8 @@ export default function NonConformanceManagementClient({
                     </Select>
                   </div>
                   <div className="flex gap-3">
-                    <Button onClick={() => handleUpdate(nc.id)} disabled={updating}>
-                      {updating
+                    <Button onClick={() => handleUpdate(nc.id)} disabled={updateMutation.isPending}>
+                      {updateMutation.isPending
                         ? t('nonConformanceManagement.update.saving')
                         : t('nonConformanceManagement.update.save')}
                     </Button>

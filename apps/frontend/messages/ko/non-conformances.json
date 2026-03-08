@@ -40,6 +40,12 @@
     "empty": "부적합 사항이 없습니다.",
     "emptyDescription": "부적합 사항을 등록하세요."
   },
+  "ncStatus": {
+    "open": "등록됨",
+    "analyzing": "분석 중",
+    "corrected": "조치 완료",
+    "closed": "종료됨"
+  },
   "approvals": {
     "title": "부적합 재개 승인",
     "description": "조치 완료된 부적합 장비의 사용 재개를 승인합니다. (기술책임자 전용)",

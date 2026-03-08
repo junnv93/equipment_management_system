@@ -10,7 +10,7 @@ interface MutationWithRefreshOptions<TData, TVariables, TContext>
   /**
    * 성공 시 무효화할 쿼리 키 목록
    */
-  invalidateKeys?: string[][];
+  invalidateKeys?: ReadonlyArray<readonly (string | number)[]>;
 
   /**
    * 서버 컴포넌트 캐시도 갱신할지 여부
@@ -132,7 +132,7 @@ export function useDeleteMutation<TVariables = string>({
 }: {
   mutationFn: (variables: TVariables) => Promise<void>;
   resourceName: string;
-  invalidateKeys?: string[][];
+  invalidateKeys?: ReadonlyArray<readonly (string | number)[]>;
   refreshServerCache?: boolean;
   onSuccessCallback?: () => void;
 }) {

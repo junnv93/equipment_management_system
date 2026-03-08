@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -40,6 +39,7 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import {
   parseAuditLogFiltersFromSearchParams,
   convertFiltersToApiParams,
+  countActiveFilters,
   type UIAuditLogFilters,
 } from '@/lib/utils/audit-log-filter-utils';
 import { format } from 'date-fns';
@@ -48,9 +48,9 @@ import {
   ChevronRight,
   RefreshCw,
   History,
-  Filter,
   Download,
   Info,
+  Shield,
 } from 'lucide-react';
 import {
   AUDIT_ACTION_VALUES,
@@ -73,8 +73,13 @@ import {
   AUDIT_EMPTY_STATE_TOKENS,
   AUDIT_PAGINATION_TOKENS,
   AUDIT_MOTION,
+  AUDIT_FILTER_TOKENS,
+  AUDIT_HEADER_TOKENS,
+  getAuditActionChipClasses,
+  ANIMATION_PRESETS,
+  getStaggerDelay,
 } from '@/lib/design-tokens';
-import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 interface AuditLogsContentProps {
@@ -93,6 +98,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   // 현재 URL에서 필터 파싱 (SSOT — URL이 유일한 진실의 소스)
   const filters = parseAuditLogFiltersFromSearchParams(searchParams);
   const apiParams = convertFiltersToApiParams(filters);
+  const activeFilterCount = countActiveFilters(filters);
 
   // 역할 기반 스코프 해석
   const userRole = session?.user?.role as UserRole | undefined;
@@ -121,7 +127,6 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
     (updates: Partial<UIAuditLogFilters>) => {
       const newParams = new URLSearchParams(searchParams.toString());
 
-      // 모든 업데이트를 URL에 반영
       Object.entries(updates).forEach(([key, value]) => {
         if (value === '' || value === undefined || value === null) {
           newParams.delete(key);
@@ -130,7 +135,6 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
         }
       });
 
-      // 필터 변경 시 page를 1로 리셋 (page 자체를 업데이트하는 경우 제외)
       if (!('page' in updates)) {
         newParams.delete('page');
       }
@@ -182,7 +186,6 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      // blob responseType은 인터셉터가 처리하지 않으므로 직접 피드백
       const message = err instanceof Error ? err.message : t('exportError');
       toast({ title: t('exportFailed'), description: message, variant: 'destructive' });
     } finally {
@@ -199,26 +202,45 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+    <div className="container mx-auto py-6 space-y-4">
+      {/* ── 헤더 ─────────────────────────────────────────────────── */}
+      <div className={AUDIT_HEADER_TOKENS.container}>
+        <div className={AUDIT_HEADER_TOKENS.titleGroup}>
+          <h1 className={AUDIT_HEADER_TOKENS.title}>
+            <Shield className="h-5 w-5 text-brand-text-muted shrink-0" />
+            {t('title')}
+          </h1>
           {scope && (
-            <p className="text-muted-foreground flex items-center gap-1.5">
-              <Info className="h-4 w-4" />
+            <p className={AUDIT_HEADER_TOKENS.subtitle}>
+              <Info className="h-3.5 w-3.5 shrink-0" />
               {scope.label}
+              {activeFilterCount > 0 && (
+                <span className="font-mono tabular-nums text-xs bg-brand-info/10 text-brand-info border border-brand-info/20 px-1.5 py-0.5 rounded-full">
+                  {activeFilterCount}
+                </span>
+              )}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => refetch()} disabled={isRefetching}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? AUDIT_MOTION.refreshSpin : ''}`} />
-            {tc('actions.refresh')}
+
+        <div className={AUDIT_HEADER_TOKENS.actionsGroup}>
+          <span className={AUDIT_HEADER_TOKENS.statsBadge}>
+            총 {pagination.total.toLocaleString()}건
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            className="h-9 w-9 p-0"
+          >
+            <RefreshCw className={cn('h-4 w-4', isRefetching && AUDIT_MOTION.refreshSpin)} />
+            <span className="sr-only">{tc('actions.refresh')}</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isExporting}>
-                <Download className="h-4 w-4 mr-2" />
+              <Button variant="outline" size="sm" disabled={isExporting}>
+                <Download className="h-4 w-4 mr-1.5" />
                 {isExporting ? t('exporting') : t('exportBtn')}
               </Button>
             </DropdownMenuTrigger>
@@ -234,226 +256,251 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
         </div>
       </div>
 
-      {/* 필터 섹션 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            {t('filter')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* userId 필터: 'all' 스코프에서만 표시 (site/team 스코프에서는 불필요) */}
-            {scope?.type === 'all' && (
-              <div className="space-y-2">
-                <Label htmlFor="userId">{t('filters.userId')}</Label>
-                <Input
-                  id="userId"
-                  placeholder="UUID..."
-                  value={filters.userId}
-                  onChange={(e) => updateFilters({ userId: e.target.value })}
-                />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="entityType">{t('filters.entityType')}</Label>
-              <Select
-                value={filters.entityType || '_all'}
-                onValueChange={(v) => updateFilters({ entityType: v === '_all' ? '' : v })}
+      {/* ── 필터 바 ────────────────────────────────────────────────── */}
+      <div className={AUDIT_FILTER_TOKENS.bar}>
+        {/* 액션 타입 칩 (단일 선택) */}
+        <div className="space-y-1.5">
+          <p className={AUDIT_FILTER_TOKENS.fieldLabel}>{t('filters.action')}</p>
+          <div className={AUDIT_FILTER_TOKENS.actionChipsRow}>
+            <button
+              type="button"
+              className={getAuditActionChipClasses(filters.action === '')}
+              onClick={() => updateFilters({ action: '' })}
+            >
+              {t('filters.all')}
+            </button>
+            {AUDIT_ACTION_VALUES.map((action) => (
+              <button
+                key={action}
+                type="button"
+                className={getAuditActionChipClasses(filters.action === action)}
+                onClick={() => updateFilters({ action: filters.action === action ? '' : action })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_all">{t('filters.all')}</SelectItem>
-                  {AUDIT_ENTITY_TYPE_VALUES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {getEntityTypeLabel(value)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {getActionLabel(action)}
+              </button>
+            ))}
+          </div>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="action">{t('filters.action')}</Label>
-              <Select
-                value={filters.action || '_all'}
-                onValueChange={(v) => updateFilters({ action: v === '_all' ? '' : v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="전체" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_all">{t('filters.all')}</SelectItem>
-                  {AUDIT_ACTION_VALUES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {getActionLabel(value)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="startDate">{t('filters.startDate')}</Label>
-              <Input
-                id="startDate"
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => updateFilters({ startDate: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="endDate">{t('filters.endDate')}</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => updateFilters({ endDate: e.target.value })}
-              />
-            </div>
+        {/* 보조 필터 (엔티티, 날짜, 사용자) */}
+        <div className={AUDIT_FILTER_TOKENS.secondaryRow}>
+          <div className="space-y-1">
+            <Label className={AUDIT_FILTER_TOKENS.fieldLabel} htmlFor="entityType">
+              {t('filters.entityType')}
+            </Label>
+            <Select
+              value={filters.entityType || '_all'}
+              onValueChange={(v) => updateFilters({ entityType: v === '_all' ? '' : v })}
+            >
+              <SelectTrigger id="entityType" className="h-8 text-xs w-40">
+                <SelectValue placeholder={t('filters.all')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_all">{t('filters.all')}</SelectItem>
+                {AUDIT_ENTITY_TYPE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {getEntityTypeLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex gap-2 mt-4">
-            <Button variant="outline" onClick={handleReset}>
+          <div className="space-y-1">
+            <Label className={AUDIT_FILTER_TOKENS.fieldLabel} htmlFor="startDate">
+              {t('filters.startDate')}
+            </Label>
+            <Input
+              id="startDate"
+              type="date"
+              className="h-8 text-xs w-36"
+              value={filters.startDate}
+              onChange={(e) => updateFilters({ startDate: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className={AUDIT_FILTER_TOKENS.fieldLabel} htmlFor="endDate">
+              {t('filters.endDate')}
+            </Label>
+            <Input
+              id="endDate"
+              type="date"
+              className="h-8 text-xs w-36"
+              value={filters.endDate}
+              onChange={(e) => updateFilters({ endDate: e.target.value })}
+            />
+          </div>
+
+          {/* userId 필터: 'all' 스코프에서만 표시 */}
+          {scope?.type === 'all' && (
+            <div className="space-y-1">
+              <Label className={AUDIT_FILTER_TOKENS.fieldLabel} htmlFor="userId">
+                {t('filters.userId')}
+              </Label>
+              <Input
+                id="userId"
+                placeholder="UUID..."
+                className="h-8 text-xs w-44 font-mono"
+                value={filters.userId}
+                onChange={(e) => updateFilters({ userId: e.target.value })}
+              />
+            </div>
+          )}
+
+          <div className="self-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-brand-text-muted hover:text-brand-text-primary"
+              onClick={handleReset}
+            >
               {tc('actions.reset')}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* 로그 목록 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <History className="h-5 w-5" />
-            {t('logList')}
-          </CardTitle>
-          <CardDescription>
-            {t('totalLogs', { count: pagination.total.toLocaleString() })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {logs.length === 0 ? (
-            <div className={AUDIT_EMPTY_STATE_TOKENS.container}>
-              <History className={AUDIT_EMPTY_STATE_TOKENS.icon} />
-              <p className={AUDIT_EMPTY_STATE_TOKENS.text}>{t('emptyLogs')}</p>
-            </div>
-          ) : (
-            <>
-              <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[180px]">{t('table.time')}</TableHead>
-                      <TableHead>{t('table.user')}</TableHead>
-                      <TableHead>{t('table.role')}</TableHead>
-                      <TableHead>{t('table.action')}</TableHead>
-                      <TableHead>{t('table.target')}</TableHead>
-                      <TableHead>{t('table.targetName')}</TableHead>
-                      <TableHead>{t('table.ip')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {logs.map((log) => (
-                      <TableRow
-                        key={log.id}
-                        onClick={() => handleRowClick(log)}
-                        className={AUDIT_TABLE_TOKENS.rowInteractive}
-                      >
-                        <TableCell className={AUDIT_TABLE_TOKENS.timestamp}>
-                          {format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss')}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{log.userName}</div>
-                          <div className="text-xs text-muted-foreground truncate max-w-[120px]">
-                            {log.userId === SYSTEM_USER_UUID ? t('systemActor') : log.userId}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            className={
-                              AUDIT_ACTION_BADGE_TOKENS[log.action as AuditAction] ||
-                              DEFAULT_AUDIT_ACTION_BADGE
-                            }
-                          >
-                            {getActionLabel(log.action)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{getEntityTypeLabel(log.entityType)}</Badge>
-                        </TableCell>
-                        <TableCell className="max-w-[200px]">
-                          <EntityLinkCell
-                            entityType={log.entityType}
-                            entityId={log.entityId}
-                            entityName={log.entityName}
-                          />
-                        </TableCell>
-                        <TableCell className={AUDIT_TABLE_TOKENS.ipAddress}>
-                          {log.ipAddress || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* 페이지네이션 */}
-              <div className="flex items-center justify-between mt-4">
-                <div className={AUDIT_PAGINATION_TOKENS.info}>
-                  {t('showingRange', {
-                    total: pagination.total.toLocaleString(),
-                    start: (
-                      (pagination.currentPage - 1) * pagination.pageSize +
-                      1
-                    ).toLocaleString(),
-                    end: Math.min(
-                      pagination.currentPage * pagination.pageSize,
-                      pagination.total
-                    ).toLocaleString(),
-                  })}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    disabled={pagination.currentPage <= 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    {tc('pagination.previous')}
-                  </Button>
-                  <span className={AUDIT_PAGINATION_TOKENS.pageNumber}>
-                    {tc('pagination.pageOf', {
-                      current: pagination.currentPage,
-                      total: pagination.totalPages,
-                    })}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    disabled={pagination.currentPage >= pagination.totalPages}
-                  >
-                    {tc('pagination.next')}
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </>
+      {/* ── 로그 테이블 ────────────────────────────────────────────── */}
+      {logs.length === 0 ? (
+        <div
+          className={cn(
+            AUDIT_EMPTY_STATE_TOKENS.container,
+            'border border-brand-border-subtle rounded-lg'
           )}
-        </CardContent>
-      </Card>
+        >
+          <History className={AUDIT_EMPTY_STATE_TOKENS.icon} />
+          <p className={AUDIT_EMPTY_STATE_TOKENS.text}>{t('emptyLogs')}</p>
+        </div>
+      ) : (
+        <>
+          <div className="rounded-lg border border-brand-border-subtle overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-brand-bg-elevated hover:bg-brand-bg-elevated border-b border-brand-border-subtle">
+                  <TableHead className="w-[160px] text-xs font-medium text-brand-text-muted">
+                    {t('table.time')}
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-brand-text-muted">
+                    {t('table.user')}
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-brand-text-muted">
+                    {t('table.role')}
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-brand-text-muted">
+                    {t('table.action')}
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-brand-text-muted">
+                    {t('table.target')}
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-brand-text-muted">
+                    {t('table.targetName')}
+                  </TableHead>
+                  <TableHead className="text-xs font-medium text-brand-text-muted">
+                    {t('table.ip')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {logs.map((log, index) => (
+                  <TableRow
+                    key={log.id}
+                    onClick={() => handleRowClick(log)}
+                    className={cn(
+                      AUDIT_TABLE_TOKENS.rowInteractive,
+                      ANIMATION_PRESETS.fadeIn,
+                      'motion-safe:duration-150'
+                    )}
+                    style={{ animationDelay: getStaggerDelay(Math.min(index, 9), 'list') }}
+                  >
+                    <TableCell className={AUDIT_TABLE_TOKENS.timestamp}>
+                      {format(new Date(log.timestamp), 'yyyy-MM-dd HH:mm:ss')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm font-medium text-brand-text-primary leading-tight">
+                        {log.userName}
+                      </div>
+                      <div className="font-mono text-xs text-brand-text-muted tabular-nums truncate max-w-[110px]">
+                        {log.userId === SYSTEM_USER_UUID ? t('systemActor') : log.userId}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          AUDIT_ACTION_BADGE_TOKENS[log.action as AuditAction] ||
+                          DEFAULT_AUDIT_ACTION_BADGE
+                        }
+                      >
+                        {getActionLabel(log.action)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-xs">
+                        {getEntityTypeLabel(log.entityType)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[180px]">
+                      <EntityLinkCell
+                        entityType={log.entityType}
+                        entityId={log.entityId}
+                        entityName={log.entityName}
+                      />
+                    </TableCell>
+                    <TableCell className={AUDIT_TABLE_TOKENS.ipAddress}>
+                      {log.ipAddress || '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* 페이지네이션 */}
+          <div className="flex items-center justify-between">
+            <div className={AUDIT_PAGINATION_TOKENS.info}>
+              {t('showingRange', {
+                total: pagination.total.toLocaleString(),
+                start: ((pagination.currentPage - 1) * pagination.pageSize + 1).toLocaleString(),
+                end: Math.min(
+                  pagination.currentPage * pagination.pageSize,
+                  pagination.total
+                ).toLocaleString(),
+              })}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                {tc('pagination.previous')}
+              </Button>
+              <span className={AUDIT_PAGINATION_TOKENS.pageNumber}>
+                {tc('pagination.pageOf', {
+                  current: pagination.currentPage,
+                  total: pagination.totalPages,
+                })}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage >= pagination.totalPages}
+              >
+                {tc('pagination.next')}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 감사 로그 상세 다이얼로그 */}
       {selectedLog && (

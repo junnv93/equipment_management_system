@@ -40,6 +40,12 @@
     "empty": "No non-conformances found.",
     "emptyDescription": "Register a non-conformance item."
   },
+  "ncStatus": {
+    "open": "Open",
+    "analyzing": "Analyzing",
+    "corrected": "Corrected",
+    "closed": "Closed"
+  },
   "approvals": {
     "title": "Non-Conformance Closure Approval",
     "description": "Approve equipment resumption for corrected non-conformances. (Technical Manager only)",

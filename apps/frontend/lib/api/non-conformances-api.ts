@@ -87,14 +87,6 @@ export interface CloseNonConformanceDto {
 // ✅ Re-export labels from SSOT for backward compatibility
 export { NON_CONFORMANCE_STATUS_LABELS, NON_CONFORMANCE_TYPE_LABELS, RESOLUTION_TYPE_LABELS };
 
-// 상태 색상 (UI 전용 - 프론트엔드에서만 사용)
-export const NON_CONFORMANCE_STATUS_COLORS: Record<NonConformanceStatus, string> = {
-  open: 'bg-red-100 text-red-800',
-  analyzing: 'bg-yellow-100 text-yellow-800',
-  corrected: 'bg-blue-100 text-blue-800',
-  closed: 'bg-green-100 text-green-800',
-};
-
 // 부적합 API 객체
 const nonConformancesApi = {
   // 부적합 목록 조회

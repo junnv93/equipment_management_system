@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { CheckCircle, AlertTriangle, Clock, ExternalLink, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import nonConformancesApi, {
-  NonConformance,
-  NON_CONFORMANCE_STATUS_LABELS,
-  NON_CONFORMANCE_STATUS_COLORS,
-} from '@/lib/api/non-conformances-api';
+import nonConformancesApi, { NonConformance } from '@/lib/api/non-conformances-api';
+import { formatDate } from '@/lib/utils/date';
+import {
+  getSemanticBadgeClasses,
+  getSemanticContainerColorClasses,
+  ncStatusToSemantic,
+} from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { useToast } from '@/components/ui/use-toast';
@@ -153,20 +155,20 @@ export default function NonConformanceApprovalsContent() {
         <p className="text-muted-foreground mt-1 leading-relaxed">{t('approvals.description')}</p>
       </div>
 
-      {/* 안내 메시지 */}
-      <Card className="p-4 mb-6 border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20 dark:border-l-blue-400">
+      {/* 안내 메시지 — border-l-4 notice 패턴 (info 위계 강조) */}
+      <div
+        className={`mb-6 border-l-4 p-4 rounded-r-md ${getSemanticContainerColorClasses('info')}`}
+      >
         <div className="flex items-start gap-3">
-          <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle
-              className="h-4 w-4 text-blue-600 dark:text-blue-400"
-              aria-hidden="true"
-            />
-          </div>
-          <p className="text-sm text-blue-700 dark:text-blue-300 leading-relaxed whitespace-pre-line">
+          <AlertTriangle
+            className="h-4 w-4 text-brand-info flex-shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
             {t('approvals.infoMessage')}
           </p>
         </div>
-      </Card>
+      </div>
 
       {/* 부적합 목록 */}
       {nonConformances.length === 0 ? (
@@ -194,14 +196,11 @@ export default function NonConformanceApprovalsContent() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <span
-                      className={`px-3 py-1 text-sm font-medium rounded-full ${NON_CONFORMANCE_STATUS_COLORS[nc.status]}`}
-                    >
-                      {NON_CONFORMANCE_STATUS_LABELS[nc.status]}
+                    <span className={getSemanticBadgeClasses(ncStatusToSemantic(nc.status))}>
+                      {t(`ncStatus.${nc.status}` as Parameters<typeof t>[0])}
                     </span>
                     <time dateTime={nc.discoveryDate} className="text-sm text-muted-foreground">
-                      {t('approvals.discoveryDate')}:{' '}
-                      {new Date(nc.discoveryDate).toLocaleDateString('ko-KR')}
+                      {t('approvals.discoveryDate')}: {formatDate(nc.discoveryDate, 'yyyy-MM-dd')}
                     </time>
                   </div>
                   <Link
@@ -246,7 +245,7 @@ export default function NonConformanceApprovalsContent() {
                       {t('approvals.correctionDate')}
                     </h4>
                     <time dateTime={nc.correctionDate} className="text-foreground mt-1 block">
-                      {new Date(nc.correctionDate).toLocaleDateString('ko-KR')}
+                      {formatDate(nc.correctionDate, 'yyyy-MM-dd')}
                     </time>
                   </div>
                 )}
