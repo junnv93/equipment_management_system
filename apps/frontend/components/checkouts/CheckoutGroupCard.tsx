@@ -3,7 +3,7 @@
 import { useState, useMemo, memo, useCallback } from 'react';
 import Link from 'next/link';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/use-toast';
 import {
+  AlertTriangle,
   CalendarDays,
   Building,
   ChevronDown,
@@ -24,24 +25,65 @@ import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge'
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
-import { queryKeys } from '@/lib/api/query-config';
 import { CHECKOUT_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
-  CHECKOUT_INTERACTION_TOKENS,
   CHECKOUT_MOTION,
   CHECKOUT_PURPOSE_TOKENS,
   CHECKOUT_OVERDUE_GROUP_TOKENS,
   CHECKOUT_ITEM_ROW_TOKENS,
+  RENTAL_FLOW_INLINE_TOKENS,
   getDdayClasses,
   formatDday,
-  getCheckoutRowClasses,
 } from '@/lib/design-tokens';
 import { FONT, getManagementNumberClasses } from '@/lib/design-tokens';
 
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/** 렌탈 그룹 헤더 인라인 진행 표시 (5원) */
+function RentalFlowInline({ status }: { status: string }) {
+  const t = useTranslations('checkouts');
+  const isFullyDone = status === 'lender_received';
+  const currentIdx = isFullyDone ? 5 : (RENTAL_FLOW_INLINE_TOKENS.statusToStep[status] ?? -1);
+
+  return (
+    <div className={RENTAL_FLOW_INLINE_TOKENS.container} title={t('rentalFlow.title')}>
+      {Array.from({ length: 5 }, (_, i) => {
+        const isDone = isFullyDone || i < currentIdx;
+        const isCurrent = !isFullyDone && i === currentIdx;
+
+        let circleClass = RENTAL_FLOW_INLINE_TOKENS.circle.base;
+        if (isDone) circleClass += ` ${RENTAL_FLOW_INLINE_TOKENS.circle.done}`;
+        else if (isCurrent) circleClass += ` ${RENTAL_FLOW_INLINE_TOKENS.circle.current}`;
+        else circleClass += ` ${RENTAL_FLOW_INLINE_TOKENS.circle.future}`;
+
+        const content = isDone ? '✓' : String(i + 1);
+
+        return (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && (
+              <span className={RENTAL_FLOW_INLINE_TOKENS.arrow} aria-hidden="true">
+                →
+              </span>
+            )}
+            <span className={RENTAL_FLOW_INLINE_TOKENS.stepWrapper}>
+              <span className={circleClass} aria-hidden="true">
+                {content}
+              </span>
+              {isCurrent && (
+                <span className={RENTAL_FLOW_INLINE_TOKENS.stepLabel}>
+                  {t(`rentalFlow.step_${i}`)}
+                </span>
+              )}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 /** 오늘 기준 남은 일수 계산 (음수 = 초과) */
 function calculateDaysRemaining(expectedReturnDate: string): number {
@@ -85,6 +127,7 @@ function CheckoutGroupCard({
   isOverdueGroup = false,
 }: CheckoutGroupCardProps) {
   const t = useTranslations('checkouts');
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(isOverdueGroup); // 기한 초과 그룹은 기본 펼침
 
@@ -106,16 +149,33 @@ function CheckoutGroupCard({
           expectedReturnDate: checkout.expectedReturnDate,
           version: checkout.version,
           destination: checkout.destination || checkout.location,
+          // 서버가 계산한 가능한 액션 우선, 없으면 역할 기반 폴백
+          canApproveItem: checkout.meta?.availableActions?.canApprove ?? canApprove,
         }))
       ),
-    [group.checkouts, t]
+    [group.checkouts, t, canApprove]
   );
 
-  // 그룹 내 pending 건수 (일괄 승인 버튼 표시 여부)
+  // 그룹 내 pending 건수 + 일괄 승인 가능 여부
   const pendingCount = useMemo(
     () => group.checkouts.filter((co) => co.status === 'pending').length,
     [group.checkouts]
   );
+
+  // 일괄 승인: pending 중 하나라도 canApprove가 true면 버튼 표시
+  const canApproveBulk = useMemo(
+    () =>
+      group.checkouts
+        .filter((co) => co.status === 'pending')
+        .some((co) => co.meta?.availableActions?.canApprove ?? canApprove),
+    [group.checkouts, canApprove]
+  );
+
+  // 렌탈 그룹 감지 + 현재 렌탈 상태
+  const isRentalGroup = group.purposes.includes('rental' as never);
+  const rentalStatus = isRentalGroup
+    ? (group.checkouts.find((co) => co.purpose === 'rental')?.status ?? '')
+    : '';
 
   // ──────────────────────────────────────────────
   // 인라인 승인 mutation (CAS 포함)
@@ -163,27 +223,28 @@ function CheckoutGroupCard({
   const cardClass = isOverdueGroup
     ? `overflow-hidden ${CHECKOUT_OVERDUE_GROUP_TOKENS.card}`
     : 'overflow-hidden';
-  const headerClass = isOverdueGroup
-    ? `${CHECKOUT_OVERDUE_GROUP_TOKENS.header} ${CHECKOUT_INTERACTION_TOKENS.groupCardTrigger}`
-    : CHECKOUT_INTERACTION_TOKENS.groupCardTrigger;
+  const headerContainerClass = isOverdueGroup
+    ? `${CHECKOUT_ITEM_ROW_TOKENS.groupHeaderContainer} ${CHECKOUT_OVERDUE_GROUP_TOKENS.header}`
+    : CHECKOUT_ITEM_ROW_TOKENS.groupHeaderContainer;
 
   return (
     <TooltipProvider>
       <Card className={cardClass}>
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          {/* ── 그룹 헤더 ── */}
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left ${headerClass}`}
-            >
-              {/* 왼쪽: 날짜 + 반출지 + 배지들 */}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
-                {/* 기한 초과 아이콘 */}
+          {/* ── 그룹 헤더 — div 컨테이너 (button > button 방지) ── */}
+          <div className={headerContainerClass}>
+            {/* 왼쪽: Collapsible 토글 트리거 (flex-1) */}
+            <CollapsibleTrigger asChild>
+              <button type="button" className={CHECKOUT_ITEM_ROW_TOKENS.groupHeaderInfoTrigger}>
+                {/* 기한 초과 레이블 + 아이콘 */}
                 {isOverdueGroup && (
                   <span
-                    className={`text-xs font-semibold ${CHECKOUT_OVERDUE_GROUP_TOKENS.headerText}`}
+                    className={`flex items-center gap-1.5 ${CHECKOUT_OVERDUE_GROUP_TOKENS.headerText}`}
                   >
+                    <AlertTriangle
+                      className={CHECKOUT_OVERDUE_GROUP_TOKENS.alertIcon}
+                      aria-hidden="true"
+                    />
                     {t('groupCard.overdueGroupLabel')}
                   </span>
                 )}
@@ -197,7 +258,7 @@ function CheckoutGroupCard({
                     />
                     <span>{group.date}</span>
                     <span className="text-muted-foreground text-xs font-normal">
-                      ({group.dateLabel})
+                      ({t(group.dateLabel)})
                     </span>
                   </div>
                 )}
@@ -212,11 +273,11 @@ function CheckoutGroupCard({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="truncate max-w-[160px] cursor-help">
-                          {group.destination}
+                          {group.destinationKey ? t(group.destinationKey) : group.destination}
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{group.destination}</p>
+                        <p>{group.destinationKey ? t(group.destinationKey) : group.destination}</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -234,45 +295,48 @@ function CheckoutGroupCard({
                     </Badge>
                   ))}
                 </div>
-              </div>
 
-              {/* 오른쪽: 일괄 승인 + 장비 수 + 화살표 */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* 일괄 승인 버튼 (pending 그룹만, 권한 있을 때) */}
-                {canApprove && pendingCount > 0 && (
-                  <Button
-                    size="sm"
-                    className="h-7 px-2.5 text-xs gap-1 bg-primary hover:bg-primary/90"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // 그룹 내 모든 pending checkout 순차 승인
-                      group.checkouts
-                        .filter((co) => co.status === 'pending')
-                        .forEach((co) =>
-                          approveMutation.mutate({ id: co.id, version: co.version })
-                        );
-                    }}
-                    disabled={approveMutation.isPending}
-                  >
-                    <CheckCheck className="h-3 w-3" />
-                    {t('actions.bulkApprove')} ({pendingCount})
-                  </Button>
-                )}
+                {/* [개선 8] 렌탈 그룹 — 4단계 진행 현황 인라인 */}
+                {isRentalGroup && rentalStatus && <RentalFlowInline status={rentalStatus} />}
+              </button>
+            </CollapsibleTrigger>
 
-                {/* 장비 수 배지 */}
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                  {t('groupCard.equipmentCount', { count: group.totalEquipment })}
-                </span>
+            {/* 오른쪽: 일괄 승인 + 장비 수 배지 + 화살표 (siblings — button 중첩 없음) */}
+            {canApproveBulk && pendingCount > 0 && (
+              <Button
+                size="sm"
+                className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.bulkApprove}
+                onClick={() =>
+                  group.checkouts
+                    .filter((co) => co.status === 'pending')
+                    .forEach((co) => approveMutation.mutate({ id: co.id, version: co.version }))
+                }
+                disabled={approveMutation.isPending}
+              >
+                <CheckCheck className="h-3 w-3" />
+                {t('actions.bulkApprove')} ({pendingCount})
+              </Button>
+            )}
 
+            <span className={CHECKOUT_ITEM_ROW_TOKENS.countBadge}>
+              {t('groupCard.equipmentCount', { count: group.totalEquipment })}
+            </span>
+
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className={CHECKOUT_ITEM_ROW_TOKENS.groupHeaderChevronBtn}
+                aria-label={isOpen ? t('groupCard.collapse') : t('groupCard.expand')}
+              >
                 <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground shrink-0 ${CHECKOUT_MOTION.chevronRotate} ${
+                  className={`h-4 w-4 text-muted-foreground ${CHECKOUT_MOTION.chevronRotate} ${
                     isOpen ? 'rotate-180' : ''
                   }`}
                   aria-hidden="true"
                 />
-              </div>
-            </button>
-          </CollapsibleTrigger>
+              </button>
+            </CollapsibleTrigger>
+          </div>
 
           {/* ── 장비 행 목록 ── */}
           <CollapsibleContent>
@@ -340,7 +404,7 @@ function CheckoutGroupCard({
                             <>
                               <span>
                                 {t('groupCard.expectedReturn')}{' '}
-                                {new Date(row.expectedReturnDate).toLocaleDateString('ko-KR', {
+                                {new Date(row.expectedReturnDate).toLocaleDateString(locale, {
                                   month: 'long',
                                   day: 'numeric',
                                 })}
@@ -361,11 +425,11 @@ function CheckoutGroupCard({
                         <CheckoutStatusBadge status={row.status} className="text-[10px] py-0" />
 
                         {/* 인라인 액션 버튼 */}
-                        {canApprove && row.status === 'pending' && (
+                        {row.canApproveItem && row.status === 'pending' && (
                           <>
                             <Button
                               size="sm"
-                              className="h-7 px-2.5 text-xs gap-1"
+                              className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.compact}
                               onClick={(e) => handleApprove(row.checkoutId, row.version, e)}
                               disabled={approveMutation.isPending}
                             >
@@ -375,7 +439,7 @@ function CheckoutGroupCard({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2.5 text-xs gap-1"
+                              className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.compact}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onCheckoutClick(row.checkoutId);
@@ -393,7 +457,7 @@ function CheckoutGroupCard({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-2.5 text-xs text-brand-warning gap-1 hover:bg-brand-warning/10"
+                                className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.urgent}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Phone className="h-3 w-3" />
@@ -403,7 +467,7 @@ function CheckoutGroupCard({
                             <Link
                               href={FRONTEND_ROUTES.CHECKOUTS.RETURN(row.checkoutId)}
                               onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1 h-7 px-2.5 text-xs rounded-md border border-border/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground shrink-0"
+                              className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.returnLink}
                             >
                               {t('actions.processReturn')}
                               <ArrowRight className="h-3 w-3" />

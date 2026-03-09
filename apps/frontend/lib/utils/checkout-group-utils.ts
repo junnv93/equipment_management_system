@@ -24,6 +24,9 @@ export interface CheckoutGroup {
   purposes: CheckoutPurpose[];
 }
 
+/** 미지정 반출지의 센티널 값 (i18n 키로 변환 시 사용) */
+export const UNSPECIFIED_DESTINATION = '__unspecified__';
+
 /**
  * checkout에서 그룹화에 사용할 날짜(YYYY-MM-DD)를 추출합니다.
  * checkoutDate가 있으면 사용, 없으면 createdAt을 폴백으로 사용합니다.
@@ -53,7 +56,7 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
 
   for (const checkout of checkouts) {
     const { date, hasCheckoutDate } = getGroupDate(checkout);
-    const destination = checkout.destination || checkout.location || '미지정';
+    const destination = checkout.destination || checkout.location || UNSPECIFIED_DESTINATION;
     const key = `${date}|${destination}`;
 
     const existing = groupMap.get(key);
@@ -93,16 +96,14 @@ export function groupCheckoutsByDateAndDestination(checkouts: Checkout[]): Check
       }
     }
 
-    const isUnspecified = destination === '미지정';
+    const isUnspecified = destination === UNSPECIFIED_DESTINATION;
     groups.push({
       key,
       date,
-      dateLabel: hasCheckoutDate ? '반출일' : '신청일',
-      dateLabelKey: hasCheckoutDate
-        ? 'checkouts.groupCard.checkoutDateLabel'
-        : 'checkouts.groupCard.requestDateLabel',
-      destination,
-      destinationKey: isUnspecified ? 'checkouts.groupCard.unspecifiedDestination' : undefined,
+      dateLabel: hasCheckoutDate ? 'groupCard.checkoutDateLabel' : 'groupCard.requestDateLabel',
+      dateLabelKey: hasCheckoutDate ? 'groupCard.checkoutDateLabel' : 'groupCard.requestDateLabel',
+      destination: isUnspecified ? '' : destination,
+      destinationKey: isUnspecified ? 'groupCard.unspecifiedDestination' : undefined,
       checkouts: groupCheckouts,
       totalEquipment,
       statuses: Array.from(statusSet),

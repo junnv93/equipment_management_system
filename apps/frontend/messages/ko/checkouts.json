@@ -226,7 +226,9 @@
     "progressLabel": "반출 진행: {total}단계 중 {current}단계 완료",
     "overdueGroupLabel": "기한 초과",
     "expectedReturn": "반입 예정",
-    "overdueBy": "{days}일 초과"
+    "overdueBy": "{days}일 초과",
+    "collapse": "그룹 접기",
+    "expand": "그룹 펼치기"
   },
   "selectability": {
     "calibrationExpiryWarning": "교정 만료일: {date}",
@@ -314,7 +316,17 @@
     "inProgressSub": "현재 외부 보유",
     "overdueSub": "즉시 조치 필요",
     "returnedSub": "이번 달 완료",
-    "overdueGroupLabel": "기한 초과"
+    "overdueGroupLabel": "기한 초과",
+    "activeFilter": "▼ 필터 적용됨",
+    "paginationInfo": "{total}건 중 {from}–{to}"
+  },
+  "rentalFlow": {
+    "title": "렌탈 단계 진행 현황",
+    "step_0": "대여처 확인",
+    "step_1": "인수확인",
+    "step_2": "반납예정",
+    "step_3": "반입완료",
+    "step_4": "완료"
   },
   "alerts": {
     "overdueTitle": "기한 초과 {count}건이 즉각 조치를 기다리고 있습니다",
@@ -329,6 +341,7 @@
     "rental": "대여"
   },
   "filters": {
+    "all": "전체",
     "statusLabel": "상태",
     "statusAll": "전체",
     "destinationLabel": "반출지",
@@ -337,11 +350,12 @@
     "destinationFilter": "반출지 필터",
     "purposeFilter": "목적 필터",
     "purposeLabel": "목적",
+    "periodFilter": "기간 필터",
     "periodLabel": "기간",
     "periodAll": "전체 기간",
-    "periodThisWeek": "이번 주",
-    "periodThisMonth": "이번 달",
-    "periodLastMonth": "지난 달"
+    "period_this_week": "이번 주",
+    "period_this_month": "이번 달",
+    "period_last_month": "지난 달"
   },
   "import": {
     "requestInbound": "반입 신청",

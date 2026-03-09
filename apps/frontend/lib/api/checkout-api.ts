@@ -147,6 +147,8 @@ export interface CheckoutQuery {
   purpose?: string; // ✅ 반출 목적 필터 (calibration, repair, rental, return_to_vendor)
   startDate?: string;
   endDate?: string;
+  checkoutFrom?: string; // ✅ 반출일 시작 (YYYY-MM-DD)
+  checkoutTo?: string; // ✅ 반출일 종료 (YYYY-MM-DD)
   search?: string;
   location?: string;
   destination?: string;

@@ -29,6 +29,8 @@
 /**
  * UI에서 사용하는 반출 필터 타입 (URL 파라미터와 1:1 대응)
  */
+export type CheckoutPeriod = 'all' | 'this_week' | 'this_month' | 'last_month';
+
 export interface UICheckoutFilters {
   /** 탭 뷰 모드 */
   view: 'outbound' | 'inbound';
@@ -40,6 +42,8 @@ export interface UICheckoutFilters {
   destination: string;
   /** 반출 목적 ('all', 'calibration', 'repair', 'rental') */
   purpose: string;
+  /** 기간 프리셋 */
+  period: CheckoutPeriod;
   /** 현재 페이지 */
   page: number;
   /** 페이지 크기 */
@@ -56,6 +60,8 @@ export interface ApiCheckoutParams {
   statuses?: string;
   destination?: string;
   purpose?: string;
+  checkoutFrom?: string;
+  checkoutTo?: string;
 }
 
 /**
@@ -71,6 +77,7 @@ export const DEFAULT_UI_FILTERS: UICheckoutFilters = {
   status: 'all',
   destination: 'all',
   purpose: 'all',
+  period: 'all',
   page: 1,
   pageSize: 20,
 };
@@ -114,6 +121,12 @@ export function parseCheckoutFiltersFromSearchParams(
   const destination = get('destination') || DEFAULT_UI_FILTERS.destination;
   const purpose = get('purpose') || DEFAULT_UI_FILTERS.purpose;
 
+  const periodRaw = get('period');
+  const period: CheckoutPeriod =
+    periodRaw === 'this_week' || periodRaw === 'this_month' || periodRaw === 'last_month'
+      ? periodRaw
+      : DEFAULT_UI_FILTERS.period;
+
   const pageRaw = parseInt(get('page') || String(DEFAULT_UI_FILTERS.page), 10);
   const page = isNaN(pageRaw) || pageRaw < 1 ? DEFAULT_UI_FILTERS.page : pageRaw;
 
@@ -121,7 +134,7 @@ export function parseCheckoutFiltersFromSearchParams(
   const pageSize =
     isNaN(pageSizeRaw) || pageSizeRaw < 1 ? DEFAULT_UI_FILTERS.pageSize : pageSizeRaw;
 
-  return { view, search, status, destination, purpose, page, pageSize };
+  return { view, search, status, destination, purpose, period, page, pageSize };
 }
 
 /**
@@ -130,6 +143,32 @@ export function parseCheckoutFiltersFromSearchParams(
  * @param filters - UI 필터 객체
  * @returns API 쿼리 파라미터 객체
  */
+/** 기간 프리셋 → API checkoutFrom/checkoutTo 변환 (YYYY-MM-DD) */
+function periodToDateRange(period: CheckoutPeriod): { checkoutFrom?: string; checkoutTo?: string } {
+  if (period === 'all') return {};
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const fmt = (d: Date) => d.toISOString().split('T')[0];
+
+  if (period === 'this_week') {
+    const dayOfWeek = today.getDay() || 7; // 0(일) → 7
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek - 1));
+    return { checkoutFrom: fmt(monday) };
+  }
+  if (period === 'this_month') {
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    return { checkoutFrom: fmt(first) };
+  }
+  if (period === 'last_month') {
+    const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const last = new Date(today.getFullYear(), today.getMonth(), 0);
+    return { checkoutFrom: fmt(first), checkoutTo: fmt(last) };
+  }
+  return {};
+}
+
 export function convertFiltersToApiParams(filters: UICheckoutFilters): ApiCheckoutParams {
   return {
     page: filters.page,
@@ -138,6 +177,7 @@ export function convertFiltersToApiParams(filters: UICheckoutFilters): ApiChecko
     statuses: filters.status !== 'all' ? filters.status : undefined,
     destination: filters.destination !== 'all' ? filters.destination : undefined,
     purpose: filters.purpose !== 'all' ? filters.purpose : undefined,
+    ...periodToDateRange(filters.period),
   };
 }
 
@@ -158,6 +198,7 @@ export function filtersToSearchParams(filters: UICheckoutFilters): URLSearchPara
   if (filters.status !== 'all') params.set('status', filters.status);
   if (filters.destination !== 'all') params.set('destination', filters.destination);
   if (filters.purpose !== 'all') params.set('purpose', filters.purpose);
+  if (filters.period !== 'all') params.set('period', filters.period);
   if (filters.page !== DEFAULT_UI_FILTERS.page) params.set('page', String(filters.page));
   if (filters.pageSize !== DEFAULT_UI_FILTERS.pageSize)
     params.set('pageSize', String(filters.pageSize));
@@ -177,5 +218,6 @@ export function countActiveFilters(filters: UICheckoutFilters): number {
   if (filters.status !== 'all') count++;
   if (filters.destination !== 'all') count++;
   if (filters.purpose !== 'all') count++;
+  if (filters.period !== 'all') count++;
   return count;
 }

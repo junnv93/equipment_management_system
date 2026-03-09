@@ -32,13 +32,13 @@ export const CHECKOUT_STATUS_BADGE_TOKENS = {
   // 반출중 (purple)
   checked_out: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
   // 렌탈 4단계 (purple 계열)
-  lender_checked: 'bg-brand-purple/8 text-brand-purple border-brand-purple/15',
-  borrower_received: 'bg-brand-purple/12 text-brand-purple border-brand-purple/20',
+  lender_checked: 'bg-brand-purple/10 text-brand-purple border-brand-purple/15',
+  borrower_received: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
   // 사용 중 (info)
   in_use: 'bg-brand-info/10 text-brand-info border-brand-info/20',
   // 반환 진행 (purple 계열)
-  borrower_returned: 'bg-brand-purple/12 text-brand-purple border-brand-purple/20',
-  lender_received: 'bg-brand-purple/8 text-brand-purple border-brand-purple/15',
+  borrower_returned: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
+  lender_received: 'bg-brand-purple/10 text-brand-purple border-brand-purple/15',
   // 완료 (ok)
   returned: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
   return_approved: 'bg-brand-ok/15 text-brand-ok border-brand-ok/25',
@@ -164,31 +164,95 @@ export function getCheckoutRowClasses(purpose: string, status: string): string {
 /**
  * 미니 프로그레스 도트/커넥터 토큰
  *
- * 4개 점(completed/current/future) + 3개 커넥터로 반출 진행 상태를 표현
+ * 18px 원(✓/!/숫자) + 커넥터로 반출 진행 상태를 표현
+ *
+ * 설계 원칙:
+ * - 원 0번(index 0)은 "신청됨"으로 항상 완료 표시 (visible checkout = 신청 완료)
+ * - statusToStepIndex: 각 status가 현재 진행 중인 단계의 인덱스를 가리킴
+ * - stepCount: 반출 유형별 전체 원 개수
  */
 export const CHECKOUT_MINI_PROGRESS = {
   dot: {
-    size: 'w-2 h-2',
-    completed: 'bg-brand-ok',
-    current: 'border-2 border-brand-info bg-transparent',
-    future: 'bg-brand-neutral/30',
+    /** 18px 원 공통 — ✓/!/숫자 텍스트 포함 */
+    base: 'w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-bold shrink-0',
+    completed: 'bg-brand-ok text-white',
+    current: 'bg-brand-info text-white',
+    late: 'bg-brand-critical text-white',
+    future: 'border-2 border-border text-muted-foreground bg-background',
   },
   connector: {
-    base: 'h-px w-2',
+    base: 'h-0.5 w-2.5 shrink-0',
     completed: 'bg-brand-ok',
-    pending: 'bg-brand-neutral/30',
+    pending: 'bg-border',
   },
+  /** rejected/canceled: 진행 바 대신 아이콘만 표시 */
   special: {
-    overdue: 'text-brand-critical',
     rejected: 'text-brand-critical',
     canceled: 'text-brand-neutral',
   },
+  /**
+   * 상태 → 표시 단계 인덱스 매핑 (SSOT)
+   * 원 0번이 "신청됨(항상 완료)"이므로 real status는 index 1부터 시작
+   */
+  statusToStepIndex: {
+    pending: 1,
+    approved: 1,
+    checked_out: 2,
+    overdue: 2, // checked_out 위치 + late(빨강) 스타일
+    in_use: 2,
+    returned: 3,
+    // rental 4-step flow
+    lender_checked: 1,
+    borrower_received: 2,
+    borrower_returned: 3,
+    lender_received: 4,
+  } as Partial<Record<string, number>>,
+  /** 반출 유형별 원 개수 */
+  stepCount: {
+    calibration: 4,
+    repair: 4,
+    rental: 5,
+  } as Record<string, number>,
+} as const;
+
+// ============================================================================
+// 3-B. Rental Flow Inline Tokens (그룹 헤더 내 렌탈 단계 표시)
+// ============================================================================
+
+/**
+ * 렌탈 그룹 카드 헤더의 인라인 4단계 흐름 표시
+ *
+ * 와이어프레임 [개선 8]: 렌탈 그룹 헤더에 대여 4단계 현황 인라인 표시
+ * 5개 원: lender_checked→borrower_received→borrower_returned→lender_received→완료
+ */
+export const RENTAL_FLOW_INLINE_TOKENS = {
+  container:
+    'hidden sm:flex items-center gap-1 px-2.5 py-1 bg-brand-purple/5 border border-brand-purple/20 rounded-md',
+  arrow: 'text-[9px] text-brand-purple/30 shrink-0',
+  stepWrapper: 'flex flex-col items-center gap-0.5',
+  circle: {
+    base: 'w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold border-[1.5px] shrink-0',
+    done: 'bg-brand-ok text-white border-brand-ok',
+    current: 'bg-brand-purple text-white border-brand-purple',
+    future: 'bg-white text-brand-purple/40 border-brand-purple/25',
+  },
+  stepLabel: 'text-[8px] text-brand-purple font-medium leading-none',
+  /**
+   * 렌탈 상태 → 0-based 인라인 단계 인덱스 (5원 기준)
+   * SSOT: CheckoutGroupCard에서 직접 매핑 상수 정의 금지
+   */
+  statusToStep: {
+    approved: 0,
+    lender_checked: 0,
+    borrower_received: 1,
+    borrower_returned: 2,
+    lender_received: 3,
+  } as Partial<Record<string, number>>,
 } as const;
 
 /**
- * 반출 유형별 단계 배열 (SSOT)
- *
- * 각 단계의 순서가 CheckoutMiniProgress 컴포넌트의 표시 순서를 결정합니다.
+ * @deprecated CHECKOUT_MINI_PROGRESS.statusToStepIndex + .stepCount 사용
+ * CheckoutMiniProgress가 statusToStepIndex 기반으로 전환됨 (v2 리디자인)
  */
 export const MINI_PROGRESS_STEPS = {
   calibration: ['pending', 'approved', 'checked_out', 'returned'] as const,
@@ -197,9 +261,10 @@ export const MINI_PROGRESS_STEPS = {
 } as const;
 
 /**
- * 미니 프로그레스에서 특수 표시가 필요한 상태
+ * 미니 프로그레스에서 진행 바 대신 아이콘만 표시하는 상태
+ * overdue는 checked_out 위치에 late(빨강 !) 스타일로 표시됨
  */
-export const MINI_PROGRESS_SPECIAL_STATUSES = ['overdue', 'rejected', 'canceled'] as const;
+export const MINI_PROGRESS_SPECIAL_STATUSES = ['rejected', 'canceled'] as const;
 
 // ============================================================================
 // 5. Checkout Stepper Tokens (진행 표시기 — 상세 페이지용)
@@ -301,11 +366,24 @@ export const CHECKOUT_STATS_VARIANTS = {
     activeBg: 'bg-brand-critical/10',
     iconColor: 'text-brand-critical',
   },
+  /** @deprecated checkedOut과 동일 — checkedOut 사용 권장 */
   inProgress: {
     hoverBorder: 'hover:border-brand-purple/30',
     activeBorder: 'border-brand-purple',
     activeBg: 'bg-brand-purple/10',
     iconColor: 'text-brand-purple',
+  },
+  checkedOut: {
+    hoverBorder: 'hover:border-brand-purple/30',
+    activeBorder: 'border-brand-purple',
+    activeBg: 'bg-brand-purple/10',
+    iconColor: 'text-brand-purple',
+  },
+  returned: {
+    hoverBorder: 'hover:border-brand-ok/30',
+    activeBorder: 'border-brand-ok',
+    activeBg: 'bg-brand-ok/10',
+    iconColor: 'text-brand-ok',
   },
 } as const;
 
@@ -418,8 +496,6 @@ export const CHECKOUT_DETAIL_TOKENS = {
 // 10. Condition Comparison Tokens (조건 비교)
 // ============================================================================
 
-// (아래에 신규 토큰들 추가됨 — Section 12~17)
-
 /**
  * 장비 상태 비교 토큰 (반입 시 상태 비교)
  */
@@ -476,28 +552,15 @@ export const CHECKOUT_FORM_TOKENS = {
 // 12. Checkout Stats (5-card variant 확장)
 // ============================================================================
 
-// CHECKOUT_STATS_VARIANTS에 반출중(checkedOut) / 반입완료(returned) 추가
-// 기존 CHECKOUT_STATS_VARIANTS는 불변(const), 여기서 새 variant만 별도 정의
+/**
+ * @deprecated CHECKOUT_STATS_VARIANTS.checkedOut 사용. 하위 호환용.
+ */
+export const CHECKOUT_STATS_CHECKED_OUT = CHECKOUT_STATS_VARIANTS.checkedOut;
 
 /**
- * 반출중 카드 variant (반출 승인됨 + 진행중 상태 합산)
+ * @deprecated CHECKOUT_STATS_VARIANTS.returned 사용. 하위 호환용.
  */
-export const CHECKOUT_STATS_CHECKED_OUT = {
-  hoverBorder: 'hover:border-brand-purple/30',
-  activeBorder: 'border-brand-purple',
-  activeBg: 'bg-brand-purple/10',
-  iconColor: 'text-brand-purple',
-} as const;
-
-/**
- * 반입완료 카드 variant
- */
-export const CHECKOUT_STATS_RETURNED = {
-  hoverBorder: 'hover:border-brand-ok/30',
-  activeBorder: 'border-brand-ok',
-  activeBg: 'bg-brand-ok/10',
-  iconColor: 'text-brand-ok',
-} as const;
+export const CHECKOUT_STATS_RETURNED = CHECKOUT_STATS_VARIANTS.returned;
 
 // ============================================================================
 // 13. D-day Badge Tokens
@@ -582,6 +645,7 @@ export const CHECKOUT_OVERDUE_GROUP_TOKENS = {
   header: 'bg-brand-critical/5',
   headerText: 'text-brand-critical font-semibold',
   count: 'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
+  alertIcon: 'h-3.5 w-3.5 text-brand-critical shrink-0',
 } as const;
 
 // ============================================================================
@@ -605,7 +669,37 @@ export const CHECKOUT_PURPOSE_LEGEND_TOKENS = {
 } as const;
 
 // ============================================================================
-// 17. Checkout Item Row Tokens (그룹 카드 내 개별 행)
+// 17. Checkout Filter Bar Tokens (필터 바 + 활성 필터 태그)
+// ============================================================================
+
+/**
+ * 필터 바 및 활성 필터 태그 토큰
+ *
+ * CheckoutsContent.tsx의 필터 영역 스타일 SSOT
+ */
+export const CHECKOUT_FILTER_BAR_TOKENS = {
+  /** 필터 바 컨테이너 */
+  container:
+    'bg-card border border-border/60 rounded-lg px-3 py-2.5 flex flex-wrap items-center gap-2',
+  /** 구분선 */
+  divider: 'w-px h-6 bg-border/60',
+  /** 활성 필터 태그 (개별 제거 가능) */
+  tag: [
+    'inline-flex items-center gap-1 text-xs',
+    'text-primary bg-primary/10 px-2 py-0.5 rounded-full',
+    'hover:bg-primary/20',
+    getTransitionClasses('instant', ['background-color']),
+  ].join(' '),
+  /** 전체 초기화 버튼 */
+  resetButton: 'flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground',
+  /** 태그 내 X 아이콘 */
+  tagDismissIcon: 'h-2.5 w-2.5',
+  /** 초기화 X 아이콘 */
+  resetIcon: 'h-3 w-3',
+} as const;
+
+// ============================================================================
+// 18. Checkout Item Row Tokens (그룹 카드 내 개별 행)
 // ============================================================================
 
 /**
@@ -646,4 +740,80 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
 
   /** 우측 액션 영역 */
   actionsArea: 'flex items-center gap-1.5 shrink-0',
+
+  /** 인라인 액션 버튼 */
+  actionButtons: {
+    /** 승인/반려 공통 compact 버튼 오버라이드 */
+    compact: 'h-7 px-2.5 text-xs gap-1',
+    /** 일괄 승인 버튼 (그룹 헤더) */
+    bulkApprove: 'h-7 px-2.5 text-xs gap-1 bg-primary hover:bg-primary/90',
+    /** 독촉 연락 버튼 (overdue 전용) */
+    urgent: `h-7 px-2.5 text-xs text-brand-warning gap-1 ${getTransitionClasses('fast', ['background-color'])} hover:bg-brand-warning/10`,
+    /** 반입 처리 링크 (checked_out / overdue) */
+    returnLink: [
+      'flex items-center gap-1 h-7 px-2.5 text-xs shrink-0',
+      'rounded-md border border-border/60',
+      'text-muted-foreground',
+      getTransitionClasses('fast', ['background-color', 'color']),
+      'hover:bg-muted/60 hover:text-foreground',
+    ].join(' '),
+  },
+
+  /** 그룹 헤더 컨테이너 (div — button 중첩 방지용) */
+  groupHeaderContainer: [
+    'flex w-full items-center gap-3 px-4 py-3',
+    'border-b border-border/40 bg-muted/30',
+    getTransitionClasses('instant', ['background-color']),
+  ].join(' '),
+  /** 그룹 헤더 왼쪽 CollapsiblTrigger 트리거 버튼 */
+  groupHeaderInfoTrigger:
+    'flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 min-w-0 text-left cursor-pointer',
+  /** 그룹 헤더 오른쪽 화살표 버튼 */
+  groupHeaderChevronBtn: [
+    'p-1 rounded-md shrink-0',
+    'hover:bg-muted/50',
+    getTransitionClasses('instant', ['background-color']),
+  ].join(' '),
+  /** 장비 수 배지 */
+  countBadge: 'text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md',
+} as const;
+
+// ============================================================================
+// 19. Checkout Pagination Tokens (반출 목록 페이지네이션)
+// ============================================================================
+
+/**
+ * 반출 목록 숫자 버튼 페이지네이션 토큰
+ *
+ * 와이어프레임: ‹ 1 2 3 › 패턴, 현재 페이지 하이라이트, 건수 정보
+ */
+export const CHECKOUT_PAGINATION_TOKENS = {
+  container: 'flex items-center justify-between mt-6 px-1',
+  info: 'text-xs text-muted-foreground tabular-nums',
+  buttons: 'flex items-center gap-1',
+  btn: {
+    base: [
+      'w-[30px] h-[30px] flex items-center justify-center',
+      'rounded-md border text-xs font-medium',
+      'cursor-pointer select-none tabular-nums',
+      getTransitionClasses('fast', ['background-color', 'color', 'border-color']),
+    ].join(' '),
+    default: 'border-border bg-background hover:bg-muted text-foreground',
+    active: 'border-primary bg-primary text-primary-foreground cursor-default',
+    disabled: 'border-border/40 text-muted-foreground/40 cursor-default',
+  },
+  ellipsis: 'w-[30px] flex items-center justify-center text-xs text-muted-foreground',
+} as const;
+
+// ============================================================================
+// 20. Checkout Tab Badge Tokens (탭 카운트 배지)
+// ============================================================================
+
+/**
+ * 탭 카운트 배지 토큰 — 활성/비활성 상태에 따라 색상 전환
+ */
+export const CHECKOUT_TAB_BADGE_TOKENS = {
+  base: 'ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-none tabular-nums',
+  active: 'bg-primary/15 text-primary',
+  inactive: 'bg-muted text-muted-foreground',
 } as const;

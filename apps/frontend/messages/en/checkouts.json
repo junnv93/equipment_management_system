@@ -226,7 +226,9 @@
     "progressLabel": "Checkout progress: {current} of {total} steps completed",
     "overdueGroupLabel": "Overdue",
     "expectedReturn": "Expected return",
-    "overdueBy": "{days}d overdue"
+    "overdueBy": "{days}d overdue",
+    "collapse": "Collapse group",
+    "expand": "Expand group"
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",
@@ -314,7 +316,17 @@
     "inProgressSub": "Currently off-site",
     "overdueSub": "Immediate action required",
     "returnedSub": "This month completed",
-    "overdueGroupLabel": "Overdue"
+    "overdueGroupLabel": "Overdue",
+    "activeFilter": "▼ Filter active",
+    "paginationInfo": "{from}–{to} of {total}"
+  },
+  "rentalFlow": {
+    "title": "Rental flow progress",
+    "step_0": "Lender confirmed",
+    "step_1": "Borrower received",
+    "step_2": "Return scheduled",
+    "step_3": "Return confirmed",
+    "step_4": "Completed"
   },
   "alerts": {
     "overdueTitle": "{count} overdue items need immediate attention",
@@ -329,6 +341,7 @@
     "rental": "Rental"
   },
   "filters": {
+    "all": "All",
     "statusLabel": "Status",
     "statusAll": "All",
     "destinationLabel": "Destination",
@@ -337,11 +350,12 @@
     "destinationFilter": "Destination Filter",
     "purposeFilter": "Purpose Filter",
     "purposeLabel": "Purpose",
+    "periodFilter": "Period Filter",
     "periodLabel": "Period",
     "periodAll": "All time",
-    "periodThisWeek": "This week",
-    "periodThisMonth": "This month",
-    "periodLastMonth": "Last month"
+    "period_this_week": "This week",
+    "period_this_month": "This month",
+    "period_last_month": "Last month"
   },
   "import": {
     "requestInbound": "Request Inbound",
