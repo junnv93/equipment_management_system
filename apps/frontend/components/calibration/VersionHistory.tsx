@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { History, FileText, ExternalLink } from 'lucide-react';
+import { CALIBRATION_VERSION_HISTORY } from '@/lib/design-tokens';
 
 interface VersionHistoryProps {
   /** 현재 교정계획서 UUID */
@@ -94,7 +95,9 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
             <div
               key={version.id}
               className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
-                isCurrent ? 'bg-ul-green/5 border-ul-green/30' : 'hover:bg-gray-50'
+                isCurrent
+                  ? CALIBRATION_VERSION_HISTORY.row.current
+                  : CALIBRATION_VERSION_HISTORY.row.default
               }`}
               role="listitem"
               aria-label={versionAriaLabel}
@@ -102,19 +105,19 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
             >
               <div className="flex items-center gap-3">
                 <FileText
-                  className={`h-4 w-4 ${isCurrent ? 'text-ul-green' : 'text-gray-400'}`}
+                  className={`h-4 w-4 ${isCurrent ? CALIBRATION_VERSION_HISTORY.icon.current : CALIBRATION_VERSION_HISTORY.icon.default}`}
                   aria-hidden="true"
                 />
                 <div>
                   <div className="font-medium flex items-center gap-2">
                     {t(`${vh}.versionLabel`, { version: version.version })}
                     {version.isLatestVersion && (
-                      <Badge className="bg-ul-green/10 text-ul-green border border-ul-green/20">
+                      <Badge className={CALIBRATION_VERSION_HISTORY.latestBadge}>
                         {t(`${vh}.latestBadge`)}
                       </Badge>
                     )}
                     {isCurrent && (
-                      <Badge variant="outline" className="text-ul-midnight border-ul-midnight/30">
+                      <Badge variant="outline" className={CALIBRATION_VERSION_HISTORY.currentBadge}>
                         {t(`${vh}.currentBadge`)}
                       </Badge>
                     )}

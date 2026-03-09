@@ -19,6 +19,23 @@ import { AlertCircle, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
+// 0. CALIBRATION_THRESHOLDS — D-day 임계값 SSOT
+// ============================================================================
+
+/**
+ * 교정/중간점검 D-day 임계값 (일수)
+ *
+ * 이 상수들은 getCalibrationDdayClasses, resolveUrgency, getStatusStyle 등
+ * 여러 컴포넌트에서 참조하는 SSOT입니다. 정책 변경 시 여기만 수정하세요.
+ */
+export const CALIBRATION_THRESHOLDS = {
+  /** 교정 D-day warning 임계값 (일) — 이 값 이하면 warning 상태 */
+  CALIBRATION_WARNING_DAYS: 30,
+  /** 중간점검 upcoming 임계값 (일) — 이 값 이하면 upcoming 상태 */
+  INTERMEDIATE_CHECK_UPCOMING_DAYS: 7,
+} as const;
+
+// ============================================================================
 // 1. CALIBRATION_STATUS_INDICATOR — 교정 상태 dot + text (4가지 상태)
 // ============================================================================
 
@@ -151,11 +168,12 @@ export function getCalibrationStatsVariant(type: CalibrationStatsType): StatsVar
  *
  * StatsCard의 숫자 색상 (카드 전체가 아닌 숫자만)
  */
-export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType, string> = {
+export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType | 'pending', string> = {
   total: 'text-foreground',
   compliant: 'text-ul-green dark:text-green-400',
   overdue: 'text-ul-red dark:text-red-400',
   upcoming: 'text-ul-orange dark:text-orange-400',
+  pending: 'text-ul-blue dark:text-blue-400',
 };
 
 // ============================================================================
@@ -430,7 +448,8 @@ export const CALIBRATION_TIMELINE_DOT_Y_OFFSET_PX = 9;
  */
 export function getCalibrationTimelineDotClasses(days: number): string {
   if (days < 0) return CALIBRATION_TIMELINE.dot.overdue;
-  if (days <= 30) return CALIBRATION_TIMELINE.dot.warning;
+  if (days <= CALIBRATION_THRESHOLDS.CALIBRATION_WARNING_DAYS)
+    return CALIBRATION_TIMELINE.dot.warning;
   return CALIBRATION_TIMELINE.dot.ok;
 }
 
@@ -439,7 +458,8 @@ export function getCalibrationTimelineDotClasses(days: number): string {
  */
 export function getCalibrationTimelineTooltipTextClasses(days: number): string {
   if (days < 0) return CALIBRATION_TIMELINE.tooltipText.overdue;
-  if (days <= 30) return CALIBRATION_TIMELINE.tooltipText.warning;
+  if (days <= CALIBRATION_THRESHOLDS.CALIBRATION_WARNING_DAYS)
+    return CALIBRATION_TIMELINE.tooltipText.warning;
   return CALIBRATION_TIMELINE.tooltipText.ok;
 }
 
@@ -474,7 +494,7 @@ export function getCalibrationDdayClasses(days: number | null | undefined): stri
   if (days < 0) {
     return [CALIBRATION_DDAY_COLUMN.base, CALIBRATION_DDAY_COLUMN.overdue].join(' ');
   }
-  if (days <= 30) {
+  if (days <= CALIBRATION_THRESHOLDS.CALIBRATION_WARNING_DAYS) {
     return [CALIBRATION_DDAY_COLUMN.base, CALIBRATION_DDAY_COLUMN.warning].join(' ');
   }
   return [CALIBRATION_DDAY_COLUMN.base, CALIBRATION_DDAY_COLUMN.normal].join(' ');
@@ -589,3 +609,80 @@ export function getCalibrationActionButtonClasses(action: 'approve' | 'reject'):
     ' '
   );
 }
+
+// ============================================================================
+// 20. CALIBRATION_ALERT_TOKENS — 교정 경고 배너
+// ============================================================================
+
+/**
+ * 교정 Alert Banner 스타일 (CHECKOUT_ALERT_TOKENS 패턴 참조)
+ *
+ * - overdue: 교정기한 초과 장비 (UL-QP-18: 사용 금지 대상)
+ * - upcoming: 30일 이내 교정 예정 (사전 대비)
+ */
+export const CALIBRATION_ALERT_TOKENS = {
+  overdue: {
+    container:
+      'flex items-center gap-3 bg-brand-critical/5 border border-brand-critical/20 rounded-lg px-4 py-3',
+    icon: 'text-brand-critical shrink-0 h-4 w-4',
+    text: 'flex-1 text-sm text-brand-critical',
+    action:
+      'text-xs font-semibold text-brand-critical underline whitespace-nowrap cursor-pointer hover:text-brand-critical/70',
+    close: 'text-brand-critical/40 hover:text-brand-critical/70 cursor-pointer shrink-0',
+  },
+  upcoming: {
+    container:
+      'flex items-center gap-3 bg-brand-warning/5 border border-brand-warning/20 rounded-lg px-4 py-3',
+    icon: 'text-brand-warning shrink-0 h-4 w-4',
+    text: 'flex-1 text-sm text-brand-warning',
+    action:
+      'text-xs font-semibold text-brand-warning underline whitespace-nowrap cursor-pointer hover:text-brand-warning/70',
+    close: 'text-brand-warning/40 hover:text-brand-warning/70 cursor-pointer shrink-0',
+  },
+} as const;
+
+// ============================================================================
+// 21. CALIBRATION_VERSION_HISTORY — 버전 히스토리 스타일
+// ============================================================================
+
+/**
+ * 교정계획서 버전 히스토리 토큰
+ *
+ * - row: 현재/비현재 행 스타일
+ * - icon: 아이콘 색상
+ * - latestBadge: "최신" 배지
+ * - currentBadge: "현재" 배지
+ */
+export const CALIBRATION_VERSION_HISTORY = {
+  row: {
+    current: 'bg-ul-green/5 border-ul-green/30',
+    default: 'hover:bg-muted/50',
+  },
+  icon: {
+    current: 'text-ul-green dark:text-green-400',
+    default: 'text-muted-foreground',
+  },
+  latestBadge: 'bg-ul-green/10 text-ul-green border border-ul-green/20',
+  currentBadge: 'text-ul-midnight border-ul-midnight/30',
+} as const;
+
+// ============================================================================
+// 22. CALIBRATION_FILTER_BAR — 필터 바 스타일
+// ============================================================================
+
+/**
+ * 교정 관리 필터 바 토큰 (CHECKOUT_FILTER_BAR_TOKENS 대칭)
+ */
+export const CALIBRATION_FILTER_BAR = {
+  container:
+    'bg-card border border-border/60 rounded-lg px-3 py-2.5 flex flex-wrap items-center gap-2',
+  divider: 'w-px h-6 bg-border/60',
+  tag: [
+    'inline-flex items-center gap-1 text-xs',
+    'text-primary bg-primary/10 px-2 py-0.5 rounded-full',
+    'hover:bg-primary/20',
+    getTransitionClasses('instant', ['background-color']),
+  ].join(' '),
+  tagDismissIcon: 'h-2.5 w-2.5',
+  resetButton: 'flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground',
+} as const;

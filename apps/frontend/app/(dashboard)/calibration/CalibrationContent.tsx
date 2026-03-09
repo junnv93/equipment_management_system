@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, CheckSquare, ClipboardCheck, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,15 +41,19 @@ import {
   getCalibrationTabClasses,
   CALIBRATION_DIALOG,
   CALIBRATION_TAB_TRANSITION,
+  CALIBRATION_THRESHOLDS,
+  CALIBRATION_FILTER_BAR,
 } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
+import { countActiveFilters } from '@/lib/utils/calibration-filter-utils';
 import CalibrationStatsCards from '@/components/calibration/CalibrationStatsCards';
 import CalibrationTimeline, {
   type CalibrationTimelineItem,
 } from '@/components/calibration/CalibrationTimeline';
 import CalibrationListTable from '@/components/calibration/CalibrationListTable';
+import CalibrationAlertBanners from '@/components/calibration/CalibrationAlertBanners';
 
 // ✅ 탭 컴포넌트는 dynamic import: 초기 번들 제외, 사용자 인터랙션 후 로드
 const IntermediateChecksTab = dynamic(
@@ -70,7 +74,15 @@ export default function CalibrationContent({
   initialFilters,
 }: CalibrationContentProps) {
   const t = useTranslations('calibration');
-  const { filters, updateSearch, updateTeamId, updateTab } = useCalibrationFilters(initialFilters);
+  const {
+    filters,
+    updateSearch,
+    updateTeamId,
+    updateTab,
+    updateApprovalStatus,
+    updateResult,
+    clearFilters,
+  } = useCalibrationFilters(initialFilters);
   const defaultTeamId = filters.teamId || initialFilters?.teamId;
   const defaultSite = filters.site || initialFilters?.site;
   const router = useRouter();
@@ -98,8 +110,17 @@ export default function CalibrationContent({
   });
 
   const { data: upcomingData } = useQuery({
-    queryKey: queryKeys.calibrations.upcoming(30, defaultTeamId, defaultSite),
-    queryFn: () => calibrationApi.getUpcomingCalibrations(30, defaultTeamId, defaultSite),
+    queryKey: queryKeys.calibrations.upcoming(
+      CALIBRATION_THRESHOLDS.CALIBRATION_WARNING_DAYS,
+      defaultTeamId,
+      defaultSite
+    ),
+    queryFn: () =>
+      calibrationApi.getUpcomingCalibrations(
+        CALIBRATION_THRESHOLDS.CALIBRATION_WARNING_DAYS,
+        defaultTeamId,
+        defaultSite
+      ),
     ...QUERY_CONFIG.CALIBRATION_SUMMARY,
   });
 
@@ -222,39 +243,159 @@ export default function CalibrationContent({
         </Button>
       </div>
 
+      {/* Alert Banner (교정기한 초과 / 30일 이내 교정 예정) */}
+      <CalibrationAlertBanners overdue={stats.overdue} upcoming={stats.upcoming} />
+
       {/* 통계 카드 */}
       <CalibrationStatsCards stats={stats} />
 
-      {/* 검색 및 팀 필터 */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative flex-grow">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* 필터 바 (Compact Filter Bar — CHECKOUT_FILTER_BAR_TOKENS 대칭) */}
+      <div className={CALIBRATION_FILTER_BAR.container}>
+        {/* 검색 */}
+        <div className="relative flex-1 min-w-[180px]">
+          <Search
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             placeholder={t('content.search.placeholder')}
-            className="pl-8"
+            className="pl-8 h-8 text-sm"
             value={filters.search}
             onChange={(e) => updateSearch(e.target.value)}
+            aria-label={t('content.search.searchLabel')}
           />
         </div>
-        <div className="flex items-center w-full md:w-64 space-x-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select
-            value={filters.teamId || 'all'}
-            onValueChange={(v) => updateTeamId(v === 'all' ? '' : v)}
+
+        <div className={CALIBRATION_FILTER_BAR.divider} aria-hidden="true" />
+
+        {/* 팀 필터 */}
+        <Select
+          value={filters.teamId || 'all'}
+          onValueChange={(v) => updateTeamId(v === 'all' ? '' : v)}
+        >
+          <SelectTrigger
+            className="h-8 w-[120px] text-xs"
+            aria-label={t('content.search.teamFilter')}
           >
-            <SelectTrigger>
+            <div className="flex items-center gap-1.5">
+              <Filter className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
               <SelectValue placeholder={t('content.search.teamFilter')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('content.search.allTeams')}</SelectItem>
-              {teamsData?.items?.map((team: { id: string; name: string }) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('content.search.allTeams')}</SelectItem>
+            {teamsData?.items?.map((team: { id: string; name: string }) => (
+              <SelectItem key={team.id} value={team.id}>
+                {team.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* 승인 상태 필터 */}
+        <Select
+          value={filters.approvalStatus || 'all'}
+          onValueChange={(v) => updateApprovalStatus(v === 'all' ? '' : v)}
+        >
+          <SelectTrigger
+            className="h-8 w-[120px] text-xs"
+            aria-label={t('content.filters.approvalStatusLabel')}
+          >
+            <div className="flex items-center gap-1.5">
+              <CheckSquare className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <SelectValue placeholder={t('content.filters.approvalStatusLabel')} />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('content.filters.approvalStatusAll')}</SelectItem>
+            <SelectItem value="pending_approval">
+              {t('content.filters.approvalOptions.pending_approval')}
+            </SelectItem>
+            <SelectItem value="approved">
+              {t('content.filters.approvalOptions.approved')}
+            </SelectItem>
+            <SelectItem value="rejected">
+              {t('content.filters.approvalOptions.rejected')}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* 교정 결과 필터 */}
+        <Select
+          value={filters.result || 'all'}
+          onValueChange={(v) => updateResult(v === 'all' ? '' : v)}
+        >
+          <SelectTrigger
+            className="h-8 w-[110px] text-xs"
+            aria-label={t('content.filters.resultLabel')}
+          >
+            <div className="flex items-center gap-1.5">
+              <ClipboardCheck
+                className="h-3 w-3 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <SelectValue placeholder={t('content.filters.resultLabel')} />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('content.filters.resultAll')}</SelectItem>
+            <SelectItem value="pass">{t('content.filters.resultOptions.pass')}</SelectItem>
+            <SelectItem value="fail">{t('content.filters.resultOptions.fail')}</SelectItem>
+            <SelectItem value="conditional">
+              {t('content.filters.resultOptions.conditional')}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* 활성 필터 태그 */}
+        {countActiveFilters(filters) > 0 && (
+          <>
+            <div className={CALIBRATION_FILTER_BAR.divider} aria-hidden="true" />
+            {filters.teamId && (
+              <button
+                type="button"
+                className={CALIBRATION_FILTER_BAR.tag}
+                onClick={() => updateTeamId('')}
+              >
+                {teamsData?.items?.find(
+                  (t: { id: string; name: string }) => t.id === filters.teamId
+                )?.name ?? filters.teamId}
+                <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
+              </button>
+            )}
+            {filters.approvalStatus && (
+              <button
+                type="button"
+                className={CALIBRATION_FILTER_BAR.tag}
+                onClick={() => updateApprovalStatus('')}
+              >
+                {t(
+                  `content.filters.approvalOptions.${filters.approvalStatus}` as Parameters<
+                    typeof t
+                  >[0]
+                )}
+                <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
+              </button>
+            )}
+            {filters.result && (
+              <button
+                type="button"
+                className={CALIBRATION_FILTER_BAR.tag}
+                onClick={() => updateResult('')}
+              >
+                {t(`content.filters.resultOptions.${filters.result}` as Parameters<typeof t>[0])}
+                <X className={CALIBRATION_FILTER_BAR.tagDismissIcon} />
+              </button>
+            )}
+            <button
+              type="button"
+              className={CALIBRATION_FILTER_BAR.resetButton}
+              onClick={clearFilters}
+            >
+              {t('content.filters.reset')}
+            </button>
+          </>
+        )}
       </div>
 
       {/* 탭 */}

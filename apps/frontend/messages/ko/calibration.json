@@ -187,6 +187,12 @@
       "currentSuffix": " - 현재 보고 있는 버전"
     }
   },
+  "alerts": {
+    "overdueTitle": "교정 기한이 초과된 장비가 {count}대 있습니다. UL-QP-18에 따라 해당 장비는 사용이 제한됩니다.",
+    "overdueAction": "기한 초과 장비 확인",
+    "upcomingTitle": "30일 이내 교정이 필요한 장비가 {count}대 있습니다.",
+    "upcomingAction": "교정 예정 장비 확인"
+  },
   "content": {
     "registerButton": "교정 정보 등록",
     "stats": {
@@ -200,7 +206,28 @@
     "search": {
       "placeholder": "장비명, 관리번호 검색...",
       "teamFilter": "팀 필터",
-      "allTeams": "모든 팀"
+      "allTeams": "모든 팀",
+      "searchLabel": "교정 기록 검색"
+    },
+    "filters": {
+      "approvalStatusLabel": "승인 상태",
+      "approvalStatusAll": "전체 상태",
+      "resultLabel": "교정 결과",
+      "resultAll": "전체 결과",
+      "dateRangeLabel": "기간",
+      "startDate": "시작일",
+      "endDate": "종료일",
+      "reset": "필터 초기화",
+      "approvalOptions": {
+        "pending_approval": "승인 대기",
+        "approved": "승인됨",
+        "rejected": "반려됨"
+      },
+      "resultOptions": {
+        "pass": "합격",
+        "fail": "불합격",
+        "conditional": "조건부 합격"
+      }
     },
     "tabs": {
       "all": "전체",
@@ -209,6 +236,11 @@
       "intermediateChecks": "중간점검",
       "list": "교정목록",
       "selfInspection": "자체점검"
+    },
+    "timeline": {
+      "moreItems": "+{count}개 더",
+      "segmentLabel": "{month} 교정 {count}건",
+      "countUnit": "{count}건"
     },
     "loading": "데이터를 불러오는 중...",
     "error": "데이터를 불러오는 중 오류가 발생했습니다.",

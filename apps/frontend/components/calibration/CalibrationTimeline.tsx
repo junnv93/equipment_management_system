@@ -5,9 +5,11 @@ import { differenceInDays, startOfMonth, addMonths, format, getYear, getMonth } 
 import { ko } from 'date-fns/locale';
 import {
   CALIBRATION_TIMELINE,
+  CALIBRATION_THRESHOLDS,
   getCalibrationTimelineTooltipTextClasses,
   getCalibrationDdayLabel,
 } from '@/lib/design-tokens';
+import { useTranslations } from 'next-intl';
 
 export interface CalibrationTimelineItem {
   equipmentId: string;
@@ -37,7 +39,8 @@ interface MonthSegment {
 function resolveUrgency(items: MonthSegment['items']): SegmentUrgency {
   if (items.length === 0) return 'empty';
   if (items.some((i) => i.days < 0)) return 'overdue';
-  if (items.some((i) => i.days <= 30)) return 'warning';
+  if (items.some((i) => i.days <= CALIBRATION_THRESHOLDS.CALIBRATION_WARNING_DAYS))
+    return 'warning';
   return 'ok';
 }
 
@@ -49,6 +52,7 @@ function segmentColorClass(urgency: SegmentUrgency): string {
 }
 
 export default function CalibrationTimeline({ items }: Props) {
+  const t = useTranslations('calibration');
   const [activeMonth, setActiveMonth] = useState<string | null>(null);
 
   const { monthSegments, todayLeftPct, maxCount } = useMemo(() => {
@@ -140,7 +144,14 @@ export default function CalibrationTimeline({ items }: Props) {
                 onFocus={() => seg.count > 0 && setActiveMonth(seg.monthKey)}
                 onBlur={() => setActiveMonth(null)}
                 tabIndex={seg.count > 0 ? 0 : undefined}
-                aria-label={seg.count > 0 ? `${seg.monthLabel} 교정 ${seg.count}건` : undefined}
+                aria-label={
+                  seg.count > 0
+                    ? t('content.timeline.segmentLabel', {
+                        month: seg.monthLabel,
+                        count: seg.count,
+                      })
+                    : undefined
+                }
               >
                 {/* 세그먼트 막대 or 빈 마커 */}
                 {seg.count > 0 ? (
@@ -164,7 +175,9 @@ export default function CalibrationTimeline({ items }: Props) {
                     {/* 월 헤더 + 건수 */}
                     <div className={`${CALIBRATION_TIMELINE.tooltipDday} ${textClass}`}>
                       {seg.monthLabel}&nbsp;
-                      <span className="font-normal text-muted-foreground">({seg.count}건)</span>
+                      <span className="font-normal text-muted-foreground">
+                        ({t('content.timeline.countUnit', { count: seg.count })})
+                      </span>
                     </div>
 
                     {/* 장비 목록 */}
@@ -181,7 +194,9 @@ export default function CalibrationTimeline({ items }: Props) {
                       ))}
                       {seg.count > MAX_TOOLTIP_ITEMS && (
                         <div className={CALIBRATION_TIMELINE.tooltipMore}>
-                          +{seg.count - MAX_TOOLTIP_ITEMS}개 더
+                          {t('content.timeline.moreItems', {
+                            count: seg.count - MAX_TOOLTIP_ITEMS,
+                          })}
                         </div>
                       )}
                     </div>

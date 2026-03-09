@@ -27,6 +27,7 @@ import {
   CALIBRATION_EMPTY_STATE,
   CALIBRATION_STATS_TEXT,
   CALIBRATION_CARD_BORDER,
+  CALIBRATION_THRESHOLDS,
   type IntermediateCheckStatus,
 } from '@/lib/design-tokens';
 
@@ -47,7 +48,7 @@ function getStatusStyle(checkDate: string, t: ReturnType<typeof useTranslations<
   } else if (diff === 0) {
     status = 'today';
     text = t('content.intermediateChecks.statusText.today');
-  } else if (diff <= 7) {
+  } else if (diff <= CALIBRATION_THRESHOLDS.INTERMEDIATE_CHECK_UPCOMING_DAYS) {
     status = 'upcoming';
     text = `D-${diff}`;
   } else {
@@ -141,12 +142,12 @@ export default function IntermediateChecksTab({
 
         <Card className={CALIBRATION_CARD_BORDER.pending}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-ul-blue dark:text-blue-400">
+            <CardTitle className={`text-sm font-medium ${CALIBRATION_STATS_TEXT.pending}`}>
               {t('content.intermediateChecks.stats.pending')}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tabular-nums text-ul-blue dark:text-blue-400">
+            <div className={`text-2xl font-bold tabular-nums ${CALIBRATION_STATS_TEXT.pending}`}>
               {t('content.intermediateChecks.stats.unit', { count: data.meta.pendingCount })}
             </div>
           </CardContent>
