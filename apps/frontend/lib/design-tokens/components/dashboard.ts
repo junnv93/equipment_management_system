@@ -318,6 +318,23 @@ export const DASHBOARD_KPI_TOKENS = {
   primaryCount: 'font-mono tabular-nums font-bold text-4xl text-foreground leading-tight',
   primaryLabel: 'text-sm font-medium text-muted-foreground',
   primarySub: 'text-xs text-muted-foreground tabular-nums',
+  /**
+   * 가동률/반출/부적합 상태별 색상 토큰
+   *
+   * KPI 카드에서 수치 색상 분기에 사용 — raw Tailwind 하드코딩 금지
+   */
+  statusColor: {
+    /** 가동률 70%+ 또는 정상 상태 */
+    good: 'text-ul-green dark:text-green-400',
+    /** 가동률 40-70% 또는 주의 필요 */
+    warning: 'text-ul-orange dark:text-orange-400',
+    /** 가동률 <40% 또는 위험 상태 */
+    danger: 'text-ul-red dark:text-red-400',
+    /** 반출 중 (양수인 경우) */
+    active: 'text-ul-blue dark:text-ul-info',
+    /** 부적합 존재 시 카드 테두리 */
+    alertBorder: 'border-ul-red/30 dark:border-red-500/30',
+  },
 } as const;
 
 // ============================================================================
@@ -353,6 +370,10 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   footer: 'px-4 py-2 border-t border-border flex-shrink-0',
   viewAllLink: 'text-xs text-muted-foreground hover:text-foreground',
   emptyContainer: 'flex-1 flex flex-col items-center justify-center py-8 text-muted-foreground',
+  /** 빈 상태 아이콘 (교정 일정 없음 = 긍정) */
+  emptyIcon: 'h-10 w-10 mb-2 text-ul-green dark:text-green-400',
+  emptyTitle: 'text-sm font-medium',
+  emptyDesc: 'text-xs mt-1 text-center',
 } as const;
 
 // ============================================================================
@@ -369,7 +390,8 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden',
   header: 'px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0',
   title: 'text-sm font-semibold text-foreground tabular-nums',
-  navButton: 'p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground',
+  navButton:
+    'p-1 rounded hover:bg-muted active:bg-muted/80 active:scale-95 text-muted-foreground hover:text-foreground motion-safe:transition-transform motion-safe:duration-75 motion-reduce:transition-none',
   grid: 'grid grid-cols-7 px-3 pb-3',
   dayLabel: 'text-center text-[10px] font-medium text-muted-foreground py-1',
   cell: 'relative flex flex-col items-center py-1 rounded hover:bg-muted/50 cursor-default',
@@ -395,7 +417,46 @@ export const DASHBOARD_CALENDAR_TOKENS = {
 } as const;
 
 // ============================================================================
-// 11. DASHBOARD_TEAM_DISTRIBUTION_TOKENS — 팀별 장비 분포
+// 11. DASHBOARD_OVERDUE_CHECKOUTS_TOKENS — 반출 기한 초과 카드
+// ============================================================================
+
+/**
+ * 반출 기한 초과 카드 토큰
+ *
+ * OverdueCheckoutsCard에서 사용 (기존 raw Tailwind → 디자인 토큰 교체)
+ */
+export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
+  container: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-2 min-h-[12rem]',
+  containerLoading: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-3 min-h-[12rem]',
+  header: 'flex items-center justify-between',
+  title: 'text-sm font-semibold text-foreground',
+  countAlert: 'text-xs font-medium text-ul-red dark:text-red-400',
+  /** 내부 탭 스트립 */
+  tabBar: 'flex border-b border-border -mx-0 mb-1',
+  tab: 'text-xs font-medium px-3 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px motion-safe:transition-colors motion-safe:duration-100 focus-visible:outline-none',
+  tabActive: 'text-foreground border-b-2 border-primary',
+  listWrapper: 'relative flex-1 overflow-hidden',
+  list: 'flex flex-col gap-1 overflow-y-auto max-h-[150px]',
+  listFade:
+    'pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent',
+  item: 'flex items-center gap-3 p-2 rounded hover:bg-muted/50 group',
+  dday: 'font-mono tabular-nums font-bold text-xs text-ul-red dark:text-red-400 w-12 flex-shrink-0',
+  ddayReturn:
+    'font-mono tabular-nums font-bold text-xs text-ul-blue dark:text-ul-info w-12 flex-shrink-0',
+  info: 'min-w-0 flex-1',
+  name: 'text-xs text-foreground truncate',
+  user: 'text-[10px] text-muted-foreground truncate',
+  /** 인라인 빈 상태 (flex row, 한 줄) */
+  compactEmpty: 'flex items-center gap-2 py-2 text-muted-foreground',
+  compactEmptyIcon: 'h-4 w-4 text-ul-green dark:text-green-400 flex-shrink-0',
+  compactEmptyText: 'text-xs',
+  /** 목록 스크롤 어포던스 — 하단 그라데이션 페이드 */
+  arrow:
+    'h-3 w-3 text-muted-foreground group-hover:text-foreground flex-shrink-0 motion-safe:transition-colors motion-safe:duration-100',
+} as const;
+
+// ============================================================================
+// 12. DASHBOARD_TEAM_DISTRIBUTION_TOKENS — 팀별 장비 분포
 // ============================================================================
 
 /**
@@ -409,7 +470,7 @@ export const DASHBOARD_TEAM_DISTRIBUTION_TOKENS = {
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold text-foreground',
   total: 'text-xs text-muted-foreground',
-  list: 'flex flex-col gap-2',
+  list: 'flex flex-col gap-2 overflow-y-auto max-h-[220px] pr-1',
   row: 'flex flex-col gap-1',
   rowHeader: 'flex items-center justify-between',
   teamName: 'text-xs text-foreground truncate',
@@ -417,4 +478,239 @@ export const DASHBOARD_TEAM_DISTRIBUTION_TOKENS = {
   barTrack: 'h-2 bg-muted rounded-full overflow-hidden',
   barFill: 'h-full rounded-full bg-ul-blue dark:bg-ul-info',
   emptyText: 'text-xs text-muted-foreground text-center py-4',
+} as const;
+
+// ============================================================================
+// 13. DASHBOARD_QUICK_ACTION_TOKENS — 빠른 실행 버튼 바
+// ============================================================================
+
+export const DASHBOARD_QUICK_ACTION_TOKENS = {
+  container: 'bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-4 flex-wrap',
+  label: 'text-xs font-medium text-muted-foreground flex-shrink-0',
+  grid: 'flex items-center gap-2 flex-wrap',
+  action:
+    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted/60 active:scale-[0.98] motion-safe:transition-[background-color,transform,box-shadow] motion-safe:duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+  /** 주요 액션 (filled bg-primary/10) — secondary와 시각적 위계 구분 */
+  actionPrimary:
+    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 active:scale-[0.98] motion-safe:transition-[background-color,transform,box-shadow] motion-safe:duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+  actionIcon: 'h-3.5 w-3.5 flex-shrink-0',
+  actionLabel: 'text-xs font-medium text-foreground whitespace-nowrap',
+} as const;
+
+// ============================================================================
+// 14. DASHBOARD_ALERT_BANNER_TOKENS — 긴급 조치 요약 배너 (신규)
+// ============================================================================
+
+/**
+ * 긴급 조치 요약 배너 토큰
+ *
+ * AlertBanner에서 사용 — 대시보드 상단 1줄 요약
+ * - totalCount=0: "이상 없음" 인라인 텍스트
+ * - totalCount>0: severity-colored 좌측 바 + 카운트 배지 + pill 칩
+ */
+export const DASHBOARD_ALERT_BANNER_TOKENS = {
+  container:
+    'flex items-center gap-3 min-h-[2.75rem] px-3 py-2 rounded-lg border bg-card overflow-hidden',
+  /** 좌측 severity 색상 바 (border-l-4) */
+  severityBorder: {
+    critical: 'border-l-4 border-l-ul-red',
+    warning: 'border-l-4 border-l-ul-orange',
+    none: 'border-l-4 border-l-transparent',
+  },
+  /** 원형 카운트 배지 */
+  countCircle:
+    'flex-shrink-0 h-6 w-6 rounded-full bg-ul-red text-white text-[10px] font-bold flex items-center justify-center tabular-nums',
+  /** 요약 텍스트 */
+  summaryText: 'text-xs font-medium text-foreground',
+  /** pill 칩 컨테이너 — ml-auto로 우측 정렬 (와이어프레임 준수) */
+  chips: 'flex items-center gap-2 flex-wrap ml-auto',
+  /** 기본 카테고리 pill */
+  chip: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border',
+  /** 긴급 카테고리 pill (non-conforming 등) */
+  chipUrgent:
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-red/10 text-ul-red dark:text-red-400 border border-ul-red/20',
+  /** 경고 카테고리 pill (overdue 등) */
+  chipWarning:
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-orange/10 text-ul-orange dark:text-orange-400 border border-ul-orange/20',
+  /** "이상 없음" 인라인 상태 */
+  clearState: 'flex items-center gap-2 text-xs text-muted-foreground',
+  clearIcon: 'h-4 w-4 text-ul-green dark:text-green-400 flex-shrink-0',
+} as const;
+
+// ============================================================================
+// 15. DASHBOARD_STATUS_MINI_TOKENS — 5번째 KPI 카드 (장비 상태 분포)
+// ============================================================================
+
+/**
+ * 장비 상태 미니 분포 카드 토큰
+ *
+ * KpiStatusGrid 5번째 카드 — 상태별 수평 바 + 도트 + 건수
+ */
+export const DASHBOARD_STATUS_MINI_TOKENS = {
+  container:
+    'bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2 min-h-[7rem]',
+  header: 'flex items-start justify-between gap-1',
+  label: 'text-sm font-medium text-muted-foreground',
+  subLabel: 'text-xs text-muted-foreground',
+  list: 'flex flex-col gap-1.5',
+  statusRow: 'flex items-center gap-2',
+  statusDot: 'w-2 h-2 rounded-full flex-shrink-0',
+  barTrack: 'flex-1 h-1 rounded-full bg-muted overflow-hidden',
+  barFill: 'h-full rounded-full',
+  statusLabel: 'text-[10px] text-muted-foreground w-14 truncate flex-shrink-0',
+  statusCount:
+    'text-[10px] tabular-nums font-medium text-muted-foreground text-right w-5 flex-shrink-0',
+} as const;
+
+// ============================================================================
+// 15. DASHBOARD_KPI_TREND_TOKENS — KPI 트렌드 배지
+// ============================================================================
+
+export const DASHBOARD_KPI_TREND_TOKENS = {
+  up: 'text-ul-green dark:text-green-400 text-[10px] tabular-nums font-semibold leading-none',
+  down: 'text-ul-red dark:text-red-400 text-[10px] tabular-nums font-semibold leading-none',
+  same: 'text-muted-foreground text-[10px] tabular-nums leading-none',
+  badge: 'inline-flex items-center gap-0.5',
+} as const;
+
+// ============================================================================
+// 16. DASHBOARD_WELCOME_TOKENS — 환영 헤더
+// ============================================================================
+
+/**
+ * 환영 헤더 토큰
+ *
+ * WelcomeHeader에서 사용 — 타이포그래피/레이아웃 하드코딩 제거
+ */
+export const DASHBOARD_WELCOME_TOKENS = {
+  title: 'text-2xl md:text-3xl font-bold tracking-tight text-foreground',
+  metaRow: 'flex flex-wrap items-center gap-3',
+  badgeLayout: 'flex items-center gap-1.5 py-1 px-2.5',
+  roleIcon: 'h-3.5 w-3.5',
+  onlineContainer: 'inline-flex items-center gap-1.5 text-sm text-muted-foreground',
+  onlineDot: 'inline-block w-2 h-2 rounded-full bg-ul-green',
+  divider: 'hidden sm:inline text-muted-foreground/30',
+  date: 'text-sm text-muted-foreground',
+  description: 'text-xs text-muted-foreground/70 hidden md:block leading-relaxed',
+} as const;
+
+// ============================================================================
+// 17. DASHBOARD_RECENT_ACTIVITIES_TOKENS — 최근 활동 피드
+// ============================================================================
+
+/**
+ * 최근 활동 피드 토큰
+ *
+ * RecentActivities에서 사용 — 반복되는 레이아웃/스타일 하드코딩 제거
+ */
+export const DASHBOARD_RECENT_ACTIVITIES_TOKENS = {
+  /** 개별 활동 아이템 행 레이아웃 */
+  item: 'flex items-start space-x-4 p-3 rounded-lg',
+  /** 활동 타입별 아이콘 컨테이너 */
+  iconContainer: 'mt-1 rounded-full p-2',
+  /** 아이콘 컨테이너 — 기본(중립) */
+  iconContainerDefault: 'bg-muted',
+  /** 아이콘 컨테이너 — 승인 */
+  iconContainerApproval: 'bg-ul-green/10 dark:bg-ul-green/20',
+  /** 아이콘 컨테이너 — 반려 */
+  iconContainerRejection: 'bg-ul-red/10 dark:bg-ul-red/20',
+  /** 아이템 행 배경 — 승인 */
+  rowApproval: 'bg-ul-green/5 dark:bg-ul-green/10',
+  /** 아이템 행 배경 — 반려 */
+  rowRejection: 'bg-ul-red/5 dark:bg-ul-red/10',
+  /** 콘텐츠 영역 */
+  content: 'flex-1 space-y-1 min-w-0',
+  /** 메타 텍스트 (시간, 작은 정보) */
+  meta: 'text-xs text-muted-foreground flex items-center',
+  /** 상세 보기 링크 버튼 */
+  viewDetailBtn: 'h-6 px-0 text-xs',
+  /** 스크롤 컨테이너 */
+  scrollContainer: 'space-y-2 max-h-[400px] overflow-y-auto pr-2 pb-6',
+  /** 스크롤 어포던스 그라데이션 */
+  scrollFade:
+    'pointer-events-none absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-card to-transparent rounded-b-lg',
+} as const;
+// 빈 상태는 DASHBOARD_EMPTY_STATE_TOKENS.prominent / .filter 사용
+
+// ============================================================================
+// 18. DASHBOARD_EMPTY_STATE_TOKENS — 의미 기반 빈 상태 시스템
+// ============================================================================
+
+/**
+ * 대시보드 빈 상태 의미 기반 토큰
+ *
+ * 빈 상태는 의미가 다르다 — 하나로 통합하면 UX가 잘못됨:
+ *
+ * success  — 초과/문제 없음 = 긍정 신호 → 초록 아이콘 (CheckCircle2)
+ *            예: 반출 초과 없음, 교정 기한 초과 없음
+ *
+ * neutral  — 데이터가 아직 없음 = 중립 안내 → 회색 반투명 아이콘
+ *            예: 최근 활동 없음, 팀 장비 없음
+ *
+ * filter   — 필터/탭 결과 없음 = 일시적 상태 → 텍스트만
+ *            예: 카테고리 탭 필터 후 결과 없음
+ *
+ * scrollFade — 레이아웃 유틸리티: 스크롤 어포던스 (의미와 무관)
+ */
+export const DASHBOARD_EMPTY_STATE_TOKENS = {
+  /**
+   * success: 문제/초과가 없음 → 사용자에게 긍정적 신호
+   * 아이콘: CheckCircle2 (lucide-react)
+   */
+  success: {
+    container: 'flex flex-col items-center justify-center py-4 text-muted-foreground',
+    icon: 'mb-1 text-ul-green dark:text-green-400',
+    iconSize: 'h-8 w-8',
+    title: 'text-xs font-medium',
+  },
+
+  /**
+   * neutral: 데이터가 없음 → 중립 안내
+   * flex-1로 부모 높이 채움 (카드 내 세로 중앙)
+   */
+  neutral: {
+    container: 'flex-1 flex flex-col items-center justify-center py-8 text-muted-foreground',
+    icon: 'mb-2 opacity-30',
+    iconSize: 'h-10 w-10',
+    title: 'text-sm font-medium',
+    description: 'text-xs mt-1 opacity-70 text-center',
+  },
+
+  /**
+   * prominent: 전체 피드 없음 → 더 강한 안내 필요
+   * 상위 neutral보다 패딩 크고 아이콘 더 선명
+   */
+  prominent: {
+    container: 'py-10 text-center text-muted-foreground',
+    icon: 'h-10 w-10 mx-auto mb-3 opacity-30',
+    title: 'text-sm font-medium',
+    description: 'text-xs mt-1 opacity-70',
+  },
+
+  /**
+   * filter: 탭/필터 적용 후 결과 없음 → 텍스트만으로 충분
+   */
+  filter: {
+    container: 'py-8 text-center text-muted-foreground',
+    text: 'text-sm',
+  },
+
+  /**
+   * inline: 컴팩트 카드 내 인라인 빈 상태 → flex row 한 줄
+   * 예: "✓ 반출 기한 초과 없음"
+   */
+  inline: {
+    container: 'flex items-center gap-2 py-2 text-muted-foreground',
+    icon: 'h-4 w-4 text-ul-green dark:text-green-400 flex-shrink-0',
+    text: 'text-xs',
+  },
+
+  /**
+   * scrollFade: 레이아웃 유틸리티
+   *
+   * 스크롤 가능한 목록 하단 그라데이션 어포던스
+   * 의미와 무관 — 모든 스크롤 컨테이너에서 재사용
+   */
+  scrollFade:
+    'pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent',
 } as const;

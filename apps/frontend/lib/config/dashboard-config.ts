@@ -8,9 +8,26 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { Package, AlertCircle, AlertTriangle, Clock, Truck, Ban, CheckCircle2 } from 'lucide-react';
+import {
+  Package,
+  AlertCircle,
+  AlertTriangle,
+  Clock,
+  Truck,
+  Ban,
+  CheckCircle2,
+  Plus,
+  ClipboardList,
+  FileText,
+  Users,
+  Settings,
+  ShieldCheck,
+  List,
+  ArrowLeftRight,
+} from 'lucide-react';
 import type { StatsVariant } from '@/lib/design-tokens';
 import type { DashboardSummary } from '@/lib/api/dashboard-api';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 // ─── Stats Card 설정 ───────────────────────────────────────────
 export interface StatsCardConfig {
@@ -29,8 +46,40 @@ export interface StatsCardConfig {
   variant: StatsVariant;
 }
 
+// ─── 빠른 실행 액션 정의 ────────────────────────────────────────
+export interface QuickActionItem {
+  /** i18n key under 'dashboard.quickActions' */
+  labelKey: string;
+  href: string;
+  icon: LucideIcon;
+  /** Tailwind class for icon bg */
+  iconBgClass: string;
+  /** Tailwind class for icon color */
+  iconColorClass: string;
+  /** 시각적 우선순위 — primary: 채운 배경, secondary: 아웃라인 (기본값) */
+  priority?: 'primary' | 'secondary';
+}
+
+// ─── 공유 그리드 템플릿 상수 (CLS 근본 해결) ──────────────────
+/**
+ * 대시보드 그리드 클래스 SSOT
+ *
+ * loading.tsx와 DashboardClient.tsx가 동일한 상수를 참조하여
+ * 스켈레톤↔실제 레이아웃 그리드 불일치(CLS 원인)를 원천 봉쇄
+ */
+export const DASHBOARD_GRID = {
+  /** KPI 카드 행 */
+  kpi: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3',
+  /** 3컬럼 액션 행: 승인대기 | 반출현황 | 교정현황 */
+  actionRow: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1fr_1fr_280px] gap-4 items-start',
+  /** 하단 행: 최근활동(2fr) | 팀분포+달력(1fr) */
+  bottomRow: 'grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 items-start',
+} as const;
+
 // ─── Control Center 설정 ────────────────────────────────────────
 export interface ControlCenterConfig {
+  /** 긴급 조치 요약 배너 표시 여부 */
+  showAlertBanner: boolean;
   /** 승인 대기 카드 표시 여부 */
   showPendingApprovals: boolean;
   /** 반출 기한 초과 카드 표시 여부 */
@@ -41,6 +90,10 @@ export interface ControlCenterConfig {
   showTeamDistribution: boolean;
   /** 미니 달력 표시 여부 */
   showMiniCalendar: boolean;
+  /** 빠른 실행 버튼 바 표시 여부 */
+  showQuickActionBar: boolean;
+  /** 역할별 빠른 실행 액션 목록 */
+  quickActions: QuickActionItem[];
   /** KPI 총계 레이블 ('my' | 'team' | 'all') */
   kpiDisplay: 'my' | 'team' | 'all';
   /**
@@ -141,6 +194,73 @@ const STATS = {
   }),
 } as const;
 
+// ─── 역할별 빠른 실행 액션 사전 정의 ──────────────────────────
+const QUICK_ACTIONS = {
+  registerEquipment: {
+    labelKey: 'registerEquipment',
+    href: FRONTEND_ROUTES.EQUIPMENT.CREATE,
+    icon: Plus,
+    iconBgClass: 'bg-ul-blue/15',
+    iconColorClass: 'text-ul-blue dark:text-ul-info',
+  },
+  registerCalibration: {
+    labelKey: 'registerCalibration',
+    href: FRONTEND_ROUTES.CALIBRATION.REGISTER,
+    icon: ClipboardList,
+    iconBgClass: 'bg-ul-green/15',
+    iconColorClass: 'text-ul-green',
+  },
+  createCheckout: {
+    labelKey: 'createCheckout',
+    href: FRONTEND_ROUTES.CHECKOUTS.CREATE,
+    icon: Truck,
+    iconBgClass: 'bg-ul-orange/15',
+    iconColorClass: 'text-ul-orange',
+  },
+  equipmentList: {
+    labelKey: 'equipmentList',
+    href: FRONTEND_ROUTES.EQUIPMENT.LIST,
+    icon: List,
+    iconBgClass: 'bg-muted',
+    iconColorClass: 'text-muted-foreground',
+  },
+  approvalManagement: {
+    labelKey: 'approvalManagement',
+    href: FRONTEND_ROUTES.ADMIN.APPROVALS,
+    icon: ShieldCheck,
+    iconBgClass: 'bg-ul-midnight/10 dark:bg-ul-info/15',
+    iconColorClass: 'text-ul-midnight dark:text-ul-info',
+  },
+  calibrationPlans: {
+    labelKey: 'calibrationPlans',
+    href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
+    icon: FileText,
+    iconBgClass: 'bg-ul-blue/15',
+    iconColorClass: 'text-ul-blue dark:text-ul-info',
+  },
+  checkoutStatus: {
+    labelKey: 'checkoutStatus',
+    href: FRONTEND_ROUTES.CHECKOUTS.LIST,
+    icon: ArrowLeftRight,
+    iconBgClass: 'bg-ul-orange/15',
+    iconColorClass: 'text-ul-orange',
+  },
+  userManagement: {
+    labelKey: 'userManagement',
+    href: FRONTEND_ROUTES.ADMIN.USERS,
+    icon: Users,
+    iconBgClass: 'bg-ul-fog/15',
+    iconColorClass: 'text-ul-fog dark:text-muted-foreground',
+  },
+  systemSettings: {
+    labelKey: 'systemSettings',
+    href: FRONTEND_ROUTES.ADMIN.SETTINGS,
+    icon: Settings,
+    iconBgClass: 'bg-muted',
+    iconColorClass: 'text-muted-foreground',
+  },
+} as const satisfies Record<string, QuickActionItem>;
+
 // ─── 역할별 설정 (SSOT) ────────────────────────────────────────
 export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
   test_engineer: {
@@ -157,11 +277,19 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
     controlCenter: {
+      showAlertBanner: true,
       showPendingApprovals: false,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
       showTeamDistribution: false,
       showMiniCalendar: true,
+      showQuickActionBar: true,
+      quickActions: [
+        { ...QUICK_ACTIONS.registerEquipment, priority: 'primary' as const },
+        { ...QUICK_ACTIONS.createCheckout, priority: 'primary' as const },
+        QUICK_ACTIONS.registerCalibration,
+        QUICK_ACTIONS.equipmentList,
+      ],
       kpiDisplay: 'my',
       requiresTeamScope: true,
     },
@@ -181,11 +309,19 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
     controlCenter: {
+      showAlertBanner: true,
       showPendingApprovals: true,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
       showTeamDistribution: true,
       showMiniCalendar: true,
+      showQuickActionBar: true,
+      quickActions: [
+        { ...QUICK_ACTIONS.approvalManagement, priority: 'primary' as const },
+        { ...QUICK_ACTIONS.equipmentList, priority: 'primary' as const },
+        QUICK_ACTIONS.checkoutStatus,
+        QUICK_ACTIONS.registerCalibration,
+      ],
       kpiDisplay: 'team',
       requiresTeamScope: true,
     },
@@ -205,11 +341,19 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     ],
     alertSections: ['overdueCalibrations'],
     controlCenter: {
+      showAlertBanner: true,
       showPendingApprovals: true,
       showCheckoutOverdue: false,
       showCalibrationDday: true,
       showTeamDistribution: false,
       showMiniCalendar: true,
+      showQuickActionBar: true,
+      quickActions: [
+        { ...QUICK_ACTIONS.calibrationPlans, priority: 'primary' as const },
+        { ...QUICK_ACTIONS.approvalManagement, priority: 'primary' as const },
+        QUICK_ACTIONS.equipmentList,
+        QUICK_ACTIONS.checkoutStatus,
+      ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
     },
@@ -230,11 +374,19 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
     controlCenter: {
+      showAlertBanner: true,
       showPendingApprovals: true,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
       showTeamDistribution: true,
       showMiniCalendar: true,
+      showQuickActionBar: true,
+      quickActions: [
+        { ...QUICK_ACTIONS.calibrationPlans, priority: 'primary' as const },
+        { ...QUICK_ACTIONS.approvalManagement, priority: 'primary' as const },
+        QUICK_ACTIONS.userManagement,
+        QUICK_ACTIONS.equipmentList,
+      ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
     },
@@ -255,11 +407,19 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     ],
     alertSections: ['overdueCalibrations', 'overdueCheckouts'],
     controlCenter: {
+      showAlertBanner: true,
       showPendingApprovals: true,
       showCheckoutOverdue: true,
       showCalibrationDday: true,
       showTeamDistribution: true,
       showMiniCalendar: true,
+      showQuickActionBar: true,
+      quickActions: [
+        { ...QUICK_ACTIONS.userManagement, priority: 'primary' as const },
+        { ...QUICK_ACTIONS.systemSettings, priority: 'primary' as const },
+        QUICK_ACTIONS.calibrationPlans,
+        QUICK_ACTIONS.equipmentList,
+      ],
       kpiDisplay: 'all',
       requiresTeamScope: false,
     },
@@ -277,3 +437,19 @@ export const LEGACY_TAB_MAP: Record<string, string> = {
   rental: 'checkout',
   approvals: 'calibration',
 };
+
+/**
+ * 대시보드 컴포넌트별 최대 표시 건수 (SSOT)
+ *
+ * 컴포넌트에서 .slice(0, N) 사용 시 이 상수를 참조
+ */
+export const DISPLAY_LIMITS = {
+  /** OverdueCheckoutsCard 최대 표시 건수 */
+  overdueCheckouts: 6,
+  /** OverdueCheckoutsCard 반납 예정 탭 최대 표시 건수 */
+  upcomingCheckoutReturns: 6,
+  /** CalibrationDdayList 최대 표시 건수 */
+  calibrationDday: 8,
+  /** MiniCalendar 팝업 최대 이벤트 수 */
+  calendarEvents: 5,
+} as const;

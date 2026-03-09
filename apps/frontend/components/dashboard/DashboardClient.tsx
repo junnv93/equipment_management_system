@@ -1,11 +1,13 @@
 'use client';
 
 /**
- * 대시보드 클라이언트 컴포넌트 — 밀도 높은 그리드 레이아웃
+ * 대시보드 클라이언트 컴포넌트 — Command Center (Alert-First Layout)
  *
- * Row 1: KPI 4카드 + 교정 현황 컴팩트 리스트
- * Row 2: 승인 대기 + 반출 초과 + 미니 달력
- * Row 3: 최근 활동 피드 + 팀별 장비 분포
+ * Row 0: WelcomeHeader + QuickActionBar (flex row)
+ * Row 1: AlertBanner (긴급 조치 요약, 1 줄)
+ * Row 2: KPI 5카드 (독립 행)
+ * Row 3: 3컬럼 — 승인대기 | 반출현황(탭) | 교정현황
+ * Row 4: 하단 2컬럼 — 최근활동(2fr) | 팀분포+달력(1fr)
  */
 
 import { useMemo, memo } from 'react';
@@ -16,10 +18,12 @@ import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader';
 import { PendingApprovalCard } from '@/components/dashboard/PendingApprovalCard';
 import { RecentActivities } from '@/components/dashboard/RecentActivities';
 import { KpiStatusGrid } from '@/components/dashboard/KpiStatusGrid';
-import { CalibrationDdayList } from '@/components/dashboard/CalibrationDdayList';
 import { OverdueCheckoutsCard } from '@/components/dashboard/OverdueCheckoutsCard';
 import { TeamEquipmentDistribution } from '@/components/dashboard/TeamEquipmentDistribution';
+import { QuickActionBar } from '@/components/dashboard/QuickActionBar';
+import { CalibrationDdayList } from '@/components/dashboard/CalibrationDdayList';
 import { MiniCalendar } from '@/components/dashboard/MiniCalendar';
+import { AlertBanner } from '@/components/dashboard/AlertBanner';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/lib/api/dashboard-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
@@ -33,7 +37,7 @@ import type {
   UpcomingCheckoutReturn,
   DashboardAggregate,
 } from '@/lib/api/dashboard-api';
-import { DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE } from '@/lib/config/dashboard-config';
+import { DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE, DASHBOARD_GRID } from '@/lib/config/dashboard-config';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
 
 // Props 타입
@@ -68,7 +72,6 @@ function DashboardClientComponent({
   const { controlCenter } = config;
 
   // 대시보드 스코프 — API 호출 / queryKey / KPI 링크 세 곳이 동일한 범위를 참조
-  // requiresTeamScope는 dashboard-config(SSOT)가 결정, 이 컴포넌트는 그대로 전달
   const scope = useMemo(
     () =>
       resolveDashboardScope(
@@ -120,19 +123,45 @@ function DashboardClientComponent({
 
   return (
     <div className="space-y-4 p-4 md:p-6">
-      {/* Header */}
-      <header>
-        <WelcomeHeader />
-      </header>
+      {/* Row 0: Welcome + QuickActionBar (flex row) */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <header className="flex-1 min-w-0">
+          <WelcomeHeader />
+        </header>
+        {controlCenter.showQuickActionBar && controlCenter.quickActions.length > 0 && (
+          <div className="sm:flex-shrink-0">
+            <QuickActionBar actions={controlCenter.quickActions} />
+          </div>
+        )}
+      </div>
 
-      {/* Row 1: KPI 4카드 + 교정 현황 컴팩트 리스트 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <KpiStatusGrid
-          summary={summary}
-          equipmentStatusStats={equipmentStatusStats}
-          loading={isLoading}
-          scope={scope}
+      {/* Row 1: AlertBanner */}
+      {controlCenter.showAlertBanner && (
+        <AlertBanner
+          overdueCalibrationCount={overdueCalibrations.length}
+          overdueCheckoutCount={overdueCheckouts.length}
+          nonConformingCount={equipmentStatusStats.non_conforming ?? 0}
         />
+      )}
+
+      {/* Row 2: KPI 5카드 (독립 행) */}
+      <KpiStatusGrid
+        summary={summary}
+        equipmentStatusStats={equipmentStatusStats}
+        loading={isLoading}
+        scope={scope}
+      />
+
+      {/* Row 3: 3컬럼 액션 행 — 승인대기 | 반출현황 | 교정현황 */}
+      <div className={DASHBOARD_GRID.actionRow}>
+        {controlCenter.showPendingApprovals && <PendingApprovalCard compact />}
+        {controlCenter.showCheckoutOverdue && (
+          <OverdueCheckoutsCard
+            overdueCheckouts={overdueCheckouts}
+            upcomingCheckoutReturns={upcomingCheckoutReturns}
+            loading={isLoading}
+          />
+        )}
         {controlCenter.showCalibrationDday && (
           <CalibrationDdayList
             overdueCalibrations={overdueCalibrations}
@@ -142,31 +171,24 @@ function DashboardClientComponent({
         )}
       </div>
 
-      {/* Row 2: 승인 대기 + 반출 초과 + 미니 달력 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {controlCenter.showPendingApprovals && <PendingApprovalCard compact />}
-          {controlCenter.showCheckoutOverdue && (
-            <OverdueCheckoutsCard overdueCheckouts={overdueCheckouts} loading={isLoading} />
-          )}
-        </div>
-        {controlCenter.showMiniCalendar && (
-          <MiniCalendar
-            upcomingCalibrations={upcomingCalibrations}
-            upcomingCheckoutReturns={upcomingCheckoutReturns}
-            overdueCalibrations={overdueCalibrations}
-          />
-        )}
-      </div>
-
-      {/* Row 3: 최근 활동 피드 + 팀별 장비 분포 */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
+      {/* Row 4: 하단 2컬럼 — 최근활동(2fr) | 팀분포+달력(1fr) */}
+      <div className={DASHBOARD_GRID.bottomRow}>
         <section aria-label={t('srOnly.recentActivity')}>
           <RecentActivities data={recentActivities} loading={isLoading} />
         </section>
-        {controlCenter.showTeamDistribution && (
-          <TeamEquipmentDistribution equipmentByTeam={equipmentByTeam} loading={isLoading} />
-        )}
+
+        <div className="flex flex-col gap-4">
+          {controlCenter.showTeamDistribution && (
+            <TeamEquipmentDistribution equipmentByTeam={equipmentByTeam} loading={isLoading} />
+          )}
+          {controlCenter.showMiniCalendar && (
+            <MiniCalendar
+              upcomingCalibrations={upcomingCalibrations}
+              upcomingCheckoutReturns={upcomingCheckoutReturns}
+              overdueCalibrations={overdueCalibrations}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

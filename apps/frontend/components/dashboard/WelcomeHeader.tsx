@@ -1,12 +1,12 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { User, Shield, ShieldCheck, Crown } from 'lucide-react';
-import { DASHBOARD_ROLE_BADGES } from '@/lib/design-tokens';
+import { DASHBOARD_ROLE_BADGES, DASHBOARD_WELCOME_TOKENS as T } from '@/lib/design-tokens';
 
 interface WelcomeHeaderProps {
   className?: string;
@@ -42,6 +42,7 @@ function getGreetingKey(): string {
 export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   const { data: session, status } = useSession();
   const t = useTranslations('dashboard.welcome');
+  const locale = useLocale();
 
   if (status === 'loading') {
     return (
@@ -64,7 +65,7 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   const roleLabel = t(`roles.${userRole}` as Parameters<typeof t>[0]);
   const roleDescription = t(`roleDescriptions.${userRole}` as Parameters<typeof t>[0]);
 
-  const today = new Date().toLocaleDateString(undefined, {
+  const today = new Date().toLocaleDateString(locale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -72,46 +73,44 @@ export function WelcomeHeader({ className }: WelcomeHeaderProps) {
   });
 
   return (
-    <div className={cn('space-y-2', className)} role="banner" aria-label={t('ariaLabel')}>
-      <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+    <div className={cn('space-y-2', className)} aria-label={t('ariaLabel')}>
+      <h1 className={T.title}>
         {t(`greeting.${greetingKey}` as Parameters<typeof t>[0])},{' '}
         <span className="text-primary">{userName}</span>
         {t('suffix')}
       </h1>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className={T.metaRow}>
         {/* 역할 배지 */}
         <Badge
           variant="secondary"
-          className={cn('flex items-center gap-1.5 py-1 px-2.5', role.bgColor, role.color)}
+          className={cn(T.badgeLayout, role.bgColor, role.color)}
           aria-label={t('currentRole', { role: roleLabel })}
         >
-          <RoleIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          <RoleIcon className={T.roleIcon} aria-hidden="true" />
           <span>{roleLabel}</span>
         </Badge>
 
         {/* 온라인 상태 표시 */}
-        <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-          <span className="inline-block w-2 h-2 rounded-full bg-ul-green" aria-hidden="true" />
+        <span className={T.onlineContainer}>
+          <span className={T.onlineDot} aria-hidden="true" />
           <span className="sr-only">{t('onlineStatus')}</span>
           {t('online')}
         </span>
 
         {/* 구분선 */}
-        <span className="hidden sm:inline text-muted-foreground/30" aria-hidden="true">
+        <span className={T.divider} aria-hidden="true">
           |
         </span>
 
         {/* 날짜 */}
-        <time dateTime={new Date().toISOString()} className="text-sm text-muted-foreground">
+        <time dateTime={new Date().toISOString()} className={T.date}>
           {today}
         </time>
       </div>
 
-      {/* 역할 설명 (작은 텍스트) */}
-      <p className="text-xs text-muted-foreground/70 hidden md:block leading-relaxed">
-        {roleDescription}
-      </p>
+      {/* 역할 설명 (작은 텍스트) — 모바일에서 QuickActionBar와 공존 시 공간 절약 */}
+      <p className={cn(T.description, 'hidden sm:block')}>{roleDescription}</p>
     </div>
   );
 }

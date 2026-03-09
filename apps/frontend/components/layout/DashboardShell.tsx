@@ -79,8 +79,8 @@ const SidebarItem = memo(function SidebarItem({
         getTransitionClasses('fast', ['background-color', 'color']),
         FOCUS_TOKENS.classes.onDark,
         isActive
-          ? 'text-white bg-white/15 font-medium'
-          : 'text-white/70 hover:text-white hover:bg-white/10'
+          ? 'text-white bg-white/15 font-medium border-l-[3px] border-white pl-[9px]'
+          : 'text-white/70 hover:text-white hover:bg-white/10 border-l-[3px] border-transparent'
       )}
       aria-current={isActive ? 'page' : undefined}
     >

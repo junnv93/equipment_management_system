@@ -299,13 +299,18 @@
     "ariaLabel": "Calibration status compact list"
   },
   "overdueCheckouts": {
-    "title": "Overdue Checkouts",
+    "title": "Checkout Status",
     "count": "{count} items",
     "daysOverdue": "D+{days}",
     "viewDetail": "View detail",
     "empty": "No Overdue",
     "emptyDesc": "No checkouts have exceeded their due date",
-    "ariaLabel": "Overdue checkout list"
+    "ariaLabel": "Checkout status list",
+    "tabOverdue": "Overdue",
+    "tabUpcoming": "Upcoming Returns",
+    "upcomingEmpty": "No upcoming returns",
+    "daysUntilReturn": "D-{days}",
+    "viewAllCheckouts": "View all checkouts"
   },
   "calendar": {
     "title": "{month} {year}",
@@ -336,6 +341,16 @@
     "activeCheckoutsSub": "{percent}% of total",
     "nonConforming": "Non-Conforming",
     "nonConformingSub": "Immediate action required",
-    "nonConformingSubNone": "No issues"
+    "nonConformingSubNone": "No issues",
+    "statusBreakdown": "Equipment Status",
+    "statusBreakdownSub": "Overview"
+  },
+  "alertBanner": {
+    "ariaLabel": "Urgent action summary",
+    "allClear": "No items require action",
+    "actionRequired": "Items require immediate action",
+    "overdueCalibrations": "{count} calibration overdue",
+    "overdueCheckouts": "{count} checkout overdue",
+    "nonConforming": "{count} non-conforming"
   }
 }

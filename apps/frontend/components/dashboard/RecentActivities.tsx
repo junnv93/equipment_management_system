@@ -8,182 +8,29 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RecentActivity } from '@/lib/api/dashboard-api';
 import { formatDateTime } from '@/lib/utils/date';
-import {
-  Clock,
-  Pen,
-  Send,
-  Truck,
-  PlusCircle,
-  Wrench,
-  FileCheck,
-  CheckCircle,
-  XCircle,
-  Filter,
-} from 'lucide-react';
+import { Clock, Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { DASHBOARD_MOTION, getDashboardStaggerDelay } from '@/lib/design-tokens';
-import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import {
+  DASHBOARD_MOTION,
+  getDashboardStaggerDelay,
+  DASHBOARD_RECENT_ACTIVITIES_TOKENS as RA,
+  DASHBOARD_EMPTY_STATE_TOKENS as ES,
+} from '@/lib/design-tokens';
+import {
+  ACTIVITY_TYPES,
+  ACTIVITY_ROUTES,
+  ROLE_CATEGORIES,
+  CATEGORY_TABS,
+  DEFAULT_ACTIVITY_META,
+} from '@/lib/config/recent-activities-config';
+import type { RecentActivity } from '@/lib/api/dashboard-api';
 
 interface RecentActivitiesProps {
   data: RecentActivity[];
   loading?: boolean;
 }
-
-// 활동 타입에 따른 정보 정의 (label은 i18n key)
-const ACTIVITY_TYPES: Record<
-  string,
-  {
-    icon: React.ReactNode;
-    labelKey: string; // i18n key under 'dashboard.activities.types'
-    variant: 'default' | 'secondary' | 'outline' | 'destructive';
-    category: string;
-  }
-> = {
-  equipment_added: {
-    icon: <PlusCircle className="h-4 w-4" />,
-    labelKey: 'equipment_added',
-    variant: 'default',
-    category: 'equipment',
-  },
-  equipment_updated: {
-    icon: <Pen className="h-4 w-4" />,
-    labelKey: 'equipment_updated',
-    variant: 'secondary',
-    category: 'equipment',
-  },
-  equipment_approved: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    labelKey: 'equipment_approved',
-    variant: 'default',
-    category: 'equipment',
-  },
-  equipment_rejected: {
-    icon: <XCircle className="h-4 w-4" />,
-    labelKey: 'equipment_rejected',
-    variant: 'destructive',
-    category: 'equipment',
-  },
-  calibration_created: {
-    icon: <Wrench className="h-4 w-4" />,
-    labelKey: 'calibration_created',
-    variant: 'default',
-    category: 'calibration',
-  },
-  calibration_approved: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    labelKey: 'calibration_approved',
-    variant: 'default',
-    category: 'calibration',
-  },
-  calibration_updated: {
-    icon: <Wrench className="h-4 w-4" />,
-    labelKey: 'calibration_updated',
-    variant: 'secondary',
-    category: 'calibration',
-  },
-  non_conformance_created: {
-    icon: <XCircle className="h-4 w-4" />,
-    labelKey: 'non_conformance_created',
-    variant: 'destructive',
-    category: 'equipment',
-  },
-  non_conformance_updated: {
-    icon: <Pen className="h-4 w-4" />,
-    labelKey: 'non_conformance_updated',
-    variant: 'secondary',
-    category: 'equipment',
-  },
-  non_conformance_resolved: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    labelKey: 'non_conformance_resolved',
-    variant: 'default',
-    category: 'equipment',
-  },
-  calibration_plan_created: {
-    icon: <FileCheck className="h-4 w-4" />,
-    labelKey: 'calibration_plan_created',
-    variant: 'default',
-    category: 'calibration',
-  },
-  calibration_plan_approved: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    labelKey: 'calibration_plan_approved',
-    variant: 'default',
-    category: 'calibration',
-  },
-  calibration_plan_rejected: {
-    icon: <XCircle className="h-4 w-4" />,
-    labelKey: 'calibration_plan_rejected',
-    variant: 'destructive',
-    category: 'calibration',
-  },
-  rental_created: {
-    icon: <Send className="h-4 w-4" />,
-    labelKey: 'rental_created',
-    variant: 'outline',
-    category: 'rental',
-  },
-  rental_approved: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    labelKey: 'rental_approved',
-    variant: 'default',
-    category: 'rental',
-  },
-  checkout_created: {
-    icon: <Truck className="h-4 w-4" />,
-    labelKey: 'checkout_created',
-    variant: 'outline',
-    category: 'checkout',
-  },
-  checkout_approved: {
-    icon: <CheckCircle className="h-4 w-4" />,
-    labelKey: 'checkout_approved',
-    variant: 'default',
-    category: 'checkout',
-  },
-};
-
-// 라우트 정보 (SSOT: FRONTEND_ROUTES)
-const ROUTES: Record<string, (entityId: string) => string> = {
-  equipment_added: (id) => FRONTEND_ROUTES.EQUIPMENT.DETAIL(id),
-  equipment_updated: (id) => FRONTEND_ROUTES.EQUIPMENT.DETAIL(id),
-  equipment_approved: (id) => FRONTEND_ROUTES.EQUIPMENT.DETAIL(id),
-  equipment_rejected: (id) => FRONTEND_ROUTES.EQUIPMENT.DETAIL(id),
-  calibration_created: (id) => FRONTEND_ROUTES.CALIBRATION.DETAIL(id),
-  calibration_updated: (id) => FRONTEND_ROUTES.CALIBRATION.DETAIL(id),
-  calibration_approved: (id) => FRONTEND_ROUTES.CALIBRATION.DETAIL(id),
-  calibration_plan_created: (id) => FRONTEND_ROUTES.CALIBRATION_PLANS.DETAIL(id),
-  calibration_plan_approved: (id) => FRONTEND_ROUTES.CALIBRATION_PLANS.DETAIL(id),
-  calibration_plan_rejected: (id) => FRONTEND_ROUTES.CALIBRATION_PLANS.DETAIL(id),
-  // non_conformance_*: NC UUID로는 /equipment/[equipmentId]/non-conformance 접근 불가 — 라우트 미등록
-  rental_created: (id) => FRONTEND_ROUTES.CHECKOUTS.DETAIL(id),
-  rental_approved: (id) => FRONTEND_ROUTES.CHECKOUTS.DETAIL(id),
-  rental_returned: (id) => FRONTEND_ROUTES.CHECKOUTS.DETAIL(id),
-  checkout_created: (id) => FRONTEND_ROUTES.CHECKOUTS.DETAIL(id),
-  checkout_approved: (id) => FRONTEND_ROUTES.CHECKOUTS.DETAIL(id),
-  checkout_returned: (id) => FRONTEND_ROUTES.CHECKOUTS.DETAIL(id),
-};
-
-// 역할별 표시 카테고리 정의
-const ROLE_CATEGORIES: Record<string, string[]> = {
-  test_engineer: ['equipment', 'calibration', 'rental', 'checkout'],
-  technical_manager: ['equipment', 'calibration', 'rental'],
-  quality_manager: ['calibration', 'equipment'],
-  lab_manager: ['equipment', 'calibration', 'rental', 'checkout'],
-  system_admin: ['equipment', 'calibration', 'rental', 'checkout'],
-};
-
-// 카테고리 탭 정의 (label은 i18n key)
-const CATEGORY_TABS = [
-  { key: 'all', labelKey: 'all' },
-  { key: 'equipment', labelKey: 'equipment' },
-  { key: 'calibration', labelKey: 'calibration' },
-  { key: 'rental', labelKey: 'rental' },
-  { key: 'checkout', labelKey: 'checkout' },
-];
 
 // 개별 활동 항목 컴포넌트
 const ActivityItem = memo(function ActivityItem({
@@ -201,12 +48,8 @@ const ActivityItem = memo(function ActivityItem({
   userActionText: string;
   viewDetailText: string;
 }) {
-  const activityInfo = ACTIVITY_TYPES[activity.type] || {
-    icon: <FileCheck className="h-4 w-4" />,
-    labelKey: 'other',
-    variant: 'default' as const,
-    category: 'other',
-  };
+  const activityInfo = ACTIVITY_TYPES[activity.type] || DEFAULT_ACTIVITY_META;
+  const Icon = activityInfo.icon;
 
   const isApproval = activity.type.includes('approved');
   const isRejection = activity.type.includes('rejected');
@@ -215,31 +58,28 @@ const ActivityItem = memo(function ActivityItem({
   return (
     <div
       className={cn(
-        `flex items-start space-x-4 p-3 rounded-lg ${DASHBOARD_MOTION.instantBg} motion-reduce:transition-none`,
+        `${RA.item} ${DASHBOARD_MOTION.instantBg} motion-reduce:transition-none`,
         'hover:bg-muted/50',
-        isApproval && 'bg-ul-green/5 dark:bg-ul-green/10',
-        isRejection && 'bg-ul-red/5 dark:bg-ul-red/10'
+        isApproval && RA.rowApproval,
+        isRejection && RA.rowRejection
       )}
     >
       <div
         className={cn(
-          'mt-1 rounded-full p-2',
-          isApproval && 'bg-ul-green/10 dark:bg-ul-green/20',
-          isRejection && 'bg-ul-red/10 dark:bg-ul-red/20',
-          !isApproval && !isRejection && 'bg-muted'
+          RA.iconContainer,
+          isApproval && RA.iconContainerApproval,
+          isRejection && RA.iconContainerRejection,
+          !isApproval && !isRejection && RA.iconContainerDefault
         )}
       >
-        {activityInfo.icon}
+        <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
-      <div className="flex-1 space-y-1 min-w-0">
+      <div className={RA.content}>
         <div className="flex items-center flex-wrap gap-2">
           <Badge variant={activityInfo.variant} className="py-0.5 text-xs">
             {label}
           </Badge>
-          <time
-            dateTime={activity.timestamp}
-            className="text-xs text-muted-foreground flex items-center"
-          >
+          <time dateTime={activity.timestamp} className={RA.meta}>
             <Clock className="inline-block h-3 w-3 mr-1" aria-hidden="true" />
             {formatDateTime(activity.timestamp)}
           </time>
@@ -252,7 +92,7 @@ const ActivityItem = memo(function ActivityItem({
         <Button
           variant="link"
           size="sm"
-          className="h-6 px-0 text-xs"
+          className={RA.viewDetailBtn}
           onClick={() => onNavigate(activity)}
         >
           {viewDetailText}
@@ -279,7 +119,7 @@ export const RecentActivities = memo(function RecentActivities({
   // 활동 상세 페이지 이동 함수
   const handleNavigateToDetail = useCallback(
     (activity: RecentActivity) => {
-      const route = ROUTES[activity.type];
+      const route = ACTIVITY_ROUTES[activity.type];
       if (route) {
         router.push(route(activity.entityId));
       }
@@ -351,16 +191,8 @@ export const RecentActivities = memo(function RecentActivities({
                 </div>
               ))}
           </div>
-        ) : data.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground">
-            <Filter
-              className="h-12 w-12 mx-auto mb-4 opacity-30 motion-safe:animate-gentle-bounce"
-              aria-hidden="true"
-            />
-            <p className="text-lg font-medium">{t('empty')}</p>
-            <p className="text-sm mt-1">{t('emptyDescription')}</p>
-          </div>
         ) : (
+          /* 탭은 데이터 유무와 관계없이 항상 표시 */
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="w-full justify-start overflow-x-auto">
               {visibleTabs.map((tab) => (
@@ -370,28 +202,40 @@ export const RecentActivities = memo(function RecentActivities({
               ))}
             </TabsList>
 
-            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-              {filteredActivities.length === 0 ? (
-                <div className="py-8 text-center text-muted-foreground">
-                  <p>{t('noCategory')}</p>
+            <div className="relative">
+              {data.length === 0 ? (
+                /* 전체 데이터 없음 — neutral (py-8, 패딩 축소) */
+                <div className={ES.neutral.container}>
+                  <Filter className={cn(ES.neutral.icon, ES.neutral.iconSize)} aria-hidden="true" />
+                  <p className={ES.neutral.title}>{t('empty')}</p>
+                  <p className={ES.neutral.description}>{t('emptyDescription')}</p>
+                </div>
+              ) : filteredActivities.length === 0 ? (
+                /* 탭 필터링 후 결과 없음 — filter (텍스트만) */
+                <div className={ES.filter.container}>
+                  <p className={ES.filter.text}>{t('noCategory')}</p>
                 </div>
               ) : (
-                filteredActivities.map((activity) => {
-                  const activityInfo = ACTIVITY_TYPES[activity.type];
-                  const labelKey = activityInfo?.labelKey || 'other';
-                  return (
-                    <ActivityItem
-                      key={activity.id}
-                      activity={activity}
-                      onNavigate={handleNavigateToDetail}
-                      activityLabel={t(`types.${labelKey}` as Parameters<typeof t>[0])}
-                      otherLabel={t('other')}
-                      userActionText={t('userAction', { userName: activity.userName })}
-                      viewDetailText={t('viewDetail')}
-                    />
-                  );
-                })
+                <div className={RA.scrollContainer}>
+                  {filteredActivities.map((activity) => {
+                    const activityInfo = ACTIVITY_TYPES[activity.type];
+                    const labelKey = activityInfo?.labelKey || 'other';
+                    return (
+                      <ActivityItem
+                        key={activity.id}
+                        activity={activity}
+                        onNavigate={handleNavigateToDetail}
+                        activityLabel={t(`types.${labelKey}` as Parameters<typeof t>[0])}
+                        otherLabel={t('other')}
+                        userActionText={t('userAction', { userName: activity.userName })}
+                        viewDetailText={t('viewDetail')}
+                      />
+                    );
+                  })}
+                </div>
               )}
+              {/* 스크롤 어포던스 */}
+              {filteredActivities.length > 4 && <div className={RA.scrollFade} />}
             </div>
           </Tabs>
         )}

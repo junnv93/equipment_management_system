@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { OverdueCalibration, UpcomingCalibration } from '@/lib/api/dashboard-api';
 import { DASHBOARD_DDAY_COMPACT_TOKENS as T } from '@/lib/design-tokens';
+import { DISPLAY_LIMITS } from '@/lib/config/dashboard-config';
 import { getTimeBasedUrgency, type UrgencyLevel } from '@/lib/design-tokens/visual-feedback';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
@@ -14,6 +15,7 @@ interface CalibrationDdayListProps {
   overdueCalibrations: OverdueCalibration[];
   upcomingCalibrations: UpcomingCalibration[];
   loading?: boolean;
+  className?: string;
 }
 
 type DdayItem =
@@ -50,7 +52,9 @@ export function CalibrationDdayList({
   overdueCalibrations,
   upcomingCalibrations,
   loading = false,
+  className,
 }: CalibrationDdayListProps) {
+  const minH = 280;
   const t = useTranslations('dashboard.compactDday');
 
   // 초과(내림차순) + 예정(오름차순) 통합
@@ -79,14 +83,14 @@ export function CalibrationDdayList({
           daysUntilDue: c.daysUntilDue,
         })
       ),
-  ].slice(0, 8);
+  ].slice(0, DISPLAY_LIMITS.calibrationDday);
 
   const overdueCount = overdueCalibrations.length;
   const upcomingCount = upcomingCalibrations.length;
 
   if (loading) {
     return (
-      <div className={T.container} style={{ minHeight: 280 }}>
+      <div className={cn(T.container, className)} style={{ minHeight: minH }}>
         <div className={T.header}>
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-4 w-16" />
@@ -109,8 +113,8 @@ export function CalibrationDdayList({
 
   return (
     <div
-      className={T.container}
-      style={{ minHeight: 280 }}
+      className={cn(T.container, className)}
+      style={minH ? { minHeight: minH } : undefined}
       role="region"
       aria-label={t('ariaLabel')}
     >
@@ -134,26 +138,35 @@ export function CalibrationDdayList({
       {/* 리스트 */}
       {items.length > 0 ? (
         <>
-          <div className={cn(T.list, 'max-h-[320px]')}>
-            {items.map((item) => (
-              <Link
-                key={`${item.kind}-${item.id}`}
-                href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(item.id)}
-                className={cn(T.item, 'hover:bg-muted/70 group')}
-                aria-label={`${item.name} ${getDdayLabel(item)}`}
-              >
-                <span className={cn(T.bar, URGENCY_BAR[getItemUrgency(item)])} aria-hidden="true" />
-                <span className={cn(T.dday, URGENCY_DDAY[getItemUrgency(item)])}>
-                  {getDdayLabel(item)}
-                </span>
-                <div className={T.info}>
-                  {item.managementNumber && (
-                    <div className={T.managementNumber}>{item.managementNumber}</div>
-                  )}
-                  <div className={T.equipmentName}>{item.name}</div>
-                </div>
-              </Link>
-            ))}
+          <div className="relative flex-1 overflow-hidden">
+            <div className={cn(T.list, 'max-h-[320px]')}>
+              {items.map((item) => (
+                <Link
+                  key={`${item.kind}-${item.id}`}
+                  href={FRONTEND_ROUTES.EQUIPMENT.DETAIL(item.id)}
+                  className={cn(T.item, 'hover:bg-muted/70 group')}
+                  aria-label={`${item.name} ${getDdayLabel(item)}`}
+                >
+                  <span
+                    className={cn(T.bar, URGENCY_BAR[getItemUrgency(item)])}
+                    aria-hidden="true"
+                  />
+                  <span className={cn(T.dday, URGENCY_DDAY[getItemUrgency(item)])}>
+                    {getDdayLabel(item)}
+                  </span>
+                  <div className={T.info}>
+                    {item.managementNumber && (
+                      <div className={T.managementNumber}>{item.managementNumber}</div>
+                    )}
+                    <div className={T.equipmentName}>{item.name}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {/* 스크롤 어포던스 — 더 보기 있음을 시각적으로 표시 */}
+            {items.length >= 6 && (
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent" />
+            )}
           </div>
           {/* 더보기 링크 */}
           {(overdueCount > 8 || upcomingCount > 8) && (
@@ -166,9 +179,9 @@ export function CalibrationDdayList({
         </>
       ) : (
         <div className={T.emptyContainer}>
-          <CheckCircle2 className="h-10 w-10 mb-2 text-ul-green" aria-hidden="true" />
-          <p className="text-sm font-medium">{t('empty')}</p>
-          <p className="text-xs mt-1 text-center">{t('emptyDesc')}</p>
+          <CheckCircle2 className={T.emptyIcon} aria-hidden="true" />
+          <p className={T.emptyTitle}>{t('empty')}</p>
+          <p className={T.emptyDesc}>{t('emptyDesc')}</p>
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import type {
   UpcomingCheckoutReturn,
 } from '@/lib/api/dashboard-api';
 import { DASHBOARD_CALENDAR_TOKENS as T } from '@/lib/design-tokens';
+import { DISPLAY_LIMITS } from '@/lib/config/dashboard-config';
 
 type EventType = 'overdue' | 'upcoming' | 'return';
 
@@ -190,8 +191,28 @@ export function MiniCalendar({
             // 도트 타입 중복 제거 (같은 타입 도트는 1개만)
             const uniqueTypes = Array.from(new Set(cell.events.map((e) => e.type)));
 
+            // 이벤트 있는 셀의 키보드 접근성 핸들러
+            const handleCellKeyDown = hasEvents
+              ? (e: React.KeyboardEvent<HTMLDivElement>) => {
+                  // Enter/Space: 툴팁 트리거 (포커스 유지, Radix Tooltip이 처리)
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                  }
+                }
+              : undefined;
+
             const cellContent = (
-              <div className={cn(T.cell, isToday && T.cellToday, hasEvents && 'cursor-pointer')}>
+              <div
+                className={cn(T.cell, isToday && T.cellToday, hasEvents && 'cursor-pointer')}
+                {...(hasEvents
+                  ? {
+                      tabIndex: 0,
+                      role: 'button',
+                      onKeyDown: handleCellKeyDown,
+                      'aria-label': `${cell.dateKey}: ${cell.events.map((e) => e.label).join(', ')}${holidayName ? ` (${holidayName})` : ''}`,
+                    }
+                  : {})}
+              >
                 <span
                   className={cn(
                     T.cellNumber,
@@ -229,7 +250,7 @@ export function MiniCalendar({
                       {holidayName}
                     </div>
                   )}
-                  {cell.events.slice(0, 5).map((ev, i) => (
+                  {cell.events.slice(0, DISPLAY_LIMITS.calendarEvents).map((ev, i) => (
                     <div key={`${ev.id}-${i}`} className="flex items-center gap-1.5 py-0.5">
                       <span className={getPopupDotClass(ev.type)} aria-hidden="true" />
                       <span className="text-[10px] truncate max-w-[160px]" title={ev.label}>
@@ -237,9 +258,9 @@ export function MiniCalendar({
                       </span>
                     </div>
                   ))}
-                  {cell.events.length > 5 && (
+                  {cell.events.length > DISPLAY_LIMITS.calendarEvents && (
                     <div className="text-[10px] text-muted-foreground mt-1">
-                      +{cell.events.length - 5}건 더
+                      +{cell.events.length - DISPLAY_LIMITS.calendarEvents}건 더
                     </div>
                   )}
                 </TooltipContent>
