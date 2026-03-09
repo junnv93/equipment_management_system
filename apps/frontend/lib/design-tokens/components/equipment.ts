@@ -468,6 +468,13 @@ export const EQUIPMENT_FILTER_TOKENS = {
 
   /** 필터 카운트 */
   count: 'tabular-nums font-medium',
+
+  /** 레이아웃 */
+  layout: {
+    root: 'flex flex-col gap-3',
+    primaryRow: 'flex flex-wrap gap-2 items-center',
+    secondaryRow: 'flex flex-wrap gap-2 pt-1',
+  },
 } as const;
 
 // ============================================================================
@@ -502,6 +509,12 @@ export const EQUIPMENT_EMPTY_STATE_TOKENS = {
  * 장비 테이블 스타일
  */
 export const EQUIPMENT_TABLE_TOKENS = {
+  /** 테이블 외부 컨테이너 */
+  container: 'border border-brand-border-subtle bg-brand-bg-surface rounded-lg overflow-hidden',
+
+  /** 헤더 행 배경 */
+  headerRow: 'bg-brand-bg-elevated/80 border-b-2 border-brand-border-default',
+
   /** Row hover */
   rowHover: ['hover:bg-muted/50', getTransitionClasses('instant', ['background-color'])].join(' '),
 
@@ -642,6 +655,114 @@ export const EQUIPMENT_CRITICAL_STATUSES = new Set<string>([
 ]);
 
 // ============================================================================
+// Equipment Detail Header Tokens (컴팩트 Sticky 헤더)
+// ============================================================================
+
+/**
+ * 장비 상세 컴팩트 헤더 스타일
+ *
+ * 기존 EQUIPMENT_HEADER_TOKENS (dark gradient)와 별도로,
+ * 컴팩트 sticky 헤더용 light background 스타일.
+ */
+export const EQUIPMENT_DETAIL_HEADER_TOKENS = {
+  /** sticky + semantic bg (shadcn bg-background: white/dark 자동 대응) */
+  container: 'sticky top-0 z-30 bg-background border-b border-border shadow-sm',
+  breadcrumbRow:
+    'py-1.5 text-sm text-muted-foreground flex items-center justify-between border-b border-border/50 px-4 sm:px-6 lg:px-8',
+  mainRow: 'py-3 flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-8',
+  nameGroup: 'flex flex-col gap-0.5 min-w-0',
+  name: 'text-lg font-bold text-foreground truncate',
+  meta: 'text-xs text-muted-foreground flex items-center gap-2 flex-wrap',
+  actions: 'flex items-center gap-2 flex-shrink-0',
+  /** 뒤로가기 링크 — getTransitionClasses 적용 */
+  backLink: [
+    'flex items-center gap-1 shrink-0 hover:text-foreground text-xs',
+    getTransitionClasses('fast', ['color']),
+  ].join(' '),
+} as const;
+
+// ============================================================================
+// Equipment KPI Strip Tokens
+// ============================================================================
+
+/**
+ * 장비 KPI 스트립 카드 스타일
+ *
+ * 5개 KPI 카드: 다음 교정일, 현재 위치, 반출 이력, 유지보수, 사고 이력
+ */
+export const EQUIPMENT_KPI_STRIP_TOKENS = {
+  container: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 py-4',
+  card: {
+    base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4 cursor-pointer',
+    hover: ['hover:shadow-sm', getTransitionClasses('fast', ['box-shadow', 'border-color'])].join(
+      ' '
+    ),
+    focus: FOCUS_TOKENS.classes.brand,
+  },
+  /** 텍스트 값 (위치, 교정일 등) */
+  value: 'text-xl font-semibold leading-tight',
+  /** 숫자 카운트 값 — tabular-nums로 정렬, font-mono 없음 (한국어 "건" 혼합 폰트 방지) */
+  numericValue: 'text-xl font-semibold tabular-nums leading-tight',
+  label: 'text-xs text-muted-foreground',
+  sub: 'text-[11px] text-muted-foreground/70',
+  borderColors: {
+    ok: 'border-l-green-500',
+    warn: 'border-l-red-500',
+    info: 'border-l-blue-500',
+    neutral: 'border-l-border',
+  },
+  iconBg: {
+    ok: 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400',
+    warn: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400',
+    info: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400',
+    neutral: 'bg-muted text-muted-foreground',
+  },
+  iconContainer: 'rounded-md p-2 flex-shrink-0',
+} as const;
+
+export type KpiColorVariant = keyof typeof EQUIPMENT_KPI_STRIP_TOKENS.borderColors;
+
+// ============================================================================
+// Equipment Tab Underline Tokens (flat underline 스타일)
+// ============================================================================
+
+/**
+ * 장비 탭 Flat Underline 스타일
+ *
+ * 기존 pill 스타일(EQUIPMENT_TAB_TOKENS)과 별도로,
+ * 새 flat underline + sticky 탭 바용 스타일.
+ */
+export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
+  /**
+   * 탭 바 컨테이너 (sticky)
+   * top: CSS 변수 --sticky-header-height (EquipmentDetailClient ResizeObserver로 동적 설정)
+   * bg-background: semantic token (하드코딩 금지)
+   */
+  container:
+    'sticky top-[var(--sticky-header-height,0px)] z-20 bg-background border-b border-border',
+  /** 스크롤 가능한 wrapper (모바일) */
+  mobileScroll: 'overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0',
+  /** TabsList */
+  list: 'inline-flex min-w-max bg-transparent',
+  /** Trigger base */
+  triggerBase: [
+    'px-3 min-h-11 text-sm font-medium relative whitespace-nowrap inline-flex items-center gap-1.5',
+    getTransitionClasses('fast', ['color']),
+  ].join(' '),
+  /** 활성 상태 */
+  triggerActive:
+    'data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[3px] data-[state=active]:after:bg-ul-red data-[state=active]:after:rounded-t-sm',
+  /** 비활성 상태 */
+  triggerInactive: 'text-muted-foreground hover:text-foreground',
+  /** 포커스 */
+  triggerFocus: FOCUS_TOKENS.classes.brand,
+  /** 구분선 */
+  separator: 'mx-1 h-5 w-px bg-border opacity-60 self-center',
+  /** 아이콘 크기 */
+  iconSize: 'h-4 w-4',
+} as const;
+
+// ============================================================================
 // Equipment Card Performance Classes
 // ============================================================================
 
@@ -654,6 +775,15 @@ export const EQUIPMENT_CRITICAL_STATUSES = new Set<string>([
  */
 export const EQUIPMENT_CARD_PERFORMANCE_CLASSES =
   '[content-visibility:auto] [contain-intrinsic-size:0_220px]' as const;
+
+/**
+ * 장비 카드 그리드 레이아웃 토큰
+ *
+ * 카드 뷰의 그리드 레이아웃 SSOT — 로딩 스켈레톤과 실제 그리드에서 공유.
+ */
+export const EQUIPMENT_CARD_GRID_TOKENS = {
+  grid: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4',
+} as const;
 
 /**
  * 장비 상태 배지 클래스 + 라벨 반환 (SSOT)

@@ -25,7 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { FormValues } from './BasicInfoSection';
 import { apiClient } from '@/lib/api/api-client';
-import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
+import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
@@ -129,9 +129,9 @@ export function StatusLocationSection({
                           <div className="flex items-center gap-2">
                             <Badge
                               variant="outline"
-                              className={getEquipmentStatusStyle(field.value).className}
+                              className={getEquipmentStatusTokenStyle(field.value).className}
                             >
-                              {getEquipmentStatusStyle(field.value).label}
+                              {getEquipmentStatusTokenStyle(field.value).label}
                             </Badge>
                           </div>
                         )}
@@ -140,7 +140,7 @@ export function StatusLocationSection({
                   </FormControl>
                   <SelectContent>
                     {Object.entries(EQUIPMENT_STATUS_LABELS).map(([value, label]) => {
-                      const style = getEquipmentStatusStyle(value);
+                      const style = getEquipmentStatusTokenStyle(value);
                       return (
                         <SelectItem key={value} value={value}>
                           <div className="flex items-center gap-2">

@@ -22,7 +22,7 @@ import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
 import type { EquipmentStatus } from '@equipment-management/schemas';
-import { EQUIPMENT_TOOLBAR_TOKENS } from '@/lib/design-tokens';
+import { EQUIPMENT_TOOLBAR_TOKENS, EQUIPMENT_STATS_STRIP_TOKENS } from '@/lib/design-tokens';
 
 /**
  * 스켈레톤 로딩 컴포넌트
@@ -38,7 +38,7 @@ export function EquipmentListSkeleton() {
       aria-label={t('list.loading')}
     >
       {/* 상태 요약 스트립 스켈레톤 */}
-      <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 rounded-lg border border-border overflow-x-auto">
+      <div className={EQUIPMENT_STATS_STRIP_TOKENS.container}>
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-4 w-20 shrink-0" />
         ))}

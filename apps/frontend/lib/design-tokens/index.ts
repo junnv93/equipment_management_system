@@ -187,12 +187,16 @@ export {
   EQUIPMENT_STATUS_DISPLAY_ORDER,
   EQUIPMENT_CRITICAL_STATUSES,
   EQUIPMENT_CARD_PERFORMANCE_CLASSES,
+  EQUIPMENT_CARD_GRID_TOKENS,
   CALIBRATION_BADGE_TOKENS,
   EQUIPMENT_CARD_TOKENS,
   getEquipmentCardClasses,
   EQUIPMENT_HEADER_TOKENS,
   getEquipmentHeaderButtonClasses,
   EQUIPMENT_TAB_TOKENS,
+  EQUIPMENT_DETAIL_HEADER_TOKENS,
+  EQUIPMENT_KPI_STRIP_TOKENS,
+  EQUIPMENT_TAB_UNDERLINE_TOKENS,
   EQUIPMENT_FILTER_TOKENS,
   EQUIPMENT_EMPTY_STATE_TOKENS,
   EQUIPMENT_TABLE_TOKENS,
@@ -204,6 +208,7 @@ export {
   type CalibrationSeverity,
   type CalibrationBadgeStyle,
   type HeaderButtonVariant,
+  type KpiColorVariant,
 } from './components/equipment';
 
 // Equipment Timeline
@@ -293,14 +298,25 @@ export {
   MINI_PROGRESS_SPECIAL_STATUSES,
   CHECKOUT_STEPPER_TOKENS,
   CHECKOUT_STATS_VARIANTS,
+  CHECKOUT_STATS_CHECKED_OUT,
+  CHECKOUT_STATS_RETURNED,
   getCheckoutStatsClasses,
   CHECKOUT_MOTION,
   CHECKOUT_INTERACTION_TOKENS,
   CHECKOUT_DETAIL_TOKENS,
   CONDITION_COMPARISON_TOKENS,
   CHECKOUT_FORM_TOKENS,
+  // v2 redesign tokens
+  CHECKOUT_DDAY_TOKENS,
+  getDdayClasses,
+  formatDday,
+  CHECKOUT_ALERT_TOKENS,
+  CHECKOUT_OVERDUE_GROUP_TOKENS,
+  CHECKOUT_PURPOSE_LEGEND_TOKENS,
+  CHECKOUT_ITEM_ROW_TOKENS,
   type CheckoutStatsVariant,
   type CheckoutPurposeKey,
+  type DdayVariant,
 } from './components/checkout';
 
 // Calibration Plans
@@ -378,6 +394,24 @@ export {
   getWizardStepperLabelClasses,
   getWizardConnectorClasses,
 } from './components/form-wizard';
+
+// Sidebar
+export {
+  SIDEBAR_LAYOUT,
+  SIDEBAR_COLORS,
+  SIDEBAR_ITEM_TOKENS,
+  SIDEBAR_SECTION_TOKENS,
+  getSidebarItemClasses,
+  getSidebarWidthClasses,
+  getSidebarMarginClasses,
+} from './components/sidebar';
+
+// Mobile Nav
+export {
+  MOBILE_NAV_TOKENS,
+  MOBILE_NAV_SECTION_TOKENS,
+  getMobileNavItemClasses,
+} from './components/mobile-nav';
 
 // Settings
 export {

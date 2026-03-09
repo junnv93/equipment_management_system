@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { formatDate } from '@/lib/utils/date';
 import { Equipment } from '@/lib/api/equipment-api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
+import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
 
 // 아이템 높이 및 기타 상수 정의
 const ITEM_HEIGHT = 64; // 각 행의, 높이
@@ -29,7 +29,7 @@ const EquipmentRow = memo(
     // 상태에 따른 뱃지 스타일 (SSOT: equipment-status-styles.ts)
     // 실시간 교정기한 초과 체크 포함
     const getStatusBadge = (status: string, nextCalibrationDate?: string | Date | null) => {
-      const style = getEquipmentStatusStyle(status, nextCalibrationDate);
+      const style = getEquipmentStatusTokenStyle(status, nextCalibrationDate);
       return (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${style.className}`}>
           {style.label}

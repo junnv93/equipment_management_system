@@ -355,13 +355,10 @@ function EquipmentTableComponent({
   const t = useTranslations('equipment');
 
   return (
-    <div className="border border-brand-border-subtle bg-brand-bg-surface rounded-lg overflow-hidden">
+    <div className={EQUIPMENT_TABLE_TOKENS.container}>
       <Table role="grid" aria-label={t('table.ariaLabel')} className="[&_td]:py-2 [&_td]:px-3">
         <TableHeader>
-          <TableRow
-            role="row"
-            className="bg-brand-bg-elevated/80 border-b-2 border-brand-border-default"
-          >
+          <TableRow role="row" className={EQUIPMENT_TABLE_TOKENS.headerRow}>
             {COLUMNS.map((col) => {
               // 상태 바 헤더: 빈 셀
               if (col.key === 'statusBar') {

@@ -18,6 +18,7 @@ import {
   DEFAULT_STATUS_CONFIG,
   CALIBRATION_BADGE_TOKENS,
   EQUIPMENT_CARD_PERFORMANCE_CLASSES,
+  EQUIPMENT_CARD_GRID_TOKENS,
   getEquipmentCardClasses,
   EQUIPMENT_EMPTY_STATE_TOKENS,
   getStaggerDelay,
@@ -265,7 +266,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
   if (isLoading) {
     return (
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4"
+        className={EQUIPMENT_CARD_GRID_TOKENS.grid}
         data-testid="equipment-card-grid"
         aria-busy="true"
         aria-live="polite"
@@ -294,7 +295,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
 
   return (
     <div
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4"
+      className={EQUIPMENT_CARD_GRID_TOKENS.grid}
       data-testid="equipment-card-grid"
       role="feed"
       aria-label={t('card.gridAriaLabel')}

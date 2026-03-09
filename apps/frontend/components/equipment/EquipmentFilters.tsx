@@ -275,12 +275,12 @@ function EquipmentFiltersComponent({
 
   return (
     <div
-      className={`flex flex-col gap-3 ${className}`}
+      className={`${EQUIPMENT_FILTER_TOKENS.layout.root} ${className}`}
       role="group"
       aria-label={t('filters.filterOptions')}
     >
       {/* 1차 필터: slotBefore + Site, Status, CalibrationDue + 추가 필터 버튼 + slotAfter */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className={EQUIPMENT_FILTER_TOKENS.layout.primaryRow}>
         {slotBefore}
         {/* 사이트 필터 */}
         <Select
@@ -372,7 +372,7 @@ function EquipmentFiltersComponent({
         className={`grid transition-[grid-template-rows] duration-200 ease-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className={EQUIPMENT_FILTER_TOKENS.layout.secondaryRow}>
             {/* 교정 방법 필터 */}
             <Select
               value={filters.calibrationMethod || '_all'}

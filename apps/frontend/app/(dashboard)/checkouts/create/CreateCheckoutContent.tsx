@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
-import { CHECKOUT_FORM_TOKENS } from '@/lib/design-tokens';
+import { CHECKOUT_FORM_TOKENS, getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,7 +48,6 @@ import { SITE_LABELS } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
-import { getEquipmentStatusStyle } from '@/lib/constants/equipment-status-styles';
 import {
   getEquipmentSelectability,
   filterVisibleEquipment,
@@ -348,7 +347,7 @@ export default function CreateCheckoutContent() {
                         </TableRow>
                       ) : (
                         visibleEquipments.map((equipment: Equipment) => {
-                          const statusStyle = getEquipmentStatusStyle(
+                          const statusStyle = getEquipmentStatusTokenStyle(
                             equipment.status,
                             equipment.nextCalibrationDate
                           );
@@ -485,7 +484,7 @@ export default function CreateCheckoutContent() {
                 ) : (
                   <div className="space-y-3 max-h-[400px] overflow-y-auto">
                     {selectedEquipments.map((equipment) => {
-                      const statusStyle = getEquipmentStatusStyle(
+                      const statusStyle = getEquipmentStatusTokenStyle(
                         equipment.status,
                         equipment.nextCalibrationDate
                       );
