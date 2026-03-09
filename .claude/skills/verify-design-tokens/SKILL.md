@@ -114,6 +114,10 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/equipment/EquipmentKpiStrip.tsx`                                         | 마이그레이션된 컴포넌트 (Equipment)                  |
 | `apps/frontend/components/layout/GlobalSearchDialog.tsx`                                           | 마이그레이션된 컴포넌트 (Layout)                     |
 | `apps/frontend/components/layout/GlobalSearchTrigger.tsx`                                          | 마이그레이션된 컴포넌트 (Layout)                     |
+| `apps/frontend/app/(dashboard)/checkouts/CheckoutsContent.tsx`                                     | 마이그레이션된 컴포넌트 (Checkout)                   |
+| `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx`                            | 마이그레이션된 컴포넌트 (Checkout)                   |
+| `apps/frontend/components/calibration/CalibrationAlertBanners.tsx`                                 | 마이그레이션된 컴포넌트 (Calibration)                |
+| `apps/frontend/components/calibration/VersionHistory.tsx`                                          | 마이그레이션된 컴포넌트 (Calibration)                |
 
 ## Workflow
 
@@ -194,7 +198,7 @@ import { getHeaderButtonClasses, getHeaderSizeClasses } from '@/lib/design-token
 
 ### Step 4: 마이그레이션된 컴포넌트 토큰 사용
 
-마이그레이션된 32개 컴포넌트가 여전히 design-tokens를 import하는지 확인합니다.
+마이그레이션된 60개 컴포넌트가 여전히 design-tokens를 import하는지 확인합니다.
 
 ```bash
 # 마이그레이션된 컴포넌트의 design-tokens import 확인
@@ -256,6 +260,9 @@ files=(
   "apps/frontend/components/equipment/EquipmentKpiStrip.tsx"
   "apps/frontend/components/layout/GlobalSearchDialog.tsx"
   "apps/frontend/components/layout/GlobalSearchTrigger.tsx"
+  "apps/frontend/app/(dashboard)/checkouts/CheckoutsContent.tsx"
+  "apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx"
+  "apps/frontend/components/calibration/CalibrationAlertBanners.tsx"
 )
 
 for f in "${files[@]}"; do
@@ -271,7 +278,7 @@ for f in "${files[@]}"; do
 done
 ```
 
-**PASS 기준:** 모든 마이그레이션된 53개 컴포넌트에서 design-tokens import가 존재.
+**PASS 기준:** 모든 마이그레이션된 60개 컴포넌트에서 design-tokens import가 존재.
 
 **FAIL 기준:** design-tokens import가 없거나 하드코딩된 값 사용 시 재마이그레이션 필요.
 

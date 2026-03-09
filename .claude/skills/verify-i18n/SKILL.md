@@ -168,8 +168,8 @@ ls apps/frontend/messages/en/*.json | xargs -I{} basename {} .json | sort
 en/ko에서 `{variable}` 플레이스홀더가 동일하게 사용되는지 확인합니다.
 
 ```bash
-# en 파일의 ICU 변수 추출 후 ko와 비교 (대표 도메인만)
-for domain in equipment dashboard audit; do
+# en 파일의 ICU 변수 추출 후 ko와 비교 (ICU 변수 사용 도메인 전체)
+for domain in equipment dashboard audit checkouts calibration approvals; do
   echo "=== $domain ==="
   diff \
     <(jq -r 'to_entries[] | .value | if type == "string" then . else empty end' \
@@ -182,7 +182,7 @@ for domain in equipment dashboard audit; do
 done
 ```
 
-**참고:** 이 검사는 전체 파일 수준의 변수 집합을 비교합니다. 개별 키 수준의 변수 불일치는 Step 2 키 구조 검사와 함께 수동 확인 필요.
+**참고:** 이 검사는 전체 파일 수준의 변수 집합을 비교합니다. 개별 키 수준의 변수 불일치는 Step 2 키 구조 검사와 함께 수동 확인 필요. 새로운 ICU 변수 사용 도메인이 추가되면 `for domain in ...` 목록에 포함시켜야 합니다.
 
 **PASS 기준:** 차이 없음 (동일한 ICU 변수 집합).
 
