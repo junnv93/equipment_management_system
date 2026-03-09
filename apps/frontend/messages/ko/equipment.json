@@ -168,10 +168,17 @@
       "not_applicable": "비대상"
     },
     "moreFilters": "추가 필터",
-    "moreFiltersCount": "추가 필터 ({count})"
+    "moreFiltersCount": "추가 필터 ({count})",
+    "showAllEquipment": "전체 장비 보기",
+    "filterByStatus": "{status} 상태로 필터링"
+  },
+  "resultsBar": {
+    "totalWithRange": "{total}개 장비 · {start}-{end} 표시",
+    "ariaLabel": "검색 결과 요약"
   },
   "sort": {
     "label": "정렬:",
+    "managementNumber": "관리번호순",
     "name": "이름순",
     "lastCalibrationDate": "교정일순",
     "nextCalibrationDate": "교정기한순",

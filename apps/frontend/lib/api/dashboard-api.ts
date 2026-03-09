@@ -89,20 +89,6 @@ export interface RecentActivity {
   entityName: string;
 }
 
-/**
- * @deprecated Use PendingCountsByCategory from approvals-api.ts instead.
- * This interface uses a different category structure that doesn't match
- * the actual approval page tabs (e.g., 'checkout' vs 'outgoing'/'incoming').
- */
-export interface PendingApprovalCounts {
-  equipment: number;
-  calibration: number;
-  checkout: number;
-  calibrationFactor: number;
-  software: number;
-  total: number;
-}
-
 // UserRole은 @equipment-management/schemas에서 import (SSOT)
 export type { UserRole };
 
@@ -203,30 +189,6 @@ class DashboardApi {
       params: teamId ? { teamId } : undefined,
     });
     return response.data;
-  }
-
-  /**
-   * @deprecated Use approvalsApi.getPendingCounts() from approvals-api.ts instead.
-   * This method calls a legacy endpoint with incomplete counting logic
-   * (calibration/disposal/NC hardcoded to 0).
-   */
-  async getPendingApprovalCounts(role?: string): Promise<PendingApprovalCounts> {
-    try {
-      const response = await apiClient.get(API_ENDPOINTS.DASHBOARD.PENDING_APPROVAL_COUNTS, {
-        params: role ? { role } : undefined,
-      });
-      return response.data;
-    } catch {
-      // API 실패 시 기본값 반환
-      return {
-        equipment: 0,
-        calibration: 0,
-        checkout: 0,
-        calibrationFactor: 0,
-        software: 0,
-        total: 0,
-      };
-    }
   }
 
   /**

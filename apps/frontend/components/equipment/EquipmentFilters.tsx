@@ -1,12 +1,12 @@
 'use client';
 
-import { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { EQUIPMENT_FILTER_TOKENS, EQUIPMENT_TOOLBAR_TOKENS } from '@/lib/design-tokens';
+import { EQUIPMENT_FILTER_TOKENS } from '@/lib/design-tokens';
 import {
   Select,
   SelectContent,
@@ -19,6 +19,7 @@ import {
   type EquipmentStatus,
   type CalibrationMethod,
   type Classification,
+  SITE_VALUES,
   EQUIPMENT_STATUS_FILTER_OPTIONS,
   CALIBRATION_METHOD_LABELS,
   CLASSIFICATION_LABELS,
@@ -36,9 +37,6 @@ import { useAuth } from '@/hooks/use-auth';
 import teamsApi from '@/lib/api/teams-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 
-/** 사이트 값 배열 (옵션 생성용) */
-const SITE_VALUES: Site[] = ['suwon', 'uiwang', 'pyeongtaek'];
-
 interface EquipmentFiltersProps {
   filters: FiltersType;
   onSiteChange: (site: Site | '') => void;
@@ -52,6 +50,10 @@ interface EquipmentFiltersProps {
   activeFilterCount: number;
   hasActiveFilters: boolean;
   className?: string;
+  /** Primary 필터 행 앞에 렌더링할 슬롯 (SearchBar 등) */
+  slotBefore?: React.ReactNode;
+  /** Primary 필터 행 끝에 렌더링할 슬롯 (ViewToggle 등) */
+  slotAfter?: React.ReactNode;
 }
 
 /**
@@ -99,6 +101,8 @@ function EquipmentFiltersComponent({
   onClearFilters,
   hasActiveFilters,
   className = '',
+  slotBefore,
+  slotAfter,
 }: EquipmentFiltersProps) {
   const t = useTranslations('equipment');
   const { user } = useAuth();
@@ -271,12 +275,13 @@ function EquipmentFiltersComponent({
 
   return (
     <div
-      className={`${EQUIPMENT_TOOLBAR_TOKENS.filterContainer} flex flex-col gap-3 ${className}`}
+      className={`flex flex-col gap-3 ${className}`}
       role="group"
       aria-label={t('filters.filterOptions')}
     >
-      {/* 1차 필터: Site, Status, CalibrationDue + 추가 필터 버튼 + 초기화 */}
+      {/* 1차 필터: slotBefore + Site, Status, CalibrationDue + 추가 필터 버튼 + slotAfter */}
       <div className="flex flex-wrap gap-2 items-center">
+        {slotBefore}
         {/* 사이트 필터 */}
         <Select
           value={filters.site || '_all'}
@@ -359,19 +364,7 @@ function EquipmentFiltersComponent({
             : t('filters.moreFilters')}
         </Button>
 
-        {/* 초기화 버튼 */}
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClearFilters}
-            className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
-            type="button"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            {t('filters.reset')}
-          </Button>
-        )}
+        {slotAfter && <div className="ml-auto flex items-center gap-2 shrink-0">{slotAfter}</div>}
       </div>
 
       {/* 2차 필터 (CSS-only grid-rows 트랜지션) */}
@@ -474,9 +467,13 @@ function EquipmentFiltersComponent({
         </div>
       </div>
 
-      {/* 활성 필터 배지 */}
+      {/* 활성 필터 배지 + 초기화 버튼 */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap gap-1" role="list" aria-label={t('filters.appliedFilters')}>
+        <div
+          className="flex flex-wrap items-center gap-1"
+          role="list"
+          aria-label={t('filters.appliedFilters')}
+        >
           {filters.site && !isSiteFixed && (
             <ActiveFilterBadge
               label={t('filters.badgeSite', { label: getSiteLabel(filters.site) })}
@@ -525,6 +522,16 @@ function EquipmentFiltersComponent({
               onRemove={() => onTeamIdChange('')}
             />
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearFilters}
+            className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground ml-1"
+            type="button"
+          >
+            <RotateCcw className="h-3 w-3" />
+            {t('filters.reset')}
+          </Button>
         </div>
       )}
     </div>

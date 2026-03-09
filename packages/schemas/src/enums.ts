@@ -66,6 +66,12 @@ export type UserRole = z.infer<typeof UserRoleEnum>;
 export const SiteEnum = z.enum(['suwon', 'uiwang', 'pyeongtaek']);
 export type Site = z.infer<typeof SiteEnum>;
 
+/**
+ * 사이트 값 배열 (SiteEnum SSOT — 중복 선언 금지)
+ * @example SITE_VALUES.map(site => ({ value: site, label: ... }))
+ */
+export const SITE_VALUES: readonly Site[] = SiteEnum.options;
+
 // 위치 타입 열거형
 export const LocationEnum = z.enum(['수원랩', '의왕랩', '평택랩']);
 export type Location = z.infer<typeof LocationEnum>;

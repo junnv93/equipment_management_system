@@ -63,16 +63,11 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/auth/LoginPageContent.tsx`                                               | 마이그레이션된 컴포넌트                  |
 | `apps/frontend/components/auth/AzureAdButton.tsx`                                                  | 마이그레이션된 컴포넌트                  |
 | `apps/frontend/components/notifications/notification-item.tsx`                                     | 마이그레이션된 컴포넌트                  |
-| `apps/frontend/components/dashboard/StatsCard.tsx`                                                 | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/WelcomeHeader.tsx`                                             | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/PendingApprovalCard.tsx`                                       | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/QuickActionButtons.tsx`                                        | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/RecentActivities.tsx`                                          | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/TeamEquipmentStats.tsx`                                        | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/EquipmentStatusChart.tsx`                                      | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/CalibrationList.tsx`                                           | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/OverdueCheckoutsList.tsx`                                      | 마이그레이션된 컴포넌트 (Dashboard)      |
-| `apps/frontend/components/dashboard/DashboardClient.tsx`                                           | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/QuickActionBar.tsx`                                            | 마이그레이션된 컴포넌트 (Dashboard)      |
+| `apps/frontend/components/dashboard/TabbedCalibrationPanel.tsx`                                    | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/CalibrationDdayList.tsx`                                       | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/KpiStatusGrid.tsx`                                             | 마이그레이션된 컴포넌트 (Dashboard)      |
 | `apps/frontend/components/dashboard/MiniCalendar.tsx`                                              | 마이그레이션된 컴포넌트 (Dashboard)      |
@@ -82,6 +77,8 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/equipment/EquipmentListContent.tsx`                                      | 마이그레이션된 컴포넌트 (Equipment)      |
 | `apps/frontend/components/equipment/EquipmentTable.tsx`                                            | 마이그레이션된 컴포넌트 (Equipment)      |
 | `apps/frontend/components/equipment/EquipmentPageHeader.tsx`                                       | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/StatusSummaryStrip.tsx`                                        | 마이그레이션된 컴포넌트 (Equipment)      |
+| `apps/frontend/components/equipment/EquipmentEmptyState.tsx`                                       | 마이그레이션된 컴포넌트 (Equipment)      |
 | `apps/frontend/app/(dashboard)/calibration/CalibrationContent.tsx`                                 | 마이그레이션된 컴포넌트 (Calibration)    |
 | `apps/frontend/app/(dashboard)/calibration/register/CalibrationRegisterContent.tsx`                | 마이그레이션된 컴포넌트 (Calibration)    |
 | `apps/frontend/lib/design-tokens/components/form-wizard.ts`                                        | Layer 3 Form Wizard 토큰                 |
@@ -205,15 +202,11 @@ files=(
   "apps/frontend/components/auth/LoginPageContent.tsx"
   "apps/frontend/components/auth/AzureAdButton.tsx"
   "apps/frontend/components/notifications/notification-item.tsx"
-  "apps/frontend/components/dashboard/StatsCard.tsx"
   "apps/frontend/components/dashboard/WelcomeHeader.tsx"
   "apps/frontend/components/dashboard/PendingApprovalCard.tsx"
-  "apps/frontend/components/dashboard/QuickActionButtons.tsx"
   "apps/frontend/components/dashboard/RecentActivities.tsx"
-  "apps/frontend/components/dashboard/TeamEquipmentStats.tsx"
-  "apps/frontend/components/dashboard/EquipmentStatusChart.tsx"
-  "apps/frontend/components/dashboard/CalibrationList.tsx"
-  "apps/frontend/components/dashboard/OverdueCheckoutsList.tsx"
+  "apps/frontend/components/dashboard/QuickActionBar.tsx"
+  "apps/frontend/components/dashboard/TabbedCalibrationPanel.tsx"
   "apps/frontend/components/dashboard/CalibrationDdayList.tsx"
   "apps/frontend/components/dashboard/KpiStatusGrid.tsx"
   "apps/frontend/components/dashboard/MiniCalendar.tsx"
@@ -223,11 +216,10 @@ files=(
   "apps/frontend/components/equipment/EquipmentListContent.tsx"
   "apps/frontend/components/equipment/EquipmentTable.tsx"
   "apps/frontend/components/equipment/EquipmentPageHeader.tsx"
+  "apps/frontend/components/equipment/StatusSummaryStrip.tsx"
+  "apps/frontend/components/equipment/EquipmentEmptyState.tsx"
   "apps/frontend/app/(dashboard)/calibration/CalibrationContent.tsx"
   "apps/frontend/app/(dashboard)/calibration/register/CalibrationRegisterContent.tsx"
-  "apps/frontend/components/dashboard/AlertPanel.tsx"
-  "apps/frontend/components/dashboard/EquipmentStatusBar.tsx"
-  "apps/frontend/components/dashboard/EquipmentStatusBreakdown.tsx"
   "apps/frontend/components/shared/FormWizardStepper.tsx"
   "apps/frontend/components/equipment/ManagementNumberPreviewBar.tsx"
   "apps/frontend/components/calibration/CalibrationListTable.tsx"
@@ -269,7 +261,7 @@ for f in "${files[@]}"; do
 done
 ```
 
-**PASS 기준:** 모든 마이그레이션된 58개 컴포넌트에서 design-tokens import가 존재.
+**PASS 기준:** 모든 마이그레이션된 53개 컴포넌트에서 design-tokens import가 존재.
 
 **FAIL 기준:** design-tokens import가 없거나 하드코딩된 값 사용 시 재마이그레이션 필요.
 

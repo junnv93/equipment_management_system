@@ -90,6 +90,8 @@ export class EquipmentCacheInvalidation {
         queryKey: queryKeys.equipment.lists(),
         exact: false, // 모든 필터 조합 매칭
       }),
+      // 3. 대시보드 캐시 무효화 (장비 상태 변경 시 통계 영향)
+      DashboardCacheInvalidation.invalidateAll(queryClient),
     ]);
   }
 

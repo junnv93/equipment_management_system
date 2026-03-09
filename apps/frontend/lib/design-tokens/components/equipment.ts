@@ -553,11 +553,33 @@ export const EQUIPMENT_LIST_HEADER_TOKENS = {
  * Dashboard API (GET /api/dashboard/equipment-status-stats) 재활용
  */
 export const EQUIPMENT_STATS_STRIP_TOKENS = {
+  /** 스크롤 가능한 내부 컨테이너 */
   container:
     'flex items-center gap-3 px-3 py-2 bg-brand-bg-elevated/50 rounded-lg border border-brand-border-subtle overflow-x-auto',
+  /** 외부 래퍼 (스크롤 gradient 인디케이터용 relative positioning) */
+  wrapper: 'relative',
+  /** 왼쪽 gradient fade (스크롤 가능성 인디케이터) */
+  gradientLeft:
+    'pointer-events-none absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-brand-bg-surface to-transparent rounded-l-lg z-10',
+  /** 오른쪽 gradient fade */
+  gradientRight:
+    'pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-brand-bg-surface to-transparent rounded-r-lg z-10',
   item: 'flex items-center gap-1.5 text-sm whitespace-nowrap',
+  /** 인터랙티브 아이템 (클릭 가능한 버튼) */
+  itemButton: [
+    'flex items-center gap-1.5 text-sm whitespace-nowrap',
+    'cursor-pointer rounded px-1 -mx-1 py-0.5',
+    'hover:bg-brand-bg-elevated',
+    getTransitionClasses('fast', ['background-color']),
+    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
+  ].join(' '),
+  /** 활성 상태 (현재 필터 적용 중) */
+  itemActive: 'bg-brand-bg-elevated ring-1 ring-brand-border-default rounded px-1 -mx-1 py-0.5',
   dot: 'h-2 w-2 rounded-full flex-shrink-0',
+  /** 일반 카운트 */
   count: 'font-mono tabular-nums font-semibold text-brand-text-primary',
+  /** 위험 상태 카운트 (calibration_overdue, non_conforming) */
+  criticalCount: 'font-mono tabular-nums font-bold text-brand-critical',
   label: 'text-brand-text-muted text-xs',
   divider: 'h-4 w-px bg-brand-border-subtle flex-shrink-0',
   totalCount: 'font-mono tabular-nums font-bold text-lg text-brand-text-primary',
@@ -567,9 +589,71 @@ export const EQUIPMENT_STATS_STRIP_TOKENS = {
  * 장비 필터 툴바 컨테이너 스타일
  */
 export const EQUIPMENT_TOOLBAR_TOKENS = {
+  /** Unified Command Bar 컨테이너 (SearchBar + Filters + ViewToggle 통합) */
+  commandBar: 'bg-brand-bg-elevated/50 rounded-lg border border-brand-border-subtle p-3',
+  /** 결과 정보 바 (toolbar과 table 사이) */
+  resultsBar: 'flex items-center justify-between px-1 py-1.5',
+  /** 결과 카운트 텍스트 */
+  resultsCount: 'text-sm tabular-nums text-brand-text-muted',
+  /** 정렬 표시 */
+  sortIndicator: [
+    'inline-flex items-center gap-1 text-xs',
+    'text-brand-text-secondary',
+    'border border-brand-border-subtle rounded px-1.5 py-0.5',
+  ].join(' '),
+  /** @deprecated commandBar 사용 */
   filterContainer: 'bg-brand-bg-elevated/50 rounded-lg border border-brand-border-subtle px-3 py-2',
   filterCount: 'text-xs tabular-nums font-medium text-brand-text-secondary',
 } as const;
+
+// ============================================================================
+// Equipment Status Display Order & Critical Statuses
+// ============================================================================
+
+/**
+ * 상태 요약 스트립 표시 우선순위 (SSOT)
+ *
+ * STATUS_PRIORITY_ORDER를 컴포넌트 내에 중복 선언하지 말 것.
+ * 상태 추가 시 이 배열과 EQUIPMENT_STATUS_TOKENS만 수정하면 됨.
+ */
+export const EQUIPMENT_STATUS_DISPLAY_ORDER = [
+  'available',
+  'in_use',
+  'checked_out',
+  'calibration_scheduled',
+  'non_conforming',
+  'calibration_overdue',
+  'pending_disposal',
+  'spare',
+  'retired',
+  'disposed',
+  'temporary',
+  'inactive',
+] as const;
+
+/**
+ * 위험 상태 집합 (카운트 강조 표시 대상)
+ *
+ * 이 상태들은 StatusSummaryStrip에서 count를 빨간색(brand-critical)으로 표시한다.
+ */
+export const EQUIPMENT_CRITICAL_STATUSES = new Set<string>([
+  'calibration_overdue',
+  'non_conforming',
+]);
+
+// ============================================================================
+// Equipment Card Performance Classes
+// ============================================================================
+
+/**
+ * CSS 성능 최적화 클래스 (content-visibility API)
+ *
+ * Tailwind arbitrary class로 컴포넌트에 직접 하드코딩하지 말 것.
+ * - content-visibility:auto: 뷰포트 밖 카드 렌더링 건너뜀
+ * - contain-intrinsic-size: 렌더링 전 레이아웃 공간 예약 (220px = 카드 평균 높이)
+ */
+export const EQUIPMENT_CARD_PERFORMANCE_CLASSES =
+  '[content-visibility:auto] [contain-intrinsic-size:0_220px]' as const;
 
 /**
  * 장비 상태 배지 클래스 + 라벨 반환 (SSOT)

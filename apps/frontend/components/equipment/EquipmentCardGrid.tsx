@@ -17,6 +17,7 @@ import {
   EQUIPMENT_STATUS_TOKENS,
   DEFAULT_STATUS_CONFIG,
   CALIBRATION_BADGE_TOKENS,
+  EQUIPMENT_CARD_PERFORMANCE_CLASSES,
   getEquipmentCardClasses,
   EQUIPMENT_EMPTY_STATE_TOKENS,
   getStaggerDelay,
@@ -25,7 +26,7 @@ import {
   getTransitionClasses,
 } from '@/lib/design-tokens';
 import { calculateCalibrationStatus } from '@/lib/utils/calibration-status';
-import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';
+import type { CalibrationMethod } from '@equipment-management/schemas';
 
 interface EquipmentCardGridProps {
   items: Equipment[];
@@ -223,8 +224,11 @@ const EquipmentCard = memo(function EquipmentCard({
               <dt className="sr-only">{t('card.calibrationMethodSrOnly')}</dt>
               <Wrench className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <dd>
-                {CALIBRATION_METHOD_LABELS[equipment.calibrationMethod as CalibrationMethod] ||
-                  equipment.calibrationMethod}
+                {t(
+                  `filters.calibrationMethodLabel.${equipment.calibrationMethod as CalibrationMethod}` as Parameters<
+                    typeof t
+                  >[0]
+                )}
               </dd>
             </div>
           )}
@@ -297,10 +301,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
       aria-busy={isLoading}
     >
       {items.map((equipment) => (
-        <div
-          key={equipment.id || equipment.uuid}
-          className="[content-visibility:auto] [contain-intrinsic-size:0_220px]"
-        >
+        <div key={equipment.id || equipment.uuid} className={EQUIPMENT_CARD_PERFORMANCE_CLASSES}>
           <EquipmentCard equipment={equipment} searchTerm={searchTerm} />
         </div>
       ))}

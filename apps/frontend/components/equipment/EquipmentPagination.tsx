@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { CONTENT_TOKENS } from '@/lib/design-tokens';
+import { PAGE_SIZE_OPTIONS } from '@/lib/config/pagination';
 
 interface EquipmentPaginationProps {
   currentPage: number;
@@ -22,11 +23,6 @@ interface EquipmentPaginationProps {
   onPageSizeChange: (pageSize: number) => void;
   className?: string;
 }
-
-/**
- * 페이지 크기 옵션
- */
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 /**
  * 장비 목록 페이지네이션 컴포넌트

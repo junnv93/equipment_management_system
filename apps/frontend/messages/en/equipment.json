@@ -168,10 +168,17 @@
       "not_applicable": "Not Applicable"
     },
     "moreFilters": "More filters",
-    "moreFiltersCount": "More filters ({count})"
+    "moreFiltersCount": "More filters ({count})",
+    "showAllEquipment": "Show all equipment",
+    "filterByStatus": "Filter by {status} status"
+  },
+  "resultsBar": {
+    "totalWithRange": "{total} equipment · showing {start}-{end}",
+    "ariaLabel": "Search results summary"
   },
   "sort": {
     "label": "Sort:",
+    "managementNumber": "Management No.",
     "name": "By Name",
     "lastCalibrationDate": "By Cal. Date",
     "nextCalibrationDate": "By Cal. Due",

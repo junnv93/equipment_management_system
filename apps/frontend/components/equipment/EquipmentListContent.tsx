@@ -1,19 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-import Link from 'next/link';
-import { Package, SearchX, FilterX, Plus } from 'lucide-react';
+import { memo, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import {
-  EQUIPMENT_EMPTY_STATE_TOKENS,
-  EQUIPMENT_STATUS_TOKENS,
-  EQUIPMENT_STATS_STRIP_TOKENS,
-} from '@/lib/design-tokens';
 import equipmentApi from '@/lib/api/equipment-api';
-import dashboardApi from '@/lib/api/dashboard-api';
 import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { useTranslations } from 'next-intl';
 import { useEquipmentFilters } from '@/hooks/useEquipmentFilters';
@@ -23,75 +13,16 @@ import { EquipmentTable } from '@/components/equipment/EquipmentTable';
 import { EquipmentCardGrid } from '@/components/equipment/EquipmentCardGrid';
 import { ViewToggle } from '@/components/equipment/ViewToggle';
 import { EquipmentPagination } from '@/components/equipment/EquipmentPagination';
+import {
+  EmptySearchResults,
+  EquipmentEmptyState,
+} from '@/components/equipment/EquipmentEmptyState';
+import { StatusSummaryStrip } from '@/components/equipment/StatusSummaryStrip';
 import type { PaginatedResponse } from '@/lib/api/types';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-
-/**
- * 빈 상태 컴포넌트 (검색 결과 없음)
- */
-function EmptySearchResults({
-  hasActiveFilters,
-  searchTerm,
-  onClearFilters,
-}: {
-  hasActiveFilters: boolean;
-  searchTerm?: string;
-  onClearFilters: () => void;
-}) {
-  const t = useTranslations('equipment');
-  const Icon = searchTerm ? SearchX : FilterX;
-
-  return (
-    <div className={`${EQUIPMENT_EMPTY_STATE_TOKENS.container} py-16`}>
-      <Icon className={EQUIPMENT_EMPTY_STATE_TOKENS.icon} aria-hidden="true" />
-      <h3 className={EQUIPMENT_EMPTY_STATE_TOKENS.title}>
-        {searchTerm ? t('list.noSearchResults') : t('list.noFilterResults')}
-      </h3>
-      <p className={`${EQUIPMENT_EMPTY_STATE_TOKENS.description} max-w-md mx-auto`}>
-        {searchTerm
-          ? t('list.noSearchResultsDesc', { term: searchTerm })
-          : t('list.noFilterResultsDesc')}
-      </p>
-      {hasActiveFilters && (
-        <Button variant="outline" className="mt-4" onClick={onClearFilters} type="button">
-          <FilterX className="h-4 w-4 mr-1.5" aria-hidden="true" />
-          {t('list.clearFilters')}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-/**
- * 빈 상태 컴포넌트 (데이터 없음)
- */
-function EmptyState() {
-  const t = useTranslations('equipment');
-  return (
-    <div className={`${EQUIPMENT_EMPTY_STATE_TOKENS.container} py-16`}>
-      <Package className={EQUIPMENT_EMPTY_STATE_TOKENS.icon} aria-hidden="true" />
-      <h3 className={EQUIPMENT_EMPTY_STATE_TOKENS.title}>{t('list.empty')}</h3>
-      <p className={`${EQUIPMENT_EMPTY_STATE_TOKENS.description} max-w-md mx-auto`}>
-        {t('list.emptyDescription')}
-      </p>
-      <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
-        <Button asChild>
-          <Link href="/equipment/create">
-            <Plus className="h-4 w-4 mr-1.5" aria-hidden="true" />
-            {t('list.createButton')}
-          </Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link href="/equipment/create-shared">
-            <Package className="h-4 w-4 mr-1.5" aria-hidden="true" />
-            {t('list.createSharedButton')}
-          </Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
+import { queryKeys } from '@/lib/api/query-config';
+import type { EquipmentStatus } from '@equipment-management/schemas';
+import { EQUIPMENT_TOOLBAR_TOKENS } from '@/lib/design-tokens';
 
 /**
  * 스켈레톤 로딩 컴포넌트
@@ -113,22 +44,24 @@ export function EquipmentListSkeleton() {
         ))}
       </div>
 
-      {/* 툴바 스켈레톤 */}
-      <div className="flex flex-col gap-3">
-        {/* Row 1: 검색바 + 뷰 토글 */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <Skeleton className="h-9 w-full sm:max-w-sm rounded-md" />
-          <div className="sm:ml-auto">
+      {/* 통합 Command Bar 스켈레톤 */}
+      <div className={EQUIPMENT_TOOLBAR_TOKENS.commandBar}>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Skeleton className="h-9 w-full sm:w-[200px] rounded-md" />
+          <Skeleton className="h-9 w-[120px] rounded-md" />
+          <Skeleton className="h-9 w-[130px] rounded-md" />
+          <Skeleton className="h-9 w-[130px] rounded-md" />
+          <Skeleton className="h-9 w-[120px] rounded-md" />
+          <div className="ml-auto">
             <Skeleton className="h-9 w-[100px] rounded-md" />
           </div>
         </div>
-        {/* Row 2: 인라인 필터 바 */}
-        <div className="flex flex-wrap gap-2">
-          <Skeleton className="h-9 w-[120px] rounded-md" />
-          <Skeleton className="h-9 w-[130px] rounded-md" />
-          <Skeleton className="h-9 w-[130px] rounded-md" />
-          <Skeleton className="h-9 w-[120px] rounded-md" />
-        </div>
+      </div>
+
+      {/* 결과 정보 바 스켈레톤 */}
+      <div className="flex items-center justify-between px-1">
+        <Skeleton className="h-4 w-[180px]" />
+        <Skeleton className="h-5 w-[120px] rounded" />
       </div>
 
       {/* 테이블 스켈레톤 — 7개 컬럼 (상태 바 포함) */}
@@ -185,97 +118,64 @@ interface EquipmentListContentProps {
   initialData?: PaginatedResponse<Equipment>;
 }
 
-/** 상태 분포 스트립 표시 우선순위 */
-const STATUS_PRIORITY_ORDER = [
-  'available',
-  'in_use',
-  'checked_out',
-  'calibration_scheduled',
-  'non_conforming',
-  'calibration_overdue',
-  'pending_disposal',
-  'spare',
-  'retired',
-  'disposed',
-  'temporary',
-  'inactive',
-] as const;
-
-/**
- * 상태 분포 요약 스트립 (Dashboard API 재활용)
- *
- * scope 설계:
- * - teamId 있음 → 팀 범위 통계 (test_engineer, technical_manager)
- * - teamId 없음 → site 전체 통계 (백엔드 @SiteScoped 자동 격리)
- *
- * 표시할 상태 우선순위 및 색상 점:
- * - 전체(totalItems) → 항상 첫 번째
- * - available → brand-ok (bg-brand-ok)
- * - in_use → brand-info
- * - checked_out → brand-warning
- * - non_conforming / calibration_overdue → brand-critical
- * - 기타 count > 0인 것만 동적 표시
- */
-function StatusSummaryStrip({
-  stats,
-  totalItems,
-  isTeamScoped,
-}: {
-  stats: Record<string, number> | undefined;
-  totalItems: number;
-  /** URL ?teamId= 존재 여부 — 레이블 표시 결정 */
-  isTeamScoped: boolean;
-}) {
-  const t = useTranslations('equipment');
-
-  const visibleStats = useMemo(() => {
-    if (!stats) return [];
-    return STATUS_PRIORITY_ORDER.filter((key) => (stats[key] || 0) > 0).map((key) => ({
-      key,
-      count: stats[key] || 0,
-      statusBarColor: EQUIPMENT_STATUS_TOKENS[key]?.card.statusBarColor || 'bg-brand-neutral',
-      label: t(`status.${key}` as Parameters<typeof t>[0]),
-    }));
-  }, [stats, t]);
-
-  // 총계 레이블: 팀 스코프면 "팀 장비", 아니면 "전체 장비"
-  const totalLabel = isTeamScoped ? t('filters.teamEquipment') : t('filters.allEquipment');
-
-  return (
-    <div className={EQUIPMENT_STATS_STRIP_TOKENS.container}>
-      {/* 전체 수 */}
-      <span className={EQUIPMENT_STATS_STRIP_TOKENS.item}>
-        <span className={EQUIPMENT_STATS_STRIP_TOKENS.totalCount}>{totalItems}</span>
-        <span className={EQUIPMENT_STATS_STRIP_TOKENS.label}>{totalLabel}</span>
-      </span>
-
-      {visibleStats.length > 0 && (
-        <span className={EQUIPMENT_STATS_STRIP_TOKENS.divider} aria-hidden="true" />
-      )}
-
-      {visibleStats.map((stat, i) => (
-        <span key={stat.key} className={EQUIPMENT_STATS_STRIP_TOKENS.item}>
-          {i > 0 && <span className={EQUIPMENT_STATS_STRIP_TOKENS.divider} aria-hidden="true" />}
-          <span
-            className={`${EQUIPMENT_STATS_STRIP_TOKENS.dot} ${stat.statusBarColor}`}
-            aria-hidden="true"
-          />
-          <span className={EQUIPMENT_STATS_STRIP_TOKENS.count}>{stat.count}</span>
-          <span className={EQUIPMENT_STATS_STRIP_TOKENS.label}>{stat.label}</span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/** 정렬 배지 i18n 키 맵 (중첩 삼항 대체) */
+/** 정렬 표시 i18n 키 맵 (중첩 삼항 대체) */
 const SORT_LABEL_KEYS = {
+  managementNumber: 'sort.managementNumber',
   name: 'sort.name',
   lastCalibrationDate: 'sort.lastCalibrationDate',
   nextCalibrationDate: 'sort.nextCalibrationDate',
   status: 'sort.status',
   createdAt: 'sort.createdAt',
 } as const;
+
+interface ResultsInfoBarProps {
+  totalItems: number;
+  currentPage: number;
+  pageSize: number;
+  sortBy: string | undefined;
+  sortOrder: string | undefined;
+}
+
+/**
+ * 결과 정보 바 — toolbar과 목록 사이에 표시
+ * 좌: "55개 장비 · 1-10 표시" / 우: "정렬: 관리번호 ↑"
+ */
+const ResultsInfoBar = memo(function ResultsInfoBar({
+  totalItems,
+  currentPage,
+  pageSize,
+  sortBy,
+  sortOrder,
+}: ResultsInfoBarProps) {
+  const t = useTranslations('equipment');
+
+  const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, totalItems);
+
+  const sortLabel =
+    sortBy && sortBy in SORT_LABEL_KEYS
+      ? t(SORT_LABEL_KEYS[sortBy as keyof typeof SORT_LABEL_KEYS] as Parameters<typeof t>[0])
+      : null;
+
+  return (
+    <div
+      className={EQUIPMENT_TOOLBAR_TOKENS.resultsBar}
+      role="status"
+      aria-label={t('resultsBar.ariaLabel')}
+    >
+      <span className={EQUIPMENT_TOOLBAR_TOKENS.resultsCount}>
+        {totalItems > 0
+          ? t('resultsBar.totalWithRange', { total: totalItems, start, end })
+          : t('resultsBar.totalWithRange', { total: 0, start: 0, end: 0 })}
+      </span>
+      {sortLabel && (
+        <span className={EQUIPMENT_TOOLBAR_TOKENS.sortIndicator}>
+          {t('sort.label')} {sortLabel} {sortOrder === 'asc' ? '↑' : '↓'}
+        </span>
+      )}
+    </div>
+  );
+});
 
 /**
  * 장비 목록 컨텐츠 컴포넌트 (Client Component)
@@ -292,7 +192,6 @@ const SORT_LABEL_KEYS = {
  */
 export function EquipmentListContent({ initialData }: EquipmentListContentProps) {
   const t = useTranslations('equipment');
-  // URL 상태 관리 훅
   const {
     filters,
     view,
@@ -315,49 +214,18 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
     isClient,
   } = useEquipmentFilters();
 
-  // 장비 상태 분포 (기존 Dashboard API 재활용, 30s TTL)
-  //
-  // ✅ scope 설계: URL ?teamId= (SSOT)를 그대로 전달
-  //   - test_engineer / technical_manager: page.tsx의 buildRoleBasedRedirectUrl이
-  //     이미 ?teamId=자기팀 을 URL에 주입 → filters.teamId = 팀 스코프
-  //   - quality_manager / lab_manager / system_admin: teamId 없음
-  //     → undefined → 백엔드 @SiteScoped 인터셉터가 JWT site로 자동 격리
-  //
-  // ✅ 캐시 격리: teamId가 달라지면 다른 queryKey → 팀A와 팀B 통계 충돌 없음
-  const { data: statusStats } = useQuery({
-    queryKey: queryKeys.dashboard.equipmentStatusStats(undefined, filters.teamId || undefined),
-    queryFn: () => dashboardApi.getEquipmentStatusStats(filters.teamId || undefined),
-    staleTime: CACHE_TIMES.SHORT,
-  });
-
   // 장비 목록 쿼리
-  // ✅ Vercel Best Practice: Query Key 객체 사용
-  // - React Query v5는 queryKey 객체를 deep comparison으로 비교
-  // - useEquipmentFilters가 queryFilters를 useMemo로 안정화하므로 캐시 히트율 최적
-  //
-  // ⚠️ staleTime: 0 is intentional for real-time accuracy
-  //
-  // Equipment status changes from:
-  // - 부적합 등록 (Non-conformance registration)
-  // - 사고이력 등록 (Incident history with status change)
-  // - 교정기한 초과 자동 처리 (Calibration overdue auto-processing)
-  // - 폐기 신청 (Disposal workflows)
-  //
-  // Users expect immediate status badge updates after these operations.
-  //
-  // ✅ refetchOnMount: 'always' - 항상 최신 데이터 확인
-  // - 목록 페이지는 상태 변경에 민감 (상세 페이지에서 NC 등록 등)
-  // - 새 페이지 컨텍스트에서도 최신 상태 보장
+  // ⚠️ staleTime: 0 is intentional — 상태 변경(부적합, 교정기한초과 등)에 실시간 반응 필요
+  // ✅ refetchOnMount: 'always' — 상세 페이지에서 변경 후 목록 복귀 시 최신 상태 보장
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: queryKeys.equipment.list(queryFilters), // ✅ 표준화된 키
+    queryKey: queryKeys.equipment.list(queryFilters),
     queryFn: () => equipmentApi.getEquipmentList(queryFilters),
-    placeholderData: initialData, // Server에서 전달받은 초기 데이터
+    placeholderData: initialData,
     retry: 3,
-    staleTime: 0, // 장비 상태는 실시간 정확성이 중요 (부적합, 교정기한초과 등)
-    refetchOnMount: 'always', // ✅ 항상 최신 데이터 확인 (상태 변경 민감)
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
-  // 페이지네이션 정보 계산
   const paginationInfo = useMemo(() => {
     const totalItems = data?.meta?.pagination?.total || 0;
     const totalPages = data?.meta?.pagination?.totalPages || 1;
@@ -365,15 +233,12 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
     return { totalItems, totalPages, currentPage };
   }, [data, filters.page]);
 
-  // 장비 데이터
   const items = data?.data || [];
 
-  // 에러 상태 처리
   if (error) {
     return <ErrorAlert error={error} title={t('list.loadError')} onRetry={() => refetch()} />;
   }
 
-  // 초기 로딩 상태 (initialData가 없는 경우에만)
   if (isLoading && items.length === 0) {
     return <EquipmentListSkeleton />;
   }
@@ -391,40 +256,22 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
         </div>
       )}
 
-      {/* 상태 요약 스트립 (URL ?teamId= SSOT → scope 자동 결정) */}
+      {/*
+       * 상태 요약 스트립
+       * - StatusSummaryStrip이 Dashboard API를 자체 fetch (SRP)
+       * - onStatusChange 연결 → 클릭으로 상태 필터 즉시 적용
+       * - teamId: URL ?teamId= SSOT → scope 자동 결정
+       */}
       <StatusSummaryStrip
-        stats={statusStats}
-        totalItems={paginationInfo.totalItems}
         isTeamScoped={!!filters.teamId}
+        totalItems={paginationInfo.totalItems}
+        activeStatus={filters.status as EquipmentStatus | ''}
+        onStatusChange={setStatus}
+        teamId={filters.teamId || undefined}
       />
 
-      {/* 툴바: 검색+정렬+뷰 토글 / 필터 */}
-      <div className="flex flex-col gap-3">
-        {/* Row 1: 검색바 + 정렬 배지 + 뷰 토글 */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          <EquipmentSearchBar
-            value={filters.search}
-            onChange={setSearch}
-            isLoading={isFetching}
-            className="w-full sm:max-w-sm"
-          />
-          <div className="flex items-center gap-3 sm:ml-auto">
-            {/* 정렬 표시 */}
-            {filters.sortBy &&
-              filters.sortBy !== 'managementNumber' &&
-              filters.sortBy in SORT_LABEL_KEYS && (
-                <Badge variant="outline" className="text-xs">
-                  {t('sort.label')}{' '}
-                  {t(SORT_LABEL_KEYS[filters.sortBy as keyof typeof SORT_LABEL_KEYS])} (
-                  {filters.sortOrder === 'asc' ? t('sort.asc') : t('sort.desc')})
-                </Badge>
-              )}
-            {/* 뷰 전환 */}
-            {isClient && <ViewToggle view={view} onChange={setView} />}
-          </div>
-        </div>
-
-        {/* Row 2: 인라인 필터 바 */}
+      {/* Unified Command Bar: 검색 + 필터 + 뷰 토글 통합 */}
+      <div className={EQUIPMENT_TOOLBAR_TOKENS.commandBar}>
         <EquipmentFilters
           filters={filters}
           onSiteChange={setSite}
@@ -437,8 +284,26 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
           onClearFilters={clearFilters}
           activeFilterCount={activeFilterCount}
           hasActiveFilters={hasActiveFilters}
+          slotBefore={
+            <EquipmentSearchBar
+              value={filters.search}
+              onChange={setSearch}
+              isLoading={isFetching}
+              className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[280px]"
+            />
+          }
+          slotAfter={isClient ? <ViewToggle view={view} onChange={setView} /> : undefined}
         />
       </div>
+
+      {/* 결과 정보 바 */}
+      <ResultsInfoBar
+        totalItems={paginationInfo.totalItems}
+        currentPage={paginationInfo.currentPage}
+        pageSize={filters.pageSize}
+        sortBy={filters.sortBy}
+        sortOrder={filters.sortOrder}
+      />
 
       {/* 장비 목록 (테이블 또는 카드) */}
       {items.length === 0 ? (
@@ -449,7 +314,7 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
             onClearFilters={clearFilters}
           />
         ) : (
-          <EmptyState />
+          <EquipmentEmptyState />
         )
       ) : (
         <>
@@ -466,7 +331,6 @@ export function EquipmentListContent({ initialData }: EquipmentListContentProps)
             <EquipmentCardGrid items={items} isLoading={isFetching} searchTerm={filters.search} />
           )}
 
-          {/* 페이지네이션 */}
           <EquipmentPagination
             currentPage={paginationInfo.currentPage}
             totalPages={paginationInfo.totalPages}

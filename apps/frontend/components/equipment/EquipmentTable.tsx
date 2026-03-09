@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowUpDown, ArrowUp, ArrowDown, Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toDate, formatDate } from '@/lib/utils/date';
@@ -178,6 +179,10 @@ const SkeletonRow = memo(function SkeletonRow() {
 
 /**
  * 장비 테이블 행 컴포넌트
+ *
+ * UX: 행 전체 클릭 → 상세 페이지 이동
+ * - 기존 "상세" 버튼은 유지 (우클릭 → 새 탭, 키보드 포커스)
+ * - e.target.closest('button, a') 체크로 버튼 클릭 시 중복 이동 방지
  */
 const EquipmentRow = memo(function EquipmentRow({
   equipment,
@@ -187,6 +192,7 @@ const EquipmentRow = memo(function EquipmentRow({
   searchTerm?: string;
 }) {
   const t = useTranslations('equipment');
+  const router = useRouter();
   const calStatus = useMemo(
     () =>
       calculateCalibrationStatus(
@@ -245,12 +251,22 @@ const EquipmentRow = memo(function EquipmentRow({
     );
   };
 
+  const handleRowClick = useCallback(
+    (e: React.MouseEvent<HTMLTableRowElement>) => {
+      // "상세" 버튼/링크 클릭은 해당 요소가 처리하도록 위임
+      if ((e.target as HTMLElement).closest('button, a')) return;
+      router.push(`/equipment/${equipment.id}`);
+    },
+    [router, equipment.id]
+  );
+
   return (
     <TableRow
-      className={`${EQUIPMENT_TABLE_TOKENS.rowHover} focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary/20`}
+      className={`${EQUIPMENT_TABLE_TOKENS.rowHover} cursor-pointer focus-within:ring-1 focus-within:ring-inset focus-within:ring-primary/20`}
       role="row"
       aria-selected={false}
       data-testid="equipment-row"
+      onClick={handleRowClick}
     >
       {/* 4px 상태 세로 바 */}
       <TableCell className={EQUIPMENT_TABLE_TOKENS.statusBar.cell} aria-hidden="true">

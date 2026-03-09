@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
   let backendHealthy = false;
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';

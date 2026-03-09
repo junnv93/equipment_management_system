@@ -46,6 +46,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)                           |
 | `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)                                |
 | `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)                              |
+| `apps/frontend/lib/config/pagination.ts`                                     | SSOT 페이지네이션 상수 (PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE — 로컬 재정의 금지)               |
 | `apps/frontend/lib/utils/dashboard-scope.ts`                                 | SSOT 대시보드 스코프 유틸리티 (DashboardScope, resolveDashboardScope, buildScopedEquipmentUrl) |
 | `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                                            |
 | `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등)                          |
@@ -416,33 +417,101 @@ grep -rn "ABSOLUTE_SESSION_MAX_AGE\s*=\|accessTokenExpiresInSeconds\s*=" \
 
 **PASS 기준:** 0개 결과.
 
+### Step 10: SITE_VALUES 로컬 재정의 탐지
+
+`SITE_VALUES`(또는 `Site[]` 타입의 로컬 배열 상수)가 `@equipment-management/schemas`에서 임포트되지 않고 컴포넌트/유틸리티에 하드코딩되어 있는지 확인합니다. `SiteEnum.options`에서 자동 도출되는 `SITE_VALUES`는 schemas 패키지의 SSOT입니다.
+
+```bash
+# Site[] 타입의 로컬 배열 선언 탐지 (schemas import 제외)
+grep -rn "Site\[\]\s*=\s*\[" apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|// "
+```
+
+```bash
+# SITE_VALUES 로컬 상수 선언 탐지
+grep -rn "const SITE_VALUES\s*[=:]" apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|// "
+```
+
+**PASS 기준:** 0개 결과.
+
+**FAIL 기준:** `SITE_VALUES` 또는 `Site[]` 타입 배열이 컴포넌트/훅/유틸리티에서 직접 선언되면 위반.
+
+**수정 패턴:**
+
+```typescript
+// ❌ WRONG — 로컬 하드코딩 (EquipmentFilters.tsx 등)
+const SITE_VALUES: Site[] = ['suwon', 'uiwang', 'pyeongtaek'];
+
+// ✅ CORRECT — schemas SSOT에서 import
+import { SITE_VALUES } from '@equipment-management/schemas';
+// SITE_VALUES = SiteEnum.options (자동 파생, 추가 사이트 시 자동 반영)
+```
+
+**참고:** UI 표시용 `SITE_OPTIONS: { value: Site, label: string }[]` (레이블 포함 객체 배열)은 로컬 정의 허용. 순수 값 배열(`Site[]`)만 schemas에서 import해야 합니다.
+
+### Step 11: PAGE_SIZE_OPTIONS 로컬 재정의 탐지
+
+`PAGE_SIZE_OPTIONS`가 `@/lib/config/pagination`에서 임포트되지 않고 컴포넌트에서 직접 선언되어 있는지 확인합니다.
+
+```bash
+# PAGE_SIZE_OPTIONS 로컬 상수 선언 탐지
+grep -rn "const PAGE_SIZE_OPTIONS\s*[=:]" apps/frontend --include="*.ts" --include="*.tsx" | grep -v "pagination\.ts\|node_modules\|// "
+```
+
+```bash
+# PAGE_SIZE_OPTIONS 올바른 import 확인
+grep -rn "PAGE_SIZE_OPTIONS" apps/frontend --include="*.ts" --include="*.tsx" | grep -v "pagination\.ts\|node_modules\|// "
+```
+
+**PASS 기준:** `PAGE_SIZE_OPTIONS` 사용 파일 모두 `@/lib/config/pagination`에서 import.
+
+**FAIL 기준:** `pagination.ts` 외 파일에 `const PAGE_SIZE_OPTIONS = [...]` 직접 선언 시 위반.
+
+**수정 패턴:**
+
+```typescript
+// ❌ WRONG — 컴포넌트 내 하드코딩
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+// ✅ CORRECT — pagination SSOT에서 import
+import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/config/pagination';
+// type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number]; // 10 | 20 | 50 | 100
+```
+
+**참고 — pagination.ts SSOT 상수 (`apps/frontend/lib/config/pagination.ts`):**
+
+- `PAGE_SIZE_OPTIONS` — `[10, 20, 50, 100] as const`
+- `PageSizeOption` — `10 | 20 | 50 | 100` (추론 타입)
+- `DEFAULT_PAGE_SIZE` — `20` (기본값)
+
 ## Output Format
 
 ```markdown
-| #   | 검사                       | 상태      | 상세                                   |
-| --- | -------------------------- | --------- | -------------------------------------- |
-| 1   | 로컬 타입 재정의           | PASS/FAIL | 재정의 위치 목록                       |
-| 2   | Permission 임포트          | PASS/FAIL | 잘못된 임포트 위치                     |
-| 3   | API_ENDPOINTS 임포트       | PASS/FAIL | 잘못된 임포트 위치                     |
-| 3a  | Audit Log 타입 임포트      | PASS/FAIL | 잘못된 임포트 위치                     |
-| 3b  | Field Labels 임포트        | PASS/FAIL | 잘못된 임포트 위치                     |
-| 3c  | Entity Routes 임포트       | PASS/FAIL | 잘못된 임포트 위치                     |
-| 3d  | Data Scope 임포트          | PASS/FAIL | 잘못된 임포트 위치                     |
-| 3e  | Audit Log SSOT 상수        | PASS/FAIL | 잘못된 임포트 위치                     |
-| 4   | 하드코딩 API 경로          | PASS/FAIL | 하드코딩 위치 목록                     |
-| 5   | queryKeys 팩토리           | PASS/FAIL | 하드코딩 queryKey 위치                 |
-| 6   | Icon Library 통합          | PASS/FAIL | react-icons 사용, 비표준 library 위치  |
-| 7   | 환경변수 직접 참조         | PASS/FAIL | NEXT_PUBLIC_API_URL 직접 참조 위치     |
-| 7b  | E2E Backend URL SSOT       | PASS/FAIL | E2E 내 직접 env 참조 파일 목록         |
-| 8   | Promise<unknown> 반환 타입 | PASS/FAIL | 서비스 메서드의 unknown 반환 타입 위치 |
-| 9   | 토큰 TTL 하드코딩          | PASS/FAIL | auth 파일 내 하드코딩 위치             |
+| #   | 검사                          | 상태      | 상세                                   |
+| --- | ----------------------------- | --------- | -------------------------------------- |
+| 1   | 로컬 타입 재정의              | PASS/FAIL | 재정의 위치 목록                       |
+| 2   | Permission 임포트             | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3   | API_ENDPOINTS 임포트          | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3a  | Audit Log 타입 임포트         | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3b  | Field Labels 임포트           | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3c  | Entity Routes 임포트          | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3d  | Data Scope 임포트             | PASS/FAIL | 잘못된 임포트 위치                     |
+| 3e  | Audit Log SSOT 상수           | PASS/FAIL | 잘못된 임포트 위치                     |
+| 4   | 하드코딩 API 경로             | PASS/FAIL | 하드코딩 위치 목록                     |
+| 5   | queryKeys 팩토리              | PASS/FAIL | 하드코딩 queryKey 위치                 |
+| 6   | Icon Library 통합             | PASS/FAIL | react-icons 사용, 비표준 library 위치  |
+| 7   | 환경변수 직접 참조            | PASS/FAIL | NEXT_PUBLIC_API_URL 직접 참조 위치     |
+| 7b  | E2E Backend URL SSOT          | PASS/FAIL | E2E 내 직접 env 참조 파일 목록         |
+| 8   | Promise<unknown> 반환 타입    | PASS/FAIL | 서비스 메서드의 unknown 반환 타입 위치 |
+| 9   | 토큰 TTL 하드코딩             | PASS/FAIL | auth 파일 내 하드코딩 위치             |
+| 10  | SITE_VALUES 로컬 재정의       | PASS/FAIL | Site[] 로컬 선언 위치                  |
+| 11  | PAGE_SIZE_OPTIONS 로컬 재정의 | PASS/FAIL | pagination.ts 외 직접 선언 위치        |
 ```
 
 ## Exceptions
 
 다음은 **위반이 아닙니다**:
 
-1. **프론트엔드 UI 전용 상수** — `SITE_OPTIONS`, `CLASSIFICATION_OPTIONS` 등 UI 전용 옵션은 로컬 정의 허용
+1. **프론트엔드 UI 표시용 옵션 객체** — `SITE_OPTIONS: { value: Site, label: string }[]`, `CLASSIFICATION_OPTIONS` 등 레이블+값 쌍의 UI 표시용 객체 배열은 로컬 정의 허용. 단, 순수 값 배열(`SITE_VALUES: Site[]`)은 `@equipment-management/schemas`에서 import 필수.
 2. **packages/ 디렉토리 내 정의** — 패키지 자체에서의 타입 정의는 SSOT의 원본이므로 정상
 3. **테스트 파일의 mock 타입** — 테스트에서 사용하는 mock 타입 정의는 허용
 4. **re-export 파일** — `export type { UserRole } from '@equipment-management/schemas'` 같은 재내보내기는 위반 아님
