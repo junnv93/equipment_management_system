@@ -4,6 +4,8 @@
  * MobileNav (Client Component)
  *
  * 모바일 환경에서 사용하는 네비게이션 드로어 컴포넌트
+ * - 섹션 그룹핑: FilteredNavSection[] 기반 (Phase 1 - nav-config.ts SSOT)
+ * - 디자인 토큰: getMobileNavItemClasses() (Phase 2 - mobile-nav.ts SSOT)
  *
  * 접근성 (WCAG 2.1 AA):
  * - ESC 키로 닫기
@@ -15,6 +17,7 @@
  * - useCallback으로 이벤트 핸들러 안정화
  * - memo로 NavLink 컴포넌트 최적화
  */
+
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -22,21 +25,21 @@ import { useTranslations } from 'next-intl';
 import { X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { FOCUS_TOKENS, getTransitionClasses } from '@/lib/design-tokens';
-
-export interface NavItem {
-  icon: React.ReactNode;
-  href: string;
-  label: string;
-  badge?: number; // 선택적: 알림 배지 (승인 대기 건수 등)
-}
+import { FOCUS_TOKENS } from '@/lib/design-tokens';
+import {
+  MOBILE_NAV_TOKENS,
+  MOBILE_NAV_DRAWER_TOKENS,
+  MOBILE_NAV_SECTION_TOKENS,
+  getMobileNavItemClasses,
+} from '@/lib/design-tokens/components/mobile-nav';
+import type { FilteredNavItem, FilteredNavSection } from '@/lib/navigation/nav-config';
+import { isNavItemActive } from '@/lib/navigation/nav-config';
 
 // aria-live 영역에 스크린리더 알림 전송
 function announceToScreenReader(message: string) {
   const liveRegion = document.getElementById('live-announcements');
   if (liveRegion) {
     liveRegion.textContent = message;
-    // 다음 알림을 위해 텍스트 초기화 (약간의 딜레이 필요)
     setTimeout(() => {
       liveRegion.textContent = '';
     }, 1000);
@@ -44,40 +47,39 @@ function announceToScreenReader(message: string) {
 }
 
 interface MobileNavProps {
-  navItems: NavItem[];
+  navSections: FilteredNavSection[];
   brandName?: string;
   brandIcon?: React.ReactNode;
 }
 
 // 네비게이션 링크를 memo로 래핑 (rerender-memo)
 interface NavLinkProps {
-  item: NavItem;
+  item: FilteredNavItem;
   isActive: boolean;
   onClick: () => void;
 }
 
 const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps) {
   const t = useTranslations('navigation');
+  const Icon = item.icon;
   return (
     <Link
       href={item.href}
-      className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-3 relative',
-        // SSOT: design-tokens — motion + focus-visible
-        getTransitionClasses('fast', ['background-color', 'color']),
-        FOCUS_TOKENS.classes.default,
-        isActive
-          ? 'text-blue-600 bg-blue-50 font-medium dark:text-blue-400 dark:bg-blue-900/20'
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-gray-800'
-      )}
+      className={cn(getMobileNavItemClasses(isActive))}
       aria-current={isActive ? 'page' : undefined}
       onClick={onClick}
     >
-      <span aria-hidden="true">{item.icon}</span>
+      <span aria-hidden="true">
+        <Icon className="h-5 w-5" />
+      </span>
       <span className="flex-1">{item.label}</span>
       {item.badge !== undefined && item.badge > 0 && (
         <span
-          className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+          className={cn(
+            'ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full',
+            MOBILE_NAV_TOKENS.badge.background,
+            MOBILE_NAV_TOKENS.badge.text
+          )}
           aria-label={t('layout.notificationCount', { count: item.badge })}
         >
           {item.badge}
@@ -87,7 +89,7 @@ const NavLink = memo(function NavLink({ item, isActive, onClick }: NavLinkProps)
   );
 });
 
-export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
+export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const t = useTranslations('navigation');
@@ -108,11 +110,10 @@ export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsOpen(false);
-        menuButtonRef.current?.focus(); // ESC 시 메뉴 버튼으로 포커스 복귀
+        menuButtonRef.current?.focus();
         return;
       }
 
-      // 포커스 트랩: Tab 키가 드로어 내에서만 동작하도록
       if (e.key === 'Tab' && drawerRef.current) {
         const focusableElements = drawerRef.current.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
@@ -138,11 +139,9 @@ export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      // 약간의 딜레이 후 닫기 버튼에 포커스
       requestAnimationFrame(() => {
         closeButtonRef.current?.focus();
       });
-      // aria-live 영역에 알림
       announceToScreenReader(t('layout.menuOpened'));
     } else {
       document.body.style.overflow = '';
@@ -158,18 +157,9 @@ export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
 
   const closeMenu = useCallback(() => {
     setIsOpen(false);
-    menuButtonRef.current?.focus(); // 포커스 복귀
+    menuButtonRef.current?.focus();
     announceToScreenReader(t('layout.menuClosed'));
   }, [t]);
-
-  // isActive 판별 함수를 useCallback으로 안정화
-  const checkIsActive = useCallback(
-    (href: string) => {
-      if (href === '/') return pathname === '/';
-      return pathname === href || pathname?.startsWith(`${href}/`);
-    },
-    [pathname]
-  );
 
   return (
     <>
@@ -187,7 +177,7 @@ export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
         <Menu className="h-6 w-6" aria-hidden="true" />
       </Button>
 
-      {/* 오버레이 - prefers-reduced-motion 지원 */}
+      {/* 오버레이 */}
       {isOpen && (
         <div
           className={cn(
@@ -200,7 +190,7 @@ export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
         />
       )}
 
-      {/* 모바일 드로어 - prefers-reduced-motion 지원 */}
+      {/* 모바일 드로어 */}
       <div
         ref={drawerRef}
         id="mobile-nav-drawer"
@@ -209,17 +199,26 @@ export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
         aria-label={t('layout.mainNav')}
         aria-hidden={!isOpen}
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-gray-900 shadow-xl md:hidden',
+          'fixed inset-y-0 left-0 z-50 w-72 md:hidden',
+          MOBILE_NAV_DRAWER_TOKENS.background,
+          MOBILE_NAV_DRAWER_TOKENS.shadow,
+          MOBILE_NAV_DRAWER_TOKENS.border,
           'transform',
-          // prefers-reduced-motion 지원
           'motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-in-out',
           'motion-reduce:transition-none',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* 드로어 헤더 */}
-        <div className="flex h-14 items-center justify-between border-b dark:border-gray-700 px-4">
-          <div className="flex items-center gap-2 font-semibold dark:text-white">
+        <div
+          className={cn(
+            'flex h-14 items-center justify-between px-4',
+            MOBILE_NAV_DRAWER_TOKENS.headerBorder
+          )}
+        >
+          <div
+            className={cn('flex items-center gap-2 font-semibold', MOBILE_NAV_DRAWER_TOKENS.text)}
+          >
             {brandIcon}
             <span>{displayBrandName}</span>
           </div>
@@ -235,19 +234,38 @@ export function MobileNav({ navItems, brandName, brandIcon }: MobileNavProps) {
           </Button>
         </div>
 
-        {/* 네비게이션 링크 */}
+        {/* 네비게이션 섹션 */}
         <nav
-          role="navigation"
           aria-label={t('layout.mainNav')}
-          className="flex flex-col gap-1 p-4 overflow-y-auto max-h-[calc(100vh-3.5rem)]"
+          className="flex flex-col overflow-y-auto max-h-[calc(100vh-3.5rem)] p-2"
         >
-          {navItems.map((item) => (
-            <NavLink
-              key={item.href}
-              item={item}
-              isActive={checkIsActive(item.href)}
-              onClick={closeMenu}
-            />
+          {navSections.map((section, sectionIndex) => (
+            <div key={section.sectionLabel}>
+              {/* 섹션 구분선 (첫 섹션 제외) */}
+              {sectionIndex > 0 && <div className={MOBILE_NAV_SECTION_TOKENS.divider} />}
+              {/* 섹션 라벨 */}
+              <div
+                className={cn(
+                  MOBILE_NAV_SECTION_TOKENS.label,
+                  sectionIndex === 0
+                    ? MOBILE_NAV_SECTION_TOKENS.firstSpacing
+                    : MOBILE_NAV_SECTION_TOKENS.spacing
+                )}
+              >
+                {section.sectionLabel}
+              </div>
+              {/* 아이템 목록 */}
+              <div className="flex flex-col gap-1">
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    isActive={isNavItemActive(item.href, pathname)}
+                    onClick={closeMenu}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
       </div>

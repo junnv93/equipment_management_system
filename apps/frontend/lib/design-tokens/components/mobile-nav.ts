@@ -1,0 +1,66 @@
+/**
+ * Mobile Nav Component Tokens (Layer 3)
+ *
+ * 모바일 드로어 — 라이트 테마이므로 사이드바와 다른 토큰
+ * SSOT: 모바일 네비게이션의 모든 스타일은 여기서만 정의
+ */
+
+import { FOCUS_TOKENS } from '../semantic';
+import { getTransitionClasses } from '../motion';
+
+/**
+ * 모바일 드로어 컨테이너 토큰
+ *
+ * 배경/테두리/그림자를 테마 시스템 변수로 — bg-white/dark:bg-gray-900 하드코딩 제거
+ */
+export const MOBILE_NAV_DRAWER_TOKENS = {
+  background: 'bg-background',
+  shadow: 'shadow-xl',
+  border: 'border-r border-border',
+  headerBorder: 'border-b border-border',
+  text: 'text-foreground',
+} as const;
+
+/**
+ * 모바일 네비게이션 아이템 토큰
+ *
+ * 이슈 #3: blue-600 하드코딩 → theme primary
+ * 이슈 #4: bg-red-100 → theme destructive
+ */
+export const MOBILE_NAV_TOKENS = {
+  active: {
+    base: 'text-primary bg-primary/10 font-medium',
+  },
+  inactive: {
+    base: 'text-muted-foreground hover:text-foreground hover:bg-muted',
+  },
+  badge: {
+    background: 'bg-destructive/10',
+    text: 'text-destructive',
+  },
+  transition: getTransitionClasses('fast', ['background-color', 'color']),
+  focus: FOCUS_TOKENS.classes.default,
+} as const;
+
+/**
+ * 모바일 네비게이션 섹션 토큰
+ */
+export const MOBILE_NAV_SECTION_TOKENS = {
+  label: 'text-[11px] font-semibold text-muted-foreground uppercase tracking-wider',
+  spacing: 'px-3 pt-4 pb-1',
+  firstSpacing: 'px-3 pb-1',
+  divider: 'border-t border-border mt-2',
+} as const;
+
+/**
+ * 모바일 네비게이션 아이템 클래스 조합 함수
+ */
+export function getMobileNavItemClasses(isActive: boolean): string {
+  const stateBase = isActive ? MOBILE_NAV_TOKENS.active.base : MOBILE_NAV_TOKENS.inactive.base;
+  return [
+    'flex items-center gap-3 rounded-lg px-3 py-3 relative',
+    stateBase,
+    MOBILE_NAV_TOKENS.transition,
+    MOBILE_NAV_TOKENS.focus,
+  ].join(' ');
+}

@@ -143,16 +143,45 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
 
   // 현재 페이지 (마지막 항목)
   const currentItem = allItems[allItems.length - 1];
-  const resolvedKey = resolveLabelKey(currentItem);
-  const displayLabel = resolvedKey ? t(resolvedKey as Parameters<typeof t>[0]) : currentItem.label;
+  const currentResolvedKey = resolveLabelKey(currentItem);
+  const currentLabel = currentResolvedKey
+    ? t(currentResolvedKey as Parameters<typeof t>[0])
+    : currentItem.label;
+
+  // 부모 페이지 (2단계: 상위 항목이 있을 때만)
+  const parentItem = allItems.length > 1 ? allItems[allItems.length - 2] : null;
+  const parentResolvedKey = parentItem ? resolveLabelKey(parentItem) : null;
+  const parentLabel = parentItem
+    ? parentResolvedKey
+      ? t(parentResolvedKey as Parameters<typeof t>[0])
+      : parentItem.label
+    : null;
 
   return (
     <nav aria-label="breadcrumb" className={cn('flex items-center gap-1', className)}>
+      {parentItem && parentLabel && (
+        <>
+          <Link
+            href={parentItem.href}
+            className={cn(
+              'text-sm text-muted-foreground hover:text-foreground truncate max-w-[100px]',
+              'motion-safe:transition-colors motion-reduce:transition-none',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded'
+            )}
+          >
+            {parentLabel}
+          </Link>
+          <ChevronRight
+            className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0"
+            aria-hidden="true"
+          />
+        </>
+      )}
       <span
         className={cn('text-sm text-foreground', 'truncate max-w-[180px]', 'font-medium')}
         aria-current="page"
       >
-        {displayLabel}
+        {currentLabel}
       </span>
     </nav>
   );

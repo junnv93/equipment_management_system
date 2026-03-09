@@ -1284,5 +1284,19 @@
       "successDesc": "장비가 자동으로 등록되었습니다.",
       "error": "수령 확인 실패"
     }
+  },
+  "kpiStrip": {
+    "nextCalibration": "다음 교정일",
+    "currentLocation": "현재 위치",
+    "checkoutHistory": "반출 이력",
+    "maintenance": "유지보수",
+    "incidentHistory": "사고 이력",
+    "dday": "D-{days}",
+    "overdue": "{days}일 초과",
+    "notApplicable": "N/A",
+    "noRecord": "이상 없음",
+    "count": "{count}건",
+    "lastDate": "최근: {date}",
+    "navigateTo": "{label} 탭으로 이동"
   }
 }

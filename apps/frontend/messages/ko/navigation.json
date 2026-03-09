@@ -49,6 +49,11 @@
   "adminAuditLogs": "감사 로그",
   "login": "로그인",
   "error": "오류",
+  "sections": {
+    "operations": "운영",
+    "management": "관리",
+    "system": "시스템"
+  },
   "layout": {
     "systemName": "장비 관리 시스템",
     "mainNav": "메인 네비게이션",
@@ -84,7 +89,16 @@
     "supportNote": "문제가 지속되면 시스템 관리자에게 문의하세요.",
     "globalErrorTitle": "문제가 발생했습니다",
     "globalErrorDescription": "예기치 않은 오류가 발생했습니다.",
-    "goToEquipment": "장비 목록"
+    "goToEquipment": "장비 목록",
+    "collapseSidebar": "사이드바 접기",
+    "expandSidebar": "사이드바 펼치기",
+    "toggleSidebarShortcut": "사이드바 토글 (Ctrl+B)",
+    "search": "검색",
+    "searchPlaceholder": "페이지, 장비 검색...",
+    "searchShortcut": "⌘K",
+    "recentPages": "최근 페이지",
+    "menus": "메뉴",
+    "noResults": "검색 결과가 없습니다"
   },
   "roles": {
     "test_engineer": "시험실무자",

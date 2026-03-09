@@ -104,6 +104,9 @@ function StatusMiniCard({
                 style={{ backgroundColor: color }}
                 aria-hidden="true"
               />
+              <span className={SM.statusLabel}>
+                {t(`equipmentStatusLabels.${key}` as Parameters<typeof t>[0])}
+              </span>
               <div className={SM.barTrack} aria-hidden="true">
                 <div className={SM.barFill} style={{ width: `${pct}%`, backgroundColor: color }} />
               </div>

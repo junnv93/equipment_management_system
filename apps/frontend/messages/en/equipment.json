@@ -1284,5 +1284,19 @@
       "successDesc": "Equipment has been automatically registered.",
       "error": "Receive Confirmation Failed"
     }
+  },
+  "kpiStrip": {
+    "nextCalibration": "Next Calibration",
+    "currentLocation": "Location",
+    "checkoutHistory": "Checkouts",
+    "maintenance": "Maintenance",
+    "incidentHistory": "Incidents",
+    "dday": "D-{days}",
+    "overdue": "{days}d overdue",
+    "notApplicable": "N/A",
+    "noRecord": "No issues",
+    "count": "{count}",
+    "lastDate": "Last: {date}",
+    "navigateTo": "Navigate to {label} tab"
   }
 }

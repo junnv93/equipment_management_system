@@ -1,6 +1,7 @@
 'use client';
 
-import { LogOut, ChevronDown } from 'lucide-react';
+import { LogOut, ChevronDown, User, Settings } from 'lucide-react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -16,6 +17,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { getHeaderSizeClasses, HEADER_INTERACTIVE_STYLES } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
+import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 // 역할별 배지 색상
 const roleBadgeColors: Record<string, string> = {
@@ -121,6 +123,24 @@ export function UserProfileDropdown() {
             </span>
           </div>
         </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        {/* 내 프로필 링크 */}
+        <DropdownMenuItem asChild>
+          <Link href={FRONTEND_ROUTES.SETTINGS.PROFILE} className="cursor-pointer">
+            <User className="mr-2 h-4 w-4" />
+            <span>{t('settingsProfile')}</span>
+          </Link>
+        </DropdownMenuItem>
+
+        {/* 설정 링크 */}
+        <DropdownMenuItem asChild>
+          <Link href={FRONTEND_ROUTES.SETTINGS.INDEX} className="cursor-pointer">
+            <Settings className="mr-2 h-4 w-4" />
+            <span>{t('settings')}</span>
+          </Link>
+        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 

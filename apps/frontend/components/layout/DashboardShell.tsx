@@ -4,98 +4,108 @@
  * Dashboard Shell (Client Component)
  *
  * 대시보드 레이아웃 UI 컴포넌트
- * - 사이드바, 헤더, 메인 콘텐츠 영역 포함
- * - usePathname 등 클라이언트 훅 사용
+ * - 사이드바: 섹션 그룹핑 + 접기/펼치기 (Phase 1-3)
+ * - 헤더: 글로벌 검색 트리거 (Phase 4)
+ * - 모바일: MobileNav 드로어
  *
  * 성능 최적화 (vercel-react-best-practices):
- * - MobileNav: 직접 import (SSR-safe, CSS md:hidden으로 데스크톱 숨김)
- * - 아이콘: lucide-react 개별 import (tree-shaking)
+ * - SidebarItem: memo로 불필요한 리렌더 방지
+ * - filteredSections: useMemo로 의존성 변경 시만 재계산
  */
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  Package2,
-  FileSpreadsheet,
-  ClipboardCheck,
-  CheckSquare,
-  Users,
-  Bell,
-  Settings,
-  Wrench,
-  FileText,
-  FileSearch,
-} from 'lucide-react';
-import { ReactNode, memo, useCallback, useMemo } from 'react';
+import { Wrench, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { ReactNode, memo, useMemo, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { useNotificationStream } from '@/hooks/use-notification-stream';
 import { cn } from '@/lib/utils';
-import { FRONTEND_ROUTES, Permission, hasPermission } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
-import { MobileNav, type NavItem } from '@/components/layout/MobileNav';
+import { MobileNav } from '@/components/layout/MobileNav';
 import { Header } from '@/components/layout/Header';
 import { SkipLink } from '@/components/layout/SkipLink';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { UserProfileDropdown } from '@/components/layout/UserProfileDropdown';
 import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
+import { GlobalSearchTrigger } from '@/components/layout/GlobalSearchTrigger';
 import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
 import { queryKeys, CACHE_TIMES, REFETCH_INTERVALS } from '@/lib/api/query-config';
-import { computeApprovalTotal } from '@/lib/utils/approval-count-utils';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
+import { getHeaderSpacingClass, FOCUS_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
+import { getTransitionClasses } from '@/lib/design-tokens/motion';
 import {
-  getHeaderSpacingClass,
-  FOCUS_TOKENS,
-  ANIMATION_PRESETS,
-  getTransitionClasses,
-} from '@/lib/design-tokens';
+  SIDEBAR_LAYOUT,
+  SIDEBAR_COLORS,
+  SIDEBAR_ITEM_TOKENS,
+  SIDEBAR_SECTION_TOKENS,
+  getSidebarItemClasses,
+  getSidebarWidthClasses,
+  getSidebarMarginClasses,
+} from '@/lib/design-tokens/components/sidebar';
+import { getFilteredNavSections, isNavItemActive } from '@/lib/navigation/nav-config';
+import type { FilteredNavSection } from '@/lib/navigation/nav-config';
+import { saveRecentPage } from '@/components/layout/GlobalSearchDialog';
+import { useSidebarState } from '@/hooks/use-sidebar-state';
 import { useTranslations } from 'next-intl';
 
 interface SidebarItemProps {
-  icon: React.ReactNode;
+  icon: LucideIcon;
   href: string;
   label: string;
   isActive?: boolean;
-  badge?: number; // 선택적: 알림 배지 (승인 대기 건수 등)
+  badge?: number;
+  isCollapsed?: boolean;
 }
 
 // SidebarItem을 memo로 래핑하여 불필요한 리렌더 방지 (rerender-memo)
 const SidebarItem = memo(function SidebarItem({
-  icon,
+  icon: Icon,
   href,
   label,
   isActive,
   badge,
+  isCollapsed,
 }: SidebarItemProps) {
   const t = useTranslations('navigation');
   return (
     <Link
       href={href}
-      className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 relative',
-        // SSOT: design-tokens — motion + focus-visible
-        getTransitionClasses('fast', ['background-color', 'color']),
-        FOCUS_TOKENS.classes.onDark,
-        isActive
-          ? 'text-white bg-white/15 font-medium border-l-[3px] border-white pl-[9px]'
-          : 'text-white/70 hover:text-white hover:bg-white/10 border-l-[3px] border-transparent'
-      )}
+      className={cn(getSidebarItemClasses(!!isActive, isCollapsed))}
       aria-current={isActive ? 'page' : undefined}
+      title={isCollapsed ? label : undefined}
     >
-      <span aria-hidden="true">{icon}</span>
-      <span className="flex-1 truncate">{label}</span>
-      {badge !== undefined && badge > 0 && (
+      <span aria-hidden="true">
+        <Icon className={SIDEBAR_ITEM_TOKENS.iconSize} />
+      </span>
+      {!isCollapsed && <span className="flex-1 truncate">{label}</span>}
+      {/* 펼쳐진 상태: 숫자 배지 */}
+      {!isCollapsed && badge !== undefined && badge > 0 && (
         <span
           className={cn(
-            'ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full bg-ul-red text-white',
+            'ml-auto inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full',
+            SIDEBAR_ITEM_TOKENS.badge.background,
+            SIDEBAR_ITEM_TOKENS.badge.text,
             ANIMATION_PRESETS.pulse
           )}
           aria-label={t('layout.notificationCount', { count: badge })}
         >
           {badge}
         </span>
+      )}
+      {/* 접힌 상태: dot 인디케이터 */}
+      {isCollapsed && badge !== undefined && badge > 0 && (
+        <span
+          className={cn(
+            'absolute top-0.5 right-0.5 w-2 h-2 rounded-full',
+            SIDEBAR_ITEM_TOKENS.badge.background
+          )}
+          aria-label={t('layout.notificationCount', { count: badge })}
+        />
       )}
     </Link>
   );
@@ -109,15 +119,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const t = useTranslations('navigation');
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const userRole = session?.user?.role;
+  const userRole = session?.user?.role as UserRole | undefined;
+  const { isCollapsed, toggle } = useSidebarState();
 
   // SSE 알림 실시간 스트림 (세션 있을 때만 자동 연결)
-  // useNotificationStream 내부에서 accessToken 없으면 no-op
   useNotificationStream();
 
   // 승인 대기 카운트 조회 (권한이 있는 경우에만)
-  // SSOT: ApprovalsService (GET /api/approvals/counts) — 대시보드 카드, 승인 페이지와 동일 소스
-  // enabled: false일 때 쿼리 비활성화 → 세션 로딩 중 API 호출 없음
   const { data: pendingCounts } = useQuery<PendingCountsByCategory>({
     queryKey: queryKeys.approvals.counts(userRole),
     queryFn: () => approvalsApi.getPendingCounts(),
@@ -126,113 +134,25 @@ export function DashboardShell({ children }: DashboardShellProps) {
     refetchInterval: REFETCH_INTERVALS.NEAR_REALTIME,
   });
 
-  // 선언적 네비게이션 설정
-  // SSOT: FRONTEND_ROUTES(경로) + Permission(가시성) + hasPermission(필터링)
-  // requiredPermission이 null이면 모든 역할에게 표시
-  const navItems: NavItem[] = useMemo(() => {
-    const role = userRole as UserRole | undefined;
-
-    // 각 메뉴의 가시성을 Permission 상수로 선언 — 역할 하드코딩 없음
-    const navConfig: Array<{
-      icon: React.ReactNode;
-      href: string;
-      label: string;
-      requiredPermission: Permission | null;
-      badge?: number;
-    }> = [
-      {
-        icon: <LayoutDashboard className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.DASHBOARD,
-        label: t('dashboard'),
-        requiredPermission: null, // 모든 역할
-      },
-      {
-        icon: <Package2 className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.EQUIPMENT.LIST,
-        label: t('equipment'),
-        requiredPermission: Permission.VIEW_EQUIPMENT,
-      },
-      {
-        icon: <ClipboardCheck className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.CHECKOUTS.LIST,
-        label: t('checkouts'),
-        requiredPermission: Permission.VIEW_CHECKOUTS,
-      },
-      {
-        icon: <FileSpreadsheet className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.CALIBRATION.LIST,
-        label: t('calibration'),
-        requiredPermission: Permission.VIEW_CALIBRATIONS,
-      },
-      {
-        icon: <FileText className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
-        label: t('calibrationPlans'),
-        requiredPermission: Permission.VIEW_CALIBRATION_PLANS,
-      },
-      {
-        icon: <CheckSquare className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.ADMIN.APPROVALS,
-        label: t('adminApprovals'),
-        requiredPermission: Permission.APPROVE_EQUIPMENT, // 승인 권한 중 하나라도 있으면 표시
-        badge: (() => {
-          if (!role || !hasApprovalPermissions(role)) return undefined;
-          const total = computeApprovalTotal(pendingCounts, role);
-          return total > 0 ? total : undefined;
-        })(),
-      },
-      {
-        icon: <FileSearch className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.ADMIN.AUDIT_LOGS,
-        label: t('adminAuditLogs'),
-        requiredPermission: Permission.VIEW_AUDIT_LOGS,
-      },
-      {
-        icon: <Users className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.TEAMS.LIST,
-        label: t('teams'),
-        requiredPermission: Permission.VIEW_TEAMS,
-      },
-      {
-        icon: <Bell className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.NOTIFICATIONS.LIST,
-        label: t('notifications'),
-        requiredPermission: Permission.VIEW_NOTIFICATIONS,
-      },
-      {
-        icon: <Settings className="h-5 w-5" />,
-        href: FRONTEND_ROUTES.SETTINGS.INDEX,
-        label: t('settings'),
-        requiredPermission: null, // 모든 역할
-      },
-    ];
-
-    // Permission 기반 필터링 — 역할 추가/변경 시 role-permissions.ts만 수정하면 됨
-    return navConfig.filter((item) => {
-      if (item.requiredPermission === null) return true;
-      if (!role) return false;
-
-      // 승인 관리는 기존 hasApprovalPermissions 로직 유지 (복수 권한 OR 조건)
-      if (item.href === FRONTEND_ROUTES.ADMIN.APPROVALS) {
-        return hasApprovalPermissions(role);
-      }
-
-      return hasPermission(role, item.requiredPermission);
-    });
-  }, [userRole, pendingCounts, t]);
-
-  // isActive를 useCallback으로 안정화 (rerender-functional-setstate)
-  const isActive = useCallback(
-    (href: string) => {
-      if (href === '/') return pathname === '/';
-      return pathname?.startsWith(href);
-    },
-    [pathname]
+  // SSOT: nav-config.ts에서 필터링된 섹션 조회
+  // getFilteredNavSections가 useMemo 안에서만 호출되므로 참조 안정적
+  const filteredSections = useMemo(
+    () =>
+      getFilteredNavSections(userRole, (key) => t(key as Parameters<typeof t>[0]), pendingCounts),
+    [userRole, pendingCounts, t]
   );
 
+  // 페이지 방문 시 최근 페이지 자동 저장 — 검색 다이얼로그 '최근 페이지' 섹션용
+  useEffect(() => {
+    const activeItem = filteredSections
+      .flatMap((s) => s.items)
+      .find((item) => isNavItemActive(item.href, pathname));
+    if (activeItem) {
+      saveRecentPage(pathname, activeItem.label);
+    }
+  }, [pathname, filteredSections]);
+
   // Layer 0: 세션 복원 전까지 인증 의존 컴포넌트 미마운트
-  // → 하위 컴포넌트의 API 호출이 토큰 없이 발생하는 문제 원천 차단
-  // NOTE: 모든 hooks 호출 이후에 위치해야 함 (React 규칙: 조건부 early return 전 hooks 완료)
   if (status === 'loading') {
     return <DashboardShellSkeleton />;
   }
@@ -245,74 +165,175 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
         {/* 데스크톱 사이드바 - UL Midnight Blue */}
         <aside
-          className="fixed inset-y-0 z-20 hidden w-64 bg-ul-midnight md:block"
-          role="navigation"
+          className={cn(
+            'fixed inset-y-0 z-20 hidden md:flex md:flex-col',
+            getSidebarWidthClasses(isCollapsed),
+            SIDEBAR_COLORS.background,
+            SIDEBAR_LAYOUT.transition
+          )}
           aria-label={t('layout.mainNav')}
         >
-          {/* 사이드바 헤더 */}
-          <div className="flex h-14 items-center border-b border-white/10 px-4">
-            <Link
-              href="/"
-              className={cn(
-                'flex items-center gap-2 font-semibold text-white',
-                FOCUS_TOKENS.classes.onDark,
-                'rounded-md',
-                'hover:bg-white/10',
-                getTransitionClasses('fast', ['background-color', 'transform']),
-                'px-2 py-1.5 -mx-2',
-                'group'
-              )}
-              aria-label={t('layout.goHome')}
-            >
-              <div
-                className={cn(
-                  'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
-                  'group-hover:scale-110 motion-safe:transition-transform motion-reduce:transition-none'
-                )}
-              >
-                <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
-              </div>
-              <span className="group-hover:text-ul-info motion-safe:transition-colors motion-reduce:transition-none">
-                {t('layout.systemName')}
-              </span>
-            </Link>
+          {/* 사이드바 헤더 — 펼침/접힘 모두 h-14 동일 영역 내 토글 버튼 배치 */}
+          <div
+            className={cn(
+              'flex h-14 items-center border-b shrink-0',
+              SIDEBAR_COLORS.border,
+              isCollapsed ? 'px-2 justify-between' : 'px-4'
+            )}
+          >
+            {isCollapsed ? (
+              <>
+                <Link
+                  href="/"
+                  className={cn(
+                    'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
+                    FOCUS_TOKENS.classes.onDark
+                  )}
+                  aria-label={t('layout.goHome')}
+                >
+                  <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'h-7 w-7 text-white/50 hover:text-white hover:bg-white/10',
+                    FOCUS_TOKENS.classes.onDark
+                  )}
+                  onClick={toggle}
+                  aria-label={t('layout.expandSidebar')}
+                  aria-expanded={!isCollapsed}
+                >
+                  <ChevronsRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/"
+                  className={cn(
+                    'flex items-center gap-2 font-semibold text-white group',
+                    FOCUS_TOKENS.classes.onDark,
+                    'rounded-md hover:bg-white/10 px-2 py-1.5 -mx-2',
+                    getTransitionClasses('fast', ['background-color'])
+                  )}
+                  aria-label={t('layout.goHome')}
+                >
+                  <div
+                    className={cn(
+                      'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
+                      'group-hover:scale-110',
+                      getTransitionClasses('fast', ['transform'])
+                    )}
+                  >
+                    <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
+                  </div>
+                  <span
+                    className={cn(
+                      'group-hover:text-ul-info',
+                      getTransitionClasses('fast', ['color'])
+                    )}
+                  >
+                    {t('layout.systemName')}
+                  </span>
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'ml-auto h-7 w-7 text-white/50 hover:text-white hover:bg-white/10',
+                    FOCUS_TOKENS.classes.onDark
+                  )}
+                  onClick={toggle}
+                  aria-label={t('layout.collapseSidebar')}
+                  aria-expanded={!isCollapsed}
+                >
+                  <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </>
+            )}
           </div>
 
-          {/* 네비게이션 링크 */}
-          <nav className="flex flex-col gap-1 p-4">
-            {navItems.map((item) => (
-              <SidebarItem
-                key={item.href}
-                icon={item.icon}
-                href={item.href}
-                label={item.label}
-                isActive={isActive(item.href)}
-                badge={item.badge}
-              />
+          {/* 네비게이션 섹션 */}
+          <nav
+            className="flex flex-col flex-1 overflow-y-auto p-2"
+            aria-label={t('layout.mainNav')}
+          >
+            {filteredSections.map((section: FilteredNavSection, sectionIndex: number) => (
+              <div key={section.sectionLabel}>
+                {/* 섹션 구분선 (첫 섹션 제외) */}
+                {sectionIndex > 0 && (
+                  <div
+                    className={cn(SIDEBAR_SECTION_TOKENS.divider, isCollapsed ? 'my-1' : undefined)}
+                  />
+                )}
+                {/* 섹션 라벨 (펼쳐진 상태에서만) */}
+                {!isCollapsed && (
+                  <div
+                    className={cn(
+                      SIDEBAR_SECTION_TOKENS.label,
+                      sectionIndex === 0
+                        ? SIDEBAR_SECTION_TOKENS.firstSpacing
+                        : SIDEBAR_SECTION_TOKENS.spacing
+                    )}
+                  >
+                    {section.sectionLabel}
+                  </div>
+                )}
+                {/* 아이템 목록 */}
+                <div className="flex flex-col gap-1">
+                  {section.items.map((item) => (
+                    <SidebarItem
+                      key={item.href}
+                      icon={item.icon}
+                      href={item.href}
+                      label={item.label}
+                      isActive={isNavItemActive(item.href, pathname)}
+                      badge={item.badge}
+                      isCollapsed={isCollapsed}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </nav>
 
-          {/* 사이드바 하단 - UL 브랜딩 */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-            <div className="flex items-center gap-2">
-              <span className="text-ul-red font-bold text-xs">UL Solutions</span>
-              <span className="text-white/30 text-xs">|</span>
-              <span className="text-white/40 text-xs">Working for a safer world.</span>
+          {/* 사이드바 하단 — 브랜딩 (펼쳐진 상태에서만) */}
+          {!isCollapsed && (
+            <div className={cn('p-4 border-t shrink-0', SIDEBAR_COLORS.border)}>
+              <div className="flex items-center gap-2">
+                <span className={cn('font-bold text-xs', SIDEBAR_COLORS.brandPrimary)}>
+                  UL Solutions
+                </span>
+                <span className="text-white/30 text-xs">|</span>
+                <span className={cn('text-xs', SIDEBAR_COLORS.brandSecondary)}>
+                  Working for a safer world.
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </aside>
 
         {/* 메인 콘텐츠 영역 */}
-        <div className="flex flex-col flex-1 md:ml-64">
+        <div
+          className={cn(
+            'flex flex-col flex-1',
+            getSidebarMarginClasses(isCollapsed),
+            SIDEBAR_LAYOUT.transition
+          )}
+        >
           {/* 헤더 */}
           <Header
             title={t('layout.systemName')}
             leftContent={
-              <MobileNav
-                navItems={navItems}
-                brandName={t('layout.systemName')}
-                brandIcon={<Wrench className="h-6 w-6" aria-hidden="true" />}
-              />
+              <>
+                <MobileNav
+                  navSections={filteredSections}
+                  brandName={t('layout.systemName')}
+                  brandIcon={<Wrench className="h-6 w-6" aria-hidden="true" />}
+                />
+                <GlobalSearchTrigger filteredSections={filteredSections} />
+              </>
             }
             rightContent={
               <div className={cn('flex items-center', getHeaderSpacingClass())}>
@@ -340,16 +361,20 @@ export function DashboardShell({ children }: DashboardShellProps) {
  * DashboardShell 스켈레톤
  *
  * 세션 복원 중(status === 'loading') 표시되는 레이아웃 스켈레톤.
- * 사이드바 구조는 정적으로 렌더링하고, 메인 콘텐츠 영역만 스켈레톤 처리.
  */
 export function DashboardShellSkeleton() {
   const t = useTranslations('navigation');
   return (
     <div className="flex min-h-screen bg-background">
       {/* 데스크톱 사이드바 스켈레톤 */}
-      <aside className="fixed inset-y-0 z-20 hidden w-64 bg-ul-midnight md:block">
-        {/* 사이드바 헤더 */}
-        <div className="flex h-14 items-center border-b border-white/10 px-4">
+      <aside
+        className={cn(
+          'fixed inset-y-0 z-20 hidden md:block',
+          SIDEBAR_LAYOUT.expanded.width,
+          SIDEBAR_COLORS.background
+        )}
+      >
+        <div className={cn('flex h-14 items-center border-b px-4', SIDEBAR_COLORS.border)}>
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red">
               <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
@@ -358,7 +383,6 @@ export function DashboardShellSkeleton() {
           </div>
         </div>
 
-        {/* 네비게이션 스켈레톤 */}
         <nav className="flex flex-col gap-1 p-4">
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2">
@@ -368,8 +392,7 @@ export function DashboardShellSkeleton() {
           ))}
         </nav>
 
-        {/* 사이드바 하단 */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+        <div className={cn('absolute bottom-0 left-0 right-0 p-4 border-t', SIDEBAR_COLORS.border)}>
           <div className="flex items-center gap-2">
             <span className="text-ul-red font-bold text-xs">UL Solutions</span>
             <span className="text-white/30 text-xs">|</span>
@@ -379,8 +402,7 @@ export function DashboardShellSkeleton() {
       </aside>
 
       {/* 메인 콘텐츠 영역 스켈레톤 */}
-      <div className="flex flex-col flex-1 md:ml-64">
-        {/* 헤더 스켈레톤 */}
+      <div className={cn('flex flex-col flex-1', SIDEBAR_LAYOUT.expanded.marginLeft)}>
         <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6">
           <Skeleton className="h-6 w-6 md:hidden" />
           <div className="flex-1" />
@@ -391,7 +413,6 @@ export function DashboardShellSkeleton() {
           </div>
         </header>
 
-        {/* 메인 콘텐츠 스켈레톤 */}
         <main className="flex-1 overflow-auto p-6">
           <div className="space-y-6">
             <Skeleton className="h-9 w-48" />

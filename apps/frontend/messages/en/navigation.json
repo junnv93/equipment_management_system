@@ -49,6 +49,11 @@
   "adminAuditLogs": "Audit Logs",
   "login": "Login",
   "error": "Error",
+  "sections": {
+    "operations": "Operations",
+    "management": "Management",
+    "system": "System"
+  },
   "layout": {
     "systemName": "Equipment Management System",
     "mainNav": "Main Navigation",
@@ -84,7 +89,16 @@
     "supportNote": "If the problem persists, please contact your system administrator.",
     "globalErrorTitle": "Something went wrong",
     "globalErrorDescription": "An unexpected error has occurred.",
-    "goToEquipment": "Equipment List"
+    "goToEquipment": "Equipment List",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "toggleSidebarShortcut": "Toggle sidebar (Ctrl+B)",
+    "search": "Search",
+    "searchPlaceholder": "Search pages, equipment...",
+    "searchShortcut": "⌘K",
+    "recentPages": "Recent pages",
+    "menus": "Menus",
+    "noResults": "No results found"
   },
   "roles": {
     "test_engineer": "Test Engineer",

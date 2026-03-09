@@ -152,35 +152,71 @@ function DashboardClientComponent({
         scope={scope}
       />
 
-      {/* Row 3: 3컬럼 액션 행 — 승인대기 | 반출현황 | 교정현황 */}
-      <div className={DASHBOARD_GRID.actionRow}>
-        {controlCenter.showPendingApprovals && <PendingApprovalCard compact />}
-        {controlCenter.showCheckoutOverdue && (
-          <OverdueCheckoutsCard
-            overdueCheckouts={overdueCheckouts}
-            upcomingCheckoutReturns={upcomingCheckoutReturns}
-            loading={isLoading}
-          />
-        )}
-        {controlCenter.showCalibrationDday && (
-          <CalibrationDdayList
-            overdueCalibrations={overdueCalibrations}
-            upcomingCalibrations={upcomingCalibrations}
-            loading={isLoading}
-          />
-        )}
-      </div>
-
-      {/* Row 4: 하단 2컬럼 — 최근활동(2fr) | 팀분포+달력(1fr) */}
-      <div className={DASHBOARD_GRID.bottomRow}>
-        <section aria-label={t('srOnly.recentActivity')}>
-          <RecentActivities data={recentActivities} loading={isLoading} />
-        </section>
-
-        <div className="flex flex-col gap-4">
-          {controlCenter.showTeamDistribution && (
-            <TeamEquipmentDistribution equipmentByTeam={equipmentByTeam} loading={isLoading} />
+      {/*
+       * Row 3: 액션 행 — 2컬럼 외부 [1fr_280px]
+       *
+       * CalibrationDday를 항상 우측 280px 고정 컬럼에 배치하기 위해
+       * 외부를 [1fr_280px]로 분리하고, 내부에서 승인대기/반출현황을 서브그리드로 처리.
+       * 이렇게 하면 역할에 따라 승인대기/반출현황이 일부 없더라도
+       * 교정현황은 항상 우측에 고정되어 레이아웃이 일관성을 유지함.
+       */}
+      {(controlCenter.showPendingApprovals ||
+        controlCenter.showCheckoutOverdue ||
+        controlCenter.showCalibrationDday) && (
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+          {/* 좌측: 승인대기 + 반출현황 서브그리드 */}
+          {(controlCenter.showPendingApprovals || controlCenter.showCheckoutOverdue) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {controlCenter.showPendingApprovals && <PendingApprovalCard compact />}
+              {controlCenter.showCheckoutOverdue && (
+                <OverdueCheckoutsCard
+                  overdueCheckouts={overdueCheckouts}
+                  upcomingCheckoutReturns={upcomingCheckoutReturns}
+                  loading={isLoading}
+                />
+              )}
+            </div>
           )}
+
+          {/* 우측: 교정현황 — 항상 280px 고정 컬럼 */}
+          {controlCenter.showCalibrationDday && (
+            <CalibrationDdayList
+              overdueCalibrations={overdueCalibrations}
+              upcomingCalibrations={upcomingCalibrations}
+              loading={isLoading}
+            />
+          )}
+        </div>
+      )}
+
+      {/*
+       * Row 4: 하단 — 팀 분포 유무에 따라 레이아웃 분기
+       *
+       * showTeamDistribution=true  → 2컬럼 [2fr_1fr]: 최근활동 | 팀분포+달력
+       * showTeamDistribution=false → 최근활동 전폭 + 달력 아래 배치 (1컬럼)
+       *   → test_engineer, quality_manager 역할에서 우측 컬럼이 허전해지는 문제 해결
+       */}
+      {controlCenter.showTeamDistribution ? (
+        <div className={DASHBOARD_GRID.bottomRow}>
+          <section aria-label={t('srOnly.recentActivity')}>
+            <RecentActivities data={recentActivities} loading={isLoading} />
+          </section>
+          <div className="flex flex-col gap-4">
+            <TeamEquipmentDistribution equipmentByTeam={equipmentByTeam} loading={isLoading} />
+            {controlCenter.showMiniCalendar && (
+              <MiniCalendar
+                upcomingCalibrations={upcomingCalibrations}
+                upcomingCheckoutReturns={upcomingCheckoutReturns}
+                overdueCalibrations={overdueCalibrations}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <section aria-label={t('srOnly.recentActivity')}>
+            <RecentActivities data={recentActivities} loading={isLoading} />
+          </section>
           {controlCenter.showMiniCalendar && (
             <MiniCalendar
               upcomingCalibrations={upcomingCalibrations}
@@ -189,7 +225,7 @@ function DashboardClientComponent({
             />
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
