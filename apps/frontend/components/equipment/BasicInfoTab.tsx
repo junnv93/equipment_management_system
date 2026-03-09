@@ -59,7 +59,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {/* 기본 정보 카드 */}
       <Card className="shadow-sm">
         <CardHeader className="pb-3 border-b border-border">
@@ -172,7 +172,7 @@ export function BasicInfoTab({ equipment }: BasicInfoTabProps) {
 
       {/* 소프트웨어/펌웨어 정보 카드 */}
       {(equipment.softwareVersion || equipment.firmwareVersion || equipment.manualLocation) && (
-        <Card className="shadow-sm">
+        <Card className="shadow-sm lg:col-span-3">
           <CardHeader className="pb-3 border-b border-border">
             <CardSection icon={Package} title={t('softwareTab.title')} />
           </CardHeader>

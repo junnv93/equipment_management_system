@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
-import { EquipmentHeader } from './EquipmentHeader';
+import { EquipmentStickyHeader } from './EquipmentStickyHeader';
 import { EquipmentTabs } from './EquipmentTabs';
+import { EquipmentKpiStrip } from './EquipmentKpiStrip';
 import { NonConformanceBanner } from './NonConformanceBanner';
 import { UsagePeriodBadge } from './UsagePeriodBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -17,6 +18,10 @@ import disposalApi from '@/lib/api/disposal-api';
 import { DisposalProgressCard } from './disposal/DisposalProgressCard';
 import { DisposedBanner } from './disposal/DisposedBanner';
 import { DisposalDetailDialog } from './disposal/DisposalDetailDialog';
+import { DisposalRequestDialog } from './disposal/DisposalRequestDialog';
+import { DisposalCancelDialog } from './disposal/DisposalCancelDialog';
+import { DisposalReviewDialog } from './disposal/DisposalReviewDialog';
+import { DisposalApprovalDialog } from './disposal/DisposalApprovalDialog';
 import type { DisposalRequest } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { queryKeys } from '@/lib/api/query-config';
@@ -59,11 +64,8 @@ export function EquipmentDetailClient({
 
   // 브레드크럼 동적 라벨 설정
   useEffect(() => {
-    // 장비 정보를 사용해서 의미있는 라벨 생성
     const label = `${initialEquipment.name} (${initialEquipment.managementNumber})`;
     setDynamicLabel(equipmentId, label);
-
-    // 컴포넌트 언마운트 시 라벨 제거
     return () => {
       clearDynamicLabel(equipmentId);
     };
@@ -75,7 +77,29 @@ export function EquipmentDetailClient({
     clearDynamicLabel,
   ]);
 
-  // 폐기 관련 다이얼로그 상태
+  // sticky 헤더 높이 → CSS 변수 동적 설정 (탭 바 top 위치 계산용)
+  // EQUIPMENT_TAB_UNDERLINE_TOKENS.container 의 --sticky-header-height 변수에 사용
+  useEffect(() => {
+    const header = document.getElementById('equipment-sticky-header');
+    if (!header) return;
+    const observer = new ResizeObserver(([entry]) => {
+      document.documentElement.style.setProperty(
+        '--sticky-header-height',
+        `${entry.contentRect.height}px`
+      );
+    });
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--sticky-header-height');
+    };
+  }, []);
+
+  // 폐기 관련 다이얼로그 상태 (EquipmentStickyHeader에서 리프팅)
+  const [disposalRequestOpen, setDisposalRequestOpen] = useState(false);
+  const [disposalReviewOpen, setDisposalReviewOpen] = useState(false);
+  const [disposalApprovalOpen, setDisposalApprovalOpen] = useState(false);
+  const [disposalCancelOpen, setDisposalCancelOpen] = useState(false);
   const [disposalDetailOpen, setDisposalDetailOpen] = useState(false);
 
   // ✅ 장비 데이터를 React Query로 관리하여 캐시 무효화 시 자동 갱신
@@ -139,11 +163,21 @@ export function EquipmentDetailClient({
 
   return (
     <div className="min-h-screen bg-ul-gray-bg dark:bg-gray-950">
-      {/* 헤더 */}
-      <EquipmentHeader equipment={equipment} disposalRequest={disposalRequest} />
+      {/* 컴팩트 Sticky 헤더 */}
+      <EquipmentStickyHeader
+        equipment={equipment}
+        disposalRequest={disposalRequest}
+        onDisposalRequestOpen={() => setDisposalRequestOpen(true)}
+        onDisposalReviewOpen={() => setDisposalReviewOpen(true)}
+        onDisposalApprovalOpen={() => setDisposalApprovalOpen(true)}
+        onDisposalCancelOpen={() => setDisposalCancelOpen(true)}
+        onDisposalDetailOpen={() => setDisposalDetailOpen(true)}
+      />
 
       {/* 컨텐츠 영역 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+        {/* KPI 스트립 */}
+        <EquipmentKpiStrip equipment={equipment} />
         {/* 폐기 진행 중 배너 */}
         {equipment.status === 'pending_disposal' && disposalRequest && (
           <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
@@ -215,14 +249,42 @@ export function EquipmentDetailClient({
         <EquipmentTabs equipment={equipment} activeTab={activeTab} />
       </div>
 
-      {/* 폐기 상세 다이얼로그 */}
+      {/* 폐기 관련 다이얼로그 (EquipmentStickyHeader에서 리프팅) */}
+      <DisposalRequestDialog
+        open={disposalRequestOpen}
+        onOpenChange={setDisposalRequestOpen}
+        equipmentId={equipmentId}
+        equipmentName={equipment.name}
+      />
+      <DisposalCancelDialog
+        open={disposalCancelOpen}
+        onOpenChange={setDisposalCancelOpen}
+        equipmentId={equipmentId}
+        equipmentName={equipment.name}
+      />
       {disposalRequest && (
-        <DisposalDetailDialog
-          open={disposalDetailOpen}
-          onOpenChange={setDisposalDetailOpen}
-          disposalRequest={disposalRequest}
-          equipmentName={equipment.name}
-        />
+        <>
+          <DisposalReviewDialog
+            open={disposalReviewOpen}
+            onOpenChange={setDisposalReviewOpen}
+            equipmentId={equipmentId}
+            equipment={equipment}
+            disposalRequest={disposalRequest}
+          />
+          <DisposalApprovalDialog
+            open={disposalApprovalOpen}
+            onOpenChange={setDisposalApprovalOpen}
+            equipmentId={equipmentId}
+            equipment={equipment}
+            disposalRequest={disposalRequest}
+          />
+          <DisposalDetailDialog
+            open={disposalDetailOpen}
+            onOpenChange={setDisposalDetailOpen}
+            disposalRequest={disposalRequest}
+            equipmentName={equipment.name}
+          />
+        </>
       )}
     </div>
   );

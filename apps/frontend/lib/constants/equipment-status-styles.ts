@@ -169,3 +169,17 @@ export function shouldDisplayCalibrationStatus(status: string | undefined | null
   if (!status) return true;
   return !STATUS_SKIP_CALIBRATION_DISPLAY.includes(status as EquipmentStatus);
 }
+
+/**
+ * 반출 불가 상태 목록 (SSOT)
+ *
+ * UL-QP-18 기준: 반출 중/폐기/사용 중 장비는 신규 반출 불가
+ * 부적합/교정기한초과는 교정·수리 목적 반출은 가능 (별도 처리)
+ *
+ * CRITICAL: 이 상수를 직접 하드코딩하지 말 것 — 이 곳이 유일한 정의 위치
+ */
+export const STATUS_NOT_ALLOWED_FOR_CHECKOUT: EquipmentStatus[] = [
+  'checked_out',
+  'retired',
+  'in_use',
+];

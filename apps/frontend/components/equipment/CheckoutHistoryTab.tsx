@@ -47,6 +47,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { TIMELINE_TOKENS, getTimelineCardClasses } from '@/lib/design-tokens';
+import { STATUS_NOT_ALLOWED_FOR_CHECKOUT } from '@/lib/constants/equipment-status-styles';
 
 // 반출 신청 스키마
 const checkoutSchema = z.object({
@@ -174,11 +175,13 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
    *   교정/수리 목적으로는 반출 가능
    * - 외부 대여(rental)는 available 상태에서만 가능
    */
-  const STATUS_NOT_ALLOWED_FOR_CHECKOUT = ['checked_out', 'retired', 'in_use'];
+  // SSOT: STATUS_NOT_ALLOWED_FOR_CHECKOUT (lib/constants/equipment-status-styles.ts)
   const STATUS_ONLY_CALIBRATION_REPAIR = ['non_conforming', 'calibration_overdue'];
   const currentStatus = equipment.status || 'available';
 
-  const canCheckoutAnyPurpose = !STATUS_NOT_ALLOWED_FOR_CHECKOUT.includes(currentStatus);
+  const canCheckoutAnyPurpose = !STATUS_NOT_ALLOWED_FOR_CHECKOUT.includes(
+    currentStatus as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
+  );
   const canCheckoutOnlyForCalibrationRepair =
     STATUS_ONLY_CALIBRATION_REPAIR.includes(currentStatus);
   const isEquipmentAvailable = currentStatus === 'available';

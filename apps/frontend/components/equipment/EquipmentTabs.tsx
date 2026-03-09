@@ -18,7 +18,7 @@ import {
   Paperclip,
 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { EQUIPMENT_TAB_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
+import { EQUIPMENT_TAB_UNDERLINE_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
 
 // 탭 로딩 스켈레톤 컴포넌트
 function TabSkeleton() {
@@ -177,42 +177,44 @@ export function EquipmentTabs({ equipment, activeTab }: EquipmentTabsProps) {
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-      {/* 탭 리스트 - 스크롤 가능한 반응형 레이아웃 */}
-      <div className={EQUIPMENT_TAB_TOKENS.mobileScroll.container}>
-        <TabsList
-          className="inline-flex h-auto bg-card p-1 rounded-lg shadow-sm border border-border min-w-max"
-          aria-label={t('tabs.ariaLabel')}
-        >
-          {tabs.map(({ value, label, icon: Icon }) => (
-            <React.Fragment key={value}>
-              {/* 그룹 경계 구분선 (WAI-ARIA: role="separator") */}
-              {groupBoundaries.has(value) && (
-                <div
-                  className="mx-1 h-5 w-px bg-border opacity-60 self-center"
-                  role="separator"
-                  aria-orientation="vertical"
-                />
-              )}
-              <TabsTrigger
-                value={value}
-                id={`${value}-tab`}
-                className={[
-                  EQUIPMENT_TAB_TOKENS.trigger.base,
-                  EQUIPMENT_TAB_TOKENS.trigger.active,
-                  EQUIPMENT_TAB_TOKENS.trigger.inactive,
-                  EQUIPMENT_TAB_TOKENS.trigger.focus,
-                ].join(' ')}
-                aria-label={t('tabs.tabAriaLabel', { label })}
-              >
-                <Icon
-                  className={`${EQUIPMENT_TAB_TOKENS.icon.size} mr-1.5 shrink-0`}
-                  aria-hidden="true"
-                />
-                <span className="text-sm font-medium whitespace-nowrap">{label}</span>
-              </TabsTrigger>
-            </React.Fragment>
-          ))}
-        </TabsList>
+      {/* 탭 바 — flat underline + sticky (헤더 아래 고정) */}
+      <div className={EQUIPMENT_TAB_UNDERLINE_TOKENS.container}>
+        <div className={EQUIPMENT_TAB_UNDERLINE_TOKENS.mobileScroll}>
+          <TabsList
+            className={EQUIPMENT_TAB_UNDERLINE_TOKENS.list}
+            aria-label={t('tabs.ariaLabel')}
+          >
+            {tabs.map(({ value, label, icon: Icon }) => (
+              <React.Fragment key={value}>
+                {/* 그룹 경계 구분선 (WAI-ARIA: role="separator") */}
+                {groupBoundaries.has(value) && (
+                  <div
+                    className={EQUIPMENT_TAB_UNDERLINE_TOKENS.separator}
+                    role="separator"
+                    aria-orientation="vertical"
+                  />
+                )}
+                <TabsTrigger
+                  value={value}
+                  id={`${value}-tab`}
+                  className={[
+                    EQUIPMENT_TAB_UNDERLINE_TOKENS.triggerBase,
+                    EQUIPMENT_TAB_UNDERLINE_TOKENS.triggerActive,
+                    EQUIPMENT_TAB_UNDERLINE_TOKENS.triggerInactive,
+                    EQUIPMENT_TAB_UNDERLINE_TOKENS.triggerFocus,
+                  ].join(' ')}
+                  aria-label={t('tabs.tabAriaLabel', { label })}
+                >
+                  <Icon
+                    className={`${EQUIPMENT_TAB_UNDERLINE_TOKENS.iconSize} shrink-0`}
+                    aria-hidden="true"
+                  />
+                  <span className="text-sm font-medium whitespace-nowrap">{label}</span>
+                </TabsTrigger>
+              </React.Fragment>
+            ))}
+          </TabsList>
+        </div>
       </div>
 
       {/* 탭 컨텐츠 — slideUp+fadeIn 단일 animate-in으로 방향성 있는 전환 */}
