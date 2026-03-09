@@ -6,8 +6,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ClipboardList, Clock, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  ClipboardList,
+  Clock,
+  AlertTriangle,
+  PackageCheck,
+  PackageOpen,
+  CheckCircle2,
+} from 'lucide-react';
 import checkoutApi, { type CheckoutQuery } from '@/lib/api/checkout-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
@@ -15,10 +22,13 @@ import CheckoutGroupCard from '@/components/checkouts/CheckoutGroupCard';
 import { groupCheckoutsByDateAndDestination } from '@/lib/utils/checkout-group-utils';
 import {
   CHECKOUT_STATS_VARIANTS,
+  CHECKOUT_STATS_CHECKED_OUT,
+  CHECKOUT_STATS_RETURNED,
   getCheckoutStatsClasses,
   CHECKOUT_MOTION,
+  CONTENT_TOKENS,
 } from '@/lib/design-tokens';
-import { CONTENT_TOKENS } from '@/lib/design-tokens';
+import { useAuth } from '@/hooks/use-auth';
 import {
   convertFiltersToApiParams,
   type UICheckoutFilters,
@@ -38,10 +48,65 @@ interface OutboundCheckoutsTabProps {
   onResetFilters: () => void;
 }
 
+/** 반출 탭 통계 카드 데이터 정의 */
+function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
+  return [
+    {
+      key: 'total' as const,
+      labelKey: 'outbound.totalCheckouts',
+      subKey: 'outbound.totalSub',
+      value: summary.total,
+      icon: ClipboardList,
+      filterStatus: 'all',
+      variant: CHECKOUT_STATS_VARIANTS.total,
+    },
+    {
+      key: 'pending' as const,
+      labelKey: 'outbound.pendingApproval',
+      subKey: 'outbound.pendingSub',
+      value: summary.pending,
+      icon: Clock,
+      filterStatus: 'pending',
+      variant: CHECKOUT_STATS_VARIANTS.pending,
+    },
+    {
+      key: 'checkedOut' as const,
+      labelKey: 'outbound.inProgress',
+      subKey: 'outbound.inProgressSub',
+      value: summary.approved,
+      icon: PackageOpen,
+      filterStatus:
+        'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received',
+      variant: CHECKOUT_STATS_CHECKED_OUT,
+    },
+    {
+      key: 'overdue' as const,
+      labelKey: 'outbound.overdue',
+      subKey: 'outbound.overdueSub',
+      value: summary.overdue,
+      icon: AlertTriangle,
+      filterStatus: 'overdue',
+      variant: CHECKOUT_STATS_VARIANTS.overdue,
+    },
+    {
+      key: 'returned' as const,
+      labelKey: 'outbound.returnToday',
+      subKey: 'outbound.returnedSub',
+      value: summary.returnedToday,
+      icon: PackageCheck,
+      filterStatus: 'returned,return_approved',
+      variant: CHECKOUT_STATS_RETURNED,
+    },
+  ];
+}
+
 /**
  * 반출 탭 컴포넌트
- * ✅ 코드 분할: 반출 관련 로직만 포함 (Bundle size optimization)
- * ✅ URL SSOT: 페이지네이션 포함 모든 필터를 URL에서 읽음
+ *
+ * v2 변경:
+ * - 5개 통계 카드 (전체/승인대기/반출중/기한초과/반입완료)
+ * - 기한 초과 그룹 최상단 고정 (overdue 그룹 id 부여)
+ * - 인라인 승인 권한 (canApprove) 전달
  */
 export default function OutboundCheckoutsTab({
   teamId,
@@ -53,6 +118,10 @@ export default function OutboundCheckoutsTab({
   const t = useTranslations('checkouts');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { hasRole } = useAuth();
+  const canApprove = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
+
+  const statCards = useStatCards(summary);
 
   // URL 페이지 변경 핸들러
   const handlePageChange = (newPage: number) => {
@@ -62,7 +131,7 @@ export default function OutboundCheckoutsTab({
   };
 
   // ──────────────────────────────────────────────
-  // 반출 목록 조회 (URL 필터 기반)
+  // 반출 목록 조회
   // ──────────────────────────────────────────────
   const apiParams = convertFiltersToApiParams(filters);
   const { data: checkoutsData, isLoading: checkoutsLoading } = useQuery({
@@ -89,12 +158,22 @@ export default function OutboundCheckoutsTab({
   });
 
   // ──────────────────────────────────────────────
-  // 그룹화
+  // 그룹화 + 기한 초과 그룹 최상단 고정
   // ──────────────────────────────────────────────
-  const outboundGroups = useMemo(() => {
-    if (!checkoutsData?.data) return [];
-    return groupCheckoutsByDateAndDestination(checkoutsData.data);
+  const { overdueGroups, normalGroups } = useMemo(() => {
+    if (!checkoutsData?.data) return { overdueGroups: [], normalGroups: [] };
+    const all = groupCheckoutsByDateAndDestination(checkoutsData.data);
+    const overdue = all.filter((g) => g.statuses.includes('overdue'));
+    const normal = all.filter((g) => !g.statuses.includes('overdue'));
+    return { overdueGroups: overdue, normalGroups: normal };
   }, [checkoutsData?.data]);
+
+  const allGroups = [...overdueGroups, ...normalGroups];
+
+  // ──────────────────────────────────────────────
+  // 활성 필터 판단
+  // ──────────────────────────────────────────────
+  const isAllActive = filters.status === 'all' && filters.destination === 'all' && !filters.search;
 
   // ──────────────────────────────────────────────
   // Render helpers
@@ -124,130 +203,129 @@ export default function OutboundCheckoutsTab({
       <ClipboardList className="h-12 w-12 text-brand-text-muted mb-4" aria-hidden="true" />
       <h3 className="text-lg font-medium text-brand-text-primary">{t('outbound.noData')}</h3>
       <p className="text-sm text-brand-text-muted mt-2 mb-4">{t('outbound.noDataDesc')}</p>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={onResetFilters}>
-          {t('actions.resetFilters')}
-        </Button>
-      </div>
+      <Button variant="outline" onClick={onResetFilters}>
+        {t('actions.resetFilters')}
+      </Button>
     </div>
   );
 
   // ──────────────────────────────────────────────
-  // 통계 카드
+  // 5개 통계 카드
   // ──────────────────────────────────────────────
-  const renderStats = () => {
-    const isAllActive =
-      filters.status === 'all' && filters.destination === 'all' && !filters.search;
-    const isPendingActive = filters.status === 'pending';
-    const isOverdueActive = filters.status === 'overdue';
-    const isInProgressActive =
-      filters.status ===
-      'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received';
+  const renderStats = () => (
+    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-5">
+      {statCards.map((card) => {
+        const isActive =
+          card.filterStatus === 'all' ? isAllActive : filters.status === card.filterStatus;
 
-    return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card
-          className={`${getCheckoutStatsClasses('total', isAllActive)} ${CHECKOUT_MOTION.statsCard}`}
-          onClick={() => {
-            onResetFilters();
-          }}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t('outbound.totalCheckouts')}</CardTitle>
-            <ClipboardList
-              className={`h-4 w-4 ${isAllActive ? CHECKOUT_STATS_VARIANTS.total.iconColor : 'text-muted-foreground'}`}
-              aria-hidden="true"
-            />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
-              {summary.total}
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className={`${getCheckoutStatsClasses('pending', isPendingActive)} ${CHECKOUT_MOTION.statsCard}`}
-          onClick={() => onStatCardClick('pending')}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t('outbound.pendingApproval')}</CardTitle>
-            <Clock
-              className={`h-4 w-4 ${isPendingActive ? CHECKOUT_STATS_VARIANTS.pending.iconColor : 'text-brand-warning'}`}
-              aria-hidden="true"
-            />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
-              {summary.pending}
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className={`${getCheckoutStatsClasses('overdue', isOverdueActive)} ${CHECKOUT_MOTION.statsCard}`}
-          onClick={() => onStatCardClick('overdue')}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t('outbound.overdue')}</CardTitle>
-            <AlertTriangle
-              className={`h-4 w-4 ${isOverdueActive ? CHECKOUT_STATS_VARIANTS.overdue.iconColor : 'text-brand-critical'}`}
-              aria-hidden="true"
-            />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
-              {summary.overdue}
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className={`${getCheckoutStatsClasses('inProgress', isInProgressActive)} ${CHECKOUT_MOTION.statsCard}`}
-          onClick={() =>
-            onStatCardClick(
-              'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received'
-            )
-          }
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">{t('outbound.returnToday')}</CardTitle>
-            <Clock
-              className={`h-4 w-4 ${isInProgressActive ? CHECKOUT_STATS_VARIANTS.inProgress.iconColor : 'text-brand-purple'}`}
-              aria-hidden="true"
-            />
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular}`}>
-              {summary.returnedToday}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  };
+        const cardClasses = [
+          getCheckoutStatsClasses(
+            card.key === 'total'
+              ? 'total'
+              : card.key === 'pending'
+                ? 'pending'
+                : card.key === 'overdue'
+                  ? 'overdue'
+                  : 'inProgress', // inProgress 폴백 — CHECKOUT_STATS_CHECKED_OUT/RETURNED는 직접 적용
+            false // getCheckoutStatsClasses는 variant별로 partial — 별도 처리
+          ),
+          CHECKOUT_MOTION.statsCard,
+        ].join(' ');
+
+        // checkedOut / returned 는 custom variant (CHECKOUT_STATS_VARIANTS에 없음)
+        const customVariant =
+          card.key === 'checkedOut'
+            ? CHECKOUT_STATS_CHECKED_OUT
+            : card.key === 'returned'
+              ? CHECKOUT_STATS_RETURNED
+              : null;
+
+        const finalCardClasses = customVariant
+          ? [
+              'cursor-pointer border-2',
+              isActive
+                ? `${customVariant.activeBorder} ${customVariant.activeBg}`
+                : `border-transparent ${customVariant.hoverBorder}`,
+              CHECKOUT_MOTION.statsCard,
+            ].join(' ')
+          : [
+              getCheckoutStatsClasses(
+                card.key === 'total' ? 'total' : card.key === 'pending' ? 'pending' : 'overdue',
+                isActive
+              ),
+              CHECKOUT_MOTION.statsCard,
+            ].join(' ');
+
+        const IconComponent = card.icon;
+        const iconColorClass = isActive
+          ? (customVariant?.iconColor ??
+            CHECKOUT_STATS_VARIANTS[
+              card.key === 'total' ? 'total' : card.key === 'pending' ? 'pending' : 'overdue'
+            ]?.iconColor ??
+            'text-muted-foreground')
+          : 'text-muted-foreground';
+
+        return (
+          <Card
+            key={card.key}
+            className={finalCardClasses}
+            onClick={() =>
+              card.filterStatus === 'all' ? onResetFilters() : onStatCardClick(card.filterStatus)
+            }
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-1.5 pt-3 px-3">
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                {t(card.labelKey)}
+              </CardTitle>
+              <IconComponent
+                className={`h-3.5 w-3.5 shrink-0 ${iconColorClass}`}
+                aria-hidden="true"
+              />
+            </CardHeader>
+            <CardContent className="px-3 pb-3">
+              <div
+                className={`text-2xl font-bold ${CONTENT_TOKENS.numeric.tabular} ${
+                  card.key === 'overdue' && card.value > 0 ? 'text-brand-critical' : ''
+                } ${card.key === 'pending' && card.value > 0 ? 'text-brand-warning' : ''}`}
+              >
+                {card.value}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{t(card.subKey)}</p>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
 
   // ──────────────────────────────────────────────
   // Main render
   // ──────────────────────────────────────────────
   return (
     <>
-      {/* 통계 카드 */}
       {renderStats()}
 
-      {/* 목록 */}
       <div className="space-y-3">
         {checkoutsLoading
           ? renderLoadingState()
-          : outboundGroups.length === 0
+          : allGroups.length === 0
             ? renderEmptyState()
-            : outboundGroups.map((group) => (
-                <CheckoutGroupCard
+            : allGroups.map((group) => (
+                <div
                   key={group.key}
-                  group={group}
-                  onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
-                />
+                  id={group.statuses.includes('overdue') ? 'overdue-group-section' : undefined}
+                >
+                  <CheckoutGroupCard
+                    group={group}
+                    onCheckoutClick={(id) => router.push(FRONTEND_ROUTES.CHECKOUTS.DETAIL(id))}
+                    canApprove={canApprove}
+                    isOverdueGroup={group.statuses.includes('overdue')}
+                  />
+                </div>
               ))}
       </div>
 
-      {/* 페이지네이션 (URL 기반) */}
+      {/* 페이지네이션 */}
       {checkoutsData && checkoutsData.meta.pagination.totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-6">
           <Button

@@ -418,6 +418,8 @@ export const CHECKOUT_DETAIL_TOKENS = {
 // 10. Condition Comparison Tokens (조건 비교)
 // ============================================================================
 
+// (아래에 신규 토큰들 추가됨 — Section 12~17)
+
 /**
  * 장비 상태 비교 토큰 (반입 시 상태 비교)
  */
@@ -468,4 +470,180 @@ export const CHECKOUT_FORM_TOKENS = {
 
   /** 이상 내용 textarea (focus → focus-visible) */
   abnormalTextarea: 'focus-visible:border-brand-critical/60 focus-visible:ring-brand-critical/40',
+} as const;
+
+// ============================================================================
+// 12. Checkout Stats (5-card variant 확장)
+// ============================================================================
+
+// CHECKOUT_STATS_VARIANTS에 반출중(checkedOut) / 반입완료(returned) 추가
+// 기존 CHECKOUT_STATS_VARIANTS는 불변(const), 여기서 새 variant만 별도 정의
+
+/**
+ * 반출중 카드 variant (반출 승인됨 + 진행중 상태 합산)
+ */
+export const CHECKOUT_STATS_CHECKED_OUT = {
+  hoverBorder: 'hover:border-brand-purple/30',
+  activeBorder: 'border-brand-purple',
+  activeBg: 'bg-brand-purple/10',
+  iconColor: 'text-brand-purple',
+} as const;
+
+/**
+ * 반입완료 카드 variant
+ */
+export const CHECKOUT_STATS_RETURNED = {
+  hoverBorder: 'hover:border-brand-ok/30',
+  activeBorder: 'border-brand-ok',
+  activeBg: 'bg-brand-ok/10',
+  iconColor: 'text-brand-ok',
+} as const;
+
+// ============================================================================
+// 13. D-day Badge Tokens
+// ============================================================================
+
+/**
+ * D-day 배지 스타일 (반입 예정일 기준)
+ *
+ * - ok: D-4 이상 (여유 있음)
+ * - warn: D-0 ~ D-3 (주의)
+ * - danger: D+ (기한 초과)
+ */
+export const CHECKOUT_DDAY_TOKENS = {
+  ok: 'bg-brand-ok/15 text-brand-ok',
+  warn: 'bg-brand-warning/15 text-brand-warning',
+  danger: 'bg-brand-critical/15 text-brand-critical font-semibold',
+} as const;
+
+export type DdayVariant = keyof typeof CHECKOUT_DDAY_TOKENS;
+
+/**
+ * D-day 클래스 결정
+ *
+ * @param daysRemaining - 오늘 기준 남은 일수 (음수 = 초과)
+ */
+export function getDdayClasses(daysRemaining: number): string {
+  if (daysRemaining < 0) return CHECKOUT_DDAY_TOKENS.danger;
+  if (daysRemaining <= 3) return CHECKOUT_DDAY_TOKENS.warn;
+  return CHECKOUT_DDAY_TOKENS.ok;
+}
+
+/**
+ * D-day 텍스트 생성
+ *
+ * @param daysRemaining - 오늘 기준 남은 일수
+ */
+export function formatDday(daysRemaining: number): string {
+  if (daysRemaining < 0) return `D+${Math.abs(daysRemaining)}`;
+  if (daysRemaining === 0) return 'D-day';
+  return `D-${daysRemaining}`;
+}
+
+// ============================================================================
+// 14. Alert Banner Tokens (Alert-First 패턴)
+// ============================================================================
+
+/**
+ * 기한 초과 / 반입 검사 대기 알림 배너 토큰
+ *
+ * Alert-First: 중요 상태는 페이지 최상단에 배너로 표시
+ */
+export const CHECKOUT_ALERT_TOKENS = {
+  overdue: {
+    container:
+      'flex items-center gap-3 bg-brand-critical/5 border border-brand-critical/20 rounded-lg px-4 py-3',
+    icon: 'text-brand-critical shrink-0 h-4 w-4',
+    text: 'flex-1 text-sm text-brand-critical',
+    action:
+      'text-xs font-semibold text-brand-critical underline whitespace-nowrap cursor-pointer hover:text-brand-critical/70',
+    close:
+      'text-brand-critical/40 hover:text-brand-critical/70 cursor-pointer shrink-0 h-3.5 w-3.5',
+  },
+  pendingCheck: {
+    container:
+      'flex items-center gap-3 bg-brand-warning/5 border border-brand-warning/20 rounded-lg px-4 py-3',
+    icon: 'text-brand-warning shrink-0 h-4 w-4',
+    text: 'flex-1 text-sm text-brand-warning',
+    action:
+      'text-xs font-semibold bg-brand-warning text-white rounded px-3 py-1 cursor-pointer whitespace-nowrap hover:bg-brand-warning/90 shrink-0',
+  },
+} as const;
+
+// ============================================================================
+// 15. Overdue Group Card Tokens
+// ============================================================================
+
+/**
+ * 기한 초과 그룹 카드 강조 토큰 (최상단 고정 + 특별 스타일)
+ */
+export const CHECKOUT_OVERDUE_GROUP_TOKENS = {
+  card: 'border-brand-critical/30',
+  header: 'bg-brand-critical/5',
+  headerText: 'text-brand-critical font-semibold',
+  count: 'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
+} as const;
+
+// ============================================================================
+// 16. Purpose Legend Bar Tokens
+// ============================================================================
+
+/**
+ * 반출 목적 색상 범례 토큰
+ *
+ * 필터 바 하단에 교정/수리/대여 색상 범례를 표시
+ */
+export const CHECKOUT_PURPOSE_LEGEND_TOKENS = {
+  container: 'flex items-center gap-3 px-3 py-1.5 bg-muted/30 border border-border/50 rounded-lg',
+  label: 'text-[10px] text-muted-foreground font-medium uppercase tracking-wide',
+  item: 'flex items-center gap-1.5 text-xs text-foreground/70',
+  dot: {
+    calibration: 'w-2.5 h-2.5 rounded-[2px] bg-brand-info shrink-0',
+    repair: 'w-2.5 h-2.5 rounded-[2px] bg-brand-repair shrink-0',
+    rental: 'w-2.5 h-2.5 rounded-[2px] bg-brand-purple shrink-0',
+  },
+} as const;
+
+// ============================================================================
+// 17. Checkout Item Row Tokens (그룹 카드 내 개별 행)
+// ============================================================================
+
+/**
+ * 반출 그룹 카드 내 장비 아이템 행 토큰
+ *
+ * 기존 Table → 개별 행(Row) 기반으로 재설계
+ * 각 행: [목적 색상 바] [장비 정보] [메타] [진행 상태] [배지] [액션]
+ */
+export const CHECKOUT_ITEM_ROW_TOKENS = {
+  /** 행 컨테이너 */
+  container: [
+    'flex items-center gap-3 px-3 py-2.5',
+    'border-b border-border/40 last:border-0',
+    'cursor-pointer',
+    getTransitionClasses('instant', ['background-color']),
+    'hover:bg-muted/40',
+  ].join(' '),
+
+  /** 기한 초과 행 배경 */
+  containerOverdue: 'bg-brand-critical/5 hover:bg-brand-critical/8',
+
+  /** 목적별 3px 세로 색상 바 */
+  purposeBar: {
+    base: 'w-[3px] self-stretch rounded-full shrink-0',
+    calibration: 'bg-brand-info',
+    repair: 'bg-brand-repair',
+    rental: 'bg-brand-purple',
+    default: 'bg-brand-neutral/50',
+  },
+
+  /** 장비 정보 블록 */
+  infoBlock: 'flex-1 min-w-0',
+  nameRow: 'flex items-center gap-1.5 flex-wrap',
+  name: 'text-sm font-semibold text-foreground truncate',
+  mgmt: 'text-xs text-muted-foreground font-mono shrink-0',
+  dday: 'text-[10px] px-1.5 py-0.5 rounded font-medium tabular-nums shrink-0',
+  meta: 'text-xs text-muted-foreground mt-0.5 truncate',
+
+  /** 우측 액션 영역 */
+  actionsArea: 'flex items-center gap-1.5 shrink-0',
 } as const;

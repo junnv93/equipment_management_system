@@ -43,7 +43,10 @@
     "selectAll": "Deselect All",
     "previous": "Previous",
     "next": "Next",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "bulkApprove": "Approve All",
+    "urgentContact": "Send Reminder",
+    "viewDetail": "View Detail"
   },
   "toasts": {
     "approveSuccess": "Checkout request approved.",
@@ -220,7 +223,10 @@
     "unspecifiedDestination": "Unspecified",
     "checkoutDateLabel": "Checkout Date",
     "requestDateLabel": "Request Date",
-    "progressLabel": "Checkout progress: {current} of {total} steps completed"
+    "progressLabel": "Checkout progress: {current} of {total} steps completed",
+    "overdueGroupLabel": "Overdue",
+    "expectedReturn": "Expected return",
+    "overdueBy": "{days}d overdue"
   },
   "selectability": {
     "calibrationExpiryWarning": "Calibration expiry: {date}",
@@ -298,10 +304,29 @@
     "searchPlaceholder": "Search equipment or user",
     "noData": "No outbound records",
     "noDataDesc": "No records match the search criteria.",
-    "totalCheckouts": "Total Checkouts",
+    "totalCheckouts": "Total",
     "pendingApproval": "Pending Approval",
     "overdue": "Overdue",
-    "returnToday": "Return Today"
+    "returnToday": "Returned",
+    "inProgress": "Checked Out",
+    "totalSub": "This month",
+    "pendingSub": "Needs immediate action",
+    "inProgressSub": "Currently off-site",
+    "overdueSub": "Immediate action required",
+    "returnedSub": "This month completed",
+    "overdueGroupLabel": "Overdue"
+  },
+  "alerts": {
+    "overdueTitle": "{count} overdue items need immediate attention",
+    "overdueAction": "Jump to overdue →",
+    "pendingCheckTitle": "{count} returned items awaiting return approval",
+    "pendingCheckAction": "Process"
+  },
+  "legend": {
+    "label": "Legend",
+    "calibration": "Calibration",
+    "repair": "Repair",
+    "rental": "Rental"
   },
   "filters": {
     "statusLabel": "Status",
@@ -311,7 +336,12 @@
     "statusFilter": "Status Filter",
     "destinationFilter": "Destination Filter",
     "purposeFilter": "Purpose Filter",
-    "purposeLabel": "Purpose"
+    "purposeLabel": "Purpose",
+    "periodLabel": "Period",
+    "periodAll": "All time",
+    "periodThisWeek": "This week",
+    "periodThisMonth": "This month",
+    "periodLastMonth": "Last month"
   },
   "import": {
     "requestInbound": "Request Inbound",

@@ -43,7 +43,10 @@
     "selectAll": "전체 해제",
     "previous": "이전",
     "next": "다음",
-    "processing": "처리 중..."
+    "processing": "처리 중...",
+    "bulkApprove": "전체 승인",
+    "urgentContact": "독촉 연락",
+    "viewDetail": "상세 보기"
   },
   "toasts": {
     "approveSuccess": "반출 요청이 승인되었습니다.",
@@ -220,7 +223,10 @@
     "unspecifiedDestination": "미지정",
     "checkoutDateLabel": "반출일",
     "requestDateLabel": "신청일",
-    "progressLabel": "반출 진행: {total}단계 중 {current}단계 완료"
+    "progressLabel": "반출 진행: {total}단계 중 {current}단계 완료",
+    "overdueGroupLabel": "기한 초과",
+    "expectedReturn": "반입 예정",
+    "overdueBy": "{days}일 초과"
   },
   "selectability": {
     "calibrationExpiryWarning": "교정 만료일: {date}",
@@ -298,10 +304,29 @@
     "searchPlaceholder": "장비 또는 사용자 검색",
     "noData": "반출 정보가 없습니다",
     "noDataDesc": "검색 조건에 맞는 정보가 없습니다.",
-    "totalCheckouts": "전체 반출",
+    "totalCheckouts": "전체",
     "pendingApproval": "승인 대기",
     "overdue": "기한 초과",
-    "returnToday": "오늘 반입 예정"
+    "returnToday": "반입 완료",
+    "inProgress": "반출 중",
+    "totalSub": "이번 달 누적",
+    "pendingSub": "즉시 처리 필요",
+    "inProgressSub": "현재 외부 보유",
+    "overdueSub": "즉시 조치 필요",
+    "returnedSub": "이번 달 완료",
+    "overdueGroupLabel": "기한 초과"
+  },
+  "alerts": {
+    "overdueTitle": "기한 초과 {count}건이 즉각 조치를 기다리고 있습니다",
+    "overdueAction": "바로 이동 →",
+    "pendingCheckTitle": "반입된 장비 {count}건의 반입 승인이 대기 중입니다",
+    "pendingCheckAction": "처리하기"
+  },
+  "legend": {
+    "label": "색상 범례",
+    "calibration": "교정",
+    "repair": "수리",
+    "rental": "대여"
   },
   "filters": {
     "statusLabel": "상태",
@@ -311,7 +336,12 @@
     "statusFilter": "상태 필터",
     "destinationFilter": "반출지 필터",
     "purposeFilter": "목적 필터",
-    "purposeLabel": "목적"
+    "purposeLabel": "목적",
+    "periodLabel": "기간",
+    "periodAll": "전체 기간",
+    "periodThisWeek": "이번 주",
+    "periodThisMonth": "이번 달",
+    "periodLastMonth": "지난 달"
   },
   "import": {
     "requestInbound": "반입 신청",
