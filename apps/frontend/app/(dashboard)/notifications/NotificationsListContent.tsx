@@ -25,6 +25,15 @@ import {
 import { useNotificationFilters } from '@/hooks/use-notification-filters';
 import { NOTIFICATION_CATEGORIES } from '@equipment-management/shared-constants';
 import type { UINotificationFilters } from '@/lib/utils/notification-filter-utils';
+import {
+  NOTIFICATION_LIST_HEADER_TOKENS,
+  NOTIFICATION_LIST_FILTER_TOKENS,
+  NOTIFICATION_LIST_SKELETON_TOKENS,
+  NOTIFICATION_LIST_EMPTY_TOKENS,
+  NOTIFICATION_LIST_PAGINATION_TOKENS,
+  NOTIFICATION_LIST_ITEM_TOKENS,
+  getStaggerDelay,
+} from '@/lib/design-tokens';
 
 /**
  * 알림 목록 페이지 (클라이언트 컴포넌트)
@@ -74,21 +83,21 @@ export default function NotificationsListContent() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Bell className="h-6 w-6 text-primary" aria-hidden="true" />
+      <div className={NOTIFICATION_LIST_HEADER_TOKENS.container}>
+        <div className={NOTIFICATION_LIST_HEADER_TOKENS.titleGroup}>
+          <div className={NOTIFICATION_LIST_HEADER_TOKENS.iconWrapper}>
+            <Bell className={NOTIFICATION_LIST_HEADER_TOKENS.icon} aria-hidden="true" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive flex items-center justify-center">
-                <span className="text-xs text-destructive-foreground tabular-nums font-bold">
+              <span className={NOTIFICATION_LIST_HEADER_TOKENS.unreadBadge}>
+                <span className={NOTIFICATION_LIST_HEADER_TOKENS.unreadBadgeText}>
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               </span>
             )}
           </div>
           <div>
-            <h1 className="text-2xl font-bold">{t('title')}</h1>
-            <p className="text-sm text-muted-foreground tabular-nums">
+            <h1 className={NOTIFICATION_LIST_HEADER_TOKENS.title}>{t('title')}</h1>
+            <p className={NOTIFICATION_LIST_HEADER_TOKENS.subtitle}>
               {unreadCount > 0 ? t('list.unreadCount', { count: unreadCount }) : t('list.noUnread')}
             </p>
           </div>
@@ -111,20 +120,18 @@ export default function NotificationsListContent() {
         value={filters.tab}
         onValueChange={(v) => updateFilters({ tab: v as 'all' | 'unread' })}
       >
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className={NOTIFICATION_LIST_FILTER_TOKENS.filterRow}>
           <TabsList>
             <TabsTrigger value="all">{t('list.tabs.all')}</TabsTrigger>
             <TabsTrigger value="unread">
               {t('list.tabs.unread')}
               {unreadCount > 0 && (
-                <span className="ml-1 rounded-full bg-destructive px-1.5 py-0.5 text-xs text-destructive-foreground">
-                  {unreadCount}
-                </span>
+                <span className={NOTIFICATION_LIST_FILTER_TOKENS.tabBadge}>{unreadCount}</span>
               )}
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2">
+          <div className={NOTIFICATION_LIST_FILTER_TOKENS.filterGroup}>
             <Select
               value={filters.category || '_all'}
               onValueChange={(v) =>
@@ -133,7 +140,10 @@ export default function NotificationsListContent() {
                 })
               }
             >
-              <SelectTrigger className="w-[130px]" aria-label={t('list.categoryAriaLabel')}>
+              <SelectTrigger
+                className={NOTIFICATION_LIST_FILTER_TOKENS.categorySelect}
+                aria-label={t('list.categoryAriaLabel')}
+              >
                 <SelectValue placeholder={t('list.categoryFilter')} />
               </SelectTrigger>
               <SelectContent>
@@ -151,12 +161,12 @@ export default function NotificationsListContent() {
               placeholder={t('list.searchPlaceholder')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-[200px]"
+              className={NOTIFICATION_LIST_FILTER_TOKENS.searchInput}
             />
           </div>
         </div>
 
-        <TabsContent value="all" className="mt-4">
+        <TabsContent value="all" className={NOTIFICATION_LIST_FILTER_TOKENS.tabContent}>
           <NotificationsList
             notifications={notifications}
             isLoading={isLoading}
@@ -164,7 +174,7 @@ export default function NotificationsListContent() {
             onDelete={(id) => deleteMutation.mutate(id)}
           />
         </TabsContent>
-        <TabsContent value="unread" className="mt-4">
+        <TabsContent value="unread" className={NOTIFICATION_LIST_FILTER_TOKENS.tabContent}>
           <NotificationsList
             notifications={notifications}
             isLoading={isLoading}
@@ -176,15 +186,15 @@ export default function NotificationsListContent() {
 
       {/* 페이지네이션 */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground tabular-nums">
+        <div className={NOTIFICATION_LIST_PAGINATION_TOKENS.container}>
+          <p className={NOTIFICATION_LIST_PAGINATION_TOKENS.info}>
             {t('list.pagination.total', {
               total,
               start: (filters.page - 1) * 20 + 1,
               end: Math.min(filters.page * 20, total),
             })}
           </p>
-          <div className="flex gap-2">
+          <div className={NOTIFICATION_LIST_PAGINATION_TOKENS.buttonGroup}>
             <Button
               variant="outline"
               size="sm"
@@ -222,19 +232,19 @@ function NotificationsList({
   const t = useTranslations('notifications');
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className={NOTIFICATION_LIST_SKELETON_TOKENS.container}>
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="p-4 rounded-lg bg-muted/50 border-l-4 border-muted animate-pulse"
-            style={{ animationDelay: `${i * 100}ms` }}
+            className={NOTIFICATION_LIST_SKELETON_TOKENS.card}
+            style={{ animationDelay: getStaggerDelay(i, 'list') }}
           >
-            <div className="flex items-start gap-3">
-              <div className="h-4 w-4 rounded bg-muted-foreground/20 mt-1" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 bg-muted-foreground/20 rounded w-3/4" />
-                <div className="h-3 bg-muted-foreground/10 rounded w-full" />
-                <div className="h-3 bg-muted-foreground/10 rounded w-1/4" />
+            <div className={NOTIFICATION_LIST_SKELETON_TOKENS.row}>
+              <div className={NOTIFICATION_LIST_SKELETON_TOKENS.iconPlaceholder} />
+              <div className={NOTIFICATION_LIST_SKELETON_TOKENS.contentGroup}>
+                <div className={NOTIFICATION_LIST_SKELETON_TOKENS.titleLine} />
+                <div className={NOTIFICATION_LIST_SKELETON_TOKENS.bodyLine} />
+                <div className={NOTIFICATION_LIST_SKELETON_TOKENS.timeLine} />
               </div>
             </div>
           </div>
@@ -245,17 +255,15 @@ function NotificationsList({
 
   if (notifications.length === 0) {
     return (
-      <div className="py-16 text-center">
-        <div className="relative inline-block mb-4 motion-safe:animate-gentle-bounce">
-          <Bell className="h-16 w-16 mx-auto text-muted-foreground/30" aria-hidden="true" />
-          <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-success flex items-center justify-center motion-safe:animate-checkmark-pop shadow-lg">
-            <span className="text-xs text-success-foreground font-bold">✓</span>
+      <div className={NOTIFICATION_LIST_EMPTY_TOKENS.container}>
+        <div className={NOTIFICATION_LIST_EMPTY_TOKENS.iconWrapper}>
+          <Bell className={NOTIFICATION_LIST_EMPTY_TOKENS.icon} aria-hidden="true" />
+          <div className={NOTIFICATION_LIST_EMPTY_TOKENS.checkmark}>
+            <span className={NOTIFICATION_LIST_EMPTY_TOKENS.checkmarkText}>✓</span>
           </div>
         </div>
-        <h3 className="text-lg font-semibold mb-2 tracking-tight">{t('list.allRead.title')}</h3>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-          {t('list.allRead.description')}
-        </p>
+        <h3 className={NOTIFICATION_LIST_EMPTY_TOKENS.title}>{t('list.allRead.title')}</h3>
+        <p className={NOTIFICATION_LIST_EMPTY_TOKENS.desc}>{t('list.allRead.description')}</p>
       </div>
     );
   }
@@ -265,21 +273,21 @@ function NotificationsList({
       {notifications.map((notification, index) => (
         <div
           key={notification.id}
-          className="relative group motion-safe:animate-[staggerFadeIn_0.3s_ease-out_forwards]"
-          style={{ animationDelay: `${index * 50}ms` }}
+          className={NOTIFICATION_LIST_ITEM_TOKENS.wrapper}
+          style={{ animationDelay: getStaggerDelay(index, 'list') }}
         >
           <NotificationItem notification={notification} onMarkAsRead={onMarkAsRead} />
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-2 h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity motion-reduce:transition-none"
+            className={NOTIFICATION_LIST_ITEM_TOKENS.deleteBtn}
             onClick={(e) => {
               e.stopPropagation();
               onDelete(notification.id);
             }}
             aria-label={t('list.deleteAriaLabel')}
           >
-            <Trash2 className="h-3 w-3" aria-hidden="true" />
+            <Trash2 className={NOTIFICATION_LIST_ITEM_TOKENS.deleteIcon} aria-hidden="true" />
           </Button>
         </div>
       ))}

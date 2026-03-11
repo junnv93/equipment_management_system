@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { getTransitionClasses } from '@/lib/design-tokens';
+import { NOTIFICATION_LIST_ITEM_TOKENS } from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { NotificationItem as NotificationItemType } from '@/lib/api/notifications-api';
 import type { NotificationCategory } from '@equipment-management/shared-constants';
@@ -121,42 +121,25 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
     }
   };
 
+  const T = NOTIFICATION_LIST_ITEM_TOKENS;
+
   const content = (
     <>
       {!notification.isRead && (
-        <div
-          className="absolute right-3 top-3 h-2 w-2 rounded-full bg-primary motion-safe:animate-badge-pulse"
-          aria-hidden="true"
-        >
+        <div className={T.indicator.dot} aria-hidden="true">
           <span className="sr-only">{t('alerts.tabs.unread')}</span>
         </div>
       )}
       <div className="flex items-start gap-3">
-        {/* Enhanced icon with background circle */}
-        <div
-          className={cn(
-            'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
-            'transition-transform duration-200 motion-safe:group-hover:scale-110',
-            style.bgColor
-          )}
-        >
-          <Icon className={cn('h-4 w-4', style.color)} aria-hidden="true" />
+        <div className={cn(T.iconCircle, style.bgColor)}>
+          <Icon className={cn(T.iconSize, style.color)} aria-hidden="true" />
         </div>
 
-        <div className="flex-1 min-w-0">
-          {/* Title with improved typography */}
-          <div className="font-semibold text-sm line-clamp-2 tracking-tight leading-snug">
-            {notification.title}
-          </div>
-
-          {/* Content */}
-          <div className="text-sm text-muted-foreground mt-1 line-clamp-3 leading-relaxed">
-            {notification.content}
-          </div>
-
-          {/* Time with icon */}
-          <div className="flex items-center gap-1 text-xs text-muted-foreground/60 mt-2">
-            <Clock className="h-3 w-3" aria-hidden="true" />
+        <div className={T.content}>
+          <div className={T.title}>{notification.title}</div>
+          <div className={T.body}>{notification.content}</div>
+          <div className={T.timeRow}>
+            <Clock className={T.timeIcon} aria-hidden="true" />
             <time dateTime={notification.createdAt} title={fullDate}>
               {formattedDate}
             </time>
@@ -167,13 +150,8 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
   );
 
   const baseClassName = cn(
-    'group p-4 mb-2 rounded-lg shadow-sm relative border-l-4 block w-full text-left',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-    getTransitionClasses('moderate', ['box-shadow', 'transform']),
-    'motion-safe:hover:shadow-lg motion-safe:hover:scale-[1.01] motion-safe:hover:-translate-y-0.5',
-    notification.isRead
-      ? 'bg-muted/80 opacity-60'
-      : 'bg-card motion-safe:animate-[pulseGlow_3s_ease-in-out_infinite]',
+    T.card.base,
+    notification.isRead ? T.card.read : T.card.unread,
     style.borderColor
   );
 
