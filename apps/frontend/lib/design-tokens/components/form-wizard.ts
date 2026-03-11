@@ -28,7 +28,7 @@ export const FORM_WIZARD_STEPPER_TOKENS = {
 
   /** 스텝 상태별 스타일 */
   status: {
-    completed: 'border-green-500 bg-green-500 text-white',
+    completed: 'border-brand-ok bg-brand-ok text-white',
     current: 'border-primary bg-primary text-primary-foreground',
     pending: 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
     error: 'border-destructive bg-destructive text-white',
@@ -37,7 +37,7 @@ export const FORM_WIZARD_STEPPER_TOKENS = {
   /** 스텝 라벨 */
   label: {
     base: 'text-xs font-medium mt-1',
-    completed: 'text-green-700 dark:text-green-400',
+    completed: 'text-brand-ok',
     current: 'text-primary',
     pending: 'text-gray-400',
     error: 'text-destructive',
@@ -46,7 +46,7 @@ export const FORM_WIZARD_STEPPER_TOKENS = {
   /** 연결선 */
   connector: {
     base: 'h-[2px] flex-1',
-    completed: 'bg-green-500',
+    completed: 'bg-brand-ok',
     pending: 'bg-gray-200 dark:bg-gray-700',
   },
 

@@ -50,7 +50,7 @@ export const SOFTWARE_STATS_TOKENS = {
   iconBg: {
     equipment: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
     types: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-    updated: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    updated: 'bg-brand-ok/10 text-brand-ok',
   } as Record<string, string>,
 
   label: 'text-xs text-muted-foreground font-medium',
@@ -155,6 +155,6 @@ export const SOFTWARE_EMPTY_STATE_TOKENS = {
 
 export const SOFTWARE_APPROVAL_BADGE_TOKENS: Record<string, string> = {
   pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  approved: 'bg-brand-ok/10 text-brand-ok',
   rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
 } as const;

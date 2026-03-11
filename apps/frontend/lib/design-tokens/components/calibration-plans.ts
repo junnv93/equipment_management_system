@@ -61,9 +61,9 @@ export const CALIBRATION_PLAN_STATUS_TOKENS = {
     animation: '',
   },
   approved: {
-    color: 'bg-green-500 dark:bg-green-600',
+    color: 'bg-brand-ok',
     textColor: 'text-white',
-    borderColor: 'border-green-500 dark:border-green-600',
+    borderColor: 'border-brand-ok',
     label: '승인 완료',
     labelKey: 'calibration.planStatus.approved',
     animation: '',
@@ -108,7 +108,7 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
     },
     /** 완료됨 */
     completed: {
-      background: 'bg-green-500 dark:bg-green-600',
+      background: 'bg-brand-ok',
       text: 'text-white',
       animation: '', // 완료 상태는 정적
       icon: 'opacity-100',
@@ -133,7 +133,7 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
   connector: {
     height: 'h-0.5',
     /** 완료된 구간 */
-    completed: 'bg-green-500 dark:bg-green-600',
+    completed: 'bg-brand-ok',
     /** 대기 중 구간 */
     pending: 'bg-gray-300 dark:bg-gray-600',
     /** Web Interface Guidelines: Specific property transitions */
@@ -458,9 +458,9 @@ export const COLLAPSIBLE_TOKENS = {
 export const CONFIRMATION_BADGE_TOKENS = {
   /** 확인됨 상태 */
   confirmed: {
-    background: 'bg-green-50 dark:bg-green-900/20',
-    border: 'border-green-200 dark:border-green-800',
-    text: 'text-green-700 dark:text-green-300',
+    background: 'bg-brand-ok/10',
+    border: 'border-brand-ok/20',
+    text: 'text-brand-ok',
     icon: 'h-3 w-3',
     gap: 'gap-1',
   },

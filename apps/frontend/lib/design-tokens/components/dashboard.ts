@@ -325,7 +325,7 @@ export const DASHBOARD_KPI_TOKENS = {
    */
   statusColor: {
     /** 가동률 70%+ 또는 정상 상태 */
-    good: 'text-ul-green dark:text-green-400',
+    good: 'text-brand-ok',
     /** 가동률 40-70% 또는 주의 필요 */
     warning: 'text-ul-orange dark:text-orange-400',
     /** 가동률 <40% 또는 위험 상태 */
@@ -358,12 +358,12 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   barOverdue: 'bg-ul-red dark:bg-red-500',
   barUrgent: 'bg-ul-orange dark:bg-orange-400',
   barWarning: 'bg-yellow-400 dark:bg-yellow-500',
-  barOk: 'bg-ul-green dark:bg-green-500',
+  barOk: 'bg-brand-ok',
   dday: 'font-mono tabular-nums font-bold text-sm w-14 flex-shrink-0',
   ddayOverdue: 'text-ul-red dark:text-red-400',
   ddayUrgent: 'text-ul-orange dark:text-orange-400',
   ddayWarning: 'text-yellow-600 dark:text-yellow-400',
-  ddayOk: 'text-ul-green dark:text-green-400',
+  ddayOk: 'text-brand-ok',
   info: 'min-w-0 flex-1',
   managementNumber: 'text-xs text-muted-foreground font-mono truncate',
   equipmentName: 'text-xs text-foreground truncate',
@@ -371,7 +371,7 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   viewAllLink: 'text-xs text-muted-foreground hover:text-foreground',
   emptyContainer: 'flex-1 flex flex-col items-center justify-center py-8 text-muted-foreground',
   /** 빈 상태 아이콘 (교정 일정 없음 = 긍정) */
-  emptyIcon: 'h-10 w-10 mb-2 text-ul-green dark:text-green-400',
+  emptyIcon: 'h-10 w-10 mb-2 text-brand-ok',
   emptyTitle: 'text-sm font-medium',
   emptyDesc: 'text-xs mt-1 text-center',
 } as const;
@@ -448,7 +448,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   user: 'text-[10px] text-muted-foreground truncate',
   /** 인라인 빈 상태 (flex row, 한 줄) */
   compactEmpty: 'flex items-center gap-2 py-2 text-muted-foreground',
-  compactEmptyIcon: 'h-4 w-4 text-ul-green dark:text-green-400 flex-shrink-0',
+  compactEmptyIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',
   compactEmptyText: 'text-xs',
   /** 목록 스크롤 어포던스 — 하단 그라데이션 페이드 */
   arrow:
@@ -534,7 +534,7 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
     'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-orange/10 text-ul-orange dark:text-orange-400 border border-ul-orange/20',
   /** "이상 없음" 인라인 상태 */
   clearState: 'flex items-center gap-2 text-xs text-muted-foreground',
-  clearIcon: 'h-4 w-4 text-ul-green dark:text-green-400 flex-shrink-0',
+  clearIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',
 } as const;
 
 // ============================================================================
@@ -567,7 +567,7 @@ export const DASHBOARD_STATUS_MINI_TOKENS = {
 // ============================================================================
 
 export const DASHBOARD_KPI_TREND_TOKENS = {
-  up: 'text-ul-green dark:text-green-400 text-[10px] tabular-nums font-semibold leading-none',
+  up: 'text-brand-ok text-[10px] tabular-nums font-semibold leading-none',
   down: 'text-ul-red dark:text-red-400 text-[10px] tabular-nums font-semibold leading-none',
   same: 'text-muted-foreground text-[10px] tabular-nums leading-none',
   badge: 'inline-flex items-center gap-0.5',
@@ -659,7 +659,7 @@ export const DASHBOARD_EMPTY_STATE_TOKENS = {
    */
   success: {
     container: 'flex flex-col items-center justify-center py-4 text-muted-foreground',
-    icon: 'mb-1 text-ul-green dark:text-green-400',
+    icon: 'mb-1 text-brand-ok',
     iconSize: 'h-8 w-8',
     title: 'text-xs font-medium',
   },
@@ -701,7 +701,7 @@ export const DASHBOARD_EMPTY_STATE_TOKENS = {
    */
   inline: {
     container: 'flex items-center gap-2 py-2 text-muted-foreground',
-    icon: 'h-4 w-4 text-ul-green dark:text-green-400 flex-shrink-0',
+    icon: 'h-4 w-4 text-brand-ok flex-shrink-0',
     text: 'text-xs',
   },
 

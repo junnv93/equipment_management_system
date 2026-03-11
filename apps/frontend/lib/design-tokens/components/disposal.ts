@@ -27,7 +27,7 @@ export const DISPOSAL_STEPPER_TOKENS = {
 
   /** 스텝 상태별 스타일 */
   status: {
-    completed: 'border-green-500 bg-green-500 text-white',
+    completed: 'border-brand-ok bg-brand-ok text-white',
     current: 'border-orange-500 bg-orange-500 text-white',
     pending: 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
   },
@@ -35,7 +35,7 @@ export const DISPOSAL_STEPPER_TOKENS = {
   /** 스텝 라벨 */
   label: {
     base: 'text-xs font-medium',
-    completed: 'text-green-700 dark:text-green-400',
+    completed: 'text-brand-ok',
     current: 'text-orange-700 dark:text-orange-400',
     pending: 'text-gray-400',
   },
@@ -43,7 +43,7 @@ export const DISPOSAL_STEPPER_TOKENS = {
   /** 연결선 */
   connector: {
     base: 'mx-2 h-[2px] w-12',
-    completed: 'bg-green-500',
+    completed: 'bg-brand-ok',
     pending: 'bg-gray-200 dark:bg-gray-700',
   },
 
@@ -63,7 +63,7 @@ export const DISPOSAL_TIMELINE_TOKENS = {
   node: {
     size: 'h-9 w-9',
     base: 'flex shrink-0 items-center justify-center rounded-full border-2',
-    completed: 'border-green-500 bg-green-500 text-white',
+    completed: 'border-brand-ok bg-brand-ok text-white',
     rejected: 'border-red-500 bg-red-500 text-white',
     pending: 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
   },
@@ -71,13 +71,13 @@ export const DISPOSAL_TIMELINE_TOKENS = {
   /** 연결선 */
   connector: {
     base: 'absolute left-[18px] top-[36px] h-full w-[2px]',
-    completed: 'bg-green-500',
+    completed: 'bg-brand-ok',
     pending: 'bg-gray-200 dark:bg-gray-700',
   },
 
   /** 단계 제목 */
   title: {
-    completed: 'text-green-700 dark:text-green-400',
+    completed: 'text-brand-ok',
     rejected: 'text-red-700 dark:text-red-400',
     pending: 'text-gray-400',
   },
@@ -150,7 +150,7 @@ export const DISPOSAL_BUTTON_TOKENS = {
   review: 'bg-blue-600 hover:bg-blue-700',
 
   /** 최종 승인 (초록색) */
-  approve: 'bg-green-600 hover:bg-green-700',
+  approve: 'bg-brand-ok hover:bg-brand-ok/90',
 
   /** 폐기 요청 제출 (빨간색) */
   submit: 'bg-red-600 hover:bg-red-700',

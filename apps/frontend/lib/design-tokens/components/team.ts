@@ -24,7 +24,7 @@ import { getTransitionClasses } from '../motion';
  */
 export const ROLE_BADGE_TOKENS: Record<string, string> = {
   test_engineer: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  technical_manager: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  technical_manager: 'bg-brand-ok/10 text-brand-ok',
   quality_manager: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   lab_manager: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   system_admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',

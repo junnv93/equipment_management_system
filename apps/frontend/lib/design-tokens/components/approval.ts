@@ -381,7 +381,7 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
     total: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400',
     urgent: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400',
     avgWait: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400',
-    processed: 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400',
+    processed: 'bg-brand-ok/10 text-brand-ok',
   },
   iconContainer: 'rounded-md p-2 flex-shrink-0',
 } as const;

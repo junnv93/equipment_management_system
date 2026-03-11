@@ -66,7 +66,7 @@ export const CALIBRATION_STATUS_INDICATOR: Record<
   },
   ok: {
     dot: 'bg-ul-green dark:bg-ul-green',
-    text: 'text-ul-green dark:text-green-400',
+    text: 'text-brand-ok',
   },
   none: {
     dot: 'bg-muted dark:bg-muted',
@@ -170,7 +170,7 @@ export function getCalibrationStatsVariant(type: CalibrationStatsType): StatsVar
  */
 export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType | 'pending', string> = {
   total: 'text-foreground',
-  compliant: 'text-ul-green dark:text-green-400',
+  compliant: 'text-brand-ok',
   overdue: 'text-ul-red dark:text-red-400',
   upcoming: 'text-ul-orange dark:text-orange-400',
   pending: 'text-ul-blue dark:text-blue-400',
@@ -558,7 +558,7 @@ export const CALIBRATION_TAB_TRANSITION = getTransitionClasses('fast', ['opacity
  * - conditional: 조건부 합격 (Yellow)
  */
 export const CALIBRATION_RESULT_BADGE: Record<string, string> = {
-  pass: 'bg-ul-green/10 text-ul-green border-ul-green/20 dark:bg-green-900/30 dark:text-green-300',
+  pass: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
   fail: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-red-900/30 dark:text-red-300',
   conditional:
     'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
@@ -579,8 +579,7 @@ export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground 
 export const CALIBRATION_APPROVAL_BADGE: Record<string, string> = {
   pending_approval:
     'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
-  approved:
-    'bg-ul-green/10 text-ul-green border-ul-green/20 dark:bg-green-900/30 dark:text-green-300',
+  approved: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
   rejected: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-red-900/30 dark:text-red-300',
 };
 export const DEFAULT_CALIBRATION_APPROVAL_BADGE = 'bg-muted text-muted-foreground border-border';
@@ -659,10 +658,10 @@ export const CALIBRATION_VERSION_HISTORY = {
     default: 'hover:bg-muted/50',
   },
   icon: {
-    current: 'text-ul-green dark:text-green-400',
+    current: 'text-brand-ok',
     default: 'text-muted-foreground',
   },
-  latestBadge: 'bg-ul-green/10 text-ul-green border border-ul-green/20',
+  latestBadge: 'bg-brand-ok/10 text-brand-ok border border-brand-ok/20',
   currentBadge: 'text-ul-midnight border-ul-midnight/30',
 } as const;
 

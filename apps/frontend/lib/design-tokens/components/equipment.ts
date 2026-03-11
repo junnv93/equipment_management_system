@@ -67,13 +67,13 @@ export interface EquipmentStatusConfig {
 export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   available: {
     card: {
-      className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
+      className: 'bg-brand-ok/10 text-brand-ok',
       borderColor: 'border-l-green-500',
       statusBarColor: 'bg-brand-ok',
     },
     header: {
-      textColor: 'text-green-800 dark:text-green-300',
-      bgClasses: 'bg-green-100 dark:bg-green-900/30 border-green-500',
+      textColor: 'text-brand-ok',
+      bgClasses: 'bg-brand-ok/10 border-brand-ok',
     },
     icon: CheckCircle,
     label: '사용 가능',
@@ -110,13 +110,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   calibration_scheduled: {
     // UI는 "사용 가능"으로 표시 (교정 상태는 별도 배지)
     card: {
-      className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
+      className: 'bg-brand-ok/10 text-brand-ok',
       borderColor: 'border-l-green-500',
       statusBarColor: 'bg-brand-warning',
     },
     header: {
-      textColor: 'text-green-800 dark:text-green-300',
-      bgClasses: 'bg-green-100 dark:bg-green-900/30 border-green-500',
+      textColor: 'text-brand-ok',
+      bgClasses: 'bg-brand-ok/10 border-brand-ok',
     },
     icon: CheckCircle,
     label: '사용 가능', // calibration_scheduled → available 표시
@@ -712,7 +712,7 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
     neutral: 'border-l-border',
   },
   iconBg: {
-    ok: 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400',
+    ok: 'bg-brand-ok/10 text-brand-ok',
     warn: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400',
     info: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400',
     neutral: 'bg-muted text-muted-foreground',

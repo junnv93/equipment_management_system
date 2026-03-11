@@ -89,7 +89,7 @@ export const AUDIT_DIFF_TOKENS = {
   removed: 'bg-red-50 dark:bg-red-950/20',
 
   /** 추가된 값 (초록) */
-  added: 'bg-green-50 dark:bg-green-950/20',
+  added: 'bg-brand-ok/10',
 
   /** Empty state */
   empty: 'text-center py-8 text-muted-foreground',

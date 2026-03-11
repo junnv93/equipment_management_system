@@ -244,7 +244,7 @@ export function getSettingsSubmitButtonClasses(): string {
 export const SETTINGS_SAVE_INDICATOR_TOKENS = {
   saving: 'h-4 w-4 motion-safe:animate-spin text-muted-foreground',
   saved:
-    'h-4 w-4 text-green-500 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300',
+    'h-4 w-4 text-brand-ok motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300',
 } as const;
 
 // ============================================================================
@@ -482,7 +482,7 @@ export function getSettingsNavChevronClasses(isActive: boolean): string {
  */
 export const SETTINGS_PROFILE_BADGE_TOKENS = {
   role: 'font-medium bg-primary/10 text-primary border-primary/20 text-xs',
-  active: 'text-xs border-green-500/40 text-green-600 dark:text-green-400',
+  active: 'text-xs border-brand-ok/40 text-brand-ok',
   inactive: 'text-xs border-destructive/40 text-destructive',
   site: 'text-xs',
 } as const;
