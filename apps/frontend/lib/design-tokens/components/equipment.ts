@@ -68,7 +68,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   available: {
     card: {
       className: 'bg-brand-ok/10 text-brand-ok',
-      borderColor: 'border-l-green-500',
+      borderColor: 'border-l-brand-ok',
       statusBarColor: 'bg-brand-ok',
     },
     header: {
@@ -111,7 +111,7 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
     // UI는 "사용 가능"으로 표시 (교정 상태는 별도 배지)
     card: {
       className: 'bg-brand-ok/10 text-brand-ok',
-      borderColor: 'border-l-green-500',
+      borderColor: 'border-l-brand-ok',
       statusBarColor: 'bg-brand-warning',
     },
     header: {
@@ -706,7 +706,7 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
   label: 'text-xs text-muted-foreground',
   sub: 'text-[11px] text-muted-foreground/70',
   borderColors: {
-    ok: 'border-l-green-500',
+    ok: 'border-l-brand-ok',
     warn: 'border-l-red-500',
     info: 'border-l-blue-500',
     neutral: 'border-l-border',
