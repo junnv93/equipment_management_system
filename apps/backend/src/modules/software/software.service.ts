@@ -226,13 +226,77 @@ export class SoftwareService extends VersionedBaseService {
     totalSoftwareTypes: number;
     generatedAt: Date;
   }> {
-    // TODO: Implement when equipment table has software fields
-    // For now, return empty registry
+    // 최신 승인 레코드만 조회 (장비-소프트웨어 쌍 기준 최신 1건)
+    const latestApproved = await this.db
+      .select({
+        equipmentId: schema.softwareHistory.equipmentId,
+        softwareName: schema.softwareHistory.softwareName,
+        newVersion: schema.softwareHistory.newVersion,
+        approvedAt: schema.softwareHistory.approvedAt,
+        equipmentName: schema.equipment.name,
+      })
+      .from(schema.softwareHistory)
+      .leftJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
+      .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatus.APPROVED))
+      .orderBy(desc(schema.softwareHistory.approvedAt));
+
+    // 장비-소프트웨어 쌍 기준 최신 레코드만 추출
+    const seen = new Set<string>();
+    const registry: {
+      equipmentId: string;
+      equipmentName: string;
+      softwareName: string | null;
+      softwareVersion: string | null;
+      softwareType: string | null;
+      lastUpdated: Date | null;
+    }[] = [];
+
+    for (const r of latestApproved) {
+      const key = `${r.equipmentId}:${r.softwareName}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      registry.push({
+        equipmentId: r.equipmentId,
+        equipmentName: r.equipmentName || '',
+        softwareName: r.softwareName,
+        softwareVersion: r.newVersion,
+        softwareType: null,
+        lastUpdated: r.approvedAt,
+      });
+    }
+
+    // 소프트웨어별 요약 집계
+    const summaryMap = new Map<
+      string,
+      { equipmentIds: Set<string>; versions: Set<string | null> }
+    >();
+    for (const item of registry) {
+      if (!item.softwareName) continue;
+      const existing = summaryMap.get(item.softwareName);
+      if (existing) {
+        existing.equipmentIds.add(item.equipmentId);
+        existing.versions.add(item.softwareVersion);
+      } else {
+        summaryMap.set(item.softwareName, {
+          equipmentIds: new Set([item.equipmentId]),
+          versions: new Set([item.softwareVersion]),
+        });
+      }
+    }
+
+    const summary = Array.from(summaryMap.entries()).map(([name, data]) => ({
+      softwareName: name,
+      equipmentCount: data.equipmentIds.size,
+      versions: Array.from(data.versions),
+    }));
+
+    const uniqueEquipmentIds = new Set(registry.map((r) => r.equipmentId));
+
     return {
-      registry: [],
-      summary: [],
-      totalEquipments: 0,
-      totalSoftwareTypes: 0,
+      registry,
+      summary,
+      totalEquipments: uniqueEquipmentIds.size,
+      totalSoftwareTypes: summaryMap.size,
       generatedAt: new Date(),
     };
   }

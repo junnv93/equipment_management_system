@@ -484,6 +484,17 @@ export {
   type SettingsChipState,
 } from './components/settings';
 
+// Software
+export {
+  SOFTWARE_HEADER_TOKENS,
+  SOFTWARE_STATS_TOKENS,
+  SOFTWARE_SUMMARY_TOKENS,
+  SOFTWARE_SEARCH_TOKENS,
+  SOFTWARE_TABLE_TOKENS,
+  SOFTWARE_EMPTY_STATE_TOKENS,
+  SOFTWARE_APPROVAL_BADGE_TOKENS,
+} from './components/software';
+
 // ============================================================================
 // Usage Guidelines
 // ============================================================================
