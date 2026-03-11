@@ -78,7 +78,7 @@ export const APPROVAL_STEPPER_TOKENS = {
     /** 진행 중 (UL Blue) */
     current: 'border-ul-blue bg-ul-blue text-white',
     /** 대기 (Gray) */
-    pending: 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
+    pending: 'border-brand-neutral/30 bg-background text-muted-foreground',
     /** 반려 (UL Red) */
     rejected: 'border-ul-red bg-ul-red text-white',
   },
@@ -96,7 +96,7 @@ export const APPROVAL_STEPPER_TOKENS = {
   connector: {
     base: 'w-8 h-0.5 mx-2',
     completed: 'bg-ul-green',
-    pending: 'bg-gray-200 dark:bg-gray-700',
+    pending: 'bg-brand-neutral/20',
   },
 
   /** 아이콘 */

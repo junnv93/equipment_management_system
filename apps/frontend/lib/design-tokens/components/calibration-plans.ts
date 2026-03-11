@@ -115,8 +115,8 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
     },
     /** 대기 중 */
     pending: {
-      background: 'bg-gray-300 dark:bg-gray-600',
-      text: 'text-gray-500 dark:text-gray-400',
+      background: 'bg-brand-neutral/30',
+      text: 'text-brand-neutral',
       animation: '',
       icon: 'opacity-50',
     },
@@ -135,7 +135,7 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
     /** 완료된 구간 */
     completed: 'bg-brand-ok',
     /** 대기 중 구간 */
-    pending: 'bg-gray-300 dark:bg-gray-600',
+    pending: 'bg-brand-neutral/30',
     /** Web Interface Guidelines: Specific property transitions */
     transition: getTransitionClasses('fast', ['background-color']),
   },

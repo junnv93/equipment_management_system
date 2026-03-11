@@ -29,7 +29,7 @@ export const DISPOSAL_STEPPER_TOKENS = {
   status: {
     completed: 'border-brand-ok bg-brand-ok text-white',
     current: 'border-orange-500 bg-orange-500 text-white',
-    pending: 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
+    pending: 'border-brand-neutral/20 bg-background text-muted-foreground',
   },
 
   /** 스텝 라벨 */
@@ -37,14 +37,14 @@ export const DISPOSAL_STEPPER_TOKENS = {
     base: 'text-xs font-medium',
     completed: 'text-brand-ok',
     current: 'text-orange-700 dark:text-orange-400',
-    pending: 'text-gray-400',
+    pending: 'text-muted-foreground',
   },
 
   /** 연결선 */
   connector: {
     base: 'mx-2 h-[2px] w-12',
     completed: 'bg-brand-ok',
-    pending: 'bg-gray-200 dark:bg-gray-700',
+    pending: 'bg-brand-neutral/20',
   },
 
   /** 아이콘 */
@@ -65,26 +65,26 @@ export const DISPOSAL_TIMELINE_TOKENS = {
     base: 'flex shrink-0 items-center justify-center rounded-full border-2',
     completed: 'border-brand-ok bg-brand-ok text-white',
     rejected: 'border-brand-critical bg-brand-critical text-white',
-    pending: 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
+    pending: 'border-brand-neutral/20 bg-background text-muted-foreground',
   },
 
   /** 연결선 */
   connector: {
     base: 'absolute left-[18px] top-[36px] h-full w-[2px]',
     completed: 'bg-brand-ok',
-    pending: 'bg-gray-200 dark:bg-gray-700',
+    pending: 'bg-brand-neutral/20',
   },
 
   /** 단계 제목 */
   title: {
     completed: 'text-brand-ok',
     rejected: 'text-brand-critical',
-    pending: 'text-gray-400',
+    pending: 'text-muted-foreground',
   },
 
   /** 카드 배경 */
   card: {
-    default: 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50',
+    default: 'border-border bg-muted',
     rejected: 'border-brand-critical/20 bg-brand-critical/10',
   },
 } as const;
@@ -120,10 +120,10 @@ export const DISPOSAL_PROGRESS_CARD_TOKENS = {
  * 폐기 완료 배너 (DisposedBanner)
  */
 export const DISPOSAL_BANNER_TOKENS = {
-  container: 'border-l-4 border-l-gray-500 bg-gray-100 border-gray-300',
-  title: 'text-gray-900 font-semibold',
-  text: 'text-sm text-gray-700',
-  icon: 'h-5 w-5 text-gray-600',
+  container: 'border-l-4 border-l-brand-neutral bg-brand-neutral/10 border-border',
+  title: 'text-foreground font-semibold',
+  text: 'text-sm text-brand-neutral',
+  icon: 'h-5 w-5 text-brand-neutral',
 } as const;
 
 // ============================================================================
@@ -138,7 +138,7 @@ export const DISPOSAL_BUTTON_TOKENS = {
   request: 'border-brand-critical text-brand-critical hover:bg-brand-critical/5',
 
   /** 폐기 완료 (disabled) */
-  completed: 'border-gray-300 text-gray-500',
+  completed: 'border-border text-muted-foreground',
 
   /** 폐기 진행 중 (드롭다운 트리거) */
   inProgress: 'bg-orange-500 hover:bg-orange-600',
@@ -167,8 +167,8 @@ export const DISPOSAL_INFO_CARD_TOKENS = {
   /** 기본 정보 카드 */
   container: 'border-brand-info/20 bg-brand-info/10',
   title: 'text-sm font-medium text-brand-info',
-  label: 'font-medium text-gray-700',
-  text: 'text-gray-600',
+  label: 'font-medium text-foreground',
+  text: 'text-muted-foreground',
 
   /** 반려 안내 영역 */
   rejectNotice: 'rounded-md bg-brand-critical/10 border border-brand-critical/20 p-3',
@@ -189,7 +189,7 @@ export const REVIEW_OPINION_CARD_TOKENS = {
   container: 'border-l-4 border-l-brand-info bg-brand-info/10',
   reviewerName: 'text-sm font-semibold text-brand-info',
   timestamp: 'text-xs text-brand-info',
-  blockquote: 'border-l-2 border-brand-info/30 pl-3 text-sm text-gray-700 italic',
+  blockquote: 'border-l-2 border-brand-info/30 pl-3 text-sm text-foreground italic',
 } as const;
 
 // ============================================================================

@@ -158,8 +158,8 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       statusBarColor: 'bg-brand-neutral',
     },
     header: {
-      textColor: 'text-gray-700 dark:text-gray-300',
-      bgClasses: 'bg-gray-100 dark:bg-gray-800/30 border-gray-400',
+      textColor: 'text-brand-neutral',
+      bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
     },
     icon: Archive,
     label: '여분',
@@ -167,13 +167,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   retired: {
     card: {
-      className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-      borderColor: 'border-l-gray-500',
+      className: 'bg-brand-neutral/10 text-brand-neutral',
+      borderColor: 'border-l-brand-neutral',
       statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
-      textColor: 'text-gray-600 dark:text-gray-400',
-      bgClasses: 'bg-gray-200 dark:bg-gray-800/50 border-gray-500',
+      textColor: 'text-brand-neutral',
+      bgClasses: 'bg-brand-neutral/20 border-brand-neutral',
     },
     icon: Ban,
     label: '폐기',
@@ -195,13 +195,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   disposed: {
     card: {
-      className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-      borderColor: 'border-l-gray-500',
+      className: 'bg-brand-neutral/10 text-brand-neutral',
+      borderColor: 'border-l-brand-neutral',
       statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
-      textColor: 'text-gray-600 dark:text-gray-400',
-      bgClasses: 'bg-gray-200 dark:bg-gray-800/50 border-gray-500',
+      textColor: 'text-brand-neutral',
+      bgClasses: 'bg-brand-neutral/20 border-brand-neutral',
     },
     icon: Ban,
     label: '폐기 완료',
@@ -242,13 +242,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
  */
 export const DEFAULT_STATUS_CONFIG: EquipmentStatusConfig = {
   card: {
-    className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    borderColor: 'border-l-gray-500',
+    className: 'bg-brand-neutral/10 text-brand-neutral',
+    borderColor: 'border-l-brand-neutral',
     statusBarColor: 'bg-brand-neutral',
   },
   header: {
-    textColor: 'text-gray-800 dark:text-gray-300',
-    bgClasses: 'bg-gray-100 dark:bg-gray-800 border-gray-400',
+    textColor: 'text-brand-neutral',
+    bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
   },
   icon: Package,
   label: '알 수 없음',

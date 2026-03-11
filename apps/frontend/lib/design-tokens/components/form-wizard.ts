@@ -30,7 +30,7 @@ export const FORM_WIZARD_STEPPER_TOKENS = {
   status: {
     completed: 'border-brand-ok bg-brand-ok text-white',
     current: 'border-primary bg-primary text-primary-foreground',
-    pending: 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
+    pending: 'border-brand-neutral/20 bg-background text-muted-foreground',
     error: 'border-destructive bg-destructive text-white',
   },
 
@@ -39,7 +39,7 @@ export const FORM_WIZARD_STEPPER_TOKENS = {
     base: 'text-xs font-medium mt-1',
     completed: 'text-brand-ok',
     current: 'text-primary',
-    pending: 'text-gray-400',
+    pending: 'text-muted-foreground',
     error: 'text-destructive',
   },
 
@@ -47,7 +47,7 @@ export const FORM_WIZARD_STEPPER_TOKENS = {
   connector: {
     base: 'h-[2px] flex-1',
     completed: 'bg-brand-ok',
-    pending: 'bg-gray-200 dark:bg-gray-700',
+    pending: 'bg-brand-neutral/20',
   },
 
   /** 아이콘 */
