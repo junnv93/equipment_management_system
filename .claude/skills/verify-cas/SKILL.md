@@ -110,7 +110,32 @@ grep -rn "ConflictException" apps/backend/src/modules --include="*.service.ts" -
 
 **FAIL 기준:** ConflictException catch 후 캐시 삭제 없이 `throw error`만 하는 경우.
 
-### Step 5: 프론트엔드 mutation에서 version 전달
+### Step 5: 트랜잭션 내 CAS 사용 검증
+
+다중 테이블 원자적 상태 변경 시 `updateWithVersion()`의 `tx` 파라미터를 사용하는지 확인합니다.
+
+```bash
+# 트랜잭션 내부에서 updateWithVersion 호출 시 tx 전달 여부 확인
+grep -rn "\.transaction" apps/backend/src/modules --include="*.service.ts" -A 20 | grep "updateWithVersion"
+```
+
+**PASS 기준:** `this.db.transaction(async (tx) => { ... updateWithVersion(..., tx) })` 형태로 tx 전달.
+
+**FAIL 기준:** 트랜잭션 블록 내에서 `updateWithVersion()`에 tx를 전달하지 않으면 트랜잭션 격리가 깨짐.
+
+```typescript
+// ❌ WRONG — 트랜잭션 내 tx 미전달
+await this.db.transaction(async (tx) => {
+  await this.updateWithVersion(table, id, version, data, 'Entity'); // this.db 사용됨
+});
+
+// ✅ CORRECT — tx 전달
+await this.db.transaction(async (tx) => {
+  await this.updateWithVersion(table, id, version, data, 'Entity', tx); // tx 사용
+});
+```
+
+### Step 6: 프론트엔드 mutation에서 version 전달
 
 상태 변경 API 호출 시 version 필드를 전달하는지 확인합니다.
 
@@ -130,7 +155,8 @@ grep -rn "version" apps/frontend/lib/api/checkout-api.ts apps/frontend/lib/api/c
 | 2   | versionedSchema DTO       | PASS/FAIL | 누락 DTO 목록            |
 | 3   | updateWithVersion 사용    | PASS/FAIL | 직접 .update() 호출 위치 |
 | 4   | 캐시 삭제 (409)           | PASS/FAIL | 누락 위치                |
-| 5   | 프론트엔드 version 전달   | PASS/FAIL | 누락 API 함수            |
+| 5   | 트랜잭션 내 CAS tx 전달   | PASS/FAIL | tx 미전달 위치           |
+| 6   | 프론트엔드 version 전달   | PASS/FAIL | 누락 API 함수            |
 ```
 
 ## Exceptions

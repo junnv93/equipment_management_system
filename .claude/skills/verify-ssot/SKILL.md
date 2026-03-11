@@ -30,6 +30,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | File                                                                         | Purpose                                                                                        |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `packages/db/src/schema/audit-logs.ts`                                       | DB enum 배열 (auditAction, auditEntityType — schemas와 동기화 필수)                            |
+| `packages/db/src/index.ts`                                                   | AppDatabase SSOT 타입 (NodePgDatabase 직접 import 금지)                                        |
 | `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                                            |
 | `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                                             |
 | `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)                                     |
@@ -49,6 +50,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)                              |
 | `apps/frontend/lib/navigation/nav-config.ts`                                 | SSOT 네비게이션 설정 (NavItemConfig, FRONTEND_ROUTES, Permission 기반 필터링)                  |
 | `apps/frontend/lib/config/pagination.ts`                                     | SSOT 페이지네이션 상수 (PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE — 로컬 재정의 금지)               |
+| `apps/backend/src/common/cache/cache-key-prefixes.ts`                        | SSOT 캐시 키 프리픽스 (CACHE_KEY_PREFIXES — 서비스/레지스트리/헬퍼 공유)                       |
 | `apps/frontend/lib/utils/dashboard-scope.ts`                                 | SSOT 대시보드 스코프 유틸리티 (DashboardScope, resolveDashboardScope, buildScopedEquipmentUrl) |
 | `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                                            |
 | `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등)                          |
@@ -331,7 +333,33 @@ import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 const BACKEND_URL = BASE_URLS.BACKEND;
 ```
 
-### Step 8: 서비스 메서드의 `Promise<unknown>` 안티패턴 탐지
+### Step 8: AppDatabase SSOT 타입 사용 확인
+
+백엔드 서비스가 `NodePgDatabase` 직접 import 대신 `AppDatabase` SSOT 타입을 사용하는지 확인합니다.
+
+```bash
+# NodePgDatabase 직접 import 탐지 (packages/db 제외)
+grep -rn "import.*NodePgDatabase" apps/backend/src --include="*.ts" | grep -v "node_modules\|packages/db"
+```
+
+**PASS 기준:** 0개 결과 (모든 서비스가 `AppDatabase` from `@equipment-management/db` 사용).
+
+**FAIL 기준:** `import { NodePgDatabase } from 'drizzle-orm/node-postgres'` 직접 import 발견 시 위반.
+
+```typescript
+// ❌ WRONG — 드라이버 직접 의존 (드라이버 변경 시 모든 서비스 수정 필요)
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import * as schema from '@equipment-management/db';
+constructor(@Inject('DATABASE') private db: NodePgDatabase<typeof schema>) {}
+
+// ✅ CORRECT — SSOT 추상화 타입 사용
+import type { AppDatabase } from '@equipment-management/db';
+constructor(@Inject('DATABASE') private db: AppDatabase) {}
+```
+
+**참고:** `AppDatabase` 타입은 `packages/db/src/index.ts`에서 `NodePgDatabase<typeof schema>`로 정의됨. DB 드라이버 변경 시 한 곳만 수정하면 됨.
+
+### Step 9: 서비스 메서드의 `Promise<unknown>` 안티패턴 탐지
 
 서비스 메서드의 반환 타입이 `Promise<unknown>`으로 선언되어 있으면, 호출자가 타입 단언(`as Type`) 없이는 결과를 안전하게 사용할 수 없습니다. 반환 타입은 Drizzle `$inferSelect` 또는 `Pick<$inferSelect, ...>`으로 파생된 구체적 타입이어야 합니다.
 
@@ -455,6 +483,46 @@ import { SITE_VALUES } from '@equipment-management/schemas';
 
 **참고:** UI 표시용 `SITE_OPTIONS: { value: Site, label: string }[]` (레이블 포함 객체 배열)은 로컬 정의 허용. 순수 값 배열(`Site[]`)만 schemas에서 import해야 합니다.
 
+### Step 11a: CACHE_KEY_PREFIXES SSOT 사용 확인
+
+백엔드 서비스의 캐시 키 프리픽스가 `cache-key-prefixes.ts`의 `CACHE_KEY_PREFIXES`를 통해 참조되는지 확인합니다. 하드코딩된 캐시 키 문자열은 서비스/레지스트리/헬퍼 간 불일치를 유발합니다.
+
+```bash
+# 서비스 파일에서 하드코딩된 캐시 키 프리픽스 탐지
+grep -rn "'equipment:\|'checkouts:\|'calibration:\|'calibration-plans:\|'dashboard:\|'disposal-requests:\|'equipment-imports:\|'software:\|'non-conformances\|'audit-logs:\|'notification:" apps/backend/src/modules --include="*.service.ts" | grep -v "CACHE_KEY_PREFIXES\|cache-key-prefixes\|// \|spec\|test"
+```
+
+```bash
+# cache-invalidation.helper.ts에서 하드코딩된 캐시 키 탐지
+grep -rn "'equipment:\|'checkouts:\|'calibration:\|'dashboard:\|'disposal-requests:\|'equipment-imports:" apps/backend/src/common/cache/cache-invalidation.helper.ts | grep -v "CACHE_KEY_PREFIXES\|// "
+```
+
+```bash
+# cache-event.registry.ts에서 하드코딩된 캐시 키 탐지
+grep -rn "'checkout:\|'calibration:\|'disposal-requests:\|'equipment-imports:" apps/backend/src/common/cache/cache-event.registry.ts | grep -v "CACHE_KEY_PREFIXES\|// "
+```
+
+**PASS 기준:** 0개 결과 (모든 캐시 키가 `CACHE_KEY_PREFIXES.*`로 참조).
+
+**FAIL 기준:** 서비스/헬퍼/레지스트리에서 문자열 리터럴 캐시 키 발견 시 위반.
+
+**수정 패턴:**
+
+```typescript
+// ❌ WRONG — 하드코딩 캐시 키
+private readonly CACHE_PREFIX = 'equipment:';
+const cacheKey = `dashboard:summary:${site}`;
+patterns: [{ pattern: 'checkout:*' }],
+
+// ✅ CORRECT — SSOT에서 import
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
+private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.EQUIPMENT;
+const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}summary:${site}`;
+patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
+```
+
+**참고 — SSOT 파일:** `apps/backend/src/common/cache/cache-key-prefixes.ts`
+
 ### Step 11: PAGE_SIZE_OPTIONS 로컬 재정의 탐지
 
 `PAGE_SIZE_OPTIONS`가 `@/lib/config/pagination`에서 임포트되지 않고 컴포넌트에서 직접 선언되어 있는지 확인합니다.
@@ -508,10 +576,12 @@ import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/config/pagination';
 | 6   | Icon Library 통합             | PASS/FAIL | react-icons 사용, 비표준 library 위치  |
 | 7   | 환경변수 직접 참조            | PASS/FAIL | NEXT_PUBLIC_API_URL 직접 참조 위치     |
 | 7b  | E2E Backend URL SSOT          | PASS/FAIL | E2E 내 직접 env 참조 파일 목록         |
-| 8   | Promise<unknown> 반환 타입    | PASS/FAIL | 서비스 메서드의 unknown 반환 타입 위치 |
+| 8   | AppDatabase SSOT 타입         | PASS/FAIL | NodePgDatabase 직접 import 위치        |
+| 9   | Promise<unknown> 반환 타입    | PASS/FAIL | 서비스 메서드의 unknown 반환 타입 위치 |
 | 9   | 토큰 TTL 하드코딩             | PASS/FAIL | auth 파일 내 하드코딩 위치             |
 | 10  | SITE_VALUES 로컬 재정의       | PASS/FAIL | Site[] 로컬 선언 위치                  |
 | 11  | PAGE_SIZE_OPTIONS 로컬 재정의 | PASS/FAIL | pagination.ts 외 직접 선언 위치        |
+| 11a | CACHE_KEY_PREFIXES SSOT       | PASS/FAIL | 하드코딩 캐시 키 위치                  |
 ```
 
 ## Exceptions

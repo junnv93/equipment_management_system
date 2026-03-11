@@ -183,6 +183,40 @@ grep -rn "@SiteScoped" apps/backend/src --include="*.controller.ts" -A 1 | grep 
 - `@SiteScoped()` 데코레이터는 있지만 `@UseInterceptors(SiteScopeInterceptor)` 누락 → 데코레이터가 효과 없음
 - 신규 컨트롤러에서 사이트 필터링 로직을 직접 구현 → `@SiteScoped` 패턴 사용 필요
 
+### Step 6b: Implicit Site Filtering 탐지
+
+`@SiteScoped` 데코레이터 없이 `req.user.site`를 수동으로 전달하여 사이트 필터링을 구현하는 패턴을 탐지합니다.
+
+```bash
+# @SiteScoped 없이 req.user.site를 사용하는 컨트롤러 탐지
+for f in $(grep -rln "req\.user\.site\|req\.user\?.site" apps/backend/src/modules --include="*.controller.ts"); do
+  if ! grep -q "@SiteScoped\|@UseInterceptors.*SiteScopeInterceptor" "$f"; then
+    echo "IMPLICIT: $f"
+  fi
+done
+```
+
+**PASS 기준:** 0개 결과 (모든 사이트 필터링이 @SiteScoped 데코레이터를 통해 선언적으로 처리).
+
+**FAIL 기준:** @SiteScoped 없이 `req.user.site`를 수동 전달하는 컨트롤러 발견 시 위반 — 코드 리뷰에서 사이트 격리 의도가 불명확.
+
+```typescript
+// ❌ WRONG — implicit site filtering (의도 불명확)
+@Get('stats')
+async getStats(@Request() req: AuthenticatedRequest) {
+  return this.service.getStats(req.user.site); // @SiteScoped 없이 수동 전달
+}
+
+// ✅ CORRECT — declarative site scoping
+@SiteScoped()
+@Get('stats')
+async getStats(@Request() req: AuthenticatedRequest) {
+  return this.service.getStats(req.query.site); // interceptor가 주입한 site 사용
+}
+```
+
+**참고:** DashboardController, ApprovalsController, AuditController가 현재 implicit 패턴을 사용 중.
+
 ### Step 7: CI 엔드포인트 어노테이션 검증
 
 모든 컨트롤러 엔드포인트에 보안 데코레이터가 적용되어 있는지 CI 스크립트로 확인합니다.

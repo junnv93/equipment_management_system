@@ -39,6 +39,7 @@ argument-hint: '[선택사항: 특정 verify 스킬 이름]'
 | 8   | `verify-design-tokens`  | Design Token 3-Layer 아키텍처 — transition-all 금지, focus-visible 우선, Layer 참조 규칙 |
 | 9   | `verify-security`       | 보안 설정 — Helmet CSP 프로덕션 강화, Next.js Security Headers, @Public 남용 검사        |
 | 10  | `verify-i18n`           | i18n 번역 — en/ko 키 쌍 일치, 빈 번역 없음, 네임스페이스 참조 일관성                     |
+| 11  | `verify-sql-safety`     | SQL 안전성 — LIKE 와일드카드 이스케이프, N+1 쿼리 패턴 탐지                              |
 
 ## 워크플로우
 
