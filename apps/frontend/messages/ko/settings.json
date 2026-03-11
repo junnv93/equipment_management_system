@@ -1,11 +1,39 @@
 {
   "title": "설정",
+  "description": "시스템 환경설정 및 개인화 옵션을 관리합니다",
   "profile": {
     "title": "내 프로필",
     "description": "현재 로그인한 사용자의 정보입니다. Azure AD에서 동기화됩니다.",
     "loadError": "프로필 정보를 불러오는데 실패했습니다.",
     "notRegistered": "미등록",
+    "active": "활성",
+    "inactive": "비활성",
     "azureAdNote": "프로필 정보는 <strong>Azure Active Directory</strong>에서 동기화됩니다. 수정이 필요한 경우 IT 관리자에게 문의하세요.",
+    "lastLogin": "마지막 로그인",
+    "lastLoginNever": "기록 없음",
+    "permissions": {
+      "title": "권한 목록",
+      "description": "현재 역할에 부여된 시스템 권한",
+      "readOnly": "읽기 전용",
+      "totalCount": "총 {count}개 권한 부여됨",
+      "categories": {
+        "equipment": "장비",
+        "checkouts": "반출",
+        "calibrations": "교정",
+        "calibrationFactors": "보정계수",
+        "nonConformances": "부적합",
+        "software": "소프트웨어",
+        "teams": "팀",
+        "users": "사용자",
+        "notifications": "알림",
+        "reports": "통계 · 보고서",
+        "calibrationPlans": "교정계획서",
+        "audit": "감사 로그",
+        "disposal": "폐기",
+        "equipmentImports": "장비 반입",
+        "system": "시스템 설정"
+      }
+    },
     "fields": {
       "name": "이름",
       "email": "이메일",
@@ -15,15 +43,19 @@
       "position": "직위",
       "department": "부서",
       "phone": "회사 전화",
-      "employeeId": "사원번호"
+      "employeeId": "사원번호",
+      "userId": "사용자 ID"
     }
   },
   "nav": {
     "display": "표시 설정",
     "notifications": "알림 설정",
-    "profile": "프로필",
+    "profile": "내 프로필",
     "calibration": "교정 알림 설정",
-    "system": "시스템 설정"
+    "system": "시스템 설정",
+    "personalSection": "개인",
+    "adminSection": "관리",
+    "adminHelp": "관리 설정은 권한에 따라 표시됩니다"
   },
   "display": {
     "title": "표시 설정",
@@ -95,6 +127,7 @@
     "dayOnly": "당일",
     "currentSelection": "현재 선택:",
     "noSelection": "선택 없음",
+    "selectionCount": "{count}개 선택됨",
     "howItWorks": "알림 동작 방식",
     "howItWorksItems": {
       "timing": "선택한 D-day에 교정/중간점검 예정 장비에 대해 알림이 발송됩니다",

@@ -1,11 +1,39 @@
 {
   "title": "Settings",
+  "description": "Manage system preferences and personalization options",
   "profile": {
     "title": "My Profile",
     "description": "Information for the currently logged-in user. Synchronized from Azure AD.",
     "loadError": "Failed to load profile information.",
     "notRegistered": "Not registered",
+    "active": "Active",
+    "inactive": "Inactive",
     "azureAdNote": "Profile information is synchronized from <strong>Azure Active Directory</strong>. For changes, please contact your IT administrator.",
+    "lastLogin": "Last Login",
+    "lastLoginNever": "No record",
+    "permissions": {
+      "title": "Permissions",
+      "description": "System permissions granted to your current role",
+      "readOnly": "Read-only",
+      "totalCount": "{count} permissions granted",
+      "categories": {
+        "equipment": "Equipment",
+        "checkouts": "Checkouts",
+        "calibrations": "Calibrations",
+        "calibrationFactors": "Calibration Factors",
+        "nonConformances": "Non-Conformances",
+        "software": "Software",
+        "teams": "Teams",
+        "users": "Users",
+        "notifications": "Notifications",
+        "reports": "Reports",
+        "calibrationPlans": "Calibration Plans",
+        "audit": "Audit Logs",
+        "disposal": "Disposal",
+        "equipmentImports": "Equipment Imports",
+        "system": "System Settings"
+      }
+    },
     "fields": {
       "name": "Name",
       "email": "Email",
@@ -15,15 +43,19 @@
       "position": "Position",
       "department": "Department",
       "phone": "Office Phone",
-      "employeeId": "Employee ID"
+      "employeeId": "Employee ID",
+      "userId": "User ID"
     }
   },
   "nav": {
     "display": "Display Settings",
     "notifications": "Notification Settings",
-    "profile": "Profile",
+    "profile": "My Profile",
     "calibration": "Calibration Alert Settings",
-    "system": "System Settings"
+    "system": "System Settings",
+    "personalSection": "Personal",
+    "adminSection": "Admin",
+    "adminHelp": "Admin settings are shown based on your permissions"
   },
   "display": {
     "title": "Display Settings",
@@ -95,6 +127,7 @@
     "dayOnly": "Same Day",
     "currentSelection": "Current selection:",
     "noSelection": "None selected",
+    "selectionCount": "{count} selected",
     "howItWorks": "How Alerts Work",
     "howItWorksItems": {
       "timing": "Alerts are sent for equipment with upcoming calibration/intermediate checks on selected D-days",

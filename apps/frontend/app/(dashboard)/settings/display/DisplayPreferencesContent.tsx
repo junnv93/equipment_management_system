@@ -20,9 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, Monitor } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api/api-client';
@@ -35,6 +34,17 @@ import {
 } from '@equipment-management/schemas';
 import { setLocaleCookie } from '@/lib/i18n/locale-cookie';
 import { useTranslations, useLocale } from 'next-intl';
+import { SettingsToggleField } from '@/components/settings/SettingsToggleField';
+import {
+  SETTINGS_CARD_HEADER_TOKENS,
+  SETTINGS_SUBMIT_TOKENS,
+  SETTINGS_SAVE_INDICATOR_TOKENS,
+  getSettingsCardClasses,
+  getSettingsCardHeaderClasses,
+  getSettingsSelectTriggerClasses,
+  getSettingsSubmitButtonClasses,
+  SETTINGS_SPACING_TOKENS,
+} from '@/lib/design-tokens';
 
 export default function DisplayPreferencesContent() {
   const { data: preferences, isLoading } = useQuery<DisplayPreferences>({
@@ -48,12 +58,14 @@ export default function DisplayPreferencesContent() {
 
   if (isLoading) {
     return (
-      <Card className="overflow-hidden">
-        <CardHeader className="space-y-2">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-4 w-72" />
+      <Card className={getSettingsCardClasses()}>
+        <CardHeader className={getSettingsCardHeaderClasses()}>
+          <div>
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-72 mt-1" />
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
@@ -62,7 +74,7 @@ export default function DisplayPreferencesContent() {
     );
   }
 
-  // 로드 완료 후 형 보장된 초기값을 자식에게 전달
+  // 로드 완료 후 타입 보장된 초기값을 자식에게 전달
   // 자식은 defaultValues만 사용 → 첫 렌더부터 동기적으로 올바른 값 보장
   // (values 옵션의 useEffect 비동기 sync는 Radix Select 포털 렌더링과 충돌)
   const mergedPreferences: DisplayPreferences = {
@@ -109,22 +121,24 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
     },
   });
 
+  const selectTriggerClasses = getSettingsSelectTriggerClasses();
+
   return (
-    <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-[box-shadow] motion-safe:duration-300 motion-reduce:transition-none">
-      <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
-        <div className="flex items-start gap-4">
-          <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
-            <Monitor className="h-6 w-6 text-primary" aria-hidden="true" />
-          </div>
-          <div className="flex-1">
-            <CardTitle className="text-xl mb-1.5">{t('display.title')}</CardTitle>
-            <CardDescription>{t('display.description')}</CardDescription>
-          </div>
+    <Card className={getSettingsCardClasses()}>
+      <CardHeader className={getSettingsCardHeaderClasses()}>
+        <div className={SETTINGS_CARD_HEADER_TOKENS.titleWrapper}>
+          <CardTitle className={SETTINGS_CARD_HEADER_TOKENS.title}>{t('display.title')}</CardTitle>
+          <CardDescription className={SETTINGS_CARD_HEADER_TOKENS.description}>
+            {t('display.description')}
+          </CardDescription>
         </div>
       </CardHeader>
       <CardContent className="pt-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-8">
+          <form
+            onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+            className={SETTINGS_SPACING_TOKENS.formFields}
+          >
             {/* Language / Locale */}
             <FormField
               control={form.control}
@@ -134,7 +148,7 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                   <FormLabel className="text-base font-semibold">{t('display.language')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className={selectTriggerClasses}>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -161,7 +175,7 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className={selectTriggerClasses}>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -189,7 +203,7 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className={selectTriggerClasses}>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -226,7 +240,7 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                      <SelectTrigger className={selectTriggerClasses}>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -245,45 +259,26 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
               )}
             />
 
-            {/* Show Retired Equipment */}
-            <FormField
+            {/* Show Retired Equipment — SettingsToggleField 사용 */}
+            <SettingsToggleField
               control={form.control}
               name="showRetiredEquipment"
-              render={({ field }) => (
-                <FormItem className="group rounded-lg border-2 border-border/50 p-5 motion-safe:transition-[border-color,background-color] motion-safe:duration-200 motion-reduce:transition-none hover:border-primary/30 hover:bg-accent/30">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1.5 flex-1">
-                      <FormLabel className="text-base font-semibold cursor-pointer">
-                        {t('display.showRetiredEquipment')}
-                      </FormLabel>
-                      <FormDescription className="text-xs leading-relaxed">
-                        {t('display.showRetiredDescription')}
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="data-[state=checked]:bg-primary motion-safe:transition-colors motion-reduce:transition-none"
-                      />
-                    </FormControl>
-                  </div>
-                </FormItem>
-              )}
+              label={t('display.showRetiredEquipment')}
+              description={t('display.showRetiredDescription')}
             />
 
             {/* Submit Button */}
-            <div className="flex items-center justify-between pt-4 border-t border-border/50">
-              <p className="text-xs text-muted-foreground">{t('display.saveNote')}</p>
+            <div className={SETTINGS_SUBMIT_TOKENS.section}>
+              <p className={SETTINGS_SUBMIT_TOKENS.note}>{t('display.saveNote')}</p>
               <Button
                 type="submit"
                 disabled={mutation.isPending || !form.formState.isDirty}
-                className="min-w-[120px] motion-safe:transition-[transform,background-color,opacity] motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
+                className={getSettingsSubmitButtonClasses()}
               >
                 {mutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-                    {t('common.saving')}
+                    <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
+                    <span className="ml-2">{t('common.saving')}</span>
                   </>
                 ) : (
                   <>

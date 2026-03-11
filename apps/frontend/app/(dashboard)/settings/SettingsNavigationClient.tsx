@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import { User, Bell, Monitor, Calendar, Cog, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   isTechnicalManagerOrAbove,
   hasPermission,
@@ -13,11 +13,17 @@ import {
   FRONTEND_ROUTES,
 } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
+import {
+  SETTINGS_NAV_TOKENS,
+  getSettingsNavItemClasses,
+  getSettingsNavIconCircleClasses,
+  getSettingsNavChevronClasses,
+} from '@/lib/design-tokens';
 
 interface SettingsNavItem {
   href: string;
-  label: string;
-  icon: ReactNode;
+  labelKey: string;
+  icon: LucideIcon;
   section?: 'admin';
 }
 
@@ -25,26 +31,26 @@ function getSettingsNavItems(role?: string): SettingsNavItem[] {
   const items: SettingsNavItem[] = [
     {
       href: FRONTEND_ROUTES.SETTINGS.PROFILE,
-      label: '내 프로필',
-      icon: <User className="h-4 w-4" aria-hidden="true" />,
+      labelKey: 'nav.profile',
+      icon: User,
     },
     {
       href: FRONTEND_ROUTES.SETTINGS.NOTIFICATIONS,
-      label: '알림 설정',
-      icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+      labelKey: 'nav.notifications',
+      icon: Bell,
     },
     {
       href: FRONTEND_ROUTES.SETTINGS.DISPLAY,
-      label: '표시 설정',
-      icon: <Monitor className="h-4 w-4" aria-hidden="true" />,
+      labelKey: 'nav.display',
+      icon: Monitor,
     },
   ];
 
   if (role && isTechnicalManagerOrAbove(role as UserRole)) {
     items.push({
       href: FRONTEND_ROUTES.SETTINGS.ADMIN_CALIBRATION,
-      label: '교정 알림 설정',
-      icon: <Calendar className="h-4 w-4" aria-hidden="true" />,
+      labelKey: 'nav.calibration',
+      icon: Calendar,
       section: 'admin',
     });
   }
@@ -52,8 +58,8 @@ function getSettingsNavItems(role?: string): SettingsNavItem[] {
   if (role && hasPermission(role as UserRole, Permission.MANAGE_SYSTEM_SETTINGS)) {
     items.push({
       href: FRONTEND_ROUTES.SETTINGS.ADMIN_SYSTEM,
-      label: '시스템 설정',
-      icon: <Cog className="h-4 w-4" aria-hidden="true" />,
+      labelKey: 'nav.system',
+      icon: Cog,
       section: 'admin',
     });
   }
@@ -67,70 +73,53 @@ function getSettingsNavItems(role?: string): SettingsNavItem[] {
  * cacheComponents 호환 아키텍처:
  * - layout.tsx: non-blocking (async 없음) → 정적 셸 즉시 프리렌더
  * - 이 컴포넌트: useSession()으로 역할 접근 + usePathname()으로 활성 경로 감지
- * - 인증 보장: middleware.ts에서 JWT 검증 → useSession()은 항상 세션 보유
+ * - i18n: useTranslations('settings')으로 다국어 지원
  *
  * SSOT: SessionProvider(providers.tsx) → useSession() → role
+ * Design Token: SETTINGS_NAV_TOKENS (settings.ts)
  */
 export function SettingsNavigationClient() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   const pathname = usePathname();
+  const t = useTranslations('settings');
   const navItems = getSettingsNavItems(userRole);
   const hasAdminSection = navItems.some((item) => item.section === 'admin');
 
   return (
-    <nav className="lg:w-64 flex-shrink-0" aria-label="설정 네비게이션">
-      <div className="sticky top-6">
+    <nav className={SETTINGS_NAV_TOKENS.container} aria-label={t('title')}>
+      <div className={SETTINGS_NAV_TOKENS.stickyWrapper}>
         <ul className="space-y-1">
           {navItems.map((item, index) => {
             const isActive = pathname === item.href;
-            const showSeparator =
+            const Icon = item.icon;
+            const isFirstItem = index === 0;
+            const showAdminSeparator =
               item.section === 'admin' && index > 0 && navItems[index - 1].section !== 'admin';
 
             return (
               <li key={item.href}>
-                {showSeparator && (
-                  <div className="my-4 relative">
-                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                      <div className="w-full border-t border-border" />
-                    </div>
-                    <div className="relative flex justify-center">
-                      <span className="bg-background px-3 text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
-                        관리
-                      </span>
-                    </div>
+                {isFirstItem && (
+                  <p className={SETTINGS_NAV_TOKENS.sectionLabel}>{t('nav.personalSection')}</p>
+                )}
+                {showAdminSeparator && (
+                  <div className={SETTINGS_NAV_TOKENS.adminSeparator}>
+                    <p className={SETTINGS_NAV_TOKENS.adminSectionLabel}>{t('nav.adminSection')}</p>
                   </div>
                 )}
                 <Link
                   href={item.href}
-                  className={cn(
-                    'group flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-                    'motion-safe:transition-[transform,background-color,color] motion-safe:duration-200 motion-reduce:transition-none',
-                    'hover:translate-x-1',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                  )}
+                  className={getSettingsNavItemClasses(isActive)}
                   aria-current={isActive ? 'page' : undefined}
                 >
                   <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        'flex h-7 w-7 items-center justify-center rounded-full motion-safe:transition-[transform] motion-safe:duration-200 motion-reduce:transition-none',
-                        isActive ? 'bg-primary-foreground/20 scale-110' : ''
-                      )}
-                    >
-                      {item.icon}
+                    <span className={getSettingsNavIconCircleClasses(isActive)}>
+                      <Icon className={SETTINGS_NAV_TOKENS.icon} aria-hidden="true" />
                     </span>
-                    <span>{item.label}</span>
+                    <span>{t(item.labelKey as Parameters<typeof t>[0])}</span>
                   </div>
                   <ChevronRight
-                    className={cn(
-                      'h-4 w-4 motion-safe:transition-[transform,opacity] motion-safe:duration-200 motion-reduce:transition-none',
-                      isActive
-                        ? 'opacity-100 translate-x-0'
-                        : 'opacity-0 -translate-x-2 group-hover:opacity-50 group-hover:translate-x-0'
-                    )}
+                    className={getSettingsNavChevronClasses(isActive)}
                     aria-hidden="true"
                   />
                 </Link>
@@ -138,11 +127,7 @@ export function SettingsNavigationClient() {
             );
           })}
         </ul>
-        {hasAdminSection && (
-          <p className="mt-4 px-3 text-xs text-muted-foreground/60 leading-relaxed">
-            관리 설정은 권한에 따라 표시됩니다
-          </p>
-        )}
+        {hasAdminSection && <p className={SETTINGS_NAV_TOKENS.adminHelp}>{t('nav.adminHelp')}</p>}
       </div>
     </nav>
   );

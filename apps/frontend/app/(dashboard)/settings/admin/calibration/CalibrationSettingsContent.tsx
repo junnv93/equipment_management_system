@@ -6,27 +6,33 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, X, Plus, Calendar } from 'lucide-react';
+import { Loader2, Check, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
-import { DEFAULT_CALIBRATION_ALERT_DAYS } from '@equipment-management/schemas';
 import {
+  DEFAULT_CALIBRATION_ALERT_DAYS,
+  CALIBRATION_ALERT_DAYS_OPTIONS,
+} from '@equipment-management/schemas';
+import {
+  SETTINGS_CARD_HEADER_TOKENS,
+  SETTINGS_SUBMIT_TOKENS,
+  SETTINGS_SAVE_INDICATOR_TOKENS,
+  getSettingsCardClasses,
+  getSettingsCardHeaderClasses,
   getSettingsChipClasses,
   getSettingsChipIconClasses,
-  getSettingsCardHeaderClasses,
-  getSettingsIconContainerClasses,
   getSettingsInfoBoxClasses,
+  getSettingsSubmitButtonClasses,
   SETTINGS_SPACING_TOKENS,
   SETTINGS_TEXT_TOKENS,
+  SETTINGS_INFO_BOX_TOKENS,
 } from '@/lib/design-tokens';
 import { z } from 'zod';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
-
-const AVAILABLE_DAYS = [0, 1, 3, 7, 14, 30, 60, 90] as const;
 
 // 프론트엔드 로컬 Zod 스키마
 const calibrationSettingsFormSchema = z.object({
@@ -69,8 +75,9 @@ export default function CalibrationSettingsContent() {
   const mutation = useMutation({
     mutationFn: (formData: CalibrationSettingsForm) =>
       apiClient.patch(API_ENDPOINTS.SETTINGS.CALIBRATION, formData),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success(t('toasts.calibrationSaveSuccess'));
+      form.reset(variables);
     },
     onError: () => {
       toast.error(t('toasts.calibrationSaveError'));
@@ -97,12 +104,14 @@ export default function CalibrationSettingsContent() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-80 mt-1" />
+      <Card className={getSettingsCardClasses()}>
+        <CardHeader className={getSettingsCardHeaderClasses()}>
+          <div>
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-80 mt-1" />
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </CardContent>
@@ -111,23 +120,22 @@ export default function CalibrationSettingsContent() {
   }
 
   return (
-    <Card>
+    <Card className={getSettingsCardClasses()}>
       <CardHeader className={getSettingsCardHeaderClasses()}>
-        <div className="flex items-center gap-3">
-          <div className={getSettingsIconContainerClasses()}>
-            <Calendar className="h-5 w-5 text-primary" aria-hidden="true" />
-          </div>
-          <div>
-            <CardTitle>{t('calibration.title')}</CardTitle>
-            <CardDescription>{t('calibration.description')}</CardDescription>
-          </div>
+        <div className={SETTINGS_CARD_HEADER_TOKENS.titleWrapper}>
+          <CardTitle className={SETTINGS_CARD_HEADER_TOKENS.title}>
+            {t('calibration.title')}
+          </CardTitle>
+          <CardDescription className={SETTINGS_CARD_HEADER_TOKENS.description}>
+            {t('calibration.description')}
+          </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className={SETTINGS_SPACING_TOKENS.cardContent}>
+      <CardContent className={cn('pt-6', SETTINGS_SPACING_TOKENS.cardContent)}>
         <div>
           <p className={cn(SETTINGS_TEXT_TOKENS.label, 'mb-3')}>{t('calibration.alertTiming')}</p>
           <div className={SETTINGS_SPACING_TOKENS.chipGroup}>
-            {AVAILABLE_DAYS.map((day) => {
+            {CALIBRATION_ALERT_DAYS_OPTIONS.map((day) => {
               const isSelected = alertDays.includes(day);
               return (
                 <button
@@ -160,30 +168,40 @@ export default function CalibrationSettingsContent() {
         </div>
 
         <div className={getSettingsInfoBoxClasses()}>
-          <p className={SETTINGS_TEXT_TOKENS.label}>{t('calibration.howItWorks')}</p>
-          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside mt-1">
+          <p className={SETTINGS_INFO_BOX_TOKENS.title}>{t('calibration.howItWorks')}</p>
+          <ul className={SETTINGS_INFO_BOX_TOKENS.list}>
             <li>{t('calibration.howItWorksItems.timing')}</li>
             <li>{t('calibration.howItWorksItems.dedupe')}</li>
             <li>{t('calibration.howItWorksItems.overdue')}</li>
           </ul>
         </div>
 
-        <Button
-          onClick={() => mutation.mutate({ alertDays })}
-          disabled={mutation.isPending || !form.formState.isDirty || alertDays.length === 0}
-        >
-          {mutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-              {t('common.saving')}
-            </>
-          ) : (
-            <>
-              <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-              {t('common.save')}
-            </>
-          )}
-        </Button>
+        {/* Submit Section — 통일된 토큰 패턴 */}
+        <div className={SETTINGS_SUBMIT_TOKENS.section}>
+          <p className={SETTINGS_SUBMIT_TOKENS.note}>
+            {t('calibration.currentSelection')}{' '}
+            {alertDays.length > 0
+              ? t('calibration.selectionCount', { count: alertDays.length })
+              : t('calibration.noSelection')}
+          </p>
+          <Button
+            onClick={() => mutation.mutate({ alertDays })}
+            disabled={mutation.isPending || !form.formState.isDirty || alertDays.length === 0}
+            className={getSettingsSubmitButtonClasses()}
+          >
+            {mutation.isPending ? (
+              <>
+                <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
+                <span className="ml-2">{t('common.saving')}</span>
+              </>
+            ) : (
+              <>
+                <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+                {t('common.save')}
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

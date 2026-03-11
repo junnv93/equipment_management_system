@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Check, ShieldAlert, Cog } from 'lucide-react';
+import { Loader2, Check, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
@@ -32,6 +31,17 @@ import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { DEFAULT_SYSTEM_SETTINGS, type SystemSettings } from '@equipment-management/schemas';
+import {
+  SETTINGS_CARD_HEADER_TOKENS,
+  SETTINGS_SUBMIT_TOKENS,
+  SETTINGS_SAVE_INDICATOR_TOKENS,
+  getSettingsCardClasses,
+  getSettingsCardHeaderClasses,
+  getSettingsSelectTriggerClasses,
+  getSettingsSubmitButtonClasses,
+  getSettingsTextareaClasses,
+  SETTINGS_SPACING_TOKENS,
+} from '@/lib/design-tokens';
 
 const systemSettingsFormSchema = z.object({
   auditLogRetentionDays: z.string(),
@@ -47,10 +57,14 @@ const DEFAULTS: SystemSettingsForm = {
   maintenanceMessage: DEFAULT_SYSTEM_SETTINGS.maintenanceMessage,
 };
 
+/**
+ * 시스템 설정 컨테이너 (로딩 후 자식 마운트)
+ *
+ * DisplayPreferencesContent와 동일 패턴:
+ * 부모에서 isLoading 처리 → 자식은 동기적 defaultValues로 마운트
+ * → Radix Select 포털 렌더링 충돌 방지
+ */
 export default function SystemSettingsContent() {
-  const t = useTranslations('settings');
-  const queryClient = useQueryClient();
-
   const { data, isLoading } = useQuery<SystemSettings>({
     queryKey: queryKeys.settings.system(),
     queryFn: async () => {
@@ -60,21 +74,45 @@ export default function SystemSettingsContent() {
     staleTime: CACHE_TIMES.MEDIUM,
   });
 
+  if (isLoading) {
+    return (
+      <Card className={getSettingsCardClasses()}>
+        <CardHeader className={getSettingsCardHeaderClasses()}>
+          <div>
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-72 mt-1" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6 pt-6">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const mergedSettings: SystemSettingsForm = {
+    auditLogRetentionDays: String(
+      data?.auditLogRetentionDays ?? DEFAULT_SYSTEM_SETTINGS.auditLogRetentionDays
+    ),
+    notificationRetentionDays: String(
+      data?.notificationRetentionDays ?? DEFAULT_SYSTEM_SETTINGS.notificationRetentionDays
+    ),
+    maintenanceMessage: data?.maintenanceMessage ?? DEFAULT_SYSTEM_SETTINGS.maintenanceMessage,
+  };
+
+  return <SystemSettingsForm initialSettings={mergedSettings} />;
+}
+
+function SystemSettingsForm({ initialSettings }: { initialSettings: SystemSettingsForm }) {
+  const t = useTranslations('settings');
+  const queryClient = useQueryClient();
+
   const form = useForm<SystemSettingsForm>({
     resolver: zodResolver(systemSettingsFormSchema),
-    defaultValues: DEFAULTS,
+    defaultValues: initialSettings,
   });
-
-  // isDirty 가드: 사용자가 변경 중일 때 서버 refetch로 인한 리셋 방지
-  useEffect(() => {
-    if (data && !form.formState.isDirty) {
-      form.reset({
-        auditLogRetentionDays: String(data.auditLogRetentionDays),
-        notificationRetentionDays: String(data.notificationRetentionDays),
-        maintenanceMessage: data.maintenanceMessage,
-      });
-    }
-  }, [data, form]);
 
   const mutation = useMutation({
     mutationFn: (formData: SystemSettingsForm) =>
@@ -83,8 +121,9 @@ export default function SystemSettingsContent() {
         notificationRetentionDays: parseInt(formData.notificationRetentionDays, 10),
         maintenanceMessage: formData.maintenanceMessage,
       }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast.success(t('toasts.systemSaveSuccess'));
+      form.reset(variables);
     },
     onError: () => {
       toast.error(t('toasts.systemSaveError'));
@@ -94,21 +133,7 @@ export default function SystemSettingsContent() {
     },
   });
 
-  if (isLoading) {
-    return (
-      <Card className="overflow-hidden">
-        <CardHeader className="space-y-2">
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
+  const selectTriggerClasses = getSettingsSelectTriggerClasses();
 
   return (
     <div className="space-y-6">
@@ -123,22 +148,22 @@ export default function SystemSettingsContent() {
         </AlertDescription>
       </Alert>
 
-      {/* Settings Card */}
-      <Card className="overflow-hidden border-primary/10 shadow-sm hover:shadow-md motion-safe:transition-[box-shadow] motion-safe:duration-300 motion-reduce:transition-none">
-        <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent border-b border-border/50 pb-6">
-          <div className="flex items-start gap-4">
-            <div className="rounded-full bg-primary/10 p-3 ring-4 ring-primary/5">
-              <Cog className="h-6 w-6 text-primary" aria-hidden="true" />
-            </div>
-            <div className="flex-1">
-              <CardTitle className="text-xl mb-1.5">{t('system.title')}</CardTitle>
-              <CardDescription>{t('system.description')}</CardDescription>
-            </div>
+      {/* Settings Card — Design Token SSOT */}
+      <Card className={getSettingsCardClasses()}>
+        <CardHeader className={getSettingsCardHeaderClasses()}>
+          <div className={SETTINGS_CARD_HEADER_TOKENS.titleWrapper}>
+            <CardTitle className={SETTINGS_CARD_HEADER_TOKENS.title}>{t('system.title')}</CardTitle>
+            <CardDescription className={SETTINGS_CARD_HEADER_TOKENS.description}>
+              {t('system.description')}
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))} className="space-y-8">
+            <form
+              onSubmit={form.handleSubmit((d) => mutation.mutate(d))}
+              className={SETTINGS_SPACING_TOKENS.formFields}
+            >
               {/* Audit Log Retention */}
               <FormField
                 control={form.control}
@@ -150,13 +175,13 @@ export default function SystemSettingsContent() {
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                        <SelectTrigger className={selectTriggerClasses}>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="0">
-                          <span className="font-mono">∞</span>
+                          <span className="font-mono">&#8734;</span>
                           <span className="ml-2">{t('system.unlimited')}</span>
                         </SelectItem>
                         <SelectItem value="90">
@@ -197,7 +222,7 @@ export default function SystemSettingsContent() {
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className="motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20">
+                        <SelectTrigger className={selectTriggerClasses}>
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -241,7 +266,7 @@ export default function SystemSettingsContent() {
                     <FormControl>
                       <Textarea
                         placeholder={t('system.maintenanceMessagePlaceholder')}
-                        className="resize-y min-h-[100px] motion-safe:transition-[border-color,box-shadow] motion-reduce:transition-none hover:border-primary/30 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
+                        className={getSettingsTextareaClasses()}
                         {...field}
                       />
                     </FormControl>
@@ -254,22 +279,22 @@ export default function SystemSettingsContent() {
               />
 
               {/* Submit Button */}
-              <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                <p className="text-xs text-muted-foreground">
+              <div className={SETTINGS_SUBMIT_TOKENS.section}>
+                <p className={SETTINGS_SUBMIT_TOKENS.note}>
                   {t('system.changesAppliedImmediately')}
                 </p>
                 <Button
                   type="submit"
                   disabled={mutation.isPending || !form.formState.isDirty}
-                  className="min-w-[120px] motion-safe:transition-[transform,background-color,opacity] motion-reduce:transition-none motion-safe:hover:scale-105 motion-safe:active:scale-95"
+                  className={getSettingsSubmitButtonClasses()}
                 >
                   {mutation.isPending ? (
                     <>
                       <Loader2
-                        className="mr-2 h-4 w-4 motion-safe:animate-spin"
+                        className={SETTINGS_SAVE_INDICATOR_TOKENS.saving}
                         aria-hidden="true"
                       />
-                      {t('common.saving')}
+                      <span className="ml-2">{t('common.saving')}</span>
                     </>
                   ) : (
                     <>
