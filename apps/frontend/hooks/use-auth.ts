@@ -11,7 +11,11 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { clearTokenCache } from '@/lib/api/api-client';
-import { ADMIN_ROLES } from '@equipment-management/shared-constants';
+import {
+  ADMIN_ROLES,
+  SESSION_SYNC_CHANNEL,
+  SESSION_SYNC_MESSAGE,
+} from '@equipment-management/shared-constants';
 
 export function useAuth() {
   const { data: session, status } = useSession();
@@ -54,6 +58,12 @@ export function useAuth() {
   const logout = useCallback(async () => {
     // ✅ API 클라이언트 토큰 캐시 초기화
     clearTokenCache();
+    // 다른 탭에 수동 로그아웃 알림 (BroadcastChannel 미지원 브라우저 안전 처리)
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const ch = new BroadcastChannel(SESSION_SYNC_CHANNEL);
+      ch.postMessage({ type: SESSION_SYNC_MESSAGE.LOGOUT });
+      ch.close();
+    }
     await signOut({ redirect: false });
     router.push('/login');
     router.refresh();

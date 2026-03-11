@@ -5,7 +5,7 @@
  * SSOT: 로그인/회원가입 UI의 모든 디자인 값은 여기서 정의
  */
 
-import { MOTION_TOKENS, INTERACTIVE_TOKENS } from '../semantic';
+import { MOTION_TOKENS, INTERACTIVE_TOKENS, CONTENT_TOKENS } from '../semantic';
 
 /**
  * Auth Input Field Tokens
@@ -300,4 +300,60 @@ export function getAuthStaggerDelay(
   increment: number = 100
 ): string {
   return `${baseDelay + index * increment}ms`;
+}
+
+// ─── Idle Timeout Dialog (무활동 타임아웃 경고) ──────────────────────────────
+
+/**
+ * Idle Timeout Dialog Tokens
+ *
+ * Layer 3 아키텍처: Layer 2(semantic) 참조
+ * DeleteTeamModal의 AlertDialog 패턴과 시각적 일관성 유지
+ */
+export const IDLE_TIMEOUT_DIALOG_TOKENS = {
+  /** 아이콘 컨테이너 (DeleteTeamModal 원형 배경 패턴) */
+  iconContainer:
+    'flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10',
+  /** 아이콘 크기 + 색상 */
+  iconSize: 'h-5 w-5 text-destructive',
+  /** 카운트다운 링 SVG 수치 */
+  ring: {
+    size: 80,
+    strokeWidth: 3,
+  },
+  /** 카운트다운 숫자 (Layer 2 CONTENT_TOKENS 참조 — 레이아웃 시프트 방지) */
+  countdownText: `${CONTENT_TOKENS.numeric.tabular} text-2xl font-semibold leading-none`,
+  /** 카운트다운 하위 라벨 */
+  countdownLabel: 'text-xs text-muted-foreground mt-0.5',
+  /** 링 트랙 (배경 원) 색상 */
+  ringTrack: 'text-muted-foreground/20',
+  /** 링 진행률 transition (motion-safe, specific property — transition-all 금지) */
+  ringTransition:
+    'motion-safe:transition-[stroke-dashoffset,color] motion-safe:duration-1000 motion-safe:ease-linear',
+  /** 긴급 시각 전환 임계값 (초) — 이 시간 이하에서 amber → destructive */
+  urgentThresholdSeconds: 60,
+} as const;
+
+/**
+ * Utility: Idle Timeout 긴급도 기반 색상 클래스
+ *
+ * 남은 시간에 따라 warning(amber) → critical(destructive) 전환.
+ * Visual Feedback 아키텍처의 urgency → color 매핑 원칙 준수.
+ *
+ * @param secondsRemaining - 자동 로그아웃까지 남은 초
+ * @returns 텍스트/링 색상 클래스
+ *
+ * @example
+ * const urgency = getIdleTimeoutUrgencyClasses(45); // ≤60s → destructive
+ * <span className={urgency.text}>{countdown}</span>
+ */
+export function getIdleTimeoutUrgencyClasses(secondsRemaining: number): {
+  text: string;
+  ring: string;
+} {
+  const isUrgent = secondsRemaining <= IDLE_TIMEOUT_DIALOG_TOKENS.urgentThresholdSeconds;
+  return {
+    text: isUrgent ? 'text-destructive' : 'text-amber-600 dark:text-amber-400',
+    ring: isUrgent ? 'text-destructive' : 'text-amber-500 dark:text-amber-400',
+  };
 }
