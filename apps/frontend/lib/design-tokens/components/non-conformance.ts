@@ -2,10 +2,20 @@
  * Non-Conformance Component Tokens
  *
  * 도메인 상태 → 시멘틱 색상 매핑 레이어 (SSOT).
- * 실제 색상 스타일은 brand.ts의 getSemanticBadgeClasses() / getSemanticContainerClasses()를 사용.
+ *
+ * 색상 원칙:
+ * - 모든 색상은 brand.ts의 시맨틱 시스템 경유 (CSS 변수 기반)
+ * - bg-green-*, bg-emerald-* 등 raw 색상 직접 사용 금지
+ * - brand-ok = 성공/완료/연결됨, brand-critical = 부적합/위험
+ *
+ * Layer 참조:
+ * - Layer 2: getSemanticBadgeClasses(), getSemanticContainerClasses() (brand.ts)
+ * - Layer 2: getTransitionClasses() (motion.ts)
+ * - Layer 3: 이 파일 — 컴포넌트별 조합
  */
 
 import type { SemanticColorKey } from '../brand';
+import { getTransitionClasses } from '../motion';
 import type { NonConformanceStatus } from '@equipment-management/schemas';
 
 /** NC 상태 → 시멘틱 색상 매핑 (SSOT) */
@@ -30,14 +40,16 @@ export function ncStatusToSemantic(status: string): SemanticColorKey {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 컴포넌트 레벨 토큰
+// 컴포넌트 레벨 토큰 (Layer 3 — Layer 2 시맨틱 참조)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * 부적합 배너 (NonConformanceBanner)
- * 장비 상세에서 부적합 상태일 때 표시되는 경고 배너
+ *
+ * 모든 색상이 brand-critical CSS 변수를 참조 → 다크 모드 자동 대응
  */
 export const NC_BANNER_TOKENS = {
+  /** Alert 컨테이너 — brand-critical 배경 + 테두리 */
   alert: 'border-brand-critical bg-brand-critical/5',
   icon: 'h-5 w-5 text-brand-critical',
   title: 'text-brand-critical font-semibold text-lg',
@@ -48,18 +60,28 @@ export const NC_BANNER_TOKENS = {
 
 /**
  * 수리 연결 배지 (Repair Linked)
- * 부적합에 수리 이력이 연결된 경우 표시
+ *
+ * brand-ok = 성공/완료 시맨틱 → CSS 변수 기반 다크 모드 자동 대응
+ * getSemanticBadgeClasses('ok')를 기반으로 hover/transition 확장
  */
 export const NC_REPAIR_LINKED_TOKENS = {
-  badge:
-    'px-2 py-1 text-xs font-medium rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/30 motion-safe:transition-colors motion-reduce:transition-none',
-  text: 'flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400',
+  badge: [
+    'px-2 py-1 text-xs font-medium rounded border',
+    'text-brand-ok bg-brand-ok/10 border-brand-ok/20',
+    'hover:bg-brand-ok/20',
+    getTransitionClasses('fast', ['background-color']),
+  ].join(' '),
+  text: 'flex items-center gap-2 text-sm text-brand-ok',
 } as const;
 
 /**
- * 승인 버튼 (Close/Approve)
+ * 승인/종결 버튼
+ *
+ * brand-ok 기반 CTA 버튼 — 배경색은 불투명(가시성 확보)
  */
 export const NC_APPROVE_BUTTON_TOKENS = {
-  approve:
-    'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white',
+  approve: [
+    'bg-brand-ok hover:bg-brand-ok/90 text-white',
+    getTransitionClasses('fast', ['background-color']),
+  ].join(' '),
 } as const;

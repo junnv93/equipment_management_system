@@ -2,11 +2,19 @@
  * Reports Component Tokens
  *
  * 보고서 생성 페이지 디자인 토큰
- * - 헤더, 성공 배너, 설정 요약, 빈 상태
- * - 다크 모드 호환 시맨틱 컬러 사용
+ *
+ * 색상 원칙:
+ * - 성공 배너 → brand-ok CSS 변수 (getSemanticContainerColorClasses 경유)
+ * - 요약 카드 → bg-muted (Tailwind 시맨틱 토큰)
+ * - raw 색상(bg-green-*, bg-slate-*) 직접 사용 금지
+ *
+ * Layer 참조:
+ * - Layer 2: getSemanticContainerColorClasses('ok') (brand.ts)
+ * - Layer 2: getTransitionClasses() (motion.ts)
  */
 
 import { getTransitionClasses } from '../motion';
+import { getSemanticContainerColorClasses, getSemanticContainerTextClasses } from '../brand';
 
 /**
  * 페이지 헤더
@@ -21,12 +29,13 @@ export const REPORTS_HEADER_TOKENS = {
  * 성공 배너 (보고서 생성 완료)
  */
 export const REPORTS_SUCCESS_BANNER_TOKENS = {
+  /** brand-ok CSS 변수 기반 → 다크 모드 globals.css에서 자동 처리 */
   container: [
     'mb-6 p-4 border rounded-md flex items-start space-x-2',
-    'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200',
+    getSemanticContainerColorClasses('ok'),
     getTransitionClasses('fast', ['opacity']),
   ].join(' '),
-  icon: 'h-5 w-5 mt-0.5',
+  icon: `h-5 w-5 mt-0.5 ${getSemanticContainerTextClasses('ok')}`,
   title: 'font-medium',
 } as const;
 
