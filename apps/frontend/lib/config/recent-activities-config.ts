@@ -8,7 +8,6 @@
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import type { RecentActivity } from '@/lib/api/dashboard-api';
 import {
-  Clock,
   Pen,
   Send,
   Truck,

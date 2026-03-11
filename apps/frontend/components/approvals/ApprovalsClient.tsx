@@ -487,7 +487,7 @@ export function ApprovalsClient({
               <>
                 <DialogHeader>
                   <DialogTitle>
-                    {commentMeta?.commentDialogTitle
+                    {commentMeta?.commentDialogTitleKey
                       ? t(`tabMeta.${approveCommentItem.category}.commentDialogTitle`)
                       : t('commentDialog.titleFallback')}
                   </DialogTitle>
@@ -499,7 +499,7 @@ export function ApprovalsClient({
                     <Textarea
                       id="approve-comment"
                       placeholder={
-                        commentMeta?.commentPlaceholder
+                        commentMeta?.commentPlaceholderKey
                           ? t(`tabMeta.${approveCommentItem.category}.commentPlaceholder`)
                           : t('commentDialog.placeholderFallback')
                       }
@@ -547,7 +547,7 @@ export function ApprovalsClient({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {activeTabMeta?.commentDialogTitle
+                {activeTabMeta?.commentDialogTitleKey
                   ? t(`tabMeta.${activeTab}.commentDialogTitle`)
                   : t('bulkCommentDialog.titleFallback')}
               </DialogTitle>
@@ -561,7 +561,7 @@ export function ApprovalsClient({
                 <Textarea
                   id="bulk-approve-comment"
                   placeholder={
-                    activeTabMeta?.commentPlaceholder
+                    activeTabMeta?.commentPlaceholderKey
                       ? t(`tabMeta.${activeTab}.commentPlaceholder`)
                       : t('commentDialog.placeholderFallback')
                   }

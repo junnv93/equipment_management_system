@@ -46,7 +46,6 @@ import {
 import {
   FILTER_TOKENS,
   getFilterSelectClasses,
-  getNumericClasses,
   CARD_TOKENS,
   getTableRowClasses,
 } from '@/lib/design-tokens';

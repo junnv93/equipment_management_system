@@ -83,7 +83,7 @@ export const TEAM_FILTER_PANEL_TOKENS = {
   filterItem: [
     'flex items-center justify-between w-full px-2.5 py-1.5 rounded-md',
     'text-sm text-left',
-    'motion-safe:transition-colors motion-safe:duration-100',
+    getTransitionClasses('fast', ['color']),
     'hover:bg-muted/70',
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
     'disabled:opacity-40 disabled:cursor-not-allowed',
@@ -146,7 +146,7 @@ export const SITE_PANEL_TOKENS = {
     'border border-dashed border-border',
     'text-xs text-muted-foreground font-medium',
     'hover:bg-muted/50 hover:border-muted-foreground hover:text-foreground',
-    'motion-safe:transition-colors motion-safe:duration-100',
+    getTransitionClasses('fast', ['color']),
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
   ].join(' '),
 } as const;
@@ -161,7 +161,7 @@ export const TEAM_ROW_TOKENS = {
     'group relative flex items-center px-3.5 py-2.5 gap-2.5',
     'cursor-pointer',
     'hover:bg-muted/50',
-    'motion-safe:transition-colors motion-safe:duration-100',
+    getTransitionClasses('fast', ['color']),
     'focus-visible:outline-none focus-visible:ring-inset focus-visible:ring-1 focus-visible:ring-primary',
   ].join(' '),
 
@@ -169,7 +169,7 @@ export const TEAM_ROW_TOKENS = {
   accentBar: [
     'absolute left-0 top-0 bottom-0 w-[3px]',
     'opacity-0 group-hover:opacity-100',
-    'motion-safe:transition-opacity motion-safe:duration-100',
+    getTransitionClasses('fast', ['opacity']),
   ].join(' '),
 
   /** 분류 코드 아이콘 (E/R/W/S/A/P letter circle) */
@@ -210,7 +210,7 @@ export const CLS_PILL_TOKENS = {
     'text-[11.5px] font-medium cursor-pointer border',
     'bg-muted/70 border-transparent text-muted-foreground',
     'hover:bg-muted hover:text-foreground',
-    'motion-safe:transition-colors motion-safe:duration-100',
+    getTransitionClasses('fast', ['color']),
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
   ].join(' '),
 
@@ -235,7 +235,7 @@ export const TEAM_MEMBER_GROUP_TOKENS = {
   memberRow: [
     'flex items-center gap-3 px-2 py-2.5 rounded-lg',
     'hover:bg-muted/50',
-    'motion-safe:transition-colors motion-safe:duration-100',
+    getTransitionClasses('fast', ['color']),
     'cursor-pointer',
   ].join(' '),
 

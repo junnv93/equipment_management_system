@@ -515,7 +515,7 @@ export function EquipmentForm({
         setPendingLocationHistory((prev) => [...prev, { tempId, data }]);
       }
     },
-    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]
+    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId, t]
   );
 
   const handleDeleteLocationHistory = useCallback(
@@ -540,7 +540,7 @@ export function EquipmentForm({
         throw error;
       }
     },
-    [isEdit, handleHistoryError]
+    [isEdit, handleHistoryError, t]
   );
 
   const handleAddMaintenanceHistory = useCallback(
@@ -572,7 +572,7 @@ export function EquipmentForm({
         setPendingMaintenanceHistory((prev) => [...prev, { tempId, data }]);
       }
     },
-    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]
+    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId, t]
   );
 
   const handleDeleteMaintenanceHistory = useCallback(
@@ -592,7 +592,7 @@ export function EquipmentForm({
         throw error;
       }
     },
-    [isEdit, handleHistoryError]
+    [isEdit, handleHistoryError, t]
   );
 
   const handleAddIncidentHistory = useCallback(
@@ -625,7 +625,7 @@ export function EquipmentForm({
         setPendingIncidentHistory((prev) => [...prev, { tempId, data }]);
       }
     },
-    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId]
+    [isEdit, initialData?.uuid, toast, handleHistoryError, generateTempId, t]
   );
 
   const handleDeleteIncidentHistory = useCallback(
@@ -645,7 +645,7 @@ export function EquipmentForm({
         throw error;
       }
     },
-    [isEdit, handleHistoryError]
+    [isEdit, handleHistoryError, t]
   );
 
   // 교정 이력 추가/삭제 핸들러 (등록 모드용)
@@ -669,7 +669,7 @@ export function EquipmentForm({
         description: t('form.toasts.calibrationHistoryTempSaved'),
       });
     },
-    [toast, generateTempId]
+    [toast, generateTempId, t]
   );
 
   const handleDeleteCalibrationHistory = useCallback(async (historyId: string) => {

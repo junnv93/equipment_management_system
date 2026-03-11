@@ -172,7 +172,7 @@ export function FileUpload({
         fileInputRef.current.value = '';
       }
     },
-    [files, maxFiles, onChange, validateFile]
+    [files, maxFiles, onChange, validateFile, t]
   );
 
   const handleRemove = useCallback(

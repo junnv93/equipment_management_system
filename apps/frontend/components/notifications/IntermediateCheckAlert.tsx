@@ -99,7 +99,6 @@ export function IntermediateCheckAlert({
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const t = useTranslations('notifications.alerts.intermediateCheck');
-  const tCommon = useTranslations('common.actions');
 
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [completionNotes, setCompletionNotes] = useState('');

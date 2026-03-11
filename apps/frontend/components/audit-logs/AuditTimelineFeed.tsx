@@ -46,26 +46,6 @@ function groupByDate(logs: AuditLog[], todayLabel: string, yesterdayLabel: strin
   });
 }
 
-/**
- * 각 로그에 전역 flat index를 부여 (render 이전에 순수하게 계산)
- *
- * ✅ let counter++ 패턴을 피하는 이유:
- * React 18 Strict Mode / concurrent 렌더링에서 render 함수가 두 번 실행되면
- * mutable counter가 오염되어 stagger delay가 잘못 계산됩니다.
- */
-function assignFlatIndex(
-  groups: DateGroup[]
-): Array<DateGroup['logs'][number] & { flatIdx: number }> {
-  let idx = 0;
-  const result: Array<DateGroup['logs'][number] & { flatIdx: number }> = [];
-  for (const group of groups) {
-    for (const log of group.logs) {
-      result.push({ ...log, flatIdx: idx++ });
-    }
-  }
-  return result;
-}
-
 /** 인라인 Diff 미리보기용 첫 변경 필드 추출 (최대 1개) */
 function getFirstDiff(
   previousValue: Record<string, unknown> | undefined,

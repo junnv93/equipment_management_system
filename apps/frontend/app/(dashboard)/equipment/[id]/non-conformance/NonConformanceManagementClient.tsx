@@ -99,13 +99,7 @@ export default function NonConformanceManagementClient({
     const label = `${equipment.name} (${equipment.managementNumber})`;
     setDynamicLabel(equipmentId, label);
     return () => clearDynamicLabel(equipmentId);
-  }, [
-    equipmentId,
-    equipment?.name,
-    equipment?.managementNumber,
-    setDynamicLabel,
-    clearDynamicLabel,
-  ]);
+  }, [equipmentId, equipment, setDynamicLabel, clearDynamicLabel]);
 
   // 부적합 등록 폼 상태
   const [showCreateForm, setShowCreateForm] = useState(false);

@@ -21,9 +21,9 @@ import {
   SITE_PANEL_TOKENS,
   TEAM_ROW_TOKENS,
   CLS_PILL_TOKENS,
-} from '@/lib/design-tokens/components/team';
-import { getStaggerDelay } from '@/lib/design-tokens/motion';
-import { MOTION_PRIMITIVES } from '@/lib/design-tokens/primitives';
+  getStaggerDelay,
+  MOTION_PRIMITIVES,
+} from '@/lib/design-tokens';
 
 interface TeamListContentProps {
   initialData?: PaginatedResponse<Team>;

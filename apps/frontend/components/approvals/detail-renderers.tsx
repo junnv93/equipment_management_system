@@ -56,11 +56,12 @@ type TFunc = (key: string) => string;
  * 카테고리 배지 컴포넌트
  */
 export function CategoryBadge({ category }: { category: ApprovalCategory }) {
+  const t = useTranslations('approvals');
   const meta = TAB_META[category];
   if (!meta) return null;
   return (
     <Badge variant="outline" className="text-xs">
-      {meta.label}
+      {t(meta.labelKey as Parameters<typeof t>[0])}
     </Badge>
   );
 }

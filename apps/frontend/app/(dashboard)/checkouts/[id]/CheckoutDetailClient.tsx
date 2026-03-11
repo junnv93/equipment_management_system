@@ -105,7 +105,7 @@ export default function CheckoutDetailClient({
     return () => {
       clearDynamicLabel(checkout.id);
     };
-  }, [checkout.id, checkout.purpose, checkout.destination, setDynamicLabel, clearDynamicLabel]);
+  }, [checkout.id, checkout.purpose, checkout.destination, setDynamicLabel, clearDynamicLabel, t]);
 
   // 다이얼로그 상태 (통합)
   const [dialogState, setDialogState] = useState({

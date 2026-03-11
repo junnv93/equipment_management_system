@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { MapPin, Package, Calendar, Wrench } from 'lucide-react';
+import { MapPin, Package, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { CALIBRATION_METHOD_LABELS, type CalibrationMethod } from '@equipment-management/schemas';

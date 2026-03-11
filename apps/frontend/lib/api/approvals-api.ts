@@ -99,24 +99,17 @@ export const ROLE_TABS: Record<UserRole, ApprovalCategory[]> = {
  * - 백엔드 DTO에서도 해당 필드를 .min(1)로 검증
  */
 export interface TabMeta {
-  /** 표시 라벨 (한국어 하드코딩) — deprecated: labelKey로 전환 예정 */
-  label: string;
-  /** i18n 키 — Phase 3에서 label 대체. 사용: t(labelKey) with useTranslations('approvals') */
-  labelKey?: string;
+  /** i18n 키 — t(labelKey) with useTranslations('approvals') */
+  labelKey: string;
+  /** lucide-react 아이콘 이름 */
   icon: string;
-  /** 액션 라벨 (한국어 하드코딩) — deprecated: actionKey로 전환 예정 */
-  action: string;
-  /** i18n 키 — Phase 3에서 action 대체 */
-  actionKey?: string;
+  /** i18n 키 — 승인/검토 버튼 라벨 */
+  actionKey: string;
   /** 승인 시 코멘트 입력 필수 여부 (기본 false) */
   commentRequired?: boolean;
-  /** 코멘트 입력 다이얼로그 제목 (commentRequired일 때 사용) */
-  commentDialogTitle?: string;
-  /** i18n 키 — Phase 3에서 commentDialogTitle 대체 */
+  /** i18n 키 — 코멘트 다이얼로그 제목 (commentRequired일 때 사용) */
   commentDialogTitleKey?: string;
-  /** 코멘트 placeholder (commentRequired일 때 사용) */
-  commentPlaceholder?: string;
-  /** i18n 키 — Phase 3에서 commentPlaceholder 대체 */
+  /** i18n 키 — 코멘트 placeholder (commentRequired일 때 사용) */
   commentPlaceholderKey?: string;
   /** 다단계 승인 여부 (disposal 2-step, calibration_plan 3-step) */
   multiStep?: boolean;
@@ -148,107 +141,83 @@ export const REJECTION_MIN_LENGTH = 10;
 export const TAB_META: Record<ApprovalCategory, TabMeta> = {
   // Direction-based (checkout section)
   outgoing: {
-    label: '반출',
     labelKey: 'tabMeta.outgoing.label',
     icon: 'ArrowUpFromLine',
-    action: '승인',
     actionKey: 'tabMeta.outgoing.action',
     section: 'checkout',
   },
   incoming: {
-    label: '반입',
     labelKey: 'tabMeta.incoming.label',
     icon: 'ArrowDownToLine',
-    action: '승인',
     actionKey: 'tabMeta.incoming.action',
     section: 'checkout',
   },
 
   // Equipment section
   equipment: {
-    label: '장비',
     labelKey: 'tabMeta.equipment.label',
     icon: 'Package',
-    action: '승인',
     actionKey: 'tabMeta.equipment.action',
     section: 'equipment',
   },
   calibration: {
-    label: '교정 기록',
     labelKey: 'tabMeta.calibration.label',
     icon: 'FileCheck',
-    action: '승인',
     actionKey: 'tabMeta.calibration.action',
     section: 'equipment',
   },
   inspection: {
-    label: '중간점검',
     labelKey: 'tabMeta.inspection.label',
     icon: 'ClipboardCheck',
-    action: '승인',
     actionKey: 'tabMeta.inspection.action',
     section: 'equipment',
   },
   nonconformity: {
-    label: '부적합 재개',
     labelKey: 'tabMeta.nonconformity.label',
     icon: 'AlertTriangle',
-    action: '승인',
     actionKey: 'tabMeta.nonconformity.action',
     section: 'equipment',
   },
 
   // Management section
   disposal_review: {
-    label: '폐기 검토',
     labelKey: 'tabMeta.disposal_review.label',
     icon: 'Trash2',
-    action: '검토완료',
     actionKey: 'tabMeta.disposal_review.action',
     commentRequired: true,
-    commentDialogTitle: '폐기 검토 의견',
     commentDialogTitleKey: 'tabMeta.disposal_review.commentDialogTitle',
-    commentPlaceholder: '검토 의견을 입력하세요',
     commentPlaceholderKey: 'tabMeta.disposal_review.commentPlaceholder',
     multiStep: true,
     multiStepType: 'disposal',
     section: 'management',
   },
   disposal_final: {
-    label: '폐기 승인',
     labelKey: 'tabMeta.disposal_final.label',
     icon: 'Trash2',
-    action: '승인',
     actionKey: 'tabMeta.disposal_final.action',
     multiStep: true,
     multiStepType: 'disposal',
     section: 'management',
   },
   plan_review: {
-    label: '교정계획서 검토',
     labelKey: 'tabMeta.plan_review.label',
     icon: 'Calendar',
-    action: '검토완료',
     actionKey: 'tabMeta.plan_review.action',
     multiStep: true,
     multiStepType: 'calibration_plan',
     section: 'management',
   },
   plan_final: {
-    label: '교정계획서 승인',
     labelKey: 'tabMeta.plan_final.label',
     icon: 'Calendar',
-    action: '승인',
     actionKey: 'tabMeta.plan_final.action',
     multiStep: true,
     multiStepType: 'calibration_plan',
     section: 'management',
   },
   software: {
-    label: '소프트웨어',
     labelKey: 'tabMeta.software.label',
     icon: 'Code',
-    action: '검토완료',
     actionKey: 'tabMeta.software.action',
     section: 'management',
   },

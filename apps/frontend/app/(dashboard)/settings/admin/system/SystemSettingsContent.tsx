@@ -51,12 +51,6 @@ const systemSettingsFormSchema = z.object({
 
 type SystemSettingsForm = z.infer<typeof systemSettingsFormSchema>;
 
-const DEFAULTS: SystemSettingsForm = {
-  auditLogRetentionDays: String(DEFAULT_SYSTEM_SETTINGS.auditLogRetentionDays),
-  notificationRetentionDays: String(DEFAULT_SYSTEM_SETTINGS.notificationRetentionDays),
-  maintenanceMessage: DEFAULT_SYSTEM_SETTINGS.maintenanceMessage,
-};
-
 /**
  * 시스템 설정 컨테이너 (로딩 후 자식 마운트)
  *

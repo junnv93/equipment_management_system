@@ -124,6 +124,7 @@ export function EquipmentStickyHeader({
     equipment.calibrationRequired,
     equipment.calibrationMethod,
     equipment.nextCalibrationDate,
+    t,
   ]);
 
   return (

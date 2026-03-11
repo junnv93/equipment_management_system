@@ -148,7 +148,7 @@ export function CalibrationPlanDetailClient({
     return () => {
       clearDynamicLabel(planUuid);
     };
-  }, [plan, planUuid, setDynamicLabel, clearDynamicLabel]);
+  }, [plan, planUuid, setDynamicLabel, clearDynamicLabel, t, tEquip]);
 
   /**
    * 상태 변경 후 공통 캐시 무효화
