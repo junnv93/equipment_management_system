@@ -11,6 +11,7 @@ import {
   getSemanticBadgeClasses,
   getSemanticContainerColorClasses,
   ncStatusToSemantic,
+  NC_APPROVE_BUTTON_TOKENS,
 } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
@@ -276,7 +277,7 @@ export default function NonConformanceApprovalsContent() {
                     <Button
                       onClick={() => handleClose(nc.id)}
                       disabled={closingId === nc.id}
-                      className="bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-500 text-white"
+                      className={NC_APPROVE_BUTTON_TOKENS.approve}
                     >
                       {closingId === nc.id ? (
                         <>

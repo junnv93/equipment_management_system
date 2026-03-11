@@ -230,7 +230,12 @@ export {
 } from './components/equipment-timeline';
 
 // Non-Conformance
-export { ncStatusToSemantic } from './components/non-conformance';
+export {
+  ncStatusToSemantic,
+  NC_BANNER_TOKENS,
+  NC_REPAIR_LINKED_TOKENS,
+  NC_APPROVE_BUTTON_TOKENS,
+} from './components/non-conformance';
 
 // Calibration
 export {

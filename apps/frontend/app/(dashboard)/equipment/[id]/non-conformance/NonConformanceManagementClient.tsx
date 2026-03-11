@@ -28,6 +28,7 @@ import {
   getSemanticContainerClasses,
   getSemanticContainerTextClasses,
   ncStatusToSemantic,
+  NC_REPAIR_LINKED_TOKENS,
 } from '@/lib/design-tokens';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
@@ -510,7 +511,7 @@ export default function NonConformanceManagementClient({
                   {nc.repairHistoryId && (
                     <Link
                       href={`/equipment/${equipmentId}/repair-history`}
-                      className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400 rounded hover:bg-green-200 dark:hover:bg-green-900/30 motion-safe:transition-colors motion-reduce:transition-none"
+                      className={NC_REPAIR_LINKED_TOKENS.badge}
                     >
                       {t('nonConformanceManagement.repairLinked')}
                     </Link>
@@ -648,7 +649,7 @@ export default function NonConformanceManagementClient({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                    <div className={NC_REPAIR_LINKED_TOKENS.text}>
                       <CheckCircle className="h-4 w-4" aria-hidden="true" />
                       {t('nonConformanceManagement.repairLinkedApproval')}
                       <Link
