@@ -8,7 +8,7 @@
  * - IncidentHistoryTab
  */
 
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 /**
  * 타임라인 스타일
@@ -35,7 +35,7 @@ export const TIMELINE_TOKENS = {
   /** 타임라인 카드 */
   card: {
     base: 'rounded-lg border bg-card p-4',
-    hover: ['hover:shadow-md', getTransitionClasses('fast', ['box-shadow'])].join(' '),
+    hover: `hover:shadow-md ${TRANSITION_PRESETS.fastShadow}`,
   },
 
   /** 항목 간 간격 */

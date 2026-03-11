@@ -13,6 +13,7 @@
  */
 
 import { TRANSITION_PRESETS } from '../motion';
+import { getSemanticStatusClasses } from '../brand';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 페이지 헤더
@@ -48,9 +49,9 @@ export const SOFTWARE_STATS_TOKENS = {
 
   iconContainer: 'h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0',
   iconBg: {
-    equipment: 'bg-brand-info/10 text-brand-info',
-    types: 'bg-brand-purple/10 text-brand-purple',
-    updated: 'bg-brand-ok/10 text-brand-ok',
+    equipment: getSemanticStatusClasses('info'),
+    types: getSemanticStatusClasses('purple'),
+    updated: getSemanticStatusClasses('ok'),
   } as Record<string, string>,
 
   label: 'text-xs text-muted-foreground font-medium',
@@ -154,7 +155,7 @@ export const SOFTWARE_EMPTY_STATE_TOKENS = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const SOFTWARE_APPROVAL_BADGE_TOKENS: Record<string, string> = {
-  pending: 'bg-brand-warning/10 text-brand-warning',
-  approved: 'bg-brand-ok/10 text-brand-ok',
-  rejected: 'bg-brand-critical/10 text-brand-critical',
+  pending: getSemanticStatusClasses('warning'),
+  approved: getSemanticStatusClasses('ok'),
+  rejected: getSemanticStatusClasses('critical'),
 } as const;

@@ -10,6 +10,12 @@
 
 import { FOCUS_TOKENS } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
+import {
+  getSemanticSolidBgClasses,
+  getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
+  getSemanticLeftBorderClasses,
+} from '../brand';
 
 // ============================================================================
 // Disposal Stepper Tokens
@@ -27,16 +33,16 @@ export const DISPOSAL_STEPPER_TOKENS = {
 
   /** 스텝 상태별 스타일 */
   status: {
-    completed: 'border-brand-ok bg-brand-ok text-white',
-    current: 'border-brand-repair bg-brand-repair text-white',
+    completed: `border-brand-ok ${getSemanticSolidBgClasses('ok')}`,
+    current: `border-brand-repair ${getSemanticSolidBgClasses('repair')}`,
     pending: 'border-brand-neutral/20 bg-background text-muted-foreground',
   },
 
   /** 스텝 라벨 */
   label: {
     base: 'text-xs font-medium',
-    completed: 'text-brand-ok',
-    current: 'text-brand-repair',
+    completed: getSemanticContainerTextClasses('ok'),
+    current: getSemanticContainerTextClasses('repair'),
     pending: 'text-muted-foreground',
   },
 
@@ -63,8 +69,8 @@ export const DISPOSAL_TIMELINE_TOKENS = {
   node: {
     size: 'h-9 w-9',
     base: 'flex shrink-0 items-center justify-center rounded-full border-2',
-    completed: 'border-brand-ok bg-brand-ok text-white',
-    rejected: 'border-brand-critical bg-brand-critical text-white',
+    completed: `border-brand-ok ${getSemanticSolidBgClasses('ok')}`,
+    rejected: `border-brand-critical ${getSemanticSolidBgClasses('critical')}`,
     pending: 'border-brand-neutral/20 bg-background text-muted-foreground',
   },
 
@@ -77,15 +83,15 @@ export const DISPOSAL_TIMELINE_TOKENS = {
 
   /** 단계 제목 */
   title: {
-    completed: 'text-brand-ok',
-    rejected: 'text-brand-critical',
+    completed: getSemanticContainerTextClasses('ok'),
+    rejected: getSemanticContainerTextClasses('critical'),
     pending: 'text-muted-foreground',
   },
 
   /** 카드 배경 */
   card: {
     default: 'border-border bg-muted',
-    rejected: 'border-brand-critical/20 bg-brand-critical/10',
+    rejected: getSemanticContainerColorClasses('critical'),
   },
 } as const;
 
@@ -98,10 +104,10 @@ export const DISPOSAL_TIMELINE_TOKENS = {
  */
 export const DISPOSAL_PROGRESS_CARD_TOKENS = {
   /** 카드 컨테이너 */
-  container: 'border-l-4 border-l-brand-repair bg-brand-repair/10 border-brand-repair/20',
+  container: `border-l-4 ${getSemanticLeftBorderClasses('repair')} ${getSemanticContainerColorClasses('repair')}`,
 
   /** 제목 */
-  title: 'text-brand-repair font-semibold',
+  title: `${getSemanticContainerTextClasses('repair')} font-semibold`,
 
   /** 본문 */
   text: 'text-sm text-brand-repair',
@@ -120,7 +126,7 @@ export const DISPOSAL_PROGRESS_CARD_TOKENS = {
  * 폐기 완료 배너 (DisposedBanner)
  */
 export const DISPOSAL_BANNER_TOKENS = {
-  container: 'border-l-4 border-l-brand-neutral bg-brand-neutral/10 border-border',
+  container: `border-l-4 ${getSemanticLeftBorderClasses('neutral')} bg-brand-neutral/10 border-border`,
   title: 'text-foreground font-semibold',
   text: 'text-sm text-brand-neutral',
   icon: 'h-5 w-5 text-brand-neutral',
@@ -165,17 +171,17 @@ export const DISPOSAL_BUTTON_TOKENS = {
  */
 export const DISPOSAL_INFO_CARD_TOKENS = {
   /** 기본 정보 카드 */
-  container: 'border-brand-info/20 bg-brand-info/10',
-  title: 'text-sm font-medium text-brand-info',
+  container: getSemanticContainerColorClasses('info'),
+  title: `text-sm font-medium ${getSemanticContainerTextClasses('info')}`,
   label: 'font-medium text-foreground',
   text: 'text-muted-foreground',
 
   /** 반려 안내 영역 */
-  rejectNotice: 'rounded-md bg-brand-critical/10 border border-brand-critical/20 p-3',
-  rejectText: 'text-sm text-brand-critical',
+  rejectNotice: `rounded-md ${getSemanticContainerColorClasses('critical')} border p-3`,
+  rejectText: `text-sm ${getSemanticContainerTextClasses('critical')}`,
 
   /** 반려 카운트 */
-  rejectCount: 'text-xs text-brand-critical',
+  rejectCount: `text-xs ${getSemanticContainerTextClasses('critical')}`,
 } as const;
 
 // ============================================================================
@@ -186,9 +192,9 @@ export const DISPOSAL_INFO_CARD_TOKENS = {
  * 검토 의견 카드
  */
 export const REVIEW_OPINION_CARD_TOKENS = {
-  container: 'border-l-4 border-l-brand-info bg-brand-info/10',
-  reviewerName: 'text-sm font-semibold text-brand-info',
-  timestamp: 'text-xs text-brand-info',
+  container: `border-l-4 ${getSemanticLeftBorderClasses('info')} bg-brand-info/10`,
+  reviewerName: `text-sm font-semibold ${getSemanticContainerTextClasses('info')}`,
+  timestamp: `text-xs ${getSemanticContainerTextClasses('info')}`,
   blockquote: 'border-l-2 border-brand-info/30 pl-3 text-sm text-foreground italic',
 } as const;
 

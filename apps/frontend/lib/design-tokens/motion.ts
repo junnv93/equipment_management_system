@@ -100,6 +100,8 @@ export const TRANSITION_PRESETS = {
     'opacity',
     'border-color',
   ]),
+  /** box-shadow */
+  fastShadow: getTransitionClasses('fast', ['box-shadow']),
   /** box-shadow, transform */
   fastShadowTransform: getTransitionClasses('fast', ['box-shadow', 'transform']),
   /** box-shadow, border-color */
@@ -124,6 +126,8 @@ export const TRANSITION_PRESETS = {
     'background-color',
     'opacity',
   ]),
+  /** background-color, transform, opacity, box-shadow (기본 4속성) */
+  fastAll: getTransitionClasses('fast', ['background-color', 'transform', 'opacity', 'box-shadow']),
 
   // ── Instant (100ms) ───────────────────────────
   /** background-color */

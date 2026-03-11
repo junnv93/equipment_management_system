@@ -14,6 +14,11 @@
 
 import { FOCUS_TOKENS } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
+import {
+  getSemanticStatusClasses,
+  getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
+} from '../brand';
 import { type StatsVariant } from './dashboard';
 import { AlertCircle, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -112,7 +117,7 @@ export const CALIBRATION_CHECK_BADGE: Record<
     icon: Clock,
   },
   upcoming: {
-    badge: 'bg-brand-warning/10 text-brand-warning',
+    badge: getSemanticStatusClasses('warning'),
     icon: AlertTriangle,
   },
   future: {
@@ -558,9 +563,9 @@ export const CALIBRATION_TAB_TRANSITION = TRANSITION_PRESETS.fastOpacity;
  * - conditional: 조건부 합격 (Yellow)
  */
 export const CALIBRATION_RESULT_BADGE: Record<string, string> = {
-  pass: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
+  pass: `${getSemanticContainerColorClasses('ok')} ${getSemanticContainerTextClasses('ok')}`,
   fail: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',
-  conditional: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
+  conditional: `${getSemanticContainerColorClasses('warning')} ${getSemanticContainerTextClasses('warning')}`,
 };
 export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground border-border';
 
@@ -576,8 +581,8 @@ export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground 
  * - rejected: 반려됨 (UL Red)
  */
 export const CALIBRATION_APPROVAL_BADGE: Record<string, string> = {
-  pending_approval: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
-  approved: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
+  pending_approval: `${getSemanticContainerColorClasses('warning')} ${getSemanticContainerTextClasses('warning')}`,
+  approved: `${getSemanticContainerColorClasses('ok')} ${getSemanticContainerTextClasses('ok')}`,
   rejected:
     'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',
 };
@@ -660,7 +665,7 @@ export const CALIBRATION_VERSION_HISTORY = {
     current: 'text-brand-ok',
     default: 'text-muted-foreground',
   },
-  latestBadge: 'bg-brand-ok/10 text-brand-ok border border-brand-ok/20',
+  latestBadge: `${getSemanticContainerColorClasses('ok')} ${getSemanticContainerTextClasses('ok')} border`,
   currentBadge: 'text-ul-midnight border-ul-midnight/30',
 } as const;
 

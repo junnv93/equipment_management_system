@@ -187,12 +187,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   pending_disposal: {
     card: {
-      className: 'bg-brand-repair/10 text-brand-repair',
-      borderColor: 'border-l-brand-repair',
+      className: getSemanticStatusClasses('repair'),
+      borderColor: getSemanticLeftBorderClasses('repair'),
       statusBarColor: 'bg-brand-warning',
     },
     header: {
-      textColor: 'text-brand-repair',
+      textColor: getSemanticContainerTextClasses('repair'),
       bgClasses: 'bg-brand-repair/10 border-brand-repair',
     },
     icon: AlertCircle,
@@ -201,12 +201,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   disposed: {
     card: {
-      className: 'bg-brand-neutral/10 text-brand-neutral',
-      borderColor: 'border-l-brand-neutral',
+      className: getSemanticStatusClasses('neutral'),
+      borderColor: getSemanticLeftBorderClasses('neutral'),
       statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
-      textColor: 'text-brand-neutral',
+      textColor: getSemanticContainerTextClasses('neutral'),
       bgClasses: 'bg-brand-neutral/20 border-brand-neutral',
     },
     icon: Ban,
@@ -229,12 +229,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   inactive: {
     card: {
-      className: 'bg-brand-neutral/10 text-brand-neutral',
-      borderColor: 'border-l-brand-neutral',
+      className: getSemanticStatusClasses('neutral'),
+      borderColor: getSemanticLeftBorderClasses('neutral'),
       statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
-      textColor: 'text-brand-neutral',
+      textColor: getSemanticContainerTextClasses('neutral'),
       bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
     },
     icon: Package,
@@ -248,12 +248,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
  */
 export const DEFAULT_STATUS_CONFIG: EquipmentStatusConfig = {
   card: {
-    className: 'bg-brand-neutral/10 text-brand-neutral',
-    borderColor: 'border-l-brand-neutral',
+    className: getSemanticStatusClasses('neutral'),
+    borderColor: getSemanticLeftBorderClasses('neutral'),
     statusBarColor: 'bg-brand-neutral',
   },
   header: {
-    textColor: 'text-brand-neutral',
+    textColor: getSemanticContainerTextClasses('neutral'),
     bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
   },
   icon: Package,
@@ -298,8 +298,8 @@ export interface CalibrationBadgeStyle {
  */
 export const CALIBRATION_BADGE_TOKENS: Record<CalibrationSeverity, CalibrationBadgeStyle> = {
   overdue: {
-    card: 'bg-brand-critical text-white border-brand-critical/40',
-    table: 'bg-brand-critical text-white',
+    card: `${getSemanticSolidBgClasses('critical')} border-brand-critical/40`,
+    table: getSemanticSolidBgClasses('critical'),
     header: {
       textColor: 'text-brand-critical/80',
       bgClasses: 'bg-brand-critical/90 border-brand-critical/40',
@@ -307,8 +307,8 @@ export const CALIBRATION_BADGE_TOKENS: Record<CalibrationSeverity, CalibrationBa
     icon: AlertCircle,
   },
   urgent: {
-    card: 'bg-brand-repair text-white border-brand-repair/40',
-    table: 'bg-brand-repair text-white',
+    card: `${getSemanticSolidBgClasses('repair')} border-brand-repair/40`,
+    table: getSemanticSolidBgClasses('repair'),
     header: {
       textColor: 'text-brand-repair/80',
       bgClasses: 'bg-brand-repair/90 border-brand-repair/40',
@@ -316,8 +316,8 @@ export const CALIBRATION_BADGE_TOKENS: Record<CalibrationSeverity, CalibrationBa
     icon: AlertTriangle,
   },
   warning: {
-    card: 'bg-brand-warning text-white border-brand-warning/40',
-    table: 'bg-brand-warning text-white',
+    card: `${getSemanticSolidBgClasses('warning')} border-brand-warning/40`,
+    table: getSemanticSolidBgClasses('warning'),
     header: {
       textColor: 'text-brand-warning/80',
       bgClasses: 'bg-brand-warning/90 border-brand-warning/40',
@@ -707,15 +707,15 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
   label: 'text-xs text-muted-foreground',
   sub: 'text-[11px] text-muted-foreground/70',
   borderColors: {
-    ok: 'border-l-brand-ok',
-    warn: 'border-l-brand-critical',
-    info: 'border-l-brand-info',
+    ok: getSemanticLeftBorderClasses('ok'),
+    warn: getSemanticLeftBorderClasses('critical'),
+    info: getSemanticLeftBorderClasses('info'),
     neutral: 'border-l-border',
   },
   iconBg: {
-    ok: 'bg-brand-ok/10 text-brand-ok',
-    warn: 'bg-brand-critical/10 text-brand-critical',
-    info: 'bg-brand-info/10 text-brand-info',
+    ok: getSemanticStatusClasses('ok'),
+    warn: getSemanticStatusClasses('critical'),
+    info: getSemanticStatusClasses('info'),
     neutral: 'bg-muted text-muted-foreground',
   },
   iconContainer: 'rounded-md p-2 flex-shrink-0',
