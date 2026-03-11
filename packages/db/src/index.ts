@@ -1,7 +1,14 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool, PoolConfig } from 'pg';
 import * as dotenv from 'dotenv';
 import * as schema from './schema';
+
+/**
+ * SSOT: 전체 프로젝트에서 사용하는 DB 인스턴스 타입
+ * 개별 서비스에서 NodePgDatabase<typeof schema>를 직접 import하지 않고 이 타입을 사용합니다.
+ */
+export type AppDatabase = NodePgDatabase<typeof schema>;
 
 // 환경 변수 로드
 dotenv.config();

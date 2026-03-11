@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { eq, and, asc, desc, sql, isNull, ilike, or, lte, gte } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { calibrationFactors, CalibrationFactor } from '@equipment-management/db/schema';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
@@ -40,7 +40,7 @@ export interface CalibrationFactorRecord {
 export class CalibrationFactorsService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>
+    private readonly db: AppDatabase
   ) {}
 
   /**

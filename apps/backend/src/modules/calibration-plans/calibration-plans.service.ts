@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, desc, sql, SQL } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
   calibrationPlans,
@@ -46,7 +46,7 @@ import type {
 export class CalibrationPlansService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: SimpleCacheService
   ) {}

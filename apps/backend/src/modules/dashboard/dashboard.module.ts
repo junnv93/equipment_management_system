@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 import { DrizzleModule } from '../../database/drizzle.module';
+import { ApprovalsModule } from '../approvals/approvals.module';
 
 /**
  * 대시보드 모듈
@@ -10,11 +11,11 @@ import { DrizzleModule } from '../../database/drizzle.module';
  * - 장비 현황 집계
  * - 교정 일정 및 지연 현황
  * - 대여/반출 현황
- * - 승인 대기 카운트
+ * - 승인 대기 카운트 (ApprovalsService에 위임)
  * - 최근 활동 내역
  */
 @Module({
-  imports: [DrizzleModule],
+  imports: [DrizzleModule, ApprovalsModule],
   controllers: [DashboardController],
   providers: [DashboardService],
   exports: [DashboardService],

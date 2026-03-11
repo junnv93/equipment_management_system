@@ -7,7 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { eq, and, like, desc, sql, SQL, or } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import * as schema from '@equipment-management/db/schema';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
@@ -46,7 +46,7 @@ export class EquipmentImportsService extends VersionedBaseService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>,
+    protected readonly db: AppDatabase,
     private readonly equipmentService: EquipmentService,
     @Inject(forwardRef(() => CheckoutsService))
     private readonly checkoutsService: CheckoutsService,
@@ -426,58 +426,63 @@ export class EquipmentImportsService extends VersionedBaseService {
       `Receiving equipment import: ${id} (sourceType: ${equipmentImport.sourceType}, sharedSource: ${sharedSource}, owner: ${owner})`
     );
 
-    // 장비 직접 생성
-    const [newEquipment] = await this.db
-      .insert(equipment)
-      .values({
-        name: equipmentImport.equipmentName,
-        managementNumber,
-        site: equipmentImport.site,
-        modelName: equipmentImport.modelName,
-        manufacturer: equipmentImport.manufacturer,
-        serialNumber: equipmentImport.serialNumber,
-        description: equipmentImport.description,
-        teamId: equipmentImport.teamId,
-        isShared: true,
-        sharedSource, // 'external' or 'internal_shared'
-        owner, // vendorName or ownerDepartment
-        externalIdentifier,
-        usagePeriodStart: equipmentImport.usagePeriodStart,
-        usagePeriodEnd: equipmentImport.usagePeriodEnd,
-        status: 'temporary',
-        isActive: true,
-        approvalStatus: EIVal.APPROVED,
-        // 교정 정보 추가
-        calibrationMethod: dto.calibrationInfo?.calibrationMethod || null,
-        calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
-        lastCalibrationDate: dto.calibrationInfo?.lastCalibrationDate
-          ? new Date(dto.calibrationInfo.lastCalibrationDate)
-          : null,
-        calibrationAgency: dto.calibrationInfo?.calibrationAgency || null,
-        nextCalibrationDate,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as typeof equipment.$inferInsert)
-      .returning();
+    // 장비 생성 + 반입 상태 업데이트 — 원자성 보장
+    const updated = await this.db.transaction(async (tx) => {
+      const [newEquipment] = await tx
+        .insert(equipment)
+        .values({
+          name: equipmentImport.equipmentName,
+          managementNumber,
+          site: equipmentImport.site,
+          modelName: equipmentImport.modelName,
+          manufacturer: equipmentImport.manufacturer,
+          serialNumber: equipmentImport.serialNumber,
+          description: equipmentImport.description,
+          teamId: equipmentImport.teamId,
+          isShared: true,
+          sharedSource, // 'external' or 'internal_shared'
+          owner, // vendorName or ownerDepartment
+          externalIdentifier,
+          usagePeriodStart: equipmentImport.usagePeriodStart,
+          usagePeriodEnd: equipmentImport.usagePeriodEnd,
+          status: 'temporary',
+          isActive: true,
+          approvalStatus: EIVal.APPROVED,
+          // 교정 정보 추가
+          calibrationMethod: dto.calibrationInfo?.calibrationMethod || null,
+          calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
+          lastCalibrationDate: dto.calibrationInfo?.lastCalibrationDate
+            ? new Date(dto.calibrationInfo.lastCalibrationDate)
+            : null,
+          calibrationAgency: dto.calibrationInfo?.calibrationAgency || null,
+          nextCalibrationDate,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        } as typeof equipment.$inferInsert)
+        .returning();
 
-    // ✅ CAS: equipment import 업데이트 (optimistic locking)
-    const updated = await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
-      equipmentImports,
-      id,
-      equipmentImport.version,
-      {
-        status: EIVal.RECEIVED as EquipmentImportStatus,
-        receivedBy,
-        receivedAt: new Date(),
-        receivingCondition: dto.receivingCondition,
-        equipmentId: newEquipment.id,
-      },
-      'Equipment import'
-    );
+      // ✅ CAS: equipment import 업데이트 (tx 컨텍스트로 원자성 보장)
+      const result = await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
+        equipmentImports,
+        id,
+        equipmentImport.version,
+        {
+          status: EIVal.RECEIVED as EquipmentImportStatus,
+          receivedBy,
+          receivedAt: new Date(),
+          receivingCondition: dto.receivingCondition,
+          equipmentId: newEquipment.id,
+        },
+        'Equipment import',
+        tx
+      );
 
-    this.logger.log(
-      `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
-    );
+      this.logger.log(
+        `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
+      );
+
+      return result;
+    });
 
     return updated;
   }
@@ -605,19 +610,21 @@ export class EquipmentImportsService extends VersionedBaseService {
       `Return completed for equipment import: ${equipmentImport.id} (sourceType: ${equipmentImport.sourceType})`
     );
 
-    // 장비 반입 완료 처리
-    await this.db
-      .update(equipmentImports)
-      .set({
-        status: EIVal.RETURNED as EquipmentImportStatus,
-        updatedAt: new Date(),
-      })
-      .where(eq(equipmentImports.id, equipmentImport.id));
+    // 장비 반입 완료 + 장비 비활성화 — 원자성 보장
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(equipmentImports)
+        .set({
+          status: EIVal.RETURNED as EquipmentImportStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(equipmentImports.id, equipmentImport.id));
 
-    // 장비 비활성화
-    if (equipmentImport.equipmentId) {
-      await this.equipmentService.updateStatus(equipmentImport.equipmentId, 'inactive');
-    }
+      // 장비 비활성화
+      if (equipmentImport.equipmentId) {
+        await this.equipmentService.updateStatus(equipmentImport.equipmentId, 'inactive');
+      }
+    });
   }
 
   /**

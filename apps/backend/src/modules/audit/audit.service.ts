@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { auditLogs, NewAuditLog, AuditLog, AuditLogDetails } from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -14,6 +14,7 @@ import {
   type AuditLogFilter,
 } from '@equipment-management/schemas';
 import {
+  CACHE_TTL,
   USER_ROLE_LABELS,
   type UserRole,
   type ResolvedDataScope,
@@ -45,12 +46,8 @@ export interface PaginationMeta {
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
-  // Cache TTLs
-  private readonly LIST_CACHE_TTL = 1000 * 60 * 2; // 2분 (리스트는 짧게)
-  private readonly DETAIL_CACHE_TTL = 1000 * 60 * 10; // 10분 (감사 로그는 append-only라 오래 유지)
-
   constructor(
-    @Inject('DRIZZLE_INSTANCE') private db: PostgresJsDatabase<typeof schema>,
+    @Inject('DRIZZLE_INSTANCE') private db: AppDatabase,
     private readonly cacheService: SimpleCacheService
   ) {}
 
@@ -186,7 +183,7 @@ export class AuditService {
           },
         };
       },
-      this.LIST_CACHE_TTL
+      CACHE_TTL.MEDIUM
     );
   }
 
@@ -222,7 +219,7 @@ export class AuditService {
 
         return log;
       },
-      this.DETAIL_CACHE_TTL
+      CACHE_TTL.VERY_LONG
     );
   }
 
@@ -259,7 +256,7 @@ export class AuditService {
           .where(and(...conditions))
           .orderBy(desc(auditLogs.timestamp));
       },
-      this.LIST_CACHE_TTL
+      CACHE_TTL.MEDIUM
     );
   }
 
@@ -290,7 +287,7 @@ export class AuditService {
           .orderBy(desc(auditLogs.timestamp))
           .limit(limit);
       },
-      this.LIST_CACHE_TTL
+      CACHE_TTL.MEDIUM
     );
   }
 

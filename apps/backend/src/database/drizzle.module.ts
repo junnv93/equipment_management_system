@@ -70,7 +70,7 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
   }
 
   // DB 인스턴스 반환
-  getDB(): unknown {
+  getDB(): typeof db {
     return db;
   }
 

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { repairHistory, RepairHistory } from '@equipment-management/db/schema';
 import {
@@ -21,7 +21,7 @@ export type RepairHistoryRecord = RepairHistory;
 export class RepairHistoryService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     @Inject(forwardRef(() => NonConformancesService))
     private nonConformancesService: NonConformancesService
   ) {}

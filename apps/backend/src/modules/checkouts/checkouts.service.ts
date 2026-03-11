@@ -25,12 +25,16 @@ import {
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
-import { getAllowedStatusesForPurpose, Permission } from '@equipment-management/shared-constants';
+import {
+  CACHE_TTL,
+  getAllowedStatusesForPurpose,
+  Permission,
+} from '@equipment-management/shared-constants';
 import { eq, and, like, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { EquipmentService } from '../equipment/equipment.service';
@@ -130,7 +134,6 @@ export interface CheckoutListResponse {
 @Injectable()
 export class CheckoutsService extends VersionedBaseService {
   private readonly logger = new Logger(CheckoutsService.name);
-  private readonly CACHE_TTL = 1000 * 60 * 5; // 5분
   private readonly CACHE_PREFIX = 'checkouts:';
 
   // 인덱스가 있는 필드 목록 (정렬 최적화용)
@@ -145,7 +148,7 @@ export class CheckoutsService extends VersionedBaseService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>,
+    protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
     private readonly equipmentService: EquipmentService,
     private readonly teamsService: TeamsService,
@@ -560,7 +563,7 @@ export class CheckoutsService extends VersionedBaseService {
                 .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
               return Number(countResult[0]?.count || 0);
             },
-            this.CACHE_TTL
+            CACHE_TTL.LONG
           );
 
           const totalPages = Math.ceil(totalItems / pageSize);
@@ -667,7 +670,7 @@ export class CheckoutsService extends VersionedBaseService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 
@@ -757,7 +760,7 @@ export class CheckoutsService extends VersionedBaseService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 
@@ -814,7 +817,7 @@ export class CheckoutsService extends VersionedBaseService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
 
     // ✅ Phase 2: userPermissions 제공 시 meta.availableActions 포함
@@ -943,6 +946,7 @@ export class CheckoutsService extends VersionedBaseService {
       canCancel: status === CSVal.PENDING && hasPermission(Permission.CANCEL_CHECKOUT),
 
       // 상태 확인 등록: 대여 목적 + 특정 상태들 + 완료 권한
+      // 렌탈 4-Step: approved → lender_checked → borrower_received → borrower_returned
       canSubmitConditionCheck:
         purpose === CPVal.RENTAL &&
         (
@@ -950,7 +954,6 @@ export class CheckoutsService extends VersionedBaseService {
             CSVal.APPROVED,
             CSVal.LENDER_CHECKED,
             CSVal.BORROWER_RECEIVED,
-            CSVal.IN_USE,
             CSVal.BORROWER_RETURNED,
           ] as string[]
         ).includes(status) &&
@@ -1082,22 +1085,26 @@ export class CheckoutsService extends VersionedBaseService {
         insertData.lenderSiteId = createCheckoutDto.lenderSiteId || null;
       }
 
-      // 반출 생성 (Equipment 모듈과 동일한 패턴: as typeof table.$inferInsert)
-      const [newCheckout] = await this.db
-        .insert(checkouts)
-        .values(insertData as typeof checkouts.$inferInsert)
-        .returning();
+      // 반출 생성 — checkouts + checkoutItems 원자성 보장
+      const [newCheckout] = await this.db.transaction(async (tx) => {
+        const [checkout] = await tx
+          .insert(checkouts)
+          .values(insertData as typeof checkouts.$inferInsert)
+          .returning();
 
-      // 반출 장비 목록 생성
-      const itemsData = createCheckoutDto.equipmentIds.map((equipmentId) => ({
-        checkoutId: newCheckout.id,
-        equipmentId,
-        conditionBefore: null,
-        conditionAfter: null,
-        inspectionNotes: null,
-      }));
+        // 반출 장비 목록 생성
+        const itemsData = createCheckoutDto.equipmentIds.map((equipmentId) => ({
+          checkoutId: checkout.id,
+          equipmentId,
+          conditionBefore: null,
+          conditionAfter: null,
+          inspectionNotes: null,
+        }));
 
-      await this.db.insert(checkoutItems).values(itemsData);
+        await tx.insert(checkoutItems).values(itemsData);
+
+        return [checkout];
+      });
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화
       const affectedTeams = [userTeamId, insertData.lenderTeamId].filter(Boolean) as string[];
@@ -1751,8 +1758,14 @@ export class CheckoutsService extends VersionedBaseService {
       // 단계별 현재 상태 검증 및 상태 전이 매핑
       const stepTransitions: Record<string, { requiredStatus: string; nextStatus: string }> = {
         lender_checkout: { requiredStatus: CSVal.APPROVED, nextStatus: CSVal.LENDER_CHECKED },
-        borrower_receive: { requiredStatus: CSVal.LENDER_CHECKED, nextStatus: CSVal.IN_USE },
-        borrower_return: { requiredStatus: CSVal.IN_USE, nextStatus: CSVal.BORROWER_RETURNED },
+        borrower_receive: {
+          requiredStatus: CSVal.LENDER_CHECKED,
+          nextStatus: CSVal.BORROWER_RECEIVED,
+        },
+        borrower_return: {
+          requiredStatus: CSVal.BORROWER_RECEIVED,
+          nextStatus: CSVal.BORROWER_RETURNED,
+        },
         lender_return: {
           requiredStatus: CSVal.BORROWER_RETURNED,
           nextStatus: CSVal.LENDER_RECEIVED,

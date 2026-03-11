@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { and, eq, lte, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
@@ -26,7 +26,7 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     private readonly eventEmitter: EventEmitter2,
     private readonly cacheService: SimpleCacheService
   ) {}

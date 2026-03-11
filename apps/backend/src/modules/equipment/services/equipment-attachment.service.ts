@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject, NotFoundException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { equipmentAttachments } from '@equipment-management/db/schema';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { FileUploadService } from './file-upload.service';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
@@ -17,7 +17,7 @@ export class EquipmentAttachmentService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     private readonly fileUploadService: FileUploadService
   ) {}
 

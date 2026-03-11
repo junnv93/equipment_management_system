@@ -1,6 +1,20 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, and, gte, inArray, count } from 'drizzle-orm';
+import type { AppDatabase } from '@equipment-management/db';
+import {
+  eq,
+  and,
+  or,
+  ne,
+  gte,
+  lt,
+  inArray,
+  notInArray,
+  isNull,
+  isNotNull,
+  count,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import {
   CalibrationApprovalStatusEnum,
@@ -85,17 +99,14 @@ export interface PendingCountsByCategory {
 export class ApprovalsService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>
+    private readonly db: AppDatabase
   ) {}
 
   /**
-   * 역할별 승인 대기 개수 조회
+   * 역할별 승인 대기 개수 조회 (Approvals 페이지용)
    *
-   * 모든 카테고리의 개수를 병렬로 조회하여 성능 최적화
-   *
-   * @param userId - 현재 사용자 ID (권한 필터링용)
-   * @param userRole - 사용자 역할 (technical_manager, lab_manager, quality_manager)
-   * @returns 카테고리별 대기 개수
+   * getApprovalCountsByScope() 결과에 ROLE_CATEGORIES gating을 적용합니다.
+   * 역할에 해당하지 않는 카테고리는 DB 쿼리 자체를 생략합니다.
    */
   async getPendingCountsByRole(
     userId: string,
@@ -111,7 +122,6 @@ export class ApprovalsService {
       },
     });
 
-    // ✅ 사용자가 존재하지 않는 경우 명확한 에러 반환
     if (!user) {
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
@@ -119,24 +129,47 @@ export class ApprovalsService {
       });
     }
 
-    const userTeamId = user.teamId;
-    const userSite = user.site;
     const isLabManager = checkIsLabManager(userRole);
 
-    // Role-based category gating
+    // Role gating: 해당 역할이 접근 불가한 카테고리는 쿼리 자체를 생략
     const allowedCategories = ROLE_CATEGORIES[userRole] ?? new Set();
-    const shouldQuery = (category: string): boolean => allowedCategories.has(category);
+    const rawCounts = await this.getApprovalCountsByScope(
+      user.teamId,
+      user.site,
+      isLabManager,
+      allowedCategories
+    );
 
-    // Parallel execution for efficiency (with role gating)
+    return rawCounts;
+  }
+
+  /**
+   * 스코프 기반 승인 대기 개수 — Core Counting (SSOT)
+   *
+   * DashboardService와 ApprovalsController 양쪽에서 사용하는 단일 소스.
+   * allowedCategories가 주어지면 해당 카테고리만 쿼리하고 나머지는 0을 반환합니다.
+   * 생략 시 전체 카테고리를 쿼리합니다 (Dashboard용).
+   *
+   * @param userTeamId - 사용자 팀 ID (team-scoped 필터링)
+   * @param userSite - 사용자 사이트 (site-scoped 필터링)
+   * @param isLabManager - lab_manager 여부 (cross-site visibility)
+   * @param allowedCategories - 쿼리할 카테고리 제한 (없으면 전체)
+   */
+  async getApprovalCountsByScope(
+    userTeamId: string | null,
+    userSite: string | null,
+    isLabManager: boolean,
+    allowedCategories?: ReadonlySet<string>
+  ): Promise<PendingCountsByCategory> {
+    const shouldQuery = (category: string): boolean =>
+      !allowedCategories || allowedCategories.has(category);
+
     const [
-      // Direction-based counts (consolidated)
       outgoingCheckouts,
       outgoingVendorReturns,
       incomingReturns,
       incomingRentalImports,
       incomingSharedImports,
-
-      // Specialized counts
       equipmentCount,
       calibrationCount,
       inspectionCount,
@@ -148,7 +181,6 @@ export class ApprovalsService {
       softwareCount,
     ] = await Promise.all([
       // === Outgoing (반출) ===
-      // Regular checkouts (calibration, repair, rental — RETURN_TO_VENDOR 제외)
       shouldQuery('outgoing')
         ? this.getCheckoutCount(
             CheckoutStatusValues.PENDING,
@@ -159,7 +191,6 @@ export class ApprovalsService {
           )
         : Promise.resolve(0),
 
-      // Equipment being returned to vendors (part of outgoing)
       shouldQuery('outgoing')
         ? this.getCheckoutCount(
             CheckoutStatusValues.PENDING,
@@ -170,12 +201,10 @@ export class ApprovalsService {
         : Promise.resolve(0),
 
       // === Incoming (반입) ===
-      // Equipment returning from calibration/repair
       shouldQuery('incoming')
         ? this.getCheckoutCount(CheckoutStatusValues.RETURNED, undefined, userTeamId, isLabManager)
         : Promise.resolve(0),
 
-      // Rental equipment arriving from vendors
       shouldQuery('incoming')
         ? this.getEquipmentImportCount(
             EquipmentImportStatusValues.PENDING,
@@ -184,7 +213,6 @@ export class ApprovalsService {
           )
         : Promise.resolve(0),
 
-      // Shared equipment arriving from other teams
       shouldQuery('incoming')
         ? this.getEquipmentImportCount(
             EquipmentImportStatusValues.PENDING,
@@ -193,7 +221,7 @@ export class ApprovalsService {
           )
         : Promise.resolve(0),
 
-      // === Specialized (not movement) ===
+      // === Specialized ===
       shouldQuery('equipment') ? this.getEquipmentRequestCount(userSite) : Promise.resolve(0),
       shouldQuery('calibration') ? this.getCalibrationCount(userSite) : Promise.resolve(0),
       shouldQuery('inspection') ? this.getIntermediateCheckCount() : Promise.resolve(0),
@@ -201,20 +229,17 @@ export class ApprovalsService {
         ? this.getNonConformanceCount(userTeamId, isLabManager)
         : Promise.resolve(0),
       shouldQuery('disposal_review')
-        ? this.getDisposalReviewCount(userId, isLabManager, userTeamId)
+        ? this.getDisposalReviewCount('', isLabManager, userTeamId)
         : Promise.resolve(0),
       shouldQuery('disposal_final') ? this.getDisposalFinalCount(userSite) : Promise.resolve(0),
-      shouldQuery('plan_review') ? this.getCalibrationPlanReviewCount() : Promise.resolve(0), // Cross-site
+      shouldQuery('plan_review') ? this.getCalibrationPlanReviewCount() : Promise.resolve(0),
       shouldQuery('plan_final') ? this.getCalibrationPlanFinalCount() : Promise.resolve(0),
       shouldQuery('software') ? this.getSoftwareCount() : Promise.resolve(0),
     ]);
 
     return {
-      // Consolidated direction counts
       outgoing: outgoingCheckouts + outgoingVendorReturns,
       incoming: incomingReturns + incomingRentalImports + incomingSharedImports,
-
-      // Specialized counts
       equipment: equipmentCount,
       calibration: calibrationCount,
       inspection: inspectionCount,
@@ -254,6 +279,8 @@ export class ApprovalsService {
 
   /**
    * 반출 승인 대기 개수 조회
+   *
+   * N+1 제거: findMany + client-side filter → COUNT + JOIN WHERE
    */
   private async getCheckoutCount(
     status: string,
@@ -263,39 +290,25 @@ export class ApprovalsService {
     excludePurpose?: string
   ): Promise<number> {
     try {
-      const checkouts = await this.db.query.checkouts.findMany({
-        where: (checkouts, { eq: eqFn, and: andFn, ne }) => {
-          const conditions = [eqFn(checkouts.status, status)];
+      const conditions: SQL[] = [eq(schema.checkouts.status, status)];
+      if (purpose) conditions.push(eq(schema.checkouts.purpose, purpose));
+      if (excludePurpose) conditions.push(ne(schema.checkouts.purpose, excludePurpose));
 
-          if (purpose) {
-            conditions.push(eqFn(checkouts.purpose, purpose));
-          }
-
-          if (excludePurpose) {
-            conditions.push(ne(checkouts.purpose, excludePurpose));
-          }
-
-          return andFn(...conditions);
-        },
-        columns: {
-          id: true,
-          requesterId: true,
-        },
-        with: {
-          requester: {
-            columns: {
-              teamId: true,
-            },
-          },
-        },
-      });
-
-      // Filter by team if not lab_manager
+      // Team filter: DB-level JOIN + WHERE (client-side filter 제거)
       if (!isLabManager && userTeamId) {
-        return checkouts.filter((c) => c.requester?.teamId === userTeamId).length;
+        const [result] = await this.db
+          .select({ count: count() })
+          .from(schema.checkouts)
+          .innerJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
+          .where(and(...conditions, eq(schema.users.teamId, userTeamId)));
+        return result?.count ?? 0;
       }
 
-      return checkouts.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.checkouts)
+        .where(and(...conditions));
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -304,7 +317,7 @@ export class ApprovalsService {
   /**
    * 장비 반입 승인 대기 개수 조회
    *
-   * Site filtering: equipmentImports has direct site column
+   * findMany + .length → COUNT (데이터 전송 제거)
    */
   private async getEquipmentImportCount(
     status: string,
@@ -312,20 +325,17 @@ export class ApprovalsService {
     userSite?: string | null
   ): Promise<number> {
     try {
-      const items = await this.db.query.equipmentImports.findMany({
-        where: (imports, { eq: eqFn, and: andFn }) => {
-          const conditions = [eqFn(imports.status, status), eqFn(imports.sourceType, sourceType)];
-          if (userSite) {
-            conditions.push(eqFn(imports.site, userSite));
-          }
-          return andFn(...conditions);
-        },
-        columns: {
-          id: true,
-        },
-      });
+      const conditions: SQL[] = [
+        eq(schema.equipmentImports.status, status),
+        eq(schema.equipmentImports.sourceType, sourceType),
+      ];
+      if (userSite) conditions.push(eq(schema.equipmentImports.site, userSite));
 
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.equipmentImports)
+        .where(and(...conditions));
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -334,14 +344,13 @@ export class ApprovalsService {
   /**
    * 장비 등록/수정/삭제 승인 대기 개수
    *
-   * Site filtering: JOIN users via requestedBy, filter by users.site
-   * Pattern: DashboardService.getPendingApprovalCounts
+   * select + .length → COUNT
    */
   private async getEquipmentRequestCount(userSite?: string | null): Promise<number> {
     try {
       if (userSite) {
-        const result = await this.db
-          .select({ id: schema.equipmentRequests.id })
+        const [result] = await this.db
+          .select({ count: count() })
           .from(schema.equipmentRequests)
           .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
           .where(
@@ -350,20 +359,16 @@ export class ApprovalsService {
               eq(schema.users.site, userSite)
             )
           );
-        return result.length;
+        return result?.count ?? 0;
       }
 
-      const items = await this.db.query.equipmentRequests.findMany({
-        where: eq(
-          schema.equipmentRequests.approvalStatus,
-          ApprovalStatusEnum.enum.pending_approval
-        ),
-        columns: {
-          id: true,
-        },
-      });
-
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.equipmentRequests)
+        .where(
+          eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval)
+        );
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -372,13 +377,13 @@ export class ApprovalsService {
   /**
    * 교정 기록 승인 대기 개수
    *
-   * Site filtering: JOIN equipment, filter by equipment.site
+   * select + .length → COUNT
    */
   private async getCalibrationCount(userSite?: string | null): Promise<number> {
     try {
       if (userSite) {
-        const result = await this.db
-          .select({ id: schema.calibrations.id })
+        const [result] = await this.db
+          .select({ count: count() })
           .from(schema.calibrations)
           .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
           .where(
@@ -390,20 +395,19 @@ export class ApprovalsService {
               eq(schema.equipment.site, userSite)
             )
           );
-        return result.length;
+        return result?.count ?? 0;
       }
 
-      const items = await this.db.query.calibrations.findMany({
-        where: eq(
-          schema.calibrations.approvalStatus,
-          CalibrationApprovalStatusEnum.enum.pending_approval
-        ),
-        columns: {
-          id: true,
-        },
-      });
-
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.calibrations)
+        .where(
+          eq(
+            schema.calibrations.approvalStatus,
+            CalibrationApprovalStatusEnum.enum.pending_approval
+          )
+        );
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -418,15 +422,16 @@ export class ApprovalsService {
   private async getIntermediateCheckCount(): Promise<number> {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const items = await this.db.query.calibrations.findMany({
-        where: (calibrations, { isNotNull, lt, and: andFn }) =>
-          andFn(
-            isNotNull(calibrations.intermediateCheckDate),
-            lt(calibrations.intermediateCheckDate, today)
-          ),
-        columns: { id: true },
-      });
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.calibrations)
+        .where(
+          and(
+            isNotNull(schema.calibrations.intermediateCheckDate),
+            lt(schema.calibrations.intermediateCheckDate, today)
+          )
+        );
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -444,37 +449,30 @@ export class ApprovalsService {
     isLabManager?: boolean
   ): Promise<number> {
     try {
-      const items = await this.db.query.nonConformances.findMany({
-        where: (nc, { eq: eqFn, and: andFn, isNull: isNullFn }) =>
-          andFn(eqFn(nc.status, NonConformanceStatusValues.CORRECTED), isNullFn(nc.deletedAt)),
-        columns: {
-          id: true,
-          ncType: true,
-          repairHistoryId: true,
-        },
-        with: {
-          equipment: {
-            columns: {
-              teamId: true,
-            },
-          },
-        },
-      });
+      // N+1 제거: findMany + 2중 client-side filter → COUNT + SQL WHERE 푸시다운
+      const conditions: SQL[] = [
+        eq(schema.nonConformances.status, NonConformanceStatusValues.CORRECTED),
+        isNull(schema.nonConformances.deletedAt),
+        // 수리 필요 유형은 수리 이력이 있어야 승인 가능
+        or(
+          notInArray(schema.nonConformances.ncType, [
+            NonConformanceTypeValues.DAMAGE,
+            NonConformanceTypeValues.MALFUNCTION,
+          ]),
+          isNotNull(schema.nonConformances.repairHistoryId)
+        )!,
+      ];
 
-      // Filter out items that require repair but don't have repair history
-      let validItems = items.filter((item) => {
-        const requiresRepair =
-          item.ncType === NonConformanceTypeValues.DAMAGE ||
-          item.ncType === NonConformanceTypeValues.MALFUNCTION;
-        return !requiresRepair || item.repairHistoryId !== null;
-      });
-
-      // Team filtering (cross-site workflow consideration)
       if (!isLabManager && userTeamId) {
-        validItems = validItems.filter((item) => item.equipment?.teamId === userTeamId);
+        conditions.push(eq(schema.equipment.teamId, userTeamId));
       }
 
-      return validItems.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.nonConformances)
+        .innerJoin(schema.equipment, eq(schema.nonConformances.equipmentId, schema.equipment.id))
+        .where(and(...conditions));
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -484,31 +482,31 @@ export class ApprovalsService {
    * 폐기 검토 대기 개수 (기술책임자)
    */
   private async getDisposalReviewCount(
-    userId: string,
+    _userId: string,
     isLabManager: boolean,
     userTeamId?: string | null
   ): Promise<number> {
     try {
-      const requests = await this.db.query.disposalRequests.findMany({
-        where: eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING),
-        columns: {
-          id: true,
-        },
-        with: {
-          equipment: {
-            columns: {
-              teamId: true,
-            },
-          },
-        },
-      });
-
-      // Filter by team if not lab_manager
+      // N+1 제거: findMany + client-side filter → COUNT + JOIN WHERE
       if (!isLabManager && userTeamId) {
-        return requests.filter((r) => r.equipment?.teamId === userTeamId).length;
+        const [result] = await this.db
+          .select({ count: count() })
+          .from(schema.disposalRequests)
+          .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
+          .where(
+            and(
+              eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING),
+              eq(schema.equipment.teamId, userTeamId)
+            )
+          );
+        return result?.count ?? 0;
       }
 
-      return requests.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.disposalRequests)
+        .where(eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING));
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -522,8 +520,8 @@ export class ApprovalsService {
   private async getDisposalFinalCount(userSite?: string | null): Promise<number> {
     try {
       if (userSite) {
-        const result = await this.db
-          .select({ id: schema.disposalRequests.id })
+        const [result] = await this.db
+          .select({ count: count() })
           .from(schema.disposalRequests)
           .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
           .where(
@@ -532,17 +530,14 @@ export class ApprovalsService {
               eq(schema.equipment.site, userSite)
             )
           );
-        return result.length;
+        return result?.count ?? 0;
       }
 
-      const items = await this.db.query.disposalRequests.findMany({
-        where: eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED),
-        columns: {
-          id: true,
-        },
-      });
-
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.disposalRequests)
+        .where(eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED));
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -553,15 +548,16 @@ export class ApprovalsService {
    */
   private async getCalibrationPlanReviewCount(): Promise<number> {
     try {
-      const items = await this.db.query.calibrationPlans.findMany({
-        where: (plans, { eq: eqFn, and: andFn }) =>
-          andFn(
-            eqFn(plans.status, CalibrationPlanStatusValues.PENDING_REVIEW),
-            eqFn(plans.isLatestVersion, true)
-          ),
-        columns: { id: true },
-      });
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.calibrationPlans)
+        .where(
+          and(
+            eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.PENDING_REVIEW),
+            eq(schema.calibrationPlans.isLatestVersion, true)
+          )
+        );
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -572,15 +568,16 @@ export class ApprovalsService {
    */
   private async getCalibrationPlanFinalCount(): Promise<number> {
     try {
-      const items = await this.db.query.calibrationPlans.findMany({
-        where: (plans, { eq: eqFn, and: andFn }) =>
-          andFn(
-            eqFn(plans.status, CalibrationPlanStatusValues.PENDING_APPROVAL),
-            eqFn(plans.isLatestVersion, true)
-          ),
-        columns: { id: true },
-      });
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.calibrationPlans)
+        .where(
+          and(
+            eq(schema.calibrationPlans.status, CalibrationPlanStatusValues.PENDING_APPROVAL),
+            eq(schema.calibrationPlans.isLatestVersion, true)
+          )
+        );
+      return result?.count ?? 0;
     } catch {
       return 0;
     }
@@ -591,11 +588,11 @@ export class ApprovalsService {
    */
   private async getSoftwareCount(): Promise<number> {
     try {
-      const items = await this.db.query.softwareHistory.findMany({
-        where: eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING),
-        columns: { id: true },
-      });
-      return items.length;
+      const [result] = await this.db
+        .select({ count: count() })
+        .from(schema.softwareHistory)
+        .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING));
+      return result?.count ?? 0;
     } catch {
       return 0;
     }

@@ -6,7 +6,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { disposalRequests } from '@equipment-management/db/schema';
@@ -41,7 +41,7 @@ export class DisposalService extends VersionedBaseService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>,
+    protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
     private readonly eventEmitter: EventEmitter2
   ) {

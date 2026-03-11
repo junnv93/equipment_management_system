@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
   equipment as equipmentTable,
@@ -86,7 +86,7 @@ const CALIBRATION_STATUS_LABELS: Record<string, string> = {
 export class ReportsService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: NodePgDatabase<typeof schema>
+    private readonly db: AppDatabase
   ) {}
 
   // ══════════════════════════════════════════════════════════════════════════

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DashboardService } from '../dashboard.service';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { ApprovalsService } from '../../approvals/approvals.service';
 import { createMockCacheService } from '../../../common/testing/mock-providers';
 
 /** 집계 쿼리 mock — count 결과를 단일 객체 배열로 반환 */
@@ -42,11 +43,28 @@ describe('DashboardService', () => {
       select: jest.fn().mockReturnValue(createCountChain(0)),
     };
 
+    const mockApprovalsService = {
+      getApprovalCountsByScope: jest.fn().mockResolvedValue({
+        outgoing: 0,
+        incoming: 0,
+        equipment: 0,
+        calibration: 0,
+        inspection: 0,
+        nonconformity: 0,
+        disposal_review: 0,
+        disposal_final: 0,
+        plan_review: 0,
+        plan_final: 0,
+        software: 0,
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DashboardService,
         { provide: 'DRIZZLE_INSTANCE', useValue: mockDb },
         { provide: SimpleCacheService, useValue: mockCacheService },
+        { provide: ApprovalsService, useValue: mockApprovalsService },
       ],
     }).compile();
 

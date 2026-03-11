@@ -1,21 +1,28 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ApprovalsService } from '../approvals.service';
+import * as schema from '@equipment-management/db/schema';
 
 describe('ApprovalsService', () => {
   let service: ApprovalsService;
-  let mockDb: {
-    query: {
-      users: { findFirst: jest.Mock };
-      checkouts: { findMany: jest.Mock };
-      calibrations: { findMany: jest.Mock };
-      calibrationPlans: { findMany: jest.Mock };
-      nonConformances: { findMany: jest.Mock };
-      disposalRequests: { findMany: jest.Mock };
-      equipmentRequests: { findMany: jest.Mock };
-      softwareHistory: { findMany: jest.Mock };
-      equipmentImports: { findMany: jest.Mock };
+
+  /**
+   * 테이블별 COUNT 반환값 설정
+   *
+   * select().from(table).where() 또는 select().from(table).innerJoin().where() 경로에서
+   * table 객체를 키로 사용하여 테이블별 다른 count를 반환합니다.
+   */
+  const tableCounts = new Map<object, number>();
+
+  const createSelectChain = (table: object) => {
+    const cnt = tableCounts.get(table) ?? 0;
+    const chain: Record<string, jest.Mock> = {
+      where: jest.fn().mockResolvedValue([{ count: cnt }]),
+      innerJoin: jest.fn(),
     };
+    // innerJoin → 동일 chain 반환 (체이닝: .innerJoin().where())
+    chain.innerJoin.mockReturnValue(chain);
+    return chain;
   };
 
   const MOCK_USER = {
@@ -24,19 +31,21 @@ describe('ApprovalsService', () => {
     site: 'SUW',
   };
 
+  let mockDb: {
+    query: { users: { findFirst: jest.Mock } };
+    select: jest.Mock;
+  };
+
   beforeEach(async () => {
+    tableCounts.clear();
+
     mockDb = {
       query: {
         users: { findFirst: jest.fn().mockResolvedValue(MOCK_USER) },
-        checkouts: { findMany: jest.fn().mockResolvedValue([]) },
-        calibrations: { findMany: jest.fn().mockResolvedValue([]) },
-        calibrationPlans: { findMany: jest.fn().mockResolvedValue([]) },
-        nonConformances: { findMany: jest.fn().mockResolvedValue([]) },
-        disposalRequests: { findMany: jest.fn().mockResolvedValue([]) },
-        equipmentRequests: { findMany: jest.fn().mockResolvedValue([]) },
-        softwareHistory: { findMany: jest.fn().mockResolvedValue([]) },
-        equipmentImports: { findMany: jest.fn().mockResolvedValue([]) },
       },
+      select: jest.fn().mockReturnValue({
+        from: jest.fn().mockImplementation((table: object) => createSelectChain(table)),
+      }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -72,7 +81,7 @@ describe('ApprovalsService', () => {
     });
 
     it('quality_manager 역할은 plan_review만 조회한다', async () => {
-      mockDb.query.calibrationPlans.findMany.mockResolvedValue([{}, {}]); // 2 pending
+      tableCounts.set(schema.calibrationPlans, 2);
 
       const result = await service.getPendingCountsByRole('user-1', 'quality_manager');
 
@@ -89,9 +98,9 @@ describe('ApprovalsService', () => {
     });
 
     it('technical_manager 역할은 outgoing/incoming/calibration 등을 조회한다', async () => {
-      mockDb.query.checkouts.findMany.mockResolvedValue([{}]); // 1 pending checkout
-      mockDb.query.calibrations.findMany.mockResolvedValue([{}, {}]); // 2 pending calibrations
-      mockDb.query.softwareHistory.findMany.mockResolvedValue([{}]); // 1 software
+      tableCounts.set(schema.checkouts, 1);
+      tableCounts.set(schema.calibrations, 2);
+      tableCounts.set(schema.softwareHistory, 1);
 
       const result = await service.getPendingCountsByRole('user-1', 'technical_manager');
 
@@ -103,10 +112,10 @@ describe('ApprovalsService', () => {
     });
 
     it('lab_manager 역할은 disposal_final과 plan_final을 조회한다', async () => {
-      // site=null → getDisposalFinalCount가 db.query.findMany 경로를 사용 (select 경로 회피)
+      // site=null → getDisposalFinalCount/getCalibrationPlanFinalCount가 no-site 경로 사용
       mockDb.query.users.findFirst.mockResolvedValue({ ...MOCK_USER, site: null });
-      mockDb.query.disposalRequests.findMany.mockResolvedValue([{}, {}, {}]); // 3 disposal final
-      mockDb.query.calibrationPlans.findMany.mockResolvedValue([{}]); // 1 plan final
+      tableCounts.set(schema.disposalRequests, 3);
+      tableCounts.set(schema.calibrationPlans, 1);
 
       const result = await service.getPendingCountsByRole('user-1', 'lab_manager');
 

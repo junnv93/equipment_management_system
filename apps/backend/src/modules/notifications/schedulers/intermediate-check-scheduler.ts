@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { and, eq, gte, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CalibrationService } from '../../calibration/calibration.service';
@@ -23,7 +23,7 @@ export class IntermediateCheckScheduler {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     private readonly calibrationService: CalibrationService,
     private readonly settingsService: SettingsService,
     private readonly eventEmitter: EventEmitter2

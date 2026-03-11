@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { eq, desc, and, isNull, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
   equipmentLocationHistory,
@@ -24,7 +24,7 @@ import { getUtcStartOfDay } from '../../../common/utils';
 export class EquipmentHistoryService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>
+    private readonly db: AppDatabase
   ) {}
 
   /**

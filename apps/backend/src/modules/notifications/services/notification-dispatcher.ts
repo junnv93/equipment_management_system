@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { eq, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { NOTIFICATION_REGISTRY } from '../config/notification-registry';
@@ -29,7 +29,7 @@ export class NotificationDispatcher {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: NodePgDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     private readonly recipientResolver: NotificationRecipientResolver,
     private readonly preferencesService: NotificationPreferencesService,
     private readonly templateService: NotificationTemplateService,

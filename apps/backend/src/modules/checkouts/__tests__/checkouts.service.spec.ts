@@ -30,7 +30,7 @@ describe('CheckoutsService', () => {
       set: jest.fn(),
       delete: jest.fn(),
       execute: jest.fn(),
-      transaction: jest.fn(),
+      transaction: jest.fn().mockImplementation((cb) => cb(mockDrizzle)),
       leftJoin: jest.fn(),
     };
 

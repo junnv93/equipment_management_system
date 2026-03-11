@@ -6,7 +6,7 @@ import {
   Logger,
   Inject,
 } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
@@ -23,6 +23,7 @@ import {
   EquipmentStatusValues as ESVal,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc } from '../../common/utils';
 import * as schema from '@equipment-management/db/schema';
 import { and, eq, gte, lte, count, sql, or, desc, asc, SQL, isNull } from 'drizzle-orm';
@@ -71,11 +72,10 @@ export interface CalibrationRecord {
 @Injectable()
 export class CalibrationService extends VersionedBaseService {
   private readonly logger = new Logger(CalibrationService.name);
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5분
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>,
+    protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
     private readonly eventEmitter: EventEmitter2
   ) {
@@ -221,7 +221,7 @@ export class CalibrationService extends VersionedBaseService {
 
         return this.transformDbToRecord(row);
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 

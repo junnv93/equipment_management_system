@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, desc, like, or, sql, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CreateSoftwareChangeInput } from './dto/create-software-change.dto';
@@ -8,6 +8,7 @@ import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve
 import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 
 // Backward compatibility alias
 const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
@@ -16,9 +17,6 @@ const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
 const CACHE_KEYS = {
   REGISTRY: 'software:registry',
 } as const;
-
-/** 레지스트리 캐시 TTL: 5분 (변경 빈도 낮음) */
-const REGISTRY_CACHE_TTL = 5 * 60 * 1000;
 
 /**
  * 소프트웨어 관리 서비스
@@ -35,7 +33,7 @@ const REGISTRY_CACHE_TTL = 5 * 60 * 1000;
 export class SoftwareService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>,
+    protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService
   ) {
     super();
@@ -253,7 +251,7 @@ export class SoftwareService extends VersionedBaseService {
     return this.cacheService.getOrSet(
       CACHE_KEYS.REGISTRY,
       () => this.buildRegistry(),
-      REGISTRY_CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 

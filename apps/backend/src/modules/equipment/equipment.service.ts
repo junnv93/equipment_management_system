@@ -19,8 +19,9 @@ import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
 import { eq, and, like, or, desc, asc, sql, SQL } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { Team } from '@equipment-management/db/schema/teams';
@@ -56,7 +57,6 @@ export interface EquipmentListResponse {
 @Injectable()
 export class EquipmentService {
   private readonly logger = new Logger(EquipmentService.name);
-  private readonly CACHE_TTL = 1000 * 60 * 5; // 5분
   private readonly CACHE_PREFIX = 'equipment:';
 
   // 인덱스가 있는 필드 목록 (정렬 최적화용)
@@ -75,7 +75,7 @@ export class EquipmentService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService
   ) {}
 
@@ -834,7 +834,7 @@ export class EquipmentService {
                 .where(and(...whereConditions));
               return Number(countResult[0]?.count || 0);
             },
-            this.CACHE_TTL
+            CACHE_TTL.LONG
           );
 
           // 페이지네이션 계산
@@ -912,7 +912,7 @@ export class EquipmentService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 
@@ -955,7 +955,7 @@ export class EquipmentService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 
@@ -1312,7 +1312,7 @@ export class EquipmentService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 
@@ -1346,7 +1346,7 @@ export class EquipmentService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 
@@ -1393,7 +1393,7 @@ export class EquipmentService {
           throw error;
         }
       },
-      this.CACHE_TTL
+      CACHE_TTL.LONG
     );
   }
 }

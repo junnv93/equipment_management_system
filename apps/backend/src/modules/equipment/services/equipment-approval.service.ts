@@ -15,7 +15,7 @@ import {
   users,
 } from '@equipment-management/db/schema';
 import { UserRoleValues } from '@equipment-management/schemas';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { EquipmentService } from '../equipment.service';
 import { CreateEquipmentDto } from '../dto/create-equipment.dto';
@@ -42,7 +42,7 @@ export class EquipmentApprovalService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly db: AppDatabase,
     private readonly equipmentService: EquipmentService,
     private readonly eventEmitter: EventEmitter2
   ) {}

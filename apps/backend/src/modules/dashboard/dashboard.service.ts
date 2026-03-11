@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, count, gte, lte, desc, inArray, sql, SQL } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -10,6 +10,11 @@ import {
   AUDIT_ENTITY_TYPE_LABELS,
 } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { ApprovalsService } from '../approvals/approvals.service';
+import {
+  CACHE_TTL,
+  isLabManager as checkIsLabManager,
+} from '@equipment-management/shared-constants';
 import {
   DashboardSummaryDto,
   EquipmentByTeamDto,
@@ -21,9 +26,6 @@ import {
   PendingApprovalCountsDto,
   EquipmentStatusStatsDto,
 } from './dto/dashboard-response.dto';
-
-/** 대시보드 캐시 TTL (30s — 프론트엔드 CACHE_TIMES.SHORT와 동기화) */
-const DASHBOARD_CACHE_TTL = 30_000;
 
 /**
  * 대시보드 서비스
@@ -43,8 +45,9 @@ const DASHBOARD_CACHE_TTL = 30_000;
 @Injectable()
 export class DashboardService {
   constructor(
-    @Inject('DRIZZLE_INSTANCE') private readonly db: NodePgDatabase<typeof schema>,
-    private readonly cacheService: SimpleCacheService
+    @Inject('DRIZZLE_INSTANCE') private readonly db: AppDatabase,
+    private readonly cacheService: SimpleCacheService,
+    private readonly approvalsService: ApprovalsService
   ) {}
 
   /**
@@ -60,78 +63,54 @@ export class DashboardService {
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        // 전체 장비 수
-        const [totalResult] = await this.db
-          .select({ count: count() })
-          .from(schema.equipment)
-          .where(
-            and(
-              teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-              site ? eq(schema.equipment.site, site) : undefined
-            )
-          );
-
-        const totalEquipment = totalResult?.count || 0;
-
-        // 사용 가능 장비 수
-        const [availableResult] = await this.db
-          .select({ count: count() })
-          .from(schema.equipment)
-          .where(
-            and(
-              eq(schema.equipment.status, 'available'),
-              teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-              site ? eq(schema.equipment.site, site) : undefined
-            )
-          );
-
-        const availableEquipment = availableResult?.count || 0;
-
-        // 활성 반출 수 (checkouts → checkoutItems → equipment 조인, site/team 필터 적용)
-        // COUNT(DISTINCT checkouts.id): checkoutItems 복수로 인한 중복 카운트 방지
-        const [checkoutResult] = await this.db
-          .select({ count: sql<number>`COUNT(DISTINCT ${schema.checkouts.id})` })
-          .from(schema.checkouts)
-          .innerJoin(schema.checkoutItems, eq(schema.checkouts.id, schema.checkoutItems.checkoutId))
-          .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
-          .where(
-            and(
-              eq(schema.checkouts.status, 'checked_out'),
-              teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-              site ? eq(schema.equipment.site, site) : undefined
-            )
-          );
-
-        const activeCheckouts = checkoutResult?.count || 0;
-
-        // 교정 예정 장비 수 (30일 이내)
+        // 3개 equipment COUNT → 1개 조건부 집계 + checkout COUNT 병렬 실행 (4쿼리 → 2쿼리)
         const today = new Date();
         const thirtyDaysLater = new Date(today);
         thirtyDaysLater.setDate(today.getDate() + 30);
 
-        const [calibrationResult] = await this.db
-          .select({ count: count() })
-          .from(schema.equipment)
-          .where(
-            and(
-              eq(schema.equipment.calibrationRequired, 'required'),
-              gte(schema.equipment.nextCalibrationDate, today),
-              lte(schema.equipment.nextCalibrationDate, thirtyDaysLater),
-              teamId ? eq(schema.equipment.teamId, teamId) : undefined,
-              site ? eq(schema.equipment.site, site) : undefined
-            )
-          );
+        const siteTeamFilter = and(
+          teamId ? eq(schema.equipment.teamId, teamId) : undefined,
+          site ? eq(schema.equipment.site, site) : undefined
+        );
 
-        const upcomingCalibrations = calibrationResult?.count || 0;
+        const [[equipmentStats], [checkoutResult]] = await Promise.all([
+          // 단일 쿼리: total + available + upcoming calibrations (FILTER 조건부 집계)
+          this.db
+            .select({
+              total: count(),
+              available: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = 'available') as integer)`,
+              upcomingCalibrations: sql<number>`cast(count(*) filter (where ${schema.equipment.calibrationRequired} = 'required' and ${schema.equipment.nextCalibrationDate} >= ${today} and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater}) as integer)`,
+            })
+            .from(schema.equipment)
+            .where(siteTeamFilter),
+          // 활성 반출 수 (다른 테이블이므로 별도 쿼리, 병렬 실행)
+          this.db
+            .select({
+              count: sql<number>`cast(count(distinct ${schema.checkouts.id}) as integer)`,
+            })
+            .from(schema.checkouts)
+            .innerJoin(
+              schema.checkoutItems,
+              eq(schema.checkouts.id, schema.checkoutItems.checkoutId)
+            )
+            .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
+            .where(
+              and(
+                eq(schema.checkouts.status, 'checked_out'),
+                teamId ? eq(schema.equipment.teamId, teamId) : undefined,
+                site ? eq(schema.equipment.site, site) : undefined
+              )
+            ),
+        ]);
 
         return {
-          totalEquipment,
-          availableEquipment,
-          activeCheckouts,
-          upcomingCalibrations,
+          totalEquipment: equipmentStats?.total || 0,
+          availableEquipment: equipmentStats?.available || 0,
+          activeCheckouts: checkoutResult?.count || 0,
+          upcomingCalibrations: equipmentStats?.upcomingCalibrations || 0,
         };
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -170,7 +149,7 @@ export class DashboardService {
           count: r.count,
         }));
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -226,7 +205,7 @@ export class DashboardService {
           };
         });
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -284,7 +263,7 @@ export class DashboardService {
           };
         });
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -365,7 +344,7 @@ export class DashboardService {
           };
         });
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -428,7 +407,7 @@ export class DashboardService {
           };
         });
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -538,7 +517,7 @@ export class DashboardService {
           };
         });
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -557,6 +536,9 @@ export class DashboardService {
 
   /**
    * 승인 대기 카운트 조회
+   *
+   * SSOT: ApprovalsService.getApprovalCountsByScope()에 위임.
+   * Dashboard DTO 형식으로 매핑만 담당합니다.
    */
   async getPendingApprovalCounts(
     _userId: string,
@@ -568,108 +550,18 @@ export class DashboardService {
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        // 장비 승인 대기 (equipmentRequests 테이블 조회 + 팀/사이트 필터링)
-        const isLabManager = userRole === 'lab_manager';
-        let equipmentCountResult: { count: number }[];
+        const isLabManager = checkIsLabManager(userRole);
+        const counts = await this.approvalsService.getApprovalCountsByScope(
+          teamId ?? null,
+          site ?? null,
+          isLabManager
+        );
 
-        if (teamId && !isLabManager) {
-          // technical_manager: 같은 팀 요청자의 승인 대기만 조회
-          equipmentCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.equipmentRequests)
-            .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
-            .where(
-              and(
-                eq(schema.equipmentRequests.approvalStatus, 'pending_approval'),
-                eq(schema.users.teamId, teamId)
-              )
-            );
-        } else if (site) {
-          // 사이트 필터: 같은 사이트 요청자의 승인 대기만 조회
-          equipmentCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.equipmentRequests)
-            .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
-            .where(
-              and(
-                eq(schema.equipmentRequests.approvalStatus, 'pending_approval'),
-                eq(schema.users.site, site)
-              )
-            );
-        } else {
-          // system_admin 또는 teamId/site 없음: 전체 조회
-          equipmentCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.equipmentRequests)
-            .where(eq(schema.equipmentRequests.approvalStatus, 'pending_approval'));
-        }
-
-        const [equipmentCount] = equipmentCountResult;
-
-        // 교정 승인 대기 (calibrations.approvalStatus = 'pending_approval')
-        let calibrationCountResult: { count: number }[];
-        if (teamId && !isLabManager) {
-          calibrationCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.calibrations)
-            .innerJoin(schema.users, eq(schema.calibrations.registeredBy, schema.users.id))
-            .where(
-              and(
-                eq(schema.calibrations.approvalStatus, 'pending_approval'),
-                eq(schema.users.teamId, teamId)
-              )
-            );
-        } else if (site) {
-          calibrationCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.calibrations)
-            .innerJoin(schema.users, eq(schema.calibrations.registeredBy, schema.users.id))
-            .where(
-              and(
-                eq(schema.calibrations.approvalStatus, 'pending_approval'),
-                eq(schema.users.site, site)
-              )
-            );
-        } else {
-          calibrationCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.calibrations)
-            .where(eq(schema.calibrations.approvalStatus, 'pending_approval'));
-        }
-        const [calibrationCount] = calibrationCountResult;
-        const calibration = calibrationCount?.count || 0;
-
-        // 반출 승인 대기 (checkouts - 대여 포함, 사이트 필터링)
-        let checkoutCountResult: { count: number }[];
-
-        if (site) {
-          // 같은 사이트 요청자의 반출 승인 대기만 조회
-          checkoutCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.checkouts)
-            .innerJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
-            .where(and(eq(schema.checkouts.status, 'pending'), eq(schema.users.site, site)));
-        } else {
-          checkoutCountResult = await this.db
-            .select({ count: count() })
-            .from(schema.checkouts)
-            .where(eq(schema.checkouts.status, 'pending'));
-        }
-
-        const [checkoutCount] = checkoutCountResult;
-
-        // 보정계수 승인 대기 (스키마 미구현)
+        const equipment = counts.equipment;
+        const calibration = counts.calibration;
+        const checkout = counts.outgoing;
         const calibrationFactor = 0;
-
-        // 소프트웨어 변경 승인 대기
-        const [softwareCountResult] = await this.db
-          .select({ count: count() })
-          .from(schema.softwareHistory)
-          .where(eq(schema.softwareHistory.approvalStatus, 'pending'));
-        const software = softwareCountResult?.count || 0;
-
-        const equipment = equipmentCount?.count || 0;
-        const checkout = checkoutCount?.count || 0;
+        const software = counts.software;
 
         return {
           equipment,
@@ -680,7 +572,7 @@ export class DashboardService {
           total: equipment + calibration + checkout + calibrationFactor + software,
         };
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 
@@ -718,7 +610,7 @@ export class DashboardService {
 
         return stats;
       },
-      DASHBOARD_CACHE_TTL
+      CACHE_TTL.SHORT
     );
   }
 

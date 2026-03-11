@@ -1,7 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { eq, and, sql } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '@equipment-management/db/schema';
+import type { AppDatabase } from '@equipment-management/db';
 
 /**
  * Optimistic Locking (CAS) 추상 기반 서비스
@@ -11,7 +10,7 @@ import * as schema from '@equipment-management/db/schema';
  * ✅ 에러 분류: 404 (Not Found) vs 409 (Version Conflict)
  */
 export abstract class VersionedBaseService {
-  protected abstract readonly db: NodePgDatabase<typeof schema>;
+  protected abstract readonly db: AppDatabase;
 
   /**
    * CAS(Compare-And-Swap) 기반 업데이트
@@ -29,15 +28,21 @@ export abstract class VersionedBaseService {
    * @throws NotFoundException  엔티티가 존재하지 않을 때 (404)
    * @throws ConflictException  version 불일치 (동시 수정) (409)
    */
+  /**
+   * @param tx  선택적 트랜잭션 컨텍스트 — 다중 테이블 원자성이 필요할 때 전달
+   */
   protected async updateWithVersion<T>(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
     table: any,
     id: string,
     expectedVersion: number,
     updateData: Record<string, unknown>,
-    entityName: string
+    entityName: string,
+    tx?: AppDatabase
   ): Promise<T> {
-    const [updated] = await this.db
+    const executor = tx ?? this.db;
+
+    const [updated] = await executor
       .update(table)
       .set({
         ...updateData,
@@ -48,7 +53,7 @@ export abstract class VersionedBaseService {
       .returning();
 
     if (!updated) {
-      const [existing] = await this.db
+      const [existing] = await executor
         .select({ id: table.id, version: table.version })
         .from(table)
         .where(eq(table.id, id))

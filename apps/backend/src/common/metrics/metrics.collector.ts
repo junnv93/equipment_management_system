@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { eq, and, count, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CheckoutStatusValues, EquipmentStatusValues } from '@equipment-management/schemas';
@@ -22,7 +22,7 @@ import { MetricsService } from './metrics.service';
 @Injectable()
 export class MetricsCollector {
   constructor(
-    @Inject('DRIZZLE_INSTANCE') private readonly db: NodePgDatabase<typeof schema>,
+    @Inject('DRIZZLE_INSTANCE') private readonly db: AppDatabase,
     private readonly metricsService: MetricsService
   ) {}
 

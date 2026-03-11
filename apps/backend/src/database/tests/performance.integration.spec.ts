@@ -2,13 +2,13 @@ import { Test } from '@nestjs/testing';
 import { DrizzleModule } from '../drizzle.module';
 import { ConfigModule } from '@nestjs/config';
 import * as pg from 'pg';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import { equipment, teams, users, calibrations, checkouts } from '@equipment-management/db/schema';
 
 describe('Database Performance', () => {
   let pool: pg.Pool;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  let db: PostgresJsDatabase;
+  let db: AppDatabase;
 
   beforeAll(async () => {
     await Test.createTestingModule({
@@ -29,7 +29,7 @@ describe('Database Performance', () => {
     });
     // Note: drizzle-orm/postgres-js expects postgres.js client, not pg.Pool
     // This test file uses raw pg.Pool queries, so db variable is not used
-    db = null as unknown as PostgresJsDatabase;
+    db = null as unknown as AppDatabase;
   });
 
   afterAll(async () => {

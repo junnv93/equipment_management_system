@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { eq, and, isNull, like, SQL, ne, sql } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
   nonConformances,
@@ -23,6 +23,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 
 /**
@@ -46,11 +47,10 @@ export class NonConformancesService extends VersionedBaseService {
   private readonly logger = new Logger(NonConformancesService.name);
 
   private readonly CACHE_PREFIX = 'non-conformances';
-  private readonly CACHE_TTL = 120_000; // 2분 (MEDIUM)
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>,
+    protected readonly db: AppDatabase,
     private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly cacheService: SimpleCacheService,
     private readonly eventEmitter: EventEmitter2
@@ -384,7 +384,7 @@ export class NonConformancesService extends VersionedBaseService {
 
         return nonConformance;
       },
-      this.CACHE_TTL
+      CACHE_TTL.MEDIUM
     );
   }
 

@@ -715,10 +715,10 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
   }),
 
   // ========================================================================
-  // STATUS: in_use (3 records) - Rental 4-step (사용 중)
+  // STATUS: borrower_received (3 records) - Rental 4-step ② (차용처 수령)
   // ========================================================================
 
-  // 33. In Use - Rental (Suwon → Uiwang)
+  // 33. Borrower Received - Rental (Suwon → Uiwang)
   createCheckout({
     id: CHECKOUT_033_ID,
     requesterId: USER_TEST_ENGINEER_SUWON_ID,
@@ -731,13 +731,13 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '장기 시험 지원',
     expectedReturnDate: daysLater(10),
     checkoutDate: daysAgo(20),
-    status: 'in_use',
+    status: 'borrower_received',
     approvedAt: daysAgo(21),
     createdAt: daysAgo(23),
     updatedAt: daysAgo(15),
   }),
 
-  // 34. In Use - Rental (Uiwang → Suwon)
+  // 34. Borrower Received - Rental (Uiwang → Suwon)
   createCheckout({
     id: CHECKOUT_034_ID,
     requesterId: USER_TEST_ENGINEER_UIWANG_ID,
@@ -750,13 +750,13 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '특수 시험',
     expectedReturnDate: daysLater(15),
     checkoutDate: daysAgo(15),
-    status: 'in_use',
+    status: 'borrower_received',
     approvedAt: daysAgo(16),
     createdAt: daysAgo(18),
     updatedAt: daysAgo(10),
   }),
 
-  // 35. In Use - Rental Multi-equipment (3 items)
+  // 35. Borrower Received - Rental Multi-equipment (3 items)
   createCheckout({
     id: CHECKOUT_035_ID,
     requesterId: USER_TEST_ENGINEER_SUWON_ID,
@@ -769,7 +769,7 @@ export const CHECKOUTS_SEED_DATA: CheckoutInsert[] = [
     reason: '시스템 구성 시험',
     expectedReturnDate: daysLater(20),
     checkoutDate: daysAgo(10),
-    status: 'in_use',
+    status: 'borrower_received',
     approvedAt: daysAgo(11),
     createdAt: daysAgo(13),
     updatedAt: daysAgo(8),

@@ -7,7 +7,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { eq, ilike, inArray, and, sql } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
   users as usersTable,
@@ -30,7 +30,7 @@ interface JwtPayload {
 export class UsersService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>
+    private readonly db: AppDatabase
   ) {}
 
   async findAll(query: UserQueryDto): Promise<UserListResponse> {

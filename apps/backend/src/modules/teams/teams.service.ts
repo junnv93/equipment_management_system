@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { eq, ilike, inArray, and, sql, SQL } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
   teams as teamsTable,
@@ -14,7 +14,7 @@ import { Team, TeamListResponse } from '@equipment-management/schemas';
 export class TeamsService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: PostgresJsDatabase<typeof schema>
+    private readonly db: AppDatabase
   ) {}
 
   async findAll(query: TeamQueryDto): Promise<TeamListResponse> {

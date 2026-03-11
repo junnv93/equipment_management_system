@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { AppDatabase } from '@equipment-management/db';
 import { eq, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import type { NotificationCategory } from '../config/notification-registry';
@@ -47,7 +47,7 @@ const CATEGORY_COLUMN_MAP: Record<
 export class NotificationPreferencesService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: NodePgDatabase<typeof schema>
+    private readonly db: AppDatabase
   ) {}
 
   /**
