@@ -162,7 +162,7 @@ export function EquipmentDetailClient({
     : 0;
 
   return (
-    <div className="min-h-screen bg-ul-gray-bg dark:bg-gray-950">
+    <div className="min-h-screen bg-background">
       {/* 컴팩트 Sticky 헤더 */}
       <EquipmentStickyHeader
         equipment={equipment}

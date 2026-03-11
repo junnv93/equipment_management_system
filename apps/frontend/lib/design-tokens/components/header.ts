@@ -9,7 +9,7 @@
 
 import { INTERACTIVE_TOKENS, CONTENT_TOKENS } from '../semantic';
 import { toTailwindSize, toTailwindGap } from '../primitives';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 /**
  * Header Interactive 버튼 크기
@@ -68,12 +68,7 @@ export const HEADER_INTERACTIVE_STYLES = {
   hover: 'hover:bg-muted/80',
 
   /** Transition (Web Interface Guidelines 준수) */
-  transition: getTransitionClasses('fast', [
-    'background-color',
-    'transform',
-    'opacity',
-    'box-shadow',
-  ]),
+  transition: TRANSITION_PRESETS.fastAll,
 
   /** 버튼 모양 */
   shape: 'rounded-full', // 원형 버튼

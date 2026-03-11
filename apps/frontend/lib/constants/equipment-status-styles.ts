@@ -1,9 +1,14 @@
 /**
- * 장비 상태 스타일 중앙화 (SSOT)
+ * 장비 상태 스타일 — EQUIPMENT_STATUS_TOKENS에서 파생
  *
- * 이 파일은 프론트엔드 전용 스타일을 정의합니다.
- * - 라벨은 packages/schemas에서 import (EQUIPMENT_STATUS_LABELS)
- * - 스타일(색상, 클래스)은 여기서 정의
+ * SSOT 체인:
+ *   BRAND_CLASS_MATRIX (brand.ts)
+ *     → EQUIPMENT_STATUS_TOKENS (equipment.ts) — 원본
+ *       → EQUIPMENT_STATUS_STYLES (이 파일) — 파생 (className + label + borderColor)
+ *
+ * 이 파일은 스타일을 독자적으로 정의하지 않습니다.
+ * EQUIPMENT_STATUS_TOKENS.card.className / card.borderColor에서 파생하며,
+ * 라벨 오버라이드(calibration_scheduled → "사용 가능" 등)만 이 파일에서 관리합니다.
  *
  * 사용법:
  * ```typescript
@@ -14,92 +19,56 @@
  * ```
  */
 import { EQUIPMENT_STATUS_LABELS, type EquipmentStatus } from '@equipment-management/schemas';
+import {
+  EQUIPMENT_STATUS_TOKENS,
+  DEFAULT_STATUS_CONFIG,
+} from '@/lib/design-tokens/components/equipment';
 
-/**
- * 장비 상태별 스타일 정의
- *
- * calibration_scheduled, calibration_overdue는 기본 상태로는 "사용 가능"으로 표시
- * 교정 상태는 별도 배지로 D-day 형식으로 표시
- */
 export interface EquipmentStatusStyle {
   className: string;
   label: string;
   borderColor: string;
 }
 
-export const EQUIPMENT_STATUS_STYLES: Record<EquipmentStatus, EquipmentStatusStyle> = {
-  available: {
-    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-    label: EQUIPMENT_STATUS_LABELS.available,
-    borderColor: 'border-l-green-500',
-  },
-  in_use: {
-    className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-    label: EQUIPMENT_STATUS_LABELS.in_use,
-    borderColor: 'border-l-blue-500',
-  },
-  checked_out: {
-    className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300',
-    label: EQUIPMENT_STATUS_LABELS.checked_out,
-    borderColor: 'border-l-orange-500',
-  },
-  // calibration_scheduled는 "사용 가능"으로 표시 (교정 상태는 별도 배지)
-  calibration_scheduled: {
-    className: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-    label: EQUIPMENT_STATUS_LABELS.available, // "사용 가능"으로 표시
-    borderColor: 'border-l-green-500',
-  },
-  // calibration_overdue는 "부적합"으로 표시 (백엔드 스케줄러가 자동 전환하지만 즉시 반영 위해)
-  calibration_overdue: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: EQUIPMENT_STATUS_LABELS.non_conforming, // "부적합"으로 표시
-    borderColor: 'border-l-red-600',
-  },
-  non_conforming: {
-    className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-    label: EQUIPMENT_STATUS_LABELS.non_conforming,
-    borderColor: 'border-l-red-600',
-  },
-  spare: {
-    className: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
-    label: EQUIPMENT_STATUS_LABELS.spare,
-    borderColor: 'border-l-slate-500',
-  },
-  retired: {
-    className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    label: EQUIPMENT_STATUS_LABELS.retired,
-    borderColor: 'border-l-gray-500',
-  },
-  // 새 상태들
-  pending_disposal: {
-    className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    label: EQUIPMENT_STATUS_LABELS.pending_disposal,
-    borderColor: 'border-l-orange-500',
-  },
-  disposed: {
-    className: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
-    label: EQUIPMENT_STATUS_LABELS.disposed,
-    borderColor: 'border-l-gray-500',
-  },
-  temporary: {
-    className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
-    label: EQUIPMENT_STATUS_LABELS.temporary,
-    borderColor: 'border-l-cyan-500',
-  },
-  inactive: {
-    className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
-    label: EQUIPMENT_STATUS_LABELS.inactive,
-    borderColor: 'border-l-slate-400',
-  },
+/**
+ * 라벨 오버라이드 — 표시 라벨이 상태 이름과 다른 경우
+ *
+ * calibration_scheduled: 교정 상태는 별도 D-day 배지로 표시하므로 "사용 가능"
+ * calibration_overdue: 백엔드 스케줄러 전환 전 즉시 "부적합" 표시
+ */
+const LABEL_OVERRIDES: Partial<Record<EquipmentStatus, string>> = {
+  calibration_scheduled: EQUIPMENT_STATUS_LABELS.available,
+  calibration_overdue: EQUIPMENT_STATUS_LABELS.non_conforming,
 };
+
+/**
+ * EQUIPMENT_STATUS_TOKENS에서 파생된 스타일 레코드
+ *
+ * className, borderColor → EQUIPMENT_STATUS_TOKENS.card에서 추출
+ * label → EQUIPMENT_STATUS_LABELS + LABEL_OVERRIDES
+ */
+export const EQUIPMENT_STATUS_STYLES: Record<EquipmentStatus, EquipmentStatusStyle> =
+  Object.fromEntries(
+    (Object.keys(EQUIPMENT_STATUS_LABELS) as EquipmentStatus[]).map((status) => {
+      const tokens = EQUIPMENT_STATUS_TOKENS[status] ?? DEFAULT_STATUS_CONFIG;
+      return [
+        status,
+        {
+          className: tokens.card.className,
+          label: LABEL_OVERRIDES[status] ?? EQUIPMENT_STATUS_LABELS[status],
+          borderColor: tokens.card.borderColor,
+        },
+      ];
+    })
+  ) as Record<EquipmentStatus, EquipmentStatusStyle>;
 
 /**
  * 기본 스타일 (알 수 없는 상태용)
  */
 export const DEFAULT_STATUS_STYLE: EquipmentStatusStyle = {
-  className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  className: DEFAULT_STATUS_CONFIG.card.className,
   label: '알 수 없음',
-  borderColor: 'border-l-gray-500',
+  borderColor: DEFAULT_STATUS_CONFIG.card.borderColor,
 };
 
 /**
@@ -112,7 +81,6 @@ export const DEFAULT_STATUS_STYLE: EquipmentStatusStyle = {
  * @example
  * // 기본 사용
  * const style = getEquipmentStatusStyle('available');
- * // { className: 'bg-green-100...', label: '사용 가능', borderColor: 'border-l-green-500' }
  *
  * // 교정기한 실시간 체크
  * const style = getEquipmentStatusStyle('available', equipment.nextCalibrationDate);

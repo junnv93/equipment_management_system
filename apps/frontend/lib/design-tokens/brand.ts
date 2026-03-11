@@ -38,6 +38,7 @@ export const BRAND_COLORS_HEX = {
   neutral: '#6B7280',
   purple: '#8B5CF6',
   repair: '#F97316',
+  temporary: '#22B8CF',
 } as const;
 
 export type SemanticColorKey = keyof typeof BRAND_COLORS_HEX;
@@ -108,7 +109,125 @@ export const BRAND_LAYOUT = {
 } as const;
 
 // ============================================================================
-// 4. Composite Helpers (Tailwind theme 토큰 기반)
+// 4. BRAND_CLASS_MATRIX — 시멘틱 색상 클래스 단일 진실의 소스
+// ============================================================================
+
+/**
+ * 모든 시멘틱 색상의 Tailwind 클래스 변형을 한 곳에서 정의합니다.
+ *
+ * 왜 동적 보간(`bg-brand-${key}/10`)이 아닌 리터럴 문자열인가?
+ * → Tailwind JIT는 소스 파일의 정적 문자열만 스캔합니다.
+ *   동적 보간은 빌드 시 CSS에 포함되지 않습니다.
+ *
+ * 새 색상 추가 시:
+ * 1. BRAND_COLORS_HEX에 키 추가 → SemanticColorKey 자동 확장
+ * 2. 이 매트릭스에 1행 추가 → 모든 헬퍼 함수 자동 확장
+ * 3. TypeScript가 누락된 키를 컴파일 에러로 감지
+ */
+interface BrandClassSet {
+  /** 텍스트만 — text-brand-{key} */
+  text: string;
+  /** 배경만 (10% 투명) — bg-brand-{key}/10 */
+  bgLight: string;
+  /** 배경(10%) + 텍스트 — 상태 표시기, 카드 배경 */
+  status: string;
+  /** 배경(10%) + 텍스트 + 보더(20%) — 배지, 컨테이너 */
+  badge: string;
+  /** 배경(10%) + 보더(20%) — 컨테이너 색상만 (텍스트 없음) */
+  container: string;
+  /** 좌측 보더 — border-l-brand-{key} */
+  leftBorder: string;
+  /** 솔리드 배경 + 흰 텍스트 — CTA, 스테퍼 노드 */
+  solid: string;
+  /** 도트 — bg-brand-{key} rounded-full */
+  dot: string;
+}
+
+const BRAND_CLASS_MATRIX: Record<SemanticColorKey, BrandClassSet> = {
+  ok: {
+    text: 'text-brand-ok',
+    bgLight: 'bg-brand-ok/10',
+    status: 'bg-brand-ok/10 text-brand-ok',
+    badge: 'text-brand-ok bg-brand-ok/10 border-brand-ok/20',
+    container: 'bg-brand-ok/10 border-brand-ok/20',
+    leftBorder: 'border-l-brand-ok',
+    solid: 'bg-brand-ok text-white',
+    dot: 'bg-brand-ok rounded-full',
+  },
+  warning: {
+    text: 'text-brand-warning',
+    bgLight: 'bg-brand-warning/10',
+    status: 'bg-brand-warning/10 text-brand-warning',
+    badge: 'text-brand-warning bg-brand-warning/10 border-brand-warning/20',
+    container: 'bg-brand-warning/10 border-brand-warning/20',
+    leftBorder: 'border-l-brand-warning',
+    solid: 'bg-brand-warning text-white',
+    dot: 'bg-brand-warning rounded-full',
+  },
+  critical: {
+    text: 'text-brand-critical',
+    bgLight: 'bg-brand-critical/10',
+    status: 'bg-brand-critical/10 text-brand-critical',
+    badge: 'text-brand-critical bg-brand-critical/10 border-brand-critical/20',
+    container: 'bg-brand-critical/10 border-brand-critical/20',
+    leftBorder: 'border-l-brand-critical',
+    solid: 'bg-brand-critical text-white',
+    dot: 'bg-brand-critical rounded-full',
+  },
+  info: {
+    text: 'text-brand-info',
+    bgLight: 'bg-brand-info/10',
+    status: 'bg-brand-info/10 text-brand-info',
+    badge: 'text-brand-info bg-brand-info/10 border-brand-info/20',
+    container: 'bg-brand-info/10 border-brand-info/20',
+    leftBorder: 'border-l-brand-info',
+    solid: 'bg-brand-info text-white',
+    dot: 'bg-brand-info rounded-full',
+  },
+  neutral: {
+    text: 'text-brand-neutral',
+    bgLight: 'bg-brand-neutral/10',
+    status: 'bg-brand-neutral/10 text-brand-neutral',
+    badge: 'text-brand-neutral bg-brand-neutral/10 border-brand-neutral/20',
+    container: 'bg-brand-neutral/10 border-brand-neutral/20',
+    leftBorder: 'border-l-brand-neutral',
+    solid: 'bg-brand-neutral text-white',
+    dot: 'bg-brand-neutral rounded-full',
+  },
+  purple: {
+    text: 'text-brand-purple',
+    bgLight: 'bg-brand-purple/10',
+    status: 'bg-brand-purple/10 text-brand-purple',
+    badge: 'text-brand-purple bg-brand-purple/10 border-brand-purple/20',
+    container: 'bg-brand-purple/10 border-brand-purple/20',
+    leftBorder: 'border-l-brand-purple',
+    solid: 'bg-brand-purple text-white',
+    dot: 'bg-brand-purple rounded-full',
+  },
+  repair: {
+    text: 'text-brand-repair',
+    bgLight: 'bg-brand-repair/10',
+    status: 'bg-brand-repair/10 text-brand-repair',
+    badge: 'text-brand-repair bg-brand-repair/10 border-brand-repair/20',
+    container: 'bg-brand-repair/10 border-brand-repair/20',
+    leftBorder: 'border-l-brand-repair',
+    solid: 'bg-brand-repair text-white',
+    dot: 'bg-brand-repair rounded-full',
+  },
+  temporary: {
+    text: 'text-brand-temporary',
+    bgLight: 'bg-brand-temporary/10',
+    status: 'bg-brand-temporary/10 text-brand-temporary',
+    badge: 'text-brand-temporary bg-brand-temporary/10 border-brand-temporary/20',
+    container: 'bg-brand-temporary/10 border-brand-temporary/20',
+    leftBorder: 'border-l-brand-temporary',
+    solid: 'bg-brand-temporary text-white',
+    dot: 'bg-brand-temporary rounded-full',
+  },
+} as const satisfies Record<SemanticColorKey, BrandClassSet>;
+
+// ============================================================================
+// 4.2 Composite Helpers (Tailwind theme 토큰 기반)
 // ============================================================================
 
 /**
@@ -152,23 +271,12 @@ export function getKpiCounterClasses(): string {
 /**
  * 시멘틱 색상 배지 스타일
  *
- * Tailwind theme 토큰 사용 → opacity modifier 지원
- *
  * @example
  * getSemanticBadgeClasses('ok')       // 정상 → 초록
  * getSemanticBadgeClasses('critical') // 부적합 → 빨강
  */
 export function getSemanticBadgeClasses(color: SemanticColorKey): string {
-  const colorMap: Record<SemanticColorKey, string> = {
-    ok: 'text-brand-ok bg-brand-ok/10 border-brand-ok/20',
-    warning: 'text-brand-warning bg-brand-warning/10 border-brand-warning/20',
-    critical: 'text-brand-critical bg-brand-critical/10 border-brand-critical/20',
-    info: 'text-brand-info bg-brand-info/10 border-brand-info/20',
-    neutral: 'text-brand-neutral bg-brand-neutral/10 border-brand-neutral/20',
-    purple: 'text-brand-purple bg-brand-purple/10 border-brand-purple/20',
-    repair: 'text-brand-repair bg-brand-repair/10 border-brand-repair/20',
-  };
-  return `${colorMap[color]} border rounded-md px-2 py-0.5 text-xs font-medium`;
+  return `${BRAND_CLASS_MATRIX[color].badge} border rounded-md px-2 py-0.5 text-xs font-medium`;
 }
 
 /**
@@ -203,16 +311,7 @@ export function getBrandMutedTextClasses(): string {
  * <div className={`rounded border p-2 text-xs ${getSemanticContainerColorClasses('warning')}`}>
  */
 export function getSemanticContainerColorClasses(color: SemanticColorKey): string {
-  const colorMap: Record<SemanticColorKey, string> = {
-    ok: 'bg-brand-ok/10 border-brand-ok/20',
-    warning: 'bg-brand-warning/10 border-brand-warning/20',
-    critical: 'bg-brand-critical/10 border-brand-critical/20',
-    info: 'bg-brand-info/10 border-brand-info/20',
-    neutral: 'bg-brand-neutral/10 border-brand-neutral/20',
-    purple: 'bg-brand-purple/10 border-brand-purple/20',
-    repair: 'bg-brand-repair/10 border-brand-repair/20',
-  };
-  return colorMap[color];
+  return BRAND_CLASS_MATRIX[color].container;
 }
 
 /**
@@ -228,7 +327,7 @@ export function getSemanticContainerColorClasses(color: SemanticColorKey): strin
  * getSemanticContainerClasses('critical') // 위험 박스 (빨간색)
  */
 export function getSemanticContainerClasses(color: SemanticColorKey): string {
-  return `rounded-md border p-4 ${getSemanticContainerColorClasses(color)}`;
+  return `rounded-md border p-4 ${BRAND_CLASS_MATRIX[color].container}`;
 }
 
 /**
@@ -239,20 +338,11 @@ export function getSemanticContainerClasses(color: SemanticColorKey): string {
  * 이 함수는 아이콘, 제목 등 강조 요소에만 사용하세요.
  */
 export function getSemanticContainerTextClasses(color: SemanticColorKey): string {
-  const colorMap: Record<SemanticColorKey, string> = {
-    ok: 'text-brand-ok',
-    warning: 'text-brand-warning',
-    critical: 'text-brand-critical',
-    info: 'text-brand-info',
-    neutral: 'text-brand-neutral',
-    purple: 'text-brand-purple',
-    repair: 'text-brand-repair',
-  };
-  return colorMap[color];
+  return BRAND_CLASS_MATRIX[color].text;
 }
 
 // ============================================================================
-// 5. Status / Border / Solid / Dot Helpers (Layer 2 SSOT)
+// 5. Status / Border / Solid / Dot / BgLight Helpers (BRAND_CLASS_MATRIX 파생)
 // ============================================================================
 
 /**
@@ -266,16 +356,7 @@ export function getSemanticContainerTextClasses(color: SemanticColorKey): string
  * getSemanticStatusClasses('critical') // 'bg-brand-critical/10 text-brand-critical'
  */
 export function getSemanticStatusClasses(color: SemanticColorKey): string {
-  const colorMap: Record<SemanticColorKey, string> = {
-    ok: 'bg-brand-ok/10 text-brand-ok',
-    warning: 'bg-brand-warning/10 text-brand-warning',
-    critical: 'bg-brand-critical/10 text-brand-critical',
-    info: 'bg-brand-info/10 text-brand-info',
-    neutral: 'bg-brand-neutral/10 text-brand-neutral',
-    purple: 'bg-brand-purple/10 text-brand-purple',
-    repair: 'bg-brand-repair/10 text-brand-repair',
-  };
-  return colorMap[color];
+  return BRAND_CLASS_MATRIX[color].status;
 }
 
 /**
@@ -289,16 +370,7 @@ export function getSemanticStatusClasses(color: SemanticColorKey): string {
  * getSemanticLeftBorderClasses('info')   // 'border-l-brand-info'
  */
 export function getSemanticLeftBorderClasses(color: SemanticColorKey): string {
-  const colorMap: Record<SemanticColorKey, string> = {
-    ok: 'border-l-brand-ok',
-    warning: 'border-l-brand-warning',
-    critical: 'border-l-brand-critical',
-    info: 'border-l-brand-info',
-    neutral: 'border-l-brand-neutral',
-    purple: 'border-l-brand-purple',
-    repair: 'border-l-brand-repair',
-  };
-  return colorMap[color];
+  return BRAND_CLASS_MATRIX[color].leftBorder;
 }
 
 /**
@@ -311,16 +383,7 @@ export function getSemanticLeftBorderClasses(color: SemanticColorKey): string {
  * getSemanticSolidBgClasses('critical') // 'bg-brand-critical text-white'
  */
 export function getSemanticSolidBgClasses(color: SemanticColorKey): string {
-  const colorMap: Record<SemanticColorKey, string> = {
-    ok: 'bg-brand-ok text-white',
-    warning: 'bg-brand-warning text-white',
-    critical: 'bg-brand-critical text-white',
-    info: 'bg-brand-info text-white',
-    neutral: 'bg-brand-neutral text-white',
-    purple: 'bg-brand-purple text-white',
-    repair: 'bg-brand-repair text-white',
-  };
-  return colorMap[color];
+  return BRAND_CLASS_MATRIX[color].solid;
 }
 
 /**
@@ -334,16 +397,21 @@ export function getSemanticSolidBgClasses(color: SemanticColorKey): string {
  * getSemanticDotClasses('critical') // 'bg-brand-critical rounded-full'
  */
 export function getSemanticDotClasses(color: SemanticColorKey): string {
-  const colorMap: Record<SemanticColorKey, string> = {
-    ok: 'bg-brand-ok rounded-full',
-    warning: 'bg-brand-warning rounded-full',
-    critical: 'bg-brand-critical rounded-full',
-    info: 'bg-brand-info rounded-full',
-    neutral: 'bg-brand-neutral rounded-full',
-    purple: 'bg-brand-purple rounded-full',
-    repair: 'bg-brand-repair rounded-full',
-  };
-  return colorMap[color];
+  return BRAND_CLASS_MATRIX[color].dot;
+}
+
+/**
+ * 시멘틱 배경만 클래스 — bg-brand-{color}/10 (텍스트·보더 없음)
+ *
+ * 아이콘 배경 원, 인디케이터 배경 등 순수 배경만 필요한 곳에 사용.
+ * 텍스트 색상은 호출부에서 별도 적용하세요.
+ *
+ * @example
+ * getSemanticBgLightClasses('ok')       // 'bg-brand-ok/10'
+ * getSemanticBgLightClasses('critical') // 'bg-brand-critical/10'
+ */
+export function getSemanticBgLightClasses(color: SemanticColorKey): string {
+  return BRAND_CLASS_MATRIX[color].bgLight;
 }
 
 // ============================================================================

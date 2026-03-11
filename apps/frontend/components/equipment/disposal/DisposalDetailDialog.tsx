@@ -132,7 +132,7 @@ export function DisposalDetailDialog({
 
         <div className="py-4">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <h3 className="text-sm font-medium text-muted-foreground">
               {t('detailDialog.progressStatus')}
             </h3>
             <Badge
@@ -194,7 +194,7 @@ export function DisposalDetailDialog({
                           {stage.title}
                         </h3>
                         {stage.data && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-xs text-muted-foreground">
                             {stage.data.person} |{' '}
                             {stage.data.time && formatDateTime(stage.data.time)}
                           </p>
@@ -211,13 +211,13 @@ export function DisposalDetailDialog({
                         >
                           <CardContent className="pt-4 pb-4">
                             {stage.data.content && (
-                              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                              <p className="text-sm text-foreground whitespace-pre-wrap">
                                 {stage.data.content}
                               </p>
                             )}
                             {stage.data.attachments && stage.data.attachments.length > 0 && (
                               <div className="mt-3 space-y-1">
-                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                <p className="text-xs font-medium text-muted-foreground">
                                   {t('common.attachments')}
                                 </p>
                                 {stage.data.attachments.map((file) => (

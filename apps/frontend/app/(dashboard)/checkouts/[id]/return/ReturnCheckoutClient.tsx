@@ -164,7 +164,7 @@ export default function ReturnCheckoutClient({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">{t('detail.expectedReturn')}</span>
-            <span className={isOverdue ? 'font-medium text-red-600' : 'font-medium'}>
+            <span className={isOverdue ? 'font-medium text-brand-critical' : 'font-medium'}>
               {formatDate(checkout.expectedReturnDate)}
             </span>
           </div>

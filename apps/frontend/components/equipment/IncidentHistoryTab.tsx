@@ -609,7 +609,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                             type="checkbox"
                             checked={field.value}
                             onChange={field.onChange}
-                            className="h-4 w-4 mt-1 rounded border-gray-300"
+                            className="h-4 w-4 mt-1 rounded border-border"
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none flex-1">
@@ -622,7 +622,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                               t('incidentHistoryTab.calibrationOverdue.statusChangeNote')}{' '}
                             <Link
                               href={`/equipment/${equipmentId}/repair-history`}
-                              className="underline text-blue-600 hover:text-blue-800"
+                              className="underline text-brand-info hover:text-brand-info/80"
                             >
                               {t('incidentHistoryTab.nonConformance.repairHistoryLink')}
                             </Link>
@@ -800,7 +800,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                                 <span>{formatDate(item.occurredAt, 'yyyy-MM-dd')}</span>
                               </div>
                             </div>
-                            <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
+                            <h4 className="text-lg font-semibold text-foreground">
                               {item.content}
                             </h4>
                           </div>

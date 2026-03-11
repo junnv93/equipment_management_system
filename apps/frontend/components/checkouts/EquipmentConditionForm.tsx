@@ -158,14 +158,14 @@ export default function EquipmentConditionForm({
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="normal" id="appearance-normal" />
               <Label htmlFor="appearance-normal" className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
                 {t('condition.conditionStatus.normal')}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="abnormal" id="appearance-abnormal" />
               <Label htmlFor="appearance-abnormal" className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertCircle className="h-4 w-4 text-brand-critical" />
                 {t('condition.conditionStatus.abnormal')}
               </Label>
             </div>
@@ -198,14 +198,14 @@ export default function EquipmentConditionForm({
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="normal" id="operation-normal" />
               <Label htmlFor="operation-normal" className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
                 {t('condition.conditionStatus.normal')}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="abnormal" id="operation-abnormal" />
               <Label htmlFor="operation-abnormal" className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertCircle className="h-4 w-4 text-brand-critical" />
                 {t('condition.conditionStatus.abnormal')}
               </Label>
             </div>
@@ -243,14 +243,14 @@ export default function EquipmentConditionForm({
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="complete" id="accessories-complete" />
               <Label htmlFor="accessories-complete" className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
                 {t('condition.accessoriesStatusLabels.complete')}
               </Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="incomplete" id="accessories-incomplete" />
               <Label htmlFor="accessories-incomplete" className="flex items-center gap-1">
-                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertCircle className="h-4 w-4 text-brand-warning" />
                 {t('condition.accessoriesStatusLabels.incomplete')}
               </Label>
             </div>
@@ -269,7 +269,7 @@ export default function EquipmentConditionForm({
       {hasAbnormal && (
         <div className="space-y-2">
           <Label htmlFor="abnormalDetails">
-            {t('condition.abnormalDetailsLabel')} <span className="text-red-500">*</span>
+            {t('condition.abnormalDetailsLabel')} <span className="text-destructive">*</span>
           </Label>
           <Textarea
             id="abnormalDetails"
@@ -277,7 +277,7 @@ export default function EquipmentConditionForm({
             value={abnormalDetails}
             onChange={(e) => setAbnormalDetails(e.target.value)}
             rows={3}
-            className={`border-red-200 ${CHECKOUT_FORM_TOKENS.abnormalTextarea}`}
+            className={`border-brand-critical/40 ${CHECKOUT_FORM_TOKENS.abnormalTextarea}`}
           />
         </div>
       )}
@@ -315,9 +315,9 @@ export default function EquipmentConditionForm({
         <div className="grid gap-2 text-sm">
           <div className="flex items-center gap-2">
             {appearanceStatus === 'normal' ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className="h-4 w-4 text-brand-ok" />
             ) : (
-              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertCircle className="h-4 w-4 text-brand-critical" />
             )}
             <span>
               {t('condition.appearance')}: {t(`condition.conditionStatus.${appearanceStatus}`)}
@@ -325,9 +325,9 @@ export default function EquipmentConditionForm({
           </div>
           <div className="flex items-center gap-2">
             {operationStatus === 'normal' ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className="h-4 w-4 text-brand-ok" />
             ) : (
-              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertCircle className="h-4 w-4 text-brand-critical" />
             )}
             <span>
               {t('condition.operation')}: {t(`condition.conditionStatus.${operationStatus}`)}
@@ -336,9 +336,9 @@ export default function EquipmentConditionForm({
           {accessoriesStatus && (
             <div className="flex items-center gap-2">
               {accessoriesStatus === 'complete' ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-brand-ok" />
               ) : (
-                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <AlertCircle className="h-4 w-4 text-brand-warning" />
               )}
               <span>
                 {t('condition.accessories')}:{' '}

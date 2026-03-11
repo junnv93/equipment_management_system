@@ -223,7 +223,7 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
             {noLeaderCount > 0 && (
               <>
                 <span className="h-3 w-px bg-border" aria-hidden="true" />
-                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                <span className="flex items-center gap-1.5 text-brand-warning">
                   <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                   <span>{t('listContent.stats.noLeader')}</span>
                   <span className="font-mono font-semibold tabular-nums">{noLeaderCount}</span>
@@ -348,7 +348,7 @@ function SitePanel({
             <span className={SITE_PANEL_TOKENS.metaNum}>{memberCount}</span>명
           </div>
           {noLeaderCount > 0 && (
-            <div className={cn(SITE_PANEL_TOKENS.metaItem, 'text-amber-600 dark:text-amber-400')}>
+            <div className={cn(SITE_PANEL_TOKENS.metaItem, 'text-brand-warning')}>
               <AlertTriangle className="h-3 w-3" aria-hidden="true" />
               <span className={SITE_PANEL_TOKENS.metaNumWarn}>{noLeaderCount}</span>
               {t('listContent.stats.noLeader')}
@@ -443,7 +443,7 @@ function TeamRow({ team, onClick, t }: TeamRowProps) {
           {team.leaderName ? (
             <>
               <UserCheck
-                className="h-[10px] w-[10px] text-green-500 flex-shrink-0"
+                className="h-[10px] w-[10px] text-brand-ok flex-shrink-0"
                 aria-hidden="true"
               />
               <span className={TEAM_ROW_TOKENS.leaderName}>{team.leaderName}</span>

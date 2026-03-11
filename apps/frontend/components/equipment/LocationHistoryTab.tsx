@@ -358,7 +358,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
                             <Calendar className="h-4 w-4" />
                             <span>{formatDate(item.changedAt, 'yyyy-MM-dd')}</span>
                           </div>
-                          <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
+                          <h4 className="text-lg font-semibold text-foreground">
                             {item.newLocation}
                           </h4>
                         </div>
@@ -376,7 +376,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
 
                       {/* 비고 */}
                       {item.notes && (
-                        <div className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <div className="flex items-start gap-2 text-sm text-foreground">
                           <FileText className="h-4 w-4 mt-0.5 text-muted-foreground" />
                           <p>{item.notes}</p>
                         </div>

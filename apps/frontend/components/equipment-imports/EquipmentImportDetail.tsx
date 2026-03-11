@@ -403,9 +403,11 @@ export default function EquipmentImportDetail({ id }: Props) {
 
       {/* Rejection Reason */}
       {status === 'rejected' && equipmentImport.rejectionReason && (
-        <Card className="border-red-200">
+        <Card className="border-brand-critical/40">
           <CardHeader>
-            <CardTitle className="text-red-700">{t('equipmentImport.rejectionReason')}</CardTitle>
+            <CardTitle className="text-brand-critical">
+              {t('equipmentImport.rejectionReason')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p>{equipmentImport.rejectionReason}</p>

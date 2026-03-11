@@ -91,11 +91,13 @@ export interface CalibrationFactorRegistry {
 export const FACTOR_TYPE_LABELS = CALIBRATION_FACTOR_TYPE_LABELS;
 export const APPROVAL_STATUS_LABELS = CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS;
 
-// 승인 상태 색상 (brand CSS 변수 기반 — dark mode 자동 대응)
+// 승인 상태 색상 — BRAND_CLASS_MATRIX에서 파생 (SSOT)
+import { getSemanticStatusClasses } from '@/lib/design-tokens/brand';
+
 export const APPROVAL_STATUS_COLORS: Record<CalibrationFactorApprovalStatus, string> = {
-  pending: 'bg-brand-warning/10 text-brand-warning',
-  approved: 'bg-brand-ok/10 text-brand-ok',
-  rejected: 'bg-brand-critical/10 text-brand-critical',
+  pending: getSemanticStatusClasses('warning'),
+  approved: getSemanticStatusClasses('ok'),
+  rejected: getSemanticStatusClasses('critical'),
 };
 
 // 보정계수 API 객체

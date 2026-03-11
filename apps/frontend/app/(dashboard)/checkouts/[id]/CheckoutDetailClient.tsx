@@ -309,7 +309,7 @@ export default function CheckoutDetailClient({
     // 대여 목적 특수 상태 - 상태 확인 필요
     if (
       checkout.purpose === 'rental' &&
-      ['approved', 'lender_checked', 'borrower_received', 'in_use', 'borrower_returned'].includes(
+      ['approved', 'lender_checked', 'borrower_received', 'borrower_returned'].includes(
         checkout.status
       )
     ) {
@@ -518,7 +518,7 @@ export default function CheckoutDetailClient({
             {checkout.approvedBy && (
               <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                 <div className="p-2 bg-background rounded-full">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <CheckCircle2 className="h-5 w-5 text-brand-ok" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t('detail.approver')}</p>
@@ -642,9 +642,9 @@ export default function CheckoutDetailClient({
               {checkout.purpose === 'calibration' && (
                 <div className="flex items-center gap-2">
                   {checkout.calibrationChecked ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-brand-ok" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-red-600" />
+                    <XCircle className="h-5 w-5 text-brand-critical" />
                   )}
                   <span>{t('detail.calibrationCheck')}</span>
                 </div>
@@ -652,18 +652,18 @@ export default function CheckoutDetailClient({
               {checkout.purpose === 'repair' && (
                 <div className="flex items-center gap-2">
                   {checkout.repairChecked ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-brand-ok" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-red-600" />
+                    <XCircle className="h-5 w-5 text-brand-critical" />
                   )}
                   <span>{t('detail.repairCheck')}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
                 {checkout.workingStatusChecked ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <CheckCircle2 className="h-5 w-5 text-brand-ok" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-red-600" />
+                  <XCircle className="h-5 w-5 text-brand-critical" />
                 )}
                 <span>{t('detail.operationCheck')}</span>
               </div>

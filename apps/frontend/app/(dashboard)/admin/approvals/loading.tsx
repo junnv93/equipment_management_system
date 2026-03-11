@@ -33,7 +33,7 @@ export default function ApprovalsLoading() {
         </CardHeader>
         <CardContent className="space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="border-l-4 border-l-gray-200">
+            <Card key={i} className="border-l-4 border-l-brand-border-subtle">
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-3">

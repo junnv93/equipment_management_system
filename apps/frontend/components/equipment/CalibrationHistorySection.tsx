@@ -263,7 +263,7 @@ export function CalibrationHistorySection({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CalendarCheck className="h-5 w-5 text-purple-500" />
+            <CalendarCheck className="h-5 w-5 text-brand-purple" />
             <CardTitle>{t('title')}</CardTitle>
           </div>
           {isCreateMode || onAdd ? (
@@ -314,7 +314,7 @@ export function CalibrationHistorySection({
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={RESULT_COLORS[resultKey] || 'bg-gray-100 text-gray-800'}
+                        className={RESULT_COLORS[resultKey] || 'bg-muted text-muted-foreground'}
                       >
                         {RESULT_LABEL_KEYS[resultKey]
                           ? t(
@@ -329,10 +329,7 @@ export function CalibrationHistorySection({
                     <TableCell>{formatDate(item.nextCalibrationDate, 'yyyy-MM-dd')}</TableCell>
                     <TableCell>{item.calibrationAgency || '-'}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={STATUS_COLORS[item.status] || 'bg-gray-100'}
-                      >
+                      <Badge variant="outline" className={STATUS_COLORS[item.status] || 'bg-muted'}>
                         {STATUS_LABEL_KEYS[item.status]
                           ? t(
                               STATUS_LABEL_KEYS[item.status] as

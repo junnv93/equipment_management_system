@@ -9,9 +9,9 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'rounded-lg border bg-card text-card-foreground shadow-sm motion-safe:transition-[box-shadow,border-color] motion-safe:duration-200 motion-reduce:transition-none dark:border-gray-800 dark:bg-gray-950/50 dark:shadow-md dark:shadow-gray-900/20',
+      'rounded-lg border bg-card text-card-foreground shadow-sm motion-safe:transition-[box-shadow,border-color] motion-safe:duration-200 motion-reduce:transition-none dark:border-brand-border-subtle dark:bg-brand-bg-surface dark:shadow-md dark:shadow-black/20',
       hoverable &&
-        'hover:shadow-md hover:shadow-gray-200/50 dark:hover:shadow-lg dark:hover:shadow-gray-900/30 hover:border-gray-300 dark:hover:border-gray-700',
+        'hover:shadow-md hover:shadow-black/5 dark:hover:shadow-lg dark:hover:shadow-black/30 hover:border-brand-border-default dark:hover:border-brand-border-default',
       className
     )}
     {...props}
@@ -31,7 +31,7 @@ const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTML
     <h3
       ref={ref}
       className={cn(
-        'text-lg font-semibold leading-none tracking-tight dark:text-gray-50',
+        'text-lg font-semibold leading-none tracking-tight dark:text-brand-text-primary',
         className
       )}
       role="heading"
@@ -45,11 +45,7 @@ const CardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn('text-sm text-muted-foreground dark:text-gray-400', className)}
-    {...props}
-  />
+  <p ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />
 ));
 CardDescription.displayName = 'CardDescription';
 
@@ -64,7 +60,7 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex items-center p-6 pt-0 dark:border-t-gray-800', className)}
+      className={cn('flex items-center p-6 pt-0 dark:border-t-brand-border-subtle', className)}
       {...props}
     />
   )

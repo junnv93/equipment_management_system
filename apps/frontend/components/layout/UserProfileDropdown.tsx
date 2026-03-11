@@ -25,7 +25,7 @@ const roleBadgeColors: Record<string, string> = {
   technical_manager: 'bg-brand-ok/10 text-brand-ok',
   quality_manager: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
   lab_manager: 'bg-brand-purple/10 text-brand-purple',
-  system_admin: 'bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300',
+  system_admin: 'bg-ul-red/10 text-ul-red dark:bg-ul-red/20',
 };
 
 /**

@@ -72,7 +72,7 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
           <span className="text-sm text-muted-foreground" aria-hidden="true">
             ...
           </span>
-          <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" aria-hidden="true" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
         </>
       )}
 

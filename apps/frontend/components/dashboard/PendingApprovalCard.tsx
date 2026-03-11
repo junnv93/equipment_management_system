@@ -185,7 +185,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
               <Badge
                 variant="secondary"
                 className={cn(
-                  'bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300',
+                  'bg-ul-red/10 text-ul-red dark:bg-ul-red/20',
                   getUrgencyFeedbackClasses(getCountBasedUrgency(totalPending), false) // 애니메이션 없음
                 )}
                 aria-live="polite"
@@ -247,7 +247,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
                     className={cn(
                       'text-2xl font-bold mt-1 tracking-tight tabular-nums',
                       DASHBOARD_MOTION.textColor,
-                      hasItems ? 'text-ul-red dark:text-red-400' : 'text-muted-foreground'
+                      hasItems ? 'text-ul-red' : 'text-muted-foreground'
                     )}
                   >
                     {count}

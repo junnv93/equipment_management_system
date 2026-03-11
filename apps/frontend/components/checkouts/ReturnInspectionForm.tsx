@@ -101,7 +101,7 @@ export default function ReturnInspectionForm({
             <Label htmlFor="calibrationChecked" className="flex items-center gap-2">
               {t('returnInspection.calibrationLabel')}
               {isCalibrationRequired && (
-                <span className="text-xs text-red-500 font-medium">
+                <span className="text-xs text-destructive font-medium">
                   {t('returnInspection.required')}
                 </span>
               )}
@@ -121,7 +121,7 @@ export default function ReturnInspectionForm({
             <Label htmlFor="repairChecked" className="flex items-center gap-2">
               {t('returnInspection.repairLabel')}
               {isRepairRequired && (
-                <span className="text-xs text-red-500 font-medium">
+                <span className="text-xs text-destructive font-medium">
                   {t('returnInspection.required')}
                 </span>
               )}
@@ -140,7 +140,7 @@ export default function ReturnInspectionForm({
           <div className="grid gap-1.5 leading-none">
             <Label htmlFor="workingStatusChecked" className="flex items-center gap-2">
               {t('returnInspection.workingStatusLabel')}
-              <span className="text-xs text-red-500 font-medium">
+              <span className="text-xs text-destructive font-medium">
                 {t('returnInspection.required')}
               </span>
             </Label>
@@ -169,7 +169,7 @@ export default function ReturnInspectionForm({
         <div className="space-y-1 text-sm">
           <div className="flex items-center gap-2">
             <CheckCircle2
-              className={`h-4 w-4 ${workingStatusChecked ? 'text-green-500' : 'text-gray-300'}`}
+              className={`h-4 w-4 ${workingStatusChecked ? 'text-brand-ok' : 'text-muted-foreground/30'}`}
             />
             <span>
               {t('returnInspection.workingStatus', {
@@ -182,7 +182,7 @@ export default function ReturnInspectionForm({
           {(isCalibrationRequired || calibrationChecked) && (
             <div className="flex items-center gap-2">
               <CheckCircle2
-                className={`h-4 w-4 ${calibrationChecked ? 'text-green-500' : 'text-gray-300'}`}
+                className={`h-4 w-4 ${calibrationChecked ? 'text-brand-ok' : 'text-muted-foreground/30'}`}
               />
               <span>
                 {t('returnInspection.calibrationStatus', {
@@ -196,7 +196,7 @@ export default function ReturnInspectionForm({
           {(isRepairRequired || repairChecked) && (
             <div className="flex items-center gap-2">
               <CheckCircle2
-                className={`h-4 w-4 ${repairChecked ? 'text-green-500' : 'text-gray-300'}`}
+                className={`h-4 w-4 ${repairChecked ? 'text-brand-ok' : 'text-muted-foreground/30'}`}
               />
               <span>
                 {t('returnInspection.repairStatus', {

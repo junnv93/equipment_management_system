@@ -64,14 +64,14 @@ export function DisposalCancelDialog({
       <DialogContent role="dialog" aria-modal="true">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-600" />
+            <AlertTriangle className="h-5 w-5 text-brand-warning" />
             {t('cancelDialog.title')}
           </DialogTitle>
           <DialogDescription>{t('cancelDialog.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-muted-foreground">
             {t.rich('cancelDialog.message', {
               name: equipmentName,
               status: t('cancelDialog.available'),

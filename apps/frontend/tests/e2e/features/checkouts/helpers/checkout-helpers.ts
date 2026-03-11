@@ -863,7 +863,11 @@ export async function resetRentalCheckoutToState(
   };
 
   // Add dates based on progression
-  if (['lender_checked', 'in_use', 'borrower_returned', 'lender_received'].includes(targetStatus)) {
+  if (
+    ['lender_checked', 'borrower_received', 'borrower_returned', 'lender_received'].includes(
+      targetStatus
+    )
+  ) {
     baseFields.checkout_date = "NOW() - INTERVAL '2 days'";
   }
   if (['lender_received'].includes(targetStatus)) {
@@ -880,7 +884,7 @@ export async function resetRentalCheckoutToState(
          approver_id = $3,
          approved_at = NOW() - INTERVAL '3 days',
          checkout_date = CASE
-           WHEN $4 IN ('lender_checked','in_use','borrower_returned','lender_received')
+           WHEN $4 IN ('lender_checked','borrower_received','borrower_returned','lender_received')
            THEN NOW() - INTERVAL '2 days'
            ELSE NULL
          END,

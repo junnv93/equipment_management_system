@@ -127,7 +127,7 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                       {t(`condition.conditionStatus.${beforeCheck.appearanceStatus}`)}
                     </Badge>
                     {changes.appearance ? (
-                      <ArrowRight className="h-4 w-4 text-orange-500" />
+                      <ArrowRight className="h-4 w-4 text-brand-warning" />
                     ) : (
                       <Equal className="h-4 w-4 text-muted-foreground" />
                     )}
@@ -158,7 +158,7 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                       {t(`condition.conditionStatus.${beforeCheck.operationStatus}`)}
                     </Badge>
                     {changes.operation ? (
-                      <ArrowRight className="h-4 w-4 text-orange-500" />
+                      <ArrowRight className="h-4 w-4 text-brand-warning" />
                     ) : (
                       <Equal className="h-4 w-4 text-muted-foreground" />
                     )}
@@ -194,7 +194,7 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
                         {t(`condition.accessoriesStatusLabels.${beforeCheck.accessoriesStatus}`)}
                       </Badge>
                       {changes.accessories ? (
-                        <ArrowRight className="h-4 w-4 text-orange-500" />
+                        <ArrowRight className="h-4 w-4 text-brand-warning" />
                       ) : (
                         <Equal className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -222,11 +222,11 @@ export default function ConditionComparisonCard({ conditionChecks }: ConditionCo
 
               {/* 이상 내용 (후단계) */}
               {afterCheck.abnormalDetails && (
-                <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <p className="text-sm text-red-800 font-medium mb-1">
+                <div className="p-3 bg-brand-critical/10 rounded-lg border border-brand-critical/20">
+                  <p className="text-sm text-brand-critical font-medium mb-1">
                     {t('condition.abnormalDetails')}
                   </p>
-                  <p className="text-sm text-red-700">{afterCheck.abnormalDetails}</p>
+                  <p className="text-sm text-brand-critical">{afterCheck.abnormalDetails}</p>
                 </div>
               )}
             </div>

@@ -106,7 +106,7 @@ export function MaintenanceHistorySection({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-green-500" />
+            <Wrench className="h-5 w-5 text-brand-ok" />
             <CardTitle>{t('maintenanceHistoryTab.sectionTitle')}</CardTitle>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

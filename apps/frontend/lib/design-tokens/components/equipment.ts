@@ -215,13 +215,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   temporary: {
     card: {
-      className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
-      borderColor: 'border-l-cyan-500',
-      statusBarColor: 'bg-brand-purple',
+      className: getSemanticStatusClasses('temporary'),
+      borderColor: getSemanticLeftBorderClasses('temporary'),
+      statusBarColor: 'bg-brand-temporary',
     },
     header: {
-      textColor: 'text-cyan-700 dark:text-cyan-300',
-      bgClasses: 'bg-cyan-100 dark:bg-cyan-900/30 border-cyan-500',
+      textColor: getSemanticContainerTextClasses('temporary'),
+      bgClasses: 'bg-brand-temporary/10 border-brand-temporary',
     },
     icon: Package,
     label: '임시',

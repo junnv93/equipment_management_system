@@ -217,7 +217,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
           <DialogDescription>
             {t('checkoutHistoryTab.dialog.description')}
             {canCheckoutOnlyForCalibrationRepair && (
-              <span className="block mt-2 text-amber-600 dark:text-amber-400">
+              <span className="block mt-2 text-brand-warning">
                 {t('checkoutHistoryTab.dialog.restrictedWarning', {
                   status: t(`status.${currentStatus}`),
                 })}
@@ -479,7 +479,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
                             </Badge>
                             <CheckoutStatusBadge status={checkout.status} />
                           </div>
-                          <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
+                          <h4 className="text-lg font-semibold text-foreground">
                             {checkout.destination || checkout.location}
                           </h4>
                         </div>
@@ -487,9 +487,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
 
                       {/* 사유 */}
                       {checkout.reason && (
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                          {checkout.reason}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{checkout.reason}</p>
                       )}
 
                       {/* 날짜 정보 */}

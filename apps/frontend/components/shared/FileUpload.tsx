@@ -59,16 +59,16 @@ function getFileIcon(fileName: string) {
 function getFileTypeColor(fileName: string) {
   const ext = fileName.split('.').pop()?.toLowerCase();
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext || '')) {
-    return 'text-green-600 dark:text-green-400';
+    return 'text-brand-ok';
   }
   if (['pdf'].includes(ext || '')) {
-    return 'text-red-600 dark:text-red-400';
+    return 'text-brand-critical';
   }
   if (['doc', 'docx'].includes(ext || '')) {
-    return 'text-blue-600 dark:text-blue-400';
+    return 'text-brand-info';
   }
   if (['xls', 'xlsx'].includes(ext || '')) {
-    return 'text-emerald-600 dark:text-emerald-400';
+    return 'text-brand-ok';
   }
   return 'text-muted-foreground';
 }
@@ -224,14 +224,14 @@ export function FileUpload({
         );
       case 'success':
         return (
-          <div className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+          <div className="flex items-center gap-1 text-sm text-brand-ok">
             <CheckCircle2 className="h-4 w-4" />
             <span>{t('success')}</span>
           </div>
         );
       case 'error':
         return (
-          <div className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+          <div className="flex items-center gap-1 text-sm text-brand-critical">
             <AlertCircle className="h-4 w-4" />
             <span>{uploadedFile.error || t('error')}</span>
           </div>
@@ -314,10 +314,7 @@ export function FileUpload({
       {errors.length > 0 && (
         <div className="space-y-1">
           {errors.map((error, index) => (
-            <p
-              key={index}
-              className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1"
-            >
+            <p key={index} className="text-sm text-brand-critical flex items-center gap-1">
               <AlertCircle className="h-4 w-4" />
               {error}
             </p>

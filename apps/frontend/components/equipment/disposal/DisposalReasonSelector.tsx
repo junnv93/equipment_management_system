@@ -24,7 +24,7 @@ export function DisposalReasonSelector({ value, onValueChange }: DisposalReasonS
   return (
     <div className="space-y-3">
       <Label className="text-sm font-medium">
-        {t('reasonSelector.label')} <span className="text-red-500">*</span>
+        {t('reasonSelector.label')} <span className="text-destructive">*</span>
       </Label>
       <RadioGroup
         value={value}

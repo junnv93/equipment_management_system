@@ -138,11 +138,11 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   const getStatusIcon = (status: SoftwareApprovalStatus) => {
     switch (status) {
       case 'approved':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+        return <CheckCircle2 className="h-4 w-4 text-brand-ok" />;
       case 'rejected':
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-brand-critical" />;
       default:
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-brand-warning" />;
     }
   };
 

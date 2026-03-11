@@ -56,6 +56,7 @@ export {
   getSemanticLeftBorderClasses,
   getSemanticSolidBgClasses,
   getSemanticDotClasses,
+  getSemanticBgLightClasses,
   getBrandElevatedClasses,
   getBrandMutedTextClasses,
   getSiteBadgeClasses,

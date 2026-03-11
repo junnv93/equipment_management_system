@@ -19,11 +19,7 @@ import { cn } from '@/lib/utils';
  */
 export function EquipmentDetailSkeleton() {
   return (
-    <div
-      className="min-h-screen bg-ul-gray-light dark:bg-gray-950"
-      aria-busy="true"
-      aria-live="polite"
-    >
+    <div className="min-h-screen bg-background" aria-busy="true" aria-live="polite">
       {/* 컴팩트 헤더 스켈레톤 — EQUIPMENT_DETAIL_HEADER_TOKENS와 구조 동기화 */}
       <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.container}>
         <div className={EQUIPMENT_DETAIL_HEADER_TOKENS.breadcrumbRow}>

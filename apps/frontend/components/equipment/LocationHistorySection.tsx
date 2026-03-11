@@ -106,7 +106,7 @@ export function LocationHistorySection({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-blue-500" />
+            <MapPin className="h-5 w-5 text-brand-info" />
             <CardTitle>{t('locationHistoryTab.title')}</CardTitle>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

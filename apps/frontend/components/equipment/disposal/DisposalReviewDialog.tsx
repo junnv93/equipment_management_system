@@ -121,26 +121,26 @@ export function DisposalReviewDialog({
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div>
-                <span className="font-medium text-gray-700">{t('common.equipmentName')}</span>{' '}
+                <span className="font-medium text-foreground">{t('common.equipmentName')}</span>{' '}
                 {equipment.name}
               </div>
               <div>
-                <span className="font-medium text-gray-700">{t('common.requester')}</span>{' '}
+                <span className="font-medium text-foreground">{t('common.requester')}</span>{' '}
                 {disposalRequest.requestedByName} | {formatDateTime(disposalRequest.requestedAt)}
               </div>
               <div>
-                <span className="font-medium text-gray-700">{t('common.disposalReason')}</span>{' '}
+                <span className="font-medium text-foreground">{t('common.disposalReason')}</span>{' '}
                 {tReason(disposalRequest.reason)}
               </div>
               <div>
-                <span className="font-medium text-gray-700">{t('common.reasonDetail')}</span>
-                <p className="mt-1 text-gray-600 whitespace-pre-wrap">
+                <span className="font-medium text-foreground">{t('common.reasonDetail')}</span>
+                <p className="mt-1 text-muted-foreground whitespace-pre-wrap">
                   {disposalRequest.reasonDetail}
                 </p>
               </div>
               {disposalRequest.attachments && disposalRequest.attachments.length > 0 && (
                 <div>
-                  <span className="font-medium text-gray-700">{t('common.attachments')}</span>
+                  <span className="font-medium text-foreground">{t('common.attachments')}</span>
                   <div className="mt-1 space-y-1">
                     {disposalRequest.attachments.map((file) => (
                       <a
@@ -164,7 +164,7 @@ export function DisposalReviewDialog({
 
           <div className="space-y-2">
             <Label htmlFor="opinion">
-              {t('reviewDialog.opinionLabel')} <span className="text-red-500">*</span>
+              {t('reviewDialog.opinionLabel')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="opinion"
@@ -181,7 +181,7 @@ export function DisposalReviewDialog({
             />
             <p
               id="opinion-hint"
-              className={`text-xs text-gray-500 ${CONTENT_TOKENS.numeric.tabular}`}
+              className={`text-xs text-muted-foreground ${CONTENT_TOKENS.numeric.tabular}`}
             >
               {t('common.charCount', { count: opinion.length })}
             </p>

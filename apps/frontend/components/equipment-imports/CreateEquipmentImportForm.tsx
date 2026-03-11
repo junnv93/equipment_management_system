@@ -212,7 +212,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label htmlFor="equipmentName">
-                {t('equipmentImport.equipmentName')} <span className="text-red-500">*</span>
+                {t('equipmentImport.equipmentName')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="equipmentName"
@@ -225,7 +225,8 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
             <div>
               <Label htmlFor="classification">
-                {t('equipmentImport.classificationLabel')} <span className="text-red-500">*</span>
+                {t('equipmentImport.classificationLabel')}{' '}
+                <span className="text-destructive">*</span>
               </Label>
               <Select
                 value={form.classification}
@@ -309,7 +310,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
               <>
                 <div className="sm:col-span-2">
                   <Label htmlFor="vendorName">
-                    {t('equipmentImport.vendorName')} <span className="text-red-500">*</span>
+                    {t('equipmentImport.vendorName')} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="vendorName"
@@ -348,7 +349,8 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
               <>
                 <div className="sm:col-span-2">
                   <Label htmlFor="ownerDepartment">
-                    {t('equipmentImport.ownerDepartment')} <span className="text-red-500">*</span>
+                    {t('equipmentImport.ownerDepartment')}{' '}
+                    <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="ownerDepartment"
@@ -384,7 +386,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="usagePeriodStart">
-                {t('equipmentImport.usagePeriodStart')} <span className="text-red-500">*</span>
+                {t('equipmentImport.usagePeriodStart')} <span className="text-destructive">*</span>
               </Label>
               <DatePicker
                 selected={form.usagePeriodStart ?? undefined}
@@ -395,7 +397,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
             <div>
               <Label htmlFor="usagePeriodEnd">
-                {t('equipmentImport.usagePeriodEnd')} <span className="text-red-500">*</span>
+                {t('equipmentImport.usagePeriodEnd')} <span className="text-destructive">*</span>
               </Label>
               <DatePicker
                 selected={form.usagePeriodEnd ?? undefined}
@@ -409,7 +411,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
                 {isInternalShared
                   ? t('equipmentImport.importReasonBrief')
                   : t('equipmentImport.importReason')}{' '}
-                <span className="text-red-500">*</span>
+                <span className="text-destructive">*</span>
               </Label>
               <Textarea
                 id="reason"

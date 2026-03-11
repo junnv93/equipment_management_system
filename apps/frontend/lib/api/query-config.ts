@@ -15,22 +15,15 @@
  */
 
 import type { Site } from '@equipment-management/schemas';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 
 /**
  * 캐시 시간 상수 (밀리초)
+ *
+ * SSOT: @equipment-management/shared-constants의 CACHE_TTL 참조
+ * Backend SimpleCacheService TTL과 동일한 값을 사용합니다.
  */
-export const CACHE_TIMES = {
-  /** 30초 - 자주 변경되는 데이터 (대시보드, 알림) */
-  SHORT: 30 * 1000,
-  /** 2분 - 일반적인 데이터 (상세 페이지) */
-  MEDIUM: 2 * 60 * 1000,
-  /** 5분 - 변경이 적은 데이터 (목록 페이지) */
-  LONG: 5 * 60 * 1000,
-  /** 10분 - 거의 변경되지 않는 데이터 (메타데이터) */
-  VERY_LONG: 10 * 60 * 1000,
-  /** 30분 - 참조 데이터 (팀 목록, 상태 코드) */
-  REFERENCE: 30 * 60 * 1000,
-} as const;
+export const CACHE_TIMES = CACHE_TTL;
 
 /**
  * Refetch Interval 상수 (밀리초)

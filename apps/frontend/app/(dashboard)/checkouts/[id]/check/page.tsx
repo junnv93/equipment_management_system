@@ -30,20 +30,18 @@ type PageProps = {
 /**
  * 현재 상태에서 필요한 확인 단계 결정
  *
- * 대여 목적 반출의 상태 전이:
- * approved → lender_checked (①반출 전 확인)
- * lender_checked → borrower_received (②인수 확인)
- * borrower_received → in_use (사용 시작)
- * in_use → borrower_returned (③반납 전 확인)
- * borrower_returned → lender_received (④반입 확인)
+ * 대여 목적 반출의 4단계 상태 전이:
+ * ① approved → lender_checked (반출 전 확인)
+ * ② lender_checked → borrower_received (인수 확인)
+ * ③ borrower_received → borrower_returned (반납 전 확인)
+ * ④ borrower_returned → lender_received (반입 확인)
  */
 function getNextCheckStep(status: CheckoutStatus): ConditionCheckStep | null {
   const stepMap: Partial<Record<CheckoutStatus, ConditionCheckStep>> = {
     approved: 'lender_checkout', // 승인됨 → 반출 전 확인 필요
     checked_out: 'lender_checkout', // 반출 중 (교정/수리에서 전환된 경우)
     lender_checked: 'borrower_receive', // 반출 전 확인 완료 → 인수 확인 필요
-    borrower_received: 'borrower_return', // 인수 확인 완료 (사용 중) → 반납 전 확인 필요
-    in_use: 'borrower_return', // 사용 중 → 반납 전 확인 필요
+    borrower_received: 'borrower_return', // 인수 확인 완료 → 반납 전 확인 필요
     borrower_returned: 'lender_return', // 반납 전 확인 완료 → 반입 확인 필요
   };
 

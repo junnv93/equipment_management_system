@@ -304,9 +304,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
                             <Calendar className="h-4 w-4" />
                             <span>{formatDate(item.performedAt, 'yyyy-MM-dd')}</span>
                           </div>
-                          <h4 className="text-lg font-semibold text-ul-midnight dark:text-white">
-                            {item.content}
-                          </h4>
+                          <h4 className="text-lg font-semibold text-foreground">{item.content}</h4>
                         </div>
                         {canDelete && (
                           <Button

@@ -44,7 +44,7 @@ const EquipmentRow = memo(
     }, [equipment, onClick]);
 
     return (
-      <TableRow className="dark:border-gray-700 h-16">
+      <TableRow className="dark:border-border h-16">
         <TableCell className="font-medium">{equipment.managementNumber}</TableCell>
         <TableCell className="max-w-[150px] sm:max-w-none truncate">{equipment.name}</TableCell>
         <TableCell className="hidden sm:table-cell">{equipment.modelName || '-'}</TableCell>
@@ -72,7 +72,7 @@ EquipmentRow.displayName = 'EquipmentRow';
 
 // 스켈레톤 로딩 컴포넌트
 const SkeletonRow = memo(() => (
-  <TableRow className="dark:border-gray-700 h-16">
+  <TableRow className="dark:border-border h-16">
     <TableCell>
       <Skeleton className="h-4 w-16" />
     </TableCell>
@@ -179,10 +179,10 @@ const VirtualizedEquipmentList = ({
   );
 
   return (
-    <div className="border rounded-lg overflow-hidden dark:border-gray-700 h-[600px]">
+    <div className="border rounded-lg overflow-hidden dark:border-border h-[600px]">
       <Table>
         <TableHeader>
-          <TableRow className="dark:border-gray-700">
+          <TableRow className="dark:border-border">
             <TableHead className="w-[100px] md:w-auto">관리번호</TableHead>
             <TableHead>장비명</TableHead>
             <TableHead className="hidden sm:table-cell">분류</TableHead>

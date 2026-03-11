@@ -121,7 +121,7 @@ export function IncidentHistorySection({
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <AlertTriangle className="h-5 w-5 text-brand-warning" />
             <CardTitle>{t('incidentHistoryTab.sectionTitle')}</CardTitle>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

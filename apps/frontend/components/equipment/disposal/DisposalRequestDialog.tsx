@@ -103,7 +103,7 @@ export function DisposalRequestDialog({
 
           <div className="space-y-2">
             <Label htmlFor="reasonDetail">
-              {t('requestDialog.reasonDetailLabel')} <span className="text-red-500">*</span>
+              {t('requestDialog.reasonDetailLabel')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="reasonDetail"
@@ -116,7 +116,7 @@ export function DisposalRequestDialog({
             />
             <p
               id="reasonDetail-hint"
-              className={`text-xs text-gray-500 ${CONTENT_TOKENS.numeric.tabular}`}
+              className={`text-xs text-muted-foreground ${CONTENT_TOKENS.numeric.tabular}`}
             >
               {t('common.charCount', { count: reasonDetail.length })}
             </p>

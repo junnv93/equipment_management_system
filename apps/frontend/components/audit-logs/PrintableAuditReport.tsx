@@ -118,26 +118,26 @@ export function PrintableAuditReport({
               </td>
               <td className="p-3 align-top">
                 <div className="font-medium">{log.userName}</div>
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-muted-foreground">
                   {USER_ROLE_LABELS[log.userRole as UserRole] || log.userRole}
                 </div>
               </td>
               <td className="p-3 align-top">
-                <div className="inline-block px-2 py-1 rounded bg-gray-200 text-gray-800">
+                <div className="inline-block px-2 py-1 rounded bg-muted text-foreground">
                   {AUDIT_ACTION_LABELS[log.action as AuditAction] || log.action}
                 </div>
               </td>
               <td className="p-3 align-top">
                 <div className="font-medium truncate max-w-[200px]">
                   {log.entityName || (
-                    <span className="text-gray-600 text-xs">
+                    <span className="text-muted-foreground text-xs">
                       {AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] ||
                         log.entityType}{' '}
                       ({log.entityId.substring(0, 8)}...)
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-muted-foreground">
                   {AUDIT_ENTITY_TYPE_LABELS[log.entityType as AuditEntityType] || log.entityType}
                 </div>
               </td>
@@ -150,7 +150,7 @@ export function PrintableAuditReport({
       </table>
 
       {/* 푸터 */}
-      <div className="print:mt-8 text-xs text-gray-500 space-y-1">
+      <div className="print:mt-8 text-xs text-muted-foreground space-y-1">
         <p>총 {logs.length.toLocaleString()}개의 로그</p>
         <p>본 문서는 품질 관리 시스템의 공식 감사 기록입니다.</p>
         <p>UL Solutions - Equipment Management System</p>

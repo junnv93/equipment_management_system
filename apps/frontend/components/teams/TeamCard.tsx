@@ -8,7 +8,7 @@ import type { Team } from '@/lib/api/teams-api';
 import { SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { TeamTypeIcon } from './TeamTypeIcon';
 import { TeamMemberAvatars } from './TeamMemberAvatars';
-import { TEAM_CARD_TOKENS } from '@/lib/design-tokens/components/team';
+import { TEAM_CARD_TOKENS } from '@/lib/design-tokens';
 
 interface TeamCardProps {
   team: Team;
@@ -100,9 +100,7 @@ export function TeamCard({ team, className }: TeamCardProps) {
             <div
               className={cn(
                 TEAM_CARD_TOKENS.kpiValue,
-                team.leaderName
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-amber-500 dark:text-amber-400'
+                team.leaderName ? 'text-brand-ok' : 'text-brand-warning'
               )}
             >
               {team.leaderName ? '✓' : '−'}
@@ -115,7 +113,7 @@ export function TeamCard({ team, className }: TeamCardProps) {
         <div className="flex items-center justify-between min-h-[24px]">
           {team.leaderName ? (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-              <UserCheck className="h-3 w-3 text-green-500 flex-shrink-0" aria-hidden="true" />
+              <UserCheck className="h-3 w-3 text-brand-ok flex-shrink-0" aria-hidden="true" />
               <span className="truncate">{team.leaderName}</span>
             </div>
           ) : (

@@ -58,7 +58,7 @@ export function EquipmentSelector({
       </CardHeader>
       <CardContent>
         <div className="relative mb-4">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="장비명, 관리번호 검색..."
             value={searchTerm}

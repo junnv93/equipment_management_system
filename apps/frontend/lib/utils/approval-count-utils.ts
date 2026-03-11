@@ -18,6 +18,11 @@ import {
   type ApprovalCategory,
   type PendingCountsByCategory,
 } from '@/lib/api/approvals-api';
+import {
+  getSemanticContainerTextClasses,
+  getSemanticBgLightClasses,
+  type SemanticColorKey,
+} from '@/lib/design-tokens/brand';
 
 /**
  * 역할별 승인 대기 총합 계산
@@ -48,52 +53,36 @@ export interface DashboardApprovalCategory {
   bgColor: string;
 }
 
-const CATEGORY_COLORS: Record<ApprovalCategory, { color: string; bgColor: string }> = {
-  outgoing: {
-    color: 'text-orange-700 dark:text-orange-300',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-  },
-  incoming: {
-    color: 'text-emerald-700 dark:text-emerald-300',
-    bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
-  },
-  equipment: {
-    color: 'text-blue-700 dark:text-blue-300',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-  },
-  calibration: {
-    color: 'text-green-700 dark:text-green-300',
-    bgColor: 'bg-green-100 dark:bg-green-900/30',
-  },
-  inspection: {
-    color: 'text-cyan-700 dark:text-cyan-300',
-    bgColor: 'bg-cyan-100 dark:bg-cyan-900/30',
-  },
-  nonconformity: {
-    color: 'text-amber-700 dark:text-amber-300',
-    bgColor: 'bg-amber-100 dark:bg-amber-900/30',
-  },
-  disposal_review: {
-    color: 'text-red-700 dark:text-red-300',
-    bgColor: 'bg-red-100 dark:bg-red-900/30',
-  },
-  disposal_final: {
-    color: 'text-red-700 dark:text-red-300',
-    bgColor: 'bg-red-100 dark:bg-red-900/30',
-  },
-  plan_review: {
-    color: 'text-violet-700 dark:text-violet-300',
-    bgColor: 'bg-violet-100 dark:bg-violet-900/30',
-  },
-  plan_final: {
-    color: 'text-violet-700 dark:text-violet-300',
-    bgColor: 'bg-violet-100 dark:bg-violet-900/30',
-  },
-  software: {
-    color: 'text-pink-700 dark:text-pink-300',
-    bgColor: 'bg-pink-100 dark:bg-pink-900/30',
-  },
+/**
+ * 승인 카테고리 → 시맨틱 색상 매핑
+ *
+ * brand.ts의 SemanticColorKey를 사용하여 SSOT 체인 유지.
+ * CSS 변수 → Tailwind → brand 헬퍼 체인으로 다크모드/사이트 테마 자동 대응.
+ */
+const CATEGORY_SEMANTIC_COLOR: Record<ApprovalCategory, SemanticColorKey> = {
+  outgoing: 'repair', // 반출 → orange 계열
+  incoming: 'ok', // 반입 → green 계열
+  equipment: 'info', // 장비 → blue 계열
+  calibration: 'ok', // 교정 → green 계열
+  inspection: 'temporary', // 점검 → cyan 계열
+  nonconformity: 'warning', // 부적합 → amber 계열
+  disposal_review: 'critical', // 폐기 검토 → red 계열
+  disposal_final: 'critical', // 폐기 승인 → red 계열
+  plan_review: 'purple', // 계획 검토 → violet 계열
+  plan_final: 'purple', // 계획 승인 → violet 계열
+  software: 'purple', // 소프트웨어 → purple 계열
 };
+
+const CATEGORY_COLORS: Record<ApprovalCategory, { color: string; bgColor: string }> =
+  Object.fromEntries(
+    Object.entries(CATEGORY_SEMANTIC_COLOR).map(([key, semanticKey]) => [
+      key,
+      {
+        color: getSemanticContainerTextClasses(semanticKey),
+        bgColor: getSemanticBgLightClasses(semanticKey),
+      },
+    ])
+  ) as Record<ApprovalCategory, { color: string; bgColor: string }>;
 
 /**
  * 역할별 대시보드 카드 카테고리 목록 생성

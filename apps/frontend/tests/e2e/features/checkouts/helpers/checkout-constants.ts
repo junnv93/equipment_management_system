@@ -105,8 +105,8 @@ export const SUITE_07 = {
 // ============================================================================
 export const SUITE_10 = {
   STEP1_LENDER: CHECKOUT_014_ID, // approved - rental → lender_checked
-  STEP2_BORROWER: CHECKOUT_027_ID, // lender_checked → in_use
-  STEP3_RETURN: CHECKOUT_033_ID, // in_use → borrower_returned
+  STEP2_BORROWER: CHECKOUT_027_ID, // lender_checked → borrower_received
+  STEP3_RETURN: CHECKOUT_033_ID, // borrower_received → borrower_returned
   STEP4_FINAL: CHECKOUT_036_ID, // borrower_returned → lender_received
   ORDER_VIOLATION: CHECKOUT_028_ID, // rental (reset to approved, skip step test)
   HISTORY: CHECKOUT_030_ID, // borrower_received (has existing checks)

@@ -54,20 +54,20 @@ export function DisposalDropdownMenu({
 
         {permissions.canReviewDisposal && (
           <DropdownMenuItem onClick={onReviewOpen}>
-            <CheckCircle className="mr-2 h-4 w-4 text-blue-600" />
+            <CheckCircle className="mr-2 h-4 w-4 text-brand-info" />
             <span className="font-medium">{t('dropdown.review')}</span>
           </DropdownMenuItem>
         )}
 
         {permissions.canApproveDisposal && (
           <DropdownMenuItem onClick={onApproveOpen}>
-            <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+            <CheckCircle className="mr-2 h-4 w-4 text-brand-ok" />
             <span className="font-medium">{t('dropdown.approve')}</span>
           </DropdownMenuItem>
         )}
 
         {permissions.canCancelDisposal && (
-          <DropdownMenuItem onClick={onCancelOpen} className="text-red-600">
+          <DropdownMenuItem onClick={onCancelOpen} className="text-brand-critical">
             <XCircle className="mr-2 h-4 w-4" />
             <span className="font-medium">{t('dropdown.cancel')}</span>
           </DropdownMenuItem>
@@ -78,7 +78,7 @@ export function DisposalDropdownMenu({
           permissions.canCancelDisposal) && <DropdownMenuSeparator />}
 
         <DropdownMenuItem onClick={onDetailOpen}>
-          <Eye className="mr-2 h-4 w-4 text-gray-600" />
+          <Eye className="mr-2 h-4 w-4 text-muted-foreground" />
           {t('dropdown.detail')}
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -17,9 +17,9 @@ interface CheckoutStatusStepperProps {
  * 교정/수리: 5단계
  * - pending → approved → checked_out → returned → return_approved
  *
- * 대여: 8단계 (양측 4단계 확인)
+ * 대여: 7단계 (양측 4단계 확인)
  * - pending → approved → lender_checked → borrower_received
- * → in_use → borrower_returned → lender_received → return_approved
+ * → borrower_returned → lender_received → return_approved
  */
 const STEP_STATUSES: Record<string, CheckoutStatus[]> = {
   calibration: ['pending', 'approved', 'checked_out', 'returned', 'return_approved'],
@@ -29,7 +29,6 @@ const STEP_STATUSES: Record<string, CheckoutStatus[]> = {
     'approved',
     'lender_checked',
     'borrower_received',
-    'in_use',
     'borrower_returned',
     'lender_received',
     'return_approved',
@@ -45,7 +44,6 @@ const STEPPER_LABEL_MAP: Record<string, string> = {
   return_approved: 'returnApproved',
   lender_checked: 'lenderCheckout',
   borrower_received: 'borrowerReceive',
-  in_use: 'inUse',
   borrower_returned: 'borrowerReturn',
   lender_received: 'lenderReturn',
 };

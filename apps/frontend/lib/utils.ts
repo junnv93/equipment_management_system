@@ -1,5 +1,5 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 // Re-export date utilities for compatibility
 export { formatDate, formatDateTime, formatShortDate } from './utils/date';
@@ -9,16 +9,16 @@ export { formatDate, formatDateTime, formatShortDate } from './utils/date';
  * clsx로 클래스 조건부 적용 후 tailwind-merge로 중복 스타일 해결
  */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
  * 숫자를 통화 형식으로 변환 (예: 1000000 -> 1,000,000원)
  */
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("ko-KR", {
-    style: "currency",
-    currency: "KRW",
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency: 'KRW',
     maximumFractionDigits: 0,
   }).format(amount);
 }
@@ -35,31 +35,25 @@ export function capitalizeFirstLetter(string: string): string {
  */
 export function truncateString(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength) + "...";
+  return str.slice(0, maxLength) + '...';
 }
 
 /**
  * 대여 상태에 따른 배지 색상 반환
+ *
+ * SSOT: brand.ts의 getSemanticStatusClasses() 사용
  */
 export function getRentalStatusColor(status: string): string {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-100 text-yellow-800";
-    case "approved":
-      return "bg-green-100 text-green-800";
-    case "rejected":
-      return "bg-red-100 text-red-800";
-    case "borrowed":
-      return "bg-blue-100 text-blue-800";
-    case "returned":
-      return "bg-gray-100 text-gray-800";
-    case "overdue":
-      return "bg-orange-100 text-orange-800";
-    case "return_requested":
-      return "bg-purple-100 text-purple-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
+  const statusColorMap: Record<string, string> = {
+    pending: 'bg-brand-warning/10 text-brand-warning',
+    approved: 'bg-brand-ok/10 text-brand-ok',
+    rejected: 'bg-brand-critical/10 text-brand-critical',
+    borrowed: 'bg-brand-info/10 text-brand-info',
+    returned: 'bg-brand-neutral/10 text-brand-neutral',
+    overdue: 'bg-brand-repair/10 text-brand-repair',
+    return_requested: 'bg-brand-purple/10 text-brand-purple',
+  };
+  return statusColorMap[status] ?? 'bg-brand-neutral/10 text-brand-neutral';
 }
 
 /**

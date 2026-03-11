@@ -148,26 +148,26 @@ export function DisposalApprovalDialog({
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium text-gray-700">{t('common.equipmentName')}</span>{' '}
+                  <span className="font-medium text-foreground">{t('common.equipmentName')}</span>{' '}
                   {equipment.name}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">
+                  <span className="font-medium text-foreground">
                     {t('approvalDialog.managementNumber')}
                   </span>{' '}
                   {equipment.managementNumber}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">{t('common.requester')}</span>{' '}
+                  <span className="font-medium text-foreground">{t('common.requester')}</span>{' '}
                   {disposalRequest.requestedByName} | {formatDateTime(disposalRequest.requestedAt)}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">{t('common.disposalReason')}</span>{' '}
+                  <span className="font-medium text-foreground">{t('common.disposalReason')}</span>{' '}
                   {tReason(disposalRequest.reason)}
                 </div>
                 <div>
-                  <span className="font-medium text-gray-700">{t('common.reasonDetail')}</span>
-                  <p className="mt-1 text-gray-600 whitespace-pre-wrap">
+                  <span className="font-medium text-foreground">{t('common.reasonDetail')}</span>
+                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap">
                     {disposalRequest.reasonDetail}
                   </p>
                 </div>
@@ -248,13 +248,15 @@ export function DisposalApprovalDialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <AlertTriangle className="h-5 w-5 text-brand-warning" />
               {t('approvalDialog.confirmTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               <div className="space-y-2">
                 <p>{t('approvalDialog.confirmDescription', { name: equipment.name })}</p>
-                <p className="text-red-600 font-medium">{t('approvalDialog.confirmWarning')}</p>
+                <p className="text-brand-critical font-medium">
+                  {t('approvalDialog.confirmWarning')}
+                </p>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

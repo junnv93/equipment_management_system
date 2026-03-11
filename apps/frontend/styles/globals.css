@@ -77,6 +77,7 @@
     --brand-color-neutral: 220 9% 46%;
     --brand-color-purple: 258 90% 66%;
     --brand-color-repair: 24 95% 53%;
+    --brand-color-temporary: 187 72% 51%;  /* #22B8CF — 임시 장비 상태 */
 
     /* Site Identity Colors */
     --brand-color-site-suw: 210 75% 18%;   /* #122C49 수원 — UL Midnight */
@@ -151,6 +152,7 @@
     --brand-color-neutral: 220 9% 46%;
     --brand-color-purple: 258 90% 66%;
     --brand-color-repair: 24 95% 53%;
+    --brand-color-temporary: 187 72% 51%;  /* 임시 — 다크모드 동일 */
 
     /* Site Identity Colors — Dark Mode (밝기 보정) */
     --brand-color-site-suw: 210 60% 55%;   /* 수원 — 다크모드 밝기 보정 */

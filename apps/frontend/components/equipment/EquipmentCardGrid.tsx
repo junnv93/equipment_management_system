@@ -40,7 +40,7 @@ interface EquipmentCardGridProps {
  */
 const SkeletonCard = memo(function SkeletonCard() {
   return (
-    <Card className="border-l-4 border-l-gray-300 dark:border-l-gray-600 motion-safe:animate-pulse">
+    <Card className="border-l-4 border-l-brand-border-default motion-safe:animate-pulse">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="space-y-2">

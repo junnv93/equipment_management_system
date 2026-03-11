@@ -189,13 +189,19 @@ export interface ConfirmPlanItemDto {
 // ✅ SSOT: packages/schemas의 라벨 재사용
 export const CALIBRATION_PLAN_STATUS_LABELS = SSOT_STATUS_LABELS;
 
-// 상태 색상 (brand CSS 변수 기반 — dark mode 자동 대응)
+// 상태 색상 — BRAND_CLASS_MATRIX에서 파생 (SSOT)
+// Badge 컴포넌트가 레이아웃(rounded, px, text-xs)을 제공하므로 색상만 전달
+import {
+  getSemanticStatusClasses,
+  getSemanticContainerColorClasses,
+} from '@/lib/design-tokens/brand';
+
 export const CALIBRATION_PLAN_STATUS_COLORS: Record<CalibrationPlanStatus, string> = {
-  draft: 'bg-brand-neutral/10 text-brand-neutral',
-  pending_review: 'bg-brand-warning/10 text-brand-warning border border-brand-warning/20',
-  pending_approval: 'bg-brand-info/10 text-brand-info border border-brand-info/20',
-  approved: 'bg-brand-ok/10 text-brand-ok border border-brand-ok/20',
-  rejected: 'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
+  draft: getSemanticStatusClasses('neutral'),
+  pending_review: `${getSemanticStatusClasses('warning')} border ${getSemanticContainerColorClasses('warning')}`,
+  pending_approval: `${getSemanticStatusClasses('info')} border ${getSemanticContainerColorClasses('info')}`,
+  approved: `${getSemanticStatusClasses('ok')} border ${getSemanticContainerColorClasses('ok')}`,
+  rejected: `${getSemanticStatusClasses('critical')} border ${getSemanticContainerColorClasses('critical')}`,
 };
 
 // ✅ SSOT: packages/schemas의 라벨 재사용

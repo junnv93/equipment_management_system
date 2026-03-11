@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Eye, XCircle } from 'lucide-react';
@@ -41,7 +39,7 @@ export function DisposalProgressCard({
 
   return (
     <Alert className={DISPOSAL_PROGRESS_CARD_TOKENS.container}>
-      <AlertCircle className="h-5 w-5 text-orange-600" />
+      <AlertCircle className="h-5 w-5 text-brand-repair" />
       <AlertTitle className={DISPOSAL_PROGRESS_CARD_TOKENS.title}>
         {t('progressCard.title')}
       </AlertTitle>

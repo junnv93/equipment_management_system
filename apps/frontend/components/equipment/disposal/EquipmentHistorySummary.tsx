@@ -24,10 +24,10 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
   const usageMonths = Math.floor((usagePeriod % 365) / 30);
 
   return (
-    <Card className="border-gray-200">
+    <Card className="border-border">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-gray-700">{t('title')}</CardTitle>
+          <CardTitle className="text-sm font-medium text-foreground">{t('title')}</CardTitle>
           <Button
             variant="ghost"
             size="sm"
@@ -44,9 +44,9 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
         <CardContent className="pt-0 space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-start gap-2">
-              <Calendar className="h-4 w-4 text-blue-600 mt-0.5" />
+              <Calendar className="h-4 w-4 text-brand-info mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">{t('lastCalibration')}</p>
+                <p className="text-xs text-muted-foreground">{t('lastCalibration')}</p>
                 <p className="text-sm font-medium">
                   {equipment.lastCalibrationDate
                     ? formatDate(equipment.lastCalibrationDate)
@@ -56,25 +56,25 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
             </div>
 
             <div className="flex items-start gap-2">
-              <Wrench className="h-4 w-4 text-orange-600 mt-0.5" />
+              <Wrench className="h-4 w-4 text-brand-repair mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">{t('repairHistory')}</p>
+                <p className="text-xs text-muted-foreground">{t('repairHistory')}</p>
                 <p className="text-sm font-medium">{t('noInfo')}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
+              <AlertTriangle className="h-4 w-4 text-brand-critical mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">{t('ncHistory')}</p>
+                <p className="text-xs text-muted-foreground">{t('ncHistory')}</p>
                 <p className="text-sm font-medium">{t('noInfo')}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <Clock className="h-4 w-4 text-green-600 mt-0.5" />
+              <Clock className="h-4 w-4 text-brand-ok mt-0.5" />
               <div>
-                <p className="text-xs text-gray-500">{t('usagePeriod')}</p>
+                <p className="text-xs text-muted-foreground">{t('usagePeriod')}</p>
                 <p className="text-sm font-medium">
                   {usageYears > 0 && t('years', { count: usageYears })}
                   {usageMonths > 0 && t('months', { count: usageMonths })}

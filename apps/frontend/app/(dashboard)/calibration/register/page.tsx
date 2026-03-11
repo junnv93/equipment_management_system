@@ -6,7 +6,7 @@ export default function CalibrationRegisterPage() {
     <Suspense
       fallback={
         <div className="p-6 flex items-center justify-center min-h-[400px]">
-          <p className="text-gray-500">교정 등록 페이지를 불러오는 중...</p>
+          <p className="text-muted-foreground">교정 등록 페이지를 불러오는 중...</p>
         </div>
       }
     >
