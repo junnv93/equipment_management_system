@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>팀 관리 — Faceted Navigation + Role-Grouped Detail</title>
+<style>
+/*
+  Design Token → CSS 변수 매핑 (기존 프로젝트 팔레트 준수)
+  ─────────────────────────────────────────────────────────
+  ul-midnight  #1D2B4F   brand primary
+  ul-red       #C41E3A   accent / tab underline
+  ul-info      #2563EB   focus ring
+  ─────────────────────────────────────────────────────────
+  팀 분류별 accent color (신규)
+  fcc-emc-rf      #2563EB  blue
+  chem-env        #059669  green
+  mech-vib        #D97706  amber
+  elec            #7C3AED  purple
+  optical         #DB2777  pink
+  general         #6B7280  gray
+*/
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* primitives */
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-xl: 12px; --r-full: 9999px;
+  --sh-sm: 0 1px 2px 0 rgb(0 0 0/.05);
+  --sh-md: 0 4px 6px -1px rgb(0 0 0/.08), 0 2px 4px -2px rgb(0 0 0/.05);
+  --sh-lg: 0 10px 24px -4px rgb(0 0 0/.10), 0 4px 8px -4px rgb(0 0 0/.06);
+  --sh-xl: 0 20px 40px -8px rgb(0 0 0/.14), 0 8px 16px -8px rgb(0 0 0/.08);
+
+  /* semantic — light */
+  --bg:        #F7F8FA;
+  --surface:   #FFFFFF;
+  --elev:      #F3F4F6;
+  --elev2:     #ECEEF1;
+  --border:    #E5E7EB;
+  --border-s:  #F0F1F3;
+  --t1:        #111827;
+  --t2:        #4B5563;
+  --t3:        #9CA3AF;
+
+  /* brand */
+  --mid:   #1D2B4F;
+  --mid2:  #162242;
+  --mid3:  #0E1A33;
+  --red:   #C41E3A;
+  --info:  #2563EB;
+
+  /* status */
+  --ok:    #059669; --ok-bg:   #ECFDF5; --ok-b:  #22C55E; --ok-t:  #065F46;
+  --warn:  #D97706; --warn-bg: #FFFBEB; --warn-b:#F59E0B; --warn-t:#92400E;
+  --err:   #DC2626; --err-bg:  #FEE2E2; --err-b: #EF4444; --err-t: #991B1B;
+  --blue:  #2563EB; --blue-bg: #EFF6FF; --blue-b:#3B82F6; --blue-t:#1E40AF;
+
+  /* classification colors */
+  --cls-fcc:   #2563EB; --cls-fcc-bg:   #EFF6FF; --cls-fcc-t:   #1E40AF;
+  --cls-chem:  #059669; --cls-chem-bg:  #ECFDF5; --cls-chem-t:  #065F46;
+  --cls-mech:  #D97706; --cls-mech-bg:  #FFFBEB; --cls-mech-t:  #92400E;
+  --cls-elec:  #7C3AED; --cls-elec-bg:  #F5F3FF; --cls-elec-t:  #4C1D95;
+  --cls-opt:   #DB2777; --cls-opt-bg:   #FDF2F8; --cls-opt-t:   #831843;
+  --cls-gen:   #6B7280; --cls-gen-bg:   #F9FAFB; --cls-gen-t:   #374151;
+
+  /* role colors */
+  --role-te:   #2563EB; --role-te-bg:   #EFF6FF; --role-te-t:   #1E40AF;
+  --role-tm:   #059669; --role-tm-bg:   #ECFDF5; --role-tm-t:   #065F46;
+  --role-qm:   #7C3AED; --role-qm-bg:   #F5F3FF; --role-qm-t:   #4C1D95;
+  --role-lm:   #D97706; --role-lm-bg:   #FFFBEB; --role-lm-t:   #92400E;
+
+  /* layout */
+  --sw:  212px;   /* global sidebar width */
+  --fw:  260px;   /* filter panel width */
+  --hh:  52px;    /* header height */
+  --dp:  480px;   /* detail panel width */
+  --sans: 'IBM Plex Sans KR', -apple-system, sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--t1);
+  font-size: 13.5px;
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ═══════════════════════════════════════
+   GLOBAL SIDEBAR  (공통 컴포넌트 재현)
+═══════════════════════════════════════ */
+.g-sidebar {
+  width: var(--sw);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 200;
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.g-sidebar-logo {
+  height: var(--hh); padding: 0 14px;
+  display: flex; align-items: center; gap: 9px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.logo-mark {
+  width: 26px; height: 26px; background: var(--mid);
+  border-radius: var(--r-md); display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 10px; font-weight: 700; font-family: var(--mono); flex-shrink: 0;
+}
+.logo-text { font-size: 12.5px; font-weight: 600; color: var(--mid); letter-spacing: -.01em; }
+.logo-sub  { font-size: 9.5px; color: var(--t3); }
+
+.g-nav-section { padding: 10px 8px 4px; }
+.g-nav-section-label {
+  font-size: 9px; font-family: var(--mono); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--t3); font-weight: 500;
+  padding: 0 8px 6px;
+}
+.g-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 8px; border-radius: var(--r-md);
+  font-size: 13px; color: var(--t2); cursor: pointer;
+  transition: background .12s, color .12s;
+  text-decoration: none;
+}
+.g-nav-item:hover { background: var(--elev); color: var(--t1); }
+.g-nav-item.active {
+  background: #EEF2FA; color: var(--mid); font-weight: 600;
+}
+.g-nav-item .nav-icon {
+  width: 16px; height: 16px; flex-shrink: 0; opacity: .7;
+}
+.g-nav-item.active .nav-icon { opacity: 1; }
+.g-nav-badge {
+  margin-left: auto; font-size: 10px; font-family: var(--mono);
+  background: var(--elev2); color: var(--t2); padding: 1px 6px;
+  border-radius: var(--r-full); font-weight: 500;
+}
+.g-nav-item.active .g-nav-badge { background: #D6DFF5; color: var(--mid); }
+
+.g-sidebar-footer {
+  margin-top: auto; padding: 12px 8px;
+  border-top: 1px solid var(--border-s);
+}
+.g-user-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: var(--r-md); cursor: pointer;
+}
+.g-user-row:hover { background: var(--elev); }
+.g-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--mid); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
+}
+.g-user-name  { font-size: 12.5px; font-weight: 500; color: var(--t1); }
+.g-user-role  { font-size: 10.5px; color: var(--t3); }
+
+/* ═══════════════════════════════════════
+   PAGE SHELL
+═══════════════════════════════════════ */
+.shell {
+  margin-left: var(--sw);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* PAGE HEADER */
+.page-header {
+  height: var(--hh); padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100; flex-shrink: 0;
+}
+.page-header-left { display: flex; align-items: center; gap: 10px; }
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--t3); font-family: var(--mono);
+}
+.breadcrumb-sep { color: var(--border); }
+.breadcrumb-current { color: var(--t2); font-weight: 500; }
+.page-title { font-size: 15px; font-weight: 700; color: var(--mid); }
+.ph-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ═══════════════════════════════════════
+   CONTENT AREA : FILTER PANEL + MAIN
+═══════════════════════════════════════ */
+.content-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── LEFT FILTER PANEL ── */
+.filter-panel {
+  width: var(--fw);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  position: sticky; top: var(--hh);
+  height: calc(100vh - var(--hh));
+  overflow-y: auto; flex-shrink: 0;
+  display: flex; flex-direction: column;
+}
+.fp-search-wrap {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border-s);
+}
+.fp-search {
+  position: relative;
+}
+.fp-search svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: var(--t3);
+}
+.fp-search input {
+  width: 100%; padding: 7px 10px 7px 32px;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  background: var(--bg); color: var(--t1); font-family: var(--sans);
+  font-size: 13px; outline: none;
+  transition: border-color .12s, box-shadow .12s;
+}
+.fp-search input:focus {
+  border-color: var(--info); box-shadow: 0 0 0 3px rgb(37 99 235 /.12);
+}
+.fp-search input::placeholder { color: var(--t3); }
+
+.fp-section { padding: 12px 14px 8px; }
+.fp-section + .fp-section { border-top: 1px solid var(--border-s); }
+.fp-section-label {
+  font-size: 9px; font-family: var(--mono); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--t3); font-weight: 500; margin-bottom: 8px;
+}
+.fp-filter-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px; border-radius: var(--r-md); cursor: pointer;
+  margin-bottom: 2px; transition: background .1s;
+}
+.fp-filter-item:hover { background: var(--elev); }
+.fp-filter-item.active { background: #EEF2FA; }
+.fp-filter-left { display: flex; align-items: center; gap: 7px; }
+.fp-filter-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.fp-filter-text { font-size: 12.5px; color: var(--t2); }
+.fp-filter-item.active .fp-filter-text { color: var(--mid); font-weight: 600; }
+.fp-count {
+  font-size: 10px; font-family: var(--mono); font-weight: 500;
+  color: var(--t3); background: var(--elev2);
+  padding: 1px 6px; border-radius: var(--r-full);
+}
+.fp-filter-item.active .fp-count { background: #D6DFF5; color: var(--mid); }
+
+.fp-cls-bar {
+  width: 3px; height: 16px; border-radius: 2px; flex-shrink: 0;
+}
+
+/* summary stats in filter panel */
+.fp-stats {
+  margin: 10px 14px; padding: 10px 12px;
+  background: var(--bg); border-radius: var(--r-lg); border: 1px solid var(--border-s);
+}
+.fp-stats-title { font-size: 9px; font-family: var(--mono); text-transform: uppercase;
+  letter-spacing: .08em; color: var(--t3); margin-bottom: 8px; }
+.fp-stat-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 3px 0; font-size: 12px;
+}
+.fp-stat-label { color: var(--t2); }
+.fp-stat-val { font-family: var(--mono); font-weight: 600; color: var(--t1); font-size: 13px; }
+.fp-stat-val.warn { color: var(--warn); }
+.fp-stat-val.err  { color: var(--err); }
+
+/* ── MAIN CONTENT ── */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+/* SUMMARY BAR */
+.summary-bar {
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+}
+.sb-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sb-stat {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--t2);
+}
+.sb-stat strong { color: var(--t1); font-weight: 600; font-family: var(--mono); }
+.sb-sep { color: var(--border); font-size: 16px; }
+.sb-right { display: flex; align-items: center; gap: 6px; }
+
+/* VIEW TOGGLE */
+.view-toggle {
+  display: flex; gap: 2px; padding: 2px;
+  background: var(--elev); border-radius: var(--r-md);
+}
+.vt-btn {
+  padding: 4px 8px; border-radius: var(--r-sm); cursor: pointer;
+  color: var(--t3); font-size: 12px; transition: background .1s, color .1s;
+}
+.vt-btn.active { background: var(--surface); color: var(--t1); box-shadow: var(--sh-sm); }
+
+/* CLASSIFICATION SECTIONS */
+.cls-section { padding: 20px 24px 0; }
+.cls-section:last-child { padding-bottom: 32px; }
+.cls-section-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.cls-section-bar {
+  width: 4px; height: 20px; border-radius: 2px; flex-shrink: 0;
+}
+.cls-section-title {
+  font-size: 13px; font-weight: 700; color: var(--t1); letter-spacing: -.01em;
+}
+.cls-section-sub { font-size: 11.5px; color: var(--t3); margin-left: auto; }
+
+/* TEAM CARDS GRID */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+/* TEAM CARD */
+.team-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-xl); padding: 16px;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: box-shadow .18s, transform .18s, border-color .18s;
+}
+.team-card:hover {
+  box-shadow: var(--sh-md); transform: translateY(-1px); border-color: var(--border);
+}
+.team-card.active {
+  border-color: var(--info);
+  box-shadow: 0 0 0 3px rgb(37 99 235 /.10), var(--sh-md);
+}
+
+/* classification accent line at top */
+.tc-accent-line {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px; border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+.tc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+.tc-header-left { display: flex; align-items: center; gap: 9px; }
+.tc-icon {
+  width: 36px; height: 36px; border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.tc-name { font-size: 13.5px; font-weight: 700; color: var(--t1); line-height: 1.3; }
+.tc-site {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-family: var(--mono); font-weight: 500;
+  padding: 2px 6px; border-radius: var(--r-sm);
+  background: var(--elev); color: var(--t2); margin-top: 3px;
+  letter-spacing: .04em;
+}
+.tc-desc {
+  font-size: 12px; color: var(--t2); line-height: 1.45;
+  margin-bottom: 12px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* KPI row */
+.tc-kpi {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px; margin-bottom: 12px;
+}
+.tc-kpi-item {
+  background: var(--bg); border-radius: var(--r-md); padding: 6px 8px;
+  text-align: center;
+}
+.tc-kpi-val {
+  font-size: 16px; font-weight: 700; font-family: var(--mono);
+  color: var(--t1); line-height: 1;
+}
+.tc-kpi-val.ok   { color: var(--ok); }
+.tc-kpi-val.warn { color: var(--warn); }
+.tc-kpi-val.err  { color: var(--err); }
+.tc-kpi-label { font-size: 9.5px; color: var(--t3); margin-top: 2px; }
+
+/* member avatars */
+.tc-footer { display: flex; align-items: center; justify-content: space-between; }
+.tc-leader { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); }
+.tc-leader-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.tc-avatars { display: flex; align-items: center; }
+.tc-av {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600; color: #fff;
+  margin-left: -6px; background: var(--mid);
+}
+.tc-av:first-child { margin-left: 0; }
+.tc-av-more {
+  background: var(--elev); color: var(--t2); font-size: 8px;
+  border: 2px solid var(--surface);
+}
+
+/* no-leader badge */
+.tc-no-leader {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; color: var(--warn); background: var(--warn-bg);
+  padding: 2px 7px; border-radius: var(--r-full);
+}
+
+/* ═══════════════════════════════════════
+   DETAIL PANEL (right side sheet)
+═══════════════════════════════════════ */
+.detail-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 300;
+}
+.detail-overlay.open { display: block; }
+
+.detail-backdrop {
+  position: absolute; inset: 0;
+  background: rgb(0 0 0 / .25);
+  animation: fadeIn .18s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.detail-panel {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: var(--dp); background: var(--surface);
+  box-shadow: var(--sh-xl);
+  display: flex; flex-direction: column;
+  animation: slideIn .2s cubic-bezier(.16,1,.3,1);
+  overflow: hidden;
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: .6; }
+  to   { transform: translateX(0);    opacity: 1;  }
+}
+
+/* detail panel header */
+.dp-header {
+  padding: 0 20px;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.dp-close {
+  width: 30px; height: 30px; border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--t3); font-size: 18px;
+  transition: background .1s, color .1s;
+}
+.dp-close:hover { background: var(--elev); color: var(--t1); }
+.dp-header-actions { display: flex; align-items: center; gap: 6px; }
+
+/* identity block */
+.dp-identity {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.dp-identity-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.dp-team-icon {
+  width: 48px; height: 48px; border-radius: var(--r-xl);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.dp-team-name { font-size: 17px; font-weight: 700; color: var(--t1); letter-spacing: -.02em; line-height: 1.2; }
+.dp-badges { display: flex; align-items: center; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+
+/* KPI strip */
+.dp-kpi {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 6px; margin-top: 14px;
+}
+.dp-kpi-item {
+  background: var(--bg); border-radius: var(--r-lg); padding: 8px 10px;
+  text-align: center; border: 1px solid var(--border-s);
+}
+.dp-kpi-val {
+  font-size: 20px; font-weight: 700; font-family: var(--mono); line-height: 1;
+  color: var(--t1);
+}
+.dp-kpi-val.ok   { color: var(--ok); }
+.dp-kpi-val.warn { color: var(--warn); }
+.dp-kpi-val.err  { color: var(--err); }
+.dp-kpi-label { font-size: 9.5px; color: var(--t3); margin-top: 3px; }
+
+/* tabs */
+.dp-tabs {
+  display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  padding: 0 20px;
+}
+.dp-tab {
+  padding: 10px 12px; font-size: 12.5px; color: var(--t2); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color .1s, border-color .1s;
+}
+.dp-tab:hover { color: var(--t1); }
+.dp-tab.active { color: var(--red); border-color: var(--red); font-weight: 600; }
+
+/* detail body */
+.dp-body { flex: 1; overflow-y: auto; padding: 0; }
+
+/* member section */
+.dp-member-section { padding: 14px 20px 0; }
+.dp-role-group { margin-bottom: 20px; }
+.dp-role-header {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 8px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border-s);
+}
+.dp-role-badge {
+  font-size: 10px; font-weight: 600; font-family: var(--mono);
+  padding: 2px 7px; border-radius: var(--r-full); letter-spacing: .02em;
+}
+.dp-role-count { font-size: 11px; color: var(--t3); font-family: var(--mono); }
+
+.dp-member-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--r-lg); margin-bottom: 2px;
+  cursor: pointer; transition: background .1s;
+}
+.dp-member-row:hover { background: var(--elev); }
+.dp-member-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0;
+}
+.dp-member-info { flex: 1; min-width: 0; }
+.dp-member-name { font-size: 13px; font-weight: 500; color: var(--t1); }
+.dp-member-dept { font-size: 11px; color: var(--t3); }
+.dp-member-action {
+  font-size: 11px; color: var(--t3); padding: 3px 8px;
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  cursor: pointer; transition: background .1s, color .1s, border-color .1s;
+}
+.dp-member-action:hover { background: var(--elev); color: var(--t1); border-color: var(--t3); }
+
+/* info tab */
+.dp-info { padding: 16px 20px; }
+.dp-info-row {
+  display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-s);
+  font-size: 12.5px;
+}
+.dp-info-row:last-child { border-bottom: none; }
+.dp-info-label { width: 80px; flex-shrink: 0; color: var(--t3); }
+.dp-info-val { flex: 1; color: var(--t1); font-weight: 500; }
+.dp-info-val.mono { font-family: var(--mono); }
+.dp-desc { padding: 16px 20px; font-size: 13px; color: var(--t2); line-height: 1.65; }
+
+/* ═══════════════════════════════════════
+   COMMON COMPONENTS
+═══════════════════════════════════════ */
+.badge {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 600; font-family: var(--mono);
+  padding: 2px 7px; border-radius: var(--r-full); letter-spacing: .02em;
+}
+.badge-fcc  { background: var(--cls-fcc-bg);  color: var(--cls-fcc-t); }
+.badge-chem { background: var(--cls-chem-bg); color: var(--cls-chem-t); }
+.badge-mech { background: var(--cls-mech-bg); color: var(--cls-mech-t); }
+.badge-elec { background: var(--cls-elec-bg); color: var(--cls-elec-t); }
+.badge-opt  { background: var(--cls-opt-bg);  color: var(--cls-opt-t); }
+.badge-gen  { background: var(--cls-gen-bg);  color: var(--cls-gen-t); }
+
+.badge-site {
+  font-size: 9.5px; font-family: var(--mono); font-weight: 600;
+  padding: 2px 6px; border-radius: var(--r-sm);
+  background: var(--elev); color: var(--t2); letter-spacing: .06em;
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; font-family: var(--sans); font-weight: 500;
+  padding: 6px 12px; border-radius: var(--r-lg); cursor: pointer;
+  transition: background .12s, box-shadow .12s, transform .1s; border: none;
+  text-decoration: none;
+}
+.btn:active { transform: scale(.98); }
+.btn-primary {
+  background: var(--mid); color: #fff;
+}
+.btn-primary:hover { background: var(--mid2); box-shadow: var(--sh-md); }
+.btn-secondary {
+  background: var(--surface); color: var(--t1);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--elev); }
+.btn-ghost {
+  background: transparent; color: var(--t2);
+}
+.btn-ghost:hover { background: var(--elev); color: var(--t1); }
+.btn-danger {
+  background: var(--err-bg); color: var(--err-t);
+  border: 1px solid var(--err-b);
+}
+.btn-danger:hover { background: var(--err); color: #fff; }
+
+.btn svg { width: 13px; height: 13px; }
+
+/* empty state */
+.empty-state {
+  text-align: center; padding: 60px 20px; color: var(--t3);
+}
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+.empty-text { font-size: 14px; font-weight: 500; color: var(--t2); margin-bottom: 6px; }
+.empty-sub  { font-size: 12px; }
+
+/* no-leader warning */
+.leader-warn {
+  display: flex; align-items: center; gap: 6px; font-size: 11.5px;
+  color: var(--warn-t); background: var(--warn-bg);
+  padding: 8px 12px; border-radius: var(--r-lg);
+  border: 1px solid var(--warn-b); margin: 12px 20px;
+}
+.leader-warn svg { width: 14px; height: 14px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ GLOBAL SIDEBAR ═══════════════ -->
+<nav class="g-sidebar">
+  <div class="g-sidebar-logo">
+    <div class="logo-mark">UL</div>
+    <div>
+      <div class="logo-text">장비 관리 시스템</div>
+      <div class="logo-sub">UL-QP-18</div>
+    </div>
+  </div>
+
+  <div class="g-nav-section">
+    <div class="g-nav-section-label">운영</div>
+    <a class="g-nav-item" href="#">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+        <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+      </svg>
+      대시보드
+    </a>
+    <a class="g-nav-item" href="#">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 4h12M2 8h12M2 12h8"/>
+      </svg>
+      장비 관리
+      <span class="g-nav-badge">142</span>
+    </a>
+    <a class="g-nav-item" href="#">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 2v12M4 6l4-4 4 4M3 14h10"/>
+      </svg>
+      반출 관리
+      <span class="g-nav-badge">8</span>
+    </a>
+    <a class="g-nav-item" href="#">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="8" r="5"/><path d="M8 5v3l2 1.5"/>
+      </svg>
+      교정 관리
+    </a>
+  </div>
+
+  <div class="g-nav-section">
+    <div class="g-nav-section-label">관리</div>
+    <a class="g-nav-item active" href="#">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M11 4a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      </svg>
+      팀 관리
+      <span class="g-nav-badge">12</span>
+    </a>
+    <a class="g-nav-item" href="#">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="8" cy="6" r="3"/><path d="M1 14c0-3 3.1-5 7-5s7 2 7 5"/>
+      </svg>
+      사용자 관리
+    </a>
+  </div>
+
+  <div class="g-sidebar-footer">
+    <div class="g-user-row">
+      <div class="g-avatar">김</div>
+      <div>
+        <div class="g-user-name">김철수</div>
+        <div class="g-user-role">시험소장</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════ PAGE SHELL ═══════════════ -->
+<div class="shell">
+  <!-- PAGE HEADER -->
+  <header class="page-header">
+    <div class="page-header-left">
+      <div class="breadcrumb">
+        <span>홈</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-current">팀 관리</span>
+      </div>
+      <span style="color:var(--border)">|</span>
+      <span class="page-title">팀 관리</span>
+    </div>
+    <div class="ph-actions">
+      <button class="btn btn-secondary" style="font-size:12px;">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3v10M3 8l5 5 5-5"/></svg>
+        내보내기
+      </button>
+      <button class="btn btn-primary" onclick="openCreate()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+        새 팀 만들기
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENT AREA -->
+  <div class="content-area">
+
+    <!-- LEFT FILTER PANEL -->
+    <aside class="filter-panel">
+      <!-- 검색 -->
+      <div class="fp-search-wrap">
+        <div class="fp-search">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="6.5" cy="6.5" r="4.5"/><path d="m10 10 3 3"/>
+          </svg>
+          <input type="text" placeholder="팀 이름 검색..." id="searchInput" oninput="filterTeams()">
+        </div>
+      </div>
+
+      <!-- 사이트 필터 -->
+      <div class="fp-section">
+        <div class="fp-section-label">사이트</div>
+        <div class="fp-filter-item active" onclick="filterBySite('all', this)">
+          <div class="fp-filter-left">
+            <div class="fp-filter-dot" style="background:#9CA3AF"></div>
+            <span class="fp-filter-text">전체 사이트</span>
+          </div>
+          <span class="fp-count">12</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterBySite('suw', this)">
+          <div class="fp-filter-left">
+            <div class="fp-filter-dot" style="background:#2563EB"></div>
+            <span class="fp-filter-text">수원 (SUW)</span>
+          </div>
+          <span class="fp-count">5</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterBySite('uiw', this)">
+          <div class="fp-filter-left">
+            <div class="fp-filter-dot" style="background:#059669"></div>
+            <span class="fp-filter-text">울산 (UIW)</span>
+          </div>
+          <span class="fp-count">4</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterBySite('pyt', this)">
+          <div class="fp-filter-left">
+            <div class="fp-filter-dot" style="background:#D97706"></div>
+            <span class="fp-filter-text">포항 (PYT)</span>
+          </div>
+          <span class="fp-count">3</span>
+        </div>
+      </div>
+
+      <!-- 팀 분류 필터 -->
+      <div class="fp-section">
+        <div class="fp-section-label">팀 분류</div>
+        <div class="fp-filter-item active" onclick="filterByCls('all', this)">
+          <div class="fp-filter-left">
+            <div class="fp-cls-bar" style="background:#9CA3AF"></div>
+            <span class="fp-filter-text">전체 분류</span>
+          </div>
+          <span class="fp-count">12</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterByCls('fcc', this)">
+          <div class="fp-filter-left">
+            <div class="fp-cls-bar" style="background:var(--cls-fcc)"></div>
+            <span class="fp-filter-text">FCC/EMC/RF</span>
+          </div>
+          <span class="fp-count">4</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterByCls('chem', this)">
+          <div class="fp-filter-left">
+            <div class="fp-cls-bar" style="background:var(--cls-chem)"></div>
+            <span class="fp-filter-text">화학/환경</span>
+          </div>
+          <span class="fp-count">3</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterByCls('mech', this)">
+          <div class="fp-filter-left">
+            <div class="fp-cls-bar" style="background:var(--cls-mech)"></div>
+            <span class="fp-filter-text">기계/진동</span>
+          </div>
+          <span class="fp-count">2</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterByCls('elec', this)">
+          <div class="fp-filter-left">
+            <div class="fp-cls-bar" style="background:var(--cls-elec)"></div>
+            <span class="fp-filter-text">전기/전자</span>
+          </div>
+          <span class="fp-count">2</span>
+        </div>
+        <div class="fp-filter-item" onclick="filterByCls('opt', this)">
+          <div class="fp-filter-left">
+            <div class="fp-cls-bar" style="background:var(--cls-opt)"></div>
+            <span class="fp-filter-text">광학/음향</span>
+          </div>
+          <span class="fp-count">1</span>
+        </div>
+      </div>
+
+      <!-- 멤버 현황 통계 -->
+      <div class="fp-stats">
+        <div class="fp-stats-title">멤버 현황</div>
+        <div class="fp-stat-row">
+          <span class="fp-stat-label">전체 멤버</span>
+          <span class="fp-stat-val">47명</span>
+        </div>
+        <div class="fp-stat-row">
+          <span class="fp-stat-label">팀장 없는 팀</span>
+          <span class="fp-stat-val warn">2팀 ⚠</span>
+        </div>
+        <div class="fp-stat-row">
+          <span class="fp-stat-label">반출 장비</span>
+          <span class="fp-stat-val">11개</span>
+        </div>
+        <div class="fp-stat-row">
+          <span class="fp-stat-label">교정 예정(7일)</span>
+          <span class="fp-stat-val warn">5개</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="mainContent">
+      <!-- SUMMARY BAR -->
+      <div class="summary-bar">
+        <div class="sb-left">
+          <div class="sb-stat">전체 <strong>12</strong>팀</div>
+          <span class="sb-sep">·</span>
+          <div class="sb-stat">수원 <strong>5</strong></div>
+          <span class="sb-sep">·</span>
+          <div class="sb-stat">울산 <strong>4</strong></div>
+          <span class="sb-sep">·</span>
+          <div class="sb-stat">포항 <strong>3</strong></div>
+          <span class="sb-sep">·</span>
+          <div class="sb-stat">팀원 <strong>47</strong>명</div>
+        </div>
+        <div class="sb-right">
+          <div class="view-toggle">
+            <div class="vt-btn active">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+                <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+              </svg>
+            </div>
+            <div class="vt-btn">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 4h12M2 8h12M2 12h12"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── FCC/EMC/RF ─── -->
+      <div class="cls-section" data-cls="fcc">
+        <div class="cls-section-header">
+          <div class="cls-section-bar" style="background:var(--cls-fcc)"></div>
+          <span class="cls-section-title">FCC / EMC / RF</span>
+          <span class="cls-section-sub">4팀 · 수원 2 · 울산 1 · 포항 1</span>
+        </div>
+        <div class="team-grid">
+
+          <div class="team-card" data-site="suw" data-cls="fcc" onclick="openDetail('fcc-1')">
+            <div class="tc-accent-line" style="background:var(--cls-fcc)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-fcc-bg);color:var(--cls-fcc)">📡</div>
+                <div>
+                  <div class="tc-name">FCC 전자파적합성 시험팀</div>
+                  <span class="tc-site">SUW</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">FCC/CE 인증 전자파 적합성 시험 전담. 복사/전도 방사 측정, 자동화 시험 환경 운영</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">6</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">23</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val ok">0</div><div class="tc-kpi-label">부적합</div></div>
+            </div>
+            <div class="tc-footer">
+              <div class="tc-leader"><div class="tc-leader-dot"></div>김철수 팀장</div>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#2563EB">김</div>
+                <div class="tc-av" style="background:#7C3AED">이</div>
+                <div class="tc-av" style="background:#059669">박</div>
+                <div class="tc-av" style="background:#D97706">최</div>
+                <div class="tc-av tc-av-more">+2</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-card" data-site="suw" data-cls="fcc" onclick="openDetail('fcc-2')">
+            <div class="tc-accent-line" style="background:var(--cls-fcc)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-fcc-bg);color:var(--cls-fcc)">📶</div>
+                <div>
+                  <div class="tc-name">EMC 차폐 측정팀</div>
+                  <span class="tc-site">SUW</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">전자기 호환성 차폐 효과 측정. 신호 분석 및 차폐재 성능 평가</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">4</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">18</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val warn">2</div><div class="tc-kpi-label">교정 예정</div></div>
+            </div>
+            <div class="tc-footer">
+              <span class="tc-no-leader">⚠ 팀장 미지정</span>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#059669">홍</div>
+                <div class="tc-av" style="background:#2563EB">정</div>
+                <div class="tc-av" style="background:#D97706">강</div>
+                <div class="tc-av tc-av-more">+1</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-card" data-site="uiw" data-cls="fcc" onclick="openDetail('fcc-3')">
+            <div class="tc-accent-line" style="background:var(--cls-fcc)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-fcc-bg);color:var(--cls-fcc)">🛰</div>
+                <div>
+                  <div class="tc-name">RF 무선통신 시험팀</div>
+                  <span class="tc-site">UIW</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">무선 통신 기기 RF 특성 측정. 5G/LTE 장비 인증 전문</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">5</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">31</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val ok">0</div><div class="tc-kpi-label">부적합</div></div>
+            </div>
+            <div class="tc-footer">
+              <div class="tc-leader"><div class="tc-leader-dot"></div>이영희 팀장</div>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#DB2777">이</div>
+                <div class="tc-av" style="background:#2563EB">오</div>
+                <div class="tc-av" style="background:#059669">윤</div>
+                <div class="tc-av tc-av-more">+2</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-card" data-site="pyt" data-cls="fcc" onclick="openDetail('fcc-4')">
+            <div class="tc-accent-line" style="background:var(--cls-fcc)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-fcc-bg);color:var(--cls-fcc)">🔭</div>
+                <div>
+                  <div class="tc-name">전자파 환경 시험팀</div>
+                  <span class="tc-site">PYT</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">전자파 환경 측정 및 산업 설비 EMI 분석. 포항 중공업 특화</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">3</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">14</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val err">1</div><div class="tc-kpi-label">부적합</div></div>
+            </div>
+            <div class="tc-footer">
+              <div class="tc-leader"><div class="tc-leader-dot"></div>박민준 팀장</div>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#7C3AED">박</div>
+                <div class="tc-av" style="background:#2563EB">서</div>
+                <div class="tc-av tc-av-more">+1</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── 화학/환경 ─── -->
+      <div class="cls-section" data-cls="chem">
+        <div class="cls-section-header">
+          <div class="cls-section-bar" style="background:var(--cls-chem)"></div>
+          <span class="cls-section-title">화학 / 환경</span>
+          <span class="cls-section-sub">3팀 · 수원 2 · 울산 1</span>
+        </div>
+        <div class="team-grid">
+
+          <div class="team-card" data-site="suw" data-cls="chem" onclick="openDetail('chem-1')">
+            <div class="tc-accent-line" style="background:var(--cls-chem)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-chem-bg);color:var(--cls-chem)">🧪</div>
+                <div>
+                  <div class="tc-name">유해물질 분석팀</div>
+                  <span class="tc-site">SUW</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">RoHS/REACH 유해물질 정성·정량 분석. ICP-OES, GC-MS 장비 운용</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">5</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">19</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val ok">0</div><div class="tc-kpi-label">부적합</div></div>
+            </div>
+            <div class="tc-footer">
+              <div class="tc-leader"><div class="tc-leader-dot"></div>최지은 팀장</div>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#059669">최</div>
+                <div class="tc-av" style="background:#DB2777">한</div>
+                <div class="tc-av" style="background:#D97706">임</div>
+                <div class="tc-av tc-av-more">+2</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-card" data-site="suw" data-cls="chem" onclick="openDetail('chem-2')">
+            <div class="tc-accent-line" style="background:var(--cls-chem)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-chem-bg);color:var(--cls-chem)">🌿</div>
+                <div>
+                  <div class="tc-name">환경 안전성 평가팀</div>
+                  <span class="tc-site">SUW</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">제품 환경 안전성 평가 및 인증. 토양·수질 오염 분석</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">4</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">12</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val warn">1</div><div class="tc-kpi-label">교정 예정</div></div>
+            </div>
+            <div class="tc-footer">
+              <span class="tc-no-leader">⚠ 팀장 미지정</span>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#2563EB">신</div>
+                <div class="tc-av" style="background:#059669">엄</div>
+                <div class="tc-av tc-av-more">+2</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-card" data-site="uiw" data-cls="chem" onclick="openDetail('chem-3')">
+            <div class="tc-accent-line" style="background:var(--cls-chem)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-chem-bg);color:var(--cls-chem)">⚗️</div>
+                <div>
+                  <div class="tc-name">산업화학 시험팀</div>
+                  <span class="tc-site">UIW</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">산업용 화학물질 물성 및 반응성 시험. 고압·고온 환경 전문</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">3</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">9</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val ok">0</div><div class="tc-kpi-label">부적합</div></div>
+            </div>
+            <div class="tc-footer">
+              <div class="tc-leader"><div class="tc-leader-dot"></div>정수민 팀장</div>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#7C3AED">정</div>
+                <div class="tc-av" style="background:#059669">류</div>
+                <div class="tc-av tc-av-more">+1</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── 기계/진동 ─── -->
+      <div class="cls-section" data-cls="mech">
+        <div class="cls-section-header">
+          <div class="cls-section-bar" style="background:var(--cls-mech)"></div>
+          <span class="cls-section-title">기계 / 진동</span>
+          <span class="cls-section-sub">2팀 · 울산 1 · 포항 1</span>
+        </div>
+        <div class="team-grid">
+
+          <div class="team-card" data-site="uiw" data-cls="mech" onclick="openDetail('mech-1')">
+            <div class="tc-accent-line" style="background:var(--cls-mech)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-mech-bg);color:var(--cls-mech)">⚙️</div>
+                <div>
+                  <div class="tc-name">진동·충격 시험팀</div>
+                  <span class="tc-site">UIW</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">기계적 내구성 진동·충격·낙하 시험. 차량 부품 신뢰성 평가</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">4</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">15</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val ok">0</div><div class="tc-kpi-label">부적합</div></div>
+            </div>
+            <div class="tc-footer">
+              <div class="tc-leader"><div class="tc-leader-dot"></div>강동훈 팀장</div>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#D97706">강</div>
+                <div class="tc-av" style="background:#2563EB">노</div>
+                <div class="tc-av tc-av-more">+2</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-card" data-site="pyt" data-cls="mech" onclick="openDetail('mech-2')">
+            <div class="tc-accent-line" style="background:var(--cls-mech)"></div>
+            <div class="tc-header">
+              <div class="tc-header-left">
+                <div class="tc-icon" style="background:var(--cls-mech-bg);color:var(--cls-mech)">🔩</div>
+                <div>
+                  <div class="tc-name">구조물 강도 시험팀</div>
+                  <span class="tc-site">PYT</span>
+                </div>
+              </div>
+            </div>
+            <div class="tc-desc">금속·복합소재 인장·압축·피로 강도 평가. UTM 장비 전담</div>
+            <div class="tc-kpi">
+              <div class="tc-kpi-item"><div class="tc-kpi-val">3</div><div class="tc-kpi-label">멤버</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val">8</div><div class="tc-kpi-label">담당 장비</div></div>
+              <div class="tc-kpi-item"><div class="tc-kpi-val warn">2</div><div class="tc-kpi-label">교정 예정</div></div>
+            </div>
+            <div class="tc-footer">
+              <div class="tc-leader"><div class="tc-leader-dot"></div>손영철 팀장</div>
+              <div class="tc-avatars">
+                <div class="tc-av" style="background:#7C3AED">손</div>
+                <div class="tc-av" style="background:#D97706">배</div>
+                <div class="tc-av tc-av-more">+1</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════ DETAIL PANEL ═══════════════ -->
+<div class="detail-overlay" id="detailOverlay">
+  <div class="detail-backdrop" onclick="closeDetail()"></div>
+  <div class="detail-panel" id="detailPanel">
+
+    <!-- DP HEADER -->
+    <div class="dp-header">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="dp-close" onclick="closeDetail()">×</div>
+        <span style="font-size:12px;color:var(--t3);font-family:var(--mono)">팀 상세</span>
+      </div>
+      <div class="dp-header-actions">
+        <button class="btn btn-secondary" style="padding:5px 10px;font-size:11.5px;">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
+          수정
+        </button>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:11.5px;">삭제</button>
+      </div>
+    </div>
+
+    <!-- IDENTITY BLOCK -->
+    <div class="dp-identity">
+      <div class="dp-identity-top">
+        <div class="dp-team-icon" id="dpTeamIcon" style="background:var(--cls-fcc-bg);color:var(--cls-fcc)">📡</div>
+        <div>
+          <div class="dp-team-name" id="dpTeamName">FCC 전자파적합성 시험팀</div>
+          <div class="dp-badges">
+            <span class="badge badge-fcc" id="dpClsBadge">FCC/EMC/RF</span>
+            <span class="badge-site" id="dpSiteBadge">SUW</span>
+          </div>
+        </div>
+      </div>
+      <!-- KPI STRIP -->
+      <div class="dp-kpi">
+        <div class="dp-kpi-item">
+          <div class="dp-kpi-val" id="dpKpiMembers">6</div>
+          <div class="dp-kpi-label">팀원</div>
+        </div>
+        <div class="dp-kpi-item">
+          <div class="dp-kpi-val" id="dpKpiEquip">23</div>
+          <div class="dp-kpi-label">담당 장비</div>
+        </div>
+        <div class="dp-kpi-item">
+          <div class="dp-kpi-val warn" id="dpKpiCal">2</div>
+          <div class="dp-kpi-label">교정 예정</div>
+        </div>
+        <div class="dp-kpi-item">
+          <div class="dp-kpi-val ok" id="dpKpiNc">0</div>
+          <div class="dp-kpi-label">부적합</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="dp-tabs">
+      <div class="dp-tab active" onclick="switchTab(this,'members')">팀원</div>
+      <div class="dp-tab" onclick="switchTab(this,'info')">기본 정보</div>
+      <div class="dp-tab" onclick="switchTab(this,'equipment')">담당 장비</div>
+    </div>
+
+    <!-- TAB: MEMBERS -->
+    <div class="dp-body" id="tabMembers">
+
+      <div id="leaderWarn" class="leader-warn" style="display:none;">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 10v.5"/></svg>
+        팀장이 지정되지 않았습니다. 기술책임자를 팀장으로 지정해주세요.
+      </div>
+
+      <div class="dp-member-section">
+
+        <!-- 기술책임자 -->
+        <div class="dp-role-group" id="roleGroupTM">
+          <div class="dp-role-header">
+            <span class="dp-role-badge" style="background:var(--role-tm-bg);color:var(--role-tm-t)">기술책임자</span>
+            <span class="dp-role-count" id="countTM">1명</span>
+          </div>
+          <div id="membersTM">
+            <div class="dp-member-row">
+              <div class="dp-member-av" style="background:var(--role-tm)">김</div>
+              <div class="dp-member-info">
+                <div class="dp-member-name">김철수 <span style="font-size:10px;color:var(--ok);margin-left:4px">★ 팀장</span></div>
+                <div class="dp-member-dept">기계공학부 · kcs@lab.co.kr</div>
+              </div>
+              <div class="dp-member-action" title="역할 변경 불가 (기술책임자)">역할 고정</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 시험실무자 -->
+        <div class="dp-role-group" id="roleGroupTE">
+          <div class="dp-role-header">
+            <span class="dp-role-badge" style="background:var(--role-te-bg);color:var(--role-te-t)">시험실무자</span>
+            <span class="dp-role-count" id="countTE">5명</span>
+          </div>
+          <div id="membersTE">
+            <div class="dp-member-row">
+              <div class="dp-member-av" style="background:#7C3AED">이</div>
+              <div class="dp-member-info">
+                <div class="dp-member-name">이영희</div>
+                <div class="dp-member-dept">전자공학부 · lyh@lab.co.kr</div>
+              </div>
+              <button class="dp-member-action" onclick="event.stopPropagation()">역할 변경 ▾</button>
+            </div>
+            <div class="dp-member-row">
+              <div class="dp-member-av" style="background:#059669">박</div>
+              <div class="dp-member-info">
+                <div class="dp-member-name">박민준</div>
+                <div class="dp-member-dept">정보통신학부 · pmj@lab.co.kr</div>
+              </div>
+              <button class="dp-member-action" onclick="event.stopPropagation()">역할 변경 ▾</button>
+            </div>
+            <div class="dp-member-row">
+              <div class="dp-member-av" style="background:#D97706">최</div>
+              <div class="dp-member-info">
+                <div class="dp-member-name">최지은</div>
+                <div class="dp-member-dept">화학공학부 · cje@lab.co.kr</div>
+              </div>
+              <button class="dp-member-action" onclick="event.stopPropagation()">역할 변경 ▾</button>
+            </div>
+            <div class="dp-member-row">
+              <div class="dp-member-av" style="background:#DB2777">정</div>
+              <div class="dp-member-info">
+                <div class="dp-member-name">정수민</div>
+                <div class="dp-member-dept">물리학부 · jsm@lab.co.kr</div>
+              </div>
+              <button class="dp-member-action" onclick="event.stopPropagation()">역할 변경 ▾</button>
+            </div>
+            <div class="dp-member-row">
+              <div class="dp-member-av" style="background:#2563EB">강</div>
+              <div class="dp-member-info">
+                <div class="dp-member-name">강동훈</div>
+                <div class="dp-member-dept">기계공학부 · kdh@lab.co.kr</div>
+              </div>
+              <button class="dp-member-action" onclick="event.stopPropagation()">역할 변경 ▾</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 팀원 추가 버튼 -->
+        <div style="padding: 4px 0 20px;">
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;font-size:12.5px;">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v10M3 8h10"/></svg>
+            팀원 추가
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB: INFO -->
+    <div class="dp-body" id="tabInfo" style="display:none;">
+      <div class="dp-info">
+        <div class="dp-info-row">
+          <div class="dp-info-label">팀 분류</div>
+          <div class="dp-info-val"><span class="badge badge-fcc">FCC/EMC/RF</span></div>
+        </div>
+        <div class="dp-info-row">
+          <div class="dp-info-label">소속 사이트</div>
+          <div class="dp-info-val mono">SUW · 수원</div>
+        </div>
+        <div class="dp-info-row">
+          <div class="dp-info-label">팀장</div>
+          <div class="dp-info-val">김철수 (기술책임자)</div>
+        </div>
+        <div class="dp-info-row">
+          <div class="dp-info-label">팀원 수</div>
+          <div class="dp-info-val mono">6명</div>
+        </div>
+        <div class="dp-info-row">
+          <div class="dp-info-label">생성일</div>
+          <div class="dp-info-val mono">2023-01-15</div>
+        </div>
+        <div class="dp-info-row">
+          <div class="dp-info-label">최종 수정</div>
+          <div class="dp-info-val mono">2026-02-28</div>
+        </div>
+      </div>
+      <div class="dp-desc">
+        FCC/CE 인증 전자파 적합성 시험 전담팀으로, 복사 방사 및 전도 방사 측정을 수행합니다. 자동화 시험 환경을 운용하며, 연간 약 200건 이상의 인증 시험을 처리합니다.
+      </div>
+    </div>
+
+    <!-- TAB: EQUIPMENT -->
+    <div class="dp-body" id="tabEquipment" style="display:none;">
+      <div class="dp-member-section">
+        <div style="display:flex;flex-direction:column;gap:6px;padding-bottom:20px;">
+          <div class="dp-member-row" style="border:1px solid var(--border-s);border-radius:var(--r-lg);">
+            <div class="dp-member-av" style="background:var(--cls-fcc-bg);color:var(--cls-fcc);font-size:16px;">📡</div>
+            <div class="dp-member-info">
+              <div class="dp-member-name">벡터 신호 분석기 R&S FSV</div>
+              <div class="dp-member-dept" style="display:flex;gap:6px;align-items:center;">
+                <span class="badge-site">SUW-E-0042</span>
+                <span style="font-size:10px;color:var(--ok)">● 사용가능</span>
+              </div>
+            </div>
+          </div>
+          <div class="dp-member-row" style="border:1px solid var(--border-s);border-radius:var(--r-lg);">
+            <div class="dp-member-av" style="background:var(--warn-bg);color:var(--warn);font-size:16px;">⚡</div>
+            <div class="dp-member-info">
+              <div class="dp-member-name">스펙트럼 분석기 Agilent E4407B</div>
+              <div class="dp-member-dept" style="display:flex;gap:6px;align-items:center;">
+                <span class="badge-site">SUW-E-0051</span>
+                <span style="font-size:10px;color:var(--warn)">● 교정 예정 D-3</span>
+              </div>
+            </div>
+          </div>
+          <div class="dp-member-row" style="border:1px solid var(--border-s);border-radius:var(--r-lg);">
+            <div class="dp-member-av" style="background:var(--cls-fcc-bg);color:var(--cls-fcc);font-size:16px;">🔌</div>
+            <div class="dp-member-info">
+              <div class="dp-member-name">EMC 전도 방사 측정 장비</div>
+              <div class="dp-member-dept" style="display:flex;gap:6px;align-items:center;">
+                <span class="badge-site">SUW-E-0067</span>
+                <span style="font-size:10px;color:var(--ok)">● 사용가능</span>
+              </div>
+            </div>
+          </div>
+          <div style="text-align:center;padding:8px 0;">
+            <a href="#" style="font-size:11.5px;color:var(--info);">전체 23개 장비 보기 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const teamData = {
+  'fcc-1': {
+    icon:'📡', iconBg:'var(--cls-fcc-bg)', iconColor:'var(--cls-fcc)',
+    name:'FCC 전자파적합성 시험팀', cls:'FCC/EMC/RF', clsBadge:'badge-fcc',
+    site:'SUW', members:6, equip:23, cal:2, nc:0, hasLeader:true
+  },
+  'fcc-2': {
+    icon:'📶', iconBg:'var(--cls-fcc-bg)', iconColor:'var(--cls-fcc)',
+    name:'EMC 차폐 측정팀', cls:'FCC/EMC/RF', clsBadge:'badge-fcc',
+    site:'SUW', members:4, equip:18, cal:0, nc:0, hasLeader:false
+  },
+  'fcc-3': {
+    icon:'🛰', iconBg:'var(--cls-fcc-bg)', iconColor:'var(--cls-fcc)',
+    name:'RF 무선통신 시험팀', cls:'FCC/EMC/RF', clsBadge:'badge-fcc',
+    site:'UIW', members:5, equip:31, cal:0, nc:0, hasLeader:true
+  },
+  'fcc-4': {
+    icon:'🔭', iconBg:'var(--cls-fcc-bg)', iconColor:'var(--cls-fcc)',
+    name:'전자파 환경 시험팀', cls:'FCC/EMC/RF', clsBadge:'badge-fcc',
+    site:'PYT', members:3, equip:14, cal:0, nc:1, hasLeader:true
+  },
+  'chem-1': {
+    icon:'🧪', iconBg:'var(--cls-chem-bg)', iconColor:'var(--cls-chem)',
+    name:'유해물질 분석팀', cls:'화학/환경', clsBadge:'badge-chem',
+    site:'SUW', members:5, equip:19, cal:0, nc:0, hasLeader:true
+  },
+  'chem-2': {
+    icon:'🌿', iconBg:'var(--cls-chem-bg)', iconColor:'var(--cls-chem)',
+    name:'환경 안전성 평가팀', cls:'화학/환경', clsBadge:'badge-chem',
+    site:'SUW', members:4, equip:12, cal:1, nc:0, hasLeader:false
+  },
+  'chem-3': {
+    icon:'⚗️', iconBg:'var(--cls-chem-bg)', iconColor:'var(--cls-chem)',
+    name:'산업화학 시험팀', cls:'화학/환경', clsBadge:'badge-chem',
+    site:'UIW', members:3, equip:9, cal:0, nc:0, hasLeader:true
+  },
+  'mech-1': {
+    icon:'⚙️', iconBg:'var(--cls-mech-bg)', iconColor:'var(--cls-mech)',
+    name:'진동·충격 시험팀', cls:'기계/진동', clsBadge:'badge-mech',
+    site:'UIW', members:4, equip:15, cal:0, nc:0, hasLeader:true
+  },
+  'mech-2': {
+    icon:'🔩', iconBg:'var(--cls-mech-bg)', iconColor:'var(--cls-mech)',
+    name:'구조물 강도 시험팀', cls:'기계/진동', clsBadge:'badge-mech',
+    site:'PYT', members:3, equip:8, cal:2, nc:0, hasLeader:true
+  }
+};
+
+let currentCard = null;
+
+function openDetail(id) {
+  const d = teamData[id];
+  if (!d) return;
+
+  // 이전 활성 카드 해제
+  if (currentCard) currentCard.classList.remove('active');
+  currentCard = document.querySelector(`[onclick="openDetail('${id}')"]`);
+  if (currentCard) currentCard.classList.add('active');
+
+  // 패널 데이터 업데이트
+  document.getElementById('dpTeamIcon').textContent = d.icon;
+  document.getElementById('dpTeamIcon').style.background = d.iconBg;
+  document.getElementById('dpTeamIcon').style.color = d.iconColor;
+  document.getElementById('dpTeamName').textContent = d.name;
+
+  const clsBadge = document.getElementById('dpClsBadge');
+  clsBadge.textContent = d.cls;
+  clsBadge.className = 'badge ' + d.clsBadge;
+
+  document.getElementById('dpSiteBadge').textContent = d.site;
+  document.getElementById('dpKpiMembers').textContent = d.members;
+  document.getElementById('dpKpiEquip').textContent = d.equip;
+  document.getElementById('dpKpiCal').textContent = d.cal;
+  document.getElementById('dpKpiCal').className = 'dp-kpi-val ' + (d.cal > 0 ? 'warn' : 'ok');
+  document.getElementById('dpKpiNc').textContent = d.nc;
+  document.getElementById('dpKpiNc').className = 'dp-kpi-val ' + (d.nc > 0 ? 'err' : 'ok');
+
+  // 팀장 없음 경고
+  document.getElementById('leaderWarn').style.display = d.hasLeader ? 'none' : 'flex';
+
+  // 패널 열기
+  document.getElementById('detailOverlay').classList.add('open');
+
+  // 기본 탭
+  const tabs = document.querySelectorAll('.dp-tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  tabs[0].classList.add('active');
+  ['tabMembers','tabInfo','tabEquipment'].forEach(id => {
+    document.getElementById(id).style.display = id === 'tabMembers' ? 'block' : 'none';
+  });
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('open');
+  if (currentCard) { currentCard.classList.remove('active'); currentCard = null; }
+}
+
+function switchTab(el, tab) {
+  document.querySelectorAll('.dp-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const map = { members:'tabMembers', info:'tabInfo', equipment:'tabEquipment' };
+  Object.values(map).forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById(map[tab]).style.display = 'block';
+}
+
+function filterBySite(site, el) {
+  document.querySelectorAll('.fp-section:nth-child(2) .fp-filter-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  const cards = document.querySelectorAll('.team-card');
+  cards.forEach(c => {
+    const show = site === 'all' || c.dataset.site === site;
+    c.style.display = show ? '' : 'none';
+  });
+  updateSectionVisibility();
+}
+
+function filterByCls(cls, el) {
+  document.querySelectorAll('.fp-section:nth-child(3) .fp-filter-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  const sections = document.querySelectorAll('.cls-section');
+  sections.forEach(s => {
+    s.style.display = (cls === 'all' || s.dataset.cls === cls) ? '' : 'none';
+  });
+}
+
+function filterTeams() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.team-card').forEach(c => {
+    const name = c.querySelector('.tc-name').textContent.toLowerCase();
+    const desc = c.querySelector('.tc-desc').textContent.toLowerCase();
+    c.style.display = (name.includes(q) || desc.includes(q)) ? '' : 'none';
+  });
+  updateSectionVisibility();
+}
+
+function updateSectionVisibility() {
+  document.querySelectorAll('.cls-section').forEach(s => {
+    const visible = [...s.querySelectorAll('.team-card')].some(c => c.style.display !== 'none');
+    s.style.display = visible ? '' : 'none';
+  });
+}
+
+function openCreate() {
+  alert('팀 생성 폼으로 이동 (구현 예시)');
+}
+
+// ESC 키로 패널 닫기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDetail();
+});
+</script>
+</body>
+</html>

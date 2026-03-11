@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장비 상세 — Option B Light (라이트 테마 · 디자인토큰 적용)</title>
+<style>
+/*
+  Design Token 매핑 (실제 코드베이스 기준)
+  ─────────────────────────────────────────
+  bg-background           → #FFFFFF
+  bg-muted / bg-ul-gray-bg→ #F7F8FA
+  bg-card                 → #FFFFFF
+  bg-brand-bg-elevated    → #F3F4F6
+  border-border           → #E5E7EB
+  text-foreground         → #111827
+  text-muted-foreground   → #6B7280
+  ul-midnight             → #1D2B4F   (brand primary)
+  ul-red                  → #C41E3A   (tab underline, brand accent)
+  ul-info                 → #2563EB   (focus ring)
+  brand-ok                → #059669
+  brand-critical          → #DC2626
+  brand-warning           → #D97706
+  brand-neutral           → #6B7280
+
+  KPI border-l 색상:
+  ok   → border-l-green-500 (#22C55E)
+  warn → border-l-red-500   (#EF4444)
+  info → border-l-blue-500  (#3B82F6)
+  neutral → border-l-border (#E5E7EB)
+
+  Status tokens (non_conforming):
+  bg-red-100 text-red-800 border-l-red-600
+  → #FEE2E2 / #991B1B / #DC2626
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Token layer 1: primitives ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --shadow-sm:  0 1px 2px 0 rgb(0 0 0 / .05);
+  --shadow-md:  0 4px 6px -1px rgb(0 0 0 / .08), 0 2px 4px -2px rgb(0 0 0 / .05);
+
+  /* ── Token layer 2: semantic (light) ── */
+  --bg:            #F7F8FA;   /* ul-gray-bg */
+  --surface:       #FFFFFF;   /* bg-background / bg-card */
+  --surface-elev:  #F3F4F6;   /* bg-brand-bg-elevated */
+  --border:        #E5E7EB;   /* border-border */
+  --border-subtle: #F0F1F3;   /* border-border/50 */
+  --text-1:        #111827;   /* text-foreground */
+  --text-2:        #6B7280;   /* text-muted-foreground */
+  --text-3:        #9CA3AF;   /* text-muted-foreground/70 */
+
+  /* ── Brand ── */
+  --midnight:      #1D2B4F;   /* ul-midnight */
+  --ul-red:        #C41E3A;   /* ul-red — tab underline */
+  --ul-info:       #2563EB;   /* ul-info — focus ring */
+
+  /* ── Semantic colors ── */
+  --ok:            #059669;   /* brand-ok */
+  --ok-bg:         #ECFDF5;
+  --ok-border:     #22C55E;   /* border-l-green-500 */
+  --ok-text:       #065F46;
+
+  --warn:          #D97706;   /* brand-warning */
+  --warn-bg:       #FFFBEB;
+  --warn-border:   #F59E0B;
+  --warn-text:     #92400E;
+
+  --danger:        #DC2626;   /* brand-critical */
+  --danger-bg:     #FEE2E2;   /* bg-red-100 */
+  --danger-border: #EF4444;   /* border-l-red-500 */
+  --danger-strong-border: #DC2626; /* border-l-red-600 */
+  --danger-text:   #991B1B;   /* text-red-800 */
+
+  --info:          #2563EB;
+  --info-bg:       #EFF6FF;
+  --info-border:   #3B82F6;   /* border-l-blue-500 */
+  --info-text:     #1E40AF;
+
+  /* ── Layout ── */
+  --sidebar-w: 216px;
+  --header-h:  52px;
+  --sans:  'Geist', -apple-system, sans-serif;
+  --mono:  'Geist Mono', monospace;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text-1);
+  font-size: 13.5px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar (matches EQUIPMENT_TAB_UNDERLINE_TOKENS.mobileScroll: scrollbar-hide) ── */
+::-webkit-scrollbar { width: 5px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ════════════════════════════════════
+   SIDEBAR
+   ════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  position: fixed; left:0; top:0; bottom:0; z-index:200;
+  display: flex; flex-direction: column;
+}
+.sidebar-logo {
+  height: var(--header-h);
+  padding: 0 16px;
+  display: flex; align-items: center; gap: 9px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo-mark {
+  width: 28px; height: 28px;
+  background: var(--midnight);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 11px; font-weight: 700;
+}
+.logo-text { font-size: 13px; font-weight: 600; color: var(--midnight); }
+
+.sidebar-body { padding: 8px; flex:1; overflow-y:auto; }
+
+.nav-group-label {
+  font-size: 10px; font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .1em;
+  padding: 10px 8px 4px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 9px; border-radius: 5px;
+  color: var(--text-2); cursor: pointer; font-size: 13px;
+  transition: background .12s, color .12s;
+}
+.nav-item:hover { background: var(--bg); color: var(--text-1); }
+.nav-item.active {
+  background: #EEF2FF;           /* accent-light equivalent */
+  color: var(--midnight); font-weight: 500;
+}
+.nav-badge {
+  margin-left: auto;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid #FECACA;
+  border-radius: 9px;
+  font-size: 10px; font-weight: 700;
+  padding: 0 6px;
+}
+
+/* ════════════════════════════════════
+   MAIN WRAPPER
+   ════════════════════════════════════ */
+.main { margin-left: var(--sidebar-w); display:flex; flex-direction:column; min-height:100vh; }
+
+/* ════════════════════════════════════
+   STICKY HEADER
+   (EQUIPMENT_DETAIL_HEADER_TOKENS)
+   sticky top-0 z-30 bg-background border-b border-border shadow-sm
+   ════════════════════════════════════ */
+.sticky-header {
+  position: sticky; top:0; z-index:30;   /* ELEVATION_PRIMITIVES.sticky = 30 */
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center;
+  padding: 0 32px; gap: 12px;
+}
+/* breadcrumbRow: py-1.5 text-sm text-muted-foreground … */
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text-2);
+  flex:1; min-width:0;
+}
+.breadcrumb a { color: var(--text-2); text-decoration:none; cursor:pointer; }
+.breadcrumb a:hover { color: var(--midnight); }
+.breadcrumb .sep { color: var(--border); }
+.breadcrumb .current {
+  color: var(--text-1); font-weight: 500;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+/* EQUIPMENT_DETAIL_HEADER_TOKENS.backLink */
+.back-link {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; color: var(--text-2);
+  text-decoration: none; flex-shrink:0;
+  transition: color 200ms cubic-bezier(.4,0,.2,1); /* getTransitionClasses('fast', ['color']) */
+}
+.back-link:hover { color: var(--text-1); }
+
+.header-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+/* ── Button primitives ── */
+.btn {
+  display: inline-flex; align-items:center; gap:5px;
+  padding: 5px 12px; border-radius: var(--radius-md);
+  font-size: 12.5px; font-weight:500; cursor:pointer;
+  border: none; font-family: var(--sans);
+  transition: background 150ms, box-shadow 150ms;
+}
+.btn-ghost {
+  background: transparent; color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--bg); color: var(--text-1); }
+.btn-primary { background: var(--midnight); color: white; }
+.btn-primary:hover { background: #162242; box-shadow: var(--shadow-sm); }
+.btn-danger { background: var(--danger-bg); color: var(--danger); border:1px solid #FECACA; }
+.btn-danger:hover { background: #FEE2E2; }
+.btn-sm { padding: 4px 9px; font-size: 12px; }
+
+/* ════════════════════════════════════
+   NC STRIPE  (부적합 상태 — 정적 3px 라인)
+   ════════════════════════════════════ */
+.nc-stripe {
+  height: 3px;
+  background: var(--danger);
+  opacity: 0.85;
+}
+
+/* ════════════════════════════════════
+   HERO SECTION
+   ════════════════════════════════════ */
+.hero {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: relative; overflow:hidden;
+}
+/* NC 상태일 때 미묘한 배경 틴트 */
+.hero-nc-tint {
+  position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(220,38,38,.04) 0%, transparent 55%);
+  pointer-events:none;
+}
+
+.hero-inner {
+  display: flex; align-items:stretch;
+  position:relative; z-index:1;
+}
+
+/* 장비 아이콘 슬롯 */
+.hero-visual {
+  width: 180px; flex-shrink:0;
+  background: var(--surface-elev);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:10px; padding: 24px 16px;
+}
+.device-icon-wrap {
+  width: 72px; height:72px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:34px; position:relative;
+  box-shadow: var(--shadow-sm);
+}
+.device-icon-badge {
+  position:absolute; bottom:-5px; right:-5px;
+  width:22px; height:22px; border-radius:50%;
+  background: var(--danger);
+  border: 2px solid var(--surface);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:white;
+}
+.device-category {
+  font-size:10px; font-weight:600;
+  color: var(--text-3); text-transform:uppercase;
+  letter-spacing:.08em; text-align:center;
+}
+.device-mgmt-num {
+  font-family: var(--mono); font-size:10.5px;
+  color: var(--midnight); background: #EEF2FF;
+  border: 1px solid #C7D2FE;
+  padding:2px 7px; border-radius:4px; text-align:center;
+}
+
+/* 헤더 콘텐츠 */
+.hero-content { flex:1; min-width:0; padding: 20px 28px; }
+
+.hero-top-row {
+  display:flex; align-items:flex-start;
+  justify-content:space-between; gap:16px; margin-bottom:14px;
+}
+.hero-title-block { flex:1; min-width:0; }
+.hero-model {
+  font-size:11px; color: var(--text-3); margin-bottom:4px;
+  display:flex; align-items:center; gap:6px;
+}
+.hero-name { font-size:20px; font-weight:700; line-height:1.2; margin-bottom:2px; }
+.hero-sub { font-size:12.5px; color: var(--text-2); }
+
+/* Status chip — EQUIPMENT_STATUS_TOKENS.non_conforming */
+.status-chip {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 11px; border-radius:6px;
+  font-size:12px; font-weight:600; flex-shrink:0;
+  border: 1px solid;
+}
+.status-nc {
+  background: var(--danger-bg);        /* bg-red-100 */
+  color: var(--danger-text);           /* text-red-800 */
+  border-color: #FECACA;
+}
+.status-available {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-color: #A7F3D0;
+}
+.status-pulse {
+  width:6px; height:6px; border-radius:50%;
+  background:currentColor;
+  animation: blink 1.2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* 빠른 메타 필드 */
+.hero-fields { display:flex; gap:20px; flex-wrap:wrap; }
+.hero-field-label {
+  font-size:10.5px; font-weight:600;
+  color: var(--text-3); text-transform:uppercase;
+  letter-spacing:.07em; margin-bottom:3px;
+}
+.hero-field-value { font-size:13px; }
+.hero-field-value.mono { font-family: var(--mono); font-size:12px; }
+
+/* NC 인라인 알림 */
+.hero-nc-alert {
+  margin-top:14px;
+  background: var(--danger-bg);
+  border: 1px solid #FECACA;
+  border-left: 3px solid var(--danger);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display:flex; align-items:center; gap:10px;
+}
+.hero-nc-alert-text {
+  flex:1; min-width:0; font-size:12.5px;
+  color: var(--danger-text); line-height:1.5;
+}
+.hero-nc-alert-text strong { color: var(--danger); }
+
+/* ════════════════════════════════════
+   KPI STRIP
+   (EQUIPMENT_KPI_STRIP_TOKENS)
+   ════════════════════════════════════ */
+.kpi-strip {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  /* EQUIPMENT_KPI_STRIP_TOKENS.container grid grid-cols-5 */
+}
+/* EQUIPMENT_KPI_STRIP_TOKENS.card.base:
+   bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4 cursor-pointer
+   하지만 여기선 strip 레이아웃이므로 변형 적용 */
+.kpi-cell {
+  padding: 16px 20px;
+  border-right: 1px solid var(--border);
+  cursor:pointer; position:relative; overflow:hidden;
+  /* EQUIPMENT_KPI_STRIP_TOKENS.card.hover:
+     hover:shadow-sm transition-[box-shadow,border-color] duration-200 */
+  transition: background 200ms cubic-bezier(.4,0,.2,1);
+}
+.kpi-cell:last-child { border-right:none; }
+.kpi-cell:hover { background: var(--bg); }
+
+/* 상단 컬러 바 (KPI 색상 표시) */
+.kpi-cell::before {
+  content:''; position:absolute; top:0; left:0; right:0;
+  height:3px;
+}
+/* border-l 색상 → 상단 바로 변환 */
+.kpi-ok::before    { background: var(--ok-border); }
+.kpi-warn::before  { background: var(--danger-border); }
+.kpi-info::before  { background: var(--info-border); }
+.kpi-neutral::before { background: var(--border); }
+
+.kpi-label {
+  font-size:10.5px; font-weight:600;
+  /* EQUIPMENT_KPI_STRIP_TOKENS.label: text-xs text-muted-foreground */
+  color: var(--text-2);
+  text-transform:uppercase; letter-spacing:.07em;
+  margin-bottom:8px;
+}
+/* EQUIPMENT_KPI_STRIP_TOKENS.numericValue: text-xl font-semibold tabular-nums */
+.kpi-value {
+  font-size:24px; font-weight:700;
+  font-family: var(--mono);  /* tabular-nums */
+  line-height:1; margin-bottom:4px;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-value.ok    { color: var(--ok); }
+.kpi-value.warn  { color: var(--danger); }  /* border-l-red-500 */
+.kpi-value.info  { color: var(--info); }
+/* EQUIPMENT_KPI_STRIP_TOKENS.sub: text-[11px] text-muted-foreground/70 */
+.kpi-sub { font-size:11px; color: var(--text-3); }
+
+/* ════════════════════════════════════
+   CONTENT LAYOUT
+   ════════════════════════════════════ */
+.content-wrap { display:flex; flex:1; }
+
+/* ── Main content ── */
+.content-main { flex:1; min-width:0; overflow-y:auto; }
+
+/* ════════════════════════════════════
+   TAB BAR
+   (EQUIPMENT_TAB_UNDERLINE_TOKENS)
+   sticky top-[var(--sticky-header-height,0px)] z-20
+   bg-background border-b border-border
+   ════════════════════════════════════ */
+.tab-bar {
+  position: sticky; top:0; z-index:20;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  /* EQUIPMENT_TAB_UNDERLINE_TOKENS.mobileScroll:
+     overflow-x-auto scrollbar-hide */
+  overflow-x:auto;
+  display:flex; align-items:flex-end;
+  padding: 0 28px; gap:0;
+}
+/* EQUIPMENT_TAB_UNDERLINE_TOKENS.triggerBase:
+   px-3 min-h-11 text-sm font-medium relative whitespace-nowrap
+   inline-flex items-center gap-1.5 transition-colors duration-200 */
+.tab-item {
+  padding: 0 12px; min-height:44px;  /* min-h-11 = 44px (INTERACTIVE_TOKENS.size.standard) */
+  font-size:13px; font-weight:500;
+  color: var(--text-2); cursor:pointer;
+  white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  position:relative;
+  /* triggerInactive: text-muted-foreground hover:text-foreground */
+  transition: color 200ms cubic-bezier(.4,0,.2,1);
+  border-bottom: 2px solid transparent;
+}
+.tab-item:hover { color: var(--text-1); }
+/* EQUIPMENT_TAB_UNDERLINE_TOKENS.triggerActive:
+   after:absolute after:bottom-0 after:h-[3px] after:bg-ul-red after:rounded-t-sm */
+.tab-item.active {
+  color: var(--text-1);
+}
+.tab-item.active::after {
+  content:'';
+  position:absolute; bottom:0; left:0; right:0;
+  height:3px;
+  background: var(--ul-red);   /* bg-ul-red */
+  border-radius:2px 2px 0 0;   /* rounded-t-sm */
+}
+.tab-icon {
+  width:14px; height:14px; opacity:.7; flex-shrink:0;
+}
+.tab-item.active .tab-icon { opacity:1; }
+/* 탭 배지 */
+.tab-badge {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:18px; height:18px; border-radius:9px;
+  font-size:10px; font-weight:700; padding:0 5px;
+}
+.tab-badge-danger { background: var(--danger-bg); color: var(--danger); }
+.tab-badge-warn   { background: var(--warn-bg);   color: var(--warn); }
+
+/* EQUIPMENT_TAB_UNDERLINE_TOKENS.separator: mx-1 h-5 w-px bg-border opacity-60 */
+.tab-sep { width:1px; height:20px; background: var(--border); opacity:.6; align-self:center; margin:0 4px; flex-shrink:0; }
+
+/* ════════════════════════════════════
+   SECTION CONTENT
+   ════════════════════════════════════ */
+.section-container { padding: 20px 28px; }
+
+/* 카드 — ELEVATION_TOKENS.shadow.subtle */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow:hidden; margin-bottom:14px;
+  box-shadow: var(--shadow-sm);
+}
+.card-header {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.card-title { font-size:13px; font-weight:600; }
+.card-body { padding: 18px; }
+
+/* ── NC 메인 카드 ── */
+.nc-main-card {
+  background: var(--surface);
+  border: 1px solid #FECACA;
+  border-top: 3px solid var(--danger);    /* border-l-red-600 → top 변환 */
+  border-radius: var(--radius-lg);
+  overflow:hidden; margin-bottom:14px;
+  box-shadow: var(--shadow-sm);
+  position:relative;
+}
+.nc-main-card::before {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(220,38,38,.025) 0%, transparent 50%);
+  pointer-events:none;
+}
+.nc-main-header {
+  padding:16px 20px;
+  background: #FFF5F5;
+  border-bottom: 1px solid #FEE2E2;
+  display:flex; align-items:flex-start; gap:14px;
+}
+.nc-main-icon {
+  width:40px; height:40px;
+  background: var(--danger-bg);
+  border:1px solid #FECACA; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:19px; flex-shrink:0;
+}
+.nc-main-info { flex:1; min-width:0; }
+.nc-ref {
+  font-family: var(--mono); font-size:11px;
+  color: var(--danger); opacity:.75;
+  margin-bottom:3px; display:flex; align-items:center; gap:8px;
+}
+.nc-main-title { font-size:15px; font-weight:600; margin-bottom:3px; }
+.nc-main-sub { font-size:12px; color: var(--text-2); }
+.nc-severity-badge {
+  padding:4px 10px; border-radius:5px;
+  font-size:11px; font-weight:700; letter-spacing:.04em;
+  background: var(--danger); color:white; flex-shrink:0;
+}
+.nc-main-body { padding:18px 20px; }
+
+.nc-meta-grid {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:16px; margin-bottom:14px;
+}
+.nc-meta-label {
+  font-size:10px; font-weight:700;
+  color: var(--text-3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;
+}
+.nc-meta-value { font-size:13px; }
+.nc-meta-value.danger { color: var(--danger); font-weight:600; }
+
+.nc-desc {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius:6px; padding:11px 13px;
+  font-size:12.5px; line-height:1.7;
+  color: var(--text-2); margin-bottom:14px;
+}
+
+/* 조치 프로세스 스텝 */
+.nc-steps { display:flex; align-items:flex-start; gap:0; margin-bottom:16px; }
+.nc-step { flex:1; text-align:center; position:relative; }
+.nc-step::after {
+  content:''; position:absolute;
+  top:11px; left:50%; width:100%; height:1px;
+  background: var(--border);
+}
+.nc-step:last-child::after { display:none; }
+.nc-step-dot {
+  width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700;
+  margin:0 auto 6px; position:relative; z-index:1; border:2px solid;
+}
+.nc-step.done .nc-step-dot  { background:var(--ok); border-color:var(--ok); color:white; }
+.nc-step.cur  .nc-step-dot  { background:var(--danger-bg); border-color:var(--danger); color:var(--danger); animation:ring 1.6s ease-in-out infinite; }
+.nc-step.pend .nc-step-dot  { background:var(--surface-elev); border-color:var(--border); color:var(--text-3); }
+@keyframes ring { 0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0)} 50%{box-shadow:0 0 0 4px rgba(220,38,38,.18)} }
+.nc-step-label { font-size:10px; color:var(--text-3); }
+.nc-step.cur  .nc-step-label { color:var(--danger); font-weight:600; }
+.nc-step.done .nc-step-label { color:var(--ok); }
+
+.nc-footer {
+  display:flex; gap:8px; padding-top:14px;
+  border-top:1px solid var(--border-subtle);
+}
+
+/* ── 완료된 NC 카드 ── */
+.nc-resolved {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  background: var(--ok-bg);
+  border:1px solid #A7F3D0;
+  border-left:3px solid var(--ok);
+  border-radius:6px;
+}
+.nc-resolved-id {
+  font-family:var(--mono); font-size:10.5px;
+  color:var(--ok-text); background:#D1FAE5;
+  padding:1px 6px; border-radius:3px; margin-right:4px;
+}
+
+/* ── 교정 타임라인 ── */
+.cal-timeline { position:relative; }
+.cal-item {
+  display:flex; gap:14px; padding-bottom:20px; position:relative;
+}
+.cal-item::before {
+  content:''; position:absolute; left:15px; top:32px; bottom:0;
+  width:1px; background:var(--border);
+}
+.cal-item:last-child::before { display:none; }
+.cal-item:last-child { padding-bottom:0; }
+.cal-dot {
+  width:32px; height:32px; border-radius:50%;
+  flex-shrink:0; position:relative; z-index:1;
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; border:1.5px solid;
+}
+.cal-dot.nc   { background:var(--danger-bg); border-color:#FECACA; color:var(--danger); }
+.cal-dot.warn { background:var(--warn-bg);   border-color:#FDE68A; color:var(--warn);   }
+.cal-dot.ok   { background:var(--ok-bg);     border-color:#A7F3D0; color:var(--ok);     }
+.cal-dot.info { background:var(--info-bg);   border-color:#BFDBFE; color:var(--info);   }
+.cal-body { flex:1; min-width:0; padding-top:4px; }
+.cal-title { font-size:13px; font-weight:500; margin-bottom:2px; }
+.cal-meta  { font-size:11.5px; color:var(--text-3); display:flex; gap:12px; flex-wrap:wrap; }
+
+/* ── 반출/위치/정비/사고/소프트웨어/첨부 공통 row ── */
+.hist-row {
+  display:flex; align-items:center; gap:12px;
+  padding:11px 0; border-bottom:1px solid var(--border-subtle);
+}
+.hist-row:last-child { border-bottom:none; padding-bottom:0; }
+.hist-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+.hist-dot.ok      { background:var(--ok); }
+.hist-dot.warn    { background:var(--warn); }
+.hist-dot.danger  { background:var(--danger); }
+.hist-dot.info    { background:var(--info); }
+.hist-dot.neutral { background:var(--text-3); }
+.hist-title { font-size:13px; flex:1; min-width:0; }
+.hist-meta  { font-size:11.5px; color:var(--text-3); }
+.hist-badge {
+  display:inline-flex; padding:2px 7px; border-radius:4px;
+  font-size:11px; font-weight:600; flex-shrink:0;
+}
+
+/* ── KPI 아이콘 컨테이너 (EQUIPMENT_KPI_STRIP_TOKENS.iconContainer) ── */
+.kpi-icon-wrap {
+  width:32px; height:32px; border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0; margin-bottom:10px;
+}
+/* EQUIPMENT_KPI_STRIP_TOKENS.iconBg */
+.kpi-icon-ok      { background:var(--ok-bg);   color:var(--ok); }
+.kpi-icon-warn    { background:var(--danger-bg); color:var(--danger); }
+.kpi-icon-info    { background:var(--info-bg);  color:var(--info); }
+.kpi-icon-neutral { background:var(--surface-elev); color:var(--text-2); }
+
+/* ════════════════════════════════════
+   RIGHT ACTIVITY PANEL
+   ════════════════════════════════════ */
+.activity-panel {
+  width:256px; flex-shrink:0;
+  border-left:1px solid var(--border);
+  background: var(--surface);
+  overflow-y:auto;
+  position:sticky; top:var(--header-h);
+  height:calc(100vh - var(--header-h));
+}
+.panel-section-title {
+  font-size:10px; font-weight:700;
+  color:var(--text-3); text-transform:uppercase; letter-spacing:.1em;
+  padding:12px 14px 6px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface-elev);
+}
+/* 빠른 액션 */
+.quick-actions { padding:10px 12px; border-bottom:1px solid var(--border); }
+.quick-btn {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; border-radius:5px;
+  font-size:12.5px; font-weight:500;
+  cursor:pointer; width:100%; text-align:left;
+  background:transparent; color:var(--text-2);
+  border:1px solid var(--border); font-family:var(--sans);
+  margin-bottom:5px;
+  transition: background .12s, color .12s;
+}
+.quick-btn:last-child { margin-bottom:0; }
+.quick-btn:hover { background:var(--bg); color:var(--text-1); }
+.quick-btn.primary-action {
+  background:var(--danger-bg); color:var(--danger);
+  border-color:#FECACA; font-weight:600;
+}
+.quick-btn.primary-action:hover { background:#FEE2E2; }
+
+/* 활동 피드 */
+.activity-feed { padding:12px; }
+.act-item {
+  display:flex; gap:9px; padding-bottom:13px; position:relative;
+}
+.act-item::before {
+  content:''; position:absolute; left:10px; top:21px; bottom:0;
+  width:1px; background:var(--border-subtle);
+}
+.act-item:last-child::before { display:none; }
+.act-item:last-child { padding-bottom:0; }
+.act-dot {
+  width:21px; height:21px; border-radius:50%; flex-shrink:0;
+  z-index:1; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10px; border:1px solid var(--border);
+  background:var(--surface-elev);
+}
+.act-dot.danger { background:var(--danger-bg); border-color:#FECACA; }
+.act-dot.ok     { background:var(--ok-bg);     border-color:#A7F3D0; }
+.act-dot.warn   { background:var(--warn-bg);   border-color:#FDE68A; }
+.act-body { flex:1; min-width:0; padding-top:1px; }
+.act-title { font-size:12px; font-weight:500; margin-bottom:1px; line-height:1.4; }
+.act-meta  { font-size:10.5px; color:var(--text-3); }
+
+/* ════════════════════════════════════
+   INFO GRID  (기본정보 탭)
+   ════════════════════════════════════ */
+.info-grid {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  border-top:1px solid var(--border);
+  border-left:1px solid var(--border);
+}
+.info-cell {
+  padding:13px 16px;
+  border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.info-cell-label {
+  font-size:10.5px; font-weight:600; color:var(--text-3);
+  text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px;
+}
+.info-cell-value { font-size:13px; }
+.info-cell-value.mono { font-family:var(--mono); font-size:12px; }
+
+/* ════════════════════════════════════
+   ANNOTATION + DESIGN NOTES
+   ════════════════════════════════════ */
+.design-note {
+  background:linear-gradient(90deg,#0F172A,#1E1B4B);
+  color:#94A3B8; padding:10px 28px; font-size:12px;
+  display:flex; align-items:center; gap:8px;
+  margin-left:var(--sidebar-w);
+}
+.design-note strong { color:#A5B4FC; }
+
+.anno {
+  outline:2px dashed #93C5FD;
+  outline-offset:-1px;
+  border-radius:5px; position:relative; padding-top:18px;
+}
+.anno-tag {
+  position:absolute; top:-10px; left:10px;
+  background:#EFF6FF; color:#1D4ED8;
+  font-size:10px; font-weight:700;
+  padding:1px 8px; border-radius:100px;
+  border:1px solid #93C5FD; white-space:nowrap;
+}
+</style>
+</head>
+<body>
+
+<div class="design-note">
+  ☀️ <strong>Option B Light — Command Center</strong> &nbsp;|&nbsp;
+  디자인토큰 실제 값 적용 (EQUIPMENT_KPI_STRIP_TOKENS / EQUIPMENT_TAB_UNDERLINE_TOKENS / EQUIPMENT_STATUS_TOKENS) &nbsp;|&nbsp;
+  9개 탭 전부 포함 &nbsp;|&nbsp; 부적합 상태 시나리오 표시
+</div>
+
+<div style="display:flex;min-height:calc(100vh - 37px);">
+
+<!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">EQ</div>
+    <span class="logo-text">장비 관리 시스템</span>
+  </div>
+  <div class="sidebar-body">
+    <div class="nav-group-label">운영</div>
+    <div class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="5.5" height="5.5" rx="1"/><rect x="8.5" y="1" width="5.5" height="5.5" rx="1"/><rect x="1" y="8.5" width="5.5" height="5.5" rx="1"/><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1"/></svg>
+      대시보드
+    </div>
+    <div class="nav-item active">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h11M2 7.5h11M2 11h7"/><circle cx="12.5" cy="10.5" r="2"/></svg>
+      장비 관리
+    </div>
+    <div class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11 L5 8 L8 11 L13 4"/></svg>
+      반출 관리
+    </div>
+    <div class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="5"/><path d="M7.5 4.5v3.5l2 2"/></svg>
+      교정 관리
+    </div>
+    <div class="nav-group-label" style="margin-top:6px;">관리</div>
+    <div class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m3 7.5 3 3 6-6"/></svg>
+      승인 관리
+    </div>
+    <div class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.5 2v4M7.5 9v4M2 7.5h4M9 7.5h4"/></svg>
+      부적합 관리
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="11" height="10" rx="1"/><path d="M5 3V1M10 3V1M2 7h11"/></svg>
+      교정 계획
+    </div>
+    <div class="nav-group-label" style="margin-top:6px;">시스템</div>
+    <div class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="7.5" r="2"/><path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2"/></svg>
+      설정
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<div class="main">
+
+  <!-- STICKY HEADER (EQUIPMENT_DETAIL_HEADER_TOKENS) -->
+  <header class="sticky-header">
+    <!-- backLink: flex items-center gap-1 shrink-0 hover:text-foreground text-xs transition-colors -->
+    <a class="back-link">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12L4 7l5-5"/></svg>
+      목록
+    </a>
+    <div class="breadcrumb">
+      <span class="sep">/</span>
+      <a>장비 관리</a>
+      <span class="sep">/</span>
+      <span class="current">SUW-E-2024-001 · 다기능교정기 (Fluke 5522A)</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm">수정</button>
+      <button class="btn btn-danger btn-sm">⚠ 부적합 조치</button>
+    </div>
+  </header>
+
+  <!-- NC STRIPE (비정상 상태 경고 — 부적합/교정초과일 때만 표시) -->
+  <div class="nc-stripe"></div>
+
+  <!-- HERO SECTION -->
+  <div class="hero">
+    <div class="hero-nc-tint"></div>
+    <div class="hero-inner">
+
+      <!-- 장비 아이콘 슬롯 -->
+      <div class="hero-visual">
+        <div class="device-icon-wrap">
+          ⚡
+          <div class="device-icon-badge">⚠</div>
+        </div>
+        <div class="device-category">교정장비 · 다기능</div>
+        <div class="device-mgmt-num">SUW-E-2024-001</div>
+      </div>
+
+      <!-- 콘텐츠 -->
+      <div class="hero-content">
+        <div class="hero-top-row">
+          <div class="hero-title-block">
+            <div class="hero-model">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4"/><path d="M6 4v2.5l1.5 1.5"/></svg>
+              Fluke Corporation · 모델 5522A · S/N: FL5522-20240301
+            </div>
+            <div class="hero-name">다기능교정기</div>
+            <div class="hero-sub">전기계측팀 · SUW 전기실 E-LAB-03 · 취득일 2020-03-15</div>
+          </div>
+          <!-- EQUIPMENT_STATUS_TOKENS.non_conforming: bg-red-100 text-red-800 border-red-200 -->
+          <div class="status-chip status-nc">
+            <span class="status-pulse"></span>
+            부적합
+          </div>
+        </div>
+
+        <!-- 빠른 필드 -->
+        <div class="hero-fields">
+          <div>
+            <div class="hero-field-label">취득 비용</div>
+            <div class="hero-field-value">₩14,500,000</div>
+          </div>
+          <div>
+            <div class="hero-field-label">분류 코드</div>
+            <div class="hero-field-value mono">E</div>
+          </div>
+          <div>
+            <div class="hero-field-label">교정 주기</div>
+            <div class="hero-field-value">12개월</div>
+          </div>
+          <div>
+            <div class="hero-field-label">마지막 교정</div>
+            <div class="hero-field-value" style="color:var(--danger);font-weight:500;">2023-11-01 (만료)</div>
+          </div>
+          <div>
+            <div class="hero-field-label">소유 여부</div>
+            <div class="hero-field-value">자체 보유</div>
+          </div>
+        </div>
+
+        <!-- NC 인라인 알림 -->
+        <div class="hero-nc-alert">
+          <span style="font-size:16px;flex-shrink:0;">⚠</span>
+          <div class="hero-nc-alert-text">
+            <strong>교정기한 14일 초과</strong> — 2024-11-15 시스템에 의해 자동 부적합 처리되었습니다.
+            사용 및 반출이 제한됩니다. 즉시 교정 조치가 필요합니다.
+          </div>
+          <button class="btn btn-danger btn-sm" style="flex-shrink:0;">조치하기 →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- KPI STRIP (EQUIPMENT_KPI_STRIP_TOKENS) -->
+  <div class="kpi-strip">
+    <!-- warn: border-l-red-500 / kpi-value.warn = danger색 -->
+    <div class="kpi-cell kpi-warn">
+      <div class="kpi-icon-wrap kpi-icon-warn">📅</div>
+      <div class="kpi-label">교정 잔여일</div>
+      <div class="kpi-value warn">D+14</div>
+      <div class="kpi-sub">2024-11-01 만료 · 초과</div>
+    </div>
+    <div class="kpi-cell kpi-info">
+      <div class="kpi-icon-wrap kpi-icon-info">📤</div>
+      <div class="kpi-label">총 반출 횟수</div>
+      <div class="kpi-value info">24</div>
+      <div class="kpi-sub">최근 2024-10-22</div>
+    </div>
+    <div class="kpi-cell kpi-ok">
+      <div class="kpi-icon-wrap kpi-icon-ok">✅</div>
+      <div class="kpi-label">교정 실시 횟수</div>
+      <div class="kpi-value ok">8</div>
+      <div class="kpi-sub">최초 2020-03-15</div>
+    </div>
+    <div class="kpi-cell kpi-warn" style="--kpi-c:var(--warn);">
+      <div class="kpi-icon-wrap" style="background:var(--warn-bg);color:var(--warn);">🔧</div>
+      <div class="kpi-label">정비 이력</div>
+      <div class="kpi-value" style="color:var(--warn);">3</div>
+      <div class="kpi-sub">최근 2024-08-10</div>
+    </div>
+    <div class="kpi-cell kpi-warn">
+      <div class="kpi-icon-wrap kpi-icon-warn">🚨</div>
+      <div class="kpi-label">부적합 건수</div>
+      <div class="kpi-value warn">2</div>
+      <div class="kpi-sub">진행중 1건</div>
+    </div>
+  </div>
+
+  <!-- CONTENT WRAPPER -->
+  <div class="content-wrap">
+
+    <!-- MAIN CONTENT -->
+    <div class="content-main">
+
+      <!-- TAB BAR (EQUIPMENT_TAB_UNDERLINE_TOKENS) -->
+      <div class="tab-bar">
+        <!-- 1. 기본정보 -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="12" height="12" rx="1.5"/><path d="M4 5h6M4 7.5h6M4 10h3"/></svg>
+          기본정보
+        </div>
+        <!-- 2. 교정 이력 (D+14 배지) -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="12" height="11" rx="1.5"/><path d="M5 2V0M9 2V0M1 6h12"/></svg>
+          교정 이력
+          <span class="tab-badge tab-badge-warn">D+14</span>
+        </div>
+        <!-- 3. 교정 보정계수 -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5"/><path d="M7 4v3.5l2.5 2.5"/></svg>
+          교정 보정계수
+        </div>
+        <div class="tab-sep"></div>
+        <!-- 4. 반출 이력 -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1H3a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V5L9 1z"/><path d="M9 1v4h4"/></svg>
+          반출 이력
+        </div>
+        <!-- 5. 위치 이력 -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1a4 4 0 010 8C5 9 2 6 2 5a5 5 0 0110 0c0 1-3 4-5 4z"/><circle cx="7" cy="5" r="1.5"/></svg>
+          위치 이력
+        </div>
+        <div class="tab-sep"></div>
+        <!-- 6. 정비 이력 -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 1a3 3 0 00-2.8 4L2 10.2a1 1 0 001.4 1.4L8.6 7A3 3 0 1010 1z"/></svg>
+          정비 이력
+        </div>
+        <!-- 7. 부적합 (빨간 배지!) -->
+        <div class="tab-item active">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1L1 12h12L7 1z"/><path d="M7 5v4"/><circle cx="7" cy="10.5" r=".5" fill="currentColor"/></svg>
+          부적합
+          <span class="tab-badge tab-badge-danger">1</span>
+        </div>
+        <div class="tab-sep"></div>
+        <!-- 8. 소프트웨어 -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4L1.5 7 4 10M10 4l2.5 3-2.5 3M7.5 2l-1 10"/></svg>
+          소프트웨어
+        </div>
+        <!-- 9. 첨부파일 -->
+        <div class="tab-item">
+          <svg class="tab-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 6.5L6.5 12a3.5 3.5 0 01-5-5l7-7a2 2 0 013 3L5 9a.5.5 0 01-1-1l5.5-5.5"/></svg>
+          첨부파일
+        </div>
+      </div>
+
+      <!-- TAB CONTENT: 부적합 탭 (active) -->
+      <div class="section-container">
+
+        <!-- 활성 NC 카드 -->
+        <div class="nc-main-card">
+          <div class="nc-main-header">
+            <div class="nc-main-icon">⚠</div>
+            <div class="nc-main-info">
+              <div class="nc-ref">
+                NC-2024-0088
+                <span style="color:var(--text-3);">·</span>
+                <span style="background:var(--danger-bg);color:var(--danger);padding:1px 6px;border-radius:4px;font-size:10px;">진행중</span>
+              </div>
+              <div class="nc-main-title">교정기한 초과로 인한 자동 부적합 처리</div>
+              <div class="nc-main-sub">CalibrationOverdueScheduler · 2024-11-15 09:00 자동 감지 및 처리</div>
+            </div>
+            <span class="nc-severity-badge">CRITICAL</span>
+          </div>
+
+          <div class="nc-main-body">
+            <!-- 메타 그리드 -->
+            <div class="nc-meta-grid">
+              <div>
+                <div class="nc-meta-label">부적합 유형</div>
+                <div class="nc-meta-value">교정기한 초과</div>
+              </div>
+              <div>
+                <div class="nc-meta-label">발생일시</div>
+                <div class="nc-meta-value">2024-11-15 09:00</div>
+              </div>
+              <div>
+                <div class="nc-meta-label">담당자</div>
+                <div class="nc-meta-value">김기술 (기술책임자)</div>
+              </div>
+              <div>
+                <div class="nc-meta-label">처리 상태</div>
+                <div class="nc-meta-value danger">미처리</div>
+              </div>
+            </div>
+
+            <!-- 설명 -->
+            <div class="nc-desc">
+              장비 교정 주기(12개월)가 초과되었습니다. 마지막 교정일은 2023-11-01이며,
+              교정 만료일(2024-11-01) 경과 후에도 교정이 실시되지 않아 자동 부적합 처리되었습니다.
+              즉시 격리 조치 후 교정 기관에 의뢰하거나 내부 교정을 실시해야 합니다.
+            </div>
+
+            <!-- 조치 프로세스 스텝 -->
+            <div style="margin-bottom:14px;">
+              <div class="nc-meta-label" style="margin-bottom:10px;">조치 프로세스</div>
+              <div class="nc-steps">
+                <div class="nc-step done">
+                  <div class="nc-step-dot">✓</div>
+                  <div class="nc-step-label">자동 감지</div>
+                </div>
+                <div class="nc-step cur">
+                  <div class="nc-step-dot">2</div>
+                  <div class="nc-step-label">조치 등록</div>
+                </div>
+                <div class="nc-step pend">
+                  <div class="nc-step-dot">3</div>
+                  <div class="nc-step-label">교정 실시</div>
+                </div>
+                <div class="nc-step pend">
+                  <div class="nc-step-dot">4</div>
+                  <div class="nc-step-label">승인 검토</div>
+                </div>
+                <div class="nc-step pend">
+                  <div class="nc-step-dot">5</div>
+                  <div class="nc-step-label">부적합 해제</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nc-footer">
+              <button class="btn btn-primary">✎ 조치 계획 등록</button>
+              <button class="btn btn-ghost">📋 교정 기록 추가</button>
+              <button class="btn btn-ghost">📎 관련 문서</button>
+              <button class="btn btn-ghost" style="margin-left:auto;color:var(--text-3);font-size:12px;">내보내기</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 해결된 NC 이력 -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" style="color:var(--text-2);font-size:12.5px;">해결된 부적합 이력</span>
+            <span style="font-size:11px;color:var(--text-3);">1건</span>
+          </div>
+          <div class="card-body" style="padding:12px 16px;">
+            <div class="nc-resolved">
+              <span style="font-size:16px;">✅</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:12.5px;font-weight:500;margin-bottom:2px;">
+                  <span class="nc-resolved-id">NC-2022-0031</span>
+                  수리 후 재교정 완료
+                </div>
+                <div style="font-size:11px;color:var(--text-3);">발생 2022-06-10 · 해결 2022-07-05 (25일 소요) · 담당: 이담당</div>
+              </div>
+              <span style="font-size:11px;color:var(--ok);font-weight:600;white-space:nowrap;">해결됨</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 아래는 다른 탭들 미리보기 (접힌 상태 참고용) -->
+        <div style="margin-top:8px;padding:10px 14px;background:var(--surface-elev);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text-3);">
+          💡 다른 탭 콘텐츠 미리보기 → 아래 참고 섹션 확인
+        </div>
+
+      </div><!-- /section-container -->
+
+      <!-- 다른 탭들 참고용 미리보기 (annotation) -->
+      <div class="section-container" style="padding-top:0;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">탭별 콘텐츠 레이아웃 참고</div>
+
+        <!-- 기본정보 탭 미리보기 -->
+        <div class="card" style="margin-bottom:10px;">
+          <div class="card-header">
+            <span class="card-title" style="font-size:12px;color:var(--text-2);">📄 기본정보 탭 — 3열 그리드</span>
+          </div>
+          <div class="info-grid">
+            <div class="info-cell"><div class="info-cell-label">장비명</div><div class="info-cell-value">다기능교정기</div></div>
+            <div class="info-cell"><div class="info-cell-label">제조사</div><div class="info-cell-value">Fluke Corporation</div></div>
+            <div class="info-cell"><div class="info-cell-label">모델</div><div class="info-cell-value">5522A</div></div>
+            <div class="info-cell"><div class="info-cell-label">관리번호</div><div class="info-cell-value mono">SUW-E-2024-001</div></div>
+            <div class="info-cell"><div class="info-cell-label">시리얼</div><div class="info-cell-value mono">FL5522-20240301</div></div>
+            <div class="info-cell"><div class="info-cell-label">위치</div><div class="info-cell-value">SUW 전기실 E-LAB-03</div></div>
+          </div>
+        </div>
+
+        <!-- 교정 이력 탭 미리보기 -->
+        <div class="card" style="margin-bottom:10px;">
+          <div class="card-header">
+            <span class="card-title" style="font-size:12px;color:var(--text-2);">📅 교정 이력 탭 — 타임라인</span>
+            <span style="font-size:11px;background:var(--warn-bg);color:var(--warn);border:1px solid #FDE68A;padding:2px 7px;border-radius:4px;font-weight:600;">D+14</span>
+          </div>
+          <div class="card-body">
+            <div class="cal-timeline">
+              <div class="cal-item">
+                <div class="cal-dot nc">⚠</div>
+                <div class="cal-body">
+                  <div class="cal-title">부적합 자동 전환 (CAL 만료)</div>
+                  <div class="cal-meta"><span>2024-11-15</span><span>교정기한초과</span><span>시스템 자동</span></div>
+                </div>
+              </div>
+              <div class="cal-item">
+                <div class="cal-dot ok">✓</div>
+                <div class="cal-body">
+                  <div class="cal-title">외부 교정 완료 — CAL-2023-0128</div>
+                  <div class="cal-meta"><span>2023-11-01</span><span>KOLAS 공인기관</span><span>담당: 박실무</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 반출/정비/소프트웨어/첨부 미리보기 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="card">
+            <div class="card-header"><span class="card-title" style="font-size:12px;color:var(--text-2);">📤 반출 이력</span></div>
+            <div class="card-body" style="padding:12px 16px;">
+              <div class="hist-row">
+                <div class="hist-dot ok"></div>
+                <div class="hist-title">전기시험실 → 현장 점검<span class="hist-meta" style="margin-left:8px;">2024-10-22</span></div>
+                <span class="hist-badge" style="background:var(--ok-bg);color:var(--ok-text);">반입완료</span>
+              </div>
+              <div class="hist-row">
+                <div class="hist-dot info"></div>
+                <div class="hist-title">외부 교정 의뢰<span class="hist-meta" style="margin-left:8px;">2023-11-01</span></div>
+                <span class="hist-badge" style="background:var(--info-bg);color:var(--info-text);">반입완료</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title" style="font-size:12px;color:var(--text-2);">🔧 정비 이력</span></div>
+            <div class="card-body" style="padding:12px 16px;">
+              <div class="hist-row">
+                <div class="hist-dot warn"></div>
+                <div class="hist-title">전원부 점검<span class="hist-meta" style="margin-left:8px;">2024-08-10</span></div>
+                <span class="hist-badge" style="background:var(--ok-bg);color:var(--ok-text);">완료</span>
+              </div>
+              <div class="hist-row">
+                <div class="hist-dot neutral"></div>
+                <div class="hist-title">정기 자체 점검<span class="hist-meta" style="margin-left:8px;">2024-03-15</span></div>
+                <span class="hist-badge" style="background:var(--surface-elev);color:var(--text-2);">완료</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title" style="font-size:12px;color:var(--text-2);">💻 소프트웨어</span></div>
+            <div class="card-body" style="padding:12px 16px;">
+              <div class="hist-row">
+                <div class="hist-dot info"></div>
+                <div class="hist-title">Fluke Calibration SW v3.2</div>
+                <span class="hist-badge" style="background:var(--ok-bg);color:var(--ok-text);">정식</span>
+              </div>
+              <div class="hist-row">
+                <div class="hist-dot neutral"></div>
+                <div class="hist-title">Windows 11 Pro</div>
+                <span class="hist-badge" style="background:var(--surface-elev);color:var(--text-2);">OS</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title" style="font-size:12px;color:var(--text-2);">📎 첨부파일</span></div>
+            <div class="card-body" style="padding:12px 16px;">
+              <div class="hist-row">
+                <div class="hist-dot info"></div>
+                <div class="hist-title">교정성적서_2023.pdf</div>
+                <span style="font-size:11px;color:var(--text-3);">2.4MB</span>
+              </div>
+              <div class="hist-row">
+                <div class="hist-dot neutral"></div>
+                <div class="hist-title">사용설명서_Fluke5522A.pdf</div>
+                <span style="font-size:11px;color:var(--text-3);">8.1MB</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div><!-- /content-main -->
+
+    <!-- RIGHT ACTIVITY PANEL -->
+    <aside class="activity-panel">
+      <div class="panel-section-title">빠른 작업</div>
+      <div class="quick-actions">
+        <button class="quick-btn primary-action">⚠ 부적합 조치 등록</button>
+        <button class="quick-btn">📋 교정 기록 추가</button>
+        <button class="quick-btn">✏ 장비 정보 수정</button>
+        <button class="quick-btn">📤 반출 요청</button>
+        <button class="quick-btn" style="color:var(--text-3);font-size:12px;border-style:dashed;">🗑 폐기 요청</button>
+      </div>
+
+      <div class="panel-section-title" style="margin-top:0;">최근 활동</div>
+      <div class="activity-feed">
+        <div class="act-item">
+          <div class="act-dot danger">⚠</div>
+          <div class="act-body">
+            <div class="act-title">부적합 자동 처리</div>
+            <div class="act-meta">2024-11-15 09:00 · 시스템</div>
+          </div>
+        </div>
+        <div class="act-item">
+          <div class="act-dot warn">🔔</div>
+          <div class="act-body">
+            <div class="act-title">교정 만료 D-7 알림 발송</div>
+            <div class="act-meta">2024-10-25 · 시스템 → 김기술</div>
+          </div>
+        </div>
+        <div class="act-item">
+          <div class="act-dot" style="font-size:9px;">📤</div>
+          <div class="act-body">
+            <div class="act-title">반출 완료 — 전기시험실</div>
+            <div class="act-meta">2024-10-22 · 박실무</div>
+          </div>
+        </div>
+        <div class="act-item">
+          <div class="act-dot ok">✓</div>
+          <div class="act-body">
+            <div class="act-title">교정 완료 CAL-2023-0128</div>
+            <div class="act-meta">2023-11-01 · KOLAS 공인기관</div>
+          </div>
+        </div>
+        <div class="act-item">
+          <div class="act-dot" style="font-size:9px;">✏</div>
+          <div class="act-body">
+            <div class="act-title">장비 정보 수정 (위치)</div>
+            <div class="act-meta">2023-05-14 · 김기술</div>
+          </div>
+        </div>
+        <div class="act-item">
+          <div class="act-dot ok">✓</div>
+          <div class="act-body">
+            <div class="act-title">교정 완료 CAL-2022-0089</div>
+            <div class="act-meta">2022-11-01 · 내부 교정</div>
+          </div>
+        </div>
+        <div class="act-item">
+          <div class="act-dot" style="background:var(--danger-bg);border-color:#FECACA;">✓</div>
+          <div class="act-body">
+            <div class="act-title">부적합 해제 NC-2022-0031</div>
+            <div class="act-meta">2022-07-05 · 이담당 (기술책임자)</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- /content-wrap -->
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- FOOTER NOTES -->
+<div style="background:#1E293B;color:#64748B;padding:16px 28px 16px calc(216px + 28px);font-size:12px;line-height:1.9;">
+  <div style="color:#F1F5F9;font-weight:600;margin-bottom:8px;">디자인토큰 → CSS 변수 매핑 요약</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+    <div>
+      <div style="color:#CBD5E1;font-weight:500;margin-bottom:4px;">KPI Strip</div>
+      EQUIPMENT_KPI_STRIP_TOKENS.numericValue<br>
+      → font-family:Mono, tabular-nums, text-xl font-semibold<br>
+      borderColors.warn → border-l-red-500 (danger-border)<br>
+      borderColors.ok   → border-l-green-500 (ok-border)
+    </div>
+    <div>
+      <div style="color:#CBD5E1;font-weight:500;margin-bottom:4px;">Tab Bar</div>
+      EQUIPMENT_TAB_UNDERLINE_TOKENS<br>
+      triggerActive.after → bg-ul-red (#C41E3A)<br>
+      min-h-11 → 44px (INTERACTIVE_TOKENS.size.standard)<br>
+      transition-colors duration-200 → 200ms cubic-bezier
+    </div>
+    <div>
+      <div style="color:#CBD5E1;font-weight:500;margin-bottom:4px;">Status / NC</div>
+      EQUIPMENT_STATUS_TOKENS.non_conforming<br>
+      bg-red-100 (#FEE2E2) / text-red-800 (#991B1B)<br>
+      border-l-red-600 (#DC2626) → hero-nc-stripe<br>
+      FOCUS_TOKENS.classes.brand → ring-ul-info (#2563EB)
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

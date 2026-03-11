@@ -52,6 +52,7 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/lib/design-tokens/components/checkout.ts`                                           | Layer 3 Checkout 토큰                                |
 | `apps/frontend/lib/design-tokens/components/non-conformance.ts`                                    | Layer 3 Non-Conformance 토큰                         |
 | `apps/frontend/lib/design-tokens/components/settings.ts`                                           | Layer 3 Settings 토큰                                |
+| `apps/frontend/lib/design-tokens/components/team.ts`                                               | Layer 3 Team 토큰                                    |
 | `apps/frontend/styles/globals.css`                                                                 | Brand CSS 변수 정의 (--brand-color-\*)               |
 | `apps/frontend/tailwind.config.js`                                                                 | Tailwind brand 팔레트 확장 설정                      |
 | `apps/frontend/lib/utils/calibration-status.ts`                                                    | 교정 상태 유틸리티 (design-tokens 사용)              |
@@ -104,11 +105,18 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/checkouts/CheckoutStatusBadge.tsx`                                       | 마이그레이션된 컴포넌트 (Checkout)                   |
 | `apps/frontend/components/checkouts/CheckoutMiniProgress.tsx`                                      | 마이그레이션된 컴포넌트 (Checkout)                   |
 | `apps/frontend/components/approvals/ApprovalDetailModal.tsx`                                       | 마이그레이션된 컴포넌트 (Approval)                   |
-| `apps/frontend/components/approvals/ApprovalItem.tsx`                                              | 마이그레이션된 컴포넌트 (Approval)                   |
+| `apps/frontend/components/approvals/ApprovalRow.tsx`                                               | 마이그레이션된 컴포넌트 (Approval)                   |
+| `apps/frontend/components/approvals/ApprovalCategorySidebar.tsx`                                   | 마이그레이션된 컴포넌트 (Approval)                   |
+| `apps/frontend/components/approvals/ApprovalKpiStrip.tsx`                                          | 마이그레이션된 컴포넌트 (Approval)                   |
+| `apps/frontend/components/approvals/ApprovalMobileCategoryBar.tsx`                                 | 마이그레이션된 컴포넌트 (Approval)                   |
 | `apps/frontend/components/approvals/ApprovalList.tsx`                                              | 마이그레이션된 컴포넌트 (Approval)                   |
 | `apps/frontend/components/approvals/ApprovalsClient.tsx`                                           | 마이그레이션된 컴포넌트 (Approval)                   |
 | `apps/frontend/components/approvals/BulkActionBar.tsx`                                             | 마이그레이션된 컴포넌트 (Approval)                   |
+| `apps/frontend/components/approvals/RejectModal.tsx`                                               | 마이그레이션된 컴포넌트 (Approval)                   |
 | `apps/frontend/app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx`                              | 마이그레이션된 컴포넌트 (Audit)                      |
+| `apps/frontend/components/audit-logs/AuditDetailSheet.tsx`                                         | 마이그레이션된 컴포넌트 (Audit)                      |
+| `apps/frontend/components/audit-logs/AuditSummaryBar.tsx`                                          | 마이그레이션된 컴포넌트 (Audit)                      |
+| `apps/frontend/components/audit-logs/AuditTimelineFeed.tsx`                                        | 마이그레이션된 컴포넌트 (Audit)                      |
 | `apps/frontend/app/(dashboard)/admin/non-conformance-approvals/NonConformanceApprovalsContent.tsx` | 마이그레이션된 컴포넌트 (Admin)                      |
 | `apps/frontend/components/equipment/EquipmentStickyHeader.tsx`                                     | 마이그레이션된 컴포넌트 (Equipment)                  |
 | `apps/frontend/components/equipment/EquipmentKpiStrip.tsx`                                         | 마이그레이션된 컴포넌트 (Equipment)                  |
@@ -118,6 +126,15 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx`                            | 마이그레이션된 컴포넌트 (Checkout)                   |
 | `apps/frontend/components/calibration/CalibrationAlertBanners.tsx`                                 | 마이그레이션된 컴포넌트 (Calibration)                |
 | `apps/frontend/components/calibration/VersionHistory.tsx`                                          | 마이그레이션된 컴포넌트 (Calibration)                |
+| `apps/frontend/components/auth/IdleTimeoutDialog.tsx`                                              | 마이그레이션된 컴포넌트 (Auth)                       |
+| `apps/frontend/components/settings/SettingsToggleField.tsx`                                        | 마이그레이션된 컴포넌트 (Settings)                   |
+| `apps/frontend/app/(dashboard)/settings/SettingsPageHeader.tsx`                                    | 마이그레이션된 컴포넌트 (Settings)                   |
+| `apps/frontend/components/dashboard/OverdueCheckoutsCard.tsx`                                      | 마이그레이션된 컴포넌트 (Dashboard)                  |
+| `apps/frontend/components/teams/TeamCard.tsx`                                                      | 마이그레이션된 컴포넌트 (Team)                       |
+| `apps/frontend/components/teams/TeamListContent.tsx`                                               | 마이그레이션된 컴포넌트 (Team)                       |
+| `apps/frontend/components/teams/TeamMemberList.tsx`                                                | 마이그레이션된 컴포넌트 (Team)                       |
+| `apps/frontend/components/teams/LeaderCombobox.tsx`                                                | 마이그레이션된 컴포넌트 (Team)                       |
+| `apps/frontend/components/teams/MemberProfileDialog.tsx`                                           | 마이그레이션된 컴포넌트 (Team)                       |
 
 ## Workflow
 
@@ -250,11 +267,18 @@ files=(
   "apps/frontend/components/checkouts/CheckoutStatusBadge.tsx"
   "apps/frontend/components/checkouts/CheckoutMiniProgress.tsx"
   "apps/frontend/components/approvals/ApprovalDetailModal.tsx"
-  "apps/frontend/components/approvals/ApprovalItem.tsx"
+  "apps/frontend/components/approvals/ApprovalRow.tsx"
+  "apps/frontend/components/approvals/ApprovalCategorySidebar.tsx"
+  "apps/frontend/components/approvals/ApprovalKpiStrip.tsx"
+  "apps/frontend/components/approvals/ApprovalMobileCategoryBar.tsx"
   "apps/frontend/components/approvals/ApprovalList.tsx"
   "apps/frontend/components/approvals/ApprovalsClient.tsx"
   "apps/frontend/components/approvals/BulkActionBar.tsx"
+  "apps/frontend/components/approvals/RejectModal.tsx"
   "apps/frontend/app/(dashboard)/admin/audit-logs/AuditLogsContent.tsx"
+  "apps/frontend/components/audit-logs/AuditDetailSheet.tsx"
+  "apps/frontend/components/audit-logs/AuditSummaryBar.tsx"
+  "apps/frontend/components/audit-logs/AuditTimelineFeed.tsx"
   "apps/frontend/app/(dashboard)/admin/non-conformance-approvals/NonConformanceApprovalsContent.tsx"
   "apps/frontend/components/equipment/EquipmentStickyHeader.tsx"
   "apps/frontend/components/equipment/EquipmentKpiStrip.tsx"
@@ -263,6 +287,16 @@ files=(
   "apps/frontend/app/(dashboard)/checkouts/CheckoutsContent.tsx"
   "apps/frontend/app/(dashboard)/checkouts/tabs/OutboundCheckoutsTab.tsx"
   "apps/frontend/components/calibration/CalibrationAlertBanners.tsx"
+  "apps/frontend/components/calibration/VersionHistory.tsx"
+  "apps/frontend/components/auth/IdleTimeoutDialog.tsx"
+  "apps/frontend/components/settings/SettingsToggleField.tsx"
+  "apps/frontend/app/(dashboard)/settings/SettingsPageHeader.tsx"
+  "apps/frontend/components/dashboard/OverdueCheckoutsCard.tsx"
+  "apps/frontend/components/teams/TeamCard.tsx"
+  "apps/frontend/components/teams/TeamListContent.tsx"
+  "apps/frontend/components/teams/TeamMemberList.tsx"
+  "apps/frontend/components/teams/LeaderCombobox.tsx"
+  "apps/frontend/components/teams/MemberProfileDialog.tsx"
 )
 
 for f in "${files[@]}"; do

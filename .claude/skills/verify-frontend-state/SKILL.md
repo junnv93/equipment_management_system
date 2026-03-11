@@ -43,7 +43,9 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/components/notifications/IntermediateCheckAlert.tsx`                                      | 중간점검 완료 direct useMutation 참조                    |
 | `apps/frontend/components/equipment/CalibrationFactorsClient.tsx`                                        | 보정계수 생성 direct useMutation 참조                    |
 | `apps/frontend/hooks/use-equipment-kpi.ts`                                                               | 장비 KPI 계산 훅 (TanStack Query 참조)                   |
+| `apps/frontend/hooks/use-approval-kpi.ts`                                                                | 승인 KPI 계산 훅 (TanStack Query 참조)                   |
 | `apps/frontend/hooks/use-sidebar-state.ts`                                                               | 사이드바 상태 훅 (localStorage UI 상태, 서버 상태 아님)  |
+| `apps/frontend/hooks/use-idle-timeout.ts`                                                                | Idle Timeout 훅 (UI 타이머 상태, 서버 상태 아님)         |
 | `apps/frontend/hooks/use-debounced-value.ts`                                                             | 디바운스 훅 (UI 입력 지연 — 서버 상태 아님, 재사용 유틸) |
 
 ## Workflow
@@ -183,3 +185,4 @@ const { data } = useQuery({
 10. **SoftwareHistoryClient의 direct useMutation** — 소프트웨어 변경 요청은 신규 생성이므로 optimistic update 불필요
 11. **refetchInterval 직접 설정 (특수 케이스)** — QUERY_CONFIG 프리셋으로 커버되지 않는 특수한 polling 요구사항이 있을 때 직접 설정 가능. 단, 주석으로 이유를 명시해야 함
 12. **use-sidebar-state.ts의 localStorage useState** — 사이드바 접기/펼치기 상태는 UI 로컬 상태 (서버 상태 아님). localStorage에서 읽는 SSR 안전 패턴은 정상 (useState false 초기화 → useEffect로 복원)
+13. **use-idle-timeout.ts의 useState** — `isWarningVisible(boolean)`, `secondsRemaining(number)`는 UI 타이머 상태 (서버 상태 아님). `setInterval` 기반 카운트다운 로직이므로 TanStack Query 대상 아님

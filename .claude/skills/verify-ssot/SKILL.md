@@ -40,8 +40,9 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/shared-constants/src/api-endpoints.ts`                             | API_ENDPOINTS 상수                                                                             |
 | `packages/shared-constants/src/entity-routes.ts`                             | SSOT 엔티티 라우팅 (ENTITY_ROUTES, getEntityRoute)                                             |
 | `packages/shared-constants/src/data-scope.ts`                                | SSOT 데이터 스코프 (DataScopeType, resolveDataScope, AUDIT_LOG_SCOPE)                          |
+| `packages/shared-constants/src/permission-categories.ts`                     | SSOT 권한 카테고리 그룹핑 (PERMISSION_CATEGORIES, PERMISSION_CATEGORY_KEYS)                    |
 | `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                                               |
-| `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 상수 (TTL, buffer, expires_in)                                     |
+| `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 + 세션 동작 상수 (TTL, idle timeout, session sync)                 |
 | `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리                                                                               |
 | `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)                           |
 | `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)                                |
@@ -116,6 +117,11 @@ grep -rn "ENTITY_ROUTES\s*=" apps/backend/src apps/frontend --include="*.ts" --i
 ```bash
 # 로컬 DataScopeType/resolveDataScope/AUDIT_LOG_SCOPE 재정의 탐지
 grep -rn "type DataScopeType\s*=\|AUDIT_LOG_SCOPE\s*=\|resolveDataScope\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
+```
+
+```bash
+# 로컬 PERMISSION_CATEGORIES/PERMISSION_CATEGORY_KEYS 재정의 탐지
+grep -rn "PERMISSION_CATEGORIES\s*[=:]\|PERMISSION_CATEGORY_KEYS\s*[=:]" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
 ```
 
 **PASS 기준:** 0개 결과 (모든 핵심 타입은 패키지에서 임포트).

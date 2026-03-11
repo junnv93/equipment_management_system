@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>반출입 관리 — Wireframe</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      background: #f4f5f7;
+      color: #1a1d21;
+      line-height: 1.5;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Layout Shell ── */
+    .shell { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 52px;
+      background: #1c1f26;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 2px;
+    }
+    .sidebar-logo {
+      width: 32px; height: 32px;
+      background: #3b82f6;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 14px;
+    }
+    .sidebar-item {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #6b7280;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.15s;
+    }
+    .sidebar-item:hover { background: #2d3139; color: #e5e7eb; }
+    .sidebar-item.active { background: #2563eb; color: #fff; }
+    .sidebar-divider { width: 28px; height: 1px; background: #2d3139; margin: 4px 0; }
+
+    /* ── Main Content ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Top Header ── */
+    .topbar {
+      height: 52px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .topbar-breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: #6b7280;
+    }
+    .topbar-breadcrumb .current { color: #111827; font-weight: 500; }
+    .topbar-sep { color: #d1d5db; }
+    .topbar-spacer { flex: 1; }
+    .topbar-search {
+      height: 32px; width: 220px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #f9fafb;
+      padding: 0 10px 0 28px;
+      font-size: 12px; color: #6b7280;
+      position: relative;
+      display: flex; align-items: center;
+      cursor: pointer;
+    }
+    .topbar-search-icon {
+      position: absolute; left: 8px;
+      color: #9ca3af; font-size: 12px;
+    }
+    .topbar-icon-btn {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #6b7280; font-size: 14px;
+    }
+    .topbar-icon-btn:hover { background: #f3f4f6; }
+    .topbar-avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%; background: #dbeafe;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: #1d4ed8; cursor: pointer;
+    }
+
+    /* ── Page Body ── */
+    .page-body {
+      flex: 1; overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* ── Page Header ── */
+    .page-header {
+      display: flex; align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .page-title { font-size: 20px; font-weight: 700; color: #111827; }
+    .page-subtitle { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border-radius: 7px;
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; border: none;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-outline {
+      background: #fff; color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    .btn-outline:hover { background: #f9fafb; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+    .btn-ghost {
+      background: transparent; color: #6b7280;
+      border: 1px solid transparent;
+    }
+    .btn-ghost:hover { background: #f3f4f6; color: #374151; }
+
+    /* ── Stats Cards ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .stat-card:hover {
+      border-color: #93c5fd;
+      box-shadow: 0 1px 4px rgba(37,99,235,.08);
+    }
+    .stat-card.active-filter {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .stat-card-label {
+      font-size: 11px; color: #6b7280; font-weight: 500;
+      display: flex; align-items: center; gap: 4px;
+      margin-bottom: 8px;
+    }
+    .stat-card-value {
+      font-size: 24px; font-weight: 700; color: #111827;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .stat-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .dot-blue { background: #3b82f6; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+    .dot-red { background: #ef4444; }
+    .dot-purple { background: #8b5cf6; }
+
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 16px;
+      gap: 0;
+    }
+    .tab {
+      padding: 10px 20px;
+      font-size: 13px; font-weight: 500;
+      color: #6b7280;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tab:hover { color: #374151; }
+    .tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .tab-count {
+      background: #e5e7eb;
+      color: #374151;
+      border-radius: 10px;
+      padding: 1px 6px;
+      font-size: 10px; font-weight: 600;
+    }
+    .tab.active .tab-count { background: #dbeafe; color: #1d4ed8; }
+
+    /* ── Filter Bar ── */
+    .filter-bar {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filter-search {
+      position: relative;
+      flex: 1; min-width: 200px;
+    }
+    .filter-search input {
+      width: 100%; height: 34px;
+      border: 1px solid #e5e7eb;
+      border-radius: 7px;
+      padding: 0 10px 0 30px;
+      font-size: 12px; color: #374151;
+      outline: none;
+    }
+    .filter-search input:focus { border-color: #93c5fd; }
+    .filter-search-icon {
+      position: absolute; left: 9px; top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af; font-size: 13px;
+      pointer-events: none;
+    }
+    .filter-divider { width: 1px; height: 24px; background: #e5e7eb; flex-shrink: 0; }
+    .filter-select {
+      height: 34px;
+      border: 1px solid #e5e7eb;
+      border-radius: 7px;
+      padding: 0 28px 0 10px;
+      font-size: 12px; color: #374151;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;
+      appearance: none;
+      cursor: pointer;
+      outline: none;
+      min-width: 120px;
+    }
+    .filter-select:focus { border-color: #93c5fd; }
+    .filter-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 8px;
+      background: #dbeafe; color: #1d4ed8;
+      border-radius: 5px;
+      font-size: 11px; font-weight: 500;
+    }
+    .filter-clear {
+      font-size: 11px; color: #9ca3af;
+      cursor: pointer; text-decoration: underline;
+      white-space: nowrap;
+    }
+    .filter-clear:hover { color: #6b7280; }
+
+    /* ── Group Cards ── */
+    .group-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .group-header {
+      display: flex; align-items: center;
+      padding: 12px 16px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      gap: 10px;
+    }
+    .group-header-toggle {
+      width: 20px; height: 20px;
+      background: #e5e7eb; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #6b7280; font-size: 10px;
+    }
+    .group-date { font-size: 12px; font-weight: 600; color: #374151; }
+    .group-dest {
+      font-size: 12px; color: #6b7280;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .group-dest-icon { font-size: 11px; }
+    .group-spacer { flex: 1; }
+    .group-meta { font-size: 11px; color: #9ca3af; }
+    .group-count {
+      font-size: 11px; font-weight: 500;
+      background: #e5e7eb; color: #374151;
+      padding: 2px 7px; border-radius: 5px;
+    }
+
+    /* ── Checkout Items ── */
+    .checkout-item {
+      display: flex; align-items: center;
+      padding: 13px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 14px;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .checkout-item:last-child { border-bottom: none; }
+    .checkout-item:hover { background: #f9fafb; }
+    .purpose-bar {
+      width: 3px; height: 42px; border-radius: 2px; flex-shrink: 0;
+    }
+    .bar-calibration { background: #3b82f6; }
+    .bar-repair { background: #f59e0b; }
+    .bar-rental { background: #8b5cf6; }
+
+    .checkout-main { flex: 1; min-width: 0; }
+    .checkout-title {
+      font-size: 13px; font-weight: 600; color: #111827;
+      display: flex; align-items: center; gap: 7px;
+      margin-bottom: 3px;
+    }
+    .checkout-mgmt { font-family: 'Courier New', monospace; font-size: 11px; color: #6b7280; }
+    .checkout-meta {
+      font-size: 11px; color: #9ca3af;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .checkout-meta-sep { color: #d1d5db; }
+    .checkout-status { flex-shrink: 0; }
+    .checkout-actions {
+      flex-shrink: 0;
+      display: flex; gap: 6px;
+    }
+    .checkout-progress {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 3px;
+    }
+
+    /* ── Status Badges ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px; font-weight: 500;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge-pending {
+      background: rgba(245,158,11,.1);
+      color: #b45309;
+      border-color: rgba(245,158,11,.2);
+    }
+    .badge-approved {
+      background: rgba(59,130,246,.1);
+      color: #1d4ed8;
+      border-color: rgba(59,130,246,.2);
+    }
+    .badge-checked-out {
+      background: rgba(139,92,246,.1);
+      color: #6d28d9;
+      border-color: rgba(139,92,246,.2);
+    }
+    .badge-overdue {
+      background: rgba(239,68,68,.15);
+      color: #b91c1c;
+      border-color: rgba(239,68,68,.3);
+    }
+    .badge-returned {
+      background: rgba(16,185,129,.1);
+      color: #065f46;
+      border-color: rgba(16,185,129,.2);
+    }
+    .badge-return-approved {
+      background: rgba(16,185,129,.15);
+      color: #064e3b;
+      border-color: rgba(16,185,129,.3);
+    }
+    .badge-rejected {
+      background: rgba(239,68,68,.1);
+      color: #b91c1c;
+      border-color: rgba(239,68,68,.2);
+    }
+    .badge-canceled {
+      background: rgba(156,163,175,.15);
+      color: #4b5563;
+      border-color: rgba(156,163,175,.3);
+    }
+    .badge-purpose-calibration {
+      background: #eff6ff; color: #1d4ed8;
+      border-color: #bfdbfe;
+    }
+    .badge-purpose-repair {
+      background: #fffbeb; color: #b45309;
+      border-color: #fde68a;
+    }
+    .badge-purpose-rental {
+      background: #f5f3ff; color: #6d28d9;
+      border-color: #ddd6fe;
+    }
+
+    /* ── Mini Progress Stepper ── */
+    .progress-step {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 2px solid #e5e7eb;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px; color: #9ca3af;
+      position: relative;
+    }
+    .progress-step.done { background: #10b981; border-color: #10b981; color: #fff; }
+    .progress-step.current { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .progress-step.late { background: #ef4444; border-color: #ef4444; color: #fff; }
+    .progress-connector {
+      width: 12px; height: 2px;
+      background: #e5e7eb;
+    }
+    .progress-connector.done { background: #10b981; }
+
+    /* ── D-day Badge ── */
+    .dday-badge {
+      display: inline-flex; align-items: center;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 10px; font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .dday-ok { background: #d1fae5; color: #065f46; }
+    .dday-warn { background: #fef3c7; color: #92400e; }
+    .dday-danger { background: #fee2e2; color: #991b1b; }
+
+    /* ── Stepper (상세) ── */
+    .stepper {
+      display: flex; align-items: flex-start;
+      gap: 0;
+      padding: 16px 20px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .step-item {
+      display: flex; flex-direction: column; align-items: center;
+      flex: 1;
+    }
+    .step-line-wrap {
+      display: flex; align-items: center; width: 100%; justify-content: center;
+    }
+    .step-circle {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid #e5e7eb;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #9ca3af; font-weight: 600;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .step-circle.done { background: #10b981; border-color: #10b981; color: #fff; }
+    .step-circle.current { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .step-line {
+      flex: 1; height: 2px; background: #e5e7eb;
+    }
+    .step-line.done { background: #10b981; }
+    .step-label {
+      font-size: 10px; color: #6b7280; margin-top: 4px; text-align: center;
+    }
+    .step-label.done { color: #059669; }
+    .step-label.current { color: #2563eb; font-weight: 500; }
+    .step-date { font-size: 9px; color: #9ca3af; text-align: center; margin-top: 2px; }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9ca3af;
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .empty-desc { font-size: 12px; color: #9ca3af; }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 0 4px;
+    }
+    .pagination-info { font-size: 12px; color: #6b7280; }
+    .pagination-btns { display: flex; gap: 4px; }
+    .page-btn {
+      width: 30px; height: 30px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px; background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; cursor: pointer; color: #374151;
+    }
+    .page-btn:hover { background: #f3f4f6; }
+    .page-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .page-btn.disabled { color: #d1d5db; cursor: default; }
+
+    /* ── Section Divider ── */
+    .section-title {
+      font-size: 12px; font-weight: 600; color: #374151;
+      display: flex; align-items: center; gap: 8px;
+      margin: 20px 0 10px;
+    }
+    .section-title::before, .section-title::after {
+      content: ''; flex: 1; height: 1px; background: #e5e7eb;
+    }
+
+    /* ── Rental Steps Card ── */
+    .rental-flow {
+      background: #f5f3ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 8px 16px;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px;
+    }
+    .rental-step {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 3px; flex: 1;
+    }
+    .rental-step-circle {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid #c4b5fd;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 600; color: #7c3aed;
+    }
+    .rental-step-circle.current { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+    .rental-step-circle.done { background: #10b981; color: #fff; border-color: #10b981; }
+    .rental-step-label { font-size: 9px; color: #7c3aed; text-align: center; }
+    .rental-arrow { color: #c4b5fd; font-size: 12px; }
+
+    /* ── Annotation ── */
+    .annotation {
+      position: relative;
+      border: 1.5px dashed #93c5fd;
+      border-radius: 8px;
+      padding: 4px;
+    }
+    .annotation-label {
+      position: absolute; top: -10px; left: 8px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-size: 10px; font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* ── Inbound Section ── */
+    .inbound-section {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .inbound-section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .inbound-section-title {
+      font-size: 13px; font-weight: 600; color: #374151;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .inbound-item {
+      display: flex; align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f3f4f6;
+      gap: 12px;
+      cursor: pointer;
+    }
+    .inbound-item:last-child { border-bottom: none; }
+    .inbound-item:hover { background: #f9fafb; }
+    .inbound-item-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #f3f4f6;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+
+    /* ── Wireframe Note ── */
+    .wf-note {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 11px; color: #92400e;
+      margin-bottom: 20px;
+      display: flex; gap: 8px;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+    /* ── Tabs for demo switching ── */
+    #tab-outbound, #tab-inbound { display: block; }
+    .tab-panel { display: none; }
+    .tab-panel.visible { display: block; }
+
+    /* ── Tooltip ── */
+    [data-tip] { position: relative; }
+    [data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%);
+      background: #1a1d21; color: #fff;
+      font-size: 10px; white-space: nowrap;
+      padding: 3px 7px; border-radius: 4px;
+      pointer-events: none; z-index: 100;
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ SIDEBAR ══ -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">E</div>
+    <div class="sidebar-item" data-tip="대시보드">🏠</div>
+    <div class="sidebar-item" data-tip="장비 관리">🔧</div>
+    <div class="sidebar-item active" data-tip="반출입 관리">📦</div>
+    <div class="sidebar-item" data-tip="교정 관리">📐</div>
+    <div class="sidebar-item" data-tip="부적합 관리">⚠️</div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-item" data-tip="소프트웨어">💾</div>
+    <div class="sidebar-item" data-tip="리포트">📊</div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-item" data-tip="설정" style="margin-top:auto">⚙️</div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <main class="main">
+
+    <!-- Top Header -->
+    <div class="topbar">
+      <div class="topbar-breadcrumb">
+        <span>홈</span>
+        <span class="topbar-sep">/</span>
+        <span class="current">반출입 관리</span>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div style="position:relative; display:flex; align-items:center;">
+        <span class="topbar-search-icon" style="position:absolute;left:8px;z-index:1;font-size:11px;">🔍</span>
+        <input type="text" class="topbar-search" placeholder="전체 검색… (⌘K)" style="width:200px;height:32px;border:1px solid #e5e7eb;border-radius:6px;padding:0 10px 0 26px;font-size:12px;color:#6b7280;background:#f9fafb;" readonly />
+      </div>
+      <div class="topbar-icon-btn" data-tip="알림">🔔</div>
+      <div class="topbar-avatar" data-tip="이민준 (기술책임자)">이</div>
+    </div>
+
+    <!-- Page Body -->
+    <div class="page-body">
+
+      <!-- Wireframe Note -->
+      <div class="wf-note">
+        <span>📋</span>
+        <div>
+          <strong>반출입 관리 — UI 와이어프레임</strong><br/>
+          탭 버튼을 클릭하면 <strong>반출(Outbound)</strong> / <strong>반입(Inbound)</strong> 탭 전환을 확인할 수 있습니다.
+          아이콘 클릭으로 Rental 4-step 플로우 카드도 토글됩니다.
+        </div>
+      </div>
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div>
+          <div class="page-title">반출입 관리</div>
+          <div class="page-subtitle">교정·수리·대여 목적의 장비 반출입 전 과정을 추적합니다</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline btn-sm">📥 반입 검사 대기 <span style="background:#fee2e2;color:#b91c1c;border-radius:4px;padding:1px 5px;font-size:10px;">3</span></button>
+          <button class="btn btn-primary btn-sm">+ 반출 신청</button>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="annotation" style="margin-bottom:20px;">
+        <div class="annotation-label">📊 요약 통계 — 클릭 시 해당 상태 필터 적용</div>
+        <div class="stats-grid" style="padding:10px 4px 4px;">
+          <div class="stat-card">
+            <div class="stat-card-label"><span class="stat-dot dot-blue"></span>전체</div>
+            <div class="stat-card-value">47</div>
+            <div class="stat-card-sub">이번 달 누적</div>
+          </div>
+          <div class="stat-card active-filter">
+            <div class="stat-card-label"><span class="stat-dot dot-yellow"></span>승인 대기</div>
+            <div class="stat-card-value" style="color:#b45309;">8</div>
+            <div class="stat-card-sub">즉시 처리 필요</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label"><span class="stat-dot dot-purple"></span>반출 중</div>
+            <div class="stat-card-value">12</div>
+            <div class="stat-card-sub">현재 외부 보유</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label"><span class="stat-dot dot-red"></span>기한 초과</div>
+            <div class="stat-card-value" style="color:#b91c1c;">3</div>
+            <div class="stat-card-sub">즉시 조치 필요</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label"><span class="stat-dot dot-green"></span>반입 완료</div>
+            <div class="stat-card-value">24</div>
+            <div class="stat-card-sub">이번 달 완료</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Bar -->
+      <div class="tab-bar">
+        <div class="tab active" id="btn-outbound" onclick="switchTab('outbound')">
+          📤 반출 관리
+          <span class="tab-count">32</span>
+        </div>
+        <div class="tab" id="btn-inbound" onclick="switchTab('inbound')">
+          📥 반입 관리
+          <span class="tab-count">15</span>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════ -->
+      <!-- TAB: OUTBOUND                          -->
+      <!-- ══════════════════════════════════════ -->
+      <div id="panel-outbound" class="tab-panel visible">
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+          <div class="filter-search">
+            <span class="filter-search-icon">🔍</span>
+            <input type="text" placeholder="장비명, 관리번호, 반출지 검색…" />
+          </div>
+          <div class="filter-divider"></div>
+          <select class="filter-select">
+            <option>상태: 전체</option>
+            <option selected>승인 대기</option>
+            <option>승인됨</option>
+            <option>반출 중</option>
+            <option>반입 완료</option>
+            <option>기한 초과</option>
+            <option>거절됨</option>
+            <option>취소됨</option>
+          </select>
+          <select class="filter-select">
+            <option>목적: 전체</option>
+            <option>교정</option>
+            <option>수리</option>
+            <option>대여</option>
+          </select>
+          <select class="filter-select">
+            <option>반출지: 전체</option>
+            <option>한국계량기술원</option>
+            <option>KRISS</option>
+            <option>삼성전자 (수원)</option>
+            <option>LG전자 (평택)</option>
+          </select>
+          <span class="filter-badge">승인 대기 ✕</span>
+          <span class="filter-clear">필터 초기화</span>
+        </div>
+
+        <!-- Group Card 1: 교정 목적 그룹 -->
+        <div class="group-card">
+          <div class="group-header">
+            <div class="group-header-toggle" onclick="toggleGroup(this)">▼</div>
+            <div class="group-date">2026-03-09 (월)</div>
+            <div class="group-dest">
+              <span class="group-dest-icon">🏢</span>
+              한국계량기술원
+            </div>
+            <span class="badge badge-purpose-calibration" style="font-size:10px;">교정</span>
+            <div class="group-spacer"></div>
+            <div class="group-meta">담당: 이민준</div>
+            <div class="group-count">2개 장비</div>
+          </div>
+          <div class="group-body">
+
+            <!-- Item 1 -->
+            <div class="checkout-item">
+              <div class="purpose-bar bar-calibration"></div>
+              <div class="checkout-main">
+                <div class="checkout-title">
+                  디지털 멀티미터
+                  <span class="checkout-mgmt">SUW-E-0042</span>
+                  <span class="dday-badge dday-warn">D-3</span>
+                </div>
+                <div class="checkout-meta">
+                  <span>신청일: 2026-03-07</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span>예상 반입: 2026-03-12</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span>신청자: 박지훈</span>
+                </div>
+              </div>
+              <div class="checkout-progress">
+                <div class="progress-step done" title="신청">✓</div>
+                <div class="progress-connector done"></div>
+                <div class="progress-step current" title="승인 대기">!</div>
+                <div class="progress-connector"></div>
+                <div class="progress-step" title="반출 중">3</div>
+                <div class="progress-connector"></div>
+                <div class="progress-step" title="반입 완료">4</div>
+              </div>
+              <div class="checkout-status">
+                <span class="badge badge-pending">승인 대기</span>
+              </div>
+              <div class="checkout-actions">
+                <button class="btn btn-primary btn-sm">승인</button>
+                <button class="btn btn-outline btn-sm">반려</button>
+              </div>
+            </div>
+
+            <!-- Item 2 -->
+            <div class="checkout-item">
+              <div class="purpose-bar bar-calibration"></div>
+              <div class="checkout-main">
+                <div class="checkout-title">
+                  오실로스코프 200MHz
+                  <span class="checkout-mgmt">SUW-E-0018</span>
+                </div>
+                <div class="checkout-meta">
+                  <span>신청일: 2026-03-07</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span>예상 반입: 2026-03-14</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span>신청자: 박지훈</span>
+                </div>
+              </div>
+              <div class="checkout-progress">
+                <div class="progress-step done">✓</div>
+                <div class="progress-connector done"></div>
+                <div class="progress-step current">!</div>
+                <div class="progress-connector"></div>
+                <div class="progress-step">3</div>
+                <div class="progress-connector"></div>
+                <div class="progress-step">4</div>
+              </div>
+              <div class="checkout-status">
+                <span class="badge badge-pending">승인 대기</span>
+              </div>
+              <div class="checkout-actions">
+                <button class="btn btn-primary btn-sm">승인</button>
+                <button class="btn btn-outline btn-sm">반려</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Group Card 2: 수리 목적 그룹 -->
+        <div class="group-card">
+          <div class="group-header">
+            <div class="group-header-toggle" onclick="toggleGroup(this)">▼</div>
+            <div class="group-date">2026-03-06 (금)</div>
+            <div class="group-dest">
+              <span class="group-dest-icon">🔨</span>
+              삼성전자 서비스센터 (수원)
+            </div>
+            <span class="badge badge-purpose-repair" style="font-size:10px;">수리</span>
+            <div class="group-spacer"></div>
+            <div class="group-meta">담당: 이민준</div>
+            <div class="group-count">1개 장비</div>
+          </div>
+          <div class="group-body">
+
+            <!-- Item: checked_out -->
+            <div class="checkout-item">
+              <div class="purpose-bar bar-repair"></div>
+              <div class="checkout-main">
+                <div class="checkout-title">
+                  스펙트럼 분석기
+                  <span class="checkout-mgmt">UIW-E-0091</span>
+                  <span class="dday-badge dday-danger">D+2 초과</span>
+                </div>
+                <div class="checkout-meta">
+                  <span>반출일: 2026-03-06</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span style="color:#b91c1c;font-weight:500;">예상 반입: 2026-03-07 (초과)</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span>신청자: 최동현</span>
+                </div>
+              </div>
+              <div class="checkout-progress">
+                <div class="progress-step done">✓</div>
+                <div class="progress-connector done"></div>
+                <div class="progress-step done">✓</div>
+                <div class="progress-connector done"></div>
+                <div class="progress-step late">!</div>
+                <div class="progress-connector"></div>
+                <div class="progress-step">4</div>
+              </div>
+              <div class="checkout-status">
+                <span class="badge badge-overdue">기한 초과</span>
+              </div>
+              <div class="checkout-actions">
+                <a class="btn btn-outline btn-sm" href="#">반입 처리 →</a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Group Card 3: 렌탈 대여 그룹 (Rental 4-step) -->
+        <div class="group-card">
+          <div class="group-header">
+            <div class="group-header-toggle" onclick="toggleGroup(this)">▼</div>
+            <div class="group-date">2026-03-04 (화)</div>
+            <div class="group-dest">
+              <span class="group-dest-icon">🤝</span>
+              LG전자 평택 사업장
+            </div>
+            <span class="badge badge-purpose-rental" style="font-size:10px;">대여</span>
+            <div class="group-spacer"></div>
+            <div class="group-meta">담당: 이민준</div>
+            <div class="group-count">1개 장비</div>
+          </div>
+          <div class="group-body">
+
+            <!-- Rental Flow Banner -->
+            <div class="rental-flow">
+              <div class="rental-step">
+                <div class="rental-step-circle done">✓</div>
+                <div class="rental-step-label">반출 전<br/>확인</div>
+              </div>
+              <div class="rental-arrow">→</div>
+              <div class="rental-step">
+                <div class="rental-step-circle current">2</div>
+                <div class="rental-step-label">인수<br/>확인</div>
+              </div>
+              <div class="rental-arrow">→</div>
+              <div class="rental-step">
+                <div class="rental-step-circle">3</div>
+                <div class="rental-step-label">사용<br/>중</div>
+              </div>
+              <div class="rental-arrow">→</div>
+              <div class="rental-step">
+                <div class="rental-step-circle">4</div>
+                <div class="rental-step-label">반납 전<br/>확인</div>
+              </div>
+              <div class="rental-arrow">→</div>
+              <div class="rental-step">
+                <div class="rental-step-circle">5</div>
+                <div class="rental-step-label">수령<br/>확인</div>
+              </div>
+            </div>
+
+            <!-- Item: borrower_received -->
+            <div class="checkout-item">
+              <div class="purpose-bar bar-rental"></div>
+              <div class="checkout-main">
+                <div class="checkout-title">
+                  신호 발생기 3GHz
+                  <span class="checkout-mgmt">PYT-E-0034</span>
+                  <span class="dday-badge dday-ok">D+12</span>
+                </div>
+                <div class="checkout-meta">
+                  <span>반출일: 2026-03-04</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span>반납 예정: 2026-03-21</span>
+                  <span class="checkout-meta-sep">·</span>
+                  <span>신청자: 정수아</span>
+                </div>
+              </div>
+              <div class="checkout-progress">
+                <div class="progress-step done">✓</div>
+                <div class="progress-connector done"></div>
+                <div class="progress-step done">✓</div>
+                <div class="progress-connector done"></div>
+                <div class="progress-step current">3</div>
+                <div class="progress-connector"></div>
+                <div class="progress-step">4</div>
+                <div class="progress-connector"></div>
+                <div class="progress-step">5</div>
+              </div>
+              <div class="checkout-status">
+                <span class="badge" style="background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe;">인수 확인됨</span>
+              </div>
+              <div class="checkout-actions">
+                <button class="btn btn-outline btn-sm" disabled style="color:#d1d5db;">대기 중</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Group Card 4: 반입 완료 (collapsed) -->
+        <div class="group-card">
+          <div class="group-header">
+            <div class="group-header-toggle" onclick="toggleGroup(this)" style="transform:rotate(-90deg);">▼</div>
+            <div class="group-date">2026-03-01 (일)</div>
+            <div class="group-dest">
+              <span class="group-dest-icon">🏢</span>
+              KRISS (한국표준과학연구원)
+            </div>
+            <span class="badge badge-purpose-calibration" style="font-size:10px;">교정</span>
+            <span class="badge badge-return-approved" style="font-size:10px;margin-left:4px;">반입 승인됨</span>
+            <div class="group-spacer"></div>
+            <div class="group-count">3개 장비</div>
+          </div>
+          <!-- Collapsed: body hidden -->
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <div class="pagination-info">총 32건 중 1–4 표시</div>
+          <div class="pagination-btns">
+            <div class="page-btn disabled">‹</div>
+            <div class="page-btn active">1</div>
+            <div class="page-btn">2</div>
+            <div class="page-btn">3</div>
+            <div class="page-btn">›</div>
+          </div>
+        </div>
+
+      </div><!-- /panel-outbound -->
+
+
+      <!-- ══════════════════════════════════════ -->
+      <!-- TAB: INBOUND                           -->
+      <!-- ══════════════════════════════════════ -->
+      <div id="panel-inbound" class="tab-panel">
+
+        <!-- Filter Bar (Inbound) -->
+        <div class="filter-bar">
+          <div class="filter-search">
+            <span class="filter-search-icon">🔍</span>
+            <input type="text" placeholder="장비명, 팀명, 반입지 검색…" />
+          </div>
+          <div class="filter-divider"></div>
+          <select class="filter-select">
+            <option selected>상태: 전체</option>
+            <option>대기</option>
+            <option>승인됨</option>
+            <option>수령 완료</option>
+            <option>반납 진행 중</option>
+            <option>반납 완료</option>
+          </select>
+          <select class="filter-select">
+            <option selected>출처: 전체</option>
+            <option>내부 팀 대여</option>
+            <option>외부 렌탈</option>
+          </select>
+        </div>
+
+        <!-- Section 1: 내부 팀 대여 -->
+        <div class="inbound-section">
+          <div class="inbound-section-header">
+            <div class="inbound-section-title">
+              🤝 내부 팀 대여
+              <span class="tab-count">4</span>
+            </div>
+            <button class="btn btn-outline btn-sm">반입 신청</button>
+          </div>
+
+          <div class="inbound-item">
+            <div class="inbound-item-icon">📏</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:3px;">
+                임피던스 분석기 (UIW 팀)
+                <span style="font-family:monospace;font-size:11px;color:#6b7280;">UIW-E-0055</span>
+              </div>
+              <div style="font-size:11px;color:#9ca3af;">
+                반입일: 2026-03-02 · 반납 예정: 2026-03-16 · 대여 팀: 수원 EMC 팀
+              </div>
+            </div>
+            <div class="checkout-progress">
+              <div class="progress-step done">✓</div>
+              <div class="progress-connector done"></div>
+              <div class="progress-step done">✓</div>
+              <div class="progress-connector done"></div>
+              <div class="progress-step current">3</div>
+              <div class="progress-connector"></div>
+              <div class="progress-step">4</div>
+            </div>
+            <span class="badge" style="background:#f0fdf4;color:#065f46;border-color:#bbf7d0;">수령 완료</span>
+            <button class="btn btn-outline btn-sm">반납 처리</button>
+          </div>
+
+          <div class="inbound-item">
+            <div class="inbound-item-icon">📡</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:3px;">
+                EMC 안테나 Set (PYT 팀)
+                <span style="font-family:monospace;font-size:11px;color:#6b7280;">PYT-E-0012</span>
+              </div>
+              <div style="font-size:11px;color:#9ca3af;">
+                반입 예정: 2026-03-10 · 대여 팀: 평택 RF 팀
+              </div>
+            </div>
+            <div class="checkout-progress">
+              <div class="progress-step done">✓</div>
+              <div class="progress-connector done"></div>
+              <div class="progress-step current">2</div>
+              <div class="progress-connector"></div>
+              <div class="progress-step">3</div>
+              <div class="progress-connector"></div>
+              <div class="progress-step">4</div>
+            </div>
+            <span class="badge badge-approved">승인됨</span>
+            <button class="btn btn-primary btn-sm">수령 확인</button>
+          </div>
+
+          <div class="inbound-item">
+            <div class="inbound-item-icon">⚡</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:3px;">
+                파워 서플라이 5kW
+                <span style="font-family:monospace;font-size:11px;color:#6b7280;">UIW-E-0033</span>
+              </div>
+              <div style="font-size:11px;color:#9ca3af;">
+                신청일: 2026-03-08 · 대여 팀: UIW EMC 팀
+              </div>
+            </div>
+            <div class="checkout-progress">
+              <div class="progress-step current">!</div>
+              <div class="progress-connector"></div>
+              <div class="progress-step">2</div>
+              <div class="progress-connector"></div>
+              <div class="progress-step">3</div>
+              <div class="progress-connector"></div>
+              <div class="progress-step">4</div>
+            </div>
+            <span class="badge badge-pending">승인 대기</span>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-primary btn-sm">승인</button>
+              <button class="btn btn-outline btn-sm">반려</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Section 2: 외부 렌탈 -->
+        <div class="inbound-section">
+          <div class="inbound-section-header">
+            <div class="inbound-section-title">
+              🏭 외부 렌탈 장비
+              <span class="tab-count">11</span>
+            </div>
+            <button class="btn btn-outline btn-sm">렌탈 등록</button>
+          </div>
+
+          <div class="inbound-item">
+            <div class="inbound-item-icon" style="background:#eff6ff;">🔬</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:3px;">
+                벡터 네트워크 분석기 VNA-3000
+              </div>
+              <div style="font-size:11px;color:#9ca3af;">
+                업체: ㈜계측기솔루션 · 반입일: 2026-02-15 · 반납 예정: 2026-04-15
+                <span class="dday-badge dday-ok" style="margin-left:4px;">D+37</span>
+              </div>
+            </div>
+            <span class="badge" style="background:#f0fdf4;color:#065f46;border-color:#bbf7d0;">수령 완료</span>
+            <button class="btn btn-outline btn-sm">반납 요청</button>
+          </div>
+
+          <div class="inbound-item">
+            <div class="inbound-item-icon" style="background:#fef3c7;">🔊</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:3px;">
+                RF 파워 측정기 SRM-3006
+              </div>
+              <div style="font-size:11px;color:#9ca3af;">
+                업체: ㈜한국계측기기 · 반입일: 2026-03-01 · 반납 예정: 2026-03-31
+                <span class="dday-badge dday-warn" style="margin-left:4px;">D+22</span>
+              </div>
+            </div>
+            <span class="badge" style="background:#f0fdf4;color:#065f46;border-color:#bbf7d0;">수령 완료</span>
+            <button class="btn btn-outline btn-sm">반납 요청</button>
+          </div>
+
+          <div class="inbound-item">
+            <div class="inbound-item-icon" style="background:#fef3c7;">📡</div>
+            <div style="font-size:13px;font-weight:600;color:#111827;margin-bottom:3px;flex:1;">
+              로그 주기 안테나 LP-5700
+              <span style="font-family:monospace;font-size:11px;font-weight:400;color:#6b7280;">외부</span>
+            </div>
+            <div style="font-size:11px;color:#9ca3af;">
+              업체: ㈜RF시스템즈 · 반납 예정: 2026-03-05
+              <span class="dday-badge dday-danger" style="margin-left:4px;">D+4 초과</span>
+            </div>
+            <span class="badge badge-overdue">기한 초과</span>
+            <button class="btn btn-primary btn-sm" style="background:#dc2626;">반납 독촉</button>
+          </div>
+
+          <div style="padding:8px 16px 12px; text-align:right;">
+            <button class="btn btn-ghost btn-sm">더 보기 (8개) ›</button>
+          </div>
+
+        </div>
+
+      </div><!-- /panel-inbound -->
+
+    </div><!-- /page-body -->
+
+  </main>
+</div>
+
+
+<!-- ══ MODAL: 상세 화면 암시 (hover annotation) ══ -->
+<!-- 실제 구현에서는 드로어 or 별도 페이지 -->
+
+<script>
+  function switchTab(tab) {
+    ['outbound','inbound'].forEach(t => {
+      document.getElementById('panel-' + t).classList.toggle('visible', t === tab);
+      const btn = document.getElementById('btn-' + t);
+      btn.classList.toggle('active', t === tab);
+    });
+  }
+
+  function toggleGroup(toggleEl) {
+    const card = toggleEl.closest('.group-card');
+    const body = card.querySelector('.group-body');
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    toggleEl.style.transform = isOpen ? 'rotate(-90deg)' : '';
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>반출입 관리 — 칸반 보드 뷰</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      background: #f0f2f5;
+      color: #1a1d21;
+      line-height: 1.5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Shell ── */
+    .shell { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 52px; background: #1c1f26; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 12px 0; gap: 2px;
+    }
+    .sb-logo {
+      width: 32px; height: 32px; background: #3b82f6;
+      border-radius: 8px; margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 700; font-size: 14px;
+    }
+    .sb-item {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: #6b7280; cursor: pointer; font-size: 15px;
+    }
+    .sb-item:hover { background: #2d3139; color: #e5e7eb; }
+    .sb-item.active { background: #2563eb; color: #fff; }
+    .sb-div { width: 28px; height: 1px; background: #2d3139; margin: 4px 0; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Topbar ── */
+    .topbar {
+      height: 52px; background: #fff; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0;
+    }
+    .breadcrumb { font-size: 12px; color: #6b7280; display: flex; gap: 6px; align-items: center; }
+    .breadcrumb .cur { color: #111827; font-weight: 500; }
+    .view-toggle {
+      display: flex; background: #f3f4f6; border-radius: 7px; padding: 3px; gap: 2px;
+    }
+    .view-btn {
+      padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 500;
+      cursor: pointer; color: #6b7280; border: none; background: transparent;
+    }
+    .view-btn.active { background: #fff; color: #111827; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .spacer { flex: 1; }
+    .topbar-avatar {
+      width: 30px; height: 30px; border-radius: 50%; background: #dbeafe;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: #1d4ed8;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border-radius: 7px; font-size: 12px; font-weight: 500;
+      cursor: pointer; border: none;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+    /* ── Sub Header ── */
+    .sub-header {
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 10px 20px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .filter-pill {
+      display: flex; align-items: center; gap: 5px;
+      padding: 5px 10px; background: #f9fafb; border: 1px solid #e5e7eb;
+      border-radius: 6px; font-size: 11px; color: #374151; cursor: pointer;
+    }
+    .filter-pill.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .filter-pill select {
+      border: none; background: transparent; font-size: 11px;
+      color: inherit; cursor: pointer; outline: none;
+    }
+    .search-box {
+      flex: 1; max-width: 240px; height: 32px;
+      border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 0 10px 0 28px; font-size: 12px; color: #374151;
+      background: #f9fafb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 9px center;
+      outline: none;
+    }
+    .sort-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border: 1px solid #e5e7eb; border-radius: 6px;
+      background: #fff; font-size: 11px; color: #374151; cursor: pointer;
+    }
+
+    /* ── Board ── */
+    .board {
+      flex: 1; overflow-x: auto; overflow-y: hidden;
+      padding: 16px 20px; display: flex; gap: 14px; align-items: flex-start;
+    }
+
+    /* ── Column ── */
+    .col {
+      width: 280px; min-width: 280px; flex-shrink: 0;
+      display: flex; flex-direction: column; max-height: 100%;
+    }
+    .col-header {
+      display: flex; align-items: center; gap: 7px;
+      padding: 9px 12px; border-radius: 9px 9px 0 0;
+      margin-bottom: 0; background: #fff;
+      border: 1px solid #e5e7eb; border-bottom: none;
+    }
+    .col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .col-title { font-size: 12px; font-weight: 600; color: #374151; flex: 1; }
+    .col-count {
+      background: #e5e7eb; color: #374151;
+      border-radius: 10px; padding: 1px 7px;
+      font-size: 10px; font-weight: 600;
+    }
+    .col-add {
+      width: 22px; height: 22px; border-radius: 5px;
+      background: #f3f4f6; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: #9ca3af; cursor: pointer;
+    }
+    .col-add:hover { background: #e5e7eb; color: #374151; }
+    .col-body {
+      flex: 1; overflow-y: auto;
+      background: #f3f4f6; border-radius: 0 0 9px 9px;
+      border: 1px solid #e5e7eb; border-top: none;
+      padding: 8px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .col-body::-webkit-scrollbar { width: 4px; }
+    .col-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 8px; padding: 11px 12px;
+      cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); border-color: #c7d2fe; }
+    .card.dragging { opacity: 0.4; }
+    .card-purpose-bar {
+      position: absolute; top: 0; left: 0; bottom: 0;
+      width: 3px; border-radius: 8px 0 0 8px;
+    }
+    .bar-cal { background: #3b82f6; }
+    .bar-rep { background: #f59e0b; }
+    .bar-ren { background: #8b5cf6; }
+
+    .card-top { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 6px; padding-left: 6px; }
+    .card-title { font-size: 12px; font-weight: 600; color: #111827; flex: 1; line-height: 1.4; }
+    .card-mgmt {
+      font-family: 'Courier New', monospace; font-size: 10px;
+      color: #9ca3af; margin-left: 0;
+    }
+    .card-dest {
+      font-size: 11px; color: #6b7280; margin-bottom: 5px; padding-left: 6px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .card-meta {
+      font-size: 10px; color: #9ca3af; padding-left: 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding-left: 6px; margin-top: 8px; padding-top: 8px;
+      border-top: 1px solid #f3f4f6;
+    }
+    .card-avatar {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #dbeafe; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 600; color: #1d4ed8;
+    }
+    .card-actions { display: flex; gap: 4px; }
+    .card-btn {
+      padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 500;
+      cursor: pointer; border: none;
+    }
+    .card-btn-primary { background: #2563eb; color: #fff; }
+    .card-btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+    .card-btn-danger { background: #fee2e2; color: #b91c1c; border: none; }
+    .card-btn-link { background: transparent; color: #2563eb; border: none; font-weight: 600; padding: 3px 4px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 6px;
+      border-radius: 4px; font-size: 10px; font-weight: 500; border: 1px solid transparent;
+    }
+    .b-cal { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .b-rep { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+    .b-ren { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+
+    .dday {
+      display: inline-flex; padding: 1px 5px; border-radius: 3px;
+      font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums;
+    }
+    .dday-ok { background: #d1fae5; color: #065f46; }
+    .dday-warn { background: #fef3c7; color: #92400e; }
+    .dday-danger { background: #fee2e2; color: #991b1b; }
+
+    /* ── WIP Limit ── */
+    .wip-limit {
+      font-size: 9px; color: #9ca3af;
+      background: #f9fafb; border: 1px dashed #e5e7eb;
+      border-radius: 5px; text-align: center; padding: 6px;
+      cursor: pointer;
+    }
+    .wip-limit:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+
+    /* ── Overdue Highlight ── */
+    .card.overdue { border-color: #fca5a5; background: #fff5f5; }
+    .card.overdue:hover { border-color: #f87171; }
+
+    /* ── Column Color Themes ── */
+    .col-pending .col-header { border-top: 3px solid #f59e0b; }
+    .col-approved .col-header { border-top: 3px solid #3b82f6; }
+    .col-out .col-header { border-top: 3px solid #8b5cf6; }
+    .col-return .col-header { border-top: 3px solid #10b981; }
+    .col-overdue .col-header { border-top: 3px solid #ef4444; }
+
+    /* ── Collapsed Column ── */
+    .col.collapsed { width: 44px; min-width: 44px; }
+    .col.collapsed .col-body { display: none; }
+    .col.collapsed .col-header {
+      border-radius: 9px; border-bottom: 1px solid #e5e7eb;
+      writing-mode: vertical-rl; padding: 12px 10px; height: auto;
+      flex-direction: column; gap: 8px; cursor: pointer;
+    }
+    .col.collapsed .col-count { writing-mode: horizontal-tb; }
+
+    /* ── Stats Strip ── */
+    .stats-strip {
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 8px 20px; display: flex; gap: 24px; align-items: center; flex-shrink: 0;
+    }
+    .stat-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: #6b7280;
+    }
+    .stat-value { font-size: 16px; font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; }
+    .stat-label { font-size: 10px; }
+    .stat-divider { width: 1px; height: 24px; background: #e5e7eb; }
+
+    /* ── Drop Zone ── */
+    .drop-hint {
+      border: 2px dashed #c7d2fe; border-radius: 7px;
+      padding: 12px; text-align: center; font-size: 11px; color: #a5b4fc;
+      background: #eef2ff;
+    }
+
+    /* ── Wf badge ── */
+    .wf-badge {
+      position: fixed; bottom: 16px; right: 16px;
+      background: #1c1f26; color: #e5e7eb;
+      padding: 6px 12px; border-radius: 20px; font-size: 11px; z-index: 100;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sb-logo">E</div>
+    <div class="sb-item">🏠</div>
+    <div class="sb-item">🔧</div>
+    <div class="sb-item active">📦</div>
+    <div class="sb-item">📐</div>
+    <div class="sb-item">⚠️</div>
+    <div class="sb-div"></div>
+    <div class="sb-item">💾</div>
+    <div class="sb-item">📊</div>
+    <div class="sb-div"></div>
+    <div class="sb-item" style="margin-top:auto">⚙️</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="breadcrumb">
+        <span>홈</span><span>/</span>
+        <span class="cur">반출입 관리</span>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn">≡ 목록</button>
+        <button class="view-btn active">⊞ 칸반</button>
+        <button class="view-btn">📅 타임라인</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn btn-outline btn-sm">📥 반입 검사 대기 <span style="background:#fee2e2;color:#b91c1c;padding:1px 5px;border-radius:3px;font-size:10px;">3</span></button>
+      <button class="btn btn-primary btn-sm">+ 반출 신청</button>
+      <div class="topbar-avatar">이</div>
+    </div>
+
+    <!-- Stats Strip -->
+    <div class="stats-strip">
+      <div class="stat-item">
+        <span style="color:#f59e0b;font-size:14px;">●</span>
+        <div>
+          <div class="stat-value" style="color:#b45309;">8</div>
+          <div class="stat-label">승인 대기</div>
+        </div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span style="color:#3b82f6;font-size:14px;">●</span>
+        <div>
+          <div class="stat-value">6</div>
+          <div class="stat-label">승인됨 (반출 전)</div>
+        </div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span style="color:#8b5cf6;font-size:14px;">●</span>
+        <div>
+          <div class="stat-value">12</div>
+          <div class="stat-label">반출 중</div>
+        </div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span style="color:#ef4444;font-size:14px;">●</span>
+        <div>
+          <div class="stat-value" style="color:#b91c1c;">3</div>
+          <div class="stat-label">기한 초과</div>
+        </div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <span style="color:#10b981;font-size:14px;">●</span>
+        <div>
+          <div class="stat-value">24</div>
+          <div class="stat-label">이번달 완료</div>
+        </div>
+      </div>
+      <div class="stat-divider"></div>
+      <!-- Sub-filter -->
+      <div class="spacer"></div>
+      <div class="filter-pill active">
+        <span>📤</span>
+        <select><option>목적: 전체</option><option>교정</option><option>수리</option><option>대여</option></select>
+      </div>
+      <div class="filter-pill">
+        <span>🏢</span>
+        <select><option>반출지: 전체</option><option>한국계량기술원</option><option>KRISS</option></select>
+      </div>
+      <input class="search-box" type="text" placeholder="장비 검색…" />
+    </div>
+
+    <!-- Sub-filter row (purpose toggle) -->
+    <div style="background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 20px;display:flex;gap:6px;align-items:center;flex-shrink:0;">
+      <span style="font-size:11px;color:#6b7280;font-weight:500;">필터:</span>
+      <div class="filter-pill active">전체 (29)</div>
+      <div class="filter-pill"><span style="width:8px;height:8px;background:#3b82f6;border-radius:50%;display:inline-block;"></span> 교정 (14)</div>
+      <div class="filter-pill"><span style="width:8px;height:8px;background:#f59e0b;border-radius:50%;display:inline-block;"></span> 수리 (9)</div>
+      <div class="filter-pill"><span style="width:8px;height:8px;background:#8b5cf6;border-radius:50%;display:inline-block;"></span> 대여 (6)</div>
+      <div class="spacer"></div>
+      <div class="sort-btn">정렬: 신청일 ▾</div>
+      <div class="sort-btn" onclick="toggleCol(this)" data-target="col-done" style="font-size:11px;">완료 컬럼 숨기기 👁</div>
+    </div>
+
+    <!-- Board -->
+    <div class="board">
+
+      <!-- COL 1: 승인 대기 -->
+      <div class="col col-pending">
+        <div class="col-header">
+          <div class="col-dot" style="background:#f59e0b;"></div>
+          <div class="col-title">승인 대기</div>
+          <div class="col-count" style="background:#fef3c7;color:#92400e;">8</div>
+          <div class="col-add">+</div>
+        </div>
+        <div class="col-body">
+
+          <div class="card" draggable="true">
+            <div class="card-purpose-bar bar-cal"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">디지털 멀티미터</div>
+                <div class="card-mgmt">SUW-E-0042</div>
+              </div>
+              <span class="badge b-cal">교정</span>
+            </div>
+            <div class="card-dest">🏢 한국계량기술원</div>
+            <div class="card-meta">
+              <span>신청 3월 7일</span>
+              <span class="dday dday-warn">D-3</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">박</div>
+                <span style="font-size:10px;color:#6b7280;">박지훈</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-primary">승인</button>
+                <button class="card-btn card-btn-outline">반려</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" draggable="true">
+            <div class="card-purpose-bar bar-cal"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">오실로스코프 200MHz</div>
+                <div class="card-mgmt">SUW-E-0018</div>
+              </div>
+              <span class="badge b-cal">교정</span>
+            </div>
+            <div class="card-dest">🏢 한국계량기술원</div>
+            <div class="card-meta">
+              <span>신청 3월 7일</span>
+              <span class="dday dday-ok">D-10</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">박</div>
+                <span style="font-size:10px;color:#6b7280;">박지훈</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-primary">승인</button>
+                <button class="card-btn card-btn-outline">반려</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" draggable="true">
+            <div class="card-purpose-bar bar-rep"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">파워 서플라이 5kW</div>
+                <div class="card-mgmt">UIW-E-0033</div>
+              </div>
+              <span class="badge b-rep">수리</span>
+            </div>
+            <div class="card-dest">🔨 삼성전자 서비스센터</div>
+            <div class="card-meta">
+              <span>신청 3월 8일</span>
+              <span class="dday dday-ok">D-7</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">최</div>
+                <span style="font-size:10px;color:#6b7280;">최동현</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-primary">승인</button>
+                <button class="card-btn card-btn-outline">반려</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" draggable="true">
+            <div class="card-purpose-bar bar-ren"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">신호 발생기 3GHz</div>
+                <div class="card-mgmt">PYT-E-0034</div>
+              </div>
+              <span class="badge b-ren">대여</span>
+            </div>
+            <div class="card-dest">🤝 LG전자 평택</div>
+            <div class="card-meta">
+              <span>신청 3월 9일</span>
+              <span class="dday dday-ok">D-14</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">정</div>
+                <span style="font-size:10px;color:#6b7280;">정수아</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-primary">승인</button>
+                <button class="card-btn card-btn-outline">반려</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 더보기 hint -->
+          <div style="text-align:center;font-size:10px;color:#9ca3af;padding:4px;">+4개 더 ›</div>
+
+        </div>
+      </div><!-- /col-pending -->
+
+      <!-- COL 2: 승인됨 (반출 대기) -->
+      <div class="col col-approved">
+        <div class="col-header">
+          <div class="col-dot" style="background:#3b82f6;"></div>
+          <div class="col-title">승인됨</div>
+          <div class="col-count" style="background:#dbeafe;color:#1d4ed8;">6</div>
+          <div class="col-add">+</div>
+        </div>
+        <div class="col-body">
+
+          <div class="card">
+            <div class="card-purpose-bar bar-cal"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">임피던스 분석기</div>
+                <div class="card-mgmt">UIW-E-0055</div>
+              </div>
+              <span class="badge b-cal">교정</span>
+            </div>
+            <div class="card-dest">🏢 KRISS</div>
+            <div class="card-meta">
+              <span>반출 예정 3월 10일</span>
+              <span class="dday dday-ok">D-1</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar" style="background:#d1fae5;color:#065f46;">이</div>
+                <span style="font-size:10px;color:#6b7280;">이민준</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-primary">반출 시작</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-purpose-bar bar-rep"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">EMC 안테나 Set</div>
+                <div class="card-mgmt">PYT-E-0012</div>
+              </div>
+              <span class="badge b-rep">수리</span>
+            </div>
+            <div class="card-dest">🔨 LG전자 서비스</div>
+            <div class="card-meta">
+              <span>반출 예정 3월 11일</span>
+              <span class="dday dday-ok">D-2</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">김</div>
+                <span style="font-size:10px;color:#6b7280;">김태우</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-primary">반출 시작</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="drop-hint">드래그하여 이 컬럼으로 이동</div>
+
+        </div>
+      </div><!-- /col-approved -->
+
+      <!-- COL 3: 반출 중 -->
+      <div class="col col-out">
+        <div class="col-header">
+          <div class="col-dot" style="background:#8b5cf6;"></div>
+          <div class="col-title">반출 중</div>
+          <div class="col-count" style="background:#ede9fe;color:#6d28d9;">12</div>
+          <div class="col-add">+</div>
+        </div>
+        <div class="col-body">
+
+          <div class="card">
+            <div class="card-purpose-bar bar-cal"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">로그 주기 안테나</div>
+                <div class="card-mgmt">SUW-E-0061</div>
+              </div>
+              <span class="badge b-cal">교정</span>
+            </div>
+            <div class="card-dest">🏢 한국계량기술원</div>
+            <div class="card-meta">
+              <span>반출 3월 1일</span>
+              <span class="dday dday-ok">D+12</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">박</div>
+                <span style="font-size:10px;color:#6b7280;">박지훈</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-link">반입 처리 →</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-purpose-bar bar-ren"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">벡터 신호 분석기</div>
+                <div class="card-mgmt">UIW-E-0074</div>
+              </div>
+              <span class="badge b-ren">대여</span>
+            </div>
+            <div class="card-dest">🤝 SK하이닉스 (이천)</div>
+            <div class="card-meta">
+              <span>반출 2월 20일</span>
+              <span class="dday dday-warn">D+4</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">정</div>
+                <span style="font-size:10px;color:#6b7280;">정수아</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-link">반입 처리 →</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:center;font-size:10px;color:#9ca3af;padding:4px;">+10개 더 ›</div>
+
+        </div>
+      </div><!-- /col-out -->
+
+      <!-- COL 4: 기한 초과 (강조) -->
+      <div class="col col-overdue">
+        <div class="col-header">
+          <div class="col-dot" style="background:#ef4444;"></div>
+          <div class="col-title">기한 초과</div>
+          <div class="col-count" style="background:#fee2e2;color:#b91c1c;">3</div>
+        </div>
+        <div class="col-body">
+
+          <div class="card overdue">
+            <div class="card-purpose-bar bar-rep"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">스펙트럼 분석기</div>
+                <div class="card-mgmt">UIW-E-0091</div>
+              </div>
+              <span class="badge b-rep">수리</span>
+            </div>
+            <div class="card-dest" style="color:#b91c1c;">🔨 삼성전자 서비스센터</div>
+            <div class="card-meta">
+              <span style="color:#b91c1c;">예정 3월 7일 (2일 초과)</span>
+              <span class="dday dday-danger">D+2</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">최</div>
+                <span style="font-size:10px;color:#6b7280;">최동현</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-danger">독촉 연락</button>
+                <button class="card-btn card-btn-link">반입 →</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card overdue">
+            <div class="card-purpose-bar bar-cal"></div>
+            <div class="card-top">
+              <div>
+                <div class="card-title">RF 파워 미터</div>
+                <div class="card-mgmt">PYT-E-0008</div>
+              </div>
+              <span class="badge b-cal">교정</span>
+            </div>
+            <div class="card-dest" style="color:#b91c1c;">🏢 KRISS</div>
+            <div class="card-meta">
+              <span style="color:#b91c1c;">예정 3월 5일 (4일 초과)</span>
+              <span class="dday dday-danger">D+4</span>
+            </div>
+            <div class="card-footer">
+              <div style="display:flex;align-items:center;gap:5px;">
+                <div class="card-avatar">이</div>
+                <span style="font-size:10px;color:#6b7280;">이민준</span>
+              </div>
+              <div class="card-actions">
+                <button class="card-btn card-btn-danger">독촉 연락</button>
+                <button class="card-btn card-btn-link">반입 →</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /col-overdue -->
+
+      <!-- COL 5: 반입 완료 (접힌 상태) -->
+      <div class="col col-return collapsed" id="col-done" onclick="expandCol(this)">
+        <div class="col-header" style="cursor:pointer;" title="클릭하여 펼치기">
+          <div class="col-dot" style="background:#10b981;"></div>
+          <div class="col-title">반입 완료</div>
+          <div class="col-count" style="background:#d1fae5;color:#065f46;">24</div>
+        </div>
+        <div class="col-body">
+          <div style="text-align:center;font-size:10px;color:#9ca3af;padding:4px;">24개 완료 항목</div>
+        </div>
+      </div>
+
+    </div><!-- /board -->
+
+  </main>
+</div>
+
+<div class="wf-badge">📋 칸반 보드 뷰 — Wireframe B</div>
+
+<script>
+  function expandCol(col) {
+    col.classList.toggle('collapsed');
+  }
+  function toggleCol(btn) {
+    const col = document.getElementById(btn.dataset.target);
+    if (!col) return;
+    col.classList.toggle('collapsed');
+    btn.textContent = col.classList.contains('collapsed') ? '완료 컬럼 보기 👁' : '완료 컬럼 숨기기 👁';
+  }
+
+  // Basic drag feedback
+  document.querySelectorAll('.card[draggable]').forEach(card => {
+    card.addEventListener('dragstart', () => card.classList.add('dragging'));
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  });
+  document.querySelectorAll('.col-body').forEach(body => {
+    body.addEventListener('dragover', e => { e.preventDefault(); body.style.background = '#e8edff'; });
+    body.addEventListener('dragleave', () => { body.style.background = ''; });
+    body.addEventListener('drop', () => { body.style.background = ''; });
+  });
+</script>
+</body>
+</html>

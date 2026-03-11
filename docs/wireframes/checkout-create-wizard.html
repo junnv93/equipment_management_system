@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>반출 신청 Wizard — Wireframe</title>
+  <style>
+    /* ─── Reset & Base ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    /* ─── Layout ────────────────────────────────────── */
+    .page { max-width: 760px; margin: 0 auto; }
+    .page-title {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #94a3b8; margin-bottom: 4px;
+    }
+    .page-subtitle {
+      font-size: 22px; font-weight: 700; color: #0f172a; margin-bottom: 28px;
+    }
+
+    /* ─── Step Indicator ─────────────────────────────── */
+    .step-indicator {
+      display: flex; align-items: center; gap: 0; margin-bottom: 28px;
+    }
+    .step-item { display: flex; align-items: center; flex: 1; }
+    .step-circle {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; transition: all 0.2s;
+    }
+    .step-circle.done   { background: #22c55e; color: #fff; }
+    .step-circle.active { background: #3b82f6; color: #fff; box-shadow: 0 0 0 3px #bfdbfe; }
+    .step-circle.future { background: #e2e8f0; color: #94a3b8; }
+    .step-label {
+      font-size: 11px; font-weight: 600; margin-left: 8px;
+      white-space: nowrap;
+    }
+    .step-label.active { color: #3b82f6; }
+    .step-label.done   { color: #22c55e; }
+    .step-label.future { color: #94a3b8; }
+    .step-connector {
+      flex: 1; height: 2px; margin: 0 8px;
+      background: #e2e8f0; min-width: 20px;
+    }
+    .step-connector.done { background: #22c55e; }
+
+    /* ─── Card ──────────────────────────────────────── */
+    .card {
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+      overflow: hidden; margin-bottom: 16px;
+    }
+    .card-header {
+      padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9;
+    }
+    .card-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .card-desc  { font-size: 13px; color: #64748b; }
+    .card-body  { padding: 20px 24px; }
+
+    /* ─── Step 1: Purpose ───────────────────────────── */
+    .purpose-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    }
+    .purpose-card {
+      border: 2px solid #e2e8f0; border-radius: 10px; padding: 16px;
+      cursor: pointer; transition: all 0.15s; text-align: center;
+      position: relative;
+    }
+    .purpose-card:hover { border-color: #93c5fd; background: #eff6ff; }
+    .purpose-card.selected { border-color: #3b82f6; background: #eff6ff; }
+    .purpose-card.selected::after {
+      content: "✓"; position: absolute; top: 8px; right: 10px;
+      font-size: 12px; color: #3b82f6; font-weight: 700;
+    }
+    .purpose-icon  { font-size: 28px; margin-bottom: 8px; }
+    .purpose-label { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+    .purpose-desc  { font-size: 11px; color: #64748b; line-height: 1.4; }
+    .purpose-hint  {
+      margin-top: 8px; padding: 6px 8px; border-radius: 6px;
+      background: #f8fafc; font-size: 10px; color: #94a3b8;
+      border: 1px solid #f1f5f9; text-align: left;
+    }
+
+    /* ─── Rental expansion ──────────────────────────── */
+    .rental-extra {
+      display: none; padding: 14px 0 0;
+    }
+    .rental-extra.visible { display: block; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field-label {
+      font-size: 11px; font-weight: 600; color: #475569;
+      margin-bottom: 5px; display: block;
+    }
+    .field-select {
+      width: 100%; height: 36px; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 0 12px; font-size: 13px; color: #0f172a;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2394a3b8' d='M6 8 0 0h12z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      appearance: none; -webkit-appearance: none;
+    }
+
+    /* ─── Step 2: Equipment ─────────────────────────── */
+    .search-bar {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .search-input {
+      flex: 1; height: 38px; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 0 12px 0 36px; font-size: 13px; color: #0f172a; background: #fff;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 10px center;
+    }
+    .selected-count {
+      font-size: 12px; font-weight: 600; color: #3b82f6;
+      white-space: nowrap; padding: 6px 10px; background: #eff6ff;
+      border-radius: 6px;
+    }
+
+    .equipment-table { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    .eq-row {
+      display: grid; grid-template-columns: 36px 1fr 140px 90px;
+      padding: 10px 14px; border-bottom: 1px solid #f1f5f9;
+      align-items: center; gap: 12px;
+    }
+    .eq-row:last-child { border-bottom: none; }
+    .eq-row.header {
+      background: #f8fafc; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8;
+    }
+    .eq-row.selected-row { background: #eff6ff; }
+    .eq-row.disabled-row { opacity: 0.55; }
+    .checkbox {
+      width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+      border: 2px solid #cbd5e1; background: #fff;
+    }
+    .checkbox.checked { background: #3b82f6; border-color: #3b82f6; position: relative; }
+    .checkbox.checked::after {
+      content: "✓"; position: absolute; font-size: 10px; color: #fff;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .checkbox.dash {
+      border-color: #e2e8f0; position: relative;
+    }
+    .checkbox.dash::after {
+      content: "─"; position: absolute; font-size: 10px; color: #cbd5e1;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .eq-name { font-size: 13px; font-weight: 600; color: #0f172a; }
+    .eq-sub  { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+    .eq-mgmt { font-family: monospace; font-size: 11px; color: #64748b; }
+    .badge   {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;
+    }
+    .badge.ok      { background: #dcfce7; color: #16a34a; }
+    .badge.blocked { background: #fee2e2; color: #dc2626; }
+
+    /* ─── Step 3: Details ───────────────────────────── */
+    .selected-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; background: #eff6ff; color: #3b82f6;
+      border: 1px solid #bfdbfe; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .chip .close { font-size: 10px; color: #93c5fd; cursor: pointer; }
+
+    .form-grid { display: grid; gap: 14px; }
+    .form-field label {
+      display: block; font-size: 11px; font-weight: 700; color: #475569;
+      margin-bottom: 6px;
+    }
+    .form-field label .required { color: #dc2626; margin-left: 2px; }
+    .form-input {
+      width: 100%; height: 38px; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 0 12px; font-size: 13px; color: #0f172a; background: #fff;
+    }
+    .form-input.date-input { color: #94a3b8; }
+    .form-note { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+    .divider { height: 1px; background: #f1f5f9; margin: 8px 0; }
+
+    /* ─── Bottom action bar ─────────────────────────── */
+    .action-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; border-top: 1px solid #f1f5f9;
+      background: #fff;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; transition: all 0.15s;
+    }
+    .btn-ghost {
+      background: transparent; color: #64748b; border: 1px solid #e2e8f0;
+    }
+    .btn-ghost:hover { background: #f8fafc; }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary.submit { background: #16a34a; }
+    .btn-primary.submit:hover { background: #15803d; }
+    .action-summary { font-size: 12px; color: #64748b; }
+    .action-summary strong { color: #3b82f6; }
+
+    /* ─── Mobile note ───────────────────────────────── */
+    .mobile-note {
+      text-align: center; font-size: 11px; color: #94a3b8;
+      margin-top: 8px; padding: 10px;
+    }
+    .mobile-note strong { color: #64748b; }
+
+    /* ─── Section label ─────────────────────────────── */
+    .section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 12px;
+    }
+
+    /* ─── Tab nav ───────────────────────────────────── */
+    .tab-nav {
+      display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 28px;
+    }
+    .tab-item {
+      padding: 8px 16px; font-size: 13px; font-weight: 600; color: #94a3b8;
+      cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+    }
+    .tab-item.active { color: #3b82f6; border-color: #3b82f6; }
+
+    /* ─── Component breakdown box ───────────────────── */
+    .breakdown {
+      background: #0f172a; border-radius: 10px; padding: 20px 24px;
+      margin-top: 20px;
+    }
+    .breakdown h3 { color: #f8fafc; font-size: 13px; margin-bottom: 12px; }
+    .breakdown pre {
+      color: #94a3b8; font-family: "SF Mono", Consolas, monospace;
+      font-size: 12px; line-height: 1.7; white-space: pre-wrap;
+    }
+    .breakdown .hl { color: #7dd3fc; }
+    .breakdown .dim { color: #334155; }
+
+    /* ─── Annotation ────────────────────────────────── */
+    .annotation {
+      display: flex; gap: 10px; align-items: flex-start;
+      margin-top: 10px; padding: 10px 14px;
+      background: #fefce8; border: 1px solid #fde68a; border-radius: 8px;
+      font-size: 11px; color: #92400e; line-height: 1.5;
+    }
+    .annotation .icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <p class="page-title">Wireframe · v1 · 2026-03-09</p>
+  <h1 class="page-subtitle">반출 신청 — Purpose-First 3-Step Wizard</h1>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <div class="tab-item active" onclick="showStep(1)">Step 1 — 목적 선택</div>
+    <div class="tab-item" onclick="showStep(2)">Step 2 — 장비 선택</div>
+    <div class="tab-item" onclick="showStep(3)">Step 3 — 정보 입력</div>
+  </div>
+
+  <!-- ────────────────────────────── STEP 1 ─────────────────────── -->
+  <div id="step1" class="step-view">
+
+    <!-- Step indicator -->
+    <div class="step-indicator">
+      <div class="step-item">
+        <div class="step-circle active">1</div>
+        <span class="step-label active">목적 선택</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-item">
+        <div class="step-circle future">2</div>
+        <span class="step-label future">장비 선택</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-item">
+        <div class="step-circle future">3</div>
+        <span class="step-label future">정보 입력</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">반출 목적을 선택하세요</div>
+        <div class="card-desc">선택한 목적에 따라 장비 필터와 입력 항목이 자동으로 맞춤 설정됩니다.</div>
+      </div>
+      <div class="card-body">
+        <div class="purpose-grid">
+
+          <!-- 교정 -->
+          <div class="purpose-card" onclick="selectPurpose('calibration', this)">
+            <div class="purpose-icon">🔬</div>
+            <div class="purpose-label">교정</div>
+            <div class="purpose-desc">외부 교정기관에 장비를 반출합니다.</div>
+            <div class="purpose-hint">허용 상태: 사용가능, 교정예정</div>
+          </div>
+
+          <!-- 수리 -->
+          <div class="purpose-card" onclick="selectPurpose('repair', this)">
+            <div class="purpose-icon">🔧</div>
+            <div class="purpose-label">수리</div>
+            <div class="purpose-desc">수리·점검을 위해 외부에 의뢰합니다.</div>
+            <div class="purpose-hint">허용 상태: 사용가능, 부적합</div>
+          </div>
+
+          <!-- 대여 -->
+          <div class="purpose-card" onclick="selectPurpose('rental', this)">
+            <div class="purpose-icon">🤝</div>
+            <div class="purpose-label">대여 <small style="font-weight:400;font-size:10px;color:#94a3b8">(타팀)</small></div>
+            <div class="purpose-desc">다른 팀에 장비를 대여합니다.</div>
+            <div class="purpose-hint">대여처 팀 선택 필요 <span style="color:#3b82f6">▾</span></div>
+          </div>
+        </div>
+
+        <!-- 대여 선택 시 슬라이드 인 -->
+        <div class="rental-extra" id="rental-extra">
+          <div class="divider"></div>
+          <p class="section-label">대여처 정보 입력</p>
+          <div class="field-row">
+            <div>
+              <span class="field-label">대여받을 사이트 <span style="color:#dc2626">*</span></span>
+              <select class="field-select">
+                <option value="">사이트를 선택하세요</option>
+                <option>SUW — 수원</option>
+                <option>UIW — 의왕</option>
+                <option>PYT — 평택</option>
+              </select>
+            </div>
+            <div>
+              <span class="field-label">대여받을 팀 <span style="color:#dc2626">*</span></span>
+              <select class="field-select" disabled>
+                <option value="">사이트를 먼저 선택하세요</option>
+              </select>
+            </div>
+          </div>
+          <div class="annotation" style="margin-top:12px">
+            <span class="icon">ℹ️</span>
+            <span>대여 목적은 양측 4단계 확인(대여처 확인 → 차용처 수령 → 차용처 반납 → 대여처 수령)이 필요합니다.</span>
+          </div>
+        </div>
+      </div>
+      <div class="action-bar">
+        <button class="btn btn-ghost" onclick="window.history.back()">← 취소</button>
+        <button class="btn btn-primary" onclick="showStep(2)">다음 → <small style="font-weight:400">장비 선택</small></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────── STEP 2 ─────────────────────── -->
+  <div id="step2" class="step-view" style="display:none">
+
+    <div class="step-indicator">
+      <div class="step-item">
+        <div class="step-circle done">✓</div>
+        <span class="step-label done">교정</span>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step-item">
+        <div class="step-circle active">2</div>
+        <span class="step-label active">장비 선택</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step-item">
+        <div class="step-circle future">3</div>
+        <span class="step-label future">정보 입력</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">반출할 장비를 선택하세요</div>
+        <div class="card-desc">교정 반출 허용 상태 장비만 표시됩니다. 선택 불가 장비는 이유와 함께 회색으로 표시됩니다.</div>
+      </div>
+      <div class="card-body">
+        <div class="search-bar">
+          <input class="search-input" type="text" placeholder="🔍  장비명 또는 관리번호로 검색..." />
+          <span class="selected-count">선택됨: 1개</span>
+        </div>
+
+        <div class="equipment-table">
+          <div class="eq-row header">
+            <div></div>
+            <div>장비 정보</div>
+            <div>관리번호</div>
+            <div>상태</div>
+          </div>
+          <!-- 선택 불가 -->
+          <div class="eq-row disabled-row">
+            <div class="checkbox dash"></div>
+            <div>
+              <div class="eq-name">온도계 A형</div>
+              <div class="eq-sub">⛔ 선택 불가 — 현재 다른 팀이 반출 중</div>
+            </div>
+            <div class="eq-mgmt">SUW-E2024-001</div>
+            <div><span class="badge blocked">반출 중</span></div>
+          </div>
+          <!-- 선택됨 -->
+          <div class="eq-row selected-row">
+            <div class="checkbox checked"></div>
+            <div>
+              <div class="eq-name">압력계 B형 <span style="font-size:10px;color:#3b82f6;font-weight:700">★ 선택됨</span></div>
+              <div class="eq-sub">📅 교정 만료 D-12 — 우선 반출 권장</div>
+            </div>
+            <div class="eq-mgmt">SUW-E2024-003</div>
+            <div><span class="badge ok">사용가능</span></div>
+          </div>
+          <!-- 선택 가능 -->
+          <div class="eq-row">
+            <div class="checkbox"></div>
+            <div>
+              <div class="eq-name">전압계 C형</div>
+              <div class="eq-sub">📅 교정 만료 D-45</div>
+            </div>
+            <div class="eq-mgmt">SUW-E2024-008</div>
+            <div><span class="badge ok">사용가능</span></div>
+          </div>
+          <!-- 부적합 상태 (교정에서 선택 불가) -->
+          <div class="eq-row disabled-row">
+            <div class="checkbox dash"></div>
+            <div>
+              <div class="eq-name">멀티미터 D형</div>
+              <div class="eq-sub">⛔ 선택 불가 — 교정 반출에는 부적합 상태 허용 안 됨</div>
+            </div>
+            <div class="eq-mgmt">SUW-E2024-012</div>
+            <div><span class="badge blocked">부적합</span></div>
+          </div>
+        </div>
+
+        <div class="annotation">
+          <span class="icon">💡</span>
+          <span>교정 만료가 임박한 장비(D-14 이내)는 우선 반출을 권장합니다. 클릭하거나 Space로 선택/해제합니다.</span>
+        </div>
+      </div>
+      <div class="action-bar">
+        <button class="btn btn-ghost" onclick="showStep(1)">← 이전</button>
+        <div class="action-summary">
+          <strong>압력계 B형</strong> 1개 선택됨
+        </div>
+        <button class="btn btn-primary" onclick="showStep(3)">다음 → <small style="font-weight:400">정보 입력</small></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────── STEP 3 ─────────────────────── -->
+  <div id="step3" class="step-view" style="display:none">
+
+    <div class="step-indicator">
+      <div class="step-item">
+        <div class="step-circle done">✓</div>
+        <span class="step-label done">교정</span>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step-item">
+        <div class="step-circle done">✓</div>
+        <span class="step-label done">1개 선택</span>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step-item">
+        <div class="step-circle active">3</div>
+        <span class="step-label active">정보 입력</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">반출 정보를 입력하세요</div>
+        <div class="card-desc">교정 반출 — <strong>압력계 B형</strong> 1개 · 승인 후 반출 시작 가능</div>
+      </div>
+      <div class="card-body">
+
+        <!-- 선택된 장비 칩 -->
+        <p class="section-label">선택된 장비</p>
+        <div class="selected-chips">
+          <div class="chip">
+            압력계 B형 <span style="font-family:monospace;font-size:10px;color:#93c5fd">SUW-E2024-003</span>
+            <span class="close">✕</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form-grid">
+          <!-- 반출자 -->
+          <div class="form-field">
+            <label>반출 신청자 <span class="required">*</span></label>
+            <input class="form-input" type="text" value="김기술 (현재 로그인 사용자)" readonly
+              style="background:#f8fafc; color:#64748b;" />
+            <div class="form-note">신청자는 로그인한 사용자로 자동 설정됩니다.</div>
+          </div>
+
+          <!-- 반입 예정일 -->
+          <div class="form-field">
+            <label>반입 예정일 <span class="required">*</span></label>
+            <input class="form-input date-input" type="date" placeholder="날짜 선택" />
+            <div class="form-note">반출일은 반출 시작 시점에 자동으로 기록됩니다.</div>
+          </div>
+
+          <!-- 반출지 -->
+          <div class="form-field">
+            <label>반출지(교정기관) <span class="required">*</span></label>
+            <input class="form-input" type="text" placeholder="예: 한국교정기술원" />
+          </div>
+
+          <!-- 반출 사유 -->
+          <div class="form-field">
+            <label>반출 사유</label>
+            <input class="form-input" type="text" placeholder="예: 교정 기한 도래로 인한 외부 교정기관 의뢰 (선택)" />
+          </div>
+
+          <!-- 연락처 -->
+          <div class="form-field">
+            <label>연락처</label>
+            <input class="form-input" type="tel" placeholder="반출 기간 연락 가능한 번호 (선택)" />
+          </div>
+
+          <!-- 주소 -->
+          <div class="form-field">
+            <label>주소</label>
+            <input class="form-input" type="text" placeholder="반출 장소 상세 주소 (선택)" />
+          </div>
+        </div>
+
+        <!-- 대여 전용 필드 (교정에서는 숨김) -->
+        <div style="display:none; margin-top:16px;" id="rental-fields-step3">
+          <div class="divider"></div>
+          <p class="section-label">대여 전용 항목</p>
+          <div class="annotation">
+            <span class="icon">📋</span>
+            <span>대여 목적의 경우 양측이 각 단계마다 상태 확인을 기록해야 합니다.</span>
+          </div>
+        </div>
+
+        <div class="annotation" style="margin-top:16px;">
+          <span class="icon">✅</span>
+          <span>제출 후 기술책임자의 승인이 필요합니다. 승인 완료 후 반출을 시작할 수 있습니다.</span>
+        </div>
+      </div>
+      <div class="action-bar">
+        <button class="btn btn-ghost" onclick="showStep(2)">← 이전</button>
+        <div class="action-summary">
+          <strong>압력계 B형</strong> 교정 반출 신청
+        </div>
+        <button class="btn btn-primary submit">반출 신청 제출 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────── 컴포넌트 분해 ──────────────── -->
+  <div class="breakdown">
+    <h3>📁 컴포넌트 분해 (772줄 → 단계별 구조)</h3>
+    <pre>
+<span class="hl">app/(dashboard)/checkouts/create/</span>
+├── <span class="hl">page.tsx</span>                        <span class="dim"># Server Component — teams/equipment 데이터 prefetch, ~30줄</span>
+├── <span class="hl">CreateCheckoutContent.tsx</span>       <span class="dim"># 오케스트레이터 — currentStep 상태, wizard 진행 관리, ~120줄</span>
+│   └── StepIndicator (내부 컴포넌트)
+└── <span class="hl">steps/</span>
+    ├── <span class="hl">PurposeStep.tsx</span>             <span class="dim"># Step 1 — 목적 카드 3개 + 대여 확장 필드, ~150줄</span>
+    ├── <span class="hl">EquipmentSelectionStep.tsx</span>  <span class="dim"># Step 2 — 검색 + 테이블 + 선택 카운터, ~180줄</span>
+    └── <span class="hl">DetailsStep.tsx</span>             <span class="dim"># Step 3 — 폼 필드 + 선택 장비 칩 + 제출, ~180줄</span>
+
+<span class="dim"># 상태 흐름: CreateCheckoutContent가 단일 wizard 상태 보유
+# Step간 데이터 전달: { purpose, selectedEquipmentIds, formValues }
+# URL sync: currentStep을 ?step=N으로 URL에 반영 (뒤로가기 지원)</span>
+    </pre>
+  </div>
+
+  <div class="mobile-note">
+    <strong>Mobile-first 고려사항:</strong>
+    Step 2의 테이블은 모바일에서 카드 형태로 전환 (grid-cols-1, 각 장비 카드 방식)
+    · Wizard 네비게이션은 bottom-fixed sticky bar로 배치
+  </div>
+
+</div>
+
+<script>
+  function showStep(n) {
+    document.querySelectorAll('.step-view').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-item').forEach((el, i) => {
+      el.classList.toggle('active', i + 1 === n);
+    });
+    const el = document.getElementById('step' + n);
+    if (el) el.style.display = '';
+  }
+
+  function selectPurpose(purpose, card) {
+    document.querySelectorAll('.purpose-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    const extra = document.getElementById('rental-extra');
+    extra.classList.toggle('visible', purpose === 'rental');
+  }
+</script>
+</body>
+</html>

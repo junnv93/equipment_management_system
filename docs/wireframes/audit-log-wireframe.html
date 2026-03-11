@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>감사 로그 — 와이어프레임 제안</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-page:       #0f1117;
+    --bg-surface:    #161b27;
+    --bg-elevated:   #1e2538;
+    --bg-overlay:    #252d42;
+    --border-subtle: rgba(255,255,255,0.06);
+    --border-default:rgba(255,255,255,0.12);
+    --border-focus:  #4f6ef7;
+    --text-primary:  #e8eaf2;
+    --text-secondary:#8b93b0;
+    --text-muted:    #555d7a;
+    --brand:         #4f6ef7;
+    --brand-dim:     rgba(79,110,247,0.12);
+    --green:         #22c55e;
+    --green-dim:     rgba(34,197,94,0.12);
+    --blue:          #60a5fa;
+    --blue-dim:      rgba(96,165,250,0.10);
+    --amber:         #f59e0b;
+    --amber-dim:     rgba(245,158,11,0.12);
+    --red:           #f87171;
+    --red-dim:       rgba(248,113,113,0.12);
+    --purple:        #a78bfa;
+    --purple-dim:    rgba(167,139,250,0.12);
+    --teal:          #2dd4bf;
+    --teal-dim:      rgba(45,212,191,0.10);
+    --neutral-dim:   rgba(255,255,255,0.05);
+    --font-sans: 'Pretendard', 'Noto Sans KR', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px var(--border-subtle);
+  }
+
+  html { font-family: var(--font-sans); background: var(--bg-page); color: var(--text-primary); font-size: 14px; line-height: 1.5; }
+
+  /* ── Shell ────────────────────────────────────── */
+  .shell { display: flex; min-height: 100vh; }
+
+  /* ── Sidebar ─────────────────────────────────── */
+  .sidebar {
+    width: 52px;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px 0;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: var(--brand);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; color: #fff;
+    margin-bottom: 12px;
+  }
+  .sidebar-item {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .sidebar-item:hover { background: var(--bg-elevated); color: var(--text-secondary); }
+  .sidebar-item.active { background: var(--brand-dim); color: var(--brand); }
+  .sidebar-item svg { width: 16px; height: 16px; }
+
+  /* ── Main ────────────────────────────────────── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  /* ── Topbar ──────────────────────────────────── */
+  .topbar {
+    height: 48px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .topbar-crumb { font-size: 12px; color: var(--text-muted); }
+  .topbar-crumb + .topbar-crumb::before { content: '/'; margin: 0 6px; opacity: 0.4; }
+  .topbar-crumb.active { color: var(--text-secondary); }
+  .topbar-spacer { flex: 1; }
+  .topbar-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .topbar-btn svg { width: 14px; height: 14px; }
+
+  /* ── Page Content ────────────────────────────── */
+  .page { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; max-width: 1200px; width: 100%; margin: 0 auto; }
+
+  /* ── Page Header ─────────────────────────────── */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .page-title-group {}
+  .page-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 22px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.4px;
+  }
+  .page-title svg { width: 20px; height: 20px; color: var(--brand); }
+  .page-scope {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 4px;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .scope-badge {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 999px;
+    background: var(--brand-dim); color: var(--brand);
+    border: 1px solid rgba(79,110,247,0.2);
+  }
+  .page-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 12px; height: 32px;
+    border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; border: none; transition: background 0.15s, color 0.15s;
+  }
+  .btn svg { width: 13px; height: 13px; }
+  .btn-ghost { background: transparent; color: var(--text-secondary); }
+  .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .btn-outline {
+    background: transparent; color: var(--text-secondary);
+    border: 1px solid var(--border-default);
+  }
+  .btn-outline:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: #3d5ce0; }
+  .stat-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Summary Bar ─────────────────────────────── */
+  .summary-bar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  .summary-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+  }
+  .summary-card:hover { border-color: var(--border-default); background: var(--bg-elevated); }
+  .summary-card.active { border-color: var(--border-focus); }
+  .summary-card.active::before { background: var(--brand); }
+  .summary-card.c-all::before { background: var(--brand); }
+  .summary-card.c-create::before { background: var(--green); }
+  .summary-card.c-update::before { background: var(--blue); }
+  .summary-card.c-delete::before { background: var(--red); }
+  .summary-card.c-approve::before { background: var(--purple); }
+  .summary-label {
+    font-size: 11px; color: var(--text-muted); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .summary-label svg { width: 12px; height: 12px; }
+  .summary-count {
+    font-family: var(--font-mono);
+    font-size: 22px; font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .summary-delta {
+    font-size: 10px; color: var(--text-muted); margin-top: 3px;
+    font-family: var(--font-mono);
+  }
+  .c-all   .summary-count { color: var(--text-primary); }
+  .c-create .summary-count { color: var(--green); }
+  .c-update .summary-count { color: var(--blue); }
+  .c-delete .summary-count { color: var(--red); }
+  .c-approve .summary-count { color: var(--purple); }
+
+  /* ── Filter Bar ──────────────────────────────── */
+  .filter-bar {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .filter-label { font-size: 11px; font-weight: 600; color: var(--text-muted); width: 48px; flex-shrink: 0; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px; font-weight: 500;
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.12s;
+  }
+  .chip:hover { border-color: var(--border-default); color: var(--text-secondary); }
+  .chip.active {
+    background: var(--bg-elevated);
+    border-color: var(--border-default);
+    color: var(--text-primary);
+  }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .chip.chip-create.active { border-color: rgba(34,197,94,0.3); color: var(--green); background: var(--green-dim); }
+  .chip.chip-update.active { border-color: rgba(96,165,250,0.3); color: var(--blue); background: var(--blue-dim); }
+  .chip.chip-delete.active { border-color: rgba(248,113,113,0.3); color: var(--red); background: var(--red-dim); }
+  .chip.chip-approve.active { border-color: rgba(167,139,250,0.3); color: var(--purple); background: var(--purple-dim); }
+  .chip.chip-reject.active { border-color: rgba(245,158,11,0.3); color: var(--amber); background: var(--amber-dim); }
+  .chip.chip-checkout.active { border-color: rgba(45,212,191,0.3); color: var(--teal); background: var(--teal-dim); }
+  .chip.chip-all.active { border-color: rgba(79,110,247,0.3); color: var(--brand); background: var(--brand-dim); }
+  .filter-sep { width: 1px; height: 18px; background: var(--border-subtle); margin: 0 2px; }
+  .filter-select {
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: 0 8px;
+    outline: none;
+    cursor: pointer;
+  }
+  .filter-input {
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: 0 8px;
+    outline: none;
+    font-family: var(--font-mono);
+  }
+  .filter-input::placeholder { color: var(--text-muted); }
+  .filter-divider { width: 100%; height: 1px; background: var(--border-subtle); }
+  .filter-reset { font-size: 11px; color: var(--text-muted); cursor: pointer; margin-left: auto; }
+  .filter-reset:hover { color: var(--text-secondary); }
+
+  /* ── Timeline ────────────────────────────────── */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+
+  .timeline-group-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0 10px;
+    position: sticky; top: 0;
+    z-index: 10;
+  }
+  .timeline-group-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--bg-page);
+    z-index: -1;
+    margin: 0 -4px;
+  }
+  .timeline-date {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+  .timeline-group-line { flex: 1; height: 1px; background: var(--border-subtle); }
+  .timeline-group-count {
+    font-size: 10px; font-family: var(--font-mono);
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+  }
+
+  .timeline-entries { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+
+  /* ── Timeline Entry ──────────────────────────── */
+  .entry {
+    display: grid;
+    grid-template-columns: 64px 20px 1fr;
+    align-items: start;
+    gap: 0 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background 0.12s;
+    position: relative;
+  }
+  .entry:hover { background: var(--bg-surface); }
+  .entry:hover .entry-arrow { opacity: 1; }
+
+  /* Time column */
+  .entry-time {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    padding-top: 2px;
+    text-align: right;
+    letter-spacing: 0.2px;
+  }
+
+  /* Spine column */
+  .entry-spine { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .entry-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+    border: 2px solid var(--bg-page);
+    box-shadow: 0 0 0 1px currentColor;
+  }
+  .entry-line { width: 1px; flex: 1; min-height: 18px; background: var(--border-subtle); margin-top: 4px; }
+  .entry:last-child .entry-line { display: none; }
+
+  /* Content column */
+  .entry-content { min-width: 0; }
+  .entry-main { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+  .entry-actor { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .entry-action-badge {
+    display: inline-flex; align-items: center;
+    padding: 1px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .entry-target { font-size: 12px; color: var(--text-secondary); }
+  .entry-entity-badge {
+    display: inline-flex; align-items: center;
+    padding: 1px 7px; border-radius: 4px;
+    font-size: 10px; color: var(--text-muted);
+    border: 1px solid var(--border-subtle);
+    background: var(--neutral-dim);
+  }
+  .entry-sub {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 3px; flex-wrap: wrap;
+  }
+  .entry-sub-item {
+    font-size: 11px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .entry-sub-item svg { width: 10px; height: 10px; }
+  .entry-sub-item.mono { font-family: var(--font-mono); font-size: 10px; }
+  .entry-diff-preview {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    display: flex; gap: 8px;
+  }
+  .diff-before { color: var(--red); }
+  .diff-after { color: var(--green); }
+  .diff-arrow { color: var(--text-muted); }
+  .entry-arrow {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--text-muted); opacity: 0; transition: opacity 0.12s;
+  }
+  .entry-arrow svg { width: 14px; height: 14px; }
+
+  /* action badge colors */
+  .badge-create  { background: var(--green-dim);  color: var(--green);  }
+  .badge-update  { background: var(--blue-dim);   color: var(--blue);   }
+  .badge-delete  { background: var(--red-dim);    color: var(--red);    }
+  .badge-approve { background: var(--purple-dim); color: var(--purple); }
+  .badge-reject  { background: var(--amber-dim);  color: var(--amber);  }
+  .badge-checkout{ background: var(--teal-dim);   color: var(--teal);   }
+  .badge-login   { background: var(--blue-dim);   color: var(--blue);   }
+  .badge-system  { background: var(--neutral-dim);color: var(--text-muted); }
+
+  /* dot colors */
+  .dot-create  { color: var(--green);  }
+  .dot-update  { color: var(--blue);   }
+  .dot-delete  { color: var(--red);    }
+  .dot-approve { color: var(--purple); }
+  .dot-reject  { color: var(--amber);  }
+  .dot-checkout{ color: var(--teal);   }
+  .dot-login   { color: var(--blue);   }
+  .dot-system  { color: var(--text-muted); }
+
+  /* ── Pagination ──────────────────────────────── */
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0;
+  }
+  .pagination-info { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+  .pagination-controls { display: flex; align-items: center; gap: 6px; }
+  .page-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 28px; padding: 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px; cursor: pointer;
+    transition: all 0.12s;
+  }
+  .page-btn:hover:not(:disabled) { border-color: var(--border-default); color: var(--text-primary); background: var(--bg-elevated); }
+  .page-btn:disabled { opacity: 0.35; cursor: default; }
+  .page-btn svg { width: 12px; height: 12px; }
+  .page-info { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); padding: 0 4px; }
+
+  /* ── Detail Panel (right-side) ───────────────── */
+  .detail-panel {
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    width: 420px;
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column;
+    z-index: 100;
+    box-shadow: -8px 0 32px rgba(0,0,0,0.4);
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .detail-header {
+    padding: 18px 20px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex; flex-direction: column; gap: 10px;
+    flex-shrink: 0;
+  }
+  .detail-header-top { display: flex; align-items: center; justify-content: space-between; }
+  .detail-title { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+  .detail-close {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text-muted);
+  }
+  .detail-close:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .detail-close svg { width: 12px; height: 12px; }
+  .detail-action-row { display: flex; align-items: center; gap: 8px; }
+  .detail-timestamp { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+
+  .detail-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  .detail-section {}
+  .detail-section-label {
+    font-size: 10px; font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+  .detail-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+  }
+  .detail-row { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; }
+  .detail-row + .detail-row { border-top: 1px solid var(--border-subtle); }
+  .detail-key { font-size: 11px; color: var(--text-muted); width: 72px; flex-shrink: 0; }
+  .detail-val { font-size: 12px; color: var(--text-primary); min-width: 0; word-break: break-all; }
+  .detail-val.mono { font-family: var(--font-mono); font-size: 10px; color: var(--text-secondary); }
+  .detail-val .role-badge {
+    display: inline-flex; align-items: center;
+    padding: 1px 7px; border-radius: 4px;
+    font-size: 10px; border: 1px solid var(--border-subtle);
+    background: var(--neutral-dim); color: var(--text-secondary);
+  }
+
+  /* diff table */
+  .diff-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .diff-table th {
+    text-align: left; padding: 6px 8px;
+    color: var(--text-muted); font-weight: 600;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 10px; letter-spacing: 0.5px;
+  }
+  .diff-table td { padding: 5px 8px; vertical-align: top; }
+  .diff-table tr + tr td { border-top: 1px solid var(--border-subtle); }
+  .diff-table .field-name { color: var(--text-secondary); font-family: var(--font-mono); font-size: 10px; }
+  .diff-table .diff-old { color: var(--red); background: var(--red-dim); border-radius: 3px; padding: 1px 5px; font-family: var(--font-mono); font-size: 10px; }
+  .diff-table .diff-new { color: var(--green); background: var(--green-dim); border-radius: 3px; padding: 1px 5px; font-family: var(--font-mono); font-size: 10px; }
+
+  .detail-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex; gap: 8px; flex-shrink: 0;
+  }
+
+  /* ── Overlay ─────────────────────────────────── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 99;
+    cursor: pointer;
+  }
+
+  /* ── Annotation overlays (wireframe labels) ──── */
+  .annot {
+    position: absolute;
+    font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    background: rgba(79,110,247,0.9);
+    color: #fff; padding: 2px 6px; border-radius: 3px;
+    pointer-events: none; z-index: 200;
+    white-space: nowrap;
+  }
+
+  .wf-note {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-muted);
+    background: var(--brand-dim);
+    border: 1px dashed rgba(79,110,247,0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+  .wf-note svg { width: 12px; height: 12px; color: var(--brand); flex-shrink: 0; }
+
+  /* ── Scrollbar ───────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">E</div>
+    <!-- Nav items (icon only) -->
+    <div class="sidebar-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <div class="sidebar-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    </div>
+    <div style="flex:1"></div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <span class="topbar-crumb">관리자</span>
+      <span class="topbar-crumb active">감사 로그</span>
+      <div class="topbar-spacer"></div>
+      <button class="topbar-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="topbar-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+    </header>
+
+    <!-- Page -->
+    <main class="page">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-title-group">
+          <h1 class="page-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            감사 로그
+          </h1>
+          <div class="page-scope">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            조회 범위:
+            <span class="scope-badge">전 사이트</span>
+          </div>
+        </div>
+        <div class="page-actions">
+          <span class="stat-badge">총 1,234건</span>
+          <button class="btn btn-ghost">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4"/></svg>
+            새로고침
+          </button>
+          <button class="btn btn-outline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            내보내기
+          </button>
+          <button class="btn btn-ghost">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- ① Summary Bar -->
+      <div class="summary-bar" style="position:relative;">
+        <div class="annot" style="top:-22px;left:0;">① 액션별 요약 바 (클릭 시 필터)</div>
+
+        <div class="summary-card c-all active" onclick="filterAction('all')">
+          <div class="summary-label">전체</div>
+          <div class="summary-count">1,234</div>
+          <div class="summary-delta">오늘 +47</div>
+        </div>
+        <div class="summary-card c-create" onclick="filterAction('create')">
+          <div class="summary-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            생성
+          </div>
+          <div class="summary-count">342</div>
+          <div class="summary-delta">오늘 +18</div>
+        </div>
+        <div class="summary-card c-update" onclick="filterAction('update')">
+          <div class="summary-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            수정
+          </div>
+          <div class="summary-count">521</div>
+          <div class="summary-delta">오늘 +21</div>
+        </div>
+        <div class="summary-card c-delete" onclick="filterAction('delete')">
+          <div class="summary-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            삭제
+          </div>
+          <div class="summary-count">89</div>
+          <div class="summary-delta" style="color:var(--red);">오늘 +3 ⚠</div>
+        </div>
+        <div class="summary-card c-approve" onclick="filterAction('approve')">
+          <div class="summary-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20,6 9,17 4,12"/></svg>
+            승인
+          </div>
+          <div class="summary-count">282</div>
+          <div class="summary-delta">오늘 +5</div>
+        </div>
+      </div>
+
+      <!-- ② Filter Bar -->
+      <div class="filter-bar" style="position:relative;">
+        <div class="annot" style="top:-22px;left:0;">② 액션 칩 + 보조 필터 (현재 구조 유지)</div>
+
+        <!-- Action chips -->
+        <div class="filter-row">
+          <span class="filter-label">액션</span>
+          <button class="chip chip-all active">전체</button>
+          <button class="chip chip-create" onclick="toggleChip(this)">
+            <span class="chip-dot" style="background:var(--green)"></span>생성
+          </button>
+          <button class="chip chip-update" onclick="toggleChip(this)">
+            <span class="chip-dot" style="background:var(--blue)"></span>수정
+          </button>
+          <button class="chip chip-delete" onclick="toggleChip(this)">
+            <span class="chip-dot" style="background:var(--red)"></span>삭제
+          </button>
+          <button class="chip chip-approve" onclick="toggleChip(this)">
+            <span class="chip-dot" style="background:var(--purple)"></span>승인
+          </button>
+          <button class="chip chip-reject" onclick="toggleChip(this)">
+            <span class="chip-dot" style="background:var(--amber)"></span>반려
+          </button>
+          <button class="chip chip-checkout" onclick="toggleChip(this)">
+            <span class="chip-dot" style="background:var(--teal)"></span>반출
+          </button>
+          <button class="chip" onclick="toggleChip(this)">로그인</button>
+          <button class="chip" onclick="toggleChip(this)">로그아웃</button>
+          <button class="chip" onclick="toggleChip(this)">취소</button>
+          <button class="chip" onclick="toggleChip(this)">반납</button>
+          <button class="chip" onclick="toggleChip(this)">종료</button>
+          <button class="chip" onclick="toggleChip(this)">반려(교정)</button>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <!-- Secondary filters -->
+        <div class="filter-row">
+          <span class="filter-label">보조</span>
+          <select class="filter-select">
+            <option>엔티티 전체</option>
+            <option>장비</option>
+            <option>교정</option>
+            <option>반출</option>
+            <option>부적합</option>
+          </select>
+          <div style="display:flex;align-items:center;gap:4px;">
+            <input type="date" class="filter-input" style="width:130px;" value="2026-03-01">
+            <span style="color:var(--text-muted);font-size:11px;">~</span>
+            <input type="date" class="filter-input" style="width:130px;" value="2026-03-10">
+          </div>
+          <input class="filter-input" placeholder="사용자 UUID..." style="width:180px;">
+          <span class="filter-reset">초기화</span>
+        </div>
+      </div>
+
+      <!-- ③ Timeline -->
+      <div class="timeline" style="position:relative;">
+        <div class="annot" style="top:-22px;left:0;">③ 날짜별 그룹 타임라인 피드 (현재 flat 테이블 → 교체 제안)</div>
+
+        <!-- Today group -->
+        <div class="timeline-group-header">
+          <span class="timeline-date">오늘 — 2026. 03. 10.</span>
+          <div class="timeline-group-line"></div>
+          <span class="timeline-group-count">47건</span>
+        </div>
+
+        <div class="timeline-entries">
+
+          <!-- Entry: Update (with diff preview) -->
+          <div class="entry" onclick="openDetail()">
+            <div class="entry-time">14:32</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-update" style="background:var(--blue)"></div>
+              <div class="entry-line"></div>
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor">김철수</span>
+                <span class="entry-action-badge badge-update">수정</span>
+                <span class="entry-target">장비 <strong>SUW-E-0042</strong></span>
+                <span class="entry-entity-badge">장비</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  기술책임자
+                </span>
+                <span class="entry-sub-item mono">192.168.1.104</span>
+              </div>
+              <div class="entry-diff-preview">
+                <span class="diff-before">상태: available</span>
+                <span class="diff-arrow">→</span>
+                <span class="diff-after">상태: calibration_scheduled</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+          <!-- Entry: Approve -->
+          <div class="entry" onclick="openDetail()">
+            <div class="entry-time">14:29</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-approve" style="background:var(--purple)"></div>
+              <div class="entry-line"></div>
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor">이영희</span>
+                <span class="entry-action-badge badge-approve">승인</span>
+                <span class="entry-target">교정 기록 <strong>#C-1234</strong></span>
+                <span class="entry-entity-badge">교정</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  시험소장
+                </span>
+                <span class="entry-sub-item mono">192.168.1.22</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+          <!-- Entry: Checkout -->
+          <div class="entry" onclick="openDetail()">
+            <div class="entry-time">14:01</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-checkout" style="background:var(--teal)"></div>
+              <div class="entry-line"></div>
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor">박민준</span>
+                <span class="entry-action-badge badge-checkout">반출</span>
+                <span class="entry-target">반출 요청 <strong>#CH-0891</strong></span>
+                <span class="entry-entity-badge">반출</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  시험실무자
+                </span>
+                <span class="entry-sub-item mono">10.10.5.88</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+          <!-- Entry: Delete (high severity) -->
+          <div class="entry" onclick="openDetail()" style="background:rgba(248,113,113,0.03); border:1px solid rgba(248,113,113,0.1); border-radius:10px;">
+            <div class="entry-time">13:47</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-delete" style="background:var(--red)"></div>
+              <div class="entry-line"></div>
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor">최지수</span>
+                <span class="entry-action-badge badge-delete">삭제</span>
+                <span class="entry-target">임시 장비 <strong>#T-007</strong></span>
+                <span class="entry-entity-badge">장비</span>
+                <span style="font-size:10px;color:var(--red);background:var(--red-dim);border:1px solid rgba(248,113,113,0.2);border-radius:4px;padding:1px 6px;">주의</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  품질책임자
+                </span>
+                <span class="entry-sub-item mono">192.168.2.31</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+          <!-- Entry: Create -->
+          <div class="entry" onclick="openDetail()">
+            <div class="entry-time">11:20</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-create" style="background:var(--green)"></div>
+              <div class="entry-line"></div>
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor">김철수</span>
+                <span class="entry-action-badge badge-create">생성</span>
+                <span class="entry-target">장비 <strong>UIW-E-0215</strong></span>
+                <span class="entry-entity-badge">장비</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  기술책임자
+                </span>
+                <span class="entry-sub-item mono">192.168.1.104</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+        </div><!-- /today entries -->
+
+        <!-- Yesterday group -->
+        <div class="timeline-group-header">
+          <span class="timeline-date">어제 — 2026. 03. 09.</span>
+          <div class="timeline-group-line"></div>
+          <span class="timeline-group-count">91건</span>
+        </div>
+
+        <div class="timeline-entries">
+
+          <!-- System entry -->
+          <div class="entry" onclick="openDetail()">
+            <div class="entry-time">23:58</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-system" style="background:var(--text-muted)"></div>
+              <div class="entry-line"></div>
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor" style="color:var(--text-muted)">시스템</span>
+                <span class="entry-action-badge badge-system">생성</span>
+                <span class="entry-target">교정 기한 초과 부적합 <strong>#NC-0088</strong> 자동 생성</span>
+                <span class="entry-entity-badge">부적합</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item">CalibrationOverdueScheduler</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+          <!-- Reject entry -->
+          <div class="entry" onclick="openDetail()">
+            <div class="entry-time">18:44</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-reject" style="background:var(--amber)"></div>
+              <div class="entry-line"></div>
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor">이영희</span>
+                <span class="entry-action-badge badge-reject">반려</span>
+                <span class="entry-target">교정 계획 <strong>#CP-0041</strong></span>
+                <span class="entry-entity-badge">교정계획</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item">시험소장</span>
+                <span class="entry-sub-item mono">192.168.1.22</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+          <!-- Login entry -->
+          <div class="entry" onclick="openDetail()">
+            <div class="entry-time">08:03</div>
+            <div class="entry-spine">
+              <div class="entry-dot dot-login" style="background:var(--blue)"></div>
+              <!-- last entry, no line -->
+            </div>
+            <div class="entry-content">
+              <div class="entry-main">
+                <span class="entry-actor">박민준</span>
+                <span class="entry-action-badge badge-login">로그인</span>
+                <span class="entry-target">인증 성공</span>
+              </div>
+              <div class="entry-sub">
+                <span class="entry-sub-item mono">10.10.5.88</span>
+              </div>
+            </div>
+            <div class="entry-arrow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+            </div>
+          </div>
+
+        </div><!-- /yesterday entries -->
+
+      </div><!-- /timeline -->
+
+      <!-- ④ Pagination -->
+      <div class="pagination" style="position:relative;">
+        <div class="annot" style="top:-22px;left:0;">④ 현재 구조 유지 (범위 표시 개선)</div>
+        <div class="pagination-info">1 – 20 / 1,234건</div>
+        <div class="pagination-controls">
+          <button class="page-btn" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+            이전
+          </button>
+          <span class="page-info">1 / 62</span>
+          <button class="page-btn">
+            다음
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,18 15,12 9,6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Wireframe note -->
+      <div class="wf-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        와이어프레임: 행을 클릭하면 우측 상세 패널이 열립니다. 요약 바 카드 클릭 시 해당 액션 필터가 적용됩니다.
+      </div>
+
+    </main><!-- /page -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ⑤ Detail Side Panel (슬라이드 인) -->
+<div class="overlay" id="overlay" style="display:none;" onclick="closeDetail()"></div>
+
+<div class="detail-panel" id="detailPanel" style="display:none;">
+  <div class="detail-header">
+    <div class="detail-header-top">
+      <span class="detail-title" style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;">상세 정보</span>
+        <span class="annot" style="position:static;background:rgba(79,110,247,0.9);">⑤ 슬라이드 패널 (다이얼로그 → 교체 제안)</span>
+      </span>
+      <button class="detail-close" onclick="closeDetail()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="detail-action-row">
+      <span class="entry-action-badge badge-update" style="font-size:11px;padding:3px 9px;">수정</span>
+      <span class="detail-timestamp">2026-03-10 14:32:07</span>
+    </div>
+  </div>
+
+  <div class="detail-body">
+
+    <!-- User section -->
+    <div class="detail-section">
+      <div class="detail-section-label">사용자</div>
+      <div class="detail-card">
+        <div class="detail-row">
+          <span class="detail-key">이름</span>
+          <span class="detail-val" style="font-weight:600;">김철수</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">역할</span>
+          <span class="detail-val"><span class="role-badge">기술책임자</span></span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">ID</span>
+          <span class="detail-val mono">a1b2c3d4-e5f6-7890-abcd-ef1234567890</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">IP</span>
+          <span class="detail-val mono">192.168.1.104</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Target section -->
+    <div class="detail-section">
+      <div class="detail-section-label">대상 엔티티</div>
+      <div class="detail-card">
+        <div class="detail-row">
+          <span class="detail-key">유형</span>
+          <span class="detail-val">장비</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">ID</span>
+          <span class="detail-val mono">f8e7d6c5-b4a3-2190-fedc-ba9876543210</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">관리번호</span>
+          <span class="detail-val" style="color:var(--brand);text-decoration:underline;cursor:pointer;">SUW-E-0042 ↗</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diff section -->
+    <div class="detail-section">
+      <div class="detail-section-label">변경 사항</div>
+      <div class="detail-card" style="padding:0;overflow:hidden;">
+        <table class="diff-table">
+          <thead>
+            <tr>
+              <th>필드</th>
+              <th>변경 전</th>
+              <th>변경 후</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="field-name">status</td>
+              <td><span class="diff-old">available</span></td>
+              <td><span class="diff-new">calibration_scheduled</span></td>
+            </tr>
+            <tr>
+              <td class="field-name">nextCalibrationDate</td>
+              <td><span class="diff-old">null</span></td>
+              <td><span class="diff-new">2026-04-15</span></td>
+            </tr>
+            <tr>
+              <td class="field-name">version</td>
+              <td><span class="diff-old">12</span></td>
+              <td><span class="diff-new">13</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Metadata section -->
+    <div class="detail-section">
+      <div class="detail-section-label">메타데이터</div>
+      <div class="detail-card">
+        <div class="detail-row">
+          <span class="detail-key">로그 ID</span>
+          <span class="detail-val mono">9f8e7d6c-5b4a-3210-fedc-ba9876543211</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">Request ID</span>
+          <span class="detail-val mono">req_7xKm2pQ9nR4</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-key">기록 시각</span>
+          <span class="detail-val mono">2026-03-10 14:32:07.483</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /detail-body -->
+
+  <div class="detail-footer">
+    <button class="btn btn-ghost" onclick="closeDetail()" style="flex:1;justify-content:center;">닫기</button>
+    <button class="btn btn-outline" style="flex:1;justify-content:center;">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+      인쇄
+    </button>
+  </div>
+</div>
+
+<script>
+  function openDetail() {
+    document.getElementById('detailPanel').style.display = 'flex';
+    document.getElementById('overlay').style.display = 'block';
+  }
+  function closeDetail() {
+    document.getElementById('detailPanel').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+  }
+  function toggleChip(el) {
+    const allChip = document.querySelector('.chip-all');
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    if (el.classList.contains('chip-all')) {
+      el.classList.add('active');
+    } else {
+      el.classList.add('active');
+    }
+  }
+  function filterAction(type) {
+    document.querySelectorAll('.summary-card').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+</script>
+</body>
+</html>
