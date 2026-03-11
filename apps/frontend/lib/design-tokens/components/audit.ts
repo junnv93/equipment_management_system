@@ -184,7 +184,250 @@ export const AUDIT_MOTION = {
 } as const;
 
 // ============================================================================
-// 9. Audit Filter Tokens (필터 바 — 리디자인)
+// 9. Audit Summary Bar Tokens (액션별 요약 바)
+// ============================================================================
+
+/**
+ * 요약 바 그리드 레이아웃
+ */
+export const AUDIT_SUMMARY_TOKENS = {
+  /** 5열 그리드 */
+  grid: 'grid grid-cols-5 gap-3',
+
+  /** 카드 상단 색상 스트라이프 */
+  stripe: 'absolute top-0 left-0 right-0 h-[2px] rounded-t-xl',
+
+  /** 액션 라벨 */
+  label: 'text-xs font-medium text-brand-text-muted',
+
+  /** 총 건수 (전체 카드에만) */
+  count: 'font-mono text-xl font-bold tabular-nums tracking-tight',
+
+  /** 서브 라벨 */
+  sublabel: 'text-[10px] text-brand-text-muted mt-0.5',
+} as const;
+
+/**
+ * 색상 체계: 액션 타입별 (stripe + count 색상)
+ */
+export const AUDIT_SUMMARY_COLOR_MAP = {
+  all: { stripe: 'bg-brand', count: 'text-brand-text-primary' },
+  create: { stripe: 'bg-brand-ok', count: 'text-brand-ok' },
+  update: { stripe: 'bg-brand-info', count: 'text-brand-info' },
+  delete: { stripe: 'bg-brand-critical', count: 'text-brand-critical' },
+  approve: { stripe: 'bg-brand-purple', count: 'text-brand-purple' },
+} as const;
+
+/**
+ * 요약 카드 클래스 생성 (active / inactive)
+ */
+export function getAuditSummaryCardClasses(
+  isActive: boolean,
+  color: keyof typeof AUDIT_SUMMARY_COLOR_MAP
+): string {
+  const base = [
+    'relative overflow-hidden flex flex-col gap-0.5 p-4 rounded-xl border text-left cursor-pointer',
+    getTransitionClasses('instant', ['background-color', 'border-color']),
+    FOCUS_TOKENS.classes.default,
+  ].join(' ');
+
+  const borderActive: Record<keyof typeof AUDIT_SUMMARY_COLOR_MAP, string> = {
+    all: 'border-brand/40',
+    create: 'border-brand-ok/40',
+    update: 'border-brand-info/40',
+    delete: 'border-brand-critical/40',
+    approve: 'border-brand-purple/40',
+  };
+
+  return isActive
+    ? `${base} bg-brand-bg-elevated ${borderActive[color]}`
+    : `${base} bg-brand-bg-surface border-brand-border-subtle hover:border-brand-border-default hover:bg-brand-bg-elevated`;
+}
+
+// ============================================================================
+// 10. Audit Timeline Tokens (타임라인 피드)
+// ============================================================================
+
+/**
+ * 날짜 그룹 헤더 스타일
+ */
+export const AUDIT_TIMELINE_TOKENS = {
+  /**
+   * 그룹 헤더 행 (sticky)
+   *
+   * ⚠️ bg-brand-bg-surface: 타임라인 피드는 항상 bg-brand-bg-surface 카드 내부에
+   * 렌더링되므로 bg-brand-bg-page가 아닌 bg-brand-bg-surface를 사용해야 함.
+   * sticky 헤더 배경이 컨테이너 배경과 일치해야 시각적 일관성 보장.
+   */
+  groupHeader: 'flex items-center gap-3 py-2 sticky top-0 z-10 bg-brand-bg-surface',
+
+  /** 날짜 라벨 */
+  groupDate:
+    'font-mono text-[11px] font-bold text-brand-text-muted tracking-widest uppercase shrink-0',
+
+  /** 구분선 */
+  groupLine: 'flex-1 h-px bg-brand-border-subtle',
+
+  /** 건수 배지 */
+  groupCount: [
+    'text-[10px] font-mono text-brand-text-muted shrink-0',
+    'px-2 py-0.5 rounded-full border border-brand-border-subtle bg-brand-bg-elevated',
+  ].join(' '),
+
+  /** 엔트리 컨테이너 */
+  entries: 'flex flex-col gap-0.5',
+
+  /** 빈 상태 */
+  emptyState: 'text-center py-16 text-brand-text-muted',
+
+  /** 단일 엔트리 (3열 그리드: time | spine | content)
+   *
+   * ✅ `relative`는 ChevronRight absolute 포지셔닝의 기준점이므로 필수.
+   * ✅ `group`은 호버 화살표의 group-hover 클래스를 위해 필수.
+   */
+  entry: [
+    'grid gap-x-3 px-3 py-2.5 rounded-xl cursor-pointer group relative',
+    'hover:bg-brand-bg-elevated',
+    getTransitionClasses('instant', ['background-color']),
+    FOCUS_TOKENS.classes.default,
+  ].join(' '),
+
+  /** 시간 컬럼 */
+  time: 'font-mono text-[11px] text-brand-text-muted pt-0.5 text-right tabular-nums leading-none',
+
+  /**
+   * 스파인 (점 + 연결선)
+   *
+   * dot ring: bg-brand-bg-surface와 일치 (컨테이너 배경색과 동일해야 ring이 자연스러움)
+   */
+  spineWrapper: 'flex flex-col items-center',
+  dot: 'w-2 h-2 rounded-full mt-1 ring-2 ring-brand-bg-surface shrink-0',
+  line: 'w-px flex-1 bg-brand-border-subtle mt-1',
+
+  /** 본문 컬럼 */
+  contentWrapper: 'min-w-0 pb-0.5',
+  mainRow: 'flex items-baseline flex-wrap gap-1.5',
+  actor: 'text-[13px] font-semibold text-brand-text-primary leading-none',
+  targetText: 'text-[12px] text-brand-text-secondary',
+  targetId: 'font-semibold',
+  entityBadge: [
+    'inline-flex items-center px-1.5 py-0.5 text-[10px] rounded-md border',
+    'border-brand-border-subtle bg-brand-bg-elevated text-brand-text-muted',
+  ].join(' '),
+
+  /** 위험 액션(delete) 강조 배지 — 토큰화하여 인라인 하드코딩 제거 */
+  dangerLabel: [
+    'inline-flex items-center px-1.5 py-0.5 text-[10px] rounded-md font-semibold',
+    'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
+  ].join(' '),
+
+  subRow: 'flex items-center flex-wrap gap-2.5 mt-1',
+  subItem: 'flex items-center gap-1 text-[11px] text-brand-text-muted',
+  subMono: 'font-mono text-[10px] text-brand-text-muted',
+
+  /** 인라인 Diff 미리보기 */
+  diffPreview: [
+    'mt-1.5 px-2.5 py-1.5 rounded-lg border border-brand-border-subtle',
+    'bg-brand-bg-elevated font-mono text-[10px] flex items-center gap-2 max-w-full overflow-hidden',
+  ].join(' '),
+  diffOld: 'text-brand-critical truncate shrink-0 max-w-[30%]',
+  diffArrow: 'text-brand-text-muted shrink-0',
+  diffNew: 'text-brand-ok truncate shrink-0 max-w-[40%]',
+
+  /** 호버 시 오른쪽 화살표 (absolute — 부모 entry가 relative여야 함) */
+  hoverArrow: [
+    'absolute right-3 top-1/2 -translate-y-1/2',
+    'opacity-0 group-hover:opacity-100 text-brand-text-muted',
+    getTransitionClasses('instant', ['opacity']),
+  ].join(' '),
+
+  /** 고위험(delete) 엔트리 강조 테두리 */
+  dangerEntry: 'bg-brand-critical/[0.03] border border-brand-critical/10 rounded-xl',
+} as const;
+
+/**
+ * 액션 타입별 dot 색상
+ *
+ * SSOT: AUDIT_ACTION_BADGE_TOKENS와 동일한 색상 시맨틱을 사용.
+ * badge 색상과 dot 색상이 일치해야 시각적 일관성이 보장됨.
+ *
+ *   Badge getSemanticBadgeClasses('ok')     → dot bg-brand-ok
+ *   Badge getSemanticBadgeClasses('info')   → dot bg-brand-info
+ *   Badge getSemanticBadgeClasses('critical')→ dot bg-brand-critical
+ *   Badge getSemanticBadgeClasses('purple') → dot bg-brand-purple
+ *   Badge getSemanticBadgeClasses('warning')→ dot bg-brand-warning
+ *   Badge getSemanticBadgeClasses('neutral')→ dot bg-brand-text-muted
+ */
+export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
+  create: 'bg-brand-ok',
+  update: 'bg-brand-info',
+  delete: 'bg-brand-critical',
+  approve: 'bg-brand-purple',
+  reject: 'bg-brand-warning',
+  checkout: 'bg-brand-purple', // badge=purple과 일치 (기존: teal 불일치 수정)
+  return: 'bg-brand-ok',
+  cancel: 'bg-brand-text-muted',
+  login: 'bg-brand-info',
+  logout: 'bg-brand-text-muted',
+  close: 'bg-brand-text-muted',
+  reject_correction: 'bg-brand-critical',
+};
+
+// ============================================================================
+// 11. Audit Detail Sheet Tokens (슬라이드 패널)
+// ============================================================================
+
+/**
+ * 감사로그 상세 슬라이드 패널 스타일
+ */
+export const AUDIT_DETAIL_SHEET_TOKENS = {
+  /** 백드롭 */
+  backdrop: ['fixed inset-0 bg-black/40 z-40', getTransitionClasses('fast', ['opacity'])].join(' '),
+
+  /** 패널 자체 */
+  panel: [
+    'fixed top-0 right-0 h-full w-[480px] max-w-[95vw]',
+    'bg-brand-bg-surface border-l border-brand-border-subtle',
+    'flex flex-col z-50',
+    'transition-transform duration-300 ease-out',
+    'shadow-2xl',
+  ].join(' '),
+
+  /** 헤더 영역 */
+  header: 'px-5 pt-5 pb-4 border-b border-brand-border-subtle flex-shrink-0',
+  headerTop: 'flex items-center justify-between mb-3',
+  headerLabel: 'text-[10px] font-bold text-brand-text-muted uppercase tracking-widest',
+  closeBtn: [
+    'w-7 h-7 rounded-md border border-brand-border-subtle bg-transparent',
+    'flex items-center justify-center text-brand-text-muted',
+    'hover:bg-brand-bg-elevated hover:text-brand-text-primary',
+    getTransitionClasses('instant', ['background-color', 'color']),
+    FOCUS_TOKENS.classes.default,
+  ].join(' '),
+  actionRow: 'flex items-center gap-2',
+  timestamp: 'font-mono text-[11px] text-brand-text-muted',
+
+  /** 스크롤 본문 */
+  body: 'flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4',
+
+  /** 섹션 */
+  sectionLabel: 'text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-2',
+  sectionCard: 'bg-brand-bg-elevated border border-brand-border-subtle rounded-xl overflow-hidden',
+  row: 'flex items-start gap-2 px-3 py-2 text-sm',
+  rowBorder: 'border-t border-brand-border-subtle',
+  rowKey: 'text-[11px] text-brand-text-muted w-20 flex-shrink-0 pt-px',
+  rowVal: 'text-[12px] text-brand-text-primary min-w-0 break-all',
+  rowValMono: 'font-mono text-[10px] text-brand-text-secondary min-w-0 break-all',
+
+  /** 하단 액션 바 */
+  footer: 'px-5 py-3 border-t border-brand-border-subtle flex gap-2 flex-shrink-0',
+
+  /** 링크 스타일 */
+  link: ['text-brand-info hover:underline', getTransitionClasses('fast', ['color'])].join(' '),
+} as const;
+
+// ============================================================================
+// 12. Audit Filter Tokens (필터 바 — 리디자인)
 // ============================================================================
 
 /**
@@ -251,4 +494,18 @@ export const AUDIT_HEADER_TOKENS = {
   /** 총 건수 배지 (mono font + terminal aesthetic) */
   statsBadge:
     'font-mono tabular-nums text-xs bg-brand-bg-elevated border border-brand-border-subtle px-2.5 py-1.5 rounded-md text-brand-text-muted',
+
+  /**
+   * 활성 필터 수 인디케이터 배지
+   * (기존: 인라인 하드코딩 className → 토큰 통합)
+   */
+  activeFilterBadge:
+    'font-mono tabular-nums text-xs bg-brand-info/10 text-brand-info border border-brand-info/20 px-1.5 py-0.5 rounded-full',
 } as const;
+
+/**
+ * 테이블 헤더 행 스타일
+ * (기존: TableRow에 인라인 className → 토큰 통합)
+ */
+export const AUDIT_TABLE_HEADER_ROW =
+  'bg-brand-bg-elevated hover:bg-brand-bg-elevated border-b border-brand-border-subtle';

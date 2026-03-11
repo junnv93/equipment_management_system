@@ -63,6 +63,18 @@
     "incident_history": "Incident History",
     "settings": "Settings"
   },
+  "timeline": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "groupCount": "{count} events",
+    "diffArrow": "→",
+    "systemActor": "System",
+    "dangerLabel": "Warning"
+  },
+  "summary": {
+    "totalSub": "All logs",
+    "actionFilter": "Filter"
+  },
   "detail": {
     "title": "Audit Log Detail",
     "description": "Detailed record of system activity.",
@@ -74,6 +86,7 @@
     "targetInfo": "Target Information",
     "targetType": "Target Type:",
     "targetId": "Target ID:",
+    "targetName": "Target:",
     "changes": "Changes",
     "additionalInfo": "Additional Information",
     "metadata": "Metadata",
