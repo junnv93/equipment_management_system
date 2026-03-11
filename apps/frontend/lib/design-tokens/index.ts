@@ -145,6 +145,8 @@ export {
   getAuthErrorClasses,
   getAuthInteractiveScaleClasses,
   getAuthStaggerDelay,
+  IDLE_TIMEOUT_DIALOG_TOKENS,
+  getIdleTimeoutUrgencyClasses,
 } from './components/auth';
 
 // Dashboard
@@ -368,11 +370,17 @@ export {
   APPROVAL_MOTION,
   APPROVAL_FOCUS,
   APPROVAL_ELAPSED_DAYS_TOKENS,
+  APPROVAL_ROW_TOKENS,
+  APPROVAL_ROW_GRID_COLS,
+  APPROVAL_KPI_STRIP_TOKENS,
+  APPROVAL_CATEGORY_SIDEBAR_TOKENS,
+  APPROVAL_MOBILE_CATEGORY_BAR_TOKENS,
   getApprovalStatusBadgeClasses,
   getApprovalCardBorderClasses,
   getApprovalStepperNodeClasses,
   getApprovalActionButtonClasses,
   getElapsedDaysClasses,
+  type ApprovalKpiVariant,
 } from './components/approval';
 
 // Audit
@@ -380,6 +388,7 @@ export {
   AUDIT_ACTION_BADGE_TOKENS,
   DEFAULT_AUDIT_ACTION_BADGE,
   AUDIT_TABLE_TOKENS,
+  AUDIT_TABLE_HEADER_ROW,
   AUDIT_DIFF_TOKENS,
   AUDIT_ENTITY_LINK_TOKENS,
   AUDIT_DETAIL_TOKENS,
@@ -389,6 +398,12 @@ export {
   AUDIT_FILTER_TOKENS,
   AUDIT_HEADER_TOKENS,
   getAuditActionChipClasses,
+  AUDIT_SUMMARY_TOKENS,
+  AUDIT_SUMMARY_COLOR_MAP,
+  getAuditSummaryCardClasses,
+  AUDIT_TIMELINE_TOKENS,
+  AUDIT_TIMELINE_DOT_COLORS,
+  AUDIT_DETAIL_SHEET_TOKENS,
 } from './components/audit';
 
 // Form Wizard
@@ -421,18 +436,51 @@ export {
   getMobileNavItemClasses,
 } from './components/mobile-nav';
 
+// Team
+export {
+  ROLE_BADGE_TOKENS,
+  TEAM_CARD_TOKENS,
+  TEAM_FILTER_PANEL_TOKENS,
+  TEAM_SECTION_TOKENS,
+  TEAM_MEMBER_GROUP_TOKENS,
+  SITE_PANEL_TOKENS,
+  TEAM_ROW_TOKENS,
+  CLS_PILL_TOKENS,
+} from './components/team';
+
 // Settings
 export {
-  SETTINGS_CHIP_TOKENS,
+  SETTINGS_CARD_CONTAINER_TOKENS,
   SETTINGS_CARD_HEADER_TOKENS,
+  SETTINGS_CHIP_TOKENS,
+  SETTINGS_FORM_ITEM_TOKENS,
+  SETTINGS_SELECT_TRIGGER_TOKENS,
+  SETTINGS_SUBMIT_TOKENS,
+  SETTINGS_SAVE_INDICATOR_TOKENS,
   SETTINGS_INFO_BOX_TOKENS,
   SETTINGS_SPACING_TOKENS,
   SETTINGS_TEXT_TOKENS,
+  SETTINGS_PAGE_HEADER_TOKENS,
+  SETTINGS_PROFILE_HERO_TOKENS,
+  SETTINGS_PROFILE_GRID_TOKENS,
+  SETTINGS_TEXTAREA_TOKENS,
+  SETTINGS_PERMISSIONS_CARD_TOKENS,
+  SETTINGS_NAV_TOKENS,
+  SETTINGS_PROFILE_BADGE_TOKENS,
+  SETTINGS_LAYOUT_TOKENS,
+  getSettingsCardClasses,
+  getSettingsCardHeaderClasses,
   getSettingsChipClasses,
   getSettingsChipIconClasses,
-  getSettingsCardHeaderClasses,
-  getSettingsIconContainerClasses,
+  getSettingsFormItemClasses,
+  getSettingsSelectTriggerClasses,
+  getSettingsSubmitButtonClasses,
   getSettingsInfoBoxClasses,
+  getSettingsPageHeaderClasses,
+  getSettingsTextareaClasses,
+  getSettingsNavItemClasses,
+  getSettingsNavIconCircleClasses,
+  getSettingsNavChevronClasses,
   type SettingsChipState,
 } from './components/settings';
 
