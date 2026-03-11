@@ -29,13 +29,11 @@ import softwareApi, {
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Monitor, ArrowRight, FileText, Clock } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
 export default function SoftwareApprovalsContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
   const t = useTranslations('approvals.softwareApprovals');
   const tActions = useTranslations('approvals.actions');
   const tCommon = useTranslations('common.actions');
@@ -52,14 +50,14 @@ export default function SoftwareApprovalsContent() {
   const approveMutation = useMutation({
     mutationFn: async ({
       id,
-      approverId,
       approverComment,
+      version,
     }: {
       id: string;
-      approverId: string;
       approverComment: string;
+      version: number;
     }) => {
-      return softwareApi.approveSoftwareChange(id, { approverId, approverComment });
+      return softwareApi.approveSoftwareChange(id, { approverComment, version });
     },
     onSuccess: () => {
       toast({
@@ -85,14 +83,14 @@ export default function SoftwareApprovalsContent() {
   const rejectMutation = useMutation({
     mutationFn: async ({
       id,
-      approverId,
       rejectionReason,
+      version,
     }: {
       id: string;
-      approverId: string;
       rejectionReason: string;
+      version: number;
     }) => {
-      return softwareApi.rejectSoftwareChange(id, { approverId, rejectionReason });
+      return softwareApi.rejectSoftwareChange(id, { rejectionReason, version });
     },
     onSuccess: () => {
       toast({
@@ -136,8 +134,8 @@ export default function SoftwareApprovalsContent() {
     }
     approveMutation.mutate({
       id: selectedChange.id,
-      approverId: session?.user?.id as string,
       approverComment: comment,
+      version: selectedChange.version,
     });
   };
 
@@ -145,8 +143,8 @@ export default function SoftwareApprovalsContent() {
     if (!selectedChange) return;
     rejectMutation.mutate({
       id: selectedChange.id,
-      approverId: session?.user?.id as string,
       rejectionReason: reason,
+      version: selectedChange.version,
     });
   };
 

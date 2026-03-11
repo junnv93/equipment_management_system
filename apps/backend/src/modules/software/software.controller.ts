@@ -18,7 +18,10 @@ import {
   CreateSoftwareChangeInput,
   CreateSoftwareChangeValidationPipe,
 } from './dto/create-software-change.dto';
-import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
+import {
+  SoftwareHistoryQueryDto,
+  SoftwareHistoryQueryValidationPipe,
+} from './dto/software-query.dto';
 import {
   ApproveSoftwareChangeDto,
   RejectSoftwareChangeDto,
@@ -80,6 +83,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
+  @UsePipes(SoftwareHistoryQueryValidationPipe)
   findHistory(@Query() query: SoftwareHistoryQueryDto): Promise<{
     items: SoftwareHistory[];
     meta: {

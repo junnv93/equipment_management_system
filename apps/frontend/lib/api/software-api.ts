@@ -22,6 +22,7 @@ export interface SoftwareHistory {
   approvedBy: string | null;
   approvedAt: string | null;
   approverComment: string | null;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,17 +43,16 @@ export interface CreateSoftwareChangeDto {
   previousVersion?: string;
   newVersion: string;
   verificationRecord: string;
-  changedBy: string;
 }
 
 export interface ApproveSoftwareChangeDto {
-  approverId: string;
   approverComment: string;
+  version: number;
 }
 
 export interface RejectSoftwareChangeDto {
-  approverId: string;
   rejectionReason: string;
+  version: number;
 }
 
 export interface EquipmentSoftwareInfo {

@@ -40,7 +40,6 @@ import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { ArrowLeft, Plus, History, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSession } from 'next-auth/react';
 
 interface SoftwareHistoryClientProps {
   equipmentId: string;
@@ -50,7 +49,6 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
   const t = useTranslations('equipment.softwareHistory');
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -82,7 +80,6 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
         previousVersion: data.previousVersion || undefined,
         newVersion: data.newVersion,
         verificationRecord: data.verificationRecord,
-        changedBy: session?.user?.id as string,
       });
     },
     onSuccess: () => {

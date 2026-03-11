@@ -199,6 +199,14 @@ export const QUERY_CONFIG = {
     refetchOnWindowFocus: false,
     retry: 2,
   },
+
+  /** 소프트웨어 관리대장 - NORMAL (승인 후 무효화로 갱신) */
+  SOFTWARE_REGISTRY: {
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  },
 } as const;
 
 /**

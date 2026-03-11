@@ -203,6 +203,15 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-5px)' },
         },
+        // Notification list page animations
+        pulseGlow: {
+          '0%, 100%': { opacity: '1', boxShadow: '0 0 0 0 hsl(var(--primary) / 0.4)' },
+          '50%': { opacity: '0.85', boxShadow: '0 0 0 6px hsl(var(--primary) / 0)' },
+        },
+        staggerFadeIn: {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
         // Auth-specific animations
         shake: {
           '0%, 100%': { transform: 'translateX(0)' },

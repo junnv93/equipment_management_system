@@ -4,7 +4,11 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from 'next-intl';
-import softwareApi, { SOFTWARE_TYPE_LABELS, type SoftwareType } from '@/lib/api/software-api';
+import softwareApi, {
+  SOFTWARE_TYPE_LABELS,
+  type SoftwareType,
+  type SoftwareRegistry,
+} from '@/lib/api/software-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { Monitor, Search, Package, Layers, Code, ExternalLink } from 'lucide-react';
@@ -31,10 +35,10 @@ export default function SoftwareContent() {
   const t = useTranslations('software');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { data: registryData, isLoading } = useQuery({
+  const { data: registryData, isLoading } = useQuery<SoftwareRegistry>({
     queryKey: queryKeys.software.registry(),
     queryFn: () => softwareApi.getSoftwareRegistry(),
-    ...QUERY_CONFIG.LIST,
+    ...QUERY_CONFIG.SOFTWARE_REGISTRY,
   });
 
   const filteredRegistry =
@@ -102,7 +106,7 @@ export default function SoftwareContent() {
           <div
             key={key}
             className={S.card.base}
-            style={{ animationDelay: getStaggerDelay(i, 'card') }}
+            style={{ animationDelay: getStaggerDelay(i, 'grid') }}
           >
             <div className="flex items-center gap-3">
               <div className={cn(S.iconContainer, S.iconBg[key])}>

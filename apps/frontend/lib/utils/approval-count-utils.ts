@@ -103,7 +103,8 @@ const CATEGORY_COLORS: Record<ApprovalCategory, { color: string; bgColor: string
  */
 export function getDashboardApprovalCategories(
   role: string,
-  approvalsRoute: string
+  approvalsRoute: string,
+  t: (key: string) => string
 ): DashboardApprovalCategory[] {
   const tabs = ROLE_TABS[role as UserRole] || [];
 
@@ -113,7 +114,7 @@ export function getDashboardApprovalCategories(
 
     return {
       key: tab,
-      label: meta.label,
+      label: t(meta.labelKey),
       href: `${approvalsRoute}?tab=${tab}`,
       color: colors.color,
       bgColor: colors.bgColor,

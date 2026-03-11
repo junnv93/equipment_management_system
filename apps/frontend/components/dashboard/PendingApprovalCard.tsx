@@ -83,6 +83,7 @@ interface PendingApprovalCardProps {
 export function PendingApprovalCard({ className, compact = false }: PendingApprovalCardProps) {
   const { data: session, status } = useSession();
   const t = useTranslations('dashboard.pending');
+  const tApprovals = useTranslations('approvals');
   const userRole = session?.user?.role || 'user';
 
   // SSOT: ApprovalsService (GET /api/approvals/counts)
@@ -102,8 +103,8 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
 
   // SSOT: ROLE_TABS에서 파생된 카테고리 목록
   const dashboardCategories = useMemo(
-    () => getDashboardApprovalCategories(userRole, FRONTEND_ROUTES.ADMIN.APPROVALS),
-    [userRole]
+    () => getDashboardApprovalCategories(userRole, FRONTEND_ROUTES.ADMIN.APPROVALS, tApprovals),
+    [userRole, tApprovals]
   );
 
   // SSOT: ROLE_TABS 기반 총합 계산

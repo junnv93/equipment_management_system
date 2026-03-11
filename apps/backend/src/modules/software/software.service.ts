@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and, desc, like, or, sql } from 'drizzle-orm';
+import { eq, and, desc, like, or, sql, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CreateSoftwareChangeInput } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
@@ -351,7 +351,7 @@ export class SoftwareService extends VersionedBaseService {
         name: schema.equipment.name,
       })
       .from(schema.equipment)
-      .where(sql`${schema.equipment.id} = ANY(${uniqueEquipmentIds})`);
+      .where(inArray(schema.equipment.id, uniqueEquipmentIds));
 
     const equipmentMap = new Map(equipments.map((e) => [e.id, e.name]));
 
