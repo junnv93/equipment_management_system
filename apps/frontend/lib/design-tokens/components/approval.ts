@@ -324,9 +324,9 @@ export const APPROVAL_ROW_TOKENS = {
   /** urgency 기반 행 배경색 (경과일 기반) */
   urgencyBg: {
     info: '',
-    warning: 'bg-amber-50/50 dark:bg-amber-950/10',
-    critical: 'bg-red-50/50 dark:bg-red-950/10',
-    emergency: 'bg-red-50/70 dark:bg-red-950/20',
+    warning: 'bg-brand-warning/5',
+    critical: 'bg-brand-critical/5',
+    emergency: 'bg-brand-critical/10',
   } as Record<UrgencyLevel, string>,
 
   /** urgency 좌측 보더 (4px 수직 막대) */
@@ -372,15 +372,15 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
   label: 'text-xs text-muted-foreground',
   sub: 'text-[11px] text-muted-foreground/70',
   borderColors: {
-    total: 'border-l-blue-500',
-    urgent: 'border-l-red-500',
-    avgWait: 'border-l-amber-500',
+    total: 'border-l-brand-info',
+    urgent: 'border-l-brand-critical',
+    avgWait: 'border-l-brand-warning',
     processed: 'border-l-brand-ok',
   },
   iconBg: {
-    total: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400',
-    urgent: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400',
-    avgWait: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400',
+    total: 'bg-brand-info/10 text-brand-info',
+    urgent: 'bg-brand-critical/10 text-brand-critical',
+    avgWait: 'bg-brand-warning/10 text-brand-warning',
     processed: 'bg-brand-ok/10 text-brand-ok',
   },
   iconContainer: 'rounded-md p-2 flex-shrink-0',
@@ -412,7 +412,7 @@ export const APPROVAL_CATEGORY_SIDEBAR_TOKENS = {
   badge: {
     base: 'ml-auto text-xs font-medium tabular-nums',
     normal: 'text-muted-foreground',
-    urgent: 'text-red-600 dark:text-red-400 font-semibold',
+    urgent: 'text-brand-critical font-semibold',
   },
   divider: 'border-t border-border my-2',
 } as const;

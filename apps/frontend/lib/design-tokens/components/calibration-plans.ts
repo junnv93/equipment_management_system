@@ -36,9 +36,9 @@ import {
  */
 export const CALIBRATION_PLAN_STATUS_TOKENS = {
   draft: {
-    color: 'bg-blue-500 dark:bg-blue-600',
+    color: 'bg-brand-info',
     textColor: 'text-white',
-    borderColor: 'border-blue-500 dark:border-blue-600',
+    borderColor: 'border-brand-info',
     label: '작성 중',
     labelKey: 'calibration.planStatus.draft',
     animation: '',
@@ -53,9 +53,9 @@ export const CALIBRATION_PLAN_STATUS_TOKENS = {
     animation: 'motion-safe:animate-pulse',
   },
   pending_approval: {
-    color: 'bg-blue-500 dark:bg-blue-600',
+    color: 'bg-brand-info',
     textColor: 'text-white',
-    borderColor: 'border-blue-500 dark:border-blue-600',
+    borderColor: 'border-brand-info',
     label: '승인 대기',
     labelKey: 'calibration.planStatus.pending_approval',
     animation: '',
@@ -69,9 +69,9 @@ export const CALIBRATION_PLAN_STATUS_TOKENS = {
     animation: '',
   },
   rejected: {
-    color: 'bg-red-500 dark:bg-red-600',
+    color: 'bg-brand-critical',
     textColor: 'text-white',
-    borderColor: 'border-red-500 dark:border-red-600',
+    borderColor: 'border-brand-critical',
     label: '반려',
     labelKey: 'calibration.planStatus.rejected',
     animation: '',
@@ -100,7 +100,7 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
   state: {
     /** 현재 진행 중 */
     active: {
-      background: 'bg-blue-500 dark:bg-blue-600',
+      background: 'bg-brand-info',
       text: 'text-white',
       /** Web Interface Guidelines: Animate only transform and opacity */
       animation: 'motion-safe:animate-pulse',
@@ -122,7 +122,7 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
     },
     /** 반려됨 */
     rejected: {
-      background: 'bg-red-500 dark:bg-red-600',
+      background: 'bg-brand-critical',
       text: 'text-white',
       animation: '',
       icon: 'opacity-100',

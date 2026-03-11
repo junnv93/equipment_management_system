@@ -81,13 +81,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   in_use: {
     card: {
-      className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
-      borderColor: 'border-l-blue-500',
+      className: 'bg-brand-info/10 text-brand-info',
+      borderColor: 'border-l-brand-info',
       statusBarColor: 'bg-brand-info',
     },
     header: {
-      textColor: 'text-blue-800 dark:text-blue-300',
-      bgClasses: 'bg-blue-100 dark:bg-blue-900/30 border-blue-500',
+      textColor: 'text-brand-info',
+      bgClasses: 'bg-brand-info/10 border-brand-info',
     },
     icon: Play,
     label: '사용 중',
@@ -100,8 +100,8 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
       statusBarColor: 'bg-brand-info/70',
     },
     header: {
-      textColor: 'text-ul-midnight dark:text-blue-300',
-      bgClasses: 'bg-blue-50 dark:bg-blue-950/30 border-blue-400',
+      textColor: 'text-ul-midnight dark:text-brand-info',
+      bgClasses: 'bg-brand-info/10 border-brand-info',
     },
     icon: FileOutput,
     label: '반출 중',
@@ -125,13 +125,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   calibration_overdue: {
     // UI는 "부적합"으로 표시
     card: {
-      className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-      borderColor: 'border-l-red-600',
+      className: 'bg-brand-critical/10 text-brand-critical',
+      borderColor: 'border-l-brand-critical',
       statusBarColor: 'bg-brand-critical',
     },
     header: {
-      textColor: 'text-red-700 dark:text-red-300',
-      bgClasses: 'bg-red-100 dark:bg-red-900/30 border-red-500',
+      textColor: 'text-brand-critical',
+      bgClasses: 'bg-brand-critical/10 border-brand-critical',
     },
     icon: XCircle,
     label: '부적합', // calibration_overdue → non_conforming 표시
@@ -139,13 +139,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   non_conforming: {
     card: {
-      className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-      borderColor: 'border-l-red-600',
+      className: 'bg-brand-critical/10 text-brand-critical',
+      borderColor: 'border-l-brand-critical',
       statusBarColor: 'bg-brand-critical',
     },
     header: {
-      textColor: 'text-red-700 dark:text-red-300',
-      bgClasses: 'bg-red-100 dark:bg-red-900/30 border-red-500',
+      textColor: 'text-brand-critical',
+      bgClasses: 'bg-brand-critical/10 border-brand-critical',
     },
     icon: XCircle,
     label: '부적합',
@@ -292,11 +292,11 @@ export interface CalibrationBadgeStyle {
  */
 export const CALIBRATION_BADGE_TOKENS: Record<CalibrationSeverity, CalibrationBadgeStyle> = {
   overdue: {
-    card: 'bg-red-600 text-white border-red-400',
-    table: 'bg-red-600 text-white',
+    card: 'bg-brand-critical text-white border-brand-critical/40',
+    table: 'bg-brand-critical text-white',
     header: {
-      textColor: 'text-red-100',
-      bgClasses: 'bg-red-600/90 border-red-400',
+      textColor: 'text-brand-critical/80',
+      bgClasses: 'bg-brand-critical/90 border-brand-critical/40',
     },
     icon: AlertCircle,
   },
@@ -396,7 +396,7 @@ export function getEquipmentHeaderButtonClasses(variant: HeaderButtonVariant = '
   const variantClasses: Record<HeaderButtonVariant, string[]> = {
     primary: ['bg-white/10', 'text-white', 'hover:bg-white/20'],
     secondary: ['bg-transparent', 'text-white/80', 'hover:text-white', 'hover:bg-white/10'],
-    destructive: ['bg-red-600', 'text-white', 'hover:bg-red-700'],
+    destructive: ['bg-brand-critical', 'text-white', 'hover:bg-brand-critical/90'],
     back: ['text-white/80', 'hover:text-white', 'hover:bg-white/10'],
   };
 
@@ -707,14 +707,14 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
   sub: 'text-[11px] text-muted-foreground/70',
   borderColors: {
     ok: 'border-l-brand-ok',
-    warn: 'border-l-red-500',
-    info: 'border-l-blue-500',
+    warn: 'border-l-brand-critical',
+    info: 'border-l-brand-info',
     neutral: 'border-l-border',
   },
   iconBg: {
     ok: 'bg-brand-ok/10 text-brand-ok',
-    warn: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400',
-    info: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400',
+    warn: 'bg-brand-critical/10 text-brand-critical',
+    info: 'bg-brand-info/10 text-brand-info',
     neutral: 'bg-muted text-muted-foreground',
   },
   iconContainer: 'rounded-md p-2 flex-shrink-0',

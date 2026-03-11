@@ -58,7 +58,7 @@ export const CALIBRATION_STATUS_INDICATOR: Record<
 > = {
   overdue: {
     dot: 'bg-ul-red dark:bg-ul-red',
-    text: 'text-ul-red dark:text-red-400',
+    text: 'text-ul-red dark:text-brand-critical',
   },
   upcoming: {
     dot: 'bg-ul-orange dark:bg-ul-orange',
@@ -103,7 +103,7 @@ export const CALIBRATION_CHECK_BADGE: Record<
   { badge: string; icon: LucideIcon }
 > = {
   overdue: {
-    badge: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-ul-red/20 dark:text-red-300',
+    badge: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-ul-red/20 dark:text-brand-critical',
     icon: AlertCircle,
   },
   today: {
@@ -116,7 +116,7 @@ export const CALIBRATION_CHECK_BADGE: Record<
     icon: AlertTriangle,
   },
   future: {
-    badge: 'bg-ul-blue/10 text-ul-blue border-ul-blue/20 dark:bg-ul-blue/20 dark:text-blue-300',
+    badge: 'bg-ul-blue/10 text-ul-blue border-ul-blue/20 dark:bg-ul-blue/20 dark:text-brand-info',
     icon: Calendar,
   },
 };
@@ -171,9 +171,9 @@ export function getCalibrationStatsVariant(type: CalibrationStatsType): StatsVar
 export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType | 'pending', string> = {
   total: 'text-foreground',
   compliant: 'text-brand-ok',
-  overdue: 'text-ul-red dark:text-red-400',
+  overdue: 'text-ul-red dark:text-brand-critical',
   upcoming: 'text-ul-orange dark:text-orange-400',
-  pending: 'text-ul-blue dark:text-blue-400',
+  pending: 'text-ul-blue dark:text-brand-info',
 };
 
 // ============================================================================
@@ -337,10 +337,10 @@ export const CALIBRATION_FOCUS = FOCUS_TOKENS.classes;
  * 중간점검 아이콘 색상 (테이블에서 사용)
  */
 export const CALIBRATION_INTERMEDIATE_CHECK_ICON_COLORS: Record<IntermediateCheckStatus, string> = {
-  overdue: 'text-ul-red dark:text-red-400',
+  overdue: 'text-ul-red dark:text-brand-critical',
   today: 'text-ul-orange dark:text-orange-400',
-  upcoming: 'text-ul-blue dark:text-blue-400',
-  future: 'text-ul-blue dark:text-blue-400',
+  upcoming: 'text-ul-blue dark:text-brand-info',
+  future: 'text-ul-blue dark:text-brand-info',
 };
 
 /**
@@ -559,7 +559,7 @@ export const CALIBRATION_TAB_TRANSITION = getTransitionClasses('fast', ['opacity
  */
 export const CALIBRATION_RESULT_BADGE: Record<string, string> = {
   pass: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
-  fail: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-red-900/30 dark:text-red-300',
+  fail: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',
   conditional:
     'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
 };
@@ -580,7 +580,8 @@ export const CALIBRATION_APPROVAL_BADGE: Record<string, string> = {
   pending_approval:
     'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
   approved: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
-  rejected: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-red-900/30 dark:text-red-300',
+  rejected:
+    'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',
 };
 export const DEFAULT_CALIBRATION_APPROVAL_BADGE = 'bg-muted text-muted-foreground border-border';
 

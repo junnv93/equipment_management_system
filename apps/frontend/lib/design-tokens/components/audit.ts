@@ -86,7 +86,7 @@ export const AUDIT_TABLE_TOKENS = {
  */
 export const AUDIT_DIFF_TOKENS = {
   /** 삭제된 값 (빨강) */
-  removed: 'bg-red-50 dark:bg-red-950/20',
+  removed: 'bg-brand-critical/10',
 
   /** 추가된 값 (초록) */
   added: 'bg-brand-ok/10',
@@ -105,8 +105,8 @@ export const AUDIT_DIFF_TOKENS = {
 export const AUDIT_ENTITY_LINK_TOKENS = {
   /** 활성 링크 (hover 포함) */
   link: [
-    'text-blue-600 dark:text-blue-400',
-    'hover:text-blue-800 dark:hover:text-blue-300',
+    'text-brand-info',
+    'hover:text-brand-info/80',
     'hover:underline',
     getTransitionClasses('fast', ['color']),
   ].join(' '),

@@ -353,7 +353,7 @@ export function getIdleTimeoutUrgencyClasses(secondsRemaining: number): {
 } {
   const isUrgent = secondsRemaining <= IDLE_TIMEOUT_DIALOG_TOKENS.urgentThresholdSeconds;
   return {
-    text: isUrgent ? 'text-destructive' : 'text-amber-600 dark:text-amber-400',
-    ring: isUrgent ? 'text-destructive' : 'text-amber-500 dark:text-amber-400',
+    text: isUrgent ? 'text-destructive' : 'text-brand-warning',
+    ring: isUrgent ? 'text-destructive' : 'text-brand-warning',
   };
 }

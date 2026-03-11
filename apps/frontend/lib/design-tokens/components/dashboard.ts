@@ -104,7 +104,7 @@ export const DASHBOARD_ROLE_BADGES = {
     bgColor: 'bg-ul-orange/10 dark:bg-ul-orange/20',
   },
   admin: {
-    color: 'text-ul-red dark:text-red-300',
+    color: 'text-ul-red dark:text-brand-critical',
     bgColor: 'bg-ul-red/10 dark:bg-ul-red/20',
   },
   user: {
@@ -171,7 +171,7 @@ export const DASHBOARD_CALIBRATION_STATUS_COLORS = {
   },
   overdue: {
     indicator: 'bg-ul-red dark:bg-ul-red',
-    text: 'text-ul-red dark:text-red-400',
+    text: 'text-ul-red dark:text-brand-critical',
   },
 } as const;
 
@@ -327,13 +327,13 @@ export const DASHBOARD_KPI_TOKENS = {
     /** 가동률 70%+ 또는 정상 상태 */
     good: 'text-brand-ok',
     /** 가동률 40-70% 또는 주의 필요 */
-    warning: 'text-ul-orange dark:text-orange-400',
+    warning: 'text-ul-orange dark:text-brand-warning',
     /** 가동률 <40% 또는 위험 상태 */
-    danger: 'text-ul-red dark:text-red-400',
+    danger: 'text-ul-red dark:text-brand-critical',
     /** 반출 중 (양수인 경우) */
     active: 'text-ul-blue dark:text-ul-info',
     /** 부적합 존재 시 카드 테두리 */
-    alertBorder: 'border-ul-red/30 dark:border-red-500/30',
+    alertBorder: 'border-ul-red/30 dark:border-brand-critical/30',
   },
 } as const;
 
@@ -355,12 +355,12 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   list: 'flex-1 overflow-y-auto',
   item: 'flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50',
   bar: 'w-1 rounded-full self-stretch flex-shrink-0',
-  barOverdue: 'bg-ul-red dark:bg-red-500',
+  barOverdue: 'bg-ul-red dark:bg-brand-critical',
   barUrgent: 'bg-ul-orange dark:bg-orange-400',
   barWarning: 'bg-yellow-400 dark:bg-yellow-500',
   barOk: 'bg-brand-ok',
   dday: 'font-mono tabular-nums font-bold text-sm w-14 flex-shrink-0',
-  ddayOverdue: 'text-ul-red dark:text-red-400',
+  ddayOverdue: 'text-ul-red dark:text-brand-critical',
   ddayUrgent: 'text-ul-orange dark:text-orange-400',
   ddayWarning: 'text-yellow-600 dark:text-yellow-400',
   ddayOk: 'text-brand-ok',
@@ -398,10 +398,10 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   cellToday: 'bg-ul-blue/10 dark:bg-ul-blue/20',
   cellNumber: 'text-xs text-foreground leading-tight',
   cellNumberToday: 'font-bold text-ul-blue dark:text-ul-info',
-  cellNumberHoliday: 'font-medium text-ul-red dark:text-red-400',
+  cellNumberHoliday: 'font-medium text-ul-red dark:text-brand-critical',
   cellNumberOtherMonth: 'text-muted-foreground/40',
   dots: 'flex gap-0.5 mt-0.5 flex-wrap justify-center max-w-[28px]',
-  dotOverdue: 'w-1.5 h-1.5 rounded-full bg-ul-red dark:bg-red-400 flex-shrink-0',
+  dotOverdue: 'w-1.5 h-1.5 rounded-full bg-ul-red dark:bg-brand-critical flex-shrink-0',
   dotUpcoming: 'w-1.5 h-1.5 rounded-full bg-yellow-400 dark:bg-yellow-500 flex-shrink-0',
   dotReturn: 'w-1.5 h-1.5 rounded-full bg-ul-blue dark:bg-ul-info flex-shrink-0',
   popup:
@@ -430,7 +430,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   containerLoading: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-3 min-h-[12rem]',
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold text-foreground',
-  countAlert: 'text-xs font-medium text-ul-red dark:text-red-400',
+  countAlert: 'text-xs font-medium text-ul-red dark:text-brand-critical',
   /** 내부 탭 스트립 */
   tabBar: 'flex border-b border-border -mx-0 mb-1',
   tab: 'text-xs font-medium px-3 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px motion-safe:transition-colors motion-safe:duration-100 focus-visible:outline-none',
@@ -440,7 +440,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   listFade:
     'pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent',
   item: 'flex items-center gap-3 p-2 rounded hover:bg-muted/50 group',
-  dday: 'font-mono tabular-nums font-bold text-xs text-ul-red dark:text-red-400 w-12 flex-shrink-0',
+  dday: 'font-mono tabular-nums font-bold text-xs text-ul-red dark:text-brand-critical w-12 flex-shrink-0',
   ddayReturn:
     'font-mono tabular-nums font-bold text-xs text-ul-blue dark:text-ul-info w-12 flex-shrink-0',
   info: 'min-w-0 flex-1',
@@ -528,7 +528,7 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
   chip: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border',
   /** 긴급 카테고리 pill (non-conforming 등) */
   chipUrgent:
-    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-red/10 text-ul-red dark:text-red-400 border border-ul-red/20',
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-red/10 text-ul-red dark:text-brand-critical border border-ul-red/20',
   /** 경고 카테고리 pill (overdue 등) */
   chipWarning:
     'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-orange/10 text-ul-orange dark:text-orange-400 border border-ul-orange/20',
@@ -568,7 +568,7 @@ export const DASHBOARD_STATUS_MINI_TOKENS = {
 
 export const DASHBOARD_KPI_TREND_TOKENS = {
   up: 'text-brand-ok text-[10px] tabular-nums font-semibold leading-none',
-  down: 'text-ul-red dark:text-red-400 text-[10px] tabular-nums font-semibold leading-none',
+  down: 'text-ul-red dark:text-brand-critical text-[10px] tabular-nums font-semibold leading-none',
   same: 'text-muted-foreground text-[10px] tabular-nums leading-none',
   badge: 'inline-flex items-center gap-0.5',
 } as const;

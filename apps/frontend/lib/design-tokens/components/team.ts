@@ -23,11 +23,11 @@ import { getTransitionClasses } from '../motion';
  * 참조: TeamMemberList, LeaderCombobox, MemberProfileDialog
  */
 export const ROLE_BADGE_TOKENS: Record<string, string> = {
-  test_engineer: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  test_engineer: 'bg-brand-info/10 text-brand-info',
   technical_manager: 'bg-brand-ok/10 text-brand-ok',
   quality_manager: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  lab_manager: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  system_admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  lab_manager: 'bg-brand-warning/10 text-brand-warning',
+  system_admin: 'bg-brand-critical/10 text-brand-critical',
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,9 +60,9 @@ export const TEAM_CARD_TOKENS = {
   /** 팀장 없음 경고 배지 */
   noLeaderBadge: [
     'inline-flex items-center gap-1 text-[11px] font-medium',
-    'text-amber-700 dark:text-amber-300',
-    'bg-amber-50 dark:bg-amber-900/20',
-    'border border-amber-200 dark:border-amber-700',
+    'text-brand-warning',
+    'bg-brand-warning/10',
+    'border border-brand-warning/20',
     'px-2 py-0.5 rounded-full',
   ].join(' '),
 } as const;
@@ -102,7 +102,7 @@ export const TEAM_FILTER_PANEL_TOKENS = {
   statsRow: 'flex items-center justify-between',
   statsLabel: 'text-xs text-muted-foreground',
   statsValue: 'text-xs font-mono font-semibold tabular-nums text-foreground',
-  statsValueWarn: 'text-xs font-mono font-semibold tabular-nums text-amber-600 dark:text-amber-400',
+  statsValueWarn: 'text-xs font-mono font-semibold tabular-nums text-brand-warning',
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ export const SITE_PANEL_TOKENS = {
   metaRow: 'flex items-center gap-3 mt-2',
   metaItem: 'flex items-center gap-1 text-[11.5px] text-muted-foreground',
   metaNum: 'font-mono font-semibold text-foreground tabular-nums',
-  metaNumWarn: 'font-mono font-semibold text-amber-600 dark:text-amber-400 tabular-nums',
+  metaNumWarn: 'font-mono font-semibold text-brand-warning tabular-nums',
 
   teamList: 'py-1.5',
 
@@ -187,9 +187,9 @@ export const TEAM_ROW_TOKENS = {
   /** 팀장 미지정 배지 — TEAM_CARD_TOKENS.noLeaderBadge의 compact 버전 */
   noLeaderBadge: [
     'inline-flex items-center gap-1 text-[10px] font-medium',
-    'text-amber-700 dark:text-amber-300',
-    'bg-amber-50 dark:bg-amber-900/20',
-    'border border-amber-200 dark:border-amber-700',
+    'text-brand-warning',
+    'bg-brand-warning/10',
+    'border border-brand-warning/20',
     'px-1.5 py-0.5 rounded-full',
   ].join(' '),
 

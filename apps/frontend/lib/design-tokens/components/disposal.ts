@@ -64,7 +64,7 @@ export const DISPOSAL_TIMELINE_TOKENS = {
     size: 'h-9 w-9',
     base: 'flex shrink-0 items-center justify-center rounded-full border-2',
     completed: 'border-brand-ok bg-brand-ok text-white',
-    rejected: 'border-red-500 bg-red-500 text-white',
+    rejected: 'border-brand-critical bg-brand-critical text-white',
     pending: 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-400',
   },
 
@@ -78,14 +78,14 @@ export const DISPOSAL_TIMELINE_TOKENS = {
   /** 단계 제목 */
   title: {
     completed: 'text-brand-ok',
-    rejected: 'text-red-700 dark:text-red-400',
+    rejected: 'text-brand-critical',
     pending: 'text-gray-400',
   },
 
   /** 카드 배경 */
   card: {
     default: 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50',
-    rejected: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30',
+    rejected: 'border-brand-critical/20 bg-brand-critical/10',
   },
 } as const;
 
@@ -113,7 +113,7 @@ export const DISPOSAL_PROGRESS_CARD_TOKENS = {
   viewButton: 'border-orange-300 text-orange-700 hover:bg-orange-100',
 
   /** 취소 버튼 */
-  cancelButton: 'border-red-300 text-red-700 hover:bg-red-100',
+  cancelButton: 'border-brand-critical/30 text-brand-critical hover:bg-brand-critical/10',
 } as const;
 
 /**
@@ -135,7 +135,7 @@ export const DISPOSAL_BANNER_TOKENS = {
  */
 export const DISPOSAL_BUTTON_TOKENS = {
   /** 폐기 요청 */
-  request: 'border-red-500 text-red-600 hover:bg-red-50',
+  request: 'border-brand-critical text-brand-critical hover:bg-brand-critical/5',
 
   /** 폐기 완료 (disabled) */
   completed: 'border-gray-300 text-gray-500',
@@ -144,16 +144,16 @@ export const DISPOSAL_BUTTON_TOKENS = {
   inProgress: 'bg-orange-500 hover:bg-orange-600',
 
   /** 반려 버튼 */
-  reject: 'border-red-300 text-red-700 hover:bg-red-50',
+  reject: 'border-brand-critical/30 text-brand-critical hover:bg-brand-critical/5',
 
   /** 검토 완료 (파란색) */
-  review: 'bg-blue-600 hover:bg-blue-700',
+  review: 'bg-brand-info hover:bg-brand-info/90',
 
   /** 최종 승인 (초록색) */
   approve: 'bg-brand-ok hover:bg-brand-ok/90',
 
   /** 폐기 요청 제출 (빨간색) */
-  submit: 'bg-red-600 hover:bg-red-700',
+  submit: 'bg-brand-critical hover:bg-brand-critical/90',
 } as const;
 
 // ============================================================================
@@ -165,17 +165,17 @@ export const DISPOSAL_BUTTON_TOKENS = {
  */
 export const DISPOSAL_INFO_CARD_TOKENS = {
   /** 기본 정보 카드 */
-  container: 'border-blue-200 bg-blue-50',
-  title: 'text-sm font-medium text-blue-900',
+  container: 'border-brand-info/20 bg-brand-info/10',
+  title: 'text-sm font-medium text-brand-info',
   label: 'font-medium text-gray-700',
   text: 'text-gray-600',
 
   /** 반려 안내 영역 */
-  rejectNotice: 'rounded-md bg-red-50 border border-red-200 p-3',
-  rejectText: 'text-sm text-red-800',
+  rejectNotice: 'rounded-md bg-brand-critical/10 border border-brand-critical/20 p-3',
+  rejectText: 'text-sm text-brand-critical',
 
   /** 반려 카운트 */
-  rejectCount: 'text-xs text-red-500',
+  rejectCount: 'text-xs text-brand-critical',
 } as const;
 
 // ============================================================================
@@ -186,10 +186,10 @@ export const DISPOSAL_INFO_CARD_TOKENS = {
  * 검토 의견 카드
  */
 export const REVIEW_OPINION_CARD_TOKENS = {
-  container: 'border-l-4 border-l-blue-500 bg-blue-50',
-  reviewerName: 'text-sm font-semibold text-blue-900',
-  timestamp: 'text-xs text-blue-600',
-  blockquote: 'border-l-2 border-blue-300 pl-3 text-sm text-gray-700 italic',
+  container: 'border-l-4 border-l-brand-info bg-brand-info/10',
+  reviewerName: 'text-sm font-semibold text-brand-info',
+  timestamp: 'text-xs text-brand-info',
+  blockquote: 'border-l-2 border-brand-info/30 pl-3 text-sm text-gray-700 italic',
 } as const;
 
 // ============================================================================
@@ -214,7 +214,7 @@ export const FORM_SECTION_TOKENS = {
  */
 export const DISPOSAL_FILE_LINK_TOKENS = {
   base: [
-    'flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300',
+    'flex items-center gap-2 text-sm text-brand-info hover:text-brand-info/80',
     FOCUS_TOKENS.classes.default,
     getTransitionClasses('fast', ['color']),
   ].join(' '),
