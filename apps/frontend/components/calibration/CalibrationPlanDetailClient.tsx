@@ -821,7 +821,7 @@ export function CalibrationPlanDetailClient({
                       </TableCell>
                       <TableCell>
                         {item.confirmedBy ? (
-                          <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20">
+                          <Badge variant="outline" className="bg-brand-ok/10">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             {t('planDetail.items.confirmed')}
                           </Badge>

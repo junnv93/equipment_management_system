@@ -151,22 +151,22 @@ const ROLE_INFO = {
   test_engineer: {
     needsApproval: true,
     icon: Clock,
-    color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    color: 'bg-brand-warning/10 text-brand-warning',
   },
   technical_manager: {
     needsApproval: false,
     icon: CheckCircle2,
-    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    color: 'bg-brand-ok/10 text-brand-ok',
   },
   lab_manager: {
     needsApproval: false,
     icon: Shield,
-    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    color: 'bg-brand-info/10 text-brand-info',
   },
   system_admin: {
     needsApproval: false,
     icon: Shield,
-    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    color: 'bg-brand-purple/10 text-brand-purple',
   },
 };
 
@@ -1005,7 +1005,8 @@ export function EquipmentForm({
                   {/* 1. 장비 유형 선택 */}
                   <div className="space-y-2">
                     <Label>
-                      {t('form.temporary.equipmentType')} <span className="text-red-500">*</span>
+                      {t('form.temporary.equipmentType')}{' '}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <RadioGroup
                       value={equipmentType}
@@ -1030,7 +1031,7 @@ export function EquipmentForm({
                   {/* 2. 소유처 */}
                   <div className="space-y-2">
                     <Label htmlFor="owner">
-                      {t('form.temporary.owner')} <span className="text-red-500">*</span>
+                      {t('form.temporary.owner')} <span className="text-destructive">*</span>
                     </Label>
                     {equipmentType === 'common' ? (
                       <Select value={owner} onValueChange={setOwner} required>
@@ -1083,7 +1084,7 @@ export function EquipmentForm({
                     <div className="space-y-2">
                       <Label htmlFor="usagePeriodStart">
                         {t('form.temporary.usagePeriodStart')}{' '}
-                        <span className="text-red-500">*</span>
+                        <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         type="date"
@@ -1095,7 +1096,8 @@ export function EquipmentForm({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="usagePeriodEnd">
-                        {t('form.temporary.usagePeriodEnd')} <span className="text-red-500">*</span>
+                        {t('form.temporary.usagePeriodEnd')}{' '}
+                        <span className="text-destructive">*</span>
                       </Label>
                       <Input
                         type="date"
@@ -1111,7 +1113,7 @@ export function EquipmentForm({
                   <div className="space-y-2">
                     <Label htmlFor="calibrationCertificate">
                       {t('form.temporary.calibrationCertificate')}{' '}
-                      <span className="text-red-500">*</span>
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       type="file"
@@ -1282,7 +1284,7 @@ export function EquipmentForm({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              <AlertCircle className="h-5 w-5 text-brand-warning" />
               {isEdit ? t('form.confirmDialog.editTitle') : t('form.confirmDialog.createTitle')}
             </DialogTitle>
             <DialogDescription>

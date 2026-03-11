@@ -41,44 +41,44 @@ const alertTypeConfig: Record<
 > = {
   calibration_due: {
     icon: <Calendar className="h-5 w-5" />,
-    bgColor: 'bg-yellow-100',
-    textColor: 'text-yellow-800',
+    bgColor: 'bg-brand-warning/10',
+    textColor: 'text-brand-warning',
   },
   calibration_overdue: {
     icon: <Calendar className="h-5 w-5" />,
-    bgColor: 'bg-red-100',
-    textColor: 'text-red-800',
+    bgColor: 'bg-brand-critical/10',
+    textColor: 'text-brand-critical',
   },
   calibration_completed: {
     icon: <CheckCircle className="h-5 w-5" />,
-    bgColor: 'bg-green-100',
-    textColor: 'text-green-800',
+    bgColor: 'bg-brand-ok/10',
+    textColor: 'text-brand-ok',
   },
   maintenance_scheduled: {
     icon: <Settings className="h-5 w-5" />,
-    bgColor: 'bg-blue-100',
-    textColor: 'text-blue-800',
+    bgColor: 'bg-brand-info/10',
+    textColor: 'text-brand-info',
   },
   checkout_request: {
     icon: <Clock className="h-5 w-5" />,
-    bgColor: 'bg-purple-100',
-    textColor: 'text-purple-800',
+    bgColor: 'bg-brand-purple/10',
+    textColor: 'text-brand-purple',
   },
   checkout_overdue: {
     icon: <Clock className="h-5 w-5" />,
-    bgColor: 'bg-red-100',
-    textColor: 'text-red-800',
+    bgColor: 'bg-brand-critical/10',
+    textColor: 'text-brand-critical',
   },
 };
 
 const PRIORITY_BADGE_COLORS: Record<string, string> = {
-  high: 'bg-red-100 text-red-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  low: 'bg-green-100 text-green-800',
+  high: 'bg-brand-critical/10 text-brand-critical',
+  medium: 'bg-brand-warning/10 text-brand-warning',
+  low: 'bg-brand-ok/10 text-brand-ok',
 };
 
 function PriorityBadge({ priority, label }: { priority: string; label: string }) {
-  const colorClass = PRIORITY_BADGE_COLORS[priority] || 'bg-gray-100 text-gray-800';
+  const colorClass = PRIORITY_BADGE_COLORS[priority] || 'bg-muted text-muted-foreground';
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>{label}</span>
   );
@@ -118,7 +118,7 @@ export default function AlertsContent() {
   function renderAlertList(items: NotificationItem[]) {
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center py-8 text-gray-500">
+        <div className="flex items-center justify-center py-8 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
           <span>로딩 중...</span>
         </div>
@@ -127,8 +127,8 @@ export default function AlertsContent() {
 
     if (items.length === 0) {
       return (
-        <div className="text-center py-8 text-gray-500">
-          <ArchiveX className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+        <div className="text-center py-8 text-muted-foreground">
+          <ArchiveX className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
           <p>{t('emptyState')}</p>
         </div>
       );
@@ -140,15 +140,15 @@ export default function AlertsContent() {
           {items.map((notification) => {
             const typeConfig = alertTypeConfig[notification.type] ?? {
               icon: <Bell className="h-5 w-5" />,
-              bgColor: 'bg-gray-100',
-              textColor: 'text-gray-800',
+              bgColor: 'bg-muted',
+              textColor: 'text-muted-foreground',
             };
 
             return (
               <div
                 key={notification.id}
                 className={`p-4 flex items-start gap-4 ${
-                  !notification.isRead ? 'bg-blue-50' : 'bg-white'
+                  !notification.isRead ? 'bg-brand-info/10' : 'bg-background'
                 }`}
               >
                 <div className={`p-2 rounded-full ${typeConfig.bgColor} ${typeConfig.textColor}`}>
@@ -163,18 +163,18 @@ export default function AlertsContent() {
                         priority={notification.priority}
                         label={getPriorityLabel(notification.priority, t)}
                       />
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {formatDate(notification.createdAt)}
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600">{notification.content}</p>
+                  <p className="text-sm text-muted-foreground">{notification.content}</p>
 
                   {notification.linkUrl && (
                     <div className="mt-2">
                       <Link
                         href={notification.linkUrl}
-                        className="text-sm text-blue-600 hover:text-blue-800"
+                        className="text-sm text-brand-info hover:text-brand-info/80"
                       >
                         {notification.entityType === 'equipment'
                           ? t('viewEquipment', { name: notification.title })
@@ -225,7 +225,7 @@ export default function AlertsContent() {
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
             placeholder={t('searchPlaceholder')}

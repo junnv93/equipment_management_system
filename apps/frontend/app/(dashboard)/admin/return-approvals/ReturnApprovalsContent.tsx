@@ -29,9 +29,9 @@ import { useSession } from 'next-auth/react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 
 const PURPOSE_COLORS: Record<string, string> = {
-  calibration: 'bg-blue-100 text-blue-800',
-  repair: 'bg-orange-100 text-orange-800',
-  rental: 'bg-purple-100 text-purple-800',
+  calibration: 'bg-brand-info/10 text-brand-info',
+  repair: 'bg-brand-repair/10 text-brand-repair',
+  rental: 'bg-brand-purple/10 text-brand-purple',
 };
 
 export default function ReturnApprovalsContent() {
@@ -182,13 +182,15 @@ export default function ReturnApprovalsContent() {
           ) : (
             <div className="space-y-4">
               {pendingReturns.map((checkout) => (
-                <Card key={checkout.id} className="border-l-4 border-l-yellow-500">
+                <Card key={checkout.id} className="border-l-4 border-l-brand-warning">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center gap-4">
                           <CheckoutStatusBadge status={checkout.status} />
-                          <Badge className={PURPOSE_COLORS[checkout.purpose] || 'bg-gray-100'}>
+                          <Badge
+                            className={PURPOSE_COLORS[checkout.purpose] || 'bg-brand-neutral/10'}
+                          >
                             {t(
                               `purpose.${checkout.purpose}` as
                                 | 'purpose.calibration'
@@ -250,7 +252,7 @@ export default function ReturnApprovalsContent() {
                           <div className="grid grid-cols-3 gap-4 text-sm">
                             <div className="flex items-center gap-2">
                               <CheckCircle2
-                                className={`h-4 w-4 ${checkout.workingStatusChecked ? 'text-green-500' : 'text-gray-300'}`}
+                                className={`h-4 w-4 ${checkout.workingStatusChecked ? 'text-brand-ok' : 'text-muted-foreground'}`}
                               />
                               <span>
                                 {t('inspection.working')}:{' '}
@@ -262,7 +264,7 @@ export default function ReturnApprovalsContent() {
                             {checkout.purpose === 'calibration' && (
                               <div className="flex items-center gap-2">
                                 <CheckCircle2
-                                  className={`h-4 w-4 ${checkout.calibrationChecked ? 'text-green-500' : 'text-gray-300'}`}
+                                  className={`h-4 w-4 ${checkout.calibrationChecked ? 'text-brand-ok' : 'text-muted-foreground'}`}
                                 />
                                 <span>
                                   {t('inspection.calibration')}:{' '}
@@ -275,7 +277,7 @@ export default function ReturnApprovalsContent() {
                             {checkout.purpose === 'repair' && (
                               <div className="flex items-center gap-2">
                                 <CheckCircle2
-                                  className={`h-4 w-4 ${checkout.repairChecked ? 'text-green-500' : 'text-gray-300'}`}
+                                  className={`h-4 w-4 ${checkout.repairChecked ? 'text-brand-ok' : 'text-muted-foreground'}`}
                                 />
                                 <span>
                                   {t('inspection.repair')}:{' '}

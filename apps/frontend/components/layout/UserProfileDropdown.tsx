@@ -21,10 +21,10 @@ import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 
 // 역할별 배지 색상
 const roleBadgeColors: Record<string, string> = {
-  test_engineer: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  technical_manager: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  test_engineer: 'bg-brand-info/10 text-brand-info',
+  technical_manager: 'bg-brand-ok/10 text-brand-ok',
   quality_manager: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
-  lab_manager: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  lab_manager: 'bg-brand-purple/10 text-brand-purple',
   system_admin: 'bg-ul-red/10 text-ul-red dark:bg-ul-red/20 dark:text-red-300',
 };
 

@@ -345,7 +345,7 @@ export function BasicInfoSection({
                           managementNumberCheckResult?.available === false
                             ? 'border-destructive focus-visible:ring-destructive pr-10'
                             : managementNumberCheckResult?.available === true
-                              ? 'border-green-500 focus-visible:ring-green-500 pr-10'
+                              ? 'border-brand-ok focus-visible:ring-brand-ok pr-10'
                               : ''
                         }
                       />
@@ -355,7 +355,7 @@ export function BasicInfoSection({
                       {isCheckingManagementNumber ? (
                         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       ) : managementNumberCheckResult?.available === true ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2 className="h-4 w-4 text-brand-ok" />
                       ) : managementNumberCheckResult?.available === false ? (
                         <AlertCircle className="h-4 w-4 text-destructive" />
                       ) : null}
@@ -374,7 +374,7 @@ export function BasicInfoSection({
                       )}
                     </p>
                   ) : managementNumberCheckResult?.available === true ? (
-                    <p className="text-sm text-green-600">{managementNumberCheckResult.message}</p>
+                    <p className="text-sm text-brand-ok">{managementNumberCheckResult.message}</p>
                   ) : (
                     <FormDescription>
                       {t('form.basicInfo.managementNumberDescription')}
@@ -394,9 +394,9 @@ export function BasicInfoSection({
               <div
                 className={`flex items-center gap-2 p-3 rounded-lg border ${
                   managementNumberCheckResult?.available === false
-                    ? 'bg-red-50 border-destructive dark:bg-red-950'
+                    ? 'bg-brand-critical/10 border-destructive'
                     : managementNumberCheckResult?.available === true
-                      ? 'bg-green-50 border-green-500 dark:bg-green-950'
+                      ? 'bg-brand-ok/10 border-brand-ok'
                       : 'bg-muted/50'
                 }`}
               >
@@ -417,8 +417,8 @@ export function BasicInfoSection({
                         managementNumberCheckResult?.available === false
                           ? 'text-destructive'
                           : managementNumberCheckResult?.available === true
-                            ? 'text-green-600'
-                            : 'text-green-600'
+                            ? 'text-brand-ok'
+                            : 'text-brand-ok'
                       }`}
                     >
                       → {managementNumberPreview}
@@ -427,7 +427,7 @@ export function BasicInfoSection({
                     {isCheckingManagementNumber ? (
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     ) : managementNumberCheckResult?.available === true ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="h-4 w-4 text-brand-ok" />
                     ) : managementNumberCheckResult?.available === false ? (
                       <AlertCircle className="h-4 w-4 text-destructive" />
                     ) : null}
@@ -447,7 +447,7 @@ export function BasicInfoSection({
                   )}
                 </p>
               ) : managementNumberCheckResult?.available === true ? (
-                <p className="text-sm text-green-600">{managementNumberCheckResult.message}</p>
+                <p className="text-sm text-brand-ok">{managementNumberCheckResult.message}</p>
               ) : null}
               {/* 숨겨진 필드 (폼 제출용) */}
               <FormField

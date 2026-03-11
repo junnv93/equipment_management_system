@@ -301,13 +301,15 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
 
       {/* 승인 대기 중인 요청 */}
       {pendingFactors.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
+        <Card className="border-brand-warning bg-brand-warning/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-800">
+            <CardTitle className="flex items-center gap-2 text-brand-warning">
               <Clock className="h-5 w-5" />
               {t('pendingTitle')}
             </CardTitle>
-            <CardDescription className="text-yellow-700">{t('pendingDescription')}</CardDescription>
+            <CardDescription className="text-brand-warning">
+              {t('pendingDescription')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>

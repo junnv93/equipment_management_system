@@ -18,9 +18,9 @@ interface RepairHistoryTimelineProps {
 
 // 수리 결과 색상 (dark mode 지원)
 const REPAIR_RESULT_COLORS: Record<string, string> = {
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-  partial: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
+  completed: 'bg-brand-ok/10 text-brand-ok',
+  partial: 'bg-brand-warning/10 text-brand-warning',
+  failed: 'bg-brand-critical/10 text-brand-critical',
 };
 
 export default function RepairHistoryTimeline({
@@ -46,17 +46,11 @@ export default function RepairHistoryTimeline({
   const getResultIcon = (result?: string) => {
     switch (result) {
       case 'completed':
-        return (
-          <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400" aria-hidden="true" />
-        );
+        return <CheckCircle className="h-5 w-5 text-brand-ok" aria-hidden="true" />;
       case 'partial':
-        return (
-          <Clock className="h-5 w-5 text-yellow-500 dark:text-yellow-400" aria-hidden="true" />
-        );
+        return <Clock className="h-5 w-5 text-brand-warning" aria-hidden="true" />;
       case 'failed':
-        return (
-          <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" aria-hidden="true" />
-        );
+        return <AlertTriangle className="h-5 w-5 text-brand-critical" aria-hidden="true" />;
       default:
         return <Wrench className="h-5 w-5 text-muted-foreground" aria-hidden="true" />;
     }
@@ -158,7 +152,7 @@ export default function RepairHistoryTimeline({
                               {onEdit && (
                                 <button
                                   onClick={() => onEdit(repair)}
-                                  className={`p-1 text-muted-foreground hover:text-blue-500 dark:hover:text-blue-400 rounded ${getTransitionClasses('fast', ['color'])}`}
+                                  className={`p-1 text-muted-foreground hover:text-brand-info rounded ${getTransitionClasses('fast', ['color'])}`}
                                   title={t('repairHistory.edit')}
                                   aria-label={t('repairHistory.editAriaLabel')}
                                 >
@@ -168,7 +162,7 @@ export default function RepairHistoryTimeline({
                               {onDelete && (
                                 <button
                                   onClick={() => onDelete(repair)}
-                                  className={`p-1 text-muted-foreground hover:text-red-500 dark:hover:text-red-400 rounded ${getTransitionClasses('fast', ['color'])}`}
+                                  className={`p-1 text-muted-foreground hover:text-brand-critical rounded ${getTransitionClasses('fast', ['color'])}`}
                                   title={t('repairHistory.delete')}
                                   aria-label={t('repairHistory.deleteAriaLabel')}
                                 >

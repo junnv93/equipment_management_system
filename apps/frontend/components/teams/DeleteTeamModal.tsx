@@ -95,17 +95,17 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
               </p>
 
               {hasRelatedData && (
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                  <p className="text-sm text-amber-800 dark:text-amber-200 font-medium mb-2">
+                <div className="p-3 rounded-lg bg-brand-warning/10 border border-brand-warning/20">
+                  <p className="text-sm text-brand-warning font-medium mb-2">
                     연관된 데이터가 있습니다:
                   </p>
-                  <ul className="text-sm text-amber-700 dark:text-amber-300 list-disc list-inside space-y-1">
+                  <ul className="text-sm text-brand-warning list-disc list-inside space-y-1">
                     {team.memberCount && team.memberCount > 0 && <li>팀원 {team.memberCount}명</li>}
                     {team.equipmentCount && team.equipmentCount > 0 && (
                       <li>장비 {team.equipmentCount}개</li>
                     )}
                   </ul>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  <p className="text-xs text-brand-warning mt-2">
                     삭제 전 팀원과 장비를 다른 팀으로 이동해주세요.
                   </p>
                 </div>

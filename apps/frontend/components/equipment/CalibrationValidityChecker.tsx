@@ -57,7 +57,7 @@ export function CalibrationValidityChecker({
   }
 
   return (
-    <Alert className="border-green-200 bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200">
+    <Alert className="border-brand-ok bg-brand-ok/10 text-brand-ok">
       <CheckCircle2 className="h-4 w-4" />
       <AlertTitle>교정 유효기간 확인됨</AlertTitle>
       <AlertDescription>

@@ -37,9 +37,9 @@ const getResultLabel = (result: string): string => {
 
 // 결과 색상 (소문자 값만 지원 — 백엔드 정규화 완료)
 const RESULT_COLORS: Record<string, string> = {
-  pass: 'bg-green-100 text-green-800',
-  fail: 'bg-red-100 text-red-800',
-  conditional: 'bg-yellow-100 text-yellow-800',
+  pass: 'bg-brand-ok/10 text-brand-ok',
+  fail: 'bg-brand-critical/10 text-brand-critical',
+  conditional: 'bg-brand-warning/10 text-brand-warning',
 };
 
 import {
@@ -194,7 +194,7 @@ export default function CalibrationApprovalsContent() {
           ) : (
             <div className="space-y-4">
               {pendingRequests.map((request) => (
-                <Card key={request.id} className="border-l-4 border-l-yellow-500">
+                <Card key={request.id} className="border-l-4 border-l-brand-warning">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">
@@ -211,7 +211,7 @@ export default function CalibrationApprovalsContent() {
                           <Badge
                             className={
                               (request.result && RESULT_COLORS[request.result]) ||
-                              'bg-gray-100 text-gray-800'
+                              'bg-brand-neutral/10 text-muted-foreground'
                             }
                           >
                             {request.result ? getResultLabel(request.result) : t('noResult')}

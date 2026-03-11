@@ -13,7 +13,7 @@ export const APPROVAL_STATUS_LABELS: Record<string, string> = {
 };
 
 export const APPROVAL_STATUS_COLORS: Record<string, string> = {
-  pending_approval: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
+  pending_approval: 'bg-brand-warning/10 text-brand-warning',
+  approved: 'bg-brand-ok/10 text-brand-ok',
+  rejected: 'bg-brand-critical/10 text-brand-critical',
 };

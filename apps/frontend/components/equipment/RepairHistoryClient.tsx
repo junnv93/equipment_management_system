@@ -470,12 +470,10 @@ export function RepairHistoryClient({
                 />
 
                 {form.watch('nonConformanceId') && openNonConformances && (
-                  <div className="rounded-md border p-3 bg-blue-50 dark:bg-blue-950 border-blue-200">
+                  <div className="rounded-md border p-3 bg-brand-info/10 border-brand-info">
                     <div className="flex items-start gap-2">
-                      <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-                      <div className="text-sm text-blue-800 dark:text-blue-200">
-                        {t('formAutoLinkInfo')}
-                      </div>
+                      <Info className="h-4 w-4 text-brand-info mt-0.5" />
+                      <div className="text-sm text-brand-info">{t('formAutoLinkInfo')}</div>
                     </div>
                   </div>
                 )}
@@ -663,7 +661,10 @@ export function RepairHistoryClient({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-brand-critical hover:bg-brand-critical/90"
+            >
               {deleteMutation.isPending ? tCommon('deleting') : tCommon('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>

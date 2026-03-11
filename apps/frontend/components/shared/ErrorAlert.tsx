@@ -57,23 +57,23 @@ const severityStyles = {
   error: {
     variant: 'destructive' as const,
     icon: AlertCircle,
-    bgClass: 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900',
-    iconClass: 'text-red-600 dark:text-red-400',
-    titleClass: 'text-red-800 dark:text-red-200',
+    bgClass: 'bg-brand-critical/10 border-brand-critical/20',
+    iconClass: 'text-brand-critical',
+    titleClass: 'text-brand-critical',
   },
   warning: {
     variant: 'default' as const,
     icon: AlertTriangle,
-    bgClass: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900',
-    iconClass: 'text-yellow-600 dark:text-yellow-400',
-    titleClass: 'text-yellow-800 dark:text-yellow-200',
+    bgClass: 'bg-brand-warning/10 border-brand-warning/20',
+    iconClass: 'text-brand-warning',
+    titleClass: 'text-brand-warning',
   },
   info: {
     variant: 'default' as const,
     icon: Info,
-    bgClass: 'bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-900',
-    iconClass: 'text-blue-600 dark:text-blue-400',
-    titleClass: 'text-blue-800 dark:text-blue-200',
+    bgClass: 'bg-brand-info/10 border-brand-info/20',
+    iconClass: 'text-brand-info',
+    titleClass: 'text-brand-info',
   },
 };
 
@@ -339,11 +339,9 @@ export function PartialSuccessAlert({
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   return (
-    <Alert
-      className={`bg-yellow-50 border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-900 ${className}`}
-    >
-      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-      <AlertTitle className="flex items-center justify-between text-yellow-800 dark:text-yellow-200">
+    <Alert className={`bg-brand-warning/10 border-brand-warning/20 ${className}`}>
+      <AlertTriangle className="h-4 w-4 text-brand-warning" />
+      <AlertTitle className="flex items-center justify-between text-brand-warning">
         <span>{t('partialSaveTitle')}</span>
         {onDismiss && (
           <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={onDismiss}>
@@ -357,7 +355,7 @@ export function PartialSuccessAlert({
 
         {failedItems.length > 0 && (
           <>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-2">
+            <p className="text-sm text-brand-warning mt-2">
               {t('partialSaveFailed', { count: failedItems.length })}
             </p>
 
@@ -366,7 +364,7 @@ export function PartialSuccessAlert({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="p-0 h-auto font-normal text-yellow-700 hover:text-yellow-900"
+                  className="p-0 h-auto font-normal text-brand-warning hover:text-brand-warning/80"
                 >
                   {isDetailOpen ? (
                     <ChevronUp className="h-3 w-3 mr-1" />
@@ -393,7 +391,7 @@ export function PartialSuccessAlert({
           </>
         )}
 
-        <div className="mt-3 pt-3 border-t border-yellow-200 dark:border-yellow-800">
+        <div className="mt-3 pt-3 border-t border-brand-warning/20">
           <div className="flex items-center gap-1 text-sm font-medium mb-2">
             <Lightbulb className="h-3 w-3" />
             {t('partialSaveNote')}

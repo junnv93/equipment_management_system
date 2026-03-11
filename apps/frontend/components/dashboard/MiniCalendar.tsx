@@ -133,9 +133,9 @@ export function MiniCalendar({
   };
 
   const getPopupDotClass = (type: EventType) => {
-    if (type === 'overdue') return cn(T.popupItemDot, 'bg-ul-red dark:bg-red-400');
-    if (type === 'upcoming') return cn(T.popupItemDot, 'bg-yellow-400 dark:bg-yellow-500');
-    return cn(T.popupItemDot, 'bg-ul-blue dark:bg-ul-info');
+    if (type === 'overdue') return cn(T.popupItemDot, 'bg-ul-red');
+    if (type === 'upcoming') return cn(T.popupItemDot, 'bg-brand-warning');
+    return cn(T.popupItemDot, 'bg-ul-blue');
   };
 
   const getEventTypeLabel = (type: EventType) => {
@@ -250,9 +250,7 @@ export function MiniCalendar({
                     {cell.dateKey.slice(5).replace('-', '/')}
                   </div>
                   {holidayName && (
-                    <div className="text-[10px] font-medium text-ul-red dark:text-red-400 mb-1">
-                      {holidayName}
-                    </div>
+                    <div className="text-[10px] font-medium text-ul-red mb-1">{holidayName}</div>
                   )}
                   {cell.events.slice(0, DISPLAY_LIMITS.calendarEvents).map((ev, i) => (
                     <div key={`${ev.id}-${i}`} className="flex items-center gap-1.5 py-0.5">
@@ -276,21 +274,19 @@ export function MiniCalendar({
         {/* 범례 */}
         <div className={T.legend}>
           <div className={T.legendItem}>
-            <span className="text-[10px] font-medium text-ul-red dark:text-red-400 tabular-nums leading-none">
-              1
-            </span>
+            <span className="text-[10px] font-medium text-ul-red tabular-nums leading-none">1</span>
             <span className={T.legendText}>{t('legendHoliday')}</span>
           </div>
           <div className={T.legendItem}>
-            <span className={cn(T.legendDot, 'bg-ul-red dark:bg-red-400')} />
+            <span className={cn(T.legendDot, 'bg-ul-red')} />
             <span className={T.legendText}>{t('legendOverdue')}</span>
           </div>
           <div className={T.legendItem}>
-            <span className={cn(T.legendDot, 'bg-yellow-400 dark:bg-yellow-500')} />
+            <span className={cn(T.legendDot, 'bg-brand-warning')} />
             <span className={T.legendText}>{t('legendUpcoming')}</span>
           </div>
           <div className={T.legendItem}>
-            <span className={cn(T.legendDot, 'bg-ul-blue dark:bg-ul-info')} />
+            <span className={cn(T.legendDot, 'bg-ul-blue')} />
             <span className={T.legendText}>{t('legendReturn')}</span>
           </div>
         </div>

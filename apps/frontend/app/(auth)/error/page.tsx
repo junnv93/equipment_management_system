@@ -40,30 +40,34 @@ function ErrorPageContent() {
     <div className="w-full max-w-md animate-fade-in-up">
       {/* 상단 로고 */}
       <div className="flex items-center justify-center gap-2 mb-8">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-info">
           <Wrench className="w-5 h-5 text-white" />
         </div>
-        <span className="text-lg font-bold text-slate-800">{t('errorPage.systemName')}</span>
+        <span className="text-lg font-bold text-foreground">{t('errorPage.systemName')}</span>
       </div>
 
-      <Card className="border-0 shadow-xl rounded-2xl bg-white">
+      <Card className="border-0 shadow-xl rounded-2xl bg-background">
         <CardHeader className="text-center pt-8 pb-4">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-            <AlertCircle className="h-8 w-8 text-red-600" aria-hidden="true" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-critical/10">
+            <AlertCircle className="h-8 w-8 text-brand-critical" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900" data-testid="error-title">
+          <h1 className="text-2xl font-bold text-foreground" data-testid="error-title">
             {title}
           </h1>
         </CardHeader>
 
         <CardContent className="px-8 pb-4">
-          <p className="text-center text-slate-600" role="alert" data-testid="error-description">
+          <p
+            className="text-center text-muted-foreground"
+            role="alert"
+            data-testid="error-description"
+          >
             {description}
           </p>
 
           {errorType !== 'Default' && (
             <div className="mt-4 text-center">
-              <span className="inline-block text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full font-mono">
+              <span className="inline-block text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full font-mono">
                 {t('errorPage.errorCodeLabel')}: {errorType}
               </span>
             </div>
@@ -73,7 +77,7 @@ function ErrorPageContent() {
         <CardFooter className="flex flex-col gap-3 px-8 pb-8">
           <Button
             asChild
-            className="w-full h-12 text-base font-medium bg-blue-600 hover:bg-blue-700 motion-safe:transition-[transform,background-color] motion-reduce:transition-none duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full h-12 text-base font-medium bg-brand-info hover:bg-brand-info/90 text-white motion-safe:transition-[transform,background-color] motion-reduce:transition-none duration-200 hover:scale-[1.02] active:scale-[0.98]"
             aria-label={t('errorPage.backToLogin')}
           >
             <Link href="/login">
@@ -85,7 +89,7 @@ function ErrorPageContent() {
           <Button
             variant="outline"
             onClick={() => window.location.reload()}
-            className="w-full h-12 text-base font-medium border-slate-200 hover:bg-slate-50 motion-safe:transition-colors motion-reduce:transition-none duration-200"
+            className="w-full h-12 text-base font-medium border-border hover:bg-muted motion-safe:transition-colors motion-reduce:transition-none duration-200"
             aria-label={t('errorPage.retry')}
           >
             <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -95,11 +99,11 @@ function ErrorPageContent() {
       </Card>
 
       {/* 하단 도움말 */}
-      <p className="text-center text-xs text-slate-400 mt-6">
+      <p className="text-center text-xs text-muted-foreground mt-6">
         {t('errorPage.helpText')}{' '}
         <button
           type="button"
-          className="text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+          className="text-brand-info hover:text-brand-info/80 hover:underline transition-colors"
           onClick={() => alert(t('errorPage.contactAdmin'))}
         >
           {t('errorPage.contactAdmin')}
@@ -115,28 +119,28 @@ function LoadingFallback() {
     <div className="w-full max-w-md animate-fade-in-up">
       {/* 상단 로고 */}
       <div className="flex items-center justify-center gap-2 mb-8">
-        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-info">
           <Wrench className="w-5 h-5 text-white" />
         </div>
-        <span className="text-lg font-bold text-slate-800">장비 관리 시스템</span>
+        <span className="text-lg font-bold text-foreground">장비 관리 시스템</span>
       </div>
 
-      <Card className="border-0 shadow-xl rounded-2xl bg-white">
+      <Card className="border-0 shadow-xl rounded-2xl bg-background">
         <CardHeader className="text-center pt-8 pb-4">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-            <Loader2 className="h-8 w-8 text-slate-400 animate-spin" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
           </div>
-          <div className="h-8 w-32 mx-auto bg-slate-200 rounded animate-pulse" />
+          <div className="h-8 w-32 mx-auto bg-muted rounded animate-pulse" />
         </CardHeader>
 
         <CardContent className="px-8 pb-4">
-          <div className="h-4 w-full bg-slate-200 rounded animate-pulse mb-2" />
-          <div className="h-4 w-3/4 mx-auto bg-slate-200 rounded animate-pulse" />
+          <div className="h-4 w-full bg-muted rounded animate-pulse mb-2" />
+          <div className="h-4 w-3/4 mx-auto bg-muted rounded animate-pulse" />
         </CardContent>
 
         <CardFooter className="flex flex-col gap-3 px-8 pb-8">
-          <div className="h-12 w-full bg-slate-200 rounded-lg animate-pulse" />
-          <div className="h-12 w-full bg-slate-100 rounded-lg animate-pulse" />
+          <div className="h-12 w-full bg-muted rounded-lg animate-pulse" />
+          <div className="h-12 w-full bg-muted/50 rounded-lg animate-pulse" />
         </CardFooter>
       </Card>
     </div>
@@ -145,7 +149,7 @@ function LoadingFallback() {
 
 export default function AuthErrorPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center p-6 bg-slate-50">
+    <div className="flex min-h-screen items-center justify-center p-6 bg-muted/50">
       <Suspense fallback={<LoadingFallback />}>
         <ErrorPageContent />
       </Suspense>

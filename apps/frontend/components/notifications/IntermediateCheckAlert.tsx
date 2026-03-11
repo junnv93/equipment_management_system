@@ -62,28 +62,28 @@ function getCheckStatus(checkDate: string): 'overdue' | 'today' | 'upcoming' | '
 // 상태별 스타일 (label은 컴포넌트 내에서 t()로 처리)
 const statusStyles = {
   overdue: {
-    alertClass: 'border-red-500 bg-red-50',
-    badgeClass: 'bg-red-100 text-red-800',
+    alertClass: 'border-brand-critical bg-brand-critical/10',
+    badgeClass: 'bg-brand-critical/10 text-brand-critical',
     icon: AlertTriangle,
-    iconClass: 'text-red-500',
+    iconClass: 'text-brand-critical',
   },
   today: {
-    alertClass: 'border-orange-500 bg-orange-50',
-    badgeClass: 'bg-orange-100 text-orange-800',
+    alertClass: 'border-brand-repair bg-brand-repair/10',
+    badgeClass: 'bg-brand-repair/10 text-brand-repair',
     icon: Clock,
-    iconClass: 'text-orange-500',
+    iconClass: 'text-brand-repair',
   },
   upcoming: {
-    alertClass: 'border-yellow-500 bg-yellow-50',
-    badgeClass: 'bg-yellow-100 text-yellow-800',
+    alertClass: 'border-brand-warning bg-brand-warning/10',
+    badgeClass: 'bg-brand-warning/10 text-brand-warning',
     icon: Clock,
-    iconClass: 'text-yellow-500',
+    iconClass: 'text-brand-warning',
   },
   future: {
-    alertClass: 'border-blue-200 bg-blue-50',
-    badgeClass: 'bg-blue-100 text-blue-800',
+    alertClass: 'border-brand-info/40 bg-brand-info/10',
+    badgeClass: 'bg-brand-info/10 text-brand-info',
     icon: Clock,
-    iconClass: 'text-blue-500',
+    iconClass: 'text-brand-info',
   },
 };
 

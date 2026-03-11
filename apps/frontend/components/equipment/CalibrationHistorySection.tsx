@@ -69,22 +69,22 @@ interface CalibrationHistorySectionProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  scheduled: 'bg-brand-info/10 text-brand-info',
+  in_progress: 'bg-brand-warning/10 text-brand-warning',
+  completed: 'bg-brand-ok/10 text-brand-ok',
+  failed: 'bg-brand-critical/10 text-brand-critical',
 };
 
 const APPROVAL_STATUS_COLORS: Record<string, string> = {
-  pending_approval: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  pending_approval: 'bg-brand-warning/10 text-brand-warning',
+  approved: 'bg-brand-ok/10 text-brand-ok',
+  rejected: 'bg-brand-critical/10 text-brand-critical',
 };
 
 const RESULT_COLORS: Record<string, string> = {
-  pass: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  fail: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  conditional: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  pass: 'bg-brand-ok/10 text-brand-ok',
+  fail: 'bg-brand-critical/10 text-brand-critical',
+  conditional: 'bg-brand-warning/10 text-brand-warning',
 };
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
@@ -348,7 +348,10 @@ export function CalibrationHistorySection({
                       {item.approvalStatus && (
                         <Badge
                           variant="outline"
-                          className={APPROVAL_STATUS_COLORS[item.approvalStatus] || 'bg-gray-100'}
+                          className={
+                            APPROVAL_STATUS_COLORS[item.approvalStatus] ||
+                            'bg-brand-neutral/10 text-brand-neutral'
+                          }
                         >
                           {APPROVAL_LABEL_KEYS[item.approvalStatus]
                             ? t(

@@ -26,7 +26,7 @@ interface HighlightTextProps {
 function HighlightTextComponent({
   text,
   search,
-  highlightClassName = 'bg-yellow-200 dark:bg-yellow-800 rounded px-0.5',
+  highlightClassName = 'bg-brand-warning/20 rounded px-0.5',
 }: HighlightTextProps) {
   if (!search || !text) return <>{text}</>;
 

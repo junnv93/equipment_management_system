@@ -290,8 +290,8 @@ export default function CreateCheckoutContent() {
             <div className="space-y-3">
               {/* 목적 선택 (장비 목록 필터링) */}
               {purpose === 'rental' && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                  <p className="text-xs text-amber-800 dark:text-amber-200 font-medium">
+                <div className="p-3 bg-brand-warning/10 border border-brand-warning/30 rounded-md">
+                  <p className="text-xs text-brand-warning font-medium">
                     {t('create.rentalNotice')}
                   </p>
                 </div>
@@ -416,7 +416,7 @@ export default function CreateCheckoutContent() {
                                       {equipment.managementNumber}
                                     </p>
                                     {selectability.selectable && selectability.warningMessage && (
-                                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 leading-tight flex items-start gap-1">
+                                      <p className="text-xs text-brand-warning mt-1.5 leading-tight flex items-start gap-1">
                                         <AlertCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
                                         {selectability.warningMessage}
                                       </p>
@@ -551,7 +551,7 @@ export default function CreateCheckoutContent() {
               {/* 반출 목적 선택 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="purpose" className="text-sm font-medium">
-                  {t('create.purposeLabel')} <span className="text-red-500">*</span>
+                  {t('create.purposeLabel')} <span className="text-brand-critical">*</span>
                 </Label>
                 <Select
                   value={purpose}
@@ -602,7 +602,7 @@ export default function CreateCheckoutContent() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="site" className="text-sm font-medium">
-                      {t('create.lenderSite')} <span className="text-red-500">*</span>
+                      {t('create.lenderSite')} <span className="text-brand-critical">*</span>
                     </Label>
                     <Select value={selectedSite} onValueChange={handleSiteChange}>
                       <SelectTrigger id="site" className="h-10">
@@ -619,7 +619,7 @@ export default function CreateCheckoutContent() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="team" className="text-sm font-medium">
-                      {t('create.lenderTeam')} <span className="text-red-500">*</span>
+                      {t('create.lenderTeam')} <span className="text-brand-critical">*</span>
                     </Label>
                     <Select
                       value={selectedTeamId}
@@ -650,7 +650,7 @@ export default function CreateCheckoutContent() {
               {/* 반출지 입력 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="destination" className="text-sm font-medium">
-                  {t('create.destinationLabel')} <span className="text-red-500">*</span>
+                  {t('create.destinationLabel')} <span className="text-brand-critical">*</span>
                 </Label>
                 <Input
                   id="destination"
@@ -666,7 +666,7 @@ export default function CreateCheckoutContent() {
               {/* 반출 사유 입력 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="reason" className="text-sm font-medium">
-                  {t('create.reasonLabel')} <span className="text-red-500">*</span>
+                  {t('create.reasonLabel')} <span className="text-brand-critical">*</span>
                 </Label>
                 <Textarea
                   id="reason"
@@ -715,7 +715,7 @@ export default function CreateCheckoutContent() {
               {/* 반입 예정일 (필수) */}
               <div className="space-y-2">
                 <Label htmlFor="expectedReturnDate" className="text-sm font-medium">
-                  {t('create.expectedReturnLabel')} <span className="text-red-500">*</span>
+                  {t('create.expectedReturnLabel')} <span className="text-brand-critical">*</span>
                 </Label>
                 <DatePicker
                   selected={expectedReturnDate}

@@ -150,7 +150,7 @@ export default function ConditionCheckClient({
                 </div>
               )}
               {previousCheck.abnormalDetails && (
-                <div className="mt-2 p-2 bg-yellow-50 rounded text-sm">
+                <div className="mt-2 p-2 bg-brand-warning/10 rounded text-sm">
                   <strong>{t('conditionCheck.abnormalContent')}</strong>{' '}
                   {previousCheck.abnormalDetails}
                 </div>
@@ -222,7 +222,9 @@ export default function ConditionCheckClient({
                   <div className="flex gap-2 text-xs">
                     <span
                       className={
-                        check.appearanceStatus === 'normal' ? 'text-green-600' : 'text-red-600'
+                        check.appearanceStatus === 'normal'
+                          ? 'text-brand-ok'
+                          : 'text-brand-critical'
                       }
                     >
                       {t('conditionCheck.appearanceStatus', {
@@ -234,7 +236,7 @@ export default function ConditionCheckClient({
                     </span>
                     <span
                       className={
-                        check.operationStatus === 'normal' ? 'text-green-600' : 'text-red-600'
+                        check.operationStatus === 'normal' ? 'text-brand-ok' : 'text-brand-critical'
                       }
                     >
                       {t('conditionCheck.operationStatus', {

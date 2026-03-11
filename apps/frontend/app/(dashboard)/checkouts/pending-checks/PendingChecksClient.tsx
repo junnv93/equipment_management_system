@@ -74,7 +74,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
   const renderEmptyState = () => (
     <Card className="text-center py-12">
       <CardContent>
-        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+        <CheckCircle2 className="h-16 w-16 text-brand-ok mx-auto mb-4" />
         <h3 className="text-lg font-medium mb-2">{t('pendingChecks.empty.title')}</h3>
         <p className="text-muted-foreground">{t('pendingChecks.empty.description')}</p>
       </CardContent>
@@ -98,7 +98,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+              <Badge variant="outline" className="bg-brand-warning/10 text-brand-warning">
                 <AlertCircle className="h-3 w-3 mr-1" />
                 {t('pendingChecks.badge.required')}
               </Badge>

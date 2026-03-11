@@ -39,9 +39,9 @@ export function SkipLink({ href = '#main-content', children }: SkipLinkProps) {
         sr-only focus-visible:not-sr-only
         focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-[100]
         focus-visible:px-4 focus-visible:py-2
-        focus-visible:bg-blue-600 focus-visible:text-white
+        focus-visible:bg-brand-info focus-visible:text-white
         focus-visible:rounded-md focus-visible:shadow-lg
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
         motion-safe:transition-[opacity,transform] motion-safe:duration-200
         motion-reduce:transition-none
       "

@@ -85,19 +85,19 @@ export function PrintableAuditReport({
       {/* 헤더 */}
       <div className="print:mb-8">
         <h1 className="text-3xl font-bold mb-2">감사 로그 보고서</h1>
-        {title && <h2 className="text-xl text-gray-700 mb-4">{title}</h2>}
-        <div className="mt-4 text-sm text-gray-600 space-y-1">
+        {title && <h2 className="text-xl text-muted-foreground mb-4">{title}</h2>}
+        <div className="mt-4 text-sm text-muted-foreground space-y-1">
           <p>출력 일시: {formatDateTime(new Date())}</p>
           {generatedBy && <p>출력자: {generatedBy}</p>}
           {filters && <p>필터: {formatFilters(filters)}</p>}
         </div>
-        <hr className="mt-4 mb-6 border-gray-300" />
+        <hr className="mt-4 mb-6 border-border" />
       </div>
 
       {/* 로그 목록 */}
       <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b-2 border-gray-800">
+          <tr className="border-b-2 border-foreground">
             <th className="text-left p-3 font-semibold">시간</th>
             <th className="text-left p-3 font-semibold">사용자</th>
             <th className="text-left p-3 font-semibold">액션</th>
@@ -109,7 +109,7 @@ export function PrintableAuditReport({
           {logs.map((log, index) => (
             <tr
               key={log.id}
-              className={`border-b border-gray-300 print:break-inside-avoid ${index % 2 === 0 ? 'bg-gray-50' : ''}`}
+              className={`border-b border-border print:break-inside-avoid ${index % 2 === 0 ? 'bg-muted' : ''}`}
             >
               <td className="p-3 align-top">
                 <div className="font-mono text-xs whitespace-nowrap">

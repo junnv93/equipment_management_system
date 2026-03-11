@@ -29,19 +29,19 @@ export function SharedEquipmentBadge({
   const config = {
     safety_lab: {
       label: t('safetyLab'),
-      className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+      className: 'bg-brand-info/10 text-brand-info',
       icon: Building2,
     },
     external: {
       label: t('external'),
-      className: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+      className: 'bg-brand-purple/10 text-brand-purple',
       icon: Share2,
     },
   };
 
   const sourceConfig = config[sharedSource as keyof typeof config] || {
     label: t('default'),
-    className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+    className: 'bg-brand-neutral/10 text-brand-neutral',
     icon: Share2,
   };
 

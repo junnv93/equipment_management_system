@@ -108,7 +108,7 @@ export function ResponsiveTable<T>({
                 // prefers-reduced-motion 지원
                 'motion-safe:transition-shadow motion-reduce:transition-none',
                 onRowClick && 'cursor-pointer hover:shadow-md',
-                'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2'
+                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               )}
               onClick={() => onRowClick?.(item)}
               role={onRowClick ? 'button' : undefined}
@@ -130,9 +130,7 @@ export function ResponsiveTable<T>({
       data-testid="responsive-table"
     >
       <Table>
-        <TableHeader
-          className={cn(stickyHeader && 'sticky top-0 bg-white dark:bg-gray-900 z-10')}
-        >
+        <TableHeader className={cn(stickyHeader && 'sticky top-0 bg-background z-10')}>
           <TableRow>
             {columns.map((column) => (
               <TableHead
@@ -166,7 +164,7 @@ export function ResponsiveTable<T>({
                   // prefers-reduced-motion 지원
                   'motion-safe:transition-colors motion-reduce:transition-none',
                   onRowClick && 'cursor-pointer hover:bg-muted/50',
-                  'focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2'
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                 )}
                 onClick={() => onRowClick?.(item)}
                 role={onRowClick ? 'button' : undefined}
