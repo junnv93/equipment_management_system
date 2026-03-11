@@ -185,12 +185,11 @@ function CheckoutGroupCard({
       checkoutApi.approveCheckout(id, version),
     onSuccess: () => {
       toast({ title: t('toasts.approveSuccess') });
-      CHECKOUT_APPROVAL_INVALIDATE_KEYS.forEach((key) => {
-        queryClient.invalidateQueries({ queryKey: key as unknown[] });
-      });
     },
     onError: () => {
       toast({ title: t('toasts.approveError'), variant: 'destructive' });
+    },
+    onSettled: () => {
       CHECKOUT_APPROVAL_INVALIDATE_KEYS.forEach((key) => {
         queryClient.invalidateQueries({ queryKey: key as unknown[] });
       });

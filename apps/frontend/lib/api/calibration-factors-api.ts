@@ -33,6 +33,7 @@ export interface CalibrationFactor {
   requestedAt: string;
   approvedAt: string | null;
   approverComment: string | null;
+  version: number;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -62,13 +63,13 @@ export interface CreateCalibrationFactorDto {
 }
 
 export interface ApproveCalibrationFactorDto {
-  approverId: string;
   approverComment: string;
+  version: number;
 }
 
 export interface RejectCalibrationFactorDto {
-  approverId: string;
   rejectionReason: string;
+  version: number;
 }
 
 export interface EquipmentFactors {
@@ -162,9 +163,14 @@ const calibrationFactorsApi = {
     return apiClient.patch(`/api/calibration-factors/${id}/reject`, data).then((res) => res.data);
   },
 
-  // 보정계수 삭제 (소프트 삭제)
-  deleteCalibrationFactor: async (id: string): Promise<{ id: string; deleted: boolean }> => {
-    return apiClient.delete(`/api/calibration-factors/${id}`).then((res) => res.data);
+  // 보정계수 삭제 (소프트 삭제) — CAS version 쿼리 파라미터 포함
+  deleteCalibrationFactor: async (
+    id: string,
+    version: number
+  ): Promise<{ id: string; deleted: boolean }> => {
+    return apiClient
+      .delete(`/api/calibration-factors/${id}?version=${version}`)
+      .then((res) => res.data);
   },
 };
 

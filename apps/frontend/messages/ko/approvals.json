@@ -286,7 +286,9 @@
       "rejectSuccessDesc": "보정계수가 반려되었습니다.",
       "rejectError": "반려 실패",
       "commentRequired": "코멘트 필요",
-      "commentRequiredDesc": "승인 시 검토 코멘트를 입력해주세요."
+      "commentRequiredDesc": "승인 시 검토 코멘트를 입력해주세요.",
+      "conflictError": "동시 수정 충돌",
+      "conflictErrorDesc": "다른 사용자가 이미 처리했습니다. 목록을 새로고침 후 다시 시도하세요."
     }
   },
   "softwareApprovals": {

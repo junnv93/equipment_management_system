@@ -286,7 +286,9 @@
       "rejectSuccessDesc": "Calibration factor has been rejected.",
       "rejectError": "Rejection Failed",
       "commentRequired": "Comment Required",
-      "commentRequiredDesc": "Please enter a review comment for approval."
+      "commentRequiredDesc": "Please enter a review comment for approval.",
+      "conflictError": "Concurrent Modification Conflict",
+      "conflictErrorDesc": "Another user has already processed this request. Please refresh and try again."
     }
   },
   "softwareApprovals": {

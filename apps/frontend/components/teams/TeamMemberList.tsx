@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Search, User, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
 import { getStaggerDelay } from '@/lib/design-tokens/motion';
-import { MOTION_PRIMITIVES } from '@/lib/design-tokens/primitives';
+import { MOTION_TOKENS } from '@/lib/design-tokens';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -160,19 +160,21 @@ export function TeamMemberList({
     return currentRole === 'test_engineer' ? 'technical_manager' : 'test_engineer';
   };
 
-  // 검색 + 역할 복합 필터링
-  const filteredMembers = (members || []).filter((member) => {
-    if (roleFilter !== 'all' && member.role !== roleFilter) return false;
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      member.name.toLowerCase().includes(searchLower) ||
-      member.role?.toLowerCase().includes(searchLower) ||
-      member.email?.toLowerCase().includes(searchLower) ||
-      member.position?.toLowerCase().includes(searchLower) ||
-      member.department?.toLowerCase().includes(searchLower)
-    );
-  });
+  // 검색 + 역할 복합 필터링 — useMemo로 불필요한 재계산 방지
+  const filteredMembers = useMemo(() => {
+    return (members || []).filter((member) => {
+      if (roleFilter !== 'all' && member.role !== roleFilter) return false;
+      if (!search) return true;
+      const searchLower = search.toLowerCase();
+      return (
+        member.name.toLowerCase().includes(searchLower) ||
+        member.role?.toLowerCase().includes(searchLower) ||
+        member.email?.toLowerCase().includes(searchLower) ||
+        member.position?.toLowerCase().includes(searchLower) ||
+        member.department?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [members, search, roleFilter]);
 
   // 역할별 그룹핑
   const groupedMembers = useMemo(() => {
@@ -303,7 +305,7 @@ export function TeamMemberList({
                     )}
                     style={{
                       animationDelay: getStaggerDelay(index, 'list'),
-                      animationDuration: `${MOTION_PRIMITIVES.duration.fast}ms`,
+                      animationDuration: `${MOTION_TOKENS.transition.fast.duration}ms`,
                     }}
                     onClick={() => setProfileMember(member)}
                   >

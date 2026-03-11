@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/api/error';
+import { getErrorMessage, isConflictError } from '@/lib/api/error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,12 +30,10 @@ import calibrationFactorsApi, {
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calculator, Calendar } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 
 export default function CalibrationFactorApprovalsContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
   const t = useTranslations('approvals.calibrationFactorApprovals');
   const tActions = useTranslations('approvals.actions');
   const tCommon = useTranslations('common.actions');
@@ -52,14 +50,17 @@ export default function CalibrationFactorApprovalsContent() {
   const approveMutation = useMutation({
     mutationFn: async ({
       id,
-      approverId,
       approverComment,
+      version,
     }: {
       id: string;
-      approverId: string;
       approverComment: string;
+      version: number;
     }) => {
-      return calibrationFactorsApi.approveCalibrationFactor(id, { approverId, approverComment });
+      return calibrationFactorsApi.approveCalibrationFactor(id, {
+        approverComment,
+        version,
+      });
     },
     onSuccess: () => {
       toast({
@@ -71,6 +72,15 @@ export default function CalibrationFactorApprovalsContent() {
       setSelectedFactor(null);
     },
     onError: (error: unknown) => {
+      if (isConflictError(error)) {
+        toast({
+          title: t('toasts.conflictError'),
+          description: t('toasts.conflictErrorDesc'),
+          variant: 'destructive',
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.pending() });
+        return;
+      }
       toast({
         title: t('toasts.approveError'),
         description: getErrorMessage(error, t('toasts.approveError')),
@@ -86,14 +96,17 @@ export default function CalibrationFactorApprovalsContent() {
   const rejectMutation = useMutation({
     mutationFn: async ({
       id,
-      approverId,
       rejectionReason,
+      version,
     }: {
       id: string;
-      approverId: string;
       rejectionReason: string;
+      version: number;
     }) => {
-      return calibrationFactorsApi.rejectCalibrationFactor(id, { approverId, rejectionReason });
+      return calibrationFactorsApi.rejectCalibrationFactor(id, {
+        rejectionReason,
+        version,
+      });
     },
     onSuccess: () => {
       toast({
@@ -104,6 +117,15 @@ export default function CalibrationFactorApprovalsContent() {
       setSelectedFactor(null);
     },
     onError: (error: unknown) => {
+      if (isConflictError(error)) {
+        toast({
+          title: t('toasts.conflictError'),
+          description: t('toasts.conflictErrorDesc'),
+          variant: 'destructive',
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.pending() });
+        return;
+      }
       toast({
         title: t('toasts.rejectError'),
         description: getErrorMessage(error, t('toasts.rejectError')),
@@ -112,6 +134,7 @@ export default function CalibrationFactorApprovalsContent() {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.pending() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.calibrationFactors.all });
     },
   });
 
@@ -137,8 +160,8 @@ export default function CalibrationFactorApprovalsContent() {
     }
     approveMutation.mutate({
       id: selectedFactor.id,
-      approverId: session?.user?.id as string,
       approverComment: comment,
+      version: selectedFactor.version,
     });
   };
 
@@ -146,8 +169,8 @@ export default function CalibrationFactorApprovalsContent() {
     if (!selectedFactor) return;
     rejectMutation.mutate({
       id: selectedFactor.id,
-      approverId: session?.user?.id as string,
       rejectionReason: reason,
+      version: selectedFactor.version,
     });
   };
 

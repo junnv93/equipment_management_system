@@ -50,7 +50,7 @@ export function useFormSubmission<TData, TVariables>({
   const mutation = useMutation({
     mutationFn,
     onSuccess: () => {
-      // 쿼리 무효화
+      // 쿼리 무효화를 리다이렉트 전에 실행 — 대상 페이지에서 stale 캐시 방지
       invalidateQueries.forEach((queryKey) => {
         queryClient.invalidateQueries({ queryKey });
       });
@@ -64,6 +64,14 @@ export function useFormSubmission<TData, TVariables>({
       // 리다이렉트
       if (redirectPath) {
         router.push(redirectPath);
+      }
+    },
+    onSettled: () => {
+      // 에러 시에도 캐시 갱신 보장
+      if (!redirectPath) {
+        invalidateQueries.forEach((queryKey) => {
+          queryClient.invalidateQueries({ queryKey });
+        });
       }
     },
     onError: (error: unknown) => {
