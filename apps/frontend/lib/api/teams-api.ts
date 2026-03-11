@@ -72,8 +72,8 @@ export const CLASSIFICATION_CONFIG: Record<
   },
   general_rf: {
     color: '#4A90D9', // Blue
-    bgColor: 'bg-blue-100',
-    borderColor: 'border-blue-300',
+    bgColor: 'bg-[#4A90D9]/10',
+    borderColor: 'border-[#4A90D9]',
     icon: 'Radio',
     label: 'General RF',
     classificationCode: 'W',
@@ -96,8 +96,8 @@ export const CLASSIFICATION_CONFIG: Record<
   },
   software: {
     color: '#8B5CF6', // Purple
-    bgColor: 'bg-purple-100',
-    borderColor: 'border-purple-300',
+    bgColor: 'bg-[#8B5CF6]/10',
+    borderColor: 'border-[#8B5CF6]',
     icon: 'Code',
     label: 'Software Program',
     classificationCode: 'P',

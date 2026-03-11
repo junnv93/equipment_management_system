@@ -189,13 +189,13 @@ export interface ConfirmPlanItemDto {
 // ✅ SSOT: packages/schemas의 라벨 재사용
 export const CALIBRATION_PLAN_STATUS_LABELS = SSOT_STATUS_LABELS;
 
-// 상태 색상 (UI 전용 - UL Solutions 브랜드 색상 적용)
+// 상태 색상 (brand CSS 변수 기반 — dark mode 자동 대응)
 export const CALIBRATION_PLAN_STATUS_COLORS: Record<CalibrationPlanStatus, string> = {
-  draft: 'bg-gray-100 text-gray-800',
-  pending_review: 'bg-ul-orange/10 text-ul-orange border border-ul-orange/20',
-  pending_approval: 'bg-ul-fog/10 text-ul-fog border border-ul-fog/20',
-  approved: 'bg-ul-green/10 text-ul-green border border-ul-green/20',
-  rejected: 'bg-ul-red/10 text-ul-red border border-ul-red/20',
+  draft: 'bg-brand-neutral/10 text-brand-neutral',
+  pending_review: 'bg-brand-warning/10 text-brand-warning border border-brand-warning/20',
+  pending_approval: 'bg-brand-info/10 text-brand-info border border-brand-info/20',
+  approved: 'bg-brand-ok/10 text-brand-ok border border-brand-ok/20',
+  rejected: 'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
 };
 
 // ✅ SSOT: packages/schemas의 라벨 재사용

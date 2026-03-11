@@ -91,11 +91,11 @@ export interface CalibrationFactorRegistry {
 export const FACTOR_TYPE_LABELS = CALIBRATION_FACTOR_TYPE_LABELS;
 export const APPROVAL_STATUS_LABELS = CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS;
 
-// 승인 상태 색상
+// 승인 상태 색상 (brand CSS 변수 기반 — dark mode 자동 대응)
 export const APPROVAL_STATUS_COLORS: Record<CalibrationFactorApprovalStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
+  pending: 'bg-brand-warning/10 text-brand-warning',
+  approved: 'bg-brand-ok/10 text-brand-ok',
+  rejected: 'bg-brand-critical/10 text-brand-critical',
 };
 
 // 보정계수 API 객체
