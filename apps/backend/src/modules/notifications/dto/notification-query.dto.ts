@@ -36,6 +36,8 @@ export const notificationQuerySchema = z.object({
   category: NotificationCategoryEnum.optional(),
   recipientId: z.string().uuid({ message: '유효한 수신자 UUID가 아닙니다' }).optional(),
   teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
+  // @SiteScoped 인터셉터가 관리자 엔드포인트에서 주입하는 필드
+  recipientSite: z.string().optional(),
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
   calibrationId: z.string().uuid({ message: '유효한 교정 UUID가 아닙니다' }).optional(),
   rentalId: z.string().uuid({ message: '유효한 대여 UUID가 아닙니다' }).optional(),

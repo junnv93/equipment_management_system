@@ -39,6 +39,9 @@ export const notifications = pgTable(
     actorId: uuid('actor_id'),
     actorName: varchar('actor_name', { length: 100 }),
 
+    // 수신자 사이트 (감사 추적 + 관리자 통계)
+    recipientSite: varchar('recipient_site', { length: 20 }),
+
     // 만료
     expiresAt: timestamp('expires_at'),
 
@@ -61,6 +64,8 @@ export const notifications = pgTable(
     index('idx_notifications_entity').on(table.entityType, table.entityId),
     // 만료 알림 정리 스케줄러
     index('idx_notifications_expires').on(table.expiresAt),
+    // 사이트별 시간순 조회 최적화 (관리자 통계)
+    index('idx_notifications_site_created').on(table.recipientSite, table.createdAt),
   ]
 );
 

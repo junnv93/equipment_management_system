@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
+import type { SQL } from 'drizzle-orm';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 
 /**
@@ -11,6 +12,33 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
  * 알림 CRUD + 읽음 처리 + 미읽음 카운트를 담당.
  * 알림 생성은 NotificationDispatcher가 담당 (이 서비스는 저수준 DB 레이어).
  */
+
+/**
+ * 사용자의 알림 소유권 OR 조건을 빌드한다 (SSOT).
+ *
+ * WHERE (recipientId = userId OR teamId = userTeamId OR isSystemWide = true)
+ *
+ * 개인 알림 + 팀 브로드캐스트 + 시스템 공지 3가지를 포괄.
+ * markAllAsRead에서는 isSystemWide를 의도적으로 제외한다
+ * (시스템 공지는 공유 단일 행 — 한 사용자가 읽음 처리하면 전체 영향).
+ */
+function buildOwnershipCondition(
+  userId: string,
+  userTeamId: string | null,
+  options?: { excludeSystemWide?: boolean }
+): SQL {
+  const conditions: SQL[] = [eq(schema.notifications.recipientId, userId)];
+
+  if (userTeamId) {
+    conditions.push(eq(schema.notifications.teamId, userTeamId));
+  }
+
+  if (!options?.excludeSystemWide) {
+    conditions.push(eq(schema.notifications.isSystemWide, true));
+  }
+
+  return or(...conditions)!;
+}
 
 export interface NotificationRecord {
   id: string;
@@ -30,6 +58,7 @@ export interface NotificationRecord {
   readAt: Date | null;
   actorId: string | null;
   actorName: string | null;
+  recipientSite: string | null;
   expiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -88,16 +117,7 @@ export class NotificationsService {
       pageSize = 20,
     } = query;
 
-    // 기본 수신 조건: 개인 OR 팀 OR 시스템 전체
-    const recipientConditions = [
-      eq(schema.notifications.recipientId, userId),
-      eq(schema.notifications.isSystemWide, true),
-    ];
-    if (userTeamId) {
-      recipientConditions.push(eq(schema.notifications.teamId, userTeamId));
-    }
-
-    const conditions = [or(...recipientConditions)!];
+    const conditions = [buildOwnershipCondition(userId, userTeamId)];
 
     // 추가 필터링
     if (category) {
@@ -168,18 +188,12 @@ export class NotificationsService {
     const count = await this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const recipientConditions = [
-          eq(schema.notifications.recipientId, userId),
-          eq(schema.notifications.isSystemWide, true),
-        ];
-        if (userTeamId) {
-          recipientConditions.push(eq(schema.notifications.teamId, userTeamId));
-        }
-
         const [result] = await this.db
           .select({ count: sql<number>`cast(count(*) as integer)` })
           .from(schema.notifications)
-          .where(and(or(...recipientConditions), eq(schema.notifications.isRead, false)));
+          .where(
+            and(buildOwnershipCondition(userId, userTeamId), eq(schema.notifications.isRead, false))
+          );
 
         return result.count;
       },
@@ -190,13 +204,20 @@ export class NotificationsService {
   }
 
   /**
-   * 단일 알림 조회
+   * 단일 알림 조회 (소유권 검증 포함)
+   *
+   * IDOR 방어: recipientId/teamId/isSystemWide 3-condition OR로 소유권 검증.
+   * 미매칭 시 404 반환 (존재 여부 노출 방지).
    */
-  async findOne(id: string): Promise<NotificationRecord> {
+  async findOne(
+    id: string,
+    userId: string,
+    userTeamId: string | null
+  ): Promise<NotificationRecord> {
     const [notification] = await this.db
       .select()
       .from(schema.notifications)
-      .where(eq(schema.notifications.id, id))
+      .where(and(eq(schema.notifications.id, id), buildOwnershipCondition(userId, userTeamId)))
       .limit(1);
 
     if (!notification) {
@@ -241,15 +262,16 @@ export class NotificationsService {
   ): Promise<{ success: boolean; count: number }> {
     const now = new Date();
 
-    const recipientConditions = [eq(schema.notifications.recipientId, userId)];
-    if (userTeamId) {
-      recipientConditions.push(eq(schema.notifications.teamId, userTeamId));
-    }
-
+    // isSystemWide 제외: 시스템 공지는 공유 단일 행 — 한 사용자가 읽음 처리하면 전체 영향
     const result = await this.db
       .update(schema.notifications)
       .set({ isRead: true, readAt: now, updatedAt: now })
-      .where(and(or(...recipientConditions), eq(schema.notifications.isRead, false)))
+      .where(
+        and(
+          buildOwnershipCondition(userId, userTeamId, { excludeSystemWide: true }),
+          eq(schema.notifications.isRead, false)
+        )
+      )
       .returning({ id: schema.notifications.id });
 
     this.cacheService.delete(`notification:unread:${userId}`);
@@ -278,6 +300,72 @@ export class NotificationsService {
   }
 
   /**
+   * 관리자 알림 현황 조회
+   *
+   * @SiteScoped가 recipientSite를 query에 주입 (site 스코프).
+   * system_admin은 필터 없이 전체 조회.
+   * notifications.teamId는 "팀 브로드캐스트 대상"이므로 관리자 필터에 사용하지 않음.
+   */
+  async findAllAdmin(query: FindAllQuery & { recipientSite?: string }): Promise<{
+    items: NotificationRecord[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    const { category, isRead, search, recipientSite, page = 1, pageSize = 20 } = query;
+
+    const conditions: SQL[] = [];
+
+    // @SiteScoped 인터셉터가 주입한 사이트 필터
+    if (recipientSite) {
+      conditions.push(eq(schema.notifications.recipientSite, recipientSite));
+    }
+
+    if (category) {
+      conditions.push(eq(schema.notifications.category, category));
+    }
+    if (isRead !== undefined) {
+      conditions.push(eq(schema.notifications.isRead, isRead));
+    }
+    if (search) {
+      conditions.push(
+        or(
+          ilike(schema.notifications.title, `%${search}%`),
+          ilike(schema.notifications.content, `%${search}%`)
+        )!
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [{ count }] = await this.db
+      .select({ count: sql<number>`cast(count(*) as integer)` })
+      .from(schema.notifications)
+      .where(whereClause);
+
+    const totalItems = count;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const offset = (page - 1) * pageSize;
+
+    const items = await this.db
+      .select()
+      .from(schema.notifications)
+      .where(whereClause)
+      .orderBy(desc(schema.notifications.createdAt))
+      .limit(pageSize)
+      .offset(offset);
+
+    return {
+      items: items as NotificationRecord[],
+      total: totalItems,
+      page,
+      pageSize,
+      totalPages,
+    };
+  }
+
+  /**
    * 배치 삽입 (Dispatcher가 호출)
    */
   async createBatch(
@@ -296,6 +384,7 @@ export class NotificationsService {
       linkUrl?: string | null;
       actorId?: string | null;
       actorName?: string | null;
+      recipientSite?: string | null;
       expiresAt?: Date | null;
     }>
   ): Promise<NotificationRecord[]> {

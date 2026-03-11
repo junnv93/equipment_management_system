@@ -16,8 +16,9 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@ne
 import { NotificationsService } from './notifications.service';
 import { NotificationPreferencesService } from './services/notification-preferences.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, NOTIFICATION_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { CalibrationOverdueScheduler } from './schedulers/calibration-overdue-scheduler';
 import { CheckoutOverdueScheduler } from './schedulers/checkout-overdue-scheduler';
 import {
@@ -167,6 +168,21 @@ export class NotificationsController {
     return this.checkoutOverdueScheduler.checkOverdueCheckouts();
   }
 
+  // ─── 관리자 알림 현황 조회 (사이트 스코핑) ──────────────────────────
+
+  @Get('admin')
+  @ApiOperation({
+    summary: '관리자 알림 현황 조회',
+    description: '역할별 사이트 스코핑이 적용된 알림 현황을 조회합니다.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: '관리자 알림 현황 조회 성공' })
+  @RequirePermissions(Permission.CREATE_SYSTEM_NOTIFICATION)
+  @SiteScoped({ policy: NOTIFICATION_DATA_SCOPE, siteField: 'recipientSite' })
+  @UsePipes(NotificationQueryValidationPipe)
+  findAllAdmin(@Query() query: NotificationQueryInput): Promise<unknown> {
+    return this.notificationsService.findAllAdmin(query);
+  }
+
   // ─── 파라미터 라우트 (반드시 마지막에 선언) ──────────────────────────
 
   @Get(':id')
@@ -178,8 +194,11 @@ export class NotificationsController {
   @ApiResponse({ status: HttpStatus.OK, description: '알림 상세 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '알림을 찾을 수 없음' })
   @RequirePermissions(Permission.VIEW_NOTIFICATIONS)
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<unknown> {
-    return this.notificationsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
+    return this.notificationsService.findOne(id, req.user.userId, req.user.teamId ?? null);
   }
 
   @Patch(':id/read')

@@ -132,6 +132,25 @@ export class NotificationDispatcher {
       // === Stage 4: 템플릿 렌더링 + DB 배치 삽입 (실패 → early return) ===
       const notification = this.templateService.buildNotification(eventName, enrichedPayload);
 
+      // 수신자 사이트 일괄 조회 (감사 추적 + 관리자 사이트 스코핑용)
+      // 의식적 트레이드오프: RecipientResolver가 이미 users 테이블을 쿼리하지만,
+      // resolver의 반환 타입을 string[] → {id, site}[]로 변경하면 4개 전략 + composite 로직
+      // 전부 수정 필요 (blast radius 큼). PK IN 조회 1회(~1ms)는 수용 가능.
+      const recipientSiteMap = new Map<string, string | null>();
+      try {
+        const userSites = await this.db
+          .select({ id: schema.users.id, site: schema.users.site })
+          .from(schema.users)
+          .where(inArray(schema.users.id, enabledIds));
+        for (const u of userSites) {
+          recipientSiteMap.set(u.id, u.site ?? null);
+        }
+      } catch (err) {
+        this.logger.warn(
+          `수신자 사이트 조회 실패, recipientSite=null로 계속: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
       let retentionDays = DEFAULT_NOTIFICATION_TTL_DAYS;
       try {
         const settings = await this.settingsService.getSystemSettings();
@@ -159,6 +178,7 @@ export class NotificationDispatcher {
         readAt: null,
         actorId: actorId || null,
         actorName: resolvedActorName || null,
+        recipientSite: recipientSiteMap.get(userId) ?? null,
         expiresAt,
       }));
 
