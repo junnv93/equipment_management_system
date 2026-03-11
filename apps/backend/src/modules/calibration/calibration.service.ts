@@ -28,6 +28,7 @@ import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc } from '../../common/utils';
 import * as schema from '@equipment-management/db/schema';
 import { and, eq, gte, lte, count, sql, or, desc, asc, SQL, isNull } from 'drizzle-orm';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 // Drizzle 추론 타입 (DB 컬럼과 1:1 대응)
 type CalibrationRow = typeof schema.calibrations.$inferSelect;
@@ -621,7 +622,7 @@ export class CalibrationService extends VersionedBaseService {
 
     if (calibrationAgency) {
       whereConditions.push(
-        sql`LOWER(${schema.calibrations.agencyName}) LIKE LOWER(${'%' + calibrationAgency + '%'})`
+        safeIlike(schema.calibrations.agencyName, likeContains(calibrationAgency))
       );
     }
 
@@ -648,12 +649,13 @@ export class CalibrationService extends VersionedBaseService {
     }
 
     if (search) {
+      const pattern = likeContains(search);
       const searchCondition = or(
-        sql`LOWER(${schema.calibrations.certificateNumber}) LIKE LOWER(${'%' + search + '%'})`,
-        sql`LOWER(${schema.calibrations.notes}) LIKE LOWER(${'%' + search + '%'})`,
-        sql`LOWER(${schema.calibrations.agencyName}) LIKE LOWER(${'%' + search + '%'})`,
-        sql`LOWER(${schema.equipment.name}) LIKE LOWER(${'%' + search + '%'})`,
-        sql`LOWER(${schema.equipment.managementNumber}) LIKE LOWER(${'%' + search + '%'})`
+        safeIlike(schema.calibrations.certificateNumber, pattern),
+        safeIlike(schema.calibrations.notes, pattern),
+        safeIlike(schema.calibrations.agencyName, pattern),
+        safeIlike(schema.equipment.name, pattern),
+        safeIlike(schema.equipment.managementNumber, pattern)
       );
       if (searchCondition) {
         whereConditions.push(searchCondition);

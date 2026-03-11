@@ -274,9 +274,9 @@ describe('CalibrationFactorsController', () => {
 
       mockCalibrationFactorsService.remove.mockResolvedValue(expectedResult);
 
-      const result = await controller.remove(uuid);
+      const result = await controller.remove(uuid, 1);
 
-      expect(service.remove).toHaveBeenCalledWith(uuid);
+      expect(service.remove).toHaveBeenCalledWith(uuid, 1);
       expect(result).toEqual(expectedResult);
     });
   });

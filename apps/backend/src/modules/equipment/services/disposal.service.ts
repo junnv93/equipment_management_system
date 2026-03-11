@@ -491,6 +491,7 @@ export class DisposalService extends VersionedBaseService {
           .returning();
 
         if (!updated) {
+          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
           throw new ConflictException({
             message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
             code: 'VERSION_CONFLICT',
@@ -518,6 +519,7 @@ export class DisposalService extends VersionedBaseService {
           .returning();
 
         if (!updated) {
+          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
           throw new ConflictException({
             message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
             code: 'VERSION_CONFLICT',
@@ -763,6 +765,7 @@ export class DisposalService extends VersionedBaseService {
           .returning();
 
         if (!updated) {
+          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
           throw new ConflictException({
             message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
             code: 'VERSION_CONFLICT',
@@ -799,6 +802,7 @@ export class DisposalService extends VersionedBaseService {
           .returning();
 
         if (!updated) {
+          this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');
           throw new ConflictException({
             message: '다른 사용자가 이미 수정했습니다. 페이지를 새로고침하세요.',
             code: 'VERSION_CONFLICT',

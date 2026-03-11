@@ -16,7 +16,7 @@ import {
   CLASSIFICATION_TO_CODE,
 } from '@equipment-management/schemas';
 import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
-import { eq, and, like, or, desc, asc, sql, SQL } from 'drizzle-orm';
+import { eq, and, or, desc, asc, sql, SQL } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
@@ -27,6 +27,7 @@ import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { Team } from '@equipment-management/db/schema/teams';
 import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc, addMonthsUtc } from '../../common/utils';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 /**
  * 쿼리 조건 빌더 인터페이스
@@ -326,12 +327,13 @@ export class EquipmentService {
 
     // 검색어 조건은 마지막에 추가 (인덱스 활용도가 낮음)
     if (search) {
+      const pattern = likeContains(search);
       whereConditions.push(
         or(
-          like(equipment.name, `%${search}%`),
-          like(equipment.managementNumber, `%${search}%`),
-          like(equipment.serialNumber, `%${search}%`),
-          sql`${equipment.description} IS NOT NULL AND ${equipment.description} LIKE ${`%${search}%`}`
+          safeIlike(equipment.name, pattern),
+          safeIlike(equipment.managementNumber, pattern),
+          safeIlike(equipment.serialNumber, pattern),
+          safeIlike(equipment.description, pattern)
         )!
       );
     }

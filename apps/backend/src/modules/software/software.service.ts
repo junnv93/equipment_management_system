@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  ConflictException,
+} from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { eq, and, desc, like, or, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, or, sql, inArray } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { CreateSoftwareChangeInput } from './dto/create-software-change.dto';
 import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
@@ -9,13 +15,15 @@ import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 
 // Backward compatibility alias
 const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
 
 /** 캐시 키 상수 */
 const CACHE_KEYS = {
-  REGISTRY: 'software:registry',
+  REGISTRY: `${CACHE_KEY_PREFIXES.SOFTWARE}registry`,
 } as const;
 
 /**
@@ -23,7 +31,7 @@ const CACHE_KEYS = {
  *
  * ✅ DB-backed: Drizzle ORM으로 PostgreSQL 연동
  * ✅ Optimistic Locking: VersionedBaseService 상속으로 CAS 패턴 구현
- * ✅ Transactional: 승인 시 소프트웨어 변경 + 장비 버전 업데이트 원자성 보장
+ * ✅ CAS: 단일 테이블 업데이트는 WHERE절 원자성 보장 (트랜잭션 불필요)
  * ✅ No in-memory state: 서버 재시작 시 데이터 유실 없음
  *
  * @see apps/backend/src/common/base/versioned-base.service.ts
@@ -124,10 +132,11 @@ export class SoftwareService extends VersionedBaseService {
     }
 
     if (search) {
+      const pattern = likeContains(search);
       conditions.push(
         or(
-          like(schema.softwareHistory.softwareName, `%${search}%`),
-          like(schema.softwareHistory.verificationRecord, `%${search}%`)
+          safeIlike(schema.softwareHistory.softwareName, pattern),
+          safeIlike(schema.softwareHistory.verificationRecord, pattern)
         )
       );
     }
@@ -139,21 +148,12 @@ export class SoftwareService extends VersionedBaseService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Count total items (site 필터 시 equipment JOIN 필요)
-    const countQuery = this.db
+    // Count total items (equipment JOIN 항상 포함 — data 쿼리와 동일한 조인 구조)
+    const [{ count: totalItems }] = await this.db
       .select({ count: sql<number>`count(*)::int` })
-      .from(schema.softwareHistory);
-
-    if (site) {
-      countQuery.leftJoin(
-        schema.equipment,
-        eq(schema.softwareHistory.equipmentId, schema.equipment.id)
-      );
-    }
-
-    const [{ count }] = await countQuery.where(whereClause);
-
-    const totalItems = count;
+      .from(schema.softwareHistory)
+      .leftJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
+      .where(whereClause);
     const totalPages = Math.ceil(totalItems / pageSize);
     const offset = (page - 1) * pageSize;
 
@@ -360,8 +360,6 @@ export class SoftwareService extends VersionedBaseService {
     count: number;
   }> {
     // Query software_history for latest approved records
-    const searchName = `%${softwareName.toLowerCase()}%`;
-
     const records = await this.db
       .select({
         equipmentId: schema.softwareHistory.equipmentId,
@@ -372,7 +370,7 @@ export class SoftwareService extends VersionedBaseService {
       .from(schema.softwareHistory)
       .where(
         and(
-          like(sql`LOWER(${schema.softwareHistory.softwareName})`, searchName),
+          safeIlike(schema.softwareHistory.softwareName, likeContains(softwareName)),
           eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatus.APPROVED)
         )
       )
@@ -441,8 +439,7 @@ export class SoftwareService extends VersionedBaseService {
   /**
    * 소프트웨어 변경 승인 (기술책임자)
    *
-   * ✅ Optimistic Locking: updateWithVersion() 사용
-   * ✅ Transactional: 소프트웨어 이력 + 장비 버전 업데이트 원자성 보장
+   * ✅ Optimistic Locking: updateWithVersion() CAS 패턴 (단일 테이블 → 트랜잭션 불필요)
    */
   async approve(
     id: string,
@@ -458,18 +455,26 @@ export class SoftwareService extends VersionedBaseService {
     }
 
     // Use CAS pattern from VersionedBaseService
-    const updated = await this.updateWithVersion<schema.SoftwareHistory>(
-      schema.softwareHistory,
-      id,
-      approveDto.version,
-      {
-        approvalStatus: SoftwareApprovalStatus.APPROVED,
-        approvedBy: approveDto.approverId,
-        approvedAt: new Date(),
-        approverComment: approveDto.approverComment,
-      },
-      'Software change history'
-    );
+    let updated: schema.SoftwareHistory;
+    try {
+      updated = await this.updateWithVersion<schema.SoftwareHistory>(
+        schema.softwareHistory,
+        id,
+        approveDto.version,
+        {
+          approvalStatus: SoftwareApprovalStatus.APPROVED,
+          approvedBy: approveDto.approverId,
+          approvedAt: new Date(),
+          approverComment: approveDto.approverComment,
+        },
+        'Software change history'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(CACHE_KEYS.REGISTRY);
+      }
+      throw error;
+    }
 
     // 승인 후 레지스트리 캐시 무효화 (새 승인 레코드 반영)
     this.cacheService.delete(CACHE_KEYS.REGISTRY);
@@ -496,19 +501,26 @@ export class SoftwareService extends VersionedBaseService {
     }
 
     // Use CAS pattern from VersionedBaseService
-    const updated = await this.updateWithVersion<schema.SoftwareHistory>(
-      schema.softwareHistory,
-      id,
-      rejectDto.version,
-      {
-        approvalStatus: SoftwareApprovalStatus.REJECTED,
-        approvedBy: rejectDto.approverId,
-        approvedAt: new Date(),
-        approverComment: rejectDto.rejectionReason,
-      },
-      'Software change history'
-    );
+    try {
+      const updated = await this.updateWithVersion<schema.SoftwareHistory>(
+        schema.softwareHistory,
+        id,
+        rejectDto.version,
+        {
+          approvalStatus: SoftwareApprovalStatus.REJECTED,
+          approvedBy: rejectDto.approverId,
+          approvedAt: new Date(),
+          approverComment: rejectDto.rejectionReason,
+        },
+        'Software change history'
+      );
 
-    return updated;
+      return updated;
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.delete(CACHE_KEYS.REGISTRY);
+      }
+      throw error;
+    }
   }
 }

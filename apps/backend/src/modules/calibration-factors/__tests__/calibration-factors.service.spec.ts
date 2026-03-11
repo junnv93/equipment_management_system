@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { CalibrationFactorsService } from '../calibration-factors.service';
 import {
   CalibrationFactorTypeValues,
@@ -26,6 +26,7 @@ const MOCK_FACTOR = {
   requestedAt: new Date('2024-01-10'),
   approvedAt: null,
   approverComment: null,
+  version: 1,
   createdAt: new Date('2024-01-10'),
   updatedAt: new Date('2024-01-10'),
   deletedAt: null,
@@ -139,6 +140,7 @@ describe('CalibrationFactorsService', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe(MOCK_FACTOR.id);
       expect(typeof result.factorValue).toBe('number');
+      expect(result.version).toBe(1);
     });
 
     it('should throw NotFoundException when factor not found', async () => {
@@ -167,13 +169,14 @@ describe('CalibrationFactorsService', () => {
   });
 
   describe('approve', () => {
-    it('should approve a pending calibration factor', async () => {
+    it('should approve a pending calibration factor with CAS', async () => {
       const approvedFactor = {
         ...MOCK_FACTOR,
         approvalStatus: 'approved',
         approvedBy: 'approver-uuid',
         approverComment: '검토 완료',
         approvedAt: new Date(),
+        version: 2,
       };
 
       const findChain = createChain([MOCK_FACTOR]);
@@ -184,6 +187,7 @@ describe('CalibrationFactorsService', () => {
       const result = await service.approve('cf-uuid-001', {
         approverId: 'approver-uuid',
         approverComment: '검토 완료',
+        version: 1,
       });
 
       expect(mockDb.update).toHaveBeenCalled();
@@ -196,18 +200,48 @@ describe('CalibrationFactorsService', () => {
       mockDb.select.mockReturnValue(findChain);
 
       await expect(
-        service.approve('cf-uuid-001', { approverId: 'approver-uuid', approverComment: '재승인' })
+        service.approve('cf-uuid-001', {
+          approverId: 'approver-uuid',
+          approverComment: '재승인',
+          version: 1,
+        })
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ConflictException on version mismatch', async () => {
+      // findOne → returns pending factor
+      const findChain = createChain([MOCK_FACTOR]);
+      // updateWithVersion → returns empty (no rows affected)
+      const updateChain = createChain([]);
+      // version check select → returns existing with different version
+      const existingChain = createChain([{ id: MOCK_FACTOR.id, version: 2 }]);
+
+      let selectCall = 0;
+      mockDb.select.mockImplementation(() => {
+        selectCall++;
+        // 1st: findOne, 2nd: updateWithVersion existence check
+        return selectCall === 1 ? findChain : existingChain;
+      });
+      mockDb.update.mockReturnValue(updateChain);
+
+      await expect(
+        service.approve('cf-uuid-001', {
+          approverId: 'approver-uuid',
+          approverComment: '검토 완료',
+          version: 1,
+        })
+      ).rejects.toThrow(ConflictException);
     });
   });
 
   describe('reject', () => {
-    it('should reject a pending calibration factor', async () => {
+    it('should reject a pending calibration factor with CAS', async () => {
       const rejectedFactor = {
         ...MOCK_FACTOR,
         approvalStatus: 'rejected',
         approvedBy: 'approver-uuid',
         approverComment: '범위 초과',
+        version: 2,
       };
 
       const findChain = createChain([MOCK_FACTOR]);
@@ -218,6 +252,7 @@ describe('CalibrationFactorsService', () => {
       const result = await service.reject('cf-uuid-001', {
         approverId: 'approver-uuid',
         rejectionReason: '범위 초과',
+        version: 1,
       });
 
       expect(result.approvalStatus).toBe(CalibrationFactorApprovalStatus.REJECTED);
@@ -229,19 +264,23 @@ describe('CalibrationFactorsService', () => {
       mockDb.select.mockReturnValue(findChain);
 
       await expect(
-        service.reject('cf-uuid-001', { approverId: 'approver-uuid', rejectionReason: '재시도' })
+        service.reject('cf-uuid-001', {
+          approverId: 'approver-uuid',
+          rejectionReason: '재시도',
+          version: 1,
+        })
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('remove (soft delete)', () => {
-    it('should soft delete a calibration factor', async () => {
+    it('should soft delete a calibration factor with CAS', async () => {
       const findChain = createChain([MOCK_FACTOR]);
-      const updateChain = createChain([]);
+      const updateChain = createChain([{ ...MOCK_FACTOR, deletedAt: new Date(), version: 2 }]);
       mockDb.select.mockReturnValue(findChain);
       mockDb.update.mockReturnValue(updateChain);
 
-      const result = await service.remove('cf-uuid-001');
+      const result = await service.remove('cf-uuid-001', 1);
 
       expect(result.id).toBe('cf-uuid-001');
       expect(result.deleted).toBe(true);
@@ -251,7 +290,7 @@ describe('CalibrationFactorsService', () => {
       const emptyChain = createChain([]);
       mockDb.select.mockReturnValue(emptyChain);
 
-      await expect(service.remove('non-existent-id')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('non-existent-id', 1)).rejects.toThrow(NotFoundException);
     });
   });
 

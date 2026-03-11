@@ -68,13 +68,31 @@ export class EquipmentAttachmentService {
     equipmentId?: string,
     requestId?: string
   ): Promise<EquipmentAttachment[]> {
-    const attachments: EquipmentAttachment[] = [];
+    if (files.length === 0) return [];
 
-    for (const file of files) {
-      const attachment = await this.createAttachment(file, attachmentType, equipmentId, requestId);
-      attachments.push(attachment);
-    }
+    // 파일 저장 병렬 처리
+    const savedFiles = await Promise.all(
+      files.map((file) => this.fileUploadService.saveFile(file, 'equipment'))
+    );
 
+    // 단일 배치 INSERT
+    const attachments = await this.db
+      .insert(equipmentAttachments)
+      .values(
+        savedFiles.map((saved) => ({
+          equipmentId,
+          requestId,
+          attachmentType,
+          fileName: saved.fileName,
+          originalFileName: saved.originalFileName,
+          filePath: saved.filePath,
+          fileSize: saved.fileSize,
+          mimeType: saved.mimeType,
+        }))
+      )
+      .returning();
+
+    this.logger.log(`Batch created ${attachments.length} attachments`);
     return attachments;
   }
 

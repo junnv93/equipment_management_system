@@ -11,9 +11,20 @@ import {
   UsePipes,
   BadRequestException,
   Request,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { CalibrationFactorsService } from './calibration-factors.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import {
+  CalibrationFactorsService,
+  type CalibrationFactorRecord,
+} from './calibration-factors.service';
 import {
   CreateCalibrationFactorDto,
   CreateCalibrationFactorValidationPipe,
@@ -26,8 +37,9 @@ import {
   RejectCalibrationFactorValidationPipe,
 } from './dto/approve-calibration-factor.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { AuthenticatedRequest } from '../../types/auth';
 
 @ApiTags('보정계수 관리')
@@ -54,9 +66,7 @@ export class CalibrationFactorsController {
   async create(
     @Body() createDto: CreateCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
-  > {
+  ): Promise<CalibrationFactorRecord> {
     const requestedBy = req.user?.userId || req.user?.sub;
     if (!requestedBy) {
       throw new BadRequestException({
@@ -76,8 +86,9 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
   findAll(@Query() query: CalibrationFactorQueryDto): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -98,8 +109,9 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTOR_REQUESTS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
   findPendingApprovals(): Promise<{
-    items: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    items: CalibrationFactorRecord[];
     meta: {
       totalItems: number;
       itemCount: number;
@@ -120,10 +132,11 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
+  @SiteScoped({ policy: CALIBRATION_DATA_SCOPE })
   getRegistry(): Promise<{
     registry: {
       equipmentId: string;
-      factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+      factors: CalibrationFactorRecord[];
       factorCount: number;
     }[];
     totalEquipments: number;
@@ -145,7 +158,7 @@ export class CalibrationFactorsController {
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
   findByEquipment(@Param('equipmentUuid') equipmentUuid: string): Promise<{
     equipmentId: string;
-    factors: import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord[];
+    factors: CalibrationFactorRecord[];
     count: number;
   }> {
     return this.calibrationFactorsService.findByEquipment(equipmentUuid);
@@ -162,11 +175,7 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_FACTORS)
-  findOne(
-    @Param('uuid') uuid: string
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
-  > {
+  findOne(@Param('uuid') uuid: string): Promise<CalibrationFactorRecord> {
     return this.calibrationFactorsService.findOne(uuid);
   }
 
@@ -188,9 +197,7 @@ export class CalibrationFactorsController {
     @Param('uuid') uuid: string,
     @Body() approveDto: ApproveCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
-  > {
+  ): Promise<CalibrationFactorRecord> {
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
       throw new BadRequestException({
@@ -219,9 +226,7 @@ export class CalibrationFactorsController {
     @Param('uuid') uuid: string,
     @Body() rejectDto: RejectCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/calibration-factors/calibration-factors.service').CalibrationFactorRecord
-  > {
+  ): Promise<CalibrationFactorRecord> {
     const approverId = req.user?.userId || req.user?.sub;
     if (!approverId) {
       throw new BadRequestException({
@@ -244,7 +249,16 @@ export class CalibrationFactorsController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION_FACTOR)
   @AuditLog({ action: 'delete', entityType: 'calibration_factor', entityIdPath: 'params.uuid' })
-  remove(@Param('uuid') uuid: string): Promise<{ id: string; deleted: boolean }> {
-    return this.calibrationFactorsService.remove(uuid);
+  @ApiQuery({
+    name: 'version',
+    required: true,
+    type: Number,
+    description: 'CAS version for optimistic locking',
+  })
+  remove(
+    @Param('uuid') uuid: string,
+    @Query('version', ParseIntPipe) version: number
+  ): Promise<{ id: string; deleted: boolean }> {
+    return this.calibrationFactorsService.remove(uuid, version);
   }
 }

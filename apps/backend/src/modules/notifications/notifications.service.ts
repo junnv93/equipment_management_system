@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { AppDatabase } from '@equipment-management/db';
-import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import type { SQL } from 'drizzle-orm';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 /**
  * 알림 서비스 (DB 기반)
@@ -135,8 +136,8 @@ export class NotificationsService {
     if (search) {
       conditions.push(
         or(
-          ilike(schema.notifications.title, `%${search}%`),
-          ilike(schema.notifications.content, `%${search}%`)
+          safeIlike(schema.notifications.title, likeContains(search)),
+          safeIlike(schema.notifications.content, likeContains(search))
         )!
       );
     }
@@ -331,8 +332,8 @@ export class NotificationsService {
     if (search) {
       conditions.push(
         or(
-          ilike(schema.notifications.title, `%${search}%`),
-          ilike(schema.notifications.content, `%${search}%`)
+          safeIlike(schema.notifications.title, likeContains(search)),
+          safeIlike(schema.notifications.content, likeContains(search))
         )!
       );
     }

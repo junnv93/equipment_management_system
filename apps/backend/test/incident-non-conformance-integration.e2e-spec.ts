@@ -18,14 +18,14 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { eq, and, isNull } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 
 describe('Incident History → Non-Conformance Integration (e2e)', () => {
   let app: INestApplication;
-  let db: PostgresJsDatabase<typeof schema>;
+  let db: AppDatabase;
   let accessToken: string;
   let testEquipmentId: string;
   let createdIncidentIds: string[] = [];
@@ -47,7 +47,7 @@ describe('Incident History → Non-Conformance Integration (e2e)', () => {
     await app.init();
 
     // DB 인스턴스 가져오기
-    db = moduleFixture.get<PostgresJsDatabase<typeof schema>>('DRIZZLE_INSTANCE');
+    db = moduleFixture.get<AppDatabase>('DRIZZLE_INSTANCE');
 
     // 로그인
     const loginResponse = await request(app.getHttpServer()).post('/auth/login').send({

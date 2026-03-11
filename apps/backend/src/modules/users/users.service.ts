@@ -6,8 +6,9 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
-import { eq, ilike, inArray, and, sql } from 'drizzle-orm';
+import { eq, inArray, and, sql, count, asc, desc, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import * as schema from '@equipment-management/db/schema';
 import {
   users as usersTable,
@@ -16,7 +17,7 @@ import {
 import { CreateUserDto, UpdateUserDto, UserQueryDto, ChangeRoleInput } from './dto';
 import { User, UserListResponse, type UserRole } from '@equipment-management/schemas';
 import { getPermissions, Permission } from '@equipment-management/shared-constants';
-import { parseSortString, sortByField } from '../../common/utils/sort';
+import { parseSortString } from '../../common/utils/sort';
 
 interface JwtPayload {
   userId: string;
@@ -33,81 +34,88 @@ export class UsersService {
     private readonly db: AppDatabase
   ) {}
 
+  /** 정렬 가능한 컬럼 매핑 (동적 sort 파라미터 → Drizzle 컬럼) */
+  private static getSortColumn(field?: string) {
+    switch (field) {
+      case 'email':
+        return usersTable.email;
+      case 'role':
+        return usersTable.role;
+      case 'site':
+        return usersTable.site;
+      case 'createdAt':
+        return usersTable.createdAt;
+      case 'updatedAt':
+        return usersTable.updatedAt;
+      default:
+        return usersTable.name;
+    }
+  }
+
   async findAll(query: UserQueryDto): Promise<UserListResponse> {
     // 필터 조건들을 수집
-    const conditions = [];
+    const conditions: SQL[] = [];
 
-    // 이메일 필터
     if (query.email) {
-      conditions.push(ilike(usersTable.email, `%${query.email}%`));
+      conditions.push(safeIlike(usersTable.email, likeContains(query.email)));
     }
 
-    // 이름 필터
     if (query.name) {
-      conditions.push(ilike(usersTable.name, `%${query.name}%`));
+      conditions.push(safeIlike(usersTable.name, likeContains(query.name)));
     }
 
-    // 검색 필터 (이름, 이메일, 직함, 부서)
     if (query.search) {
-      const searchPattern = `%${query.search}%`;
+      const searchPattern = likeContains(query.search);
       conditions.push(
         sql`(
-          ${ilike(usersTable.name, searchPattern)} OR
-          ${ilike(usersTable.email, searchPattern)} OR
-          ${ilike(usersTable.position, searchPattern)} OR
-          ${ilike(usersTable.department, searchPattern)}
+          ${safeIlike(usersTable.name, searchPattern)} OR
+          ${safeIlike(usersTable.email, searchPattern)} OR
+          ${safeIlike(usersTable.position, searchPattern)} OR
+          ${safeIlike(usersTable.department, searchPattern)}
         )`
       );
     }
 
-    // 역할 필터
     if (query.roles) {
       const roleList = query.roles.split(',');
       conditions.push(inArray(usersTable.role, roleList));
     }
 
-    // 팀 필터
     if (query.teams) {
       const teamList = query.teams.split(',');
       conditions.push(inArray(usersTable.teamId, teamList));
     }
 
-    // 사이트 필터
     if (query.site) {
       conditions.push(eq(usersTable.site, query.site));
     }
 
-    // 쿼리 빌드
-    let dbQuery = this.db.select().from(usersTable);
-
-    // 조건이 있으면 and()로 결합
-    if (conditions.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      dbQuery = dbQuery.where(and(...conditions)) as any;
-    }
-
-    // 전체 데이터 조회
-    const allUsers = await dbQuery;
-
-    let filteredUsers = allUsers.map((user) => this.toUser(user));
-
-    // 정렬
-    const sortConfig = parseSortString(query.sort);
-    if (sortConfig) {
-      filteredUsers = sortByField(filteredUsers, sortConfig.field, sortConfig.direction);
-    } else {
-      // 기본 정렬: 이름 오름차순
-      filteredUsers = sortByField(filteredUsers, 'name', 'asc');
-    }
-
-    // 페이지네이션
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const page = query.page || 1;
     const pageSize = query.pageSize || 20;
-    const total = filteredUsers.length;
-    const totalPages = Math.ceil(total / pageSize);
-    const skip = (page - 1) * pageSize;
+    const offset = (page - 1) * pageSize;
 
-    const items = filteredUsers.slice(skip, skip + pageSize);
+    // 1) Count 쿼리
+    const [{ total }] = await this.db
+      .select({ total: count() })
+      .from(usersTable)
+      .where(whereClause);
+
+    // 2) DB 레벨 정렬 + 페이지네이션
+    const sortConfig = parseSortString(query.sort);
+    const sortColumn = UsersService.getSortColumn(sortConfig?.field);
+    const sortDirection = sortConfig?.direction === 'desc' ? desc : asc;
+
+    const rows = await this.db
+      .select()
+      .from(usersTable)
+      .where(whereClause)
+      .orderBy(sortDirection(sortColumn))
+      .limit(pageSize)
+      .offset(offset);
+
+    const items = rows.map((user) => this.toUser(user));
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
       items,

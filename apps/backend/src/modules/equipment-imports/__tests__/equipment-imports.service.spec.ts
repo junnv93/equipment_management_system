@@ -5,6 +5,7 @@ import { EquipmentService } from '../../equipment/equipment.service';
 import { CheckoutsService } from '../../checkouts/checkouts.service';
 import { createMockEventEmitter } from '../../../common/testing/mock-providers';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 
 const MOCK_IMPORT = {
   id: 'import-uuid-1',
@@ -114,6 +115,10 @@ describe('EquipmentImportsService', () => {
           },
         },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        {
+          provide: SimpleCacheService,
+          useValue: { get: jest.fn(), set: jest.fn(), delete: jest.fn(), getOrSet: jest.fn() },
+        },
       ],
     }).compile();
 

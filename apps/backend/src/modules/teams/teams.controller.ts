@@ -11,10 +11,8 @@ import {
   HttpStatus,
   HttpCode,
   NotFoundException,
-  BadRequestException,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { getErrorMessage } from '../../common/utils/error';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
@@ -82,16 +80,7 @@ export class TeamsController {
   @ApiResponse({ status: 201, description: '팀 생성 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청' })
   async create(@Body() createTeamDto: CreateTeamDto): Promise<unknown> {
-    try {
-      const team = await this.teamsService.create(createTeamDto);
-      return team;
-    } catch (error) {
-      throw new BadRequestException({
-        code: 'INVALID_REQUEST',
-        message: '팀 생성 중 오류가 발생했습니다.',
-        details: { error: getErrorMessage(error) },
-      });
-    }
+    return this.teamsService.create(createTeamDto);
   }
 
   @Put(':id')

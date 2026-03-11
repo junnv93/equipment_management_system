@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
-import { eq, and, asc, desc, sql, isNull, ilike, or, lte, gte } from 'drizzle-orm';
+import { eq, and, asc, desc, sql, isNull, or, lte, gte } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import * as schema from '@equipment-management/db/schema';
 import { calibrationFactors, CalibrationFactor } from '@equipment-management/db/schema';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
@@ -10,6 +11,7 @@ import {
   RejectCalibrationFactorDto,
 } from './dto/approve-calibration-factor.dto';
 import { CalibrationFactorApprovalStatusValues } from '@equipment-management/schemas';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 
 const CalibrationFactorApprovalStatus = CalibrationFactorApprovalStatusValues;
 
@@ -31,17 +33,20 @@ export interface CalibrationFactorRecord {
   requestedAt: Date;
   approvedAt: Date | null;
   approverComment: string | null;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
 }
 
 @Injectable()
-export class CalibrationFactorsService {
+export class CalibrationFactorsService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
-  ) {}
+    protected readonly db: AppDatabase
+  ) {
+    super();
+  }
 
   /**
    * Drizzle CalibrationFactor → CalibrationFactorRecord 변환
@@ -105,7 +110,7 @@ export class CalibrationFactorsService {
     if (equipmentId) conditions.push(eq(calibrationFactors.equipmentId, equipmentId));
     if (approvalStatus) conditions.push(eq(calibrationFactors.approvalStatus, approvalStatus));
     if (factorType) conditions.push(eq(calibrationFactors.factorType, factorType));
-    if (search) conditions.push(ilike(calibrationFactors.factorName, `%${search}%`));
+    if (search) conditions.push(safeIlike(calibrationFactors.factorName, likeContains(search)));
 
     const [sortField, sortOrder] = sort.split('.');
     const sortColumn =
@@ -247,7 +252,7 @@ export class CalibrationFactorsService {
     } as CalibrationFactorQueryDto);
   }
 
-  // 보정계수 승인 (기술책임자)
+  // 보정계수 승인 (기술책임자) — CAS 적용
   async approve(
     id: string,
     approveDto: ApproveCalibrationFactorDto & { approverId: string }
@@ -261,23 +266,23 @@ export class CalibrationFactorsService {
       });
     }
 
-    const now = new Date();
-    const [updated] = await this.db
-      .update(calibrationFactors)
-      .set({
+    const updated = await this.updateWithVersion<CalibrationFactor>(
+      calibrationFactors,
+      id,
+      approveDto.version,
+      {
         approvalStatus: CalibrationFactorApprovalStatus.APPROVED,
         approvedBy: approveDto.approverId,
-        approvedAt: now,
+        approvedAt: new Date(),
         approverComment: approveDto.approverComment,
-        updatedAt: now,
-      })
-      .where(eq(calibrationFactors.id, id))
-      .returning();
+      },
+      '보정계수'
+    );
 
     return this.normalize(updated);
   }
 
-  // 보정계수 반려 (기술책임자)
+  // 보정계수 반려 (기술책임자) — CAS 적용
   async reject(
     id: string,
     rejectDto: RejectCalibrationFactorDto & { approverId: string }
@@ -291,30 +296,33 @@ export class CalibrationFactorsService {
       });
     }
 
-    const now = new Date();
-    const [updated] = await this.db
-      .update(calibrationFactors)
-      .set({
+    const updated = await this.updateWithVersion<CalibrationFactor>(
+      calibrationFactors,
+      id,
+      rejectDto.version,
+      {
         approvalStatus: CalibrationFactorApprovalStatus.REJECTED,
         approvedBy: rejectDto.approverId,
-        approvedAt: now,
+        approvedAt: new Date(),
         approverComment: rejectDto.rejectionReason,
-        updatedAt: now,
-      })
-      .where(eq(calibrationFactors.id, id))
-      .returning();
+      },
+      '보정계수'
+    );
 
     return this.normalize(updated);
   }
 
-  // 소프트 삭제
-  async remove(id: string): Promise<{ id: string; deleted: boolean }> {
+  // 소프트 삭제 — CAS 적용
+  async remove(id: string, version: number): Promise<{ id: string; deleted: boolean }> {
     await this.findOne(id);
 
-    await this.db
-      .update(calibrationFactors)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(calibrationFactors.id, id));
+    await this.updateWithVersion(
+      calibrationFactors,
+      id,
+      version,
+      { deletedAt: new Date() },
+      '보정계수'
+    );
 
     return { id, deleted: true };
   }

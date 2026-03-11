@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, Inject } from '@nestjs/common';
-import { eq, ilike, inArray, and, sql, SQL } from 'drizzle-orm';
+import { eq, inArray, and, sql, SQL, count } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import * as schema from '@equipment-management/db/schema';
 import {
   teams as teamsTable,
@@ -35,15 +36,26 @@ export class TeamsService {
     }
 
     if (query.search) {
-      const searchPattern = `%${query.search}%`;
+      const searchPattern = likeContains(query.search);
       conditions.push(
-        sql`(${ilike(teamsTable.name, searchPattern)} OR ${ilike(teamsTable.description, searchPattern)})`
+        sql`(${safeIlike(teamsTable.name, searchPattern)} OR ${safeIlike(teamsTable.description, searchPattern)})`
       );
     }
 
     // JOIN + GROUP BY 패턴 (DashboardService와 동일)
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 20;
+    const offset = (page - 1) * pageSize;
+
+    // 1) Count 쿼리 (JOIN 없이 teams 테이블만 — 정확한 팀 수)
+    const [{ total }] = await this.db
+      .select({ total: count() })
+      .from(teamsTable)
+      .where(whereClause);
+
+    // 2) 데이터 쿼리 (DB 레벨 LIMIT/OFFSET)
     const rows = await this.db
       .select({
         id: teamsTable.id,
@@ -78,19 +90,12 @@ export class TeamsService {
         teamsTable.createdAt,
         teamsTable.updatedAt
       )
-      .orderBy(teamsTable.name);
+      .orderBy(teamsTable.name)
+      .limit(pageSize)
+      .offset(offset);
 
-    // 결과를 Team 타입으로 변환
-    let items: Team[] = rows.map((row) => this.toTeam(row));
-
-    // 페이지네이션
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
-    const total = items.length;
+    const items: Team[] = rows.map((row) => this.toTeam(row));
     const totalPages = Math.ceil(total / pageSize);
-    const skip = (page - 1) * pageSize;
-
-    items = items.slice(skip, skip + pageSize);
 
     return {
       items,

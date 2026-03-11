@@ -30,7 +30,7 @@ import {
   getAllowedStatusesForPurpose,
   Permission,
 } from '@equipment-management/shared-constants';
-import { eq, and, like, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
+import { eq, and, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
@@ -44,6 +44,7 @@ import { EquipmentImportsService } from '../equipment-imports/equipment-imports.
 import { ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
 // Drizzle에서 자동 추론되는 타입 사용
 type Checkout = typeof checkouts.$inferSelect;
 
@@ -390,11 +391,12 @@ export class CheckoutsService extends VersionedBaseService {
 
     // 검색어 조건
     if (search) {
+      const pattern = likeContains(search);
       whereConditions.push(
         or(
-          like(checkouts.destination, `%${search}%`),
-          like(checkouts.reason, `%${search}%`),
-          like(checkouts.address, `%${search}%`)
+          safeIlike(checkouts.destination, pattern),
+          safeIlike(checkouts.reason, pattern),
+          safeIlike(checkouts.address, pattern)
         )!
       );
     }
@@ -1873,33 +1875,24 @@ export class CheckoutsService extends VersionedBaseService {
   > {
     this.validateUuid(uuid, 'checkoutId');
 
-    const checks = await this.db
-      .select()
+    const rows = await this.db
+      .select({
+        check: conditionChecks,
+        checkerId: schema.users.id,
+        checkerName: schema.users.name,
+        checkerEmail: schema.users.email,
+      })
       .from(conditionChecks)
+      .leftJoin(schema.users, eq(schema.users.id, conditionChecks.checkedBy))
       .where(eq(conditionChecks.checkoutId, uuid))
       .orderBy(asc(conditionChecks.checkedAt));
 
-    // checker 정보 조인
-    const checksWithChecker = await Promise.all(
-      checks.map(async (check) => {
-        const [checkerData] = await this.db
-          .select({
-            id: schema.users.id,
-            name: schema.users.name,
-            email: schema.users.email,
-          })
-          .from(schema.users)
-          .where(eq(schema.users.id, check.checkedBy))
-          .limit(1);
-
-        return {
-          ...check,
-          checker: checkerData || undefined,
-        };
-      })
-    );
-
-    return checksWithChecker;
+    return rows.map((row) => ({
+      ...row.check,
+      checker: row.checkerId
+        ? { id: row.checkerId, name: row.checkerName, email: row.checkerEmail }
+        : undefined,
+    }));
   }
 
   /**

@@ -8,6 +8,7 @@ import {
   date,
   jsonb,
   index,
+  integer,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
@@ -78,6 +79,9 @@ export const calibrationFactors = pgTable(
     requestedAt: timestamp('requested_at').defaultNow().notNull(), // 요청 시각
     approvedAt: timestamp('approved_at'), // 승인 시각
     approverComment: text('approver_comment'), // 승인/반려 시 코멘트
+
+    // Optimistic Locking (CAS)
+    version: integer('version').notNull().default(1),
 
     // 시스템 필드
     createdAt: timestamp('created_at').defaultNow().notNull(),

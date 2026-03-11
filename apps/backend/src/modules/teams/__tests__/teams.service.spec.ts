@@ -11,6 +11,8 @@ const createDrizzleChain = (finalValue: unknown): Record<string, jest.Mock> => {
     'where',
     'groupBy',
     'orderBy',
+    'limit',
+    'offset',
     'leftJoin',
     'insert',
     'values',
@@ -22,14 +24,21 @@ const createDrizzleChain = (finalValue: unknown): Record<string, jest.Mock> => {
   for (const m of methods) {
     chain[m] = jest.fn().mockReturnValue(chain);
   }
-  // 마지막 체인 메서드(orderBy, returning 등)에서 실제 값 반환
-  chain.orderBy.mockResolvedValue(finalValue);
+  // returning()은 항상 체인의 마지막이므로 직접 값 반환
   chain.returning.mockResolvedValue(finalValue);
-  // chain 자체를 thenable로 만들어 groupBy()가 마지막 호출인 findOne을 지원
-  // await chain.groupBy() → chain 반환 → await chain → chain.then(resolve) → finalValue
+  // 나머지 체인 메서드(orderBy, groupBy, offset 등)는 chain을 반환하고,
+  // await chain → thenable로 최종값 해결 (체인 길이에 무관하게 작동)
   (chain as Record<string, unknown>).then = (resolve: (v: unknown) => void) => resolve(finalValue);
   return chain;
 };
+
+/** findAll의 count + data 쿼리 2회 select mock 설정 */
+function setupFindAllMock(mockDb: { select: jest.Mock }, total: number, rows: unknown[]): void {
+  const countChain = createDrizzleChain([{ total }]);
+  const dataChain = createDrizzleChain(rows);
+  mockDb.select.mockReset();
+  mockDb.select.mockReturnValueOnce(countChain).mockReturnValue(dataChain);
+}
 
 describe('TeamsService', () => {
   let service: TeamsService;
@@ -64,6 +73,7 @@ describe('TeamsService', () => {
     chain = createDrizzleChain([MOCK_TEAM_ROW]);
 
     mockDb = {
+      // 기본: findOne/create/delete용 단일 select 체인
       select: jest.fn().mockReturnValue(chain),
       insert: jest.fn().mockReturnValue(chain),
       update: jest.fn().mockReturnValue(chain),
@@ -82,6 +92,8 @@ describe('TeamsService', () => {
 
   describe('findAll()', () => {
     it('기본 쿼리로 팀 목록과 페이지네이션 정보를 반환한다', async () => {
+      setupFindAllMock(mockDb, 1, [MOCK_TEAM_ROW]);
+
       const result = await service.findAll({ page: 1, pageSize: 20 });
 
       expect(result.items).toHaveLength(1);
@@ -91,6 +103,8 @@ describe('TeamsService', () => {
     });
 
     it('팀 항목에 memberCount와 equipmentCount가 포함된다 (JOIN 패턴 검증)', async () => {
+      setupFindAllMock(mockDb, 1, [MOCK_TEAM_ROW]);
+
       const result = await service.findAll({});
 
       const team = result.items[0];
@@ -99,7 +113,7 @@ describe('TeamsService', () => {
     });
 
     it('빈 결과에서 total이 0이어야 한다', async () => {
-      chain.orderBy.mockResolvedValue([]);
+      setupFindAllMock(mockDb, 0, []);
 
       const result = await service.findAll({});
 
@@ -109,8 +123,11 @@ describe('TeamsService', () => {
     });
 
     it('페이지네이션이 올바르게 적용된다', async () => {
-      const rows = Array.from({ length: 25 }, (_, i) => ({ ...MOCK_TEAM_ROW, id: `team-${i}` }));
-      chain.orderBy.mockResolvedValue(rows);
+      const rows = Array.from({ length: 10 }, (_, i) => ({
+        ...MOCK_TEAM_ROW,
+        id: `team-${i}`,
+      }));
+      setupFindAllMock(mockDb, 25, rows);
 
       const result = await service.findAll({ page: 2, pageSize: 10 });
 
@@ -121,12 +138,11 @@ describe('TeamsService', () => {
     });
 
     it('팀 leaderName이 리더가 없으면 undefined이어야 한다', async () => {
-      chain.orderBy.mockResolvedValue([{ ...MOCK_TEAM_ROW, leaderId: null, leaderName: null }]);
+      setupFindAllMock(mockDb, 1, [{ ...MOCK_TEAM_ROW, leaderId: null, leaderName: null }]);
 
       const result = await service.findAll({});
 
       expect(result.items[0].leaderId).toBeUndefined();
-      // leaderName은 toTeam()이 as Team 캐스트로 추가하는 런타임 필드
       expect((result.items[0] as unknown as { leaderName?: string }).leaderName).toBeUndefined();
     });
   });
@@ -141,9 +157,8 @@ describe('TeamsService', () => {
     });
 
     it('존재하지 않는 팀 ID에 대해 null을 반환한다', async () => {
-      chain.orderBy.mockResolvedValue([]);
-      // findOne은 select().from()...orderBy()를 사용하므로 체인 마지막이 groupBy → 재설정
-      chain.groupBy.mockResolvedValue([]);
+      const emptyChain = createDrizzleChain([]);
+      mockDb.select.mockReturnValue(emptyChain);
 
       const result = await service.findOne('non-existent-id');
 
@@ -166,9 +181,11 @@ describe('TeamsService', () => {
 
     it('중복이 없으면 팀을 생성하고 반환한다', async () => {
       mockDb.query.teams.findFirst.mockResolvedValue(null);
-      chain.returning.mockResolvedValue([{ ...MOCK_TEAM_ROW, id: 'new-team-id' }]);
-      // findOne 내부 select 체인도 작동하도록
-      chain.groupBy.mockResolvedValue([{ ...MOCK_TEAM_ROW, id: 'new-team-id' }]);
+      const newTeamRow = { ...MOCK_TEAM_ROW, id: 'new-team-id' };
+      chain.returning.mockResolvedValue([newTeamRow]);
+      // create() → insert → findOne → select 체인 (thenable 해결)
+      const findOneChain = createDrizzleChain([newTeamRow]);
+      mockDb.select.mockReturnValue(findOneChain);
 
       const result = await service.create({
         name: 'New Team',
@@ -182,7 +199,6 @@ describe('TeamsService', () => {
 
   describe('remove()', () => {
     it('존재하는 팀을 삭제하면 true를 반환한다', async () => {
-      // delete().where().returning()이 결과 배열 반환
       const deleteChain = { where: jest.fn(), returning: jest.fn() };
       mockDb.delete.mockReturnValue(deleteChain);
       deleteChain.where.mockReturnValue(deleteChain);

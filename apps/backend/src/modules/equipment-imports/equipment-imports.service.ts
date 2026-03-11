@@ -5,10 +5,13 @@ import {
   Inject,
   Logger,
   forwardRef,
+  ConflictException,
 } from '@nestjs/common';
-import { eq, and, like, desc, sql, SQL, or } from 'drizzle-orm';
+import { eq, and, desc, sql, SQL, or } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import * as schema from '@equipment-management/db/schema';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { equipment } from '@equipment-management/db/schema/equipment';
@@ -17,6 +20,8 @@ import {
   EquipmentImportStatusValues as EIVal,
   EquipmentStatusValues as ESVal,
   generateTemporaryManagementNumber,
+  SITE_TO_CODE,
+  TEMPORARY_EQUIPMENT_PREFIX,
   type Classification,
   type Site,
 } from '@equipment-management/schemas';
@@ -37,6 +42,7 @@ import {
   getSharedSource,
   type EquipmentImportListResult,
 } from './types/equipment-import.types';
+import { likeContains, likeStartsWith, safeIlike } from '../../common/utils/like-escape';
 
 type EquipmentImport = typeof equipmentImports.$inferSelect;
 
@@ -50,7 +56,8 @@ export class EquipmentImportsService extends VersionedBaseService {
     private readonly equipmentService: EquipmentService,
     @Inject(forwardRef(() => CheckoutsService))
     private readonly checkoutsService: CheckoutsService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly cacheService: SimpleCacheService
   ) {
     super();
   }
@@ -164,11 +171,12 @@ export class EquipmentImportsService extends VersionedBaseService {
       whereConditions.push(eq(equipmentImports.teamId, query.teamId));
     }
     if (query.search) {
+      const pattern = likeContains(query.search);
       whereConditions.push(
         or(
-          like(equipmentImports.equipmentName, `%${query.search}%`),
-          like(equipmentImports.vendorName, `%${query.search}%`),
-          like(equipmentImports.ownerDepartment, `%${query.search}%`)
+          safeIlike(equipmentImports.equipmentName, pattern),
+          safeIlike(equipmentImports.vendorName, pattern),
+          safeIlike(equipmentImports.ownerDepartment, pattern)
         )!
       );
     }
@@ -292,17 +300,25 @@ export class EquipmentImportsService extends VersionedBaseService {
     }
 
     // ✅ CAS: optimistic locking
-    const updated = await this.updateWithVersion<EquipmentImport>(
-      equipmentImports,
-      id,
-      dto.version,
-      {
-        status: EIVal.APPROVED as EquipmentImportStatus,
-        approverId,
-        approvedAt: new Date(),
-      },
-      'Equipment import'
-    );
+    let updated: EquipmentImport;
+    try {
+      updated = await this.updateWithVersion<EquipmentImport>(
+        equipmentImports,
+        id,
+        dto.version,
+        {
+          status: EIVal.APPROVED as EquipmentImportStatus,
+          approverId,
+          approvedAt: new Date(),
+        },
+        'Equipment import'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+      }
+      throw error;
+    }
 
     this.logger.log(`Equipment import approved: ${id} (sourceType: ${updated.sourceType})`);
 
@@ -341,18 +357,26 @@ export class EquipmentImportsService extends VersionedBaseService {
     }
 
     // ✅ CAS: optimistic locking
-    const updated = await this.updateWithVersion<EquipmentImport>(
-      equipmentImports,
-      id,
-      dto.version,
-      {
-        status: EIVal.REJECTED as EquipmentImportStatus,
-        approverId,
-        approvedAt: new Date(),
-        rejectionReason: dto.rejectionReason,
-      },
-      'Equipment import'
-    );
+    let updated: EquipmentImport;
+    try {
+      updated = await this.updateWithVersion<EquipmentImport>(
+        equipmentImports,
+        id,
+        dto.version,
+        {
+          status: EIVal.REJECTED as EquipmentImportStatus,
+          approverId,
+          approvedAt: new Date(),
+          rejectionReason: dto.rejectionReason,
+        },
+        'Equipment import'
+      );
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+      }
+      throw error;
+    }
 
     // 📢 알림 이벤트 발행 (장비 반입 거절)
     this.eventEmitter.emit(NOTIFICATION_EVENTS.IMPORT_REJECTED, {
@@ -427,62 +451,70 @@ export class EquipmentImportsService extends VersionedBaseService {
     );
 
     // 장비 생성 + 반입 상태 업데이트 — 원자성 보장
-    const updated = await this.db.transaction(async (tx) => {
-      const [newEquipment] = await tx
-        .insert(equipment)
-        .values({
-          name: equipmentImport.equipmentName,
-          managementNumber,
-          site: equipmentImport.site,
-          modelName: equipmentImport.modelName,
-          manufacturer: equipmentImport.manufacturer,
-          serialNumber: equipmentImport.serialNumber,
-          description: equipmentImport.description,
-          teamId: equipmentImport.teamId,
-          isShared: true,
-          sharedSource, // 'external' or 'internal_shared'
-          owner, // vendorName or ownerDepartment
-          externalIdentifier,
-          usagePeriodStart: equipmentImport.usagePeriodStart,
-          usagePeriodEnd: equipmentImport.usagePeriodEnd,
-          status: 'temporary',
-          isActive: true,
-          approvalStatus: EIVal.APPROVED,
-          // 교정 정보 추가
-          calibrationMethod: dto.calibrationInfo?.calibrationMethod || null,
-          calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
-          lastCalibrationDate: dto.calibrationInfo?.lastCalibrationDate
-            ? new Date(dto.calibrationInfo.lastCalibrationDate)
-            : null,
-          calibrationAgency: dto.calibrationInfo?.calibrationAgency || null,
-          nextCalibrationDate,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        } as typeof equipment.$inferInsert)
-        .returning();
+    let updated: typeof equipmentImports.$inferSelect;
+    try {
+      updated = await this.db.transaction(async (tx) => {
+        const [newEquipment] = await tx
+          .insert(equipment)
+          .values({
+            name: equipmentImport.equipmentName,
+            managementNumber,
+            site: equipmentImport.site,
+            modelName: equipmentImport.modelName,
+            manufacturer: equipmentImport.manufacturer,
+            serialNumber: equipmentImport.serialNumber,
+            description: equipmentImport.description,
+            teamId: equipmentImport.teamId,
+            isShared: true,
+            sharedSource, // 'external' or 'internal_shared'
+            owner, // vendorName or ownerDepartment
+            externalIdentifier,
+            usagePeriodStart: equipmentImport.usagePeriodStart,
+            usagePeriodEnd: equipmentImport.usagePeriodEnd,
+            status: 'temporary',
+            isActive: true,
+            approvalStatus: EIVal.APPROVED,
+            // 교정 정보 추가
+            calibrationMethod: dto.calibrationInfo?.calibrationMethod || null,
+            calibrationCycle: dto.calibrationInfo?.calibrationCycle || null,
+            lastCalibrationDate: dto.calibrationInfo?.lastCalibrationDate
+              ? new Date(dto.calibrationInfo.lastCalibrationDate)
+              : null,
+            calibrationAgency: dto.calibrationInfo?.calibrationAgency || null,
+            nextCalibrationDate,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          } as typeof equipment.$inferInsert)
+          .returning();
 
-      // ✅ CAS: equipment import 업데이트 (tx 컨텍스트로 원자성 보장)
-      const result = await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
-        equipmentImports,
-        id,
-        equipmentImport.version,
-        {
-          status: EIVal.RECEIVED as EquipmentImportStatus,
-          receivedBy,
-          receivedAt: new Date(),
-          receivingCondition: dto.receivingCondition,
-          equipmentId: newEquipment.id,
-        },
-        'Equipment import',
-        tx
-      );
+        // ✅ CAS: equipment import 업데이트 (tx 컨텍스트로 원자성 보장)
+        const result = await this.updateWithVersion<typeof equipmentImports.$inferSelect>(
+          equipmentImports,
+          id,
+          equipmentImport.version,
+          {
+            status: EIVal.RECEIVED as EquipmentImportStatus,
+            receivedBy,
+            receivedAt: new Date(),
+            receivingCondition: dto.receivingCondition,
+            equipmentId: newEquipment.id,
+          },
+          'Equipment import',
+          tx
+        );
 
-      this.logger.log(
-        `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
-      );
+        this.logger.log(
+          `Equipment created from import: ${newEquipment.id} (managementNumber: ${managementNumber})`
+        );
 
-      return result;
-    });
+        return result;
+      });
+    } catch (error) {
+      if (error instanceof ConflictException) {
+        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+      }
+      throw error;
+    }
 
     return updated;
   }
@@ -540,16 +572,26 @@ export class EquipmentImportsService extends VersionedBaseService {
       userTeamId
     );
 
-    // equipment import 업데이트
+    // equipment import 업데이트 — CAS로 동시 요청 방어
     const [updated] = await this.db
       .update(equipmentImports)
       .set({
         status: 'return_requested' as EquipmentImportStatus,
         returnCheckoutId: newCheckout.id,
+        version: sql`version + 1`,
         updatedAt: new Date(),
       })
-      .where(eq(equipmentImports.id, id))
+      .where(
+        and(eq(equipmentImports.id, id), eq(equipmentImports.version, equipmentImport.version))
+      )
       .returning();
+
+    if (!updated) {
+      throw new ConflictException({
+        message: 'This import has been modified by another user. Please refresh and try again.',
+        code: 'VERSION_CONFLICT',
+      });
+    }
 
     return updated;
   }
@@ -610,7 +652,7 @@ export class EquipmentImportsService extends VersionedBaseService {
       `Return completed for equipment import: ${equipmentImport.id} (sourceType: ${equipmentImport.sourceType})`
     );
 
-    // 장비 반입 완료 + 장비 비활성화 — 원자성 보장
+    // 장비 반입 완료 + 장비 비활성화 — 동일 tx 내 원자성 보장
     await this.db.transaction(async (tx) => {
       await tx
         .update(equipmentImports)
@@ -620,9 +662,16 @@ export class EquipmentImportsService extends VersionedBaseService {
         })
         .where(eq(equipmentImports.id, equipmentImport.id));
 
-      // 장비 비활성화
+      // 장비 비활성화 — tx 내에서 직접 UPDATE (equipmentService는 별도 커넥션이므로 사용 불가)
       if (equipmentImport.equipmentId) {
-        await this.equipmentService.updateStatus(equipmentImport.equipmentId, 'inactive');
+        await tx
+          .update(equipment)
+          .set({
+            status: 'inactive',
+            version: sql`version + 1`,
+            updatedAt: new Date(),
+          } as Record<string, unknown>)
+          .where(eq(equipment.id, equipmentImport.equipmentId));
       }
     });
   }
@@ -637,16 +686,12 @@ export class EquipmentImportsService extends VersionedBaseService {
     const maxRetries = 10;
 
     for (let i = 0; i < maxRetries; i++) {
-      // 현재 최대 일련번호 조회
+      // 현재 최대 일련번호 조회 (SSOT: TEMPORARY_EQUIPMENT_PREFIX + SITE_TO_CODE)
+      const tempPrefix = `${TEMPORARY_EQUIPMENT_PREFIX}${SITE_TO_CODE[site]}-`;
       const result = await this.db
         .select({ managementNumber: equipment.managementNumber })
         .from(equipment)
-        .where(
-          like(
-            equipment.managementNumber,
-            `TEMP-${site === 'suwon' ? 'SUW' : site === 'uiwang' ? 'UIW' : 'PYT'}-%`
-          )
-        )
+        .where(safeIlike(equipment.managementNumber, likeStartsWith(tempPrefix)))
         .orderBy(desc(equipment.managementNumber))
         .limit(1);
 

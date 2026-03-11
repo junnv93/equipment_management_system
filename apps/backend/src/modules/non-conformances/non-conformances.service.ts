@@ -6,7 +6,7 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { eq, and, isNull, like, SQL, ne, sql } from 'drizzle-orm';
+import { eq, and, isNull, SQL, ne, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -26,6 +26,8 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
+import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import { equipmentBelongsToSite } from '../../common/utils/site-filter';
 
 /**
  * 부적합 상태 전이 규칙 (State Machine)
@@ -61,6 +63,34 @@ export class NonConformancesService extends VersionedBaseService {
 
   private buildCacheKey(type: string, id: string): string {
     return `${this.CACHE_PREFIX}:${type}:${id}`;
+  }
+
+  /**
+   * 목록 조회 공통 필터 조건 빌더 (data 쿼리 + count 쿼리 SSOT)
+   * → 필터 조건이 한 곳에서만 정의되어 data/count 불일치 방지
+   */
+  private buildListConditions(params: {
+    equipmentId?: string;
+    status?: string;
+    site?: string;
+    search?: string;
+  }): SQL[] {
+    const conditions: SQL[] = [isNull(nonConformances.deletedAt)];
+
+    if (params.equipmentId) {
+      conditions.push(eq(nonConformances.equipmentId, params.equipmentId));
+    }
+    if (params.status) {
+      conditions.push(eq(nonConformances.status, params.status));
+    }
+    if (params.site) {
+      conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, params.site));
+    }
+    if (params.search) {
+      conditions.push(safeIlike(nonConformances.cause, likeContains(params.search)));
+    }
+
+    return conditions;
   }
 
   /**
@@ -213,30 +243,14 @@ export class NonConformancesService extends VersionedBaseService {
       pageSize = 20,
     } = query;
 
+    // buildListConditions()로 data/count 쿼리 필터 일관성 보장
+    const filterParams = { equipmentId, status, site, search };
+
     // Use Drizzle relational query to include user→team relations
     const items = await this.db.query.nonConformances.findMany({
-      where: (nc, { eq: eqFn, isNull: isNullFn, like: likeFn, and: andFn }) => {
-        const conditions = [isNullFn(nc.deletedAt)];
-
-        if (equipmentId) {
-          conditions.push(eqFn(nc.equipmentId, equipmentId));
-        }
-
-        if (status) {
-          conditions.push(eqFn(nc.status, status));
-        }
-
-        // 🔒 사이트 필터: 장비의 사이트로 부적합 격리
-        if (site) {
-          const siteEquipmentIds = sql`${nc.equipmentId} IN (SELECT id FROM equipment WHERE site = ${site})`;
-          conditions.push(siteEquipmentIds);
-        }
-
-        if (search) {
-          conditions.push(likeFn(nc.cause, `%${search}%`));
-        }
-
-        return andFn(...conditions);
+      where: () => {
+        const conditions = this.buildListConditions(filterParams);
+        return and(...conditions);
       },
       with: {
         equipment: {
@@ -308,24 +322,13 @@ export class NonConformancesService extends VersionedBaseService {
       offset: (page - 1) * pageSize,
     });
 
-    // Get total count for pagination
-    const conditions: SQL[] = [isNull(nonConformances.deletedAt)];
-    if (equipmentId) {
-      conditions.push(eq(nonConformances.equipmentId, equipmentId));
-    }
-    if (status) {
-      conditions.push(eq(nonConformances.status, status));
-    }
-    if (search) {
-      conditions.push(like(nonConformances.cause, `%${search}%`));
-    }
+    // Count 쿼리 — buildListConditions()로 data 쿼리와 동일한 필터 보장
+    const countConditions = this.buildListConditions(filterParams);
 
-    const allItems = await this.db
-      .select()
+    const [{ total: totalItems }] = await this.db
+      .select({ total: sql<number>`count(*)::int` })
       .from(nonConformances)
-      .where(and(...conditions));
-
-    const totalItems = allItems.length;
+      .where(and(...countConditions));
 
     return {
       items,

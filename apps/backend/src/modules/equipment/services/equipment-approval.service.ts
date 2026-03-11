@@ -7,7 +7,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, inArray } from 'drizzle-orm';
 import {
   equipmentRequests,
   equipmentAttachments,
@@ -56,13 +56,17 @@ export class EquipmentApprovalService {
     attachmentUuids?: string[]
   ): Promise<EquipmentRequest> {
     try {
-      // 사용자 존재 여부 확인 (외래 키 제약 조건 방지)
+      // 사용자 존재 여부 확인 (외래 키 제약 조건 — JWT 인증 통과 시 반드시 존재해야 함)
       const user = await this.db.query.users.findFirst({
         where: eq(users.id, requestedBy),
       });
 
-      // 사용자가 없으면 기본 관리자 사용 (테스트 환경 대응)
-      const validRequestedBy = user ? requestedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      if (!user) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: `User ${requestedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
 
       // 요청 데이터를 JSON으로 직렬화
       const requestData = JSON.stringify(createDto);
@@ -72,25 +76,18 @@ export class EquipmentApprovalService {
         .insert(equipmentRequests)
         .values({
           requestType: 'create',
-          requestedBy: validRequestedBy,
+          requestedBy,
           approvalStatus: 'pending_approval',
           requestData,
         })
         .returning();
 
-      // 첨부 파일 연결 (요청 ID 업데이트)
+      // 첨부 파일 연결 (요청 ID 업데이트) — 단일 배치 UPDATE
       if (attachmentUuids && attachmentUuids.length > 0) {
-        // 여러 UUID를 처리하기 위해 IN 연산자 사용
-        const attachmentRecords = await this.db.query.equipmentAttachments.findMany({
-          where: sql`${equipmentAttachments.id} = ANY(${attachmentUuids})`,
-        });
-
-        for (const attachment of attachmentRecords) {
-          await this.db
-            .update(equipmentAttachments)
-            .set({ requestId: request.id })
-            .where(eq(equipmentAttachments.id, attachment.id));
-        }
+        await this.db
+          .update(equipmentAttachments)
+          .set({ requestId: request.id })
+          .where(inArray(equipmentAttachments.id, attachmentUuids));
       }
 
       // 📢 알림 이벤트 발행
@@ -99,10 +96,10 @@ export class EquipmentApprovalService {
         equipmentId: '',
         equipmentName: createDto.name || '신규 장비',
         managementNumber: createDto.managementNumber || '',
-        requesterId: validRequestedBy,
-        requesterTeamId: user?.teamId ?? '',
-        actorId: validRequestedBy,
-        actorName: user?.name ?? '',
+        requesterId: requestedBy,
+        requesterTeamId: user.teamId ?? '',
+        actorId: requestedBy,
+        actorName: user.name ?? '',
         timestamp: new Date(),
       });
 
@@ -139,11 +136,17 @@ export class EquipmentApprovalService {
       // 요청 데이터를 JSON으로 직렬화
       const requestData = JSON.stringify(updateDto);
 
-      // 사용자 존재 여부 확인
+      // 사용자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
       const user = await this.db.query.users.findFirst({
         where: eq(users.id, requestedBy),
       });
-      const validRequestedBy = user ? requestedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+      if (!user) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: `User ${requestedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
 
       // 요청 생성
       const [request] = await this.db
@@ -151,25 +154,18 @@ export class EquipmentApprovalService {
         .values({
           requestType: 'update',
           equipmentId: existingEquipment.id,
-          requestedBy: validRequestedBy,
+          requestedBy,
           approvalStatus: 'pending_approval',
           requestData,
         })
         .returning();
 
-      // 첨부 파일 연결
+      // 첨부 파일 연결 — 단일 배치 UPDATE (createEquipmentRequest와 동일 패턴)
       if (attachmentUuids && attachmentUuids.length > 0) {
-        // 여러 UUID를 처리하기 위해 IN 연산자 사용
-        const attachmentRecords = await this.db.query.equipmentAttachments.findMany({
-          where: sql`${equipmentAttachments.id} = ANY(${attachmentUuids})`,
-        });
-
-        for (const attachment of attachmentRecords) {
-          await this.db
-            .update(equipmentAttachments)
-            .set({ requestId: request.id })
-            .where(eq(equipmentAttachments.id, attachment.id));
-        }
+        await this.db
+          .update(equipmentAttachments)
+          .set({ requestId: request.id })
+          .where(inArray(equipmentAttachments.id, attachmentUuids));
       }
 
       this.logger.log(`Equipment update request created: ${request.id}`);
@@ -203,11 +199,17 @@ export class EquipmentApprovalService {
         });
       }
 
-      // 사용자 존재 여부 확인
+      // 사용자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
       const user = await this.db.query.users.findFirst({
         where: eq(users.id, requestedBy),
       });
-      const validRequestedBy = user ? requestedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+      if (!user) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: `User ${requestedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
 
       // 요청 생성
       const [request] = await this.db
@@ -215,7 +217,7 @@ export class EquipmentApprovalService {
         .values({
           requestType: 'delete',
           equipmentId: existingEquipment.id,
-          requestedBy: validRequestedBy,
+          requestedBy,
           approvalStatus: 'pending_approval',
         })
         .returning();
@@ -415,18 +417,24 @@ export class EquipmentApprovalService {
         await this.equipmentService.remove(equipmentData.id);
       }
 
-      // 승인자 존재 여부 확인
+      // 승인자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
       const approver = await this.db.query.users.findFirst({
         where: eq(users.id, approvedBy),
       });
-      const validApprovedBy = approver ? approvedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+      if (!approver) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
 
       // 요청 상태 업데이트
       const [updated] = await this.db
         .update(equipmentRequests)
         .set({
           approvalStatus: 'approved',
-          approvedBy: validApprovedBy,
+          approvedBy,
           approvedAt: new Date(),
         })
         .where(eq(equipmentRequests.id, requestUuid))
@@ -441,7 +449,7 @@ export class EquipmentApprovalService {
         managementNumber: requestData.managementNumber || '',
         requesterId: request.requestedBy,
         requesterTeamId: '',
-        actorId: validApprovedBy,
+        actorId: approvedBy,
         actorName: '',
         timestamp: new Date(),
       });
@@ -505,18 +513,24 @@ export class EquipmentApprovalService {
         });
       }
 
-      // 승인자 존재 여부 확인
+      // 승인자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
       const approver = await this.db.query.users.findFirst({
         where: eq(users.id, approvedBy),
       });
-      const validApprovedBy = approver ? approvedBy : 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+      if (!approver) {
+        throw new NotFoundException({
+          code: 'USER_NOT_FOUND',
+          message: `Approver ${approvedBy} not found. Authenticated users must exist in the database.`,
+        });
+      }
 
       // 요청 상태 업데이트
       const [updated] = await this.db
         .update(equipmentRequests)
         .set({
           approvalStatus: 'rejected',
-          approvedBy: validApprovedBy,
+          approvedBy,
           approvedAt: new Date(),
           rejectionReason,
         })
@@ -533,7 +547,7 @@ export class EquipmentApprovalService {
         requesterId: request.requestedBy,
         requesterTeamId: '',
         reason: rejectionReason,
-        actorId: validApprovedBy,
+        actorId: approvedBy,
         actorName: '',
         timestamp: new Date(),
       });
