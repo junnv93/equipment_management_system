@@ -17,6 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { APPROVAL_BULK_BAR_TOKENS, getApprovalActionButtonClasses } from '@/lib/design-tokens';
+import { REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
 import { useTranslations } from 'next-intl';
 
 interface BulkActionBarProps {
@@ -56,7 +57,7 @@ export function BulkActionBar({
   };
 
   const handleBulkReject = async () => {
-    if (!rejectReason.trim() || rejectReason.length < 10) {
+    if (!rejectReason.trim() || rejectReason.length < REJECTION_MIN_LENGTH) {
       return;
     }
 
@@ -157,7 +158,7 @@ export function BulkActionBar({
               onChange={(e) => setRejectReason(e.target.value)}
               className="mt-2 min-h-[100px]"
             />
-            {rejectReason.length > 0 && rejectReason.length < 10 && (
+            {rejectReason.length > 0 && rejectReason.length < REJECTION_MIN_LENGTH && (
               <p className="text-sm text-destructive mt-1" role="alert">
                 {t('bulk.rejectValidation')} ({rejectReason.length}/10)
               </p>
@@ -167,7 +168,7 @@ export function BulkActionBar({
             <AlertDialogCancel disabled={isProcessing}>{t('actions.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBulkReject}
-              disabled={isProcessing || rejectReason.length < 10}
+              disabled={isProcessing || rejectReason.length < REJECTION_MIN_LENGTH}
               className={getApprovalActionButtonClasses('reject')}
             >
               {isProcessing ? t('processing') : t('actions.reject')}

@@ -1,11 +1,14 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
-import { ApprovalItemCard } from './ApprovalItem';
-import { APPROVAL_EMPTY_STATE_TOKENS, APPROVAL_MOTION } from '@/lib/design-tokens';
+import { ApprovalRow } from './ApprovalRow';
+import {
+  APPROVAL_EMPTY_STATE_TOKENS,
+  APPROVAL_MOTION,
+  APPROVAL_ROW_TOKENS,
+} from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
 interface ApprovalListProps {
@@ -37,77 +40,86 @@ export function ApprovalList({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <Skeleton className={`h-6 w-32 ${APPROVAL_MOTION.skeleton}`} />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card
-              key={i}
-              className="border-l-4 border-l-border"
-              style={{ animationDelay: APPROVAL_MOTION.listStagger(i) }}
-            >
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex gap-2">
-                      <Skeleton className="h-6 w-20" />
-                      <Skeleton className="h-6 w-48" />
-                    </div>
-                    <Skeleton className="h-4 w-64" />
-                  </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-9 w-16" />
-                    <Skeleton className="h-9 w-16" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </CardContent>
-      </Card>
+      <div className="border border-border rounded-lg overflow-hidden">
+        {/* Column header skeleton */}
+        <div className={APPROVAL_ROW_TOKENS.container.header}>
+          <Skeleton className="h-4 w-4" />
+          <div />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-10" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        {/* Row skeletons */}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className={`${APPROVAL_ROW_TOKENS.container.base} ${APPROVAL_ROW_TOKENS.container.desktop}`}
+            style={{ animationDelay: APPROVAL_MOTION.listStagger(i) }}
+          >
+            <Skeleton className="h-4 w-4" />
+            <div />
+            <div className="space-y-1">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="h-5 w-24 hidden lg:block" />
+            <Skeleton className="h-5 w-16 hidden lg:block" />
+            <Skeleton className="h-5 w-12 hidden lg:block" />
+            <Skeleton className="h-5 w-20 hidden lg:block" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="border border-border rounded-lg py-16">
+        <div className={APPROVAL_EMPTY_STATE_TOKENS.text} role="status" aria-live="polite">
+          <div className={APPROVAL_EMPTY_STATE_TOKENS.iconContainer}>
+            <Clock className={APPROVAL_EMPTY_STATE_TOKENS.icon} />
+          </div>
+          <p>{t('list.empty')}</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t('list.title')}</CardTitle>
-        <CardDescription>{t('list.countDescription', { count: items.length })}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {items.length === 0 ? (
-          <div className={APPROVAL_EMPTY_STATE_TOKENS.text} role="status" aria-live="polite">
-            <div className={APPROVAL_EMPTY_STATE_TOKENS.iconContainer}>
-              <Clock className={APPROVAL_EMPTY_STATE_TOKENS.icon} />
-            </div>
-            <p>{t('list.empty')}</p>
-          </div>
-        ) : (
-          <div className="space-y-4" data-testid="approval-list">
-            {items.map((item, index) => (
-              <div
-                key={item.id}
-                className={`${APPROVAL_MOTION.listItemEnter} [content-visibility:auto] [contain-intrinsic-size:0_120px]`}
-                style={{ animationDelay: APPROVAL_MOTION.listStagger(index) }}
-              >
-                <ApprovalItemCard
-                  item={item}
-                  isSelected={selectedItems.includes(item.id)}
-                  isMutating={processingIds.has(item.id)}
-                  isExiting={exitingIds.has(item.id)}
-                  onToggleSelect={() => onToggleSelect(item.id)}
-                  onApprove={() => onApprove(item)}
-                  onReject={() => onReject(item)}
-                  onViewDetail={() => onViewDetail(item)}
-                  actionLabel={actionLabel}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="border border-border rounded-lg overflow-hidden" data-testid="approval-list">
+      {/* Column headers — desktop only */}
+      <div className={APPROVAL_ROW_TOKENS.container.header}>
+        <div /> {/* checkbox col */}
+        <div /> {/* urgency bar col */}
+        <div>{t('row.colSummary')}</div>
+        <div>{t('item.requester')}</div>
+        <div>{t('item.requestDate')}</div>
+        <div>{t('item.elapsedLabel')}</div>
+        <div>{t('row.colActions')}</div>
+      </div>
+
+      {/* Rows */}
+      {items.map((item, index) => (
+        <div
+          key={item.id}
+          className={`${APPROVAL_MOTION.listItemEnter} [content-visibility:auto] [contain-intrinsic-size:0_64px]`}
+          style={{ animationDelay: APPROVAL_MOTION.listStagger(index) }}
+        >
+          <ApprovalRow
+            item={item}
+            isSelected={selectedItems.includes(item.id)}
+            isMutating={processingIds.has(item.id)}
+            isExiting={exitingIds.has(item.id)}
+            onToggleSelect={() => onToggleSelect(item.id)}
+            onApprove={() => onApprove(item)}
+            onReject={() => onReject(item)}
+            onViewDetail={() => onViewDetail(item)}
+            actionLabel={actionLabel}
+          />
+        </div>
+      ))}
+    </div>
   );
 }

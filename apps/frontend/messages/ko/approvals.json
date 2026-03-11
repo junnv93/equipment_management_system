@@ -68,6 +68,35 @@
     "bulkApproveError": "일괄 승인 중 오류가 발생했습니다."
   },
   "ariaLabel": "승인 카테고리",
+  "sections": {
+    "checkout": "반출/반입",
+    "equipment": "장비/교정",
+    "management": "관리"
+  },
+  "kpi": {
+    "totalPending": "전체 대기",
+    "urgentCount": "긴급 (8일+)",
+    "urgentSub": "8일 초과",
+    "avgWait": "평균 대기",
+    "days": "{days}일",
+    "dayUnit": "일",
+    "todayProcessed": "금일 처리",
+    "comingSoon": "준비 중"
+  },
+  "row": {
+    "stepBadge": "승인 단계 진행",
+    "tooltipApprove": "승인",
+    "tooltipReject": "반려",
+    "tooltipDetail": "상세 보기",
+    "colSummary": "요약",
+    "colActions": "작업"
+  },
+  "sidebar": {
+    "ariaLabel": "승인 카테고리 네비게이션"
+  },
+  "mobileBar": {
+    "ariaLabel": "승인 카테고리 탭"
+  },
   "badge": {
     "pending": "대기 {count}건"
   },

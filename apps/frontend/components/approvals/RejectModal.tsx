@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { XCircle } from 'lucide-react';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
+import { REJECTION_MIN_LENGTH } from '@/lib/api/approvals-api';
 import { getApprovalActionButtonClasses } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 
@@ -68,7 +69,7 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
       const reason = formData.get('reason') as string;
 
       // 반려 사유 10자 이상 검증
-      if (!reason || reason.trim().length < 10) {
+      if (!reason || reason.trim().length < REJECTION_MIN_LENGTH) {
         setValidationError(t('rejectModal.validation'));
         return {
           error: null,
@@ -95,15 +96,16 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
     setReasonValue(value);
 
     // Clear validation error if user enters valid input
-    if (value.trim().length >= 10) {
+    if (value.trim().length >= REJECTION_MIN_LENGTH) {
       setValidationError(null);
     }
   };
 
   const handleTemplateSelect = (value: string) => {
-    if (value) {
-      setReasonValue(value);
-      // Clear validation error when template is selected (all templates are > 10 chars)
+    // 'direct' = 직접 입력 (빈 문자열 대체값) → textarea 초기화
+    const resolvedValue = value === 'direct' ? '' : value;
+    setReasonValue(resolvedValue);
+    if (resolvedValue.trim().length >= REJECTION_MIN_LENGTH) {
       setValidationError(null);
     }
   };
@@ -169,7 +171,7 @@ export default function RejectModal({ item, isOpen, onClose, onConfirm }: Reject
             </Button>
             <Button
               type="submit"
-              variant="destructive"
+              variant="outline"
               disabled={isPending}
               aria-busy={isPending}
               className={getApprovalActionButtonClasses('reject')}

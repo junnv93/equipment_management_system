@@ -12,6 +12,7 @@
 
 import { FOCUS_TOKENS, MOTION_TOKENS } from '../semantic';
 import { getStaggerDelay, getTransitionClasses } from '../motion';
+import { getSemanticContainerColorClasses } from '../brand';
 import { getElapsedDaysUrgency } from '../visual-feedback';
 import type { UrgencyLevel } from '../visual-feedback';
 
@@ -117,27 +118,27 @@ export const APPROVAL_STEPPER_TOKENS = {
 export const APPROVAL_TIMELINE_TOKENS = {
   /** 액션별 아이콘 배지 스타일 */
   iconBadge: {
-    approve: 'bg-ul-green text-white',
-    review: 'bg-ul-blue text-white',
-    reject: 'bg-ul-red text-white',
+    approve: 'bg-brand-ok text-white',
+    review: 'bg-brand-info text-white',
+    reject: 'bg-brand-critical text-white',
   },
 
   /** 액션별 카드 스타일 (상세 다이얼로그용) */
   card: {
-    approved: 'border-l-4 border-l-green-500 bg-green-50 dark:bg-green-950/30',
-    rejected: 'border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/30',
-    reviewed: 'border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950/30',
-    requested: 'border-l-4 border-l-gray-300 bg-gray-50 dark:bg-gray-800/50',
+    approved: `border-l-4 ${getSemanticContainerColorClasses('ok')}`,
+    rejected: `border-l-4 ${getSemanticContainerColorClasses('critical')}`,
+    reviewed: `border-l-4 ${getSemanticContainerColorClasses('info')}`,
+    requested: `border-l-4 ${getSemanticContainerColorClasses('neutral')}`,
   },
 
   /** 연결선 */
-  connector: 'border-l-2 border-gray-200 dark:border-gray-700 ml-3',
+  connector: 'border-l-2 border-border ml-3',
 
   /** 블록 인용 (코멘트) */
-  blockquote: 'border-l-2 border-gray-300 dark:border-gray-600 pl-2',
+  blockquote: 'border-l-2 border-muted-foreground/30 pl-2',
 
   /** 거절 섹션 상단 보더 (detail-renderers.tsx) */
-  rejectionBorder: 'border-t border-red-200 dark:border-red-800',
+  rejectionBorder: 'border-t border-destructive/30',
 } as const;
 
 // ============================================================================
@@ -156,8 +157,8 @@ export const APPROVAL_ACTION_BUTTON_TOKENS = {
   /** 반려 버튼 (UL Red outline) */
   reject: 'border border-ul-red text-ul-red hover:bg-ul-red/10',
 
-  /** 상세 보기 버튼 (Outline) */
-  detail: 'variant-outline',
+  /** 상세 보기 버튼 (Neutral outline) */
+  detail: 'border border-border text-foreground hover:bg-muted/80',
 } as const;
 
 // ============================================================================
@@ -295,6 +296,146 @@ export const APPROVAL_FOCUS = {
 
   /** 버튼 focus */
   button: FOCUS_TOKENS.classes.default,
+} as const;
+
+// ============================================================================
+// 12. Approval Row Tokens (컴팩트 로우 — Triage Dashboard)
+// ============================================================================
+
+/**
+ * 승인 컴팩트 로우 — 카드 대체 (~64px vs ~150px)
+ *
+ * Desktop: 7-column grid [Checkbox][StatusBar][Summary+Meta][Requester/Team][Date][Elapsed][Actions]
+ * Mobile: stacked flex 레이아웃
+ */
+/** 7-column grid 정의 — 로우, 헤더, 스켈레톤에서 공유 (SSOT) */
+export const APPROVAL_ROW_GRID_COLS = 'lg:grid-cols-[32px_4px_1fr_140px_100px_80px_auto]' as const;
+
+export const APPROVAL_ROW_TOKENS = {
+  /** 로우 컨테이너 — desktop grid, mobile stacked */
+  container: {
+    base: 'group relative border-b border-border last:border-b-0',
+    desktop: `lg:grid ${APPROVAL_ROW_GRID_COLS} lg:items-center lg:gap-3 lg:px-4 lg:py-3`,
+    mobile: 'flex flex-col gap-2 p-4 lg:p-0',
+    /** 헤더 행 (컬럼 라벨) */
+    header: `hidden lg:grid ${APPROVAL_ROW_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground`,
+  },
+
+  /** urgency 기반 행 배경색 (경과일 기반) */
+  urgencyBg: {
+    info: '',
+    warning: 'bg-amber-50/50 dark:bg-amber-950/10',
+    critical: 'bg-red-50/50 dark:bg-red-950/10',
+    emergency: 'bg-red-50/70 dark:bg-red-950/20',
+  } as Record<UrgencyLevel, string>,
+
+  /** urgency 좌측 보더 (4px 수직 막대) */
+  urgencyBorder: {
+    info: 'bg-border',
+    warning: 'bg-brand-warning',
+    critical: 'bg-brand-critical',
+    emergency: 'bg-brand-critical',
+  } as Record<UrgencyLevel, string>,
+
+  /** 호버 스타일 */
+  hover: 'hover:bg-muted/40',
+
+  /** 다단계 인라인 도트 배지 */
+  stepBadge: 'text-xs text-muted-foreground font-mono tabular-nums',
+
+  /** 액션 버튼 영역 (desktop: icon-only, mobile: text 포함) */
+  actions: {
+    container: 'flex items-center gap-1',
+    iconButton: 'h-8 w-8 p-0',
+  },
+} as const;
+
+// ============================================================================
+// 13. Approval KPI Strip Tokens (4개 KPI 카드)
+// ============================================================================
+
+/**
+ * 승인 KPI 스트립 — EQUIPMENT_KPI_STRIP_TOKENS 패턴 참조
+ *
+ * 4가지 variant: total(blue), urgent(red), avgWait(orange), processed(green)
+ */
+export const APPROVAL_KPI_STRIP_TOKENS = {
+  container: 'grid grid-cols-2 lg:grid-cols-4 gap-3',
+  card: {
+    base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4',
+    hover: ['hover:shadow-sm', getTransitionClasses('fast', ['box-shadow', 'border-color'])].join(
+      ' '
+    ),
+    focus: FOCUS_TOKENS.classes.default,
+  },
+  value: 'text-xl font-semibold tabular-nums leading-tight',
+  label: 'text-xs text-muted-foreground',
+  sub: 'text-[11px] text-muted-foreground/70',
+  borderColors: {
+    total: 'border-l-blue-500',
+    urgent: 'border-l-red-500',
+    avgWait: 'border-l-amber-500',
+    processed: 'border-l-green-500',
+  },
+  iconBg: {
+    total: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400',
+    urgent: 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400',
+    avgWait: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400',
+    processed: 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400',
+  },
+  iconContainer: 'rounded-md p-2 flex-shrink-0',
+} as const;
+
+export type ApprovalKpiVariant = keyof typeof APPROVAL_KPI_STRIP_TOKENS.borderColors;
+
+// ============================================================================
+// 14. Approval Category Sidebar Tokens
+// ============================================================================
+
+/**
+ * 카테고리 사이드바 — sticky 네비게이션
+ *
+ * lg: 이상에서만 표시 (220px)
+ */
+export const APPROVAL_CATEGORY_SIDEBAR_TOKENS = {
+  container: 'w-[220px] flex-shrink-0 sticky top-20 self-start',
+  sectionLabel: 'text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-3 py-2',
+  item: {
+    base: [
+      'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm',
+      getTransitionClasses('fast', ['background-color', 'color']),
+    ].join(' '),
+    active: 'bg-primary text-primary-foreground font-medium',
+    inactive: 'text-muted-foreground hover:bg-muted hover:text-foreground',
+  },
+  icon: 'h-4 w-4 flex-shrink-0',
+  badge: {
+    base: 'ml-auto text-xs font-medium tabular-nums',
+    normal: 'text-muted-foreground',
+    urgent: 'text-red-600 dark:text-red-400 font-semibold',
+  },
+  divider: 'border-t border-border my-2',
+} as const;
+
+// ============================================================================
+// 15. Approval Mobile Category Bar Tokens
+// ============================================================================
+
+/**
+ * 모바일 카테고리 가로 스크롤 pill bar (<lg)
+ */
+export const APPROVAL_MOBILE_CATEGORY_BAR_TOKENS = {
+  container: 'flex gap-1.5 overflow-x-auto pb-2 scrollbar-none',
+  pill: {
+    base: [
+      'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap border',
+      getTransitionClasses('fast', ['background-color', 'color', 'border-color']),
+    ].join(' '),
+    active: 'bg-primary text-primary-foreground border-primary',
+    inactive: 'bg-background text-muted-foreground border-border hover:bg-muted',
+  },
+  sectionDivider: 'w-px bg-border self-stretch mx-1 flex-shrink-0',
+  badge: 'text-xs tabular-nums',
 } as const;
 
 // ============================================================================

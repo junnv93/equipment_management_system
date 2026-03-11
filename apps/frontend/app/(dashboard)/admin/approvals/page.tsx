@@ -2,21 +2,18 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getServerAuthSession } from '@/lib/auth/server-session';
+import { getTranslations } from 'next-intl/server';
 import type { UserRole } from '@equipment-management/schemas';
 import { APPROVAL_ROLES } from '@equipment-management/shared-constants';
 import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 /**
  * 승인 관리 통합 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Static Shell: 헤더 (즉시 렌더링)
- * ✅ Dynamic Hole: 세션 체크 + ApprovalsClient (Suspense로 서버 스트리밍)
- * ✅ SSOT FIX: getServerAuthSession() 사용 (getServerSession(authOptions) 대신)
+ * ✅ Dynamic Hole: i18n 헤더 + 세션 체크 + ApprovalsClient (Suspense로 서버 스트리밍)
  */
 
-// ✅ Next.js 16: Static Metadata Export
 export const metadata: Metadata = {
   title: '승인 관리 | 장비 관리 시스템',
   description: '장비, 교정, 반출 등 각종 승인 요청을 통합 관리합니다',
@@ -24,55 +21,85 @@ export const metadata: Metadata = {
 
 function ApprovalsLoadingFallback() {
   return (
-    <div className="space-y-6">
-      {/* 탭 스켈레톤 */}
-      <div className="flex gap-2 border-b pb-2">
+    <div className="space-y-4">
+      {/* Header skeleton */}
+      <div className="mb-2">
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-5 w-64 mt-1" />
+      </div>
+
+      {/* KPI Strip skeleton */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-32" />
+          <div
+            key={i}
+            className="bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4 border-l-border"
+          >
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <div className="flex-1 space-y-1">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-6 w-12" />
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* 일괄 처리 바 스켈레톤 */}
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-6 w-24" />
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-24" />
-          <Skeleton className="h-9 w-24" />
+      {/* Layout: Sidebar + Content */}
+      <div className="flex gap-6">
+        {/* Sidebar skeleton (lg+ only) */}
+        <div className="hidden lg:block w-[220px] flex-shrink-0 space-y-2">
+          <Skeleton className="h-4 w-20" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
+          ))}
+          <Skeleton className="h-4 w-20 mt-4" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
+          ))}
+        </div>
+
+        {/* Content skeleton */}
+        <div className="flex-1 min-w-0 space-y-3">
+          {/* Bulk bar skeleton */}
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-24" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-24" />
+              <Skeleton className="h-9 w-24" />
+            </div>
+          </div>
+
+          {/* Row list skeleton */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="hidden lg:grid lg:grid-cols-[32px_4px_1fr_140px_100px_80px_auto] lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border">
+              <Skeleton className="h-4 w-4" />
+              <div />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-4 w-10" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="lg:grid lg:grid-cols-[32px_4px_1fr_140px_100px_80px_auto] lg:gap-3 lg:px-4 lg:py-3 border-b border-border last:border-b-0"
+              >
+                <Skeleton className="h-4 w-4" />
+                <div />
+                <div className="space-y-1">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+                <Skeleton className="h-5 w-24 hidden lg:block" />
+                <Skeleton className="h-5 w-16 hidden lg:block" />
+                <Skeleton className="h-5 w-12 hidden lg:block" />
+                <Skeleton className="h-5 w-20 hidden lg:block" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-
-      {/* 목록 스켈레톤 */}
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-32" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="border-l-4 border-l-gray-200">
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex gap-2">
-                      <Skeleton className="h-6 w-20" />
-                      <Skeleton className="h-6 w-32" />
-                    </div>
-                    <div className="grid grid-cols-4 gap-4">
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-12 w-full" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-9 w-16" />
-                    <Skeleton className="h-9 w-16" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -82,15 +109,7 @@ export default function ApprovalsPage(props: {
 }) {
   return (
     <div className="container mx-auto py-6">
-      {/* Static Shell: 페이지 헤더 */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">승인 관리</h1>
-        <p className="text-muted-foreground">
-          장비, 교정, 반출 등 각종 승인 요청을 통합 관리합니다
-        </p>
-      </div>
-
-      {/* Dynamic Hole: 세션 체크 + 승인 클라이언트 */}
+      {/* Dynamic Hole: 헤더(i18n) + 세션 체크 + 승인 클라이언트 */}
       <Suspense fallback={<ApprovalsLoadingFallback />}>
         <ApprovalsContentAsync searchParamsPromise={props.searchParams} />
       </Suspense>
@@ -109,7 +128,7 @@ async function ApprovalsContentAsync({
   const searchParams = await searchParamsPromise;
   const initialTab = typeof searchParams.tab === 'string' ? searchParams.tab : undefined;
 
-  // ✅ SSOT: getServerAuthSession() 사용
+  const t = await getTranslations('approvals');
   const session = await getServerAuthSession();
 
   if (!session?.user) {
@@ -120,17 +139,22 @@ async function ApprovalsContentAsync({
   const userId = session.user.id;
   const userTeamId = session.user.teamId;
 
-  // 승인 권한이 없는 역할은 대시보드로 리다이렉트 (SSOT: APPROVAL_ROLES)
   if (!APPROVAL_ROLES.includes(userRole)) {
     redirect('/dashboard');
   }
 
   return (
-    <ApprovalsClient
-      userRole={userRole}
-      userId={userId}
-      userTeamId={userTeamId}
-      initialTab={initialTab}
-    />
+    <>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('subtitle')}</p>
+      </div>
+      <ApprovalsClient
+        userRole={userRole}
+        userId={userId}
+        userTeamId={userTeamId}
+        initialTab={initialTab}
+      />
+    </>
   );
 }

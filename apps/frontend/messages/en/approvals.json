@@ -68,6 +68,35 @@
     "bulkApproveError": "An error occurred during bulk approval."
   },
   "ariaLabel": "Approval categories",
+  "sections": {
+    "checkout": "Checkout/Return",
+    "equipment": "Equipment/Calibration",
+    "management": "Management"
+  },
+  "kpi": {
+    "totalPending": "Total Pending",
+    "urgentCount": "Urgent (8d+)",
+    "urgentSub": "Over 8 days",
+    "avgWait": "Avg. Wait",
+    "days": "{days}d",
+    "dayUnit": "d",
+    "todayProcessed": "Processed Today",
+    "comingSoon": "Coming soon"
+  },
+  "row": {
+    "stepBadge": "Approval step progress",
+    "tooltipApprove": "Approve",
+    "tooltipReject": "Reject",
+    "tooltipDetail": "View detail",
+    "colSummary": "Summary",
+    "colActions": "Actions"
+  },
+  "sidebar": {
+    "ariaLabel": "Approval categories navigation"
+  },
+  "mobileBar": {
+    "ariaLabel": "Approval category tabs"
+  },
   "badge": {
     "pending": "{count} pending"
   },

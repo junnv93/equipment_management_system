@@ -5,8 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { CHECKOUT_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -18,19 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Package,
-  FileCheck,
-  ClipboardCheck,
-  ArrowUpFromLine,
-  ArrowDownToLine,
-  Share2,
-  AlertTriangle,
-  Trash2,
-  Calendar,
-  Code,
-  PackagePlus,
-} from 'lucide-react';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { UserRole } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
 import {
@@ -41,17 +27,15 @@ import {
 } from '@/lib/api/approvals-api';
 import { useApprovalsApi } from '@/lib/api/hooks/use-approvals-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
+import { ApprovalKpiStrip } from './ApprovalKpiStrip';
+import { ApprovalCategorySidebar } from './ApprovalCategorySidebar';
+import { ApprovalMobileCategoryBar } from './ApprovalMobileCategoryBar';
 import { ApprovalList } from './ApprovalList';
 import { BulkActionBar } from './BulkActionBar';
 import ApprovalDetailModal from './ApprovalDetailModal';
 import RejectModal from './RejectModal';
-import {
-  APPROVAL_TAB_TOKENS,
-  APPROVAL_MOTION,
-  getApprovalActionButtonClasses,
-  getCountBasedUrgency,
-  getUrgencyFeedbackClasses,
-} from '@/lib/design-tokens';
+import { useApprovalKpi } from '@/hooks/use-approval-kpi';
+import { APPROVAL_MOTION, getApprovalActionButtonClasses } from '@/lib/design-tokens';
 
 interface ApprovalsClientProps {
   userRole: UserRole;
@@ -59,21 +43,6 @@ interface ApprovalsClientProps {
   userTeamId?: string;
   initialTab?: string;
 }
-
-// 아이콘 개별 import 매핑
-const ICONS: Record<string, React.ElementType> = {
-  Package,
-  FileCheck,
-  ClipboardCheck,
-  ArrowUpFromLine,
-  ArrowDownToLine,
-  Share2,
-  AlertTriangle,
-  Trash2,
-  Calendar,
-  Code,
-  PackagePlus,
-};
 
 export function ApprovalsClient({
   userRole,
@@ -83,13 +52,8 @@ export function ApprovalsClient({
 }: ApprovalsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // ✅ Best Practice: useAuthenticatedClient를 통한 인증된 API 클라이언트 사용
   const approvalsApi = useApprovalsApi();
   const t = useTranslations('approvals');
-
-  // ✅ Hydration 에러 방지: 클라이언트 마운트 감지
-  const [mounted, setMounted] = useState(false);
 
   // 현재 역할에서 사용 가능한 탭 (useMemo로 안정화)
   const availableTabs = useMemo(() => ROLE_TABS[userRole] || [], [userRole]);
@@ -104,17 +68,12 @@ export function ApprovalsClient({
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
 
-  // ✅ 승인 코멘트 다이얼로그 상태 (commentRequired 카테고리용)
+  // 승인 코멘트 다이얼로그 상태 (commentRequired 카테고리용)
   const [approveCommentItem, setApproveCommentItem] = useState<ApprovalItem | null>(null);
   const [approveComment, setApproveComment] = useState('');
   // 벌크 승인 코멘트 다이얼로그 상태
   const [isBulkApproveCommentOpen, setIsBulkApproveCommentOpen] = useState(false);
   const [bulkApproveComment, setBulkApproveComment] = useState('');
-
-  // 클라이언트 마운트 후에만 Radix UI 렌더링 (useId 충돌 방지)
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // URL 쿼리 파라미터 동기화
   useEffect(() => {
@@ -151,15 +110,16 @@ export function ApprovalsClient({
   }, [pendingItems]);
 
   // 카테고리별 대기 개수 조회
-  // SSOT: 네비 뱃지, 대시보드 카드와 동일한 query key 공유
   const { data: pendingCounts } = useQuery({
     queryKey: queryKeys.approvals.counts(userRole),
     queryFn: () => approvalsApi.getPendingCounts(userRole),
     staleTime: CACHE_TIMES.MEDIUM,
   });
 
+  // KPI 데이터 (기존 쿼리에서 파생 — 추가 API 호출 없음)
+  const kpi = useApprovalKpi(pendingCounts, sortedItems, availableTabs);
+
   // ✅ 승인 처리 - Optimistic Update 패턴
-  // 타입 변경: ApprovalItem → { item, comment? } — 코멘트 전달 지원
   const approveMutation = useOptimisticMutation<
     void,
     { item: ApprovalItem; comment?: string },
@@ -177,7 +137,6 @@ export function ApprovalsClient({
       );
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션(opacity 0)을 위해 DOM 유지
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
@@ -211,14 +170,10 @@ export function ApprovalsClient({
 
   /**
    * 승인 핸들러 — SSOT: TAB_META.commentRequired 기반 분기
-   *
-   * commentRequired=true → 코멘트 입력 다이얼로그 표시
-   * commentRequired=false → 직접 mutation 실행
    */
   const handleApprove = (item: ApprovalItem) => {
     const meta = TAB_META[item.category];
     if (meta?.commentRequired) {
-      // 상세 모달이 열려있으면 닫고 코멘트 다이얼로그로 전환
       setDetailModalItem(null);
       setApproveCommentItem(item);
       setApproveComment('');
@@ -228,16 +183,13 @@ export function ApprovalsClient({
     }
   };
 
-  /**
-   * 코멘트 다이얼로그에서 확인 클릭 시
-   */
   const handleApproveWithComment = () => {
     if (!approveCommentItem || !approveComment.trim()) return;
     setProcessingIds((prev) => new Set(prev).add(approveCommentItem.id));
     approveMutation.mutate({ item: approveCommentItem, comment: approveComment });
   };
 
-  // ✅ 반려 처리 - Optimistic Update 패턴
+  // ✅ 반려 처리
   const rejectMutation = useOptimisticMutation<
     void,
     { item: ApprovalItem; reason: string },
@@ -255,7 +207,6 @@ export function ApprovalsClient({
       );
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션을 위해 DOM 유지
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (_, { item }) => t('toasts.rejectDynamic', { summary: item.summary }),
@@ -290,7 +241,7 @@ export function ApprovalsClient({
     await rejectMutation.mutateAsync({ item, reason });
   };
 
-  // ✅ 일괄 승인 처리 - Optimistic Update 패턴
+  // ✅ 일괄 승인 처리
   const bulkApproveMutation = useOptimisticMutation<
     { success: string[]; failed: string[] },
     { ids: string[]; comment?: string },
@@ -300,7 +251,6 @@ export function ApprovalsClient({
       return await approvalsApi.bulkApprove(activeTab, ids, userId, comment);
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션을 위해 DOM 유지
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
@@ -340,9 +290,6 @@ export function ApprovalsClient({
     },
   });
 
-  /**
-   * 일괄 승인 핸들러 — commentRequired 카테고리는 코멘트 다이얼로그 표시
-   */
   const handleBulkApprove = () => {
     if (selectedItems.length === 0) return;
     const meta = TAB_META[activeTab];
@@ -355,16 +302,13 @@ export function ApprovalsClient({
     }
   };
 
-  /**
-   * 벌크 코멘트 다이얼로그에서 확인 클릭 시
-   */
   const handleBulkApproveWithComment = () => {
     if (!bulkApproveComment.trim()) return;
     setProcessingIds((prev) => new Set(Array.from(prev).concat(selectedItems)));
     bulkApproveMutation.mutate({ ids: selectedItems, comment: bulkApproveComment });
   };
 
-  // ✅ 일괄 반려 처리 - Optimistic Update 패턴
+  // ✅ 일괄 반려 처리
   const bulkRejectMutation = useOptimisticMutation<
     { success: string[]; failed: string[] },
     { ids: string[]; reason: string },
@@ -374,7 +318,6 @@ export function ApprovalsClient({
       return await approvalsApi.bulkReject(activeTab, ids, userId, reason);
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
-    // DOM에서 즉시 제거하지 않음 — 퇴장 애니메이션을 위해 DOM 유지
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
     successMessage: (result) => {
@@ -432,18 +375,6 @@ export function ApprovalsClient({
     }
   }, [sortedItems, selectedItems.length]);
 
-  // 탭에 표시할 아이콘 컴포넌트 가져오기
-  const getIcon = (iconName: string) => {
-    const IconComponent = ICONS[iconName];
-    return IconComponent ? <IconComponent className="h-4 w-4 mr-1.5" /> : null;
-  };
-
-  // 탭에 표시할 대기 개수
-  const getCount = (category: ApprovalCategory): number => {
-    if (!pendingCounts) return 0;
-    return pendingCounts[category] || 0;
-  };
-
   // 현재 탭의 코멘트 다이얼로그 메타 (SSOT: TAB_META)
   const activeTabMeta = TAB_META[activeTab];
   const commentMeta = approveCommentItem ? TAB_META[approveCommentItem.category] : null;
@@ -456,69 +387,54 @@ export function ApprovalsClient({
     );
   }
 
-  // 클라이언트 마운트 전: 스켈레톤 로더 표시
-  if (!mounted) {
-    return (
-      <div className="space-y-4">
-        <div className={`h-10 bg-muted rounded ${APPROVAL_MOTION.skeleton}`} />
-        <div className={`h-64 bg-muted rounded ${APPROVAL_MOTION.skeleton}`} />
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        {/* 탭 목록 - 접근성 속성 포함 */}
-        <TabsList
-          className={`flex flex-wrap gap-1 h-auto p-1 ${APPROVAL_TAB_TOKENS.listContainer}`}
-          role="tablist"
-          aria-label={t('ariaLabel')}
-        >
-          {availableTabs.map((tab) => {
-            const meta = TAB_META[tab];
-            const count = getCount(tab);
-            const urgency = getCountBasedUrgency(count);
-
-            return (
-              <TabsTrigger
-                key={tab}
-                value={tab}
-                className={`flex items-center gap-1.5 ${APPROVAL_TAB_TOKENS.activeIndicator}`}
-                aria-selected={activeTab === tab}
-              >
-                {getIcon(meta.icon)}
-                <span>{t(`tabMeta.${tab}.label`)}</span>
-                {count > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className={`${APPROVAL_TAB_TOKENS.badge.base} ${getUrgencyFeedbackClasses(urgency, false)}`}
-                    aria-label={t('badge.pending', { count })}
-                  >
-                    {count}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-
-        {/* 일괄 처리 바 */}
-        <BulkActionBar
-          selectedCount={selectedItems.length}
-          totalCount={sortedItems.length}
-          onSelectAll={handleSelectAll}
-          onBulkApprove={handleBulkApprove}
-          onBulkReject={handleBulkReject}
-          actionLabel={t(`tabMeta.${activeTab}.action`)}
+    <TooltipProvider>
+      <div className="space-y-4">
+        {/* KPI Strip */}
+        <ApprovalKpiStrip
+          totalPending={kpi.totalPending}
+          urgentCount={kpi.urgentCount}
+          avgWaitDays={kpi.avgWaitDays}
+          todayProcessed={kpi.todayProcessed}
+          isLoading={isLoading && !pendingCounts}
         />
 
-        {/* 탭 콘텐츠 */}
-        {availableTabs.map((tab) => (
-          <TabsContent key={tab} value={tab} className="mt-4">
+        {/* Mobile Category Bar (<lg) */}
+        <ApprovalMobileCategoryBar
+          className="lg:hidden"
+          availableTabs={availableTabs}
+          activeTab={activeTab}
+          pendingCounts={pendingCounts}
+          onTabChange={handleTabChange}
+        />
+
+        {/* Main 2-column layout */}
+        <div className="flex gap-6">
+          {/* Desktop Category Sidebar (lg+) */}
+          <ApprovalCategorySidebar
+            className="hidden lg:block"
+            availableTabs={availableTabs}
+            activeTab={activeTab}
+            pendingCounts={pendingCounts}
+            onTabChange={handleTabChange}
+          />
+
+          {/* Content Area */}
+          <div className="flex-1 min-w-0 space-y-3">
+            {/* Bulk Action Bar */}
+            <BulkActionBar
+              selectedCount={selectedItems.length}
+              totalCount={sortedItems.length}
+              onSelectAll={handleSelectAll}
+              onBulkApprove={handleBulkApprove}
+              onBulkReject={handleBulkReject}
+              actionLabel={t(`tabMeta.${activeTab}.action`)}
+            />
+
+            {/* Single list — no TabsContent loop */}
             <ApprovalList
-              items={activeTab === tab ? sortedItems : []}
-              isLoading={isLoading && activeTab === tab}
+              items={sortedItems}
+              isLoading={isLoading}
               selectedItems={selectedItems}
               processingIds={processingIds}
               exitingIds={exitingIds}
@@ -526,162 +442,161 @@ export function ApprovalsClient({
               onApprove={handleApprove}
               onReject={(item) => setRejectModalItem(item)}
               onViewDetail={(item) => setDetailModalItem(item)}
-              actionLabel={t(`tabMeta.${tab}.action`)}
+              actionLabel={t(`tabMeta.${activeTab}.action`)}
             />
-          </TabsContent>
-        ))}
-      </Tabs>
-
-      {/* 상세 보기 모달 */}
-      {detailModalItem && (
-        <ApprovalDetailModal
-          item={detailModalItem}
-          isOpen={!!detailModalItem}
-          onClose={() => setDetailModalItem(null)}
-          onApprove={() => handleApprove(detailModalItem)}
-          onReject={() => {
-            setDetailModalItem(null);
-            setRejectModalItem(detailModalItem);
-          }}
-          actionLabel={t(`tabMeta.${detailModalItem.category}.action`)}
-        />
-      )}
-
-      {/* 반려 모달 */}
-      {rejectModalItem && (
-        <RejectModal
-          item={rejectModalItem}
-          isOpen={!!rejectModalItem}
-          onClose={() => setRejectModalItem(null)}
-          onConfirm={(reason) => handleReject(rejectModalItem, reason)}
-        />
-      )}
-
-      {/* ✅ 승인 코멘트 다이얼로그 (commentRequired 카테고리용) */}
-      <Dialog
-        open={!!approveCommentItem}
-        onOpenChange={(open) => {
-          if (!open) {
-            setApproveCommentItem(null);
-            setApproveComment('');
-          }
-        }}
-      >
-        <DialogContent>
-          {/* Radix UI exit animation 중 approveCommentItem이 null이 될 수 있으므로 조기 리턴 */}
-          {approveCommentItem && (
-            <>
-              <DialogHeader>
-                <DialogTitle>
-                  {commentMeta?.commentDialogTitle
-                    ? t(`tabMeta.${approveCommentItem.category}.commentDialogTitle`)
-                    : t('commentDialog.titleFallback')}
-                </DialogTitle>
-                <DialogDescription>{approveCommentItem.summary}</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="approve-comment">{t('commentDialog.label')} *</Label>
-                  <Textarea
-                    id="approve-comment"
-                    placeholder={
-                      commentMeta?.commentPlaceholder
-                        ? t(`tabMeta.${approveCommentItem.category}.commentPlaceholder`)
-                        : t('commentDialog.placeholderFallback')
-                    }
-                    value={approveComment}
-                    onChange={(e) => setApproveComment(e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setApproveCommentItem(null);
-                    setApproveComment('');
-                  }}
-                >
-                  {t('actions.cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleApproveWithComment}
-                  disabled={!approveComment.trim() || approveMutation.isPending}
-                  className={getApprovalActionButtonClasses('approve')}
-                >
-                  {t(`tabMeta.${approveCommentItem.category}.action`)}
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ✅ 벌크 승인 코멘트 다이얼로그 (commentRequired 카테고리용) */}
-      <Dialog
-        open={isBulkApproveCommentOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsBulkApproveCommentOpen(false);
-            setBulkApproveComment('');
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {activeTabMeta?.commentDialogTitle
-                ? t(`tabMeta.${activeTab}.commentDialogTitle`)
-                : t('bulkCommentDialog.titleFallback')}
-            </DialogTitle>
-            <DialogDescription>
-              {t('bulkCommentDialog.description', { count: selectedItems.length })}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="bulk-approve-comment">{t('bulkCommentDialog.label')} *</Label>
-              <Textarea
-                id="bulk-approve-comment"
-                placeholder={
-                  activeTabMeta?.commentPlaceholder
-                    ? t(`tabMeta.${activeTab}.commentPlaceholder`)
-                    : t('commentDialog.placeholderFallback')
-                }
-                value={bulkApproveComment}
-                onChange={(e) => setBulkApproveComment(e.target.value)}
-                className="min-h-[100px]"
-              />
-            </div>
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsBulkApproveCommentOpen(false);
-                setBulkApproveComment('');
-              }}
-            >
-              {t('actions.cancel')}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleBulkApproveWithComment}
-              disabled={!bulkApproveComment.trim() || bulkApproveMutation.isPending}
-              className={getApprovalActionButtonClasses('approve')}
-            >
-              {t('bulkCommentDialog.buttonLabel', {
-                count: selectedItems.length,
-                action: t(`tabMeta.${activeTab}.action`),
-              })}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+
+        {/* 상세 보기 모달 */}
+        {detailModalItem && (
+          <ApprovalDetailModal
+            item={detailModalItem}
+            isOpen={!!detailModalItem}
+            onClose={() => setDetailModalItem(null)}
+            onApprove={() => handleApprove(detailModalItem)}
+            onReject={() => {
+              setDetailModalItem(null);
+              setRejectModalItem(detailModalItem);
+            }}
+            actionLabel={t(`tabMeta.${detailModalItem.category}.action`)}
+          />
+        )}
+
+        {/* 반려 모달 */}
+        {rejectModalItem && (
+          <RejectModal
+            item={rejectModalItem}
+            isOpen={!!rejectModalItem}
+            onClose={() => setRejectModalItem(null)}
+            onConfirm={(reason) => handleReject(rejectModalItem, reason)}
+          />
+        )}
+
+        {/* 승인 코멘트 다이얼로그 (commentRequired 카테고리용) */}
+        <Dialog
+          open={!!approveCommentItem}
+          onOpenChange={(open) => {
+            if (!open) {
+              setApproveCommentItem(null);
+              setApproveComment('');
+            }
+          }}
+        >
+          <DialogContent>
+            {approveCommentItem && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {commentMeta?.commentDialogTitle
+                      ? t(`tabMeta.${approveCommentItem.category}.commentDialogTitle`)
+                      : t('commentDialog.titleFallback')}
+                  </DialogTitle>
+                  <DialogDescription>{approveCommentItem.summary}</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="approve-comment">{t('commentDialog.label')} *</Label>
+                    <Textarea
+                      id="approve-comment"
+                      placeholder={
+                        commentMeta?.commentPlaceholder
+                          ? t(`tabMeta.${approveCommentItem.category}.commentPlaceholder`)
+                          : t('commentDialog.placeholderFallback')
+                      }
+                      value={approveComment}
+                      onChange={(e) => setApproveComment(e.target.value)}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setApproveCommentItem(null);
+                      setApproveComment('');
+                    }}
+                  >
+                    {t('actions.cancel')}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleApproveWithComment}
+                    disabled={!approveComment.trim() || approveMutation.isPending}
+                    className={getApprovalActionButtonClasses('approve')}
+                  >
+                    {t(`tabMeta.${approveCommentItem.category}.action`)}
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* 벌크 승인 코멘트 다이얼로그 (commentRequired 카테고리용) */}
+        <Dialog
+          open={isBulkApproveCommentOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsBulkApproveCommentOpen(false);
+              setBulkApproveComment('');
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {activeTabMeta?.commentDialogTitle
+                  ? t(`tabMeta.${activeTab}.commentDialogTitle`)
+                  : t('bulkCommentDialog.titleFallback')}
+              </DialogTitle>
+              <DialogDescription>
+                {t('bulkCommentDialog.description', { count: selectedItems.length })}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="bulk-approve-comment">{t('bulkCommentDialog.label')} *</Label>
+                <Textarea
+                  id="bulk-approve-comment"
+                  placeholder={
+                    activeTabMeta?.commentPlaceholder
+                      ? t(`tabMeta.${activeTab}.commentPlaceholder`)
+                      : t('commentDialog.placeholderFallback')
+                  }
+                  value={bulkApproveComment}
+                  onChange={(e) => setBulkApproveComment(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsBulkApproveCommentOpen(false);
+                  setBulkApproveComment('');
+                }}
+              >
+                {t('actions.cancel')}
+              </Button>
+              <Button
+                type="button"
+                onClick={handleBulkApproveWithComment}
+                disabled={!bulkApproveComment.trim() || bulkApproveMutation.isPending}
+                className={getApprovalActionButtonClasses('approve')}
+              >
+                {t('bulkCommentDialog.buttonLabel', {
+                  count: selectedItems.length,
+                  action: t(`tabMeta.${activeTab}.action`),
+                })}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }
