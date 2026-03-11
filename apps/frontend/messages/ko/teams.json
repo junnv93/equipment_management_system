@@ -30,7 +30,37 @@
   },
   "detail": {
     "members": "팀원 목록",
-    "equipment": "담당 장비 목록"
+    "equipment": "담당 장비 목록",
+    "edit": "수정",
+    "delete": "삭제",
+    "backToList": "팀 목록으로 돌아가기",
+    "leaderLabel": "팀장:"
+  },
+  "leaderCombobox": {
+    "ariaLabel": "팀장 선택",
+    "clearAriaLabel": "선택 해제",
+    "placeholder": "팀장을 검색하여 선택...",
+    "searchPlaceholder": "이름으로 검색...",
+    "searchAriaLabel": "사용자 검색",
+    "listAriaLabel": "사용자 목록",
+    "typeToSearch": "이름을 입력하여 검색하세요",
+    "noResults": "검색 결과가 없습니다",
+    "noTeamMembers": "팀에 활성 멤버가 없습니다. 검색어를 변경하세요."
+  },
+  "deleteModal": {
+    "successTitle": "팀이 삭제되었습니다",
+    "successDesc": "{name} 팀이 성공적으로 삭제되었습니다.",
+    "errorTitle": "팀 삭제 실패"
+  },
+  "memberProfile": {
+    "title": "팀원 프로필",
+    "position": "직함",
+    "department": "부서",
+    "email": "이메일",
+    "phone": "전화",
+    "employeeId": "사번",
+    "manager": "관리자",
+    "site": "사이트"
   },
   "edit": {
     "title": "팀 수정",
@@ -121,6 +151,16 @@
     "searchBadge": "검색: {term}",
     "siteBadge": "사이트: {site}",
     "classificationBadge": "분류: {classification}",
+    "filterPanelAriaLabel": "팀 필터 패널",
+    "siteSection": "사이트",
+    "classificationSection": "분류",
+    "statsSection": "현황",
+    "sectionTeamCount": "{count}개 팀",
+    "stats": {
+      "totalTeams": "전체 팀",
+      "noLeader": "팀장 미지정",
+      "totalMembers": "전체 팀원"
+    },
     "empty": {
       "noResults": "검색 결과가 없습니다",
       "noTeams": "등록된 팀이 없습니다",

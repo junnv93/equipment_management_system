@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -44,14 +45,15 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const t = useTranslations('teams');
 
   // 삭제 뮤테이션
   const deleteMutation = useMutation({
     mutationFn: () => teamsApi.deleteTeam(team.id),
     onSuccess: () => {
       toast({
-        title: '팀이 삭제되었습니다',
-        description: `${team.name} 팀이 성공적으로 삭제되었습니다.`,
+        title: t('deleteModal.successTitle'),
+        description: t('deleteModal.successDesc', { name: team.name }),
       });
 
       onOpenChange(false);
@@ -63,8 +65,8 @@ export function DeleteTeamModal({ team, open, onOpenChange }: DeleteTeamModalPro
     onError: (error: Error) => {
       toast({
         variant: 'destructive',
-        title: '팀 삭제 실패',
-        description: error.message || '팀을 삭제하는 중 오류가 발생했습니다.',
+        title: t('deleteModal.errorTitle'),
+        description: error.message || t('toasts.deleteError'),
       });
     },
   });

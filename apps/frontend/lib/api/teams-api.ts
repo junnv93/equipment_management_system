@@ -108,12 +108,17 @@ export const CLASSIFICATION_CONFIG: Record<
 export const TEAM_TYPE_CONFIG = CLASSIFICATION_CONFIG;
 
 /**
- * 사이트 정보
+ * 사이트 정보 (SSOT — UL 팔레트 기반 color 포함)
+ *
+ * color: CLASSIFICATION_CONFIG와 동일한 UL 팔레트 사용
+ * - suwon: UL Midnight Blue (#122C49)
+ * - uiwang: UL Blue (#4A90D9)
+ * - pyeongtaek: UL Green (#00A451)
  */
 export const SITE_CONFIG = {
-  suwon: { label: '수원', code: 'SUW' },
-  uiwang: { label: '의왕', code: 'UIW' },
-  pyeongtaek: { label: '평택', code: 'PYT' },
+  suwon: { label: '수원', code: 'SUW', color: '#122C49' },
+  uiwang: { label: '의왕', code: 'UIW', color: '#4A90D9' },
+  pyeongtaek: { label: '평택', code: 'PYT', color: '#00A451' },
 } as const;
 
 export type Site = keyof typeof SITE_CONFIG;

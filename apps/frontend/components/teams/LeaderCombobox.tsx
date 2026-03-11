@@ -7,17 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { USER_ROLE_LABELS } from '@equipment-management/shared-constants';
-
-/** 역할 뱃지 색상 매핑 */
-const ROLE_BADGE_VARIANT: Record<string, string> = {
-  test_engineer: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  technical_manager: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  quality_manager: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  lab_manager: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-};
+import { ROLE_BADGE_TOKENS } from '@/lib/design-tokens/components/team';
 
 interface LeaderComboboxProps {
   value?: string;
@@ -28,6 +22,7 @@ interface LeaderComboboxProps {
 }
 
 export function LeaderCombobox({ value, onChange, site, teamId, disabled }: LeaderComboboxProps) {
+  const t = useTranslations('teams');
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -94,7 +89,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
             role="combobox"
             aria-expanded={open}
             aria-haspopup="listbox"
-            aria-label="팀장 선택"
+            aria-label={t('leaderCombobox.ariaLabel')}
             disabled={disabled}
             className={cn(
               'w-full justify-start text-left font-normal h-10',
@@ -103,7 +98,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
           >
             <User className="h-4 w-4 mr-2 shrink-0" aria-hidden="true" />
             <span className="truncate">
-              {selectedUser ? selectedUser.name : '팀장을 검색하여 선택...'}
+              {selectedUser ? selectedUser.name : t('leaderCombobox.placeholder')}
             </span>
           </Button>
           {selectedUser && !disabled && (
@@ -114,7 +109,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
                 handleClear();
               }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="선택 해제"
+              aria-label={t('leaderCombobox.clearAriaLabel')}
             >
               <X className="h-4 w-4" />
             </button>
@@ -129,25 +124,29 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
             <Input
               ref={inputRef}
               type="search"
-              placeholder="이름으로 검색..."
+              placeholder={t('leaderCombobox.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9"
-              aria-label="사용자 검색"
+              aria-label={t('leaderCombobox.searchAriaLabel')}
               autoFocus
             />
           </div>
         </div>
 
         {/* 결과 목록 */}
-        <div className="max-h-60 overflow-y-auto" role="listbox" aria-label="사용자 목록">
+        <div
+          className="max-h-60 overflow-y-auto"
+          role="listbox"
+          aria-label={t('leaderCombobox.listAriaLabel')}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           ) : !debouncedSearch ? (
             <p className="text-sm text-muted-foreground text-center py-6">
-              이름을 입력하여 검색하세요
+              {t('leaderCombobox.typeToSearch')}
             </p>
           ) : users && users.length > 0 ? (
             users.map((user) => (
@@ -171,7 +170,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
                     <span
                       className={cn(
                         'inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium',
-                        ROLE_BADGE_VARIANT[user.role] || 'bg-muted'
+                        ROLE_BADGE_TOKENS[user.role] || 'bg-muted'
                       )}
                     >
                       {USER_ROLE_LABELS[user.role as keyof typeof USER_ROLE_LABELS] || user.role}
@@ -188,7 +187,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
             ))
           ) : (
             <p className="text-sm text-muted-foreground text-center py-6">
-              {teamId ? '팀에 활성 멤버가 없습니다. 검색어를 변경하세요.' : '검색 결과가 없습니다'}
+              {teamId ? t('leaderCombobox.noTeamMembers') : t('leaderCombobox.noResults')}
             </p>
           )}
         </div>

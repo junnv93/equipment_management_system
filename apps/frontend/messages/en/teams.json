@@ -30,7 +30,37 @@
   },
   "detail": {
     "members": "Team Members",
-    "equipment": "Assigned Equipment"
+    "equipment": "Assigned Equipment",
+    "edit": "Edit",
+    "delete": "Delete",
+    "backToList": "Back to Team List",
+    "leaderLabel": "Leader:"
+  },
+  "leaderCombobox": {
+    "ariaLabel": "Select team leader",
+    "clearAriaLabel": "Clear selection",
+    "placeholder": "Search and select a team leader...",
+    "searchPlaceholder": "Search by name...",
+    "searchAriaLabel": "Search users",
+    "listAriaLabel": "User list",
+    "typeToSearch": "Type a name to search",
+    "noResults": "No results found",
+    "noTeamMembers": "No active members in this team. Try a different search term."
+  },
+  "deleteModal": {
+    "successTitle": "Team deleted",
+    "successDesc": "{name} has been successfully deleted.",
+    "errorTitle": "Team deletion failed"
+  },
+  "memberProfile": {
+    "title": "Member Profile",
+    "position": "Position",
+    "department": "Department",
+    "email": "Email",
+    "phone": "Phone",
+    "employeeId": "Employee ID",
+    "manager": "Manager",
+    "site": "Site"
   },
   "edit": {
     "title": "Edit Team",
@@ -121,6 +151,16 @@
     "searchBadge": "Search: {term}",
     "siteBadge": "Site: {site}",
     "classificationBadge": "Classification: {classification}",
+    "filterPanelAriaLabel": "Team filters",
+    "siteSection": "Site",
+    "classificationSection": "Classification",
+    "statsSection": "Summary",
+    "sectionTeamCount": "{count} teams",
+    "stats": {
+      "totalTeams": "Total Teams",
+      "noLeader": "No Leader",
+      "totalMembers": "Total Members"
+    },
     "empty": {
       "noResults": "No results found",
       "noTeams": "No teams registered",

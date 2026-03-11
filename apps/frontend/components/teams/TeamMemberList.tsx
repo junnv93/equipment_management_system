@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Search, User, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
+import { getStaggerDelay } from '@/lib/design-tokens/motion';
+import { MOTION_PRIMITIVES } from '@/lib/design-tokens/primitives';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ import { cn } from '@/lib/utils';
 import { UserRoleValues } from '@equipment-management/schemas';
 import { MemberProfileDialog } from './MemberProfileDialog';
 import type { CurrentUserInfo } from './TeamDetail';
+import { ROLE_BADGE_TOKENS, TEAM_MEMBER_GROUP_TOKENS } from '@/lib/design-tokens/components/team';
 
 interface TeamMemberListProps {
   teamId: string;
@@ -48,13 +50,14 @@ interface TeamMemberListProps {
   currentUser?: CurrentUserInfo;
 }
 
-/** 역할 뱃지 색상 매핑 */
-const ROLE_BADGE_VARIANT: Record<string, string> = {
-  test_engineer: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  technical_manager: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  quality_manager: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  lab_manager: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-};
+/** 역할 표시 순서 */
+const ROLE_ORDER = [
+  'technical_manager',
+  'test_engineer',
+  'quality_manager',
+  'lab_manager',
+  'system_admin',
+] as const;
 
 /**
  * 팀원 목록 컴포넌트
@@ -159,9 +162,7 @@ export function TeamMemberList({
 
   // 검색 + 역할 복합 필터링
   const filteredMembers = (members || []).filter((member) => {
-    // 역할 필터
     if (roleFilter !== 'all' && member.role !== roleFilter) return false;
-    // 검색 필터
     if (!search) return true;
     const searchLower = search.toLowerCase();
     return (
@@ -173,28 +174,35 @@ export function TeamMemberList({
     );
   });
 
+  // 역할별 그룹핑
+  const groupedMembers = useMemo(() => {
+    const groups: Record<string, TeamMember[]> = {};
+    ROLE_ORDER.forEach((role) => {
+      groups[role] = [];
+    });
+    filteredMembers.forEach((m) => {
+      const role = m.role || 'test_engineer';
+      if (!groups[role]) groups[role] = [];
+      groups[role].push(m);
+    });
+    return groups;
+  }, [filteredMembers]);
+
   if (error) {
     return (
       <ErrorAlert error={error as Error} title={t('member.errorLoad')} onRetry={() => refetch()} />
     );
   }
 
-  const roleKeys = [
-    'test_engineer',
-    'technical_manager',
-    'quality_manager',
-    'lab_manager',
-  ] as const;
-
   return (
     <div className="space-y-4">
       {/* 검색 + 역할 필터 + 팀원 수 */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex gap-3 flex-1 w-full sm:w-auto">
-          {/* 검색 (+ clear 버튼) */}
-          <div className="relative max-w-md flex-1">
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex gap-2.5 flex-1 w-full sm:w-auto">
+          {/* 검색 */}
+          <div className="relative max-w-xs flex-1">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
               aria-hidden="true"
             />
             <Input
@@ -202,7 +210,7 @@ export function TeamMemberList({
               placeholder={t('member.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-8"
+              className="pl-9 pr-8 h-9 text-sm"
               aria-label={t('member.searchAriaLabel')}
             />
             {search && (
@@ -212,19 +220,22 @@ export function TeamMemberList({
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label={t('member.searchClear')}
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
           {/* 역할 필터 */}
           <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-[160px]" aria-label={t('member.roleFilterAriaLabel')}>
+            <SelectTrigger
+              className="w-[140px] h-9 text-sm"
+              aria-label={t('member.roleFilterAriaLabel')}
+            >
               <SelectValue placeholder={t('member.allRoles')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('member.allRoles')}</SelectItem>
-              {roleKeys.map((role) => (
+              {ROLE_ORDER.map((role) => (
                 <SelectItem key={role} value={role}>
                   {tNav(`roles.${role}` as Parameters<typeof tNav>[0])}
                 </SelectItem>
@@ -233,208 +244,155 @@ export function TeamMemberList({
           </Select>
         </div>
 
-        {/* 팀원 수 */}
-        <span
-          className="text-sm text-muted-foreground shrink-0"
-          style={{ fontVariantNumeric: 'tabular-nums' }}
-        >
+        <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
           {t('member.count', { count: filteredMembers.length })}
         </span>
       </div>
 
-      {/* 팀원 목록 */}
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="divide-y">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <Skeleton className="h-4 w-40" />
+      {/* 팀원 목록 — 역할별 그룹 */}
+      <div className="space-y-5">
+        {isLoading ? (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-2 py-2.5">
+                <Skeleton className="h-9 w-9 rounded-full flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-20" />
                 </div>
-              ))}
-            </div>
-          ) : filteredMembers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <User className="h-10 w-10 text-muted-foreground mb-3" />
-              <p className="text-muted-foreground">
-                {search || roleFilter !== 'all'
-                  ? t('member.empty.noResults')
-                  : t('member.empty.noMembers')}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left p-4 font-medium text-muted-foreground">
-                      {t('member.table.name')}
-                    </th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">
-                      {t('member.table.role')}
-                    </th>
-                    <th className="text-left p-4 font-medium text-muted-foreground hidden lg:table-cell">
-                      {t('member.table.department')}
-                    </th>
-                    <th className="text-left p-4 font-medium text-muted-foreground hidden md:table-cell">
-                      {t('member.table.email')}
-                    </th>
-                    <th className="text-right p-4 font-medium text-muted-foreground">
-                      <span className="sr-only">{t('member.table.actionsLabel')}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.map((member, index) => (
-                    <tr
-                      key={member.id}
+                <Skeleton className="h-6 w-20" />
+              </div>
+            ))}
+          </div>
+        ) : filteredMembers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <User className="h-9 w-9 text-muted-foreground mb-2.5" />
+            <p className="text-sm text-muted-foreground">
+              {search || roleFilter !== 'all'
+                ? t('member.empty.noResults')
+                : t('member.empty.noMembers')}
+            </p>
+          </div>
+        ) : (
+          ROLE_ORDER.filter((role) => groupedMembers[role]?.length > 0).map((role) => (
+            <div key={role}>
+              {/* 역할 그룹 헤더 */}
+              <div className={TEAM_MEMBER_GROUP_TOKENS.groupHeader}>
+                <span
+                  className={cn(
+                    TEAM_MEMBER_GROUP_TOKENS.groupBadge,
+                    ROLE_BADGE_TOKENS[role] || 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {tNav(`roles.${role}` as Parameters<typeof tNav>[0])}
+                </span>
+                <span className={TEAM_MEMBER_GROUP_TOKENS.groupCount}>
+                  {groupedMembers[role].length}명
+                </span>
+              </div>
+
+              {/* 해당 역할 팀원 목록 */}
+              <div className="mt-1">
+                {groupedMembers[role].map((member, index) => (
+                  <div
+                    key={member.id}
+                    className={cn(
+                      TEAM_MEMBER_GROUP_TOKENS.memberRow,
+                      member.isActive === false && 'opacity-50',
+                      'motion-safe:animate-in motion-safe:fade-in motion-safe:fill-mode-forwards'
+                    )}
+                    style={{
+                      animationDelay: getStaggerDelay(index, 'list'),
+                      animationDuration: `${MOTION_PRIMITIVES.duration.fast}ms`,
+                    }}
+                    onClick={() => setProfileMember(member)}
+                  >
+                    {/* 아바타 */}
+                    <div
                       className={cn(
-                        'border-b last:border-0 hover:bg-muted/30 transition-colors',
-                        'motion-safe:animate-in motion-safe:fade-in motion-safe:fill-mode-forwards',
-                        member.isActive === false && 'opacity-50'
+                        TEAM_MEMBER_GROUP_TOKENS.avatar,
+                        ROLE_BADGE_TOKENS[member.role] || 'bg-muted text-muted-foreground'
                       )}
-                      style={{
-                        animationDelay: `${index * 30}ms`,
-                        animationDuration: '200ms',
-                      }}
+                      data-testid="member-avatar"
+                      aria-label={member.name}
                     >
-                      {/* 이름/직함 */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-10 w-10 rounded-full bg-muted flex items-center justify-center shrink-0"
-                            data-testid="member-avatar"
-                            aria-label={member.name}
-                          >
-                            <User className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium truncate">
-                              {member.name}
-                              {member.isActive === false && (
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  {t('member.inactive')}
-                                </Badge>
-                              )}
-                            </p>
-                            {member.position && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {member.position}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
+                      {member.name.charAt(0)}
+                    </div>
 
-                      {/* 역할 + 역할 변경 버튼 */}
-                      <td className="p-4">
-                        {canChangeRole(member) ? (
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                                ROLE_BADGE_VARIANT[member.role] || 'bg-muted'
-                              )}
-                            >
-                              {tNav(`roles.${member.role}` as Parameters<typeof tNav>[0])}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setRoleChangeTarget({
-                                  member,
-                                  newRole: getTargetRole(member.role),
-                                })
-                              }
-                              className="h-7 text-xs"
-                            >
-                              <ShieldCheck className="h-3 w-3 mr-1" />
-                              {t('member.changeRoleButton', {
-                                role: tNav(
-                                  `roles.${getTargetRole(member.role)}` as Parameters<
-                                    typeof tNav
-                                  >[0]
-                                ),
-                              })}
-                            </Button>
-                          </div>
-                        ) : (
-                          <span
-                            className={cn(
-                              'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                              ROLE_BADGE_VARIANT[member.role] || 'bg-muted'
-                            )}
-                          >
-                            {tNav(`roles.${member.role}` as Parameters<typeof tNav>[0])}
-                          </span>
+                    {/* 이름 + 부서/이메일 */}
+                    <div className={TEAM_MEMBER_GROUP_TOKENS.memberInfo}>
+                      <p className={TEAM_MEMBER_GROUP_TOKENS.memberName}>
+                        {member.name}
+                        {member.isActive === false && (
+                          <Badge variant="outline" className="ml-2 text-[10px] py-0">
+                            {t('member.inactive')}
+                          </Badge>
                         )}
-                      </td>
+                      </p>
+                      <p className={TEAM_MEMBER_GROUP_TOKENS.memberSub}>
+                        {[member.department, member.email].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
 
-                      {/* 부서 */}
-                      <td className="p-4 hidden lg:table-cell">
-                        <span className="text-sm text-muted-foreground">
-                          {member.department || '-'}
-                        </span>
-                      </td>
-
-                      {/* 이메일 */}
-                      <td className="p-4 hidden md:table-cell">
-                        {member.email ? (
-                          <a
-                            href={`mailto:${member.email}`}
-                            className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    {/* 역할 변경 또는 액션 메뉴 */}
+                    <div
+                      className="flex items-center gap-1.5 flex-shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {canChangeRole(member) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setRoleChangeTarget({
+                              member,
+                              newRole: getTargetRole(member.role),
+                            })
+                          }
+                          className="h-7 text-xs px-2"
+                        >
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          {t('member.changeRoleButton', {
+                            role: tNav(
+                              `roles.${getTargetRole(member.role)}` as Parameters<typeof tNav>[0]
+                            ),
+                          })}
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            aria-label={t('member.menuAriaLabel', { name: member.name })}
                           >
-                            <Mail className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{member.email}</span>
-                          </a>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">-</span>
-                        )}
-                      </td>
-
-                      {/* 작업 */}
-                      <td className="p-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              aria-label={t('member.menuAriaLabel', { name: member.name })}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {member.email && (
-                              <DropdownMenuItem asChild>
-                                <a href={`mailto:${member.email}`}>
-                                  <Mail className="h-4 w-4 mr-2" />
-                                  {t('member.sendEmail')}
-                                </a>
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => setProfileMember(member)}>
-                              <User className="h-4 w-4 mr-2" />
-                              {t('member.viewProfile')}
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {member.email && (
+                            <DropdownMenuItem asChild>
+                              <a href={`mailto:${member.email}`}>
+                                <Mail className="h-4 w-4 mr-2" />
+                                {t('member.sendEmail')}
+                              </a>
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          )}
+                          <DropdownMenuItem onClick={() => setProfileMember(member)}>
+                            <User className="h-4 w-4 mr-2" />
+                            {t('member.viewProfile')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          ))
+        )}
+      </div>
 
       {/* 프로필 다이얼로그 */}
       {profileMember && (

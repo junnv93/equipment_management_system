@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { ArrowLeft, Edit, Trash2, Users, MapPin, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ interface TeamDetailProps {
  */
 export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps) {
   const router = useRouter();
+  const t = useTranslations('teams');
   const { hasRole } = useAuth();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -61,7 +63,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
             variant="outline"
             size="icon"
             onClick={() => router.push('/teams')}
-            aria-label="팀 목록으로 돌아가기"
+            aria-label={t('detail.backToList')}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -84,13 +86,13 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
           {canEdit && (
             <Button variant="outline" onClick={() => router.push(`/teams/${team.id}/edit`)}>
               <Edit className="h-4 w-4 mr-2" />
-              수정
+              {t('detail.edit')}
             </Button>
           )}
           {canDelete && (
             <Button variant="destructive" onClick={() => setIsDeleteModalOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" />
-              삭제
+              {t('detail.delete')}
             </Button>
           )}
         </div>
@@ -110,7 +112,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
             {team.leaderName && (
               <span className="text-muted-foreground flex items-center gap-1">
                 <User className="h-3 w-3" aria-hidden="true" />
-                팀장: {team.leaderName}
+                {t('detail.leaderLabel')} {team.leaderName}
               </span>
             )}
             <span

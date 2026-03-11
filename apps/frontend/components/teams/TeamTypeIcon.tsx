@@ -65,7 +65,6 @@ export function TeamTypeIcon({
           config.bgColor,
           containerSizeClasses[size]
         )}
-        style={{ borderColor: config.color }}
         data-testid="team-type-icon"
         aria-label={`${config.label} 팀 유형`}
       >
