@@ -658,9 +658,15 @@ export class DashboardService {
 
         const [checkoutCount] = checkoutCountResult;
 
-        // 보정계수, 소프트웨어 승인 대기 (스키마 미구현)
+        // 보정계수 승인 대기 (스키마 미구현)
         const calibrationFactor = 0;
-        const software = 0;
+
+        // 소프트웨어 변경 승인 대기
+        const [softwareCountResult] = await this.db
+          .select({ count: count() })
+          .from(schema.softwareHistory)
+          .where(eq(schema.softwareHistory.approvalStatus, 'pending'));
+        const software = softwareCountResult?.count || 0;
 
         const equipment = equipmentCount?.count || 0;
         const checkout = checkoutCount?.count || 0;

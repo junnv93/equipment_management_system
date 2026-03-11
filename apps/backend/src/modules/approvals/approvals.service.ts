@@ -148,9 +148,15 @@ export class ApprovalsService {
       softwareCount,
     ] = await Promise.all([
       // === Outgoing (반출) ===
-      // Regular checkouts (calibration, repair, rental, etc.)
+      // Regular checkouts (calibration, repair, rental — RETURN_TO_VENDOR 제외)
       shouldQuery('outgoing')
-        ? this.getCheckoutCount(CheckoutStatusValues.PENDING, undefined, userTeamId, isLabManager)
+        ? this.getCheckoutCount(
+            CheckoutStatusValues.PENDING,
+            undefined,
+            userTeamId,
+            isLabManager,
+            CheckoutPurposeValues.RETURN_TO_VENDOR
+          )
         : Promise.resolve(0),
 
       // Equipment being returned to vendors (part of outgoing)
@@ -253,15 +259,20 @@ export class ApprovalsService {
     status: string,
     purpose?: string,
     userTeamId?: string | null,
-    isLabManager?: boolean
+    isLabManager?: boolean,
+    excludePurpose?: string
   ): Promise<number> {
     try {
       const checkouts = await this.db.query.checkouts.findMany({
-        where: (checkouts, { eq: eqFn, and: andFn }) => {
+        where: (checkouts, { eq: eqFn, and: andFn, ne }) => {
           const conditions = [eqFn(checkouts.status, status)];
 
           if (purpose) {
             conditions.push(eqFn(checkouts.purpose, purpose));
+          }
+
+          if (excludePurpose) {
+            conditions.push(ne(checkouts.purpose, excludePurpose));
           }
 
           return andFn(...conditions);
