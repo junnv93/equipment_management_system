@@ -38,9 +38,12 @@ export interface UpcomingCalibration {
 
 /**
  * 반납 예정 반출 데이터 (달력용)
+ *
+ * id = checkout ID (상세 링크용), checkoutItemId = 고유 행 식별자 (React key용)
  */
 export interface UpcomingCheckoutReturn {
   id: string;
+  checkoutItemId: string;
   equipmentName: string;
   managementNumber: string;
   expectedReturnDate: string;
@@ -50,9 +53,12 @@ export interface UpcomingCheckoutReturn {
 
 /**
  * 반출 지연 데이터 (대여/교정/수리 포함)
+ *
+ * id = checkout ID (상세 링크용), checkoutItemId = 고유 행 식별자 (React key용)
  */
 export interface OverdueCheckout {
   id: string;
+  checkoutItemId: string;
   equipmentId: string;
   equipment?: {
     id: string;

@@ -26,6 +26,8 @@
  * ============================================================================
  */
 
+import { findCheckoutStatusGroupKey } from '@equipment-management/schemas';
+
 /**
  * UI에서 사용하는 반출 필터 타입 (URL 파라미터와 1:1 대응)
  */
@@ -220,4 +222,21 @@ export function countActiveFilters(filters: UICheckoutFilters): number {
   if (filters.purpose !== 'all') count++;
   if (filters.period !== 'all') count++;
   return count;
+}
+
+/**
+ * 상태 필터 값에 대한 i18n 키를 반환
+ *
+ * - 단일 상태: `status.{value}` (예: `status.pending`)
+ * - 상태 그룹: `statusGroup.{groupKey}` (예: `statusGroup.in_progress`)
+ *
+ * @param statusFilterValue - filters.status 값 (단일 또는 쉼표 구분 그룹)
+ * @returns i18n 번역 함수에 전달할 키
+ */
+export function getStatusFilterDisplayKey(statusFilterValue: string): string {
+  const groupKey = findCheckoutStatusGroupKey(statusFilterValue);
+  if (groupKey) {
+    return `statusGroup.${groupKey}`;
+  }
+  return `status.${statusFilterValue}`;
 }

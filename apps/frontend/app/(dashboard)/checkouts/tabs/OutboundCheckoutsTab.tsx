@@ -26,6 +26,7 @@ import {
   convertFiltersToApiParams,
   type UICheckoutFilters,
 } from '@/lib/utils/checkout-filter-utils';
+import { getCheckoutStatusGroupFilterValue } from '@equipment-management/schemas';
 
 interface OutboundCheckoutsTabProps {
   teamId?: string;
@@ -68,8 +69,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
       subKey: 'outbound.inProgressSub',
       value: summary.approved,
       icon: PackageOpen,
-      filterStatus:
-        'checked_out,lender_checked,borrower_received,in_use,borrower_returned,lender_received',
+      filterStatus: getCheckoutStatusGroupFilterValue('in_progress'),
       dotColor: 'bg-brand-purple',
     },
     {
@@ -87,7 +87,7 @@ function useStatCards(summary: OutboundCheckoutsTabProps['summary']) {
       subKey: 'outbound.returnedSub',
       value: summary.returnedToday,
       icon: PackageCheck,
-      filterStatus: 'returned,return_approved',
+      filterStatus: getCheckoutStatusGroupFilterValue('completed'),
       dotColor: 'bg-brand-ok',
     },
   ];

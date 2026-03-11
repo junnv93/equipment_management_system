@@ -303,10 +303,11 @@ export class DashboardService {
       async () => {
         const today = new Date();
 
-        // checkout_items를 통해 장비 정보 조회
+        // checkout_items를 통해 장비 정보 조회 (checkoutItemId로 행 고유 식별)
         const results = await this.db
           .select({
             id: schema.checkouts.id,
+            checkoutItemId: schema.checkoutItems.id,
             equipmentId: schema.checkoutItems.equipmentId,
             equipmentName: schema.equipment.name,
             equipmentManagementNumber: schema.equipment.managementNumber,
@@ -341,6 +342,7 @@ export class DashboardService {
 
           return {
             id: r.id,
+            checkoutItemId: r.checkoutItemId,
             equipmentId: r.equipmentId,
             equipment: {
               id: r.equipmentId,
@@ -385,6 +387,7 @@ export class DashboardService {
         const results = await this.db
           .select({
             id: schema.checkouts.id,
+            checkoutItemId: schema.checkoutItems.id,
             equipmentName: schema.equipment.name,
             managementNumber: schema.equipment.managementNumber,
             expectedReturnDate: schema.checkouts.expectedReturnDate,
@@ -413,6 +416,7 @@ export class DashboardService {
 
           return {
             id: r.id,
+            checkoutItemId: r.checkoutItemId,
             equipmentName: r.equipmentName || '',
             managementNumber: r.managementNumber || '',
             expectedReturnDate: r.expectedReturnDate ? r.expectedReturnDate.toISOString() : '',

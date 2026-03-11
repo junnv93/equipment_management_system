@@ -17,6 +17,10 @@
     "overdue": "Overdue",
     "canceled": "Canceled"
   },
+  "statusGroup": {
+    "in_progress": "In Progress",
+    "completed": "Completed"
+  },
   "purpose": {
     "calibration": "Calibration",
     "repair": "Repair",

@@ -51,6 +51,7 @@ import {
   filtersToSearchParams,
   DEFAULT_UI_FILTERS,
   countActiveFilters,
+  getStatusFilterDisplayKey,
   type UICheckoutFilters,
   type CheckoutPeriod,
 } from '@/lib/utils/checkout-filter-utils';
@@ -391,7 +392,7 @@ export default function CheckoutsContent({
                   className={CHECKOUT_FILTER_BAR_TOKENS.tag}
                   onClick={() => updateUrl({ ...filters, status: 'all', page: 1 })}
                 >
-                  {t(`status.${filters.status}`)}
+                  {t(getStatusFilterDisplayKey(filters.status))}
                   <X className={CHECKOUT_FILTER_BAR_TOKENS.tagDismissIcon} />
                 </button>
               )}

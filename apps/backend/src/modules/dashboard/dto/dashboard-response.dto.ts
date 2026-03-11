@@ -79,10 +79,16 @@ export class UpcomingCalibrationDto {
 
 /**
  * 반출 지연 DTO (대여/교정/수리 포함)
+ *
+ * checkout-checkoutItem 1:N 관계에서 각 행은 checkoutItem 단위.
+ * id = checkout ID (상세 링크용), checkoutItemId = 고유 행 식별자 (React key용).
  */
 export class OverdueCheckoutDto {
-  @ApiProperty({ description: '반출 ID' })
+  @ApiProperty({ description: '반출 ID (checkout)' })
   id: string;
+
+  @ApiProperty({ description: '반출 항목 ID (checkout_item, 고유 행 식별자)' })
+  checkoutItemId: string;
 
   @ApiProperty({ description: '장비 ID' })
   equipmentId: string;
@@ -124,10 +130,16 @@ export const OverdueRentalDto = OverdueCheckoutDto;
 
 /**
  * 반납 예정 반출 DTO (달력용)
+ *
+ * checkout-checkoutItem 1:N 관계에서 각 행은 checkoutItem 단위.
+ * id = checkout ID (상세 링크용), checkoutItemId = 고유 행 식별자 (React key용).
  */
 export class UpcomingCheckoutReturnDto {
-  @ApiProperty({ description: '반출 ID' })
+  @ApiProperty({ description: '반출 ID (checkout)' })
   id: string;
+
+  @ApiProperty({ description: '반출 항목 ID (checkout_item, 고유 행 식별자)' })
+  checkoutItemId: string;
 
   @ApiProperty({ description: '장비명' })
   equipmentName: string;

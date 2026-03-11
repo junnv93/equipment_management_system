@@ -17,6 +17,10 @@
     "overdue": "기한 초과",
     "canceled": "취소"
   },
+  "statusGroup": {
+    "in_progress": "진행 중",
+    "completed": "반입 완료"
+  },
   "purpose": {
     "calibration": "교정",
     "repair": "수리",

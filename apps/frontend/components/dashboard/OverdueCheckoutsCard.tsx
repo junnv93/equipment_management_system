@@ -85,7 +85,7 @@ export function OverdueCheckoutsCard({
             <div className={T.list}>
               {overdueCheckouts.slice(0, DISPLAY_LIMITS.overdueCheckouts).map((item) => (
                 <Link
-                  key={item.id}
+                  key={item.checkoutItemId}
                   href={FRONTEND_ROUTES.CHECKOUTS.DETAIL(item.id)}
                   className={T.item}
                   aria-label={`${item.equipment?.name ?? ''} ${t('daysOverdue', { days: item.daysOverdue })}`}
@@ -117,7 +117,7 @@ export function OverdueCheckoutsCard({
                 .slice(0, DISPLAY_LIMITS.upcomingCheckoutReturns)
                 .map((item) => (
                   <Link
-                    key={item.id}
+                    key={item.checkoutItemId}
                     href={FRONTEND_ROUTES.CHECKOUTS.DETAIL(item.id)}
                     className={T.item}
                     aria-label={`${item.equipmentName} ${t('daysUntilReturn', { days: item.daysUntilReturn })}`}

@@ -73,7 +73,11 @@ export function MiniCalendar({
 
     upcomingCheckoutReturns.forEach((r) => {
       if (r.expectedReturnDate)
-        push(toDateKey(r.expectedReturnDate), { id: r.id, label: r.equipmentName, type: 'return' });
+        push(toDateKey(r.expectedReturnDate), {
+          id: r.checkoutItemId,
+          label: r.equipmentName,
+          type: 'return',
+        });
     });
 
     return map;
