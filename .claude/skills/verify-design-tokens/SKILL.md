@@ -70,7 +70,6 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/components/dashboard/PendingApprovalCard.tsx`                                       | 마이그레이션된 컴포넌트 (Dashboard)                        |
 | `apps/frontend/components/dashboard/RecentActivities.tsx`                                          | 마이그레이션된 컴포넌트 (Dashboard)                        |
 | `apps/frontend/components/dashboard/QuickActionBar.tsx`                                            | 마이그레이션된 컴포넌트 (Dashboard)                        |
-| `apps/frontend/components/dashboard/TabbedCalibrationPanel.tsx`                                    | 마이그레이션된 컴포넌트 (Dashboard)                        |
 | `apps/frontend/components/dashboard/CalibrationDdayList.tsx`                                       | 마이그레이션된 컴포넌트 (Dashboard)                        |
 | `apps/frontend/components/dashboard/KpiStatusGrid.tsx`                                             | 마이그레이션된 컴포넌트 (Dashboard)                        |
 | `apps/frontend/components/dashboard/MiniCalendar.tsx`                                              | 마이그레이션된 컴포넌트 (Dashboard)                        |
@@ -233,7 +232,6 @@ files=(
   "apps/frontend/components/dashboard/PendingApprovalCard.tsx"
   "apps/frontend/components/dashboard/RecentActivities.tsx"
   "apps/frontend/components/dashboard/QuickActionBar.tsx"
-  "apps/frontend/components/dashboard/TabbedCalibrationPanel.tsx"
   "apps/frontend/components/dashboard/CalibrationDdayList.tsx"
   "apps/frontend/components/dashboard/KpiStatusGrid.tsx"
   "apps/frontend/components/dashboard/MiniCalendar.tsx"
