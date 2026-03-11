@@ -13,7 +13,7 @@
  * - Layer 2: getTransitionClasses() (motion.ts)
  */
 
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 import { getSemanticContainerColorClasses, getSemanticContainerTextClasses } from '../brand';
 
 /**
@@ -33,7 +33,7 @@ export const REPORTS_SUCCESS_BANNER_TOKENS = {
   container: [
     'mb-6 p-4 border rounded-md flex items-start space-x-2',
     getSemanticContainerColorClasses('ok'),
-    getTransitionClasses('fast', ['opacity']),
+    TRANSITION_PRESETS.fastOpacity,
   ].join(' '),
   icon: `h-5 w-5 mt-0.5 ${getSemanticContainerTextClasses('ok')}`,
   title: 'font-medium',

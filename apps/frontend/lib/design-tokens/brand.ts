@@ -250,3 +250,134 @@ export function getSemanticContainerTextClasses(color: SemanticColorKey): string
   };
   return colorMap[color];
 }
+
+// ============================================================================
+// 5. Status / Border / Solid / Dot Helpers (Layer 2 SSOT)
+// ============================================================================
+
+/**
+ * 시멘틱 상태 클래스 — 배경(10%) + 텍스트 (border 없음)
+ *
+ * getSemanticBadgeClasses와 달리 border를 포함하지 않습니다.
+ * 카드 className, 상태 표시기, 테이블 셀 배경 등에 사용.
+ *
+ * @example
+ * getSemanticStatusClasses('ok')       // 'bg-brand-ok/10 text-brand-ok'
+ * getSemanticStatusClasses('critical') // 'bg-brand-critical/10 text-brand-critical'
+ */
+export function getSemanticStatusClasses(color: SemanticColorKey): string {
+  const colorMap: Record<SemanticColorKey, string> = {
+    ok: 'bg-brand-ok/10 text-brand-ok',
+    warning: 'bg-brand-warning/10 text-brand-warning',
+    critical: 'bg-brand-critical/10 text-brand-critical',
+    info: 'bg-brand-info/10 text-brand-info',
+    neutral: 'bg-brand-neutral/10 text-brand-neutral',
+    purple: 'bg-brand-purple/10 text-brand-purple',
+    repair: 'bg-brand-repair/10 text-brand-repair',
+  };
+  return colorMap[color];
+}
+
+/**
+ * 시멘틱 좌측 보더 클래스 — border-l-brand-{color}
+ *
+ * 카드 좌측 색상 바, 타임라인 보더, 승인 상태 보더 등에 사용.
+ * border-l-4 등 너비 클래스는 호출부에서 추가하세요.
+ *
+ * @example
+ * getSemanticLeftBorderClasses('ok')     // 'border-l-brand-ok'
+ * getSemanticLeftBorderClasses('info')   // 'border-l-brand-info'
+ */
+export function getSemanticLeftBorderClasses(color: SemanticColorKey): string {
+  const colorMap: Record<SemanticColorKey, string> = {
+    ok: 'border-l-brand-ok',
+    warning: 'border-l-brand-warning',
+    critical: 'border-l-brand-critical',
+    info: 'border-l-brand-info',
+    neutral: 'border-l-brand-neutral',
+    purple: 'border-l-brand-purple',
+    repair: 'border-l-brand-repair',
+  };
+  return colorMap[color];
+}
+
+/**
+ * 시멘틱 솔리드 배경 클래스 — bg-brand-{color} text-white
+ *
+ * 배지(solid), CTA 버튼, 스테퍼 노드, 타임라인 도트 등 불투명 배경에 사용.
+ *
+ * @example
+ * getSemanticSolidBgClasses('ok')       // 'bg-brand-ok text-white'
+ * getSemanticSolidBgClasses('critical') // 'bg-brand-critical text-white'
+ */
+export function getSemanticSolidBgClasses(color: SemanticColorKey): string {
+  const colorMap: Record<SemanticColorKey, string> = {
+    ok: 'bg-brand-ok text-white',
+    warning: 'bg-brand-warning text-white',
+    critical: 'bg-brand-critical text-white',
+    info: 'bg-brand-info text-white',
+    neutral: 'bg-brand-neutral text-white',
+    purple: 'bg-brand-purple text-white',
+    repair: 'bg-brand-repair text-white',
+  };
+  return colorMap[color];
+}
+
+/**
+ * 시멘틱 상태 도트 클래스 — bg-brand-{color} rounded-full
+ *
+ * 상태 인디케이터 도트, 미니 프로그레스 완료 표시 등에 사용.
+ * 크기(h-2 w-2 등)는 호출부에서 추가하세요.
+ *
+ * @example
+ * getSemanticDotClasses('ok')       // 'bg-brand-ok rounded-full'
+ * getSemanticDotClasses('critical') // 'bg-brand-critical rounded-full'
+ */
+export function getSemanticDotClasses(color: SemanticColorKey): string {
+  const colorMap: Record<SemanticColorKey, string> = {
+    ok: 'bg-brand-ok rounded-full',
+    warning: 'bg-brand-warning rounded-full',
+    critical: 'bg-brand-critical rounded-full',
+    info: 'bg-brand-info rounded-full',
+    neutral: 'bg-brand-neutral rounded-full',
+    purple: 'bg-brand-purple rounded-full',
+    repair: 'bg-brand-repair rounded-full',
+  };
+  return colorMap[color];
+}
+
+// ============================================================================
+// 6. Site Identity Helpers (크로스 사이트 색상 체계)
+// ============================================================================
+
+export type SiteCode = 'suw' | 'uiw' | 'pyt';
+
+/**
+ * 사이트 배지 클래스 — bg-brand-site-{code}/10 + text + border
+ *
+ * @example
+ * getSiteBadgeClasses('suw') // 수원 배지
+ * getSiteBadgeClasses('pyt') // 평택 배지
+ */
+export function getSiteBadgeClasses(site: SiteCode): string {
+  const colorMap: Record<SiteCode, string> = {
+    suw: 'text-brand-site-suw bg-brand-site-suw/10 border-brand-site-suw/20',
+    uiw: 'text-brand-site-uiw bg-brand-site-uiw/10 border-brand-site-uiw/20',
+    pyt: 'text-brand-site-pyt bg-brand-site-pyt/10 border-brand-site-pyt/20',
+  };
+  return `${colorMap[site]} border rounded-md px-2 py-0.5 text-xs font-medium`;
+}
+
+/**
+ * 사이트 도트 클래스 — bg-brand-site-{code} rounded-full
+ *
+ * 크기(h-2 w-2 등)는 호출부에서 추가하세요.
+ */
+export function getSiteDotClasses(site: SiteCode): string {
+  const colorMap: Record<SiteCode, string> = {
+    suw: 'bg-brand-site-suw rounded-full',
+    uiw: 'bg-brand-site-uiw rounded-full',
+    pyt: 'bg-brand-site-pyt rounded-full',
+  };
+  return colorMap[site];
+}

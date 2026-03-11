@@ -52,9 +52,16 @@ export {
   getSemanticContainerColorClasses,
   getSemanticContainerClasses,
   getSemanticContainerTextClasses,
+  getSemanticStatusClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticSolidBgClasses,
+  getSemanticDotClasses,
   getBrandElevatedClasses,
   getBrandMutedTextClasses,
+  getSiteBadgeClasses,
+  getSiteDotClasses,
   type SemanticColorKey,
+  type SiteCode,
 } from './brand';
 
 // ============================================================================
@@ -83,6 +90,7 @@ export {
   getAnimationDuration,
   getAnimationEasing,
   ANIMATION_PRESETS,
+  TRANSITION_PRESETS,
 } from './motion';
 
 // ============================================================================

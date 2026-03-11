@@ -19,7 +19,7 @@
  * - CalibrationSettingsContent.tsx (Chip + Info Box)
  */
 
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 // ============================================================================
 // Settings Card Container
@@ -32,7 +32,7 @@ import { getTransitionClasses } from '../motion';
 export const SETTINGS_CARD_CONTAINER_TOKENS = {
   base: 'overflow-hidden border-primary/10 shadow-sm',
   hover: 'hover:shadow-md',
-  transition: getTransitionClasses('moderate', ['box-shadow']),
+  transition: TRANSITION_PRESETS.moderateShadow,
 } as const;
 
 /**
@@ -85,7 +85,7 @@ export const SETTINGS_CHIP_TOKENS = {
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
   ].join(' '),
 
-  transition: getTransitionClasses('fast', ['background-color', 'color', 'border-color']),
+  transition: TRANSITION_PRESETS.fastBgColorBorder,
 
   states: {
     selected: 'bg-primary/10 border border-primary/20 text-primary',
@@ -144,7 +144,7 @@ export function getSettingsChipIconClasses(): string {
 export const SETTINGS_FORM_ITEM_TOKENS = {
   base: 'group rounded-lg border-2 border-border/50 p-5',
   hover: 'hover:border-primary/30 hover:bg-accent/30',
-  transition: getTransitionClasses('fast', ['border-color', 'background-color']),
+  transition: TRANSITION_PRESETS.fastBorderBg,
   disabled: 'opacity-60 pointer-events-none',
 
   layout: 'flex items-start justify-between gap-4',
@@ -188,7 +188,7 @@ export function getSettingsFormItemClasses(options?: { disabled?: boolean }): st
 export const SETTINGS_SELECT_TRIGGER_TOKENS = {
   hover: 'hover:border-primary/30',
   focus: 'focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20',
-  transition: getTransitionClasses('fast', ['border-color', 'box-shadow']),
+  transition: TRANSITION_PRESETS.fastBorderShadow,
 } as const;
 
 /**
@@ -217,7 +217,7 @@ export const SETTINGS_SUBMIT_TOKENS = {
   button: {
     base: 'min-w-[120px]',
     interaction: 'motion-safe:hover:scale-105 motion-safe:active:scale-95',
-    transition: getTransitionClasses('fast', ['transform', 'background-color', 'opacity']),
+    transition: TRANSITION_PRESETS.fastTransformBgOpacity,
   },
 } as const;
 
@@ -365,7 +365,7 @@ export const SETTINGS_PROFILE_GRID_TOKENS = {
  */
 export const SETTINGS_TEXTAREA_TOKENS = {
   base: 'resize-y min-h-[100px]',
-  interactive: getTransitionClasses('fast', ['border-color', 'box-shadow']),
+  interactive: TRANSITION_PRESETS.fastBorderShadow,
   focus: 'focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20',
   hover: 'hover:border-primary/30',
 } as const;
@@ -415,7 +415,7 @@ export const SETTINGS_NAV_TOKENS = {
 
   item: {
     base: 'group flex items-center justify-between gap-3 rounded-lg py-2.5 text-sm font-medium border-l-2 pl-[10px] pr-3',
-    transition: getTransitionClasses('fast', ['background-color', 'color']),
+    transition: TRANSITION_PRESETS.fastBgColor,
     active: 'border-primary bg-primary/10 text-primary',
     inactive:
       'border-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -423,7 +423,7 @@ export const SETTINGS_NAV_TOKENS = {
 
   iconCircle: {
     base: 'flex h-7 w-7 items-center justify-center rounded-full',
-    transition: getTransitionClasses('fast', ['background-color']),
+    transition: TRANSITION_PRESETS.fastBg,
     active: 'bg-primary/10 scale-110',
     inactive: '',
   },
@@ -432,7 +432,7 @@ export const SETTINGS_NAV_TOKENS = {
 
   chevron: {
     base: 'h-4 w-4',
-    transition: getTransitionClasses('fast', ['transform', 'opacity']),
+    transition: TRANSITION_PRESETS.fastTransformOpacity,
     active: 'opacity-100 translate-x-0',
     inactive: 'opacity-0 -translate-x-2 group-hover:opacity-50 group-hover:translate-x-0',
   },

@@ -17,7 +17,7 @@
  */
 
 import { MOTION_TOKENS, ELEVATION_TOKENS } from '../semantic';
-import { getTransitionClasses, getStaggerDelay, ANIMATION_PRESETS } from '../motion';
+import { getStaggerDelay, ANIMATION_PRESETS, TRANSITION_PRESETS } from '../motion';
 import { getCountBasedUrgency, getUrgencyFeedbackClasses } from '../visual-feedback';
 
 /**
@@ -223,7 +223,7 @@ export const NOTIFICATION_LIST_ITEM_TOKENS = {
     base: [
       'group p-4 mb-2 rounded-lg shadow-sm relative border-l-4 block w-full text-left',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-      getTransitionClasses('moderate', ['box-shadow', 'transform']),
+      TRANSITION_PRESETS.moderateShadowTransform,
       'motion-safe:hover:shadow-lg motion-safe:hover:scale-[1.01] motion-safe:hover:-translate-y-0.5',
     ].join(' '),
     unread: 'bg-card motion-safe:animate-[pulseGlow_3s_ease-in-out_infinite]',
@@ -236,7 +236,7 @@ export const NOTIFICATION_LIST_ITEM_TOKENS = {
 
   iconCircle: [
     'h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
-    getTransitionClasses('fast', ['transform']),
+    TRANSITION_PRESETS.fastTransform,
     'motion-safe:group-hover:scale-110',
   ].join(' '),
   iconSize: 'h-4 w-4',
@@ -250,7 +250,7 @@ export const NOTIFICATION_LIST_ITEM_TOKENS = {
   deleteBtn: [
     'absolute right-2 top-2 h-6 w-6',
     'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100',
-    getTransitionClasses('fast', ['opacity']),
+    TRANSITION_PRESETS.fastOpacity,
   ].join(' '),
   deleteIcon: 'h-3 w-3',
 } as const;

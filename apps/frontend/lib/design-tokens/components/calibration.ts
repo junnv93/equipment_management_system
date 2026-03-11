@@ -13,7 +13,7 @@
  */
 
 import { FOCUS_TOKENS } from '../semantic';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 import { type StatsVariant } from './dashboard';
 import { AlertCircle, AlertTriangle, Calendar, Clock } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -216,19 +216,19 @@ export function getCalibrationTabClasses(tab: CalibrationTabType): string {
  */
 export const CALIBRATION_MOTION = {
   /** 통계 카드 hover */
-  statsCard: getTransitionClasses('fast', ['box-shadow', 'transform']),
+  statsCard: TRANSITION_PRESETS.fastShadowTransform,
 
   /** 테이블 행 hover */
-  tableRow: getTransitionClasses('instant', ['background-color']),
+  tableRow: TRANSITION_PRESETS.instantBg,
 
   /** 탭 전환 */
-  tab: getTransitionClasses('fast', ['color', 'border-color']),
+  tab: TRANSITION_PRESETS.fastColorBorder,
 
   /** 링크 hover */
-  link: getTransitionClasses('fast', ['color']),
+  link: TRANSITION_PRESETS.fastColor,
 
   /** 장비 선택 리스트 */
-  equipmentItem: getTransitionClasses('fast', ['background-color', 'border-color']),
+  equipmentItem: TRANSITION_PRESETS.fastBgBorder,
 } as const;
 
 // ============================================================================
@@ -544,7 +544,7 @@ export function getCalibrationRowClasses(approvalStatus?: string): string {
  *
  * Web Interface Guidelines: specific property (opacity)만 전환
  */
-export const CALIBRATION_TAB_TRANSITION = getTransitionClasses('fast', ['opacity']);
+export const CALIBRATION_TAB_TRANSITION = TRANSITION_PRESETS.fastOpacity;
 
 // ============================================================================
 // 17. CALIBRATION_RESULT_BADGE — 교정 결과 배지
@@ -679,7 +679,7 @@ export const CALIBRATION_FILTER_BAR = {
     'inline-flex items-center gap-1 text-xs',
     'text-primary bg-primary/10 px-2 py-0.5 rounded-full',
     'hover:bg-primary/20',
-    getTransitionClasses('instant', ['background-color']),
+    TRANSITION_PRESETS.instantBg,
   ].join(' '),
   tagDismissIcon: 'h-2.5 w-2.5',
   resetButton: 'flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground',

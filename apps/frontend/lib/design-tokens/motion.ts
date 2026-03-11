@@ -52,6 +52,104 @@ export function getStaggerDelay(
   return `${index * delay}ms`;
 }
 
+// ============================================================================
+// Pre-computed Transition Presets (Performance Optimization)
+// ============================================================================
+
+/**
+ * TRANSITION_PRESETS — 사전 계산된 트랜지션 클래스
+ *
+ * 129개 getTransitionClasses() 런타임 호출 → 모듈 초기화 시 1회 계산.
+ * Layer 3 파일에서 getTransitionClasses('fast', [...]) 대신 이 상수를 참조하세요.
+ *
+ * 네이밍 규칙: {speed}{Properties}
+ * - speed: fast / instant / moderate
+ * - Properties: Bg, Color, Shadow, Transform, Opacity, Border 조합
+ */
+export const TRANSITION_PRESETS = {
+  // ── Fast (200ms) ──────────────────────────────
+  /** background-color */
+  fastBg: getTransitionClasses('fast', ['background-color']),
+  /** color */
+  fastColor: getTransitionClasses('fast', ['color']),
+  /** opacity */
+  fastOpacity: getTransitionClasses('fast', ['opacity']),
+  /** transform */
+  fastTransform: getTransitionClasses('fast', ['transform']),
+  /** background-color, color */
+  fastBgColor: getTransitionClasses('fast', ['background-color', 'color']),
+  /** background-color, transform */
+  fastBgTransform: getTransitionClasses('fast', ['background-color', 'transform']),
+  /** background-color, border-color */
+  fastBgBorder: getTransitionClasses('fast', ['background-color', 'border-color']),
+  /** background-color, box-shadow */
+  fastBgShadow: getTransitionClasses('fast', ['background-color', 'box-shadow']),
+  /** background-color, color, border-color */
+  fastBgColorBorder: getTransitionClasses('fast', ['background-color', 'color', 'border-color']),
+  /** background-color, color, transform */
+  fastBgColorTransform: getTransitionClasses('fast', ['background-color', 'color', 'transform']),
+  /** background-color, transform, box-shadow */
+  fastBgTransformShadow: getTransitionClasses('fast', [
+    'background-color',
+    'transform',
+    'box-shadow',
+  ]),
+  /** background-color, opacity, border-color */
+  fastBgOpacityBorder: getTransitionClasses('fast', [
+    'background-color',
+    'opacity',
+    'border-color',
+  ]),
+  /** box-shadow, transform */
+  fastShadowTransform: getTransitionClasses('fast', ['box-shadow', 'transform']),
+  /** box-shadow, border-color */
+  fastShadowBorder: getTransitionClasses('fast', ['box-shadow', 'border-color']),
+  /** box-shadow, transform, border-color */
+  fastShadowTransformBorder: getTransitionClasses('fast', [
+    'box-shadow',
+    'transform',
+    'border-color',
+  ]),
+  /** border-color, background-color (= fastBgBorder, alias for readability) */
+  fastBorderBg: getTransitionClasses('fast', ['border-color', 'background-color']),
+  /** border-color, box-shadow */
+  fastBorderShadow: getTransitionClasses('fast', ['border-color', 'box-shadow']),
+  /** color, border-color */
+  fastColorBorder: getTransitionClasses('fast', ['color', 'border-color']),
+  /** transform, opacity */
+  fastTransformOpacity: getTransitionClasses('fast', ['transform', 'opacity']),
+  /** transform, background-color, opacity */
+  fastTransformBgOpacity: getTransitionClasses('fast', [
+    'transform',
+    'background-color',
+    'opacity',
+  ]),
+
+  // ── Instant (100ms) ───────────────────────────
+  /** background-color */
+  instantBg: getTransitionClasses('instant', ['background-color']),
+  /** opacity */
+  instantOpacity: getTransitionClasses('instant', ['opacity']),
+  /** background-color, border-color */
+  instantBgBorder: getTransitionClasses('instant', ['background-color', 'border-color']),
+  /** background-color, color */
+  instantBgColor: getTransitionClasses('instant', ['background-color', 'color']),
+  /** background-color, border-color, color */
+  instantBgBorderColor: getTransitionClasses('instant', [
+    'background-color',
+    'border-color',
+    'color',
+  ]),
+
+  // ── Moderate (300ms) ──────────────────────────
+  /** opacity */
+  moderateOpacity: getTransitionClasses('moderate', ['opacity']),
+  /** box-shadow */
+  moderateShadow: getTransitionClasses('moderate', ['box-shadow']),
+  /** box-shadow, transform */
+  moderateShadowTransform: getTransitionClasses('moderate', ['box-shadow', 'transform']),
+} as const;
+
 /**
  * Keyframe 애니메이션 클래스
  *

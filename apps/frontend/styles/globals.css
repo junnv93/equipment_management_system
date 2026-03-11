@@ -77,6 +77,11 @@
     --brand-color-neutral: 220 9% 46%;
     --brand-color-purple: 258 90% 66%;
     --brand-color-repair: 24 95% 53%;
+
+    /* Site Identity Colors */
+    --brand-color-site-suw: 210 75% 18%;   /* #122C49 수원 — UL Midnight */
+    --brand-color-site-uiw: 212 62% 56%;   /* #4A90D9 의왕 — UL Blue */
+    --brand-color-site-pyt: 152 100% 32%;  /* #00A451 평택 — UL Green */
   }
 
   .dark {
@@ -146,9 +151,14 @@
     --brand-color-neutral: 220 9% 46%;
     --brand-color-purple: 258 90% 66%;
     --brand-color-repair: 24 95% 53%;
+
+    /* Site Identity Colors — Dark Mode (밝기 보정) */
+    --brand-color-site-suw: 210 60% 55%;   /* 수원 — 다크모드 밝기 보정 */
+    --brand-color-site-uiw: 212 70% 65%;   /* 의왕 — 다크모드 밝기 보정 */
+    --brand-color-site-pyt: 152 80% 45%;   /* 평택 — 다크모드 밝기 보정 */
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;

@@ -17,11 +17,11 @@ import {
   CONTENT_TOKENS,
   toTailwindSize,
   toTailwindGap,
-  getTransitionClasses,
   getStaggerDelay,
   SPACING_PRIMITIVES,
   SIZE_PRIMITIVES,
   MOTION_PRIMITIVES,
+  TRANSITION_PRESETS,
 } from '../index';
 
 /**
@@ -137,7 +137,7 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
     /** 대기 중 구간 */
     pending: 'bg-brand-neutral/30',
     /** Web Interface Guidelines: Specific property transitions */
-    transition: getTransitionClasses('fast', ['background-color']),
+    transition: TRANSITION_PRESETS.fastBg,
   },
 
   /** 라벨 스타일 */
@@ -197,7 +197,7 @@ export const FILTER_TOKENS = {
     /** Hover state */
     hover: 'hover:bg-muted/50',
     /** Web Interface Guidelines: Specific property transitions */
-    transition: getTransitionClasses('fast', ['background-color', 'border-color']),
+    transition: TRANSITION_PRESETS.fastBgBorder,
   },
 } as const;
 
@@ -235,7 +235,7 @@ export const TABLE_TOKENS = {
     /** Hover state */
     hover: 'hover:bg-muted/50',
     /** Web Interface Guidelines: Specific property transitions */
-    transition: getTransitionClasses('instant', ['background-color']),
+    transition: TRANSITION_PRESETS.instantBg,
   },
 
   /** 인라인 편집 */
@@ -306,7 +306,7 @@ export const ACTION_BUTTON_TOKENS = {
     /** Hover: subtle scale */
     hover: 'hover:scale-[1.02]',
     /** Transition */
-    transition: getTransitionClasses('fast', ['transform', 'background-color']),
+    transition: TRANSITION_PRESETS.fastBgTransform,
   },
 
   /** Destructive action (반려, 삭제) */
@@ -316,7 +316,7 @@ export const ACTION_BUTTON_TOKENS = {
     gap: 'gap-2',
     focus: FOCUS_TOKENS.classes.default,
     hover: 'hover:scale-[1.02]',
-    transition: getTransitionClasses('fast', ['transform', 'background-color']),
+    transition: TRANSITION_PRESETS.fastBgTransform,
   },
 
   /** Ghost action (목록으로, 취소) */
@@ -326,7 +326,7 @@ export const ACTION_BUTTON_TOKENS = {
     gap: 'gap-2',
     focus: FOCUS_TOKENS.classes.default,
     hover: 'hover:bg-muted/50',
-    transition: getTransitionClasses('fast', ['background-color']),
+    transition: TRANSITION_PRESETS.fastBg,
   },
 
   /** Inline action (품질책임자 확인 완료) */
@@ -336,7 +336,7 @@ export const ACTION_BUTTON_TOKENS = {
     gap: 'gap-1',
     focus: FOCUS_TOKENS.classes.default,
     hover: 'hover:bg-muted/50',
-    transition: getTransitionClasses('fast', ['background-color', 'transform']),
+    transition: TRANSITION_PRESETS.fastBgTransform,
   },
 } as const;
 
@@ -434,7 +434,7 @@ export const COLLAPSIBLE_TOKENS = {
     /** Web Interface Guidelines: Interactive elements need focus-visible */
     focus: FOCUS_TOKENS.classes.default,
     /** Transition */
-    transition: getTransitionClasses('fast', ['color']),
+    transition: TRANSITION_PRESETS.fastColor,
   },
 
   /** Content */
@@ -551,7 +551,7 @@ export function getCalibrationPlanTimelineNodeClasses(
     stateToken.animation,
     'flex items-center justify-center',
     /** Web Interface Guidelines: Specific property transitions */
-    getTransitionClasses('fast', ['background-color', 'transform']),
+    TRANSITION_PRESETS.fastBgTransform,
   ]
     .filter(Boolean)
     .join(' ');

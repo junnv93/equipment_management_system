@@ -12,7 +12,12 @@
  */
 
 import { FOCUS_TOKENS } from '../semantic';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
+import {
+  getSemanticSolidBgClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticContainerTextClasses,
+} from '../brand';
 
 // ============================================================================
 // 1. Checkout Status Badge Tokens (13개 상태 스타일 — brand 시멘틱 토큰)
@@ -91,19 +96,19 @@ export const DEFAULT_CHECKOUT_BADGE =
 export const CHECKOUT_PURPOSE_TOKENS = {
   calibration: {
     badge: 'bg-brand-info/10 text-brand-info border-brand-info/20',
-    colorBar: 'border-l-brand-info',
+    colorBar: getSemanticLeftBorderClasses('info'),
   },
   repair: {
     badge: 'bg-brand-repair/10 text-brand-repair border-brand-repair/20',
-    colorBar: 'border-l-brand-repair',
+    colorBar: getSemanticLeftBorderClasses('repair'),
   },
   rental: {
     badge: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20',
-    colorBar: 'border-l-brand-purple',
+    colorBar: getSemanticLeftBorderClasses('purple'),
   },
   return_to_vendor: {
     badge: 'bg-brand-neutral/10 text-brand-neutral border-brand-neutral/20',
-    colorBar: 'border-l-brand-neutral',
+    colorBar: getSemanticLeftBorderClasses('neutral'),
   },
 } as const;
 
@@ -122,10 +127,10 @@ export type CheckoutPurposeKey = keyof typeof CHECKOUT_PURPOSE_TOKENS;
 export const CHECKOUT_ROW_TOKENS = {
   colorBar: {
     base: 'border-l-4',
-    calibration: 'border-l-brand-info',
-    repair: 'border-l-brand-repair',
-    rental: 'border-l-brand-purple',
-    return_to_vendor: 'border-l-brand-neutral',
+    calibration: getSemanticLeftBorderClasses('info'),
+    repair: getSemanticLeftBorderClasses('repair'),
+    rental: getSemanticLeftBorderClasses('purple'),
+    return_to_vendor: getSemanticLeftBorderClasses('neutral'),
   },
   overdue: {
     background: 'bg-brand-critical/8',
@@ -175,9 +180,9 @@ export const CHECKOUT_MINI_PROGRESS = {
   dot: {
     /** 18px 원 공통 — ✓/!/숫자 텍스트 포함 */
     base: 'w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-bold shrink-0',
-    completed: 'bg-brand-ok text-white',
-    current: 'bg-brand-info text-white',
-    late: 'bg-brand-critical text-white',
+    completed: getSemanticSolidBgClasses('ok'),
+    current: getSemanticSolidBgClasses('info'),
+    late: getSemanticSolidBgClasses('critical'),
     future: 'border-2 border-border text-muted-foreground bg-background',
   },
   connector: {
@@ -187,8 +192,8 @@ export const CHECKOUT_MINI_PROGRESS = {
   },
   /** rejected/canceled: 진행 바 대신 아이콘만 표시 */
   special: {
-    rejected: 'text-brand-critical',
-    canceled: 'text-brand-neutral',
+    rejected: getSemanticContainerTextClasses('critical'),
+    canceled: getSemanticContainerTextClasses('neutral'),
   },
   /**
    * 상태 → 표시 단계 인덱스 매핑 (SSOT)
@@ -417,19 +422,19 @@ export function getCheckoutStatsClasses(
  */
 export const CHECKOUT_MOTION = {
   /** 통계 카드: hover 시 border + bg 전환 */
-  statsCard: getTransitionClasses('fast', ['border-color', 'background-color']),
+  statsCard: TRANSITION_PRESETS.fastBorderBg,
 
   /** 테이블 row hover: 배경색만 전환 */
-  rowHover: getTransitionClasses('instant', ['background-color']),
+  rowHover: TRANSITION_PRESETS.instantBg,
 
   /** 아이템 hover: 배경색 + 스케일 */
-  itemHover: getTransitionClasses('fast', ['background-color', 'transform']),
+  itemHover: TRANSITION_PRESETS.fastBgTransform,
 
   /** Chevron 회전 */
-  chevronRotate: getTransitionClasses('fast', ['transform']),
+  chevronRotate: TRANSITION_PRESETS.fastTransform,
 
   /** Selectable row: 배경색 + 불투명도 + border */
-  selectableRow: getTransitionClasses('fast', ['background-color', 'opacity', 'border-color']),
+  selectableRow: TRANSITION_PRESETS.fastBgOpacityBorder,
 } as const;
 
 // ============================================================================
@@ -441,28 +446,16 @@ export const CHECKOUT_MOTION = {
  */
 export const CHECKOUT_INTERACTION_TOKENS = {
   /** Group card trigger: hover + instant bg transition */
-  groupCardTrigger: [
-    'hover:bg-muted/50',
-    getTransitionClasses('instant', ['background-color']),
-  ].join(' '),
+  groupCardTrigger: ['hover:bg-muted/50', TRANSITION_PRESETS.instantBg].join(' '),
 
   /** Clickable row: cursor + hover + transition */
-  clickableRow: [
-    'cursor-pointer',
-    'hover:bg-muted/50',
-    getTransitionClasses('instant', ['background-color']),
-  ].join(' '),
+  clickableRow: ['cursor-pointer', 'hover:bg-muted/50', TRANSITION_PRESETS.instantBg].join(' '),
 
   /** Row focus (focus-visible) */
   rowFocus: FOCUS_TOKENS.classes.default,
 
   /** Equipment item: border + rounded + hover + transition */
-  equipmentItem: [
-    'border',
-    'rounded-md',
-    'hover:bg-muted/50',
-    getTransitionClasses('fast', ['background-color']),
-  ].join(' '),
+  equipmentItem: ['border', 'rounded-md', 'hover:bg-muted/50', TRANSITION_PRESETS.fastBg].join(' '),
 } as const;
 
 // ============================================================================
@@ -489,7 +482,7 @@ export const CHECKOUT_DETAIL_TOKENS = {
   rejectionCard: 'border-brand-critical/30',
 
   /** 거절 제목 */
-  rejectionTitle: 'text-brand-critical',
+  rejectionTitle: getSemanticContainerTextClasses('critical'),
 } as const;
 
 // ============================================================================
@@ -510,10 +503,10 @@ export const CONDITION_COMPARISON_TOKENS = {
   abnormalDetail: 'bg-brand-critical/5 border-l-4 border-brand-critical',
 
   /** 이상 내용 제목 */
-  abnormalTitle: 'text-brand-critical',
+  abnormalTitle: getSemanticContainerTextClasses('critical'),
 
   /** 이상 내용 텍스트 */
-  abnormalText: 'text-brand-critical',
+  abnormalText: getSemanticContainerTextClasses('critical'),
 } as const;
 
 // ============================================================================
@@ -527,7 +520,7 @@ export const CHECKOUT_FORM_TOKENS = {
   /** Selectable row */
   selectableRow: {
     /** Base: transition-all 대신 specific properties */
-    base: getTransitionClasses('fast', ['background-color', 'opacity', 'border-color']),
+    base: TRANSITION_PRESETS.fastBgOpacityBorder,
 
     /** Selected */
     selected: 'bg-brand-info/8 border-brand-info/30',
@@ -536,7 +529,7 @@ export const CHECKOUT_FORM_TOKENS = {
     hoverable: [
       'hover:bg-muted/50',
       'cursor-pointer',
-      getTransitionClasses('fast', ['background-color']),
+      TRANSITION_PRESETS.fastBg,
       FOCUS_TOKENS.classes.default,
     ].join(' '),
 
@@ -688,7 +681,7 @@ export const CHECKOUT_FILTER_BAR_TOKENS = {
     'inline-flex items-center gap-1 text-xs',
     'text-primary bg-primary/10 px-2 py-0.5 rounded-full',
     'hover:bg-primary/20',
-    getTransitionClasses('instant', ['background-color']),
+    TRANSITION_PRESETS.instantBg,
   ].join(' '),
   /** 전체 초기화 버튼 */
   resetButton: 'flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground',
@@ -714,7 +707,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
     'flex items-center gap-3 px-3 py-2.5',
     'border-b border-border/40 last:border-0',
     'cursor-pointer',
-    getTransitionClasses('instant', ['background-color']),
+    TRANSITION_PRESETS.instantBg,
     'hover:bg-muted/40',
   ].join(' '),
 
@@ -748,13 +741,13 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
     /** 일괄 승인 버튼 (그룹 헤더) */
     bulkApprove: 'h-7 px-2.5 text-xs gap-1 bg-primary hover:bg-primary/90',
     /** 독촉 연락 버튼 (overdue 전용) */
-    urgent: `h-7 px-2.5 text-xs text-brand-warning gap-1 ${getTransitionClasses('fast', ['background-color'])} hover:bg-brand-warning/10`,
+    urgent: `h-7 px-2.5 text-xs text-brand-warning gap-1 ${TRANSITION_PRESETS.fastBg} hover:bg-brand-warning/10`,
     /** 반입 처리 링크 (checked_out / overdue) */
     returnLink: [
       'flex items-center gap-1 h-7 px-2.5 text-xs shrink-0',
       'rounded-md border border-border/60',
       'text-muted-foreground',
-      getTransitionClasses('fast', ['background-color', 'color']),
+      TRANSITION_PRESETS.fastBgColor,
       'hover:bg-muted/60 hover:text-foreground',
     ].join(' '),
   },
@@ -763,7 +756,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   groupHeaderContainer: [
     'flex w-full items-center gap-3 px-4 py-3',
     'border-b border-border/40 bg-muted/30',
-    getTransitionClasses('instant', ['background-color']),
+    TRANSITION_PRESETS.instantBg,
   ].join(' '),
   /** 그룹 헤더 왼쪽 CollapsiblTrigger 트리거 버튼 */
   groupHeaderInfoTrigger:
@@ -772,7 +765,7 @@ export const CHECKOUT_ITEM_ROW_TOKENS = {
   groupHeaderChevronBtn: [
     'p-1 rounded-md shrink-0',
     'hover:bg-muted/50',
-    getTransitionClasses('instant', ['background-color']),
+    TRANSITION_PRESETS.instantBg,
   ].join(' '),
   /** 장비 수 배지 */
   countBadge: 'text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md',
@@ -796,7 +789,7 @@ export const CHECKOUT_PAGINATION_TOKENS = {
       'w-[30px] h-[30px] flex items-center justify-center',
       'rounded-md border text-xs font-medium',
       'cursor-pointer select-none tabular-nums',
-      getTransitionClasses('fast', ['background-color', 'color', 'border-color']),
+      TRANSITION_PRESETS.fastBgColorBorder,
     ].join(' '),
     default: 'border-border bg-background hover:bg-muted text-foreground',
     active: 'border-primary bg-primary text-primary-foreground cursor-default',

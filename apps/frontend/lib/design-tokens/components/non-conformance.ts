@@ -15,7 +15,7 @@
  */
 
 import type { SemanticColorKey } from '../brand';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 import type { NonConformanceStatus } from '@equipment-management/schemas';
 
 /** NC 상태 → 시멘틱 색상 매핑 (SSOT) */
@@ -69,7 +69,7 @@ export const NC_REPAIR_LINKED_TOKENS = {
     'px-2 py-1 text-xs font-medium rounded border',
     'text-brand-ok bg-brand-ok/10 border-brand-ok/20',
     'hover:bg-brand-ok/20',
-    getTransitionClasses('fast', ['background-color']),
+    TRANSITION_PRESETS.fastBg,
   ].join(' '),
   text: 'flex items-center gap-2 text-sm text-brand-ok',
 } as const;
@@ -80,8 +80,5 @@ export const NC_REPAIR_LINKED_TOKENS = {
  * brand-ok 기반 CTA 버튼 — 배경색은 불투명(가시성 확보)
  */
 export const NC_APPROVE_BUTTON_TOKENS = {
-  approve: [
-    'bg-brand-ok hover:bg-brand-ok/90 text-white',
-    getTransitionClasses('fast', ['background-color']),
-  ].join(' '),
+  approve: ['bg-brand-ok hover:bg-brand-ok/90 text-white', TRANSITION_PRESETS.fastBg].join(' '),
 } as const;

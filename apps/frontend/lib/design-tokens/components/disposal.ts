@@ -9,7 +9,7 @@
  */
 
 import { FOCUS_TOKENS } from '../semantic';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 // ============================================================================
 // Disposal Stepper Tokens
@@ -216,7 +216,7 @@ export const DISPOSAL_FILE_LINK_TOKENS = {
   base: [
     'flex items-center gap-2 text-sm text-brand-info hover:text-brand-info/80',
     FOCUS_TOKENS.classes.default,
-    getTransitionClasses('fast', ['color']),
+    TRANSITION_PRESETS.fastColor,
   ].join(' '),
 } as const;
 

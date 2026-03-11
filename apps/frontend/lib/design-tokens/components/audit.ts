@@ -10,7 +10,7 @@
 
 import { type AuditAction } from '@equipment-management/schemas';
 import { FOCUS_TOKENS } from '../semantic';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 import { getSemanticBadgeClasses } from '../brand';
 
 // ============================================================================
@@ -63,7 +63,7 @@ export const AUDIT_TABLE_TOKENS = {
   rowInteractive: [
     'cursor-pointer',
     'hover:bg-muted/50',
-    getTransitionClasses('instant', ['background-color']),
+    TRANSITION_PRESETS.instantBg,
     FOCUS_TOKENS.classes.default,
   ].join(' '),
 
@@ -108,7 +108,7 @@ export const AUDIT_ENTITY_LINK_TOKENS = {
     'text-brand-info',
     'hover:text-brand-info/80',
     'hover:underline',
-    getTransitionClasses('fast', ['color']),
+    TRANSITION_PRESETS.fastColor,
   ].join(' '),
 
   /** 비활성 (라우팅 불가능한 엔티티) */
@@ -174,10 +174,10 @@ export const AUDIT_PAGINATION_TOKENS = {
  */
 export const AUDIT_MOTION = {
   /** 테이블 row hover: 배경색만 전환 */
-  rowHover: getTransitionClasses('instant', ['background-color']),
+  rowHover: TRANSITION_PRESETS.instantBg,
 
   /** 엔티티 링크 색상 전환 */
-  linkColor: getTransitionClasses('fast', ['color']),
+  linkColor: TRANSITION_PRESETS.fastColor,
 
   /** 새로고침 버튼 회전 */
   refreshSpin: 'motion-safe:animate-spin',
@@ -227,7 +227,7 @@ export function getAuditSummaryCardClasses(
 ): string {
   const base = [
     'relative overflow-hidden flex flex-col gap-0.5 p-4 rounded-xl border text-left cursor-pointer',
-    getTransitionClasses('instant', ['background-color', 'border-color']),
+    TRANSITION_PRESETS.instantBgBorder,
     FOCUS_TOKENS.classes.default,
   ].join(' ');
 
@@ -288,7 +288,7 @@ export const AUDIT_TIMELINE_TOKENS = {
   entry: [
     'grid gap-x-3 px-3 py-2.5 rounded-xl cursor-pointer group relative',
     'hover:bg-brand-bg-elevated',
-    getTransitionClasses('instant', ['background-color']),
+    TRANSITION_PRESETS.instantBg,
     FOCUS_TOKENS.classes.default,
   ].join(' '),
 
@@ -338,7 +338,7 @@ export const AUDIT_TIMELINE_TOKENS = {
   hoverArrow: [
     'absolute right-3 top-1/2 -translate-y-1/2',
     'opacity-0 group-hover:opacity-100 text-brand-text-muted',
-    getTransitionClasses('instant', ['opacity']),
+    TRANSITION_PRESETS.instantOpacity,
   ].join(' '),
 
   /** 고위험(delete) 엔트리 강조 테두리 */
@@ -382,7 +382,7 @@ export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
  */
 export const AUDIT_DETAIL_SHEET_TOKENS = {
   /** 백드롭 */
-  backdrop: ['fixed inset-0 bg-black/40 z-40', getTransitionClasses('fast', ['opacity'])].join(' '),
+  backdrop: ['fixed inset-0 bg-black/40 z-40', TRANSITION_PRESETS.fastOpacity].join(' '),
 
   /** 패널 자체 */
   panel: [
@@ -401,7 +401,7 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
     'w-7 h-7 rounded-md border border-brand-border-subtle bg-transparent',
     'flex items-center justify-center text-brand-text-muted',
     'hover:bg-brand-bg-elevated hover:text-brand-text-primary',
-    getTransitionClasses('instant', ['background-color', 'color']),
+    TRANSITION_PRESETS.instantBgColor,
     FOCUS_TOKENS.classes.default,
   ].join(' '),
   actionRow: 'flex items-center gap-2',
@@ -423,7 +423,7 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
   footer: 'px-5 py-3 border-t border-brand-border-subtle flex gap-2 flex-shrink-0',
 
   /** 링크 스타일 */
-  link: ['text-brand-info hover:underline', getTransitionClasses('fast', ['color'])].join(' '),
+  link: ['text-brand-info hover:underline', TRANSITION_PRESETS.fastColor].join(' '),
 } as const;
 
 // ============================================================================
@@ -458,7 +458,7 @@ export const AUDIT_FILTER_TOKENS = {
 export function getAuditActionChipClasses(active: boolean): string {
   const base = [
     'inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md border',
-    getTransitionClasses('instant', ['background-color', 'border-color', 'color']),
+    TRANSITION_PRESETS.instantBgBorderColor,
     FOCUS_TOKENS.classes.default,
   ].join(' ');
 

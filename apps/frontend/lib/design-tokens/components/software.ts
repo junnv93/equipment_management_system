@@ -12,7 +12,7 @@
  * - SOFTWARE_EMPTY_STATE_TOKENS: 빈 상태
  */
 
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 페이지 헤더
@@ -26,7 +26,7 @@ export const SOFTWARE_HEADER_TOKENS = {
     'inline-flex items-center gap-2',
     'bg-primary text-primary-foreground',
     'hover:bg-primary/90',
-    getTransitionClasses('fast', ['background-color']),
+    TRANSITION_PRESETS.fastBg,
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
   ].join(' '),
 } as const;
@@ -41,7 +41,7 @@ export const SOFTWARE_STATS_TOKENS = {
   card: {
     base: [
       'relative overflow-hidden rounded-lg border border-border bg-card p-4',
-      getTransitionClasses('fast', ['box-shadow', 'border-color']),
+      TRANSITION_PRESETS.fastShadowBorder,
       'hover:shadow-sm hover:border-border/80',
     ].join(' '),
   },
@@ -74,7 +74,7 @@ export const SOFTWARE_SUMMARY_TOKENS = {
     base: [
       'flex items-center gap-3 p-3.5 rounded-lg border border-border bg-card',
       'cursor-pointer',
-      getTransitionClasses('fast', ['background-color', 'box-shadow']),
+      TRANSITION_PRESETS.fastBgShadow,
       'hover:bg-muted/50 hover:shadow-sm',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     ].join(' '),
@@ -120,7 +120,7 @@ export const SOFTWARE_TABLE_TOKENS = {
 
   bodyRow: [
     'border-b border-border last:border-b-0',
-    getTransitionClasses('fast', ['background-color']),
+    TRANSITION_PRESETS.fastBg,
     'hover:bg-muted/30',
   ].join(' '),
   bodyCell: 'px-4 py-3 text-sm text-foreground',
@@ -133,7 +133,7 @@ export const SOFTWARE_TABLE_TOKENS = {
   actionBtn: [
     'inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium',
     'text-primary hover:bg-primary/10',
-    getTransitionClasses('fast', ['background-color']),
+    TRANSITION_PRESETS.fastBg,
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
   ].join(' '),
 } as const;

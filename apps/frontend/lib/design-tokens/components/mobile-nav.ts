@@ -6,7 +6,7 @@
  */
 
 import { FOCUS_TOKENS } from '../semantic';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 /**
  * 모바일 드로어 컨테이너 토큰
@@ -38,7 +38,7 @@ export const MOBILE_NAV_TOKENS = {
     background: 'bg-destructive/10',
     text: 'text-destructive',
   },
-  transition: getTransitionClasses('fast', ['background-color', 'color']),
+  transition: TRANSITION_PRESETS.fastBgColor,
   focus: FOCUS_TOKENS.classes.default,
 } as const;
 

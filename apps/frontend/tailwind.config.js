@@ -128,6 +128,11 @@ module.exports = {
           neutral: 'hsl(var(--brand-color-neutral) / <alpha-value>)',
           purple: 'hsl(var(--brand-color-purple) / <alpha-value>)',
           repair: 'hsl(var(--brand-color-repair) / <alpha-value>)',
+          site: {
+            suw: 'hsl(var(--brand-color-site-suw) / <alpha-value>)',
+            uiw: 'hsl(var(--brand-color-site-uiw) / <alpha-value>)',
+            pyt: 'hsl(var(--brand-color-site-pyt) / <alpha-value>)',
+          },
         },
         // Semantic colors
         success: {

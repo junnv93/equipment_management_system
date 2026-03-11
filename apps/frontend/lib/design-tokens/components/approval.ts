@@ -11,8 +11,13 @@
  */
 
 import { FOCUS_TOKENS, MOTION_TOKENS } from '../semantic';
-import { getStaggerDelay, getTransitionClasses } from '../motion';
-import { getSemanticContainerColorClasses } from '../brand';
+import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
+import {
+  getSemanticContainerColorClasses,
+  getSemanticSolidBgClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticStatusClasses,
+} from '../brand';
 import { getElapsedDaysUrgency } from '../visual-feedback';
 import type { UrgencyLevel } from '../visual-feedback';
 
@@ -118,9 +123,9 @@ export const APPROVAL_STEPPER_TOKENS = {
 export const APPROVAL_TIMELINE_TOKENS = {
   /** 액션별 아이콘 배지 스타일 */
   iconBadge: {
-    approve: 'bg-brand-ok text-white',
-    review: 'bg-brand-info text-white',
-    reject: 'bg-brand-critical text-white',
+    approve: getSemanticSolidBgClasses('ok'),
+    review: getSemanticSolidBgClasses('info'),
+    reject: getSemanticSolidBgClasses('critical'),
   },
 
   /** 액션별 카드 스타일 (상세 다이얼로그용) */
@@ -274,7 +279,7 @@ export const APPROVAL_MOTION = {
   processing: 'opacity-40',
 
   /** 퇴장 애니메이션 (opacity 0 + moderate transition) */
-  exiting: `${getTransitionClasses('moderate', ['opacity'])} opacity-0`,
+  exiting: `${TRANSITION_PRESETS.moderateOpacity} opacity-0`,
 
   /** 퇴장 애니메이션 duration (ms) — JS setTimeout용
    *  SSOT: getTransitionClasses('moderate') 와 동일 소스(MOTION_TOKENS) 참조 */
@@ -363,9 +368,7 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
   container: 'grid grid-cols-2 lg:grid-cols-4 gap-3',
   card: {
     base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4',
-    hover: ['hover:shadow-sm', getTransitionClasses('fast', ['box-shadow', 'border-color'])].join(
-      ' '
-    ),
+    hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
     focus: FOCUS_TOKENS.classes.default,
   },
   value: 'text-xl font-semibold tabular-nums leading-tight',
@@ -403,7 +406,7 @@ export const APPROVAL_CATEGORY_SIDEBAR_TOKENS = {
   item: {
     base: [
       'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm',
-      getTransitionClasses('fast', ['background-color', 'color']),
+      TRANSITION_PRESETS.fastBgColor,
     ].join(' '),
     active: 'bg-primary text-primary-foreground font-medium',
     inactive: 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -429,7 +432,7 @@ export const APPROVAL_MOBILE_CATEGORY_BAR_TOKENS = {
   pill: {
     base: [
       'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm whitespace-nowrap border',
-      getTransitionClasses('fast', ['background-color', 'color', 'border-color']),
+      TRANSITION_PRESETS.fastBgColorBorder,
     ].join(' '),
     active: 'bg-primary text-primary-foreground border-primary',
     inactive: 'bg-background text-muted-foreground border-border hover:bg-muted',

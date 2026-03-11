@@ -69,6 +69,8 @@ const nextConfig = {
     '@radix-ui/react-tabs',
     '@radix-ui/react-toast',
     '@radix-ui/react-tooltip',
+    // ── 프로젝트 내부 ──
+    '@/lib/design-tokens',
   ],
 
   async headers() {

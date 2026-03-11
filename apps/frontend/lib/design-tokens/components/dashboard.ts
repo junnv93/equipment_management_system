@@ -13,7 +13,7 @@
 
 import { INTERACTIVE_TOKENS, FOCUS_TOKENS } from '../semantic';
 import { toTailwindSize } from '../primitives';
-import { getTransitionClasses, getStaggerDelay } from '../motion';
+import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
 
 // ============================================================================
 // 1. DASHBOARD_STATS_VARIANTS — StatsCard 색상 (UL Brand 기반)
@@ -196,22 +196,22 @@ export function getCalibrationStatusClasses(status: CalibrationStatus) {
  */
 export const DASHBOARD_MOTION = {
   /** StatsCard: hover 시 shadow + scale 전환 */
-  statsCard: getTransitionClasses('moderate', ['box-shadow', 'transform']),
+  statsCard: TRANSITION_PRESETS.moderateShadowTransform,
 
   /** 카드 hover: 빠른 배경색/스케일/그림자 전환 */
-  cardHover: getTransitionClasses('fast', ['background-color', 'transform', 'box-shadow']),
+  cardHover: TRANSITION_PRESETS.fastBgTransformShadow,
 
   /** 리스트 아이템: 배경색/텍스트 전환 */
-  listItem: getTransitionClasses('fast', ['background-color', 'color']),
+  listItem: TRANSITION_PRESETS.fastBgColor,
 
   /** 즉각 배경색 전환 */
-  instantBg: getTransitionClasses('instant', ['background-color']),
+  instantBg: TRANSITION_PRESETS.instantBg,
 
   /** 아이콘/배지: 배경색/스케일 전환 */
-  iconTransition: getTransitionClasses('fast', ['background-color', 'transform']),
+  iconTransition: TRANSITION_PRESETS.fastBgTransform,
 
   /** 텍스트 색상 전환 */
-  textColor: getTransitionClasses('fast', ['color']),
+  textColor: TRANSITION_PRESETS.fastColor,
 } as const;
 
 /**

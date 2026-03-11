@@ -10,7 +10,7 @@
  * 패턴: DISPOSAL_STEPPER_TOKENS과 동일한 구조 + error 상태 확장
  */
 
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 // ============================================================================
 // Form Wizard Stepper Tokens
@@ -85,7 +85,7 @@ export const FORM_WIZARD_PREVIEW_BAR_TOKENS = {
     'flex items-center gap-3 px-4 py-2',
     'bg-background/90 backdrop-blur-sm',
     'border-b border-border/50',
-    getTransitionClasses('fast', ['background-color', 'border-color']),
+    TRANSITION_PRESETS.fastBgBorder,
   ].join(' '),
 
   /** 레이블 */

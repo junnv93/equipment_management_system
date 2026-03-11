@@ -7,7 +7,7 @@
 
 import { INTERACTIVE_TOKENS, FOCUS_TOKENS } from '../semantic';
 import { toTailwindSize } from '../primitives';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
 
 /**
  * 사이드바 레이아웃 크기
@@ -58,7 +58,7 @@ export const SIDEBAR_ITEM_TOKENS = {
     text: 'text-white',
   },
   /** prefers-reduced-motion 지원 transition */
-  transition: getTransitionClasses('fast', ['background-color', 'color']),
+  transition: TRANSITION_PRESETS.fastBgColor,
   /** 포커스 (어두운 배경) */
   focus: FOCUS_TOKENS.classes.onDark,
 } as const;

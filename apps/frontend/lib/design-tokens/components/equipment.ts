@@ -10,7 +10,13 @@
  */
 
 import { FOCUS_TOKENS } from '../semantic';
-import { getTransitionClasses } from '../motion';
+import { TRANSITION_PRESETS } from '../motion';
+import {
+  getSemanticStatusClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticSolidBgClasses,
+  getSemanticContainerTextClasses,
+} from '../brand';
 import {
   CheckCircle,
   Play,
@@ -67,12 +73,12 @@ export interface EquipmentStatusConfig {
 export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   available: {
     card: {
-      className: 'bg-brand-ok/10 text-brand-ok',
-      borderColor: 'border-l-brand-ok',
+      className: getSemanticStatusClasses('ok'),
+      borderColor: getSemanticLeftBorderClasses('ok'),
       statusBarColor: 'bg-brand-ok',
     },
     header: {
-      textColor: 'text-brand-ok',
+      textColor: getSemanticContainerTextClasses('ok'),
       bgClasses: 'bg-brand-ok/10 border-brand-ok',
     },
     icon: CheckCircle,
@@ -81,12 +87,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   in_use: {
     card: {
-      className: 'bg-brand-info/10 text-brand-info',
-      borderColor: 'border-l-brand-info',
+      className: getSemanticStatusClasses('info'),
+      borderColor: getSemanticLeftBorderClasses('info'),
       statusBarColor: 'bg-brand-info',
     },
     header: {
-      textColor: 'text-brand-info',
+      textColor: getSemanticContainerTextClasses('info'),
       bgClasses: 'bg-brand-info/10 border-brand-info',
     },
     icon: Play,
@@ -95,8 +101,8 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   checked_out: {
     card: {
-      className: 'bg-brand-repair/10 text-brand-repair',
-      borderColor: 'border-l-brand-repair',
+      className: getSemanticStatusClasses('repair'),
+      borderColor: getSemanticLeftBorderClasses('repair'),
       statusBarColor: 'bg-brand-info/70',
     },
     header: {
@@ -110,12 +116,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   calibration_scheduled: {
     // UI는 "사용 가능"으로 표시 (교정 상태는 별도 배지)
     card: {
-      className: 'bg-brand-ok/10 text-brand-ok',
-      borderColor: 'border-l-brand-ok',
+      className: getSemanticStatusClasses('ok'),
+      borderColor: getSemanticLeftBorderClasses('ok'),
       statusBarColor: 'bg-brand-warning',
     },
     header: {
-      textColor: 'text-brand-ok',
+      textColor: getSemanticContainerTextClasses('ok'),
       bgClasses: 'bg-brand-ok/10 border-brand-ok',
     },
     icon: CheckCircle,
@@ -125,12 +131,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   calibration_overdue: {
     // UI는 "부적합"으로 표시
     card: {
-      className: 'bg-brand-critical/10 text-brand-critical',
-      borderColor: 'border-l-brand-critical',
+      className: getSemanticStatusClasses('critical'),
+      borderColor: getSemanticLeftBorderClasses('critical'),
       statusBarColor: 'bg-brand-critical',
     },
     header: {
-      textColor: 'text-brand-critical',
+      textColor: getSemanticContainerTextClasses('critical'),
       bgClasses: 'bg-brand-critical/10 border-brand-critical',
     },
     icon: XCircle,
@@ -139,12 +145,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   non_conforming: {
     card: {
-      className: 'bg-brand-critical/10 text-brand-critical',
-      borderColor: 'border-l-brand-critical',
+      className: getSemanticStatusClasses('critical'),
+      borderColor: getSemanticLeftBorderClasses('critical'),
       statusBarColor: 'bg-brand-critical',
     },
     header: {
-      textColor: 'text-brand-critical',
+      textColor: getSemanticContainerTextClasses('critical'),
       bgClasses: 'bg-brand-critical/10 border-brand-critical',
     },
     icon: XCircle,
@@ -153,12 +159,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   spare: {
     card: {
-      className: 'bg-brand-neutral/10 text-brand-neutral',
-      borderColor: 'border-l-brand-neutral',
+      className: getSemanticStatusClasses('neutral'),
+      borderColor: getSemanticLeftBorderClasses('neutral'),
       statusBarColor: 'bg-brand-neutral',
     },
     header: {
-      textColor: 'text-brand-neutral',
+      textColor: getSemanticContainerTextClasses('neutral'),
       bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
     },
     icon: Archive,
@@ -167,12 +173,12 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   retired: {
     card: {
-      className: 'bg-brand-neutral/10 text-brand-neutral',
-      borderColor: 'border-l-brand-neutral',
+      className: getSemanticStatusClasses('neutral'),
+      borderColor: getSemanticLeftBorderClasses('neutral'),
       statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
-      textColor: 'text-brand-neutral',
+      textColor: getSemanticContainerTextClasses('neutral'),
       bgClasses: 'bg-brand-neutral/20 border-brand-neutral',
     },
     icon: Ban,
@@ -332,7 +338,7 @@ export const EQUIPMENT_CARD_TOKENS = {
   base: 'border-l-4',
 
   /** Hover transition */
-  hover: ['hover:shadow-md', getTransitionClasses('fast', ['box-shadow', 'transform'])].join(' '),
+  hover: ['hover:shadow-md', TRANSITION_PRESETS.fastShadowTransform].join(' '),
 
   /** 포커스 (카드 링크용) */
   focus: [
@@ -387,7 +393,7 @@ export type HeaderButtonVariant = 'primary' | 'secondary' | 'destructive' | 'bac
  */
 export function getEquipmentHeaderButtonClasses(variant: HeaderButtonVariant = 'primary'): string {
   const baseClasses = [
-    getTransitionClasses('fast', ['background-color', 'color', 'transform']),
+    TRANSITION_PRESETS.fastBgColorTransform,
     'hover:scale-[1.01]',
     'active:scale-[0.99]',
     FOCUS_TOKENS.classes.onDark, // focus-visible on dark background
@@ -418,10 +424,7 @@ export function getEquipmentHeaderButtonClasses(variant: HeaderButtonVariant = '
 export const EQUIPMENT_TAB_TOKENS = {
   /** Trigger (탭 버튼) — pill 스타일 */
   trigger: {
-    base: [
-      'px-3 py-1.5 text-sm font-medium rounded-md',
-      getTransitionClasses('fast', ['background-color', 'color']),
-    ].join(' '),
+    base: ['px-3 py-1.5 text-sm font-medium rounded-md', TRANSITION_PRESETS.fastBgColor].join(' '),
     /** 활성 상태 (Radix UI data-state=active 포함) */
     active:
       'data-[state=active]:bg-ul-midnight data-[state=active]:text-white dark:data-[state=active]:bg-ul-info dark:data-[state=active]:text-ul-midnight',
@@ -432,7 +435,7 @@ export const EQUIPMENT_TAB_TOKENS = {
   /** Content (탭 내용) */
   content: {
     base: 'pt-6',
-    animation: getTransitionClasses('moderate', ['opacity']),
+    animation: TRANSITION_PRESETS.moderateOpacity,
   },
 
   /** Icon */
@@ -463,7 +466,7 @@ export const EQUIPMENT_FILTER_TOKENS = {
     'h-4 w-4',
     'text-ul-midnight/60',
     'hover:text-ul-midnight',
-    getTransitionClasses('fast', ['color']),
+    TRANSITION_PRESETS.fastColor,
   ].join(' '),
 
   /** 필터 카운트 */
@@ -516,7 +519,7 @@ export const EQUIPMENT_TABLE_TOKENS = {
   headerRow: 'bg-brand-bg-elevated/80 border-b-2 border-brand-border-default',
 
   /** Row hover */
-  rowHover: ['hover:bg-muted/50', getTransitionClasses('instant', ['background-color'])].join(' '),
+  rowHover: ['hover:bg-muted/50', TRANSITION_PRESETS.instantBg].join(' '),
 
   /** Header */
   header: {
@@ -528,7 +531,7 @@ export const EQUIPMENT_TABLE_TOKENS = {
   sortButton: [
     'inline-flex items-center gap-1',
     'hover:text-foreground',
-    getTransitionClasses('fast', ['color']),
+    TRANSITION_PRESETS.fastColor,
   ].join(' '),
 
   /** 수치 컬럼 */
@@ -583,7 +586,7 @@ export const EQUIPMENT_STATS_STRIP_TOKENS = {
     'flex items-center gap-1.5 text-sm whitespace-nowrap',
     'cursor-pointer rounded px-1 -mx-1 py-0.5',
     'hover:bg-brand-bg-elevated',
-    getTransitionClasses('fast', ['background-color']),
+    TRANSITION_PRESETS.fastBg,
     'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
   ].join(' '),
   /** 활성 상태 (현재 필터 적용 중) */
@@ -677,7 +680,7 @@ export const EQUIPMENT_DETAIL_HEADER_TOKENS = {
   /** 뒤로가기 링크 — getTransitionClasses 적용 */
   backLink: [
     'flex items-center gap-1 shrink-0 hover:text-foreground text-xs',
-    getTransitionClasses('fast', ['color']),
+    TRANSITION_PRESETS.fastColor,
   ].join(' '),
 } as const;
 
@@ -694,9 +697,7 @@ export const EQUIPMENT_KPI_STRIP_TOKENS = {
   container: 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 py-4',
   card: {
     base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4 cursor-pointer',
-    hover: ['hover:shadow-sm', getTransitionClasses('fast', ['box-shadow', 'border-color'])].join(
-      ' '
-    ),
+    hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
     focus: FOCUS_TOKENS.classes.brand,
   },
   /** 텍스트 값 (위치, 교정일 등) */
@@ -747,7 +748,7 @@ export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
   /** Trigger base */
   triggerBase: [
     'px-3 min-h-11 text-sm font-medium relative whitespace-nowrap inline-flex items-center gap-1.5',
-    getTransitionClasses('fast', ['color']),
+    TRANSITION_PRESETS.fastColor,
   ].join(' '),
   /** 활성 상태 */
   triggerActive:
