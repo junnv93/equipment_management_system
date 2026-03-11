@@ -9,6 +9,7 @@ import {
 import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CreateCalibrationDto } from './dto/create-calibration.dto';
 import { UpdateCalibrationDto } from './dto/update-calibration.dto';
 import { CalibrationQueryDto } from './dto/calibration-query.dto';
@@ -87,15 +88,17 @@ export class CalibrationService extends VersionedBaseService {
   // ============================================================================
 
   private buildCacheKey(type: string, id?: string): string {
-    return id ? `calibration:${type}:${id}` : `calibration:${type}`;
+    return id
+      ? `${CACHE_KEY_PREFIXES.CALIBRATION}${type}:${id}`
+      : `${CACHE_KEY_PREFIXES.CALIBRATION}${type}`;
   }
 
   private invalidateCalibrationCache(id?: string): void {
     if (id) {
       this.cacheService.delete(this.buildCacheKey('detail', id));
     }
-    this.cacheService.deleteByPattern('calibration:list:*');
-    this.cacheService.deleteByPattern('calibration:pending:*');
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}list:*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION}pending:*`);
   }
 
   // ============================================================================

@@ -55,13 +55,14 @@ export class CacheEventListener implements OnModuleInit {
       tasks.push(this.executeAction(action, payload));
     }
 
-    // 2. 패턴 기반 캐시 삭제
+    // 2. 패턴 기반 캐시 삭제 (동기 — Map.delete)
     if (rule.patterns) {
       for (const { pattern } of rule.patterns) {
-        tasks.push(this.cacheService.deleteByPattern(pattern));
+        this.cacheService.deleteByPattern(pattern);
       }
     }
 
+    // 3. CacheInvalidationHelper 비동기 작업 완료 대기
     await Promise.all(tasks);
 
     this.logger.debug(

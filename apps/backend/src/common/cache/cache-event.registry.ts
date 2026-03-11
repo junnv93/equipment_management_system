@@ -1,4 +1,5 @@
 import { NOTIFICATION_EVENTS } from '../../modules/notifications/events/notification-events';
+import { CACHE_KEY_PREFIXES } from './cache-key-prefixes';
 
 /**
  * 캐시 무효화 액션 타입
@@ -68,18 +69,18 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
   // 모든 반출 이벤트는 대시보드 카운트에 영향 + checkout 캐시 무효화
   [NOTIFICATION_EVENTS.CHECKOUT_CREATED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_APPROVED]: {
     actions: [
       { method: 'invalidateAllDashboard' },
       { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
     ],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_STARTED]: {
     actions: [
@@ -89,7 +90,7 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_RETURNED]: {
     actions: [
@@ -99,7 +100,7 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED]: {
     actions: [
@@ -109,15 +110,15 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
   [NOTIFICATION_EVENTS.CHECKOUT_OVERDUE]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: 'checkout:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
   },
 
   // ─── 교정 (Calibration) ───
@@ -126,7 +127,10 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       { method: 'invalidateAllDashboard' },
       { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
     ],
-    patterns: [{ pattern: 'calibration:list:*' }, { pattern: 'calibration:pending:*' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}pending:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CALIBRATION_APPROVED]: {
     actions: [
@@ -136,14 +140,20 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: 'calibration:list:*' }, { pattern: 'calibration:pending:*' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}pending:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CALIBRATION_REJECTED]: {
     actions: [
       { method: 'invalidateAllDashboard' },
       { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
     ],
-    patterns: [{ pattern: 'calibration:list:*' }, { pattern: 'calibration:pending:*' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}pending:*` },
+    ],
   },
   [NOTIFICATION_EVENTS.CALIBRATION_DUE_SOON]: {
     actions: [{ method: 'invalidateAllDashboard' }],
@@ -156,7 +166,10 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: 'calibration:list:*' }, { pattern: 'calibration:pending:*' }],
+    patterns: [
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}list:*` },
+      { pattern: `${CACHE_KEY_PREFIXES.CALIBRATION}pending:*` },
+    ],
   },
 
   // ─── 교정계획 (Calibration Plan) ───
@@ -249,13 +262,13 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
       { method: 'invalidateAllDashboard' },
       { method: 'invalidateEquipmentDetail', equipmentIdField: 'equipmentId' },
     ],
-    patterns: [{ pattern: 'disposal-requests:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.DISPOSAL_REQUESTS}*` }],
   },
 
   // ─── 장비 반입 (Equipment Import) ───
   [NOTIFICATION_EVENTS.IMPORT_CREATED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: 'equipment-imports:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
   },
   [NOTIFICATION_EVENTS.IMPORT_APPROVED]: {
     actions: [
@@ -265,10 +278,10 @@ export const CACHE_INVALIDATION_REGISTRY: Record<string, CacheInvalidationRule> 
         statusChanged: true,
       },
     ],
-    patterns: [{ pattern: 'equipment-imports:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
   },
   [NOTIFICATION_EVENTS.IMPORT_REJECTED]: {
     actions: [{ method: 'invalidateAllDashboard' }],
-    patterns: [{ pattern: 'equipment-imports:*' }],
+    patterns: [{ pattern: `${CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS}*` }],
   },
 };

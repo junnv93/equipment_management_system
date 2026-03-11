@@ -99,6 +99,9 @@ export {
 // 엔티티 라우팅
 export { ENTITY_ROUTES, getEntityRoute, hasEntityRoute } from './entity-routes';
 
+// 캐시 TTL (Backend SimpleCacheService + Frontend React Query 공유)
+export { CACHE_TTL, type CacheTTLTier } from './cache-config';
+
 // 데이터 스코프 정책 (역할별 접근 범위)
 export {
   type DataScopeType,

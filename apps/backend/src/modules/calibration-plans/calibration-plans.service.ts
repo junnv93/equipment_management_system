@@ -20,6 +20,7 @@ import { users } from '@equipment-management/db/schema/users';
 import { teams } from '@equipment-management/db/schema/teams';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import type {
   CreateCalibrationPlanPayload,
   UpdateCalibrationPlanInput,
@@ -94,7 +95,7 @@ export class CalibrationPlansService {
       }
 
       // CAS 실패 시 detail 캐시 삭제 (stale cache 방지)
-      this.cacheService.delete(`calibration-plans:detail:${uuid}`);
+      this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${uuid}`);
 
       throw new ConflictException({
         message: 'This record has been modified by another user. Please refresh the page.',
@@ -111,8 +112,8 @@ export class CalibrationPlansService {
    * 교정계획서 캐시 무효화
    */
   private invalidatePlanCache(uuid: string): void {
-    this.cacheService.delete(`calibration-plans:detail:${uuid}`);
-    this.cacheService.deleteByPattern('calibration-plans:list:*');
+    this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${uuid}`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:*`);
   }
 
   /**
@@ -299,7 +300,7 @@ export class CalibrationPlansService {
    * 교정계획서 상세 조회 (항목 포함, Cache-Aside)
    */
   async findOne(uuid: string): Promise<CalibrationPlanDetail> {
-    const cacheKey = `calibration-plans:detail:${uuid}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${uuid}`;
 
     return this.cacheService.getOrSet<CalibrationPlanDetail>(
       cacheKey,
@@ -617,7 +618,7 @@ export class CalibrationPlansService {
     // optional CAS check (casVersion은 confirmPlanItemSchema에서 optional)
     if (confirmDto.casVersion !== undefined) {
       if (plan.casVersion !== confirmDto.casVersion) {
-        this.cacheService.delete(`calibration-plans:detail:${planUuid}`);
+        this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planUuid}`);
         throw new ConflictException({
           message: 'This record has been modified by another user. Please refresh the page.',
           code: 'VERSION_CONFLICT',

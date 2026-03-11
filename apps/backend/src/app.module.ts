@@ -25,6 +25,7 @@ import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DrizzleModule } from './database/drizzle.module';
 import { CacheModule } from './common/cache/cache.module';
+import { CacheEventModule } from './common/cache/cache-event.module';
 import { StorageModule } from './common/storage/storage.module';
 import { MetricsModule } from './common/metrics/metrics.module';
 import { MetricsMiddleware } from './common/metrics/metrics.middleware';
@@ -66,6 +67,7 @@ import { I18nModule } from './common/i18n/i18n.module';
 
     // 공통 모듈
     CacheModule,
+    CacheEventModule, // EventEmitterModule 이후 — 이벤트 기반 캐시 무효화
     StorageModule,
     LoggerModule,
     MetricsModule,

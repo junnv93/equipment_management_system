@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SimpleCacheService } from './simple-cache.service';
+import { CACHE_KEY_PREFIXES } from './cache-key-prefixes';
 
 /**
  * 중앙화된 캐시 무효화 헬퍼
@@ -34,7 +35,7 @@ export class CacheInvalidationHelper {
    * 영향: 모든 대시보드 통계, 팀별 현황, 교정 현황, 승인 카운트 캐시
    */
   async invalidateAllDashboard(): Promise<void> {
-    await this.cacheService.deleteByPattern('dashboard:*');
+    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.DASHBOARD}*`);
     this.logger.debug('✓ Invalidated all dashboard caches');
   }
 
@@ -49,7 +50,7 @@ export class CacheInvalidationHelper {
    * 영향: 모든 목록, 상세, 카운트 캐시
    */
   async invalidateAllEquipment(): Promise<void> {
-    await this.cacheService.deleteByPattern('equipment:*');
+    await this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}*`);
     this.logger.debug('✓ Invalidated all equipment caches');
   }
 
@@ -63,7 +64,9 @@ export class CacheInvalidationHelper {
    * - 정규식 패턴으로 UUID 매칭
    */
   async invalidateEquipmentDetail(equipmentId: string): Promise<void> {
-    await this.cacheService.deleteByPattern(`equipment:detail:\\{"uuid":"${equipmentId}".*`);
+    await this.cacheService.deleteByPattern(
+      `${CACHE_KEY_PREFIXES.EQUIPMENT}detail:\\{"uuid":"${equipmentId}".*`
+    );
     this.logger.debug(`✓ Invalidated equipment detail: ${equipmentId}`);
   }
 
@@ -82,8 +85,8 @@ export class CacheInvalidationHelper {
    */
   async invalidateEquipmentLists(): Promise<void> {
     await Promise.all([
-      this.cacheService.deleteByPattern('equipment:list:*'),
-      this.cacheService.deleteByPattern('equipment:count:*'),
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}list:*`),
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}count:*`),
     ]);
     this.logger.debug('✓ Invalidated all equipment list caches');
   }
@@ -131,7 +134,9 @@ export class CacheInvalidationHelper {
 
     // 4. 팀 변경 시 팀별 캐시 무효화
     if (teamIdChanged) {
-      tasks.push(Promise.resolve(this.cacheService.deleteByPattern('equipment:team:*')));
+      tasks.push(
+        Promise.resolve(this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.EQUIPMENT}team:*`))
+      );
     }
 
     await Promise.all(tasks);
@@ -195,7 +200,7 @@ export class CacheInvalidationHelper {
   async invalidateAfterDisposal(equipmentId: string): Promise<void> {
     await Promise.all([
       this.invalidateAfterEquipmentUpdate(equipmentId, true, false), // 대시보드 무효화 포함
-      this.cacheService.deleteByPattern('disposal-requests:*'),
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.DISPOSAL_REQUESTS}*`),
     ]);
 
     this.logger.debug(`✓ Invalidated caches after disposal for equipment: ${equipmentId}`);
@@ -210,8 +215,8 @@ export class CacheInvalidationHelper {
    */
   async invalidateAfterCalibrationPlanUpdate(planId: string): Promise<void> {
     await Promise.all([
-      this.cacheService.delete(`calibration-plans:detail:${planId}`),
-      this.cacheService.deleteByPattern('calibration-plans:list:*'),
+      this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${planId}`),
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:*`),
     ]);
 
     this.logger.debug(`✓ Invalidated calibration plan caches: ${planId}`);

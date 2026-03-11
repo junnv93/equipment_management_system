@@ -37,6 +37,7 @@ import { conditionChecks } from '@equipment-management/db/schema/condition-check
 import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { EquipmentService } from '../equipment/equipment.service';
 import { TeamsService } from '../teams/teams.service';
 import { EquipmentImportsService } from '../equipment-imports/equipment-imports.service';
@@ -134,7 +135,7 @@ export interface CheckoutListResponse {
 @Injectable()
 export class CheckoutsService extends VersionedBaseService {
   private readonly logger = new Logger(CheckoutsService.name);
-  private readonly CACHE_PREFIX = 'checkouts:';
+  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.CHECKOUTS;
 
   // 인덱스가 있는 필드 목록 (정렬 최적화용)
   private readonly INDEXED_FIELDS = [

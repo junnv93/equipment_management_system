@@ -23,6 +23,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 
@@ -46,7 +47,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 export class NonConformancesService extends VersionedBaseService {
   private readonly logger = new Logger(NonConformancesService.name);
 
-  private readonly CACHE_PREFIX = 'non-conformances';
+  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.NON_CONFORMANCES;
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')

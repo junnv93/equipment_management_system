@@ -10,6 +10,7 @@ import {
   AUDIT_ENTITY_TYPE_LABELS,
 } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import { ApprovalsService } from '../approvals/approvals.service';
 import {
   CACHE_TTL,
@@ -59,7 +60,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<DashboardSummaryDto> {
-    const cacheKey = `dashboard:summary:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}summary:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -123,7 +124,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<EquipmentByTeamDto[]> {
-    const cacheKey = `dashboard:equipmentByTeam:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}equipmentByTeam:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -162,7 +163,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<OverdueCalibrationDto[]> {
-    const cacheKey = `dashboard:overdueCalibrations:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}overdueCalibrations:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -219,7 +220,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<UpcomingCalibrationDto[]> {
-    const cacheKey = `dashboard:upcomingCalibrations:${days}:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}upcomingCalibrations:${days}:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -276,7 +277,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<OverdueCheckoutDto[]> {
-    const cacheKey = `dashboard:overdueCheckouts:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}overdueCheckouts:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -358,7 +359,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<UpcomingCheckoutReturnDto[]> {
-    const cacheKey = `dashboard:upcomingCheckoutReturns:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}upcomingCheckoutReturns:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -427,7 +428,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<RecentActivityDto[]> {
-    const cacheKey = `dashboard:recentActivities:${userRole}:${site || 'all'}:${teamId || 'all'}:${userId}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}recentActivities:${userRole}:${site || 'all'}:${teamId || 'all'}:${userId}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -546,7 +547,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<PendingApprovalCountsDto> {
-    const cacheKey = `dashboard:pendingApprovalCounts:${userRole}:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}pendingApprovalCounts:${userRole}:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -585,7 +586,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<EquipmentStatusStatsDto> {
-    const cacheKey = `dashboard:equipmentStatusStats:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}equipmentStatusStats:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {

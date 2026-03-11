@@ -19,6 +19,7 @@ import {
 } from '../dto/disposal.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../../common/cache/cache-key-prefixes';
 import { VersionedBaseService } from '../../../common/base/versioned-base.service';
 import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
 import {
@@ -37,7 +38,7 @@ import {
 @Injectable()
 export class DisposalService extends VersionedBaseService {
   private readonly logger = new Logger(DisposalService.name);
-  private readonly CACHE_PREFIX = 'equipment:';
+  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.EQUIPMENT;
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')

@@ -23,6 +23,7 @@ import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
+import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { Team } from '@equipment-management/db/schema/teams';
 import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc, addMonthsUtc } from '../../common/utils';
@@ -57,7 +58,7 @@ export interface EquipmentListResponse {
 @Injectable()
 export class EquipmentService {
   private readonly logger = new Logger(EquipmentService.name);
-  private readonly CACHE_PREFIX = 'equipment:';
+  private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.EQUIPMENT;
 
   // 인덱스가 있는 필드 목록 (정렬 최적화용)
   private readonly INDEXED_FIELDS = [
