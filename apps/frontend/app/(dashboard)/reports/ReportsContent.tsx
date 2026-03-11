@@ -34,6 +34,16 @@ import {
   File,
   CheckCircle2,
 } from 'lucide-react';
+import {
+  REPORTS_HEADER_TOKENS,
+  REPORTS_SUCCESS_BANNER_TOKENS,
+  REPORTS_SUMMARY_TOKENS,
+  REPORTS_CONTENT_LIST_TOKENS,
+  REPORTS_EMPTY_STATE_TOKENS,
+  REPORTS_LAYOUT_TOKENS,
+  REPORTS_SPINNER_TOKENS,
+  REPORTS_ICON_TOKENS,
+} from '@/lib/design-tokens';
 
 export default function ReportsContent() {
   const { toast } = useToast();
@@ -127,19 +137,20 @@ export default function ReportsContent() {
   };
 
   const getReportIcon = (type: ReportType) => {
+    const ic = REPORTS_ICON_TOKENS.inline;
     switch (type) {
       case 'equipment_inventory':
-        return <FileText className="mr-2 h-4 w-4" />;
+        return <FileText className={ic} />;
       case 'calibration_status':
-        return <Clipboard className="mr-2 h-4 w-4" />;
+        return <Clipboard className={ic} />;
       case 'utilization_report':
-        return <BarChart className="mr-2 h-4 w-4" />;
+        return <BarChart className={ic} />;
       case 'team_equipment':
-        return <FileText className="mr-2 h-4 w-4" />;
+        return <FileText className={ic} />;
       case 'maintenance_report':
-        return <Clipboard className="mr-2 h-4 w-4" />;
+        return <Clipboard className={ic} />;
       default:
-        return <FileText className="mr-2 h-4 w-4" />;
+        return <FileText className={ic} />;
     }
   };
 
@@ -148,15 +159,16 @@ export default function ReportsContent() {
   };
 
   const getFormatIcon = (fmt: ReportFormat) => {
+    const ic = REPORTS_ICON_TOKENS.inline;
     switch (fmt) {
       case 'excel':
-        return <FileSpreadsheet className="mr-2 h-4 w-4" />;
+        return <FileSpreadsheet className={ic} />;
       case 'csv':
-        return <FileCSV className="mr-2 h-4 w-4" />;
+        return <FileCSV className={ic} />;
       case 'pdf':
-        return <File className="mr-2 h-4 w-4" />;
+        return <File className={ic} />;
       default:
-        return <FileText className="mr-2 h-4 w-4" />;
+        return <FileText className={ic} />;
     }
   };
 
@@ -232,24 +244,24 @@ export default function ReportsContent() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
+      <div className={REPORTS_HEADER_TOKENS.container}>
         <div>
-          <h1 className="text-2xl font-bold">{t('reports.title')}</h1>
-          <p className="text-muted-foreground">{t('reports.subtitle')}</p>
+          <h1 className={REPORTS_HEADER_TOKENS.title}>{t('reports.title')}</h1>
+          <p className={REPORTS_HEADER_TOKENS.subtitle}>{t('reports.subtitle')}</p>
         </div>
       </div>
 
       {lastGeneratedReport && (
-        <div className="mb-6 p-4 border rounded-md bg-green-50 border-green-200 text-green-800 flex items-start space-x-2">
-          <CheckCircle2 className="h-5 w-5 mt-0.5" />
+        <div className={REPORTS_SUCCESS_BANNER_TOKENS.container}>
+          <CheckCircle2 className={REPORTS_SUCCESS_BANNER_TOKENS.icon} />
           <div>
-            <h4 className="font-medium">{t('reports.generateComplete')}</h4>
+            <h4 className={REPORTS_SUCCESS_BANNER_TOKENS.title}>{t('reports.generateComplete')}</h4>
             <p>{t('reports.fileDownloaded', { fileName: lastGeneratedReport.fileName })}</p>
           </div>
         </div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className={REPORTS_LAYOUT_TOKENS.grid}>
         <Card>
           <CardHeader>
             <CardTitle>{t('reports.generate')}</CardTitle>
@@ -269,31 +281,31 @@ export default function ReportsContent() {
                   <SelectContent>
                     <SelectItem value="equipment_inventory">
                       <div className="flex items-center">
-                        <FileText className="mr-2 h-4 w-4" />
+                        <FileText className={REPORTS_ICON_TOKENS.inline} />
                         {t('reports.types.equipment_inventory')}
                       </div>
                     </SelectItem>
                     <SelectItem value="calibration_status">
                       <div className="flex items-center">
-                        <Clipboard className="mr-2 h-4 w-4" />
+                        <Clipboard className={REPORTS_ICON_TOKENS.inline} />
                         {t('reports.types.calibration_status')}
                       </div>
                     </SelectItem>
                     <SelectItem value="utilization_report">
                       <div className="flex items-center">
-                        <BarChart className="mr-2 h-4 w-4" />
+                        <BarChart className={REPORTS_ICON_TOKENS.inline} />
                         {t('reports.types.utilization_report')}
                       </div>
                     </SelectItem>
                     <SelectItem value="team_equipment">
                       <div className="flex items-center">
-                        <FileText className="mr-2 h-4 w-4" />
+                        <FileText className={REPORTS_ICON_TOKENS.inline} />
                         {t('reports.types.team_equipment')}
                       </div>
                     </SelectItem>
                     <SelectItem value="maintenance_report">
                       <div className="flex items-center">
-                        <Clipboard className="mr-2 h-4 w-4" />
+                        <Clipboard className={REPORTS_ICON_TOKENS.inline} />
                         {t('reports.types.maintenance_report')}
                       </div>
                     </SelectItem>
@@ -392,7 +404,7 @@ export default function ReportsContent() {
                 >
                   <SelectTrigger>
                     <div className="flex items-center">
-                      <Calendar className="mr-2 h-4 w-4" />
+                      <Calendar className={REPORTS_ICON_TOKENS.inline} />
                       <SelectValue placeholder={t('reports.periodSelect')} />
                     </div>
                   </SelectTrigger>
@@ -425,32 +437,36 @@ export default function ReportsContent() {
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="excel" id="format-excel" />
                     <Label htmlFor="format-excel" className="cursor-pointer flex items-center">
-                      <FileSpreadsheet className="mr-1 h-4 w-4" />
+                      <FileSpreadsheet className={REPORTS_ICON_TOKENS.inlineSmall} />
                       Excel
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="csv" id="format-csv" />
                     <Label htmlFor="format-csv" className="cursor-pointer flex items-center">
-                      <FileCSV className="mr-1 h-4 w-4" />
+                      <FileCSV className={REPORTS_ICON_TOKENS.inlineSmall} />
                       CSV
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="pdf" id="format-pdf" />
                     <Label htmlFor="format-pdf" className="cursor-pointer flex items-center">
-                      <File className="mr-1 h-4 w-4" />
+                      <File className={REPORTS_ICON_TOKENS.inlineSmall} />
                       PDF
                     </Label>
                   </div>
                 </RadioGroup>
               </div>
 
-              <Button onClick={handleGenerateReport} disabled={isPending} className="w-full mt-2">
+              <Button
+                onClick={handleGenerateReport}
+                disabled={isPending}
+                className={REPORTS_LAYOUT_TOKENS.submitButton}
+              >
                 {isPending ? (
-                  <span className="flex items-center">
+                  <span className={REPORTS_SPINNER_TOKENS.container}>
                     <svg
-                      className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
+                      className={REPORTS_SPINNER_TOKENS.spinner}
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -472,8 +488,8 @@ export default function ReportsContent() {
                     {t('reports.generating')}
                   </span>
                 ) : (
-                  <span className="flex items-center">
-                    <Download className="mr-2 h-4 w-4" />
+                  <span className={REPORTS_SPINNER_TOKENS.container}>
+                    <Download className={REPORTS_ICON_TOKENS.inline} />
                     {t('reports.generate')}
                   </span>
                 )}
@@ -505,59 +521,73 @@ export default function ReportsContent() {
             <div className="flex flex-col items-center justify-center h-full">
               {reportType ? (
                 <div className="space-y-6 w-full">
-                  <div className="border rounded-lg p-4 bg-slate-50">
-                    <h3 className="font-medium mb-2">{t('reports.settingsSummary')}</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex justify-between">
-                        <span className="text-muted-foreground">
+                  <div className={REPORTS_SUMMARY_TOKENS.container}>
+                    <h3 className={REPORTS_SUMMARY_TOKENS.heading}>
+                      {t('reports.settingsSummary')}
+                    </h3>
+                    <ul className={REPORTS_SUMMARY_TOKENS.list}>
+                      <li className={REPORTS_SUMMARY_TOKENS.row}>
+                        <span className={REPORTS_SUMMARY_TOKENS.label}>
                           {t('reports.reportTypeLabel')}
                         </span>
-                        <span className="font-medium">
+                        <span className={REPORTS_SUMMARY_TOKENS.value}>
                           {getReportTypeLabel(reportType as ReportType)}
                         </span>
                       </li>
-                      <li className="flex justify-between">
-                        <span className="text-muted-foreground">
+                      <li className={REPORTS_SUMMARY_TOKENS.row}>
+                        <span className={REPORTS_SUMMARY_TOKENS.label}>
                           {t('reports.outputFormatLabel')}
                         </span>
-                        <span className="font-medium flex items-center">
+                        <span className={REPORTS_SUMMARY_TOKENS.valueWithIcon}>
                           {getFormatIcon(reportFormat)}
                           {reportFormat.toUpperCase()}
                         </span>
                       </li>
-                      <li className="flex justify-between">
-                        <span className="text-muted-foreground">{t('reports.periodLabel')}</span>
-                        <span className="font-medium">{getPeriodLabel(dateRange)}</span>
+                      <li className={REPORTS_SUMMARY_TOKENS.row}>
+                        <span className={REPORTS_SUMMARY_TOKENS.label}>
+                          {t('reports.periodLabel')}
+                        </span>
+                        <span className={REPORTS_SUMMARY_TOKENS.value}>
+                          {getPeriodLabel(dateRange)}
+                        </span>
                       </li>
                       {reportType === 'equipment_inventory' && categoryId && (
-                        <li className="flex justify-between">
-                          <span className="text-muted-foreground">
+                        <li className={REPORTS_SUMMARY_TOKENS.row}>
+                          <span className={REPORTS_SUMMARY_TOKENS.label}>
                             {t('reports.equipmentCategoryLabel')}
                           </span>
-                          <span className="font-medium">{getCategoryLabel(categoryId)}</span>
+                          <span className={REPORTS_SUMMARY_TOKENS.value}>
+                            {getCategoryLabel(categoryId)}
+                          </span>
                         </li>
                       )}
                       {reportType === 'calibration_status' && status && (
-                        <li className="flex justify-between">
-                          <span className="text-muted-foreground">
+                        <li className={REPORTS_SUMMARY_TOKENS.row}>
+                          <span className={REPORTS_SUMMARY_TOKENS.label}>
                             {t('reports.calibrationStatusFilterLabel')}
                           </span>
-                          <span className="font-medium">{getCalibrationStatusLabel(status)}</span>
+                          <span className={REPORTS_SUMMARY_TOKENS.value}>
+                            {getCalibrationStatusLabel(status)}
+                          </span>
                         </li>
                       )}
                       {reportType === 'team_equipment' && departmentId && (
-                        <li className="flex justify-between">
-                          <span className="text-muted-foreground">
+                        <li className={REPORTS_SUMMARY_TOKENS.row}>
+                          <span className={REPORTS_SUMMARY_TOKENS.label}>
                             {t('reports.departmentLabel')}
                           </span>
-                          <span className="font-medium">{getDepartmentLabel(departmentId)}</span>
+                          <span className={REPORTS_SUMMARY_TOKENS.value}>
+                            {getDepartmentLabel(departmentId)}
+                          </span>
                         </li>
                       )}
                     </ul>
                   </div>
-                  <div className="mt-4">
-                    <h3 className="font-medium mb-2">{t('reports.includedContent')}</h3>
-                    <ul className="list-disc pl-5 space-y-1 text-sm">
+                  <div className={REPORTS_CONTENT_LIST_TOKENS.container}>
+                    <h3 className={REPORTS_CONTENT_LIST_TOKENS.heading}>
+                      {t('reports.includedContent')}
+                    </h3>
+                    <ul className={REPORTS_CONTENT_LIST_TOKENS.list}>
                       {getReportContents(reportType as ReportType).map((item, idx) => (
                         <li key={idx}>{item}</li>
                       ))}
@@ -565,9 +595,9 @@ export default function ReportsContent() {
                   </div>
                 </div>
               ) : (
-                <div className="text-center p-4">
-                  <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">{t('reports.selectTypeHint')}</p>
+                <div className={REPORTS_EMPTY_STATE_TOKENS.container}>
+                  <FileText className={REPORTS_EMPTY_STATE_TOKENS.icon} />
+                  <p className={REPORTS_EMPTY_STATE_TOKENS.text}>{t('reports.selectTypeHint')}</p>
                 </div>
               )}
             </div>
