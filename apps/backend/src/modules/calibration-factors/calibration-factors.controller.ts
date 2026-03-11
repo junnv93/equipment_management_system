@@ -9,7 +9,6 @@ import {
   Query,
   HttpStatus,
   UsePipes,
-  BadRequestException,
   Request,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -41,6 +40,7 @@ import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { AuthenticatedRequest } from '../../types/auth';
+import { extractUserId } from '../../common/utils/extract-user';
 
 @ApiTags('보정계수 관리')
 @ApiBearerAuth()
@@ -67,13 +67,7 @@ export class CalibrationFactorsController {
     @Body() createDto: CreateCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
-    const requestedBy = req.user?.userId || req.user?.sub;
-    if (!requestedBy) {
-      throw new BadRequestException({
-        code: 'AUTH_REQUESTER_INFO_MISSING',
-        message: 'Requester information not found.',
-      });
-    }
+    const requestedBy = extractUserId(req);
     return this.calibrationFactorsService.create(createDto, requestedBy);
   }
 
@@ -198,13 +192,7 @@ export class CalibrationFactorsController {
     @Body() approveDto: ApproveCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     return this.calibrationFactorsService.approve(uuid, { ...approveDto, approverId });
   }
 
@@ -227,13 +215,7 @@ export class CalibrationFactorsController {
     @Body() rejectDto: RejectCalibrationFactorDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationFactorRecord> {
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     return this.calibrationFactorsService.reject(uuid, { ...rejectDto, approverId });
   }
 

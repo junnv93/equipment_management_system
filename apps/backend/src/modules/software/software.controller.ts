@@ -8,7 +8,6 @@ import {
   Query,
   UsePipes,
   HttpStatus,
-  BadRequestException,
   Request,
   ParseUUIDPipe,
 } from '@nestjs/common';
@@ -34,6 +33,7 @@ import { SoftwareHistory } from '@equipment-management/db/schema';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
+import { extractUserId } from '../../common/utils/extract-user';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
@@ -64,13 +64,7 @@ export class SoftwareController {
     @Body() createDto: CreateSoftwareChangeInput,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
-    const changedBy = req.user?.userId || req.user?.sub;
-    if (!changedBy) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const changedBy = extractUserId(req);
     return this.softwareService.create(createDto, changedBy);
   }
 
@@ -213,13 +207,7 @@ export class SoftwareController {
     @Body() approveDto: ApproveSoftwareChangeDto,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     return this.softwareService.approve(uuid, { ...approveDto, approverId });
   }
 
@@ -246,13 +234,7 @@ export class SoftwareController {
     @Body() rejectDto: RejectSoftwareChangeDto,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     return this.softwareService.reject(uuid, { ...rejectDto, approverId });
   }
 }

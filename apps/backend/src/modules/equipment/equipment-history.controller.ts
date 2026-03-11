@@ -14,6 +14,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { extractUserId } from '../../common/utils/extract-user';
 import { EquipmentHistoryService } from './services/equipment-history.service';
 import {
   CreateLocationHistoryDto,
@@ -69,7 +70,7 @@ export class EquipmentHistoryController {
     @Body(CreateLocationHistoryValidationPipe) dto: CreateLocationHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<LocationHistoryResponseDto> {
-    const userId = req.user?.userId || req.user?.uuid || req.user?.id;
+    const userId = extractUserId(req);
     return this.equipmentHistoryService.createLocationHistory(equipmentUuid, dto, userId);
   }
 
@@ -119,7 +120,7 @@ export class EquipmentHistoryController {
     @Body(CreateMaintenanceHistoryValidationPipe) dto: CreateMaintenanceHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<MaintenanceHistoryResponseDto> {
-    const userId = req.user?.userId || req.user?.uuid || req.user?.id;
+    const userId = extractUserId(req);
     return this.equipmentHistoryService.createMaintenanceHistory(equipmentUuid, dto, userId);
   }
 
@@ -175,7 +176,7 @@ export class EquipmentHistoryController {
     @Body(CreateIncidentHistoryValidationPipe) dto: CreateIncidentHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<IncidentHistoryResponseDto> {
-    const userId = req.user?.userId || req.user?.uuid || req.user?.id;
+    const userId = extractUserId(req);
     return this.equipmentHistoryService.createIncidentHistory(equipmentUuid, dto, userId);
   }
 

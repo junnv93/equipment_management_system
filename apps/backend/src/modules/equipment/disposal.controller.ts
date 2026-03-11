@@ -9,7 +9,6 @@ import {
   HttpCode,
   ParseUUIDPipe,
   Req,
-  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -33,6 +32,7 @@ import {
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { extractUserId } from '../../common/utils/extract-user';
 
 /**
  * 장비 폐기 컨트롤러
@@ -76,13 +76,7 @@ export class DisposalController {
     @Body(new ZodValidationPipe(requestDisposalSchema)) dto: RequestDisposalDto,
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
-    const userId = req.user?.userId || req.user?.sub;
-    if (!userId) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const userId = extractUserId(req);
     return this.disposalService.requestDisposal(equipmentId, dto, userId);
   }
 
@@ -117,13 +111,7 @@ export class DisposalController {
     @Body(new ZodValidationPipe(reviewDisposalSchema)) reviewDto: ReviewDisposalDto,
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
-    const userId = req.user?.userId || req.user?.sub;
-    if (!userId) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const userId = extractUserId(req);
     return this.disposalService.reviewDisposal(equipmentId, reviewDto, userId);
   }
 
@@ -160,13 +148,7 @@ export class DisposalController {
     @Body(new ZodValidationPipe(approveDisposalSchema)) approveDto: ApproveDisposalDto,
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
-    const userId = req.user?.userId || req.user?.sub;
-    if (!userId) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const userId = extractUserId(req);
     return this.disposalService.approveDisposal(equipmentId, approveDto, userId);
   }
 
@@ -194,13 +176,7 @@ export class DisposalController {
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
     @Req() req: AuthenticatedRequest
   ): Promise<{ success: boolean; message: string }> {
-    const userId = req.user?.userId || req.user?.sub;
-    if (!userId) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const userId = extractUserId(req);
     return this.disposalService.cancelDisposalRequest(equipmentId, userId);
   }
 

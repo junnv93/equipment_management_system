@@ -12,7 +12,6 @@ import {
   Res,
   Request,
   UsePipes,
-  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -56,20 +55,7 @@ import { Permission, CALIBRATION_PLAN_DATA_SCOPE } from '@equipment-management/s
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
-
-/**
- * 서버에서 JWT 사용자 ID를 안전하게 추출
- */
-function extractUserId(req: AuthenticatedRequest): string {
-  const userId = req.user?.userId || req.user?.sub;
-  if (!userId) {
-    throw new BadRequestException({
-      code: 'AUTH_USER_INFO_MISSING',
-      message: 'User information not found.',
-    });
-  }
-  return userId;
-}
+import { extractUserId } from '../../common/utils/extract-user';
 
 @ApiTags('교정계획서')
 @ApiBearerAuth()

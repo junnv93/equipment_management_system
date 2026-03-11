@@ -56,6 +56,7 @@ import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { extractUserId } from '../../common/utils/extract-user';
 import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.dto';
 
 @ApiTags('장비 관리')
@@ -1216,7 +1217,7 @@ export class EquipmentController {
     requestData: string | null;
   }> {
     const userRoles = req.user?.roles ?? [];
-    const userId = req.user?.userId ?? req.user?.id ?? '';
+    const userId = extractUserId(req);
     return this.approvalService.approveRequest(requestUuid, userId, userRoles);
   }
 
@@ -1256,7 +1257,7 @@ export class EquipmentController {
     requestData: string | null;
   }> {
     const userRoles = req.user?.roles ?? [];
-    const userId = req.user?.userId ?? req.user?.id ?? '';
+    const userId = extractUserId(req);
     return this.approvalService.rejectRequest(requestUuid, userId, dto.rejectionReason, userRoles);
   }
 

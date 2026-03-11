@@ -51,6 +51,7 @@ import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { Permission, CHECKOUT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { extractUserId } from '../../common/utils/extract-user';
 
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
@@ -76,13 +77,7 @@ export class CheckoutsController {
     @Body() createCheckoutDto: CreateCheckoutDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    const requesterId = req.user?.userId || req.user?.sub;
-    if (!requesterId) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const requesterId = extractUserId(req);
     const userTeamId = req.user?.teamId; // 사용자 팀 ID
     // ✅ UUID 형식 검증 (서비스에서도 검증하지만, 컨트롤러에서도 사전 검증)
     // 개발 환경에서는 UUID가 아닌 ID도 허용할 수 있지만, 프로덕션에서는 UUID 필수
@@ -267,13 +262,7 @@ export class CheckoutsController {
     lenderConfirmNotes: string | null;
   }> {
     // 승인자 ID는 인증된 세션에서 추출 (클라이언트 입력 신뢰 금지)
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
 
     const approverTeamId = req.user?.teamId; // 승인자 팀 ID
 
@@ -297,13 +286,7 @@ export class CheckoutsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     // 반려 사유 필수 검증 (요구사항)
     if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
       throw new BadRequestException({
@@ -425,13 +408,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    const returnerId = req.user?.userId || req.user?.sub;
-    if (!returnerId) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const returnerId = extractUserId(req);
     return this.checkoutsService.returnCheckout(uuid, returnDto, returnerId);
   }
 
@@ -493,13 +470,7 @@ export class CheckoutsController {
     lenderConfirmNotes: string | null;
   }> {
     // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId });
   }
 
@@ -530,13 +501,7 @@ export class CheckoutsController {
     @Body() rejectReturnDto: RejectReturnDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     const approverTeamId = req.user?.teamId;
     return this.checkoutsService.rejectReturn(uuid, {
       ...rejectReturnDto,
@@ -566,13 +531,7 @@ export class CheckoutsController {
     @Body() dto: CreateConditionCheckDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    const checkerId = req.user?.userId || req.user?.sub;
-    if (!checkerId) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const checkerId = extractUserId(req);
     return this.checkoutsService.submitConditionCheck(uuid, dto, checkerId);
   }
 

@@ -25,6 +25,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { extractUserId } from '../../common/utils/extract-user';
 
 @ApiTags('수리 이력')
 @ApiBearerAuth()
@@ -75,7 +76,7 @@ export class RepairHistoryController {
     @Body() createDto: CreateRepairHistoryDto,
     @Request() req: AuthenticatedRequest
   ): Promise<RepairHistoryRecord> {
-    const createdBy = req.user?.id || 'unknown';
+    const createdBy = extractUserId(req);
     return this.repairHistoryService.create(equipmentUuid, createDto, createdBy);
   }
 
@@ -148,7 +149,7 @@ export class RepairHistoryController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
   ): Promise<{ deleted: boolean; id: string }> {
-    const deletedBy = req.user?.id || 'unknown';
+    const deletedBy = extractUserId(req);
     return this.repairHistoryService.remove(uuid, deletedBy);
   }
 }

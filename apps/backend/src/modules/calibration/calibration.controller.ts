@@ -49,6 +49,7 @@ import type { MulterFile } from '../../types/common.types';
 import type { AuthenticatedRequest } from '../../types/auth';
 import type { CalibrationRecord } from './calibration.service';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { extractUserId } from '../../common/utils/extract-user';
 import {
   UpdateCalibrationStatusPipe,
   type UpdateCalibrationStatusDto,
@@ -80,7 +81,7 @@ export class CalibrationController {
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
     // ✅ 보안: registeredBy와 registeredByRole을 JWT 세션에서 추출 (Rule 2)
-    const registeredBy = req.user?.userId || req.user?.sub;
+    const registeredBy = extractUserId(req);
     // roles는 배열이므로 첫 번째 역할을 사용 (일반적으로 사용자는 하나의 역할만 가짐)
     const registeredByRole = req.user?.roles?.[0];
 
@@ -185,13 +186,7 @@ export class CalibrationController {
     @Request() req: AuthenticatedRequest
   ): Promise<{ calibration: CalibrationRecord; message: string }> {
     // ✅ 보안: completedBy를 JWT 세션에서 추출 (Rule 2)
-    const completedBy = req.user?.userId || req.user?.sub;
-    if (!completedBy) {
-      throw new BadRequestException({
-        code: 'AUTH_USER_INFO_MISSING',
-        message: 'User information not found.',
-      });
-    }
+    const completedBy = extractUserId(req);
     return this.calibrationService.completeIntermediateCheck(uuid, completedBy, body.notes);
   }
 
@@ -523,13 +518,7 @@ export class CalibrationController {
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
     // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     return this.calibrationService.approveCalibration(uuid, { ...approveDto, approverId });
   }
 
@@ -553,13 +542,7 @@ export class CalibrationController {
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
     // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
-    const approverId = req.user?.userId || req.user?.sub;
-    if (!approverId) {
-      throw new BadRequestException({
-        code: 'AUTH_APPROVER_INFO_MISSING',
-        message: 'Approver information not found.',
-      });
-    }
+    const approverId = extractUserId(req);
     return this.calibrationService.rejectCalibration(uuid, { ...rejectDto, approverId });
   }
 }
