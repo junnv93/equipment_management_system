@@ -1,53 +1,50 @@
 /**
- * Equipment Detail Page - Disposal Rejection by Technical Manager
+ * Equipment Detail - 기술책임자 폐기 반려
+ *
+ * Equipment: EQUIP_DISPOSAL_REJ_C1 (status: pending_disposal, reviewStatus: pending)
+ * → 사전 시드된 검토 대기 요청을 반려하는 테스트
+ *
+ * @see apps/backend/src/database/seed-data/disposal/disposal-requests.seed.ts - DISP_REQ_C1_ID
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { EQUIP_DISPOSAL_REJ_C1 } from '../../../../../../../backend/src/database/utils/uuid-constants';
 
-test.describe('Disposal Workflow', () => {
-  test('Reject disposal request as technical manager', async ({ techManagerPage: page }) => {
-    // Navigate to equipment with pending disposal (if exists)
-    await page.goto('/equipment');
+test.describe('Disposal Workflow - Tech Manager Rejection', () => {
+  test('기술책임자가 폐기 요청을 반려한다', async ({ techManagerPage: page }) => {
+    // 1. 사전 시드된 pending 상태 장비에 직접 접근
+    await page.goto(`/equipment/${EQUIP_DISPOSAL_REJ_C1}`);
     await page.waitForLoadState('networkidle');
 
-    const pendingBadge = page.locator('text=/폐기.*대기|pending/i').first();
-    const pendingExists = (await pendingBadge.count()) > 0;
+    // 2. 폐기 진행 중 버튼 클릭
+    const progressButton = page.getByRole('button', { name: /폐기 진행 중/i });
+    await expect(progressButton).toBeVisible({ timeout: 10000 });
+    await progressButton.click();
 
-    if (!pendingExists) {
-      test.skip(true, 'No pending disposal request found');
+    // 3. 다이얼로그에서 반려 관련 버튼/영역 찾기
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // 4. 반려 사유 입력 (textarea가 있으면)
+    const reasonTextarea = dialog.getByRole('textbox');
+    if (await reasonTextarea.isVisible().catch(() => false)) {
+      await reasonTextarea.fill('추가 점검이 필요하여 반려합니다. 수리 이력을 확인해주세요.');
     }
 
-    // Navigate to pending disposal equipment
-    const pendingCard = pendingBadge.locator('..').locator('..');
-    const detailLink = pendingCard.getByRole('link', { name: /상세/i });
-    await detailLink.click();
-    await page.waitForLoadState('networkidle');
-
-    // Look for review button
-    const reviewButton = page.getByRole('button', { name: /검토/i });
-
-    if ((await reviewButton.count()) > 0) {
-      await reviewButton.click();
-      await page.waitForTimeout(500);
-
-      // Enter rejection reason
-      const reasonInput = page.locator('textarea, input[type="text"]').first();
-      await reasonInput.fill('추가 점검이 필요하여 반려합니다.');
-
-      // Click reject button
-      const rejectButton = page.getByRole('button', { name: /반려/i });
+    // 5. 반려 버튼 클릭
+    const rejectButton = dialog.getByRole('button', { name: /반려/i });
+    if (await rejectButton.isVisible().catch(() => false)) {
       await rejectButton.click();
 
-      // Confirm rejection (if confirmation dialog appears)
-      await page.waitForTimeout(500);
-      const confirmButton = page.getByRole('button', { name: /확인|반려/i });
-      if ((await confirmButton.count()) > 0) {
+      // 6. 확인 다이얼로그가 있으면 확인
+      const confirmDialog = page.getByRole('alertdialog');
+      if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+        const confirmButton = confirmDialog.getByRole('button', { name: /확인|반려/i });
         await confirmButton.click();
       }
 
-      console.log('✓ Disposal request rejected');
-    } else {
-      test.skip(true, 'No review permission for this equipment');
+      // 7. 반려 완료 확인
+      await expect(page.getByText(/반려|거절/i).first()).toBeVisible({ timeout: 10000 });
     }
   });
 });

@@ -4,6 +4,7 @@
  */
 
 import { Pool } from 'pg';
+import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
 
 interface VerificationResult {
   passed: boolean;
@@ -149,6 +150,49 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
       passed: pendingCheckoutCount >= 8,
       actual: pendingCheckoutCount,
       expected: 8,
+    });
+
+    // =========================================================================
+    // Phase 2: Calibration Plans (3-step approval)
+    // =========================================================================
+
+    const cplanResult = await pool.query('SELECT COUNT(*) as count FROM calibration_plans');
+    const cplanCount = parseInt(cplanResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Calibration Plans count',
+      passed: cplanCount >= 6,
+      actual: cplanCount,
+      expected: 6,
+    });
+
+    // Status distribution: at least 1 per workflow state
+    const cplanStatusResult = await pool.query(
+      'SELECT status, COUNT(*) as count FROM calibration_plans GROUP BY status'
+    );
+    const cplanStatusMap = new Map(
+      cplanStatusResult.rows.map((r) => [r.status, parseInt(r.count, 10)])
+    );
+
+    for (const status of CALIBRATION_PLAN_STATUS_VALUES) {
+      const count = cplanStatusMap.get(status) || 0;
+      checks.push({
+        name: `Calibration Plan status: ${status}`,
+        passed: count >= 1,
+        actual: count,
+        expected: 1,
+      });
+    }
+
+    // Plan items
+    const cplanItemResult = await pool.query(
+      'SELECT COUNT(*) as count FROM calibration_plan_items'
+    );
+    const cplanItemCount = parseInt(cplanItemResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Calibration Plan Items count',
+      passed: cplanItemCount >= 12,
+      actual: cplanItemCount,
+      expected: 12,
     });
 
     // =========================================================================

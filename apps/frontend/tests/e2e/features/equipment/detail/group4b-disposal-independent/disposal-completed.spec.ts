@@ -1,41 +1,31 @@
 /**
- * Equipment Detail Page - Disposal Completed State
+ * Equipment Detail - 폐기 완료 상태 표시
  *
- * SSOT: Relative paths
+ * Equipment: EQUIP_DISPOSAL_PERM_A6 (status: disposed, reviewStatus: approved)
+ * → 사전 시드된 폐기 완료 장비
+ *
+ * @see apps/backend/src/database/seed-data/disposal/disposal-equipment.seed.ts
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { EQUIP_DISPOSAL_PERM_A6 } from '../../../../../../../backend/src/database/utils/uuid-constants';
 
-test.describe('Disposal Workflow', () => {
-  test('Disposal completed state', async ({ testOperatorPage: page }) => {
-    // Navigate to equipment list to find disposed equipment
-    await page.goto('/equipment');
+test.describe('Disposal Workflow - Completed State', () => {
+  test('폐기 완료된 장비가 올바르게 표시된다', async ({ testOperatorPage: page }) => {
+    // 1. 폐기 완료(disposed) 장비에 직접 접근
+    await page.goto(`/equipment/${EQUIP_DISPOSAL_PERM_A6}`);
     await page.waitForLoadState('networkidle');
 
-    // Look for disposed equipment (if exists)
-    const disposedBadge = page.locator('text=/폐기/i').first();
-    const disposedExists = (await disposedBadge.count()) > 0;
+    // 2. 폐기 완료 상태 표시 확인
+    await expect(page.getByText(/폐기 완료|폐기됨|disposed/i).first()).toBeVisible({
+      timeout: 10000,
+    });
 
-    if (!disposedExists) {
-      test.skip(true, 'No disposed equipment found');
+    // 3. 폐기 요청 버튼이 없거나 비활성화되어야 함
+    const disposalButton = page.getByRole('button', { name: /폐기 요청/i });
+    const buttonCount = await disposalButton.count();
+    if (buttonCount > 0) {
+      await expect(disposalButton).toBeDisabled();
     }
-
-    // Navigate to disposed equipment detail
-    const disposedCard = disposedBadge.locator('..').locator('..');
-    const detailLink = disposedCard.getByRole('link', { name: /상세/i });
-    await detailLink.click();
-    await page.waitForLoadState('networkidle');
-
-    // Verify DisposedBanner or disposed indicator
-    const disposedIndicator = page.locator('text=/폐기 완료|disposed/i');
-    await expect(disposedIndicator.first()).toBeVisible();
-
-    // Verify action buttons are disabled
-    const editButton = page.getByRole('button', { name: /수정/i });
-    if ((await editButton.count()) > 0) {
-      await expect(editButton).toBeDisabled();
-    }
-
-    console.log('✓ Disposed equipment displays correctly');
   });
 });

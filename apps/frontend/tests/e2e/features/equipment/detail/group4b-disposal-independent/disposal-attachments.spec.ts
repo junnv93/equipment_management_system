@@ -1,53 +1,40 @@
 /**
- * Equipment Detail Page - Disposal with File Attachments
+ * Equipment Detail - 폐기 요청 첨부파일
+ *
+ * Equipment: EQUIP_DISPOSAL_EXC_D2 (status: available)
+ * → 폐기 요청 다이얼로그에서 파일 업로드 기능 확인
+ *
+ * @see apps/backend/src/database/seed-data/disposal/disposal-equipment.seed.ts
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { EQUIP_DISPOSAL_EXC_D2 } from '../../../../../../../backend/src/database/utils/uuid-constants';
 
-test.describe('Disposal Workflow', () => {
-  test('Disposal workflow with file attachments', async ({ testOperatorPage: page }) => {
-    // Navigate to available equipment
-    await page.goto('/equipment');
+test.describe('Disposal Workflow - Attachments', () => {
+  test('폐기 요청 다이얼로그에서 파일 업로드 UI가 존재한다', async ({ testOperatorPage: page }) => {
+    // 1. available 상태 장비에 직접 접근
+    await page.goto(`/equipment/${EQUIP_DISPOSAL_EXC_D2}`);
     await page.waitForLoadState('networkidle');
 
-    const availableBadge = page.locator('text=/사용 가능/i').first();
-    const availableCard = availableBadge.locator('..').locator('..');
-
-    const detailLink = availableCard.getByRole('link', { name: /상세/i }).first();
-    await detailLink.click();
-    await page.waitForLoadState('networkidle');
-
-    // Click disposal request button
+    // 2. 폐기 요청 버튼 클릭
     const disposalButton = page.getByRole('button', { name: /폐기 요청/i });
-
-    if ((await disposalButton.count()) === 0) {
-      test.skip(true, 'Disposal request not available');
-    }
-
+    await expect(disposalButton).toBeVisible({ timeout: 10000 });
     await disposalButton.click();
-    await page.waitForTimeout(500);
 
-    // Look for file upload button
-    const fileUploadButton = page
-      .locator('button, label')
-      .filter({ hasText: /파일 선택|파일 업로드/i });
+    // 3. 다이얼로그 확인
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
 
-    if ((await fileUploadButton.count()) > 0) {
-      // Verify file input exists (hidden)
-      const fileInput = page.locator('input[type="file"]');
+    // 4. 파일 업로드 UI 확인 (있을 경우)
+    const fileInput = dialog.locator('input[type="file"]');
+    const hasFileInput = (await fileInput.count()) > 0;
+
+    if (hasFileInput) {
       await expect(fileInput.first()).toBeAttached();
-
-      console.log('✓ File upload functionality available');
-    } else {
-      console.log('ℹ File upload not implemented or not visible');
     }
 
-    // Close dialog
-    const closeButton = page
-      .locator('button[aria-label="Close"], button')
-      .filter({ hasText: /닫기|취소/i });
-    if ((await closeButton.count()) > 0) {
-      await closeButton.first().click();
-    }
+    // 5. 다이얼로그 닫기
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
   });
 });

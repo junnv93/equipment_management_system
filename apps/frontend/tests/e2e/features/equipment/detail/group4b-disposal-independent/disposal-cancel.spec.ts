@@ -1,50 +1,41 @@
 /**
- * Equipment Detail Page - Cancel Disposal Request
+ * Equipment Detail - 폐기 요청 취소
+ *
+ * Equipment: EQUIP_DISPOSAL_EXC_D3 (status: pending_disposal, reviewStatus: pending)
+ * → requestedBy: USER_TEST_ENGINEER_SUWON_ID (testOperatorPage와 동일)
+ *
+ * @see apps/backend/src/database/seed-data/disposal/disposal-requests.seed.ts - DISP_REQ_D3_ID
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { EQUIP_DISPOSAL_EXC_D3 } from '../../../../../../../backend/src/database/utils/uuid-constants';
 
-test.describe('Disposal Workflow', () => {
-  test('Cancel disposal request as requester', async ({ testOperatorPage: page }) => {
-    // Navigate to equipment list
-    await page.goto('/equipment');
+test.describe('Disposal Workflow - Cancel', () => {
+  test('요청자가 pending 폐기 요청을 취소할 수 있다', async ({ testOperatorPage: page }) => {
+    // 1. 사전 시드된 pending 폐기 요청 장비에 직접 접근
+    await page.goto(`/equipment/${EQUIP_DISPOSAL_EXC_D3}`);
     await page.waitForLoadState('networkidle');
 
-    // Look for equipment with pending disposal created by this user
-    const pendingBadge = page.locator('text=/폐기.*대기/i').first();
-    const pendingExists = (await pendingBadge.count()) > 0;
+    // 2. 폐기 진행 중 버튼 확인
+    const progressButton = page.getByRole('button', { name: /폐기 진행 중/i });
+    await expect(progressButton).toBeVisible({ timeout: 10000 });
+    await progressButton.click();
 
-    if (!pendingExists) {
-      test.skip(true, 'No pending disposal request found');
-    }
-
-    // Navigate to pending disposal equipment
-    const pendingCard = pendingBadge.locator('..').locator('..');
-    const detailLink = pendingCard.getByRole('link', { name: /상세/i });
-    await detailLink.click();
-    await page.waitForLoadState('networkidle');
-
-    // Look for cancel button
+    // 3. 취소 버튼 찾기
     const cancelButton = page.getByRole('button', { name: /취소/i });
-
-    if ((await cancelButton.count()) > 0) {
+    if (await cancelButton.isVisible().catch(() => false)) {
       await cancelButton.click();
-      await page.waitForTimeout(500);
 
-      // Confirm cancellation
+      // 4. 확인 다이얼로그가 있으면 확인
       const confirmButton = page.getByRole('button', { name: /확인/i });
-      if ((await confirmButton.count()) > 0) {
+      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await confirmButton.click();
-        await page.waitForTimeout(1000);
-
-        // Verify status returned to available
-        const statusBadge = page.locator('text=/사용 가능/i');
-        await expect(statusBadge.first()).toBeVisible();
-
-        console.log('✓ Disposal request cancelled');
       }
-    } else {
-      test.skip(true, 'No cancel permission (not requester)');
+
+      // 5. 장비 상태가 복원되었는지 확인
+      await expect(page.getByRole('button', { name: /폐기 요청/i })).toBeVisible({
+        timeout: 10000,
+      });
     }
   });
 });

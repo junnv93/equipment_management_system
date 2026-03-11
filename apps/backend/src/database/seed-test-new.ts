@@ -43,8 +43,11 @@ import {
   CHECKOUT_ITEMS_SEED_DATA,
 } from './seed-data/operations/checkouts.seed';
 
-// Phase 2 seed data modules (STUBBED)
-// import { CALIBRATION_PLANS_SEED_DATA, CALIBRATION_PLAN_ITEMS_SEED_DATA } from './seed-data/calibration/calibration-plans.seed';
+// Phase 2 seed data modules
+import {
+  CALIBRATION_PLANS_SEED_DATA,
+  CALIBRATION_PLAN_ITEMS_SEED_DATA,
+} from './seed-data/calibration/calibration-plans.seed';
 
 // Phase 3 seed data modules (Disposal E2E tests)
 import { DISPOSAL_EQUIPMENT_SEED_DATA } from './seed-data/disposal/disposal-equipment.seed';
@@ -161,8 +164,11 @@ async function main(): Promise<void> {
     console.log('  → Non-Conformances (10)');
     await db.insert(schema.nonConformances).values(NON_CONFORMANCES_SEED_DATA);
 
-    // Calibration Plans & Items (STUBBED - Phase 2)
-    // TODO: Implement calibration plans seed data
+    // Calibration Plans & Items (6 plans + 12 items)
+    console.log('  → Calibration Plans (6)');
+    await db.insert(schema.calibrationPlans).values(CALIBRATION_PLANS_SEED_DATA);
+    console.log('  → Calibration Plan Items (12)');
+    await db.insert(schema.calibrationPlanItems).values(CALIBRATION_PLAN_ITEMS_SEED_DATA);
 
     // Checkouts & Items (68 checkouts + items)
     console.log('  → Checkouts (68)');

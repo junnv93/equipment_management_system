@@ -134,15 +134,33 @@ export const CALIB_018_ID = 'bbbb0012-0012-0012-0012-000000000012';
 
 // =============================================================================
 // CALIBRATION PLANS (6 plans)
-// Pattern: cplan-NNNN
+// Pattern: cccc00NN-00NN-40NN-80NN-0000000000NN
 // =============================================================================
 
-export const CPLAN_001_ID = 'cplan-0001'; // draft (v1)
-export const CPLAN_002_ID = 'cplan-0002'; // pending_review (v1)
-export const CPLAN_003_ID = 'cplan-0003'; // pending_approval (v1)
-export const CPLAN_004_ID = 'cplan-0004'; // approved (v1)
-export const CPLAN_005_ID = 'cplan-0005'; // rejected (v1)
-export const CPLAN_006_ID = 'cplan-0006'; // pending_review (v2, re-submitted)
+export const CPLAN_001_ID = 'cccc0001-0001-4001-8001-000000000001'; // draft (v1, 2026 suwon)
+export const CPLAN_002_ID = 'cccc0002-0002-4002-8002-000000000002'; // pending_review (v1, 2026 uiwang)
+export const CPLAN_003_ID = 'cccc0003-0003-4003-8003-000000000003'; // pending_approval (v1, 2026 pyeongtaek)
+export const CPLAN_004_ID = 'cccc0004-0004-4004-8004-000000000004'; // approved (v1, 2025 suwon)
+export const CPLAN_005_ID = 'cccc0005-0005-4005-8005-000000000005'; // rejected (v1, 2024 suwon, review stage)
+export const CPLAN_006_ID = 'cccc0006-0006-4006-8006-000000000006'; // pending_review (v2, re-submitted from CPLAN_005)
+
+// =============================================================================
+// CALIBRATION PLAN ITEMS (12 items across 6 plans)
+// Pattern: cccc10NN-00NN-40NN-80NN-0000000000NN
+// =============================================================================
+
+export const CPLAN_ITEM_001_ID = 'cccc1001-0001-4001-8001-000000000001'; // CPLAN_001 item 1
+export const CPLAN_ITEM_002_ID = 'cccc1002-0002-4002-8002-000000000002'; // CPLAN_001 item 2
+export const CPLAN_ITEM_003_ID = 'cccc1003-0003-4003-8003-000000000003'; // CPLAN_002 item 1
+export const CPLAN_ITEM_004_ID = 'cccc1004-0004-4004-8004-000000000004'; // CPLAN_002 item 2
+export const CPLAN_ITEM_005_ID = 'cccc1005-0005-4005-8005-000000000005'; // CPLAN_003 item 1
+export const CPLAN_ITEM_006_ID = 'cccc1006-0006-4006-8006-000000000006'; // CPLAN_003 item 2
+export const CPLAN_ITEM_007_ID = 'cccc1007-0007-4007-8007-000000000007'; // CPLAN_004 item 1 (confirmed)
+export const CPLAN_ITEM_008_ID = 'cccc1008-0008-4008-8008-000000000008'; // CPLAN_004 item 2 (confirmed)
+export const CPLAN_ITEM_009_ID = 'cccc1009-0009-4009-8009-000000000009'; // CPLAN_005 item 1
+export const CPLAN_ITEM_010_ID = 'cccc1010-0010-4010-8010-000000000010'; // CPLAN_005 item 2
+export const CPLAN_ITEM_011_ID = 'cccc1011-0011-4011-8011-000000000011'; // CPLAN_006 item 1
+export const CPLAN_ITEM_012_ID = 'cccc1012-0012-4012-8012-000000000012'; // CPLAN_006 item 2
 
 // =============================================================================
 // NON-CONFORMANCES (10 non-conformances)
