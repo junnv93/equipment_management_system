@@ -1070,6 +1070,44 @@ export const CHECKOUT_STATUS_FILTER_OPTIONS: CheckoutStatus[] = [
 ];
 
 /**
+ * 반출 상태 그룹 (Stat 카드 필터용 SSOT)
+ *
+ * 대시보드 Stat 카드에서 여러 상태를 묶어 필터링할 때 사용.
+ * key = 그룹 식별자 (i18n statusGroup.{key}와 1:1 대응)
+ * value = 해당 그룹에 속하는 CheckoutStatus 배열
+ */
+export const CHECKOUT_STATUS_GROUPS = {
+  /** 진행 중 (반출~반입 전 모든 단계) */
+  in_progress: [
+    'checked_out',
+    'lender_checked',
+    'borrower_received',
+    'in_use',
+    'borrower_returned',
+    'lender_received',
+  ] as const satisfies readonly CheckoutStatus[],
+  /** 반입 완료 (반입됨 + 반입 승인) */
+  completed: ['returned', 'return_approved'] as const satisfies readonly CheckoutStatus[],
+} as const;
+
+export type CheckoutStatusGroupKey = keyof typeof CHECKOUT_STATUS_GROUPS;
+
+/** 그룹 키 → 쉼표 구분 필터 값 변환 */
+export function getCheckoutStatusGroupFilterValue(groupKey: CheckoutStatusGroupKey): string {
+  return CHECKOUT_STATUS_GROUPS[groupKey].join(',');
+}
+
+/** 쉼표 구분 필터 값 → 그룹 키 역변환 (없으면 null) */
+export function findCheckoutStatusGroupKey(filterValue: string): CheckoutStatusGroupKey | null {
+  for (const [key, statuses] of Object.entries(CHECKOUT_STATUS_GROUPS)) {
+    if (statuses.join(',') === filterValue) {
+      return key as CheckoutStatusGroupKey;
+    }
+  }
+  return null;
+}
+
+/**
  * 교정 방법 라벨 (UI 표시용)
  */
 export const CALIBRATION_METHOD_VALUES = CalibrationMethodEnum.options;

@@ -19,6 +19,12 @@ export {
   REFRESH_BUFFER_SECONDS,
   ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_TOKEN_EXPIRES_IN,
+  IDLE_TIMEOUT_SECONDS,
+  IDLE_WARNING_BEFORE_SECONDS,
+  IDLE_ACTIVITY_THROTTLE_MS,
+  SESSION_SYNC_CHANNEL,
+  SESSION_SYNC_MESSAGE,
+  type SessionSyncMessageType,
 } from './auth-token';
 
 // 역할 관련
@@ -49,6 +55,13 @@ export { Permission, PERMISSION_LABELS } from './permissions';
 
 // 역할-권한 매핑
 export { ROLE_PERMISSIONS, hasPermission, getPermissions } from './role-permissions';
+
+// 권한 카테고리
+export {
+  PERMISSION_CATEGORIES,
+  PERMISSION_CATEGORY_KEYS,
+  type PermissionCategoryKey,
+} from './permission-categories';
 
 // API 엔드포인트
 export { API_ENDPOINTS, type ApiEndpoints } from './api-endpoints';

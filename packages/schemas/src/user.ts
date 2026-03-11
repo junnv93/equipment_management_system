@@ -51,6 +51,16 @@ export type User = z.infer<typeof userSchema> & SoftDeleteEntity;
 export const userListResponseSchema = PaginatedResponse(userSchema);
 export type UserListResponse = z.infer<typeof userListResponseSchema>;
 
+// API 응답 전용 UserProfile (GET /api/users/me)
+// baseUserSchema에서 파생 — DB 전체 컬럼이 아닌 API 응답 형태
+export const userProfileSchema = baseUserSchema.extend({
+  id: z.string().uuid(),
+  teamName: z.string().optional(),
+  isActive: z.boolean(),
+  lastLogin: z.coerce.date().nullable().optional(),
+});
+export type UserProfile = z.infer<typeof userProfileSchema>;
+
 // 타입 가드
 export const isUser = (value: unknown): value is User => {
   try {
