@@ -91,8 +91,7 @@ export const SETTINGS_CHIP_TOKENS = {
     selected: 'bg-primary/10 border border-primary/20 text-primary',
     unselected:
       'border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-    highlight:
-      'bg-orange-50 border border-orange-300 text-orange-600 dark:bg-orange-950/30 dark:border-orange-700 dark:text-orange-400',
+    highlight: 'bg-brand-repair/10 border border-brand-repair/30 text-brand-repair',
     disabled: 'opacity-50 cursor-not-allowed',
   },
 

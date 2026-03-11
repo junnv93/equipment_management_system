@@ -356,13 +356,13 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   item: 'flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50',
   bar: 'w-1 rounded-full self-stretch flex-shrink-0',
   barOverdue: 'bg-ul-red dark:bg-brand-critical',
-  barUrgent: 'bg-ul-orange dark:bg-orange-400',
-  barWarning: 'bg-yellow-400 dark:bg-yellow-500',
+  barUrgent: 'bg-ul-orange dark:bg-brand-repair',
+  barWarning: 'bg-brand-warning',
   barOk: 'bg-brand-ok',
   dday: 'font-mono tabular-nums font-bold text-sm w-14 flex-shrink-0',
   ddayOverdue: 'text-ul-red dark:text-brand-critical',
-  ddayUrgent: 'text-ul-orange dark:text-orange-400',
-  ddayWarning: 'text-yellow-600 dark:text-yellow-400',
+  ddayUrgent: 'text-ul-orange dark:text-brand-repair',
+  ddayWarning: 'text-brand-warning',
   ddayOk: 'text-brand-ok',
   info: 'min-w-0 flex-1',
   managementNumber: 'text-xs text-muted-foreground font-mono truncate',
@@ -402,7 +402,7 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   cellNumberOtherMonth: 'text-muted-foreground/40',
   dots: 'flex gap-0.5 mt-0.5 flex-wrap justify-center max-w-[28px]',
   dotOverdue: 'w-1.5 h-1.5 rounded-full bg-ul-red dark:bg-brand-critical flex-shrink-0',
-  dotUpcoming: 'w-1.5 h-1.5 rounded-full bg-yellow-400 dark:bg-yellow-500 flex-shrink-0',
+  dotUpcoming: 'w-1.5 h-1.5 rounded-full bg-brand-warning flex-shrink-0',
   dotReturn: 'w-1.5 h-1.5 rounded-full bg-ul-blue dark:bg-ul-info flex-shrink-0',
   popup:
     'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-20 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[160px] max-w-[220px]',
@@ -531,7 +531,7 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
     'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-red/10 text-ul-red dark:text-brand-critical border border-ul-red/20',
   /** 경고 카테고리 pill (overdue 등) */
   chipWarning:
-    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-orange/10 text-ul-orange dark:text-orange-400 border border-ul-orange/20',
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-orange/10 text-ul-orange dark:text-brand-repair border border-ul-orange/20',
   /** "이상 없음" 인라인 상태 */
   clearState: 'flex items-center gap-2 text-xs text-muted-foreground',
   clearIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',

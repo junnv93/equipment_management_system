@@ -44,9 +44,9 @@ export const CALIBRATION_PLAN_STATUS_TOKENS = {
     animation: '',
   },
   pending_review: {
-    color: 'bg-yellow-500 dark:bg-yellow-600',
+    color: 'bg-brand-warning',
     textColor: 'text-white',
-    borderColor: 'border-yellow-500 dark:border-yellow-600',
+    borderColor: 'border-brand-warning',
     label: '확인 대기',
     labelKey: 'calibration.planStatus.pending_review',
     /** Web Interface Guidelines: Specific property animations */

@@ -95,8 +95,8 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   checked_out: {
     card: {
-      className: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300',
-      borderColor: 'border-l-orange-500',
+      className: 'bg-brand-repair/10 text-brand-repair',
+      borderColor: 'border-l-brand-repair',
       statusBarColor: 'bg-brand-info/70',
     },
     header: {
@@ -153,8 +153,8 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   spare: {
     card: {
-      className: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
-      borderColor: 'border-l-slate-500',
+      className: 'bg-brand-neutral/10 text-brand-neutral',
+      borderColor: 'border-l-brand-neutral',
       statusBarColor: 'bg-brand-neutral',
     },
     header: {
@@ -181,13 +181,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   pending_disposal: {
     card: {
-      className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      borderColor: 'border-l-orange-500',
+      className: 'bg-brand-repair/10 text-brand-repair',
+      borderColor: 'border-l-brand-repair',
       statusBarColor: 'bg-brand-warning',
     },
     header: {
-      textColor: 'text-orange-700 dark:text-orange-300',
-      bgClasses: 'bg-orange-100 dark:bg-orange-900/30 border-orange-500',
+      textColor: 'text-brand-repair',
+      bgClasses: 'bg-brand-repair/10 border-brand-repair',
     },
     icon: AlertCircle,
     label: '폐기 진행 중',
@@ -223,13 +223,13 @@ export const EQUIPMENT_STATUS_TOKENS: Record<string, EquipmentStatusConfig> = {
   },
   inactive: {
     card: {
-      className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
-      borderColor: 'border-l-slate-400',
+      className: 'bg-brand-neutral/10 text-brand-neutral',
+      borderColor: 'border-l-brand-neutral',
       statusBarColor: 'bg-brand-neutral/50',
     },
     header: {
-      textColor: 'text-slate-600 dark:text-slate-400',
-      bgClasses: 'bg-slate-100 dark:bg-slate-800/30 border-slate-400',
+      textColor: 'text-brand-neutral',
+      bgClasses: 'bg-brand-neutral/10 border-brand-neutral',
     },
     icon: Package,
     label: '비활성',
@@ -301,20 +301,20 @@ export const CALIBRATION_BADGE_TOKENS: Record<CalibrationSeverity, CalibrationBa
     icon: AlertCircle,
   },
   urgent: {
-    card: 'bg-orange-500 text-white border-orange-400',
-    table: 'bg-orange-500 text-white',
+    card: 'bg-brand-repair text-white border-brand-repair/40',
+    table: 'bg-brand-repair text-white',
     header: {
-      textColor: 'text-orange-100',
-      bgClasses: 'bg-orange-500/90 border-orange-400',
+      textColor: 'text-brand-repair/80',
+      bgClasses: 'bg-brand-repair/90 border-brand-repair/40',
     },
     icon: AlertTriangle,
   },
   warning: {
-    card: 'bg-yellow-600 text-white border-yellow-400',
-    table: 'bg-yellow-600 text-white',
+    card: 'bg-brand-warning text-white border-brand-warning/40',
+    table: 'bg-brand-warning text-white',
     header: {
-      textColor: 'text-yellow-100',
-      bgClasses: 'bg-yellow-600/90 border-yellow-400',
+      textColor: 'text-brand-warning/80',
+      bgClasses: 'bg-brand-warning/90 border-brand-warning/40',
     },
     icon: Calendar,
   },

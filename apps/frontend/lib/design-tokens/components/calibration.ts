@@ -108,11 +108,11 @@ export const CALIBRATION_CHECK_BADGE: Record<
   },
   today: {
     badge:
-      'bg-ul-orange/10 text-ul-orange border-ul-orange/20 dark:bg-ul-orange/20 dark:text-orange-300',
+      'bg-ul-orange/10 text-ul-orange border-ul-orange/20 dark:bg-ul-orange/20 dark:text-brand-repair',
     icon: Clock,
   },
   upcoming: {
-    badge: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    badge: 'bg-brand-warning/10 text-brand-warning',
     icon: AlertTriangle,
   },
   future: {
@@ -172,7 +172,7 @@ export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType | 'pending', st
   total: 'text-foreground',
   compliant: 'text-brand-ok',
   overdue: 'text-ul-red dark:text-brand-critical',
-  upcoming: 'text-ul-orange dark:text-orange-400',
+  upcoming: 'text-ul-orange dark:text-brand-repair',
   pending: 'text-ul-blue dark:text-brand-info',
 };
 
@@ -338,7 +338,7 @@ export const CALIBRATION_FOCUS = FOCUS_TOKENS.classes;
  */
 export const CALIBRATION_INTERMEDIATE_CHECK_ICON_COLORS: Record<IntermediateCheckStatus, string> = {
   overdue: 'text-ul-red dark:text-brand-critical',
-  today: 'text-ul-orange dark:text-orange-400',
+  today: 'text-ul-orange dark:text-brand-repair',
   upcoming: 'text-ul-blue dark:text-brand-info',
   future: 'text-ul-blue dark:text-brand-info',
 };
@@ -560,8 +560,7 @@ export const CALIBRATION_TAB_TRANSITION = getTransitionClasses('fast', ['opacity
 export const CALIBRATION_RESULT_BADGE: Record<string, string> = {
   pass: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
   fail: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',
-  conditional:
-    'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
+  conditional: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
 };
 export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground border-border';
 
@@ -577,8 +576,7 @@ export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground 
  * - rejected: 반려됨 (UL Red)
  */
 export const CALIBRATION_APPROVAL_BADGE: Record<string, string> = {
-  pending_approval:
-    'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300',
+  pending_approval: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
   approved: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
   rejected:
     'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',

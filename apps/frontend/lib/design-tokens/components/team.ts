@@ -25,7 +25,7 @@ import { getTransitionClasses } from '../motion';
 export const ROLE_BADGE_TOKENS: Record<string, string> = {
   test_engineer: 'bg-brand-info/10 text-brand-info',
   technical_manager: 'bg-brand-ok/10 text-brand-ok',
-  quality_manager: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  quality_manager: 'bg-brand-purple/10 text-brand-purple',
   lab_manager: 'bg-brand-warning/10 text-brand-warning',
   system_admin: 'bg-brand-critical/10 text-brand-critical',
 } as const;

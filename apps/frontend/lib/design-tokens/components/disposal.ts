@@ -28,7 +28,7 @@ export const DISPOSAL_STEPPER_TOKENS = {
   /** 스텝 상태별 스타일 */
   status: {
     completed: 'border-brand-ok bg-brand-ok text-white',
-    current: 'border-orange-500 bg-orange-500 text-white',
+    current: 'border-brand-repair bg-brand-repair text-white',
     pending: 'border-brand-neutral/20 bg-background text-muted-foreground',
   },
 
@@ -36,7 +36,7 @@ export const DISPOSAL_STEPPER_TOKENS = {
   label: {
     base: 'text-xs font-medium',
     completed: 'text-brand-ok',
-    current: 'text-orange-700 dark:text-orange-400',
+    current: 'text-brand-repair',
     pending: 'text-muted-foreground',
   },
 
@@ -98,19 +98,19 @@ export const DISPOSAL_TIMELINE_TOKENS = {
  */
 export const DISPOSAL_PROGRESS_CARD_TOKENS = {
   /** 카드 컨테이너 */
-  container: 'border-l-4 border-l-orange-500 bg-orange-50 border-orange-200',
+  container: 'border-l-4 border-l-brand-repair bg-brand-repair/10 border-brand-repair/20',
 
   /** 제목 */
-  title: 'text-orange-900 font-semibold',
+  title: 'text-brand-repair font-semibold',
 
   /** 본문 */
-  text: 'text-sm text-orange-800',
+  text: 'text-sm text-brand-repair',
 
   /** 서브텍스트 */
-  subtext: 'text-xs text-orange-600',
+  subtext: 'text-xs text-brand-repair/80',
 
   /** 상세 보기 버튼 */
-  viewButton: 'border-orange-300 text-orange-700 hover:bg-orange-100',
+  viewButton: 'border-brand-repair/30 text-brand-repair hover:bg-brand-repair/10',
 
   /** 취소 버튼 */
   cancelButton: 'border-brand-critical/30 text-brand-critical hover:bg-brand-critical/10',
@@ -141,7 +141,7 @@ export const DISPOSAL_BUTTON_TOKENS = {
   completed: 'border-border text-muted-foreground',
 
   /** 폐기 진행 중 (드롭다운 트리거) */
-  inProgress: 'bg-orange-500 hover:bg-orange-600',
+  inProgress: 'bg-brand-repair hover:bg-brand-repair/90',
 
   /** 반려 버튼 */
   reject: 'border-brand-critical/30 text-brand-critical hover:bg-brand-critical/5',

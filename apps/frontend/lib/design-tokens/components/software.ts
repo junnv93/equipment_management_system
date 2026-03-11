@@ -49,7 +49,7 @@ export const SOFTWARE_STATS_TOKENS = {
   iconContainer: 'h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0',
   iconBg: {
     equipment: 'bg-brand-info/10 text-brand-info',
-    types: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    types: 'bg-brand-purple/10 text-brand-purple',
     updated: 'bg-brand-ok/10 text-brand-ok',
   } as Record<string, string>,
 
