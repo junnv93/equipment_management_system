@@ -11,6 +11,7 @@ import {
   CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS,
 } from '@equipment-management/schemas';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { getSemanticStatusClasses } from '@/lib/design-tokens/brand';
 
 // Re-export for backward compatibility
 export type { CalibrationFactorType, CalibrationFactorApprovalStatus };
@@ -92,8 +93,6 @@ export const FACTOR_TYPE_LABELS = CALIBRATION_FACTOR_TYPE_LABELS;
 export const APPROVAL_STATUS_LABELS = CALIBRATION_FACTOR_APPROVAL_STATUS_LABELS;
 
 // 승인 상태 색상 — BRAND_CLASS_MATRIX에서 파생 (SSOT)
-import { getSemanticStatusClasses } from '@/lib/design-tokens/brand';
-
 export const APPROVAL_STATUS_COLORS: Record<CalibrationFactorApprovalStatus, string> = {
   pending: getSemanticStatusClasses('warning'),
   approved: getSemanticStatusClasses('ok'),
