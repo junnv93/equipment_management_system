@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { daysBetween } from '@/lib/utils/date';
 import type {
   ApprovalItem,
   ApprovalCategory,
   PendingCountsByCategory,
 } from '@/lib/api/approvals-api';
+import { approvalsApi } from '@/lib/api/approvals-api';
+import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 
 interface ApprovalKpiData {
   /** 역할 기반 전체 대기 건수 */
@@ -13,20 +16,27 @@ interface ApprovalKpiData {
   urgentCount: number;
   /** 현재 카테고리 평균 대기일 */
   avgWaitDays: number;
-  /** 오늘 처리 건수 (v1: 미지원 — 백엔드 엔드포인트 부재) */
+  /** 오늘 처리 건수 (서버 집계) */
   todayProcessed: number | null;
 }
 
 /**
  * 승인 KPI 스트립 데이터 훅
  *
- * 신규 쿼리 없음 — 기존 pendingCounts + pendingItems에서 파생
+ * totalPending/urgentCount/avgWaitDays: 기존 pendingCounts + pendingItems에서 파생
+ * todayProcessed: GET /api/approvals/kpi 서버 집계
  */
 export function useApprovalKpi(
   pendingCounts: PendingCountsByCategory | undefined,
   currentItems: ApprovalItem[],
   availableTabs: ApprovalCategory[]
 ): ApprovalKpiData {
+  const { data: kpiData } = useQuery({
+    queryKey: queryKeys.approvals.kpi(),
+    queryFn: () => approvalsApi.getKpi(),
+    ...QUERY_CONFIG.DASHBOARD,
+  });
+
   return useMemo(() => {
     // 1. totalPending: 역할 기반 카테고리 합산
     const totalPending = availableTabs.reduce((sum, tab) => {
@@ -45,9 +55,9 @@ export function useApprovalKpi(
           )
         : 0;
 
-    // 4. todayProcessed: v1 미지원
-    const todayProcessed = null;
+    // 4. todayProcessed: 서버 집계 (audit_logs 기반)
+    const todayProcessed = kpiData?.todayProcessed ?? null;
 
     return { totalPending, urgentCount, avgWaitDays, todayProcessed };
-  }, [pendingCounts, currentItems, availableTabs]);
+  }, [pendingCounts, currentItems, availableTabs, kpiData]);
 }

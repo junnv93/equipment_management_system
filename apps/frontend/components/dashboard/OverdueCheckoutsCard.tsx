@@ -93,7 +93,13 @@ export function OverdueCheckoutsCard({
                   <span className={T.dday}>{t('daysOverdue', { days: item.daysOverdue })}</span>
                   <div className={T.info}>
                     <div className={T.name}>{item.equipment?.name ?? ''}</div>
-                    {item.user?.name && <div className={T.user}>{item.user.name}</div>}
+                    {(item.teamName || item.user?.name) && (
+                      <div className={T.user}>
+                        {item.teamName && item.user?.name
+                          ? `${item.teamName} · ${item.user.name}`
+                          : item.teamName || item.user?.name}
+                      </div>
+                    )}
                   </div>
                   <ArrowRight className={cn(T.arrow)} aria-hidden="true" />
                 </Link>

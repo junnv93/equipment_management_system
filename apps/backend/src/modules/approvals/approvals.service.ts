@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, gte, inArray, count } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import {
   CalibrationApprovalStatusEnum,
@@ -52,6 +52,11 @@ const ROLE_CATEGORIES: Record<UserRole, ReadonlySet<string>> = {
  * Specialized categories:
  * - equipment, calibration, inspection, nonconformity, disposal_review, disposal_final, etc.
  */
+export interface ApprovalKpiResponse {
+  /** 오늘 현재 사용자가 처리(승인+반려)한 건수 */
+  todayProcessed: number;
+}
+
 export interface PendingCountsByCategory {
   // Direction-based (consolidated)
   outgoing: number;
@@ -213,6 +218,31 @@ export class ApprovalsService {
       plan_review: planReviewCount,
       plan_final: planFinalCount,
       software: softwareCount,
+    };
+  }
+
+  /**
+   * 승인 KPI 조회 (오늘 처리 건수)
+   *
+   * audit_logs에서 오늘 해당 사용자가 approve/reject 한 건수를 집계
+   */
+  async getKpi(userId: string): Promise<ApprovalKpiResponse> {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const result = await this.db
+      .select({ value: count() })
+      .from(schema.auditLogs)
+      .where(
+        and(
+          eq(schema.auditLogs.userId, userId),
+          gte(schema.auditLogs.timestamp, todayStart),
+          inArray(schema.auditLogs.action, ['approve', 'reject', 'review'])
+        )
+      );
+
+    return {
+      todayProcessed: result[0]?.value ?? 0,
     };
   }
 

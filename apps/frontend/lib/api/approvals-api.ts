@@ -292,6 +292,11 @@ export interface PendingCountsByCategory {
   software: number;
 }
 
+export interface ApprovalKpiResponse {
+  /** 오늘 현재 사용자가 처리(승인+반려)한 건수 */
+  todayProcessed: number;
+}
+
 /**
  * 일괄 처리 결과
  */
@@ -649,6 +654,18 @@ class ApprovalsApi {
     } catch (error) {
       console.error('Failed to fetch approval counts:', error);
       return this.getEmptyCounts();
+    }
+  }
+
+  /**
+   * 승인 KPI 조회 (오늘 처리 건수)
+   */
+  async getKpi(): Promise<ApprovalKpiResponse> {
+    try {
+      const response = await apiClient.get<ApprovalKpiResponse>(API_ENDPOINTS.APPROVALS.KPI);
+      return response.data || { todayProcessed: 0 };
+    } catch {
+      return { todayProcessed: 0 };
     }
   }
 

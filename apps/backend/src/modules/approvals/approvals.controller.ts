@@ -1,7 +1,11 @@
 import { Controller, Get, Req, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedRequest } from '../../types/auth';
 import { UserRole } from '@equipment-management/schemas';
-import { ApprovalsService, PendingCountsByCategory } from './approvals.service';
+import {
+  ApprovalsService,
+  PendingCountsByCategory,
+  ApprovalKpiResponse,
+} from './approvals.service';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';
 
 /**
@@ -55,5 +59,27 @@ export class ApprovalsController {
     }
 
     return this.approvalsService.getPendingCountsByRole(userId, userRole);
+  }
+
+  /**
+   * 승인 KPI 조회
+   *
+   * GET /api/approvals/kpi
+   *
+   * 오늘 현재 사용자가 처리한 승인/반려 건수 반환
+   */
+  @Get('kpi')
+  @SkipPermissions()
+  async getKpi(@Req() req: AuthenticatedRequest): Promise<ApprovalKpiResponse> {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new UnauthorizedException({
+        code: 'AUTH_INVALID_SESSION',
+        message: 'Authentication info is invalid. Please log in again.',
+      });
+    }
+
+    return this.approvalsService.getKpi(userId);
   }
 }

@@ -75,6 +75,7 @@ export interface OverdueCheckout {
   daysOverdue: number;
   startDate: string;
   status: string;
+  teamName?: string;
 }
 
 /**

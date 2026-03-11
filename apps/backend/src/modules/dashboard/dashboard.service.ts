@@ -314,6 +314,7 @@ export class DashboardService {
             userId: schema.checkouts.requesterId,
             userName: schema.users.name,
             userEmail: schema.users.email,
+            teamName: schema.teams.name,
             expectedReturnDate: schema.checkouts.expectedReturnDate,
             checkoutDate: schema.checkouts.checkoutDate,
             status: schema.checkouts.status,
@@ -323,6 +324,7 @@ export class DashboardService {
           .innerJoin(schema.checkoutItems, eq(schema.checkouts.id, schema.checkoutItems.checkoutId))
           .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
           .leftJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
+          .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
           .where(
             and(
               eq(schema.checkouts.status, 'checked_out'),
@@ -359,6 +361,7 @@ export class DashboardService {
             startDate: r.checkoutDate ? r.checkoutDate.toISOString() : '',
             status: r.status || '',
             daysOverdue,
+            teamName: r.teamName || undefined,
           };
         });
       },

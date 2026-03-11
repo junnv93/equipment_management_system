@@ -121,6 +121,9 @@ export class OverdueCheckoutDto {
 
   @ApiProperty({ description: '상태' })
   status: string;
+
+  @ApiProperty({ description: '소속 팀명', required: false })
+  teamName?: string;
 }
 
 /**
