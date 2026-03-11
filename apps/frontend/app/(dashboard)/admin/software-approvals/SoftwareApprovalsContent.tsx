@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/components/ui/use-toast';
-import { getErrorMessage } from '@/lib/api/error';
+import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,16 +24,19 @@ import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import softwareApi, {
   SoftwareHistory,
   SOFTWARE_APPROVAL_STATUS_LABELS,
-  SOFTWARE_APPROVAL_STATUS_COLORS,
 } from '@/lib/api/software-api';
+import { SOFTWARE_APPROVAL_BADGE_TOKENS } from '@/lib/design-tokens';
 import { queryKeys } from '@/lib/api/query-config';
+import type { PaginatedResponse } from '@/lib/api/types';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Monitor, ArrowRight, FileText, Clock } from 'lucide-react';
 import Link from 'next/link';
 
+/** 승인/반려 후 무효화할 쿼리 키 — 승인 카운트 + 전체 소프트웨어 캐시 */
+const SOFTWARE_APPROVAL_INVALIDATE_KEYS = [queryKeys.software.all, queryKeys.approvals.all];
+
 export default function SoftwareApprovalsContent() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const t = useTranslations('approvals.softwareApprovals');
   const tActions = useTranslations('approvals.actions');
   const tCommon = useTranslations('common.actions');
@@ -47,68 +50,76 @@ export default function SoftwareApprovalsContent() {
     queryFn: () => softwareApi.getPendingSoftwareChanges(),
   });
 
-  const approveMutation = useMutation({
-    mutationFn: async ({
-      id,
-      approverComment,
-      version,
-    }: {
-      id: string;
-      approverComment: string;
-      version: number;
-    }) => {
+  const approveMutation = useOptimisticMutation<
+    SoftwareHistory,
+    { id: string; approverComment: string; version: number },
+    PaginatedResponse<SoftwareHistory>
+  >({
+    mutationFn: async ({ id, approverComment, version }) => {
       return softwareApi.approveSoftwareChange(id, { approverComment, version });
     },
-    onSuccess: () => {
-      toast({
-        title: t('toasts.approveSuccess'),
-        description: t('toasts.approveSuccessDesc'),
-      });
+    queryKey: queryKeys.software.pending(),
+    optimisticUpdate: (old, { id }) => {
+      if (!old)
+        return {
+          data: [],
+          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+        };
+      return {
+        ...old,
+        data: old.data.filter((c) => c.id !== id),
+        meta: {
+          ...old.meta,
+          pagination: {
+            ...old.meta.pagination,
+            total: Math.max(0, old.meta.pagination.total - 1),
+          },
+        },
+      };
+    },
+    invalidateKeys: SOFTWARE_APPROVAL_INVALIDATE_KEYS,
+    successMessage: t('toasts.approveSuccessDesc'),
+    errorMessage: t('toasts.approveError'),
+    onSuccessCallback: () => {
       setIsApproveDialogOpen(false);
       setComment('');
       setSelectedChange(null);
     },
-    onError: (error: unknown) => {
-      toast({
-        title: t('toasts.approveError'),
-        description: getErrorMessage(error, t('toasts.approveError')),
-        variant: 'destructive',
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.software.all });
-    },
   });
 
-  const rejectMutation = useMutation({
-    mutationFn: async ({
-      id,
-      rejectionReason,
-      version,
-    }: {
-      id: string;
-      rejectionReason: string;
-      version: number;
-    }) => {
+  const rejectMutation = useOptimisticMutation<
+    SoftwareHistory,
+    { id: string; rejectionReason: string; version: number },
+    PaginatedResponse<SoftwareHistory>
+  >({
+    mutationFn: async ({ id, rejectionReason, version }) => {
       return softwareApi.rejectSoftwareChange(id, { rejectionReason, version });
     },
-    onSuccess: () => {
-      toast({
-        title: t('toasts.rejectSuccess'),
-        description: t('toasts.rejectSuccessDesc'),
-      });
+    queryKey: queryKeys.software.pending(),
+    optimisticUpdate: (old, { id }) => {
+      if (!old)
+        return {
+          data: [],
+          meta: { pagination: { total: 0, pageSize: 20, currentPage: 1, totalPages: 0 } },
+        };
+      return {
+        ...old,
+        data: old.data.filter((c) => c.id !== id),
+        meta: {
+          ...old.meta,
+          pagination: {
+            ...old.meta.pagination,
+            total: Math.max(0, old.meta.pagination.total - 1),
+          },
+        },
+      };
+    },
+    invalidateKeys: SOFTWARE_APPROVAL_INVALIDATE_KEYS,
+    successMessage: t('toasts.rejectSuccessDesc'),
+    errorMessage: t('toasts.rejectError'),
+    onSuccessCallback: () => {
       setIsRejectDialogOpen(false);
       setSelectedChange(null);
-    },
-    onError: (error: unknown) => {
-      toast({
-        title: t('toasts.rejectError'),
-        description: getErrorMessage(error, t('toasts.rejectError')),
-        variant: 'destructive',
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.software.pending() });
     },
   });
 
@@ -179,7 +190,7 @@ export default function SoftwareApprovalsContent() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center gap-4">
-                          <Badge className={SOFTWARE_APPROVAL_STATUS_COLORS[change.approvalStatus]}>
+                          <Badge className={SOFTWARE_APPROVAL_BADGE_TOKENS[change.approvalStatus]}>
                             {SOFTWARE_APPROVAL_STATUS_LABELS[change.approvalStatus]}
                           </Badge>
                           <span className="text-sm font-medium">{change.softwareName}</span>

@@ -171,6 +171,24 @@ export const CALIBRATION_PLAN_DATA_SCOPE: FeatureScopePolicy = {
 };
 
 /**
+ * 소프트웨어(Software) 데이터 스코프 정책
+ *
+ * 소프트웨어 변경 이력은 장비에 종속되므로 장비와 동일한 사이트 기준.
+ * - test_engineer: 소속 사이트 소프트웨어 이력만 조회
+ * - technical_manager: 전체 소프트웨어 이력 조회/승인 (크로스 사이트 승인 필요)
+ * - quality_manager: 전체 소프트웨어 이력 조회
+ * - lab_manager: 전체 소프트웨어 이력 조회
+ * - system_admin: 전체 소프트웨어 이력 조회
+ */
+export const SOFTWARE_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'site', label: '소속 사이트 소프트웨어' },
+  technical_manager: { type: 'all', label: '전체 소프트웨어' },
+  quality_manager: { type: 'all', label: '전체 소프트웨어' },
+  lab_manager: { type: 'all', label: '전체 소프트웨어' },
+  system_admin: { type: 'all', label: '전체 소프트웨어' },
+};
+
+/**
  * 사용자(User) 데이터 스코프 정책
  *
  * 사용자 목록 조회 범위를 역할별로 명시합니다.
@@ -190,6 +208,31 @@ export const USER_DATA_SCOPE: FeatureScopePolicy = {
   quality_manager: { type: 'all', label: '전체 사용자' },
   lab_manager: { type: 'all', label: '전체 사용자' },
   system_admin: { type: 'all', label: '전체 사용자' },
+};
+
+/**
+ * 알림(Notification) 관리자 스코프 정책
+ *
+ * 사용자 대면 엔드포인트에는 적용하지 않음 (사용자는 역할 무관하게 자신의 알림 조회).
+ * 관리자 "사이트별 전체 알림 현황" 엔드포인트에만 적용.
+ * recipientSite 컬럼 기반 필터링.
+ *
+ * - test_engineer: 접근 불가 (관리자 기능)
+ * - technical_manager: 소속 사이트 알림 현황
+ * - quality_manager: 소속 사이트 알림 현황
+ * - lab_manager: 소속 사이트 알림 현황
+ * - system_admin: 전체 알림 현황
+ *
+ * ⚠️ TM에 'team' 대신 'site' 사용하는 이유:
+ * 디스패처가 per-user 알림 생성 시 notifications.teamId = null로 설정.
+ * 즉 team 필터링하면 결과 0건. recipientSite 기반 site 필터가 의미론적으로 정확.
+ */
+export const NOTIFICATION_DATA_SCOPE: FeatureScopePolicy = {
+  test_engineer: { type: 'none', label: '접근 불가' },
+  technical_manager: { type: 'site', label: '소속 사이트 알림' },
+  quality_manager: { type: 'site', label: '소속 사이트 알림' },
+  lab_manager: { type: 'site', label: '소속 사이트 알림' },
+  system_admin: { type: 'all', label: '전체 알림' },
 };
 
 /**

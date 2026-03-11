@@ -29,10 +29,11 @@ import {
   RejectSoftwareChangeValidationPipe,
 } from './dto/approve-software.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, SOFTWARE_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { SoftwareHistory } from '@equipment-management/db/schema';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
@@ -83,6 +84,7 @@ export class SoftwareController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_SOFTWARE)
+  @SiteScoped({ policy: SOFTWARE_DATA_SCOPE })
   @UsePipes(SoftwareHistoryQueryValidationPipe)
   findHistory(@Query() query: SoftwareHistoryQueryDto): Promise<{
     items: SoftwareHistory[];

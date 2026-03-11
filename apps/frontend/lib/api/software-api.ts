@@ -103,13 +103,6 @@ export const SOFTWARE_APPROVAL_STATUS_LABELS: Record<SoftwareApprovalStatus, str
   rejected: '반려됨',
 };
 
-// 승인 상태 색상
-export const SOFTWARE_APPROVAL_STATUS_COLORS: Record<SoftwareApprovalStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
-};
-
 // 소프트웨어 API 객체
 const softwareApi = {
   // 소프트웨어 변경 요청

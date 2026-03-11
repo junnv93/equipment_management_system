@@ -31,9 +31,9 @@ import {
 import softwareApi, {
   SoftwareHistory,
   SOFTWARE_APPROVAL_STATUS_LABELS,
-  SOFTWARE_APPROVAL_STATUS_COLORS,
   SoftwareApprovalStatus,
 } from '@/lib/api/software-api';
+import { SOFTWARE_APPROVAL_BADGE_TOKENS } from '@/lib/design-tokens';
 // ✅ 직접 import (barrel import 제거)
 import equipmentApi from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
@@ -334,7 +334,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getStatusIcon(item.approvalStatus)}
-                        <Badge className={SOFTWARE_APPROVAL_STATUS_COLORS[item.approvalStatus]}>
+                        <Badge className={SOFTWARE_APPROVAL_BADGE_TOKENS[item.approvalStatus]}>
                           {SOFTWARE_APPROVAL_STATUS_LABELS[item.approvalStatus]}
                         </Badge>
                       </div>

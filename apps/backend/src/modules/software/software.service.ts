@@ -7,9 +7,18 @@ import { SoftwareHistoryQueryDto } from './dto/software-query.dto';
 import { ApproveSoftwareChangeDto, RejectSoftwareChangeDto } from './dto/approve-software.dto';
 import { SoftwareApprovalStatusValues } from '@equipment-management/schemas';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
+import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 
 // Backward compatibility alias
 const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
+
+/** 캐시 키 상수 */
+const CACHE_KEYS = {
+  REGISTRY: 'software:registry',
+} as const;
+
+/** 레지스트리 캐시 TTL: 5분 (변경 빈도 낮음) */
+const REGISTRY_CACHE_TTL = 5 * 60 * 1000;
 
 /**
  * 소프트웨어 관리 서비스
@@ -26,7 +35,8 @@ const SoftwareApprovalStatus = SoftwareApprovalStatusValues;
 export class SoftwareService extends VersionedBaseService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    protected readonly db: NodePgDatabase<typeof schema>
+    protected readonly db: NodePgDatabase<typeof schema>,
+    private readonly cacheService: SimpleCacheService
   ) {
     super();
   }
@@ -94,6 +104,7 @@ export class SoftwareService extends VersionedBaseService {
       softwareName,
       approvalStatus,
       search,
+      site,
       sort = 'changedAt.desc',
       page = 1,
       pageSize = 20,
@@ -123,13 +134,26 @@ export class SoftwareService extends VersionedBaseService {
       );
     }
 
+    // @SiteScoped가 주입한 site 필터 — equipment JOIN 경유
+    if (site) {
+      conditions.push(eq(schema.equipment.site, site));
+    }
+
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Count total items
-    const [{ count }] = await this.db
+    // Count total items (site 필터 시 equipment JOIN 필요)
+    const countQuery = this.db
       .select({ count: sql<number>`count(*)::int` })
-      .from(schema.softwareHistory)
-      .where(whereClause);
+      .from(schema.softwareHistory);
+
+    if (site) {
+      countQuery.leftJoin(
+        schema.equipment,
+        eq(schema.softwareHistory.equipmentId, schema.equipment.id)
+      );
+    }
+
+    const [{ count }] = await countQuery.where(whereClause);
 
     const totalItems = count;
     const totalPages = Math.ceil(totalItems / pageSize);
@@ -213,6 +237,28 @@ export class SoftwareService extends VersionedBaseService {
    * For now, returning empty registry since equipment schema doesn't have software fields yet
    */
   async getRegistry(): Promise<{
+    registry: {
+      equipmentId: string;
+      equipmentName: string;
+      softwareName: string | null;
+      softwareVersion: string | null;
+      softwareType: string | null;
+      lastUpdated: Date | null;
+    }[];
+    summary: { softwareName: string; equipmentCount: number; versions: (string | null)[] }[];
+    totalEquipments: number;
+    totalSoftwareTypes: number;
+    generatedAt: Date;
+  }> {
+    return this.cacheService.getOrSet(
+      CACHE_KEYS.REGISTRY,
+      () => this.buildRegistry(),
+      REGISTRY_CACHE_TTL
+    );
+  }
+
+  /** 레지스트리 실제 DB 조회 + 집계 (캐시 팩토리) */
+  private async buildRegistry(): Promise<{
     registry: {
       equipmentId: string;
       equipmentName: string;
@@ -427,10 +473,8 @@ export class SoftwareService extends VersionedBaseService {
       'Software change history'
     );
 
-    // TODO: Update equipment software version (when equipment schema has software fields)
-    // await this.db.update(schema.equipment)
-    //   .set({ softwareVersion: record.newVersion })
-    //   .where(eq(schema.equipment.id, record.equipmentId));
+    // 승인 후 레지스트리 캐시 무효화 (새 승인 레코드 반영)
+    this.cacheService.delete(CACHE_KEYS.REGISTRY);
 
     return updated;
   }
