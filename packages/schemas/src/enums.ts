@@ -1800,5 +1800,13 @@ export const EquipmentImportStatusValues = {
 } as const;
 
 // ============================================================================
+// Notification Frequency
+// ============================================================================
+
+export const NotificationFrequencyEnum = z.enum(['immediate', 'daily', 'weekly']);
+export type NotificationFrequency = z.infer<typeof NotificationFrequencyEnum>;
+export const NOTIFICATION_FREQUENCY_VALUES = NotificationFrequencyEnum.options;
+
+// ============================================================================
 // DEPRECATED: Legacy rental import types (backward compatibility)
 // ============================================================================
