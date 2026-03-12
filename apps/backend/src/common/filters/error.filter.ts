@@ -8,13 +8,7 @@ import { Logger } from '@nestjs/common';
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
 
-  catch(
-    exception: unknown,
-    host: ArgumentsHost
-  ): import('/home/kmjkds/equipment_management_system/node_modules/@types/express/index').Response<
-    unknown,
-    Record<string, unknown>
-  > {
+  catch(exception: unknown, host: ArgumentsHost): Response {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();

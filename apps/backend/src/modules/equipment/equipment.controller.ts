@@ -30,7 +30,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import { EquipmentService } from './equipment.service';
+import { EquipmentService, type EquipmentListResponse } from './equipment.service';
 import { EquipmentApprovalService } from './services/equipment-approval.service';
 import { EquipmentAttachmentService } from './services/equipment-attachment.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
@@ -376,11 +376,7 @@ export class EquipmentController {
   @RequirePermissions(Permission.VIEW_EQUIPMENT)
   @SiteScoped({ policy: EQUIPMENT_DATA_SCOPE })
   @UsePipes(EquipmentQueryValidationPipe)
-  findAll(
-    @Query() query: EquipmentQueryDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/equipment/equipment.service').EquipmentListResponse
-  > {
+  findAll(@Query() query: EquipmentQueryDto): Promise<EquipmentListResponse> {
     // SiteScopeInterceptor가 역할별 query.site를 자동 주입합니다 (EQUIPMENT_DATA_SCOPE 정책).
     // test_engineer → query.site = user.site, 그 외 → query.site 유지 (전체 접근)
     return this.equipmentService.findAll(query);

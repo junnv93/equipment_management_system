@@ -75,7 +75,7 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
   }
 
   // 스키마 반환
-  getSchema(): typeof import('/home/kmjkds/equipment_management_system/packages/db/src/schema/index') {
+  getSchema(): typeof schema {
     return schema;
   }
 

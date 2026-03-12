@@ -22,7 +22,7 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { CheckoutsService, CheckoutWithMeta } from './checkouts.service';
+import { CheckoutsService, CheckoutWithMeta, type CheckoutListResponse } from './checkouts.service';
 import {
   CreateCheckoutDto,
   CreateCheckoutValidationPipe,
@@ -108,11 +108,7 @@ export class CheckoutsController {
       '?includeSummary=true 사용 시 요약 정보(total, pending, approved 등)도 함께 반환됩니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '반출 목록 조회 성공' })
-  async findAll(
-    @Query() query: CheckoutQueryDto
-  ): Promise<
-    import('/home/kmjkds/equipment_management_system/apps/backend/src/modules/checkouts/checkouts.service').CheckoutListResponse
-  > {
+  async findAll(@Query() query: CheckoutQueryDto): Promise<CheckoutListResponse> {
     // SiteScopeInterceptor가 CHECKOUT_DATA_SCOPE 정책으로 query를 자동 주입합니다:
     // test_engineer/technical_manager → query.teamId = user.teamId
     // quality_manager/lab_manager    → query.site = user.site
