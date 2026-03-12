@@ -15,6 +15,7 @@
 
 import { createServerApiClient } from './server-api-client';
 import { transformPaginatedResponse, transformSingleResponse } from './utils/response-transformers';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { PaginatedResponse } from './types';
 import type { Team, TeamQuery, TeamDetail } from './teams-api';
 
@@ -34,7 +35,7 @@ export async function getTeamsList(query: TeamQuery = {}): Promise<PaginatedResp
     }
   });
 
-  const url = `/api/teams${params.toString() ? `?${params.toString()}` : ''}`;
+  const url = `${API_ENDPOINTS.TEAMS.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await apiClient.get(url);
   return transformPaginatedResponse<Team>(response);
 }
@@ -47,6 +48,6 @@ export async function getTeamsList(query: TeamQuery = {}): Promise<PaginatedResp
  */
 export async function getTeamDetail(id: string): Promise<TeamDetail> {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/teams/${id}`);
+  const response = await apiClient.get(API_ENDPOINTS.TEAMS.GET(id));
   return transformSingleResponse<TeamDetail>(response);
 }

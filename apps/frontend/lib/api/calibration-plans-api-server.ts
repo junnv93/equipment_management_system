@@ -47,7 +47,7 @@ export async function getCalibrationPlansList(
     }
   });
 
-  const url = `/api/calibration-plans${params.toString() ? `?${params.toString()}` : ''}`;
+  const url = `${API_ENDPOINTS.CALIBRATION_PLANS.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await apiClient.get(url);
   return transformPaginatedResponse<CalibrationPlan, CalibrationPlanSummary>(response);
 }

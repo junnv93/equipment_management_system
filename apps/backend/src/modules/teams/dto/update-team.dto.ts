@@ -4,6 +4,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   ClassificationEnum, // ← TeamTypeEnum → ClassificationEnum
   SiteEnum,
+  CLASSIFICATION_TO_CODE,
   type Classification, // ← TeamType → Classification
   type ClassificationCode,
   type Site,
@@ -21,7 +22,9 @@ export const updateTeamSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   classification: ClassificationEnum.optional(), // ← type → classification
   site: SiteEnum.optional(),
-  classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(),
+  classificationCode: z
+    .enum(Object.values(CLASSIFICATION_TO_CODE) as [string, ...string[]])
+    .optional(),
   description: z.string().max(500).optional(),
   leaderId: z.string().uuid().nullable().optional(),
 });
@@ -49,7 +52,7 @@ export class UpdateTeamSwaggerDto {
 
   @ApiPropertyOptional({
     description: '분류코드',
-    enum: ['E', 'R', 'W', 'S', 'A', 'P'],
+    enum: Object.values(CLASSIFICATION_TO_CODE),
   })
   classificationCode?: ClassificationCode;
 

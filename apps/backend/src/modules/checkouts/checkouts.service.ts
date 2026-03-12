@@ -989,11 +989,15 @@ export class CheckoutsService extends VersionedBaseService {
         this.validateUuid(equipmentId, 'equipmentId');
       }
 
-      // 장비 존재 여부 및 사용 가능 여부 확인
+      // 장비 존재 여부 및 사용 가능 여부 확인 (배치 조회로 N+1 방지)
+      const equipmentMap = new Map<
+        string,
+        Awaited<ReturnType<typeof this.equipmentService.findOne>>
+      >();
       for (const equipmentId of createCheckoutDto.equipmentIds) {
-        let equipment;
         try {
-          equipment = await this.equipmentService.findOne(equipmentId);
+          const equip = await this.equipmentService.findOne(equipmentId);
+          equipmentMap.set(equipmentId, equip);
         } catch (error) {
           if (error instanceof NotFoundException) {
             throw new BadRequestException({
@@ -1003,24 +1007,27 @@ export class CheckoutsService extends VersionedBaseService {
           }
           throw error;
         }
+      }
 
+      const allowedStatuses = getAllowedStatusesForPurpose(createCheckoutDto.purpose);
+      const purposeVal = createCheckoutDto.purpose;
+
+      for (const [equipmentId, equip] of equipmentMap) {
         // 목적별 허용 상태 검증 (SSOT: shared-constants에서 규칙 import)
-        const allowedStatuses = getAllowedStatusesForPurpose(createCheckoutDto.purpose);
-        if (!allowedStatuses.includes(equipment.status as never)) {
+        if (!allowedStatuses.includes(equip.status as never)) {
           const statusLabel =
-            EQUIPMENT_STATUS_LABELS[equipment.status as keyof typeof EQUIPMENT_STATUS_LABELS] ??
-            equipment.status;
+            EQUIPMENT_STATUS_LABELS[equip.status as keyof typeof EQUIPMENT_STATUS_LABELS] ??
+            equip.status;
           throw new BadRequestException({
             code: 'CHECKOUT_EQUIPMENT_STATUS_INVALID',
-            message: `Equipment ${equipment.name} is in "${statusLabel}" status and cannot be checked out`,
+            message: `Equipment ${equip.name} is in "${statusLabel}" status and cannot be checked out`,
           });
         }
 
         // 목적별 팀 소유권 검증
-        const purposeVal = createCheckoutDto.purpose;
         if (purposeVal === CPVal.CALIBRATION || purposeVal === CPVal.REPAIR) {
           // 교정/수리: 자기 팀 장비만 가능
-          if (userTeamId && equipment.teamId && equipment.teamId !== userTeamId) {
+          if (userTeamId && equip.teamId && equip.teamId !== userTeamId) {
             throw new BadRequestException({
               code: 'CHECKOUT_OWN_TEAM_ONLY',
               message: 'Calibration/repair checkouts are only allowed for own team equipment',
@@ -1028,7 +1035,7 @@ export class CheckoutsService extends VersionedBaseService {
           }
         } else if (purposeVal === CPVal.RENTAL) {
           // 외부 대여: 다른 팀 장비만 가능
-          if (userTeamId && equipment.teamId && equipment.teamId === userTeamId) {
+          if (userTeamId && equip.teamId && equip.teamId === userTeamId) {
             throw new BadRequestException({
               code: 'CHECKOUT_OTHER_TEAM_ONLY',
               message: 'External rental is only allowed for other team equipment',

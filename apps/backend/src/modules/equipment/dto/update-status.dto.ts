@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { EquipmentStatus } from '@equipment-management/schemas';
+import { type EquipmentStatus, EquipmentStatusEnum } from '@equipment-management/schemas';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
@@ -14,22 +14,7 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const updateStatusSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  status: z
-    .enum([
-      'available',
-      'in_use',
-      'checked_out',
-      'calibration_scheduled',
-      'calibration_overdue',
-      'non_conforming',
-      'spare',
-      'retired',
-      'pending_disposal',
-      'disposed',
-      'temporary',
-      'inactive',
-    ] as const)
-    .describe('유효한 장비 상태가 아닙니다.'),
+  status: EquipmentStatusEnum.describe('유효한 장비 상태가 아닙니다.'),
 });
 
 export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;
@@ -49,20 +34,7 @@ export class UpdateStatusDto extends VersionedDto {
 
   @ApiProperty({
     description: '변경할 장비 상태',
-    enum: [
-      'available',
-      'in_use',
-      'checked_out',
-      'calibration_scheduled',
-      'calibration_overdue',
-      'non_conforming',
-      'spare',
-      'retired',
-      'pending_disposal',
-      'disposed',
-      'temporary',
-      'inactive',
-    ],
+    enum: EquipmentStatusEnum.options,
     example: 'available',
   })
   status!: EquipmentStatus;

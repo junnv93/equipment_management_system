@@ -28,6 +28,7 @@
 import { cache } from 'react';
 import { createServerApiClient } from './server-api-client';
 import { transformSingleResponse } from './utils/response-transformers';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { DisposalRequest, DisposalReason } from '@equipment-management/schemas';
 
 // Re-export types for convenience
@@ -47,7 +48,7 @@ export type { DisposalRequest, DisposalReason } from '@equipment-management/sche
  */
 const getCurrentDisposalRequestCached = cache(async (equipmentId: string) => {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/equipment/${equipmentId}/disposal/current`);
+  const response = await apiClient.get(API_ENDPOINTS.EQUIPMENT.DISPOSAL.CURRENT(equipmentId));
   return transformSingleResponse<DisposalRequest | null>(response);
 });
 
@@ -88,14 +89,14 @@ export async function requestDisposal(
     data.attachments.forEach((file) => formData.append('attachments', file));
 
     const response = await apiClient.post(
-      `/api/equipment/${equipmentId}/disposal/request`,
+      API_ENDPOINTS.EQUIPMENT.DISPOSAL.REQUEST(equipmentId),
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
     );
     return response.data;
   }
 
-  const response = await apiClient.post(`/api/equipment/${equipmentId}/disposal/request`, {
+  const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.DISPOSAL.REQUEST(equipmentId), {
     reason: data.reason,
     reasonDetail: data.reasonDetail,
   });
@@ -110,7 +111,7 @@ export async function reviewDisposal(
   data: { decision: 'approve' | 'reject'; opinion: string }
 ): Promise<{ success: boolean }> {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.post(`/api/equipment/${equipmentId}/disposal/review`, data);
+  const response = await apiClient.post(API_ENDPOINTS.EQUIPMENT.DISPOSAL.REVIEW(equipmentId), data);
   return response.data;
 }
 
@@ -122,7 +123,10 @@ export async function approveDisposal(
   data: { decision: 'approve' | 'reject'; comment?: string }
 ): Promise<{ success: boolean }> {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.post(`/api/equipment/${equipmentId}/disposal/approve`, data);
+  const response = await apiClient.post(
+    API_ENDPOINTS.EQUIPMENT.DISPOSAL.APPROVE(equipmentId),
+    data
+  );
   return response.data;
 }
 
@@ -131,7 +135,7 @@ export async function approveDisposal(
  */
 export async function cancelDisposalRequest(equipmentId: string): Promise<{ success: boolean }> {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.delete(`/api/equipment/${equipmentId}/disposal/request`);
+  const response = await apiClient.delete(API_ENDPOINTS.EQUIPMENT.DISPOSAL.CANCEL(equipmentId));
   return response.data;
 }
 

@@ -9,6 +9,7 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { THROTTLE_PRESETS } from '../../common/config/throttle.constants';
 import { AuthService, AuthResponse } from './auth.service';
 import { LoginDto, LoginValidationPipe } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
@@ -22,7 +23,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Throttle({ short: { limit: 5, ttl: 60000 } }) // 1분당 5회
+  @Throttle({ short: THROTTLE_PRESETS.LOGIN }) // 1분당 5회
   @Post('login')
   @UsePipes(LoginValidationPipe)
   async login(@Body() loginDto: LoginDto): Promise<AuthResponse> {
@@ -82,7 +83,7 @@ export class AuthController {
    * Access Token 만료 시 호출되므로 @Public() 필수 (JWT Guard 우회)
    */
   @Public()
-  @Throttle({ medium: { limit: 10, ttl: 60000 } }) // 1분당 10회
+  @Throttle({ medium: THROTTLE_PRESETS.TOKEN_REFRESH }) // 1분당 10회
   @Post('refresh') // @BodyPipeExempt: single JWT string field, JWT validity verified by authService
   async refresh(@Body('refresh_token') refreshToken: string): Promise<AuthResponse> {
     if (!refreshToken) {

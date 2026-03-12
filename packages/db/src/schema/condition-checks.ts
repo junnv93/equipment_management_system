@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, text, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, text, uuid, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { checkouts } from './checkouts';
 import { users } from './users';
@@ -43,41 +43,49 @@ export const accessoriesStatus = [
  *
  * 각 단계에서 외관 상태, 작동 상태, 부속품 상태를 기록합니다.
  */
-export const conditionChecks = pgTable('condition_checks', {
-  id: uuid('id').primaryKey().defaultRandom().notNull(),
+export const conditionChecks = pgTable(
+  'condition_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
 
-  // 반출 참조
-  checkoutId: uuid('checkout_id')
-    .notNull()
-    .references(() => checkouts.id, { onDelete: 'cascade' }),
+    // 반출 참조
+    checkoutId: uuid('checkout_id')
+      .notNull()
+      .references(() => checkouts.id, { onDelete: 'cascade' }),
 
-  // 확인 단계
-  step: varchar('step', { length: 50 }).notNull(), // lender_checkout, borrower_receive, ...
+    // 확인 단계
+    step: varchar('step', { length: 50 }).notNull(), // lender_checkout, borrower_receive, ...
 
-  // 확인자 정보
-  checkedBy: uuid('checked_by')
-    .notNull()
-    .references(() => users.id),
-  checkedAt: timestamp('checked_at').defaultNow().notNull(),
+    // 확인자 정보
+    checkedBy: uuid('checked_by')
+      .notNull()
+      .references(() => users.id),
+    checkedAt: timestamp('checked_at').defaultNow().notNull(),
 
-  // 상태 확인 항목
-  appearanceStatus: varchar('appearance_status', { length: 20 }).notNull(), // normal, abnormal
-  operationStatus: varchar('operation_status', { length: 20 }).notNull(), // normal, abnormal
-  accessoriesStatus: varchar('accessories_status', { length: 20 }), // complete, incomplete (선택)
+    // 상태 확인 항목
+    appearanceStatus: varchar('appearance_status', { length: 20 }).notNull(), // normal, abnormal
+    operationStatus: varchar('operation_status', { length: 20 }).notNull(), // normal, abnormal
+    accessoriesStatus: varchar('accessories_status', { length: 20 }), // complete, incomplete (선택)
 
-  // 이상 시 상세 기록
-  abnormalDetails: text('abnormal_details'),
+    // 이상 시 상세 기록
+    abnormalDetails: text('abnormal_details'),
 
-  // 이전 단계와 비교 (④단계에서 사용)
-  comparisonWithPrevious: text('comparison_with_previous'),
+    // 이전 단계와 비교 (④단계에서 사용)
+    comparisonWithPrevious: text('comparison_with_previous'),
 
-  // 메모/비고
-  notes: text('notes'),
+    // 메모/비고
+    notes: text('notes'),
 
-  // 시스템 필드
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+    // 시스템 필드
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    checkoutIdIdx: index('condition_checks_checkout_id_idx').on(table.checkoutId),
+    checkedByIdx: index('condition_checks_checked_by_idx').on(table.checkedBy),
+    stepIdx: index('condition_checks_step_idx').on(table.step),
+  })
+);
 
 // 관계 정의
 export const conditionChecksRelations = relations(conditionChecks, ({ one }) => ({

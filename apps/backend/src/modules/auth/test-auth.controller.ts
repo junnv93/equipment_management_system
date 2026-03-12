@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Query, ForbiddenException } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { THROTTLE_PRESETS } from '../../common/config/throttle.constants';
 import { AuthService, AuthResponse, TestUser } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
@@ -30,7 +31,7 @@ export class TestAuthController {
    */
   @Get('test-login')
   @Public()
-  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @Throttle({ short: THROTTLE_PRESETS.TEST_LOGIN })
   async testLogin(
     @Query('role') role?: string,
     @Query('email') email?: string

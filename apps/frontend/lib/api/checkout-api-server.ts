@@ -24,6 +24,7 @@
 
 import { createServerApiClient } from './server-api-client';
 import { transformSingleResponse } from './utils/response-transformers';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { Checkout, ConditionCheck } from './checkout-api';
 
 /**
@@ -32,7 +33,7 @@ import type { Checkout, ConditionCheck } from './checkout-api';
  */
 export async function getCheckoutServer(id: string): Promise<Checkout> {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/checkouts/${id}`);
+  const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.GET(id));
   return transformSingleResponse<Checkout>(response);
 }
 
@@ -42,6 +43,6 @@ export async function getCheckoutServer(id: string): Promise<Checkout> {
  */
 export async function getConditionChecksServer(checkoutId: string): Promise<ConditionCheck[]> {
   const apiClient = await createServerApiClient();
-  const response = await apiClient.get(`/api/checkouts/${checkoutId}/condition-checks`);
+  const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.CONDITION_CHECKS(checkoutId));
   return response.data?.data || response.data || [];
 }

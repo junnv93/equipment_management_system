@@ -1245,21 +1245,39 @@ export class EquipmentService {
         // ✅ 외부 API 호출: Optimistic Locking 사용
         updated = await this.updateWithVersion(uuid, version, updateData);
       } else {
-        // ✅ 내부 호출: CAS 스킵 (트랜잭션 내에서 안전)
+        // ✅ 내부 호출: CAS 보호 (existingEquipment.version 기반)
+        // 동시 상태 변경(checkout + NC 등) 시 last-write-wins 방지
+        const expectedVersion = existingEquipment.version;
         const [result] = await this.db
           .update(equipment)
           .set({
             ...updateData,
-            version: sql`version + 1`, // Still increment version for consistency
+            version: sql`version + 1`,
             updatedAt: new Date(),
           } as Record<string, unknown>)
-          .where(eq(equipment.id, uuid))
+          .where(and(eq(equipment.id, uuid), eq(equipment.version, expectedVersion)))
           .returning();
 
         if (!result) {
-          throw new NotFoundException({
-            code: 'EQUIPMENT_NOT_FOUND',
-            message: `Equipment with UUID ${uuid} not found.`,
+          // 엔티티가 없거나 version 충돌 — 재조회하여 판별
+          const current = await this.db
+            .select({ id: equipment.id, version: equipment.version })
+            .from(equipment)
+            .where(eq(equipment.id, uuid))
+            .limit(1);
+
+          if (current.length === 0) {
+            throw new NotFoundException({
+              code: 'EQUIPMENT_NOT_FOUND',
+              message: `Equipment with UUID ${uuid} not found.`,
+            });
+          }
+
+          throw new ConflictException({
+            code: 'VERSION_CONFLICT',
+            message: '장비 상태가 동시에 변경되었습니다. 다시 시도해주세요.',
+            currentVersion: current[0].version,
+            expectedVersion,
           });
         }
 

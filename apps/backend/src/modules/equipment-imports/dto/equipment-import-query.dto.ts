@@ -4,8 +4,10 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   EQUIPMENT_IMPORT_STATUS_VALUES,
   EQUIPMENT_IMPORT_SOURCE_VALUES,
+  SiteEnum,
   type EquipmentImportStatus,
   type EquipmentImportSource,
+  type Site,
 } from '@equipment-management/schemas';
 
 export const equipmentImportQuerySchema = z.object({
@@ -13,7 +15,7 @@ export const equipmentImportQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional(),
   status: z.enum(EQUIPMENT_IMPORT_STATUS_VALUES as unknown as [string, ...string[]]).optional(),
   sourceType: z.enum(EQUIPMENT_IMPORT_SOURCE_VALUES as unknown as [string, ...string[]]).optional(),
-  site: z.enum(['suwon', 'uiwang', 'pyeongtaek']).optional(),
+  site: SiteEnum.optional(),
   teamId: z.string().uuid().optional(),
   search: z.string().optional(),
   sortBy: z
@@ -51,8 +53,13 @@ export class EquipmentImportQueryDto {
   })
   sourceType?: EquipmentImportSource;
 
-  @ApiProperty({ description: '사이트 필터', example: 'suwon', required: false })
-  site?: string;
+  @ApiProperty({
+    description: '사이트 필터',
+    enum: SiteEnum.options,
+    example: 'suwon',
+    required: false,
+  })
+  site?: Site;
 
   @ApiProperty({ description: '팀 ID 필터', example: 'uuid', required: false })
   teamId?: string;

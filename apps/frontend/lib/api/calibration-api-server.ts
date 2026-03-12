@@ -15,6 +15,7 @@
 
 import { createServerApiClient } from './server-api-client';
 import { transformSingleResponse } from './utils/response-transformers';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import type { CalibrationQuery, CalibrationSummary } from './calibration-api';
 
 /**
@@ -36,7 +37,7 @@ export async function getCalibrationSummary(
       }
     });
 
-    const url = `/api/calibration/summary${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${API_ENDPOINTS.CALIBRATIONS.SUMMARY}${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(url);
     return transformSingleResponse<CalibrationSummary>(response);
   } catch (error) {

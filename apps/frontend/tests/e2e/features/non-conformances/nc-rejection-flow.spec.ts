@@ -14,13 +14,14 @@
  */
 
 import { test, expect } from '../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../shared/constants/shared-test-data';
 
 const TEST_NC_ID = 'aaaa0006-0006-0006-0006-000000000006';
 const TEST_EQUIPMENT_ID = 'eeee4001-0001-4001-8001-000000000001';
 const NC_CAUSE_TEXT = '교정 실패 - 신호 손실';
 const REJECTION_REASON =
   '재교정 성적서 번호가 누락되었습니다. 교정 결과 성적서 번호를 조치 내용에 포함해주세요.';
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = BASE_URLS.BACKEND;
 
 /** 백엔드 JWT 토큰 획득 */
 async function getBackendToken(

@@ -8,6 +8,7 @@
  */
 import type { Team, TeamDetail, TeamQuery } from '../teams-api';
 import { API_BASE_URL } from '../../config/api-config';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { getServerAuthHeaders as getAuthHeaders } from '@/lib/auth/server-session';
 
 /**
@@ -32,7 +33,7 @@ export async function getTeams(query: TeamQuery = {}): Promise<{
     }
   });
 
-  const url = `${API_BASE_URL}/api/teams${params.toString() ? `?${params.toString()}` : ''}`;
+  const url = `${API_BASE_URL}${API_ENDPOINTS.TEAMS.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
 
   const response = await fetch(url, {
     headers: await getAuthHeaders(),
@@ -79,7 +80,7 @@ export async function getTeams(query: TeamQuery = {}): Promise<{
  * 팀 상세 조회 (Server)
  */
 export async function getTeam(id: string): Promise<TeamDetail | null> {
-  const response = await fetch(`${API_BASE_URL}/api/teams/${id}`, {
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.TEAMS.GET(id)}`, {
     headers: await getAuthHeaders(),
     cache: 'no-store',
   });
@@ -126,10 +127,13 @@ export async function getTeamMembers(teamId: string): Promise<
  * 팀 장비 수 조회 (Server)
  */
 export async function getTeamEquipmentCount(teamId: string): Promise<number> {
-  const response = await fetch(`${API_BASE_URL}/api/equipment?teamId=${teamId}&pageSize=1`, {
-    headers: await getAuthHeaders(),
-    cache: 'no-store',
-  });
+  const response = await fetch(
+    `${API_BASE_URL}${API_ENDPOINTS.EQUIPMENT.LIST}?teamId=${teamId}&pageSize=1`,
+    {
+      headers: await getAuthHeaders(),
+      cache: 'no-store',
+    }
+  );
 
   if (!response.ok) {
     return 0;

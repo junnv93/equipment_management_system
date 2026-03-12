@@ -1,4 +1,4 @@
-import { pgTable, varchar, timestamp, uuid, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, timestamp, uuid, boolean, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { equipment } from './equipment';
 import { teams } from './teams';
@@ -28,32 +28,42 @@ export const userRoles = [
 export const locationTypes = ['수원랩', '의왕랩', '평택랩'] as const;
 
 // 사용자 테이블 스키마
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom().notNull(),
-  email: varchar('email', { length: 255 }).unique().notNull(),
-  name: varchar('name', { length: 100 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull().default('test_engineer'),
-  teamId: uuid('team_id'),
-  azureAdId: varchar('azure_ad_id', { length: 255 }),
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom().notNull(),
+    email: varchar('email', { length: 255 }).unique().notNull(),
+    name: varchar('name', { length: 100 }).notNull(),
+    role: varchar('role', { length: 50 }).notNull().default('test_engineer'),
+    teamId: uuid('team_id'),
+    azureAdId: varchar('azure_ad_id', { length: 255 }),
 
-  // 사이트 및 위치 정보
-  site: varchar('site', { length: 20 }), // 'suwon' | 'uiwang' | 'pyeongtaek'
-  location: varchar('location', { length: 50 }), // '수원랩' | '의왕랩' | '평택랩'
-  position: varchar('position', { length: 100 }), // 직위 정보
+    // 사이트 및 위치 정보
+    site: varchar('site', { length: 20 }), // 'suwon' | 'uiwang' | 'pyeongtaek'
+    location: varchar('location', { length: 50 }), // '수원랩' | '의왕랩' | '평택랩'
+    position: varchar('position', { length: 100 }), // 직위 정보
 
-  // Azure AD 프로필 필드 (매 로그인 시 동기화)
-  department: varchar('department', { length: 100 }), // 부서
-  phoneNumber: varchar('phone_number', { length: 20 }), // 회사 전화
-  employeeId: varchar('employee_id', { length: 50 }), // 직원 ID
-  managerName: varchar('manager_name', { length: 100 }), // 관리자 이름
+    // Azure AD 프로필 필드 (매 로그인 시 동기화)
+    department: varchar('department', { length: 100 }), // 부서
+    phoneNumber: varchar('phone_number', { length: 20 }), // 회사 전화
+    employeeId: varchar('employee_id', { length: 50 }), // 직원 ID
+    managerName: varchar('manager_name', { length: 100 }), // 관리자 이름
 
-  // 앱 소유 필드 (Azure AD로 덮어쓰지 않음)
-  isActive: boolean('is_active').notNull().default(true), // 활성 상태
+    // 앱 소유 필드 (Azure AD로 덮어쓰지 않음)
+    isActive: boolean('is_active').notNull().default(true), // 활성 상태
 
-  // 시스템 필드
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+    // 시스템 필드
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    roleIdx: index('users_role_idx').on(table.role),
+    siteIdx: index('users_site_idx').on(table.site),
+    teamIdIdx: index('users_team_id_idx').on(table.teamId),
+    isActiveIdx: index('users_is_active_idx').on(table.isActive),
+    roleSiteIdx: index('users_role_site_idx').on(table.role, table.site),
+  })
+);
 
 // 관계 정의
 // NOTE: users↔teams 관계가 2개 (teamMembers, teamLeader)이므로 relationName으로 구분

@@ -152,7 +152,9 @@ const calibrationFactorsApi = {
     id: string,
     data: ApproveCalibrationFactorDto
   ): Promise<CalibrationFactor> => {
-    return apiClient.patch(`/api/calibration-factors/${id}/approve`, data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.CALIBRATION_FACTORS.APPROVE(id), data)
+      .then((res) => res.data);
   },
 
   // 보정계수 반려
@@ -160,7 +162,9 @@ const calibrationFactorsApi = {
     id: string,
     data: RejectCalibrationFactorDto
   ): Promise<CalibrationFactor> => {
-    return apiClient.patch(`/api/calibration-factors/${id}/reject`, data).then((res) => res.data);
+    return apiClient
+      .patch(API_ENDPOINTS.CALIBRATION_FACTORS.REJECT(id), data)
+      .then((res) => res.data);
   },
 
   // 보정계수 삭제 (소프트 삭제) — CAS version 쿼리 파라미터 포함
@@ -169,7 +173,7 @@ const calibrationFactorsApi = {
     version: number
   ): Promise<{ id: string; deleted: boolean }> => {
     return apiClient
-      .delete(`/api/calibration-factors/${id}?version=${version}`)
+      .delete(`${API_ENDPOINTS.CALIBRATION_FACTORS.DELETE(id)}?version=${version}`)
       .then((res) => res.data);
   },
 };

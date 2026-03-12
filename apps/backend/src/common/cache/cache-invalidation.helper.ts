@@ -127,9 +127,11 @@ export class CacheInvalidationHelper {
       this.invalidateAllDashboard(),
     ];
 
-    // 3. 상태 변경 시 모든 목록 무효화
+    // 3. 상태 변경 시 모든 목록 + 연관 엔티티 캐시 무효화
     if (statusChanged) {
       tasks.push(this.invalidateEquipmentLists());
+      // 장비 상태가 변경되면 checkout 목록의 장비 참조도 stale 됨
+      this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CHECKOUTS}*`);
     }
 
     // 4. 팀 변경 시 팀별 캐시 무효화

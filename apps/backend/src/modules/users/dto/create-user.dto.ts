@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRoleEnum, SiteEnum } from '@equipment-management/schemas';
+import {
+  UserRoleEnum,
+  SiteEnum,
+  LocationEnum,
+  type UserRole,
+  type Site,
+  type Location,
+} from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 /**
@@ -17,7 +24,7 @@ export const createUserSchema = z.object({
     .max(100, { message: '이름은 100자 이내로 입력해주세요.' }),
   role: UserRoleEnum,
   site: SiteEnum.optional(),
-  location: z.enum(['수원랩', '의왕랩']).optional(),
+  location: LocationEnum.optional(),
   teamId: z.string().uuid().optional(), // UUID 형식
   department: z.string().max(100).optional(),
   position: z.string().max(100).optional(),
@@ -53,24 +60,24 @@ export class CreateUserDto {
 
   @ApiProperty({
     description: '사용자 역할',
-    enum: ['test_engineer', 'technical_manager', 'lab_manager'],
+    enum: UserRoleEnum.options,
     example: 'test_engineer',
   })
-  role: 'test_engineer' | 'technical_manager' | 'lab_manager';
+  role: UserRole;
 
   @ApiPropertyOptional({
     description: '사이트 정보',
-    enum: ['suwon', 'uiwang'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
-  site?: 'suwon' | 'uiwang';
+  site?: Site;
 
   @ApiPropertyOptional({
     description: '위치 정보',
-    enum: ['수원랩', '의왕랩'],
+    enum: LocationEnum.options,
     example: '수원랩',
   })
-  location?: '수원랩' | '의왕랩';
+  location?: Location;
 
   @ApiPropertyOptional({
     description: '소속 팀 ID (UUID)',
