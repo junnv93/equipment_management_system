@@ -10,7 +10,7 @@ import {
   resolveDataScope,
   AUDIT_LOG_SCOPE,
 } from '@equipment-management/shared-constants';
-import { type UserRole } from '@equipment-management/schemas';
+import { SiteEnum, type UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 
 const VALID_FORMATS = new Set<ReportFormat>(['excel', 'csv', 'pdf']);
@@ -161,7 +161,7 @@ export class ReportsController {
   @Get('export/equipment-inventory')
   @ApiOperation({ summary: '장비 현황 보고서 내보내기' })
   @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
-  @ApiQuery({ name: 'site', required: false, description: '시험소 코드 (SUW/UIW/PYT)' })
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @ApiQuery({ name: 'status', required: false, description: '장비 상태' })
   @ApiQuery({ name: 'teamId', required: false, description: '팀 ID' })
   @ApiResponse({ status: 200, description: '파일 스트림' })
@@ -212,7 +212,7 @@ export class ReportsController {
     required: false,
     description: 'last_week|last_month|last_quarter|last_year',
   })
-  @ApiQuery({ name: 'site', required: false })
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)
   @SkipResponseTransform()
@@ -231,7 +231,7 @@ export class ReportsController {
   @Get('export/team-equipment')
   @ApiOperation({ summary: '팀별 장비 현황 보고서 내보내기' })
   @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
-  @ApiQuery({ name: 'site', required: false })
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @ApiQuery({ name: 'teamId', required: false })
   @ApiResponse({ status: 200, description: '파일 스트림' })
   @RequirePermissions(Permission.EXPORT_REPORTS)

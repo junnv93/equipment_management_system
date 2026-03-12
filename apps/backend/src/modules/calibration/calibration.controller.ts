@@ -43,6 +43,7 @@ import {
 } from './dto/approve-calibration.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared-constants';
+import { SiteEnum } from '@equipment-management/schemas';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { FileUploadService } from '../equipment/services/file-upload.service';
 import type { MulterFile } from '../../types/common.types';
@@ -151,6 +152,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   findAllIntermediateChecks(
     @Query('status') status?: 'pending' | 'overdue',
     @Query('equipmentId') equipmentId?: string,
@@ -293,6 +295,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   getSummary(
     @Query('teamId') teamId?: string,
     @Query('site') site?: string
@@ -306,6 +309,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   getOverdueCalibrations(
     @Query('teamId') teamId?: string,
     @Query('site') site?: string
@@ -331,6 +335,7 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATIONS)
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   getUpcomingCalibrations(
     @Query('days') days: number = 30,
     @Query('teamId') teamId?: string,

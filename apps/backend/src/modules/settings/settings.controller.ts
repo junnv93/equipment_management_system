@@ -1,5 +1,6 @@
 import { Controller, Get, Patch, Body, Query, Request, UsePipes, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { SiteEnum } from '@equipment-management/schemas';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
@@ -28,6 +29,7 @@ export class SettingsController {
     description: '교정 알림 발송 시점 설정을 조회합니다. 사이트별 오버라이드를 지원합니다.',
   })
   @ApiResponse({ status: HttpStatus.OK, description: '교정 알림 설정 조회 성공' })
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION)
   async getCalibrationSettings(@Query('site') site?: string): Promise<unknown> {
     const alertDays = await this.settingsService.getCalibrationAlertDays(site);
@@ -41,6 +43,7 @@ export class SettingsController {
   })
   @ApiResponse({ status: HttpStatus.OK, description: '교정 알림 설정 변경 성공' })
   @RequirePermissions(Permission.APPROVE_CALIBRATION)
+  @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @AuditLog({ action: 'update', entityType: 'settings', entityIdPath: 'query.site' })
   @UsePipes(UpdateCalibrationSettingsValidationPipe)
   async updateCalibrationSettings(

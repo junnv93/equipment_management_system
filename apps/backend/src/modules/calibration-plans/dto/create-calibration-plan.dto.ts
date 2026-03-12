@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
+import { SiteEnum, type Site } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 // ========== Zod 스키마 정의 ==========
@@ -13,7 +14,7 @@ export const createCalibrationPlanSchema = z.object({
     .int({ message: '연도는 정수여야 합니다' })
     .min(2020, { message: '연도는 2020 이상이어야 합니다' })
     .max(2100, { message: '연도는 2100 이하여야 합니다' }),
-  siteId: z.string().min(1, '시험소 ID를 입력해주세요'),
+  siteId: SiteEnum,
   teamId: z.string().uuid({ message: '유효한 팀 UUID가 아닙니다' }).optional(),
 });
 
@@ -43,9 +44,9 @@ export class CreateCalibrationPlanDto {
   @ApiProperty({
     description: '시험소 ID',
     example: 'suwon',
-    enum: ['suwon', 'uiwang'],
+    enum: SiteEnum.options,
   })
-  siteId: string;
+  siteId: Site;
 
   @ApiPropertyOptional({
     description: '팀 ID (선택)',

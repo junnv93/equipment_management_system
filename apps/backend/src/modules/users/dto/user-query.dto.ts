@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
+import { SiteEnum, type Site } from '@equipment-management/schemas';
 
 /**
  * 사용자 쿼리 스키마 (Zod)
@@ -12,7 +13,7 @@ export const userQuerySchema = z.object({
   name: z.string().optional(),
   roles: z.string().optional(), // 쉼표로 구분된 역할 목록
   teams: z.string().optional(), // 쉼표로 구분된 팀 목록
-  site: z.string().optional(), // 사이트 필터 (suwon, uiwang, pyeongtaek)
+  site: SiteEnum.optional(),
   department: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
   search: z.string().optional(),
@@ -54,10 +55,11 @@ export class UserQueryDto {
   teams?: string;
 
   @ApiPropertyOptional({
-    description: '사이트 필터 (suwon, uiwang, pyeongtaek)',
+    description: '사이트 필터',
+    enum: SiteEnum.options,
     example: 'suwon',
   })
-  site?: string;
+  site?: Site;
 
   @ApiPropertyOptional({
     description: '부서 검색',
