@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { NotificationFrequencyEnum } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 export const updateNotificationSettingsSchema = z
@@ -13,7 +14,7 @@ export const updateNotificationSettingsSchema = z
     equipmentImportEnabled: z.boolean().optional(),
     equipmentEnabled: z.boolean().optional(),
     systemEnabled: z.boolean().optional(),
-    frequency: z.enum(['immediate', 'daily', 'weekly']).optional(),
+    frequency: NotificationFrequencyEnum.optional(),
     digestTime: z
       .string()
       .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {

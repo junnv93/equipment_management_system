@@ -38,7 +38,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts` | CAS 적용 서비스 예시                        |
 | `apps/backend/src/modules/equipment/services/disposal.service.ts`         | CAS 적용 서비스 예시                        |
 | `apps/backend/src/modules/software/software.service.ts`                   | CAS 적용 서비스 예시                        |
-| `apps/backend/src/modules/equipment/equipment.service.ts`                 | 자체 CAS 구현 (updateWithVersion 직접 정의) |
+| `apps/backend/src/modules/equipment/equipment.service.ts`                 | CAS 적용 서비스 (VersionedBaseService 상속) |
 | `apps/backend/src/modules/calibration-plans/calibration-plans.service.ts` | 자체 CAS 구현 (casVersion 필드)             |
 | `apps/frontend/hooks/use-optimistic-mutation.ts`                          | 프론트엔드 optimistic mutation 훅           |
 
@@ -53,14 +53,14 @@ argument-hint: '[선택사항: 특정 모듈명]'
 grep -rn "extends VersionedBaseService" apps/backend/src/modules --include="*.service.ts"
 ```
 
-**기대값:** checkouts, calibration, non-conformances, equipment-imports, disposal, software (6개)
+**기대값:** checkouts, calibration, non-conformances, equipment-imports, disposal, software, equipment, calibration-factors (8개)
 
 ```bash
 # 자체 CAS 구현 서비스
 grep -rn "updateWithVersion\|updatePlanWithCAS\|casVersion" apps/backend/src/modules --include="*.service.ts" | grep -v "extends VersionedBaseService" | grep "class\|updateWithVersion\|updatePlanWithCAS"
 ```
 
-**기대값:** equipment (updateWithVersion 직접 정의), calibration-plans (casVersion)
+**기대값:** calibration-plans (casVersion)
 
 ### Step 2: 상태 변경 DTO에 version 필드 포함 여부
 
