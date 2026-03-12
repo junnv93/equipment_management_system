@@ -811,3 +811,111 @@ export const NUMERIC_TOKENS = {
 export function getNumericClasses(): string {
   return NUMERIC_TOKENS.tabular;
 }
+
+// ============================================================================
+// 테이블 컬럼 그룹 토큰 (W-2: 스냅샷 vs 계획 시각적 구분)
+// ============================================================================
+
+/**
+ * 교정계획서 항목 테이블 컬럼 그룹 배경색
+ *
+ * 10+ 컬럼 테이블에서 "기본정보 / 현황(스냅샷) / 계획" 영역을
+ * 배경색으로 시각적 앵커 제공 → 사용자의 시선 이동 최소화
+ *
+ * SSOT: brand CSS 변수 기반 → dark mode 자동 대응
+ */
+export const PLAN_TABLE_COLUMN_GROUP_TOKENS = {
+  /** 기본정보 (순번, 관리번호, 장비명) — 투명 배경 */
+  base: {
+    cell: '',
+    header: 'bg-muted/30',
+  },
+  /** 현황 스냅샷 (유효일자, 주기, 교정기관) — 파란 틴트 */
+  snapshot: {
+    cell: 'bg-brand-info/[0.03]',
+    header: 'bg-brand-info/[0.08]',
+    /** 그룹 시작 경계선 */
+    borderStart: 'border-l-2 border-l-brand-info/20',
+  },
+  /** 계획 (예정일, 교정기관, 확인, 비고) — 앰버 틴트 */
+  plan: {
+    cell: 'bg-brand-warning/[0.03]',
+    header: 'bg-brand-warning/[0.08]',
+    /** 그룹 시작 경계선 */
+    borderStart: 'border-l-2 border-l-brand-warning/20',
+  },
+  /** 그룹 헤더 라벨 (1행) */
+  groupHeader: {
+    text: 'text-xs font-semibold uppercase tracking-wider',
+    icon: 'h-3.5 w-3.5 opacity-60',
+    gap: 'inline-flex items-center gap-1',
+  },
+  /** 서브 헤더 (2행) */
+  subHeader: {
+    text: 'text-xs font-medium text-muted-foreground',
+    bg: 'bg-muted/30',
+  },
+} as const;
+
+// ============================================================================
+// 확인 진행률 바 토큰 (W-1: 승인 후 항목 확인 트래킹)
+// ============================================================================
+
+/**
+ * 교정계획서 항목 확인 진행률
+ *
+ * approved 상태에서만 표시 — 각 항목의 confirmedBy 유무로 진행률 계산
+ * shimmer 애니메이션으로 "진행 중" 느낌 전달
+ */
+export const PLAN_PROGRESS_TOKENS = {
+  /** 전체 컨테이너 */
+  container: 'flex items-center gap-4 px-5 py-3 bg-muted/20 border-b border-brand-border-subtle',
+  /** 라벨 */
+  label: 'text-sm font-semibold text-brand-text-secondary whitespace-nowrap',
+  /** 프로그레스 바 래퍼 */
+  barWrap: 'flex-1 flex items-center gap-3',
+  /** 트랙 */
+  track: 'flex-1 h-2 bg-muted rounded-full overflow-hidden',
+  /** 채움 (ok 색상 그라데이션) */
+  fill: 'h-full bg-gradient-to-r from-brand-ok to-brand-ok/80 rounded-full',
+  /** 텍스트 (숫자) */
+  text: 'text-sm font-bold font-mono text-brand-ok whitespace-nowrap min-w-[72px] text-right tabular-nums',
+  /** 100% 완료 시 */
+  textComplete:
+    'text-sm font-bold font-mono text-brand-ok whitespace-nowrap min-w-[72px] text-right tabular-nums',
+  /** 0% 시 */
+  textEmpty:
+    'text-sm font-bold font-mono text-muted-foreground whitespace-nowrap min-w-[72px] text-right tabular-nums',
+  /** 애니메이션 */
+  transition: 'transition-[width] duration-500 ease-out',
+} as const;
+
+// ============================================================================
+// 접이식 버전 이력 토큰 (W-3: Collapsible)
+// ============================================================================
+
+/**
+ * 버전 이력을 details/summary 기반 접이식으로 표시
+ *
+ * 메인 콘텐츠(테이블)에 집중하도록 기본 접힘
+ * 카드 하단에 배치하여 스크롤 감소
+ */
+export const VERSION_HISTORY_COLLAPSIBLE_TOKENS = {
+  /** details 래퍼 */
+  wrapper: 'border-t border-brand-border-subtle',
+  /** summary 트리거 */
+  trigger: [
+    'flex items-center gap-2 w-full px-5 py-3',
+    'text-sm font-semibold text-brand-text-secondary',
+    'cursor-pointer select-none',
+    'hover:bg-muted/40',
+    FOCUS_TOKENS.classes.default,
+    TRANSITION_PRESETS.fastBg,
+  ].join(' '),
+  /** chevron 아이콘 (CSS rotate) */
+  icon: 'h-4 w-4 shrink-0 transition-transform duration-200',
+  /** 열림 시 아이콘 회전 */
+  iconOpen: 'rotate-90',
+  /** 콘텐츠 패딩 */
+  content: 'px-5 pb-4',
+} as const;

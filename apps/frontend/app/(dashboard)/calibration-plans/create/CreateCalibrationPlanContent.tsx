@@ -25,10 +25,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import calibrationPlansApi, {
-  ExternalEquipment,
-  SITE_LABELS,
-} from '@/lib/api/calibration-plans-api';
+import calibrationPlansApi, { ExternalEquipment } from '@/lib/api/calibration-plans-api';
+import { SITE_LABELS } from '@equipment-management/schemas';
 import teamsApi from '@/lib/api/teams-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
@@ -100,7 +98,7 @@ export default function CreateCalibrationPlanContent() {
         title: t('planCreate.toasts.createSuccess'),
         description: t('planCreate.toasts.createSuccessDesc', {
           year: selectedYear,
-          site: SITE_LABELS[selectedSite],
+          site: SITE_LABELS[selectedSite as Site],
         }),
       });
       router.push(`/calibration-plans/${data.id}`);
@@ -192,8 +190,11 @@ export default function CreateCalibrationPlanContent() {
                   <SelectValue placeholder={t('planCreate.fields.sitePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="suwon">{t('planCreate.fields.sites.suwon')}</SelectItem>
-                  <SelectItem value="uiwang">{t('planCreate.fields.sites.uiwang')}</SelectItem>
+                  {Object.entries(SITE_LABELS).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -251,7 +252,7 @@ export default function CreateCalibrationPlanContent() {
             <CardDescription>
               {t('planCreate.preview.description', {
                 year: selectedYear,
-                site: SITE_LABELS[selectedSite],
+                site: SITE_LABELS[selectedSite as Site],
               })}
             </CardDescription>
           </CardHeader>

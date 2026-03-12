@@ -96,9 +96,20 @@
       "approvedAt": "승인일"
     },
     "items": {
-      "title": "교정 계획 항목",
+      "title": "교정 대상 장비 목록",
       "description": "총 {count}개의 장비가 포함되어 있습니다",
+      "descriptionApproved": "승인 후 개별 항목 확인을 진행합니다",
       "empty": "계획서에 포함된 장비가 없습니다",
+      "progress": {
+        "label": "확인 진행",
+        "count": "{confirmed} / {total}",
+        "countWithPercent": "{confirmed} / {total} ({percent}%)"
+      },
+      "columnGroup": {
+        "base": "기본정보",
+        "snapshot": "현황 (스냅샷)",
+        "plan": "계획"
+      },
       "headers": {
         "sequence": "순번",
         "managementNumber": "관리번호",
@@ -175,7 +186,8 @@
     },
     "yearWithUnit": "{year}년",
     "versionHistory": {
-      "title": "버전 히스토리",
+      "title": "버전 이력",
+      "triggerLabel": "버전 이력 ({count}개)",
       "ariaLabel": "교정계획서 버전 목록",
       "versionLabel": "버전 {version}",
       "latestBadge": "최신",

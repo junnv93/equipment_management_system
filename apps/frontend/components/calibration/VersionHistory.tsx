@@ -54,7 +54,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
 
   if (isLoading) {
     return (
-      <div className="mt-6 border-t pt-6">
+      <div>
         <div className="flex items-center gap-2 mb-4">
           <History className="h-5 w-5 text-muted-foreground" />
           <Skeleton className="h-6 w-32" />
@@ -74,7 +74,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
   const vh = 'planDetail.versionHistory' as const;
 
   return (
-    <div className="mt-6 border-t pt-6">
+    <div>
       <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
         <History className="h-5 w-5" aria-hidden="true" />
         {t(`${vh}.title`)}

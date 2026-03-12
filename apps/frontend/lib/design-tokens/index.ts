@@ -380,6 +380,9 @@ export {
   getConfirmationBadgeClasses,
   getLoadingSpinnerClasses,
   getNumericClasses,
+  PLAN_TABLE_COLUMN_GROUP_TOKENS,
+  PLAN_PROGRESS_TOKENS,
+  VERSION_HISTORY_COLLAPSIBLE_TOKENS,
   type CalibrationPlanStatusType,
   type CalibrationPlanKpiVariant,
 } from './components/calibration-plans';

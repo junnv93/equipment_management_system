@@ -7,11 +7,12 @@ import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -20,20 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import calibrationPlansApi, {
-  type CalibrationPlan,
-  type CalibrationPlanItem,
-} from '@/lib/api/calibration-plans-api';
+import calibrationPlansApi, { type CalibrationPlan } from '@/lib/api/calibration-plans-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
@@ -42,35 +30,22 @@ import {
   ArrowLeft,
   Send,
   Trash2,
-  CheckCircle2,
-  Edit2,
-  Save,
-  X,
-  AlertCircle,
-  FileText,
   Download,
-  Circle,
   XCircle,
   ClipboardCheck,
   UserCheck,
-  Loader2,
-  Plus,
-  ChevronUp,
-  Check,
+  AlertCircle,
 } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
 import {
-  getCalibrationPlanTimelineNodeClasses,
-  getCalibrationPlanTimelineConnectorClasses,
   getActionButtonClasses,
-  getLoadingSpinnerClasses,
-  CALIBRATION_PLAN_TIMELINE_TOKENS,
   CALIBRATION_PLAN_STATUS_BADGE_COLORS,
   CALIBRATION_PLAN_DETAIL_HEADER_TOKENS,
   ACTION_BUTTON_TOKENS,
-  COLLAPSIBLE_TOKENS,
 } from '@/lib/design-tokens';
+import { ApprovalTimeline } from './ApprovalTimeline';
+import { PlanItemsTable } from './PlanItemsTable';
 
 interface CalibrationPlanDetailClientProps {
   /**
@@ -90,6 +65,10 @@ interface CalibrationPlanDetailClientProps {
  * Next.js 16 패턴:
  * - Server Component(page.tsx)에서 planUuid를 전달받음
  * - 모든 인터랙티브 로직(useState, useMutation)을 담당
+ *
+ * 서브 컴포넌트 구조:
+ * - ApprovalTimeline: 3단계 승인 타임라인 + QM 인라인 확인/반려
+ * - PlanItemsTable: 항목 테이블 (W-1 진행률, W-2 컬럼그룹, W-3 접이식 버전이력)
  */
 export function CalibrationPlanDetailClient({
   planUuid,
@@ -103,15 +82,10 @@ export function CalibrationPlanDetailClient({
   const t = useTranslations('calibration');
   const tEquip = useTranslations('equipment');
 
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [editingAgency, setEditingAgency] = useState('');
-  const [editingNotes, setEditingNotes] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
-  const [reviewComment, setReviewComment] = useState('');
-  const [showReviewComment, setShowReviewComment] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
   // ✅ queryKeys 팩토리 사용
@@ -135,7 +109,6 @@ export function CalibrationPlanDetailClient({
   // 브레드크럼 동적 라벨 설정
   useEffect(() => {
     if (plan) {
-      // 교정 계획서 정보를 사용해서 의미있는 라벨 생성
       const siteLabel = plan.siteId
         ? tEquip(`siteLabel.${plan.siteId}` as Parameters<typeof tEquip>[0]) || plan.siteId
         : '';
@@ -145,7 +118,6 @@ export function CalibrationPlanDetailClient({
       setDynamicLabel(planUuid, label);
     }
 
-    // 컴포넌트 언마운트 시 라벨 제거
     return () => {
       clearDynamicLabel(planUuid);
     };
@@ -156,8 +128,6 @@ export function CalibrationPlanDetailClient({
    */
   const invalidateAfterChange = () =>
     CalibrationPlansCacheInvalidation.invalidateAfterStatusChange(queryClient, planUuid);
-
-  // ✅ userId 제거 (서버에서 JWT 추출), casVersion 추가
 
   // 검토 요청 뮤테이션 (기술책임자 → 품질책임자)
   const submitForReviewMutation = useMutation({
@@ -178,32 +148,6 @@ export function CalibrationPlanDetailClient({
         title: t('planDetail.toasts.submitForReviewError'),
         description:
           error.response?.data?.message || t('planDetail.toasts.submitForReviewErrorDesc'),
-        variant: 'destructive',
-      });
-      invalidateAfterChange();
-    },
-  });
-
-  // 확인 완료 뮤테이션 (품질책임자)
-  const reviewMutation = useMutation({
-    mutationFn: () =>
-      calibrationPlansApi.reviewCalibrationPlan(planUuid, {
-        casVersion: plan?.casVersion ?? 0,
-        reviewComment: reviewComment || undefined,
-      }),
-    onSuccess: () => {
-      toast({
-        title: t('planDetail.toasts.reviewSuccess'),
-        description: t('planDetail.toasts.reviewSuccessDesc'),
-      });
-      invalidateAfterChange();
-      setShowReviewComment(false);
-      setReviewComment('');
-    },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast({
-        title: t('planDetail.toasts.reviewError'),
-        description: error.response?.data?.message || t('planDetail.toasts.reviewErrorDesc'),
         variant: 'destructive',
       });
       invalidateAfterChange();
@@ -279,78 +223,6 @@ export function CalibrationPlanDetailClient({
     },
   });
 
-  // 항목 수정 뮤테이션
-  const updateItemMutation = useMutation({
-    mutationFn: ({
-      itemUuid,
-      data,
-    }: {
-      itemUuid: string;
-      data: { plannedCalibrationAgency?: string; notes?: string };
-    }) => calibrationPlansApi.updatePlanItem(planUuid, itemUuid, data),
-    onSuccess: () => {
-      toast({
-        title: t('planDetail.toasts.updateItemSuccess'),
-        description: t('planDetail.toasts.updateItemSuccessDesc'),
-      });
-      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
-      setEditingItemId(null);
-    },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast({
-        title: t('planDetail.toasts.updateItemError'),
-        description: error.response?.data?.message || t('planDetail.toasts.updateItemErrorDesc'),
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // 항목 확인 뮤테이션
-  const confirmItemMutation = useMutation({
-    mutationFn: (itemUuid: string) =>
-      calibrationPlansApi.confirmPlanItem(planUuid, itemUuid, {
-        casVersion: plan?.casVersion ?? 0,
-      }),
-    onSuccess: () => {
-      toast({
-        title: t('planDetail.toasts.confirmItemSuccess'),
-        description: t('planDetail.toasts.confirmItemSuccessDesc'),
-      });
-      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
-    },
-    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
-      toast({
-        title: t('planDetail.toasts.confirmItemError'),
-        description: error.response?.data?.message || t('planDetail.toasts.confirmItemErrorDesc'),
-        variant: 'destructive',
-      });
-      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
-    },
-  });
-
-  const handleStartEdit = (item: CalibrationPlanItem) => {
-    setEditingItemId(item.id);
-    setEditingAgency(item.plannedCalibrationAgency || '');
-    setEditingNotes(item.notes || '');
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingItemId) return;
-    updateItemMutation.mutate({
-      itemUuid: editingItemId,
-      data: {
-        plannedCalibrationAgency: editingAgency,
-        notes: editingNotes,
-      },
-    });
-  };
-
-  const handleCancelEdit = () => {
-    setEditingItemId(null);
-    setEditingAgency('');
-    setEditingNotes('');
-  };
-
   const handlePrintView = () => {
     calibrationPlansApi.openPrintView(planUuid);
   };
@@ -360,10 +232,7 @@ export function CalibrationPlanDetailClient({
       <div className="container mx-auto py-6 space-y-6">
         <Skeleton className="h-10 w-64" />
         <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="space-y-4">
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-24 w-full" />
@@ -392,7 +261,6 @@ export function CalibrationPlanDetailClient({
   const isPendingReview = plan.status === CPStatus.PENDING_REVIEW;
   const isPendingApproval = plan.status === CPStatus.PENDING_APPROVAL;
   const isApproved = plan.status === CPStatus.APPROVED;
-  const items = plan.items || [];
 
   // 사용자 역할 확인
   const userRole = session?.user?.role as UserRole | undefined;
@@ -404,7 +272,6 @@ export function CalibrationPlanDetailClient({
   // 역할별 액션 가능 여부
   const canSubmitForReview =
     (isDraft || isRejected) && (isTechnicalManager || isLabManager || isSystemAdmin);
-  const canReview = isPendingReview && (isQualityManager || isLabManager || isSystemAdmin);
   const canApprove = isPendingApproval && (isLabManager || isSystemAdmin);
 
   return (
@@ -471,7 +338,6 @@ export function CalibrationPlanDetailClient({
               )}
             </>
           )}
-          {/* 확인 대기 상태: 품질책임자는 타임라인에서 원클릭 확인 */}
           {/* 승인 대기 상태: 최종 승인/반려 (시험소장) */}
           {canApprove && (
             <>
@@ -509,185 +375,12 @@ export function CalibrationPlanDetailClient({
         </div>
       </div>
 
-      {/* 3단계 승인 타임라인 — Design Token v2 적용 */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            {/* 1단계: 작성 */}
-            <div className="flex flex-col items-center flex-1">
-              <div
-                className={getCalibrationPlanTimelineNodeClasses(isDraft ? 'active' : 'completed')}
-              >
-                {isDraft ? <Circle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-              </div>
-              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
-                {t('planDetail.timeline.step1')}
-              </span>
-              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
-                {t('planDetail.timeline.technicalManager')}
-              </span>
-              {plan.submittedAt && (
-                <time
-                  dateTime={plan.submittedAt}
-                  className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
-                >
-                  {formatDate(plan.submittedAt, 'MM/dd HH:mm')}
-                </time>
-              )}
-            </div>
-
-            {/* 연결선 1-2 */}
-            <div
-              className={getCalibrationPlanTimelineConnectorClasses(
-                isPendingReview || isPendingApproval || isApproved
-              )}
-            />
-
-            {/* 2단계: 확인 */}
-            <div className="flex flex-col items-center flex-1">
-              <div
-                className={getCalibrationPlanTimelineNodeClasses(
-                  isPendingReview
-                    ? 'active'
-                    : isPendingApproval || isApproved
-                      ? 'completed'
-                      : isRejected && plan.rejectionStage === 'review'
-                        ? 'rejected'
-                        : 'pending'
-                )}
-              >
-                {isPendingReview ? (
-                  <Circle className="h-5 w-5" />
-                ) : isPendingApproval || isApproved ? (
-                  <CheckCircle2 className="h-5 w-5" />
-                ) : isRejected && plan.rejectionStage === 'review' ? (
-                  <XCircle className="h-5 w-5" />
-                ) : (
-                  <Circle className="h-5 w-5" />
-                )}
-              </div>
-              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
-                {t('planDetail.timeline.step2')}
-              </span>
-              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
-                {t('planDetail.timeline.qualityManager')}
-              </span>
-              {plan.reviewedAt && (
-                <time
-                  dateTime={plan.reviewedAt}
-                  className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
-                >
-                  {formatDate(plan.reviewedAt, 'MM/dd HH:mm')}
-                </time>
-              )}
-
-              {/* 품질책임자용 인라인 확인 버튼 — Design Token 적용 */}
-              {canReview && (
-                <div className="mt-3 flex flex-col items-center gap-1">
-                  <Button
-                    size="sm"
-                    onClick={() => reviewMutation.mutate()}
-                    disabled={reviewMutation.isPending || !plan}
-                    className={`${ACTION_BUTTON_TOKENS.inline.size} w-24`}
-                    aria-label={t('planDetail.timeline.ariaConfirmReview')}
-                  >
-                    {reviewMutation.isPending ? (
-                      <Loader2 className={getLoadingSpinnerClasses()} aria-hidden="true" />
-                    ) : (
-                      <>
-                        <Check className={ACTION_BUTTON_TOKENS.inline.iconSize} />
-                        {t('planDetail.actions.confirmReview')}
-                      </>
-                    )}
-                  </Button>
-
-                  {/* 확장 가능한 의견란 — Collapsible Token 적용 */}
-                  <Collapsible open={showReviewComment} onOpenChange={setShowReviewComment}>
-                    <CollapsibleTrigger
-                      className={`${COLLAPSIBLE_TOKENS.trigger.fontSize} ${COLLAPSIBLE_TOKENS.trigger.color} ${COLLAPSIBLE_TOKENS.trigger.gap} ${COLLAPSIBLE_TOKENS.trigger.focus} ${COLLAPSIBLE_TOKENS.trigger.transition} flex items-center mt-1`}
-                    >
-                      {showReviewComment ? (
-                        <>
-                          <ChevronUp className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
-                          {t('planDetail.actions.collapseComment')}
-                        </>
-                      ) : (
-                        <>
-                          <Plus className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
-                          {t('planDetail.actions.addComment')}
-                        </>
-                      )}
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className={COLLAPSIBLE_TOKENS.content.marginTop}>
-                      <Input
-                        placeholder={t('planDetail.placeholders.reviewComment')}
-                        value={reviewComment}
-                        onChange={(e) => setReviewComment(e.target.value)}
-                        className={`${COLLAPSIBLE_TOKENS.content.input.width} ${COLLAPSIBLE_TOKENS.content.input.fontSize} ${COLLAPSIBLE_TOKENS.content.input.height}`}
-                      />
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsRejectDialogOpen(true)}
-                    className={`${COLLAPSIBLE_TOKENS.trigger.fontSize} text-muted-foreground hover:text-destructive underline mt-1 ${COLLAPSIBLE_TOKENS.trigger.transition} ${COLLAPSIBLE_TOKENS.trigger.focus}`}
-                    disabled={rejectMutation.isPending || !plan}
-                  >
-                    {t('planDetail.actions.reject')}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 연결선 2-3 */}
-            <div
-              className={getCalibrationPlanTimelineConnectorClasses(
-                isPendingApproval || isApproved
-              )}
-            />
-
-            {/* 3단계: 승인 */}
-            <div className="flex flex-col items-center flex-1">
-              <div
-                className={getCalibrationPlanTimelineNodeClasses(
-                  isPendingApproval
-                    ? 'active'
-                    : isApproved
-                      ? 'completed'
-                      : isRejected && plan.rejectionStage === 'approval'
-                        ? 'rejected'
-                        : 'pending'
-                )}
-              >
-                {isPendingApproval ? (
-                  <Circle className="h-5 w-5" />
-                ) : isApproved ? (
-                  <CheckCircle2 className="h-5 w-5" />
-                ) : isRejected && plan.rejectionStage === 'approval' ? (
-                  <XCircle className="h-5 w-5" />
-                ) : (
-                  <Circle className="h-5 w-5" />
-                )}
-              </div>
-              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
-                {t('planDetail.timeline.step3')}
-              </span>
-              <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
-                {t('planDetail.timeline.labManager')}
-              </span>
-              {plan.approvedAt && (
-                <time
-                  dateTime={plan.approvedAt}
-                  className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
-                >
-                  {formatDate(plan.approvedAt, 'MM/dd HH:mm')}
-                </time>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* 3단계 승인 타임라인 */}
+      <ApprovalTimeline
+        plan={plan}
+        planUuid={planUuid}
+        onRejectClick={() => setIsRejectDialogOpen(true)}
+      />
 
       {/* 반려 사유 표시 */}
       {isRejected && plan.rejectionReason && (
@@ -732,170 +425,8 @@ export function CalibrationPlanDetailClient({
         </Card>
       )}
 
-      {/* 항목 테이블 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('planDetail.items.title')}</CardTitle>
-          <CardDescription>
-            {t('planDetail.items.description', { count: items.length })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>{t('planDetail.items.empty')}</p>
-            </div>
-          ) : (
-            <div className="overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60px]">
-                      {t('planDetail.items.headers.sequence')}
-                    </TableHead>
-                    <TableHead>{t('planDetail.items.headers.managementNumber')}</TableHead>
-                    <TableHead>{t('planDetail.items.headers.equipmentName')}</TableHead>
-                    <TableHead className="text-center" colSpan={3}>
-                      {t('planDetail.items.headers.snapshot')}
-                    </TableHead>
-                    <TableHead className="text-center" colSpan={3}>
-                      {t('planDetail.items.headers.plan')}
-                    </TableHead>
-                    <TableHead>{t('planDetail.items.headers.notes')}</TableHead>
-                    {(isDraft || isApproved) && (
-                      <TableHead className="w-[100px]">
-                        {t('planDetail.items.headers.action')}
-                      </TableHead>
-                    )}
-                  </TableRow>
-                  <TableRow className="bg-muted/50">
-                    <TableHead></TableHead>
-                    <TableHead></TableHead>
-                    <TableHead></TableHead>
-                    <TableHead>{t('planDetail.items.headers.validityDate')}</TableHead>
-                    <TableHead>{t('planDetail.items.headers.calibrationCycle')}</TableHead>
-                    <TableHead>{t('planDetail.items.headers.calibrationAgency')}</TableHead>
-                    <TableHead>{t('planDetail.items.headers.plannedDate')}</TableHead>
-                    <TableHead>{t('planDetail.items.headers.plannedAgency')}</TableHead>
-                    <TableHead>{t('planDetail.items.headers.confirmation')}</TableHead>
-                    <TableHead>{t('planDetail.items.headers.actualDate')}</TableHead>
-                    {(isDraft || isApproved) && <TableHead></TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item: CalibrationPlanItem) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.sequenceNumber}</TableCell>
-                      <TableCell className="font-mono">
-                        {item.equipment?.managementNumber || '-'}
-                      </TableCell>
-                      <TableCell>{item.equipment?.name || '-'}</TableCell>
-                      <TableCell>
-                        {item.snapshotValidityDate
-                          ? formatDate(item.snapshotValidityDate, 'yyyy-MM-dd')
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {item.snapshotCalibrationCycle
-                          ? t('planDetail.items.monthUnit', {
-                              count: item.snapshotCalibrationCycle,
-                            })
-                          : '-'}
-                      </TableCell>
-                      <TableCell>{item.snapshotCalibrationAgency || '-'}</TableCell>
-                      <TableCell>
-                        {item.plannedCalibrationDate
-                          ? formatDate(item.plannedCalibrationDate, 'yyyy-MM-dd')
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {editingItemId === item.id ? (
-                          <Input
-                            value={editingAgency}
-                            onChange={(e) => setEditingAgency(e.target.value)}
-                            className="w-[100px]"
-                          />
-                        ) : (
-                          item.plannedCalibrationAgency || '-'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {item.confirmedBy ? (
-                          <Badge variant="outline" className="bg-brand-ok/10">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            {t('planDetail.items.confirmed')}
-                          </Badge>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {editingItemId === item.id ? (
-                          <Input
-                            value={editingNotes}
-                            onChange={(e) => setEditingNotes(e.target.value)}
-                            placeholder={t('planDetail.placeholders.notes')}
-                            className="w-[100px]"
-                          />
-                        ) : (
-                          <>
-                            {item.actualCalibrationDate
-                              ? formatDate(item.actualCalibrationDate, 'yyyy-MM-dd')
-                              : item.notes || '-'}
-                          </>
-                        )}
-                      </TableCell>
-                      {(isDraft || isApproved) && (
-                        <TableCell>
-                          {editingItemId === item.id ? (
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleSaveEdit}
-                                disabled={updateItemMutation.isPending}
-                              >
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-1">
-                              {isDraft && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleStartEdit(item)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                              {isApproved && !item.confirmedBy && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => confirmItemMutation.mutate(item.id)}
-                                  disabled={confirmItemMutation.isPending}
-                                  title={t('planDetail.items.confirm')}
-                                >
-                                  <CheckCircle2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* 항목 테이블 (W-1 진행률 + W-2 컬럼그룹 + W-3 접이식 버전이력) */}
+      <PlanItemsTable plan={plan} planUuid={planUuid} />
 
       {/* 삭제 확인 다이얼로그 */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -969,8 +500,8 @@ export function CalibrationPlanDetailClient({
             <label className="text-sm font-medium">
               {t('planDetail.dialogs.reject.reasonLabel')}
             </label>
-            <textarea
-              className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <Textarea
+              className="mt-2"
               rows={3}
               placeholder={t('planDetail.dialogs.reject.reasonPlaceholder')}
               value={rejectionReason}

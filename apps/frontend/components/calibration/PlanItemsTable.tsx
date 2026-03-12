@@ -1,0 +1,464 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useToast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import calibrationPlansApi, {
+  type CalibrationPlan,
+  type CalibrationPlanItem,
+} from '@/lib/api/calibration-plans-api';
+import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
+import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
+import { formatDate } from '@/lib/utils/date';
+import { CheckCircle2, Edit2, Save, X, FileText, Camera, CalendarClock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { PLAN_TABLE_COLUMN_GROUP_TOKENS, PLAN_PROGRESS_TOKENS } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
+import { VersionHistory } from './VersionHistory';
+import { VERSION_HISTORY_COLLAPSIBLE_TOKENS } from '@/lib/design-tokens';
+import { ChevronRight, History } from 'lucide-react';
+
+interface PlanItemsTableProps {
+  plan: CalibrationPlan;
+  planUuid: string;
+}
+
+/**
+ * 교정계획서 항목 테이블
+ *
+ * W-1: 확인 진행률 바 (approved 상태에서만)
+ * W-2: 컬럼 그룹 배경색 (기본정보 / 스냅샷 / 계획)
+ * W-3: 접이식 버전 이력 (카드 하단)
+ */
+export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const t = useTranslations('calibration');
+
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingAgency, setEditingAgency] = useState('');
+  const [editingNotes, setEditingNotes] = useState('');
+  const [isVersionOpen, setIsVersionOpen] = useState(false);
+
+  const isDraft = plan.status === CPStatus.DRAFT;
+  const isApproved = plan.status === CPStatus.APPROVED;
+  const items = plan.items || [];
+
+  // W-1: 진행률 계산
+  const { confirmedCount, progressPercent } = useMemo(() => {
+    const confirmed = items.filter((item) => item.confirmedBy).length;
+    const percent = items.length > 0 ? Math.round((confirmed / items.length) * 100) : 0;
+    return { confirmedCount: confirmed, progressPercent: percent };
+  }, [items]);
+
+  const updateItemMutation = useMutation({
+    mutationFn: ({
+      itemUuid,
+      data,
+    }: {
+      itemUuid: string;
+      data: { plannedCalibrationAgency?: string; notes?: string };
+    }) => calibrationPlansApi.updatePlanItem(planUuid, itemUuid, data),
+    onSuccess: () => {
+      toast({
+        title: t('planDetail.toasts.updateItemSuccess'),
+        description: t('planDetail.toasts.updateItemSuccessDesc'),
+      });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
+      setEditingItemId(null);
+    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+      toast({
+        title: t('planDetail.toasts.updateItemError'),
+        description: error.response?.data?.message || t('planDetail.toasts.updateItemErrorDesc'),
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const confirmItemMutation = useMutation({
+    mutationFn: (itemUuid: string) =>
+      calibrationPlansApi.confirmPlanItem(planUuid, itemUuid, {
+        casVersion: plan.casVersion ?? 0,
+      }),
+    onSuccess: () => {
+      toast({
+        title: t('planDetail.toasts.confirmItemSuccess'),
+        description: t('planDetail.toasts.confirmItemSuccessDesc'),
+      });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
+    },
+    onError: (error: Error & { response?: { data?: { message?: string } } }) => {
+      toast({
+        title: t('planDetail.toasts.confirmItemError'),
+        description: error.response?.data?.message || t('planDetail.toasts.confirmItemErrorDesc'),
+        variant: 'destructive',
+      });
+      CalibrationPlansCacheInvalidation.invalidatePlan(queryClient, planUuid);
+    },
+  });
+
+  const handleStartEdit = (item: CalibrationPlanItem) => {
+    setEditingItemId(item.id);
+    setEditingAgency(item.plannedCalibrationAgency || '');
+    setEditingNotes(item.notes || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingItemId) return;
+    updateItemMutation.mutate({
+      itemUuid: editingItemId,
+      data: {
+        plannedCalibrationAgency: editingAgency,
+        notes: editingNotes,
+      },
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItemId(null);
+    setEditingAgency('');
+    setEditingNotes('');
+  };
+
+  const colGroup = PLAN_TABLE_COLUMN_GROUP_TOKENS;
+  const showActions = isDraft || isApproved;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('planDetail.items.title')}</CardTitle>
+        <CardDescription>
+          {isApproved
+            ? t('planDetail.items.descriptionApproved')
+            : t('planDetail.items.description', { count: items.length })}
+        </CardDescription>
+      </CardHeader>
+
+      {/* W-1: 확인 진행률 바 (approved 상태에서만) */}
+      {isApproved && items.length > 0 && (
+        <div className={PLAN_PROGRESS_TOKENS.container}>
+          <span className={PLAN_PROGRESS_TOKENS.label}>{t('planDetail.items.progress.label')}</span>
+          <div className={PLAN_PROGRESS_TOKENS.barWrap}>
+            <div className={PLAN_PROGRESS_TOKENS.track}>
+              <div
+                className={cn(PLAN_PROGRESS_TOKENS.fill, PLAN_PROGRESS_TOKENS.transition)}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <span
+              className={
+                progressPercent === 100
+                  ? PLAN_PROGRESS_TOKENS.textComplete
+                  : progressPercent === 0
+                    ? PLAN_PROGRESS_TOKENS.textEmpty
+                    : PLAN_PROGRESS_TOKENS.text
+              }
+            >
+              {t('planDetail.items.progress.countWithPercent', {
+                confirmed: confirmedCount,
+                total: items.length,
+                percent: progressPercent,
+              })}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <CardContent className="p-0">
+        {items.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>{t('planDetail.items.empty')}</p>
+          </div>
+        ) : (
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                {/* W-2: 컬럼 그룹 헤더 (1행) */}
+                <TableRow>
+                  <TableHead
+                    className={cn(colGroup.base.header, colGroup.groupHeader.text)}
+                    colSpan={3}
+                  >
+                    <span className={colGroup.groupHeader.gap}>
+                      {t('planDetail.items.columnGroup.base')}
+                    </span>
+                  </TableHead>
+                  <TableHead
+                    className={cn(
+                      colGroup.snapshot.header,
+                      colGroup.snapshot.borderStart,
+                      colGroup.groupHeader.text,
+                      'text-center'
+                    )}
+                    colSpan={3}
+                  >
+                    <span className={colGroup.groupHeader.gap}>
+                      <Camera className={colGroup.groupHeader.icon} />
+                      {t('planDetail.items.columnGroup.snapshot')}
+                    </span>
+                  </TableHead>
+                  <TableHead
+                    className={cn(
+                      colGroup.plan.header,
+                      colGroup.plan.borderStart,
+                      colGroup.groupHeader.text,
+                      'text-center'
+                    )}
+                    colSpan={4}
+                  >
+                    <span className={colGroup.groupHeader.gap}>
+                      <CalendarClock className={colGroup.groupHeader.icon} />
+                      {t('planDetail.items.columnGroup.plan')}
+                    </span>
+                  </TableHead>
+                  {showActions && <TableHead className={colGroup.base.header} />}
+                </TableRow>
+
+                {/* 서브 헤더 (2행) */}
+                <TableRow className={colGroup.subHeader.bg}>
+                  <TableHead className={cn(colGroup.subHeader.text, 'w-[50px] text-center')}>
+                    {t('planDetail.items.headers.sequence')}
+                  </TableHead>
+                  <TableHead className={colGroup.subHeader.text}>
+                    {t('planDetail.items.headers.managementNumber')}
+                  </TableHead>
+                  <TableHead className={colGroup.subHeader.text}>
+                    {t('planDetail.items.headers.equipmentName')}
+                  </TableHead>
+                  <TableHead className={cn(colGroup.subHeader.text, colGroup.snapshot.borderStart)}>
+                    {t('planDetail.items.headers.validityDate')}
+                  </TableHead>
+                  <TableHead className={colGroup.subHeader.text}>
+                    {t('planDetail.items.headers.calibrationCycle')}
+                  </TableHead>
+                  <TableHead className={colGroup.subHeader.text}>
+                    {t('planDetail.items.headers.calibrationAgency')}
+                  </TableHead>
+                  <TableHead className={cn(colGroup.subHeader.text, colGroup.plan.borderStart)}>
+                    {t('planDetail.items.headers.plannedDate')}
+                  </TableHead>
+                  <TableHead className={colGroup.subHeader.text}>
+                    {t('planDetail.items.headers.plannedAgency')}
+                  </TableHead>
+                  <TableHead className={colGroup.subHeader.text}>
+                    {t('planDetail.items.headers.confirmation')}
+                  </TableHead>
+                  <TableHead className={colGroup.subHeader.text}>
+                    {t('planDetail.items.headers.notes')}
+                  </TableHead>
+                  {showActions && <TableHead className={cn(colGroup.subHeader.text, 'w-[80px]')} />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item: CalibrationPlanItem) => (
+                  <TableRow key={item.id}>
+                    {/* 기본정보 그룹 */}
+                    <TableCell className="text-center tabular-nums text-muted-foreground font-medium">
+                      {item.sequenceNumber}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {item.equipment?.managementNumber || '-'}
+                    </TableCell>
+                    <TableCell>{item.equipment?.name || '-'}</TableCell>
+
+                    {/* 스냅샷 그룹 (W-2: 배경색) */}
+                    <TableCell
+                      className={cn(
+                        colGroup.snapshot.cell,
+                        colGroup.snapshot.borderStart,
+                        'font-mono text-sm'
+                      )}
+                    >
+                      {item.snapshotValidityDate
+                        ? formatDate(item.snapshotValidityDate, 'yyyy-MM-dd')
+                        : '-'}
+                    </TableCell>
+                    <TableCell className={colGroup.snapshot.cell}>
+                      {item.snapshotCalibrationCycle
+                        ? t('planDetail.items.monthUnit', {
+                            count: item.snapshotCalibrationCycle,
+                          })
+                        : '-'}
+                    </TableCell>
+                    <TableCell className={colGroup.snapshot.cell}>
+                      {item.snapshotCalibrationAgency || '-'}
+                    </TableCell>
+
+                    {/* 계획 그룹 (W-2: 배경색) */}
+                    <TableCell
+                      className={cn(
+                        colGroup.plan.cell,
+                        colGroup.plan.borderStart,
+                        'font-mono text-sm'
+                      )}
+                    >
+                      {item.plannedCalibrationDate
+                        ? formatDate(item.plannedCalibrationDate, 'yyyy-MM-dd')
+                        : '-'}
+                    </TableCell>
+                    <TableCell className={colGroup.plan.cell}>
+                      {editingItemId === item.id ? (
+                        <Input
+                          value={editingAgency}
+                          onChange={(e) => setEditingAgency(e.target.value)}
+                          className="w-[100px]"
+                        />
+                      ) : (
+                        item.plannedCalibrationAgency || '-'
+                      )}
+                    </TableCell>
+                    <TableCell className={cn(colGroup.plan.cell, 'text-center')}>
+                      {item.confirmedBy ? (
+                        <Badge variant="outline" className="bg-brand-ok/10">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          {t('planDetail.items.confirmed')}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className={colGroup.plan.cell}>
+                      {editingItemId === item.id ? (
+                        <Input
+                          value={editingNotes}
+                          onChange={(e) => setEditingNotes(e.target.value)}
+                          placeholder={t('planDetail.placeholders.notes')}
+                          className="w-[100px]"
+                        />
+                      ) : (
+                        <>
+                          {item.actualCalibrationDate
+                            ? formatDate(item.actualCalibrationDate, 'yyyy-MM-dd')
+                            : item.notes || <span className="text-muted-foreground">—</span>}
+                        </>
+                      )}
+                    </TableCell>
+
+                    {/* 액션 */}
+                    {showActions && (
+                      <TableCell className="text-center">
+                        {editingItemId === item.id ? (
+                          <div className="flex gap-1 justify-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleSaveEdit}
+                              disabled={updateItemMutation.isPending}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Save className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCancelEdit}
+                              className="h-8 w-8 p-0"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1 justify-center">
+                            {isDraft && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleStartEdit(item)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {isApproved && !item.confirmedBy && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => confirmItemMutation.mutate(item.id)}
+                                disabled={confirmItemMutation.isPending}
+                                title={t('planDetail.items.confirm')}
+                                className="h-8 w-8 p-0 text-brand-ok"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+
+      {/* W-3: 접이식 버전 이력 */}
+      <VersionHistoryCollapsible
+        planUuid={planUuid}
+        currentVersion={plan.version}
+        isOpen={isVersionOpen}
+        onToggle={() => setIsVersionOpen(!isVersionOpen)}
+      />
+    </Card>
+  );
+}
+
+/**
+ * 접이식 버전 이력 래퍼
+ *
+ * VersionHistory 컴포넌트를 details/summary로 감싸서
+ * 기본 접힌 상태로 카드 하단에 배치
+ */
+function VersionHistoryCollapsible({
+  planUuid,
+  currentVersion,
+  isOpen,
+  onToggle,
+}: {
+  planUuid: string;
+  currentVersion?: number;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const t = useTranslations('calibration');
+
+  return (
+    <div className={VERSION_HISTORY_COLLAPSIBLE_TOKENS.wrapper}>
+      <Button
+        variant="ghost"
+        onClick={onToggle}
+        className={VERSION_HISTORY_COLLAPSIBLE_TOKENS.trigger}
+        aria-expanded={isOpen}
+      >
+        <ChevronRight
+          className={cn(
+            VERSION_HISTORY_COLLAPSIBLE_TOKENS.icon,
+            isOpen && VERSION_HISTORY_COLLAPSIBLE_TOKENS.iconOpen
+          )}
+        />
+        <History className="h-4 w-4" />
+        {t('planDetail.versionHistory.title')}
+      </Button>
+      {isOpen && (
+        <div className={VERSION_HISTORY_COLLAPSIBLE_TOKENS.content}>
+          <VersionHistory planUuid={planUuid} currentVersion={currentVersion} />
+        </div>
+      )}
+    </div>
+  );
+}

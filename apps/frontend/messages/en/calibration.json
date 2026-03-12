@@ -96,9 +96,20 @@
       "approvedAt": "Approved"
     },
     "items": {
-      "title": "Calibration Plan Items",
+      "title": "Calibration Equipment List",
       "description": "{count} equipment included",
+      "descriptionApproved": "Confirm each item after approval",
       "empty": "No equipment in this plan",
+      "progress": {
+        "label": "Confirmation Progress",
+        "count": "{confirmed} / {total}",
+        "countWithPercent": "{confirmed} / {total} ({percent}%)"
+      },
+      "columnGroup": {
+        "base": "Basic Info",
+        "snapshot": "Current Status (Snapshot)",
+        "plan": "Plan"
+      },
       "headers": {
         "sequence": "No.",
         "managementNumber": "Mgmt No.",
@@ -176,6 +187,7 @@
     "yearWithUnit": "{year}",
     "versionHistory": {
       "title": "Version History",
+      "triggerLabel": "Version History ({count})",
       "ariaLabel": "Calibration plan version list",
       "versionLabel": "Version {version}",
       "latestBadge": "Latest",
