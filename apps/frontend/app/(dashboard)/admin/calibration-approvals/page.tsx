@@ -6,8 +6,23 @@
  * - Client bundle 분리를 통해 컴파일 성능 개선
  */
 
+import { redirect } from 'next/navigation';
+import { getServerAuthSession } from '@/lib/auth/server-session';
+import { hasPermission, Permission } from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 import CalibrationApprovalsContent from './CalibrationApprovalsContent';
 
-export default function CalibrationApprovalsPage() {
+export default async function CalibrationApprovalsPage() {
+  const session = await getServerAuthSession();
+
+  if (!session?.user) {
+    redirect('/login');
+  }
+
+  const userRole = session.user.role as UserRole;
+  if (!hasPermission(userRole, Permission.APPROVE_CALIBRATION)) {
+    redirect('/dashboard');
+  }
+
   return <CalibrationApprovalsContent />;
 }
