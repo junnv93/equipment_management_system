@@ -28,9 +28,9 @@ import {
  * @param response 백엔드 응답
  * @returns 프론트엔드 형식의 페이지네이션 응답
  */
-export function transformPaginatedResponse<T>(
-  response: AxiosResponse<PaginatedListResponse<T> & { summary?: unknown }>
-): FrontendPaginatedResponse<T> {
+export function transformPaginatedResponse<T, TSummary = Record<string, number>>(
+  response: AxiosResponse<PaginatedListResponse<T> & { summary?: TSummary }>
+): FrontendPaginatedResponse<T, TSummary> {
   // ResponseTransformInterceptor 래핑 해제: { success, data, message, timestamp }
   // 백엔드 인터셉터가 실제 데이터를 data 필드로 래핑함
   const rawData = response.data as unknown;
@@ -46,8 +46,8 @@ export function transformPaginatedResponse<T>(
     'items' in backendData &&
     'meta' in backendData
   ) {
-    const paginated = backendData as PaginatedListResponse<T> & { summary?: unknown };
-    const result: FrontendPaginatedResponse<T> = {
+    const paginated = backendData as PaginatedListResponse<T> & { summary?: TSummary };
+    const result: FrontendPaginatedResponse<T, TSummary> = {
       data: paginated.items || [],
       meta: {
         pagination: {
@@ -59,9 +59,9 @@ export function transformPaginatedResponse<T>(
       },
     };
 
-    // ✅ 성능 최적화: summary 필드가 있으면 보존
+    // summary 필드가 있으면 보존 (도메인별 TSummary 타입으로 전달)
     if (paginated.summary) {
-      result.meta.summary = paginated.summary as (typeof result)['meta']['summary'];
+      result.meta.summary = paginated.summary;
     }
 
     return result;
@@ -74,7 +74,7 @@ export function transformPaginatedResponse<T>(
     'data' in backendData &&
     'meta' in backendData
   ) {
-    return backendData as FrontendPaginatedResponse<T>;
+    return backendData as FrontendPaginatedResponse<T, TSummary>;
   }
 
   // 기본값 반환 (에러 방지)

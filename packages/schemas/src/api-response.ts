@@ -50,8 +50,21 @@ export type SingleResourceResponse<T> = T;
 /**
  * 프론트엔드에서 사용하는 페이지네이션 응답 타입
  * 백엔드 응답을 프론트엔드에서 사용하기 편한 형태로 변환
+ *
+ * @template T - 목록 아이템 타입
+ * @template TSummary - 도메인별 요약 타입 (기본: Record<string, number>)
+ *
+ * @example
+ * // 체크아웃: 전용 summary 타입
+ * FrontendPaginatedResponse<Checkout, CheckoutSummary>
+ *
+ * // 감사 로그: 액션별 건수
+ * FrontendPaginatedResponse<AuditLog, Record<string, number>>
+ *
+ * // summary 불필요: 기본값 사용
+ * FrontendPaginatedResponse<Equipment>
  */
-export interface FrontendPaginatedResponse<T> {
+export interface FrontendPaginatedResponse<T, TSummary = Record<string, number>> {
   data: T[];
   meta: {
     pagination: {
@@ -60,14 +73,7 @@ export interface FrontendPaginatedResponse<T> {
       currentPage: number;
       totalPages: number;
     };
-    /** 선택적 요약 정보 (특정 리소스에서 제공) */
-    summary?: {
-      total: number;
-      pending: number;
-      approved: number;
-      overdue: number;
-      returnedToday: number;
-      [key: string]: number; // 확장 가능
-    };
+    /** 선택적 요약 정보 (도메인별 타입) */
+    summary?: TSummary;
   };
 }

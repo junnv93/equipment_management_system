@@ -55,7 +55,7 @@ async function CheckoutsContentAsync({
   try {
     // pageSize=1: 목록 데이터 불필요, summary만 취득
     const listResponse = await apiClient.get('/api/checkouts?pageSize=1&includeSummary=true');
-    const transformed = transformPaginatedResponse<unknown>(listResponse);
+    const transformed = transformPaginatedResponse<unknown, CheckoutSummary>(listResponse);
     initialSummary = transformed.meta.summary ?? {
       total: 0,
       pending: 0,

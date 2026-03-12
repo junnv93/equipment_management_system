@@ -11,4 +11,7 @@ import type { FrontendPaginatedResponse } from '@equipment-management/schemas';
  * 페이지네이션된 응답 타입
  * 프론트엔드에서 사용하는 표준 형식
  */
-export type PaginatedResponse<T> = FrontendPaginatedResponse<T>;
+export type PaginatedResponse<T, TSummary = Record<string, number>> = FrontendPaginatedResponse<
+  T,
+  TSummary
+>;

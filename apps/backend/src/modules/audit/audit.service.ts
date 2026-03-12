@@ -161,12 +161,9 @@ export class AuditService {
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-        // 총 개수 + 액션별 건수를 단일 쿼리로 조회 (동일 WHERE 재사용)
-        const [countResult, actionCountsResult, items] = await Promise.all([
-          this.db
-            .select({ count: sql<number>`count(*)` })
-            .from(auditLogs)
-            .where(whereClause),
+        // GROUP BY action + 페이지네이션 아이템을 병렬 실행
+        // COUNT(*) 별도 쿼리 제거 — GROUP BY 합산으로 totalItems 파생
+        const [actionCountsResult, items] = await Promise.all([
           this.db
             .select({
               action: auditLogs.action,
@@ -184,13 +181,13 @@ export class AuditService {
             .offset((pagination.page - 1) * pagination.limit),
         ]);
 
-        const totalItems = Number(countResult[0]?.count || 0);
-        const totalPages = Math.ceil(totalItems / pagination.limit);
-
-        // GROUP BY 결과를 { action: count } 맵으로 변환
+        // GROUP BY 결과에서 totalItems + summary 동시 파생 (단일 스캔)
         const summary: AuditActionCounts = {};
+        let totalItems = 0;
         for (const row of actionCountsResult) {
-          summary[row.action] = Number(row.count);
+          const count = Number(row.count);
+          summary[row.action] = count;
+          totalItems += count;
         }
 
         return {
