@@ -1,22 +1,17 @@
 /**
- * Comprehensive E2E Test Seed Data - Phase 1 & 2 (WORKING)
+ * Comprehensive E2E Test Seed Data - Phase 1~4 (COMPLETE)
  * ======================================================
- *
- * Seed script for database tables covering Phase 1 & most of Phase 2
  *
  * Usage:
  *   DATABASE_URL=... pnpm --filter backend exec npx ts-node src/database/seed-test-new.ts
  *
- * Phase 1 Coverage (Complete):
- * - Teams (6), Users (8), Equipment (32)
- * - Calibrations (18), Non-Conformances (10)
+ * Phase 1: Teams (6), Users (8), Equipment (32), Calibrations (18), NC (10)
+ * Phase 2: Repair History (8), Calibration Factors (12), Checkouts (68), Cal Plans (6+12)
+ * Phase 3: Disposal Equipment (21), Disposal Requests (15)
+ * Phase 4: Software History (8), Location History (10), Maintenance History (10),
+ *          Incident History (10), Equipment Requests (6), Attachments (6), Audit Logs (20)
  *
- * Phase 2 Coverage (Implemented):
- * - Repair History (8), Calibration Factors (12)
- *
- * Phase 3: Stubbed for future implementation
- *
- * Total Records: ~150+
+ * Total Records: ~300+
  */
 
 import { drizzle } from 'drizzle-orm/node-postgres';
@@ -52,6 +47,15 @@ import {
 // Phase 3 seed data modules (Disposal E2E tests)
 import { DISPOSAL_EQUIPMENT_SEED_DATA } from './seed-data/disposal/disposal-equipment.seed';
 import { DISPOSAL_REQUESTS_SEED_DATA } from './seed-data/disposal/disposal-requests.seed';
+
+// Phase 4 seed data modules (History & Admin)
+import { LOCATION_HISTORY_SEED_DATA } from './seed-data/history/location-history.seed';
+import { MAINTENANCE_HISTORY_SEED_DATA } from './seed-data/history/maintenance-history.seed';
+import { INCIDENT_HISTORY_SEED_DATA } from './seed-data/history/incident-history.seed';
+import { SOFTWARE_HISTORY_SEED_DATA } from './seed-data/history/software-history.seed';
+import { EQUIPMENT_REQUESTS_SEED_DATA } from './seed-data/admin/equipment-requests.seed';
+import { EQUIPMENT_ATTACHMENTS_SEED_DATA } from './seed-data/admin/equipment-attachments.seed';
+import { AUDIT_LOGS_SEED_DATA } from './seed-data/admin/audit-logs.seed';
 
 // Utilities
 import { verifySeed, printVerificationResults } from './utils/verification';
@@ -189,7 +193,9 @@ async function main(): Promise<void> {
     console.log('  → Calibration Factors (12)');
     await db.insert(schema.calibrationFactors).values(CALIBRATION_FACTORS_SEED_DATA);
 
-    // TODO: Implement software history (8)
+    // Software History (8)
+    console.log('  → Software History (8)');
+    await db.insert(schema.softwareHistory).values(SOFTWARE_HISTORY_SEED_DATA);
 
     // =========================================================================
     // PHASE 3: DISPOSAL WORKFLOW E2E TEST DATA
@@ -205,15 +211,33 @@ async function main(): Promise<void> {
     await db.insert(schema.disposalRequests).values(DISPOSAL_REQUESTS_SEED_DATA);
 
     // =========================================================================
-    // PHASE 4: HISTORY & ADMIN (STUBBED)
+    // PHASE 4: HISTORY & ADMIN
     // =========================================================================
-    // console.log('\n📋 Phase 4: Inserting history & administrative data...');
-    // TODO: Implement location history (20)
-    // TODO: Implement maintenance history (15)
-    // TODO: Implement incident history (15)
-    // TODO: Implement equipment requests (6)
-    // TODO: Implement equipment attachments (8)
-    // TODO: Implement audit logs (30)
+    console.log('\n📋 Phase 4: Inserting history & administrative data...');
+
+    // Location History (10)
+    console.log('  → Equipment Location History (10)');
+    await db.insert(schema.equipmentLocationHistory).values(LOCATION_HISTORY_SEED_DATA);
+
+    // Maintenance History (10)
+    console.log('  → Equipment Maintenance History (10)');
+    await db.insert(schema.equipmentMaintenanceHistory).values(MAINTENANCE_HISTORY_SEED_DATA);
+
+    // Incident History (10)
+    console.log('  → Equipment Incident History (10)');
+    await db.insert(schema.equipmentIncidentHistory).values(INCIDENT_HISTORY_SEED_DATA);
+
+    // Equipment Requests (6)
+    console.log('  → Equipment Requests (6)');
+    await db.insert(schema.equipmentRequests).values(EQUIPMENT_REQUESTS_SEED_DATA);
+
+    // Equipment Attachments (6)
+    console.log('  → Equipment Attachments (6)');
+    await db.insert(schema.equipmentAttachments).values(EQUIPMENT_ATTACHMENTS_SEED_DATA);
+
+    // Audit Logs (20)
+    console.log('  → Audit Logs (20)');
+    await db.insert(schema.auditLogs).values(AUDIT_LOGS_SEED_DATA);
 
     // =========================================================================
     // VERIFICATION

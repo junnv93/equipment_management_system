@@ -196,6 +196,79 @@ export async function verifySeed(pool: Pool): Promise<VerificationResult> {
     });
 
     // =========================================================================
+    // Phase 4: History & Admin
+    // =========================================================================
+
+    const softHistResult = await pool.query('SELECT COUNT(*) as count FROM software_history');
+    const softHistCount = parseInt(softHistResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Software History count',
+      passed: softHistCount >= 8,
+      actual: softHistCount,
+      expected: 8,
+    });
+
+    const locHistResult = await pool.query(
+      'SELECT COUNT(*) as count FROM equipment_location_history'
+    );
+    const locHistCount = parseInt(locHistResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Location History count',
+      passed: locHistCount >= 10,
+      actual: locHistCount,
+      expected: 10,
+    });
+
+    const maintHistResult = await pool.query(
+      'SELECT COUNT(*) as count FROM equipment_maintenance_history'
+    );
+    const maintHistCount = parseInt(maintHistResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Maintenance History count',
+      passed: maintHistCount >= 10,
+      actual: maintHistCount,
+      expected: 10,
+    });
+
+    const incidentResult = await pool.query(
+      'SELECT COUNT(*) as count FROM equipment_incident_history'
+    );
+    const incidentCount = parseInt(incidentResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Incident History count',
+      passed: incidentCount >= 10,
+      actual: incidentCount,
+      expected: 10,
+    });
+
+    const equipReqResult = await pool.query('SELECT COUNT(*) as count FROM equipment_requests');
+    const equipReqCount = parseInt(equipReqResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Equipment Requests count',
+      passed: equipReqCount >= 6,
+      actual: equipReqCount,
+      expected: 6,
+    });
+
+    const attachResult = await pool.query('SELECT COUNT(*) as count FROM equipment_attachments');
+    const attachCount = parseInt(attachResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Equipment Attachments count',
+      passed: attachCount >= 6,
+      actual: attachCount,
+      expected: 6,
+    });
+
+    const auditResult = await pool.query('SELECT COUNT(*) as count FROM audit_logs');
+    const auditCount = parseInt(auditResult.rows[0]?.count ?? 0, 10);
+    checks.push({
+      name: 'Audit Logs count',
+      passed: auditCount >= 20,
+      actual: auditCount,
+      expected: 20,
+    });
+
+    // =========================================================================
     // SUMMARY
     // =========================================================================
 

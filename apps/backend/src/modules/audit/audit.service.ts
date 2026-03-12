@@ -196,7 +196,7 @@ export class AuditService {
             totalItems,
             itemCount: items.length,
             itemsPerPage: pagination.limit,
-            totalPages,
+            totalPages: Math.ceil(totalItems / pagination.limit),
             currentPage: pagination.page,
           },
           summary,
