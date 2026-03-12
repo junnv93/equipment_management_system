@@ -409,8 +409,8 @@ export const queryKeys = {
     counts: (role?: string) => ['approval-counts', role] as const,
     /** 역할 무관 prefix — 무효화 전용 (모든 role의 counts를 한번에 무효화) */
     countsAll: ['approval-counts'] as const,
-    /** 승인 KPI (오늘 처리 건수 등) */
-    kpi: () => [...queryKeys.approvals.all, 'kpi'] as const,
+    /** 승인 KPI — 서버 사이드 집계 (카테고리별 urgentCount/avgWaitDays 포함) */
+    kpi: (category?: string) => [...queryKeys.approvals.all, 'kpi', category] as const,
   },
   auditLogs: {
     all: ['audit-logs'] as const,

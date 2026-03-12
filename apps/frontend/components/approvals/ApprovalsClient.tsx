@@ -116,8 +116,8 @@ export function ApprovalsClient({
     staleTime: CACHE_TIMES.MEDIUM,
   });
 
-  // KPI 데이터 (기존 쿼리에서 파생 — 추가 API 호출 없음)
-  const kpi = useApprovalKpi(pendingCounts, sortedItems, availableTabs);
+  // KPI 데이터 — 서버 사이드 집계 (GET /api/approvals/kpi?category=X)
+  const kpi = useApprovalKpi(pendingCounts, activeTab, availableTabs);
 
   // ✅ 승인 처리 - Optimistic Update 패턴
   const approveMutation = useOptimisticMutation<
@@ -140,6 +140,7 @@ export function ApprovalsClient({
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
+      queryKeys.approvals.kpi(activeTab),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
     ],
     successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
@@ -213,6 +214,7 @@ export function ApprovalsClient({
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
+      queryKeys.approvals.kpi(activeTab),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
     ],
     successMessage: (_, { item }) => t('toasts.rejectDynamic', { summary: item.summary }),
@@ -260,6 +262,7 @@ export function ApprovalsClient({
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
+      queryKeys.approvals.kpi(activeTab),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
     ],
     successMessage: (result) => {
@@ -330,6 +333,7 @@ export function ApprovalsClient({
     optimisticUpdate: (old) => old || [],
     invalidateKeys: [
       queryKeys.approvals.counts(userRole),
+      queryKeys.approvals.kpi(activeTab),
       ...CheckoutCacheInvalidation.APPROVAL_KEYS,
     ],
     successMessage: (result) => {

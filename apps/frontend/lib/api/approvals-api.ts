@@ -295,6 +295,10 @@ export interface PendingCountsByCategory {
 export interface ApprovalKpiResponse {
   /** 오늘 현재 사용자가 처리(승인+반려)한 건수 */
   todayProcessed: number;
+  /** 현재 카테고리에서 URGENT_THRESHOLD_DAYS 이상 경과한 건수 (서버 집계) */
+  urgentCount: number;
+  /** 현재 카테고리 평균 대기일 (서버 집계) */
+  avgWaitDays: number;
 }
 
 /**
@@ -658,14 +662,19 @@ class ApprovalsApi {
   }
 
   /**
-   * 승인 KPI 조회 (오늘 처리 건수)
+   * 승인 KPI 조회 — 서버 사이드 집계
+   *
+   * @param category - 카테고리 (urgentCount/avgWaitDays 집계 대상)
    */
-  async getKpi(): Promise<ApprovalKpiResponse> {
+  async getKpi(category?: string): Promise<ApprovalKpiResponse> {
     try {
-      const response = await apiClient.get<ApprovalKpiResponse>(API_ENDPOINTS.APPROVALS.KPI);
-      return response.data || { todayProcessed: 0 };
+      const params = category ? `?category=${encodeURIComponent(category)}` : '';
+      const response = await apiClient.get<ApprovalKpiResponse>(
+        `${API_ENDPOINTS.APPROVALS.KPI}${params}`
+      );
+      return response.data || { todayProcessed: 0, urgentCount: 0, avgWaitDays: 0 };
     } catch {
-      return { todayProcessed: 0 };
+      return { todayProcessed: 0, urgentCount: 0, avgWaitDays: 0 };
     }
   }
 

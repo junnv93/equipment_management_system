@@ -30,7 +30,10 @@ import {
   ApprovalStatusEnum,
   type UserRole,
 } from '@equipment-management/schemas';
-import { isLabManager as checkIsLabManager } from '@equipment-management/shared-constants';
+import {
+  isLabManager as checkIsLabManager,
+  APPROVAL_KPI,
+} from '@equipment-management/shared-constants';
 
 /**
  * 역할별 승인 카테고리 매핑
@@ -69,6 +72,10 @@ const ROLE_CATEGORIES: Record<UserRole, ReadonlySet<string>> = {
 export interface ApprovalKpiResponse {
   /** 오늘 현재 사용자가 처리(승인+반려)한 건수 */
   todayProcessed: number;
+  /** 현재 카테고리에서 URGENT_THRESHOLD_DAYS 이상 경과한 건수 */
+  urgentCount: number;
+  /** 현재 카테고리 평균 대기일 (정수) */
+  avgWaitDays: number;
 }
 
 export interface PendingCountsByCategory {
@@ -253,15 +260,27 @@ export class ApprovalsService {
   }
 
   /**
-   * 승인 KPI 조회 (오늘 처리 건수)
+   * 승인 KPI 조회 — 서버 사이드 집계
    *
-   * audit_logs에서 오늘 해당 사용자가 approve/reject 한 건수를 집계
+   * 4개 KPI 메트릭을 서버에서 집계하여 반환:
+   * - todayProcessed: audit_logs에서 오늘 처리 건수
+   * - urgentCount: 지정 카테고리에서 URGENT_THRESHOLD_DAYS 이상 경과한 건수
+   * - avgWaitDays: 지정 카테고리 평균 대기일
+   *
+   * @param userId - JWT에서 추출된 사용자 ID
+   * @param userRole - 사용자 역할
+   * @param category - 카테고리 (없으면 urgentCount/avgWaitDays = 0)
    */
-  async getKpi(userId: string): Promise<ApprovalKpiResponse> {
+  async getKpi(
+    userId: string,
+    userRole: UserRole,
+    category?: string
+  ): Promise<ApprovalKpiResponse> {
+    // 1. todayProcessed: 오늘 처리 건수 (audit_logs 기반)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const result = await this.db
+    const todayProcessedPromise = this.db
       .select({ value: count() })
       .from(schema.auditLogs)
       .where(
@@ -272,9 +291,576 @@ export class ApprovalsService {
         )
       );
 
+    // 2. 카테고리별 urgentCount + avgWaitDays (SQL 집계)
+    // user 조회를 getKpi에서 1회만 수행 (getCategoryKpi 내부 중복 제거)
+    const categoryKpiPromise = category
+      ? this.getCategoryKpiWithUser(userId, userRole, category)
+      : Promise.resolve({ urgentCount: 0, avgWaitDays: 0 });
+
+    const [todayResult, categoryKpi] = await Promise.all([
+      todayProcessedPromise,
+      categoryKpiPromise,
+    ]);
+
     return {
-      todayProcessed: result[0]?.value ?? 0,
+      todayProcessed: todayResult[0]?.value ?? 0,
+      urgentCount: categoryKpi.urgentCount,
+      avgWaitDays: categoryKpi.avgWaitDays,
     };
+  }
+
+  /**
+   * 카테고리별 KPI 집계 — user 조회 포함 래퍼
+   *
+   * getKpi()에서 호출. user 조회 + 카테고리 라우팅을 담당.
+   */
+  private async getCategoryKpiWithUser(
+    userId: string,
+    userRole: UserRole,
+    category: string
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+      columns: { teamId: true, site: true },
+    });
+
+    return this.getCategoryKpi(user?.teamId ?? null, user?.site ?? null, userRole, category);
+  }
+
+  /**
+   * 카테고리별 KPI 집계 — SQL COUNT FILTER + AVG
+   *
+   * 각 카테고리의 소스 테이블에서 단일 SQL 쿼리로 집계.
+   * SSOT: 긴급 임계값은 APPROVAL_KPI.URGENT_THRESHOLD_DAYS 사용.
+   *
+   * user 정보를 파라미터로 받아 중복 DB 조회를 방지.
+   */
+  private async getCategoryKpi(
+    userTeamId: string | null,
+    userSite: string | null,
+    userRole: UserRole,
+    category: string
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const isLabManager = checkIsLabManager(userRole);
+    const thresholdDays = APPROVAL_KPI.URGENT_THRESHOLD_DAYS;
+
+    try {
+      switch (category) {
+        case 'outgoing':
+          return this.getOutgoingKpi(userTeamId, isLabManager, thresholdDays);
+        case 'incoming':
+          return this.getIncomingKpi(userTeamId, userSite, isLabManager, thresholdDays);
+        case 'equipment':
+          return this.getEquipmentRequestKpi(userSite, thresholdDays);
+        case 'calibration':
+          return this.getCalibrationKpi(userSite, thresholdDays);
+        case 'inspection':
+          return this.getInspectionKpi(thresholdDays);
+        case 'nonconformity':
+          return this.getNonConformanceKpi(userTeamId, isLabManager, thresholdDays);
+        case 'disposal_review':
+          return this.getDisposalReviewKpi(userTeamId, isLabManager, thresholdDays);
+        case 'disposal_final':
+          return this.getDisposalFinalKpi(userSite, thresholdDays);
+        case 'plan_review':
+          return this.getCalibrationPlanKpi(
+            CalibrationPlanStatusValues.PENDING_REVIEW,
+            thresholdDays
+          );
+        case 'plan_final':
+          return this.getCalibrationPlanKpi(
+            CalibrationPlanStatusValues.PENDING_APPROVAL,
+            thresholdDays
+          );
+        case 'software':
+          return this.getSoftwareKpi(thresholdDays);
+        default:
+          return { urgentCount: 0, avgWaitDays: 0 };
+      }
+    } catch {
+      return { urgentCount: 0, avgWaitDays: 0 };
+    }
+  }
+
+  /**
+   * 반출 (outgoing) KPI — 일반 반출 + 벤더 반환 합산
+   *
+   * SSOT: getApprovalCountsByScope()의 outgoing 로직과 동일한 분리 패턴
+   * - 일반 반출: status=PENDING, purpose ≠ RETURN_TO_VENDOR
+   * - 벤더 반환: status=PENDING, purpose = RETURN_TO_VENDOR
+   */
+  private async getOutgoingKpi(
+    userTeamId: string | null,
+    isLabManager: boolean,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+
+    // 일반 반출 (purpose ≠ RETURN_TO_VENDOR)
+    const regularQuery = this.getCheckoutKpiQuery(
+      CheckoutStatusValues.PENDING,
+      userTeamId,
+      isLabManager,
+      thresholdDate,
+      { excludePurpose: CheckoutPurposeValues.RETURN_TO_VENDOR }
+    );
+
+    // 벤더 반환 (purpose = RETURN_TO_VENDOR)
+    const vendorQuery = this.getCheckoutKpiQuery(
+      CheckoutStatusValues.PENDING,
+      userTeamId,
+      isLabManager,
+      thresholdDate,
+      { purpose: CheckoutPurposeValues.RETURN_TO_VENDOR }
+    );
+
+    const [regular, vendor] = await Promise.all([regularQuery, vendorQuery]);
+    const r = regular[0];
+    const v = vendor[0];
+
+    const totalUrgent = (r?.urgent ?? 0) + (v?.urgent ?? 0);
+    const totalCount = (r?.total ?? 0) + (v?.total ?? 0);
+    const totalSumDays = (r?.sumDays ?? 0) + (v?.sumDays ?? 0);
+
+    return {
+      urgentCount: totalUrgent,
+      avgWaitDays: totalCount > 0 ? Math.round(totalSumDays / totalCount) : 0,
+    };
+  }
+
+  /**
+   * 반출 KPI 쿼리 빌더 — COUNT + urgent + sumDays
+   */
+  private getCheckoutKpiQuery(
+    status: string,
+    userTeamId: string | null,
+    isLabManager: boolean,
+    thresholdDate: Date,
+    filter?: { purpose?: string; excludePurpose?: string }
+  ): Promise<{ total: number; urgent: number; sumDays: number }[]> {
+    const conditions: SQL[] = [eq(schema.checkouts.status, status)];
+    if (filter?.purpose) conditions.push(eq(schema.checkouts.purpose, filter.purpose));
+    if (filter?.excludePurpose)
+      conditions.push(ne(schema.checkouts.purpose, filter.excludePurpose));
+
+    if (!isLabManager && userTeamId) {
+      return this.db
+        .select({
+          total: count(),
+          urgent:
+            sql<number>`count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate})`.as(
+              'urgent'
+            ),
+          sumDays:
+            sql<number>`coalesce(sum(extract(epoch from (now() - ${schema.checkouts.createdAt})) / 86400)::int, 0)`.as(
+              'sum_days'
+            ),
+        })
+        .from(schema.checkouts)
+        .innerJoin(schema.users, eq(schema.checkouts.requesterId, schema.users.id))
+        .where(and(...conditions, eq(schema.users.teamId, userTeamId)));
+    }
+    return this.db
+      .select({
+        total: count(),
+        urgent:
+          sql<number>`count(*) filter (where ${schema.checkouts.createdAt} <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        sumDays:
+          sql<number>`coalesce(sum(extract(epoch from (now() - ${schema.checkouts.createdAt})) / 86400)::int, 0)`.as(
+            'sum_days'
+          ),
+      })
+      .from(schema.checkouts)
+      .where(and(...conditions));
+  }
+
+  /**
+   * 반입 카테고리 KPI — 복합 소스 (반입 + 렌탈임포트 + 공유임포트)
+   *
+   * 3개 소스를 각각 쿼리 후 가중 평균 계산
+   */
+  private async getIncomingKpi(
+    userTeamId: string | null,
+    userSite: string | null,
+    isLabManager: boolean,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+
+    // 반입 반환 건 — createdAt 기준 (요청 시점부터 전체 대기 기간)
+    const returnQuery = this.getCheckoutKpiQuery(
+      CheckoutStatusValues.RETURNED,
+      userTeamId,
+      isLabManager,
+      thresholdDate
+    );
+
+    // 렌탈 임포트
+    const rentalQuery = this.getImportKpiQuery(
+      EquipmentImportSourceEnum.enum.rental,
+      userSite,
+      thresholdDate
+    );
+
+    // 공유 임포트
+    const sharedQuery = this.getImportKpiQuery(
+      EquipmentImportSourceEnum.enum.internal_shared,
+      userSite,
+      thresholdDate
+    );
+
+    const [returnResult, rentalResult, sharedResult] = await Promise.all([
+      returnQuery,
+      rentalQuery,
+      sharedQuery,
+    ]);
+
+    const r = returnResult[0];
+    const rn = rentalResult[0];
+    const sh = sharedResult[0];
+
+    const totalUrgent = (r?.urgent ?? 0) + (rn?.urgent ?? 0) + (sh?.urgent ?? 0);
+    const totalCount = (r?.total ?? 0) + (rn?.total ?? 0) + (sh?.total ?? 0);
+    const totalSumDays = (r?.sumDays ?? 0) + (rn?.sumDays ?? 0) + (sh?.sumDays ?? 0);
+
+    return {
+      urgentCount: totalUrgent,
+      avgWaitDays: totalCount > 0 ? Math.round(totalSumDays / totalCount) : 0,
+    };
+  }
+
+  private getImportKpiQuery(
+    sourceType: string,
+    userSite: string | null,
+    thresholdDate: Date
+  ): Promise<{ total: number; urgent: number; sumDays: number }[]> {
+    const conditions: SQL[] = [
+      eq(schema.equipmentImports.status, EquipmentImportStatusValues.PENDING),
+      eq(schema.equipmentImports.sourceType, sourceType),
+    ];
+    if (userSite) conditions.push(eq(schema.equipmentImports.site, userSite));
+
+    return this.db
+      .select({
+        total: count(),
+        urgent:
+          sql<number>`count(*) filter (where ${schema.equipmentImports.createdAt} <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        sumDays:
+          sql<number>`coalesce(sum(extract(epoch from (now() - ${schema.equipmentImports.createdAt})) / 86400)::int, 0)`.as(
+            'sum_days'
+          ),
+      })
+      .from(schema.equipmentImports)
+      .where(and(...conditions));
+  }
+
+  /**
+   * 장비 등록 승인 KPI
+   */
+  private async getEquipmentRequestKpi(
+    userSite: string | null,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+    const conditions: SQL[] = [
+      eq(schema.equipmentRequests.approvalStatus, ApprovalStatusEnum.enum.pending_approval),
+    ];
+
+    const query = (() => {
+      if (userSite) {
+        return this.db
+          .select({
+            urgent:
+              sql<number>`count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate})`.as(
+                'urgent'
+              ),
+            avgDays:
+              sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.equipmentRequests.createdAt})) / 86400))::int, 0)`.as(
+                'avg_days'
+              ),
+          })
+          .from(schema.equipmentRequests)
+          .innerJoin(schema.users, eq(schema.equipmentRequests.requestedBy, schema.users.id))
+          .where(and(...conditions, eq(schema.users.site, userSite)));
+      }
+      return this.db
+        .select({
+          urgent:
+            sql<number>`count(*) filter (where ${schema.equipmentRequests.createdAt} <= ${thresholdDate})`.as(
+              'urgent'
+            ),
+          avgDays:
+            sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.equipmentRequests.createdAt})) / 86400))::int, 0)`.as(
+              'avg_days'
+            ),
+        })
+        .from(schema.equipmentRequests)
+        .where(and(...conditions));
+    })();
+
+    const [result] = await query;
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 교정 기록 승인 KPI
+   */
+  private async getCalibrationKpi(
+    userSite: string | null,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+    const conditions: SQL[] = [
+      eq(schema.calibrations.approvalStatus, CalibrationApprovalStatusEnum.enum.pending_approval),
+    ];
+
+    const query = (() => {
+      if (userSite) {
+        return this.db
+          .select({
+            urgent:
+              sql<number>`count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate})`.as(
+                'urgent'
+              ),
+            avgDays:
+              sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.createdAt})) / 86400))::int, 0)`.as(
+                'avg_days'
+              ),
+          })
+          .from(schema.calibrations)
+          .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+          .where(and(...conditions, eq(schema.equipment.site, userSite)));
+      }
+      return this.db
+        .select({
+          urgent:
+            sql<number>`count(*) filter (where ${schema.calibrations.createdAt} <= ${thresholdDate})`.as(
+              'urgent'
+            ),
+          avgDays:
+            sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.createdAt})) / 86400))::int, 0)`.as(
+              'avg_days'
+            ),
+        })
+        .from(schema.calibrations)
+        .where(and(...conditions));
+    })();
+
+    const [result] = await query;
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 중간점검 KPI
+   */
+  private async getInspectionKpi(
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const today = new Date().toISOString().split('T')[0];
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+
+    const [result] = await this.db
+      .select({
+        urgent:
+          sql<number>`count(*) filter (where ${schema.calibrations.intermediateCheckDate}::timestamp <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        avgDays:
+          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrations.intermediateCheckDate}::timestamp)) / 86400))::int, 0)`.as(
+            'avg_days'
+          ),
+      })
+      .from(schema.calibrations)
+      .where(
+        and(
+          isNotNull(schema.calibrations.intermediateCheckDate),
+          lt(schema.calibrations.intermediateCheckDate, today)
+        )
+      );
+
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 부적합 종료 승인 KPI
+   */
+  private async getNonConformanceKpi(
+    userTeamId: string | null,
+    isLabManager: boolean,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+    const conditions: SQL[] = [
+      eq(schema.nonConformances.status, NonConformanceStatusValues.CORRECTED),
+      isNull(schema.nonConformances.deletedAt),
+      or(
+        notInArray(schema.nonConformances.ncType, [
+          NonConformanceTypeValues.DAMAGE,
+          NonConformanceTypeValues.MALFUNCTION,
+        ]),
+        isNotNull(schema.nonConformances.repairHistoryId)
+      )!,
+    ];
+
+    if (!isLabManager && userTeamId) {
+      conditions.push(eq(schema.equipment.teamId, userTeamId));
+    }
+
+    const [result] = await this.db
+      .select({
+        urgent:
+          sql<number>`count(*) filter (where ${schema.nonConformances.createdAt} <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        avgDays:
+          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.nonConformances.createdAt})) / 86400))::int, 0)`.as(
+            'avg_days'
+          ),
+      })
+      .from(schema.nonConformances)
+      .innerJoin(schema.equipment, eq(schema.nonConformances.equipmentId, schema.equipment.id))
+      .where(and(...conditions));
+
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 폐기 검토 KPI
+   */
+  private async getDisposalReviewKpi(
+    userTeamId: string | null,
+    isLabManager: boolean,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+    const conditions: SQL[] = [
+      eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.PENDING),
+    ];
+
+    if (!isLabManager && userTeamId) {
+      conditions.push(eq(schema.equipment.teamId, userTeamId));
+    }
+
+    const [result] = await this.db
+      .select({
+        urgent:
+          sql<number>`count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        avgDays:
+          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.disposalRequests.createdAt})) / 86400))::int, 0)`.as(
+            'avg_days'
+          ),
+      })
+      .from(schema.disposalRequests)
+      .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
+      .where(and(...conditions));
+
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 폐기 최종 승인 KPI
+   */
+  private async getDisposalFinalKpi(
+    userSite: string | null,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+    const conditions: SQL[] = [
+      eq(schema.disposalRequests.reviewStatus, DisposalReviewStatusValues.REVIEWED),
+    ];
+
+    if (userSite) {
+      conditions.push(eq(schema.equipment.site, userSite));
+    }
+
+    const [result] = await this.db
+      .select({
+        urgent:
+          sql<number>`count(*) filter (where ${schema.disposalRequests.createdAt} <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        avgDays:
+          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.disposalRequests.createdAt})) / 86400))::int, 0)`.as(
+            'avg_days'
+          ),
+      })
+      .from(schema.disposalRequests)
+      .innerJoin(schema.equipment, eq(schema.disposalRequests.equipmentId, schema.equipment.id))
+      .where(and(...conditions));
+
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 교정계획서 KPI (검토/최종 공용)
+   */
+  private async getCalibrationPlanKpi(
+    status: string,
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+
+    const [result] = await this.db
+      .select({
+        urgent:
+          sql<number>`count(*) filter (where ${schema.calibrationPlans.createdAt} <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        avgDays:
+          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.calibrationPlans.createdAt})) / 86400))::int, 0)`.as(
+            'avg_days'
+          ),
+      })
+      .from(schema.calibrationPlans)
+      .where(
+        and(
+          eq(schema.calibrationPlans.status, status),
+          eq(schema.calibrationPlans.isLatestVersion, true)
+        )
+      );
+
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 소프트웨어 검증 KPI
+   */
+  private async getSoftwareKpi(
+    thresholdDays: number
+  ): Promise<{ urgentCount: number; avgWaitDays: number }> {
+    const thresholdDate = this.getThresholdDate(thresholdDays);
+
+    const [result] = await this.db
+      .select({
+        urgent:
+          sql<number>`count(*) filter (where ${schema.softwareHistory.createdAt} <= ${thresholdDate})`.as(
+            'urgent'
+          ),
+        avgDays:
+          sql<number>`coalesce(round(avg(extract(epoch from (now() - ${schema.softwareHistory.createdAt})) / 86400))::int, 0)`.as(
+            'avg_days'
+          ),
+      })
+      .from(schema.softwareHistory)
+      .where(eq(schema.softwareHistory.approvalStatus, SoftwareApprovalStatusValues.PENDING));
+
+    return { urgentCount: result?.urgent ?? 0, avgWaitDays: result?.avgDays ?? 0 };
+  }
+
+  /**
+   * 현재 시각에서 thresholdDays만큼 이전 날짜 계산
+   */
+  private getThresholdDate(thresholdDays: number): Date {
+    const date = new Date();
+    date.setDate(date.getDate() - thresholdDays);
+    date.setHours(0, 0, 0, 0);
+    return date;
   }
 
   /**

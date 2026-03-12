@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Query, Req, UnauthorizedException } from '@nestjs/common';
 import { AuthenticatedRequest } from '../../types/auth';
 import { UserRole } from '@equipment-management/schemas';
 import {
@@ -64,14 +64,23 @@ export class ApprovalsController {
   /**
    * 승인 KPI 조회
    *
-   * GET /api/approvals/kpi
+   * GET /api/approvals/kpi?category=outgoing
    *
-   * 오늘 현재 사용자가 처리한 승인/반려 건수 반환
+   * 서버 사이드 집계 KPI:
+   * - todayProcessed: 오늘 처리 건수
+   * - urgentCount: 카테고리별 긴급 건수 (URGENT_THRESHOLD_DAYS 이상 경과)
+   * - avgWaitDays: 카테고리별 평균 대기일
+   *
+   * @param category - 선택적 카테고리 (미지정 시 urgentCount/avgWaitDays = 0)
    */
   @Get('kpi')
   @SkipPermissions()
-  async getKpi(@Req() req: AuthenticatedRequest): Promise<ApprovalKpiResponse> {
+  async getKpi(
+    @Req() req: AuthenticatedRequest,
+    @Query('category') category?: string
+  ): Promise<ApprovalKpiResponse> {
     const userId = req.user?.userId;
+    const userRole = req.user?.roles?.[0] as UserRole;
 
     if (!userId) {
       throw new UnauthorizedException({
@@ -80,6 +89,6 @@ export class ApprovalsController {
       });
     }
 
-    return this.approvalsService.getKpi(userId);
+    return this.approvalsService.getKpi(userId, userRole, category);
   }
 }
