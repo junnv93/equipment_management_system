@@ -221,7 +221,9 @@ const checkoutApi = {
    * 반출 목록을 조회합니다.
    * ✅ 공통 유틸리티 사용: 중복 제거 및 일관성 보장
    */
-  async getCheckouts(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
+  async getCheckouts(
+    query: CheckoutQuery = {}
+  ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     const queryParams = new URLSearchParams();
 
     Object.entries(query).forEach(([key, value]) => {
@@ -233,7 +235,7 @@ const checkoutApi = {
     const url = `${API_ENDPOINTS.CHECKOUTS.LIST}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await apiClient.get(url);
     // ✅ 공통 유틸리티 사용: 백엔드 응답을 프론트엔드 형식으로 변환
-    return transformPaginatedResponse<Checkout>(response);
+    return transformPaginatedResponse<Checkout, CheckoutSummary>(response);
   },
 
   /**
@@ -391,7 +393,9 @@ const checkoutApi = {
    * 검사 완료된 반입 건 목록 조회 (기술책임자 승인 대기)
    * ✅ 공통 메서드 재사용: 중복 제거
    */
-  async getPendingReturnApprovals(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
+  async getPendingReturnApprovals(
+    query: CheckoutQuery = {}
+  ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     return this.getCheckouts({ ...query, statuses: 'returned' });
   },
 
@@ -417,7 +421,9 @@ const checkoutApi = {
    * ✅ 백엔드에 엔드포인트가 없으므로 findAll에 필터로 처리
    * ✅ 공통 메서드 재사용: 중복 제거
    */
-  async getOverdueCheckouts(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
+  async getOverdueCheckouts(
+    query: CheckoutQuery = {}
+  ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     return this.getCheckouts({ ...query, statuses: 'overdue' });
   },
 
@@ -426,7 +432,9 @@ const checkoutApi = {
    * ✅ 백엔드에 엔드포인트가 없으므로 findAll에 필터로 처리
    * ✅ 공통 메서드 재사용: 중복 제거
    */
-  async getTodayReturns(query: CheckoutQuery = {}): Promise<PaginatedResponse<Checkout>> {
+  async getTodayReturns(
+    query: CheckoutQuery = {}
+  ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     const today = new Date().toISOString().split('T')[0];
     return this.getCheckouts({ ...query, endDate: today });
   },

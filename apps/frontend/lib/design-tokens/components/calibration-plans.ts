@@ -6,6 +6,8 @@
  * - 필터링 시스템
  * - 항목 테이블
  * - 상태 타임라인
+ * - 목록 헤더 + KPI 스트립
+ * - 컴팩트 로우 레이아웃
  *
  * SSOT: 모든 교정계획서 관련 스타일은 이 파일에서만 정의
  */
@@ -23,6 +25,7 @@ import {
   MOTION_PRIMITIVES,
   TRANSITION_PRESETS,
 } from '../index';
+import { getSemanticLeftBorderClasses, getSemanticStatusClasses } from '../brand';
 
 /**
  * 교정계획서 상태별 스타일
@@ -79,6 +82,173 @@ export const CALIBRATION_PLAN_STATUS_TOKENS = {
 } as const;
 
 export type CalibrationPlanStatusType = keyof typeof CALIBRATION_PLAN_STATUS_TOKENS;
+
+/**
+ * 교정계획서 상태 배지 색상 (Badge className 직접 사용)
+ *
+ * SSOT: calibration-plans-api.ts의 CALIBRATION_PLAN_STATUS_COLORS를 토큰으로 이관
+ * - 기존 5곳에서 import하던 하드코딩 제거
+ * - brand CSS 변수 기반 → dark mode 자동 대응
+ */
+export const CALIBRATION_PLAN_STATUS_BADGE_COLORS: Record<string, string> = {
+  draft: 'bg-brand-neutral/10 text-brand-neutral',
+  pending_review: 'bg-brand-warning/10 text-brand-warning border border-brand-warning/20',
+  pending_approval: 'bg-brand-info/10 text-brand-info border border-brand-info/20',
+  approved: 'bg-brand-ok/10 text-brand-ok border border-brand-ok/20',
+  rejected: 'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
+};
+
+// ============================================================================
+// 목록 페이지 헤더 토큰
+// ============================================================================
+
+/**
+ * 교정계획서 목록 페이지 헤더
+ *
+ * 패턴: AUDIT_HEADER_TOKENS 참조 — 타이틀 + 액션 그룹
+ */
+export const CALIBRATION_PLAN_HEADER_TOKENS = {
+  /** 전체 컨테이너 */
+  container: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3',
+  /** 타이틀 그룹 (아이콘 + 텍스트) */
+  titleGroup: 'flex items-center gap-3',
+  /** 페이지 타이틀 */
+  title: 'text-2xl font-bold tracking-tight flex items-center gap-2',
+  /** 서브타이틀 */
+  subtitle: 'text-sm text-muted-foreground flex items-center gap-1.5',
+  /** 스코프 배지 (역할 기반 필터 안내) */
+  scopeBadge: 'text-xs text-brand-text-muted bg-muted/60 px-2 py-0.5 rounded-md',
+  /** 액션 그룹 (새 계획서 등) */
+  actionsGroup: 'flex items-center gap-2',
+} as const;
+
+// ============================================================================
+// KPI 스트립 토큰 (상태별 건수 요약)
+// ============================================================================
+
+/**
+ * 교정계획서 KPI 스트립 — APPROVAL_KPI_STRIP_TOKENS 패턴 참조
+ *
+ * 5가지 variant: total(neutral), draft(info), pendingReview(warning),
+ *                pendingApproval(info), approved(ok)
+ */
+export const CALIBRATION_PLAN_KPI_TOKENS = {
+  container: 'grid grid-cols-2 lg:grid-cols-5 gap-3',
+  card: {
+    base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4',
+    hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
+    focus: FOCUS_TOKENS.classes.default,
+    /** 클릭 가능 카드 (필터 적용) */
+    clickable: 'cursor-pointer',
+    /** 활성 상태 (현재 필터) */
+    active: 'ring-2 ring-primary/30',
+  },
+  value: 'text-xl font-semibold tabular-nums leading-tight',
+  label: 'text-xs text-muted-foreground',
+  borderColors: {
+    total: 'border-l-border',
+    draft: getSemanticLeftBorderClasses('info'),
+    pendingReview: getSemanticLeftBorderClasses('warning'),
+    pendingApproval: getSemanticLeftBorderClasses('info'),
+    approved: getSemanticLeftBorderClasses('ok'),
+  },
+  iconBg: {
+    total: getSemanticStatusClasses('neutral'),
+    draft: getSemanticStatusClasses('info'),
+    pendingReview: getSemanticStatusClasses('warning'),
+    pendingApproval: getSemanticStatusClasses('info'),
+    approved: getSemanticStatusClasses('ok'),
+  },
+  iconContainer: 'rounded-md p-2 flex-shrink-0',
+} as const;
+
+export type CalibrationPlanKpiVariant = keyof typeof CALIBRATION_PLAN_KPI_TOKENS.borderColors;
+
+// ============================================================================
+// 목록 컴팩트 로우 토큰
+// ============================================================================
+
+/**
+ * 교정계획서 목록 컴팩트 로우
+ *
+ * Desktop: 6-column grid [Year][Site][Team][Status][Author][CreatedAt]
+ * Mobile: stacked flex
+ */
+export const CALIBRATION_PLAN_LIST_GRID_COLS =
+  'lg:grid-cols-[100px_120px_1fr_140px_120px_100px_80px]' as const;
+
+export const CALIBRATION_PLAN_LIST_TOKENS = {
+  /** 로우 컨테이너 */
+  container: {
+    base: 'group relative border-b border-border last:border-b-0',
+    desktop: `lg:grid ${CALIBRATION_PLAN_LIST_GRID_COLS} lg:items-center lg:gap-3 lg:px-4 lg:py-3`,
+    mobile: 'flex flex-col gap-2 p-4 lg:p-0',
+    /** 헤더 행 */
+    header: `hidden lg:grid ${CALIBRATION_PLAN_LIST_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground`,
+  },
+  /** 호버 스타일 */
+  hover: ['hover:bg-muted/40', TRANSITION_PRESETS.instantBg].join(' '),
+  /** 연도 셀 (강조) */
+  yearCell: 'font-semibold tabular-nums',
+  /** 사이트 셀 */
+  siteCell: 'flex items-center gap-1.5 text-sm',
+  /** 팀 셀 (optional) */
+  teamCell: 'text-sm text-muted-foreground truncate',
+  /** 작성자 셀 */
+  authorCell: 'text-sm',
+  /** 날짜 셀 */
+  dateCell: 'text-sm text-muted-foreground tabular-nums',
+  /** 액션 영역 */
+  actions: {
+    container: 'flex items-center gap-1',
+    iconButton: 'h-8 w-8 p-0',
+  },
+  /** Empty state */
+  empty: {
+    container: 'py-16 text-center',
+    iconContainer: 'mx-auto mb-4 w-16 h-16 rounded-full bg-muted flex items-center justify-center',
+    icon: 'h-8 w-8 text-muted-foreground/50',
+    text: 'text-muted-foreground',
+  },
+} as const;
+
+// ============================================================================
+// 목록 인라인 필터 바 토큰
+// ============================================================================
+
+/**
+ * 교정계획서 필터 바 — 인라인 스타일 (Card 래핑 제거)
+ *
+ * 패턴: AUDIT_FILTER_TOKENS 참조
+ */
+export const CALIBRATION_PLAN_FILTER_TOKENS = {
+  /** 필터 바 컨테이너 */
+  bar: 'flex flex-wrap items-end gap-3 rounded-xl border border-brand-border-subtle bg-brand-bg-surface p-3',
+  /** 필드 라벨 */
+  fieldLabel: 'text-xs font-medium text-muted-foreground mb-1',
+  /** Select 공통 스타일 */
+  select: 'h-8 text-xs',
+} as const;
+
+// ============================================================================
+// 상세 페이지 헤더 토큰
+// ============================================================================
+
+/**
+ * 교정계획서 상세 페이지 헤더
+ */
+export const CALIBRATION_PLAN_DETAIL_HEADER_TOKENS = {
+  /** 전체 컨테이너 */
+  container: 'flex flex-col sm:flex-row sm:items-start justify-between gap-4',
+  /** 제목 영역 (뒤로가기 + 제목 + 배지) */
+  titleArea: 'flex items-center gap-4',
+  /** 제목 텍스트 */
+  title: 'text-2xl font-bold tracking-tight',
+  /** 메타 정보 (작성자/작성일) */
+  meta: 'text-sm text-muted-foreground',
+  /** 액션 버튼 그룹 */
+  actionsGroup: 'flex flex-wrap gap-2',
+} as const;
 
 /**
  * 3단계 승인 타임라인 토큰

@@ -22,13 +22,13 @@ import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import calibrationPlansApi, {
   CalibrationPlan,
   CALIBRATION_PLAN_STATUS_LABELS,
-  CALIBRATION_PLAN_STATUS_COLORS,
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, Building2, User, Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { CALIBRATION_PLAN_STATUS_BADGE_COLORS } from '@/lib/design-tokens';
 
 export default function CalibrationPlanApprovalsContent() {
   const router = useRouter();
@@ -175,7 +175,7 @@ export default function CalibrationPlanApprovalsContent() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">
                         <div className="flex items-center gap-4">
-                          <Badge className={CALIBRATION_PLAN_STATUS_COLORS[plan.status]}>
+                          <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
                             {CALIBRATION_PLAN_STATUS_LABELS[plan.status]}
                           </Badge>
                           <span className="text-lg font-semibold">

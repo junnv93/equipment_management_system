@@ -4,15 +4,16 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
-import calibrationPlansApi, {
-  CalibrationPlanVersion,
-  CALIBRATION_PLAN_STATUS_COLORS,
-} from '@/lib/api/calibration-plans-api';
+import calibrationPlansApi, { CalibrationPlanVersion } from '@/lib/api/calibration-plans-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { History, FileText, ExternalLink } from 'lucide-react';
-import { CALIBRATION_VERSION_HISTORY } from '@/lib/design-tokens';
+import {
+  CALIBRATION_VERSION_HISTORY,
+  CALIBRATION_PLAN_STATUS_BADGE_COLORS,
+  TRANSITION_PRESETS,
+} from '@/lib/design-tokens';
 
 interface VersionHistoryProps {
   /** 현재 교정계획서 UUID */
@@ -94,7 +95,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
           return (
             <div
               key={version.id}
-              className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+              className={`flex items-center justify-between p-3 border rounded-lg ${TRANSITION_PRESETS.fastColor} ${
                 isCurrent
                   ? CALIBRATION_VERSION_HISTORY.row.current
                   : CALIBRATION_VERSION_HISTORY.row.default
@@ -121,7 +122,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                         {t(`${vh}.currentBadge`)}
                       </Badge>
                     )}
-                    <Badge className={CALIBRATION_PLAN_STATUS_COLORS[version.status]}>
+                    <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[version.status]}>
                       {t(`planStatus.${version.status}` as Parameters<typeof t>[0])}
                     </Badge>
                   </div>

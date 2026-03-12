@@ -33,7 +33,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import calibrationPlansApi, {
   type CalibrationPlan,
   type CalibrationPlanItem,
-  CALIBRATION_PLAN_STATUS_COLORS,
 } from '@/lib/api/calibration-plans-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
@@ -67,6 +66,8 @@ import {
   getActionButtonClasses,
   getLoadingSpinnerClasses,
   CALIBRATION_PLAN_TIMELINE_TOKENS,
+  CALIBRATION_PLAN_STATUS_BADGE_COLORS,
+  CALIBRATION_PLAN_DETAIL_HEADER_TOKENS,
   ACTION_BUTTON_TOKENS,
   COLLAPSIBLE_TOKENS,
 } from '@/lib/design-tokens';
@@ -408,9 +409,9 @@ export function CalibrationPlanDetailClient({
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* 헤더 — Design Token 적용 */}
+      <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.container}>
+        <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.titleArea}>
           <Button variant="ghost" size="icon" asChild>
             <Link href="/calibration-plans">
               <ArrowLeft className="h-4 w-4" />
@@ -418,22 +419,22 @@ export function CalibrationPlanDetailClient({
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.title}>
                 {t('planDetail.yearWithUnit', { year: plan.year })}{' '}
                 {tEquip(`siteLabel.${plan.siteId}` as Parameters<typeof tEquip>[0])}{' '}
                 {t('planDetail.breadcrumbSuffix')}
               </h1>
-              <Badge className={CALIBRATION_PLAN_STATUS_COLORS[plan.status]}>
+              <Badge className={CALIBRATION_PLAN_STATUS_BADGE_COLORS[plan.status]}>
                 {t(`planStatus.${plan.status}` as Parameters<typeof t>[0])}
               </Badge>
             </div>
-            <p className="text-muted-foreground">
+            <p className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.meta}>
               {t('planDetail.header.author')}: {plan.createdBy} | {t('planDetail.header.createdAt')}
               : <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.actionsGroup}>
           {isApproved && (
             <Button
               variant="outline"
