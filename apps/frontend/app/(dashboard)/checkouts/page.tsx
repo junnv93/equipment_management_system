@@ -15,6 +15,7 @@
 
 import { Suspense } from 'react';
 import { createServerApiClient } from '@/lib/api/server-api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import CheckoutsContent from './CheckoutsContent';
 import { RouteLoading } from '@/components/layout/RouteLoading';
@@ -54,7 +55,9 @@ async function CheckoutsContentAsync({
 
   try {
     // pageSize=1: 목록 데이터 불필요, summary만 취득
-    const listResponse = await apiClient.get('/api/checkouts?pageSize=1&includeSummary=true');
+    const listResponse = await apiClient.get(
+      `${API_ENDPOINTS.CHECKOUTS.LIST}?pageSize=1&includeSummary=true`
+    );
     const transformed = transformPaginatedResponse<unknown, CheckoutSummary>(listResponse);
     initialSummary = transformed.meta.summary ?? {
       total: 0,

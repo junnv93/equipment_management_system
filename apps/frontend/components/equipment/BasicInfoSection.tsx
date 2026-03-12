@@ -11,7 +11,11 @@ import {
   type CalibrationRequired,
   type Classification,
 } from '@equipment-management/schemas';
-import { isTeamRestricted, type UserRole } from '@equipment-management/shared-constants';
+import {
+  isTeamRestricted,
+  API_ENDPOINTS,
+  type UserRole,
+} from '@equipment-management/shared-constants';
 import {
   FormControl,
   FormDescription,
@@ -173,7 +177,7 @@ export function BasicInfoSection({
   const { data: teams = [], isLoading: isLoadingTeams } = useQuery({
     queryKey: queryKeys.teams.lists(),
     queryFn: async () => {
-      const response = await apiClient.get('/api/teams');
+      const response = await apiClient.get(API_ENDPOINTS.TEAMS.LIST);
       const teamData = response.data || response;
       return Array.isArray(teamData) ? teamData : [];
     },

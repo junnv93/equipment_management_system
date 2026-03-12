@@ -2,7 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ Single Source of Truth: enums.ts에서 import
-import { CHECKOUT_PURPOSE_VALUES } from '@equipment-management/schemas';
+import {
+  CHECKOUT_PURPOSE_VALUES,
+  CheckoutDirectionEnum,
+  CheckoutPurposeEnum,
+  type CheckoutDirection,
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -15,7 +20,7 @@ export const checkoutQuerySchema = z.object({
   approverId: z.string().uuid().optional(),
   teamId: z.string().uuid().optional(),
   site: z.string().optional(),
-  direction: z.enum(['outbound', 'inbound']).optional(),
+  direction: CheckoutDirectionEnum.optional(),
   purpose: z
     .enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
       message: '유효하지 않은 반출 목적입니다.',
@@ -83,10 +88,10 @@ export class CheckoutQueryDto {
   @ApiProperty({
     description:
       '방향 필터링 (teamId와 함께 사용). outbound=우리 팀 장비가 나가는 건, inbound=외부 장비가 들어오는 건',
-    enum: ['outbound', 'inbound'],
+    enum: CheckoutDirectionEnum.options,
     required: false,
   })
-  direction?: 'outbound' | 'inbound';
+  direction?: CheckoutDirection;
 
   @ApiProperty({
     description: '반출 목적으로 필터링',

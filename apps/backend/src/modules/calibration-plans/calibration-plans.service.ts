@@ -6,7 +6,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { eq, and, desc, sql, SQL } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -836,17 +836,22 @@ export class CalibrationPlansService {
         )
       );
 
-    // 해당 항목의 actualCalibrationDate 업데이트
-    for (const row of items) {
+    // 해당 항목의 actualCalibrationDate 일괄 업데이트 (N+1 방지)
+    if (items.length > 0) {
+      const itemIds = items.map((row) => row.item.id);
       await this.db
         .update(calibrationPlanItems)
         .set({
           actualCalibrationDate: calibrationDate,
           updatedAt: new Date(),
         })
-        .where(eq(calibrationPlanItems.id, row.item.id));
+        .where(inArray(calibrationPlanItems.id, itemIds));
 
-      this.invalidatePlanCache(row.plan.id);
+      // 영향받은 plan 캐시 일괄 무효화 (중복 제거)
+      const planIds = [...new Set(items.map((row) => row.plan.id))];
+      for (const planId of planIds) {
+        this.invalidatePlanCache(planId);
+      }
     }
 
     return items.length;

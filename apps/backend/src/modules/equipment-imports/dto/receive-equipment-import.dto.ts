@@ -1,16 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { CalibrationMethodEnum } from '@equipment-management/schemas';
+import {
+  CalibrationMethodEnum,
+  ConditionStatusEnum,
+  AccessoriesStatusEnum,
+  type ConditionStatus,
+  type AccessoriesStatus,
+} from '@equipment-management/schemas';
 
 export const receiveEquipmentImportSchema = z
   .object({
     receivingCondition: z.object({
-      appearance: z.enum(['normal', 'abnormal'], { message: '외관 상태를 선택해주세요' }),
-      operation: z.enum(['normal', 'abnormal'], { message: '작동 상태를 선택해주세요' }),
-      accessories: z.enum(['complete', 'incomplete'], {
-        message: '부속품 상태를 선택해주세요',
-      }),
+      appearance: ConditionStatusEnum.describe('외관 상태를 선택해주세요'),
+      operation: ConditionStatusEnum.describe('작동 상태를 선택해주세요'),
+      accessories: AccessoriesStatusEnum.describe('부속품 상태를 선택해주세요'),
       notes: z.string().optional(),
     }),
 
@@ -57,9 +61,9 @@ export class ReceiveEquipmentImportDto {
     },
   })
   receivingCondition: {
-    appearance: 'normal' | 'abnormal';
-    operation: 'normal' | 'abnormal';
-    accessories: 'complete' | 'incomplete';
+    appearance: ConditionStatus;
+    operation: ConditionStatus;
+    accessories: AccessoriesStatus;
     notes?: string;
   };
 

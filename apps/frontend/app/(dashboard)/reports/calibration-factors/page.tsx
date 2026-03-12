@@ -11,6 +11,7 @@
 
 import { Suspense } from 'react';
 import { createServerApiClient } from '@/lib/api/server-api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import CalibrationFactorsRegistryContent from './CalibrationFactorsRegistryContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -62,7 +63,7 @@ async function CalibrationFactorsAsync() {
   let initialData = null;
 
   try {
-    const response = await apiClient.get('/api/calibration-factors/registry');
+    const response = await apiClient.get(API_ENDPOINTS.CALIBRATION_FACTORS.REGISTRY);
     initialData = response.data;
   } catch (error) {
     // 에러 발생 시 null로 시작 (Client에서 재시도)

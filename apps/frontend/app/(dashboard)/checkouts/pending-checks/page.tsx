@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { createServerApiClient } from '@/lib/api/server-api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { transformPaginatedResponse } from '@/lib/api/utils/response-transformers';
 import PendingChecksClient from './PendingChecksClient';
 import { RouteLoading } from '@/components/layout/RouteLoading';
@@ -33,7 +34,7 @@ async function PendingChecksAsync() {
 
   try {
     // 확인 필요 목록 fetch
-    const response = await apiClient.get('/api/checkouts/pending-checks');
+    const response = await apiClient.get(API_ENDPOINTS.CHECKOUTS.PENDING_CHECKS);
     initialData = transformPaginatedResponse<Checkout>(response);
   } catch (error) {
     console.error('[PendingChecksPage] Initial fetch error:', error);
