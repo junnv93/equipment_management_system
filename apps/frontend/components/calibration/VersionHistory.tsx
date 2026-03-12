@@ -12,7 +12,6 @@ import { History, FileText, ExternalLink } from 'lucide-react';
 import {
   CALIBRATION_VERSION_HISTORY,
   CALIBRATION_PLAN_STATUS_BADGE_COLORS,
-  TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
 
 interface VersionHistoryProps {
@@ -95,7 +94,7 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
           return (
             <div
               key={version.id}
-              className={`flex items-center justify-between p-3 border rounded-lg ${TRANSITION_PRESETS.fastColor} ${
+              className={`${CALIBRATION_VERSION_HISTORY.row.base} ${
                 isCurrent
                   ? CALIBRATION_VERSION_HISTORY.row.current
                   : CALIBRATION_VERSION_HISTORY.row.default

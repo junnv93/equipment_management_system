@@ -22,13 +22,28 @@ import calibrationPlansApi, {
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { formatDate } from '@/lib/utils/date';
-import { CheckCircle2, Edit2, Save, X, FileText, Camera, CalendarClock } from 'lucide-react';
+import {
+  CheckCircle2,
+  Edit2,
+  Save,
+  X,
+  FileText,
+  Camera,
+  CalendarClock,
+  ChevronRight,
+  History,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { PLAN_TABLE_COLUMN_GROUP_TOKENS, PLAN_PROGRESS_TOKENS } from '@/lib/design-tokens';
+import {
+  PLAN_TABLE_COLUMN_GROUP_TOKENS,
+  PLAN_PROGRESS_TOKENS,
+  CONFIRMATION_BADGE_TOKENS,
+  NUMERIC_TOKENS,
+  TABLE_TOKENS,
+  VERSION_HISTORY_COLLAPSIBLE_TOKENS,
+} from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { VersionHistory } from './VersionHistory';
-import { VERSION_HISTORY_COLLAPSIBLE_TOKENS } from '@/lib/design-tokens';
-import { ChevronRight, History } from 'lucide-react';
 
 interface PlanItemsTableProps {
   plan: CalibrationPlan;
@@ -179,9 +194,9 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
 
       <CardContent className="p-0">
         {items.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>{t('planDetail.items.empty')}</p>
+          <div className={TABLE_TOKENS.empty.container}>
+            <FileText className={TABLE_TOKENS.empty.icon} />
+            <p className={TABLE_TOKENS.empty.text}>{t('planDetail.items.empty')}</p>
           </div>
         ) : (
           <div className="overflow-auto">
@@ -267,7 +282,12 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                 {items.map((item: CalibrationPlanItem) => (
                   <TableRow key={item.id}>
                     {/* 기본정보 그룹 */}
-                    <TableCell className="text-center tabular-nums text-muted-foreground font-medium">
+                    <TableCell
+                      className={cn(
+                        'text-center font-medium text-muted-foreground',
+                        NUMERIC_TOKENS.tabular
+                      )}
+                    >
                       {item.sequenceNumber}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
@@ -315,7 +335,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                         <Input
                           value={editingAgency}
                           onChange={(e) => setEditingAgency(e.target.value)}
-                          className="w-[100px]"
+                          className={TABLE_TOKENS.inlineEdit.inputWidth}
                         />
                       ) : (
                         item.plannedCalibrationAgency || '-'
@@ -323,8 +343,13 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                     </TableCell>
                     <TableCell className={cn(colGroup.plan.cell, 'text-center')}>
                       {item.confirmedBy ? (
-                        <Badge variant="outline" className="bg-brand-ok/10">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                        <Badge
+                          variant="outline"
+                          className={CONFIRMATION_BADGE_TOKENS.confirmed.background}
+                        >
+                          <CheckCircle2
+                            className={cn(CONFIRMATION_BADGE_TOKENS.confirmed.icon, 'mr-1')}
+                          />
                           {t('planDetail.items.confirmed')}
                         </Badge>
                       ) : (
@@ -337,7 +362,7 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                           value={editingNotes}
                           onChange={(e) => setEditingNotes(e.target.value)}
                           placeholder={t('planDetail.placeholders.notes')}
-                          className="w-[100px]"
+                          className={TABLE_TOKENS.inlineEdit.inputWidth}
                         />
                       ) : (
                         <>
@@ -390,7 +415,10 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                 onClick={() => confirmItemMutation.mutate(item.id)}
                                 disabled={confirmItemMutation.isPending}
                                 title={t('planDetail.items.confirm')}
-                                className="h-8 w-8 p-0 text-brand-ok"
+                                className={cn(
+                                  'h-8 w-8 p-0',
+                                  CONFIRMATION_BADGE_TOKENS.confirmed.text
+                                )}
                               >
                                 <CheckCircle2 className="h-4 w-4" />
                               </Button>

@@ -15,6 +15,7 @@ import { formatDate } from '@/lib/utils/date';
 import { CheckCircle2, Circle, XCircle, Loader2, Plus, ChevronUp, Check } from 'lucide-react';
 import type { UserRole } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
 import {
   getCalibrationPlanTimelineNodeClasses,
   getCalibrationPlanTimelineConnectorClasses,
@@ -179,7 +180,14 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
 
                 <Collapsible open={showReviewComment} onOpenChange={setShowReviewComment}>
                   <CollapsibleTrigger
-                    className={`${COLLAPSIBLE_TOKENS.trigger.fontSize} ${COLLAPSIBLE_TOKENS.trigger.color} ${COLLAPSIBLE_TOKENS.trigger.gap} ${COLLAPSIBLE_TOKENS.trigger.focus} ${COLLAPSIBLE_TOKENS.trigger.transition} flex items-center mt-1`}
+                    className={cn(
+                      COLLAPSIBLE_TOKENS.trigger.fontSize,
+                      COLLAPSIBLE_TOKENS.trigger.color,
+                      COLLAPSIBLE_TOKENS.trigger.gap,
+                      COLLAPSIBLE_TOKENS.trigger.focus,
+                      COLLAPSIBLE_TOKENS.trigger.transition,
+                      'flex items-center mt-1'
+                    )}
                   >
                     {showReviewComment ? (
                       <>
@@ -198,7 +206,11 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
                       placeholder={t('planDetail.placeholders.reviewComment')}
                       value={reviewComment}
                       onChange={(e) => setReviewComment(e.target.value)}
-                      className={`${COLLAPSIBLE_TOKENS.content.input.width} ${COLLAPSIBLE_TOKENS.content.input.fontSize} ${COLLAPSIBLE_TOKENS.content.input.height}`}
+                      className={cn(
+                        COLLAPSIBLE_TOKENS.content.input.width,
+                        COLLAPSIBLE_TOKENS.content.input.fontSize,
+                        COLLAPSIBLE_TOKENS.content.input.height
+                      )}
                     />
                   </CollapsibleContent>
                 </Collapsible>
@@ -207,7 +219,11 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
                   variant="link"
                   size="sm"
                   onClick={onRejectClick}
-                  className={`${COLLAPSIBLE_TOKENS.trigger.fontSize} text-muted-foreground hover:text-destructive underline mt-1 h-auto p-0 ${COLLAPSIBLE_TOKENS.trigger.transition}`}
+                  className={cn(
+                    COLLAPSIBLE_TOKENS.trigger.fontSize,
+                    COLLAPSIBLE_TOKENS.trigger.transition,
+                    'text-muted-foreground hover:text-destructive underline mt-1 h-auto p-0'
+                  )}
                   disabled={!plan}
                 >
                   {t('planDetail.actions.reject')}

@@ -658,6 +658,8 @@ export const CALIBRATION_ALERT_TOKENS = {
  */
 export const CALIBRATION_VERSION_HISTORY = {
   row: {
+    /** 공통 레이아웃 (padding, border, radius, transition) */
+    base: `flex items-center justify-between p-3 border rounded-lg ${TRANSITION_PRESETS.fastColor}`,
     current: 'bg-ul-green/5 border-ul-green/30',
     default: 'hover:bg-muted/50',
   },
