@@ -113,7 +113,7 @@ export interface OptimisticMutationOptions<TData, TVariables, TCachedData = TDat
    * @example
    * invalidateKeys: [['approval-counts'], ['dashboard-stats']]
    */
-  invalidateKeys?: QueryKey[];
+  invalidateKeys?: readonly QueryKey[];
 
   /**
    * 성공 시 토스트 메시지 (선택사항)

@@ -9,10 +9,7 @@ import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { queryKeys } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
-import {
-  CHECKOUT_APPROVAL_INVALIDATE_KEYS,
-  RETURN_APPROVAL_INVALIDATE_KEYS,
-} from '@/lib/query-keys/checkout-keys';
+import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import {
@@ -129,7 +126,7 @@ export default function CheckoutDetailClient({
         approvedAt: new Date().toISOString(),
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
-    invalidateKeys: CHECKOUT_APPROVAL_INVALIDATE_KEYS,
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
     successMessage: t('toasts.approveSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.approveError')),
     onSuccessCallback: () => {
@@ -149,7 +146,7 @@ export default function CheckoutDetailClient({
         rejectionReason: reason,
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
-    invalidateKeys: CHECKOUT_APPROVAL_INVALIDATE_KEYS,
+    invalidateKeys: CheckoutCacheInvalidation.APPROVAL_KEYS,
     successMessage: t('toasts.rejectSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.rejectError')),
     onSuccessCallback: () => {
@@ -203,7 +200,7 @@ export default function CheckoutDetailClient({
         returnApprovedAt: new Date().toISOString(),
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
-    invalidateKeys: RETURN_APPROVAL_INVALIDATE_KEYS,
+    invalidateKeys: CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
     successMessage: t('toasts.returnApproveSuccess'),
     errorMessage: (error) => getErrorMessage(error, t('toasts.returnApproveError')),
     onSuccessCallback: () => {

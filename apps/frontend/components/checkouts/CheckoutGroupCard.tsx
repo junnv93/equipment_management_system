@@ -25,7 +25,7 @@ import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge'
 import { CheckoutMiniProgress } from '@/components/checkouts/CheckoutMiniProgress';
 import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
-import { CHECKOUT_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
+import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import {
   CHECKOUT_MOTION,
@@ -190,7 +190,7 @@ function CheckoutGroupCard({
       toast({ title: t('toasts.approveError'), variant: 'destructive' });
     },
     onSettled: () => {
-      CHECKOUT_APPROVAL_INVALIDATE_KEYS.forEach((key) => {
+      CheckoutCacheInvalidation.APPROVAL_KEYS.forEach((key) => {
         queryClient.invalidateQueries({ queryKey: key as unknown[] });
       });
     },

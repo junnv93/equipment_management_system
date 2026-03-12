@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
-import { CHECKOUT_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
+import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -138,7 +138,10 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [
+      queryKeys.approvals.counts(userRole),
+      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+    ],
     successMessage: (_, { item }) => t('toasts.approveDynamic', { summary: item.summary }),
     errorMessage: t('toasts.approveError'),
     onSuccessCallback: (_, { item }) => {
@@ -208,7 +211,10 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [
+      queryKeys.approvals.counts(userRole),
+      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+    ],
     successMessage: (_, { item }) => t('toasts.rejectDynamic', { summary: item.summary }),
     errorMessage: t('toasts.rejectError'),
     onSuccessCallback: (_, { item }) => {
@@ -252,7 +258,10 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [
+      queryKeys.approvals.counts(userRole),
+      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+    ],
     successMessage: (result) => {
       if (result.failed.length > 0) {
         return t('toasts.bulkApproveResult', {
@@ -319,7 +328,10 @@ export function ApprovalsClient({
     },
     queryKey: queryKeys.approvals.list(activeTab, userTeamId),
     optimisticUpdate: (old) => old || [],
-    invalidateKeys: [queryKeys.approvals.counts(userRole), ...CHECKOUT_APPROVAL_INVALIDATE_KEYS],
+    invalidateKeys: [
+      queryKeys.approvals.counts(userRole),
+      ...CheckoutCacheInvalidation.APPROVAL_KEYS,
+    ],
     successMessage: (result) => {
       if (result.failed.length > 0) {
         return t('toasts.bulkRejectResult', {
@@ -428,7 +440,7 @@ export function ApprovalsClient({
               onSelectAll={handleSelectAll}
               onBulkApprove={handleBulkApprove}
               onBulkReject={handleBulkReject}
-              actionLabel={t(`tabMeta.${activeTab}.action`)}
+              actionLabel={t(TAB_META[activeTab].actionKey as Parameters<typeof t>[0])}
             />
 
             {/* Single list — no TabsContent loop */}
@@ -442,7 +454,7 @@ export function ApprovalsClient({
               onApprove={handleApprove}
               onReject={(item) => setRejectModalItem(item)}
               onViewDetail={(item) => setDetailModalItem(item)}
-              actionLabel={t(`tabMeta.${activeTab}.action`)}
+              actionLabel={t(TAB_META[activeTab].actionKey as Parameters<typeof t>[0])}
             />
           </div>
         </div>
@@ -458,7 +470,7 @@ export function ApprovalsClient({
               setDetailModalItem(null);
               setRejectModalItem(detailModalItem);
             }}
-            actionLabel={t(`tabMeta.${detailModalItem.category}.action`)}
+            actionLabel={t(TAB_META[detailModalItem.category].actionKey as Parameters<typeof t>[0])}
           />
         )}
 

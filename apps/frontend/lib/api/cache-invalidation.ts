@@ -316,6 +316,35 @@ export class CalibrationPlansCacheInvalidation {
 }
 
 /**
+ * 체크아웃 캐시 무효화 헬퍼
+ *
+ * 체크아웃 승인/반려/반입 후 관련 캐시를 무효화.
+ * 체크아웃 상태 변경은 승인 카운트에도 영향하므로 교차 무효화 포함.
+ */
+export class CheckoutCacheInvalidation {
+  /** 체크아웃 승인/반려 후 무효화 대상 키 */
+  static readonly APPROVAL_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.checkouts.all,
+    queryKeys.approvals.all,
+    queryKeys.approvals.countsAll,
+  ];
+
+  /** 반입 승인 후 무효화 대상 키 */
+  static readonly RETURN_APPROVAL_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.checkouts.all,
+    queryKeys.approvals.all,
+    queryKeys.approvals.countsAll,
+  ];
+
+  /** 반입 제출(반출→반입) 후 무효화 대상 키 */
+  static readonly RETURN_KEYS: ReadonlyArray<readonly unknown[]> = [
+    queryKeys.checkouts.all,
+    queryKeys.approvals.all,
+    queryKeys.approvals.countsAll,
+  ];
+}
+
+/**
  * 대시보드 캐시 무효화 헬퍼
  */
 export class DashboardCacheInvalidation {

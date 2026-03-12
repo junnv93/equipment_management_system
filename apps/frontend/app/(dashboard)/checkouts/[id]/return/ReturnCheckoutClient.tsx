@@ -12,7 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { queryKeys } from '@/lib/api/query-config';
 import checkoutApi, { Checkout, ConditionCheck, ReturnCheckoutDto } from '@/lib/api/checkout-api';
-import { CHECKOUT_RETURN_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
+import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import {
   CHECKOUT_PURPOSE_LABELS,
   CHECKOUT_STATUS_LABELS,
@@ -55,7 +55,7 @@ export default function ReturnCheckoutClient({
     },
     onSettled: () => {
       Promise.all(
-        CHECKOUT_RETURN_INVALIDATE_KEYS.map((key) =>
+        CheckoutCacheInvalidation.RETURN_KEYS.map((key) =>
           queryClient.invalidateQueries({ queryKey: key })
         )
       );

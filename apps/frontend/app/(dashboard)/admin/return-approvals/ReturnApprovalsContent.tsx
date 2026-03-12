@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
-import { RETURN_APPROVAL_INVALIDATE_KEYS } from '@/lib/query-keys/checkout-keys';
+import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,7 @@ export default function ReturnApprovalsContent() {
         },
       };
     },
-    invalidateKeys: RETURN_APPROVAL_INVALIDATE_KEYS,
+    invalidateKeys: CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
     successMessage: t('approveDialog.description'),
     errorMessage: t('actions.processing'),
     onSuccessCallback: () => {
@@ -117,7 +117,7 @@ export default function ReturnApprovalsContent() {
         },
       };
     },
-    invalidateKeys: RETURN_APPROVAL_INVALIDATE_KEYS,
+    invalidateKeys: CheckoutCacheInvalidation.RETURN_APPROVAL_KEYS,
     successMessage: t('rejectDialog.description'),
     errorMessage: t('actions.processing'),
     onSuccessCallback: () => {

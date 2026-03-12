@@ -407,6 +407,8 @@ export const queryKeys = {
       [...queryKeys.approvals.all, category, teamId] as const,
     /** SSOT: 네비 뱃지, 대시보드 카드, 승인 페이지 공용 */
     counts: (role?: string) => ['approval-counts', role] as const,
+    /** 역할 무관 prefix — 무효화 전용 (모든 role의 counts를 한번에 무효화) */
+    countsAll: ['approval-counts'] as const,
     /** 승인 KPI (오늘 처리 건수 등) */
     kpi: () => [...queryKeys.approvals.all, 'kpi'] as const,
   },
