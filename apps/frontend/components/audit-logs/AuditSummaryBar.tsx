@@ -27,6 +27,8 @@ const SUMMARY_TILES: SummaryTile[] = [
 interface AuditSummaryBarProps {
   /** 현재 쿼리의 총 건수 (pagination.total) */
   total: number;
+  /** 액션별 건수 맵 (백엔드 GROUP BY action 결과) */
+  actionCounts?: Record<string, number>;
   /** 현재 활성 액션 필터 ('' = 전체) */
   activeAction: string;
   /** 액션 필터 변경 콜백 */
@@ -36,16 +38,16 @@ interface AuditSummaryBarProps {
 /**
  * 감사 로그 액션별 요약 바
  *
- * - 전체 건수를 한눈에 확인 (전체 카드)
+ * - 전체 건수 + 액션별 건수 한눈에 확인
  * - 카드 클릭 시 해당 액션으로 필터링
- * - 각 액션 카드에 배지 미리보기 표시 (AUDIT_ACTION_BADGE_TOKENS SSOT 재사용)
- *
- * 설계 결정:
- * per-action 건수는 별도 stats API 없이 제공 불가.
- * "전체" 카드만 총 건수 표시, 나머지 카드는 배지 시각으로 필터 의미 전달.
- * em-dash(—) 대신 실제 액션 배지를 보여줌으로써 의미 있는 시각적 단서 제공.
+ * - 액션별 건수는 백엔드 GROUP BY action 결과로 제공 (summary 필드)
  */
-export function AuditSummaryBar({ total, activeAction, onActionChange }: AuditSummaryBarProps) {
+export function AuditSummaryBar({
+  total,
+  actionCounts,
+  activeAction,
+  onActionChange,
+}: AuditSummaryBarProps) {
   const t = useTranslations('audit');
 
   return (
@@ -78,11 +80,15 @@ export function AuditSummaryBar({ total, activeAction, onActionChange }: AuditSu
               >
                 {total.toLocaleString()}
               </span>
+            ) : actionCounts ? (
+              /* 액션 카드: 백엔드 GROUP BY 결과로 실제 건수 표시 */
+              <span
+                className={cn(AUDIT_SUMMARY_TOKENS.count, AUDIT_SUMMARY_COLOR_MAP[colorKey].count)}
+              >
+                {(actionCounts[action] ?? 0).toLocaleString()}
+              </span>
             ) : (
-              /*
-               * 액션 카드: em-dash(—) 대신 해당 액션의 실제 배지를 축소 렌더링.
-               * AUDIT_ACTION_BADGE_TOKENS SSOT 재사용 → 배지/도트/카드 색상 3곳 일관성 보장.
-               */
+              /* 로딩 중 또는 summary 미제공 시 배지로 대체 */
               <span
                 className={cn(
                   AUDIT_ACTION_BADGE_TOKENS[action as AuditAction] ?? DEFAULT_AUDIT_ACTION_BADGE,

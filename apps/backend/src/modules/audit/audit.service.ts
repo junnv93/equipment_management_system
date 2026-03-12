@@ -42,6 +42,13 @@ export interface PaginationMeta {
   currentPage: number;
 }
 
+/**
+ * 액션별 감사 로그 건수 요약
+ */
+export interface AuditActionCounts {
+  [action: string]: number;
+}
+
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
@@ -111,7 +118,7 @@ export class AuditService {
   async findAll(
     filter: AuditLogFilter,
     pagination: PaginationOptions
-  ): Promise<{ items: AuditLog[]; meta: PaginationMeta }> {
+  ): Promise<{ items: AuditLog[]; meta: PaginationMeta; summary: AuditActionCounts }> {
     // 캐시 키 생성 (필터와 페이지네이션 포함)
     const cacheKey = `audit-logs:list:${JSON.stringify(filter)}:${pagination.page}:${pagination.limit}`;
 
@@ -154,23 +161,37 @@ export class AuditService {
 
         const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-        // 총 개수 조회
-        const countResult = await this.db
-          .select({ count: sql<number>`count(*)` })
-          .from(auditLogs)
-          .where(whereClause);
+        // 총 개수 + 액션별 건수를 단일 쿼리로 조회 (동일 WHERE 재사용)
+        const [countResult, actionCountsResult, items] = await Promise.all([
+          this.db
+            .select({ count: sql<number>`count(*)` })
+            .from(auditLogs)
+            .where(whereClause),
+          this.db
+            .select({
+              action: auditLogs.action,
+              count: sql<number>`count(*)`,
+            })
+            .from(auditLogs)
+            .where(whereClause)
+            .groupBy(auditLogs.action),
+          this.db
+            .select()
+            .from(auditLogs)
+            .where(whereClause)
+            .orderBy(desc(auditLogs.timestamp))
+            .limit(pagination.limit)
+            .offset((pagination.page - 1) * pagination.limit),
+        ]);
 
         const totalItems = Number(countResult[0]?.count || 0);
         const totalPages = Math.ceil(totalItems / pagination.limit);
 
-        // 페이지네이션 적용하여 조회
-        const items = await this.db
-          .select()
-          .from(auditLogs)
-          .where(whereClause)
-          .orderBy(desc(auditLogs.timestamp))
-          .limit(pagination.limit)
-          .offset((pagination.page - 1) * pagination.limit);
+        // GROUP BY 결과를 { action: count } 맵으로 변환
+        const summary: AuditActionCounts = {};
+        for (const row of actionCountsResult) {
+          summary[row.action] = Number(row.count);
+        }
 
         return {
           items,
@@ -181,6 +202,7 @@ export class AuditService {
             totalPages,
             currentPage: pagination.page,
           },
+          summary,
         };
       },
       CACHE_TTL.MEDIUM

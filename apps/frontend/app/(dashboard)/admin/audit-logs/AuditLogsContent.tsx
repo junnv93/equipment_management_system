@@ -219,6 +219,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
       {/* ── 요약 바 ────────────────────────────────────────────── */}
       <AuditSummaryBar
         total={pagination.total}
+        actionCounts={data?.meta?.summary as Record<string, number> | undefined}
         activeAction={filters.action}
         onActionChange={(action) => updateFilters({ action })}
       />
