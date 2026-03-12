@@ -6,7 +6,9 @@ import {
   CHECKOUT_PURPOSE_VALUES,
   CheckoutDirectionEnum,
   CheckoutPurposeEnum,
+  SiteEnum,
   type CheckoutDirection,
+  type Site,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -19,7 +21,7 @@ export const checkoutQuerySchema = z.object({
   requesterId: z.string().uuid().optional(),
   approverId: z.string().uuid().optional(),
   teamId: z.string().uuid().optional(),
-  site: z.string().optional(),
+  site: SiteEnum.optional(),
   direction: CheckoutDirectionEnum.optional(),
   purpose: z
     .enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
@@ -80,10 +82,11 @@ export class CheckoutQueryDto {
 
   @ApiProperty({
     description: '사이트로 필터링 (서버에서 자동 주입, 클라이언트 파라미터 무시)',
+    enum: SiteEnum.options,
     example: 'suwon',
     required: false,
   })
-  site?: string;
+  site?: Site;
 
   @ApiProperty({
     description:

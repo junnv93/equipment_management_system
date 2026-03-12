@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { CalibrationApprovalStatusEnum } from '@equipment-management/schemas';
+import { CalibrationApprovalStatusEnum, SiteEnum, type Site } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -22,7 +22,7 @@ export const calibrationQuerySchema = z.object({
   search: z.string().optional(),
   approvalStatus: CalibrationApprovalStatusEnum.optional(),
   teamId: z.string().uuid().optional(),
-  site: z.string().optional(),
+  site: SiteEnum.optional(),
   sort: z.string().default('calibrationDate.desc'),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
@@ -119,10 +119,11 @@ export class CalibrationQueryDto {
   teamId?: string;
 
   @ApiPropertyOptional({
-    description: '사이트 코드 (SUW/UIW/PYT)',
-    example: 'SUW',
+    description: '사이트 필터',
+    enum: SiteEnum.options,
+    example: 'suwon',
   })
-  site?: string;
+  site?: Site;
 
   @ApiPropertyOptional({
     description: '정렬 기준 (필드명.asc 또는 필드명.desc)',

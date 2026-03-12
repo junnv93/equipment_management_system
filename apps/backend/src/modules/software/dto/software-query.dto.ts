@@ -4,7 +4,9 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   SoftwareApprovalStatusEnum,
   SOFTWARE_APPROVAL_STATUS_VALUES,
+  SiteEnum,
   type SoftwareApprovalStatus,
+  type Site,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility
@@ -22,7 +24,7 @@ export const softwareHistoryQuerySchema = z.object({
   search: z.string().optional(),
   sort: z.string().optional(),
   /** @SiteScoped에 의해 자동 주입 — 직접 설정 금지 */
-  site: z.string().optional(),
+  site: SiteEnum.optional(),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : 20),
@@ -73,9 +75,10 @@ export class SoftwareHistoryQueryDto {
 
   @ApiProperty({
     description: '사이트 필터 (@SiteScoped 자동 주입)',
+    enum: SiteEnum.options,
     required: false,
   })
-  site?: string;
+  site?: Site;
 
   @ApiProperty({
     description: '페이지 번호',
