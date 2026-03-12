@@ -36,6 +36,7 @@ import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
 import type { UserRole, Site } from '@equipment-management/schemas';
+import { CALIBRATION_PLAN_CREATE_TOKENS, NUMERIC_TOKENS } from '@/lib/design-tokens';
 
 export default function CreateCalibrationPlanContent() {
   const router = useRouter();
@@ -144,15 +145,17 @@ export default function CreateCalibrationPlanContent() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
+      <div className={CALIBRATION_PLAN_CREATE_TOKENS.header.container}>
         <Button variant="ghost" size="icon" asChild>
           <Link href="/calibration-plans">
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('planCreate.title')}</h1>
-          <p className="text-muted-foreground">{t('planCreate.description')}</p>
+          <h1 className={CALIBRATION_PLAN_CREATE_TOKENS.header.title}>{t('planCreate.title')}</h1>
+          <p className={CALIBRATION_PLAN_CREATE_TOKENS.header.subtitle}>
+            {t('planCreate.description')}
+          </p>
         </div>
       </div>
 
@@ -163,7 +166,7 @@ export default function CreateCalibrationPlanContent() {
           <CardDescription>{t('planCreate.basicInfo.description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className={CALIBRATION_PLAN_CREATE_TOKENS.form.grid}>
             <div className="space-y-2">
               <Label htmlFor="year">{t('planCreate.fields.year')} *</Label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -273,10 +276,10 @@ export default function CreateCalibrationPlanContent() {
               </Alert>
             ) : (
               <>
-                <div className="mb-4 text-sm text-muted-foreground">
+                <div className={CALIBRATION_PLAN_CREATE_TOKENS.preview.count}>
                   {t('planCreate.preview.totalCount', { count: equipment.length })}
                 </div>
-                <div className="max-h-[400px] overflow-auto">
+                <div className={CALIBRATION_PLAN_CREATE_TOKENS.preview.scrollArea}>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -292,7 +295,7 @@ export default function CreateCalibrationPlanContent() {
                     <TableBody>
                       {equipment.map((eq: ExternalEquipment, index: number) => (
                         <TableRow key={eq.id}>
-                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className={NUMERIC_TOKENS.tabular}>{index + 1}</TableCell>
                           <TableCell className="font-mono">{eq.managementNumber}</TableCell>
                           <TableCell>{eq.name}</TableCell>
                           <TableCell>
@@ -323,7 +326,7 @@ export default function CreateCalibrationPlanContent() {
       )}
 
       {/* 액션 버튼 */}
-      <div className="flex justify-end gap-4">
+      <div className={CALIBRATION_PLAN_CREATE_TOKENS.actions.container}>
         <Button variant="outline" asChild>
           <Link href="/calibration-plans">{t('planCreate.actions.cancel')}</Link>
         </Button>

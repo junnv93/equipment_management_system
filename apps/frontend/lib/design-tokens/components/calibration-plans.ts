@@ -919,3 +919,34 @@ export const VERSION_HISTORY_COLLAPSIBLE_TOKENS = {
   /** 콘텐츠 패딩 */
   content: 'px-5 pb-4',
 } as const;
+
+// ============================================================================
+// 교정계획서 생성 페이지 토큰
+// ============================================================================
+
+/**
+ * 교정계획서 생성 페이지 — CALIBRATION_PLAN_DETAIL_HEADER_TOKENS 기반
+ *
+ * 헤더, 프리뷰 테이블, 폼 액션 영역
+ */
+export const CALIBRATION_PLAN_CREATE_TOKENS = {
+  /** 페이지 헤더 (뒤로가기 + 제목) — 상세 헤더 재사용 */
+  header: {
+    container: 'flex items-center gap-4',
+    title: 'text-3xl font-bold tracking-tight',
+    subtitle: 'text-muted-foreground',
+  },
+  /** 폼 그리드 */
+  form: {
+    grid: 'grid grid-cols-1 md:grid-cols-3 gap-6',
+  },
+  /** 프리뷰 테이블 래퍼 */
+  preview: {
+    scrollArea: 'max-h-[400px] overflow-auto',
+    count: 'mb-4 text-sm text-muted-foreground',
+  },
+  /** 하단 액션 버튼 영역 */
+  actions: {
+    container: 'flex justify-end gap-4',
+  },
+} as const;
