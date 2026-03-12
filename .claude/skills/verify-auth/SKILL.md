@@ -31,8 +31,13 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/auth/strategies/jwt.strategy.ts`                  | JWT 전략                                                         |
 | `apps/backend/src/modules/auth/guards/permissions.guard.ts`                 | Permission Guard                                                 |
 | `apps/backend/src/modules/auth/decorators/skip-permissions.decorator.ts`    | @SkipPermissions() 데코레이터                                    |
+| `apps/backend/src/modules/auth/decorators/public.decorator.ts`              | @Public() 데코레이터 (인증 바이패스)                             |
+| `apps/backend/src/modules/auth/decorators/permissions.decorator.ts`         | @RequirePermissions() 데코레이터                                 |
+| `apps/backend/src/modules/auth/decorators/roles.decorator.ts`               | @Roles() 데코레이터 (역할 기반 접근 제어)                        |
 | `apps/backend/src/common/decorators/audit-log.decorator.ts`                 | AuditLog 데코레이터                                              |
 | `apps/backend/src/common/decorators/skip-audit.decorator.ts`                | @SkipAudit() 데코레이터                                          |
+| `apps/backend/src/common/decorators/sse-authenticated.decorator.ts`         | SSE 인증 데코레이터 (SseJwtAuthGuard 연동)                       |
+| `apps/backend/src/common/decorators/internal-service-only.decorator.ts`     | 내부 서비스 전용 데코레이터                                      |
 | `apps/backend/src/common/guards/internal-api-key.guard.ts`                  | InternalApiKey Guard (서비스 간 인증)                            |
 | `apps/backend/src/common/interceptors/audit.interceptor.ts`                 | AuditLog 인터셉터 (JwtUser 필드 접근)                            |
 | `apps/backend/src/database/utils/uuid-constants.ts`                         | SYSTEM_USER_UUID (nil UUID) — 시스템 생성 감사 로그 actor 식별자 |

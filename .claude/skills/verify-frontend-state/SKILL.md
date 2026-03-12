@@ -26,27 +26,27 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 
 ## Related Files
 
-| File                                                                                                     | Purpose                                                  |
-| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `apps/frontend/hooks/use-optimistic-mutation.ts`                                                         | SSOT: optimistic mutation 훅                             |
-| `apps/frontend/lib/api/query-config.ts`                                                                  | queryKeys 팩토리 + QUERY_CONFIG 프리셋                   |
-| `apps/frontend/lib/api/cache-invalidation.ts`                                                            | 캐시 무효화 유틸리티                                     |
-| `apps/frontend/components/dashboard/DashboardClient.tsx`                                                 | useQuery 참조 구현                                       |
-| `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx`                                  | placeholderData 참조 구현                                |
-| `apps/frontend/hooks/use-team-filters.ts`                                                                | URL-driven 필터 훅 참조 구현                             |
-| `apps/frontend/lib/utils/equipment-filter-utils.ts`                                                      | 필터 SSOT 유틸리티 참조 구현                             |
-| `apps/frontend/app/(dashboard)/admin/calibration-approvals/CalibrationApprovalsContent.tsx`              | 1-step 승인 direct useMutation 참조                      |
-| `apps/frontend/app/(dashboard)/admin/calibration-factor-approvals/CalibrationFactorApprovalsContent.tsx` | 1-step 승인 direct useMutation 참조                      |
-| `apps/frontend/app/(dashboard)/admin/calibration-plan-approvals/CalibrationPlanApprovalsContent.tsx`     | 1-step 승인 direct useMutation 참조                      |
-| `apps/frontend/app/(dashboard)/admin/software-approvals/SoftwareApprovalsContent.tsx`                    | 1-step 승인 direct useMutation 참조                      |
-| `apps/frontend/app/(dashboard)/admin/equipment-approvals/EquipmentApprovalsContent.tsx`                  | 1-step 승인 direct useMutation 참조                      |
-| `apps/frontend/components/notifications/IntermediateCheckAlert.tsx`                                      | 중간점검 완료 direct useMutation 참조                    |
-| `apps/frontend/components/equipment/CalibrationFactorsClient.tsx`                                        | 보정계수 생성 direct useMutation 참조                    |
-| `apps/frontend/hooks/use-equipment-kpi.ts`                                                               | 장비 KPI 계산 훅 (TanStack Query 참조)                   |
-| `apps/frontend/hooks/use-approval-kpi.ts`                                                                | 승인 KPI 계산 훅 (TanStack Query 참조)                   |
-| `apps/frontend/hooks/use-sidebar-state.ts`                                                               | 사이드바 상태 훅 (localStorage UI 상태, 서버 상태 아님)  |
-| `apps/frontend/hooks/use-idle-timeout.ts`                                                                | Idle Timeout 훅 (UI 타이머 상태, 서버 상태 아님)         |
-| `apps/frontend/hooks/use-debounced-value.ts`                                                             | 디바운스 훅 (UI 입력 지연 — 서버 상태 아님, 재사용 유틸) |
+| File                                                                                                     | Purpose                                                     |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `apps/frontend/hooks/use-optimistic-mutation.ts`                                                         | SSOT: optimistic mutation 훅                                |
+| `apps/frontend/lib/api/query-config.ts`                                                                  | queryKeys 팩토리 + QUERY_CONFIG 프리셋                      |
+| `apps/frontend/lib/api/cache-invalidation.ts`                                                            | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등 정적 클래스) |
+| `apps/frontend/components/dashboard/DashboardClient.tsx`                                                 | useQuery 참조 구현                                          |
+| `apps/frontend/app/(dashboard)/checkouts/[id]/CheckoutDetailClient.tsx`                                  | placeholderData 참조 구현                                   |
+| `apps/frontend/hooks/use-team-filters.ts`                                                                | URL-driven 필터 훅 참조 구현                                |
+| `apps/frontend/lib/utils/equipment-filter-utils.ts`                                                      | 필터 SSOT 유틸리티 참조 구현                                |
+| `apps/frontend/app/(dashboard)/admin/calibration-approvals/CalibrationApprovalsContent.tsx`              | 1-step 승인 direct useMutation 참조                         |
+| `apps/frontend/app/(dashboard)/admin/calibration-factor-approvals/CalibrationFactorApprovalsContent.tsx` | 1-step 승인 direct useMutation 참조                         |
+| `apps/frontend/app/(dashboard)/admin/calibration-plan-approvals/CalibrationPlanApprovalsContent.tsx`     | 1-step 승인 direct useMutation 참조                         |
+| `apps/frontend/app/(dashboard)/admin/software-approvals/SoftwareApprovalsContent.tsx`                    | 1-step 승인 direct useMutation 참조                         |
+| `apps/frontend/app/(dashboard)/admin/equipment-approvals/EquipmentApprovalsContent.tsx`                  | 1-step 승인 direct useMutation 참조                         |
+| `apps/frontend/components/notifications/IntermediateCheckAlert.tsx`                                      | 중간점검 완료 direct useMutation 참조                       |
+| `apps/frontend/components/equipment/CalibrationFactorsClient.tsx`                                        | 보정계수 생성 direct useMutation 참조                       |
+| `apps/frontend/hooks/use-equipment-kpi.ts`                                                               | 장비 KPI 계산 훅 (TanStack Query 참조)                      |
+| `apps/frontend/hooks/use-approval-kpi.ts`                                                                | 승인 KPI 계산 훅 (TanStack Query 참조)                      |
+| `apps/frontend/hooks/use-sidebar-state.ts`                                                               | 사이드바 상태 훅 (localStorage UI 상태, 서버 상태 아님)     |
+| `apps/frontend/hooks/use-idle-timeout.ts`                                                                | Idle Timeout 훅 (UI 타이머 상태, 서버 상태 아님)            |
+| `apps/frontend/hooks/use-debounced-value.ts`                                                             | 디바운스 훅 (UI 입력 지연 — 서버 상태 아님, 재사용 유틸)    |
 
 ## Workflow
 
@@ -118,6 +118,44 @@ grep -rn "staleTime:" apps/frontend/components apps/frontend/app --include="*.ts
 
 **참고:** staleTime 직접 설정이 반드시 위반은 아니지만, QUERY_CONFIG 프리셋 사용이 권장됨.
 
+### Step 5b: countsAll prefix 기반 캐시 무효화
+
+승인 카운트 캐시 무효화 시 역할 무관 prefix 키(`countsAll`)를 사용하는지 확인합니다.
+
+```bash
+# approvals.counts() (undefined 포함)로 무효화하는 패턴 탐지
+grep -rn "approvals\.counts()" apps/frontend --include="*.ts" --include="*.tsx" | grep -v "query-config\|// "
+```
+
+**PASS 기준:** 캐시 무효화 시 `queryKeys.approvals.countsAll` 사용.
+
+**FAIL 기준:** `queryKeys.approvals.counts()` → `['approval-counts', undefined]`는 `['approval-counts', 'technical_manager']`와 prefix 매칭 안 됨 — 네비게이션 배지/대시보드 카운트 갱신 누락.
+
+**올바른 패턴:**
+
+```typescript
+// ❌ WRONG — undefined 인자 포함, prefix 매칭 실패
+invalidateKeys: [queryKeys.approvals.counts()],
+// 생성: ['approval-counts', undefined] — 역할별 키와 불일치
+
+// ✅ CORRECT — prefix 키, 모든 역할의 카운트 무효화
+invalidateKeys: [queryKeys.approvals.countsAll],
+// 생성: ['approval-counts'] — prefix 매칭으로 모든 하위 키 무효화
+```
+
+### Step 5c: CheckoutCacheInvalidation SSOT 사용
+
+체크아웃 관련 캐시 무효화가 `CheckoutCacheInvalidation` 정적 클래스를 통해 수행되는지 확인합니다.
+
+```bash
+# 컴포넌트에서 checkout 캐시를 직접 무효화하는 패턴 탐지
+grep -rn "invalidateQueries.*queryKeys\.checkouts\." apps/frontend/components apps/frontend/hooks --include="*.ts" --include="*.tsx" | grep -v "cache-invalidation\|CheckoutCacheInvalidation\|// "
+```
+
+**PASS 기준:** 컴포넌트/훅에서 체크아웃 캐시 무효화는 `CheckoutCacheInvalidation` 사용.
+
+**FAIL 기준:** 컴포넌트에서 직접 queryKeys 배열 조합으로 invalidateQueries 호출 시 무효화 누락 가능.
+
 ### Step 6: REFETCH_STRATEGIES 하드코딩 탐지
 
 refetchInterval을 직접 설정하는 대신 REFETCH_STRATEGIES 프리셋을 사용하는지 확인합니다.
@@ -166,6 +204,8 @@ const { data } = useQuery({
 | 3   | useOptimisticMutation 사용 | PASS/INFO | 직접 useMutation 위치         |
 | 4   | invalidateQueries 위치     | PASS/FAIL | onSuccess 내 위치             |
 | 5   | QUERY_CONFIG 프리셋        | PASS/INFO | 직접 설정 위치                |
+| 5b  | countsAll prefix 무효화    | PASS/FAIL | approvals.counts() 사용 위치  |
+| 5c  | CheckoutCacheInvalidation  | PASS/FAIL | 직접 queryKeys 조합 위치      |
 | 6   | REFETCH_STRATEGIES 사용    | PASS/INFO | refetchInterval 하드코딩 위치 |
 ```
 

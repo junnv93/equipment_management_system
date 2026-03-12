@@ -403,6 +403,40 @@ getTransitionClasses('fast', ['background-color', 'transform']);
 TRANSITION_PRESETS.fastBgTransform;
 ```
 
+#### Sub-step 6c: 컴포넌트 레벨 하드코딩 트랜지션 탐지
+
+`components/ui/` 외부의 컴포넌트에서 하드코딩된 Tailwind transition 클래스 사용을 탐지합니다. `TRANSITION_PRESETS` 사용이 권장됩니다.
+
+```bash
+# 하드코딩된 transition-colors, transition-opacity, transition-shadow, transition-transform 탐지
+grep -rn "transition-colors\|transition-opacity\|transition-shadow\|transition-transform" \
+  apps/frontend/components apps/frontend/app --include="*.tsx" \
+  | grep -v "apps/frontend/components/ui/\|TRANSITION_PRESETS\|// \|design-tokens"
+```
+
+```bash
+# motion-safe:transition-* 하드코딩 탐지
+grep -rn "motion-safe:transition-" apps/frontend/components apps/frontend/app --include="*.tsx" \
+  | grep -v "apps/frontend/components/ui/\|TRANSITION_PRESETS\|// \|design-tokens"
+```
+
+**PASS 기준:** 0개 결과 (`components/ui/` 제외, 모든 트랜지션은 `TRANSITION_PRESETS.*` 사용).
+
+**FAIL 기준:** 하드코딩된 transition 클래스 발견 시 다음으로 변경 필요:
+
+```tsx
+// ❌ WRONG — 하드코딩
+className="transition-colors duration-200 hover:bg-muted"
+
+// ✅ CORRECT — TRANSITION_PRESETS 사용
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+className={cn(TRANSITION_PRESETS.fastBg, "hover:bg-muted")}
+```
+
+**네이밍 규칙:** `{speed}{Properties}` — `fastBg`, `fastBgColor`, `instantOpacity`, `moderateTransform` 등.
+
+**면제:** `components/ui/` (shadcn/ui) 내부 파일은 서드파티 생성 코드이므로 하드코딩 허용.
+
 ### Step 7: Architecture v3 Visual Feedback System
 
 Visual Feedback System(getCountBasedUrgency, getUrgencyFeedbackClasses)이 올바르게 사용되는지 확인합니다.
@@ -456,15 +490,17 @@ grep -rn "getUrgencyFeedbackClasses" apps/frontend/components --include="*.tsx" 
 ## Output Format
 
 ```markdown
-| #   | 검사                           | 상태      | 상세                          |
-| --- | ------------------------------ | --------- | ----------------------------- |
-| 1   | transition-all 금지            | PASS/FAIL | 위반 위치 목록                |
-| 2   | focus-visible 우선             | PASS/FAIL | 위반 위치 목록                |
-| 3   | Layer 3 함수 import 경로       | PASS/FAIL | 위반 import 목록              |
-| 4   | 마이그레이션된 컴포넌트 토큰   | PASS/FAIL | 토큰 미사용 컴포넌트          |
-| 5   | Layer 3 컴포넌트 토큰 아키텍처 | PASS/FAIL | 위반 참조 목록                |
-| 6   | getTransitionClasses 속성 지정 | PASS/FAIL | 위반 호출 목록                |
-| 7   | Architecture v3 패턴           | PASS/INFO | Deprecated 패턴, Urgency 함수 |
+| #   | 검사                           | 상태      | 상세                           |
+| --- | ------------------------------ | --------- | ------------------------------ |
+| 1   | transition-all 금지            | PASS/FAIL | 위반 위치 목록                 |
+| 2   | focus-visible 우선             | PASS/FAIL | 위반 위치 목록                 |
+| 3   | Layer 3 함수 import 경로       | PASS/FAIL | 위반 import 목록               |
+| 4   | 마이그레이션된 컴포넌트 토큰   | PASS/FAIL | 토큰 미사용 컴포넌트           |
+| 5   | Layer 3 컴포넌트 토큰 아키텍처 | PASS/FAIL | 위반 참조 목록                 |
+| 6a  | Layer 3 getTransitionClasses   | PASS/FAIL | 잔여 런타임 호출 위치          |
+| 6b  | getTransitionClasses 속성 지정 | PASS/FAIL | properties 미지정 호출 위치    |
+| 6c  | 컴포넌트 하드코딩 트랜지션     | PASS/FAIL | TRANSITION_PRESETS 미사용 위치 |
+| 7   | Architecture v3 패턴           | PASS/INFO | Deprecated 패턴, Urgency 함수  |
 ```
 
 ## Exceptions

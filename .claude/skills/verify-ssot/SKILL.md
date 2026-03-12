@@ -44,7 +44,9 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/shared-constants/src/permission-categories.ts`                     | SSOT 권한 카테고리 그룹핑 (PERMISSION_CATEGORIES, PERMISSION_CATEGORY_KEYS)                    |
 | `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                                               |
 | `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 + 세션 동작 상수 (TTL, idle timeout, session sync)                 |
-| `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리                                                                               |
+| `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리 (countsAll prefix 키 포함)                                                    |
+| `apps/frontend/lib/api/cache-invalidation.ts`                                | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등)                                                |
+| `packages/schemas/src/api-response.ts`                                       | ApiResponse 타입 SSOT (로컬 재정의 금지)                                                       |
 | `apps/frontend/lib/config/api-config.ts`                                     | SSOT API_BASE_URL (`process.env.NEXT_PUBLIC_API_URL` 직접 참조 금지)                           |
 | `apps/frontend/tests/e2e/shared/constants/shared-test-data.ts`               | E2E 테스트 URL SSOT (`BASE_URLS.BACKEND`, `BASE_URLS.FRONTEND`)                                |
 | `apps/frontend/lib/config/dashboard-config.ts`                               | SSOT 역할별 대시보드 Config (DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE)                              |
@@ -523,6 +525,45 @@ patterns: [{ pattern: `${CACHE_KEY_PREFIXES.CHECKOUTS}*` }],
 
 **참고 — SSOT 파일:** `apps/backend/src/common/cache/cache-key-prefixes.ts`
 
+### Step 11b: ApiResponse 로컬 재정의 탐지
+
+`ApiResponse` 타입이 `@equipment-management/schemas`에서 임포트되지 않고 로컬에서 재정의되어 있는지 확인합니다.
+
+```bash
+# ApiResponse 로컬 재정의 탐지 (packages/schemas 제외)
+grep -rn "interface ApiResponse\b\|type ApiResponse\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management\|import\|re-export\|// "
+```
+
+**PASS 기준:** 0개 결과 (`ApiResponse`는 `@equipment-management/schemas`에서 import).
+
+**FAIL 기준:** `packages/` 외부에서 `interface ApiResponse` 또는 `type ApiResponse =` 정의 발견 시 위반.
+
+### Step 11c: CheckoutCacheInvalidation SSOT 사용 확인
+
+프론트엔드에서 체크아웃 관련 캐시 무효화가 `CheckoutCacheInvalidation` 클래스를 통해 수행되는지 확인합니다. 하드코딩된 `queryKeys.checkouts.*` 배열 조합 금지.
+
+```bash
+# checkout 관련 캐시 무효화에서 하드코딩된 queryKeys 배열 탐지
+grep -rn "invalidateQueries.*queryKeys\.checkouts\." apps/frontend/components apps/frontend/hooks --include="*.ts" --include="*.tsx" | grep -v "cache-invalidation\|CheckoutCacheInvalidation\|// "
+```
+
+**PASS 기준:** 컴포넌트/훅에서 체크아웃 캐시 무효화는 `CheckoutCacheInvalidation` 클래스를 통해 수행.
+
+**FAIL 기준:** 컴포넌트에서 직접 `queryKeys.checkouts.*` 배열을 조합하여 invalidateQueries 호출 시 위반.
+
+### Step 11d: countsAll prefix 키 사용 확인
+
+승인 카운트 캐시 무효화 시 `queryKeys.approvals.counts()` (undefined 매개변수 포함) 대신 `queryKeys.approvals.countsAll` (prefix 키)을 사용하는지 확인합니다.
+
+```bash
+# approvals.counts() 호출 (undefined 매개변수)로 캐시 무효화하는 패턴 탐지
+grep -rn "approvals\.counts()" apps/frontend --include="*.ts" --include="*.tsx" | grep -v "query-config\|// "
+```
+
+**PASS 기준:** 캐시 무효화 시 `queryKeys.approvals.countsAll` 사용 (역할 무관 prefix 매칭).
+
+**FAIL 기준:** `queryKeys.approvals.counts()` → `['approval-counts', undefined]`는 역할별 키 `['approval-counts', 'technical_manager']`와 매칭 안 됨 — 무효화 누락.
+
 ### Step 11: PAGE_SIZE_OPTIONS 로컬 재정의 탐지
 
 `PAGE_SIZE_OPTIONS`가 `@/lib/config/pagination`에서 임포트되지 않고 컴포넌트에서 직접 선언되어 있는지 확인합니다.
@@ -582,6 +623,9 @@ import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/config/pagination';
 | 10  | SITE_VALUES 로컬 재정의       | PASS/FAIL | Site[] 로컬 선언 위치                  |
 | 11  | PAGE_SIZE_OPTIONS 로컬 재정의 | PASS/FAIL | pagination.ts 외 직접 선언 위치        |
 | 11a | CACHE_KEY_PREFIXES SSOT       | PASS/FAIL | 하드코딩 캐시 키 위치                  |
+| 11b | ApiResponse 로컬 재정의       | PASS/FAIL | packages/ 외 ApiResponse 정의 위치     |
+| 11c | CheckoutCacheInvalidation     | PASS/FAIL | 직접 queryKeys 조합 무효화 위치        |
+| 11d | countsAll prefix 키 사용      | PASS/FAIL | approvals.counts() 무효화 위치         |
 ```
 
 ## Exceptions
