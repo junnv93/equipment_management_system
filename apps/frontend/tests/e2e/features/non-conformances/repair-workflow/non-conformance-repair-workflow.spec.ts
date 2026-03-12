@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from '../../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
 test.describe('Non-Conformance and Repair Workflow Integration', () => {
   // 테스트용 장비 ID (각 테스트에서 생성)
@@ -186,7 +187,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
   }) => {
     // 1. 장비 생성 (API 직접 호출)
     const createEquipmentResponse = await testOperatorPage.request.post(
-      'http://localhost:3001/api/equipment',
+      `${BASE_URLS.BACKEND}/api/equipment`,
       {
         data: {
           name: 'E2E Workflow Test Equipment',
@@ -243,7 +244,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     // 4. API를 통해 수리 등록 (부적합 ID 연결, 완료 상태)
     // 먼저 부적합 ID를 가져와야 함
     const ncListResponse = await testOperatorPage.request.get(
-      `http://localhost:3001/api/non-conformances?equipmentId=${testEquipmentId}`
+      `${BASE_URLS.BACKEND}/api/non-conformances?equipmentId=${testEquipmentId}`
     );
     const ncListData = await ncListResponse.json();
     if (!ncListData.items || ncListData.items.length === 0) {
@@ -257,7 +258,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 수리 등록 (부적합 연결, 완료 상태)
     const createRepairResponse = await testOperatorPage.request.post(
-      `http://localhost:3001/api/equipment/${testEquipmentId}/repair-history`,
+      `${BASE_URLS.BACKEND}/api/equipment/${testEquipmentId}/repair-history`,
       {
         data: {
           repairDate: new Date().toISOString(),
@@ -294,7 +295,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
 
     // 부적합 종료는 별도 API 호출 필요 (UI에 종료 버튼이 없다면)
     const closeResponse = await techManagerPage.request.patch(
-      `http://localhost:3001/api/non-conformances/${testNonConformanceId}/close`,
+      `${BASE_URLS.BACKEND}/api/non-conformances/${testNonConformanceId}/close`,
       {
         data: {
           closedBy: 'tech-manager-id',
@@ -317,7 +318,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     await expect(techManagerPage.getByText('사용 가능')).toBeVisible();
 
     // 정리: 테스트 장비 삭제
-    await testOperatorPage.request.delete(`http://localhost:3001/api/equipment/${testEquipmentId}`);
+    await testOperatorPage.request.delete(`${BASE_URLS.BACKEND}/api/equipment/${testEquipmentId}`);
   });
 
   test.afterEach(async ({ testOperatorPage }) => {
@@ -325,7 +326,7 @@ test.describe('Non-Conformance and Repair Workflow Integration', () => {
     if (testEquipmentId) {
       try {
         await testOperatorPage.request.delete(
-          `http://localhost:3001/api/equipment/${testEquipmentId}`
+          `${BASE_URLS.BACKEND}/api/equipment/${testEquipmentId}`
         );
       } catch (error) {
         // 이미 삭제되었거나 실패해도 무시

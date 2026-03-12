@@ -16,6 +16,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
 test.describe('Full Workflow Integration', () => {
   let testEquipmentId: string;
@@ -76,7 +77,7 @@ test.describe('Full Workflow Integration', () => {
     // 4. Verify NC can be closed (repair requirement satisfied)
     // Get NC ID via API
     const ncListResponse = await techManagerPage.request.get(
-      `http://localhost:3001/api/non-conformances?equipmentId=${testEquipmentId}`
+      `${BASE_URLS.BACKEND}/api/non-conformances?equipmentId=${testEquipmentId}`
     );
 
     if (!ncListResponse.ok()) {
@@ -101,7 +102,7 @@ test.describe('Full Workflow Integration', () => {
 
     // 5. Close NC via API call (PATCH /api/non-conformances/{id}/close)
     const closeResponse = await techManagerPage.request.patch(
-      `http://localhost:3001/api/non-conformances/${testNonConformanceId}/close`,
+      `${BASE_URLS.BACKEND}/api/non-conformances/${testNonConformanceId}/close`,
       {
         data: {
           closureNotes: 'E2E Test: Technical manager approval - repair completed',

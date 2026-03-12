@@ -15,6 +15,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
 test.describe('Full Workflow Integration', () => {
   let testEquipmentId: string;
@@ -49,7 +50,7 @@ test.describe('Full Workflow Integration', () => {
 
     // Check if all NCs are closed via API
     const ncListResponse = await techManagerPage.request.get(
-      `http://localhost:3001/api/non-conformances?equipmentId=${testEquipmentId}`
+      `${BASE_URLS.BACKEND}/api/non-conformances?equipmentId=${testEquipmentId}`
     );
 
     if (!ncListResponse.ok()) {

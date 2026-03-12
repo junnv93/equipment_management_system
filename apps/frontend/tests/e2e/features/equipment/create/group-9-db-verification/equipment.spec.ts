@@ -12,11 +12,12 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
 test.describe('DB 검증 통합 테스트', () => {
   test('장비 등록 후 DB 데이터 검증', async ({ siteAdminPage }) => {
     // Backend API directly to create equipment (bypass frontend auth issues)
-    const backendURL = 'http://localhost:3001';
+    const backendURL = BASE_URLS.BACKEND;
 
     // 1. Get backend JWT token for API authentication (lab_manager role)
     const testLoginResponse = await siteAdminPage.request.get(

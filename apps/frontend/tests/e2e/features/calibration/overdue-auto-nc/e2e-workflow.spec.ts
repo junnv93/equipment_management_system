@@ -21,10 +21,11 @@
 import { test, expect, APIRequestContext, Page } from '@playwright/test';
 import { EquipmentStatus, NonConformanceStatus } from '@equipment-management/schemas';
 import { Permission } from '@equipment-management/shared-constants';
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
 // Test configuration
-const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL || 'http://localhost:3001';
-const FRONTEND_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
+const BACKEND_URL = BASE_URLS.BACKEND;
+const FRONTEND_URL = BASE_URLS.FRONTEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}/api/notifications/trigger-overdue-check`;
 
 /**

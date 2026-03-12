@@ -11,26 +11,31 @@
  * - serial 모드: DB 상태 변경 테스트 → TOCTOU 레이스 방지
  */
 import { test, expect } from '../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../shared/constants/shared-test-data';
 
 /** 백엔드 API로 locale 직접 설정 (UI 우회, 테스트 상태 독립성 확보) */
 async function setLocaleViaApi(
   page: import('@playwright/test').Page,
   locale: 'ko' | 'en'
 ): Promise<void> {
-  await page.evaluate(async (targetLocale) => {
-    const session = await fetch('/api/auth/session').then((r) => r.json());
-    const accessToken = session?.accessToken;
-    if (!accessToken) throw new Error('No access token');
-    const res = await fetch('http://localhost:3001/api/users/me/preferences', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ locale: targetLocale }),
-    });
-    if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
-  }, locale);
+  const backendUrl = BASE_URLS.BACKEND;
+  await page.evaluate(
+    async ({ targetLocale, backendUrl: url }) => {
+      const session = await fetch('/api/auth/session').then((r) => r.json());
+      const accessToken = session?.accessToken;
+      if (!accessToken) throw new Error('No access token');
+      const res = await fetch(`${url}/api/users/me/preferences`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ locale: targetLocale }),
+      });
+      if (!res.ok) throw new Error(`PATCH failed: ${res.status}`);
+    },
+    { targetLocale: locale, backendUrl }
+  );
 }
 
 test.describe('표시 설정 - 언어 변경', () => {
@@ -55,7 +60,7 @@ test.describe('표시 설정 - 언어 변경', () => {
     const [getRes] = await Promise.all([
       page.waitForResponse(
         (r) =>
-          r.url().includes('localhost:3001') &&
+          r.url().includes(BASE_URLS.BACKEND) &&
           r.url().includes('me/preferences') &&
           r.request().method() === 'GET'
       ),

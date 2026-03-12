@@ -18,6 +18,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
 test.describe('Full Workflow Integration', () => {
   let testEquipmentId: string;
@@ -36,7 +37,7 @@ test.describe('Full Workflow Integration', () => {
   }) => {
     // Create a new test equipment for clean workflow verification
     const createEquipmentResponse = await testOperatorPage.request.post(
-      'http://localhost:3001/api/equipment',
+      `${BASE_URLS.BACKEND}/api/equipment`,
       {
         data: {
           name: 'E2E Complete Workflow Test Equipment',
@@ -85,7 +86,7 @@ test.describe('Full Workflow Integration', () => {
 
     // Verify NC was created
     const ncListResponse = await testOperatorPage.request.get(
-      `http://localhost:3001/api/non-conformances?equipmentId=${testEquipmentId}`
+      `${BASE_URLS.BACKEND}/api/non-conformances?equipmentId=${testEquipmentId}`
     );
     const ncListData = await ncListResponse.json();
     const createdNC = ncListData.items?.[0];
@@ -103,7 +104,7 @@ test.describe('Full Workflow Integration', () => {
 
     // 3. Register repair with NC connection
     const createRepairResponse = await testOperatorPage.request.post(
-      `http://localhost:3001/api/equipment/${testEquipmentId}/repair-history`,
+      `${BASE_URLS.BACKEND}/api/equipment/${testEquipmentId}/repair-history`,
       {
         data: {
           repairDate: new Date().toISOString(),
@@ -127,7 +128,7 @@ test.describe('Full Workflow Integration', () => {
 
     // 4. Verify NC auto-transitioned to corrected
     const updatedNCResponse = await testOperatorPage.request.get(
-      `http://localhost:3001/api/non-conformances/${testNonConformanceId}`
+      `${BASE_URLS.BACKEND}/api/non-conformances/${testNonConformanceId}`
     );
     const updatedNC = await updatedNCResponse.json();
 
@@ -138,7 +139,7 @@ test.describe('Full Workflow Integration', () => {
 
     // 5. Technical manager closes NC
     const closeResponse = await techManagerPage.request.patch(
-      `http://localhost:3001/api/non-conformances/${testNonConformanceId}/close`,
+      `${BASE_URLS.BACKEND}/api/non-conformances/${testNonConformanceId}/close`,
       {
         data: {
           closureNotes: 'E2E Test: Complete workflow verification - approved',
@@ -160,7 +161,7 @@ test.describe('Full Workflow Integration', () => {
 
     // 6. Verify equipment status was restored
     const finalEquipmentResponse = await techManagerPage.request.get(
-      `http://localhost:3001/api/equipment/${testEquipmentId}`
+      `${BASE_URLS.BACKEND}/api/equipment/${testEquipmentId}`
     );
     const finalEquipment = await finalEquipmentResponse.json();
 
@@ -181,7 +182,7 @@ test.describe('Full Workflow Integration', () => {
     console.log('✓ No orphaned records or broken references');
 
     // Cleanup: Delete test equipment
-    await testOperatorPage.request.delete(`http://localhost:3001/api/equipment/${testEquipmentId}`);
+    await testOperatorPage.request.delete(`${BASE_URLS.BACKEND}/api/equipment/${testEquipmentId}`);
     console.log('✓ Test equipment cleaned up');
   });
 
@@ -190,7 +191,7 @@ test.describe('Full Workflow Integration', () => {
     if (testEquipmentId) {
       try {
         await testOperatorPage.request.delete(
-          `http://localhost:3001/api/equipment/${testEquipmentId}`
+          `${BASE_URLS.BACKEND}/api/equipment/${testEquipmentId}`
         );
       } catch (error) {
         // Ignore cleanup errors

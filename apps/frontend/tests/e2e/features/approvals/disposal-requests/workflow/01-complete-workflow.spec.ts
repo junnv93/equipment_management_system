@@ -18,6 +18,7 @@
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 import { resetEquipmentToAvailable } from '../helpers/db-cleanup';
 
 // Import SSOT constants from uuid-constants
@@ -35,7 +36,7 @@ test.describe.serial('Complete Disposal Workflow', () => {
     // 2. Invalidate backend cache via API
     // This is CRITICAL because direct DB updates bypass cache invalidation
     try {
-      const response = await request.post('http://localhost:3001/api/equipment/cache/invalidate', {
+      const response = await request.post(`${BASE_URLS.BACKEND}/api/equipment/cache/invalidate`, {
         headers: { 'X-Internal-Api-Key': process.env.INTERNAL_API_KEY ?? 'dev-internal-key' },
       });
       if (response.ok()) {

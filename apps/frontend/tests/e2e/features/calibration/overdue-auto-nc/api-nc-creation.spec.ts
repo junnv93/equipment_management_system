@@ -37,9 +37,10 @@ import {
   NonConformanceStatus,
   IncidentType,
 } from '@equipment-management/schemas';
+import { BASE_URLS } from '../../../shared/constants/shared-test-data';
 
 // Backend configuration
-const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = BASE_URLS.BACKEND;
 const TRIGGER_ENDPOINT = `${BACKEND_URL}/api/notifications/trigger-overdue-check`;
 
 /**

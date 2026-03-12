@@ -7,8 +7,9 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { BASE_URLS } from '../../../../shared/constants/shared-test-data';
 
-const BACKEND_URL = process.env.PLAYWRIGHT_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = BASE_URLS.BACKEND;
 
 test.describe('Group 5: Equipment List Integration - Seed Setup', () => {
   test.beforeEach(async ({}, testInfo) => {
