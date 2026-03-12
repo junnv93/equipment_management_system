@@ -8,29 +8,29 @@
  * - 디자인 토큰: getMobileNavItemClasses() (Phase 2 - mobile-nav.ts SSOT)
  *
  * 접근성 (WCAG 2.1 AA):
- * - ESC 키로 닫기
- * - 포커스 트랩 (드로어 내 포커스 유지)
- * - aria-modal, aria-label 속성
- * - prefers-reduced-motion 존중
+ * - Radix Dialog 기반 Sheet로 포커스 트랩/스크롤 잠금/Escape 닫기 네이티브 처리
+ * - aria-modal, aria-label 속성 (Radix 자동 관리)
+ * - 닫을 때 트리거 버튼으로 자동 포커스 반환
+ * - prefers-reduced-motion 존중 (Sheet 애니메이션)
  *
  * 성능 최적화 (vercel-react-best-practices):
  * - useCallback으로 이벤트 핸들러 안정화
  * - memo로 NavLink 컴포넌트 최적화
  */
 
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import {
   FOCUS_TOKENS,
   MOBILE_NAV_TOKENS,
   MOBILE_NAV_DRAWER_TOKENS,
   MOBILE_NAV_SECTION_TOKENS,
-  TRANSITION_PRESETS,
   getMobileNavItemClasses,
 } from '@/lib/design-tokens';
 import type { FilteredNavItem, FilteredNavSection } from '@/lib/navigation/nav-config';
@@ -95,119 +95,59 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
   const pathname = usePathname();
   const t = useTranslations('navigation');
   const displayBrandName = brandName ?? t('layout.systemName');
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // 경로 변경 시 드로어 닫기
   useEffect(() => {
     setIsOpen(false);
   }, [pathname]);
 
-  // ESC 키로 닫기 + 포커스 트랩
+  // 데스크톱 뷰포트 전환 시 드로어 닫기 (body scroll lock 방지)
   useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-        menuButtonRef.current?.focus();
-        return;
-      }
-
-      if (e.key === 'Tab' && drawerRef.current) {
-        const focusableElements = drawerRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-        );
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey && document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement?.focus();
-        } else if (!e.shiftKey && document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement?.focus();
-        }
-      }
+    const mq = window.matchMedia('(min-width: 768px)');
+    const handler = () => {
+      if (mq.matches) setIsOpen(false);
     };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  // 드로어 열릴 때 첫 번째 요소에 포커스 + body 스크롤 방지
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      requestAnimationFrame(() => {
-        closeButtonRef.current?.focus();
-      });
-      announceToScreenReader(t('layout.menuOpened'));
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, t]);
-
-  const toggleMenu = useCallback(() => {
-    setIsOpen((prev) => !prev);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
+
+  // 스크린리더 알림
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open);
+      announceToScreenReader(open ? t('layout.menuOpened') : t('layout.menuClosed'));
+    },
+    [t]
+  );
 
   const closeMenu = useCallback(() => {
     setIsOpen(false);
-    menuButtonRef.current?.focus();
     announceToScreenReader(t('layout.menuClosed'));
   }, [t]);
 
   return (
-    <>
-      {/* 햄버거 메뉴 버튼 */}
-      <Button
-        ref={menuButtonRef}
-        variant="ghost"
-        size="icon"
-        className={cn('md:hidden', FOCUS_TOKENS.classes.default)}
-        onClick={toggleMenu}
-        aria-label={isOpen ? t('layout.menuClose') : t('layout.menuOpen')}
-        aria-expanded={isOpen}
-        aria-controls="mobile-nav-drawer"
-      >
-        <Menu className="h-6 w-6" aria-hidden="true" />
-      </Button>
-
-      {/* 오버레이 */}
-      {isOpen && (
-        <div
-          className={cn(
-            'fixed inset-0 z-40 bg-black/50 md:hidden',
-            TRANSITION_PRESETS.moderateOpacity
-          )}
-          onClick={closeMenu}
-          aria-hidden="true"
-        />
-      )}
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+      {/* 햄버거 메뉴 버튼 — SheetTrigger로 포커스 반환 자동 처리 */}
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn('md:hidden', FOCUS_TOKENS.classes.default)}
+          aria-label={isOpen ? t('layout.menuClose') : t('layout.menuOpen')}
+        >
+          <Menu className="h-6 w-6" aria-hidden="true" />
+        </Button>
+      </SheetTrigger>
 
       {/* 모바일 드로어 */}
-      <div
-        ref={drawerRef}
-        id="mobile-nav-drawer"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('layout.mainNav')}
-        aria-hidden={!isOpen}
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 md:hidden',
-          MOBILE_NAV_DRAWER_TOKENS.background,
-          MOBILE_NAV_DRAWER_TOKENS.shadow,
-          MOBILE_NAV_DRAWER_TOKENS.border,
-          'transform',
-          TRANSITION_PRESETS.moderateTransform,
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
+      <SheetContent
+        side="left"
+        hideClose
+        className={MOBILE_NAV_DRAWER_TOKENS.content}
+        aria-describedby={undefined}
       >
+        <SheetTitle className="sr-only">{t('layout.mainNav')}</SheetTitle>
+
         {/* 드로어 헤더 */}
         <div
           className={cn(
@@ -222,7 +162,6 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
             <span>{displayBrandName}</span>
           </div>
           <Button
-            ref={closeButtonRef}
             variant="ghost"
             size="icon"
             onClick={closeMenu}
@@ -267,7 +206,7 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
             </div>
           ))}
         </nav>
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
 import { X, Printer, User, Server, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import { AuditLogDiffViewer } from '@/components/ui/audit-log-diff-viewer';
 import { PrintableAuditReport } from './PrintableAuditReport';
@@ -29,92 +29,28 @@ interface AuditDetailSheetProps {
 /**
  * 감사 로그 상세 슬라이드 패널
  *
- * AuditLogDetailDialog(모달)를 대체하는 우측 슬라이드 패널입니다.
- * 목록 컨텍스트를 유지하면서 상세 정보를 확인할 수 있습니다.
- *
- * 접근성:
- * - role="dialog", aria-modal, aria-label 설정
- * - open 시 body overflow 잠금
- * - Escape 키 닫기
- * - 백드롭 클릭 닫기
+ * Radix Dialog 기반 Sheet 컴포넌트를 사용하여
+ * 포커스 트랩, Escape 닫기, 백드롭 클릭, body scroll 잠금을
+ * 네이티브로 처리합니다.
  */
 export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetProps) {
   const t = useTranslations('audit');
   const tc = useTranslations('common');
   const { getActionLabel, getEntityTypeLabel } = createAuditLabelFns(t);
 
-  // body overflow 잠금
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [open]);
-
-  // Escape 키 닫기 + focus trap
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!open) return;
-
-      if (e.key === 'Escape') {
-        onOpenChange(false);
-        return;
-      }
-
-      // focus trap: Tab 키가 패널 외부로 탈출하지 못하도록 제한
-      if (e.key === 'Tab') {
-        const panel = document.getElementById('audit-detail-sheet');
-        if (!panel) return;
-        const focusable = panel.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last?.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first?.focus();
-          }
-        }
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onOpenChange]);
-
   const hasDetails = log?.details && (log.details.previousValue || log.details.newValue);
   const hasAdditionalInfo = log?.details?.additionalInfo;
 
   return (
-    <>
-      {/* 백드롭 */}
-      <div
-        aria-hidden="true"
-        className={cn(
-          AUDIT_DETAIL_SHEET_TOKENS.backdrop,
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        )}
-        onClick={() => onOpenChange(false)}
-      />
-
-      {/* 슬라이드 패널 */}
-      <div
-        id="audit-detail-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('detail.title')}
-        className={cn(AUDIT_DETAIL_SHEET_TOKENS.panel, open ? 'translate-x-0' : 'translate-x-full')}
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        hideClose
+        className={AUDIT_DETAIL_SHEET_TOKENS.content}
+        aria-describedby={undefined}
       >
+        <SheetTitle className="sr-only">{t('detail.title')}</SheetTitle>
+
         {/* 화면 표시용 */}
         <div className="print:hidden flex flex-col h-full">
           {/* ── 헤더 ── */}
@@ -346,7 +282,7 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
             title={t('detail.auditLogDetail', { type: getEntityTypeLabel(log.entityType) })}
           />
         )}
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }

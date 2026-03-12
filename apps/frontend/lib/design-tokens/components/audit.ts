@@ -379,18 +379,24 @@ export const AUDIT_TIMELINE_DOT_COLORS: Record<string, string> = {
 
 /**
  * 감사로그 상세 슬라이드 패널 스타일
+ *
+ * Radix Dialog 기반 Sheet 컴포넌트 사용.
+ * - backdrop/positioning/animation/focus-trap → Sheet가 처리
+ * - content: SheetContent의 className 오버라이드 (크기/테마/레이아웃)
+ * - 이하 토큰: 패널 내부 레이아웃
  */
 export const AUDIT_DETAIL_SHEET_TOKENS = {
-  /** 백드롭 */
-  backdrop: ['fixed inset-0 bg-black/40 z-40', TRANSITION_PRESETS.fastOpacity].join(' '),
-
-  /** 패널 자체 */
-  panel: [
-    'fixed top-0 right-0 h-full w-[480px] max-w-[95vw]',
-    'bg-brand-bg-surface border-l border-brand-border-subtle',
-    'flex flex-col z-50',
-    'transition-transform duration-300 ease-out',
-    'shadow-2xl',
+  /**
+   * SheetContent className 오버라이드
+   *
+   * Sheet 기본값(w-3/4, sm:max-w-sm, bg-background) 대신
+   * 감사로그 패널에 맞는 크기/테마/레이아웃 적용.
+   * position/z-index/animation/border-side는 Sheet가 처리하므로 미포함.
+   */
+  content: [
+    'w-[480px] max-w-[95vw] sm:max-w-[480px] p-0',
+    'bg-brand-bg-surface border-brand-border-subtle',
+    'flex flex-col shadow-2xl',
   ].join(' '),
 
   /** 헤더 영역 */

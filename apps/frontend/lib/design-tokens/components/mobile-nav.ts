@@ -11,9 +11,19 @@ import { TRANSITION_PRESETS } from '../motion';
 /**
  * 모바일 드로어 컨테이너 토큰
  *
- * 배경/테두리/그림자를 테마 시스템 변수로 — bg-white/dark:bg-gray-900 하드코딩 제거
+ * Radix Dialog 기반 Sheet 컴포넌트 사용.
+ * - focus-trap/scroll-lock/backdrop/animation → Sheet가 처리
+ * - content: SheetContent className 오버라이드 (크기/테마)
+ * - 이하 개별 토큰: 드로어 내부 세부 스타일
  */
 export const MOBILE_NAV_DRAWER_TOKENS = {
+  /**
+   * SheetContent className 오버라이드
+   *
+   * Sheet 기본값(w-3/4, sm:max-w-sm) 대신
+   * 모바일 네비 드로어 크기/테마 적용.
+   */
+  content: ['w-72 sm:max-w-72 p-0', 'bg-background', 'shadow-xl'].join(' '),
   background: 'bg-background',
   shadow: 'shadow-xl',
   border: 'border-r border-border',
