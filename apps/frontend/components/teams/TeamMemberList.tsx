@@ -4,8 +4,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { Search, User, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
-import { getStaggerDelay } from '@/lib/design-tokens/motion';
-import { MOTION_TOKENS } from '@/lib/design-tokens';
+import { getStaggerDelay, MOTION_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +40,7 @@ import { cn } from '@/lib/utils';
 import { UserRoleValues } from '@equipment-management/schemas';
 import { MemberProfileDialog } from './MemberProfileDialog';
 import type { CurrentUserInfo } from './TeamDetail';
-import { ROLE_BADGE_TOKENS, TEAM_MEMBER_GROUP_TOKENS } from '@/lib/design-tokens/components/team';
+import { ROLE_BADGE_TOKENS, TEAM_MEMBER_GROUP_TOKENS } from '@/lib/design-tokens';
 
 interface TeamMemberListProps {
   teamId: string;
@@ -116,7 +115,7 @@ export function TeamMemberList({
       queryKeys.teams.detail(teamId),
       queryKeys.teams.lists(),
       queryKeys.users.list(),
-      queryKeys.approvals.counts(),
+      queryKeys.approvals.countsAll,
     ],
     successMessage: t('member.roleChangeSuccess'),
   });
@@ -219,7 +218,10 @@ export function TeamMemberList({
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                className={cn(
+                  'absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground',
+                  TRANSITION_PRESETS.fastColor
+                )}
                 aria-label={t('member.searchClear')}
               >
                 <X className="h-3.5 w-3.5" />

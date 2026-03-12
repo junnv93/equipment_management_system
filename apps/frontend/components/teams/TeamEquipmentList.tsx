@@ -14,6 +14,7 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import equipmentApi from '@/lib/api/equipment-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 interface TeamEquipmentListProps {
   teamId: string;
@@ -165,7 +166,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                       <tr
                         key={item.uuid || item.id}
                         className={cn(
-                          'border-b last:border-0 hover:bg-muted/30 transition-colors',
+                          `border-b last:border-0 hover:bg-muted/30 ${TRANSITION_PRESETS.fastColor}`,
                           'animate-in fade-in fill-mode-forwards'
                         )}
                         style={{

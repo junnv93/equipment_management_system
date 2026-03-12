@@ -19,10 +19,7 @@
  * ```
  */
 import { EQUIPMENT_STATUS_LABELS, type EquipmentStatus } from '@equipment-management/schemas';
-import {
-  EQUIPMENT_STATUS_TOKENS,
-  DEFAULT_STATUS_CONFIG,
-} from '@/lib/design-tokens/components/equipment';
+import { EQUIPMENT_STATUS_TOKENS, DEFAULT_STATUS_CONFIG } from '@/lib/design-tokens';
 
 export interface EquipmentStatusStyle {
   className: string;

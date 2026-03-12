@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TeamMemberAvatarsProps {
@@ -70,7 +71,7 @@ export function TeamMemberAvatars({
                   className={cn(
                     'relative h-8 w-8 rounded-full border-2 border-background',
                     'bg-muted flex items-center justify-center',
-                    'transition-transform duration-200',
+                    TRANSITION_PRESETS.fastTransform,
                     hoveredMember === member.id && 'z-10 scale-110'
                   )}
                   style={{
@@ -109,7 +110,7 @@ export function TeamMemberAvatars({
                     'relative h-8 w-8 rounded-full border-2 border-background',
                     'bg-primary/10 flex items-center justify-center',
                     'text-xs font-medium text-primary',
-                    'hover:bg-primary/20 transition-colors duration-200',
+                    `hover:bg-primary/20 ${TRANSITION_PRESETS.fastColor}`,
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2'
                   )}
                   style={{ zIndex: 0 }}

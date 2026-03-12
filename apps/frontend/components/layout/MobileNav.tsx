@@ -25,13 +25,13 @@ import { useTranslations } from 'next-intl';
 import { X, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { FOCUS_TOKENS } from '@/lib/design-tokens';
 import {
+  FOCUS_TOKENS,
   MOBILE_NAV_TOKENS,
   MOBILE_NAV_DRAWER_TOKENS,
   MOBILE_NAV_SECTION_TOKENS,
   getMobileNavItemClasses,
-} from '@/lib/design-tokens/components/mobile-nav';
+} from '@/lib/design-tokens';
 import type { FilteredNavItem, FilteredNavSection } from '@/lib/navigation/nav-config';
 import { isNavItemActive } from '@/lib/navigation/nav-config';
 

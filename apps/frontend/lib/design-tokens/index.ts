@@ -452,6 +452,7 @@ export {
 // Mobile Nav
 export {
   MOBILE_NAV_TOKENS,
+  MOBILE_NAV_DRAWER_TOKENS,
   MOBILE_NAV_SECTION_TOKENS,
   getMobileNavItemClasses,
 } from './components/mobile-nav';

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { USER_ROLE_LABELS } from '@equipment-management/shared-constants';
 import { SITE_CONFIG } from '@/lib/api/teams-api';
 import type { TeamMember } from '@/lib/api/teams-api';
-import { ROLE_BADGE_TOKENS } from '@/lib/design-tokens/components/team';
+import { ROLE_BADGE_TOKENS } from '@/lib/design-tokens';
 
 interface MemberProfileDialogProps {
   member: TeamMember;

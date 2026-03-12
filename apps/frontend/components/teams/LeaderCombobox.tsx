@@ -11,7 +11,7 @@ import { useTranslations } from 'next-intl';
 import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { USER_ROLE_LABELS } from '@equipment-management/shared-constants';
-import { ROLE_BADGE_TOKENS } from '@/lib/design-tokens/components/team';
+import { ROLE_BADGE_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 interface LeaderComboboxProps {
   value?: string;
@@ -156,7 +156,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
                 role="option"
                 aria-selected={user.id === value}
                 className={cn(
-                  'flex items-center gap-3 w-full px-3 py-2.5 text-left hover:bg-muted/50 transition-colors',
+                  `flex items-center gap-3 w-full px-3 py-2.5 text-left hover:bg-muted/50 ${TRANSITION_PRESETS.fastColor}`,
                   user.id === value && 'bg-muted'
                 )}
                 onClick={() => handleSelect(user)}

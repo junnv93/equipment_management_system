@@ -36,9 +36,11 @@ import { hasApprovalPermissions } from '@/lib/utils/permission-helpers';
 import { approvalsApi, type PendingCountsByCategory } from '@/lib/api/approvals-api';
 import { queryKeys, CACHE_TIMES, REFETCH_INTERVALS } from '@/lib/api/query-config';
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
-import { getHeaderSpacingClass, FOCUS_TOKENS, ANIMATION_PRESETS } from '@/lib/design-tokens';
-import { getTransitionClasses } from '@/lib/design-tokens/motion';
 import {
+  getHeaderSpacingClass,
+  FOCUS_TOKENS,
+  ANIMATION_PRESETS,
+  TRANSITION_PRESETS,
   SIDEBAR_LAYOUT,
   SIDEBAR_COLORS,
   SIDEBAR_ITEM_TOKENS,
@@ -46,7 +48,7 @@ import {
   getSidebarItemClasses,
   getSidebarWidthClasses,
   getSidebarMarginClasses,
-} from '@/lib/design-tokens/components/sidebar';
+} from '@/lib/design-tokens';
 import { getFilteredNavSections, isNavItemActive } from '@/lib/navigation/nav-config';
 import type { FilteredNavSection } from '@/lib/navigation/nav-config';
 import { saveRecentPage } from '@/components/layout/GlobalSearchDialog';
@@ -215,7 +217,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     'flex items-center gap-2 font-semibold text-white group',
                     FOCUS_TOKENS.classes.onDark,
                     'rounded-md hover:bg-white/10 px-2 py-1.5 -mx-2',
-                    getTransitionClasses('fast', ['background-color'])
+                    TRANSITION_PRESETS.fastBg
                   )}
                   aria-label={t('layout.goHome')}
                 >
@@ -223,17 +225,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     className={cn(
                       'flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red',
                       'group-hover:scale-110',
-                      getTransitionClasses('fast', ['transform'])
+                      TRANSITION_PRESETS.fastTransform
                     )}
                   >
                     <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
                   </div>
-                  <span
-                    className={cn(
-                      'group-hover:text-ul-info',
-                      getTransitionClasses('fast', ['color'])
-                    )}
-                  >
+                  <span className={cn('group-hover:text-ul-info', TRANSITION_PRESETS.fastColor)}>
                     {t('layout.systemName')}
                   </span>
                 </Link>
