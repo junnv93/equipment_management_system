@@ -1,4 +1,5 @@
 import { apiClient } from './api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 // 수리 결과 타입
 export type RepairResult = 'completed' | 'partial' | 'failed';
@@ -73,7 +74,7 @@ export async function getRepairHistoryByEquipment(
   if (query?.pageSize) params.append('pageSize', String(query.pageSize));
 
   const queryString = params.toString();
-  const url = `/api/equipment/${equipmentUuid}/repair-history${queryString ? `?${queryString}` : ''}`;
+  const url = `${API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.LIST(equipmentUuid)}${queryString ? `?${queryString}` : ''}`;
   const response = await apiClient.get<RepairHistoryListResponse>(url);
   return response.data;
 }
@@ -82,7 +83,9 @@ export async function getRepairHistoryByEquipment(
  * 수리 이력 상세 조회
  */
 export async function getRepairHistory(uuid: string): Promise<RepairHistory> {
-  const response = await apiClient.get<RepairHistory>(`/api/repair-history/${uuid}`);
+  const response = await apiClient.get<RepairHistory>(
+    API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.GET(uuid)
+  );
   return response.data;
 }
 
@@ -94,7 +97,7 @@ export async function createRepairHistory(
   dto: CreateRepairHistoryDto
 ): Promise<RepairHistory> {
   const response = await apiClient.post<RepairHistory>(
-    `/api/equipment/${equipmentUuid}/repair-history`,
+    API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.CREATE(equipmentUuid),
     dto
   );
   return response.data;
@@ -107,7 +110,10 @@ export async function updateRepairHistory(
   uuid: string,
   dto: UpdateRepairHistoryDto
 ): Promise<RepairHistory> {
-  const response = await apiClient.patch<RepairHistory>(`/api/repair-history/${uuid}`, dto);
+  const response = await apiClient.patch<RepairHistory>(
+    API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.UPDATE(uuid),
+    dto
+  );
   return response.data;
 }
 
@@ -118,7 +124,7 @@ export async function deleteRepairHistory(
   uuid: string
 ): Promise<{ deleted: boolean; uuid: string }> {
   const response = await apiClient.delete<{ deleted: boolean; uuid: string }>(
-    `/api/repair-history/${uuid}`
+    API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.DELETE(uuid)
   );
   return response.data;
 }
@@ -131,7 +137,7 @@ export async function getRecentRepairs(
   limit: number = 5
 ): Promise<RepairHistory[]> {
   const response = await apiClient.get<RepairHistory[]>(
-    `/equipment/${equipmentUuid}/repair-history/recent?limit=${limit}`
+    `${API_ENDPOINTS.EQUIPMENT.REPAIR_HISTORY.RECENT(equipmentUuid)}?limit=${limit}`
   );
   return response.data;
 }

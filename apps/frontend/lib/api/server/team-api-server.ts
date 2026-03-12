@@ -110,7 +110,7 @@ export async function getTeamMembers(teamId: string): Promise<
     avatarUrl?: string;
   }>
 > {
-  const response = await fetch(`${API_BASE_URL}/api/v1/users?teamId=${teamId}`, {
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USERS.LIST}?teamId=${teamId}`, {
     headers: await getAuthHeaders(),
     cache: 'no-store',
   });

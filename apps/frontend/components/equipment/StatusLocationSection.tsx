@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { FormValues } from './BasicInfoSection';
 import { apiClient } from '@/lib/api/api-client';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import { getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { FORM_SECTION_TOKENS } from '@/lib/design-tokens';
@@ -93,7 +94,7 @@ export function StatusLocationSection({
         params.append('teams', String(currentTeamId));
       }
 
-      const response = await apiClient.get(`/api/users?${params.toString()}`);
+      const response = await apiClient.get(`${API_ENDPOINTS.USERS.LIST}?${params.toString()}`);
       type UserResponse = { data?: { items?: TechnicalManager[] }; items?: TechnicalManager[] };
       const responseData = response as UserResponse;
       const userData = responseData.data?.items || responseData.items || [];

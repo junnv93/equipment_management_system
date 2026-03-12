@@ -262,7 +262,7 @@ const checkoutApi = {
       }
     });
 
-    const url = `/api/users/${userId}/checkouts?${queryParams.toString()}`;
+    const url = `${API_ENDPOINTS.USERS.CHECKOUTS(userId)}?${queryParams.toString()}`;
     const response = await apiClient.get(url);
     return response.data;
   },
@@ -282,7 +282,7 @@ const checkoutApi = {
       }
     });
 
-    const url = `/api/equipment/${equipmentId}/checkouts?${queryParams.toString()}`;
+    const url = `${API_ENDPOINTS.EQUIPMENT.CHECKOUTS(equipmentId)}?${queryParams.toString()}`;
     const response = await apiClient.get(url);
     return response.data;
   },

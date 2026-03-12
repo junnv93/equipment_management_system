@@ -61,6 +61,17 @@ export const API_ENDPOINTS = {
       APPROVE: (id: string) => `/api/equipment/requests/${id}/approve`,
       REJECT: (id: string) => `/api/equipment/requests/${id}/reject`,
     },
+    /** 장비별 반출 이력 */
+    CHECKOUTS: (equipmentId: string) => `/api/equipment/${equipmentId}/checkouts`,
+    // 수리 이력
+    REPAIR_HISTORY: {
+      LIST: (equipmentId: string) => `/api/equipment/${equipmentId}/repair-history`,
+      CREATE: (equipmentId: string) => `/api/equipment/${equipmentId}/repair-history`,
+      RECENT: (equipmentId: string) => `/api/equipment/${equipmentId}/repair-history/recent`,
+      GET: (id: string) => `/api/repair-history/${id}`,
+      UPDATE: (id: string) => `/api/repair-history/${id}`,
+      DELETE: (id: string) => `/api/repair-history/${id}`,
+    },
     // 장비 폐기
     DISPOSAL: {
       REQUEST: (equipmentId: string) => `/api/equipment/${equipmentId}/disposal/request`,
@@ -217,10 +228,19 @@ export const API_ENDPOINTS = {
   USERS: {
     LIST: '/api/users',
     GET: (id: string) => `/api/users/${id}`,
+    CREATE: '/api/users',
+    UPDATE: (id: string) => `/api/users/${id}`,
+    DELETE: (id: string) => `/api/users/${id}`,
     ME: '/api/users/me',
     PREFERENCES: '/api/users/me/preferences',
-    UPDATE: (id: string) => `/api/users/${id}`,
     CHANGE_ROLE: (id: string) => `/api/users/${id}/change-role`,
+    ACTIVATE: (id: string) => `/api/users/${id}/activate`,
+    DEACTIVATE: (id: string) => `/api/users/${id}/deactivate`,
+    PERMISSIONS: (id: string) => `/api/users/${id}/permissions`,
+    /** NextAuth 로그인 시 사용자 동기화 (Internal API Key) */
+    SYNC: '/api/users/sync',
+    /** 사용자별 반출 이력 */
+    CHECKOUTS: (userId: string) => `/api/users/${userId}/checkouts`,
   },
 
   // ============================================================================

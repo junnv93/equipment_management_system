@@ -19,6 +19,7 @@ import type { JWT } from 'next-auth/jwt';
 import type { Account, Profile, User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import AzureADProvider from 'next-auth/providers/azure-ad';
+import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 /**
  * Azure AD 프로필 확장 타입
@@ -386,7 +387,7 @@ export const authOptions = {
           return true;
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/users/sync`, {
+        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.USERS.SYNC}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

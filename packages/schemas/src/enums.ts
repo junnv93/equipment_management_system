@@ -108,6 +108,13 @@ export const ClassificationEnum = z.enum([
 export type Classification = z.infer<typeof ClassificationEnum>;
 
 /**
+ * 분류코드 (1자리: E, R, W, S, A, P)
+ * ✅ SiteCodeEnum 패턴 미러링 — ClassificationCode의 SSOT
+ */
+export const ClassificationCodeEnum = z.enum(['E', 'R', 'W', 'S', 'A', 'P']);
+export type ClassificationCode = z.infer<typeof ClassificationCodeEnum>;
+
+/**
  * 사이트명 → 시험소코드 매핑
  * @example 'suwon' → 'SUW'
  */
@@ -131,7 +138,7 @@ export const CODE_TO_SITE: Record<SiteCode, Site> = {
  * 분류 → 분류코드 매핑 (1자리)
  * @example 'fcc_emc_rf' → 'E'
  */
-export const CLASSIFICATION_TO_CODE: Record<Classification, string> = {
+export const CLASSIFICATION_TO_CODE: Record<Classification, ClassificationCode> = {
   fcc_emc_rf: 'E',
   general_emc: 'R',
   general_rf: 'W',
@@ -144,7 +151,7 @@ export const CLASSIFICATION_TO_CODE: Record<Classification, string> = {
  * 분류코드 → 분류 역매핑
  * @example 'E' → 'fcc_emc_rf'
  */
-export const CODE_TO_CLASSIFICATION: Record<string, Classification> = {
+export const CODE_TO_CLASSIFICATION: Record<ClassificationCode, Classification> = {
   E: 'fcc_emc_rf',
   R: 'general_emc',
   W: 'general_rf',
@@ -224,7 +231,7 @@ export function generateManagementNumber(
 export function parseManagementNumber(managementNumber: string): {
   siteCode: SiteCode;
   site: Site;
-  classificationCode: string;
+  classificationCode: ClassificationCode;
   classification: Classification;
   serialNumber: string;
 } | null {
@@ -234,7 +241,7 @@ export function parseManagementNumber(managementNumber: string): {
   }
 
   const siteCode = managementNumber.substring(0, 3) as SiteCode;
-  const classificationCode = managementNumber.charAt(4);
+  const classificationCode = managementNumber.charAt(4) as ClassificationCode;
   const serialNumber = managementNumber.substring(5);
 
   return {
@@ -275,7 +282,7 @@ export function generateTemporaryManagementNumber(
 export function parseTemporaryManagementNumber(managementNumber: string): {
   siteCode: SiteCode;
   site: Site;
-  classificationCode: string;
+  classificationCode: ClassificationCode;
   classification: Classification;
   serialNumber: string;
 } | null {
@@ -287,7 +294,7 @@ export function parseTemporaryManagementNumber(managementNumber: string): {
   // "TEMP-SUW-E0001" → substring(5) = "SUW-E0001"
   const withoutPrefix = managementNumber.substring(5);
   const siteCode = withoutPrefix.substring(0, 3) as SiteCode;
-  const classificationCode = withoutPrefix.charAt(4);
+  const classificationCode = withoutPrefix.charAt(4) as ClassificationCode;
   const serialNumber = withoutPrefix.substring(5);
 
   return {

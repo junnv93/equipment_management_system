@@ -1,16 +1,13 @@
 import { z } from 'zod';
-import { SiteEnum, ClassificationEnum, type Classification } from './enums';
+import { SiteEnum, ClassificationEnum, ClassificationCodeEnum } from './enums';
 import { BaseEntity, SoftDeleteEntity, PaginatedResponse } from './common/base';
 
 /**
- * ⚠️ SSOT 준수: ClassificationEnum은 enums.ts에서 import
+ * ⚠️ SSOT 준수: ClassificationEnum, ClassificationCodeEnum은 enums.ts에서 import
  * - TeamType 제거: Classification 사용 (팀 타입 = 장비 분류)
  * - 레거시 대문자 값 지원 제거: 소문자 통일 (fcc_emc_rf, general_emc, ...)
- * - ClassificationCodeEnum 제거: CLASSIFICATION_TO_CODE 사용
+ * - ClassificationCode 타입은 enums.ts의 ClassificationCodeEnum에서 infer
  */
-
-// 분류코드 타입 (1자리: E, R, W, S, A, P)
-export type ClassificationCode = 'E' | 'R' | 'W' | 'S' | 'A' | 'P';
 
 // 기본 팀 스키마 (공통 필드)
 // ✅ SSOT: 팀의 classification = 장비의 classification (동일 enum)
@@ -22,7 +19,7 @@ export const baseTeamSchema = z.object({
   name: z.string().min(1).max(100),
   classification: ClassificationEnum, // ✅ type → classification (장비 분류와 동일)
   site: SiteEnum, // ✅ 필수 필드: 팀 소속 사이트
-  classificationCode: z.enum(['E', 'R', 'W', 'S', 'A', 'P']).optional(), // 분류코드 (1자리)
+  classificationCode: ClassificationCodeEnum.optional(), // ✅ SSOT: enums.ts에서 import
   description: z.string().max(500).optional(),
   leaderId: z.string().uuid().optional(),
 });
