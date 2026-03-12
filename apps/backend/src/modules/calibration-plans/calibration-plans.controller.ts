@@ -12,6 +12,7 @@ import {
   Res,
   Request,
   UsePipes,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import {
@@ -51,11 +52,16 @@ import {
   ConfirmPlanItemValidationPipe,
 } from './dto/approve-calibration-plan.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { Permission, CALIBRATION_PLAN_DATA_SCOPE } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  CALIBRATION_PLAN_DATA_SCOPE,
+  resolveDataScope,
+} from '@equipment-management/shared-constants';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import type { UserRole } from '@equipment-management/schemas';
 
 @ApiTags('교정계획서')
 @ApiBearerAuth()
@@ -65,6 +71,30 @@ export class CalibrationPlansController {
     private readonly calibrationPlansService: CalibrationPlansService,
     private readonly pdfService: CalibrationPlansPdfService
   ) {}
+
+  /**
+   * 단일 엔티티 사이트 접근 검증 (SSOT: CALIBRATION_PLAN_DATA_SCOPE)
+   *
+   * 목록 엔드포인트는 @SiteScoped + SiteScopeInterceptor가 query 주입으로 처리하지만,
+   * 상세/수정/삭제 등 UUID 기반 엔드포인트는 post-fetch 검증이 필요합니다.
+   * equipment.controller.ts의 기존 패턴과 동일합니다.
+   */
+  private enforceSiteAccess(req: AuthenticatedRequest, planSiteId: string): void {
+    const userRole = req.user?.roles?.[0] as UserRole | undefined;
+    if (!userRole) return;
+
+    const scope = resolveDataScope(
+      { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
+      CALIBRATION_PLAN_DATA_SCOPE
+    );
+
+    if (scope.type === 'site' && scope.site && planSiteId !== scope.site) {
+      throw new ForbiddenException({
+        code: 'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED',
+        message: 'No permission to access calibration plans from other sites.',
+      });
+    }
+  }
 
   @Post()
   @ApiOperation({
@@ -85,6 +115,8 @@ export class CalibrationPlansController {
     @Body() createDto: CreateCalibrationPlanDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    // 사이트 제한 역할(TE/TM)은 자기 사이트용 계획서만 생성 가능
+    this.enforceSiteAccess(req, createDto.siteId);
     const createdBy = extractUserId(req);
     return this.calibrationPlansService.create({ ...createDto, createdBy });
   }
@@ -126,7 +158,14 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '교정계획서 상세 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
+    // findOneBasic으로 경량 사이트 체크 후, findOne으로 전체 데이터 반환
+    // findOne은 Cache-Aside(120s)이므로 캐시 히트 시 추가 비용 없음
+    const basicPlan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, basicPlan.siteId);
     return this.calibrationPlansService.findOne(uuid);
   }
 
@@ -142,10 +181,13 @@ export class CalibrationPlansController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION_PLAN)
   @UsePipes(UpdateCalibrationPlanValidationPipe)
   @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  update(
+  async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateDto: UpdateCalibrationPlanDto
+    @Body() updateDto: UpdateCalibrationPlanDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     return this.calibrationPlansService.update(uuid, updateDto);
   }
 
@@ -160,7 +202,12 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
   @RequirePermissions(Permission.DELETE_CALIBRATION_PLAN)
   @AuditLog({ action: 'delete', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
+  async remove(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     return this.calibrationPlansService.remove(uuid);
   }
 
@@ -175,10 +222,13 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '상태 오류' })
   @RequirePermissions(Permission.SUBMIT_CALIBRATION_PLAN)
   @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  submit(
+  async submit(
     @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest,
     @Body() _submitDto?: SubmitCalibrationPlanDto
   ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     return this.calibrationPlansService.submit(uuid);
   }
 
@@ -195,11 +245,13 @@ export class CalibrationPlansController {
   @RequirePermissions(Permission.SUBMIT_CALIBRATION_PLAN)
   @UsePipes(SubmitForReviewValidationPipe)
   @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  submitForReview(
+  async submitForReview(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() submitDto: SubmitForReviewDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     const submittedBy = extractUserId(req);
     return this.calibrationPlansService.submitForReview(uuid, { ...submitDto, submittedBy });
   }
@@ -282,12 +334,14 @@ export class CalibrationPlansController {
   @RequirePermissions(Permission.CONFIRM_CALIBRATION_PLAN_ITEM)
   @UsePipes(ConfirmPlanItemValidationPipe)
   @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  confirmItem(
+  async confirmItem(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
     @Body() confirmDto: ConfirmPlanItemDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     const confirmedBy = extractUserId(req);
     return this.calibrationPlansService.confirmItem(uuid, itemUuid, { ...confirmDto, confirmedBy });
   }
@@ -305,11 +359,14 @@ export class CalibrationPlansController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION_PLAN)
   @UsePipes(UpdateCalibrationPlanItemValidationPipe)
   @AuditLog({ action: 'update', entityType: 'calibration_plan', entityIdPath: 'params.uuid' })
-  updateItem(
+  async updateItem(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Param('itemUuid', ParseUUIDPipe) itemUuid: string,
-    @Body() updateDto: UpdateCalibrationPlanItemDto
+    @Body() updateDto: UpdateCalibrationPlanItemDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     return this.calibrationPlansService.updateItem(uuid, itemUuid, updateDto);
   }
 
@@ -326,8 +383,12 @@ export class CalibrationPlansController {
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
   async downloadPdf(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Res() res: Response
+    @Res() res: Response,
+    @Request() req: AuthenticatedRequest
   ): Promise<void> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
+
     const htmlBuffer = await this.pdfService.generatePdf(uuid);
 
     res.set({
@@ -350,10 +411,12 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '승인된 계획서만 새 버전 생성 가능' })
   @RequirePermissions(Permission.CREATE_CALIBRATION_PLAN)
   @AuditLog({ action: 'create', entityType: 'calibration_plan', entityIdPath: 'response.id' })
-  createNewVersion(
+  async createNewVersion(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     const createdBy = extractUserId(req);
     return this.calibrationPlansService.createNewVersion(uuid, createdBy);
   }
@@ -367,7 +430,12 @@ export class CalibrationPlansController {
   @ApiResponse({ status: HttpStatus.OK, description: '버전 히스토리 조회 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '교정계획서를 찾을 수 없음' })
   @RequirePermissions(Permission.VIEW_CALIBRATION_PLANS)
-  getVersionHistory(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
+  async getVersionHistory(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
+    const plan = await this.calibrationPlansService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, plan.siteId);
     return this.calibrationPlansService.getVersionHistory(uuid);
   }
 }

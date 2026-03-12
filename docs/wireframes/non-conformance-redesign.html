@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>부적합 관리 리디자인 — Wireframe</title>
+<style>
+  /* ================================================================
+     DESIGN TOKENS (CSS Variables — Tailwind CSS 변수 체계 미러링)
+     ================================================================ */
+  :root {
+    /* UL Brand */
+    --ul-red: #E4002B;
+    --ul-orange: #F57C00;
+    --ul-green: #2E7D32;
+    --ul-blue: #1565C0;
+    --ul-midnight: #1B2A4A;
+    --ul-fog: #607D8B;
+
+    /* Semantic (dark theme 기준) */
+    --bg-root: #0a0a0f;
+    --bg-surface: #111118;
+    --bg-card: #16161e;
+    --bg-elevated: #1c1c26;
+    --bg-overlay: #22222e;
+
+    --border-subtle: rgba(255,255,255,0.06);
+    --border-default: rgba(255,255,255,0.1);
+    --border-strong: rgba(255,255,255,0.18);
+
+    --text-primary: #f0f0f5;
+    --text-secondary: #a0a0b0;
+    --text-muted: #6a6a7a;
+
+    --brand-critical: #ff4d6a;
+    --brand-critical-bg: rgba(228,0,43,0.08);
+    --brand-critical-border: rgba(228,0,43,0.2);
+
+    --brand-warning: #ffab40;
+    --brand-warning-bg: rgba(245,124,0,0.08);
+    --brand-warning-border: rgba(245,124,0,0.2);
+
+    --brand-ok: #66bb6a;
+    --brand-ok-bg: rgba(46,125,50,0.08);
+    --brand-ok-border: rgba(46,125,50,0.2);
+
+    --brand-info: #64b5f6;
+    --brand-info-bg: rgba(21,101,192,0.08);
+    --brand-info-border: rgba(21,101,192,0.2);
+
+    --brand-neutral-bg: rgba(255,255,255,0.04);
+    --brand-neutral-border: rgba(255,255,255,0.08);
+
+    /* Motion */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Elevation */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  /* ================================================================
+     RESET & BASE
+     ================================================================ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-root);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ================================================================
+     LAYOUT
+     ================================================================ */
+  .page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  .page-divider {
+    border: none;
+    border-top: 2px dashed var(--border-subtle);
+    margin: 80px 0;
+    position: relative;
+  }
+  .page-divider::after {
+    content: attr(data-label);
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-root);
+    padding: 0 16px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ================================================================
+     WIREFRAME LABEL
+     ================================================================ */
+  .wireframe-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    padding: 6px 12px;
+    background: var(--brand-neutral-bg);
+    border: 1px solid var(--brand-neutral-border);
+    border-radius: 100px;
+  }
+  .wireframe-label .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--brand-info);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* ================================================================
+     PAGE HEADER
+     ================================================================ */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .page-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+  .page-header .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ================================================================
+     BUTTONS
+     ================================================================ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--ul-blue);
+    color: white;
+    border-color: transparent;
+  }
+  .btn-primary:hover { background: #1976D2; }
+  .btn-destructive {
+    background: transparent;
+    color: var(--brand-critical);
+    border-color: var(--brand-critical-border);
+  }
+  .btn-destructive:hover { background: var(--brand-critical-bg); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border-default);
+  }
+  .btn-ghost:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .btn-ok {
+    background: var(--ul-green);
+    color: white;
+  }
+  .btn-ok:hover { opacity: 0.9; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon {
+    width: 36px; height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .btn-icon:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+  /* ================================================================
+     KPI STRIP (교정계획 패턴 재활용)
+     ================================================================ */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all var(--transition-fast);
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+  }
+  .kpi-card:hover {
+    border-color: var(--border-default);
+    box-shadow: var(--shadow-sm);
+  }
+  .kpi-card.active {
+    border-color: var(--border-strong);
+    background: var(--bg-elevated);
+  }
+  .kpi-icon-wrap {
+    width: 40px; height: 40px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .kpi-content { flex: 1; }
+  .kpi-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  /* KPI variants */
+  .kpi-critical::before { background: var(--brand-critical); }
+  .kpi-critical .kpi-icon-wrap { background: var(--brand-critical-bg); color: var(--brand-critical); }
+  .kpi-critical .kpi-value { color: var(--brand-critical); }
+
+  .kpi-warning::before { background: var(--brand-warning); }
+  .kpi-warning .kpi-icon-wrap { background: var(--brand-warning-bg); color: var(--brand-warning); }
+  .kpi-warning .kpi-value { color: var(--brand-warning); }
+
+  .kpi-info::before { background: var(--brand-info); }
+  .kpi-info .kpi-icon-wrap { background: var(--brand-info-bg); color: var(--brand-info); }
+  .kpi-info .kpi-value { color: var(--brand-info); }
+
+  .kpi-ok::before { background: var(--brand-ok); }
+  .kpi-ok .kpi-icon-wrap { background: var(--brand-ok-bg); color: var(--brand-ok); }
+  .kpi-ok .kpi-value { color: var(--brand-ok); }
+
+  /* ================================================================
+     FILTER BAR (CALIBRATION_FILTER_BAR 패턴)
+     ================================================================ */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+  .filter-select {
+    appearance: none;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 6px 28px 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236a6a7a' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+  }
+  .filter-select:hover { border-color: var(--border-strong); }
+  .filter-select:focus-visible {
+    outline: 2px solid var(--ul-blue);
+    outline-offset: 2px;
+  }
+  .filter-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-subtle);
+  }
+  .filter-search {
+    flex: 1;
+    min-width: 180px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 6px 10px 6px 32px;
+    font-size: 13px;
+    transition: border-color var(--transition-fast);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%236a6a7a' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 10px center;
+  }
+  .filter-search::placeholder { color: var(--text-muted); }
+  .filter-search:focus-visible {
+    outline: 2px solid var(--ul-blue);
+    outline-offset: 2px;
+  }
+  .filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 100px;
+    background: rgba(21,101,192,0.1);
+    color: var(--brand-info);
+    font-weight: 500;
+  }
+  .filter-tag .x {
+    cursor: pointer;
+    opacity: 0.6;
+    font-size: 10px;
+  }
+  .filter-tag .x:hover { opacity: 1; }
+  .filter-reset {
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    transition: color var(--transition-fast);
+  }
+  .filter-reset:hover { color: var(--text-primary); }
+
+  /* ================================================================
+     TABLE
+     ================================================================ */
+  .table-wrapper {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-card);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th {
+    background: var(--bg-elevated);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 10px 16px;
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--border-default);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background var(--transition-fast);
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody td {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text-primary);
+    vertical-align: top;
+  }
+
+  /* Overdue group row */
+  .row-overdue {
+    background: var(--brand-critical-bg) !important;
+    border-left: 3px solid var(--brand-critical);
+  }
+
+  /* ================================================================
+     BADGES
+     ================================================================ */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .badge-critical {
+    background: var(--brand-critical-bg);
+    color: var(--brand-critical);
+    border-color: var(--brand-critical-border);
+  }
+  .badge-warning {
+    background: var(--brand-warning-bg);
+    color: var(--brand-warning);
+    border-color: var(--brand-warning-border);
+  }
+  .badge-info {
+    background: var(--brand-info-bg);
+    color: var(--brand-info);
+    border-color: var(--brand-info-border);
+  }
+  .badge-ok {
+    background: var(--brand-ok-bg);
+    color: var(--brand-ok);
+    border-color: var(--brand-ok-border);
+  }
+  .badge-neutral {
+    background: var(--brand-neutral-bg);
+    color: var(--text-muted);
+    border-color: var(--brand-neutral-border);
+  }
+
+  /* NC Type chip */
+  .nc-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--brand-neutral-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--brand-neutral-border);
+  }
+
+  /* ================================================================
+     MINI WORKFLOW PROGRESS (테이블 행 내 4-step 인라인)
+     ================================================================ */
+  .mini-workflow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 6px;
+  }
+  .mini-step {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border-default);
+    position: relative;
+    z-index: 1;
+  }
+  .mini-step.done { background: var(--brand-ok); }
+  .mini-step.current { background: var(--brand-warning); box-shadow: 0 0 0 3px var(--brand-warning-bg); }
+  .mini-step.critical { background: var(--brand-critical); box-shadow: 0 0 0 3px var(--brand-critical-bg); }
+  .mini-connector {
+    width: 20px; height: 2px;
+    background: var(--border-default);
+  }
+  .mini-connector.done { background: var(--brand-ok); }
+
+  /* ================================================================
+     ELAPSED DAYS (경과일 — visual-feedback 패턴)
+     ================================================================ */
+  .elapsed {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .elapsed-normal { color: var(--text-secondary); }
+  .elapsed-warn { color: var(--brand-warning); }
+  .elapsed-critical { color: var(--brand-critical); }
+
+  /* ================================================================
+     EQUIPMENT LINK
+     ================================================================ */
+  .equip-link {
+    color: var(--brand-info);
+    text-decoration: none;
+    font-size: 13px;
+    transition: color var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .equip-link:hover { text-decoration: underline; }
+  .equip-mgmt-num {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* ================================================================
+     CARD
+     ================================================================ */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  .card-body { padding: 20px; }
+
+  /* ================================================================
+     PAGINATION
+     ================================================================ */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 12px;
+  }
+  .pagination-buttons {
+    display: flex;
+    gap: 4px;
+  }
+  .page-btn {
+    width: 32px; height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-default);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-variant-numeric: tabular-nums;
+  }
+  .page-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+  .page-btn.active {
+    background: var(--ul-blue);
+    color: white;
+    border-color: transparent;
+  }
+
+  /* ================================================================
+     DETAIL PAGE — BACK LINK
+     ================================================================ */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    margin-bottom: 16px;
+  }
+  .back-link:hover { color: var(--text-primary); }
+
+  /* ================================================================
+     DETAIL HEADER
+     ================================================================ */
+  .detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .detail-title-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .detail-title-area h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .detail-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ================================================================
+     NC WORKFLOW TIMELINE (4-step horizontal)
+     ================================================================ */
+  .workflow-timeline {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 28px 32px;
+    margin-bottom: 20px;
+  }
+  .workflow-steps {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+  }
+  .wf-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .wf-node {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    border: 2px solid;
+    transition: all var(--transition-normal);
+  }
+  .wf-node.completed {
+    background: var(--brand-ok);
+    border-color: var(--brand-ok);
+    color: white;
+  }
+  .wf-node.current {
+    border-color: var(--brand-warning);
+    background: var(--brand-warning-bg);
+    color: var(--brand-warning);
+    box-shadow: 0 0 0 4px var(--brand-warning-bg);
+  }
+  .wf-node.current-critical {
+    border-color: var(--brand-critical);
+    background: var(--brand-critical-bg);
+    color: var(--brand-critical);
+    box-shadow: 0 0 0 4px var(--brand-critical-bg);
+    animation: pulse-critical 2s ease-in-out infinite;
+  }
+  @keyframes pulse-critical {
+    0%, 100% { box-shadow: 0 0 0 4px var(--brand-critical-bg); }
+    50% { box-shadow: 0 0 0 8px rgba(228,0,43,0.05); }
+  }
+  .wf-node.pending {
+    border-color: var(--border-default);
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+  }
+  .wf-label {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .wf-label.completed { color: var(--brand-ok); }
+  .wf-label.current { color: var(--brand-warning); }
+  .wf-label.current-critical { color: var(--brand-critical); }
+  .wf-label.pending { color: var(--text-muted); }
+  .wf-date {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .wf-actor {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  /* Connector line between steps */
+  .wf-connector {
+    position: absolute;
+    top: 20px;
+    height: 2px;
+    z-index: 0;
+  }
+  .wf-connector.done { background: var(--brand-ok); }
+  .wf-connector.pending { background: var(--border-default); }
+  /* Position connectors between each pair */
+  .wf-connector-1 { left: 12.5%;  right: 62.5%; }
+  .wf-connector-2 { left: 37.5%;  right: 37.5%; }
+  .wf-connector-3 { left: 62.5%;  right: 12.5%; }
+
+  /* ================================================================
+     REJECTION ALERT
+     ================================================================ */
+  .rejection-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--brand-critical-bg);
+    border: 1px solid var(--brand-critical-border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .rejection-alert .alert-icon {
+    color: var(--brand-critical);
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .rejection-alert .alert-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--brand-critical);
+  }
+  .rejection-alert .alert-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .rejection-alert .alert-date {
+    font-size: 11px;
+    color: var(--brand-critical);
+    margin-top: 6px;
+    opacity: 0.7;
+  }
+
+  /* ================================================================
+     INFO CARDS (2-column grid)
+     ================================================================ */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .info-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 20px;
+  }
+  .info-card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-right: 16px;
+  }
+  .info-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    text-align: right;
+  }
+  .info-value.multiline {
+    text-align: left;
+    width: 100%;
+    line-height: 1.6;
+  }
+
+  /* Repair link card */
+  .repair-link-card {
+    border-color: var(--brand-ok-border);
+    background: var(--brand-ok-bg);
+  }
+  .repair-link-card h3 { color: var(--brand-ok); }
+  .repair-needed-card {
+    border-color: var(--brand-warning-border);
+    background: var(--brand-warning-bg);
+  }
+  .repair-needed-card h3 { color: var(--brand-warning); }
+
+  /* ================================================================
+     COLLAPSIBLE SECTION
+     ================================================================ */
+  .collapsible {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .collapsible-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px 20px;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+  .collapsible-trigger:hover { background: rgba(255,255,255,0.02); }
+  .collapsible-trigger .chevron {
+    color: var(--text-muted);
+    transition: transform var(--transition-fast);
+    font-size: 14px;
+  }
+  .collapsible.open .collapsible-trigger .chevron { transform: rotate(180deg); }
+  .collapsible-content {
+    padding: 0 20px 20px;
+  }
+  .collapsible-content .field-group {
+    margin-bottom: 16px;
+  }
+  .collapsible-content .field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .collapsible-content .field-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.6;
+  }
+  .collapsible-content .field-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .text-input-placeholder {
+    width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    min-height: 60px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  /* ================================================================
+     ACTION BAR (sticky bottom)
+     ================================================================ */
+  .action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-top: 8px;
+  }
+  .action-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .action-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ================================================================
+     EMPTY STATE
+     ================================================================ */
+  .empty-state {
+    text-align: center;
+    padding: 64px 32px;
+  }
+  .empty-icon {
+    width: 56px; height: 56px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--text-muted);
+  }
+  .empty-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .empty-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ================================================================
+     STAGGER ANIMATION
+     ================================================================ */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .stagger-1 { animation: fadeSlideUp 0.3s ease-out 0.0s both; }
+  .stagger-2 { animation: fadeSlideUp 0.3s ease-out 0.06s both; }
+  .stagger-3 { animation: fadeSlideUp 0.3s ease-out 0.12s both; }
+  .stagger-4 { animation: fadeSlideUp 0.3s ease-out 0.18s both; }
+  .stagger-5 { animation: fadeSlideUp 0.3s ease-out 0.24s both; }
+  .stagger-6 { animation: fadeSlideUp 0.3s ease-out 0.30s both; }
+
+  /* ================================================================
+     RESPONSIVE
+     ================================================================ */
+  @media (max-width: 768px) {
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .info-grid { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; }
+    .detail-header { flex-direction: column; }
+    .action-bar { flex-direction: column; gap: 12px; }
+    .action-bar-left, .action-bar-right { width: 100%; justify-content: center; }
+  }
+
+  /* ================================================================
+     ANNOTATIONS (wireframe-only — 실제 구현에서 제거)
+     ================================================================ */
+  .annotation {
+    position: relative;
+  }
+  .annotation::after {
+    content: attr(data-note);
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translate(100%, -50%);
+    font-size: 10px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--brand-info);
+    opacity: 0.5;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .cause-truncate {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
+</head>
+<body>
+
+<!-- ================================================================
+     PAGE 1: /non-conformances (리스트 페이지)
+     ================================================================ -->
+<div class="page-container">
+
+  <div class="wireframe-label stagger-1">
+    <span class="dot"></span>
+    Page 1 — /non-conformances (독립 리스트)
+  </div>
+
+  <!-- Header -->
+  <div class="page-header stagger-2">
+    <div>
+      <h1>부적합 관리</h1>
+      <p class="subtitle">시스템 전체 부적합 현황 및 조치 진행 관리</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm">
+        <span style="font-size:14px">↓</span> 내보내기
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip stagger-3">
+    <div class="kpi-card kpi-critical active">
+      <div class="kpi-icon-wrap">⚠</div>
+      <div class="kpi-content">
+        <div class="kpi-label">미해결 (Open)</div>
+        <div class="kpi-value">12</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-warning">
+      <div class="kpi-icon-wrap">🔍</div>
+      <div class="kpi-content">
+        <div class="kpi-label">분석중 (Analyzing)</div>
+        <div class="kpi-value">5</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-info">
+      <div class="kpi-icon-wrap">🔧</div>
+      <div class="kpi-content">
+        <div class="kpi-label">조치완료 (Corrected)</div>
+        <div class="kpi-value">3</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-ok">
+      <div class="kpi-icon-wrap">✓</div>
+      <div class="kpi-content">
+        <div class="kpi-label">종결 (Closed)</div>
+        <div class="kpi-value">47</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar stagger-4">
+    <select class="filter-select">
+      <option>상태: 전체</option>
+      <option>미해결</option>
+      <option selected>미해결 + 분석중</option>
+      <option>조치완료</option>
+      <option>종결</option>
+    </select>
+    <select class="filter-select">
+      <option>유형: 전체</option>
+      <option>파손</option>
+      <option>고장</option>
+      <option>교정 불합격</option>
+      <option>측정 오차</option>
+      <option>기타</option>
+    </select>
+    <select class="filter-select">
+      <option>사이트: 전체</option>
+      <option>수원 (SUW)</option>
+      <option>의왕 (UIW)</option>
+      <option>평택 (PYT)</option>
+    </select>
+    <div class="filter-divider"></div>
+    <input type="text" class="filter-search" placeholder="장비명, 관리번호, 원인 검색...">
+    <div class="filter-divider"></div>
+    <span class="filter-tag">미해결 + 분석중 <span class="x">✕</span></span>
+    <button class="filter-reset">초기화</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrapper stagger-5">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:100px">상태</th>
+          <th style="width:90px">유형</th>
+          <th>장비</th>
+          <th>원인</th>
+          <th style="width:90px">발견일</th>
+          <th style="width:70px; text-align:right">경과</th>
+          <th style="width:60px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Row 1 — open, overdue group -->
+        <tr class="row-overdue">
+          <td>
+            <span class="badge badge-critical">● 미해결</span>
+            <div class="mini-workflow">
+              <div class="mini-step critical"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+            </div>
+          </td>
+          <td><span class="nc-type-chip">파손</span></td>
+          <td>
+            <a href="#" class="equip-link">만능재료시험기</a>
+            <div class="equip-mgmt-num">SUW-E0012</div>
+          </td>
+          <td><span class="cause-truncate">운송 중 충격으로 인한 로드셀 파손</span></td>
+          <td style="font-variant-numeric:tabular-nums; color:var(--text-secondary)">2026-02-15</td>
+          <td style="text-align:right"><span class="elapsed elapsed-critical">25일</span></td>
+          <td><button class="btn-icon" title="상세보기">→</button></td>
+        </tr>
+
+        <!-- Row 2 — open, overdue -->
+        <tr class="row-overdue">
+          <td>
+            <span class="badge badge-critical">● 미해결</span>
+            <div class="mini-workflow">
+              <div class="mini-step critical"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+            </div>
+          </td>
+          <td><span class="nc-type-chip">고장</span></td>
+          <td>
+            <a href="#" class="equip-link">항온항습기 #2</a>
+            <div class="equip-mgmt-num">SUW-E0045</div>
+          </td>
+          <td><span class="cause-truncate">컴프레서 이상 소음 및 온도 불안정</span></td>
+          <td style="font-variant-numeric:tabular-nums; color:var(--text-secondary)">2026-02-20</td>
+          <td style="text-align:right"><span class="elapsed elapsed-critical">20일</span></td>
+          <td><button class="btn-icon" title="상세보기">→</button></td>
+        </tr>
+
+        <!-- Row 3 — analyzing -->
+        <tr>
+          <td>
+            <span class="badge badge-warning">● 분석중</span>
+            <div class="mini-workflow">
+              <div class="mini-step done"></div>
+              <div class="mini-connector done"></div>
+              <div class="mini-step current"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+            </div>
+          </td>
+          <td><span class="nc-type-chip">교정 불합격</span></td>
+          <td>
+            <a href="#" class="equip-link">디지털 멀티미터</a>
+            <div class="equip-mgmt-num">UIW-E0088</div>
+          </td>
+          <td><span class="cause-truncate">교정 결과 0.5% 편차 — 허용 범위 초과</span></td>
+          <td style="font-variant-numeric:tabular-nums; color:var(--text-secondary)">2026-02-28</td>
+          <td style="text-align:right"><span class="elapsed elapsed-warn">12일</span></td>
+          <td><button class="btn-icon" title="상세보기">→</button></td>
+        </tr>
+
+        <!-- Row 4 — analyzing (rejected once) -->
+        <tr>
+          <td>
+            <span class="badge badge-warning">● 분석중</span>
+            <span class="badge badge-critical" style="margin-top:4px; display:inline-flex; font-size:10px; padding:1px 6px;">반려 1회</span>
+            <div class="mini-workflow">
+              <div class="mini-step done"></div>
+              <div class="mini-connector done"></div>
+              <div class="mini-step current"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+            </div>
+          </td>
+          <td><span class="nc-type-chip">측정 오차</span></td>
+          <td>
+            <a href="#" class="equip-link">온도 데이터 로거</a>
+            <div class="equip-mgmt-num">PYT-E0022</div>
+          </td>
+          <td><span class="cause-truncate">센서 3번 채널 ±2°C 오차 발생</span></td>
+          <td style="font-variant-numeric:tabular-nums; color:var(--text-secondary)">2026-03-01</td>
+          <td style="text-align:right"><span class="elapsed elapsed-warn">11일</span></td>
+          <td><button class="btn-icon" title="상세보기">→</button></td>
+        </tr>
+
+        <!-- Row 5 — open (recent) -->
+        <tr>
+          <td>
+            <span class="badge badge-critical">● 미해결</span>
+            <div class="mini-workflow">
+              <div class="mini-step current"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+            </div>
+          </td>
+          <td><span class="nc-type-chip">고장</span></td>
+          <td>
+            <a href="#" class="equip-link">진동 시험기</a>
+            <div class="equip-mgmt-num">SUW-E0067</div>
+          </td>
+          <td><span class="cause-truncate">제어판 오류 코드 E-14 반복 출력</span></td>
+          <td style="font-variant-numeric:tabular-nums; color:var(--text-secondary)">2026-03-10</td>
+          <td style="text-align:right"><span class="elapsed elapsed-normal">2일</span></td>
+          <td><button class="btn-icon" title="상세보기">→</button></td>
+        </tr>
+
+        <!-- Row 6 — corrected (awaiting closure) -->
+        <tr>
+          <td>
+            <span class="badge badge-info">● 조치완료</span>
+            <div class="mini-workflow">
+              <div class="mini-step done"></div>
+              <div class="mini-connector done"></div>
+              <div class="mini-step done"></div>
+              <div class="mini-connector done"></div>
+              <div class="mini-step current" style="background:var(--brand-info); box-shadow:0 0 0 3px var(--brand-info-bg)"></div>
+              <div class="mini-connector"></div>
+              <div class="mini-step"></div>
+            </div>
+          </td>
+          <td><span class="nc-type-chip">파손</span></td>
+          <td>
+            <a href="#" class="equip-link">충격 시험기 #3</a>
+            <div class="equip-mgmt-num">UIW-E0034</div>
+          </td>
+          <td><span class="cause-truncate">시편 고정 클램프 균열 — 교체 완료</span></td>
+          <td style="font-variant-numeric:tabular-nums; color:var(--text-secondary)">2026-02-10</td>
+          <td style="text-align:right"><span class="elapsed elapsed-warn">30일</span></td>
+          <td><button class="btn-icon" title="상세보기">→</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination stagger-6">
+    <span>총 67건 중 1–6</span>
+    <div class="pagination-buttons">
+      <button class="page-btn" disabled>‹</button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <button class="page-btn" style="pointer-events:none; border:none; background:none; color:var(--text-muted)">…</button>
+      <button class="page-btn">12</button>
+      <button class="page-btn">›</button>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ================================================================
+     DIVIDER
+     ================================================================ -->
+<hr class="page-divider" data-label="Page 2 — Detail">
+
+
+<!-- ================================================================
+     PAGE 2: /non-conformances/[id] (상세 페이지)
+     ================================================================ -->
+<div class="page-container">
+
+  <div class="wireframe-label stagger-1">
+    <span class="dot"></span>
+    Page 2 — /non-conformances/:id (상세)
+  </div>
+
+  <a href="#" class="back-link stagger-1">← 부적합 목록으로</a>
+
+  <!-- Detail Header -->
+  <div class="detail-header stagger-2">
+    <div>
+      <div class="detail-title-area">
+        <h1>부적합 상세</h1>
+        <span class="badge badge-warning" style="font-size:12px; padding:4px 12px;">● 분석중</span>
+      </div>
+      <div class="detail-meta">
+        <a href="#" class="equip-link">디지털 멀티미터 (UIW-E0088)</a>
+        <span style="color:var(--border-default)">│</span>
+        <span>발견일: 2026-02-28</span>
+        <span style="color:var(--border-default)">│</span>
+        <span>경과 <span class="elapsed elapsed-warn">12일</span></span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm">수정</button>
+      <button class="btn btn-destructive btn-sm">삭제</button>
+    </div>
+  </div>
+
+  <!-- NC Workflow Timeline -->
+  <div class="workflow-timeline stagger-3">
+    <div class="workflow-steps">
+      <!-- Connectors (absolute positioned between nodes) -->
+      <div class="wf-connector done wf-connector-1" style="left:12.5%; right:62.5%; width:25%;"></div>
+      <div class="wf-connector pending wf-connector-2" style="left:37.5%; right:37.5%; width:25%;"></div>
+      <div class="wf-connector pending wf-connector-3" style="left:62.5%; right:12.5%; width:25%;"></div>
+
+      <div class="wf-step">
+        <div class="wf-node completed">✓</div>
+        <div class="wf-label completed">미해결</div>
+        <div class="wf-date">2026-02-28</div>
+        <div class="wf-actor">홍길동</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node current">2</div>
+        <div class="wf-label current">분석중</div>
+        <div class="wf-date">진행 중</div>
+        <div class="wf-actor">김철수</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node pending">3</div>
+        <div class="wf-label pending">조치완료</div>
+        <div class="wf-date">—</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node pending">4</div>
+        <div class="wf-label pending">종결</div>
+        <div class="wf-date">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rejection Alert (반려 후 재분석 시 표시) -->
+  <div class="rejection-alert stagger-4">
+    <span class="alert-icon">✕</span>
+    <div>
+      <div class="alert-title">조치 반려 — 추가 분석 필요</div>
+      <div class="alert-desc">조치 내용이 불충분합니다. 교정 편차 원인(센서 열화 vs 환경 요인)을 분리하여 재분석해주세요.</div>
+      <div class="alert-date">반려일: 2026-03-08 │ 반려자: 이기술 (기술책임자)</div>
+    </div>
+  </div>
+
+  <!-- Info Cards Grid -->
+  <div class="info-grid stagger-5">
+    <!-- 기본 정보 -->
+    <div class="info-card">
+      <h3>기본 정보</h3>
+      <div class="info-row">
+        <span class="info-label">부적합 유형</span>
+        <span class="info-value"><span class="nc-type-chip">교정 불합격</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">발견자</span>
+        <span class="info-value">홍길동 (시험실무자)</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">발견일</span>
+        <span class="info-value" style="font-variant-numeric:tabular-nums">2026-02-28</span>
+      </div>
+      <div class="info-row" style="border-bottom:none; flex-direction:column; gap:6px;">
+        <span class="info-label">원인</span>
+        <span class="info-value multiline">교정 결과 0.5% 편차 — 허용 범위(±0.2%) 초과. 3번 채널 센서의 열화 가능성.</span>
+      </div>
+      <div class="info-row" style="border-bottom:none; flex-direction:column; gap:6px;">
+        <span class="info-label">조치 계획</span>
+        <span class="info-value multiline">센서 교체 후 재교정 수행 예정. 외부 업체(A사) 견적 요청 중.</span>
+      </div>
+    </div>
+
+    <!-- 수리 연결 (연결됨 ver.) -->
+    <div class="info-card repair-needed-card">
+      <h3>⚠ 수리 연결 필요</h3>
+      <div style="padding:12px 0;">
+        <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+          교정 불합격 유형의 부적합은 수리 이력 연결이 권장됩니다.
+          수리 완료 후 시정 조치를 등록할 수 있습니다.
+        </p>
+        <button class="btn btn-primary btn-sm" style="margin-top:12px;">
+          <span style="font-size:14px">🔧</span> 수리 이력 등록
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible: 원인 분석 -->
+  <div class="collapsible open stagger-5">
+    <button class="collapsible-trigger">
+      <span>📋 원인 분석</span>
+      <span class="chevron">▾</span>
+    </button>
+    <div class="collapsible-content">
+      <div class="field-group">
+        <div class="field-label">분석 내용</div>
+        <div class="text-input-placeholder">센서 열화 vs 환경 요인 분석 내용을 입력하세요...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible: 시정 조치 -->
+  <div class="collapsible stagger-5">
+    <button class="collapsible-trigger">
+      <span>🔧 시정 조치</span>
+      <span class="chevron">▾</span>
+    </button>
+  </div>
+
+  <!-- Collapsible: 종결 의견 -->
+  <div class="collapsible stagger-5">
+    <button class="collapsible-trigger">
+      <span>✅ 종결 의견</span>
+      <span class="chevron">▾</span>
+    </button>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="action-bar stagger-6">
+    <div class="action-bar-left">
+      <select class="filter-select" style="font-size:13px;">
+        <option>상태 변경...</option>
+        <option>분석중으로 변경</option>
+        <option selected>조치완료로 변경</option>
+      </select>
+      <button class="btn btn-primary btn-sm">저장</button>
+    </div>
+    <div class="action-bar-right">
+      <button class="btn btn-destructive btn-sm">
+        ✕ 조치 반려
+      </button>
+      <button class="btn btn-ok btn-sm">
+        ✓ 종결 승인
+      </button>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ================================================================
+     DIVIDER
+     ================================================================ -->
+<hr class="page-divider" data-label="Variant — Detail (Open + Overdue)">
+
+
+<!-- ================================================================
+     PAGE 2 VARIANT: 미해결 + 장기 미조치 (경과 25일)
+     ================================================================ -->
+<div class="page-container">
+
+  <div class="wireframe-label">
+    <span class="dot" style="background:var(--brand-critical)"></span>
+    Variant — 미해결 + 장기 미조치 (긴급 표시)
+  </div>
+
+  <a href="#" class="back-link">← 부적합 목록으로</a>
+
+  <div class="detail-header">
+    <div>
+      <div class="detail-title-area">
+        <h1>부적합 상세</h1>
+        <span class="badge badge-critical" style="font-size:12px; padding:4px 12px;">● 미해결</span>
+        <span class="badge badge-critical" style="font-size:10px; padding:2px 8px; background:var(--brand-critical); color:white; border:none;">긴급</span>
+      </div>
+      <div class="detail-meta">
+        <a href="#" class="equip-link">만능재료시험기 (SUW-E0012)</a>
+        <span style="color:var(--border-default)">│</span>
+        <span>발견일: 2026-02-15</span>
+        <span style="color:var(--border-default)">│</span>
+        <span>경과 <span class="elapsed elapsed-critical">25일</span></span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm">수정</button>
+    </div>
+  </div>
+
+  <!-- NC Workflow Timeline — open + critical pulse -->
+  <div class="workflow-timeline" style="border-color:var(--brand-critical-border);">
+    <div class="workflow-steps">
+      <div class="wf-connector pending" style="left:12.5%; width:25%;"></div>
+      <div class="wf-connector pending" style="left:37.5%; width:25%;"></div>
+      <div class="wf-connector pending" style="left:62.5%; width:25%;"></div>
+
+      <div class="wf-step">
+        <div class="wf-node current-critical">!</div>
+        <div class="wf-label current-critical">미해결</div>
+        <div class="wf-date">2026-02-15</div>
+        <div class="wf-actor">홍길동</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node pending">2</div>
+        <div class="wf-label pending">분석중</div>
+        <div class="wf-date">—</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node pending">3</div>
+        <div class="wf-label pending">조치완료</div>
+        <div class="wf-date">—</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node pending">4</div>
+        <div class="wf-label pending">종결</div>
+        <div class="wf-date">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Cards -->
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>기본 정보</h3>
+      <div class="info-row">
+        <span class="info-label">부적합 유형</span>
+        <span class="info-value"><span class="nc-type-chip">파손</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">발견자</span>
+        <span class="info-value">홍길동 (시험실무자)</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">발견일</span>
+        <span class="info-value" style="font-variant-numeric:tabular-nums">2026-02-15</span>
+      </div>
+      <div class="info-row" style="border-bottom:none; flex-direction:column; gap:6px;">
+        <span class="info-label">원인</span>
+        <span class="info-value multiline">운송 중 충격으로 인한 로드셀 파손. 500kN급 로드셀 균열 및 변형.</span>
+      </div>
+    </div>
+
+    <!-- 수리 연결 (미연결 — 경고) -->
+    <div class="info-card repair-needed-card">
+      <h3>⚠ 수리 필요</h3>
+      <div style="padding:12px 0;">
+        <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">
+          <strong style="color:var(--brand-warning)">파손</strong> 유형의 부적합입니다.
+          시정 조치 전 수리 이력을 등록해야 합니다.
+        </p>
+        <button class="btn btn-primary btn-sm" style="margin-top:12px;">
+          <span style="font-size:14px">🔧</span> 수리 이력 등록
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <div class="action-bar-left">
+      <select class="filter-select">
+        <option>상태 변경...</option>
+        <option>분석중으로 변경</option>
+      </select>
+      <button class="btn btn-primary btn-sm">저장</button>
+    </div>
+    <div class="action-bar-right">
+      <span style="font-size:12px; color:var(--text-muted);">시험실무자 — 종결 권한 없음</span>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ================================================================
+     DIVIDER
+     ================================================================ -->
+<hr class="page-divider" data-label="Variant — Detail (Corrected, awaiting closure)">
+
+
+<!-- ================================================================
+     PAGE 2 VARIANT: 조치완료 + 종결 대기
+     ================================================================ -->
+<div class="page-container">
+
+  <div class="wireframe-label">
+    <span class="dot" style="background:var(--brand-ok)"></span>
+    Variant — 조치완료, 종결 대기 (기술책임자 뷰)
+  </div>
+
+  <a href="#" class="back-link">← 부적합 목록으로</a>
+
+  <div class="detail-header">
+    <div>
+      <div class="detail-title-area">
+        <h1>부적합 상세</h1>
+        <span class="badge badge-info" style="font-size:12px; padding:4px 12px;">● 조치완료</span>
+      </div>
+      <div class="detail-meta">
+        <a href="#" class="equip-link">충격 시험기 #3 (UIW-E0034)</a>
+        <span style="color:var(--border-default)">│</span>
+        <span>발견일: 2026-02-10</span>
+        <span style="color:var(--border-default)">│</span>
+        <span>경과 <span class="elapsed elapsed-warn">30일</span></span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <!-- 기술책임자만 종결 가능 -->
+    </div>
+  </div>
+
+  <!-- NC Workflow Timeline — step 3 active -->
+  <div class="workflow-timeline">
+    <div class="workflow-steps">
+      <div class="wf-connector done" style="left:12.5%; width:25%;"></div>
+      <div class="wf-connector done" style="left:37.5%; width:25%;"></div>
+      <div class="wf-connector pending" style="left:62.5%; width:25%;"></div>
+
+      <div class="wf-step">
+        <div class="wf-node completed">✓</div>
+        <div class="wf-label completed">미해결</div>
+        <div class="wf-date">2026-02-10</div>
+        <div class="wf-actor">박실무</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node completed">✓</div>
+        <div class="wf-label completed">분석중</div>
+        <div class="wf-date">2026-02-15</div>
+        <div class="wf-actor">박실무</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node" style="border-color:var(--brand-info); background:var(--brand-info-bg); color:var(--brand-info); box-shadow:0 0 0 4px var(--brand-info-bg);">3</div>
+        <div class="wf-label" style="color:var(--brand-info);">조치완료</div>
+        <div class="wf-date">2026-03-05</div>
+        <div class="wf-actor">박실무</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node pending">4</div>
+        <div class="wf-label pending">종결</div>
+        <div class="wf-date">— 승인 대기</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Cards -->
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>기본 정보</h3>
+      <div class="info-row">
+        <span class="info-label">유형</span>
+        <span class="info-value"><span class="nc-type-chip">파손</span></span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">원인</span>
+        <span class="info-value">시편 고정 클램프 균열</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">발견자/발견일</span>
+        <span class="info-value">박실무 / 2026-02-10</span>
+      </div>
+    </div>
+    <div class="info-card repair-link-card">
+      <h3>✓ 수리 연결됨</h3>
+      <div style="padding:8px 0;">
+        <div class="info-row">
+          <span class="info-label">수리 이력</span>
+          <a href="#" class="equip-link">#R-0023</a>
+        </div>
+        <div class="info-row">
+          <span class="info-label">수리 상태</span>
+          <span class="badge badge-ok">완료</span>
+        </div>
+        <div class="info-row" style="border-bottom:none;">
+          <span class="info-label">수리 업체</span>
+          <span class="info-value">A정밀기기</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible: Analysis (filled) -->
+  <div class="collapsible open">
+    <button class="collapsible-trigger">
+      <span>📋 원인 분석</span>
+      <span class="chevron">▾</span>
+    </button>
+    <div class="collapsible-content">
+      <div class="field-group">
+        <div class="field-label">분석 내용</div>
+        <div class="field-value">
+          시편 고정 클램프에 피로 균열 발견. 반복 충격(10만 회 이상)에 의한 금속 피로로 판단.
+          클램프 소재(SUS304)의 피로 한도 초과 사용이 근본 원인.
+        </div>
+        <div class="field-meta">분석일: 2026-02-18 │ 분석자: 박실무</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible: Correction (filled) -->
+  <div class="collapsible open">
+    <button class="collapsible-trigger">
+      <span>🔧 시정 조치</span>
+      <span class="chevron">▾</span>
+    </button>
+    <div class="collapsible-content">
+      <div class="field-group">
+        <div class="field-label">조치 내용</div>
+        <div class="field-value">
+          클램프를 SCM440(고강도강)으로 교체. 충격 흡수 부싱 추가 설치.
+          교체 후 정상 작동 확인 (시험 하중 100kN × 3회).
+        </div>
+        <div class="field-meta">조치일: 2026-03-05 │ 조치자: 박실무</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible: Closure (empty, for manager) -->
+  <div class="collapsible open">
+    <button class="collapsible-trigger">
+      <span>✅ 종결 의견</span>
+      <span class="chevron">▾</span>
+    </button>
+    <div class="collapsible-content">
+      <div class="field-group">
+        <div class="field-label">종결 메모 (선택)</div>
+        <div class="text-input-placeholder">종결 시 의견을 입력하세요...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Bar (Manager view) -->
+  <div class="action-bar">
+    <div class="action-bar-left">
+      <span style="font-size:12px; color:var(--text-muted);">기술책임자: 이기술</span>
+    </div>
+    <div class="action-bar-right">
+      <button class="btn btn-destructive btn-sm">
+        ✕ 조치 반려
+      </button>
+      <button class="btn btn-ok">
+        ✓ 종결 승인
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div style="height:80px"></div>
+
+</body>
+</html>

@@ -397,7 +397,7 @@ export const CALIBRATION_TIMELINE = {
   /** 월별 세그먼트 바 */
   segment: {
     /** 공통 기반 (높이는 인라인 style로) */
-    base: 'w-full rounded-sm motion-safe:transition-opacity motion-safe:duration-150',
+    base: `w-full rounded-sm ${TRANSITION_PRESETS.fastOpacity}`,
     overdue: 'bg-brand-critical',
     warning: 'bg-brand-warning',
     ok: 'bg-brand-ok',
@@ -434,7 +434,7 @@ export const CALIBRATION_TIMELINE = {
     overdue: 'bg-brand-critical',
     warning: 'bg-brand-warning',
     ok: 'bg-brand-ok',
-    base: 'w-2.5 h-2.5 rounded-full cursor-pointer motion-safe:transition-transform motion-safe:duration-100',
+    base: `w-2.5 h-2.5 rounded-full cursor-pointer ${TRANSITION_PRESETS.instantTransform}`,
     active: 'scale-150',
     idle: 'scale-100',
   },

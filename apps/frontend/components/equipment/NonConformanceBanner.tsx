@@ -42,20 +42,26 @@ export function NonConformanceBanner({
         {showDetails && (
           <div className="space-y-2">
             {nonConformances.map((nc) => (
-              <div key={nc.id} className={NC_BANNER_TOKENS.detailCard}>
-                <p className={NC_BANNER_TOKENS.detailText}>{nc.cause}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('discoveryDate', { date: new Date(nc.discoveryDate).toLocaleDateString() })}
-                </p>
-              </div>
+              <Link key={nc.id} href={`/non-conformances/${nc.id}`}>
+                <div
+                  className={`${NC_BANNER_TOKENS.detailCard} hover:border-brand-critical/40 cursor-pointer`}
+                >
+                  <p className={NC_BANNER_TOKENS.detailText}>{nc.cause}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('discoveryDate', { date: new Date(nc.discoveryDate).toLocaleDateString() })}
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
         )}
-        <Link href={`/equipment/${equipmentId}/non-conformance`}>
-          <Button variant="default" size="sm" className="mt-2">
-            {t('manage')}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2 mt-2">
+          <Link href={`/non-conformances?equipmentId=${equipmentId}`}>
+            <Button variant="default" size="sm">
+              {t('manage')}
+            </Button>
+          </Link>
+        </div>
       </AlertDescription>
     </Alert>
   );

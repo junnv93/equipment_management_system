@@ -369,7 +369,7 @@ function EquipmentFiltersComponent({
 
       {/* 2차 필터 (CSS-only grid-rows 트랜지션) */}
       <div
-        className={`grid transition-[grid-template-rows] duration-200 ease-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+        className={`grid ${EQUIPMENT_FILTER_TOKENS.expandTransition} ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
       >
         <div className="overflow-hidden">
           <div className={EQUIPMENT_FILTER_TOKENS.layout.secondaryRow}>

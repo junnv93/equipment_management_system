@@ -313,8 +313,7 @@ export const DASHBOARD_KPI_TOKENS = {
   label: 'text-xs text-muted-foreground truncate',
   percent: 'text-xs text-muted-foreground tabular-nums',
   // 4-컬럼 주요 KPI 카드 (Link 컴포넌트로 사용 — hover/focus 포함)
-  primaryCard:
-    'group bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:transition-colors',
+  primaryCard: `group bg-card border border-border rounded-lg p-4 flex flex-col justify-between gap-2 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${TRANSITION_PRESETS.fastColor}`,
   primaryCount: 'font-mono tabular-nums font-bold text-4xl text-foreground leading-tight',
   primaryLabel: 'text-sm font-medium text-muted-foreground',
   primarySub: 'text-xs text-muted-foreground tabular-nums',
@@ -390,8 +389,7 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   container: 'bg-card border border-border rounded-lg flex flex-col overflow-hidden',
   header: 'px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0',
   title: 'text-sm font-semibold text-foreground tabular-nums',
-  navButton:
-    'p-1 rounded hover:bg-muted active:bg-muted/80 active:scale-95 text-muted-foreground hover:text-foreground motion-safe:transition-transform motion-safe:duration-75 motion-reduce:transition-none',
+  navButton: `p-1 rounded hover:bg-muted active:bg-muted/80 active:scale-95 text-muted-foreground hover:text-foreground ${TRANSITION_PRESETS.instantTransform}`,
   grid: 'grid grid-cols-7 px-3 pb-3',
   dayLabel: 'text-center text-[10px] font-medium text-muted-foreground py-1',
   cell: 'relative flex flex-col items-center py-1 rounded hover:bg-muted/50 cursor-default',
@@ -433,7 +431,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   countAlert: 'text-xs font-medium text-ul-red dark:text-brand-critical',
   /** 내부 탭 스트립 */
   tabBar: 'flex border-b border-border -mx-0 mb-1',
-  tab: 'text-xs font-medium px-3 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px motion-safe:transition-colors motion-safe:duration-100 focus-visible:outline-none',
+  tab: `text-xs font-medium px-3 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px ${TRANSITION_PRESETS.instantColor} focus-visible:outline-none`,
   tabActive: 'text-foreground border-b-2 border-primary',
   listWrapper: 'relative flex-1 overflow-hidden',
   list: 'flex flex-col gap-1 overflow-y-auto max-h-[150px]',
@@ -451,8 +449,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   compactEmptyIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',
   compactEmptyText: 'text-xs',
   /** 목록 스크롤 어포던스 — 하단 그라데이션 페이드 */
-  arrow:
-    'h-3 w-3 text-muted-foreground group-hover:text-foreground flex-shrink-0 motion-safe:transition-colors motion-safe:duration-100',
+  arrow: `h-3 w-3 text-muted-foreground group-hover:text-foreground flex-shrink-0 ${TRANSITION_PRESETS.instantColor}`,
 } as const;
 
 // ============================================================================
@@ -488,11 +485,9 @@ export const DASHBOARD_QUICK_ACTION_TOKENS = {
   container: 'bg-card border border-border rounded-lg px-4 py-3 flex items-center gap-4 flex-wrap',
   label: 'text-xs font-medium text-muted-foreground flex-shrink-0',
   grid: 'flex items-center gap-2 flex-wrap',
-  action:
-    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted/60 active:scale-[0.98] motion-safe:transition-[background-color,transform,box-shadow] motion-safe:duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+  action: `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted/60 active:scale-[0.98] ${TRANSITION_PRESETS.instantBgShadowTransform} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`,
   /** 주요 액션 (filled bg-primary/10) — secondary와 시각적 위계 구분 */
-  actionPrimary:
-    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 active:scale-[0.98] motion-safe:transition-[background-color,transform,box-shadow] motion-safe:duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+  actionPrimary: `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 hover:bg-primary/20 active:scale-[0.98] ${TRANSITION_PRESETS.instantBgShadowTransform} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`,
   actionIcon: 'h-3.5 w-3.5 flex-shrink-0',
   actionLabel: 'text-xs font-medium text-foreground whitespace-nowrap',
 } as const;

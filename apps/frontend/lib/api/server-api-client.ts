@@ -36,6 +36,7 @@ import {
   getServerAuthHeaders as getAuthHeaders,
 } from '@/lib/auth/server-session';
 import { API_BASE_URL } from '../config/api-config';
+import { getInternalApiKeyHeaders } from '../config/internal-headers';
 
 /**
  * Server Component용 API 클라이언트 생성
@@ -62,11 +63,6 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
   const session = await getServerAuthSession();
   const accessToken = session?.accessToken ?? null;
 
-  // SSR 서버→백엔드 내부 통신 식별 헤더
-  // InternalApiThrottlerGuard가 이 헤더를 확인해 IP 기반 throttle을 bypass함
-  // (Next.js SSR의 병렬 요청이 429를 유발하는 문제 해결)
-  const internalApiKey = process.env.INTERNAL_API_KEY;
-
   // Axios 인스턴스 생성
   const client = axios.create({
     baseURL: API_BASE_URL,
@@ -76,7 +72,7 @@ export async function createServerApiClient(): Promise<AxiosInstance> {
       // ✅ NextAuth 세션에서 가져온 토큰 설정
       ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       // ✅ 내부 서비스 식별 (Throttle bypass — 브라우저 요청엔 없는 헤더)
-      ...(internalApiKey && { 'X-Internal-Api-Key': internalApiKey }),
+      ...getInternalApiKeyHeaders(),
     },
   });
 

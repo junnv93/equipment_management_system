@@ -26,6 +26,8 @@ export interface UICalibrationPlansFilters {
   siteId: string; // 사이트 ID ('' = 전체)
   teamId: string; // 팀 ID ('' = 전체)
   status: string; // 상태 ('' = 전체)
+  page: number; // 현재 페이지 (1-based)
+  pageSize: number; // 페이지당 항목 수
 }
 
 /**
@@ -45,6 +47,9 @@ export interface ApiCalibrationPlansFilters {
  *
  * year는 현재 연도로 동적 설정
  */
+/** 교정계획서 기본 페이지 크기 */
+export const CALIBRATION_PLANS_DEFAULT_PAGE_SIZE = 20;
+
 export function getDefaultUIFilters(): UICalibrationPlansFilters {
   const currentYear = new Date().getFullYear();
   return {
@@ -52,6 +57,8 @@ export function getDefaultUIFilters(): UICalibrationPlansFilters {
     siteId: '',
     teamId: '',
     status: '',
+    page: 1,
+    pageSize: CALIBRATION_PLANS_DEFAULT_PAGE_SIZE,
   };
 }
 
@@ -94,11 +101,21 @@ export function parseCalibrationPlansFiltersFromSearchParams(
   const statusRaw = get('status') || defaultFilters.status;
   const status = statusRaw === '_all' ? '' : statusRaw;
 
+  const pageRaw = get('page');
+  const page = pageRaw ? Math.max(1, parseInt(pageRaw, 10) || 1) : defaultFilters.page;
+
+  const pageSizeRaw = get('pageSize');
+  const pageSize = pageSizeRaw
+    ? Math.max(1, parseInt(pageSizeRaw, 10) || defaultFilters.pageSize)
+    : defaultFilters.pageSize;
+
   return {
     year,
     siteId,
     teamId,
     status,
+    page,
+    pageSize,
   };
 }
 
@@ -116,7 +133,8 @@ export function convertFiltersToApiParams(
     siteId: filters.siteId || undefined,
     teamId: filters.teamId || undefined,
     status: filters.status || undefined,
-    pageSize: 100, // 교정계획은 보통 많지 않으므로 한 번에 로드
+    page: filters.page,
+    pageSize: filters.pageSize,
   };
 }
 

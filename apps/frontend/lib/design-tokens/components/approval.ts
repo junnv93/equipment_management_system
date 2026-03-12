@@ -73,7 +73,7 @@ export const APPROVAL_STEPPER_TOKENS = {
   /** 스텝 노드 크기 */
   node: {
     size: 'w-8 h-8',
-    base: 'flex items-center justify-center rounded-full border-2 transition-colors',
+    base: `flex items-center justify-center rounded-full border-2 ${TRANSITION_PRESETS.fastColor}`,
   },
 
   /** 스텝 상태별 스타일 */
@@ -258,9 +258,7 @@ export const APPROVAL_EMPTY_STATE_TOKENS = {
 export const APPROVAL_MOTION = {
   /** 카드 hover: box-shadow + transform */
   cardHover: [
-    'motion-safe:transition-[box-shadow,transform]',
-    'motion-safe:duration-200',
-    'motion-reduce:transition-none',
+    TRANSITION_PRESETS.fastShadowTransform,
     'hover:shadow-md',
     'hover:scale-[1.01]',
     'hover:-translate-y-0.5',

@@ -25,6 +25,10 @@ import { differenceInDays } from 'date-fns';
 import { formatDate } from '@/lib/utils/date';
 import { apiClient } from '@/lib/api/api-client';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import {
+  INTERMEDIATE_CHECK_STATUS_TOKENS,
+  type IntermediateCheckStatusKey,
+} from '@/lib/design-tokens';
 
 export interface IntermediateCheck {
   id: string;
@@ -59,32 +63,12 @@ function getCheckStatus(checkDate: string): 'overdue' | 'today' | 'upcoming' | '
   return 'future';
 }
 
-// 상태별 스타일 (label은 컴포넌트 내에서 t()로 처리)
-const statusStyles = {
-  overdue: {
-    alertClass: 'border-brand-critical bg-brand-critical/10',
-    badgeClass: 'bg-brand-critical/10 text-brand-critical',
-    icon: AlertTriangle,
-    iconClass: 'text-brand-critical',
-  },
-  today: {
-    alertClass: 'border-brand-repair bg-brand-repair/10',
-    badgeClass: 'bg-brand-repair/10 text-brand-repair',
-    icon: Clock,
-    iconClass: 'text-brand-repair',
-  },
-  upcoming: {
-    alertClass: 'border-brand-warning bg-brand-warning/10',
-    badgeClass: 'bg-brand-warning/10 text-brand-warning',
-    icon: Clock,
-    iconClass: 'text-brand-warning',
-  },
-  future: {
-    alertClass: 'border-brand-info/40 bg-brand-info/10',
-    badgeClass: 'bg-brand-info/10 text-brand-info',
-    icon: Clock,
-    iconClass: 'text-brand-info',
-  },
+// 상태별 아이콘 매핑 (스타일은 INTERMEDIATE_CHECK_STATUS_TOKENS에서 관리)
+const STATUS_ICONS: Record<IntermediateCheckStatusKey, typeof AlertTriangle> = {
+  overdue: AlertTriangle,
+  today: Clock,
+  upcoming: Clock,
+  future: Clock,
 };
 
 export function IntermediateCheckAlert({
@@ -104,8 +88,8 @@ export function IntermediateCheckAlert({
   const [completionNotes, setCompletionNotes] = useState('');
 
   const status = getCheckStatus(check.intermediateCheckDate);
-  const style = statusStyles[status];
-  const IconComponent = style.icon;
+  const style = INTERMEDIATE_CHECK_STATUS_TOKENS[status];
+  const IconComponent = STATUS_ICONS[status];
   const daysUntil = differenceInDays(new Date(check.intermediateCheckDate), new Date());
   const statusLabel = t(
     `statusLabels.${status}` as

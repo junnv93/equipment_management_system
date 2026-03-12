@@ -22,6 +22,7 @@
 import { cache } from 'react';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth';
+import { getInternalApiKeyHeaders } from '../config/internal-headers';
 
 /**
  * Per-render deduplication: 동일 렌더 트리 내 여러 호출이 단일 Promise를 공유
@@ -126,6 +127,7 @@ export async function getServerAuthHeaders(): Promise<HeadersInit> {
   return {
     'Content-Type': 'application/json',
     ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+    ...getInternalApiKeyHeaders(),
   };
 }
 

@@ -18,6 +18,7 @@ import {
   Settings,
   FileText,
   FileSearch,
+  AlertTriangle,
 } from 'lucide-react';
 import { FRONTEND_ROUTES, Permission, hasPermission } from '@equipment-management/shared-constants';
 import type { UserRole } from '@equipment-management/schemas';
@@ -96,6 +97,12 @@ export const NAV_SECTIONS: NavSection[] = [
         href: FRONTEND_ROUTES.CALIBRATION_PLANS.LIST,
         labelKey: 'calibrationPlans',
         requiredPermission: Permission.VIEW_CALIBRATION_PLANS,
+      },
+      {
+        icon: AlertTriangle,
+        href: FRONTEND_ROUTES.NON_CONFORMANCES.LIST,
+        labelKey: 'nonConformances',
+        requiredPermission: Permission.VIEW_EQUIPMENT,
       },
     ],
   },

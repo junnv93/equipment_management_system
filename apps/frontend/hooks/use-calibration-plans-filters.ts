@@ -52,11 +52,15 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
    *
    * ✅ 무한 리다이렉트 방지: "_all" 센티널 값으로 "첫 방문"과 "전체 선택" 구분
    * - scroll: false로 스크롤 위치 유지
+   * - 필터 변경 시 page=1로 리셋 (페이지네이션 정합성)
    *
    * @param updates - 업데이트할 필터 (부분 업데이트 가능)
    */
   const updateFilters = (updates: Partial<UICalibrationPlansFilters>) => {
-    const newFilters = { ...currentFilters, ...updates };
+    // 필터(page/pageSize 제외) 변경 시 page=1로 리셋
+    const isFilterChange = Object.keys(updates).some((k) => k !== 'page' && k !== 'pageSize');
+    const pageReset = isFilterChange && !('page' in updates) ? { page: 1 } : {};
+    const newFilters = { ...currentFilters, ...updates, ...pageReset };
     const defaultFilters = getDefaultUIFilters();
     const params = new URLSearchParams();
 
@@ -78,6 +82,16 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
     // ✅ status: 값이 있거나, 명시적으로 변경되었으면 URL에 포함
     if ('status' in updates || newFilters.status) {
       params.set('status', newFilters.status || '_all');
+    }
+
+    // page (기본값 1이 아닐 때만)
+    if (newFilters.page && newFilters.page > 1) {
+      params.set('page', String(newFilters.page));
+    }
+
+    // pageSize (기본값이 아닐 때만)
+    if (newFilters.pageSize && newFilters.pageSize !== defaultFilters.pageSize) {
+      params.set('pageSize', String(newFilters.pageSize));
     }
 
     const queryString = params.toString();
@@ -115,6 +129,20 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
   };
 
   /**
+   * 페이지 업데이트 헬퍼
+   */
+  const updatePage = (page: number) => {
+    updateFilters({ page });
+  };
+
+  /**
+   * 페이지 크기 업데이트 헬퍼 (page=1 리셋)
+   */
+  const updatePageSize = (pageSize: number) => {
+    updateFilters({ pageSize, page: 1 });
+  };
+
+  /**
    * 필터 초기화 (현재 연도 유지)
    */
   const clearFilters = () => {
@@ -144,6 +172,10 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
     updateTeamId,
     /** 상태 필터 업데이트 */
     updateStatus,
+    /** 페이지 업데이트 */
+    updatePage,
+    /** 페이지 크기 업데이트 */
+    updatePageSize,
     /** 필터 초기화 */
     clearFilters,
   };

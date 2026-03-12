@@ -886,8 +886,9 @@ export const PLAN_PROGRESS_TOKENS = {
   /** 0% 시 */
   textEmpty:
     'text-sm font-bold font-mono text-muted-foreground whitespace-nowrap min-w-[72px] text-right tabular-nums',
-  /** 애니메이션 */
-  transition: 'transition-[width] duration-500 ease-out',
+  /** 애니메이션 (progress bar는 의도적으로 느린 500ms) */
+  transition:
+    'motion-safe:transition-[width] motion-safe:duration-500 motion-safe:ease-out motion-reduce:transition-none',
 } as const;
 
 // ============================================================================
@@ -913,7 +914,7 @@ export const VERSION_HISTORY_COLLAPSIBLE_TOKENS = {
     TRANSITION_PRESETS.fastBg,
   ].join(' '),
   /** chevron 아이콘 (CSS rotate) */
-  icon: 'h-4 w-4 shrink-0 transition-transform duration-200',
+  icon: `h-4 w-4 shrink-0 ${TRANSITION_PRESETS.fastTransform}`,
   /** 열림 시 아이콘 회전 */
   iconOpen: 'rotate-90',
   /** 콘텐츠 패딩 */

@@ -120,9 +120,9 @@ export class CalibrationPlansService {
   }
 
   /**
-   * 기본 계획서 조회 (항목 없이, 캐시 미사용 — CAS 검증용)
+   * 기본 계획서 조회 (항목 없이, 캐시 미사용 — CAS 검증 및 사이트 접근 검증용)
    */
-  private async findOneBasic(uuid: string): Promise<typeof calibrationPlans.$inferSelect> {
+  async findOneBasic(uuid: string): Promise<typeof calibrationPlans.$inferSelect> {
     const [plan] = await this.db
       .select()
       .from(calibrationPlans)

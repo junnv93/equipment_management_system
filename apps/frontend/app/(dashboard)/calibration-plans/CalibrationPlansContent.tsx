@@ -27,7 +27,17 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filters';
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { format } from 'date-fns';
-import { Plus, FileText, Calendar, Building2, Eye, Users, ClipboardList } from 'lucide-react';
+import {
+  Plus,
+  FileText,
+  Calendar,
+  Building2,
+  Eye,
+  Users,
+  ClipboardList,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CalibrationPlanStatus, UserRole, Site } from '@equipment-management/schemas';
 import {
@@ -68,8 +78,9 @@ export default function CalibrationPlansContent({
   const t = useTranslations('calibration');
 
   // ✅ SSOT: URL-driven 필터 (useState 제거)
-  const { filters, apiFilters, updateYear, updateSiteId, updateTeamId, updateStatus } =
+  const { filters, apiFilters, updateYear, updateSiteId, updateTeamId, updateStatus, updatePage } =
     useCalibrationPlansFilters(initialFilters);
+  const tc = useTranslations('common');
 
   // 역할 확인
   const userRole = session?.user?.role;
@@ -452,6 +463,45 @@ export default function CalibrationPlansContent({
           </>
         )}
       </div>
+
+      {/* ── 페이지네이션 ──────────────────────────────────────── */}
+      {data?.meta?.pagination && data.meta.pagination.totalPages > 1 && (
+        <div
+          className="flex items-center justify-between text-sm text-muted-foreground"
+          role="navigation"
+          aria-label={tc('pagination.totalItems', { count: data.meta.pagination.total })}
+        >
+          <span>{tc('pagination.totalItems', { count: data.meta.pagination.total })}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => updatePage(filters.page - 1)}
+              disabled={filters.page <= 1}
+              aria-label={tc('pagination.previous')}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              {tc('pagination.previous')}
+            </Button>
+            <span className="tabular-nums">
+              {tc('pagination.pageOf', {
+                current: filters.page,
+                total: data.meta.pagination.totalPages,
+              })}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => updatePage(filters.page + 1)}
+              disabled={filters.page >= data.meta.pagination.totalPages}
+              aria-label={tc('pagination.next')}
+            >
+              {tc('pagination.next')}
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

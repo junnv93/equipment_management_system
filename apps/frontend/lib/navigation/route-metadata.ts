@@ -150,6 +150,22 @@ export const routeMap: Record<string, RouteMetadata> = {
   },
 
   // ========================================
+  // 부적합 관리
+  // ========================================
+  '/non-conformances': {
+    label: '부적합 관리',
+    labelKey: 'navigation.nonConformances',
+    parent: '/',
+    icon: AlertTriangle,
+  },
+  '/non-conformances/[id]': {
+    label: '부적합 상세',
+    labelKey: 'navigation.nonConformancesDetail',
+    parent: '/non-conformances',
+    dynamic: true,
+  },
+
+  // ========================================
   // 반출입 관리
   // ========================================
   '/checkouts': {

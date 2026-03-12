@@ -72,6 +72,7 @@ export class NonConformancesService extends VersionedBaseService {
   private buildListConditions(params: {
     equipmentId?: string;
     status?: string;
+    ncType?: string;
     site?: string;
     search?: string;
   }): SQL[] {
@@ -82,6 +83,9 @@ export class NonConformancesService extends VersionedBaseService {
     }
     if (params.status) {
       conditions.push(eq(nonConformances.status, params.status));
+    }
+    if (params.ncType) {
+      conditions.push(eq(nonConformances.ncType, params.ncType));
     }
     if (params.site) {
       conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, params.site));
@@ -236,6 +240,7 @@ export class NonConformancesService extends VersionedBaseService {
     const {
       equipmentId,
       status,
+      ncType,
       site,
       search,
       sort = 'discoveryDate.desc',
@@ -244,7 +249,7 @@ export class NonConformancesService extends VersionedBaseService {
     } = query;
 
     // buildListConditions()로 data/count 쿼리 필터 일관성 보장
-    const filterParams = { equipmentId, status, site, search };
+    const filterParams = { equipmentId, status, ncType, site, search };
 
     // Use Drizzle relational query to include user→team relations
     const items = await this.db.query.nonConformances.findMany({
@@ -258,6 +263,14 @@ export class NonConformancesService extends VersionedBaseService {
             id: true,
             name: true,
             managementNumber: true,
+          },
+        },
+        repairHistory: {
+          columns: {
+            id: true,
+            repairDate: true,
+            repairDescription: true,
+            repairResult: true,
           },
         },
         discoverer: {
@@ -369,15 +382,43 @@ export class NonConformancesService extends VersionedBaseService {
   /**
    * 단일 부적합 조회 (cache-aside)
    */
-  async findOne(id: string): Promise<NonConformance> {
+  async findOne(id: string) {
     const cacheKey = this.buildCacheKey('detail', id);
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
-        const [nonConformance] = await this.db
-          .select()
-          .from(nonConformances)
-          .where(and(eq(nonConformances.id, id), isNull(nonConformances.deletedAt)));
+        const nonConformance = await this.db.query.nonConformances.findFirst({
+          where: and(eq(nonConformances.id, id), isNull(nonConformances.deletedAt)),
+          with: {
+            equipment: {
+              columns: { id: true, name: true, managementNumber: true },
+            },
+            repairHistory: {
+              columns: {
+                id: true,
+                repairDate: true,
+                repairDescription: true,
+                repairResult: true,
+              },
+            },
+            discoverer: {
+              columns: { id: true, name: true, email: true },
+              with: { team: true },
+            },
+            corrector: {
+              columns: { id: true, name: true, email: true },
+              with: { team: true },
+            },
+            closer: {
+              columns: { id: true, name: true, email: true },
+              with: { team: true },
+            },
+            rejector: {
+              columns: { id: true, name: true, email: true },
+              with: { team: true },
+            },
+          },
+        });
 
         if (!nonConformance) {
           throw new NotFoundException({

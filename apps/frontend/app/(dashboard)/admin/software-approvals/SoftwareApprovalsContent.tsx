@@ -25,7 +25,10 @@ import softwareApi, {
   SoftwareHistory,
   SOFTWARE_APPROVAL_STATUS_LABELS,
 } from '@/lib/api/software-api';
-import { SOFTWARE_APPROVAL_BADGE_TOKENS } from '@/lib/design-tokens';
+import {
+  SOFTWARE_APPROVAL_BADGE_TOKENS,
+  SOFTWARE_APPROVAL_PAGE_TOKENS as TOKENS,
+} from '@/lib/design-tokens';
 import { queryKeys } from '@/lib/api/query-config';
 import type { PaginatedResponse } from '@/lib/api/types';
 import { format } from 'date-fns';
@@ -166,10 +169,10 @@ export default function SoftwareApprovalsContent() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={TOKENS.container}>
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground">{t('description')}</p>
+        <h1 className={TOKENS.header.title}>{t('title')}</h1>
+        <p className={TOKENS.header.subtitle}>{t('description')}</p>
       </div>
 
       <Card>
@@ -185,69 +188,73 @@ export default function SoftwareApprovalsContent() {
           ) : (
             <div className="space-y-4">
               {pendingChanges.map((change: SoftwareHistory) => (
-                <Card key={change.id} className="border-l-4 border-l-yellow-500">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-4">
-                        <div className="flex items-center gap-4">
+                <Card key={change.id} className={TOKENS.card.base}>
+                  <CardContent className={TOKENS.card.content}>
+                    <div className={TOKENS.card.layout}>
+                      <div className={TOKENS.card.body}>
+                        <div className={TOKENS.cardHeader.container}>
                           <Badge className={SOFTWARE_APPROVAL_BADGE_TOKENS[change.approvalStatus]}>
                             {SOFTWARE_APPROVAL_STATUS_LABELS[change.approvalStatus]}
                           </Badge>
-                          <span className="text-sm font-medium">{change.softwareName}</span>
+                          <span className={TOKENS.cardHeader.name}>{change.softwareName}</span>
                           <Link
                             href={`/equipment/${change.equipmentId}`}
-                            className="text-sm text-primary hover:underline"
+                            className={TOKENS.cardHeader.link}
                           >
                             {t('viewEquipment')}
                           </Link>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Monitor className="h-4 w-4 text-muted-foreground" />
+                        <div className={TOKENS.infoGrid.container}>
+                          <div className={TOKENS.infoGrid.item}>
+                            <Monitor className={TOKENS.infoGrid.icon} />
                             <div>
-                              <p className="text-muted-foreground">{t('fields.equipmentId')}</p>
-                              <p className="font-medium font-mono text-xs">
+                              <p className={TOKENS.infoGrid.label}>{t('fields.equipmentId')}</p>
+                              <p className={TOKENS.infoGrid.monoValue}>
                                 {change.equipmentId.slice(0, 8)}...
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          <div className={TOKENS.infoGrid.item}>
+                            <ArrowRight className={TOKENS.infoGrid.icon} />
                             <div>
-                              <p className="text-muted-foreground">{t('fields.versionChange')}</p>
-                              <p className="font-medium">
+                              <p className={TOKENS.infoGrid.label}>{t('fields.versionChange')}</p>
+                              <p className={TOKENS.infoGrid.value}>
                                 {change.previousVersion || t('fields.newVersion')} -&gt;{' '}
                                 {change.newVersion}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
+                          <div className={TOKENS.infoGrid.item}>
+                            <Clock className={TOKENS.infoGrid.icon} />
                             <div>
-                              <p className="text-muted-foreground">{t('fields.changeDate')}</p>
-                              <p className="font-medium">
+                              <p className={TOKENS.infoGrid.label}>{t('fields.changeDate')}</p>
+                              <p className={TOKENS.infoGrid.value}>
                                 {format(new Date(change.changedAt), 'yyyy-MM-dd HH:mm')}
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="p-4 bg-muted rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <p className="text-sm font-medium">{t('fields.verificationRecord')}</p>
+                        <div className={TOKENS.verificationBox.container}>
+                          <div className={TOKENS.verificationBox.header}>
+                            <FileText className={TOKENS.verificationBox.headerIcon} />
+                            <p className={TOKENS.verificationBox.headerText}>
+                              {t('fields.verificationRecord')}
+                            </p>
                           </div>
-                          <p className="text-sm whitespace-pre-wrap">{change.verificationRecord}</p>
+                          <p className={TOKENS.verificationBox.content}>
+                            {change.verificationRecord}
+                          </p>
                         </div>
 
-                        <div className="text-xs text-muted-foreground">
+                        <div className={TOKENS.meta}>
                           {t('fields.requestDate')}:{' '}
                           {format(new Date(change.createdAt), 'yyyy-MM-dd HH:mm')}
                         </div>
                       </div>
 
-                      <div className="flex gap-2 ml-4">
+                      <div className={TOKENS.actions}>
                         <Button
                           size="sm"
                           onClick={() => handleApprove(change)}
@@ -283,7 +290,7 @@ export default function SoftwareApprovalsContent() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             {selectedChange && (
-              <div className="p-4 bg-muted rounded-lg space-y-2">
+              <div className={TOKENS.dialogSummary}>
                 <p>
                   <strong>{t('approveDialog.software')}</strong> {selectedChange.softwareName}
                 </p>
@@ -337,7 +344,7 @@ export default function SoftwareApprovalsContent() {
         title={t('rejectTitle')}
       >
         {selectedChange && (
-          <div className="p-4 bg-muted rounded-lg space-y-2">
+          <div className={TOKENS.dialogSummary}>
             <p>
               <strong>{t('approveDialog.software')}</strong> {selectedChange.softwareName}
             </p>

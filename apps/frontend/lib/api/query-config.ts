@@ -193,6 +193,22 @@ export const QUERY_CONFIG = {
     retry: 2,
   },
 
+  /** 부적합 관리 목록 - NORMAL (상태 변경 후 무효화로 갱신) */
+  NON_CONFORMANCES_LIST: {
+    staleTime: CACHE_TIMES.LONG,
+    gcTime: CACHE_TIMES.VERY_LONG,
+    refetchOnWindowFocus: false,
+    retry: 2,
+  },
+
+  /** 부적합 관리 상세 - NORMAL (mutation 후 자동 무효화) */
+  NON_CONFORMANCES_DETAIL: {
+    staleTime: CACHE_TIMES.MEDIUM,
+    gcTime: CACHE_TIMES.LONG,
+    refetchOnWindowFocus: true,
+    retry: 2,
+  },
+
   /** 소프트웨어 관리대장 - NORMAL (승인 후 무효화로 갱신) */
   SOFTWARE_REGISTRY: {
     staleTime: CACHE_TIMES.LONG,

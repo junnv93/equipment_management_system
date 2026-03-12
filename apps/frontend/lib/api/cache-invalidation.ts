@@ -249,6 +249,69 @@ export class EquipmentCacheInvalidation {
 }
 
 /**
+ * 부적합 관리 캐시 무효화 헬퍼
+ *
+ * NC 상태 변경, 종결, 반려 후 관련 캐시를 무효화.
+ * NC 상태 변경은 장비 상태와 대시보드 통계에도 영향하므로 교차 무효화 포함.
+ */
+export class NonConformanceCacheInvalidation {
+  /**
+   * 모든 부적합 캐시 무효화 (목록 + 상세)
+   */
+  static async invalidateAll(queryClient: QueryClient): Promise<void> {
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.nonConformances.all,
+      exact: false,
+    });
+  }
+
+  /**
+   * 특정 부적합 상세 + 목록 무효화
+   */
+  static async invalidateNC(queryClient: QueryClient, ncId: string): Promise<void> {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.nonConformances.detail(ncId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.nonConformances.lists(),
+        exact: false,
+      }),
+    ]);
+  }
+
+  /**
+   * NC 상태 변경 후 무효화 (장비 + 대시보드 포함)
+   *
+   * 사용 시점:
+   * - 분석 시작 (open → analyzing)
+   * - 조치 완료 (analyzing → corrected)
+   * - 종결 (corrected → closed) → 장비 상태 available 복원
+   * - 반려 (corrected → analyzing)
+   */
+  static async invalidateAfterStatusChange(
+    queryClient: QueryClient,
+    ncId: string,
+    equipmentId?: string
+  ): Promise<void> {
+    await Promise.all([
+      this.invalidateNC(queryClient, ncId),
+      // 장비 상태 영향 (closed 시 non_conforming → available)
+      equipmentId
+        ? EquipmentCacheInvalidation.invalidateEquipment(queryClient, equipmentId)
+        : Promise.resolve(),
+      // 대시보드 통계 영향
+      DashboardCacheInvalidation.invalidateAll(queryClient),
+      // 승인 카운트 영향 (corrected 목록 변동)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.approvals.countsAll,
+        exact: false,
+      }),
+    ]);
+  }
+}
+
+/**
  * 알림 캐시 무효화 헬퍼
  *
  * 승인/반려 등 상태 변경 후 알림 캐시를 무효화하여

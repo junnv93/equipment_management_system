@@ -25,7 +25,14 @@ import calibrationFactorsApi, {
 import { format } from 'date-fns';
 import { Calculator, ChevronDown, ChevronRight, FileDown, Search, Building2 } from 'lucide-react';
 import Link from 'next/link';
-import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+import {
+  CAL_FACTORS_HEADER_TOKENS,
+  CAL_FACTORS_STATS_TOKENS,
+  CAL_FACTORS_SEARCH_TOKENS,
+  CAL_FACTORS_COLLAPSIBLE_TOKENS,
+  CAL_FACTORS_TABLE_TOKENS,
+  CAL_FACTORS_EMPTY_STATE_TOKENS,
+} from '@/lib/design-tokens';
 
 interface CalibrationFactorsRegistryContentProps {
   /** 서버에서 가져온 초기 대장 데이터 */
@@ -157,10 +164,10 @@ export default function CalibrationFactorsRegistryContent({
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <div className={CAL_FACTORS_HEADER_TOKENS.container}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('factorsRegistry.title')}</h1>
-          <p className="text-muted-foreground">{t('factorsRegistry.subtitle')}</p>
+          <h1 className={CAL_FACTORS_HEADER_TOKENS.title}>{t('factorsRegistry.title')}</h1>
+          <p className={CAL_FACTORS_HEADER_TOKENS.subtitle}>{t('factorsRegistry.subtitle')}</p>
         </div>
         <Button onClick={exportToCSV} variant="outline">
           <FileDown className="h-4 w-4 mr-2" />
@@ -169,47 +176,47 @@ export default function CalibrationFactorsRegistryContent({
       </div>
 
       {/* 요약 카드 */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={CAL_FACTORS_STATS_TOKENS.grid}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className={CAL_FACTORS_STATS_TOKENS.card.header}>
+            <CardTitle className={CAL_FACTORS_STATS_TOKENS.card.titleText}>
               {t('factorsRegistry.stats.totalEquipments')}
             </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <Building2 className={CAL_FACTORS_STATS_TOKENS.card.icon} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{registry?.totalEquipments || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className={CAL_FACTORS_STATS_TOKENS.value}>{registry?.totalEquipments || 0}</div>
+            <p className={CAL_FACTORS_STATS_TOKENS.desc}>
               {t('factorsRegistry.stats.equipmentsDesc')}
             </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className={CAL_FACTORS_STATS_TOKENS.card.header}>
+            <CardTitle className={CAL_FACTORS_STATS_TOKENS.card.titleText}>
               {t('factorsRegistry.stats.totalFactors')}
             </CardTitle>
-            <Calculator className="h-4 w-4 text-muted-foreground" />
+            <Calculator className={CAL_FACTORS_STATS_TOKENS.card.icon} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{registry?.totalFactors || 0}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className={CAL_FACTORS_STATS_TOKENS.value}>{registry?.totalFactors || 0}</div>
+            <p className={CAL_FACTORS_STATS_TOKENS.desc}>
               {t('factorsRegistry.stats.factorsDesc')}
             </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className={CAL_FACTORS_STATS_TOKENS.card.header}>
+            <CardTitle className={CAL_FACTORS_STATS_TOKENS.card.titleText}>
               {t('factorsRegistry.stats.generatedAt')}
             </CardTitle>
-            <Calculator className="h-4 w-4 text-muted-foreground" />
+            <Calculator className={CAL_FACTORS_STATS_TOKENS.card.icon} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className={CAL_FACTORS_STATS_TOKENS.value}>
               {registry?.generatedAt ? format(new Date(registry.generatedAt), 'HH:mm') : '-'}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className={CAL_FACTORS_STATS_TOKENS.desc}>
               {registry?.generatedAt ? format(new Date(registry.generatedAt), 'yyyy-MM-dd') : ''}
             </p>
           </CardContent>
@@ -219,17 +226,17 @@ export default function CalibrationFactorsRegistryContent({
       {/* 보정계수 대장 */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className={CAL_FACTORS_SEARCH_TOKENS.container}>
             <div>
               <CardTitle>{t('factorsRegistry.table.title')}</CardTitle>
               <CardDescription>{t('factorsRegistry.table.description')}</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className={CAL_FACTORS_SEARCH_TOKENS.controls}>
+              <div className={CAL_FACTORS_SEARCH_TOKENS.inputWrapper}>
+                <Search className={CAL_FACTORS_SEARCH_TOKENS.inputIcon} />
                 <Input
                   placeholder={t('factorsRegistry.table.searchPlaceholder')}
-                  className="pl-9 w-[300px]"
+                  className={CAL_FACTORS_SEARCH_TOKENS.input}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -245,12 +252,12 @@ export default function CalibrationFactorsRegistryContent({
         </CardHeader>
         <CardContent>
           {!filteredRegistry || filteredRegistry.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <div className={CAL_FACTORS_EMPTY_STATE_TOKENS.container}>
+              <Calculator className={CAL_FACTORS_EMPTY_STATE_TOKENS.icon} />
               <p>{t('factorsRegistry.table.empty')}</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className={CAL_FACTORS_COLLAPSIBLE_TOKENS.list}>
               {filteredRegistry.map((item) => (
                 <Collapsible
                   key={item.equipmentId}
@@ -258,38 +265,43 @@ export default function CalibrationFactorsRegistryContent({
                   onOpenChange={() => toggleEquipment(item.equipmentId)}
                 >
                   <CollapsibleTrigger asChild>
-                    <div
-                      className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-muted/50 ${TRANSITION_PRESETS.fastColor}`}
-                    >
-                      <div className="flex items-center gap-4">
+                    <div className={CAL_FACTORS_COLLAPSIBLE_TOKENS.trigger}>
+                      <div className={CAL_FACTORS_COLLAPSIBLE_TOKENS.triggerInfo}>
                         {expandedEquipment.has(item.equipmentId) ? (
-                          <ChevronDown className="h-5 w-5" />
+                          <ChevronDown className={CAL_FACTORS_COLLAPSIBLE_TOKENS.chevron} />
                         ) : (
-                          <ChevronRight className="h-5 w-5" />
+                          <ChevronRight className={CAL_FACTORS_COLLAPSIBLE_TOKENS.chevron} />
                         )}
                         <div>
                           <Link
                             href={`/equipment/${item.equipmentId}/calibration-factors`}
-                            className="font-medium hover:underline"
+                            className={CAL_FACTORS_COLLAPSIBLE_TOKENS.equipmentLink}
                             onClick={(e) => e.stopPropagation()}
                           >
                             {item.equipmentId}
                           </Link>
-                          <p className="text-sm text-muted-foreground">
+                          <p className={CAL_FACTORS_COLLAPSIBLE_TOKENS.factorCount}>
                             {t('factorsRegistry.factorCount', { count: item.factorCount })}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className={CAL_FACTORS_COLLAPSIBLE_TOKENS.badgePreview}>
                         {item.factors.slice(0, 3).map((factor) => (
-                          <Badge key={factor.id} variant="outline" className="text-xs">
+                          <Badge
+                            key={factor.id}
+                            variant="outline"
+                            className={CAL_FACTORS_COLLAPSIBLE_TOKENS.overflowBadge}
+                          >
                             {FACTOR_TYPE_LABELS[
                               factor.factorType as keyof typeof FACTOR_TYPE_LABELS
                             ] || factor.factorType}
                           </Badge>
                         ))}
                         {item.factors.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge
+                            variant="secondary"
+                            className={CAL_FACTORS_COLLAPSIBLE_TOKENS.overflowBadge}
+                          >
                             +{item.factors.length - 3}
                           </Badge>
                         )}
@@ -297,7 +309,7 @@ export default function CalibrationFactorsRegistryContent({
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="ml-9 mt-2 border rounded-lg overflow-hidden">
+                    <div className={CAL_FACTORS_COLLAPSIBLE_TOKENS.contentWrapper}>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -310,7 +322,7 @@ export default function CalibrationFactorsRegistryContent({
                         </TableHeader>
                         <TableBody>
                           {item.factors.map((factor) => (
-                            <TableRow key={factor.id}>
+                            <TableRow key={factor.id} className={CAL_FACTORS_TABLE_TOKENS.row}>
                               <TableCell>
                                 <Badge variant="outline">
                                   {FACTOR_TYPE_LABELS[
@@ -318,8 +330,10 @@ export default function CalibrationFactorsRegistryContent({
                                   ] || factor.factorType}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="font-medium">{factor.factorName}</TableCell>
-                              <TableCell className="font-mono">
+                              <TableCell className={CAL_FACTORS_TABLE_TOKENS.cellName}>
+                                {factor.factorName}
+                              </TableCell>
+                              <TableCell className={CAL_FACTORS_TABLE_TOKENS.cellValue}>
                                 {factor.factorValue} {factor.unit}
                               </TableCell>
                               <TableCell>

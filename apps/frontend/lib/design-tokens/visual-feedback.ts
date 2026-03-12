@@ -18,7 +18,7 @@
  */
 
 import { APPROVAL_KPI } from '@equipment-management/shared-constants';
-import { ANIMATION_PRESETS } from './motion';
+import { ANIMATION_PRESETS, TRANSITION_PRESETS } from './motion';
 
 /**
  * Urgency Level (비즈니스 로직 계층)
@@ -120,7 +120,7 @@ export function getUrgencyFeedbackClasses(urgency: UrgencyLevel, includeAnimatio
     feedback.ring,
     includeAnimation ? feedback.animation : '',
     feedback.bgOpacity,
-    'transition-transform duration-200 ease-out', // 부드러운 scale 전환
+    TRANSITION_PRESETS.fastTransform, // 부드러운 scale 전환
   ]
     .filter(Boolean)
     .join(' ');

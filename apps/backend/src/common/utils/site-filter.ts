@@ -5,24 +5,41 @@
  * 부적합(NC), 소프트웨어 등 equipment에 종속된 엔티티가
  * 사이트 기반 접근제어를 적용할 때 사용합니다.
  *
+ * 테이블/컬럼명은 Drizzle 스키마 메타데이터(getTableName, getTableColumns)에서
+ * 동적으로 파생합니다. 이를 통해:
+ * - SSOT 준수: 스키마 변경 시 자동 반영
+ * - Drizzle relational query(lateral join)에서 alias 충돌 방지
+ *   (${schema.column} 참조는 relational query 내부에서 잘못된 alias로 치환됨)
+ *
  * @example
  * // 부적합 목록에서 사이트 필터 적용
  * if (site) conditions.push(equipmentBelongsToSite(ncTable.equipmentId, site));
  */
 
-import { sql, type SQL } from 'drizzle-orm';
+import { sql, getTableName, getTableColumns, type SQL } from 'drizzle-orm';
 import type { AnyColumn } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
+
+/**
+ * equipment 스키마에서 파생된 테이블/컬럼명 (모듈 로드 시 1회 계산)
+ *
+ * sql.raw()로 삽입되어 Drizzle relational query의 alias 치환 대상에서 제외됩니다.
+ * 스키마가 변경되면 여기서 자동으로 새 이름이 반영됩니다.
+ */
+const EQUIPMENT_TABLE = getTableName(equipment);
+const EQUIPMENT_COLS = getTableColumns(equipment);
+const EQUIPMENT_ID_COL = EQUIPMENT_COLS.id.name;
+const EQUIPMENT_SITE_COL = EQUIPMENT_COLS.site.name;
 
 /**
  * 장비 ID 컬럼이 특정 사이트에 속하는지 확인하는 SQL 조건을 생성합니다.
  *
  * 생성되는 SQL:
- *   `equipmentIdColumn IN (SELECT id FROM equipment WHERE site = $site)`
+ *   `equipmentIdColumn IN (SELECT "id" FROM "equipment" WHERE "site" = $site)`
  *
  * @param equipmentIdColumn - 장비 ID를 참조하는 컬럼 (예: nonConformances.equipmentId)
- * @param site - 필터링할 사이트 코드 (예: 'SUW', 'UIW', 'PYT')
+ * @param site - 필터링할 사이트 코드 (예: 'suwon', 'ulsan', 'pyeongtaek')
  */
 export function equipmentBelongsToSite(equipmentIdColumn: AnyColumn, site: string): SQL {
-  return sql`${equipmentIdColumn} IN (SELECT ${equipment.id} FROM ${equipment} WHERE ${equipment.site} = ${site})`;
+  return sql`${equipmentIdColumn} IN (SELECT "${sql.raw(EQUIPMENT_ID_COL)}" FROM "${sql.raw(EQUIPMENT_TABLE)}" WHERE "${sql.raw(EQUIPMENT_SITE_COL)}" = ${site})`;
 }

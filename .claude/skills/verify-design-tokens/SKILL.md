@@ -350,6 +350,24 @@ export const BUTTON_TOKENS = {
 import { toTailwindSize } from '../primitives';
 ```
 
+### Step 5b: Layer 3 컴포넌트 토큰 barrel export 확인
+
+`design-tokens/components/` 디렉토리의 모든 토큰 파일이 `index.ts` barrel에 export 되어 있는지 확인합니다.
+
+```bash
+# components/ 디렉토리의 .ts 파일 목록과 index.ts export를 비교
+for f in apps/frontend/lib/design-tokens/components/*.ts; do
+  basename=$(basename "$f" .ts)
+  if ! grep -q "from './components/$basename'" apps/frontend/lib/design-tokens/index.ts; then
+    echo "NOT EXPORTED: $f"
+  fi
+done
+```
+
+**PASS 기준:** 모든 컴포넌트 토큰 파일이 `index.ts`에서 export됨.
+
+**FAIL 기준:** `NOT EXPORTED` 출력이 있으면 해당 파일을 `index.ts`에 re-export 추가 필요.
+
 ### Step 6: TRANSITION_PRESETS 우선 + getTransitionClasses 속성 지정
 
 Layer 3 컴포넌트 토큰 파일에서는 `getTransitionClasses()` 런타임 호출 대신 `TRANSITION_PRESETS` 사전 계산 상수를 사용해야 합니다.

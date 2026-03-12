@@ -3,7 +3,7 @@
 import { X, Printer, User, Server, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import { AuditLogDiffViewer } from '@/components/ui/audit-log-diff-viewer';
 import { PrintableAuditReport } from './PrintableAuditReport';
@@ -57,14 +57,12 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
           <div className={AUDIT_DETAIL_SHEET_TOKENS.header}>
             <div className={AUDIT_DETAIL_SHEET_TOKENS.headerTop}>
               <span className={AUDIT_DETAIL_SHEET_TOKENS.headerLabel}>{t('detail.title')}</span>
-              <button
-                type="button"
+              <SheetClose
                 aria-label={tc('actions.close')}
                 className={AUDIT_DETAIL_SHEET_TOKENS.closeBtn}
-                onClick={() => onOpenChange(false)}
               >
                 <X className="h-3.5 w-3.5" />
-              </button>
+              </SheetClose>
             </div>
 
             {log && (

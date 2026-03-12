@@ -1,21 +1,20 @@
 /**
- * 교정계획서 목록 페이지 — PPR Non-Blocking Pattern
+ * 부적합 관리 목록 페이지 — PPR Non-Blocking Pattern
  *
- * ✅ Static Shell: 없음 (CalibrationPlansContent가 전체 UI)
+ * ✅ Static Shell: 없음 (NonConformancesContent가 전체 UI)
  * ✅ Dynamic Hole: Suspense로 전체 컨텐츠 서버 스트리밍
- * ✅ SSOT 패턴: calibration-plans-filter-utils.ts + calibration-plans-api-server.ts
+ * ✅ SSOT 패턴: non-conformances-filter-utils.ts + non-conformances-api-server.ts
  * ✅ 역할별 기본 필터 (buildRoleBasedRedirectUrl)
  */
 
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import {
-  parseCalibrationPlansFiltersFromSearchParams,
-  convertFiltersToApiParams,
-  CALIBRATION_PLANS_DEFAULT_PAGE_SIZE,
-} from '@/lib/utils/calibration-plans-filter-utils';
-import * as calibrationPlansApiServer from '@/lib/api/calibration-plans-api-server';
-import CalibrationPlansContent from './CalibrationPlansContent';
+  parseNCFiltersFromSearchParams,
+  convertNCFiltersToApiParams,
+} from '@/lib/utils/non-conformances-filter-utils';
+import * as ncApiServer from '@/lib/api/non-conformances-api-server';
+import NonConformancesContent from './NonConformancesContent';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { buildRoleBasedRedirectUrl } from '@/lib/utils/role-filter-utils';
 import { ClientOnly } from '@/components/shared/ClientOnly';
@@ -29,25 +28,24 @@ type PageProps = {
 /**
  * 로딩 폴백 (ListPageSkeleton 사용)
  */
-function CalibrationPlansLoadingFallback() {
+function NonConformancesLoadingFallback() {
   return (
     <ListPageSkeleton
-      title="교정계획서"
-      description="연간 외부교정 대상 장비의 교정 계획을 관리합니다"
+      title="부적합 관리"
+      description="장비 부적합 사항을 등록, 분석, 조치하고 종결합니다"
       showFilters={true}
-      filterCount={4}
-      showSearch={false}
+      filterCount={3}
+      showSearch={true}
       gridCols={{ base: 1 }}
       cardCount={8}
-      showActionButton={true}
     />
   );
 }
 
-export default function CalibrationPlansPage(props: PageProps) {
+export default function NonConformancesPage(props: PageProps) {
   return (
-    <Suspense fallback={<CalibrationPlansLoadingFallback />}>
-      <CalibrationPlansAsync searchParamsPromise={props.searchParams} />
+    <Suspense fallback={<NonConformancesLoadingFallback />}>
+      <NonConformancesAsync searchParamsPromise={props.searchParams} />
     </Suspense>
   );
 }
@@ -55,7 +53,7 @@ export default function CalibrationPlansPage(props: PageProps) {
 /**
  * 비동기 데이터 로딩 컴포넌트 (Suspense 내부에서 실행)
  */
-async function CalibrationPlansAsync({
+async function NonConformancesAsync({
   searchParamsPromise,
 }: {
   searchParamsPromise: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -65,38 +63,34 @@ async function CalibrationPlansAsync({
   // 1️⃣ 역할별 기본 필터 적용 (서버 사이드 redirect)
   const session = await getServerAuthSession();
   if (session?.user) {
-    const redirectUrl = buildRoleBasedRedirectUrl('/calibration-plans', searchParams, session.user);
+    const redirectUrl = buildRoleBasedRedirectUrl('/non-conformances', searchParams, session.user);
     if (redirectUrl) redirect(redirectUrl);
   }
 
   // 2️⃣ 필터 파싱 (SSOT)
-  const uiFilters = parseCalibrationPlansFiltersFromSearchParams(searchParams);
-  const apiFilters = convertFiltersToApiParams(uiFilters);
+  const uiFilters = parseNCFiltersFromSearchParams(searchParams);
+  const apiFilters = convertNCFiltersToApiParams(uiFilters);
 
   // 3️⃣ 초기 데이터 서버 fetch (FCP 최적화)
   let initialData;
   try {
-    initialData = await calibrationPlansApiServer.getCalibrationPlansList({
-      ...apiFilters,
-      includeSummary: true,
-    });
+    initialData = await ncApiServer.getNonConformances(apiFilters);
   } catch (error) {
-    // 에러 발생 시 빈 데이터로 시작 (Client에서 재시도)
     if (process.env.NODE_ENV === 'development') {
       console.error(
-        '[CalibrationPlansPage] Server-side fetch 실패\n' +
+        '[NonConformancesPage] Server-side fetch 실패\n' +
           `Query: ${JSON.stringify(apiFilters, null, 2)}\n` +
           `Error: ${error instanceof Error ? error.message : String(error)}`
       );
     } else {
-      console.error('Failed to fetch initial calibration plans:', error);
+      console.error('Failed to fetch initial non-conformances:', error);
     }
     initialData = {
       data: [],
       meta: {
         pagination: {
           total: 0,
-          pageSize: CALIBRATION_PLANS_DEFAULT_PAGE_SIZE,
+          pageSize: 20,
           currentPage: 1,
           totalPages: 0,
         },
@@ -105,8 +99,8 @@ async function CalibrationPlansAsync({
   }
 
   return (
-    <ClientOnly fallback={<CalibrationPlansLoadingFallback />}>
-      <CalibrationPlansContent initialData={initialData} initialFilters={uiFilters} />
+    <ClientOnly fallback={<NonConformancesLoadingFallback />}>
+      <NonConformancesContent initialData={initialData} initialFilters={uiFilters} />
     </ClientOnly>
   );
 }

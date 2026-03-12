@@ -132,6 +132,13 @@ export const TRANSITION_PRESETS = {
   // ── Fast (200ms) — 추가 조합 ─────────────────
   /** background-color, color, box-shadow */
   fastBgColorShadow: getTransitionClasses('fast', ['background-color', 'color', 'box-shadow']),
+  /** background-color, color, box-shadow, transform */
+  fastBgColorShadowTransform: getTransitionClasses('fast', [
+    'background-color',
+    'color',
+    'box-shadow',
+    'transform',
+  ]),
   /** border-color, background-color, transform */
   fastBorderBgTransform: getTransitionClasses('fast', [
     'border-color',

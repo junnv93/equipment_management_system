@@ -44,6 +44,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/shared-constants/src/permission-categories.ts`                     | SSOT 권한 카테고리 그룹핑 (PERMISSION_CATEGORIES, PERMISSION_CATEGORY_KEYS)                    |
 | `packages/shared-constants/src/index.ts`                                     | shared-constants 패키지 내보내기                                                               |
 | `packages/shared-constants/src/auth-token.ts`                                | SSOT 인증 토큰 라이프사이클 + 세션 동작 상수 (TTL, idle timeout, session sync)                 |
+| `packages/shared-constants/src/approval-kpi.ts`                              | SSOT 승인 KPI 임계값 (URGENT_THRESHOLD_DAYS, WARNING_THRESHOLD_DAYS)                           |
 | `apps/frontend/lib/api/query-config.ts`                                      | queryKeys 팩토리 (countsAll prefix 키 포함)                                                    |
 | `apps/frontend/lib/api/cache-invalidation.ts`                                | 캐시 무효화 SSOT (CheckoutCacheInvalidation 등)                                                |
 | `packages/schemas/src/api-response.ts`                                       | ApiResponse 타입 SSOT (로컬 재정의 금지)                                                       |
@@ -564,6 +565,24 @@ grep -rn "approvals\.counts()" apps/frontend --include="*.ts" --include="*.tsx" 
 
 **FAIL 기준:** `queryKeys.approvals.counts()` → `['approval-counts', undefined]`는 역할별 키 `['approval-counts', 'technical_manager']`와 매칭 안 됨 — 무효화 누락.
 
+### Step 11e: APPROVAL_KPI 임계값 하드코딩 탐지
+
+승인 KPI 긴급/경고 임계값이 `@equipment-management/shared-constants`의 `APPROVAL_KPI`에서 import 되지 않고 매직 넘버로 하드코딩되는지 확인합니다.
+
+```bash
+# APPROVAL_KPI 로컬 재정의 탐지
+grep -rn "URGENT_THRESHOLD_DAYS\s*=\|WARNING_THRESHOLD_DAYS\s*=" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|approval-kpi\.ts\|// "
+```
+
+```bash
+# APPROVAL_KPI import 소스 확인
+grep -rn "APPROVAL_KPI" apps/backend/src apps/frontend --include="*.ts" --include="*.tsx" | grep -v "node_modules\|@equipment-management/shared-constants\|approval-kpi\.ts\|// "
+```
+
+**PASS 기준:** `APPROVAL_KPI` 사용 파일이 모두 `@equipment-management/shared-constants`에서 import.
+
+**FAIL 기준:** `approval-kpi.ts` 외 파일에서 `URGENT_THRESHOLD_DAYS = 8` 등 직접 선언, 또는 `APPROVAL_KPI`를 잘못된 경로에서 import.
+
 ### Step 11: PAGE_SIZE_OPTIONS 로컬 재정의 탐지
 
 `PAGE_SIZE_OPTIONS`가 `@/lib/config/pagination`에서 임포트되지 않고 컴포넌트에서 직접 선언되어 있는지 확인합니다.
@@ -626,6 +645,7 @@ import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/config/pagination';
 | 11b | ApiResponse 로컬 재정의       | PASS/FAIL | packages/ 외 ApiResponse 정의 위치     |
 | 11c | CheckoutCacheInvalidation     | PASS/FAIL | 직접 queryKeys 조합 무효화 위치        |
 | 11d | countsAll prefix 키 사용      | PASS/FAIL | approvals.counts() 무효화 위치         |
+| 11e | APPROVAL_KPI 임계값           | PASS/FAIL | 하드코딩 임계값/잘못된 import 위치     |
 ```
 
 ## Exceptions

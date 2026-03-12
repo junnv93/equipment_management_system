@@ -18,6 +18,22 @@ import {
 // Re-export for backward compatibility
 export type { NonConformanceStatus, NonConformanceType, ResolutionType };
 
+// 관계 유저 인터페이스 (findAll with 절에서 반환)
+export interface NCRelatedUser {
+  id: string;
+  name: string;
+  email: string;
+  team: { id: string; name: string } | null;
+}
+
+// 수리 이력 관계 인터페이스
+export interface NCRepairHistory {
+  id: string;
+  repairDate: string;
+  repairDescription: string;
+  repairResult: string | null;
+}
+
 // 부적합 인터페이스
 export interface NonConformance {
   id: string;
@@ -45,12 +61,21 @@ export interface NonConformance {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  // 관계 데이터 (findAll/findOne with 절에서 반환)
+  equipment?: { id: string; name: string; managementNumber: string };
+  repairHistory?: NCRepairHistory | null;
+  discoverer?: NCRelatedUser | null;
+  corrector?: NCRelatedUser | null;
+  closer?: NCRelatedUser | null;
+  rejector?: NCRelatedUser | null;
 }
 
 // 쿼리 인터페이스
 export interface NonConformanceQuery {
   equipmentId?: string;
   status?: NonConformanceStatus;
+  ncType?: NonConformanceType;
+  site?: string;
   search?: string;
   sort?: string;
   page?: number;

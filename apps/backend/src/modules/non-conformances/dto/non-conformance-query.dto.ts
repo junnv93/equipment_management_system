@@ -4,6 +4,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 // ✅ SSOT: NonConformanceStatus는 schemas 패키지에서 import
 import {
   NON_CONFORMANCE_STATUS_VALUES,
+  NON_CONFORMANCE_TYPE_VALUES,
   NonConformanceStatusValues,
 } from '@equipment-management/schemas';
 
@@ -20,6 +21,11 @@ export const nonConformanceQuerySchema = z.object({
   status: z
     .enum(NON_CONFORMANCE_STATUS_VALUES as unknown as [string, ...string[]], {
       message: '유효하지 않은 상태입니다 (open, analyzing, corrected, closed)',
+    })
+    .optional(),
+  ncType: z
+    .enum(NON_CONFORMANCE_TYPE_VALUES as unknown as [string, ...string[]], {
+      message: '유효하지 않은 유형입니다',
     })
     .optional(),
   site: z.enum(['suwon', 'uiwang', 'pyeongtaek']).optional(),
@@ -48,6 +54,12 @@ export class NonConformanceQueryDto {
     enum: NON_CONFORMANCE_STATUS_VALUES,
   })
   status?: string;
+
+  @ApiPropertyOptional({
+    description: '부적합 유형 필터',
+    enum: NON_CONFORMANCE_TYPE_VALUES,
+  })
+  ncType?: string;
 
   @ApiPropertyOptional({
     description: '사이트 필터 (장비 소속 사이트)',

@@ -52,6 +52,7 @@ import {
   REFRESH_TOKEN_TTL_SECONDS,
 } from '@equipment-management/shared-constants';
 import { API_BASE_URL } from './config/api-config';
+import { getInternalApiKeyHeaders } from './config/internal-headers';
 
 // 환경 변수 확인
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -101,7 +102,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getInternalApiKeyHeaders() },
         body: JSON.stringify({ refresh_token: refreshToken }),
       });
 

@@ -6,6 +6,7 @@
  */
 
 import { MOTION_TOKENS, INTERACTIVE_TOKENS, CONTENT_TOKENS } from '../semantic';
+import { TRANSITION_PRESETS } from '../motion';
 
 /**
  * Auth Input Field Tokens
@@ -83,8 +84,8 @@ export function getAuthInputClasses(hasError = false): string {
       ? 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20'
       : 'focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20',
 
-    // Transition
-    'motion-safe:transition-[border-color,box-shadow] motion-safe:duration-200 motion-reduce:transition-none',
+    // Transition (TRANSITION_PRESETS.fastBorderShadow)
+    TRANSITION_PRESETS.fastBorderShadow,
   ].join(' ');
 }
 
@@ -105,8 +106,8 @@ export function getAuthButtonClasses(variant: 'primary' | 'success' = 'primary')
     // Focus
     'focus-visible:ring-2 focus-visible:ring-offset-2',
 
-    // Transition
-    'motion-safe:transition-[background-color,color,box-shadow,transform] motion-safe:duration-200 motion-reduce:transition-none',
+    // Transition (TRANSITION_PRESETS.fastBgColorShadowTransform)
+    TRANSITION_PRESETS.fastBgColorShadowTransform,
 
     // Hover effects
     'hover:scale-[1.01] active:scale-[0.99]',

@@ -10,10 +10,16 @@
  * - SOFTWARE_TABLE_TOKENS: 관리대장 테이블
  * - SOFTWARE_SEARCH_TOKENS: 검색 바
  * - SOFTWARE_EMPTY_STATE_TOKENS: 빈 상태
+ * - SOFTWARE_APPROVAL_PAGE_TOKENS: 승인 관리 페이지
+ * - SOFTWARE_HISTORY_PAGE_TOKENS: 장비별 이력 페이지
  */
 
 import { TRANSITION_PRESETS } from '../motion';
-import { getSemanticStatusClasses } from '../brand';
+import {
+  getSemanticStatusClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticContainerColorClasses,
+} from '../brand';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 페이지 헤더
@@ -159,3 +165,153 @@ export const SOFTWARE_APPROVAL_BADGE_TOKENS: Record<string, string> = {
   approved: getSemanticStatusClasses('ok'),
   rejected: getSemanticStatusClasses('critical'),
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 8. 승인 관리 페이지 (admin/software-approvals)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const SOFTWARE_APPROVAL_PAGE_TOKENS = {
+  /** 페이지 컨테이너 */
+  container: 'container mx-auto py-6 space-y-6',
+
+  /** 페이지 헤더 */
+  header: {
+    title: 'text-3xl font-bold tracking-tight text-foreground',
+    subtitle: 'text-muted-foreground',
+  },
+
+  /** 변경 요청 카드 */
+  card: {
+    base: ['border-l-4', getSemanticLeftBorderClasses('warning')].join(' '),
+    content: 'pt-6',
+    layout: 'flex items-start justify-between',
+    body: 'flex-1 space-y-4',
+  },
+
+  /** 카드 헤더 영역 (배지 + 이름 + 링크) */
+  cardHeader: {
+    container: 'flex items-center gap-4',
+    name: 'text-sm font-medium text-foreground',
+    link: ['text-sm text-primary hover:underline', TRANSITION_PRESETS.fastColor].join(' '),
+  },
+
+  /** 카드 정보 그리드 */
+  infoGrid: {
+    container: 'grid grid-cols-2 md:grid-cols-4 gap-4 text-sm',
+    item: 'flex items-center gap-2',
+    icon: 'h-4 w-4 text-muted-foreground flex-shrink-0',
+    label: 'text-muted-foreground',
+    value: 'font-medium',
+    monoValue: 'font-medium font-mono text-xs',
+  },
+
+  /** 검증 기록 박스 */
+  verificationBox: {
+    container: 'p-4 bg-muted rounded-lg',
+    header: 'flex items-center gap-2 mb-2',
+    headerIcon: 'h-4 w-4 text-muted-foreground',
+    headerText: 'text-sm font-medium',
+    content: 'text-sm whitespace-pre-wrap',
+  },
+
+  /** 메타 정보 */
+  meta: 'text-xs text-muted-foreground',
+
+  /** 액션 버튼 영역 */
+  actions: 'flex gap-2 ml-4',
+
+  /** 다이얼로그 요약 박스 */
+  dialogSummary: 'p-4 bg-muted rounded-lg space-y-2',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9. 장비별 소프트웨어 이력 페이지 (equipment/[id]/software)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const SOFTWARE_HISTORY_PAGE_TOKENS = {
+  /** 페이지 컨테이너 */
+  container: 'container mx-auto py-6 space-y-6',
+
+  /** 네비게이션 */
+  nav: {
+    container: 'flex items-center gap-4',
+    backIcon: 'h-4 w-4 mr-2',
+  },
+
+  /** 헤더 */
+  header: {
+    container: 'flex items-center justify-between',
+    title: 'text-3xl font-bold tracking-tight text-foreground',
+    subtitle: 'text-muted-foreground',
+  },
+
+  /** 현재 소프트웨어 정보 카드 */
+  currentInfo: {
+    grid: 'grid grid-cols-2 md:grid-cols-4 gap-4',
+    label: 'text-sm text-muted-foreground',
+    value: 'font-medium',
+  },
+
+  /** 이력 테이블 */
+  table: {
+    wrapper: 'rounded-lg border border-border overflow-hidden',
+    row: [
+      'border-b border-border last:border-b-0',
+      TRANSITION_PRESETS.fastBg,
+      'hover:bg-muted/30',
+    ].join(' '),
+    cellName: 'font-medium',
+    versionBadge: 'flex items-center gap-2',
+    statusCell: 'flex items-center gap-2',
+    truncatedCell: 'max-w-xs truncate',
+  },
+
+  /** 빈 상태 */
+  emptyState: {
+    container: 'text-center py-12 text-muted-foreground',
+    icon: 'h-12 w-12 mx-auto mb-4 opacity-50',
+    text: 'text-muted-foreground',
+  },
+
+  /** 로딩 스켈레톤 */
+  skeleton: {
+    container: 'container mx-auto py-6 space-y-6',
+  },
+
+  /** 상태 아이콘 색상 */
+  statusIcon: {
+    approved: 'h-4 w-4 text-brand-ok',
+    rejected: 'h-4 w-4 text-brand-critical',
+    pending: 'h-4 w-4 text-brand-warning',
+  },
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10. 중간점검 알림 (IntermediateCheckAlert)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 중간점검 상태별 시각 피드백 토큰 */
+export const INTERMEDIATE_CHECK_STATUS_TOKENS = {
+  overdue: {
+    alertClass: ['border-brand-critical', getSemanticContainerColorClasses('critical')].join(' '),
+    badgeClass: getSemanticStatusClasses('critical'),
+    iconClass: 'text-brand-critical',
+  },
+  today: {
+    alertClass: ['border-brand-repair', getSemanticContainerColorClasses('repair')].join(' '),
+    badgeClass: getSemanticStatusClasses('repair'),
+    iconClass: 'text-brand-repair',
+  },
+  upcoming: {
+    alertClass: ['border-brand-warning', getSemanticContainerColorClasses('warning')].join(' '),
+    badgeClass: getSemanticStatusClasses('warning'),
+    iconClass: 'text-brand-warning',
+  },
+  future: {
+    alertClass: ['border-brand-info/40', getSemanticContainerColorClasses('info')].join(' '),
+    badgeClass: getSemanticStatusClasses('info'),
+    iconClass: 'text-brand-info',
+  },
+} as const;
+
+export type IntermediateCheckStatusKey = keyof typeof INTERMEDIATE_CHECK_STATUS_TOKENS;

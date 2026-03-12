@@ -383,17 +383,17 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                               size="sm"
                               onClick={handleSaveEdit}
                               disabled={updateItemMutation.isPending}
-                              className="h-8 w-8 p-0"
+                              className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
                             >
-                              <Save className="h-4 w-4" />
+                              <Save className={TABLE_TOKENS.inlineEdit.button.iconSize} />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={handleCancelEdit}
-                              className="h-8 w-8 p-0"
+                              className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
                             >
-                              <X className="h-4 w-4" />
+                              <X className={TABLE_TOKENS.inlineEdit.button.iconSize} />
                             </Button>
                           </div>
                         ) : (
@@ -403,9 +403,9 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleStartEdit(item)}
-                                className="h-8 w-8 p-0"
+                                className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
                               >
-                                <Edit2 className="h-4 w-4" />
+                                <Edit2 className={TABLE_TOKENS.inlineEdit.button.iconSize} />
                               </Button>
                             )}
                             {isApproved && !item.confirmedBy && (

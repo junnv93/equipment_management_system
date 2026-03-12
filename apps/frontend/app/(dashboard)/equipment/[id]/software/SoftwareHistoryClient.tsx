@@ -33,7 +33,10 @@ import softwareApi, {
   SOFTWARE_APPROVAL_STATUS_LABELS,
   SoftwareApprovalStatus,
 } from '@/lib/api/software-api';
-import { SOFTWARE_APPROVAL_BADGE_TOKENS } from '@/lib/design-tokens';
+import {
+  SOFTWARE_APPROVAL_BADGE_TOKENS,
+  SOFTWARE_HISTORY_PAGE_TOKENS as TOKENS,
+} from '@/lib/design-tokens';
 // ✅ 직접 import (barrel import 제거)
 import equipmentApi from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
@@ -136,13 +139,14 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   };
 
   const getStatusIcon = (status: SoftwareApprovalStatus) => {
+    const iconClasses = TOKENS.statusIcon[status as keyof typeof TOKENS.statusIcon];
     switch (status) {
       case 'approved':
-        return <CheckCircle2 className="h-4 w-4 text-brand-ok" />;
+        return <CheckCircle2 className={iconClasses ?? TOKENS.statusIcon.pending} />;
       case 'rejected':
-        return <XCircle className="h-4 w-4 text-brand-critical" />;
+        return <XCircle className={iconClasses ?? TOKENS.statusIcon.pending} />;
       default:
-        return <Clock className="h-4 w-4 text-brand-warning" />;
+        return <Clock className={TOKENS.statusIcon.pending} />;
     }
   };
 
@@ -150,7 +154,7 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className={TOKENS.skeleton.container}>
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-10 w-64" />
         <Card>
@@ -166,18 +170,18 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
+    <div className={TOKENS.container}>
+      <div className={TOKENS.nav.container}>
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className={TOKENS.nav.backIcon} />
           {t('back')}
         </Button>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className={TOKENS.header.container}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
+          <h1 className={TOKENS.header.title}>{t('title')}</h1>
+          <p className={TOKENS.header.subtitle}>
             {equipment?.name || ''} ({equipment?.managementNumber || equipmentId})
           </p>
         </div>
@@ -268,22 +272,22 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
             <CardTitle>{t('currentInfo.title')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className={TOKENS.currentInfo.grid}>
               <div>
-                <p className="text-sm text-muted-foreground">{t('currentInfo.name')}</p>
-                <p className="font-medium">{equipment.softwareName}</p>
+                <p className={TOKENS.currentInfo.label}>{t('currentInfo.name')}</p>
+                <p className={TOKENS.currentInfo.value}>{equipment.softwareName}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t('currentInfo.version')}</p>
-                <p className="font-medium">{equipment.softwareVersion || '-'}</p>
+                <p className={TOKENS.currentInfo.label}>{t('currentInfo.version')}</p>
+                <p className={TOKENS.currentInfo.value}>{equipment.softwareVersion || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t('currentInfo.type')}</p>
-                <p className="font-medium">{equipment.softwareType || '-'}</p>
+                <p className={TOKENS.currentInfo.label}>{t('currentInfo.type')}</p>
+                <p className={TOKENS.currentInfo.value}>{equipment.softwareType || '-'}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{t('currentInfo.firmwareVersion')}</p>
-                <p className="font-medium">{equipment.firmwareVersion || '-'}</p>
+                <p className={TOKENS.currentInfo.label}>{t('currentInfo.firmwareVersion')}</p>
+                <p className={TOKENS.currentInfo.value}>{equipment.firmwareVersion || '-'}</p>
               </div>
             </div>
           </CardContent>
@@ -300,8 +304,8 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
         </CardHeader>
         <CardContent>
           {!historyData?.data || historyData.data.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <div className={TOKENS.emptyState.container}>
+              <History className={TOKENS.emptyState.icon} />
               <p>{t('history.empty')}</p>
             </div>
           ) : (
@@ -317,10 +321,10 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
               </TableHeader>
               <TableBody>
                 {historyData.data.map((item: SoftwareHistory) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.softwareName}</TableCell>
+                  <TableRow key={item.id} className={TOKENS.table.row}>
+                    <TableCell className={TOKENS.table.cellName}>{item.softwareName}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className={TOKENS.table.versionBadge}>
                         {item.previousVersion && (
                           <>
                             <Badge variant="outline">{item.previousVersion}</Badge>
@@ -332,14 +336,17 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
                     </TableCell>
                     <TableCell>{format(new Date(item.changedAt), 'yyyy-MM-dd HH:mm')}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className={TOKENS.table.statusCell}>
                         {getStatusIcon(item.approvalStatus)}
                         <Badge className={SOFTWARE_APPROVAL_BADGE_TOKENS[item.approvalStatus]}>
                           {SOFTWARE_APPROVAL_STATUS_LABELS[item.approvalStatus]}
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-xs truncate" title={item.verificationRecord}>
+                    <TableCell
+                      className={TOKENS.table.truncatedCell}
+                      title={item.verificationRecord}
+                    >
                       {item.verificationRecord}
                     </TableCell>
                   </TableRow>
