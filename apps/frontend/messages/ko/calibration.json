@@ -453,7 +453,10 @@
       "approvedAt": "승인일",
       "action": "액션"
     },
-    "detail": "상세"
+    "detail": "상세",
+    "kpi": {
+      "total": "전체"
+    }
   },
   "planCreate": {
     "title": "교정계획서 작성",

@@ -453,7 +453,10 @@
       "approvedAt": "Approved",
       "action": "Action"
     },
-    "detail": "Detail"
+    "detail": "Detail",
+    "kpi": {
+      "total": "Total"
+    }
   },
   "planCreate": {
     "title": "Create Calibration Plan",
