@@ -17,7 +17,7 @@
 import { createServerApiClient } from './server-api-client';
 import { transformPaginatedResponse } from './utils/response-transformers';
 import type { PaginatedResponse } from './types';
-import type { CalibrationPlan } from './calibration-plans-api';
+import type { CalibrationPlan, CalibrationPlanSummary } from './calibration-plans-api';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 
 export interface CalibrationPlansQuery {
@@ -26,6 +26,7 @@ export interface CalibrationPlansQuery {
   status?: string;
   page?: number;
   pageSize?: number;
+  includeSummary?: boolean;
 }
 
 /**
@@ -36,7 +37,7 @@ export interface CalibrationPlansQuery {
  */
 export async function getCalibrationPlansList(
   query: CalibrationPlansQuery = {}
-): Promise<PaginatedResponse<CalibrationPlan>> {
+): Promise<PaginatedResponse<CalibrationPlan, CalibrationPlanSummary>> {
   const apiClient = await createServerApiClient();
   const params = new URLSearchParams();
 
@@ -48,7 +49,7 @@ export async function getCalibrationPlansList(
 
   const url = `/api/calibration-plans${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await apiClient.get(url);
-  return transformPaginatedResponse<CalibrationPlan>(response);
+  return transformPaginatedResponse<CalibrationPlan, CalibrationPlanSummary>(response);
 }
 
 /**

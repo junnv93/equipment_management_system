@@ -253,7 +253,7 @@ const checkoutApi = {
   async getUserCheckouts(
     userId: string,
     query: CheckoutQuery = {}
-  ): Promise<PaginatedResponse<Checkout>> {
+  ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     const queryParams = new URLSearchParams();
 
     Object.entries(query).forEach(([key, value]) => {
@@ -273,7 +273,7 @@ const checkoutApi = {
   async getEquipmentCheckouts(
     equipmentId: string,
     query: CheckoutQuery = {}
-  ): Promise<PaginatedResponse<Checkout>> {
+  ): Promise<PaginatedResponse<Checkout, CheckoutSummary>> {
     const queryParams = new URLSearchParams();
 
     Object.entries(query).forEach(([key, value]) => {

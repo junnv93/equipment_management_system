@@ -105,6 +105,16 @@ export interface CalibrationPlanVersion {
   approvedAt: string | null;
 }
 
+// 교정계획서 상태별 요약 통계
+export interface CalibrationPlanSummary {
+  total: number;
+  draft: number;
+  pending_review: number;
+  pending_approval: number;
+  approved: number;
+  rejected: number;
+}
+
 // 쿼리 인터페이스 (API 요청용 - string 허용)
 export interface CalibrationPlanQuery {
   year?: number;
@@ -112,6 +122,7 @@ export interface CalibrationPlanQuery {
   status?: CalibrationPlanStatus;
   page?: number;
   pageSize?: number;
+  includeSummary?: boolean;
 }
 
 // 외부교정 장비 쿼리 (API 요청용 - string 허용)
@@ -189,15 +200,8 @@ export interface ConfirmPlanItemDto {
 // ✅ SSOT: packages/schemas의 라벨 재사용
 export const CALIBRATION_PLAN_STATUS_LABELS = SSOT_STATUS_LABELS;
 
-// 상태 색상 (brand CSS 변수 기반 — dark mode 자동 대응)
-// pending_review 이상은 border 강조가 필요하여 인라인 brand 클래스 유지
-export const CALIBRATION_PLAN_STATUS_COLORS: Record<CalibrationPlanStatus, string> = {
-  draft: 'bg-brand-neutral/10 text-brand-neutral',
-  pending_review: 'bg-brand-warning/10 text-brand-warning border border-brand-warning/20',
-  pending_approval: 'bg-brand-info/10 text-brand-info border border-brand-info/20',
-  approved: 'bg-brand-ok/10 text-brand-ok border border-brand-ok/20',
-  rejected: 'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
-};
+// ✅ SSOT: 상태 색상은 design-tokens에서 관리
+// @see lib/design-tokens/components/calibration-plans.ts → CALIBRATION_PLAN_STATUS_BADGE_COLORS
 
 // ✅ SSOT: packages/schemas의 라벨 재사용
 // 타입 확장: API 응답의 siteId가 string이므로 Record<string, string>으로 캐스팅
@@ -208,7 +212,7 @@ const calibrationPlansApi = {
   // 계획서 목록 조회
   getCalibrationPlans: async (
     query: CalibrationPlanQuery = {}
-  ): Promise<PaginatedResponse<CalibrationPlan>> => {
+  ): Promise<PaginatedResponse<CalibrationPlan, CalibrationPlanSummary>> => {
     const params = new URLSearchParams();
 
     Object.entries(query).forEach(([key, value]) => {
@@ -218,7 +222,9 @@ const calibrationPlansApi = {
     });
 
     const url = `${API_ENDPOINTS.CALIBRATION_PLANS.LIST}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url).then((res) => transformPaginatedResponse<CalibrationPlan>(res));
+    return apiClient
+      .get(url)
+      .then((res) => transformPaginatedResponse<CalibrationPlan, CalibrationPlanSummary>(res));
   },
 
   // 계획서 상세 조회 (항목 포함)

@@ -17,6 +17,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import calibrationPlansApi, {
   type CalibrationPlan,
+  type CalibrationPlanSummary,
   CALIBRATION_PLAN_STATUS_LABELS,
   SITE_LABELS,
 } from '@/lib/api/calibration-plans-api';
@@ -45,7 +46,7 @@ import { cn } from '@/lib/utils';
 
 interface CalibrationPlansContentProps {
   /** 서버에서 가져온 초기 데이터 */
-  initialData: PaginatedResponse<CalibrationPlan>;
+  initialData: PaginatedResponse<CalibrationPlan, CalibrationPlanSummary>;
   /** 초기 필터 (SSOT 패턴) */
   initialFilters?: UICalibrationPlansFilters;
 }
@@ -99,12 +100,15 @@ export default function CalibrationPlansContent({
       calibrationPlansApi.getCalibrationPlans({
         ...apiFilters,
         year: apiFilters.year ? Number(apiFilters.year) : undefined,
+        includeSummary: true,
       }),
     placeholderData: initialData,
     ...QUERY_CONFIG.CALIBRATION_PLANS,
   });
 
   const plans = data?.data || [];
+  // ✅ 서버 집계 summary 사용 (페이지네이션에 무관한 정확한 전체 통계)
+  const summary = data?.meta?.summary;
 
   // ✅ 방어 코드: id 검증 및 경고 (SSOT: backend id = UUID string)
   if (process.env.NODE_ENV === 'development' && plans.length > 0) {
@@ -120,16 +124,6 @@ export default function CalibrationPlansContent({
   // 연도 옵션 생성 (현재 연도 기준 +-2년)
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
-  // KPI 상태별 건수 계산
-  const statusCounts = plans.reduce(
-    (acc, plan) => {
-      acc[plan.status] = (acc[plan.status] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-  const totalCount = plans.length;
-
   const kpiItems: Array<{
     key: string;
     label: string;
@@ -137,32 +131,32 @@ export default function CalibrationPlansContent({
     variant: keyof typeof CALIBRATION_PLAN_KPI_TOKENS.borderColors;
     filterStatus?: string;
   }> = [
-    { key: 'total', label: t('plansList.kpi.total'), count: totalCount, variant: 'total' },
+    { key: 'total', label: t('plansList.kpi.total'), count: summary?.total ?? 0, variant: 'total' },
     {
       key: 'draft',
       label: t('planStatus.draft'),
-      count: statusCounts['draft'] || 0,
+      count: summary?.draft ?? 0,
       variant: 'draft',
       filterStatus: 'draft',
     },
     {
       key: 'pendingReview',
       label: t('planStatus.pending_review'),
-      count: statusCounts['pending_review'] || 0,
+      count: summary?.pending_review ?? 0,
       variant: 'pendingReview',
       filterStatus: 'pending_review',
     },
     {
       key: 'pendingApproval',
       label: t('planStatus.pending_approval'),
-      count: statusCounts['pending_approval'] || 0,
+      count: summary?.pending_approval ?? 0,
       variant: 'pendingApproval',
       filterStatus: 'pending_approval',
     },
     {
       key: 'approved',
       label: t('planStatus.approved'),
-      count: statusCounts['approved'] || 0,
+      count: summary?.approved ?? 0,
       variant: 'approved',
       filterStatus: 'approved',
     },

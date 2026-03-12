@@ -75,7 +75,10 @@ async function CalibrationPlansAsync({
   // 3️⃣ 초기 데이터 서버 fetch (FCP 최적화)
   let initialData;
   try {
-    initialData = await calibrationPlansApiServer.getCalibrationPlansList(apiFilters);
+    initialData = await calibrationPlansApiServer.getCalibrationPlansList({
+      ...apiFilters,
+      includeSummary: true,
+    });
   } catch (error) {
     // 에러 발생 시 빈 데이터로 시작 (Client에서 재시도)
     if (process.env.NODE_ENV === 'development') {
