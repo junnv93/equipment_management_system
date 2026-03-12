@@ -18,6 +18,7 @@
  */
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import {
   Table,
   TableBody,
@@ -106,7 +107,7 @@ export function ResponsiveTable<T>({
               key={keyExtractor(item)}
               className={cn(
                 // prefers-reduced-motion 지원
-                'motion-safe:transition-shadow motion-reduce:transition-none',
+                TRANSITION_PRESETS.fastShadow,
                 onRowClick && 'cursor-pointer hover:shadow-md',
                 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               )}
@@ -162,7 +163,7 @@ export function ResponsiveTable<T>({
                 key={keyExtractor(item)}
                 className={cn(
                   // prefers-reduced-motion 지원
-                  'motion-safe:transition-colors motion-reduce:transition-none',
+                  TRANSITION_PRESETS.fastColor,
                   onRowClick && 'cursor-pointer hover:bg-muted/50',
                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                 )}

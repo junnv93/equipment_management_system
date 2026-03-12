@@ -25,6 +25,7 @@ import calibrationFactorsApi, {
 import { format } from 'date-fns';
 import { Calculator, ChevronDown, ChevronRight, FileDown, Search, Building2 } from 'lucide-react';
 import Link from 'next/link';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 interface CalibrationFactorsRegistryContentProps {
   /** 서버에서 가져온 초기 대장 데이터 */
@@ -257,7 +258,9 @@ export default function CalibrationFactorsRegistryContent({
                   onOpenChange={() => toggleEquipment(item.equipmentId)}
                 >
                   <CollapsibleTrigger asChild>
-                    <div className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div
+                      className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-muted/50 ${TRANSITION_PRESETS.fastColor}`}
+                    >
                       <div className="flex items-center gap-4">
                         {expandedEquipment.has(item.equipmentId) ? (
                           <ChevronDown className="h-5 w-5" />

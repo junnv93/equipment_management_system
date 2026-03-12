@@ -29,6 +29,7 @@ import {
   getSemanticContainerTextClasses,
   ncStatusToSemantic,
   NC_REPAIR_LINKED_TOKENS,
+  TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
@@ -336,7 +337,7 @@ export default function NonConformanceManagementClient({
       <div className="mb-6">
         <Link
           href={`/equipment/${equipmentId}`}
-          className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4 motion-safe:transition-colors motion-reduce:transition-none"
+          className={`inline-flex items-center text-muted-foreground hover:text-foreground mb-4 ${TRANSITION_PRESETS.fastColor}`}
         >
           <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
           {t('nonConformanceManagement.backToEquipment')}

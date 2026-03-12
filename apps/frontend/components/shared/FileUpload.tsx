@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 export interface UploadedFile {
   file: File;
@@ -257,7 +258,7 @@ export function FileUpload({
       {/* 드래그 앤 드롭 영역 */}
       <div
         className={cn(
-          'relative border-2 border-dashed rounded-lg p-8 motion-safe:transition-[border-color,background-color,transform] motion-safe:duration-200 motion-reduce:transition-none',
+          `relative border-2 border-dashed rounded-lg p-8 ${TRANSITION_PRESETS.fastBorderBgTransform}`,
           dragActive
             ? 'border-primary bg-primary/5 scale-[1.01]'
             : 'border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/30',
@@ -271,13 +272,13 @@ export function FileUpload({
         <div className="flex flex-col items-center justify-center space-y-4">
           <div
             className={cn(
-              'p-4 rounded-full motion-safe:transition-colors motion-reduce:transition-none',
+              `p-4 rounded-full ${TRANSITION_PRESETS.fastColor}`,
               dragActive ? 'bg-primary/10' : 'bg-muted'
             )}
           >
             <Upload
               className={cn(
-                'h-8 w-8 motion-safe:transition-colors motion-reduce:transition-none',
+                `h-8 w-8 ${TRANSITION_PRESETS.fastColor}`,
                 dragActive ? 'text-primary' : 'text-muted-foreground'
               )}
             />
@@ -350,7 +351,7 @@ export function FileUpload({
               return (
                 <div
                   key={`${uploadedFile.file.name}-${index}`}
-                  className="group relative flex items-center justify-between p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 motion-safe:transition-colors motion-reduce:transition-none"
+                  className={`group relative flex items-center justify-between p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 ${TRANSITION_PRESETS.fastColor}`}
                 >
                   <div className="flex items-center space-x-3 flex-1 min-w-0">
                     {/* 이미지 미리보기 또는 아이콘 */}
@@ -391,7 +392,7 @@ export function FileUpload({
                     size="icon"
                     onClick={() => handleRemove(index)}
                     disabled={disabled || uploadedFile.status === 'uploading'}
-                    className="flex-shrink-0 opacity-0 group-hover:opacity-100 motion-safe:transition-opacity motion-reduce:transition-none"
+                    className={`flex-shrink-0 opacity-0 group-hover:opacity-100 ${TRANSITION_PRESETS.fastOpacity}`}
                   >
                     <X className="h-4 w-4" />
                     <span className="sr-only">{t('deleteFile')}</span>

@@ -17,6 +17,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { generateBreadcrumbs, type BreadcrumbItem } from '@/lib/navigation/generate-breadcrumbs';
 
 const NAVIGATION_PREFIX = 'navigation.';
@@ -107,7 +108,7 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
                   'text-sm text-muted-foreground',
                   'hover:text-foreground',
                   'hover:underline',
-                  'motion-safe:transition-colors motion-reduce:transition-none',
+                  TRANSITION_PRESETS.fastColor,
                   'truncate max-w-[200px]',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ul-info focus-visible:ring-offset-2 rounded'
                 )}
@@ -165,7 +166,7 @@ export function MobileBreadcrumb({ className, dynamicLabels }: BreadcrumbProps) 
             href={parentItem.href}
             className={cn(
               'text-sm text-muted-foreground hover:text-foreground truncate max-w-[100px]',
-              'motion-safe:transition-colors motion-reduce:transition-none',
+              TRANSITION_PRESETS.fastColor,
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 rounded'
             )}
           >

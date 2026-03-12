@@ -9,7 +9,12 @@ import { Loader2, Mail, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { AUTH_CONTENT, AUTH_MOTION_TOKENS, MOTION_PRIMITIVES } from '@/lib/design-tokens';
+import {
+  AUTH_CONTENT,
+  AUTH_MOTION_TOKENS,
+  MOTION_PRIMITIVES,
+  TRANSITION_PRESETS,
+} from '@/lib/design-tokens';
 
 const loginSchema = z.object({
   email: z.string().min(1, '이메일을 입력하세요').email('유효한 이메일을 입력하세요'),
@@ -95,7 +100,7 @@ export function LoginForm({
       'h-12 pl-10 text-sm',
       'bg-brand-bg-base border-brand-border-subtle',
       'text-brand-text-primary placeholder:text-brand-text-muted',
-      'motion-safe:transition-[border-color,box-shadow] motion-safe:duration-150 motion-reduce:transition-none',
+      TRANSITION_PRESETS.instantBorderShadow,
       hasError
         ? 'border-brand-critical focus-visible:border-brand-critical focus-visible:ring-0 focus-visible:shadow-[0_0_0_2px_hsl(var(--brand-color-critical)/0.3)]'
         : 'focus-visible:border-brand-info focus-visible:ring-0 focus-visible:shadow-[0_0_0_2px_hsl(var(--brand-color-info)/0.5)]'
@@ -106,7 +111,7 @@ export function LoginForm({
       onSubmit={handleSubmit(onSubmit)}
       className={cn(
         'space-y-5',
-        'motion-safe:transition-transform motion-safe:duration-300 motion-reduce:transition-none',
+        TRANSITION_PRESETS.moderateTransform,
         shakeError && 'animate-shake'
       )}
       aria-label="로그인 폼"
@@ -139,7 +144,7 @@ export function LoginForm({
           <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none z-10">
             <Mail
               className={cn(
-                'w-4.5 h-4.5 motion-safe:transition-colors motion-safe:duration-150 motion-reduce:transition-none',
+                `w-4.5 h-4.5 ${TRANSITION_PRESETS.instantColor}`,
                 errors.email
                   ? 'text-brand-critical'
                   : 'text-brand-text-muted group-focus-within:text-brand-info'
@@ -183,7 +188,7 @@ export function LoginForm({
           <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none z-10">
             <Lock
               className={cn(
-                'w-4.5 h-4.5 motion-safe:transition-colors motion-safe:duration-150 motion-reduce:transition-none',
+                `w-4.5 h-4.5 ${TRANSITION_PRESETS.instantColor}`,
                 errors.password
                   ? 'text-brand-critical'
                   : 'text-brand-text-muted group-focus-within:text-brand-info'
@@ -222,7 +227,7 @@ export function LoginForm({
             'w-full h-12 text-base font-semibold',
             'bg-brand-info text-brand-text-inverse hover:bg-brand-info/90',
             'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-info/50',
-            'motion-safe:transition-[background-color,box-shadow,transform] motion-safe:duration-150 motion-reduce:transition-none',
+            TRANSITION_PRESETS.instantBgShadowTransform,
             'hover:scale-[1.01] active:scale-[0.99]',
             isSuccess && 'bg-brand-ok hover:bg-brand-ok/90'
           )}

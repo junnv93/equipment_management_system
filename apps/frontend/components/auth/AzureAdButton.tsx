@@ -5,7 +5,7 @@ import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AUTH_CONTENT, AUTH_LAYOUT_TOKENS } from '@/lib/design-tokens';
+import { AUTH_CONTENT, AUTH_LAYOUT_TOKENS, TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 interface AzureAdButtonProps {
   callbackUrl?: string;
@@ -41,7 +41,7 @@ export function AzureAdButton({
       className={cn(
         'w-full h-12 text-base font-medium text-white',
         'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0078D4]/50',
-        'motion-safe:transition-[background-color,box-shadow,transform] motion-safe:duration-150 motion-reduce:transition-none',
+        TRANSITION_PRESETS.instantBgShadowTransform,
         'hover:scale-[1.01] active:scale-[0.99]',
         className
       )}

@@ -1,6 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 /**
  * SkipLink (Client Component)
@@ -35,16 +37,15 @@ export function SkipLink({ href = '#main-content', children }: SkipLinkProps) {
     <a
       href={href}
       onClick={handleClick}
-      className="
-        sr-only focus-visible:not-sr-only
-        focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-[100]
-        focus-visible:px-4 focus-visible:py-2
-        focus-visible:bg-brand-info focus-visible:text-white
-        focus-visible:rounded-md focus-visible:shadow-lg
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-        motion-safe:transition-[opacity,transform] motion-safe:duration-200
-        motion-reduce:transition-none
-      "
+      className={cn(
+        'sr-only focus-visible:not-sr-only',
+        'focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-[100]',
+        'focus-visible:px-4 focus-visible:py-2',
+        'focus-visible:bg-brand-info focus-visible:text-white',
+        'focus-visible:rounded-md focus-visible:shadow-lg',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        TRANSITION_PRESETS.fastTransformOpacity
+      )}
     >
       {children ?? t('layout.skipToContent')}
     </a>

@@ -225,7 +225,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
               <Card
                 className={cn(
                   DASHBOARD_MOTION.cardHover,
-                  'motion-reduce:transition-none hover:shadow-md hover:scale-[1.02]',
+                  'hover:shadow-md hover:scale-[1.02]',
                   'cursor-pointer',
                   DASHBOARD_FOCUS.brand,
                   hasItems && 'ring-2 ring-ul-red/30 dark:ring-ul-red/50'
@@ -235,7 +235,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
                   <div
                     className={cn(
                       `${DASHBOARD_SIZES.approvalIcon} rounded-full flex items-center justify-center mb-2`,
-                      `${DASHBOARD_MOTION.iconTransition} motion-reduce:transition-none`,
+                      DASHBOARD_MOTION.iconTransition,
                       category.bgColor,
                       'group-hover:scale-110'
                     )}

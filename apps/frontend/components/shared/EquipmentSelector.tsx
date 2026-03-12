@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search } from 'lucide-react';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import { useEquipmentList } from '@/hooks/use-equipment';
 import type { Equipment } from '@/lib/api/equipment-api';
 import type { EquipmentStatus } from '@equipment-management/schemas';
@@ -76,7 +77,7 @@ export function EquipmentSelector({
             equipmentData?.data?.map((equipment: Equipment) => (
               <div
                 key={equipment.id}
-                className={`p-3 border rounded-md cursor-pointer transition-colors ${
+                className={`p-3 border rounded-md cursor-pointer ${TRANSITION_PRESETS.fastColor} ${
                   selectedEquipmentId === String(equipment.id)
                     ? 'border-primary bg-primary/5'
                     : 'hover:bg-muted/50'

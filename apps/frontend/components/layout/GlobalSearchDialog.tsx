@@ -16,6 +16,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Search, Clock, LayoutGrid } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import type { FilteredNavSection } from '@/lib/navigation/nav-config';
 
 const RECENT_PAGES_KEY = 'recent-pages';
@@ -234,7 +235,7 @@ function SearchResultItem({
     <button
       className={cn(
         'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left',
-        'motion-safe:transition-colors motion-reduce:transition-none',
+        TRANSITION_PRESETS.fastColor,
         isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent/50'
       )}
       onClick={onClick}

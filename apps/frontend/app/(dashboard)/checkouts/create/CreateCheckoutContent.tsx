@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
-import { CHECKOUT_FORM_TOKENS, getEquipmentStatusTokenStyle } from '@/lib/design-tokens';
+import {
+  CHECKOUT_FORM_TOKENS,
+  getEquipmentStatusTokenStyle,
+  TRANSITION_PRESETS,
+} from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -492,7 +496,7 @@ export default function CreateCheckoutContent() {
                       return (
                         <Card
                           key={equipment.id}
-                          className="relative border-l-4 border-l-primary overflow-hidden hover:shadow-md transition-shadow"
+                          className={`relative border-l-4 border-l-primary overflow-hidden hover:shadow-md ${TRANSITION_PRESETS.fastShadow}`}
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between gap-3">

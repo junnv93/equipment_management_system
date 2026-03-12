@@ -16,6 +16,7 @@ import { CHECKOUT_PURPOSE_LABELS, CheckoutStatus } from '@equipment-management/s
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
+import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 
 interface PendingChecksClientProps {
   initialData: PaginatedResponse<Checkout>;
@@ -94,7 +95,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
       checkout.purpose;
 
     return (
-      <Card key={checkout.id} className="hover:shadow-md transition-shadow">
+      <Card key={checkout.id} className={`hover:shadow-md ${TRANSITION_PRESETS.fastShadow}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

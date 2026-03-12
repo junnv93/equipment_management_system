@@ -129,11 +129,25 @@ export const TRANSITION_PRESETS = {
   /** background-color, transform, opacity, box-shadow (기본 4속성) */
   fastAll: getTransitionClasses('fast', ['background-color', 'transform', 'opacity', 'box-shadow']),
 
+  // ── Fast (200ms) — 추가 조합 ─────────────────
+  /** background-color, color, box-shadow */
+  fastBgColorShadow: getTransitionClasses('fast', ['background-color', 'color', 'box-shadow']),
+  /** border-color, background-color, transform */
+  fastBorderBgTransform: getTransitionClasses('fast', [
+    'border-color',
+    'background-color',
+    'transform',
+  ]),
+
   // ── Instant (100ms) ───────────────────────────
   /** background-color */
   instantBg: getTransitionClasses('instant', ['background-color']),
+  /** color */
+  instantColor: getTransitionClasses('instant', ['color']),
   /** opacity */
   instantOpacity: getTransitionClasses('instant', ['opacity']),
+  /** transform */
+  instantTransform: getTransitionClasses('instant', ['transform']),
   /** background-color, border-color */
   instantBgBorder: getTransitionClasses('instant', ['background-color', 'border-color']),
   /** background-color, color */
@@ -144,10 +158,20 @@ export const TRANSITION_PRESETS = {
     'border-color',
     'color',
   ]),
+  /** border-color, box-shadow */
+  instantBorderShadow: getTransitionClasses('instant', ['border-color', 'box-shadow']),
+  /** background-color, box-shadow, transform */
+  instantBgShadowTransform: getTransitionClasses('instant', [
+    'background-color',
+    'box-shadow',
+    'transform',
+  ]),
 
   // ── Moderate (300ms) ──────────────────────────
   /** opacity */
   moderateOpacity: getTransitionClasses('moderate', ['opacity']),
+  /** transform */
+  moderateTransform: getTransitionClasses('moderate', ['transform']),
   /** box-shadow */
   moderateShadow: getTransitionClasses('moderate', ['box-shadow']),
   /** box-shadow, transform */

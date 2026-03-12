@@ -23,6 +23,7 @@ import {
   CLS_PILL_TOKENS,
   getStaggerDelay,
   MOTION_PRIMITIVES,
+  TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
 
 interface TeamListContentProps {
@@ -196,7 +197,7 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
           <button
             type="button"
             onClick={handleClearFilters}
-            className="ml-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground motion-safe:transition-colors motion-safe:duration-100 flex-shrink-0"
+            className={`ml-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground ${TRANSITION_PRESETS.instantColor} flex-shrink-0`}
           >
             {t('listContent.clearFilters')}
           </button>

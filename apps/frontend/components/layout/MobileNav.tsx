@@ -30,6 +30,7 @@ import {
   MOBILE_NAV_TOKENS,
   MOBILE_NAV_DRAWER_TOKENS,
   MOBILE_NAV_SECTION_TOKENS,
+  TRANSITION_PRESETS,
   getMobileNavItemClasses,
 } from '@/lib/design-tokens';
 import type { FilteredNavItem, FilteredNavSection } from '@/lib/navigation/nav-config';
@@ -182,8 +183,7 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
         <div
           className={cn(
             'fixed inset-0 z-40 bg-black/50 md:hidden',
-            'motion-safe:transition-opacity motion-safe:duration-300',
-            'motion-reduce:transition-none'
+            TRANSITION_PRESETS.moderateOpacity
           )}
           onClick={closeMenu}
           aria-hidden="true"
@@ -204,8 +204,7 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
           MOBILE_NAV_DRAWER_TOKENS.shadow,
           MOBILE_NAV_DRAWER_TOKENS.border,
           'transform',
-          'motion-safe:transition-transform motion-safe:duration-300 motion-safe:ease-in-out',
-          'motion-reduce:transition-none',
+          TRANSITION_PRESETS.moderateTransform,
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
