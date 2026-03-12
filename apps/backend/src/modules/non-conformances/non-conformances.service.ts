@@ -414,6 +414,58 @@ export class NonConformancesService extends VersionedBaseService {
   }
 
   /**
+   * 장비의 사이트 조회 (크로스사이트 인가 체크용)
+   *
+   * create, findOpenByEquipment 등 equipmentId만 있는 엔드포인트에서 사용.
+   */
+  async getEquipmentSite(equipmentId: string): Promise<string> {
+    const result = await this.db
+      .select({ site: equipment.site })
+      .from(equipment)
+      .where(eq(equipment.id, equipmentId))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment UUID ${equipmentId} not found`,
+      });
+    }
+
+    return result[0].site;
+  }
+
+  /**
+   * 경량 부적합 조회 (인가 체크용 — JOIN/캐시 없음)
+   *
+   * 컨트롤러의 enforceSiteAccess()에서 사용.
+   * equipment.site를 함께 반환하여 크로스사이트 검증에 활용.
+   */
+  async findOneBasic(
+    id: string
+  ): Promise<{ id: string; equipmentId: string; equipmentSite: string }> {
+    const result = await this.db
+      .select({
+        id: nonConformances.id,
+        equipmentId: nonConformances.equipmentId,
+        equipmentSite: equipment.site,
+      })
+      .from(nonConformances)
+      .innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id))
+      .where(and(eq(nonConformances.id, id), isNull(nonConformances.deletedAt)))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException({
+        code: 'NON_CONFORMANCE_NOT_FOUND',
+        message: `Non-conformance UUID ${id} not found`,
+      });
+    }
+
+    return result[0];
+  }
+
+  /**
    * 단일 부적합 조회 (cache-aside)
    */
   async findOne(id: string) {

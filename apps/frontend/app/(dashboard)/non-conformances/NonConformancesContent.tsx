@@ -36,11 +36,14 @@ import {
   NC_HEADER_TOKENS,
   NC_KPI_TOKENS,
   NC_KPI_CARD_TOKENS,
+  NC_KPI_LABELS,
   getNCKpiCardClasses,
   NC_FILTER_TOKENS,
   NC_LIST_TOKENS,
   NC_TYPE_CHIP_TOKENS,
   NC_MINI_WORKFLOW_TOKENS,
+  NC_WORKFLOW_STEPS,
+  NC_STATUS_STEP_INDEX,
   getNCMiniDotClasses,
   getNCMiniConnectorClasses,
   getNCElapsedDaysClasses,
@@ -66,31 +69,12 @@ import { Button } from '@/components/ui/button';
 // 상수
 // ============================================================================
 
-/** NC 워크플로우 스텝 (4단계) */
-const NC_STEPS: NonConformanceStatus[] = ['open', 'analyzing', 'corrected', 'closed'];
-
-/** NC 상태 → 스텝 인덱스 */
-const NC_STATUS_INDEX: Record<string, number> = {
-  open: 0,
-  analyzing: 1,
-  corrected: 2,
-  closed: 3,
-};
-
 /** KPI 아이콘 매핑 */
 const KPI_ICONS: Record<NCKpiVariant, typeof AlertTriangle> = {
   open: AlertTriangle,
   analyzing: BarChart3,
   corrected: CheckCircle2,
   closed: XCircle,
-};
-
-/** KPI 라벨 */
-const KPI_LABELS: Record<NCKpiVariant, string> = {
-  open: '미해결',
-  analyzing: '분석 중',
-  corrected: '조치 완료',
-  closed: '종결',
 };
 
 // ============================================================================
@@ -193,7 +177,7 @@ export default function NonConformancesContent({
 
       {/* KPI 스트립 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {(Object.keys(KPI_LABELS) as NCKpiVariant[]).map((variant) => {
+        {(Object.keys(NC_KPI_LABELS) as NCKpiVariant[]).map((variant) => {
           const Icon = KPI_ICONS[variant];
           const tokens = NC_KPI_TOKENS[variant];
           const isActive = filters.status === variant;
@@ -208,7 +192,7 @@ export default function NonConformancesContent({
                 <Icon className={cn('h-5 w-5', tokens.iconColor)} />
               </div>
               <div>
-                <p className={NC_KPI_CARD_TOKENS.label}>{KPI_LABELS[variant]}</p>
+                <p className={NC_KPI_CARD_TOKENS.label}>{NC_KPI_LABELS[variant]}</p>
                 <p className={cn(NC_KPI_CARD_TOKENS.value, tokens.valueColor)}>
                   {kpiCounts[variant]}
                 </p>
@@ -412,7 +396,7 @@ export default function NonConformancesContent({
 function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
   const elapsedDays = computeElapsedDays(nc);
   const longOverdue = isNCLongOverdue(elapsedDays);
-  const statusIndex = NC_STATUS_INDEX[nc.status] ?? 0;
+  const statusIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
   const hasRejection = !!nc.rejectionReason && nc.status === 'analyzing';
 
   return (
@@ -487,7 +471,7 @@ function MiniWorkflow({
 }) {
   return (
     <div className={NC_MINI_WORKFLOW_TOKENS.container}>
-      {NC_STEPS.map((_, stepIdx) => (
+      {NC_WORKFLOW_STEPS.map((_, stepIdx) => (
         <div key={stepIdx} className="flex items-center">
           {stepIdx > 0 && (
             <div className={getNCMiniConnectorClasses(stepIdx - 1, currentStepIndex)} />

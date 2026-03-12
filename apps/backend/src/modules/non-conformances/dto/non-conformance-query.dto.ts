@@ -1,11 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-// ✅ SSOT: NonConformanceStatus는 schemas 패키지에서 import
+// ✅ SSOT: schemas 패키지에서 import
 import {
   NON_CONFORMANCE_STATUS_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
   NonConformanceStatusValues,
+  SITE_VALUES,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility (service, tests에서 사용)
@@ -28,7 +29,7 @@ export const nonConformanceQuerySchema = z.object({
       message: '유효하지 않은 유형입니다',
     })
     .optional(),
-  site: z.enum(['suwon', 'uiwang', 'pyeongtaek']).optional(),
+  site: z.enum(SITE_VALUES as unknown as [string, ...string[]]).optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
   includeSummary: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
@@ -64,7 +65,7 @@ export class NonConformanceQueryDto {
 
   @ApiPropertyOptional({
     description: '사이트 필터 (장비 소속 사이트)',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SITE_VALUES as unknown as string[],
   })
   site?: string;
 

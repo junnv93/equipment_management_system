@@ -38,6 +38,7 @@ import {
   ncStatusToSemantic,
   NC_DETAIL_HEADER_TOKENS,
   NC_WORKFLOW_TOKENS,
+  NC_WORKFLOW_STEPS,
   NC_STATUS_STEP_INDEX,
   getNCWorkflowNodeClasses,
   getNCWorkflowLabelClasses,
@@ -73,12 +74,16 @@ import {
 // 상수
 // ============================================================================
 
-const NC_STEPS: { key: NonConformanceStatus; label: string; icon: typeof AlertTriangle }[] = [
-  { key: 'open', label: '등록', icon: AlertTriangle },
-  { key: 'analyzing', label: '분석', icon: BarChart3 },
-  { key: 'corrected', label: '조치', icon: CheckCircle2 },
-  { key: 'closed', label: '종결', icon: XCircle },
-];
+/** 워크플로우 스텝 시각 정의 — NC_WORKFLOW_STEPS (SSOT) 기반 파생 */
+const NC_STEP_CONFIG: Record<
+  (typeof NC_WORKFLOW_STEPS)[number],
+  { label: string; icon: typeof AlertTriangle }
+> = {
+  open: { label: '등록', icon: AlertTriangle },
+  analyzing: { label: '분석', icon: BarChart3 },
+  corrected: { label: '조치', icon: CheckCircle2 },
+  closed: { label: '종결', icon: XCircle },
+};
 
 // ============================================================================
 // Props
@@ -576,17 +581,18 @@ function WorkflowTimeline({
       )}
     >
       <div className={NC_WORKFLOW_TOKENS.stepsLayout}>
-        {NC_STEPS.map((step, idx) => {
-          const Icon = step.icon;
+        {NC_WORKFLOW_STEPS.map((stepKey, idx) => {
+          const config = NC_STEP_CONFIG[stepKey];
+          const Icon = config.icon;
           return (
-            <div key={step.key} className={NC_WORKFLOW_TOKENS.step}>
+            <div key={stepKey} className={NC_WORKFLOW_TOKENS.step}>
               {/* 커넥터 (좌측) */}
               {idx > 0 && (
                 <div
                   className={getNCWorkflowConnectorClasses(idx - 1, currentStepIndex)}
                   style={{
-                    left: `${((idx - 1) / (NC_STEPS.length - 1)) * 100 + 100 / (NC_STEPS.length - 1) / 2}%`,
-                    width: `${100 / (NC_STEPS.length - 1) - 10}%`,
+                    left: `${((idx - 1) / (NC_WORKFLOW_STEPS.length - 1)) * 100 + 100 / (NC_WORKFLOW_STEPS.length - 1) / 2}%`,
+                    width: `${100 / (NC_WORKFLOW_STEPS.length - 1) - 10}%`,
                   }}
                 />
               )}
@@ -600,10 +606,10 @@ function WorkflowTimeline({
               </div>
               {/* 라벨 */}
               <span className={getNCWorkflowLabelClasses(idx, currentStepIndex, isLongOverdue)}>
-                {step.label}
+                {config.label}
               </span>
               {/* 날짜 */}
-              <StepDate nc={nc} stepKey={step.key} />
+              <StepDate nc={nc} stepKey={stepKey} />
             </div>
           );
         })}

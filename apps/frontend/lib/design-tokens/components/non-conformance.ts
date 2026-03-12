@@ -141,6 +141,19 @@ export const NC_DETAIL_HEADER_TOKENS = {
 export type NCKpiVariant = 'open' | 'analyzing' | 'corrected' | 'closed';
 
 /**
+ * KPI 전용 라벨 (SSOT)
+ *
+ * NON_CONFORMANCE_STATUS_LABELS (기술 상태: '등록됨')와 다른
+ * 비즈니스 맥락 라벨 ('미해결')을 제공합니다.
+ */
+export const NC_KPI_LABELS: Record<NCKpiVariant, string> = {
+  open: '미해결',
+  analyzing: '분석 중',
+  corrected: '조치 완료',
+  closed: '종결',
+} as const;
+
+/**
  * KPI 카드 스타일 — 시멘틱 색상 기반
  *
  * - open: critical (미해결 — 빨강)
@@ -406,6 +419,14 @@ export const NC_WORKFLOW_TOKENS = {
     pending: 'bg-border',
   },
 } as const;
+
+/**
+ * NC 워크플로우 4단계 스텝 정의 (SSOT)
+ *
+ * 리스트(MiniWorkflow) + 상세(WorkflowTimeline) 양쪽에서 재사용.
+ * 스텝 순서 변경 시 이 배열만 수정하면 됩니다.
+ */
+export const NC_WORKFLOW_STEPS = ['open', 'analyzing', 'corrected', 'closed'] as const;
 
 /** 상태 → 워크플로우 스텝 인덱스 매핑 */
 export const NC_STATUS_STEP_INDEX: Record<string, number> = {

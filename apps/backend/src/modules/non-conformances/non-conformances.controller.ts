@@ -11,6 +11,7 @@ import {
   ParseUUIDPipe,
   HttpStatus,
   UsePipes,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { NonConformancesService } from './non-conformances.service';
@@ -31,7 +32,12 @@ import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { type NonConformance } from '@equipment-management/db/schema/non-conformances';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
-import { Permission, NON_CONFORMANCE_DATA_SCOPE } from '@equipment-management/shared-constants';
+import {
+  Permission,
+  NON_CONFORMANCE_DATA_SCOPE,
+  resolveDataScope,
+} from '@equipment-management/shared-constants';
+import type { UserRole } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 
@@ -40,6 +46,32 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 @Controller('non-conformances')
 export class NonConformancesController {
   constructor(private readonly nonConformancesService: NonConformancesService) {}
+
+  /**
+   * 크로스사이트 접근 제어 (UUID 기반 엔드포인트용)
+   *
+   * NON_CONFORMANCE_DATA_SCOPE 정책에 따라:
+   * - test_engineer / technical_manager / quality_manager: 소속 사이트만
+   * - lab_manager / system_admin: 전체 접근
+   *
+   * NC는 siteId 직접 필드가 없으므로 equipment.site로 판별합니다.
+   */
+  private enforceSiteAccess(req: AuthenticatedRequest, equipmentSite: string): void {
+    const userRole = req.user?.roles?.[0] as UserRole | undefined;
+    if (!userRole) return;
+
+    const scope = resolveDataScope(
+      { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
+      NON_CONFORMANCE_DATA_SCOPE
+    );
+
+    if (scope.type === 'site' && scope.site && equipmentSite !== scope.site) {
+      throw new ForbiddenException({
+        code: 'NC_CROSS_SITE_ACCESS_DENIED',
+        message: 'No permission to access non-conformances from other sites.',
+      });
+    }
+  }
 
   @AuditLog({
     action: 'create',
@@ -60,7 +92,13 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CREATE_NON_CONFORMANCE)
   @UsePipes(CreateNonConformanceValidationPipe)
-  create(@Body() createDto: CreateNonConformanceDto): Promise<NonConformance> {
+  async create(
+    @Body() createDto: CreateNonConformanceDto,
+    @Request() req: AuthenticatedRequest
+  ): Promise<NonConformance> {
+    // ✅ 크로스사이트 보호: 다른 사이트 장비에 NC 등록 차단
+    const equip = await this.nonConformancesService.getEquipmentSite(createDto.equipmentId);
+    this.enforceSiteAccess(req, equip);
     return this.nonConformancesService.create(createDto);
   }
 
@@ -99,7 +137,12 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findOne(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<NonConformance> {
+  async findOne(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<NonConformance> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, basic.equipmentSite);
     return this.nonConformancesService.findOne(uuid);
   }
 
@@ -113,9 +156,12 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_NON_CONFORMANCES)
-  findOpenByEquipment(
-    @Param('equipmentUuid', ParseUUIDPipe) equipmentUuid: string
+  async findOpenByEquipment(
+    @Param('equipmentUuid', ParseUUIDPipe) equipmentUuid: string,
+    @Request() req: AuthenticatedRequest
   ): Promise<NonConformance[]> {
+    const equipSite = await this.nonConformancesService.getEquipmentSite(equipmentUuid);
+    this.enforceSiteAccess(req, equipSite);
     return this.nonConformancesService.findOpenByEquipment(equipmentUuid);
   }
 
@@ -137,10 +183,13 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_NON_CONFORMANCE)
   @UsePipes(UpdateNonConformanceValidationPipe)
-  update(
+  async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateDto: UpdateNonConformanceDto
+    @Body() updateDto: UpdateNonConformanceDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<NonConformance> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, basic.equipmentSite);
     return this.nonConformancesService.update(uuid, updateDto);
   }
 
@@ -163,11 +212,13 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
   @UsePipes(CloseNonConformanceValidationPipe)
-  close(
+  async close(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest,
     @Body() closeDto: CloseNonConformanceDto
   ): Promise<NonConformance> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, basic.equipmentSite);
     const closedBy = req.user?.userId;
     return this.nonConformancesService.close(uuid, closeDto, closedBy);
   }
@@ -191,11 +242,13 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
   @UsePipes(RejectCorrectionValidationPipe)
-  rejectCorrection(
+  async rejectCorrection(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest,
     @Body() dto: RejectCorrectionDto
   ): Promise<NonConformance> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, basic.equipmentSite);
     const rejectedBy = req.user?.userId;
     return this.nonConformancesService.rejectCorrection(uuid, dto, rejectedBy);
   }
@@ -212,7 +265,12 @@ export class NonConformancesController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.CLOSE_NON_CONFORMANCE)
   @AuditLog({ action: 'delete', entityType: 'non_conformance', entityIdPath: 'params.uuid' })
-  remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{ id: string; deleted: boolean }> {
+  async remove(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ id: string; deleted: boolean }> {
+    const basic = await this.nonConformancesService.findOneBasic(uuid);
+    this.enforceSiteAccess(req, basic.equipmentSite);
     return this.nonConformancesService.remove(uuid);
   }
 }
