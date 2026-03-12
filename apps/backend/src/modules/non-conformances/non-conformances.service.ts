@@ -244,6 +244,7 @@ export class NonConformancesService extends VersionedBaseService {
       site,
       search,
       sort = 'discoveryDate.desc',
+      includeSummary = false,
       page = 1,
       pageSize = 20,
     } = query;
@@ -343,6 +344,38 @@ export class NonConformancesService extends VersionedBaseService {
       .from(nonConformances)
       .where(and(...countConditions));
 
+    // Summary 집계 (includeSummary=true일 때만)
+    // ✅ status 필터 제외한 기본 조건으로 전체 상태별 건수 반환
+    let summary: Record<string, number> | undefined;
+    if (includeSummary) {
+      const summaryConditions = this.buildListConditions({
+        equipmentId,
+        ncType,
+        site,
+        search,
+        // status 제외 — 전체 상태별 건수를 얻기 위해
+      });
+
+      const summaryRows = await this.db
+        .select({
+          status: nonConformances.status,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(nonConformances)
+        .where(and(...summaryConditions))
+        .groupBy(nonConformances.status);
+
+      summary = {
+        open: 0,
+        analyzing: 0,
+        corrected: 0,
+        closed: 0,
+      };
+      for (const row of summaryRows) {
+        summary[row.status] = row.count;
+      }
+    }
+
     return {
       items,
       meta: {
@@ -352,6 +385,7 @@ export class NonConformancesService extends VersionedBaseService {
         totalPages: Math.ceil(totalItems / pageSize),
         currentPage: page,
       },
+      ...(summary && { summary }),
     };
   }
 

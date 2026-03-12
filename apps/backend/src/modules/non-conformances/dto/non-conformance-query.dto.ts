@@ -31,6 +31,7 @@ export const nonConformanceQuerySchema = z.object({
   site: z.enum(['suwon', 'uiwang', 'pyeongtaek']).optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
+  includeSummary: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
   page: z.preprocess((val) => (val ? Number(val) : 1), z.number().int().min(1).default(1)),
   pageSize: z.preprocess(
     (val) => (val ? Number(val) : 20),
@@ -75,6 +76,12 @@ export class NonConformanceQueryDto {
     default: 'discoveryDate.desc',
   })
   sort?: string;
+
+  @ApiPropertyOptional({
+    description: 'KPI 요약 포함 여부 (상태별 건수)',
+    default: false,
+  })
+  includeSummary?: boolean = false;
 
   @ApiPropertyOptional({ description: '페이지 번호', default: 1 })
   page?: number = 1;

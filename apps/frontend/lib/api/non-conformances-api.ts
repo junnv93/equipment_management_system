@@ -78,6 +78,7 @@ export interface NonConformanceQuery {
   site?: string;
   search?: string;
   sort?: string;
+  includeSummary?: boolean;
   page?: number;
   pageSize?: number;
 }

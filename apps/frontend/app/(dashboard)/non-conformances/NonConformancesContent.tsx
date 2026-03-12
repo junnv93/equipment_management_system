@@ -127,9 +127,10 @@ export default function NonConformancesContent({
   } = useNCFilters();
 
   // ✅ TanStack Query — 서버 초기 데이터를 placeholderData로 사용
+  const queryFilters = { ...apiFilters, includeSummary: true };
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: queryKeys.nonConformances.list(apiFilters),
-    queryFn: () => nonConformancesApi.getNonConformances(apiFilters),
+    queryKey: queryKeys.nonConformances.list(queryFilters),
+    queryFn: () => nonConformancesApi.getNonConformances(queryFilters),
     placeholderData: initialData,
     ...QUERY_CONFIG.NON_CONFORMANCES_LIST,
   });
@@ -137,8 +138,16 @@ export default function NonConformancesContent({
   const ncList = data?.data ?? [];
   const pagination = data?.meta?.pagination;
 
-  // KPI 카운트 계산 (현재 데이터 기반 — 전체 KPI는 별도 API로 분리 가능)
-  const kpiCounts = computeKpiCounts(ncList);
+  // ✅ 서버 사이드 summary 집계 (status 필터 제외한 전체 건수)
+  const serverSummary = data?.meta?.summary;
+  const kpiCounts: Record<NCKpiVariant, number> = serverSummary
+    ? {
+        open: serverSummary.open ?? 0,
+        analyzing: serverSummary.analyzing ?? 0,
+        corrected: serverSummary.corrected ?? 0,
+        closed: serverSummary.closed ?? 0,
+      }
+    : computeKpiCounts(ncList);
 
   /** CSV 내보내기 */
   const handleExport = () => {

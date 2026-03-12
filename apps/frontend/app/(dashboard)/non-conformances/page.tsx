@@ -12,6 +12,7 @@ import { redirect } from 'next/navigation';
 import {
   parseNCFiltersFromSearchParams,
   convertNCFiltersToApiParams,
+  NC_DEFAULT_PAGE_SIZE,
 } from '@/lib/utils/non-conformances-filter-utils';
 import * as ncApiServer from '@/lib/api/non-conformances-api-server';
 import NonConformancesContent from './NonConformancesContent';
@@ -71,10 +72,10 @@ async function NonConformancesAsync({
   const uiFilters = parseNCFiltersFromSearchParams(searchParams);
   const apiFilters = convertNCFiltersToApiParams(uiFilters);
 
-  // 3️⃣ 초기 데이터 서버 fetch (FCP 최적화)
+  // 3️⃣ 초기 데이터 서버 fetch (FCP 최적화) — KPI 스트립용 summary 포함
   let initialData;
   try {
-    initialData = await ncApiServer.getNonConformances(apiFilters);
+    initialData = await ncApiServer.getNonConformances({ ...apiFilters, includeSummary: true });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       console.error(
@@ -90,10 +91,11 @@ async function NonConformancesAsync({
       meta: {
         pagination: {
           total: 0,
-          pageSize: 20,
+          pageSize: NC_DEFAULT_PAGE_SIZE,
           currentPage: 1,
           totalPages: 0,
         },
+        summary: { open: 0, analyzing: 0, corrected: 0, closed: 0 },
       },
     };
   }

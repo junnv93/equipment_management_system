@@ -47,6 +47,7 @@ export interface ApiNonConformancesFilters {
   search?: string;
   equipmentId?: string;
   sort?: string;
+  includeSummary?: boolean;
   page?: number;
   pageSize?: number;
 }
