@@ -134,5 +134,8 @@ tmp
 logs/
 apps/server/logs/
 
+# symlinks
+npm
+
 # embedded repositories
 equipment_management_system/ .kombai/
