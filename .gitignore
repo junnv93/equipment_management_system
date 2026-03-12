@@ -135,4 +135,4 @@ logs/
 apps/server/logs/
 
 # embedded repositories
-equipment_management_system/ 
+equipment_management_system/ .kombai/
