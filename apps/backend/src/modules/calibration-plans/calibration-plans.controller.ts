@@ -100,6 +100,7 @@ export class CalibrationPlansController {
   @UsePipes(CalibrationPlanQueryValidationPipe)
   findAll(@Query() query: CalibrationPlanQueryInput): Promise<unknown> {
     // SiteScopeInterceptor가 siteField: 'siteId' 옵션으로 query.siteId를 자동 주입합니다.
+    // includeSummary=true: 상태별 건수 요약 포함 (KPI 스트립용)
     return this.calibrationPlansService.findAll(query);
   }
 

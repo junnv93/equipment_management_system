@@ -37,11 +37,13 @@ import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events
 import type {
   CalibrationPlanDetail,
   CalibrationPlanListResult,
+  CalibrationPlanSummary,
   CalibrationPlanItem,
   CalibrationPlanDeleteResult,
   ExternalCalibrationEquipment,
   CalibrationPlanVersionHistoryItem,
 } from './calibration-plans.types';
+import { CACHE_TTL } from '@equipment-management/shared-constants';
 
 @Injectable()
 export class CalibrationPlansService {
@@ -114,6 +116,7 @@ export class CalibrationPlansService {
   private invalidatePlanCache(uuid: string): void {
     this.cacheService.delete(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}detail:${uuid}`);
     this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}list:*`);
+    this.cacheService.deleteByPattern(`${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:*`);
   }
 
   /**
@@ -229,9 +232,13 @@ export class CalibrationPlansService {
 
   /**
    * 교정계획서 목록 조회
+   *
+   * includeSummary=true일 때 상태별 건수 요약 포함 (KPI 스트립용)
+   * - summary는 status 필터 제외 조건으로 집계 (전체 상태 분포 표시)
+   * - 캐시: CACHE_TTL.MEDIUM
    */
   async findAll(query: CalibrationPlanQueryInput): Promise<CalibrationPlanListResult> {
-    const { year, siteId, teamId, status, page = 1, pageSize = 20 } = query;
+    const { year, siteId, teamId, status, page = 1, pageSize = 20, includeSummary } = query;
 
     const conditions: SQL[] = [];
 
@@ -284,7 +291,7 @@ export class CalibrationPlansService {
       teamName: row.teamName,
     }));
 
-    return {
+    const result: CalibrationPlanListResult = {
       items,
       meta: {
         totalItems,
@@ -294,6 +301,59 @@ export class CalibrationPlansService {
         currentPage: page,
       },
     };
+
+    if (includeSummary) {
+      result.summary = await this.getSummary({ year, siteId, teamId });
+    }
+
+    return result;
+  }
+
+  /**
+   * 상태별 건수 요약 집계 (status 필터 제외 — 전체 분포 표시)
+   *
+   * 단일 SQL GROUP BY 쿼리 → CACHE_TTL.MEDIUM 캐시
+   */
+  private async getSummary(filter: {
+    year?: number;
+    siteId?: string;
+    teamId?: string;
+  }): Promise<CalibrationPlanSummary> {
+    const cacheKey = `${CACHE_KEY_PREFIXES.CALIBRATION_PLANS}summary:${filter.year ?? ''}:${filter.siteId ?? ''}:${filter.teamId ?? ''}`;
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        // status 필터 제외한 base 조건 (KPI는 전체 상태 분포를 보여줌)
+        const conditions: SQL[] = [];
+        if (filter.year) conditions.push(eq(calibrationPlans.year, filter.year));
+        if (filter.siteId) conditions.push(eq(calibrationPlans.siteId, filter.siteId));
+        if (filter.teamId) conditions.push(eq(calibrationPlans.teamId, filter.teamId));
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+        const [summaryData] = await this.db
+          .select({
+            total: sql<number>`count(*)::int`,
+            draft: sql<number>`count(*) filter (where ${calibrationPlans.status} = ${CPStatus.DRAFT})::int`,
+            pending_review: sql<number>`count(*) filter (where ${calibrationPlans.status} = ${CPStatus.PENDING_REVIEW})::int`,
+            pending_approval: sql<number>`count(*) filter (where ${calibrationPlans.status} = ${CPStatus.PENDING_APPROVAL})::int`,
+            approved: sql<number>`count(*) filter (where ${calibrationPlans.status} = ${CPStatus.APPROVED})::int`,
+            rejected: sql<number>`count(*) filter (where ${calibrationPlans.status} = ${CPStatus.REJECTED})::int`,
+          })
+          .from(calibrationPlans)
+          .where(whereClause);
+
+        return {
+          total: Number(summaryData.total),
+          draft: Number(summaryData.draft),
+          pending_review: Number(summaryData.pending_review),
+          pending_approval: Number(summaryData.pending_approval),
+          approved: Number(summaryData.approved),
+          rejected: Number(summaryData.rejected),
+        };
+      },
+      CACHE_TTL.MEDIUM
+    );
   }
 
   /**

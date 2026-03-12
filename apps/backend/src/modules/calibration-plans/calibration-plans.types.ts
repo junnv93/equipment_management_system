@@ -78,6 +78,16 @@ export type CalibrationPlanListItem = typeof calibrationPlans.$inferSelect & {
   teamName: string | null;
 };
 
+/** 교정계획서 상태별 요약 통계 — findAll(includeSummary=true) */
+export type CalibrationPlanSummary = {
+  total: number;
+  draft: number;
+  pending_review: number;
+  pending_approval: number;
+  approved: number;
+  rejected: number;
+};
+
 /** 교정계획서 목록 — findAll() 반환 타입 */
 export type CalibrationPlanListResult = {
   items: CalibrationPlanListItem[];
@@ -88,4 +98,5 @@ export type CalibrationPlanListResult = {
     totalPages: number;
     currentPage: number;
   };
+  summary?: CalibrationPlanSummary;
 };

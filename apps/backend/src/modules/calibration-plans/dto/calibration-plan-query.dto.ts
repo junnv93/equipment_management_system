@@ -43,6 +43,7 @@ export const calibrationPlanQuerySchema = z.object({
     (val) => (val ? Number(val) : 20),
     z.number().int().min(1).max(100).default(20)
   ),
+  includeSummary: z.preprocess((val) => val === 'true' || val === true, z.boolean().optional()),
 });
 
 export type CalibrationPlanQueryInput = z.infer<typeof calibrationPlanQuerySchema>;
@@ -113,6 +114,12 @@ export class CalibrationPlanQueryDto {
     example: 20,
   })
   pageSize?: number = 20;
+
+  @ApiPropertyOptional({
+    description: '상태별 요약 통계 포함 여부 (기본값: false)',
+    example: true,
+  })
+  includeSummary?: boolean;
 }
 
 export class ExternalEquipmentQueryDto {
