@@ -20,6 +20,8 @@ import {
   type AuditAction,
   type AuditEntityType,
   type AuditLogFilter,
+  type CalibrationStatus,
+  type EquipmentStatus,
 } from '@equipment-management/schemas';
 import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 import type { ReportColumn, ReportData } from './report-export.service';
@@ -175,7 +177,7 @@ export class ReportsService {
       gte(calibrationsTable.calibrationDate, start),
       lte(calibrationsTable.calibrationDate, end),
     ];
-    if (status) calConditions.push(eq(calibrationsTable.status, status));
+    if (status) calConditions.push(eq(calibrationsTable.status, status as CalibrationStatus));
 
     const statusRows = await this.db
       .select({
@@ -455,7 +457,8 @@ export class ReportsService {
   }): Promise<ReportData> {
     const conditions = [];
     if (filters.site) conditions.push(eq(equipmentTable.siteCode, filters.site));
-    if (filters.status) conditions.push(eq(equipmentTable.status, filters.status));
+    if (filters.status)
+      conditions.push(eq(equipmentTable.status, filters.status as EquipmentStatus));
     if (filters.teamId) conditions.push(eq(equipmentTable.teamId, filters.teamId));
 
     const rows = await this.db
@@ -527,7 +530,8 @@ export class ReportsService {
       gte(calibrationsTable.calibrationDate, start),
       lte(calibrationsTable.calibrationDate, end),
     ];
-    if (filters.status) conditions.push(eq(calibrationsTable.status, filters.status));
+    if (filters.status)
+      conditions.push(eq(calibrationsTable.status, filters.status as CalibrationStatus));
 
     const rows = await this.db
       .select({

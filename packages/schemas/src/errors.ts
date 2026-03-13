@@ -67,6 +67,11 @@ export enum ErrorCode {
   CannotSelfApprove = 'CANNOT_SELF_APPROVE',
 
   // ============================================================================
+  // 스코프/접근 범위 에러
+  // ============================================================================
+  ScopeAccessDenied = 'SCOPE_ACCESS_DENIED',
+
+  // ============================================================================
   // 네트워크/시스템 에러
   // ============================================================================
   NetworkError = 'NETWORK_ERROR',
@@ -119,6 +124,9 @@ export const errorCodeToStatusCode: Record<ErrorCode, number> = {
   [ErrorCode.NonConformanceNotOpen]: 400,
   [ErrorCode.CannotSelfApprove]: 403,
 
+  // 스코프/접근 범위 에러
+  [ErrorCode.ScopeAccessDenied]: 403,
+
   // 네트워크/시스템 에러
   [ErrorCode.NetworkError]: 503,
   [ErrorCode.TimeoutError]: 504,
@@ -163,7 +171,7 @@ export class AppError extends Error {
       ErrorConstructor.captureStackTrace(this, AppError);
     }
   }
-  
+
   // 응답 형식으로 변환
   toResponse(): ErrorResponse {
     return {
@@ -173,7 +181,7 @@ export class AppError extends Error {
       timestamp: new Date().toISOString(),
     };
   }
-  
+
   // 특정 에러 타입 생성을 위한 팩토리 메서드들
   static badRequest(message: string, details?: unknown): AppError {
     return new AppError(ErrorCode.BadRequest, message, details);
@@ -195,7 +203,10 @@ export class AppError extends Error {
     return new AppError(ErrorCode.Conflict, message, details);
   }
 
-  static internalServerError(message: string = '서버 오류가 발생했습니다', details?: unknown): AppError {
+  static internalServerError(
+    message: string = '서버 오류가 발생했습니다',
+    details?: unknown
+  ): AppError {
     return new AppError(ErrorCode.InternalServerError, message, details);
   }
 
@@ -209,4 +220,4 @@ export function handleZodError(error: z.ZodError): AppError {
   return AppError.validationError('입력 데이터가 유효하지 않습니다', {
     issues: error.format(),
   });
-} 
+}

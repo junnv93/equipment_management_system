@@ -7,6 +7,8 @@ import {
   NON_CONFORMANCE_TYPE_VALUES,
   NonConformanceStatusValues,
   SITE_VALUES,
+  type NonConformanceStatus as NCStatus,
+  type NonConformanceType as NCType,
 } from '@equipment-management/schemas';
 
 // Re-export for backward compatibility (service, tests에서 사용)
@@ -55,13 +57,13 @@ export class NonConformanceQueryDto {
     description: '상태 필터',
     enum: NON_CONFORMANCE_STATUS_VALUES,
   })
-  status?: string;
+  status?: NCStatus;
 
   @ApiPropertyOptional({
     description: '부적합 유형 필터',
     enum: NON_CONFORMANCE_TYPE_VALUES,
   })
-  ncType?: string;
+  ncType?: NCType;
 
   @ApiPropertyOptional({
     description: '사이트 필터 (장비 소속 사이트)',

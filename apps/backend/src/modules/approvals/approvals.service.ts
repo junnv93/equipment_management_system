@@ -29,6 +29,8 @@ import {
   DisposalReviewStatusValues,
   ApprovalStatusEnum,
   type UserRole,
+  type CheckoutStatus,
+  type CalibrationPlanStatus,
 } from '@equipment-management/schemas';
 import {
   isLabManager as checkIsLabManager,
@@ -432,7 +434,7 @@ export class ApprovalsService {
    * 반출 KPI 쿼리 빌더 — COUNT + urgent + sumDays
    */
   private getCheckoutKpiQuery(
-    status: string,
+    status: CheckoutStatus,
     userTeamId: string | null,
     isLabManager: boolean,
     thresholdDate: Date,
@@ -801,7 +803,7 @@ export class ApprovalsService {
    * 교정계획서 KPI (검토/최종 공용)
    */
   private async getCalibrationPlanKpi(
-    status: string,
+    status: CalibrationPlanStatus,
     thresholdDays: number
   ): Promise<{ urgentCount: number; avgWaitDays: number }> {
     const thresholdDate = this.getThresholdDate(thresholdDays);
@@ -869,7 +871,7 @@ export class ApprovalsService {
    * N+1 제거: findMany + client-side filter → COUNT + JOIN WHERE
    */
   private async getCheckoutCount(
-    status: string,
+    status: CheckoutStatus,
     purpose?: string,
     userTeamId?: string | null,
     isLabManager?: boolean,

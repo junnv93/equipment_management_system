@@ -31,6 +31,7 @@ import {
   NC_REPAIR_LINKED_TOKENS,
   TRANSITION_PRESETS,
 } from '@/lib/design-tokens';
+import { EquipmentStatusValues as ESVal } from '@equipment-management/schemas';
 import equipmentApi, { type Equipment } from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { useAuth } from '@/hooks/use-auth';
@@ -353,7 +354,7 @@ export default function NonConformanceManagementClient({
               </p>
             )}
           </div>
-          {equipment?.status !== 'non_conforming' && (
+          {equipment?.status !== ESVal.NON_CONFORMING && (
             <Button variant="destructive" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
               {t('nonConformanceManagement.register')}

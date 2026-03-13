@@ -82,7 +82,7 @@ export class UsersService {
     }
 
     if (query.roles) {
-      const roleList = query.roles.split(',');
+      const roleList = query.roles.split(',') as (typeof usersTable.role._)['data'][];
       conditions.push(inArray(usersTable.role, roleList));
     }
 
