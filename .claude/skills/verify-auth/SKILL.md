@@ -52,6 +52,7 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/notifications/sse/notification-sse.controller.ts` | SSE 컨트롤러 (SseJwtAuthGuard 사용)                              |
 | `apps/backend/src/common/metrics/metrics.controller.ts`                     | Prometheus 메트릭 컨트롤러 (@Public() + GET, src/common/ 레이어) |
 | `packages/shared-constants/src/permissions.ts`                              | Permission enum 정의                                             |
+| `apps/backend/src/common/utils/enforce-site-access.ts`                      | 크로스 사이트/팀 접근 제어 공유 유틸리티                         |
 
 ## Workflow
 
@@ -202,19 +203,70 @@ await this.create({
 });
 ```
 
+### Step 9: AuthenticatedRequest 옵셔널 파라미터 탐지
+
+컨트롤러에서 `req?: AuthenticatedRequest` 또는 `req!.user`와 같은 옵셔널/non-null assertion 패턴을 탐지합니다.
+JwtAuthGuard가 글로벌 적용되므로 `req`는 항상 존재하며, 옵셔널 처리는 타입 안전성을 약화시킵니다.
+
+```bash
+# 옵셔널 req 파라미터 탐지
+grep -rn "req?:\s*AuthenticatedRequest\|req!\.user\|req?\." apps/backend/src --include="*.controller.ts" | grep -v "//\|test\|spec"
+```
+
+**PASS 기준:** 0개 결과 (모든 컨트롤러에서 `req: AuthenticatedRequest` 사용).
+
+**FAIL 기준:** `req?:` 옵셔널 또는 `req!.` non-null assertion 사용 시 위반.
+
+```typescript
+// ❌ WRONG — 옵셔널 req (JwtAuthGuard가 보장하므로 불필요)
+async create(@Request() req?: AuthenticatedRequest) {
+  const userId = req?.user?.userId; // 항상 undefined 가능
+}
+
+// ❌ WRONG — non-null assertion (타입 안전성 위반)
+async create(@Request() req: AuthenticatedRequest) {
+  const userId = req!.user.userId;
+}
+
+// ✅ CORRECT — 비옵셔널 req
+async create(@Request() req: AuthenticatedRequest) {
+  const userId = req.user?.userId; // user는 ?. 허용 (Guard 내 payload 파싱)
+}
+```
+
+### Step 10: enforceSiteAccess() 뮤테이션 엔드포인트 적용 확인
+
+크로스 사이트 데이터 변경을 방지하기 위해 mutation 엔드포인트에서 `enforceSiteAccess()`를 호출하는지 확인합니다.
+
+```bash
+# enforceSiteAccess 사용 현황 확인
+grep -rn "enforceSiteAccess" apps/backend/src --include="*.ts"
+```
+
+```bash
+# enforceSiteAccess import 소스 확인 (SSOT: common/utils)
+grep -rn "import.*enforceSiteAccess" apps/backend/src --include="*.ts" | grep -v "common/utils"
+```
+
+**PASS 기준:** `enforceSiteAccess`가 `common/utils`에서 import되고, 주요 mutation 컨트롤러에서 사용됨.
+
+**FAIL 기준:** mutation 엔드포인트에서 사이트 접근 제어 없이 다른 사이트 데이터 변경 가능.
+
 ## Output Format
 
 ```markdown
-| #   | 검사                  | 상태      | 상세                            |
-| --- | --------------------- | --------- | ------------------------------- |
-| 1   | Body userId 금지      | PASS/FAIL | 위반 DTO 목록                   |
-| 2   | req.user.userId 추출  | PASS/FAIL | 누락 메서드 목록                |
-| 3   | @RequirePermissions   | PASS/FAIL | 누락 엔드포인트 목록            |
-| 4   | @AuditLog             | PASS/FAIL | 누락 메서드 목록                |
-| 5   | JwtUser 필드 접근     | PASS/FAIL | 레거시 필드 사용 위치           |
-| 6   | Permission import     | PASS/FAIL | 잘못된 import 위치              |
-| 7   | @SkipAudit() 오용     | PASS/FAIL | POST/PATCH/DELETE에 사용된 위치 |
-| 8   | SYSTEM_USER_UUID 사용 | PASS/FAIL | UUID 컬럼에 비-UUID 하드코딩    |
+| #   | 검사                        | 상태      | 상세                            |
+| --- | --------------------------- | --------- | ------------------------------- |
+| 1   | Body userId 금지            | PASS/FAIL | 위반 DTO 목록                   |
+| 2   | req.user.userId 추출        | PASS/FAIL | 누락 메서드 목록                |
+| 3   | @RequirePermissions         | PASS/FAIL | 누락 엔드포인트 목록            |
+| 4   | @AuditLog                   | PASS/FAIL | 누락 메서드 목록                |
+| 5   | JwtUser 필드 접근           | PASS/FAIL | 레거시 필드 사용 위치           |
+| 6   | Permission import           | PASS/FAIL | 잘못된 import 위치              |
+| 7   | @SkipAudit() 오용           | PASS/FAIL | POST/PATCH/DELETE에 사용된 위치 |
+| 8   | SYSTEM_USER_UUID 사용       | PASS/FAIL | UUID 컬럼에 비-UUID 하드코딩    |
+| 9   | AuthenticatedRequest 옵셔널 | PASS/FAIL | req?: 또는 req!. 사용 위치      |
+| 10  | enforceSiteAccess 적용      | PASS/FAIL | 누락 mutation 컨트롤러          |
 ```
 
 ## Exceptions

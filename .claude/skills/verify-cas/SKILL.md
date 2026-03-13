@@ -27,20 +27,22 @@ argument-hint: '[선택사항: 특정 모듈명]'
 
 ## Related Files
 
-| File                                                                      | Purpose                                     |
-| ------------------------------------------------------------------------- | ------------------------------------------- |
-| `apps/backend/src/common/base/versioned-base.service.ts`                  | VersionedBaseService 베이스 클래스          |
-| `apps/backend/src/common/dto/base-versioned.dto.ts`                       | versionedSchema 정의                        |
-| `apps/backend/src/common/cache/cache-invalidation.helper.ts`              | 캐시 무효화 헬퍼                            |
-| `apps/backend/src/modules/checkouts/checkouts.service.ts`                 | CAS 적용 서비스 예시                        |
-| `apps/backend/src/modules/calibration/calibration.service.ts`             | CAS 적용 서비스 예시                        |
-| `apps/backend/src/modules/non-conformances/non-conformances.service.ts`   | CAS 적용 서비스 예시                        |
-| `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts` | CAS 적용 서비스 예시                        |
-| `apps/backend/src/modules/equipment/services/disposal.service.ts`         | CAS 적용 서비스 예시                        |
-| `apps/backend/src/modules/software/software.service.ts`                   | CAS 적용 서비스 예시                        |
-| `apps/backend/src/modules/equipment/equipment.service.ts`                 | CAS 적용 서비스 (VersionedBaseService 상속) |
-| `apps/backend/src/modules/calibration-plans/calibration-plans.service.ts` | 자체 CAS 구현 (casVersion 필드)             |
-| `apps/frontend/hooks/use-optimistic-mutation.ts`                          | 프론트엔드 optimistic mutation 훅           |
+| File                                                                                 | Purpose                                              |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `apps/backend/src/common/base/versioned-base.service.ts`                             | VersionedBaseService 베이스 클래스                   |
+| `apps/backend/src/common/dto/base-versioned.dto.ts`                                  | versionedSchema 정의                                 |
+| `apps/backend/src/common/cache/cache-invalidation.helper.ts`                         | 캐시 무효화 헬퍼                                     |
+| `apps/backend/src/modules/checkouts/checkouts.service.ts`                            | CAS 적용 서비스 예시                                 |
+| `apps/backend/src/modules/calibration/calibration.service.ts`                        | CAS 적용 서비스 예시                                 |
+| `apps/backend/src/modules/non-conformances/non-conformances.service.ts`              | CAS 적용 서비스 예시                                 |
+| `apps/backend/src/modules/equipment-imports/equipment-imports.service.ts`            | CAS 적용 서비스 예시                                 |
+| `apps/backend/src/modules/equipment/services/disposal.service.ts`                    | CAS 적용 서비스 예시                                 |
+| `apps/backend/src/modules/software/software.service.ts`                              | CAS 적용 서비스 예시                                 |
+| `apps/backend/src/modules/equipment/equipment.service.ts`                            | CAS 적용 서비스 (VersionedBaseService 상속)          |
+| `apps/backend/src/modules/calibration-plans/calibration-plans.service.ts`            | 자체 CAS 구현 (casVersion 필드)                      |
+| `apps/backend/src/modules/equipment/services/equipment-history.service.ts`           | 시스템 내부 version bump (CAS WHERE 없이 version +1) |
+| `apps/backend/src/modules/notifications/schedulers/calibration-overdue-scheduler.ts` | 스케줄러 시스템 내부 version bump                    |
+| `apps/frontend/hooks/use-optimistic-mutation.ts`                                     | 프론트엔드 optimistic mutation 훅                    |
 
 ## Workflow
 
@@ -135,7 +137,85 @@ await this.db.transaction(async (tx) => {
 });
 ```
 
-### Step 6: 프론트엔드 mutation에서 version 전달
+### Step 6: 시스템 내부 version bump 검증
+
+스케줄러, 이력 서비스 등 시스템 내부에서 장비 상태를 변경할 때도 `version: sql\`version + 1\``을 포함하는지 확인합니다.
+사용자 요청이 아닌 시스템 자동 처리이므로 CAS WHERE 절(`AND version = ?`)은 불필요하지만, version 필드 증가는 필수입니다.
+
+```bash
+# 시스템 내부 equipment status 변경 시 version bump 포함 여부 확인
+grep -rn "status.*non_conforming\|status.*EquipmentStatusEnum" apps/backend/src/modules/equipment/services/equipment-history.service.ts apps/backend/src/modules/notifications/schedulers/calibration-overdue-scheduler.ts -A 3 | grep -E "version|sql"
+```
+
+**PASS 기준:** 장비 상태 변경 `.set({...})` 블록에 `version: sql\`version + 1\``이 포함되어야 함.
+
+**FAIL 기준:** `version` 증가 없이 상태만 변경 → 후속 사용자 CAS 업데이트 시 stale version으로 인한 영구 409 발생.
+
+```typescript
+// ❌ WRONG — version bump 누락 (시스템 내부라도 필수)
+await tx
+  .update(equipment)
+  .set({
+    status: EquipmentStatusEnum.enum.non_conforming,
+    updatedAt: new Date(),
+  })
+  .where(eq(equipment.id, equipmentUuid));
+
+// ✅ CORRECT — version bump 포함
+await tx
+  .update(equipment)
+  .set({
+    status: EquipmentStatusEnum.enum.non_conforming,
+    version: sql`version + 1`,
+    updatedAt: new Date(),
+  } as Record<string, unknown>)
+  .where(eq(equipment.id, equipmentUuid));
+```
+
+### Step 7: 시스템 내부 상태 변경 후 캐시 무효화
+
+시스템 내부(스케줄러, 이력 서비스)에서 장비 상태를 변경한 후 `CacheInvalidationHelper`로 캐시를 무효화하는지 확인합니다.
+
+```bash
+# equipment-history.service.ts와 calibration-overdue-scheduler.ts에서 캐시 무효화 확인
+grep -rn "invalidateAfterEquipmentUpdate\|cacheInvalidationHelper" apps/backend/src/modules/equipment/services/equipment-history.service.ts apps/backend/src/modules/notifications/schedulers/calibration-overdue-scheduler.ts
+```
+
+**PASS 기준:** 장비 상태 변경 후 `cacheInvalidationHelper.invalidateAfterEquipmentUpdate(equipmentId, true, false)` 호출.
+
+**FAIL 기준:** 상태 변경 후 캐시 무효화 없음 → 프론트엔드에서 stale 상태 표시.
+
+### Step 8: 보상 트랜잭션 패턴 검증 (Compensating Transaction)
+
+`updateWithVersion()`이 트랜잭션 외부에서 호출되고, 후속 작업이 실패할 수 있는 경우 보상 트랜잭션 패턴이 적용되어 있는지 확인합니다.
+
+```bash
+# updateWithVersion 호출 후 try-catch로 보상 로직이 있는지 확인
+grep -rn "updateWithVersion" apps/backend/src/modules --include="*.service.ts" -A 20 | grep -E "catch|rollback|previous|compensat"
+```
+
+**PASS 기준:** `updateWithVersion()` 호출 후 후속 작업이 실패할 수 있는 경우:
+
+1. 이전 상태를 저장 (`previousStatus`)
+2. try-catch로 후속 작업 감싸기
+3. catch 블록에서 이전 상태로 `updateWithVersion()` 역호출 (보상)
+
+**FAIL 기준:** 후속 작업 실패 시 이전 상태로 롤백하는 보상 로직 없음 → 데이터 불일치.
+
+```typescript
+// ✅ CORRECT — 보상 트랜잭션 패턴
+const previousStatus = previousEquipment.status;
+await this.updateWithVersion(equipment, id, version, { status: 'checked_out' }, 'Equipment');
+try {
+  await this.checkoutsService.create(checkoutData);
+} catch (error) {
+  // 보상: 장비 상태 원복
+  await this.updateWithVersion(equipment, id, version + 1, { status: previousStatus }, 'Equipment');
+  throw error;
+}
+```
+
+### Step 9: 프론트엔드 mutation에서 version 전달
 
 상태 변경 API 호출 시 version 필드를 전달하는지 확인합니다.
 
@@ -156,7 +236,10 @@ grep -rn "version" apps/frontend/lib/api/checkout-api.ts apps/frontend/lib/api/c
 | 3   | updateWithVersion 사용    | PASS/FAIL | 직접 .update() 호출 위치 |
 | 4   | 캐시 삭제 (409)           | PASS/FAIL | 누락 위치                |
 | 5   | 트랜잭션 내 CAS tx 전달   | PASS/FAIL | tx 미전달 위치           |
-| 6   | 프론트엔드 version 전달   | PASS/FAIL | 누락 API 함수            |
+| 6   | 시스템 내부 version bump  | PASS/FAIL | version 누락 위치        |
+| 7   | 시스템 내부 캐시 무효화   | PASS/FAIL | 캐시 무효화 누락 위치    |
+| 8   | 보상 트랜잭션 패턴        | PASS/FAIL | 보상 로직 누락 위치      |
+| 9   | 프론트엔드 version 전달   | PASS/FAIL | 누락 API 함수            |
 ```
 
 ## Exceptions
@@ -169,3 +252,5 @@ grep -rn "version" apps/frontend/lib/api/checkout-api.ts apps/frontend/lib/api/c
 4. **CalibrationPlansService의 casVersion** — `version`이 아닌 `casVersion` 필드 사용은 의도적 설계 (plan revision과 CAS 버전 분리)
 5. **Create 작업** — 새 레코드 생성은 CAS 불필요 (기존 레코드 없음)
 6. **SettingsService** — 시스템 관리자 전용, 단일 사용자 동시 수정 시나리오 없음
+7. **시스템 내부 version bump** — `CalibrationOverdueScheduler`, `EquipmentHistoryService` 등에서 `version: sql\`version + 1\``을 CAS WHERE 절 없이 사용하는 것은 정상. 시스템 자동 처리이므로 사용자 경합이 없고, version 필드 증가만으로 후속 CAS 업데이트와의 일관성을 보장
+8. **CacheInvalidationHelper가 없는 읽기 전용 서비스** — version bump만 하고 캐시 무효화를 하지 않는 서비스가 읽기 전용이면 정상 (예: 조회만 하는 헬퍼)

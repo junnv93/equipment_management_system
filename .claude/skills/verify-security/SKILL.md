@@ -42,6 +42,7 @@ argument-hint: '[선택사항: 특정 검사 항목]'
 | `scripts/check-endpoint-annotations.ts`                                    | CI 보안 검증 스크립트 (190/190 엔드포인트 어노테이션 검증)                 |
 | `apps/frontend/tests/e2e/common/security-headers/security-headers.spec.ts` | 보안 헤더 E2E 테스트 (SH-01: Backend, SH-02: Frontend)                     |
 | `.env`                                                                     | PERMISSIONS_GUARD_MODE 환경변수                                            |
+| `apps/backend/src/common/utils/enforce-site-access.ts`                     | 크로스 사이트/팀 접근 제어 공유 유틸리티 (entityTeamId 지원)               |
 
 ## Workflow
 
@@ -288,18 +289,49 @@ grep -n "INTERNAL_API_KEY" apps/frontend/.env.local 2>/dev/null || echo "MISSING
 
 **FAIL 기준:** 환경변수 없으면 헤더가 전송되지 않아 throttle bypass 실패.
 
+### Step 10: enforceSiteAccess 팀 레벨 격리 검증
+
+`enforceSiteAccess()`가 `entityTeamId` 파라미터를 활용하여 팀 레벨 격리를 지원하는지 확인합니다.
+
+```bash
+# enforceSiteAccess에 entityTeamId 파라미터 지원 확인
+grep -n "entityTeamId\|resolveDataScope" apps/backend/src/common/utils/enforce-site-access.ts
+```
+
+**PASS 기준:** `enforceSiteAccess()`가 `entityTeamId`를 5번째 파라미터로 받아 `resolveDataScope()`를 통해 팀 레벨 접근 제어 수행.
+
+**FAIL 기준:** 사이트 레벨 격리만 하고 팀 레벨 격리가 없으면 같은 사이트 내 다른 팀의 데이터 변경 가능.
+
+```bash
+# enforceSiteAccess 호출 시 entityTeamId 전달 여부 확인
+grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.controller.ts" | grep -v "import"
+```
+
+**PASS 기준:** mutation 엔드포인트에서 `enforceSiteAccess()` 호출 시 가능하면 `entityTeamId`도 전달.
+
+```typescript
+// ❌ WRONG — 사이트 레벨만 확인 (같은 사이트 다른 팀 데이터 변경 가능)
+enforceSiteAccess(req.user, entitySite, 'Equipment');
+
+// ✅ CORRECT — 팀 레벨까지 확인
+enforceSiteAccess(req.user, entitySite, 'Equipment', ForbiddenException, entityTeamId);
+```
+
 ## Output Format
 
 ```markdown
-| #   | 검사                     | 상태      | 상세                                       |
-| --- | ------------------------ | --------- | ------------------------------------------ |
-| 1   | Helmet CSP 프로덕션      | PASS/FAIL | scriptSrc 환경별 분리 여부                 |
-| 2   | Next.js Security Headers | PASS/FAIL | 누락된 헤더 목록                           |
-| 3   | PermissionsGuard 모드    | PASS/FAIL | DENY 모드 설정 가능 여부                   |
-| 4   | @Public() 남용           | PASS/FAIL | 상태 변경 엔드포인트 목록                  |
-| 5   | pnpm audit + overrides   | PASS/FAIL | critical 0 + 프로덕션 high 미티게이션 여부 |
-| 6   | @SiteScoped 데이터 격리  | PASS/FAIL | 누락 컨트롤러, bypassRoles 설정            |
-| 7   | CI 어노테이션 검증       | PASS/FAIL | 미어노테이션 엔드포인트 수                 |
+| #   | 검사                        | 상태      | 상세                                       |
+| --- | --------------------------- | --------- | ------------------------------------------ |
+| 1   | Helmet CSP 프로덕션         | PASS/FAIL | scriptSrc 환경별 분리 여부                 |
+| 2   | Next.js Security Headers    | PASS/FAIL | 누락된 헤더 목록                           |
+| 3   | PermissionsGuard 모드       | PASS/FAIL | DENY 모드 설정 가능 여부                   |
+| 4   | @Public() 남용              | PASS/FAIL | 상태 변경 엔드포인트 목록                  |
+| 5   | pnpm audit + overrides      | PASS/FAIL | critical 0 + 프로덕션 high 미티게이션 여부 |
+| 6   | @SiteScoped 데이터 격리     | PASS/FAIL | 누락 컨트롤러, bypassRoles 설정            |
+| 7   | CI 어노테이션 검증          | PASS/FAIL | 미어노테이션 엔드포인트 수                 |
+| 8   | Throttle Guard 등록         | PASS/FAIL | InternalApiThrottlerGuard 사용 여부        |
+| 9   | SSR X-Internal-Api-Key 헤더 | PASS/FAIL | 헤더 전송 코드 존재 여부                   |
+| 10  | enforceSiteAccess 팀 격리   | PASS/FAIL | entityTeamId 전달 여부                     |
 ```
 
 ## Exceptions
