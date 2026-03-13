@@ -10,13 +10,7 @@ interface DisposalReasonSelectorProps {
   onValueChange: (value: DisposalReason) => void;
 }
 
-const REASON_KEYS: DisposalReason[] = [
-  'end_of_life',
-  'beyond_repair',
-  'obsolete',
-  'damaged',
-  'other',
-];
+const REASON_KEYS: DisposalReason[] = ['obsolete', 'broken', 'inaccurate', 'other'];
 
 export function DisposalReasonSelector({ value, onValueChange }: DisposalReasonSelectorProps) {
   const t = useTranslations('disposal');

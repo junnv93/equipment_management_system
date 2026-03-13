@@ -22,7 +22,10 @@ import { DisposalRequestDialog } from './disposal/DisposalRequestDialog';
 import { DisposalCancelDialog } from './disposal/DisposalCancelDialog';
 import { DisposalReviewDialog } from './disposal/DisposalReviewDialog';
 import { DisposalApprovalDialog } from './disposal/DisposalApprovalDialog';
-import type { DisposalRequest } from '@equipment-management/schemas';
+import {
+  EquipmentStatusValues as ESVal,
+  type DisposalRequest,
+} from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { queryKeys } from '@/lib/api/query-config';
 import { ANIMATION_PRESETS } from '@/lib/design-tokens';
@@ -136,7 +139,7 @@ export function EquipmentDetailClient({
     staleTime: 0,
     enabled:
       !!equipmentId &&
-      (equipment?.status === 'pending_disposal' || equipment?.status === 'disposed'),
+      (equipment?.status === ESVal.PENDING_DISPOSAL || equipment?.status === ESVal.DISPOSED),
   });
 
   // 부적합 기록 조회
@@ -179,7 +182,7 @@ export function EquipmentDetailClient({
         {/* KPI 스트립 */}
         <EquipmentKpiStrip equipment={equipment} />
         {/* 폐기 진행 중 배너 */}
-        {equipment.status === 'pending_disposal' && disposalRequest && (
+        {equipment.status === ESVal.PENDING_DISPOSAL && disposalRequest && (
           <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
             <DisposalProgressCard
               disposalRequest={disposalRequest}
@@ -194,7 +197,7 @@ export function EquipmentDetailClient({
         )}
 
         {/* 폐기 완료 배너 */}
-        {equipment.status === 'disposed' && disposalRequest && (
+        {equipment.status === ESVal.DISPOSED && disposalRequest && (
           <div className={`${ANIMATION_PRESETS.slideDown} motion-safe:duration-200`}>
             <DisposedBanner disposalRequest={disposalRequest} />
           </div>
@@ -222,7 +225,7 @@ export function EquipmentDetailClient({
               <AlertTitle className="text-foreground flex items-center gap-2">
                 {t('sharedBanner.title')}
                 {/* 임시등록 장비이고 사용 기간이 있는 경우 D-day 표시 */}
-                {equipment.status === 'temporary' &&
+                {equipment.status === ESVal.TEMPORARY &&
                   equipment.usagePeriodStart &&
                   equipment.usagePeriodEnd && (
                     <UsagePeriodBadge
@@ -232,7 +235,7 @@ export function EquipmentDetailClient({
                   )}
               </AlertTitle>
               <AlertDescription className="text-muted-foreground">
-                {equipment.status === 'temporary' ? (
+                {equipment.status === ESVal.TEMPORARY ? (
                   <>
                     {t('sharedBanner.temporaryDesc', { source: equipment.sharedSource || 'other' })}
                     {equipment.usagePeriodEnd && <> {t('sharedBanner.expiryNotice')}</>}

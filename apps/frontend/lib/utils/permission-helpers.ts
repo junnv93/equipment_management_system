@@ -6,15 +6,16 @@
  */
 
 import { APPROVAL_ROLES, ADMIN_ROLES, type UserRole } from '@equipment-management/shared-constants';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
 // Fallback values in case of module resolution issues during HMR
 const FALLBACK_APPROVAL_ROLES: UserRole[] = [
-  'technical_manager',
-  'quality_manager',
-  'lab_manager',
-  'system_admin',
+  URVal.TECHNICAL_MANAGER,
+  URVal.QUALITY_MANAGER,
+  URVal.LAB_MANAGER,
+  URVal.SYSTEM_ADMIN,
 ];
-const FALLBACK_ADMIN_ROLES: UserRole[] = ['lab_manager', 'system_admin'];
+const FALLBACK_ADMIN_ROLES: UserRole[] = [URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN];
 
 /**
  * 사용자가 승인 권한을 가지고 있는지 확인

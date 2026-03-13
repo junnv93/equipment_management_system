@@ -23,13 +23,19 @@
  * ============================================================================
  */
 
+import type { NonConformanceStatus, NonConformanceType, Site } from '@equipment-management/schemas';
+
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
+ *
+ * ⚠️ enum 필드는 `EnumType | ''` 패턴 사용 (Equipment 필터 레퍼런스 패턴 준수)
+ * - '' = 전체 (필터 미적용)
+ * - URL에서 파싱 시 `as EnumType | ''` 캐스팅 적용
  */
 export interface UINonConformancesFilters {
-  status: string; // 상태 ('' = 전체)
-  ncType: string; // 유형 ('' = 전체)
-  site: string; // 사이트 ('' = 전체)
+  status: NonConformanceStatus | ''; // 상태 ('' = 전체)
+  ncType: NonConformanceType | ''; // 유형 ('' = 전체)
+  site: Site | ''; // 사이트 ('' = 전체)
   search: string; // 검색어 ('' = 전체)
   equipmentId: string; // 장비 UUID ('' = 전체) — 장비 상세에서 진입 시
   sort: string; // 정렬 ('' = 기본값 discoveryDate.desc)
@@ -41,8 +47,8 @@ export interface UINonConformancesFilters {
  * API에서 사용하는 필터 타입 (백엔드 쿼리 파라미터)
  */
 export interface ApiNonConformancesFilters {
-  status?: string;
-  ncType?: string;
+  status?: NonConformanceStatus;
+  ncType?: NonConformanceType;
   site?: string;
   search?: string;
   equipmentId?: string;
@@ -99,15 +105,15 @@ export function parseNCFiltersFromSearchParams(
     return null;
   };
 
-  // ✅ "_all"을 빈 문자열로 변환 (무한 리다이렉트 방지)
+  // ✅ "_all"을 빈 문자열로 변환 + enum 타입 캐스팅 (Equipment 필터 패턴 준수)
   const statusRaw = get('status') || defaults.status;
-  const status = statusRaw === '_all' ? '' : statusRaw;
+  const status = (statusRaw === '_all' ? '' : statusRaw) as NonConformanceStatus | '';
 
   const siteRaw = get('site') || defaults.site;
-  const site = siteRaw === '_all' ? '' : siteRaw;
+  const site = (siteRaw === '_all' ? '' : siteRaw) as Site | '';
 
   const ncTypeRaw = get('ncType') || defaults.ncType;
-  const ncType = ncTypeRaw === '_all' ? '' : ncTypeRaw;
+  const ncType = (ncTypeRaw === '_all' ? '' : ncTypeRaw) as NonConformanceType | '';
 
   const search = get('search') || defaults.search;
 
@@ -133,8 +139,8 @@ export function convertNCFiltersToApiParams(
   filters: UINonConformancesFilters
 ): ApiNonConformancesFilters {
   return {
-    status: filters.status || undefined,
-    ncType: filters.ncType || undefined,
+    status: (filters.status || undefined) as NonConformanceStatus | undefined,
+    ncType: (filters.ncType || undefined) as NonConformanceType | undefined,
     site: filters.site || undefined,
     search: filters.search || undefined,
     equipmentId: filters.equipmentId || undefined,
@@ -157,3 +163,16 @@ export function countActiveNCFilters(filters: UINonConformancesFilters): number 
   if (filters.search) count++;
   return count;
 }
+
+// ============================================================================
+// 표준 이름 alias (filter-utils 패턴 일관성)
+// ============================================================================
+
+/** 기본 UI 필터 상수 (표준 패턴 alias) */
+export const DEFAULT_UI_FILTERS: UINonConformancesFilters = getDefaultNCFilters();
+
+/** UI → API 필터 변환 (표준 패턴 alias) */
+export const convertFiltersToApiParams = convertNCFiltersToApiParams;
+
+/** 활성 필터 개수 (표준 패턴 alias) */
+export const countActiveFilters = countActiveNCFilters;

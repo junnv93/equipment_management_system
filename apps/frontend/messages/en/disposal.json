@@ -9,10 +9,9 @@
     "completed": "Disposed"
   },
   "reason": {
-    "end_of_life": "End of Life",
-    "beyond_repair": "Beyond Repair",
     "obsolete": "Obsolete",
-    "damaged": "Damaged",
+    "broken": "Broken (Beyond Repair)",
+    "inaccurate": "Accuracy/Precision Not Guaranteed",
     "other": "Other"
   },
   "fields": {

@@ -3,6 +3,7 @@
 import { XCircle } from 'lucide-react';
 import { CHECKOUT_MINI_PROGRESS, MINI_PROGRESS_SPECIAL_STATUSES } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 
 interface CheckoutMiniProgressProps {
   currentStatus: string;
@@ -24,7 +25,7 @@ export function CheckoutMiniProgress({ currentStatus, checkoutType }: CheckoutMi
   const isSpecial = (MINI_PROGRESS_SPECIAL_STATUSES as readonly string[]).includes(currentStatus);
 
   if (isSpecial) {
-    const label = currentStatus === 'rejected' ? t('status.rejected') : t('status.canceled');
+    const label = currentStatus === CSVal.REJECTED ? t('status.rejected') : t('status.canceled');
     return (
       <div
         role="img"
@@ -38,9 +39,9 @@ export function CheckoutMiniProgress({ currentStatus, checkoutType }: CheckoutMi
 
   const stepCount = CHECKOUT_MINI_PROGRESS.stepCount[checkoutType] ?? 4;
   const isFullyComplete =
-    currentStatus === 'return_approved' ||
-    (checkoutType === 'rental' && currentStatus === 'lender_received');
-  const isLate = currentStatus === 'overdue';
+    currentStatus === CSVal.RETURN_APPROVED ||
+    (checkoutType === 'rental' && currentStatus === CSVal.LENDER_RECEIVED);
+  const isLate = currentStatus === CSVal.OVERDUE;
   const currentStepIndex = isFullyComplete
     ? stepCount
     : (CHECKOUT_MINI_PROGRESS.statusToStepIndex[currentStatus] ?? 0);

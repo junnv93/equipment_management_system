@@ -16,7 +16,12 @@ import {
 } from '@/lib/constants/equipment-status-styles';
 import { DisposalButton } from './disposal/DisposalButton';
 import { useDisposalPermissions } from '@/hooks/use-disposal-permissions';
-import type { DisposalRequest } from '@equipment-management/schemas';
+import {
+  EquipmentStatusValues as ESVal,
+  type DisposalRequest,
+  UserRoleValues as URVal,
+  CalibrationApprovalStatusValues as CASVal,
+} from '@equipment-management/schemas';
 import {
   EQUIPMENT_STATUS_TOKENS,
   DEFAULT_STATUS_CONFIG,
@@ -59,32 +64,33 @@ export function EquipmentStickyHeader({
   const equipmentId = String(equipment.id);
 
   // 권한 계산
-  const canEdit = equipment.status !== 'retired';
+  const canEdit = equipment.status !== ESVal.RETIRED;
   const canDelete =
-    hasRole(['lab_manager', 'system_admin']) &&
+    hasRole([URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]) &&
     !equipment.isShared &&
-    (equipment.approvalStatus === 'pending_approval' || equipment.approvalStatus === 'rejected');
+    (equipment.approvalStatus === CASVal.PENDING_APPROVAL ||
+      equipment.approvalStatus === CASVal.REJECTED);
 
   const disposalPermissions = useDisposalPermissions(equipment, disposalRequest);
 
   // SSOT: STATUS_NOT_ALLOWED_FOR_CHECKOUT (equipment-status-styles.ts)
   const canCheckout = !STATUS_NOT_ALLOWED_FOR_CHECKOUT.includes(
-    (equipment.status ?? 'available') as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
+    (equipment.status ?? ESVal.AVAILABLE) as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
   );
 
   // 상태 정규화: calibration_scheduled → available, calibration_overdue → non_conforming
   const getStatusToken = (status: string) => {
-    const normalized = status === 'calibration_scheduled' ? 'available' : status;
-    const final = normalized === 'calibration_overdue' ? 'non_conforming' : normalized;
+    const normalized = status === ESVal.CALIBRATION_SCHEDULED ? ESVal.AVAILABLE : status;
+    const final = normalized === ESVal.CALIBRATION_OVERDUE ? ESVal.NON_CONFORMING : normalized;
     const token = EQUIPMENT_STATUS_TOKENS[final] || DEFAULT_STATUS_CONFIG;
     return { label: token.label, icon: token.icon, bg: token.card.className };
   };
 
-  const statusConfig = getStatusToken(equipment.status || 'available');
+  const statusConfig = getStatusToken(equipment.status || ESVal.AVAILABLE);
 
   // 교정 D-day 배지
   const calibrationStatus = useMemo(() => {
-    const isNonConforming = equipment.status === 'non_conforming';
+    const isNonConforming = equipment.status === ESVal.NON_CONFORMING;
     const shouldSkip = !shouldDisplayCalibrationStatus(equipment.status);
     if (shouldSkip && !isNonConforming) return null;
     if (!equipment.calibrationRequired || equipment.calibrationMethod === 'not_applicable')

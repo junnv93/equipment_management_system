@@ -25,6 +25,10 @@ import {
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
+import {
+  UserRoleValues as URVal,
+  EquipmentStatusValues as ESVal,
+} from '@equipment-management/schemas';
 import { CalibrationResultBadge } from './CalibrationResultBadge';
 import { CalibrationRegisterDialog } from './CalibrationRegisterDialog';
 import { CalibrationApprovalActions } from './CalibrationApprovalActions';
@@ -53,13 +57,13 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
   });
 
   // UL-QP-18: 시험실무자만 교정 등록 가능 (lab_manager도 등록 불가 — 직무분리)
-  const canCreate = hasRole(['test_engineer']);
+  const canCreate = hasRole([URVal.TEST_ENGINEER]);
 
   // 교정기한 초과 여부:
   // - equipment.status: 백엔드 CalibrationOverdueScheduler가 매시간 전환 (정확)
   // - nextCalibrationDate 날짜 비교: 스케줄러 실행 전 gap 구간 커버
   const isOverdue =
-    equipment.status === 'calibration_overdue' ||
+    equipment.status === ESVal.CALIBRATION_OVERDUE ||
     (equipment.nextCalibrationDate != null && new Date(equipment.nextCalibrationDate) < new Date());
 
   if (isLoading) {

@@ -45,6 +45,10 @@ import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
+import {
+  EquipmentStatusValues as ESVal,
+  UserRoleValues as URVal,
+} from '@equipment-management/schemas';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import { TIMELINE_TOKENS, getTimelineCardClasses } from '@/lib/design-tokens';
 import { STATUS_NOT_ALLOWED_FOR_CHECKOUT } from '@/lib/constants/equipment-status-styles';
@@ -140,8 +144,11 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
 
   const handleSubmit = (data: CheckoutFormData) => {
     // 부적합/교정기한초과 장비의 외부 대여 방지
-    const STATUS_ONLY_CALIBRATION_REPAIR = ['non_conforming', 'calibration_overdue'];
-    const equipmentStatus = equipment.status || 'available';
+    const STATUS_ONLY_CALIBRATION_REPAIR: string[] = [
+      ESVal.NON_CONFORMING,
+      ESVal.CALIBRATION_OVERDUE,
+    ];
+    const equipmentStatus = equipment.status || ESVal.AVAILABLE;
     if (STATUS_ONLY_CALIBRATION_REPAIR.includes(equipmentStatus) && data.purpose === 'rental') {
       toast({
         title: t('checkoutHistoryTab.toasts.rentalNotAllowed'),
@@ -164,7 +171,12 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   };
 
   // 등록 권한 확인 (시험실무자 이상)
-  const canCreate = hasRole(['test_engineer', 'technical_manager', 'lab_manager', 'system_admin']);
+  const canCreate = hasRole([
+    URVal.TEST_ENGINEER,
+    URVal.TECHNICAL_MANAGER,
+    URVal.LAB_MANAGER,
+    URVal.SYSTEM_ADMIN,
+  ]);
 
   /**
    * 반출 가능 상태 확인
@@ -176,15 +188,18 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
    * - 외부 대여(rental)는 available 상태에서만 가능
    */
   // SSOT: STATUS_NOT_ALLOWED_FOR_CHECKOUT (lib/constants/equipment-status-styles.ts)
-  const STATUS_ONLY_CALIBRATION_REPAIR = ['non_conforming', 'calibration_overdue'];
-  const currentStatus = equipment.status || 'available';
+  const STATUS_ONLY_CALIBRATION_REPAIR: string[] = [
+    ESVal.NON_CONFORMING,
+    ESVal.CALIBRATION_OVERDUE,
+  ];
+  const currentStatus = equipment.status || ESVal.AVAILABLE;
 
   const canCheckoutAnyPurpose = !STATUS_NOT_ALLOWED_FOR_CHECKOUT.includes(
     currentStatus as (typeof STATUS_NOT_ALLOWED_FOR_CHECKOUT)[number]
   );
   const canCheckoutOnlyForCalibrationRepair =
     STATUS_ONLY_CALIBRATION_REPAIR.includes(currentStatus);
-  const isEquipmentAvailable = currentStatus === 'available';
+  const isEquipmentAvailable = currentStatus === ESVal.AVAILABLE;
 
   // 반출 목록 데이터 (PaginatedResponse<Checkout>는 data 필드 사용)
   const checkouts = checkoutsResponse?.data || [];
@@ -192,10 +207,10 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
   // 버튼 비활성화 사유 메시지
   const getDisabledReason = (): string | null => {
     if (!canCheckoutAnyPurpose) {
-      if (currentStatus === 'checked_out')
+      if (currentStatus === ESVal.CHECKED_OUT)
         return t('checkoutHistoryTab.disabledReasons.checked_out');
-      if (currentStatus === 'retired') return t('checkoutHistoryTab.disabledReasons.retired');
-      if (currentStatus === 'in_use') return t('checkoutHistoryTab.disabledReasons.in_use');
+      if (currentStatus === ESVal.RETIRED) return t('checkoutHistoryTab.disabledReasons.retired');
+      if (currentStatus === ESVal.IN_USE) return t('checkoutHistoryTab.disabledReasons.in_use');
     }
     return null;
   };

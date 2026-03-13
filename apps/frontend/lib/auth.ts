@@ -20,6 +20,7 @@ import type { Account, Profile, User, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import AzureADProvider from 'next-auth/providers/azure-ad';
 import { API_ENDPOINTS } from '@equipment-management/shared-constants';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
 /**
  * Azure AD 프로필 확장 타입
@@ -367,7 +368,8 @@ export const authOptions = {
           id: user.id,
           email: user.email,
           name: user.name || user.email.split('@')[0],
-          role: authUser.role || (azureProfile?.roles && azureProfile.roles[0]) || 'test_engineer',
+          role:
+            authUser.role || (azureProfile?.roles && azureProfile.roles[0]) || URVal.TEST_ENGINEER,
           site: (authUser.site as Site | undefined) || 'suwon',
           location: SITE_TO_LOCATION[(authUser.site as Site | undefined) || 'suwon'],
           teamId: authUser.teamId,

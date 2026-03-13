@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getHeaderSizeClasses, HEADER_INTERACTIVE_STYLES } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
 // 역할별 배지 색상
 const roleBadgeColors: Record<string, string> = {
@@ -53,7 +54,7 @@ export function UserProfileDropdown() {
     return null;
   }
 
-  const userRole = user.role?.toLowerCase() || 'test_engineer';
+  const userRole = user.role?.toLowerCase() || URVal.TEST_ENGINEER;
   const roleNames: Record<string, string> = {
     test_engineer: t('roles.test_engineer'),
     technical_manager: t('roles.technical_manager'),

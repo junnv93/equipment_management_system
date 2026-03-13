@@ -37,7 +37,7 @@ import teamsApi, { type TeamMember } from '@/lib/api/teams-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { cn } from '@/lib/utils';
-import { UserRoleValues } from '@equipment-management/schemas';
+import { UserRoleValues, UserRoleValues as URVal } from '@equipment-management/schemas';
 import { MemberProfileDialog } from './MemberProfileDialog';
 import type { CurrentUserInfo } from './TeamDetail';
 import { ROLE_BADGE_TOKENS, TEAM_MEMBER_GROUP_TOKENS } from '@/lib/design-tokens';
@@ -51,11 +51,11 @@ interface TeamMemberListProps {
 
 /** 역할 표시 순서 */
 const ROLE_ORDER = [
-  'technical_manager',
-  'test_engineer',
-  'quality_manager',
-  'lab_manager',
-  'system_admin',
+  URVal.TECHNICAL_MANAGER,
+  URVal.TEST_ENGINEER,
+  URVal.QUALITY_MANAGER,
+  URVal.LAB_MANAGER,
+  URVal.SYSTEM_ADMIN,
 ] as const;
 
 /**
@@ -156,7 +156,7 @@ export function TeamMemberList({
   };
 
   const getTargetRole = (currentRole: string) => {
-    return currentRole === 'test_engineer' ? 'technical_manager' : 'test_engineer';
+    return currentRole === URVal.TEST_ENGINEER ? URVal.TECHNICAL_MANAGER : URVal.TEST_ENGINEER;
   };
 
   // 검색 + 역할 복합 필터링 — useMemo로 불필요한 재계산 방지
@@ -182,7 +182,7 @@ export function TeamMemberList({
       groups[role] = [];
     });
     filteredMembers.forEach((m) => {
-      const role = m.role || 'test_engineer';
+      const role = m.role || URVal.TEST_ENGINEER;
       if (!groups[role]) groups[role] = [];
       groups[role].push(m);
     });

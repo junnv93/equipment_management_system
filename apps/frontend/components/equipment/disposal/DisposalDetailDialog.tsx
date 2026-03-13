@@ -10,7 +10,10 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Clock, XCircle, Download } from 'lucide-react';
-import { type DisposalRequest } from '@equipment-management/schemas';
+import {
+  type DisposalRequest,
+  DisposalReviewStatusValues as DRSVal,
+} from '@equipment-management/schemas';
 import { formatDateTime } from '@/lib/utils/date';
 import { DISPOSAL_TIMELINE_TOKENS, DISPOSAL_FILE_LINK_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
@@ -62,15 +65,18 @@ export function DisposalDetailDialog({
       id: 'review',
       title: t('detailDialog.stages.review'),
       icon:
-        disposalRequest.reviewStatus === 'rejected' &&
+        disposalRequest.reviewStatus === DRSVal.REJECTED &&
         disposalRequest.rejectionStep === 'review' ? (
           <XCircle className="h-5 w-5" />
         ) : (
           <Check className="h-5 w-5" />
         ),
-      completed: ['reviewed', 'approved', 'rejected'].includes(disposalRequest.reviewStatus),
+      completed: (
+        [DRSVal.REVIEWED, DRSVal.APPROVED, DRSVal.REJECTED] as readonly string[]
+      ).includes(disposalRequest.reviewStatus),
       data:
-        disposalRequest.reviewStatus === 'rejected' && disposalRequest.rejectionStep === 'review'
+        disposalRequest.reviewStatus === DRSVal.REJECTED &&
+        disposalRequest.rejectionStep === 'review'
           ? {
               person: disposalRequest.rejectedByName,
               time: disposalRequest.rejectedAt,
@@ -90,15 +96,16 @@ export function DisposalDetailDialog({
       id: 'approval',
       title: t('detailDialog.stages.approval'),
       icon:
-        disposalRequest.reviewStatus === 'rejected' &&
+        disposalRequest.reviewStatus === DRSVal.REJECTED &&
         disposalRequest.rejectionStep === 'approval' ? (
           <XCircle className="h-5 w-5" />
         ) : (
           <Check className="h-5 w-5" />
         ),
-      completed: disposalRequest.reviewStatus === 'approved',
+      completed: disposalRequest.reviewStatus === DRSVal.APPROVED,
       data:
-        disposalRequest.reviewStatus === 'rejected' && disposalRequest.rejectionStep === 'approval'
+        disposalRequest.reviewStatus === DRSVal.REJECTED &&
+        disposalRequest.rejectionStep === 'approval'
           ? {
               person: disposalRequest.rejectedByName,
               time: disposalRequest.rejectedAt,
@@ -137,9 +144,9 @@ export function DisposalDetailDialog({
             </h3>
             <Badge
               variant={
-                disposalRequest.reviewStatus === 'approved'
+                disposalRequest.reviewStatus === DRSVal.APPROVED
                   ? 'default'
-                  : disposalRequest.reviewStatus === 'rejected'
+                  : disposalRequest.reviewStatus === DRSVal.REJECTED
                     ? 'destructive'
                     : 'secondary'
               }
@@ -152,7 +159,7 @@ export function DisposalDetailDialog({
             {stages.map((stage, index) => {
               const isLast = index === stages.length - 1;
               const isRejected =
-                disposalRequest.reviewStatus === 'rejected' &&
+                disposalRequest.reviewStatus === DRSVal.REJECTED &&
                 stage.id === disposalRequest.rejectionStep;
 
               return (

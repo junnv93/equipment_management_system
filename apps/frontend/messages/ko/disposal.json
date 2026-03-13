@@ -9,10 +9,9 @@
     "completed": "폐기 완료"
   },
   "reason": {
-    "end_of_life": "수명 만료",
-    "beyond_repair": "수리 불가",
-    "obsolete": "구형 장비",
-    "damaged": "손상",
+    "obsolete": "노후화",
+    "broken": "고장 (수리 불가)",
+    "inaccurate": "정밀도/정확도 미보장",
     "other": "기타"
   },
   "fields": {

@@ -49,7 +49,11 @@ import {
   CONDITION_COMPARISON_TOKENS,
   CHECKOUT_PURPOSE_TOKENS,
 } from '@/lib/design-tokens';
-import { CheckoutStatus } from '@equipment-management/schemas';
+import {
+  CheckoutStatus,
+  CheckoutStatusValues as CSVal,
+  UserRoleValues as URVal,
+} from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
@@ -78,7 +82,7 @@ export default function CheckoutDetailClient({
   const { setDynamicLabel, clearDynamicLabel } = useBreadcrumb();
   const { hasRole } = useAuth();
   // 승인/반출 시작/반입 승인: technical_manager, lab_manager, system_admin 전용
-  const canApprove = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
+  const canApprove = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
 
   // ✅ Single Source of Truth: useQuery가 유일한 상태 소스
   // placeholderData: SSR props를 초기 표시용으로 사용 (항상 stale 취급 → 백그라운드 refetch 보장)
@@ -122,7 +126,7 @@ export default function CheckoutDetailClient({
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
-        status: 'approved' as CheckoutStatus,
+        status: CSVal.APPROVED as CheckoutStatus,
         approvedAt: new Date().toISOString(),
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
@@ -142,7 +146,7 @@ export default function CheckoutDetailClient({
     optimisticUpdate: (old, reason): Checkout =>
       ({
         ...old,
-        status: 'rejected' as CheckoutStatus,
+        status: CSVal.REJECTED as CheckoutStatus,
         rejectionReason: reason,
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
@@ -174,7 +178,7 @@ export default function CheckoutDetailClient({
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
-        status: 'checked_out' as CheckoutStatus,
+        status: CSVal.CHECKED_OUT as CheckoutStatus,
         checkoutDate: new Date().toISOString(),
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
@@ -196,7 +200,7 @@ export default function CheckoutDetailClient({
     optimisticUpdate: (old): Checkout =>
       ({
         ...old,
-        status: 'return_approved' as CheckoutStatus,
+        status: CSVal.RETURN_APPROVED as CheckoutStatus,
         returnApprovedAt: new Date().toISOString(),
         version: (old?.version ?? checkout.version) + 1, // ✅ Optimistic version increment
       }) as Checkout,
@@ -253,7 +257,7 @@ export default function CheckoutDetailClient({
     const buttons: React.ReactNode[] = [];
 
     // 승인 대기 상태 — technical_manager, lab_manager만 승인/반려 가능
-    if (checkout.status === 'pending' && canApprove) {
+    if (checkout.status === CSVal.PENDING && canApprove) {
       buttons.push(
         <Button
           key="approve"
@@ -278,7 +282,7 @@ export default function CheckoutDetailClient({
 
     // 승인됨 상태 - 교정/수리만 반출 시작 가능 (대여는 상태 확인으로 진행)
     // technical_manager, lab_manager만 반출 시작 가능
-    if (checkout.status === 'approved' && checkout.purpose !== 'rental' && canApprove) {
+    if (checkout.status === CSVal.APPROVED && checkout.purpose !== 'rental' && canApprove) {
       buttons.push(
         <Button
           key="start"
@@ -292,7 +296,7 @@ export default function CheckoutDetailClient({
     }
 
     // 반출 중 상태 - 교정/수리만 반입 처리 가능 (대여는 4단계 상태 확인으로 진행)
-    if (checkout.status === 'checked_out' && checkout.purpose !== 'rental') {
+    if (checkout.status === CSVal.CHECKED_OUT && checkout.purpose !== 'rental') {
       buttons.push(
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
@@ -306,9 +310,14 @@ export default function CheckoutDetailClient({
     // 대여 목적 특수 상태 - 상태 확인 필요
     if (
       checkout.purpose === 'rental' &&
-      ['approved', 'lender_checked', 'borrower_received', 'borrower_returned'].includes(
-        checkout.status
-      )
+      (
+        [
+          CSVal.APPROVED,
+          CSVal.LENDER_CHECKED,
+          CSVal.BORROWER_RECEIVED,
+          CSVal.BORROWER_RETURNED,
+        ] as CheckoutStatus[]
+      ).includes(checkout.status)
     ) {
       buttons.push(
         <Button key="check" variant="outline" asChild>
@@ -321,7 +330,7 @@ export default function CheckoutDetailClient({
     }
 
     // 대여 목적 최종 단계 - lender_received 상태에서 반입 처리
-    if (checkout.status === 'lender_received' && checkout.purpose === 'rental') {
+    if (checkout.status === CSVal.LENDER_RECEIVED && checkout.purpose === 'rental') {
       buttons.push(
         <Button key="return" asChild>
           <Link href={`/checkouts/${checkout.id}/return`}>
@@ -333,7 +342,7 @@ export default function CheckoutDetailClient({
     }
 
     // 반입 완료 상태 - 최종 승인 가능 (technical_manager, lab_manager만)
-    if (checkout.status === 'returned' && canApprove) {
+    if (checkout.status === CSVal.RETURNED && canApprove) {
       buttons.push(
         <Button
           key="approve-return"
@@ -372,7 +381,7 @@ export default function CheckoutDetailClient({
       </div>
 
       {/* 기한 초과 경고 */}
-      {checkout.status === 'overdue' && (
+      {checkout.status === CSVal.OVERDUE && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>{t('detail.overdueWarning')}</AlertDescription>
@@ -629,7 +638,7 @@ export default function CheckoutDetailClient({
       )}
 
       {/* 반입 검사 정보 (반입 완료 후) */}
-      {['returned', 'return_approved'].includes(checkout.status) && (
+      {([CSVal.RETURNED, CSVal.RETURN_APPROVED] as CheckoutStatus[]).includes(checkout.status) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">{t('detail.returnInspection')}</CardTitle>
@@ -676,7 +685,7 @@ export default function CheckoutDetailClient({
       )}
 
       {/* 반려 사유 */}
-      {checkout.status === 'rejected' && checkout.rejectionReason && (
+      {checkout.status === CSVal.REJECTED && checkout.rejectionReason && (
         <Card className={CHECKOUT_DETAIL_TOKENS.rejectionCard}>
           <CardHeader>
             <CardTitle className={`text-lg ${CHECKOUT_DETAIL_TOKENS.rejectionTitle}`}>

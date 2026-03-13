@@ -3,7 +3,7 @@
 import { CheckCircle2, Circle, Clock, XCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { CheckoutStatus } from '@equipment-management/schemas';
+import { CheckoutStatus, CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 import { CHECKOUT_STEPPER_TOKENS } from '@/lib/design-tokens';
 
 interface CheckoutStatusStepperProps {
@@ -22,16 +22,22 @@ interface CheckoutStatusStepperProps {
  * → borrower_returned → lender_received → return_approved
  */
 const STEP_STATUSES: Record<string, CheckoutStatus[]> = {
-  calibration: ['pending', 'approved', 'checked_out', 'returned', 'return_approved'],
-  repair: ['pending', 'approved', 'checked_out', 'returned', 'return_approved'],
+  calibration: [
+    CSVal.PENDING,
+    CSVal.APPROVED,
+    CSVal.CHECKED_OUT,
+    CSVal.RETURNED,
+    CSVal.RETURN_APPROVED,
+  ],
+  repair: [CSVal.PENDING, CSVal.APPROVED, CSVal.CHECKED_OUT, CSVal.RETURNED, CSVal.RETURN_APPROVED],
   rental: [
-    'pending',
-    'approved',
-    'lender_checked',
-    'borrower_received',
-    'borrower_returned',
-    'lender_received',
-    'return_approved',
+    CSVal.PENDING,
+    CSVal.APPROVED,
+    CSVal.LENDER_CHECKED,
+    CSVal.BORROWER_RECEIVED,
+    CSVal.BORROWER_RETURNED,
+    CSVal.LENDER_RECEIVED,
+    CSVal.RETURN_APPROVED,
   ],
 };
 
@@ -51,7 +57,7 @@ const STEPPER_LABEL_MAP: Record<string, string> = {
 /**
  * 특수 상태 (진행 흐름에서 벗어난 상태)
  */
-const SPECIAL_STATUSES: CheckoutStatus[] = ['rejected', 'canceled', 'overdue'];
+const SPECIAL_STATUSES: CheckoutStatus[] = [CSVal.REJECTED, CSVal.CANCELED, CSVal.OVERDUE];
 
 /**
  * 반출 상태 진행 표시기
@@ -86,20 +92,20 @@ export default function CheckoutStatusStepper({
     return (
       <div className="flex flex-col items-center justify-center p-6" role="status">
         <div className={cn('p-4 rounded-full', specialConfig.container)}>
-          {currentStatus === 'rejected' && (
+          {currentStatus === CSVal.REJECTED && (
             <XCircle className={cn(CHECKOUT_STEPPER_TOKENS.icon.special, specialConfig.icon)} />
           )}
-          {currentStatus === 'canceled' && (
+          {currentStatus === CSVal.CANCELED && (
             <XCircle className={cn(CHECKOUT_STEPPER_TOKENS.icon.special, specialConfig.icon)} />
           )}
-          {currentStatus === 'overdue' && (
+          {currentStatus === CSVal.OVERDUE && (
             <Clock className={cn(CHECKOUT_STEPPER_TOKENS.icon.special, specialConfig.icon)} />
           )}
         </div>
         <p className={cn('mt-3 text-lg font-medium', specialConfig.label)}>
           {t(`status.${currentStatus}`)}
         </p>
-        {currentStatus === 'overdue' && (
+        {currentStatus === CSVal.OVERDUE && (
           <p className="text-sm text-muted-foreground mt-1">{t('stepper.overdueMessage')}</p>
         )}
       </div>

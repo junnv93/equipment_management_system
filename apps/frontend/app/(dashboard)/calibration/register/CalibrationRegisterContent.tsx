@@ -25,7 +25,7 @@ import calibrationApi, { CreateCalibrationDto, Calibration } from '@/lib/api/cal
 import { format } from 'date-fns';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
-import type { UserRole } from '@equipment-management/schemas';
+import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
 import {
   getEquipmentSelectionClasses,
   CALIBRATION_SELECTION,
@@ -44,10 +44,10 @@ export function CalibrationRegisterContent() {
 
   // 사용자 역할 결정 (기본값: test_engineer)
   const userRole: UserRole =
-    (session?.user as { role?: UserRole } | undefined)?.role || 'test_engineer';
+    (session?.user as { role?: UserRole } | undefined)?.role || URVal.TEST_ENGINEER;
 
   // UL-QP-18 직무분리 원칙: 시험실무자만 교정 등록 가능
-  const canRegisterCalibration = userRole === 'test_engineer';
+  const canRegisterCalibration = userRole === URVal.TEST_ENGINEER;
   const isUnauthorized = !canRegisterCalibration;
 
   // 상태 관리

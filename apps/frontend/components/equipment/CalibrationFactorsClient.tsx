@@ -42,6 +42,7 @@ import calibrationFactorsApi, {
 } from '@/lib/api/calibration-factors-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
+import { CalibrationFactorApprovalStatusValues as CFASVal } from '@equipment-management/schemas';
 import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -171,7 +172,8 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   };
 
   const currentFactors = equipmentFactors?.factors || [];
-  const pendingFactors = allFactors?.data?.filter((f) => f.approvalStatus === 'pending') || [];
+  const pendingFactors =
+    allFactors?.data?.filter((f) => f.approvalStatus === CFASVal.PENDING) || [];
 
   if (isLoading) {
     return null; // loading.tsx에서 처리

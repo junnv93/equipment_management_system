@@ -440,6 +440,76 @@ export const APPROVAL_MOBILE_CATEGORY_BAR_TOKENS = {
 } as const;
 
 // ============================================================================
+// 16. Approval Detail Panel Tokens (Split View 우측 상세 패널)
+// ============================================================================
+
+/**
+ * 승인 상세 인라인 패널 — Split View 우측 (xl:+)
+ *
+ * 모달 대체: 리스트에서 항목 클릭 시 즉시 렌더링.
+ * Layer 2 (semantic) + motion preset 참조로 3-Layer 아키텍처 준수.
+ *
+ * SSOT: ApprovalDetailPanel.tsx 하드코딩 제거
+ */
+export const APPROVAL_DETAIL_PANEL_TOKENS = {
+  /** 패널 최외곽 컨테이너 */
+  container: 'flex flex-col h-full overflow-hidden bg-card border-l border-border',
+
+  /** 진입 애니메이션 — APPROVAL_MOTION.listItemEnter 패턴과 일관 */
+  contentEnter: `flex flex-col h-full motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-2 motion-safe:duration-${MOTION_TOKENS.transition.fast.duration}`,
+
+  /** 헤더 (요약 정보) */
+  header: {
+    container: 'flex-shrink-0 p-4 border-b border-border space-y-3',
+    topRow: 'flex items-center gap-2',
+    title: 'text-base font-semibold text-foreground line-clamp-2',
+    metaGrid: 'grid grid-cols-3 gap-3',
+    /** APPROVAL_INFO_GRID_TOKENS.label 패턴 재사용 */
+    metaLabel: APPROVAL_INFO_GRID_TOKENS.label,
+    metaValue: 'text-sm font-medium text-foreground',
+  },
+
+  /** 스크롤 영역 (본문) */
+  body: 'flex-1 overflow-y-auto p-4 space-y-4',
+
+  /** 섹션 (상세 정보 블록) */
+  section: {
+    container: 'space-y-2',
+    title: 'flex items-center gap-2 text-sm font-medium text-foreground',
+    titleLine: 'flex-1 h-px bg-border',
+  },
+
+  /** 첨부 파일 행 */
+  attachment: {
+    row: 'flex items-center gap-2 py-1.5',
+    icon: `${APPROVAL_INFO_GRID_TOKENS.icon} flex-shrink-0`,
+    name: 'text-sm truncate flex-1',
+    size: 'text-xs text-muted-foreground tabular-nums',
+  },
+
+  /** 하단 고정 액션 영역 */
+  footer: {
+    container: `flex-shrink-0 flex items-center gap-2 p-4 border-t border-border ${APPROVAL_BULK_BAR_TOKENS.container}`,
+    button: 'flex-1 h-9 text-sm font-medium',
+  },
+
+  /** 키보드 단축키 배지 */
+  kbdBadge:
+    'ml-auto text-[10px] font-mono text-muted-foreground bg-muted px-1 py-0.5 rounded border border-border',
+
+  /** 빈 상태 (항목 미선택) — APPROVAL_EMPTY_STATE_TOKENS 패턴 축소판 */
+  empty: {
+    wrapper: 'flex-1 flex items-center justify-center p-8',
+    iconContainer: APPROVAL_EMPTY_STATE_TOKENS.iconContainer
+      .replace('w-16 h-16', 'w-12 h-12')
+      .replace('mb-4', 'mb-3'),
+    icon: APPROVAL_EMPTY_STATE_TOKENS.icon.replace('h-8 w-8', 'h-6 w-6'),
+    text: 'text-sm font-medium text-foreground',
+    hint: 'text-xs text-muted-foreground mt-1',
+  },
+} as const;
+
+// ============================================================================
 // Utility Functions
 // ============================================================================
 

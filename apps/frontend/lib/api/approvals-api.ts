@@ -15,6 +15,7 @@ import {
   type UnifiedApprovalStatus,
   UNIFIED_APPROVAL_STATUS_LABELS,
   SITE_LABELS,
+  UserRoleValues as URVal,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
@@ -1046,7 +1047,7 @@ class ApprovalsApi {
       requesterId: calibration.registeredBy || '',
       requesterName: registeredByUser?.name
         ? String(registeredByUser.name)
-        : calibration.registeredByRole === 'test_engineer'
+        : calibration.registeredByRole === URVal.TEST_ENGINEER
           ? '시험실무자'
           : '기술책임자',
       requesterTeam: team?.name ? String(team.name) : '',

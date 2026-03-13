@@ -16,6 +16,7 @@ import {
   SESSION_SYNC_CHANNEL,
   SESSION_SYNC_MESSAGE,
 } from '@equipment-management/shared-constants';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
 export function useAuth() {
   const { data: session, status } = useSession();
@@ -51,7 +52,7 @@ export function useAuth() {
 
   // 기술책임자 이상 권한 확인 (technical_manager, lab_manager, system_admin)
   const isManager = useCallback(() => {
-    return hasRole(['technical_manager', ...ADMIN_ROLES]);
+    return hasRole([URVal.TECHNICAL_MANAGER, ...ADMIN_ROLES]);
   }, [hasRole]);
 
   // 로그아웃 함수

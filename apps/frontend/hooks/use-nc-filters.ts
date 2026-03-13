@@ -17,6 +17,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
+import type { NonConformanceStatus, NonConformanceType, Site } from '@equipment-management/schemas';
 import {
   type UINonConformancesFilters,
   parseNCFiltersFromSearchParams,
@@ -106,13 +107,13 @@ export function useNCFilters() {
   };
 
   /** 상태 필터 업데이트 */
-  const updateStatus = (status: string) => updateFilters({ status });
+  const updateStatus = (status: NonConformanceStatus | '') => updateFilters({ status });
 
   /** 유형 필터 업데이트 */
-  const updateNCType = (ncType: string) => updateFilters({ ncType });
+  const updateNCType = (ncType: NonConformanceType | '') => updateFilters({ ncType });
 
   /** 사이트 필터 업데이트 */
-  const updateSite = (site: string) => updateFilters({ site });
+  const updateSite = (site: Site | '') => updateFilters({ site });
 
   /** 검색어 업데이트 */
   const updateSearch = (search: string) => updateFilters({ search });

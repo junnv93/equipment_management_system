@@ -3,7 +3,10 @@
 import { Button } from '@/components/ui/button';
 import { Trash2, CheckCircle2 } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import type { DisposalRequest } from '@equipment-management/schemas';
+import {
+  EquipmentStatusValues as ESVal,
+  type DisposalRequest,
+} from '@equipment-management/schemas';
 import { DisposalDropdownMenu } from './DisposalDropdownMenu';
 import { DISPOSAL_BUTTON_TOKENS } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
@@ -39,7 +42,7 @@ export function DisposalButton({
   const t = useTranslations('disposal');
 
   // Disposed state - disabled button
-  if (equipment.status === 'disposed') {
+  if (equipment.status === ESVal.DISPOSED) {
     return (
       <Button variant="outline" disabled className={DISPOSAL_BUTTON_TOKENS.completed}>
         <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -49,7 +52,7 @@ export function DisposalButton({
   }
 
   // Pending disposal - dropdown menu
-  if (equipment.status === 'pending_disposal' && disposalRequest) {
+  if (equipment.status === ESVal.PENDING_DISPOSAL && disposalRequest) {
     return (
       <DisposalDropdownMenu
         disposalRequest={disposalRequest}
@@ -63,7 +66,7 @@ export function DisposalButton({
   }
 
   // Available - request button
-  if (equipment.status === 'available' && permissions.canRequestDisposal) {
+  if (equipment.status === ESVal.AVAILABLE && permissions.canRequestDisposal) {
     return (
       <Button variant="outline" onClick={onRequestOpen} className={DISPOSAL_BUTTON_TOKENS.request}>
         <Trash2 className="mr-2 h-4 w-4" />

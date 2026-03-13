@@ -28,6 +28,7 @@ import {
 import type { StatsVariant } from '@/lib/design-tokens';
 import type { DashboardSummary } from '@/lib/api/dashboard-api';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
 // ─── Stats Card 설정 ───────────────────────────────────────────
 export interface StatsCardConfig {
@@ -263,7 +264,7 @@ const QUICK_ACTIONS = {
 
 // ─── 역할별 설정 (SSOT) ────────────────────────────────────────
 export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
-  test_engineer: {
+  [URVal.TEST_ENGINEER]: {
     tabs: [
       { value: 'calibration', label: 'calibration' },
       { value: 'equipment', label: 'equipment' },
@@ -295,7 +296,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     },
   },
 
-  technical_manager: {
+  [URVal.TECHNICAL_MANAGER]: {
     tabs: [
       { value: 'calibration', label: 'calibration' },
       { value: 'equipment', label: 'equipment' },
@@ -327,7 +328,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     },
   },
 
-  quality_manager: {
+  [URVal.QUALITY_MANAGER]: {
     tabs: [
       { value: 'calibration', label: 'calibration' },
       { value: 'equipment', label: 'equipment' },
@@ -359,7 +360,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     },
   },
 
-  lab_manager: {
+  [URVal.LAB_MANAGER]: {
     tabs: [
       { value: 'calibration', label: 'calibration' },
       { value: 'equipment', label: 'equipment' },
@@ -392,7 +393,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
     },
   },
 
-  system_admin: {
+  [URVal.SYSTEM_ADMIN]: {
     tabs: [
       { value: 'calibration', label: 'calibration' },
       { value: 'equipment', label: 'equipment' },
@@ -427,7 +428,7 @@ export const DASHBOARD_ROLE_CONFIG: Record<string, DashboardRoleConfig> = {
 };
 
 // ─── 기본값 + Fallback ─────────────────────────────────────────
-export const DEFAULT_ROLE = 'test_engineer';
+export const DEFAULT_ROLE = URVal.TEST_ENGINEER;
 export const DEFAULT_TAB = 'calibration';
 
 /** 레거시 URL 호환 매핑 — 기존 북마크/공유 링크 자동 리다이렉트 */

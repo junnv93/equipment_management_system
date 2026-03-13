@@ -37,6 +37,7 @@ import {
   SOFTWARE_APPROVAL_BADGE_TOKENS,
   SOFTWARE_HISTORY_PAGE_TOKENS as TOKENS,
 } from '@/lib/design-tokens';
+import { SoftwareApprovalStatusValues as SAVal } from '@equipment-management/schemas';
 // ✅ 직접 import (barrel import 제거)
 import equipmentApi from '@/lib/api/equipment-api';
 import { queryKeys } from '@/lib/api/query-config';
@@ -141,9 +142,9 @@ export default function SoftwareHistoryClient({ equipmentId }: SoftwareHistoryCl
   const getStatusIcon = (status: SoftwareApprovalStatus) => {
     const iconClasses = TOKENS.statusIcon[status as keyof typeof TOKENS.statusIcon];
     switch (status) {
-      case 'approved':
+      case SAVal.APPROVED:
         return <CheckCircle2 className={iconClasses ?? TOKENS.statusIcon.pending} />;
-      case 'rejected':
+      case SAVal.REJECTED:
         return <XCircle className={iconClasses ?? TOKENS.statusIcon.pending} />;
       default:
         return <Clock className={TOKENS.statusIcon.pending} />;

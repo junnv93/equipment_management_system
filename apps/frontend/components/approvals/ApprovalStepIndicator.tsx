@@ -3,6 +3,7 @@
 import { Check, Clock, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UnifiedApprovalStatus, ApprovalHistoryEntry } from '@/lib/api/approvals-api';
+import { UnifiedApprovalStatusValues as UASVal } from '@equipment-management/schemas';
 import {
   getApprovalStepperNodeClasses,
   APPROVAL_STEPPER_TOKENS,
@@ -52,7 +53,7 @@ export function ApprovalStepIndicator({
   const t = useTranslations('approvals');
   const steps = type === 'disposal' ? disposalSteps : planSteps;
   const currentOrder = STATUS_ORDER[currentStatus] ?? 0;
-  const isRejected = currentStatus === 'rejected';
+  const isRejected = currentStatus === UASVal.REJECTED;
 
   // 각 단계에 해당하는 이력 찾기
   const getHistoryForStep = (stepIndex: number): ApprovalHistoryEntry | undefined => {

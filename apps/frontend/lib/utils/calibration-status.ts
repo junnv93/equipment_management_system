@@ -10,7 +10,10 @@
  */
 
 import { type LucideIcon } from 'lucide-react';
-import { type CalibrationMethod } from '@equipment-management/schemas';
+import {
+  type CalibrationMethod,
+  EquipmentStatusValues as ESVal,
+} from '@equipment-management/schemas';
 import { type CalibrationSeverity, CALIBRATION_BADGE_TOKENS } from '@/lib/design-tokens';
 
 /**
@@ -60,7 +63,7 @@ export function calculateCalibrationStatus(
   nextCalibrationDate: string | Date | undefined | null
 ): CalibrationStatus | null {
   // 1. 교정 상태 표시를 건너뛸 장비 상태 확인
-  const isNonConforming = status === 'non_conforming';
+  const isNonConforming = status === ESVal.NON_CONFORMING;
   const shouldSkipCalibration = shouldSkipCalibrationDisplay(status);
 
   if (shouldSkipCalibration && !isNonConforming) {
@@ -134,14 +137,14 @@ export function calculateCalibrationStatus(
  *
  * SSOT: equipment-status-styles.ts의 STATUS_SKIP_CALIBRATION_DISPLAY
  */
-const STATUS_SKIP_CALIBRATION_DISPLAY = [
-  'retired',
-  'non_conforming',
-  'spare',
-  'pending_disposal',
-  'disposed',
-  'temporary',
-  'inactive',
+const STATUS_SKIP_CALIBRATION_DISPLAY: readonly string[] = [
+  ESVal.RETIRED,
+  ESVal.NON_CONFORMING,
+  ESVal.SPARE,
+  ESVal.PENDING_DISPOSAL,
+  ESVal.DISPOSED,
+  ESVal.TEMPORARY,
+  ESVal.INACTIVE,
 ];
 
 /**

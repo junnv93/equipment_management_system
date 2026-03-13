@@ -26,6 +26,7 @@ import {
   DEFAULT_ACTIVITY_META,
 } from '@/lib/config/recent-activities-config';
 import type { RecentActivity } from '@/lib/api/dashboard-api';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 
 interface RecentActivitiesProps {
   data: RecentActivity[];
@@ -111,10 +112,10 @@ export const RecentActivities = memo(function RecentActivities({
   const t = useTranslations('dashboard.activities');
   const [activeTab, setActiveTab] = useState<string>('all');
 
-  const userRole = session?.user?.role?.toLowerCase() || 'test_engineer';
+  const userRole = session?.user?.role?.toLowerCase() || URVal.TEST_ENGINEER;
 
   // 역할에 따른 표시 가능한 카테고리
-  const allowedCategories = ROLE_CATEGORIES[userRole] || ROLE_CATEGORIES['test_engineer'];
+  const allowedCategories = ROLE_CATEGORIES[userRole] || ROLE_CATEGORIES[URVal.TEST_ENGINEER];
 
   // 활동 상세 페이지 이동 함수
   const handleNavigateToDetail = useCallback(

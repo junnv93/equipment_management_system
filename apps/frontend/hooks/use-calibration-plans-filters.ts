@@ -17,6 +17,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
+import type { CalibrationPlanStatus, Site } from '@equipment-management/schemas';
 import {
   UICalibrationPlansFilters,
   parseCalibrationPlansFiltersFromSearchParams,
@@ -110,7 +111,7 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
   /**
    * 사이트 필터 업데이트 헬퍼
    */
-  const updateSiteId = (siteId: string) => {
+  const updateSiteId = (siteId: Site | '') => {
     updateFilters({ siteId });
   };
 
@@ -124,7 +125,7 @@ export function useCalibrationPlansFilters(_initialFilters?: UICalibrationPlansF
   /**
    * 상태 필터 업데이트 헬퍼
    */
-  const updateStatus = (status: string) => {
+  const updateStatus = (status: CalibrationPlanStatus | '') => {
     updateFilters({ status });
   };
 

@@ -13,7 +13,7 @@ import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation'
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { formatDate } from '@/lib/utils/date';
 import { CheckCircle2, Circle, XCircle, Loader2, Plus, ChevronUp, Check } from 'lucide-react';
-import type { UserRole } from '@equipment-management/schemas';
+import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import {
@@ -53,9 +53,9 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
   const isApproved = plan.status === CPStatus.APPROVED;
 
   const userRole = session?.user?.role as UserRole | undefined;
-  const isQualityManager = userRole === 'quality_manager';
-  const isLabManager = userRole === 'lab_manager';
-  const isSystemAdmin = userRole === 'system_admin';
+  const isQualityManager = userRole === URVal.QUALITY_MANAGER;
+  const isLabManager = userRole === URVal.LAB_MANAGER;
+  const isSystemAdmin = userRole === URVal.SYSTEM_ADMIN;
   const canReview = isPendingReview && (isQualityManager || isLabManager || isSystemAdmin);
 
   const invalidateAfterChange = () =>

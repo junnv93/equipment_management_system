@@ -27,6 +27,7 @@ import type { CheckoutGroup } from '@/lib/utils/checkout-group-utils';
 import checkoutApi from '@/lib/api/checkout-api';
 import { CheckoutCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
+import { CheckoutStatusValues as CSVal } from '@equipment-management/schemas';
 import {
   CHECKOUT_MOTION,
   CHECKOUT_PURPOSE_TOKENS,
@@ -45,7 +46,7 @@ import { FONT, getManagementNumberClasses } from '@/lib/design-tokens';
 /** 렌탈 그룹 헤더 인라인 진행 표시 (5원) */
 function RentalFlowInline({ status }: { status: string }) {
   const t = useTranslations('checkouts');
-  const isFullyDone = status === 'lender_received';
+  const isFullyDone = status === CSVal.LENDER_RECEIVED;
   const currentIdx = isFullyDone ? 5 : (RENTAL_FLOW_INLINE_TOKENS.statusToStep[status] ?? -1);
 
   return (
@@ -158,7 +159,7 @@ function CheckoutGroupCard({
 
   // 그룹 내 pending 건수 + 일괄 승인 가능 여부
   const pendingCount = useMemo(
-    () => group.checkouts.filter((co) => co.status === 'pending').length,
+    () => group.checkouts.filter((co) => co.status === CSVal.PENDING).length,
     [group.checkouts]
   );
 
@@ -166,7 +167,7 @@ function CheckoutGroupCard({
   const canApproveBulk = useMemo(
     () =>
       group.checkouts
-        .filter((co) => co.status === 'pending')
+        .filter((co) => co.status === CSVal.PENDING)
         .some((co) => co.meta?.availableActions?.canApprove ?? canApprove),
     [group.checkouts, canApprove]
   );
@@ -307,7 +308,7 @@ function CheckoutGroupCard({
                 className={CHECKOUT_ITEM_ROW_TOKENS.actionButtons.bulkApprove}
                 onClick={() =>
                   group.checkouts
-                    .filter((co) => co.status === 'pending')
+                    .filter((co) => co.status === CSVal.PENDING)
                     .forEach((co) => approveMutation.mutate({ id: co.id, version: co.version }))
                 }
                 disabled={approveMutation.isPending}
@@ -349,7 +350,7 @@ function CheckoutGroupCard({
                   const daysRemaining = row.expectedReturnDate
                     ? calculateDaysRemaining(row.expectedReturnDate)
                     : null;
-                  const isRowOverdue = row.status === 'overdue';
+                  const isRowOverdue = row.status === CSVal.OVERDUE;
                   const rowBaseClass = isRowOverdue
                     ? `${CHECKOUT_ITEM_ROW_TOKENS.container} ${CHECKOUT_ITEM_ROW_TOKENS.containerOverdue}`
                     : CHECKOUT_ITEM_ROW_TOKENS.container;
@@ -424,7 +425,7 @@ function CheckoutGroupCard({
                         <CheckoutStatusBadge status={row.status} className="text-[10px] py-0" />
 
                         {/* 인라인 액션 버튼 */}
-                        {row.canApproveItem && row.status === 'pending' && (
+                        {row.canApproveItem && row.status === CSVal.PENDING && (
                           <>
                             <Button
                               size="sm"
@@ -450,9 +451,9 @@ function CheckoutGroupCard({
                           </>
                         )}
 
-                        {(row.status === 'checked_out' || row.status === 'overdue') && (
+                        {(row.status === CSVal.CHECKED_OUT || row.status === CSVal.OVERDUE) && (
                           <>
-                            {row.status === 'overdue' && (
+                            {row.status === CSVal.OVERDUE && (
                               <Button
                                 size="sm"
                                 variant="ghost"

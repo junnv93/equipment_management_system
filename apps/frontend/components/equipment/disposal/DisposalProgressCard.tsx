@@ -3,7 +3,10 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Eye, XCircle } from 'lucide-react';
-import type { DisposalRequest } from '@equipment-management/schemas';
+import {
+  type DisposalRequest,
+  DisposalReviewStatusValues as DRSVal,
+} from '@equipment-management/schemas';
 import { DisposalProgressStepper } from './DisposalProgressStepper';
 import { ReviewOpinionCard } from './ReviewOpinionCard';
 import { formatDateTime } from '@/lib/utils/date';
@@ -28,10 +31,10 @@ export function DisposalProgressCard({
   const t = useTranslations('disposal');
 
   const getCurrentStageText = () => {
-    if (disposalRequest.reviewStatus === 'pending') {
+    if (disposalRequest.reviewStatus === DRSVal.PENDING) {
       return t('progressCard.pendingReview');
     }
-    if (disposalRequest.reviewStatus === 'reviewed') {
+    if (disposalRequest.reviewStatus === DRSVal.REVIEWED) {
       return t('progressCard.pendingApproval');
     }
     return t('progressCard.complete');
@@ -55,7 +58,7 @@ export function DisposalProgressCard({
             </p>
           </div>
 
-          {disposalRequest.reviewStatus === 'reviewed' &&
+          {disposalRequest.reviewStatus === DRSVal.REVIEWED &&
             disposalRequest.reviewOpinion &&
             disposalRequest.reviewedByName &&
             disposalRequest.reviewedAt && (

@@ -10,6 +10,7 @@ import {
   type Site,
   createEquipmentSchema,
   updateEquipmentSchema,
+  UserRoleValues as URVal,
 } from '@equipment-management/schemas';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -223,16 +224,17 @@ export function EquipmentForm({
   // 사용자 역할 결정 - useMemo 내부에서 직접 roles 접근하여 의존성 안정화
   const userRole = useMemo(() => {
     const roles = (user as { roles?: string[] })?.roles || [];
-    if (roles.some((r) => ['system_admin', 'SYSTEM_ADMIN'].includes(r))) return 'system_admin';
-    if (roles.some((r) => ['lab_manager', 'LAB_MANAGER', 'admin', 'ADMIN'].includes(r)))
-      return 'lab_manager';
+    if (roles.some((r) => [URVal.SYSTEM_ADMIN, 'SYSTEM_ADMIN'].includes(r)))
+      return URVal.SYSTEM_ADMIN;
+    if (roles.some((r) => [URVal.LAB_MANAGER, 'LAB_MANAGER', 'admin', 'ADMIN'].includes(r)))
+      return URVal.LAB_MANAGER;
     if (
       roles.some((r) =>
-        ['technical_manager', 'TECHNICAL_MANAGER', 'manager', 'MANAGER'].includes(r)
+        [URVal.TECHNICAL_MANAGER, 'TECHNICAL_MANAGER', 'manager', 'MANAGER'].includes(r)
       )
     )
-      return 'technical_manager';
-    return 'test_engineer';
+      return URVal.TECHNICAL_MANAGER;
+    return URVal.TEST_ENGINEER;
   }, [user]);
 
   const roleInfo = ROLE_INFO[userRole];

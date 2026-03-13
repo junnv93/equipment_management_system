@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
 import { useTeamFilters } from '@/hooks/use-team-filters';
 import type { UITeamFilters } from '@/lib/utils/team-filter-utils';
-import type { UserRole } from '@equipment-management/schemas';
+import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
 import { TEAMS_SITE_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
 import {
   SITE_PANEL_TOKENS,
@@ -79,7 +79,7 @@ export function TeamListContent({ initialData, initialFilters }: TeamListContent
   });
 
   const teams = useMemo(() => data?.data || [], [data]);
-  const canCreateTeam = hasRole(['lab_manager', 'system_admin', 'technical_manager']);
+  const canCreateTeam = hasRole([URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN, URVal.TECHNICAL_MANAGER]);
   const hasActiveFilters = activeCount > 0;
 
   const handleClearFilters = () => {

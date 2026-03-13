@@ -8,6 +8,7 @@ import { ArrowLeft, Edit, Trash2, Users, MapPin, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import type { TeamDetail as TeamDetailType, TeamMember } from '@/lib/api/teams-api';
 import { SITE_CONFIG } from '@/lib/api/teams-api';
 import { TeamTypeIcon, TeamTypeBadge } from './TeamTypeIcon';
@@ -51,8 +52,8 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
   const siteInfo = team.site ? SITE_CONFIG[team.site as keyof typeof SITE_CONFIG] : null;
 
   // 권한 확인
-  const canEdit = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
-  const canDelete = hasRole(['system_admin']); // system_admin만 팀 삭제 가능
+  const canEdit = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
+  const canDelete = hasRole([URVal.SYSTEM_ADMIN]); // system_admin만 팀 삭제 가능
 
   return (
     <div className="space-y-6">

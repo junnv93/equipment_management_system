@@ -9,6 +9,10 @@ import { queryKeys } from '@/lib/api/query-config';
 import calibrationApi, { type Calibration } from '@/lib/api/calibration-api';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import { useAuth } from '@/hooks/use-auth';
+import {
+  UserRoleValues as URVal,
+  CalibrationApprovalStatusValues as CASVal,
+} from '@equipment-management/schemas';
 import { getCalibrationActionButtonClasses } from '@/lib/design-tokens';
 
 // 승인/반려 후 무효화할 쿼리 키 목록 (equipmentId 의존 없는 공통 키)
@@ -47,7 +51,7 @@ export function CalibrationApprovalActions({
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     optimisticUpdate: (old, { id }) =>
       (old ?? []).map((cal) =>
-        cal.id === id ? { ...cal, approvalStatus: 'approved' as const } : cal
+        cal.id === id ? { ...cal, approvalStatus: CASVal.APPROVED as const } : cal
       ),
     invalidateKeys: [...APPROVAL_INVALIDATE_KEYS],
     successMessage: t('calibrationHistoryTab.approval.approveSuccess'),
@@ -63,7 +67,7 @@ export function CalibrationApprovalActions({
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     optimisticUpdate: (old, { id }) =>
       (old ?? []).map((cal) =>
-        cal.id === id ? { ...cal, approvalStatus: 'rejected' as const } : cal
+        cal.id === id ? { ...cal, approvalStatus: CASVal.REJECTED as const } : cal
       ),
     invalidateKeys: [...APPROVAL_INVALIDATE_KEYS],
     successMessage: t('calibrationHistoryTab.approval.rejectSuccess'),
@@ -71,8 +75,8 @@ export function CalibrationApprovalActions({
 
   // 렌더링 조건: pending_approval 상태 + 승인 권한 보유
   if (
-    calibration.approvalStatus !== 'pending_approval' ||
-    !hasRole(['technical_manager', 'lab_manager'])
+    calibration.approvalStatus !== CASVal.PENDING_APPROVAL ||
+    !hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER])
   ) {
     return null;
   }

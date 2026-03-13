@@ -36,7 +36,7 @@ import {
   UserCheck,
   AlertCircle,
 } from 'lucide-react';
-import type { UserRole } from '@equipment-management/schemas';
+import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useTranslations } from 'next-intl';
 import {
   getActionButtonClasses,
@@ -264,10 +264,10 @@ export function CalibrationPlanDetailClient({
 
   // 사용자 역할 확인
   const userRole = session?.user?.role as UserRole | undefined;
-  const isTechnicalManager = userRole === 'technical_manager';
-  const isQualityManager = userRole === 'quality_manager';
-  const isLabManager = userRole === 'lab_manager';
-  const isSystemAdmin = userRole === 'system_admin';
+  const isTechnicalManager = userRole === URVal.TECHNICAL_MANAGER;
+  const isQualityManager = userRole === URVal.QUALITY_MANAGER;
+  const isLabManager = userRole === URVal.LAB_MANAGER;
+  const isSystemAdmin = userRole === URVal.SYSTEM_ADMIN;
 
   // 역할별 액션 가능 여부
   const canSubmitForReview =

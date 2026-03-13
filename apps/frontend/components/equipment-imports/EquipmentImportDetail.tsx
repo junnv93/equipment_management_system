@@ -30,6 +30,7 @@ import {
   EQUIPMENT_IMPORT_SOURCE_LABELS,
   type EquipmentImportStatus,
   type Classification,
+  UserRoleValues as URVal,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -178,7 +179,9 @@ export default function EquipmentImportDetail({ id }: Props) {
   const isRequester = user?.id === equipmentImport.requesterId;
   const userRole = user?.roles?.[0];
   const canApprove =
-    userRole === 'technical_manager' || userRole === 'lab_manager' || userRole === 'system_admin';
+    userRole === URVal.TECHNICAL_MANAGER ||
+    userRole === URVal.LAB_MANAGER ||
+    userRole === URVal.SYSTEM_ADMIN;
 
   const isRental = equipmentImport.sourceType === 'rental';
   const isInternalShared = equipmentImport.sourceType === 'internal_shared';

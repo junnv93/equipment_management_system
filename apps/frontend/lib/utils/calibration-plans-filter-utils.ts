@@ -18,14 +18,20 @@
  * ============================================================================
  */
 
+import type { CalibrationPlanStatus, Site } from '@equipment-management/schemas';
+
 /**
  * UI에서 사용하는 필터 타입 (URL 파라미터와 1:1 대응)
+ *
+ * ⚠️ enum 필드는 `EnumType | ''` 패턴 사용 (Equipment 필터 레퍼런스 패턴 준수)
+ * - '' = 전체 (필터 미적용)
+ * - URL에서 파싱 시 `as EnumType | ''` 캐스팅 적용
  */
 export interface UICalibrationPlansFilters {
   year: string; // 연도 ('' = 전체, 기본값은 현재 연도)
-  siteId: string; // 사이트 ID ('' = 전체)
+  siteId: Site | ''; // 사이트 ID ('' = 전체)
   teamId: string; // 팀 ID ('' = 전체)
-  status: string; // 상태 ('' = 전체)
+  status: CalibrationPlanStatus | ''; // 상태 ('' = 전체)
   page: number; // 현재 페이지 (1-based)
   pageSize: number; // 페이지당 항목 수
 }
@@ -35,9 +41,9 @@ export interface UICalibrationPlansFilters {
  */
 export interface ApiCalibrationPlansFilters {
   year?: string;
-  siteId?: string;
+  siteId?: Site;
   teamId?: string;
-  status?: string;
+  status?: CalibrationPlanStatus;
   page?: number;
   pageSize?: number;
 }
@@ -91,15 +97,15 @@ export function parseCalibrationPlansFiltersFromSearchParams(
 
   const year = get('year') || defaultFilters.year;
 
-  // ✅ "_all"을 빈 문자열로 변환 (무한 리다이렉트 방지)
+  // ✅ "_all"을 빈 문자열로 변환 + enum 타입 캐스팅 (Equipment 필터 패턴 준수)
   const siteIdRaw = get('siteId') || defaultFilters.siteId;
-  const siteId = siteIdRaw === '_all' ? '' : siteIdRaw;
+  const siteId = (siteIdRaw === '_all' ? '' : siteIdRaw) as Site | '';
 
   const teamIdRaw = get('teamId') || defaultFilters.teamId;
   const teamId = teamIdRaw === '_all' ? '' : teamIdRaw;
 
   const statusRaw = get('status') || defaultFilters.status;
-  const status = statusRaw === '_all' ? '' : statusRaw;
+  const status = (statusRaw === '_all' ? '' : statusRaw) as CalibrationPlanStatus | '';
 
   const pageRaw = get('page');
   const page = pageRaw ? Math.max(1, parseInt(pageRaw, 10) || 1) : defaultFilters.page;
@@ -130,9 +136,9 @@ export function convertFiltersToApiParams(
 ): ApiCalibrationPlansFilters {
   return {
     year: filters.year || undefined,
-    siteId: filters.siteId || undefined,
+    siteId: (filters.siteId || undefined) as Site | undefined,
     teamId: filters.teamId || undefined,
-    status: filters.status || undefined,
+    status: (filters.status || undefined) as CalibrationPlanStatus | undefined,
     page: filters.page,
     pageSize: filters.pageSize,
   };

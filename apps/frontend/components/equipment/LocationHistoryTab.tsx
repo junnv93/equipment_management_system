@@ -35,6 +35,7 @@ import equipmentApi, { type CreateLocationHistoryInput } from '@/lib/api/equipme
 import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import {
@@ -171,8 +172,13 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
   };
 
   // 등록 권한 확인
-  const canCreate = hasRole(['test_engineer', 'technical_manager', 'lab_manager', 'system_admin']);
-  const canDelete = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
+  const canCreate = hasRole([
+    URVal.TEST_ENGINEER,
+    URVal.TECHNICAL_MANAGER,
+    URVal.LAB_MANAGER,
+    URVal.SYSTEM_ADMIN,
+  ]);
+  const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
 
   // 개발 환경에서만 권한 체크 디버그 출력
   if (process.env.NODE_ENV === 'development') {
@@ -180,10 +186,10 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       canCreate,
       canDelete,
       testHasRoles: {
-        test_engineer: hasRole(['test_engineer']),
-        technical_manager: hasRole(['technical_manager']),
-        lab_manager: hasRole(['lab_manager']),
-        system_admin: hasRole(['system_admin']),
+        test_engineer: hasRole([URVal.TEST_ENGINEER]),
+        technical_manager: hasRole([URVal.TECHNICAL_MANAGER]),
+        lab_manager: hasRole([URVal.LAB_MANAGER]),
+        system_admin: hasRole([URVal.SYSTEM_ADMIN]),
       },
     });
   }

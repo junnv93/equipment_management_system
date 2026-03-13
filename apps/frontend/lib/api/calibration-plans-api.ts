@@ -115,7 +115,7 @@ export interface CalibrationPlanSummary {
   rejected: number;
 }
 
-// 쿼리 인터페이스 (API 요청용 - string 허용)
+// 쿼리 인터페이스
 export interface CalibrationPlanQuery {
   year?: number;
   siteId?: string;

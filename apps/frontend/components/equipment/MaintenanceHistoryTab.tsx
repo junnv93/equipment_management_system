@@ -35,6 +35,7 @@ import equipmentApi, { type CreateMaintenanceHistoryInput } from '@/lib/api/equi
 import { useTranslations } from 'next-intl';
 import { formatDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { getErrorMessage } from '@/lib/api/error';
 import {
@@ -152,8 +153,13 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
   };
 
   // 등록 권한 확인
-  const canCreate = hasRole(['test_engineer', 'technical_manager', 'lab_manager', 'system_admin']);
-  const canDelete = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
+  const canCreate = hasRole([
+    URVal.TEST_ENGINEER,
+    URVal.TECHNICAL_MANAGER,
+    URVal.LAB_MANAGER,
+    URVal.SYSTEM_ADMIN,
+  ]);
+  const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
 
   // 등록 Dialog
   const RegisterDialog = (

@@ -26,7 +26,10 @@ import {
   convertFiltersToApiParams,
   type UICheckoutFilters,
 } from '@/lib/utils/checkout-filter-utils';
-import { getCheckoutStatusGroupFilterValue } from '@equipment-management/schemas';
+import {
+  getCheckoutStatusGroupFilterValue,
+  UserRoleValues as URVal,
+} from '@equipment-management/schemas';
 
 interface OutboundCheckoutsTabProps {
   teamId?: string;
@@ -112,7 +115,7 @@ export default function OutboundCheckoutsTab({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { hasRole } = useAuth();
-  const canApprove = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
+  const canApprove = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
 
   const statCards = useStatCards(summary);
 

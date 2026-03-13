@@ -48,6 +48,7 @@ import { useTranslations } from 'next-intl';
 import { isBefore, startOfDay } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
+import { UserRoleValues as URVal } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
@@ -319,8 +320,13 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
   };
 
   // 등록 권한 확인
-  const canCreate = hasRole(['test_engineer', 'technical_manager', 'lab_manager', 'system_admin']);
-  const canDelete = hasRole(['technical_manager', 'lab_manager', 'system_admin']);
+  const canCreate = hasRole([
+    URVal.TEST_ENGINEER,
+    URVal.TECHNICAL_MANAGER,
+    URVal.LAB_MANAGER,
+    URVal.SYSTEM_ADMIN,
+  ]);
+  const canDelete = hasRole([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER, URVal.SYSTEM_ADMIN]);
 
   // 등록 Dialog
   const RegisterDialog = (

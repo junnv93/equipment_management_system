@@ -447,7 +447,6 @@ export {
   APPROVAL_CATEGORY_SIDEBAR_TOKENS,
   APPROVAL_MOBILE_CATEGORY_BAR_TOKENS,
   APPROVAL_DETAIL_PANEL_TOKENS,
-  APPROVAL_ROW_ACTIVE_TOKENS,
   getApprovalStatusBadgeClasses,
   getApprovalCardBorderClasses,
   getApprovalStepperNodeClasses,
