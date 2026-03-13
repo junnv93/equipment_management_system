@@ -252,6 +252,22 @@ grep -rn "import.*enforceSiteAccess" apps/backend/src --include="*.ts" | grep -v
 
 **FAIL 기준:** mutation 엔드포인트에서 사이트 접근 제어 없이 다른 사이트 데이터 변경 가능.
 
+```bash
+# 구식 시그니처 (5-param) 또는 하드코딩 에러 코드 잔존 확인
+grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.controller.ts" | grep "CROSS_SITE\|CROSS_TEAM\|DENIED"
+```
+
+**PASS 기준:** 0개 결과 (4-param 시그니처: `req, entitySite, policy, entityTeamId?`).
+
+**FAIL 기준:** 하드코딩 에러 코드 문자열이 인자로 전달되면 구식 시그니처 사용 — `errorCode` 인자 제거 필요.
+
+```bash
+# 인라인 사이트 체크 중복 구현 탐지 (enforceSiteAccess 대신 직접 구현)
+grep -rn "scope.type.*===.*site.*entitySite\|equipment.*\.site.*!==.*req" apps/backend/src/modules --include="*.controller.ts" | grep -v "// "
+```
+
+**PASS 기준:** 0개 결과 (모든 사이트 체크가 `enforceSiteAccess()` 유틸리티를 통해 수행).
+
 ## Output Format
 
 ```markdown

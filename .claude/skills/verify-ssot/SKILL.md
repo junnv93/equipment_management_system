@@ -59,6 +59,8 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `apps/frontend/components/dashboard/StatsCard.tsx`                           | lucide-react 타입 참조 (LucideIcon)                                                            |
 | `apps/backend/src/modules/calibration-plans/calibration-plans.types.ts`      | Drizzle `$inferSelect` 기반 모듈 타입 SSOT (CalibrationPlanDetail 등)                          |
 | `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                                                     |
+| `apps/frontend/lib/errors/equipment-errors.ts`                               | 프론트엔드 에러 코드 매핑 (ErrorCode ↔ EquipmentErrorCode, mapBackendErrorCode)               |
+| `packages/db/src/schema/calibration-plans.ts`                                | DB 스키마 rejectionStage (REJECTION_STAGE_VALUES SSOT import 필수)                             |
 
 ## Workflow
 
@@ -584,6 +586,79 @@ grep -rn "APPROVAL_KPI" apps/backend/src apps/frontend --include="*.ts" --includ
 
 **FAIL 기준:** `approval-kpi.ts` 외 파일에서 `URGENT_THRESHOLD_DAYS = 8` 등 직접 선언, 또는 `APPROVAL_KPI`를 잘못된 경로에서 import.
 
+### Step 11f: REJECTION_STAGE_VALUES SSOT 사용 확인
+
+DB 스키마의 `rejectionStage` 배열이 `@equipment-management/schemas`의 `REJECTION_STAGE_VALUES`에서 임포트되는지 확인합니다. 로컬 배열 선언은 SSOT 위반입니다.
+
+```bash
+# rejectionStage 로컬 배열 선언 탐지 (schemas import가 아닌 직접 선언)
+grep -rn "rejectionStage\s*=\s*\[" packages/db/src apps/backend/src --include="*.ts" | grep -v "node_modules\|// "
+```
+
+```bash
+# REJECTION_STAGE_VALUES 올바른 import 확인
+grep -rn "REJECTION_STAGE_VALUES" packages/db/src apps/backend/src --include="*.ts" | grep -v "node_modules\|// "
+```
+
+**PASS 기준:** `rejectionStage` 배열이 `REJECTION_STAGE_VALUES`를 참조 (직접 `['review', 'approval']` 선언 없음).
+
+**FAIL 기준:** `const rejectionStage = ['review', 'approval'] as const` 같은 로컬 선언 발견 시 위반.
+
+**수정 패턴:**
+
+```typescript
+// ❌ WRONG — 로컬 하드코딩
+export const rejectionStage = ['review', 'approval'] as const;
+
+// ✅ CORRECT — schemas SSOT에서 import
+import { REJECTION_STAGE_VALUES } from '@equipment-management/schemas';
+export const rejectionStage = REJECTION_STAGE_VALUES;
+```
+
+### Step 11g: ErrorCode ↔ 프론트엔드 mapBackendErrorCode 매핑 완전성 확인
+
+백엔드 `ErrorCode` enum에 정의된 에러 코드가 프론트엔드 `mapBackendErrorCode`에 매핑되어 있는지 확인합니다. 특히 새로 추가된 에러 코드(`SCOPE_ACCESS_DENIED` 등)가 누락되지 않았는지 검증합니다.
+
+```bash
+# 백엔드 ErrorCode enum 값 목록 확인
+grep -n "= '" packages/schemas/src/errors.ts | grep -v "// "
+```
+
+```bash
+# 프론트엔드 mapBackendErrorCode 매핑 확인
+grep -n "ErrorCode\.\|: EquipmentErrorCode\." apps/frontend/lib/errors/equipment-errors.ts | head -30
+```
+
+**PASS 기준:** `ErrorCode`의 주요 에러 코드(`VERSION_CONFLICT`, `SCOPE_ACCESS_DENIED` 등)가 `mapBackendErrorCode`에 매핑되어 있음.
+
+**FAIL 기준:** 백엔드에서 사용하는 `ErrorCode` 값이 프론트엔드 매핑에 없으면 → 프론트엔드에서 해당 에러를 인식하지 못하고 generic 에러로 표시.
+
+**수정 패턴:**
+
+```typescript
+// apps/frontend/lib/errors/equipment-errors.ts
+
+// 1. EquipmentErrorCode enum에 추가
+enum EquipmentErrorCode {
+  // ...
+  SCOPE_ACCESS_DENIED = 'SCOPE_ACCESS_DENIED',
+}
+
+// 2. mapBackendErrorCode에 매핑 추가
+const backendCodeMap: Record<string, EquipmentErrorCode> = {
+  // ...
+  SCOPE_ACCESS_DENIED: EquipmentErrorCode.SCOPE_ACCESS_DENIED,
+};
+
+// 3. ERROR_MESSAGES에 한국어 메시지 추가
+[EquipmentErrorCode.SCOPE_ACCESS_DENIED]: {
+  title: '접근 범위 초과',
+  message: '해당 사이트/팀의 리소스에 대한 접근 권한이 없습니다.',
+  solutions: [...],
+  severity: 'error',
+},
+```
+
 ### Step 11: PAGE_SIZE_OPTIONS 로컬 재정의 탐지
 
 `PAGE_SIZE_OPTIONS`가 `@/lib/config/pagination`에서 임포트되지 않고 컴포넌트에서 직접 선언되어 있는지 확인합니다.
@@ -647,6 +722,8 @@ import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/config/pagination';
 | 11c | CheckoutCacheInvalidation     | PASS/FAIL | 직접 queryKeys 조합 무효화 위치        |
 | 11d | countsAll prefix 키 사용      | PASS/FAIL | approvals.counts() 무효화 위치         |
 | 11e | APPROVAL_KPI 임계값           | PASS/FAIL | 하드코딩 임계값/잘못된 import 위치     |
+| 11f | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
+| 11g | ErrorCode↔프론트엔드 매핑    | PASS/FAIL | 누락된 ErrorCode 매핑 목록             |
 ```
 
 ## Exceptions

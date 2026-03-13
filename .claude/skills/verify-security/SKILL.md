@@ -289,18 +289,48 @@ grep -n "INTERNAL_API_KEY" apps/frontend/.env.local 2>/dev/null || echo "MISSING
 
 **FAIL 기준:** 환경변수 없으면 헤더가 전송되지 않아 throttle bypass 실패.
 
-### Step 10: enforceSiteAccess 팀 레벨 격리 검증
+### Step 10: enforceSiteAccess 아키텍처 검증
 
-`enforceSiteAccess()`가 `entityTeamId` 파라미터를 활용하여 팀 레벨 격리를 지원하는지 확인합니다.
+`enforceSiteAccess()`가 올바른 시그니처와 SSOT 에러 코드를 사용하는지 확인합니다.
 
 ```bash
-# enforceSiteAccess에 entityTeamId 파라미터 지원 확인
-grep -n "entityTeamId\|resolveDataScope" apps/backend/src/common/utils/enforce-site-access.ts
+# enforceSiteAccess 시그니처 확인 (4-param: req, entitySite, policy, entityTeamId?)
+grep -n "export function enforceSiteAccess" apps/backend/src/common/utils/enforce-site-access.ts
 ```
 
-**PASS 기준:** `enforceSiteAccess()`가 `entityTeamId`를 5번째 파라미터로 받아 `resolveDataScope()`를 통해 팀 레벨 접근 제어 수행.
+**PASS 기준:** `enforceSiteAccess(req, entitySite, policy, entityTeamId?)` — 4개 파라미터 시그니처. `errorCode` 문자열 파라미터가 없어야 함.
 
-**FAIL 기준:** 사이트 레벨 격리만 하고 팀 레벨 격리가 없으면 같은 사이트 내 다른 팀의 데이터 변경 가능.
+```bash
+# SSOT 에러 코드 사용 확인 (ErrorCode.ScopeAccessDenied)
+grep -n "ErrorCode.ScopeAccessDenied\|code: ErrorCode" apps/backend/src/common/utils/enforce-site-access.ts
+```
+
+**PASS 기준:** 모든 ForbiddenException에 `code: ErrorCode.ScopeAccessDenied` 사용.
+
+**FAIL 기준:** 하드코딩된 에러 코드 문자열 (`'CHECKOUT_CROSS_SITE_MUTATION_DENIED'` 등) 사용 시 위반.
+
+```bash
+# scope.type === 'none' fail-close 처리 확인
+grep -n "scope.type.*none\|fail-close" apps/backend/src/common/utils/enforce-site-access.ts
+```
+
+**PASS 기준:** `scope.type === 'none'`에서 ForbiddenException throw (fail-close).
+
+**FAIL 기준:** `scope.type === 'none'` 미처리 시 pass-through (fail-open) — 보안 취약점.
+
+```bash
+# team scope에서 site 검증 (defense-in-depth) 확인
+grep -n "team.*site\|defense-in-depth\|site.*team" apps/backend/src/common/utils/enforce-site-access.ts
+```
+
+**PASS 기준:** `scope.type === 'team'`에서 site 먼저 검증 후 team 검증 (팀⊂사이트 원칙).
+
+```bash
+# 컨트롤러에서 하드코딩된 에러 코드 잔존 여부 확인
+grep -rn "CROSS_SITE\|CROSS_TEAM" apps/backend/src/modules --include="*.controller.ts"
+```
+
+**PASS 기준:** 0개 결과 (모든 컨트롤러가 `enforceSiteAccess()` 내부의 `ErrorCode.ScopeAccessDenied` 사용).
 
 ```bash
 # enforceSiteAccess 호출 시 entityTeamId 전달 여부 확인
@@ -310,11 +340,14 @@ grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.controller.ts
 **PASS 기준:** mutation 엔드포인트에서 `enforceSiteAccess()` 호출 시 가능하면 `entityTeamId`도 전달.
 
 ```typescript
-// ❌ WRONG — 사이트 레벨만 확인 (같은 사이트 다른 팀 데이터 변경 가능)
-enforceSiteAccess(req.user, entitySite, 'Equipment');
+// ❌ WRONG — 하드코딩 에러 코드 + 5-param 구식 시그니처
+enforceSiteAccess(req, entitySite, EQUIPMENT_DATA_SCOPE, 'EQUIPMENT_CROSS_SITE_MUTATION_DENIED', entityTeamId);
 
-// ✅ CORRECT — 팀 레벨까지 확인
-enforceSiteAccess(req.user, entitySite, 'Equipment', ForbiddenException, entityTeamId);
+// ❌ WRONG — 인라인 사이트 체크 (enforceSiteAccess 미사용)
+if (scope.type === 'site' && equipment.site !== req.user.site) { throw new ForbiddenException(...); }
+
+// ✅ CORRECT — 4-param 시그니처 + SSOT 에러 코드
+enforceSiteAccess(req, entitySite, EQUIPMENT_DATA_SCOPE, entityTeamId);
 ```
 
 ## Output Format
