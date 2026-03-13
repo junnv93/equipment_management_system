@@ -33,6 +33,7 @@ export enum EquipmentErrorCode {
   // 권한 에러
   UNAUTHORIZED = 'UNAUTHORIZED',
   PERMISSION_DENIED = 'PERMISSION_DENIED',
+  SCOPE_ACCESS_DENIED = 'SCOPE_ACCESS_DENIED',
   SESSION_EXPIRED = 'SESSION_EXPIRED',
 
   // 리소스 에러
@@ -164,6 +165,15 @@ export const ERROR_MESSAGES: Record<EquipmentErrorCode, ErrorInfo> = {
     solutions: [
       '해당 사이트/팀에 대한 권한이 있는지 확인하세요',
       '권한이 필요한 경우 시스템 관리자에게 문의하세요',
+    ],
+    severity: 'error',
+  },
+  [EquipmentErrorCode.SCOPE_ACCESS_DENIED]: {
+    title: '접근 범위 초과',
+    message: '해당 사이트/팀의 리소스에 대한 접근 권한이 없습니다.',
+    solutions: [
+      '본인 소속 사이트/팀의 데이터만 수정할 수 있습니다.',
+      '필요시 시스템 관리자에게 문의하세요.',
     ],
     severity: 'error',
   },
@@ -432,6 +442,7 @@ export function mapBackendErrorCode(backendCode?: string): EquipmentErrorCode {
     FORBIDDEN: EquipmentErrorCode.PERMISSION_DENIED,
     PERMISSION_DENIED: EquipmentErrorCode.PERMISSION_DENIED,
     ACCESS_DENIED: EquipmentErrorCode.PERMISSION_DENIED,
+    SCOPE_ACCESS_DENIED: EquipmentErrorCode.SCOPE_ACCESS_DENIED,
 
     // 리소스 에러
     NOT_FOUND: EquipmentErrorCode.NOT_FOUND,

@@ -140,7 +140,7 @@ export default function CalibrationPlansContent({
     label: string;
     count: number;
     variant: keyof typeof CALIBRATION_PLAN_KPI_TOKENS.borderColors;
-    filterStatus?: string;
+    filterStatus?: CalibrationPlanStatus;
   }> = [
     { key: 'total', label: t('plansList.kpi.total'), count: summary?.total ?? 0, variant: 'total' },
     {
@@ -259,7 +259,7 @@ export default function CalibrationPlansContent({
           </Label>
           <Select
             value={filters.siteId || '_all'}
-            onValueChange={(v) => updateSiteId(v === '_all' ? '' : v)}
+            onValueChange={(v) => updateSiteId((v === '_all' ? '' : v) as Site | '')}
             disabled={isSiteFixed}
           >
             <SelectTrigger
@@ -324,7 +324,9 @@ export default function CalibrationPlansContent({
           </Label>
           <Select
             value={filters.status || '_all'}
-            onValueChange={(v) => updateStatus(v === '_all' ? '' : v)}
+            onValueChange={(v) =>
+              updateStatus((v === '_all' ? '' : v) as CalibrationPlanStatus | '')
+            }
           >
             <SelectTrigger className={cn(CALIBRATION_PLAN_FILTER_TOKENS.select, 'w-[140px]')}>
               <SelectValue placeholder={t('plansList.filter.statusPlaceholder')} />

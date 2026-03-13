@@ -29,7 +29,7 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useNCFilters } from '@/hooks/use-nc-filters';
 import type { UINonConformancesFilters } from '@/lib/utils/non-conformances-filter-utils';
 import { formatDate } from '@/lib/utils/date';
-import { SITE_LABELS, type NonConformanceStatus } from '@equipment-management/schemas';
+import { SITE_LABELS, type NonConformanceStatus, type Site } from '@equipment-management/schemas';
 import {
   getSemanticBadgeClasses,
   ncStatusToSemantic,
@@ -220,7 +220,7 @@ export default function NonConformancesContent({
         {/* 상태 필터 */}
         <Select
           value={filters.status || '_all'}
-          onValueChange={(v) => updateStatus(v === '_all' ? '' : v)}
+          onValueChange={(v) => updateStatus((v === '_all' ? '' : v) as NonConformanceStatus | '')}
         >
           <SelectTrigger className="h-8 w-[130px] text-xs">
             <SelectValue placeholder="상태" />
@@ -238,7 +238,7 @@ export default function NonConformancesContent({
         {/* 유형 필터 */}
         <Select
           value={filters.ncType || '_all'}
-          onValueChange={(v) => updateNCType(v === '_all' ? '' : v)}
+          onValueChange={(v) => updateNCType((v === '_all' ? '' : v) as NonConformanceType | '')}
         >
           <SelectTrigger className="h-8 w-[130px] text-xs">
             <SelectValue placeholder="유형" />
@@ -256,7 +256,7 @@ export default function NonConformancesContent({
         {/* 사이트 필터 */}
         <Select
           value={filters.site || '_all'}
-          onValueChange={(v) => updateSite(v === '_all' ? '' : v)}
+          onValueChange={(v) => updateSite((v === '_all' ? '' : v) as Site | '')}
         >
           <SelectTrigger className="h-8 w-[110px] text-xs">
             <SelectValue placeholder="사이트" />
