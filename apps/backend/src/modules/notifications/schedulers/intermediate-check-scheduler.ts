@@ -14,8 +14,10 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
  * 이 서비스는 교정 중간점검 예정 알림을 발송합니다.
  * 알림 주기: D-30일, D-7일, 당일
  *
- * 중복 방지: DB 기반 (notifications 테이블 조회)
+ * 중복 방지: DB 기반 (notifications 테이블 배치 조회)
  * → 서버 재시작, 멀티 인스턴스에서도 안전
+ *
+ * 성능: 배치 중복 체크 + Promise.all 병렬 로딩으로 N+1 방지
  */
 @Injectable()
 export class IntermediateCheckScheduler {
@@ -30,32 +32,35 @@ export class IntermediateCheckScheduler {
   ) {}
 
   /**
-   * DB 기반 중복 알림 체크
+   * DB 기반 배치 중복 알림 체크 (N+1 방지)
    *
-   * notifications 테이블에서 같은 type + entityId로 최근 hoursBack 시간 내
-   * 알림이 존재하는지 확인한다.
+   * notifications 테이블에서 같은 type + entityId들의 최근 hoursBack 시간 내
+   * 알림이 존재하는 entityId를 Set으로 반환한다.
    * idx_notifications_entity (entityType, entityId) 인덱스 활용.
    */
-  private async hasRecentNotification(
+  private async getRecentNotificationEntityIds(
     entityType: string,
-    entityId: string,
+    entityIds: string[],
     type: string,
     hoursBack: number = 25
-  ): Promise<boolean> {
+  ): Promise<Set<string>> {
+    const uniqueIds = [...new Set(entityIds.filter(Boolean))];
+    if (uniqueIds.length === 0) return new Set();
+
     const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
-    const [existing] = await this.db
-      .select({ id: schema.notifications.id })
+    const rows = await this.db
+      .select({ entityId: schema.notifications.entityId })
       .from(schema.notifications)
       .where(
         and(
           eq(schema.notifications.entityType, entityType),
-          eq(schema.notifications.entityId, entityId),
+          inArray(schema.notifications.entityId, uniqueIds),
           eq(schema.notifications.type, type),
           gte(schema.notifications.createdAt, cutoff)
         )
-      )
-      .limit(1);
-    return !!existing;
+      );
+
+    return new Set(rows.map((r) => r.entityId).filter((id): id is string => id !== null));
   }
 
   /**
@@ -107,6 +112,8 @@ export class IntermediateCheckScheduler {
   /**
    * 중간점검 예정 알림을 발송합니다.
    * D-30일, D-7일, 당일에 중간점검 예정 알림을 발송합니다.
+   *
+   * 성능: Promise.all로 장비 정보 + 중복 체크를 병렬 로딩
    */
   async handleIntermediateCheckNotifications(
     days: number = 30
@@ -119,10 +126,14 @@ export class IntermediateCheckScheduler {
 
       this.logger.log(`${upcomingChecks.length}개의 중간점검 예정 항목 발견`);
 
-      // 배치 장비 조회 (N+1 방지)
-      const equipmentMap = await this.getEquipmentMap(
-        upcomingChecks.map((c) => c.equipmentId).filter(Boolean)
-      );
+      // 병렬 로딩: 장비 정보 + 최근 알림 ID (N+1 방지)
+      const calibrationIds = upcomingChecks.map((c) => c.id);
+      const equipmentIds = upcomingChecks.map((c) => c.equipmentId).filter(Boolean);
+
+      const [equipmentMap, recentNotificationIds] = await Promise.all([
+        this.getEquipmentMap(equipmentIds),
+        this.getRecentNotificationEntityIds('calibration', calibrationIds, 'calibration_dueSoon'),
+      ]);
 
       let sentCount = 0;
       let skippedCount = 0;
@@ -140,13 +151,8 @@ export class IntermediateCheckScheduler {
           continue;
         }
 
-        // DB 기반 중복 체크 (서버 재시작 무관)
-        const isDuplicate = await this.hasRecentNotification(
-          'calibration',
-          calibration.id,
-          'calibration_dueSoon'
-        );
-        if (isDuplicate) {
+        // 배치 중복 체크 — O(1) Set lookup (서버 재시작 무관)
+        if (recentNotificationIds.has(calibration.id)) {
           this.logger.debug(`중복 알림 건너뜀(DB): 교정 ID ${calibration.id}, D-${daysUntilCheck}`);
           skippedCount++;
           continue;
@@ -223,6 +229,8 @@ export class IntermediateCheckScheduler {
 
   /**
    * 교정 예정 + 중간점검 통합 알림 발송
+   *
+   * 성능: Promise.all로 장비 정보 + 중복 체크를 병렬 로딩
    */
   async handleCombinedCalibrationNotifications(
     days: number = 30
@@ -238,10 +246,14 @@ export class IntermediateCheckScheduler {
 
       this.logger.log(`${dueCalibrations.length}개의 교정 예정 항목 발견`);
 
-      // 배치 장비 조회 (N+1 방지)
-      const equipmentMap = await this.getEquipmentMap(
-        dueCalibrations.map((c) => c.equipmentId).filter(Boolean)
-      );
+      // 병렬 로딩: 장비 정보 + 최근 알림 ID (N+1 방지)
+      const calibrationIds = dueCalibrations.map((c) => c.id);
+      const equipmentIds = dueCalibrations.map((c) => c.equipmentId).filter(Boolean);
+
+      const [equipmentMap, recentNotificationIds] = await Promise.all([
+        this.getEquipmentMap(equipmentIds),
+        this.getRecentNotificationEntityIds('calibration', calibrationIds, 'calibration_dueSoon'),
+      ]);
 
       let sentCount = 0;
       let skippedCount = 0;
@@ -263,13 +275,8 @@ export class IntermediateCheckScheduler {
           continue;
         }
 
-        // DB 기반 중복 체크 (서버 재시작 무관)
-        const isDuplicate = await this.hasRecentNotification(
-          'calibration',
-          calibration.id,
-          'calibration_dueSoon'
-        );
-        if (isDuplicate) {
+        // 배치 중복 체크 — O(1) Set lookup (서버 재시작 무관)
+        if (recentNotificationIds.has(calibration.id)) {
           this.logger.debug(
             `중복 교정 알림 건너뜀(DB): 교정 ID ${calibration.id}, D-${daysUntilCalibration}`
           );

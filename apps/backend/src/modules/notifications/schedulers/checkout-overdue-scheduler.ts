@@ -2,7 +2,7 @@ import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AppDatabase } from '@equipment-management/db';
-import { and, eq, lte, sql } from 'drizzle-orm';
+import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
@@ -17,6 +17,9 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
  *
  * 중복 방지: WHERE status = 'checked_out' → 이미 overdue인 건은 다시 처리하지 않음
  * (CAS 패턴: status 조건이 내장 dedup 역할)
+ *
+ * 성능: 배치 UPDATE + 배치 checkout_items 조회로 N+1 방지
+ * (2N queries → 3 queries)
  *
  * 실행 주기: 매시간 (CalibrationOverdueScheduler와 동일)
  */
@@ -71,16 +74,17 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
   }
 
   /**
-   * 반출 기한 초과 점검 및 상태 전환
+   * 반출 기한 초과 점검 및 상태 전환 (배치 최적화)
    *
    * 크로스 사이트 워크플로우 지원:
    * - requester의 teamId/site를 JOIN으로 조회
-   * - checkout_items JOIN으로 장비명/관리번호 조회
+   * - checkout_items JOIN으로 장비명/관리번호 배치 조회
    * → RecipientResolver가 scope='team' 수신자를 올바르게 해석
+   *
+   * 성능: 배치 UPDATE + 배치 checkout_items 조회 (2N → 3 queries)
    */
   async checkOverdueCheckouts(): Promise<{ processed: number; updated: number }> {
     const now = new Date();
-    let updated = 0;
 
     // 1. 기한 초과 반출 조회 — requester/equipment 정보 JOIN
     const overdueCheckouts = await this.db
@@ -89,7 +93,6 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
         requesterId: schema.checkouts.requesterId,
         status: schema.checkouts.status,
         expectedReturnDate: schema.checkouts.expectedReturnDate,
-        // requester 정보 (RecipientResolver의 scope='team' 해석용)
         requesterTeamId: schema.users.teamId,
         requesterSite: schema.users.site,
       })
@@ -102,48 +105,76 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
         )
       );
 
+    if (overdueCheckouts.length === 0) {
+      return { processed: 0, updated: 0 };
+    }
+
+    // 2. 배치 UPDATE (CAS — status='checked_out' 조건이 dedup 역할)
+    const overdueIds = overdueCheckouts.map((c) => c.id);
+    const updatedRows = await this.db
+      .update(schema.checkouts)
+      .set({
+        status: 'overdue',
+        version: sql`${schema.checkouts.version} + 1`,
+        updatedAt: now,
+      })
+      .where(
+        and(inArray(schema.checkouts.id, overdueIds), eq(schema.checkouts.status, 'checked_out'))
+      )
+      .returning({ id: schema.checkouts.id });
+
+    const updatedIdSet = new Set(updatedRows.map((r) => r.id));
+    if (updatedIdSet.size === 0) {
+      return { processed: overdueCheckouts.length, updated: 0 };
+    }
+
+    // 3. 배치 checkout_items + equipment JOIN (N+1 방지)
+    const updatedIdArray = [...updatedIdSet];
+    const itemRows = await this.db
+      .select({
+        checkoutId: schema.checkoutItems.checkoutId,
+        equipmentId: schema.checkoutItems.equipmentId,
+        equipmentName: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+      })
+      .from(schema.checkoutItems)
+      .leftJoin(schema.equipment, eq(schema.equipment.id, schema.checkoutItems.equipmentId))
+      .where(inArray(schema.checkoutItems.checkoutId, updatedIdArray));
+
+    // checkoutId → first item Map
+    const itemMap = new Map<
+      string,
+      { equipmentId: string; equipmentName: string; managementNumber: string }
+    >();
+    for (const row of itemRows) {
+      if (!itemMap.has(row.checkoutId)) {
+        itemMap.set(row.checkoutId, {
+          equipmentId: row.equipmentId ?? '',
+          equipmentName: row.equipmentName ?? '',
+          managementNumber: row.managementNumber ?? '',
+        });
+      }
+    }
+
+    // 4. 이벤트 발행 + 캐시 무효화 (DB 쿼리 없음)
     for (const checkout of overdueCheckouts) {
+      if (!updatedIdSet.has(checkout.id)) continue;
+
       try {
-        // 2. 상태 업데이트 (CAS — status='checked_out' 조건이 dedup 역할)
-        const [result] = await this.db
-          .update(schema.checkouts)
-          .set({
-            status: 'overdue',
-            version: sql`${schema.checkouts.version} + 1`,
-            updatedAt: now,
-          })
-          .where(
-            and(eq(schema.checkouts.id, checkout.id), eq(schema.checkouts.status, 'checked_out'))
-          )
-          .returning({ id: schema.checkouts.id });
+        const item = itemMap.get(checkout.id) ?? {
+          equipmentId: '',
+          equipmentName: '',
+          managementNumber: '',
+        };
 
-        if (!result) continue; // 다른 프로세스가 먼저 변경 → skip
-
-        // 3. checkout_items + equipment JOIN으로 장비 정보 조회
-        const [firstItem] = await this.db
-          .select({
-            equipmentId: schema.checkoutItems.equipmentId,
-            equipmentName: schema.equipment.name,
-            managementNumber: schema.equipment.managementNumber,
-          })
-          .from(schema.checkoutItems)
-          .leftJoin(schema.equipment, eq(schema.equipment.id, schema.checkoutItems.equipmentId))
-          .where(eq(schema.checkoutItems.checkoutId, checkout.id))
-          .limit(1);
-
-        const equipmentId = firstItem?.equipmentId || '';
-
-        // 4. 이벤트 발행 — 크로스 사이트 컨텍스트 포함
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_OVERDUE, {
           checkoutId: checkout.id,
-          equipmentId,
-          equipmentName: firstItem?.equipmentName ?? '',
-          managementNumber: firstItem?.managementNumber ?? '',
+          equipmentId: item.equipmentId,
+          equipmentName: item.equipmentName,
+          managementNumber: item.managementNumber,
           requesterId: checkout.requesterId,
-          // RecipientResolver가 scope='team' 해석에 사용
           requesterTeamId: checkout.requesterTeamId ?? '',
           teamId: checkout.requesterTeamId ?? '',
-          // RecipientResolver가 scope='site' 해석에 사용
           requesterSite: checkout.requesterSite ?? '',
           site: checkout.requesterSite ?? '',
           actorId: 'system',
@@ -151,13 +182,10 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
           timestamp: now,
         });
 
-        // 5. 캐시 무효화 (반출 상세)
         this.cacheService.delete(`checkout:detail:${checkout.id}`);
-        if (equipmentId) {
-          this.cacheService.delete(`equipment:detail:${equipmentId}`);
+        if (item.equipmentId) {
+          this.cacheService.delete(`equipment:detail:${item.equipmentId}`);
         }
-
-        updated++;
       } catch (err) {
         this.logger.error(
           `반출 기한초과 처리 실패: ${checkout.id}`,
@@ -166,6 +194,6 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
       }
     }
 
-    return { processed: overdueCheckouts.length, updated };
+    return { processed: overdueCheckouts.length, updated: updatedIdSet.size };
   }
 }

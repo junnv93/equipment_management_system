@@ -1,7 +1,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { eq, and, isNull, notInArray, sql } from 'drizzle-orm';
+import { eq, and, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { equipment, equipmentIncidentHistory } from '@equipment-management/db/schema';
@@ -27,6 +27,8 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
  * - disposed, pending_disposal, retired, inactive 상태 장비
  * - calibrationRequired != 'required' 장비
  * - 이미 calibration_overdue 유형 부적합이 존재하는 장비
+ *
+ * 성능: 배치 inArray 쿼리로 기존 부적합 중복 확인 (N+1 방지)
  */
 @Injectable()
 export class CalibrationOverdueScheduler {
@@ -125,25 +127,30 @@ export class CalibrationOverdueScheduler {
 
       this.logger.log(`교정 기한 초과 장비 ${overdueEquipment.length}개 발견`);
 
-      // 2. 각 장비에 대해 처리
+      if (overdueEquipment.length === 0) {
+        return { processed: 0, created: 0, skipped: 0, details: [] };
+      }
+
+      // 2. 배치 중복 확인: 이미 calibration_overdue 부적합이 있는 장비 ID 조회 (N+1 방지)
+      const overdueIds = overdueEquipment.map((e) => e.id);
+      const existingNcRows = await this.db
+        .select({ equipmentId: nonConformances.equipmentId })
+        .from(nonConformances)
+        .where(
+          and(
+            inArray(nonConformances.equipmentId, overdueIds),
+            eq(nonConformances.ncType, 'calibration_overdue'),
+            isNull(nonConformances.deletedAt),
+            sql`${nonConformances.status} IN ('open', 'analyzing')`
+          )
+        );
+      const existingNcSet = new Set(existingNcRows.map((r) => r.equipmentId));
+
+      // 3. 각 장비에 대해 처리
       for (const equip of overdueEquipment) {
         try {
-          // 2-1. 이미 calibration_overdue 부적합이 있는지 확인 (open 또는 analyzing 상태)
-          const existingNc = await this.db
-            .select()
-            .from(nonConformances)
-            .where(
-              and(
-                eq(nonConformances.equipmentId, equip.id),
-                eq(nonConformances.ncType, 'calibration_overdue'),
-                isNull(nonConformances.deletedAt),
-                // open, analyzing 상태 = 아직 처리 중
-                sql`${nonConformances.status} IN ('open', 'analyzing')`
-              )
-            )
-            .limit(1);
-
-          if (existingNc.length > 0) {
+          // 배치 조회 결과로 O(1) 중복 확인
+          if (existingNcSet.has(equip.id)) {
             // 이미 처리 중인 부적합 존재 → 건너뜀
             this.logger.debug(
               `장비 ${equip.managementNumber}(${equip.id}): 기존 calibration_overdue 부적합 존재, 건너뜀`
@@ -158,7 +165,7 @@ export class CalibrationOverdueScheduler {
             continue;
           }
 
-          // 2-2. 트랜잭션으로 부적합 생성 + 장비 상태 변경 + 사고 이력 등록
+          // 3-1. 트랜잭션으로 부적합 생성 + 장비 상태 변경 + 사고 이력 등록
           await this.db.transaction(async (tx) => {
             const discoveryDate = today.toISOString().split('T')[0];
 
@@ -199,9 +206,7 @@ export class CalibrationOverdueScheduler {
             );
           });
 
-          // 2-2-1. 캐시 무효화 (트랜잭션 완료 후)
-          // 이유: DB 업데이트만으로는 캐시가 갱신되지 않음
-          // 효과: 상세/목록 페이지가 최신 상태('non_conforming') 반영
+          // 3-2. 캐시 무효화 (트랜잭션 완료 후)
           await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
             equip.id,
             true, // statusChanged: available → non_conforming
@@ -210,7 +215,7 @@ export class CalibrationOverdueScheduler {
 
           this.logger.debug(`장비 ${equip.managementNumber}(${equip.id}): 캐시 무효화 완료`);
 
-          // 2-3. 알림 이벤트 발행 (레지스트리 기반 수신자 자동 해석)
+          // 3-3. 알림 이벤트 발행 (레지스트리 기반 수신자 자동 해석)
           try {
             this.eventEmitter.emit(NOTIFICATION_EVENTS.CALIBRATION_OVERDUE, {
               equipmentId: equip.id,

@@ -537,10 +537,9 @@ export class DisposalService extends VersionedBaseService {
       }
     });
 
-    // 6. 반려 시에만 캐시 무효화 (장비 상태 변경됨)
-    if (reviewDto.decision === 'reject') {
-      await this.invalidateEquipmentCache();
-    }
+    // 6. 캐시 무효화 (승인/반려 모두 — 폐기 요청 상태가 변경됨)
+    // 반려: 장비 상태 available로 원복, 승인: reviewStatus 변경 → 목록/상세 캐시 갱신 필요
+    await this.invalidateEquipmentCache();
 
     this.logger.log(
       `폐기 검토 완료: requestId=${request.id}, decision=${reviewDto.decision}, reviewedBy=${reviewedBy}`

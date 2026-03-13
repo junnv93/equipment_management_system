@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { DisposalReasonEnum } from '@equipment-management/schemas';
+import {
+  ApprovalActionEnum,
+  APPROVAL_ACTION_VALUES,
+  DisposalReasonEnum,
+  type ApprovalAction,
+} from '@equipment-management/schemas';
 import { ApiProperty } from '@nestjs/swagger';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
@@ -24,9 +29,7 @@ export const RequestDisposalPipe = new ZodValidationPipe(requestDisposalSchema);
  */
 export const reviewDisposalSchema = z.object({
   ...versionedSchema,
-  decision: z.enum(['approve', 'reject'], {
-    message: 'approve 또는 reject 중 하나를 선택해주세요',
-  }),
+  decision: ApprovalActionEnum,
   opinion: z.string().min(1, '검토 의견을 입력해주세요'),
 });
 
@@ -38,9 +41,7 @@ export const ReviewDisposalPipe = new ZodValidationPipe(reviewDisposalSchema);
  */
 export const approveDisposalSchema = z.object({
   ...versionedSchema,
-  decision: z.enum(['approve', 'reject'], {
-    message: 'approve 또는 reject 중 하나를 선택해주세요',
-  }),
+  decision: ApprovalActionEnum,
   comment: z.string().optional(),
 });
 
@@ -79,10 +80,10 @@ export class ReviewDisposalDto
 {
   @ApiProperty({
     description: '검토 결과 (승인/반려)',
-    enum: ['approve', 'reject'],
+    enum: APPROVAL_ACTION_VALUES,
     example: 'approve',
   })
-  decision!: 'approve' | 'reject';
+  decision!: ApprovalAction;
 
   @ApiProperty({
     description: '검토 의견',
@@ -100,10 +101,10 @@ export class ApproveDisposalDto
 {
   @ApiProperty({
     description: '승인 결과 (승인/반려)',
-    enum: ['approve', 'reject'],
+    enum: APPROVAL_ACTION_VALUES,
     example: 'approve',
   })
-  decision!: 'approve' | 'reject';
+  decision!: ApprovalAction;
 
   @ApiProperty({
     description: '승인 코멘트 (선택)',

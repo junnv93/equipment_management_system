@@ -1,6 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
-import { SharedSourceEnum, SiteEnum } from '@equipment-management/schemas';
+import {
+  CalibrationMethodEnum,
+  CALIBRATION_METHOD_VALUES,
+  SharedSourceEnum,
+  SHARED_SOURCE_VALUES,
+  SiteEnum,
+  type CalibrationMethod,
+  type SharedSource,
+  type Site,
+} from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
 /**
@@ -33,9 +42,7 @@ export const createSharedEquipmentSchema = z.object({
   lastCalibrationDate: z.coerce.date().optional(),
   nextCalibrationDate: z.coerce.date().optional(),
   calibrationAgency: z.string().optional(),
-  calibrationMethod: z
-    .enum(['external_calibration', 'self_inspection', 'not_applicable'])
-    .optional(),
+  calibrationMethod: CalibrationMethodEnum.optional(),
 });
 
 export type CreateSharedEquipmentInput = z.infer<typeof createSharedEquipmentSchema>;
@@ -62,17 +69,17 @@ export class CreateSharedEquipmentDto implements CreateSharedEquipmentInput {
 
   @ApiProperty({
     description: '공용장비 출처',
-    enum: ['safety_lab', 'external'],
+    enum: SHARED_SOURCE_VALUES,
     example: 'safety_lab',
   })
-  sharedSource: 'safety_lab' | 'external';
+  sharedSource: SharedSource;
 
   @ApiProperty({
     description: '사이트 (필수)',
-    enum: ['suwon', 'uiwang'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
-  site: 'suwon' | 'uiwang';
+  site: Site;
 
   @ApiPropertyOptional({ description: '모델명' })
   modelName?: string;
@@ -103,9 +110,9 @@ export class CreateSharedEquipmentDto implements CreateSharedEquipmentInput {
 
   @ApiPropertyOptional({
     description: '교정 방법',
-    enum: ['external_calibration', 'self_inspection', 'not_applicable'],
+    enum: CALIBRATION_METHOD_VALUES,
   })
-  calibrationMethod?: 'external_calibration' | 'self_inspection' | 'not_applicable';
+  calibrationMethod?: CalibrationMethod;
 }
 
 // Zod 검증 파이프 생성
