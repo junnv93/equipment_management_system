@@ -17,16 +17,16 @@ import { VersionedDto, versionedSchema } from '../../../common/dto/base-versione
  */
 export const createConditionCheckSchema = z.object({
   ...versionedSchema, // ✅ Optimistic locking version
-  step: z.enum([...CONDITION_CHECK_STEP_VALUES] as [string, ...string[]], {
+  step: z.enum(CONDITION_CHECK_STEP_VALUES, {
     message: '유효하지 않은 상태 확인 단계입니다.',
   }),
-  appearanceStatus: z.enum([...CONDITION_STATUS_VALUES] as [string, ...string[]], {
+  appearanceStatus: z.enum(CONDITION_STATUS_VALUES, {
     message: '유효하지 않은 외관 상태입니다.',
   }),
-  operationStatus: z.enum([...CONDITION_STATUS_VALUES] as [string, ...string[]], {
+  operationStatus: z.enum(CONDITION_STATUS_VALUES, {
     message: '유효하지 않은 작동 상태입니다.',
   }),
-  accessoriesStatus: z.enum([...ACCESSORIES_STATUS_VALUES] as [string, ...string[]]).optional(),
+  accessoriesStatus: z.enum(ACCESSORIES_STATUS_VALUES).optional(),
   abnormalDetails: z.string().optional(),
   comparisonWithPrevious: z.string().optional(),
   notes: z.string().optional(),

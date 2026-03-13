@@ -15,8 +15,8 @@ import {
 export const equipmentImportQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
-  status: z.enum(EQUIPMENT_IMPORT_STATUS_VALUES as unknown as [string, ...string[]]).optional(),
-  sourceType: z.enum(EQUIPMENT_IMPORT_SOURCE_VALUES as unknown as [string, ...string[]]).optional(),
+  status: z.enum(EQUIPMENT_IMPORT_STATUS_VALUES).optional(),
+  sourceType: z.enum(EQUIPMENT_IMPORT_SOURCE_VALUES).optional(),
   site: SiteEnum.optional(),
   teamId: z.string().uuid().optional(),
   search: z.string().optional(),

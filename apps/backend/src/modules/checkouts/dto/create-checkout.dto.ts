@@ -18,7 +18,7 @@ export const createCheckoutSchema = z.object({
       CHECKOUT_MAX_EQUIPMENT_COUNT,
       `최대 ${CHECKOUT_MAX_EQUIPMENT_COUNT}개까지 선택 가능합니다`
     ),
-  purpose: z.enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
+  purpose: z.enum(CHECKOUT_PURPOSE_VALUES, {
     message: '유효하지 않은 반출 목적입니다.',
   }),
   destination: z.string().min(1, '반출 장소를 입력해주세요'),

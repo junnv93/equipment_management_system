@@ -18,7 +18,7 @@ export const updateCheckoutSchema = z.object({
   address: z.string().optional(),
   reason: z.string().min(1).optional(),
   status: z
-    .enum([...CHECKOUT_STATUS_VALUES] as [string, ...string[]], {
+    .enum(CHECKOUT_STATUS_VALUES, {
       message: '유효하지 않은 반출 상태값입니다.',
     })
     .optional(),

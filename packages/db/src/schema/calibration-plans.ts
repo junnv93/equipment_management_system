@@ -9,7 +9,10 @@ import {
   index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import {
+  CALIBRATION_PLAN_STATUS_VALUES,
+  REJECTION_STAGE_VALUES,
+} from '@equipment-management/schemas';
 import type { CalibrationPlanStatus } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
@@ -18,10 +21,8 @@ import { teams } from './teams';
 /** @see packages/schemas/src/enums.ts - CalibrationPlanStatusEnum (SSOT) */
 export const calibrationPlanStatus = CALIBRATION_PLAN_STATUS_VALUES;
 
-/**
- * 반려 단계 정의
- */
-export const rejectionStage = ['review', 'approval'] as const;
+/** @see packages/schemas/src/enums.ts - RejectionStageEnum (SSOT) */
+export const rejectionStage = REJECTION_STAGE_VALUES;
 
 /**
  * 교정계획서 테이블

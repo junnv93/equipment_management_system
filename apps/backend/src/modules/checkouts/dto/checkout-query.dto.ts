@@ -24,7 +24,7 @@ export const checkoutQuerySchema = z.object({
   site: SiteEnum.optional(),
   direction: CheckoutDirectionEnum.optional(),
   purpose: z
-    .enum([...CHECKOUT_PURPOSE_VALUES] as [string, ...string[]], {
+    .enum(CHECKOUT_PURPOSE_VALUES, {
       message: '유효하지 않은 반출 목적입니다.',
     })
     .optional(),

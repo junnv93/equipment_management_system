@@ -18,10 +18,7 @@ import { CreateNonConformanceDto } from './dto/create-non-conformance.dto';
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
 import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
 import { RejectCorrectionDto } from './dto/reject-correction.dto';
-import {
-  NonConformanceQueryDto,
-  NonConformanceStatus as NonConformanceStatusValues,
-} from './dto/non-conformance-query.dto';
+import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
@@ -33,7 +30,8 @@ import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { equipmentBelongsToSite } from '../../common/utils/site-filter';
 import {
   EquipmentStatusEnum,
-  type NonConformanceStatus,
+  NonConformanceStatusValues as NonConformanceStatus,
+  type NonConformanceStatus as NonConformanceStatusType,
   type NonConformanceType,
 } from '@equipment-management/schemas';
 
@@ -90,7 +88,7 @@ export class NonConformancesService extends VersionedBaseService {
       conditions.push(eq(nonConformances.equipmentId, params.equipmentId));
     }
     if (params.status) {
-      conditions.push(eq(nonConformances.status, params.status as NonConformanceStatus));
+      conditions.push(eq(nonConformances.status, params.status as NonConformanceStatusType));
     }
     if (params.ncType) {
       conditions.push(eq(nonConformances.ncType, params.ncType as NonConformanceType));

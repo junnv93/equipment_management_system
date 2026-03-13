@@ -10,13 +10,13 @@ import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES } from '@equipment-manage
 export const auditLogQuerySchema = z.object({
   userId: z.string().uuid().optional(),
   entityType: z
-    .enum([...AUDIT_ENTITY_TYPE_VALUES] as [string, ...string[]], {
+    .enum(AUDIT_ENTITY_TYPE_VALUES, {
       message: '유효하지 않은 엔티티 타입입니다.',
     })
     .optional(),
   entityId: z.string().uuid().optional(),
   action: z
-    .enum([...AUDIT_ACTION_VALUES] as [string, ...string[]], {
+    .enum(AUDIT_ACTION_VALUES, {
       message: '유효하지 않은 액션입니다.',
     })
     .optional(),

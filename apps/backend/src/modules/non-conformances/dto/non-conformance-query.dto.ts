@@ -6,7 +6,7 @@ import {
   NON_CONFORMANCE_STATUS_VALUES,
   NON_CONFORMANCE_TYPE_VALUES,
   NonConformanceStatusValues,
-  SITE_VALUES,
+  SiteEnum,
   type NonConformanceStatus as NCStatus,
   type NonConformanceType as NCType,
 } from '@equipment-management/schemas';
@@ -22,16 +22,16 @@ export const NonConformanceStatus = NonConformanceStatusValues;
 export const nonConformanceQuerySchema = z.object({
   equipmentId: z.string().uuid({ message: '유효한 장비 UUID가 아닙니다' }).optional(),
   status: z
-    .enum(NON_CONFORMANCE_STATUS_VALUES as unknown as [string, ...string[]], {
+    .enum(NON_CONFORMANCE_STATUS_VALUES, {
       message: '유효하지 않은 상태입니다 (open, analyzing, corrected, closed)',
     })
     .optional(),
   ncType: z
-    .enum(NON_CONFORMANCE_TYPE_VALUES as unknown as [string, ...string[]], {
+    .enum(NON_CONFORMANCE_TYPE_VALUES, {
       message: '유효하지 않은 유형입니다',
     })
     .optional(),
-  site: z.enum(SITE_VALUES as unknown as [string, ...string[]]).optional(),
+  site: SiteEnum.optional(),
   search: z.string().optional(),
   sort: z.string().optional(),
   includeSummary: z.preprocess((val) => val === 'true' || val === '1', z.boolean().default(false)),
@@ -67,7 +67,7 @@ export class NonConformanceQueryDto {
 
   @ApiPropertyOptional({
     description: '사이트 필터 (장비 소속 사이트)',
-    enum: SITE_VALUES as unknown as string[],
+    enum: SiteEnum.options,
   })
   site?: string;
 

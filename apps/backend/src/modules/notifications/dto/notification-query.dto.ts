@@ -28,9 +28,7 @@ const toArray = <T extends string>(val: unknown): T[] | undefined => {
 /**
  * 알림 조회 쿼리 스키마
  */
-const NotificationCategoryEnum = z.enum(
-  NOTIFICATION_CATEGORIES as unknown as [string, ...string[]]
-);
+const NotificationCategoryEnum = z.enum(NOTIFICATION_CATEGORIES);
 
 export const notificationQuerySchema = z.object({
   category: NotificationCategoryEnum.optional(),
