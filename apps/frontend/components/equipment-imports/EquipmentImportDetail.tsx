@@ -31,6 +31,7 @@ import {
   type EquipmentImportStatus,
   type Classification,
   UserRoleValues as URVal,
+  EquipmentImportStatusValues as EISVal,
 } from '@equipment-management/schemas';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
@@ -405,7 +406,7 @@ export default function EquipmentImportDetail({ id }: Props) {
       )}
 
       {/* Rejection Reason */}
-      {status === 'rejected' && equipmentImport.rejectionReason && (
+      {status === EISVal.REJECTED && equipmentImport.rejectionReason && (
         <Card className="border-brand-critical/40">
           <CardHeader>
             <CardTitle className="text-brand-critical">
@@ -465,7 +466,7 @@ export default function EquipmentImportDetail({ id }: Props) {
 
       {/* Action Buttons */}
       <div className="flex gap-2">
-        {status === 'pending' && canApprove && (
+        {status === EISVal.PENDING && canApprove && (
           <>
             <Button onClick={() => approveMutation.mutate()} disabled={approveMutation.isPending}>
               <Check className="mr-2 h-4 w-4" />
@@ -477,14 +478,14 @@ export default function EquipmentImportDetail({ id }: Props) {
             </Button>
           </>
         )}
-        {status === 'pending' && isRequester && (
+        {status === EISVal.PENDING && isRequester && (
           <Button variant="outline" onClick={() => setShowCancelDialog(true)}>
             <Ban className="mr-2 h-4 w-4" />
             {t('equipmentImport.cancel')}
           </Button>
         )}
 
-        {status === 'approved' && (
+        {status === EISVal.APPROVED && (
           <>
             <Button onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.RECEIVE(id))}>
               <Package className="mr-2 h-4 w-4" />
@@ -499,7 +500,7 @@ export default function EquipmentImportDetail({ id }: Props) {
           </>
         )}
 
-        {status === 'received' && (
+        {status === EISVal.RECEIVED && (
           <Button
             onClick={() => initiateReturnMutation.mutate()}
             disabled={initiateReturnMutation.isPending}
@@ -509,7 +510,7 @@ export default function EquipmentImportDetail({ id }: Props) {
           </Button>
         )}
 
-        {status === 'return_requested' && equipmentImport.returnCheckoutId && (
+        {status === EISVal.RETURN_REQUESTED && equipmentImport.returnCheckoutId && (
           <Button
             variant="outline"
             onClick={() =>

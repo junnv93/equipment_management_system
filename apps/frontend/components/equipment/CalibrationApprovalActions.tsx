@@ -50,9 +50,7 @@ export function CalibrationApprovalActions({
     mutationFn: ({ id, version }) => calibrationApi.approveCalibration(id, { version }),
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     optimisticUpdate: (old, { id }) =>
-      (old ?? []).map((cal) =>
-        cal.id === id ? { ...cal, approvalStatus: CASVal.APPROVED as const } : cal
-      ),
+      (old ?? []).map((cal) => (cal.id === id ? { ...cal, approvalStatus: CASVal.APPROVED } : cal)),
     invalidateKeys: [...APPROVAL_INVALIDATE_KEYS],
     successMessage: t('calibrationHistoryTab.approval.approveSuccess'),
   });
@@ -66,9 +64,7 @@ export function CalibrationApprovalActions({
       calibrationApi.rejectCalibration(id, { version, rejectionReason }),
     queryKey: queryKeys.calibrations.byEquipment(equipmentId),
     optimisticUpdate: (old, { id }) =>
-      (old ?? []).map((cal) =>
-        cal.id === id ? { ...cal, approvalStatus: CASVal.REJECTED as const } : cal
-      ),
+      (old ?? []).map((cal) => (cal.id === id ? { ...cal, approvalStatus: CASVal.REJECTED } : cal)),
     invalidateKeys: [...APPROVAL_INVALIDATE_KEYS],
     successMessage: t('calibrationHistoryTab.approval.rejectSuccess'),
   });

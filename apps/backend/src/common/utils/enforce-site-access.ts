@@ -4,6 +4,7 @@ import {
   type UserRole,
   resolveDataScope,
 } from '@equipment-management/shared-constants';
+import { ErrorCode } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 
 /**
@@ -12,28 +13,30 @@ import type { AuthenticatedRequest } from '../../types/auth';
  * 목록 엔드포인트는 @SiteScoped + SiteScopeInterceptor가 query 주입으로 처리하지만,
  * 상세/수정/삭제 등 단일 엔티티 엔드포인트는 이 함수로 사후 검증합니다.
  *
- * scope.type별 검증:
- * - 'all'  → 검증 생략 (lab_manager, system_admin)
- * - 'site' → entitySite와 사용자 사이트 비교
- * - 'team' → entityTeamId와 사용자 팀 비교 (entityTeamId가 전달된 경우)
+ * scope.type별 검증 (SiteScopeInterceptor와 대칭):
+ * - 'all'  → 즉시 통과
+ * - 'none' → ForbiddenException (fail-close)
+ * - 'site' → user.site 없으면 거부 / entitySite !== user.site → 거부
+ * - 'team' → ① site 먼저 검증 (defense-in-depth, 팀⊂사이트)
+ *           → ② entityTeamId null → site 통과했으므로 허용 (site fallback)
+ *           → ③ user.teamId null → site 통과했으므로 허용 (site fallback)
+ *           → ④ entityTeamId !== user.teamId → 거부
  *
  * @param req           인증된 요청 (JWT에서 추출된 user 포함)
  * @param entitySite    대상 엔티티의 사이트 (equipment.site 등)
  * @param policy        해당 기능의 FeatureScopePolicy
- * @param errorCode     ForbiddenException에 포함할 에러 코드
- * @param entityTeamId  대상 엔티티의 팀 ID (team scope 검증 시 필수)
+ * @param entityTeamId  대상 엔티티의 팀 ID (team scope 검증 시)
  */
 export function enforceSiteAccess(
   req: AuthenticatedRequest,
   entitySite: string,
   policy: FeatureScopePolicy,
-  errorCode: string,
   entityTeamId?: string | null
 ): void {
   const userRole = req.user?.roles?.[0] as UserRole | undefined;
   if (!userRole) {
     throw new ForbiddenException({
-      code: errorCode,
+      code: ErrorCode.ScopeAccessDenied,
       message: 'User role not found in request.',
     });
   }
@@ -43,17 +46,47 @@ export function enforceSiteAccess(
     policy
   );
 
-  if (scope.type === 'site' && scope.site && entitySite !== scope.site) {
+  // 'all' → 즉시 통과
+  if (scope.type === 'all') {
+    return;
+  }
+
+  // 'none' → fail-close
+  if (scope.type === 'none') {
     throw new ForbiddenException({
-      code: errorCode,
-      message: `No permission to access resources from other sites.`,
+      code: ErrorCode.ScopeAccessDenied,
+      message: 'No data access scope assigned for this role.',
     });
   }
 
-  if (scope.type === 'team' && scope.teamId && entityTeamId && entityTeamId !== scope.teamId) {
+  // 'site' 및 'team'(defense-in-depth) → site 검증
+  const userSite = req.user?.site;
+  if (!userSite) {
     throw new ForbiddenException({
-      code: errorCode,
-      message: `No permission to access resources from other teams.`,
+      code: ErrorCode.ScopeAccessDenied,
+      message: 'User site information not found.',
     });
+  }
+
+  if (entitySite !== userSite) {
+    throw new ForbiddenException({
+      code: ErrorCode.ScopeAccessDenied,
+      message: 'No permission to access resources from other sites.',
+    });
+  }
+
+  // 'team' → 추가 팀 검증 (site 통과 후)
+  if (scope.type === 'team') {
+    // entityTeamId null → site fallback 허용 (SiteScopeInterceptor 대칭)
+    if (!entityTeamId) return;
+    // user.teamId null → site fallback 허용
+    if (!req.user?.teamId) return;
+    // 팀 불일치 → 거부
+    if (entityTeamId !== req.user.teamId) {
+      throw new ForbiddenException({
+        code: ErrorCode.ScopeAccessDenied,
+        message: 'No permission to access resources from other teams.',
+      });
+    }
   }
 }

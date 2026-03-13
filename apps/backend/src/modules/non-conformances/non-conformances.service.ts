@@ -18,7 +18,10 @@ import { CreateNonConformanceDto } from './dto/create-non-conformance.dto';
 import { UpdateNonConformanceDto } from './dto/update-non-conformance.dto';
 import { CloseNonConformanceDto } from './dto/close-non-conformance.dto';
 import { RejectCorrectionDto } from './dto/reject-correction.dto';
-import { NonConformanceQueryDto, NonConformanceStatus } from './dto/non-conformance-query.dto';
+import {
+  NonConformanceQueryDto,
+  NonConformanceStatus as NonConformanceStatusValues,
+} from './dto/non-conformance-query.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CacheInvalidationHelper } from '../../common/cache/cache-invalidation.helper';
@@ -28,7 +31,11 @@ import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { equipmentBelongsToSite } from '../../common/utils/site-filter';
-import { EquipmentStatusEnum } from '@equipment-management/schemas';
+import {
+  EquipmentStatusEnum,
+  type NonConformanceStatus,
+  type NonConformanceType,
+} from '@equipment-management/schemas';
 
 /**
  * 부적합 상태 전이 규칙 (State Machine)
@@ -83,10 +90,10 @@ export class NonConformancesService extends VersionedBaseService {
       conditions.push(eq(nonConformances.equipmentId, params.equipmentId));
     }
     if (params.status) {
-      conditions.push(eq(nonConformances.status, params.status));
+      conditions.push(eq(nonConformances.status, params.status as NonConformanceStatus));
     }
     if (params.ncType) {
-      conditions.push(eq(nonConformances.ncType, params.ncType));
+      conditions.push(eq(nonConformances.ncType, params.ncType as NonConformanceType));
     }
     if (params.site) {
       conditions.push(equipmentBelongsToSite(nonConformances.equipmentId, params.site));
@@ -444,9 +451,7 @@ export class NonConformancesService extends VersionedBaseService {
    * 컨트롤러의 enforceSiteAccess()에서 사용.
    * equipment.site를 함께 반환하여 크로스사이트 검증에 활용.
    */
-  async findOneBasic(
-    id: string
-  ): Promise<{
+  async findOneBasic(id: string): Promise<{
     id: string;
     equipmentId: string;
     equipmentSite: string;

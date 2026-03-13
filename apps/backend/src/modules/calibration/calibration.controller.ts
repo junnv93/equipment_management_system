@@ -74,13 +74,7 @@ export class CalibrationController {
   /** 크로스사이트/크로스팀 접근 제어 — calibrations → equipment 경유 */
   private async enforceCalibrationAccess(uuid: string, req: AuthenticatedRequest): Promise<void> {
     const { site, teamId } = await this.calibrationService.getCalibrationSiteAndTeam(uuid);
-    enforceSiteAccess(
-      req,
-      site,
-      CALIBRATION_DATA_SCOPE,
-      'CALIBRATION_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, CALIBRATION_DATA_SCOPE, teamId);
   }
 
   @Post()

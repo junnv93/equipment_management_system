@@ -78,13 +78,7 @@ export class DisposalController {
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
-    enforceSiteAccess(
-      req,
-      equipmentInfo.site,
-      EQUIPMENT_DATA_SCOPE,
-      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
-      equipmentInfo.teamId
-    );
+    enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
     return this.disposalService.requestDisposal(equipmentId, dto, userId);
   }
@@ -121,13 +115,7 @@ export class DisposalController {
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
-    enforceSiteAccess(
-      req,
-      equipmentInfo.site,
-      EQUIPMENT_DATA_SCOPE,
-      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
-      equipmentInfo.teamId
-    );
+    enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
     return this.disposalService.reviewDisposal(equipmentId, reviewDto, userId);
   }
@@ -166,13 +154,7 @@ export class DisposalController {
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
-    enforceSiteAccess(
-      req,
-      equipmentInfo.site,
-      EQUIPMENT_DATA_SCOPE,
-      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
-      equipmentInfo.teamId
-    );
+    enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
     return this.disposalService.approveDisposal(equipmentId, approveDto, userId);
   }
@@ -202,13 +184,7 @@ export class DisposalController {
     @Req() req: AuthenticatedRequest
   ): Promise<{ success: boolean; message: string }> {
     const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
-    enforceSiteAccess(
-      req,
-      equipmentInfo.site,
-      EQUIPMENT_DATA_SCOPE,
-      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
-      equipmentInfo.teamId
-    );
+    enforceSiteAccess(req, equipmentInfo.site, EQUIPMENT_DATA_SCOPE, equipmentInfo.teamId);
     const userId = extractUserId(req);
     return this.disposalService.cancelDisposalRequest(equipmentId, userId);
   }

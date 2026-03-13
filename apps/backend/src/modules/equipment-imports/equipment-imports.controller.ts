@@ -104,13 +104,7 @@ export class EquipmentImportsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
-    enforceSiteAccess(
-      req,
-      site,
-      EQUIPMENT_IMPORT_DATA_SCOPE,
-      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.approve(id, req.user.userId, dto);
   }
 
@@ -127,13 +121,7 @@ export class EquipmentImportsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
-    enforceSiteAccess(
-      req,
-      site,
-      EQUIPMENT_IMPORT_DATA_SCOPE,
-      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.reject(id, req.user.userId, dto);
   }
 
@@ -156,13 +144,7 @@ export class EquipmentImportsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
-    enforceSiteAccess(
-      req,
-      site,
-      EQUIPMENT_IMPORT_DATA_SCOPE,
-      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.receive(id, req.user.userId, dto);
   }
 
@@ -184,13 +166,7 @@ export class EquipmentImportsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
-    enforceSiteAccess(
-      req,
-      site,
-      EQUIPMENT_IMPORT_DATA_SCOPE,
-      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.initiateReturn(id, req.user.userId, req.user.teamId);
   }
 
@@ -205,13 +181,7 @@ export class EquipmentImportsController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
-    enforceSiteAccess(
-      req,
-      site,
-      EQUIPMENT_IMPORT_DATA_SCOPE,
-      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, EQUIPMENT_IMPORT_DATA_SCOPE, teamId);
     return this.equipmentImportsService.cancel(id, req.user.userId);
   }
 }

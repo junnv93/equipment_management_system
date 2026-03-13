@@ -24,6 +24,7 @@ import {
   CheckoutStatusValues as CSVal,
   CheckoutPurposeValues as CPVal,
   EquipmentStatusValues as ESVal,
+  type ConditionCheckStep,
 } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
@@ -1812,7 +1813,7 @@ export class CheckoutsService extends VersionedBaseService {
         .insert(conditionChecks)
         .values({
           checkoutId: uuid,
-          step: dto.step,
+          step: dto.step as ConditionCheckStep,
           checkedBy: checkerId,
           checkedAt: new Date(),
           appearanceStatus: dto.appearanceStatus,

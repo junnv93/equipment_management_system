@@ -39,9 +39,9 @@ function createNC(
   id: string,
   equipmentId: string,
   discoveryDate: Date,
-  ncType: string,
+  ncType: (typeof nonConformances.$inferInsert)['ncType'],
   cause: string,
-  status: string,
+  status: (typeof nonConformances.$inferInsert)['status'],
   overrides?: Partial<typeof nonConformances.$inferInsert>
 ): typeof nonConformances.$inferInsert {
   const now = new Date();

@@ -520,20 +520,8 @@ export class EquipmentController {
     // ✅ includeTeam=true로 팀 정보 포함 조회
     const equipmentWithTeam = await this.equipmentService.findOne(uuid, true);
 
-    // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 단일 장비 접근 사이트 체크
-    const userRole = req.user?.roles?.[0] as UserRole | undefined;
-    if (userRole) {
-      const scope = resolveDataScope(
-        { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
-        EQUIPMENT_DATA_SCOPE
-      );
-      if (scope.type === 'site' && scope.site && equipmentWithTeam.site !== scope.site) {
-        throw new ForbiddenException({
-          code: 'EQUIPMENT_CROSS_SITE_VIEW_DENIED',
-          message: 'No permission to view equipment from other sites.',
-        });
-      }
-    }
+    // SSOT: enforceSiteAccess로 단일 장비 접근 사이트/팀 체크
+    enforceSiteAccess(req, equipmentWithTeam.site, EQUIPMENT_DATA_SCOPE, equipmentWithTeam.teamId);
 
     // ✅ 응답에 teamName 필드 추가 (프론트엔드에서 사용)
     const { team, ...equipmentData } = equipmentWithTeam;
@@ -659,13 +647,7 @@ export class EquipmentController {
     // ✅ 공용장비도 수정 가능하도록 isShared 체크 제거
     // (렌탈 장비는 수령 후 교정 정보 업데이트 필요)
     const existingEquipment = await this.equipmentService.findOne(uuid);
-    enforceSiteAccess(
-      req,
-      existingEquipment.site,
-      EQUIPMENT_DATA_SCOPE,
-      'EQUIPMENT_CROSS_SITE_MUTATION_DENIED',
-      existingEquipment.teamId
-    );
+    enforceSiteAccess(req, existingEquipment.site, EQUIPMENT_DATA_SCOPE, existingEquipment.teamId);
 
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? '';
@@ -722,13 +704,7 @@ export class EquipmentController {
   ): Promise<{ message: string; requestUuid?: string }> {
     // 공용장비 삭제 차단
     const existingEquipment = await this.equipmentService.findOne(uuid);
-    enforceSiteAccess(
-      req,
-      existingEquipment.site,
-      EQUIPMENT_DATA_SCOPE,
-      'EQUIPMENT_CROSS_SITE_MUTATION_DENIED',
-      existingEquipment.teamId
-    );
+    enforceSiteAccess(req, existingEquipment.site, EQUIPMENT_DATA_SCOPE, existingEquipment.teamId);
     if (existingEquipment.isShared) {
       throw new ForbiddenException({
         code: 'EQUIPMENT_SHARED_CANNOT_DELETE',
@@ -833,13 +809,7 @@ export class EquipmentController {
     version: number;
   }> {
     const existingEquipment = await this.equipmentService.findOne(uuid);
-    enforceSiteAccess(
-      req,
-      existingEquipment.site,
-      EQUIPMENT_DATA_SCOPE,
-      'EQUIPMENT_CROSS_SITE_MUTATION_DENIED',
-      existingEquipment.teamId
-    );
+    enforceSiteAccess(req, existingEquipment.site, EQUIPMENT_DATA_SCOPE, existingEquipment.teamId);
     return this.equipmentService.updateStatus(
       uuid,
       updateStatusDto.status,

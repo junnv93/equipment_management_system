@@ -62,7 +62,7 @@ function createDisposalEquipment(
   managementNumber: string,
   teamId: string,
   site: 'suwon' | 'uiwang' | 'pyeongtaek',
-  status: string,
+  status: NewEquipment['status'],
   overrides?: Partial<NewEquipment>
 ): NewEquipment {
   const [siteCode, classCode, serialNum] = [

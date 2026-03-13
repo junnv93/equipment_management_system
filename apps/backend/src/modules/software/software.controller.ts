@@ -209,13 +209,7 @@ export class SoftwareController {
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
     const { site, teamId } = await this.softwareService.getSoftwareSiteAndTeam(uuid);
-    enforceSiteAccess(
-      req,
-      site,
-      SOFTWARE_DATA_SCOPE,
-      'SOFTWARE_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, SOFTWARE_DATA_SCOPE, teamId);
     const approverId = extractUserId(req);
     return this.softwareService.approve(uuid, { ...approveDto, approverId });
   }
@@ -244,13 +238,7 @@ export class SoftwareController {
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
     const { site, teamId } = await this.softwareService.getSoftwareSiteAndTeam(uuid);
-    enforceSiteAccess(
-      req,
-      site,
-      SOFTWARE_DATA_SCOPE,
-      'SOFTWARE_CROSS_SITE_MUTATION_DENIED',
-      teamId
-    );
+    enforceSiteAccess(req, site, SOFTWARE_DATA_SCOPE, teamId);
     const approverId = extractUserId(req);
     return this.softwareService.reject(uuid, { ...rejectDto, approverId });
   }

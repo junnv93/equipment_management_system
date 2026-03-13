@@ -16,6 +16,11 @@ import {
   UNIFIED_APPROVAL_STATUS_LABELS,
   SITE_LABELS,
   UserRoleValues as URVal,
+  UnifiedApprovalStatusValues as UASVal,
+  CalibrationApprovalStatusValues as CASVal,
+  CheckoutStatusValues as CSVal,
+  CalibrationPlanStatusValues as CPSVal,
+  DisposalReviewStatusValues as DRSVal,
 } from '@equipment-management/schemas';
 import calibrationApi, { type Calibration } from './calibration-api';
 import checkoutApi, { type Checkout } from './checkout-api';
@@ -1199,7 +1204,7 @@ class ApprovalsApi {
     return {
       id: String(item.id),
       category,
-      status: category === 'disposal_review' ? 'pending' : 'reviewed',
+      status: category === 'disposal_review' ? UASVal.PENDING : UASVal.REVIEWED,
       requesterId: String(item.requestedBy || ''),
       requesterName: requester?.name ? String(requester.name) : '알 수 없음',
       requesterTeam: team?.name ? String(team.name) : '',
@@ -1270,57 +1275,57 @@ class ApprovalsApi {
 
   private mapEquipmentRequestStatus(status: string): UnifiedApprovalStatus {
     switch (status) {
-      case 'pending_approval':
-        return 'pending';
-      case 'approved':
-        return 'approved';
-      case 'rejected':
-        return 'rejected';
+      case CASVal.PENDING_APPROVAL:
+        return UASVal.PENDING;
+      case CASVal.APPROVED:
+        return UASVal.APPROVED;
+      case CASVal.REJECTED:
+        return UASVal.REJECTED;
       default:
-        return 'pending';
+        return UASVal.PENDING;
     }
   }
 
   private mapCalibrationStatus(status?: string): UnifiedApprovalStatus {
     switch (status) {
-      case 'pending_approval':
-        return 'pending';
-      case 'approved':
-        return 'approved';
-      case 'rejected':
-        return 'rejected';
+      case CASVal.PENDING_APPROVAL:
+        return UASVal.PENDING;
+      case CASVal.APPROVED:
+        return UASVal.APPROVED;
+      case CASVal.REJECTED:
+        return UASVal.REJECTED;
       default:
-        return 'pending';
+        return UASVal.PENDING;
     }
   }
 
   private mapCheckoutStatus(status: string): UnifiedApprovalStatus {
     switch (status) {
-      case 'pending':
-        return 'pending';
-      case 'approved':
-        return 'approved';
-      case 'rejected':
-        return 'rejected';
-      case 'returned':
-        return 'pending'; // 반입 승인 대기
+      case CSVal.PENDING:
+        return UASVal.PENDING;
+      case CSVal.APPROVED:
+        return UASVal.APPROVED;
+      case CSVal.REJECTED:
+        return UASVal.REJECTED;
+      case CSVal.RETURNED:
+        return UASVal.PENDING; // 반입 승인 대기
       default:
-        return 'pending';
+        return UASVal.PENDING;
     }
   }
 
   private mapPlanStatus(status: string): UnifiedApprovalStatus {
     switch (status) {
-      case 'pending_review':
-        return 'pending_review';
-      case 'pending_approval':
-        return 'reviewed';
-      case 'approved':
-        return 'approved';
-      case 'rejected':
-        return 'rejected';
+      case CPSVal.PENDING_REVIEW:
+        return UASVal.PENDING_REVIEW;
+      case CPSVal.PENDING_APPROVAL:
+        return UASVal.REVIEWED;
+      case CPSVal.APPROVED:
+        return UASVal.APPROVED;
+      case CPSVal.REJECTED:
+        return UASVal.REJECTED;
       default:
-        return 'pending';
+        return UASVal.PENDING;
     }
   }
 
@@ -1348,7 +1353,7 @@ class ApprovalsApi {
     return {
       id: item.id,
       category,
-      status: 'pending',
+      status: UASVal.PENDING,
       requesterId: item.requesterId,
       requesterName: requester?.name ? String(requester.name) : '신청자',
       requesterTeam: team?.name ? String(team.name) : '',

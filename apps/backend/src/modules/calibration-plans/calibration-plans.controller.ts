@@ -86,12 +86,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     // 사이트 제한 역할(TE/TM)은 자기 사이트용 계획서만 생성 가능
-    enforceSiteAccess(
-      req,
-      createDto.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, createDto.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const createdBy = extractUserId(req);
     return this.calibrationPlansService.create({ ...createDto, createdBy });
   }
@@ -140,12 +135,7 @@ export class CalibrationPlansController {
     // findOneBasic으로 경량 사이트 체크 후, findOne으로 전체 데이터 반환
     // findOne은 Cache-Aside(120s)이므로 캐시 히트 시 추가 비용 없음
     const basicPlan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      basicPlan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, basicPlan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.findOne(uuid);
   }
 
@@ -167,12 +157,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.update(uuid, updateDto);
   }
 
@@ -192,12 +177,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.remove(uuid);
   }
 
@@ -218,12 +198,7 @@ export class CalibrationPlansController {
     @Body() _submitDto?: SubmitCalibrationPlanDto
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.submit(uuid);
   }
 
@@ -246,12 +221,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const submittedBy = extractUserId(req);
     return this.calibrationPlansService.submitForReview(uuid, { ...submitDto, submittedBy });
   }
@@ -275,12 +245,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const reviewedBy = extractUserId(req);
     return this.calibrationPlansService.review(uuid, { ...reviewDto, reviewedBy });
   }
@@ -303,12 +268,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const approvedBy = extractUserId(req);
     return this.calibrationPlansService.approve(uuid, { ...approveDto, approvedBy });
   }
@@ -332,12 +292,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const rejectedBy = extractUserId(req);
     return this.calibrationPlansService.reject(uuid, { ...rejectDto, rejectedBy });
   }
@@ -362,12 +317,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const confirmedBy = extractUserId(req);
     return this.calibrationPlansService.confirmItem(uuid, itemUuid, { ...confirmDto, confirmedBy });
   }
@@ -392,12 +342,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.updateItem(uuid, itemUuid, updateDto);
   }
 
@@ -418,12 +363,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<void> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
 
     const htmlBuffer = await this.pdfService.generatePdf(uuid);
 
@@ -452,12 +392,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     const createdBy = extractUserId(req);
     return this.calibrationPlansService.createNewVersion(uuid, createdBy);
   }
@@ -476,12 +411,7 @@ export class CalibrationPlansController {
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
     const plan = await this.calibrationPlansService.findOneBasic(uuid);
-    enforceSiteAccess(
-      req,
-      plan.siteId,
-      CALIBRATION_PLAN_DATA_SCOPE,
-      'CALIBRATION_PLAN_CROSS_SITE_ACCESS_DENIED'
-    );
+    enforceSiteAccess(req, plan.siteId, CALIBRATION_PLAN_DATA_SCOPE);
     return this.calibrationPlansService.getVersionHistory(uuid);
   }
 }
