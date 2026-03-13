@@ -7,6 +7,10 @@ import {
   CalibrationMethod,
   Classification,
   Site,
+  EQUIPMENT_STATUS_VALUES,
+  CALIBRATION_METHOD_VALUES,
+  SiteEnum,
+  ClassificationEnum,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -27,16 +31,7 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
 
   @ApiPropertyOptional({
     description: '장비 상태',
-    enum: [
-      'available',
-      'in_use',
-      'checked_out',
-      'calibration_scheduled',
-      'calibration_overdue',
-      'non_conforming',
-      'spare',
-      'retired',
-    ],
+    enum: EQUIPMENT_STATUS_VALUES,
     example: 'available',
   })
   status?: EquipmentStatus;
@@ -61,21 +56,21 @@ export class EquipmentQueryDto implements Partial<EquipmentFilter> {
 
   @ApiPropertyOptional({
     description: '사이트',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
   site?: Site;
 
   @ApiPropertyOptional({
     description: '교정 방법 (외부교정/자체점검/비대상)',
-    enum: ['external_calibration', 'self_inspection', 'not_applicable'],
+    enum: CALIBRATION_METHOD_VALUES,
     example: 'external_calibration',
   })
   calibrationMethod?: CalibrationMethod;
 
   @ApiPropertyOptional({
     description: '장비 분류',
-    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+    enum: ClassificationEnum.options,
     example: 'fcc_emc_rf',
   })
   classification?: Classification;

@@ -25,6 +25,7 @@ import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-eve
 import {
   DisposalReviewStatusValues as DRVal,
   EquipmentStatusValues as ESVal,
+  UserRoleValues as URVal,
 } from '@equipment-management/schemas';
 
 /**
@@ -460,7 +461,7 @@ export class DisposalService extends VersionedBaseService {
 
     // 4. 팀 기반 권한 검증 (같은 팀인지 확인)
     // lab_manager는 모든 팀의 장비를 검토할 수 있음
-    const isLabManager = reviewer.role === 'lab_manager';
+    const isLabManager = reviewer.role === URVal.LAB_MANAGER;
     if (!isLabManager && equipmentItem.teamId && equipmentItem.teamId !== reviewer.teamId) {
       throw new ForbiddenException({
         code: 'DISPOSAL_TEAM_SCOPE_ONLY',
@@ -827,32 +828,42 @@ export class DisposalService extends VersionedBaseService {
     );
 
     // 📢 알림 이벤트 발행 (폐기 최종 승인/반려)
+    // 장비 정보 + 승인자 정보 조회 (크로스 사이트 워크플로우: site, teamId 필수)
+    const [equipmentItem, approver] = await Promise.all([
+      this.db.query.equipment.findFirst({
+        where: eq(equipment.id, equipmentId),
+      }),
+      this.db.query.users.findFirst({
+        where: eq(users.id, approvedBy),
+      }),
+    ]);
+
     if (approveDto.decision === 'approve') {
       this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_APPROVED, {
         disposalId: request.id,
         equipmentId,
-        equipmentName: '',
-        managementNumber: '',
+        equipmentName: equipmentItem?.name ?? '',
+        managementNumber: equipmentItem?.managementNumber ?? '',
         requesterId: request.requestedBy,
-        requesterTeamId: '',
-        site: '',
+        requesterTeamId: equipmentItem?.teamId ?? '',
+        site: equipmentItem?.site ?? '',
         actorId: approvedBy,
-        actorName: '',
+        actorName: approver?.name ?? '',
         timestamp: new Date(),
       });
     } else {
       this.eventEmitter.emit(NOTIFICATION_EVENTS.DISPOSAL_REJECTED, {
         disposalId: request.id,
         equipmentId,
-        equipmentName: '',
-        managementNumber: '',
+        equipmentName: equipmentItem?.name ?? '',
+        managementNumber: equipmentItem?.managementNumber ?? '',
         requesterId: request.requestedBy,
-        requesterTeamId: '',
-        site: '',
+        requesterTeamId: equipmentItem?.teamId ?? '',
+        site: equipmentItem?.site ?? '',
         reason: approveDto.comment ?? '',
         rejectionStep: 'approval',
         actorId: approvedBy,
-        actorName: '',
+        actorName: approver?.name ?? '',
         timestamp: new Date(),
       });
     }
@@ -1105,7 +1116,7 @@ export class DisposalService extends VersionedBaseService {
     }
 
     // 2. lab_manager는 모든 요청 조회, technical_manager는 같은 팀만 조회
-    const isLabManager = currentUser.role === 'lab_manager';
+    const isLabManager = currentUser.role === URVal.LAB_MANAGER;
 
     const requests = await this.db.query.disposalRequests.findMany({
       where: eq(disposalRequests.reviewStatus, DRVal.PENDING),
@@ -1178,6 +1189,27 @@ export class DisposalService extends VersionedBaseService {
    * 폐기 처리 시 장비 상태가 변경되므로 캐시를 삭제하여
    * 최신 데이터가 조회되도록 합니다.
    */
+  /**
+   * 장비 사이트 정보 조회 (enforceSiteAccess용 경량 조회)
+   */
+  async getEquipmentSiteInfo(
+    equipmentId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const item = await this.db.query.equipment.findFirst({
+      where: eq(equipment.id, equipmentId),
+      columns: { site: true, teamId: true },
+    });
+
+    if (!item) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_NOT_FOUND',
+        message: `Equipment not found. (ID: ${equipmentId})`,
+      });
+    }
+
+    return { site: item.site, teamId: item.teamId };
+  }
+
   private async invalidateEquipmentCache(): Promise<void> {
     try {
       await this.cacheService.deleteByPattern(this.CACHE_PREFIX + '*');

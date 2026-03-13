@@ -44,7 +44,7 @@ import {
 } from './dto/approve-calibration.dto';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { Permission, CALIBRATION_DATA_SCOPE } from '@equipment-management/shared-constants';
-import { SiteEnum } from '@equipment-management/schemas';
+import { SiteEnum, type CalibrationRegisteredByRole } from '@equipment-management/schemas';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { FileUploadService } from '../equipment/services/file-upload.service';
 import type { MulterFile } from '../../types/common.types';
@@ -52,10 +52,15 @@ import type { AuthenticatedRequest } from '../../types/auth';
 import type { CalibrationRecord } from './calibration.service';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import {
   UpdateCalibrationStatusPipe,
   type UpdateCalibrationStatusDto,
 } from './dto/update-calibration-status.dto';
+import {
+  CompleteIntermediateCheckPipe,
+  type CompleteIntermediateCheckDto,
+} from './dto/complete-intermediate-check.dto';
 
 @ApiTags('교정 관리')
 @ApiBearerAuth()
@@ -65,6 +70,18 @@ export class CalibrationController {
     private readonly calibrationService: CalibrationService,
     private readonly fileUploadService: FileUploadService
   ) {}
+
+  /** 크로스사이트/크로스팀 접근 제어 — calibrations → equipment 경유 */
+  private async enforceCalibrationAccess(uuid: string, req: AuthenticatedRequest): Promise<void> {
+    const { site, teamId } = await this.calibrationService.getCalibrationSiteAndTeam(uuid);
+    enforceSiteAccess(
+      req,
+      site,
+      CALIBRATION_DATA_SCOPE,
+      'CALIBRATION_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
+  }
 
   @Post()
   @ApiOperation({ summary: '교정 일정 등록', description: '새로운 교정 일정을 등록합니다.' })
@@ -85,7 +102,7 @@ export class CalibrationController {
     // ✅ 보안: registeredBy와 registeredByRole을 JWT 세션에서 추출 (Rule 2)
     const registeredBy = extractUserId(req);
     // roles는 배열이므로 첫 번째 역할을 사용 (일반적으로 사용자는 하나의 역할만 가짐)
-    const registeredByRole = req.user?.roles?.[0];
+    const registeredByRole = req.user?.roles?.[0] as CalibrationRegisteredByRole | undefined;
 
     return this.calibrationService.create({
       ...createCalibrationDto,
@@ -170,7 +187,7 @@ export class CalibrationController {
     });
   }
 
-  @Post(':uuid/intermediate-check/complete') // @BodyPipeExempt: optional notes string only, no structured schema needed
+  @Post(':uuid/intermediate-check/complete')
   @ApiOperation({
     summary: '중간점검 완료 처리',
     description: '특정 교정의 중간점검을 완료 처리하고 관련 알림을 해제합니다.',
@@ -183,14 +200,15 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
-  completeIntermediateCheck(
+  async completeIntermediateCheck(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() body: { notes?: string },
+    @Body(CompleteIntermediateCheckPipe) dto: CompleteIntermediateCheckDto,
     @Request() req: AuthenticatedRequest
   ): Promise<{ calibration: CalibrationRecord; message: string }> {
+    await this.enforceCalibrationAccess(uuid, req);
     // ✅ 보안: completedBy를 JWT 세션에서 추출 (Rule 2)
     const completedBy = extractUserId(req);
-    return this.calibrationService.completeIntermediateCheck(uuid, completedBy, body.notes);
+    return this.calibrationService.completeIntermediateCheck(uuid, completedBy, dto.notes);
   }
 
   @Get('equipment/:equipmentId')
@@ -401,7 +419,8 @@ export class CalibrationController {
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   async uploadCertificate(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @UploadedFile() file: MulterFile
+    @UploadedFile() file: MulterFile,
+    @Request() req: AuthenticatedRequest
   ): Promise<{
     filePath: string;
     fileName: string;
@@ -409,6 +428,7 @@ export class CalibrationController {
     fileSize: number;
     message: string;
   }> {
+    await this.enforceCalibrationAccess(uuid, req);
     // 교정 존재 여부 확인
     await this.calibrationService.findOne(uuid);
 
@@ -447,10 +467,12 @@ export class CalibrationController {
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
   @UsePipes(UpdateCalibrationValidationPipe)
-  update(
+  async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateCalibrationDto: UpdateCalibrationDto
+    @Body() updateCalibrationDto: UpdateCalibrationDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
+    await this.enforceCalibrationAccess(uuid, req);
     return this.calibrationService.update(uuid, updateCalibrationDto);
   }
 
@@ -463,7 +485,11 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.DELETE_CALIBRATION)
   @AuditLog({ action: 'delete', entityType: 'calibration', entityIdPath: 'params.uuid' })
-  remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<{ id: string; deleted: boolean }> {
+  async remove(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<{ id: string; deleted: boolean }> {
+    await this.enforceCalibrationAccess(uuid, req);
     return this.calibrationService.remove(uuid);
   }
 
@@ -477,10 +503,12 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
-  updateStatus(
+  async updateStatus(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body(UpdateCalibrationStatusPipe) dto: UpdateCalibrationStatusDto
+    @Body(UpdateCalibrationStatusPipe) dto: UpdateCalibrationStatusDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
+    await this.enforceCalibrationAccess(uuid, req);
     return this.calibrationService.updateStatus(uuid, dto.status);
   }
 
@@ -497,10 +525,12 @@ export class CalibrationController {
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.UPDATE_CALIBRATION)
   @AuditLog({ action: 'update', entityType: 'calibration', entityIdPath: 'params.uuid' })
-  completeCalibration(
+  async completeCalibration(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateCalibrationDto: UpdateCalibrationDto
+    @Body() updateCalibrationDto: UpdateCalibrationDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
+    await this.enforceCalibrationAccess(uuid, req);
     return this.calibrationService.completeCalibration(uuid, updateCalibrationDto);
   }
 
@@ -523,6 +553,7 @@ export class CalibrationController {
     @Body() approveDto: ApproveCalibrationDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
+    await this.enforceCalibrationAccess(uuid, req);
     // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
     const approverId = extractUserId(req);
     return this.calibrationService.approveCalibration(uuid, { ...approveDto, approverId });
@@ -547,6 +578,7 @@ export class CalibrationController {
     @Body() rejectDto: RejectCalibrationDto,
     @Request() req: AuthenticatedRequest
   ): Promise<CalibrationRecord> {
+    await this.enforceCalibrationAccess(uuid, req);
     // ✅ 보안: approverId를 JWT 세션에서 추출 (checkout 패턴)
     const approverId = extractUserId(req);
     return this.calibrationService.rejectCalibration(uuid, { ...rejectDto, approverId });

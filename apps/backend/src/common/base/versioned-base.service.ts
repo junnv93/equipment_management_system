@@ -38,7 +38,8 @@ export abstract class VersionedBaseService {
     expectedVersion: number,
     updateData: Record<string, unknown>,
     entityName: string,
-    tx?: AppDatabase
+    tx?: AppDatabase,
+    notFoundCode = 'ENTITY_NOT_FOUND'
   ): Promise<T> {
     const executor = tx ?? this.db;
 
@@ -61,7 +62,7 @@ export abstract class VersionedBaseService {
 
       if (!existing) {
         throw new NotFoundException({
-          code: 'ENTITY_NOT_FOUND',
+          code: notFoundCode,
           message: `${entityName} with UUID ${id} not found`,
         });
       }

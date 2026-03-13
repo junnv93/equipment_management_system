@@ -5,9 +5,11 @@ import {
   EQUIPMENT_IMPORT_STATUS_VALUES,
   EQUIPMENT_IMPORT_SOURCE_VALUES,
   SiteEnum,
+  SortOrderEnum,
   type EquipmentImportStatus,
   type EquipmentImportSource,
   type Site,
+  type SortOrder,
 } from '@equipment-management/schemas';
 
 export const equipmentImportQuerySchema = z.object({
@@ -22,7 +24,7 @@ export const equipmentImportQuerySchema = z.object({
     .enum(['createdAt', 'usagePeriodStart', 'usagePeriodEnd', 'status'])
     .optional()
     .default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  sortOrder: SortOrderEnum.optional().default('desc'),
 });
 
 export type EquipmentImportQueryInput = z.infer<typeof equipmentImportQuerySchema>;
@@ -81,11 +83,11 @@ export class EquipmentImportQueryDto {
 
   @ApiProperty({
     description: '정렬 순서',
-    enum: ['asc', 'desc'],
+    enum: SortOrderEnum.options,
     default: 'desc',
     required: false,
   })
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: SortOrder;
 }
 
 // ============================================================================

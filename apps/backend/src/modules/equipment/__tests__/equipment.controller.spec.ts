@@ -345,7 +345,10 @@ describe('EquipmentController', () => {
         .mockRejectedValue(new NotFoundException('장비를 찾을 수 없습니다.'));
 
       // Act & Assert
-      await expect(controller.update(uuid, updateEquipmentDto)).rejects.toThrow(NotFoundException);
+      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      await expect(
+        controller.update(uuid, updateEquipmentDto, undefined, mockReq as AuthenticatedRequest)
+      ).rejects.toThrow(NotFoundException);
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
     });
   });
@@ -379,7 +382,10 @@ describe('EquipmentController', () => {
         .mockRejectedValue(new NotFoundException('장비를 찾을 수 없습니다.'));
 
       // Act & Assert
-      await expect(controller.remove(uuid)).rejects.toThrow(NotFoundException);
+      const mockReq = { user: { roles: ['lab_manager'], userId: 'admin-uuid' } } as MockRequest;
+      await expect(controller.remove(uuid, mockReq as AuthenticatedRequest)).rejects.toThrow(
+        NotFoundException
+      );
       expect(equipmentService.findOne).toHaveBeenCalledWith(uuid);
     });
   });

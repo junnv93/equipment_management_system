@@ -31,6 +31,7 @@ import { Permission, EQUIPMENT_IMPORT_DATA_SCOPE } from '@equipment-management/s
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 
 @ApiTags('장비 반입 관리 (렌탈 + 내부 공용)')
 @ApiBearerAuth()
@@ -102,6 +103,14 @@ export class EquipmentImportsController {
     @Body() dto: ApproveEquipmentImportDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
+    enforceSiteAccess(
+      req,
+      site,
+      EQUIPMENT_IMPORT_DATA_SCOPE,
+      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
     return this.equipmentImportsService.approve(id, req.user.userId, dto);
   }
 
@@ -117,6 +126,14 @@ export class EquipmentImportsController {
     @Body() dto: RejectEquipmentImportDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
+    enforceSiteAccess(
+      req,
+      site,
+      EQUIPMENT_IMPORT_DATA_SCOPE,
+      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
     return this.equipmentImportsService.reject(id, req.user.userId, dto);
   }
 
@@ -138,6 +155,14 @@ export class EquipmentImportsController {
     @Body(ReceiveEquipmentImportValidationPipe) dto: ReceiveEquipmentImportDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
+    enforceSiteAccess(
+      req,
+      site,
+      EQUIPMENT_IMPORT_DATA_SCOPE,
+      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
     return this.equipmentImportsService.receive(id, req.user.userId, dto);
   }
 
@@ -158,6 +183,14 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
+    enforceSiteAccess(
+      req,
+      site,
+      EQUIPMENT_IMPORT_DATA_SCOPE,
+      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
     return this.equipmentImportsService.initiateReturn(id, req.user.userId, req.user.teamId);
   }
 
@@ -171,6 +204,14 @@ export class EquipmentImportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const { site, teamId } = await this.equipmentImportsService.getImportSiteAndTeam(id);
+    enforceSiteAccess(
+      req,
+      site,
+      EQUIPMENT_IMPORT_DATA_SCOPE,
+      'EQUIPMENT_IMPORT_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
     return this.equipmentImportsService.cancel(id, req.user.userId);
   }
 }

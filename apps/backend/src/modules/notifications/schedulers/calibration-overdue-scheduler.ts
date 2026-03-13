@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, inArray, isNull, notInArray, sql } from 'drizzle-orm';
@@ -6,6 +6,12 @@ import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import { equipment, equipmentIncidentHistory } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
+import {
+  EquipmentStatusEnum,
+  NonConformanceStatusEnum,
+  NonConformanceTypeEnum,
+  ResolutionTypeEnum,
+} from '@equipment-management/schemas';
 import { NotificationsService } from '../notifications.service';
 import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 import { getUtcStartOfDay } from '../../../common/utils';
@@ -31,17 +37,17 @@ import { NOTIFICATION_EVENTS } from '../events/notification-events';
  * 성능: 배치 inArray 쿼리로 기존 부적합 중복 확인 (N+1 방지)
  */
 @Injectable()
-export class CalibrationOverdueScheduler {
+export class CalibrationOverdueScheduler implements OnModuleInit {
   private readonly logger = new Logger(CalibrationOverdueScheduler.name);
 
-  // 제외할 장비 상태 목록
+  // 제외할 장비 상태 목록 (SSOT enum 참조)
   private readonly EXCLUDED_STATUSES = [
-    'non_conforming',
-    'calibration_overdue', // 이미 교정기한 초과 상태인 장비는 재처리 방지
-    'disposed',
-    'pending_disposal',
-    'retired',
-    'inactive',
+    EquipmentStatusEnum.enum.non_conforming,
+    EquipmentStatusEnum.enum.calibration_overdue,
+    EquipmentStatusEnum.enum.disposed,
+    EquipmentStatusEnum.enum.pending_disposal,
+    EquipmentStatusEnum.enum.retired,
+    EquipmentStatusEnum.enum.inactive,
   ];
 
   constructor(
@@ -51,6 +57,24 @@ export class CalibrationOverdueScheduler {
     private readonly cacheInvalidationHelper: CacheInvalidationHelper,
     private readonly eventEmitter: EventEmitter2
   ) {}
+
+  /**
+   * 앱 시작 시 즉시 실행 (CheckoutOverdueScheduler 패턴과 동일)
+   */
+  async onModuleInit(): Promise<void> {
+    this.logger.log('애플리케이션 시작 시 교정 기한 초과 점검 실행...');
+    try {
+      const result = await this.handleCalibrationOverdueCheck();
+      this.logger.log(
+        `초기 교정 기한 초과 점검 완료: 처리 ${result.processed}건, 생성 ${result.created}건, 건너뜀 ${result.skipped}건`
+      );
+    } catch (error) {
+      this.logger.error(
+        '초기 교정 기한 초과 점검 실패',
+        error instanceof Error ? error.stack : String(error)
+      );
+    }
+  }
 
   /**
    * 매 시간 정각(00분)에 자동 실행
@@ -139,9 +163,12 @@ export class CalibrationOverdueScheduler {
         .where(
           and(
             inArray(nonConformances.equipmentId, overdueIds),
-            eq(nonConformances.ncType, 'calibration_overdue'),
+            eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
             isNull(nonConformances.deletedAt),
-            sql`${nonConformances.status} IN ('open', 'analyzing')`
+            inArray(nonConformances.status, [
+              NonConformanceStatusEnum.enum.open,
+              NonConformanceStatusEnum.enum.analyzing,
+            ])
           )
         );
       const existingNcSet = new Set(existingNcRows.map((r) => r.equipmentId));
@@ -177,26 +204,27 @@ export class CalibrationOverdueScheduler {
                 discoveryDate,
                 discoveredBy: null, // 시스템 자동 생성
                 cause: `교정 기한 초과 (다음 교정일: ${equip.nextCalibrationDate?.toISOString().split('T')[0]})`,
-                ncType: 'calibration_overdue',
+                ncType: NonConformanceTypeEnum.enum.calibration_overdue,
                 actionPlan: '교정 수행 필요',
-                status: 'open',
+                status: NonConformanceStatusEnum.enum.open,
               })
               .returning();
 
-            // (B) 장비 상태를 non_conforming으로 변경
+            // (B) 장비 상태를 non_conforming으로 변경 (version bump로 CAS 일관성 보장)
             await tx
               .update(equipment)
               .set({
-                status: 'non_conforming',
+                status: EquipmentStatusEnum.enum.non_conforming,
+                version: sql`version + 1`,
                 updatedAt: new Date(),
-              })
+              } as Record<string, unknown>)
               .where(eq(equipment.id, equip.id));
 
             // (C) 사고 이력 자동 등록
             await tx.insert(equipmentIncidentHistory).values({
               equipmentId: equip.id,
               occurredAt: today,
-              incidentType: 'calibration_overdue',
+              incidentType: NonConformanceTypeEnum.enum.calibration_overdue,
               content: `교정 기한 초과로 인한 자동 부적합 전환 (부적합 ID: ${nc.id})`,
               reportedBy: null, // 시스템 자동
             });
@@ -288,10 +316,12 @@ export class CalibrationOverdueScheduler {
       .where(
         and(
           eq(nonConformances.equipmentId, equipmentId),
-          eq(nonConformances.ncType, 'calibration_overdue'),
+          eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
           isNull(nonConformances.deletedAt),
-          // open 또는 analyzing 상태
-          sql`${nonConformances.status} IN ('open', 'analyzing')`
+          inArray(nonConformances.status, [
+            NonConformanceStatusEnum.enum.open,
+            NonConformanceStatusEnum.enum.analyzing,
+          ])
         )
       )
       .limit(1);
@@ -323,8 +353,8 @@ export class CalibrationOverdueScheduler {
     await this.db
       .update(nonConformances)
       .set({
-        status: 'corrected',
-        resolutionType: 'recalibration',
+        status: NonConformanceStatusEnum.enum.corrected,
+        resolutionType: ResolutionTypeEnum.enum.recalibration,
         calibrationId,
         correctionContent: '교정 완료로 인한 자동 조치 완료',
         correctionDate: today.toISOString().split('T')[0],

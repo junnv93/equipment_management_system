@@ -43,14 +43,14 @@ export class CreateTeamDto {
 
   @ApiProperty({
     description: '팀 분류 (장비 분류와 동일, 소문자_언더스코어)',
-    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'], // ← 소문자 통일
-    example: 'fcc_emc_rf', // ← 소문자
+    enum: ClassificationEnum.options,
+    example: 'fcc_emc_rf',
   })
-  classification: Classification; // ← type → classification
+  classification: Classification;
 
   @ApiProperty({
     description: '팀 소속 사이트',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
   site: Site;

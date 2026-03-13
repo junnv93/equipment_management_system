@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { CHECKOUT_PURPOSE_VALUES, type CheckoutPurpose } from '@equipment-management/schemas';
 
 /**
  * 사용자 정보 DTO (중첩)
@@ -136,9 +137,9 @@ export class CheckoutResponseDto {
   @ApiProperty({
     description: '반출 목적',
     example: 'calibration',
-    enum: ['calibration', 'repair', 'rental', 'return_to_vendor'],
+    enum: CHECKOUT_PURPOSE_VALUES,
   })
-  purpose: string;
+  purpose: CheckoutPurpose;
 
   @ApiProperty({ description: '반출 유형', example: 'calibration' })
   checkoutType: string;

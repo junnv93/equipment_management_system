@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { CreateCalibrationDto, calibrationBaseSchema } from './create-calibration.dto';
-import { CalibrationStatusEnum } from '@equipment-management/schemas';
+import { CalibrationStatusEnum, type CalibrationStatus } from '@equipment-management/schemas';
 import { versionedSchema } from '../../../common/dto/base-versioned.dto';
 
 // ========== Zod 스키마 정의 ==========
@@ -35,7 +35,7 @@ export class UpdateCalibrationDto extends PartialType(
     example: 'completed',
     required: false,
   })
-  status?: string;
+  status?: CalibrationStatus;
 
   @ApiProperty({
     description: 'Optimistic locking version (CAS 보호 시 필수)',

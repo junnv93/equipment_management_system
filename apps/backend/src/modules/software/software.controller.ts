@@ -34,6 +34,7 @@ import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 
 @ApiTags('소프트웨어 관리')
 @ApiBearerAuth()
@@ -207,6 +208,14 @@ export class SoftwareController {
     @Body() approveDto: ApproveSoftwareChangeDto,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
+    const { site, teamId } = await this.softwareService.getSoftwareSiteAndTeam(uuid);
+    enforceSiteAccess(
+      req,
+      site,
+      SOFTWARE_DATA_SCOPE,
+      'SOFTWARE_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
     const approverId = extractUserId(req);
     return this.softwareService.approve(uuid, { ...approveDto, approverId });
   }
@@ -234,6 +243,14 @@ export class SoftwareController {
     @Body() rejectDto: RejectSoftwareChangeDto,
     @Request() req: AuthenticatedRequest
   ): Promise<SoftwareHistory> {
+    const { site, teamId } = await this.softwareService.getSoftwareSiteAndTeam(uuid);
+    enforceSiteAccess(
+      req,
+      site,
+      SOFTWARE_DATA_SCOPE,
+      'SOFTWARE_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
     const approverId = extractUserId(req);
     return this.softwareService.reject(uuid, { ...rejectDto, approverId });
   }

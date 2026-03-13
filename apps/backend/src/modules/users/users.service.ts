@@ -15,7 +15,12 @@ import {
   userPreferences as userPreferencesTable,
 } from '@equipment-management/db/schema';
 import { CreateUserDto, UpdateUserDto, UserQueryDto, ChangeRoleInput } from './dto';
-import { User, UserListResponse, type UserRole } from '@equipment-management/schemas';
+import {
+  User,
+  UserListResponse,
+  type UserRole,
+  UserRoleValues as URVal,
+} from '@equipment-management/schemas';
 import { getPermissions, Permission } from '@equipment-management/shared-constants';
 import { parseSortString } from '../../common/utils/sort';
 
@@ -187,7 +192,7 @@ export class UsersService {
         id: createUserDto.id,
         email: createUserDto.email,
         name: createUserDto.name,
-        role: createUserDto.role || 'test_engineer',
+        role: createUserDto.role || URVal.TEST_ENGINEER,
         teamId: createUserDto.teamId,
         site: createUserDto.site,
         location: createUserDto.location,
@@ -248,7 +253,7 @@ export class UsersService {
           id: createUserDto.id,
           email: createUserDto.email,
           name: createUserDto.name,
-          role: createUserDto.role || 'test_engineer',
+          role: createUserDto.role || URVal.TEST_ENGINEER,
           teamId: createUserDto.teamId,
           site: createUserDto.site,
           location: createUserDto.location,
@@ -281,7 +286,9 @@ export class UsersService {
         message: 'Requester not found.',
       });
     }
-    if (!['technical_manager', 'lab_manager'].includes(requester.role)) {
+    if (
+      !([URVal.TECHNICAL_MANAGER, URVal.LAB_MANAGER] as readonly string[]).includes(requester.role)
+    ) {
       throw new ForbiddenException({
         code: 'USER_NO_ROLE_CHANGE_PERMISSION',
         message: 'No permission to change roles.',
@@ -306,7 +313,9 @@ export class UsersService {
     }
 
     // ❹ 대상 역할 범위 검증 (QM/LM은 변경 불가)
-    if (!['test_engineer', 'technical_manager'].includes(target.role)) {
+    if (
+      !([URVal.TEST_ENGINEER, URVal.TECHNICAL_MANAGER] as readonly string[]).includes(target.role)
+    ) {
       throw new ForbiddenException({
         code: 'USER_CANNOT_CHANGE_SENIOR_ROLE',
         message: 'Cannot change the role of quality manager or lab manager.',
@@ -314,14 +323,14 @@ export class UsersService {
     }
 
     // ❺ 범위 제한 (requester의 DB 역할 기준)
-    if (requester.role === 'technical_manager') {
+    if (requester.role === URVal.TECHNICAL_MANAGER) {
       if (target.teamId !== requester.teamId) {
         throw new ForbiddenException({
           code: 'USER_TEAM_SCOPE_ONLY',
           message: 'Can only change roles of your own team members.',
         });
       }
-    } else if (requester.role === 'lab_manager') {
+    } else if (requester.role === URVal.LAB_MANAGER) {
       if (target.site !== requester.site) {
         throw new ForbiddenException({
           code: 'USER_SITE_SCOPE_ONLY',

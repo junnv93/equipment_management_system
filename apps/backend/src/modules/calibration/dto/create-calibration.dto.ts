@@ -3,9 +3,13 @@ import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   CalibrationMethodEnum,
+  type CalibrationMethod,
   CalibrationStatusEnum,
+  type CalibrationStatus,
   CalibrationRegisteredByRoleEnum,
+  type CalibrationRegisteredByRole,
   CalibrationResultEnum,
+  type CalibrationResult,
 } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
@@ -64,11 +68,21 @@ export class CreateCalibrationDto {
   @ApiProperty({ description: '다음 교정 예정일', example: '2024-05-20' })
   nextCalibrationDate: Date;
 
-  @ApiProperty({ description: '교정 방법', required: false, default: 'external_calibration' })
-  calibrationMethod?: string;
+  @ApiProperty({
+    description: '교정 방법',
+    enum: CalibrationMethodEnum.options,
+    required: false,
+    default: 'external_calibration',
+  })
+  calibrationMethod?: CalibrationMethod;
 
-  @ApiProperty({ description: '교정 상태', default: 'scheduled', required: false })
-  status?: string;
+  @ApiProperty({
+    description: '교정 상태',
+    enum: CalibrationStatusEnum.options,
+    default: 'scheduled',
+    required: false,
+  })
+  status?: CalibrationStatus;
 
   @ApiProperty({ description: '교정 기관/업체', example: '한국계측기술원' })
   calibrationAgency: string;
@@ -79,8 +93,12 @@ export class CreateCalibrationDto {
   @ApiProperty({ description: '교정성적서 파일 경로', required: false })
   certificatePath?: string;
 
-  @ApiProperty({ description: '교정 결과', enum: ['pass', 'fail', 'conditional'], required: false })
-  result?: string;
+  @ApiProperty({
+    description: '교정 결과',
+    enum: CalibrationResultEnum.options,
+    required: false,
+  })
+  result?: CalibrationResult;
 
   @ApiProperty({ description: '교정 비용', required: false })
   cost?: number;
@@ -94,8 +112,12 @@ export class CreateCalibrationDto {
   @ApiProperty({ description: '등록자 ID', required: false })
   registeredBy?: string;
 
-  @ApiProperty({ description: '등록자 역할', required: false })
-  registeredByRole?: string;
+  @ApiProperty({
+    description: '등록자 역할',
+    enum: CalibrationRegisteredByRoleEnum.options,
+    required: false,
+  })
+  registeredByRole?: CalibrationRegisteredByRole;
 
   @ApiProperty({ description: '등록자 코멘트', required: false })
   registrarComment?: string;

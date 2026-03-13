@@ -8,7 +8,13 @@ import {
   ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_TOKEN_EXPIRES_IN,
 } from '@equipment-management/shared-constants';
-import { type SiteCode, CODE_TO_SITE, SITE_TO_LOCATION } from '@equipment-management/schemas';
+import {
+  type SiteCode,
+  type Site,
+  type Location,
+  CODE_TO_SITE,
+  SITE_TO_LOCATION,
+} from '@equipment-management/schemas';
 import { UserRoleValues, type UserRole } from './rbac/roles.enum';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
@@ -21,8 +27,8 @@ export interface UserDto {
   name: string;
   roles: UserRole[];
   department?: string;
-  site?: 'suwon' | 'uiwang' | 'pyeongtaek';
-  location?: '수원랩' | '의왕랩' | '평택랩';
+  site?: Site;
+  location?: Location;
   position?: string;
   teamId?: string;
 }
@@ -73,8 +79,8 @@ export interface TestUser {
   name: string;
   role: string;
   department?: string;
-  site?: 'suwon' | 'uiwang' | 'pyeongtaek';
-  location?: '수원랩' | '의왕랩' | '평택랩';
+  site?: Site;
+  location?: Location;
   position?: string;
   teamId?: string;
 }
@@ -264,8 +270,8 @@ export class AuthService {
   //    - 평택(PYT): Automotive EMC(A)
   private mapAzureGroupsToTeamAndLocation(azureGroups: string[]): {
     teamId?: string;
-    site?: 'suwon' | 'uiwang' | 'pyeongtaek';
-    location?: '수원랩' | '의왕랩' | '평택랩';
+    site?: Site;
+    location?: Location;
   } {
     // Azure AD 그룹 패턴: LST.{SITE}.{TEAM}
     // 예: LST.SUW.RF (수원 FCC EMC/RF팀)
@@ -273,7 +279,7 @@ export class AuthService {
     // ✅ Azure AD 그룹 → 팀 UUID 매핑 (환경변수 기반 — 배포 환경에서 실제 UUID로 교체)
     // 팀 이름은 분류 이름과 동일: FCC EMC/RF, General EMC, General RF, SAR, Automotive EMC
     const cfg = this.configService;
-    const teamMapping: Record<'suwon' | 'uiwang' | 'pyeongtaek', Record<string, string>> = {
+    const teamMapping: Record<Site, Record<string, string>> = {
       suwon: {
         RF: cfg.get<string>('AZURE_TEAM_ID_SUW_RF') ?? '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
         SAR: cfg.get<string>('AZURE_TEAM_ID_SUW_SAR') ?? '7fd28076-fd5e-4d36-b051-bbf8a97b82db',

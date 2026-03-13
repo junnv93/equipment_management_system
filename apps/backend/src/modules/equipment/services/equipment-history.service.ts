@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { eq, desc, and, isNull, sql } from 'drizzle-orm';
+import { eq, desc, and, isNull, inArray, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import * as schema from '@equipment-management/db/schema';
 import {
@@ -11,6 +11,11 @@ import {
 } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {
+  EquipmentStatusEnum,
+  NonConformanceStatusEnum,
+  NonConformanceTypeEnum,
+} from '@equipment-management/schemas';
+import {
   CreateLocationHistoryDto,
   CreateMaintenanceHistoryDto,
   CreateIncidentHistoryDto,
@@ -19,12 +24,14 @@ import {
   IncidentHistoryResponseDto,
 } from '../dto/equipment-history.dto';
 import { getUtcStartOfDay } from '../../../common/utils';
+import { CacheInvalidationHelper } from '../../../common/cache/cache-invalidation.helper';
 
 @Injectable()
 export class EquipmentHistoryService {
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase
+    private readonly db: AppDatabase,
+    private readonly cacheInvalidationHelper: CacheInvalidationHelper
   ) {}
 
   /**
@@ -232,7 +239,9 @@ export class EquipmentHistoryService {
     const isPastIncident = occurredDate.getTime() < today.getTime();
 
     // 트랜잭션으로 원자성 보장
-    return await this.db.transaction(async (tx) => {
+    let equipmentStatusChanged = false;
+
+    const result = await this.db.transaction(async (tx) => {
       // 1. 사고이력 생성 (항상 수행 - 과거/현재 모두)
       const [record] = await tx
         .insert(equipmentIncidentHistory)
@@ -248,7 +257,7 @@ export class EquipmentHistoryService {
       let nonConformanceId: string | undefined;
 
       // 2-A. 교정 기한 초과는 자동으로 부적합 생성 (중복 방지)
-      if (dto.incidentType === 'calibration_overdue') {
+      if (dto.incidentType === NonConformanceTypeEnum.enum.calibration_overdue) {
         // 2-A-1. 이미 open/analyzing 상태의 calibration_overdue 부적합이 있는지 확인
         const existingNc = await tx
           .select()
@@ -256,9 +265,12 @@ export class EquipmentHistoryService {
           .where(
             and(
               eq(nonConformances.equipmentId, equipmentUuid),
-              eq(nonConformances.ncType, 'calibration_overdue'),
+              eq(nonConformances.ncType, NonConformanceTypeEnum.enum.calibration_overdue),
               isNull(nonConformances.deletedAt),
-              sql`${nonConformances.status} IN ('open', 'analyzing')`
+              inArray(nonConformances.status, [
+                NonConformanceStatusEnum.enum.open,
+                NonConformanceStatusEnum.enum.analyzing,
+              ])
             )
           )
           .limit(1);
@@ -272,9 +284,9 @@ export class EquipmentHistoryService {
               discoveryDate: occurredDate.toISOString().split('T')[0],
               discoveredBy: validatedUserId,
               cause: dto.content,
-              ncType: 'calibration_overdue',
+              ncType: NonConformanceTypeEnum.enum.calibration_overdue,
               actionPlan: dto.actionPlan || '교정 수행 필요',
-              status: 'open',
+              status: NonConformanceStatusEnum.enum.open,
             })
             .returning();
 
@@ -299,14 +311,19 @@ export class EquipmentHistoryService {
               new Date(currentEquipment.nextCalibrationDate).getTime() < today.getTime();
 
             // 실제로 교정 기한이 초과된 경우에만 상태 변경
-            if (isActuallyOverdue && currentEquipment?.status !== 'non_conforming') {
+            if (
+              isActuallyOverdue &&
+              currentEquipment?.status !== EquipmentStatusEnum.enum.non_conforming
+            ) {
               await tx
                 .update(equipment)
                 .set({
-                  status: 'non_conforming',
+                  status: EquipmentStatusEnum.enum.non_conforming,
+                  version: sql`version + 1`,
                   updatedAt: new Date(),
-                })
+                } as Record<string, unknown>)
                 .where(eq(equipment.id, equipmentUuid));
+              equipmentStatusChanged = true;
             }
           }
         } else {
@@ -342,7 +359,7 @@ export class EquipmentHistoryService {
             cause: dto.content,
             ncType: dto.incidentType as 'damage' | 'malfunction',
             actionPlan: dto.actionPlan ?? null,
-            status: 'open',
+            status: NonConformanceStatusEnum.enum.open,
           })
           .returning();
 
@@ -354,10 +371,12 @@ export class EquipmentHistoryService {
           await tx
             .update(equipment)
             .set({
-              status: 'non_conforming',
+              status: EquipmentStatusEnum.enum.non_conforming,
+              version: sql`version + 1`,
               updatedAt: new Date(),
-            })
+            } as Record<string, unknown>)
             .where(eq(equipment.id, equipmentUuid));
+          equipmentStatusChanged = true;
         }
       }
 
@@ -373,6 +392,17 @@ export class EquipmentHistoryService {
         nonConformanceId, // 부적합 생성된 경우 ID 포함
       };
     });
+
+    // 트랜잭션 완료 후 캐시 무효화 (calibration-overdue-scheduler 패턴과 동일)
+    if (equipmentStatusChanged) {
+      await this.cacheInvalidationHelper.invalidateAfterEquipmentUpdate(
+        equipmentUuid,
+        true, // statusChanged
+        false // teamIdChanged
+      );
+    }
+
+    return result;
   }
 
   /**

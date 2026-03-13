@@ -30,7 +30,7 @@ import {
   getAllowedStatusesForPurpose,
   Permission,
 } from '@equipment-management/shared-constants';
-import { eq, and, gte, lte, or, desc, asc, sql, SQL, isNull } from 'drizzle-orm';
+import { eq, and, gte, lte, or, desc, asc, sql, SQL, isNull, inArray } from 'drizzle-orm';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { checkouts, checkoutItems } from '@equipment-management/db/schema/checkouts';
 import { conditionChecks } from '@equipment-management/db/schema/condition-checks';
@@ -844,56 +844,49 @@ export class CheckoutsService extends VersionedBaseService {
    * 팀별 권한 체크 헬퍼 메서드
    * EMC팀은 RF팀 장비 반출 신청/승인 불가 (같은 사이트 내에서도)
    */
-  private async checkTeamPermission(equipmentId: string, userTeamId?: string): Promise<void> {
-    if (!userTeamId) {
-      return; // 팀 정보가 없으면 체크하지 않음
-    }
-
-    // 장비 정보 조회
-    const equipment = await this.equipmentService.findOne(equipmentId);
-    if (!equipment.teamId) {
-      return; // 장비에 팀이 없으면 체크하지 않음
-    }
-
-    // 사용자 팀 정보 조회
-    const userTeam = await this.teamsService.findOne(userTeamId);
-    if (!userTeam) {
-      return; // 사용자 팀 정보를 찾을 수 없으면 체크하지 않음
-    }
-
-    // 사용자 팀 분류 확인
-    const userTeamClassification = userTeam.classification;
+  private checkTeamPermission(
+    equipmentData: { team?: { classification?: string | null } | null },
+    userTeamClassification?: string | null
+  ): void {
+    if (!userTeamClassification || !equipmentData.team) return;
 
     // EMC팀은 RF팀 장비 반출 신청/승인 불가
-    if (userTeamClassification === 'general_emc') {
-      try {
-        // ✅ 스키마 일치화: EquipmentService를 사용하여 타입 안전하게 조회
-        const equipmentData = await this.equipmentService.findOne(equipmentId, true);
-
-        if (!equipmentData.teamId) {
-          // 팀이 없으면 체크하지 않음
-          return;
-        }
-
-        const equipmentTeamClassification = equipmentData.team?.classification;
-
-        // EMC팀은 RF팀 장비 반출 신청/승인 불가
-        if (equipmentTeamClassification === 'general_rf') {
-          throw new ForbiddenException({
-            code: 'CHECKOUT_CROSS_TEAM_FORBIDDEN',
-            message: 'EMC team does not have checkout permission for RF team equipment',
-          });
-        }
-      } catch (error) {
-        if (error instanceof ForbiddenException) {
-          throw error;
-        }
-        this.logger.error(
-          `팀별 권한 체크 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`
-        );
-        // 오류 발생 시 체크를 건너뛰고 진행 (보안보다는 안정성 우선)
-      }
+    if (
+      userTeamClassification === 'general_emc' &&
+      equipmentData.team.classification === 'general_rf'
+    ) {
+      throw new ForbiddenException({
+        code: 'CHECKOUT_CROSS_TEAM_FORBIDDEN',
+        message: 'EMC team does not have checkout permission for RF team equipment',
+      });
     }
+  }
+
+  /**
+   * checkout_items + equipment LEFT JOIN으로 아이템 + 첫 번째 장비 정보 동시 획득
+   * 알림용 중복 패턴 제거 헬퍼
+   */
+  private async getCheckoutItemsWithFirstEquipment(checkoutId: string): Promise<{
+    items: Array<{ equipmentId: string }>;
+    firstEquipment: { name: string | null; managementNumber: string | null } | null;
+  }> {
+    const rows = await this.db
+      .select({
+        equipmentId: checkoutItems.equipmentId,
+        equipmentName: schema.equipment.name,
+        managementNumber: schema.equipment.managementNumber,
+      })
+      .from(checkoutItems)
+      .leftJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
+      .where(eq(checkoutItems.checkoutId, checkoutId));
+
+    const items = rows.map((r) => ({ equipmentId: r.equipmentId }));
+    const firstEquipment =
+      rows.length > 0
+        ? { name: rows[0].equipmentName, managementNumber: rows[0].managementNumber }
+        : null;
+
+    return { items, firstEquipment };
   }
 
   /**
@@ -990,23 +983,24 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       // 장비 존재 여부 및 사용 가능 여부 확인 (배치 조회로 N+1 방지)
-      const equipmentMap = new Map<
-        string,
-        Awaited<ReturnType<typeof this.equipmentService.findOne>>
-      >();
-      for (const equipmentId of createCheckoutDto.equipmentIds) {
-        try {
-          const equip = await this.equipmentService.findOne(equipmentId);
-          equipmentMap.set(equipmentId, equip);
-        } catch (error) {
-          if (error instanceof NotFoundException) {
-            throw new BadRequestException({
-              code: 'CHECKOUT_EQUIPMENT_NOT_FOUND',
-              message: `Equipment with UUID ${equipmentId} not found`,
-            });
-          }
-          throw error;
+      let equipmentMap: Awaited<ReturnType<typeof this.equipmentService.findByIds>>;
+      try {
+        equipmentMap = await this.equipmentService.findByIds(createCheckoutDto.equipmentIds, true);
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw new BadRequestException({
+            code: 'CHECKOUT_EQUIPMENT_NOT_FOUND',
+            message: (error.getResponse() as { message: string }).message,
+          });
         }
+        throw error;
+      }
+
+      // 사용자 팀 classification 조회 (1회)
+      let userTeamClassification: string | null | undefined;
+      if (userTeamId) {
+        const userTeam = await this.teamsService.findOne(userTeamId);
+        userTeamClassification = userTeam?.classification;
       }
 
       const allowedStatuses = getAllowedStatusesForPurpose(createCheckoutDto.purpose);
@@ -1043,8 +1037,8 @@ export class CheckoutsService extends VersionedBaseService {
           }
         }
 
-        // 팀별 권한 체크: EMC팀은 RF팀 장비 반출 신청 불가
-        await this.checkTeamPermission(equipmentId, userTeamId);
+        // 팀별 권한 체크: EMC팀은 RF팀 장비 반출 신청 불가 (동기, DB 0회)
+        this.checkTeamPermission(equip, userTeamClassification);
       }
 
       // ✅ 날짜 처리 및 검증 강화
@@ -1120,13 +1114,13 @@ export class CheckoutsService extends VersionedBaseService {
       const affectedTeams = [userTeamId, insertData.lenderTeamId].filter(Boolean) as string[];
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined);
 
-      // 📢 알림 이벤트 발행 (fire-and-forget)
-      const firstEquipment = await this.equipmentService.findOne(createCheckoutDto.equipmentIds[0]);
+      // 📢 알림 이벤트 발행 (fire-and-forget) — equipmentMap 재사용 (DB 0회)
+      const firstEquipment = equipmentMap.get(createCheckoutDto.equipmentIds[0]);
       this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_CREATED, {
         checkoutId: newCheckout.id,
         equipmentId: createCheckoutDto.equipmentIds[0],
-        equipmentName: firstEquipment.name,
-        managementNumber: firstEquipment.managementNumber,
+        equipmentName: firstEquipment?.name,
+        managementNumber: firstEquipment?.managementNumber,
         requesterId,
         requesterTeamId: userTeamId ?? '',
         purpose: createCheckoutDto.purpose,
@@ -1180,14 +1174,27 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크
+      // 팀별 권한 체크: 반출에 포함된 모든 장비에 대해 체크 (배치 조회)
       const items = await this.db
         .select()
         .from(checkoutItems)
         .where(eq(checkoutItems.checkoutId, uuid));
 
+      const equipmentIds = items.map((item) => item.equipmentId);
+      const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
+
+      // 사용자 팀 classification 조회 (1회)
+      let approverTeamClassification: string | null | undefined;
+      if (approverTeamId) {
+        const approverTeam = await this.teamsService.findOne(approverTeamId);
+        approverTeamClassification = approverTeam?.classification;
+      }
+
       for (const item of items) {
-        await this.checkTeamPermission(item.equipmentId, approverTeamId);
+        const equip = equipmentMap.get(item.equipmentId);
+        if (equip) {
+          this.checkTeamPermission(equip, approverTeamClassification);
+        }
       }
 
       // 대여 목적: 장비 소속 팀(lenderTeamId)의 기술책임자만 승인 가능
@@ -1215,18 +1222,14 @@ export class CheckoutsService extends VersionedBaseService {
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행
-      const approveItems = await this.db
-        .select()
-        .from(checkoutItems)
-        .where(eq(checkoutItems.checkoutId, uuid));
-      if (approveItems.length > 0) {
-        const eq1 = await this.equipmentService.findOne(approveItems[0].equipmentId);
+      // 📢 알림 이벤트 발행 — items/equipmentMap 재사용 (DB 0회)
+      if (items.length > 0) {
+        const firstEquip = equipmentMap.get(items[0].equipmentId);
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_APPROVED, {
           checkoutId: uuid,
-          equipmentId: approveItems[0].equipmentId,
-          equipmentName: eq1.name,
-          managementNumber: eq1.managementNumber,
+          equipmentId: items[0].equipmentId,
+          equipmentName: firstEquip?.name,
+          managementNumber: firstEquip?.managementNumber,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: approveDto.approverId,
@@ -1296,18 +1299,15 @@ export class CheckoutsService extends VersionedBaseService {
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행
-      const rejectItems = await this.db
-        .select()
-        .from(checkoutItems)
-        .where(eq(checkoutItems.checkoutId, uuid));
-      if (rejectItems.length > 0) {
-        const eq1 = await this.equipmentService.findOne(rejectItems[0].equipmentId);
+      // 📢 알림 이벤트 발행 — JOIN 헬퍼 사용 (1 query)
+      const { items: rejectItems, firstEquipment: rejectFirstEquip } =
+        await this.getCheckoutItemsWithFirstEquipment(uuid);
+      if (rejectItems.length > 0 && rejectFirstEquip) {
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_REJECTED, {
           checkoutId: uuid,
           equipmentId: rejectItems[0].equipmentId,
-          equipmentName: eq1.name,
-          managementNumber: eq1.managementNumber,
+          equipmentName: rejectFirstEquip.name,
+          managementNumber: rejectFirstEquip.managementNumber,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           reason: rejectDto.reason,
@@ -1366,43 +1366,43 @@ export class CheckoutsService extends VersionedBaseService {
         '반출'
       );
 
-      // 반출된 장비들의 상태를 'checked_out'으로 변경
-      const items = await this.db
-        .select()
-        .from(checkoutItems)
-        .where(eq(checkoutItems.checkoutId, uuid));
+      // 반출된 장비들의 상태를 배치로 'checked_out'으로 변경
+      const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
 
-      for (const item of items) {
-        await this.equipmentService.updateStatus(item.equipmentId, ESVal.CHECKED_OUT);
-      }
+      const equipmentIds = items.map((item) => item.equipmentId);
+      await this.equipmentService.updateStatusBatch(equipmentIds, ESVal.CHECKED_OUT);
 
-      // 장비별 반출 전 상태 기록 (Phase 3)
+      // 장비별 반출 전 상태 기록 (Phase 3) — 배치 업데이트로 N+1 방지
       if (dto.itemConditions && dto.itemConditions.length > 0) {
-        for (const cond of dto.itemConditions) {
-          await this.db
-            .update(checkoutItems)
-            .set({ conditionBefore: cond.conditionBefore })
-            .where(
-              and(
-                eq(checkoutItems.checkoutId, uuid),
-                eq(checkoutItems.equipmentId, cond.equipmentId)
-              )
-            );
-        }
+        const conditionCases = dto.itemConditions.map(
+          (cond) =>
+            sql`WHEN ${checkoutItems.equipmentId} = ${cond.equipmentId} THEN ${cond.conditionBefore}`
+        );
+        const equipmentIdsForCondition = dto.itemConditions.map((c) => c.equipmentId);
+        await this.db
+          .update(checkoutItems)
+          .set({
+            conditionBefore: sql`CASE ${sql.join(conditionCases, sql` `)} END`,
+          })
+          .where(
+            and(
+              eq(checkoutItems.checkoutId, uuid),
+              inArray(checkoutItems.equipmentId, equipmentIdsForCondition)
+            )
+          );
       }
 
       // ✅ 선택적 캐시 무효화: 영향받는 팀만 무효화 + detail 캐시 무효화
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행
-      if (items.length > 0) {
-        const eq1 = await this.equipmentService.findOne(items[0].equipmentId);
+      // 📢 알림 이벤트 발행 — JOIN 결과 재사용 (DB 0회)
+      if (items.length > 0 && firstEquipment) {
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_STARTED, {
           checkoutId: uuid,
           equipmentId: items[0].equipmentId,
-          equipmentName: eq1.name,
-          managementNumber: eq1.managementNumber,
+          equipmentName: firstEquipment.name,
+          managementNumber: firstEquipment.managementNumber,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: checkout.requesterId,
@@ -1490,19 +1490,24 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      // 장비별 반입 후 상태 기록 (Phase 3)
+      // 장비별 반입 후 상태 기록 (Phase 3) — 배치 업데이트로 N+1 방지
       if (returnDto.itemConditions && returnDto.itemConditions.length > 0) {
-        for (const cond of returnDto.itemConditions) {
-          await this.db
-            .update(checkoutItems)
-            .set({ conditionAfter: cond.conditionAfter })
-            .where(
-              and(
-                eq(checkoutItems.checkoutId, uuid),
-                eq(checkoutItems.equipmentId, cond.equipmentId)
-              )
-            );
-        }
+        const conditionCases = returnDto.itemConditions.map(
+          (cond) =>
+            sql`WHEN ${checkoutItems.equipmentId} = ${cond.equipmentId} THEN ${cond.conditionAfter}`
+        );
+        const equipmentIdsForCondition = returnDto.itemConditions.map((c) => c.equipmentId);
+        await this.db
+          .update(checkoutItems)
+          .set({
+            conditionAfter: sql`CASE ${sql.join(conditionCases, sql` `)} END`,
+          })
+          .where(
+            and(
+              eq(checkoutItems.checkoutId, uuid),
+              inArray(checkoutItems.equipmentId, equipmentIdsForCondition)
+            )
+          );
       }
 
       // ✅ 장비 상태는 기술책임자 최종 승인 후에 변경 (approveReturn에서 처리)
@@ -1511,18 +1516,15 @@ export class CheckoutsService extends VersionedBaseService {
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행
-      const returnItems = await this.db
-        .select()
-        .from(checkoutItems)
-        .where(eq(checkoutItems.checkoutId, uuid));
-      if (returnItems.length > 0) {
-        const eq1 = await this.equipmentService.findOne(returnItems[0].equipmentId);
+      // 📢 알림 이벤트 발행 — JOIN 헬퍼 사용 (1 query)
+      const { items: returnItems, firstEquipment: returnFirstEquip } =
+        await this.getCheckoutItemsWithFirstEquipment(uuid);
+      if (returnItems.length > 0 && returnFirstEquip) {
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_RETURNED, {
           checkoutId: uuid,
           equipmentId: returnItems[0].equipmentId,
-          equipmentName: eq1.name,
-          managementNumber: eq1.managementNumber,
+          equipmentName: returnFirstEquip.name,
+          managementNumber: returnFirstEquip.managementNumber,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: returnerId,
@@ -1578,15 +1580,15 @@ export class CheckoutsService extends VersionedBaseService {
         }
       );
 
-      // ✅ 반입 승인 후 장비 상태를 'available'로 복원
-      const items = await this.db
-        .select()
-        .from(checkoutItems)
-        .where(eq(checkoutItems.checkoutId, uuid));
+      // ✅ 반입 승인 후 장비 상태를 배치로 'available'로 복원
+      const { items, firstEquipment } = await this.getCheckoutItemsWithFirstEquipment(uuid);
 
-      for (const item of items) {
-        await this.equipmentService.updateStatus(item.equipmentId, ESVal.AVAILABLE);
-      }
+      const equipmentIds = items.map((item) => item.equipmentId);
+      await this.equipmentService.updateStatusBatch(
+        equipmentIds,
+        ESVal.AVAILABLE,
+        ESVal.CHECKED_OUT
+      );
 
       // 렌탈 반납 목적 checkout일 경우 rental import 완료 콜백
       if (checkout.purpose === CPVal.RETURN_TO_VENDOR) {
@@ -1603,14 +1605,13 @@ export class CheckoutsService extends VersionedBaseService {
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행
-      if (items.length > 0) {
-        const eq1 = await this.equipmentService.findOne(items[0].equipmentId);
+      // 📢 알림 이벤트 발행 — JOIN 결과 재사용 (DB 0회)
+      if (items.length > 0 && firstEquipment) {
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_RETURN_APPROVED, {
           checkoutId: uuid,
           equipmentId: items[0].equipmentId,
-          equipmentName: eq1.name,
-          managementNumber: eq1.managementNumber,
+          equipmentName: firstEquipment.name,
+          managementNumber: firstEquipment.managementNumber,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           actorId: approveReturnDto.approverId,
@@ -1661,15 +1662,23 @@ export class CheckoutsService extends VersionedBaseService {
         });
       }
 
-      // ✅ 팀별 권한 체크 (크로스 사이트 워크플로우 — approve와 동일 패턴)
+      // ✅ 팀별 권한 체크 (크로스 사이트 워크플로우 — approve와 동일 배치 패턴)
       const items = await this.db
         .select()
         .from(checkoutItems)
         .where(eq(checkoutItems.checkoutId, uuid));
 
       if (rejectReturnDto.approverTeamId) {
+        const equipmentIds = items.map((item) => item.equipmentId);
+        const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
+        const approverTeam = await this.teamsService.findOne(rejectReturnDto.approverTeamId);
+        const approverClassification = approverTeam?.classification;
+
         for (const item of items) {
-          await this.checkTeamPermission(item.equipmentId, rejectReturnDto.approverTeamId);
+          const equip = equipmentMap.get(item.equipmentId);
+          if (equip) {
+            this.checkTeamPermission(equip, approverClassification);
+          }
         }
       }
 
@@ -1707,14 +1716,15 @@ export class CheckoutsService extends VersionedBaseService {
       const affectedTeams = await this.getAffectedTeamIds(checkout);
       await this.invalidateCache(affectedTeams.length > 0 ? affectedTeams : undefined, uuid);
 
-      // 📢 알림 이벤트 발행 (items는 팀 권한 체크에서 이미 fetch됨)
-      if (items.length > 0) {
-        const eq1 = await this.equipmentService.findOne(items[0].equipmentId);
+      // 📢 알림 이벤트 발행 — JOIN 헬퍼 사용 (1 query)
+      const { firstEquipment: rejectReturnEquip } =
+        await this.getCheckoutItemsWithFirstEquipment(uuid);
+      if (items.length > 0 && rejectReturnEquip) {
         this.eventEmitter.emit(NOTIFICATION_EVENTS.CHECKOUT_RETURN_REJECTED, {
           checkoutId: uuid,
           equipmentId: items[0].equipmentId,
-          equipmentName: eq1.name,
-          managementNumber: eq1.managementNumber,
+          equipmentName: rejectReturnEquip.name,
+          managementNumber: rejectReturnEquip.managementNumber,
           requesterId: checkout.requesterId,
           requesterTeamId: affectedTeams[0] ?? '',
           reason: rejectReturnDto.reason,
@@ -1828,9 +1838,8 @@ export class CheckoutsService extends VersionedBaseService {
           .select()
           .from(checkoutItems)
           .where(eq(checkoutItems.checkoutId, uuid));
-        for (const item of items) {
-          await this.equipmentService.updateStatus(item.equipmentId, ESVal.CHECKED_OUT);
-        }
+        const equipmentIds = items.map((item) => item.equipmentId);
+        await this.equipmentService.updateStatusBatch(equipmentIds, ESVal.CHECKED_OUT);
       } else if (dto.step === 'lender_return') {
         // ④ 반입 확인 → actualReturnDate 설정, 장비 status → available
         checkoutUpdateData.actualReturnDate = new Date();
@@ -1838,9 +1847,8 @@ export class CheckoutsService extends VersionedBaseService {
           .select()
           .from(checkoutItems)
           .where(eq(checkoutItems.checkoutId, uuid));
-        for (const item of items) {
-          await this.equipmentService.updateStatus(item.equipmentId, ESVal.AVAILABLE);
-        }
+        const equipmentIds = items.map((item) => item.equipmentId);
+        await this.equipmentService.updateStatusBatch(equipmentIds, ESVal.AVAILABLE);
       }
 
       // ✅ Optimistic locking: CAS를 사용한 상태 전환
@@ -2041,5 +2049,37 @@ export class CheckoutsService extends VersionedBaseService {
    */
   async remove(uuid: string): Promise<Checkout> {
     return this.cancel(uuid);
+  }
+
+  /**
+   * 반출의 사이트 및 팀 조회 (checkout_items → equipment 경유)
+   * 크로스사이트/크로스팀 접근 제어에 사용
+   */
+  async getCheckoutSiteAndTeam(
+    checkoutId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const result = await this.db
+      .select({ site: schema.equipment.site, teamId: schema.equipment.teamId })
+      .from(checkoutItems)
+      .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
+      .where(eq(checkoutItems.checkoutId, checkoutId));
+
+    if (result.length === 0) {
+      throw new NotFoundException({
+        code: 'CHECKOUT_NOT_FOUND',
+        message: `Checkout ${checkoutId} not found or has no equipment items.`,
+      });
+    }
+
+    // defense-in-depth: 다중 사이트 장비 혼합 방지
+    const sites = new Set(result.map((r) => r.site));
+    if (sites.size > 1) {
+      throw new BadRequestException({
+        code: 'CHECKOUT_CROSS_SITE_MIXED',
+        message: 'Checkout contains equipment from multiple sites',
+      });
+    }
+
+    return result[0];
   }
 }

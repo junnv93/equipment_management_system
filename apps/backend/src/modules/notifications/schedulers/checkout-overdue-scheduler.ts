@@ -4,6 +4,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AppDatabase } from '@equipment-management/db';
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
+import { CheckoutStatusEnum } from '@equipment-management/schemas';
 import { SimpleCacheService } from '../../../common/cache/simple-cache.service';
 import { NOTIFICATION_EVENTS } from '../events/notification-events';
 
@@ -100,7 +101,7 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
       .leftJoin(schema.users, eq(schema.users.id, schema.checkouts.requesterId))
       .where(
         and(
-          eq(schema.checkouts.status, 'checked_out'),
+          eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out),
           lte(schema.checkouts.expectedReturnDate, now)
         )
       );
@@ -114,12 +115,15 @@ export class CheckoutOverdueScheduler implements OnModuleInit {
     const updatedRows = await this.db
       .update(schema.checkouts)
       .set({
-        status: 'overdue',
+        status: CheckoutStatusEnum.enum.overdue,
         version: sql`${schema.checkouts.version} + 1`,
         updatedAt: now,
       })
       .where(
-        and(inArray(schema.checkouts.id, overdueIds), eq(schema.checkouts.status, 'checked_out'))
+        and(
+          inArray(schema.checkouts.id, overdueIds),
+          eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out)
+        )
       )
       .returning({ id: schema.checkouts.id });
 

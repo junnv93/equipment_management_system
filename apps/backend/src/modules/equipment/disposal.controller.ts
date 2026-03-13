@@ -18,7 +18,7 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
-import { Permission } from '@equipment-management/shared-constants';
+import { Permission, EQUIPMENT_DATA_SCOPE } from '@equipment-management/shared-constants';
 import { AuthenticatedRequest } from '../../types/auth';
 import { DisposalService } from './services/disposal.service';
 import {
@@ -33,6 +33,7 @@ import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 
 /**
  * 장비 폐기 컨트롤러
@@ -76,6 +77,14 @@ export class DisposalController {
     @Body(new ZodValidationPipe(requestDisposalSchema)) dto: RequestDisposalDto,
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
+    enforceSiteAccess(
+      req,
+      equipmentInfo.site,
+      EQUIPMENT_DATA_SCOPE,
+      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
+      equipmentInfo.teamId
+    );
     const userId = extractUserId(req);
     return this.disposalService.requestDisposal(equipmentId, dto, userId);
   }
@@ -111,6 +120,14 @@ export class DisposalController {
     @Body(new ZodValidationPipe(reviewDisposalSchema)) reviewDto: ReviewDisposalDto,
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
+    enforceSiteAccess(
+      req,
+      equipmentInfo.site,
+      EQUIPMENT_DATA_SCOPE,
+      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
+      equipmentInfo.teamId
+    );
     const userId = extractUserId(req);
     return this.disposalService.reviewDisposal(equipmentId, reviewDto, userId);
   }
@@ -148,6 +165,14 @@ export class DisposalController {
     @Body(new ZodValidationPipe(approveDisposalSchema)) approveDto: ApproveDisposalDto,
     @Req() req: AuthenticatedRequest
   ): Promise<unknown> {
+    const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
+    enforceSiteAccess(
+      req,
+      equipmentInfo.site,
+      EQUIPMENT_DATA_SCOPE,
+      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
+      equipmentInfo.teamId
+    );
     const userId = extractUserId(req);
     return this.disposalService.approveDisposal(equipmentId, approveDto, userId);
   }
@@ -176,6 +201,14 @@ export class DisposalController {
     @Param('equipmentId', ParseUUIDPipe) equipmentId: string,
     @Req() req: AuthenticatedRequest
   ): Promise<{ success: boolean; message: string }> {
+    const equipmentInfo = await this.disposalService.getEquipmentSiteInfo(equipmentId);
+    enforceSiteAccess(
+      req,
+      equipmentInfo.site,
+      EQUIPMENT_DATA_SCOPE,
+      'DISPOSAL_CROSS_SITE_ACCESS_DENIED',
+      equipmentInfo.teamId
+    );
     const userId = extractUserId(req);
     return this.disposalService.cancelDisposalRequest(equipmentId, userId);
   }

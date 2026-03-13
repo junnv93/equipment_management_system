@@ -11,7 +11,6 @@ import {
   ParseUUIDPipe,
   HttpStatus,
   UsePipes,
-  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { NonConformancesService } from './non-conformances.service';
@@ -32,46 +31,17 @@ import { NonConformanceQueryDto } from './dto/non-conformance-query.dto';
 import { type NonConformance } from '@equipment-management/db/schema/non-conformances';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SiteScoped } from '../../common/decorators/site-scoped.decorator';
-import {
-  Permission,
-  NON_CONFORMANCE_DATA_SCOPE,
-  resolveDataScope,
-} from '@equipment-management/shared-constants';
-import type { UserRole } from '@equipment-management/schemas';
+import { Permission, NON_CONFORMANCE_DATA_SCOPE } from '@equipment-management/shared-constants';
 import type { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
+import { extractUserId } from '../../common/utils/extract-user';
 
 @ApiTags('부적합 관리')
 @ApiBearerAuth()
 @Controller('non-conformances')
 export class NonConformancesController {
   constructor(private readonly nonConformancesService: NonConformancesService) {}
-
-  /**
-   * 크로스사이트 접근 제어 (UUID 기반 엔드포인트용)
-   *
-   * NON_CONFORMANCE_DATA_SCOPE 정책에 따라:
-   * - test_engineer / technical_manager / quality_manager: 소속 사이트만
-   * - lab_manager / system_admin: 전체 접근
-   *
-   * NC는 siteId 직접 필드가 없으므로 equipment.site로 판별합니다.
-   */
-  private enforceSiteAccess(req: AuthenticatedRequest, equipmentSite: string): void {
-    const userRole = req.user?.roles?.[0] as UserRole | undefined;
-    if (!userRole) return;
-
-    const scope = resolveDataScope(
-      { role: userRole, site: req.user?.site, teamId: req.user?.teamId },
-      NON_CONFORMANCE_DATA_SCOPE
-    );
-
-    if (scope.type === 'site' && scope.site && equipmentSite !== scope.site) {
-      throw new ForbiddenException({
-        code: 'NC_CROSS_SITE_ACCESS_DENIED',
-        message: 'No permission to access non-conformances from other sites.',
-      });
-    }
-  }
 
   @AuditLog({
     action: 'create',
@@ -96,9 +66,16 @@ export class NonConformancesController {
     @Body() createDto: CreateNonConformanceDto,
     @Request() req: AuthenticatedRequest
   ): Promise<NonConformance> {
-    // ✅ 크로스사이트 보호: 다른 사이트 장비에 NC 등록 차단
-    const equip = await this.nonConformancesService.getEquipmentSite(createDto.equipmentId);
-    this.enforceSiteAccess(req, equip);
+    // ✅ 크로스사이트/크로스팀 보호: 다른 사이트/팀 장비에 NC 등록 차단
+    const { site: equipSite, teamId: equipTeamId } =
+      await this.nonConformancesService.getEquipmentSiteAndTeam(createDto.equipmentId);
+    enforceSiteAccess(
+      req,
+      equipSite,
+      NON_CONFORMANCE_DATA_SCOPE,
+      'NC_CROSS_SITE_ACCESS_DENIED',
+      equipTeamId
+    );
     return this.nonConformancesService.create(createDto);
   }
 
@@ -142,7 +119,13 @@ export class NonConformancesController {
     @Request() req: AuthenticatedRequest
   ): Promise<NonConformance> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
-    this.enforceSiteAccess(req, basic.equipmentSite);
+    enforceSiteAccess(
+      req,
+      basic.equipmentSite,
+      NON_CONFORMANCE_DATA_SCOPE,
+      'NC_CROSS_SITE_ACCESS_DENIED',
+      basic.equipmentTeamId
+    );
     return this.nonConformancesService.findOne(uuid);
   }
 
@@ -160,8 +143,15 @@ export class NonConformancesController {
     @Param('equipmentUuid', ParseUUIDPipe) equipmentUuid: string,
     @Request() req: AuthenticatedRequest
   ): Promise<NonConformance[]> {
-    const equipSite = await this.nonConformancesService.getEquipmentSite(equipmentUuid);
-    this.enforceSiteAccess(req, equipSite);
+    const { site: equipSite, teamId: equipTeamId } =
+      await this.nonConformancesService.getEquipmentSiteAndTeam(equipmentUuid);
+    enforceSiteAccess(
+      req,
+      equipSite,
+      NON_CONFORMANCE_DATA_SCOPE,
+      'NC_CROSS_SITE_ACCESS_DENIED',
+      equipTeamId
+    );
     return this.nonConformancesService.findOpenByEquipment(equipmentUuid);
   }
 
@@ -189,7 +179,13 @@ export class NonConformancesController {
     @Request() req: AuthenticatedRequest
   ): Promise<NonConformance> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
-    this.enforceSiteAccess(req, basic.equipmentSite);
+    enforceSiteAccess(
+      req,
+      basic.equipmentSite,
+      NON_CONFORMANCE_DATA_SCOPE,
+      'NC_CROSS_SITE_ACCESS_DENIED',
+      basic.equipmentTeamId
+    );
     return this.nonConformancesService.update(uuid, updateDto);
   }
 
@@ -218,8 +214,14 @@ export class NonConformancesController {
     @Body() closeDto: CloseNonConformanceDto
   ): Promise<NonConformance> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
-    this.enforceSiteAccess(req, basic.equipmentSite);
-    const closedBy = req.user?.userId;
+    enforceSiteAccess(
+      req,
+      basic.equipmentSite,
+      NON_CONFORMANCE_DATA_SCOPE,
+      'NC_CROSS_SITE_ACCESS_DENIED',
+      basic.equipmentTeamId
+    );
+    const closedBy = extractUserId(req);
     return this.nonConformancesService.close(uuid, closeDto, closedBy);
   }
 
@@ -248,8 +250,14 @@ export class NonConformancesController {
     @Body() dto: RejectCorrectionDto
   ): Promise<NonConformance> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
-    this.enforceSiteAccess(req, basic.equipmentSite);
-    const rejectedBy = req.user?.userId;
+    enforceSiteAccess(
+      req,
+      basic.equipmentSite,
+      NON_CONFORMANCE_DATA_SCOPE,
+      'NC_CROSS_SITE_ACCESS_DENIED',
+      basic.equipmentTeamId
+    );
+    const rejectedBy = extractUserId(req);
     return this.nonConformancesService.rejectCorrection(uuid, dto, rejectedBy);
   }
 
@@ -270,7 +278,13 @@ export class NonConformancesController {
     @Request() req: AuthenticatedRequest
   ): Promise<{ id: string; deleted: boolean }> {
     const basic = await this.nonConformancesService.findOneBasic(uuid);
-    this.enforceSiteAccess(req, basic.equipmentSite);
+    enforceSiteAccess(
+      req,
+      basic.equipmentSite,
+      NON_CONFORMANCE_DATA_SCOPE,
+      'NC_CROSS_SITE_ACCESS_DENIED',
+      basic.equipmentTeamId
+    );
     return this.nonConformancesService.remove(uuid);
   }
 }

@@ -1,9 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-
-// SSOT: schemas 패키지에서 enum 값 import
-import { SiteEnum, CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import { SiteEnum, type Site, CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -86,9 +84,9 @@ export class CalibrationPlanQueryDto {
   @ApiPropertyOptional({
     description: '시험소 ID',
     example: 'suwon',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
   })
-  siteId?: string;
+  siteId?: Site;
 
   @ApiPropertyOptional({
     description: '팀 ID (UUID)',
@@ -132,9 +130,9 @@ export class ExternalEquipmentQueryDto {
   @ApiPropertyOptional({
     description: '시험소 ID',
     example: 'suwon',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
   })
-  siteId?: string;
+  siteId?: Site;
 
   @ApiPropertyOptional({
     description: '팀 ID (UUID)',

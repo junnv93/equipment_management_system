@@ -523,4 +523,28 @@ export class SoftwareService extends VersionedBaseService {
       throw error;
     }
   }
+
+  /**
+   * 소프트웨어 변경 이력의 사이트 및 팀 조회 (software_history → equipment 경유)
+   * 크로스사이트/크로스팀 접근 제어에 사용
+   */
+  async getSoftwareSiteAndTeam(
+    softwareHistoryId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const result = await this.db
+      .select({ site: schema.equipment.site, teamId: schema.equipment.teamId })
+      .from(schema.softwareHistory)
+      .innerJoin(schema.equipment, eq(schema.softwareHistory.equipmentId, schema.equipment.id))
+      .where(eq(schema.softwareHistory.id, softwareHistoryId))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException({
+        code: 'SOFTWARE_HISTORY_NOT_FOUND',
+        message: `Software history ${softwareHistoryId} not found.`,
+      });
+    }
+
+    return result[0];
+  }
 }

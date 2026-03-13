@@ -5,9 +5,25 @@ import {
   Classification,
   Site,
   SiteCode,
+  EQUIPMENT_STATUS_VALUES,
+  CALIBRATION_METHOD_VALUES,
+  SPEC_MATCH_VALUES,
+  CALIBRATION_REQUIRED_VALUES,
+  SHARED_SOURCE_VALUES,
+  SiteEnum,
+  ClassificationEnum,
+  SiteCodeEnum,
+  ClassificationCodeEnum,
+  type CalibrationMethod,
+  type SpecMatch,
+  type CalibrationRequired,
+  type SharedSource,
+  type ClassificationCode,
+  ApprovalStatusEnum,
+  type ApprovalStatus,
+  createEquipmentSchema,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { createEquipmentSchema } from '@equipment-management/schemas';
 
 /**
  * 장비 생성 DTO
@@ -44,15 +60,15 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiPropertyOptional({
     description: '시방일치 여부',
-    enum: ['match', 'mismatch'],
+    enum: SPEC_MATCH_VALUES,
   })
-  specMatch?: 'match' | 'mismatch';
+  specMatch?: SpecMatch;
 
   @ApiPropertyOptional({
     description: '교정필요 여부',
-    enum: ['required', 'not_required'],
+    enum: CALIBRATION_REQUIRED_VALUES,
   })
-  calibrationRequired?: 'required' | 'not_required';
+  calibrationRequired?: CalibrationRequired;
 
   @ApiPropertyOptional({ description: '교정 주기 (개월)', example: 12 })
   calibrationCycle?: number;
@@ -71,9 +87,9 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiPropertyOptional({
     description: '관리 방법 (교정 방법)',
-    enum: ['external_calibration', 'self_inspection', 'not_applicable'],
+    enum: CALIBRATION_METHOD_VALUES,
   })
-  calibrationMethod?: 'external_calibration' | 'self_inspection' | 'not_applicable';
+  calibrationMethod?: CalibrationMethod;
 
   @ApiPropertyOptional({ description: '최종 중간 점검일' })
   lastIntermediateCheckDate?: Date;
@@ -92,14 +108,14 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiProperty({
     description: '사이트 (필수)',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
   site: Site;
 
   @ApiPropertyOptional({
     description: '장비 분류 (관리번호 자동 생성용)',
-    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+    enum: ClassificationEnum.options,
     example: 'fcc_emc_rf',
   })
   classification?: Classification;
@@ -113,15 +129,15 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
   // 관리번호 컴포넌트 (서비스에서 자동 파싱)
   @ApiPropertyOptional({
     description: '시험소코드 (자동 파싱)',
-    enum: ['SUW', 'UIW', 'PYT'],
+    enum: SiteCodeEnum.options,
   })
   siteCode?: SiteCode;
 
   @ApiPropertyOptional({
     description: '분류코드 (자동 파싱)',
-    enum: ['E', 'R', 'W', 'S', 'A', 'P'],
+    enum: ClassificationCodeEnum.options,
   })
-  classificationCode?: 'E' | 'R' | 'W' | 'S' | 'A' | 'P';
+  classificationCode?: ClassificationCode;
 
   @ApiPropertyOptional({
     description: '관리번호 일련번호 (정수, 자동 파싱)',
@@ -165,16 +181,7 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiPropertyOptional({
     description: '장비 상태',
-    enum: [
-      'available',
-      'in_use',
-      'checked_out',
-      'calibration_scheduled',
-      'calibration_overdue',
-      'non_conforming',
-      'spare',
-      'retired',
-    ],
+    enum: EQUIPMENT_STATUS_VALUES,
     default: 'available',
     example: 'available',
   })
@@ -183,10 +190,10 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
   // 승인 프로세스 필드 (시스템 관리자는 직접 승인 가능)
   @ApiPropertyOptional({
     description: '승인 상태',
-    enum: ['pending_approval', 'approved', 'rejected'],
+    enum: ApprovalStatusEnum.options,
     default: 'pending_approval',
   })
-  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
+  approvalStatus?: ApprovalStatus;
 
   // 공용장비 필드 (프롬프트 8-1)
   @ApiPropertyOptional({
@@ -197,9 +204,9 @@ export class CreateEquipmentDto implements CreateEquipmentInput {
 
   @ApiPropertyOptional({
     description: '공용장비 출처',
-    enum: ['safety_lab', 'external'],
+    enum: SHARED_SOURCE_VALUES,
   })
-  sharedSource?: 'safety_lab' | 'external';
+  sharedSource?: SharedSource;
 }
 
 // Zod 검증 파이프 생성

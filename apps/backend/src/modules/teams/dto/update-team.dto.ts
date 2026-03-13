@@ -40,13 +40,13 @@ export class UpdateTeamSwaggerDto {
 
   @ApiPropertyOptional({
     description: '팀 분류 (장비 분류와 동일, 소문자_언더스코어)',
-    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'], // ← 소문자
+    enum: ClassificationEnum.options,
   })
   classification?: Classification; // ← type → classification
 
   @ApiPropertyOptional({
     description: '팀 소속 사이트',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
   })
   site?: Site;
 

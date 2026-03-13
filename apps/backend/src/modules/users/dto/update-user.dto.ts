@@ -1,5 +1,13 @@
 import { z } from 'zod';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  USER_ROLE_VALUES,
+  SiteEnum,
+  LOCATION_VALUES,
+  type UserRole,
+  type Site,
+  type Location,
+} from '@equipment-management/schemas';
 import { createUserSchema } from './create-user.dto';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 
@@ -33,24 +41,24 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional({
     description: '사용자 역할',
-    enum: ['test_engineer', 'technical_manager', 'lab_manager'],
+    enum: USER_ROLE_VALUES,
     example: 'test_engineer',
   })
-  role?: 'test_engineer' | 'technical_manager' | 'lab_manager';
+  role?: UserRole;
 
   @ApiPropertyOptional({
     description: '사이트 정보',
-    enum: ['suwon', 'uiwang'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
-  site?: 'suwon' | 'uiwang';
+  site?: Site;
 
   @ApiPropertyOptional({
     description: '위치 정보',
-    enum: ['수원랩', '의왕랩'],
+    enum: LOCATION_VALUES,
     example: '수원랩',
   })
-  location?: '수원랩' | '의왕랩';
+  location?: Location;
 
   @ApiPropertyOptional({
     description: '소속 팀 ID (UUID)',

@@ -6,17 +6,20 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { EquipmentQueryDto } from './dto/equipment-query.dto';
 // 표준 상태값은 schemas 패키지에서 import
 import {
   EquipmentStatus,
+  EquipmentStatusEnum,
+  ApprovalStatusEnum,
   parseManagementNumber,
   CLASSIFICATION_TO_CODE,
 } from '@equipment-management/schemas';
 import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
-import { eq, and, or, desc, asc, sql, SQL } from 'drizzle-orm';
+import { eq, and, or, desc, asc, sql, SQL, inArray } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
@@ -57,7 +60,7 @@ export interface EquipmentListResponse {
 }
 
 @Injectable()
-export class EquipmentService {
+export class EquipmentService extends VersionedBaseService {
   private readonly logger = new Logger(EquipmentService.name);
   private readonly CACHE_PREFIX = CACHE_KEY_PREFIXES.EQUIPMENT;
 
@@ -77,9 +80,11 @@ export class EquipmentService {
 
   constructor(
     @Inject('DRIZZLE_INSTANCE')
-    private readonly db: AppDatabase,
+    protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService
-  ) {}
+  ) {
+    super();
+  }
 
   /**
    * 교정일 계산 헬퍼 메서드
@@ -468,7 +473,7 @@ export class EquipmentService {
       manualLocation: dto.manualLocation,
       accessories: dto.accessories,
       technicalManager: dto.technicalManager,
-      status: dto.status ?? 'available',
+      status: dto.status ?? EquipmentStatusEnum.enum.available,
       isActive: true,
 
       // 위치 및 설치 정보
@@ -755,9 +760,9 @@ export class EquipmentService {
         isShared: true,
         sharedSource: createSharedEquipmentDto.sharedSource,
         // 기본값 설정
-        status: 'available',
+        status: EquipmentStatusEnum.enum.available,
         isActive: true,
-        approvalStatus: 'approved', // 공용장비는 바로 승인 상태
+        approvalStatus: ApprovalStatusEnum.enum.approved, // 공용장비는 바로 승인 상태
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -819,9 +824,11 @@ export class EquipmentService {
           // 쿼리 조건 빌드
           const { whereConditions, orderBy } = this.buildQueryConditions(queryParams, userSite);
 
-          // 총 아이템 수 계산
-          // ✅ Best Practice: 모든 필터 파라미터를 자동으로 포함
-          // - page/pageSize는 count에 영향 없으므로 제외
+          // 총 아이템 수 계산 — 페이지 간 공유 캐시
+          // 설계 의도: page=1,2,3 요청 시 COUNT 쿼리는 1회만 실행 (count 캐시 공유)
+          // TTL 불일치(count가 list보다 오래 남을 수 있음)는 pagination UX에서 허용 가능하며,
+          // invalidateCache()가 양쪽 모두 삭제하므로 실질적 stale 문제 없음.
+          // Thundering herd 방지(inflight dedup)로 동시 요청 시에도 안전.
           const { page: _, pageSize: __, sort: ___, ...countParams } = queryParams;
           const countCacheKey = this.buildCacheKey('count', {
             ...countParams,
@@ -963,56 +970,112 @@ export class EquipmentService {
   }
 
   /**
-   * Optimistic Locking: CAS 패턴으로 장비 업데이트
+   * 여러 장비를 배치 조회 (캐시 우선 + 미스만 DB 조회)
    *
-   * ✅ Phase 1: Equipment Module - 2026-02-11
-   * ✅ 참고: checkouts.service.ts의 updateWithVersion() 패턴 재사용
-   *
-   * @param uuid - 장비 UUID
-   * @param expectedVersion - 클라이언트가 알고 있는 version
-   * @param updateData - 업데이트할 데이터
-   * @returns 업데이트된 장비 (version이 1 증가됨)
-   * @throws ConflictException - version 불일치 (다른 사용자가 먼저 수정함)
-   * @throws NotFoundException - 장비가 존재하지 않음
+   * @param uuids 장비 UUID 배열
+   * @param includeTeam 팀 정보 포함 여부
+   * @returns Map<uuid, Equipment & { team?: Team | null }>
+   * @throws BadRequestException 존재하지 않는 장비가 포함된 경우
    */
-  private async updateWithVersion(
-    uuid: string,
-    expectedVersion: number,
-    updateData: Partial<Equipment>
-  ): Promise<Equipment> {
-    const [updated] = await this.db
-      .update(equipment)
-      .set({
-        ...updateData,
-        version: sql`version + 1`, // ✅ Explicit SQL increment (no trigger)
-        updatedAt: new Date(),
-      } as Record<string, unknown>)
-      .where(and(eq(equipment.id, uuid), eq(equipment.version, expectedVersion))) // ← CAS condition
-      .returning();
+  async findByIds(
+    uuids: string[],
+    includeTeam = false
+  ): Promise<Map<string, Equipment & { team?: Team | null }>> {
+    const result = new Map<string, Equipment & { team?: Team | null }>();
+    const missedUuids: string[] = [];
 
-    if (!updated) {
-      // Check if equipment exists or version mismatch
-      const [existing] = await this.db
-        .select({ id: equipment.id, version: equipment.version })
-        .from(equipment)
-        .where(eq(equipment.id, uuid))
-        .limit(1);
+    // 1. 캐시 히트 확인
+    for (const uuid of uuids) {
+      const cacheKey = this.buildCacheKey('detail', { uuid, includeTeam });
+      const cached = this.cacheService.get<Equipment & { team?: Team | null }>(cacheKey);
+      if (cached) {
+        result.set(uuid, cached);
+      } else {
+        missedUuids.push(uuid);
+      }
+    }
 
-      if (!existing) {
-        throw new NotFoundException({
-          code: 'EQUIPMENT_NOT_FOUND',
-          message: `Equipment with UUID ${uuid} not found.`,
-        });
+    // 2. 캐시 미스만 배치 DB 조회
+    if (missedUuids.length > 0) {
+      const query = includeTeam
+        ? this.db
+            .select()
+            .from(equipment)
+            .leftJoin(teams, eq(equipment.teamId, teams.id))
+            .where(and(inArray(equipment.id, missedUuids), eq(equipment.isActive, true)))
+        : this.db
+            .select()
+            .from(equipment)
+            .where(and(inArray(equipment.id, missedUuids), eq(equipment.isActive, true)));
+
+      const rows = await query;
+
+      for (const row of rows) {
+        const equipData = includeTeam
+          ? {
+              ...(row as { equipment: Equipment; teams: Team | null }).equipment,
+              team: (row as { equipment: Equipment; teams: Team | null }).teams,
+            }
+          : (row as unknown as Equipment);
+        const uuid = includeTeam
+          ? (row as { equipment: Equipment }).equipment.id
+          : (row as unknown as Equipment).id;
+
+        result.set(uuid, equipData);
+
+        // 개별 캐시에 set
+        const cacheKey = this.buildCacheKey('detail', { uuid, includeTeam });
+        this.cacheService.set(cacheKey, equipData, CACHE_TTL.LONG);
       }
 
-      // Version mismatch = concurrent modification
-      throw new ConflictException({
-        message:
-          'Another user has already modified this record. The page will automatically refresh.',
-        code: 'VERSION_CONFLICT',
-        currentVersion: existing.version,
-        expectedVersion,
-      });
+      // 존재하지 않는 장비 확인
+      for (const uuid of missedUuids) {
+        if (!result.has(uuid)) {
+          throw new BadRequestException({
+            code: 'EQUIPMENT_NOT_FOUND',
+            message: `Equipment with UUID ${uuid} not found.`,
+          });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 여러 장비의 상태를 배치 업데이트
+   * 스케줄러의 inArray 패턴 재사용
+   *
+   * @param uuids 장비 UUID 배열
+   * @param newStatus 변경할 상태
+   * @param expectedStatus 현재 상태 조건 (선택 — 지정 시 해당 상태인 장비만 업데이트)
+   * @returns 업데이트된 장비의 { id, teamId } 배열
+   */
+  async updateStatusBatch(
+    uuids: string[],
+    newStatus: EquipmentStatus,
+    expectedStatus?: EquipmentStatus
+  ): Promise<Array<{ id: string; teamId: string | null }>> {
+    if (uuids.length === 0) return [];
+
+    const whereConditions = [inArray(equipment.id, uuids), eq(equipment.isActive, true)];
+    if (expectedStatus) {
+      whereConditions.push(eq(equipment.status, expectedStatus));
+    }
+
+    const updated = await this.db
+      .update(equipment)
+      .set({
+        status: newStatus,
+        version: sql`version + 1`,
+        updatedAt: new Date(),
+      } as Record<string, unknown>)
+      .where(and(...whereConditions))
+      .returning({ id: equipment.id, teamId: equipment.teamId });
+
+    // 캐시 무효화
+    for (const row of updated) {
+      await this.invalidateCache(row.id, row.teamId ?? undefined);
     }
 
     return updated;
@@ -1056,8 +1119,16 @@ export class EquipmentService {
       // DTO를 DB 엔티티로 변환
       const updateData = this.transformUpdateDtoToEntity(updateEquipmentDto, existingEquipment);
 
-      // ✅ Optimistic Locking: CAS 패턴으로 업데이트
-      const updated = await this.updateWithVersion(uuid, updateEquipmentDto.version, updateData);
+      // ✅ Optimistic Locking: CAS 패턴으로 업데이트 (VersionedBaseService)
+      const updated = await this.updateWithVersion<Equipment>(
+        equipment,
+        uuid,
+        updateEquipmentDto.version,
+        updateData as Record<string, unknown>,
+        '장비',
+        undefined,
+        'EQUIPMENT_NOT_FOUND'
+      );
 
       // 캐시 무효화 (기존 팀 + 변경된 팀 모두 무효화)
       const affectedTeamId = existingEquipment.teamId ?? updateEquipmentDto.teamId;
@@ -1138,7 +1209,7 @@ export class EquipmentService {
     newStatus: EquipmentStatus
   ): void {
     // "사용 가능"으로 변경하는 경우에만 검증
-    if (newStatus !== 'available') {
+    if (newStatus !== EquipmentStatusEnum.enum.available) {
       return;
     }
 
@@ -1239,50 +1310,17 @@ export class EquipmentService {
         status,
       };
 
-      let updated: Equipment;
-
-      if (version !== undefined) {
-        // ✅ 외부 API 호출: Optimistic Locking 사용
-        updated = await this.updateWithVersion(uuid, version, updateData);
-      } else {
-        // ✅ 내부 호출: CAS 보호 (existingEquipment.version 기반)
-        // 동시 상태 변경(checkout + NC 등) 시 last-write-wins 방지
-        const expectedVersion = existingEquipment.version;
-        const [result] = await this.db
-          .update(equipment)
-          .set({
-            ...updateData,
-            version: sql`version + 1`,
-            updatedAt: new Date(),
-          } as Record<string, unknown>)
-          .where(and(eq(equipment.id, uuid), eq(equipment.version, expectedVersion)))
-          .returning();
-
-        if (!result) {
-          // 엔티티가 없거나 version 충돌 — 재조회하여 판별
-          const current = await this.db
-            .select({ id: equipment.id, version: equipment.version })
-            .from(equipment)
-            .where(eq(equipment.id, uuid))
-            .limit(1);
-
-          if (current.length === 0) {
-            throw new NotFoundException({
-              code: 'EQUIPMENT_NOT_FOUND',
-              message: `Equipment with UUID ${uuid} not found.`,
-            });
-          }
-
-          throw new ConflictException({
-            code: 'VERSION_CONFLICT',
-            message: '장비 상태가 동시에 변경되었습니다. 다시 시도해주세요.',
-            currentVersion: current[0].version,
-            expectedVersion,
-          });
-        }
-
-        updated = result;
-      }
+      // ✅ CAS 보호: 외부/내부 호출 모두 VersionedBaseService 사용
+      const effectiveVersion = version ?? existingEquipment.version;
+      const updated = await this.updateWithVersion<Equipment>(
+        equipment,
+        uuid,
+        effectiveVersion,
+        updateData as Record<string, unknown>,
+        '장비',
+        undefined,
+        'EQUIPMENT_NOT_FOUND'
+      );
 
       // 캐시 무효화 (상태 변경된 장비)
       await this.invalidateCache(uuid, updated.teamId ?? undefined);
@@ -1325,6 +1363,7 @@ export class EquipmentService {
         try {
           return await this.db.query.equipment.findMany({
             where: and(eq(equipment.teamId, normalizedTeamId), eq(equipment.isActive, true)),
+            limit: 1000,
           });
         } catch (error) {
           this.logger.error(
@@ -1359,6 +1398,7 @@ export class EquipmentService {
               sql`${equipment.nextCalibrationDate} <= ${dueDate.toISOString()}::timestamp`
             ),
             orderBy: asc(equipment.nextCalibrationDate),
+            limit: 500,
           });
         } catch (error) {
           this.logger.error(

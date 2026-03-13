@@ -14,6 +14,9 @@ import {
 import {
   AUDIT_ACTION_LABELS,
   AUDIT_ENTITY_TYPE_LABELS,
+  EquipmentStatusValues as ESVal,
+  CheckoutStatusValues as CSVal,
+  CalibrationStatusEnum,
   type AuditAction,
   type AuditEntityType,
   type AuditLogFilter,
@@ -188,12 +191,12 @@ export class ReportsService {
     const [overdueRow] = await this.db
       .select({ cnt: count(equipmentTable.id) })
       .from(equipmentTable)
-      .where(eq(equipmentTable.status, 'calibration_overdue'));
+      .where(eq(equipmentTable.status, ESVal.CALIBRATION_OVERDUE));
 
     const [dueRow] = await this.db
       .select({ cnt: count(equipmentTable.id) })
       .from(equipmentTable)
-      .where(eq(equipmentTable.status, 'calibration_scheduled'));
+      .where(eq(equipmentTable.status, ESVal.CALIBRATION_SCHEDULED));
 
     const [totalEquipRow] = await this.db
       .select({ cnt: count(equipmentTable.id) })
@@ -206,7 +209,7 @@ export class ReportsService {
         dueThisMonth: Number(dueRow?.cnt ?? 0),
         overdue: Number(overdueRow?.cnt ?? 0),
         completedThisMonth: statusRows
-          .filter((r) => r.status === 'completed')
+          .filter((r) => r.status === CalibrationStatusEnum.enum.completed)
           .reduce((acc, r) => acc + Number(r.statusCount), 0),
       },
       status: statusRows.map((r) => ({
@@ -262,14 +265,18 @@ export class ReportsService {
       .groupBy(teamsTable.id, teamsTable.name);
 
     const totalCount = statusRows.reduce((acc, r) => acc + Number(r.statusCount), 0);
-    const activeStatuses = new Set([
-      'approved',
-      'checked_out',
-      'lender_checked',
-      'borrower_received',
-      'in_use',
+    const activeStatuses: Set<string> = new Set([
+      CSVal.APPROVED,
+      CSVal.CHECKED_OUT,
+      CSVal.LENDER_CHECKED,
+      CSVal.BORROWER_RECEIVED,
+      CSVal.IN_USE,
     ]);
-    const returnedStatuses = new Set(['returned', 'return_approved', 'lender_received']);
+    const returnedStatuses: Set<string> = new Set([
+      CSVal.RETURNED,
+      CSVal.RETURN_APPROVED,
+      CSVal.LENDER_RECEIVED,
+    ]);
 
     const activeCount = statusRows
       .filter((r) => activeStatuses.has(r.status))
@@ -897,9 +904,10 @@ export class ReportsService {
     const byMonth: Record<string, { completed: number; due: number; overdue: number }> = {};
     for (const r of rows) {
       if (!byMonth[r.month]) byMonth[r.month] = { completed: 0, due: 0, overdue: 0 };
-      if (r.status === 'completed') byMonth[r.month].completed += Number(r.cnt);
-      if (r.status === 'scheduled') byMonth[r.month].due += Number(r.cnt);
-      if (r.status === 'failed') byMonth[r.month].overdue += Number(r.cnt);
+      if (r.status === CalibrationStatusEnum.enum.completed)
+        byMonth[r.month].completed += Number(r.cnt);
+      if (r.status === CalibrationStatusEnum.enum.scheduled) byMonth[r.month].due += Number(r.cnt);
+      if (r.status === CalibrationStatusEnum.enum.failed) byMonth[r.month].overdue += Number(r.cnt);
     }
 
     return Object.entries(byMonth).map(([month, counts]) => ({ month, ...counts }));

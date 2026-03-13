@@ -876,6 +876,7 @@ export class CalibrationService extends VersionedBaseService {
         },
       },
       orderBy: (calibrations, { desc: descFn }) => [descFn(calibrations.createdAt)],
+      limit: 500,
     });
 
     // ✅ Phase 4: transformDbToRecord 기반 정규화
@@ -1280,6 +1281,7 @@ export class CalibrationService extends VersionedBaseService {
         },
       },
       orderBy: (calibrations, { asc: ascFn }) => [ascFn(calibrations.intermediateCheckDate)],
+      limit: 500,
     });
 
     let results = items;
@@ -1355,5 +1357,29 @@ export class CalibrationService extends VersionedBaseService {
         }).length,
       },
     };
+  }
+
+  /**
+   * 교정 기록의 사이트 및 팀 조회 (calibrations → equipment 경유)
+   * 크로스사이트/크로스팀 접근 제어에 사용
+   */
+  async getCalibrationSiteAndTeam(
+    calibrationId: string
+  ): Promise<{ site: string; teamId: string | null }> {
+    const result = await this.db
+      .select({ site: schema.equipment.site, teamId: schema.equipment.teamId })
+      .from(schema.calibrations)
+      .innerJoin(schema.equipment, eq(schema.calibrations.equipmentId, schema.equipment.id))
+      .where(eq(schema.calibrations.id, calibrationId))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException({
+        code: 'CALIBRATION_NOT_FOUND',
+        message: `Calibration ${calibrationId} not found.`,
+      });
+    }
+
+    return result[0];
   }
 }

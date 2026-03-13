@@ -52,12 +52,25 @@ import { Permission, CHECKOUT_DATA_SCOPE } from '@equipment-management/shared-co
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
 @Controller('checkouts')
 export class CheckoutsController {
   constructor(private readonly checkoutsService: CheckoutsService) {}
+
+  /** 크로스사이트/크로스팀 접근 제어 — checkout_items → equipment 경유 */
+  private async enforceCheckoutAccess(uuid: string, req: AuthenticatedRequest): Promise<void> {
+    const { site, teamId } = await this.checkoutsService.getCheckoutSiteAndTeam(uuid);
+    enforceSiteAccess(
+      req,
+      site,
+      CHECKOUT_DATA_SCOPE,
+      'CHECKOUT_CROSS_SITE_MUTATION_DENIED',
+      teamId
+    );
+  }
 
   @Post()
   @RequirePermissions(Permission.CREATE_CHECKOUT)
@@ -157,7 +170,8 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '수정 불가능한 상태' })
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateCheckoutDto: UpdateCheckoutDto
+    @Body() updateCheckoutDto: UpdateCheckoutDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<{
     id: string;
     createdAt: Date;
@@ -189,6 +203,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
+    await this.enforceCheckoutAccess(uuid, req);
     return this.checkoutsService.update(uuid, updateCheckoutDto);
   }
 
@@ -204,7 +219,11 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
-  async remove(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
+  async remove(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
+    await this.enforceCheckoutAccess(uuid, req);
     return this.checkoutsService.remove(uuid);
   }
 
@@ -257,6 +276,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
+    await this.enforceCheckoutAccess(uuid, req);
     // 승인자 ID는 인증된 세션에서 추출 (클라이언트 입력 신뢰 금지)
     const approverId = extractUserId(req);
 
@@ -281,6 +301,7 @@ export class CheckoutsController {
     @Body() rejectDto: RejectCheckoutDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    await this.enforceCheckoutAccess(uuid, req);
     // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
     const approverId = extractUserId(req);
     // 반려 사유 필수 검증 (요구사항)
@@ -309,7 +330,8 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
   async startCheckout(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() startDto: StartCheckoutDto
+    @Body() startDto: StartCheckoutDto,
+    @Request() req: AuthenticatedRequest
   ): Promise<{
     id: string;
     createdAt: Date;
@@ -341,6 +363,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
+    await this.enforceCheckoutAccess(uuid, req);
     return this.checkoutsService.startCheckout(uuid, {
       version: startDto.version,
       itemConditions: startDto.itemConditions,
@@ -404,6 +427,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
+    await this.enforceCheckoutAccess(uuid, req);
     const returnerId = extractUserId(req);
     return this.checkoutsService.returnCheckout(uuid, returnDto, returnerId);
   }
@@ -465,6 +489,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
+    await this.enforceCheckoutAccess(uuid, req);
     // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
     const approverId = extractUserId(req);
     return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId });
@@ -497,6 +522,7 @@ export class CheckoutsController {
     @Body() rejectReturnDto: RejectReturnDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    await this.enforceCheckoutAccess(uuid, req);
     const approverId = extractUserId(req);
     const approverTeamId = req.user?.teamId;
     return this.checkoutsService.rejectReturn(uuid, {
@@ -527,6 +553,7 @@ export class CheckoutsController {
     @Body() dto: CreateConditionCheckDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    await this.enforceCheckoutAccess(uuid, req);
     const checkerId = extractUserId(req);
     return this.checkoutsService.submitConditionCheck(uuid, dto, checkerId);
   }
@@ -554,7 +581,11 @@ export class CheckoutsController {
   @ApiResponse({ status: HttpStatus.OK, description: '반출 취소 성공' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '취소 불가능한 상태' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: '반출을 찾을 수 없음' })
-  async cancel(@Param('uuid', ParseUUIDPipe) uuid: string): Promise<unknown> {
+  async cancel(
+    @Param('uuid', ParseUUIDPipe) uuid: string,
+    @Request() req: AuthenticatedRequest
+  ): Promise<unknown> {
+    await this.enforceCheckoutAccess(uuid, req);
     return this.checkoutsService.cancel(uuid);
   }
 }

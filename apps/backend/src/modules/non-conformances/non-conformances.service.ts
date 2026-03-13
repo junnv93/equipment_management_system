@@ -28,6 +28,7 @@ import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 import { equipmentBelongsToSite } from '../../common/utils/site-filter';
+import { EquipmentStatusEnum } from '@equipment-management/schemas';
 
 /**
  * 부적합 상태 전이 규칙 (State Machine)
@@ -138,7 +139,7 @@ export class NonConformancesService extends VersionedBaseService {
     }
 
     // 이미 부적합 상태인지 확인
-    if (equipmentResult[0].status === 'non_conforming') {
+    if (equipmentResult[0].status === EquipmentStatusEnum.enum.non_conforming) {
       throw new BadRequestException({
         code: 'NC_EQUIPMENT_ALREADY_NON_CONFORMING',
         message: 'Equipment is already in non-conforming status.',
@@ -165,7 +166,7 @@ export class NonConformancesService extends VersionedBaseService {
       await tx
         .update(equipment)
         .set({
-          status: 'non_conforming',
+          status: EquipmentStatusEnum.enum.non_conforming,
           updatedAt: new Date(),
         })
         .where(eq(equipment.id, createDto.equipmentId));
@@ -418,9 +419,11 @@ export class NonConformancesService extends VersionedBaseService {
    *
    * create, findOpenByEquipment 등 equipmentId만 있는 엔드포인트에서 사용.
    */
-  async getEquipmentSite(equipmentId: string): Promise<string> {
+  async getEquipmentSiteAndTeam(
+    equipmentId: string
+  ): Promise<{ site: string; teamId: string | null }> {
     const result = await this.db
-      .select({ site: equipment.site })
+      .select({ site: equipment.site, teamId: equipment.teamId })
       .from(equipment)
       .where(eq(equipment.id, equipmentId))
       .limit(1);
@@ -432,7 +435,7 @@ export class NonConformancesService extends VersionedBaseService {
       });
     }
 
-    return result[0].site;
+    return result[0];
   }
 
   /**
@@ -443,12 +446,18 @@ export class NonConformancesService extends VersionedBaseService {
    */
   async findOneBasic(
     id: string
-  ): Promise<{ id: string; equipmentId: string; equipmentSite: string }> {
+  ): Promise<{
+    id: string;
+    equipmentId: string;
+    equipmentSite: string;
+    equipmentTeamId: string | null;
+  }> {
     const result = await this.db
       .select({
         id: nonConformances.id,
         equipmentId: nonConformances.equipmentId,
         equipmentSite: equipment.site,
+        equipmentTeamId: equipment.teamId,
       })
       .from(nonConformances)
       .innerJoin(equipment, eq(nonConformances.equipmentId, equipment.id))
@@ -681,7 +690,7 @@ export class NonConformancesService extends VersionedBaseService {
           await tx
             .update(equipment)
             .set({
-              status: 'available',
+              status: EquipmentStatusEnum.enum.available,
               updatedAt: new Date(),
             })
             .where(eq(equipment.id, nonConformance.equipmentId));

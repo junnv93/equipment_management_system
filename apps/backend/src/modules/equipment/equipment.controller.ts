@@ -50,13 +50,20 @@ import {
   resolveDataScope,
 } from '@equipment-management/shared-constants';
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
-import { UserRoleValues, Site } from '@equipment-management/schemas';
-import type { UserRole } from '@equipment-management/schemas';
+import {
+  UserRoleValues,
+  Site,
+  SharedSourceEnum,
+  SiteEnum,
+  AttachmentTypeEnum,
+} from '@equipment-management/schemas';
+import { type UserRole, ApprovalStatusEnum } from '@equipment-management/schemas';
 import { CreateEquipmentValidationPipe } from './dto/create-equipment.dto';
 import { UpdateEquipmentValidationPipe } from './dto/update-equipment.dto';
 import { EquipmentQueryValidationPipe } from './dto/equipment-query.dto';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.dto';
 
 @ApiTags('장비 관리')
@@ -108,8 +115,8 @@ export class EquipmentController {
   @UsePipes(CreateEquipmentValidationPipe)
   async create(
     @Body() createEquipmentDto: CreateEquipmentDto,
-    @UploadedFiles() files?: MulterFile[],
-    @Req() req?: AuthenticatedRequest
+    @UploadedFiles() files: MulterFile[] | undefined,
+    @Req() req: AuthenticatedRequest
   ): Promise<
     | {
         id: string;
@@ -191,10 +198,10 @@ export class EquipmentController {
         };
       }
   > {
-    const userRoles = req?.user?.roles ?? [];
-    const userId = req?.user?.userId ?? req?.user?.id ?? '';
-    const userSite = req?.user?.site;
-    const userTeamId = req?.user?.teamId;
+    const userRoles = req.user?.roles ?? [];
+    const userId = req.user?.userId ?? '';
+    const userSite = req.user?.site;
+    const userTeamId = req.user?.teamId;
     const isLabManager = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 🔒 보안: lab_manager를 제외한 모든 역할은 자신의 사이트/팀 장비만 등록 가능
@@ -264,10 +271,10 @@ export class EquipmentController {
         managementNumber: { type: 'string', description: '관리번호' },
         sharedSource: {
           type: 'string',
-          enum: ['safety_lab', 'external'],
+          enum: SharedSourceEnum.options,
           description: '공용장비 출처',
         },
-        site: { type: 'string', enum: ['suwon', 'uiwang'], description: '사이트' },
+        site: { type: 'string', enum: SiteEnum.options, description: '사이트' },
         modelName: { type: 'string' },
         manufacturer: { type: 'string' },
         location: { type: 'string' },
@@ -566,8 +573,8 @@ export class EquipmentController {
   async update(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateEquipmentDto: UpdateEquipmentDto,
-    @UploadedFiles() files?: MulterFile[],
-    @Req() req?: AuthenticatedRequest
+    @UploadedFiles() files: MulterFile[] | undefined,
+    @Req() req: AuthenticatedRequest
   ): Promise<
     | {
         id: string;
@@ -651,10 +658,17 @@ export class EquipmentController {
   > {
     // ✅ 공용장비도 수정 가능하도록 isShared 체크 제거
     // (렌탈 장비는 수령 후 교정 정보 업데이트 필요)
-    const _existingEquipment = await this.equipmentService.findOne(uuid);
+    const existingEquipment = await this.equipmentService.findOne(uuid);
+    enforceSiteAccess(
+      req,
+      existingEquipment.site,
+      EQUIPMENT_DATA_SCOPE,
+      'EQUIPMENT_CROSS_SITE_MUTATION_DENIED',
+      existingEquipment.teamId
+    );
 
-    const userRoles = req?.user?.roles ?? [];
-    const userId = req?.user?.userId ?? req?.user?.id ?? '';
+    const userRoles = req.user?.roles ?? [];
+    const userId = req.user?.userId ?? '';
     const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 파일 업로드 처리
@@ -666,7 +680,7 @@ export class EquipmentController {
     }
 
     // 시스템 관리자는 직접 승인 가능
-    if (isAdmin && updateEquipmentDto.approvalStatus === 'approved') {
+    if (isAdmin && updateEquipmentDto.approvalStatus === ApprovalStatusEnum.enum.approved) {
       return this.equipmentService.update(uuid, updateEquipmentDto);
     }
 
@@ -704,10 +718,17 @@ export class EquipmentController {
   })
   async remove(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Req() req?: AuthenticatedRequest
+    @Req() req: AuthenticatedRequest
   ): Promise<{ message: string; requestUuid?: string }> {
     // 공용장비 삭제 차단
     const existingEquipment = await this.equipmentService.findOne(uuid);
+    enforceSiteAccess(
+      req,
+      existingEquipment.site,
+      EQUIPMENT_DATA_SCOPE,
+      'EQUIPMENT_CROSS_SITE_MUTATION_DENIED',
+      existingEquipment.teamId
+    );
     if (existingEquipment.isShared) {
       throw new ForbiddenException({
         code: 'EQUIPMENT_SHARED_CANNOT_DELETE',
@@ -715,8 +736,8 @@ export class EquipmentController {
       });
     }
 
-    const userRoles = req?.user?.roles ?? [];
-    const userId = req?.user?.userId ?? req?.user?.id ?? '';
+    const userRoles = req.user?.roles ?? [];
+    const userId = req.user?.userId ?? '';
     const isAdmin = userRoles.includes(UserRoleValues.LAB_MANAGER);
 
     // 시스템 관리자는 직접 삭제 가능
@@ -745,9 +766,10 @@ export class EquipmentController {
   @RequirePermissions(Permission.UPDATE_EQUIPMENT)
   @AuditLog({ action: 'update', entityType: 'equipment', entityIdPath: 'params.uuid' })
   @UsePipes(UpdateStatusValidationPipe)
-  updateStatus(
+  async updateStatus(
     @Param('uuid', ParseUUIDPipe) uuid: string,
-    @Body() updateStatusDto: UpdateStatusDto
+    @Body() updateStatusDto: UpdateStatusDto,
+    @Req() req: AuthenticatedRequest
   ): Promise<{
     id: string;
     name: string;
@@ -810,6 +832,14 @@ export class EquipmentController {
     usagePeriodEnd: Date | null;
     version: number;
   }> {
+    const existingEquipment = await this.equipmentService.findOne(uuid);
+    enforceSiteAccess(
+      req,
+      existingEquipment.site,
+      EQUIPMENT_DATA_SCOPE,
+      'EQUIPMENT_CROSS_SITE_MUTATION_DENIED',
+      existingEquipment.teamId
+    );
     return this.equipmentService.updateStatus(
       uuid,
       updateStatusDto.status,
@@ -1270,7 +1300,7 @@ export class EquipmentController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
-        attachmentType: { type: 'string', enum: ['inspection_report', 'history_card', 'other'] },
+        attachmentType: { type: 'string', enum: AttachmentTypeEnum.options },
         description: { type: 'string' },
       },
     },

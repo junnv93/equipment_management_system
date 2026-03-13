@@ -2,7 +2,8 @@ import { Controller, Get, Query, Res, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
-import { ReportExportService, ReportFormat } from './report-export.service';
+import { ReportExportService } from './report-export.service';
+import type { ReportFormat } from './report-export.service';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipResponseTransform } from '../../common/interceptors/response-transform.interceptor';
 import {
@@ -10,7 +11,12 @@ import {
   resolveDataScope,
   AUDIT_LOG_SCOPE,
 } from '@equipment-management/shared-constants';
-import { SiteEnum, type UserRole } from '@equipment-management/schemas';
+import {
+  SiteEnum,
+  type UserRole,
+  REPORT_FORMAT_VALUES,
+  REPORT_PERIOD_VALUES,
+} from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
 
 const VALID_FORMATS = new Set<ReportFormat>(['excel', 'csv', 'pdf']);
@@ -91,7 +97,7 @@ export class ReportsController {
     name: 'period',
     required: false,
     description: '기간 (week, month, quarter, year)',
-    enum: ['week', 'month', 'quarter', 'year'],
+    enum: REPORT_PERIOD_VALUES,
   })
   @ApiQuery({
     name: 'equipmentId',
@@ -142,7 +148,7 @@ export class ReportsController {
 
   @Get('export/equipment-usage')
   @ApiOperation({ summary: '장비 사용 보고서 내보내기 (구 형식 — 하위 호환)' })
-  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'format', required: true, enum: REPORT_FORMAT_VALUES })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiResponse({ status: 200, description: '파일 스트림' })
@@ -160,7 +166,7 @@ export class ReportsController {
 
   @Get('export/equipment-inventory')
   @ApiOperation({ summary: '장비 현황 보고서 내보내기' })
-  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'format', required: true, enum: REPORT_FORMAT_VALUES })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @ApiQuery({ name: 'status', required: false, description: '장비 상태' })
   @ApiQuery({ name: 'teamId', required: false, description: '팀 ID' })
@@ -180,7 +186,7 @@ export class ReportsController {
 
   @Get('export/calibration-status')
   @ApiOperation({ summary: '교정 현황 보고서 내보내기' })
-  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'format', required: true, enum: REPORT_FORMAT_VALUES })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({
@@ -204,7 +210,7 @@ export class ReportsController {
 
   @Get('export/utilization')
   @ApiOperation({ summary: '장비 활용률 보고서 내보내기' })
-  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'format', required: true, enum: REPORT_FORMAT_VALUES })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({
@@ -230,7 +236,7 @@ export class ReportsController {
 
   @Get('export/team-equipment')
   @ApiOperation({ summary: '팀별 장비 현황 보고서 내보내기' })
-  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'format', required: true, enum: REPORT_FORMAT_VALUES })
   @ApiQuery({ name: 'site', required: false, enum: SiteEnum.options, description: '사이트 필터' })
   @ApiQuery({ name: 'teamId', required: false })
   @ApiResponse({ status: 200, description: '파일 스트림' })
@@ -248,7 +254,7 @@ export class ReportsController {
 
   @Get('export/maintenance')
   @ApiOperation({ summary: '수리 및 점검 이력 보고서 내보내기' })
-  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'format', required: true, enum: REPORT_FORMAT_VALUES })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({ name: 'equipmentId', required: false })
@@ -272,7 +278,7 @@ export class ReportsController {
     description:
       'RBAC 스코프 적용 감사 로그를 Excel/CSV/PDF로 내보냅니다. 최대 10,000건, 날짜 필터로 분할 권장.',
   })
-  @ApiQuery({ name: 'format', required: true, enum: ['excel', 'csv', 'pdf'] })
+  @ApiQuery({ name: 'format', required: true, enum: REPORT_FORMAT_VALUES })
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'entityType', required: false })
   @ApiQuery({ name: 'action', required: false })

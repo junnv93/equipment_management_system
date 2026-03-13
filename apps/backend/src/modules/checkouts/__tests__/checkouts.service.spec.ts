@@ -35,6 +35,8 @@ describe('CheckoutsService', () => {
     };
 
     // 체인 메서드 설정 - 각 메서드가 mockDrizzle을 반환
+    // mockDrizzle은 thenable: await 시 빈 배열 반환 (select...where() 패턴 지원)
+    mockDrizzle.then = jest.fn((resolve: (v: unknown[]) => void) => resolve([]));
     mockDrizzle.select.mockReturnValue(mockDrizzle);
     mockDrizzle.from.mockReturnValue(mockDrizzle);
     mockDrizzle.where.mockReturnValue(mockDrizzle);
@@ -46,6 +48,7 @@ describe('CheckoutsService', () => {
     mockDrizzle.set.mockReturnValue(mockDrizzle);
     mockDrizzle.delete.mockReturnValue(mockDrizzle);
     mockDrizzle.leftJoin.mockReturnValue(mockDrizzle);
+    mockDrizzle.innerJoin = jest.fn().mockReturnValue(mockDrizzle);
 
     mockCacheService = {
       get: jest.fn(),
@@ -57,7 +60,9 @@ describe('CheckoutsService', () => {
 
     mockEquipmentService = {
       findOne: jest.fn(),
+      findByIds: jest.fn().mockResolvedValue(new Map()),
       updateStatus: jest.fn(),
+      updateStatusBatch: jest.fn().mockResolvedValue([]),
     };
 
     mockTeamsService = {
@@ -187,7 +192,9 @@ describe('CheckoutsService', () => {
         createdAt: new Date(),
       };
 
-      mockEquipmentService.findOne.mockResolvedValue(mockEquipment);
+      const equipMap = new Map([[equipmentId1, mockEquipment]]);
+      mockEquipmentService.findByIds.mockResolvedValue(equipMap);
+      mockTeamsService.findOne.mockResolvedValue({ id: userTeamId, classification: 'general_rf' });
       mockDrizzle.returning.mockResolvedValue([mockCreatedCheckout]);
       mockCacheService.deleteByPattern.mockResolvedValue(undefined);
 
@@ -195,7 +202,7 @@ describe('CheckoutsService', () => {
 
       expect(result).toBeDefined();
       expect(result.status).toBe('pending');
-      expect(mockEquipmentService.findOne).toHaveBeenCalledWith(equipmentId1);
+      expect(mockEquipmentService.findByIds).toHaveBeenCalledWith([equipmentId1], true);
     });
 
     it('should throw BadRequestException for invalid equipment UUID', async () => {
@@ -207,9 +214,12 @@ describe('CheckoutsService', () => {
     });
 
     it('should throw BadRequestException when equipment not found', async () => {
-      // 서비스는 NotFoundException을 잡아서 BadRequestException으로 변환
-      mockEquipmentService.findOne.mockRejectedValue(
-        new NotFoundException('장비를 찾을 수 없습니다.')
+      // findByIds가 BadRequestException을 던지면 잡아서 CHECKOUT_EQUIPMENT_NOT_FOUND로 변환
+      mockEquipmentService.findByIds.mockRejectedValue(
+        new BadRequestException({
+          code: 'EQUIPMENT_NOT_FOUND',
+          message: '장비를 찾을 수 없습니다.',
+        })
       );
 
       await expect(service.create(mockCreateDto, requesterId, userTeamId)).rejects.toThrow(

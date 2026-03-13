@@ -5,9 +5,23 @@ import {
   Site,
   Classification,
   SiteCode,
+  EQUIPMENT_STATUS_VALUES,
+  CALIBRATION_METHOD_VALUES,
+  SPEC_MATCH_VALUES,
+  CALIBRATION_REQUIRED_VALUES,
+  SiteEnum,
+  ClassificationEnum,
+  SiteCodeEnum,
+  ClassificationCodeEnum,
+  ApprovalStatusEnum,
+  type CalibrationMethod,
+  type SpecMatch,
+  type CalibrationRequired,
+  type ClassificationCode,
+  type ApprovalStatus,
+  updateEquipmentSchema,
 } from '@equipment-management/schemas';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { updateEquipmentSchema } from '@equipment-management/schemas';
 import { VersionedDto } from '../../../common/dto/base-versioned.dto';
 
 /**
@@ -50,15 +64,15 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
 
   @ApiPropertyOptional({
     description: '시방일치 여부',
-    enum: ['match', 'mismatch'],
+    enum: SPEC_MATCH_VALUES,
   })
-  specMatch?: 'match' | 'mismatch';
+  specMatch?: SpecMatch;
 
   @ApiPropertyOptional({
     description: '교정필요 여부',
-    enum: ['required', 'not_required'],
+    enum: CALIBRATION_REQUIRED_VALUES,
   })
-  calibrationRequired?: 'required' | 'not_required';
+  calibrationRequired?: CalibrationRequired;
 
   @ApiPropertyOptional({ description: '교정 주기 (개월)' })
   calibrationCycle?: number;
@@ -77,9 +91,9 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
 
   @ApiPropertyOptional({
     description: '관리 방법 (교정 방법)',
-    enum: ['external_calibration', 'self_inspection', 'not_applicable'],
+    enum: CALIBRATION_METHOD_VALUES,
   })
-  calibrationMethod?: 'external_calibration' | 'self_inspection' | 'not_applicable';
+  calibrationMethod?: CalibrationMethod;
 
   @ApiPropertyOptional({ description: '최종 중간 점검일' })
   lastIntermediateCheckDate?: Date;
@@ -98,28 +112,28 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
 
   @ApiPropertyOptional({
     description: '사이트',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
   site?: Site;
 
   @ApiPropertyOptional({
     description: '장비 분류 (관리번호 자동 생성용)',
-    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+    enum: ClassificationEnum.options,
   })
   classification?: Classification;
 
   @ApiPropertyOptional({
     description: '시험소코드',
-    enum: ['SUW', 'UIW', 'PYT'],
+    enum: SiteCodeEnum.options,
   })
   siteCode?: SiteCode;
 
   @ApiPropertyOptional({
     description: '분류코드',
-    enum: ['E', 'R', 'W', 'S', 'A', 'P'],
+    enum: ClassificationCodeEnum.options,
   })
-  classificationCode?: 'E' | 'R' | 'W' | 'S' | 'A' | 'P';
+  classificationCode?: ClassificationCode;
 
   @ApiPropertyOptional({
     description: '관리번호 일련번호',
@@ -162,16 +176,7 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
 
   @ApiPropertyOptional({
     description: '장비 상태',
-    enum: [
-      'available',
-      'in_use',
-      'checked_out',
-      'calibration_scheduled',
-      'calibration_overdue',
-      'non_conforming',
-      'spare',
-      'retired',
-    ],
+    enum: EQUIPMENT_STATUS_VALUES,
     example: 'in_use',
   })
   status?: EquipmentStatus;
@@ -179,9 +184,9 @@ export class UpdateEquipmentDto extends VersionedDto implements Partial<UpdateEq
   // 승인 프로세스 필드
   @ApiPropertyOptional({
     description: '승인 상태',
-    enum: ['pending_approval', 'approved', 'rejected'],
+    enum: ApprovalStatusEnum.options,
   })
-  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
+  approvalStatus?: ApprovalStatus;
 }
 
 // Zod 검증 파이프 생성

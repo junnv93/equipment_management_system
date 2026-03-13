@@ -4,6 +4,9 @@ import { eq, and, count, gte, lte, desc, inArray, sql, SQL } from 'drizzle-orm';
 import * as schema from '@equipment-management/db/schema';
 import {
   UserRole,
+  EquipmentStatusEnum,
+  CheckoutStatusEnum,
+  UserRoleValues as URVal,
   AUDIT_TO_ACTIVITY_TYPE,
   RENTAL_ACTIVITY_TYPE_OVERRIDES,
   AUDIT_ACTION_LABELS,
@@ -79,7 +82,7 @@ export class DashboardService {
           this.db
             .select({
               total: count(),
-              available: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = 'available') as integer)`,
+              available: sql<number>`cast(count(*) filter (where ${schema.equipment.status} = ${EquipmentStatusEnum.enum.available}) as integer)`,
               upcomingCalibrations: sql<number>`cast(count(*) filter (where ${schema.equipment.calibrationRequired} = 'required' and ${schema.equipment.nextCalibrationDate} >= ${today} and ${schema.equipment.nextCalibrationDate} <= ${thirtyDaysLater}) as integer)`,
             })
             .from(schema.equipment)
@@ -97,7 +100,7 @@ export class DashboardService {
             .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
             .where(
               and(
-                eq(schema.checkouts.status, 'checked_out'),
+                eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out),
                 teamId ? eq(schema.equipment.teamId, teamId) : undefined,
                 site ? eq(schema.equipment.site, site) : undefined
               )
@@ -307,7 +310,7 @@ export class DashboardService {
           .leftJoin(schema.teams, eq(schema.equipment.teamId, schema.teams.id))
           .where(
             and(
-              eq(schema.checkouts.status, 'checked_out'),
+              eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out),
               lte(schema.checkouts.expectedReturnDate, today),
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
               site ? eq(schema.equipment.site, site) : undefined
@@ -359,7 +362,7 @@ export class DashboardService {
     teamId?: string,
     site?: string
   ): Promise<UpcomingCheckoutReturnDto[]> {
-    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}upcomingCheckoutReturns:${site || 'all'}:${teamId || 'all'}`;
+    const cacheKey = `${CACHE_KEY_PREFIXES.DASHBOARD}upcomingCheckoutReturns:${days}:${site || 'all'}:${teamId || 'all'}`;
     return this.cacheService.getOrSet(
       cacheKey,
       async () => {
@@ -381,7 +384,7 @@ export class DashboardService {
           .leftJoin(schema.equipment, eq(schema.checkoutItems.equipmentId, schema.equipment.id))
           .where(
             and(
-              eq(schema.checkouts.status, 'checked_out'),
+              eq(schema.checkouts.status, CheckoutStatusEnum.enum.checked_out),
               gte(schema.checkouts.expectedReturnDate, today),
               lte(schema.checkouts.expectedReturnDate, futureDate),
               teamId ? eq(schema.equipment.teamId, teamId) : undefined,
@@ -437,13 +440,13 @@ export class DashboardService {
 
         // RBAC 조건 빌드
         const rbacConditions: SQL[] = [];
-        if (userRole === 'test_engineer') {
+        if (userRole === URVal.TEST_ENGINEER) {
           // test_engineer: 본인 활동만
           rbacConditions.push(eq(schema.auditLogs.userId, userId));
-        } else if (userRole === 'technical_manager' && teamId) {
+        } else if (userRole === URVal.TECHNICAL_MANAGER && teamId) {
           // technical_manager: 팀 내 활동
           rbacConditions.push(eq(schema.auditLogs.userTeamId, teamId));
-        } else if ((userRole === 'quality_manager' || userRole === 'lab_manager') && site) {
+        } else if ((userRole === URVal.QUALITY_MANAGER || userRole === URVal.LAB_MANAGER) && site) {
           // quality_manager/lab_manager: 사이트 내 활동
           rbacConditions.push(eq(schema.auditLogs.userSite, site));
         }
@@ -526,8 +529,9 @@ export class DashboardService {
    * 활동 상세 메시지 포매팅 (한국어)
    */
   private formatActivityDetails(action: string, entityType: string, entityName: string): string {
-    const actionLabel = AUDIT_ACTION_LABELS[action] || action;
-    const entityLabel = AUDIT_ENTITY_TYPE_LABELS[entityType] || entityType;
+    const actionLabel = (AUDIT_ACTION_LABELS as Record<string, string>)[action] || action;
+    const entityLabel =
+      (AUDIT_ENTITY_TYPE_LABELS as Record<string, string>)[entityType] || entityType;
 
     if (entityName) {
       return `${entityLabel} "${entityName}" ${actionLabel}`;

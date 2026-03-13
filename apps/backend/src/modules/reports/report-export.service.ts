@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
+import type { ReportFormat } from '@equipment-management/schemas';
 
-export type ReportFormat = 'excel' | 'csv' | 'pdf';
+export type { ReportFormat };
 
 export interface ReportColumn {
   header: string;

@@ -23,6 +23,7 @@ import {
   SITE_TO_CODE,
   TEMPORARY_EQUIPMENT_PREFIX,
   type Classification,
+  type EquipmentStatus,
   type Site,
 } from '@equipment-management/schemas';
 import { CreateEquipmentImportInput } from './dto/create-equipment-import.dto';
@@ -471,7 +472,7 @@ export class EquipmentImportsService extends VersionedBaseService {
             externalIdentifier,
             usagePeriodStart: equipmentImport.usagePeriodStart,
             usagePeriodEnd: equipmentImport.usagePeriodEnd,
-            status: 'temporary',
+            status: ESVal.TEMPORARY,
             isActive: true,
             approvalStatus: EIVal.APPROVED,
             // 교정 정보 추가
@@ -548,6 +549,10 @@ export class EquipmentImportsService extends VersionedBaseService {
       });
     }
 
+    // 장비의 이전 상태를 저장 (보상 롤백용)
+    const previousEquipment = await this.equipmentService.findOne(equipmentImport.equipmentId);
+    const previousEquipmentStatus = previousEquipment.status as EquipmentStatus;
+
     // 장비 상태를 'available'로 변경 (checkout 생성 조건 충족)
     await this.equipmentService.updateStatus(equipmentImport.equipmentId, ESVal.AVAILABLE);
 
@@ -559,38 +564,59 @@ export class EquipmentImportsService extends VersionedBaseService {
       `Initiating return for equipment import: ${id} (sourceType: ${equipmentImport.sourceType}, destination: ${destination})`
     );
 
-    // checkout 자동 생성
-    const newCheckout = await this.checkoutsService.create(
-      {
-        equipmentIds: [equipmentImport.equipmentId],
-        purpose: 'return_to_vendor',
-        destination,
-        reason: `${sourceTypeLabel} equipment return (import request #${equipmentImport.id.substring(0, 8)})`,
-        expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
-      } as Parameters<typeof this.checkoutsService.create>[0],
-      requesterId,
-      userTeamId
-    );
+    let newCheckout: Awaited<ReturnType<typeof this.checkoutsService.create>>;
+    try {
+      // checkout 자동 생성
+      newCheckout = await this.checkoutsService.create(
+        {
+          equipmentIds: [equipmentImport.equipmentId],
+          purpose: 'return_to_vendor',
+          destination,
+          reason: `${sourceTypeLabel} equipment return (import request #${equipmentImport.id.substring(0, 8)})`,
+          expectedReturnDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7일 후
+        } as Parameters<typeof this.checkoutsService.create>[0],
+        requesterId,
+        userTeamId
+      );
+    } catch (error) {
+      // 보상: checkout 생성 실패 시 장비 상태 롤백
+      this.logger.warn(`Checkout creation failed, rolling back equipment status: ${error}`);
+      await this.equipmentService.updateStatus(
+        equipmentImport.equipmentId,
+        previousEquipmentStatus
+      );
+      throw error;
+    }
 
     // equipment import 업데이트 — CAS로 동시 요청 방어
-    const [updated] = await this.db
-      .update(equipmentImports)
-      .set({
-        status: 'return_requested' as EquipmentImportStatus,
-        returnCheckoutId: newCheckout.id,
-        version: sql`version + 1`,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(equipmentImports.id, id), eq(equipmentImports.version, equipmentImport.version))
-      )
-      .returning();
-
-    if (!updated) {
-      throw new ConflictException({
-        message: 'This import has been modified by another user. Please refresh and try again.',
-        code: 'VERSION_CONFLICT',
-      });
+    let updated: EquipmentImport;
+    try {
+      updated = await this.updateWithVersion<EquipmentImport>(
+        equipmentImports,
+        id,
+        equipmentImport.version,
+        {
+          status: EIVal.RETURN_REQUESTED as EquipmentImportStatus,
+          returnCheckoutId: newCheckout.id,
+        },
+        'Equipment import'
+      );
+    } catch (error) {
+      // 보상: CAS 실패 시 checkout 취소 + 장비 상태 롤백
+      this.logger.warn(`Import CAS update failed, compensating: ${error}`);
+      try {
+        await this.checkoutsService.cancel(newCheckout.id);
+        await this.equipmentService.updateStatus(
+          equipmentImport.equipmentId,
+          previousEquipmentStatus
+        );
+      } catch (compensateError) {
+        this.logger.error(`Compensation failed (manual intervention needed): ${compensateError}`);
+      }
+      if (error instanceof ConflictException) {
+        this.cacheService.deleteByPattern(CACHE_KEY_PREFIXES.EQUIPMENT_IMPORTS + '*');
+      }
+      throw error;
     }
 
     return updated;
@@ -667,7 +693,7 @@ export class EquipmentImportsService extends VersionedBaseService {
         await tx
           .update(equipment)
           .set({
-            status: 'inactive',
+            status: ESVal.INACTIVE,
             version: sql`version + 1`,
             updatedAt: new Date(),
           } as Record<string, unknown>)
@@ -721,5 +747,26 @@ export class EquipmentImportsService extends VersionedBaseService {
       code: 'IMPORT_TEMP_NUMBER_GENERATION_FAILED',
       message: 'Failed to generate temporary management number. Please contact administrator.',
     });
+  }
+
+  /**
+   * 장비 반입의 사이트 및 팀 조회
+   * 크로스사이트/크로스팀 접근 제어에 사용
+   */
+  async getImportSiteAndTeam(importId: string): Promise<{ site: string; teamId: string | null }> {
+    const result = await this.db
+      .select({ site: equipmentImports.site, teamId: equipmentImports.teamId })
+      .from(equipmentImports)
+      .where(eq(equipmentImports.id, importId))
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException({
+        code: 'EQUIPMENT_IMPORT_NOT_FOUND',
+        message: `Equipment import ${importId} not found.`,
+      });
+    }
+
+    return result[0];
   }
 }
