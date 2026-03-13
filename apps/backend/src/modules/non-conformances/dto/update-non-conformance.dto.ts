@@ -2,13 +2,16 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
+import { NonConformanceStatusEnum } from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
-/**
- * 부적합 수정 가능한 상태
- */
-const updatableStatusValues = ['open', 'analyzing', 'corrected'] as const;
+/** 사용자가 직접 변경할 수 있는 상태 (closed는 승인 프로세스에서만 설정) */
+const UpdatableNonConformanceStatusEnum = NonConformanceStatusEnum.extract([
+  'open',
+  'analyzing',
+  'corrected',
+]);
 
 /**
  * 부적합 수정 스키마
@@ -26,11 +29,7 @@ export const updateNonConformanceSchema = z.object({
     })
     .optional(),
   correctedBy: z.string().uuid({ message: '유효한 조치자 UUID가 아닙니다' }).optional(),
-  status: z
-    .enum(updatableStatusValues, {
-      message: '유효하지 않은 상태입니다 (open, analyzing, corrected)',
-    })
-    .optional(),
+  status: UpdatableNonConformanceStatusEnum.optional(),
 });
 
 export type UpdateNonConformanceInput = z.infer<typeof updateNonConformanceSchema>;
@@ -56,7 +55,7 @@ export class UpdateNonConformanceDto extends VersionedDto {
 
   @ApiPropertyOptional({
     description: '상태 변경',
-    enum: ['open', 'analyzing', 'corrected'],
+    enum: UpdatableNonConformanceStatusEnum.options,
   })
-  status?: 'open' | 'analyzing' | 'corrected';
+  status?: z.infer<typeof UpdatableNonConformanceStatusEnum>;
 }

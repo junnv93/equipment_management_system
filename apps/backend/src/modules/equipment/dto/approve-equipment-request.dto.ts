@@ -1,6 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { approveEquipmentRequestSchema } from '@equipment-management/schemas';
+import {
+  approveEquipmentRequestSchema,
+  ApprovalActionEnum,
+  type ApprovalAction,
+} from '@equipment-management/schemas';
 
 /**
  * 장비 요청 승인/반려 DTO
@@ -14,10 +18,10 @@ export class ApproveEquipmentRequestDto {
 
   @ApiProperty({
     description: '승인 또는 반려',
-    enum: ['approve', 'reject'],
+    enum: ApprovalActionEnum.options,
     example: 'approve',
   })
-  action: 'approve' | 'reject';
+  action: ApprovalAction;
 
   @ApiPropertyOptional({
     description: '반려 사유 (반려 시 필수)',

@@ -1,7 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
-import { SiteEnum, ClassificationEnum, type Classification } from '@equipment-management/schemas';
+import {
+  SiteEnum,
+  type Site,
+  ClassificationEnum,
+  type Classification,
+} from '@equipment-management/schemas';
 
 // ========== Zod 스키마 정의 ==========
 
@@ -45,14 +50,14 @@ export class TeamQueryDto {
 
   @ApiPropertyOptional({
     description: '사이트 필터 (사용자 사이트에 맞는 팀만 조회)',
-    enum: ['suwon', 'uiwang', 'pyeongtaek'],
+    enum: SiteEnum.options,
     example: 'suwon',
   })
-  site?: 'suwon' | 'uiwang' | 'pyeongtaek';
+  site?: Site;
 
   @ApiPropertyOptional({
     description: '팀 분류 필터 (장비 분류와 동일, 소문자_언더스코어)',
-    enum: ['fcc_emc_rf', 'general_emc', 'general_rf', 'sar', 'automotive_emc', 'software'],
+    enum: ClassificationEnum.options,
     example: 'fcc_emc_rf',
   })
   classification?: Classification;

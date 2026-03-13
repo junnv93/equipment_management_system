@@ -8,10 +8,11 @@ export const CalibrationStatusEnum = z.enum([
   'in_progress', // 진행 중
   'completed', // 완료됨
   'failed', // 실패
-  'cancelled' // 취소됨
+  'cancelled', // 취소됨
 ]);
 
 export type CalibrationStatus = z.infer<typeof CalibrationStatusEnum>;
+export const CALIBRATION_STATUS_VALUES = CalibrationStatusEnum.options;
 
 // 기본 교정 스키마 (공통 필드)
 export const baseCalibrationSchema = z.object({
@@ -60,4 +61,4 @@ export const isCalibration = (value: unknown): value is Calibration => {
   } catch {
     return false;
   }
-}; 
+};
