@@ -12,34 +12,18 @@ import {
 import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
+import { EQUIPMENT_STATUS_VALUES, CALIBRATION_METHOD_VALUES } from '@equipment-management/schemas';
+import type { EquipmentStatus } from '@equipment-management/schemas';
 import { teams } from './teams';
 
-// 장비 상태 정의
-// ⚠️ 중요: 이 값들은 packages/schemas/src/enums.ts의 EquipmentStatusEnum과 반드시 일치해야 함
-// Single Source of Truth 원칙: schemas 패키지의 값이 우선
-// 값 변경 시 마이그레이션 필수
-// @see packages/schemas/src/enums.ts
-export const equipmentStatusEnum = pgEnum('equipment_status', [
-  'available', // 사용 가능
-  'in_use', // 사용 중 (대여 중 포함)
-  'checked_out', // 반출 중
-  'calibration_scheduled', // 교정 예정
-  'calibration_overdue', // 교정 기한 초과
-  'non_conforming', // 부적합 (임시, 수리 후 복귀 가능)
-  'spare', // 여분
-  'retired', // 사용 중지 (영구 폐기) - deprecated, disposed 사용 권장
-  'pending_disposal', // 폐기 대기 (시험소장 승인 전)
-  'disposed', // 폐기 완료
-  'temporary', // 임시 등록 (공용/렌탈장비)
-  'inactive', // 비활성 (임시등록 장비 사용 완료)
+/** @see packages/schemas/src/enums.ts - EquipmentStatusEnum (SSOT) */
+export const equipmentStatusEnum = pgEnum('equipment_status', [...EQUIPMENT_STATUS_VALUES] as [
+  string,
+  ...string[],
 ]);
 
-// 교정 방법 정의
-export const calibrationMethods = [
-  'external_calibration', // 외부 교정
-  'self_inspection', // 자체 점검
-  'not_applicable', // 비대상
-] as const;
+/** @see packages/schemas/src/enums.ts - CalibrationMethodEnum (SSOT) */
+export const calibrationMethods = CALIBRATION_METHOD_VALUES;
 
 // 장비 테이블 스키마
 // ✅ UUID 통일: serial(integer) id를 uuid id로 변경하여 전체 스키마 일관성 확보
@@ -109,7 +93,10 @@ export const equipment = pgTable(
     technicalManager: varchar('technical_manager', { length: 100 }),
 
     // 상태 정보
-    status: varchar('status', { length: 50 }).notNull().default('available'),
+    status: varchar('status', { length: 50 })
+      .$type<EquipmentStatus>()
+      .notNull()
+      .default('available'),
     isActive: boolean('is_active').default(true),
 
     // 승인 프로세스 필드

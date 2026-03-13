@@ -1,5 +1,6 @@
 import { pgTable, uuid, varchar, text, timestamp, index, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import type { DisposalReviewStatus } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
 
@@ -42,7 +43,10 @@ export const disposalRequests = pgTable(
     requestedAt: timestamp('requested_at').defaultNow().notNull(),
 
     // 검토 정보 (technical_manager, 같은 팀)
-    reviewStatus: varchar('review_status', { length: 20 }).notNull().default('pending'),
+    reviewStatus: varchar('review_status', { length: 20 })
+      .$type<DisposalReviewStatus>()
+      .notNull()
+      .default('pending'),
     reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'restrict' }),
     reviewedAt: timestamp('reviewed_at'),
     reviewOpinion: text('review_opinion'),

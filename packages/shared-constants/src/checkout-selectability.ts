@@ -14,6 +14,9 @@
  */
 import type { EquipmentStatus, CheckoutPurpose } from '@equipment-management/schemas';
 
+/** 반출 신청 시 최대 선택 가능 장비 수 */
+export const CHECKOUT_MAX_EQUIPMENT_COUNT = 20;
+
 /**
  * 교정/수리 목적 반출 시 허용되는 장비 상태
  *

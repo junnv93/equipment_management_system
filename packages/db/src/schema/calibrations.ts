@@ -10,30 +10,28 @@ import {
   index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import {
+  CALIBRATION_STATUS_VALUES,
+  CALIBRATION_APPROVAL_STATUS_VALUES,
+  CALIBRATION_REGISTERED_BY_ROLE_VALUES,
+} from '@equipment-management/schemas';
+import type {
+  CalibrationStatus,
+  CalibrationApprovalStatus,
+  CalibrationRegisteredByRole,
+} from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { teams } from './teams';
 import { users } from './users';
 
-// 교정 상태 정의
-export const calibrationStatus = [
-  'scheduled', // 예정됨
-  'in_progress', // 진행 중
-  'completed', // 완료됨
-  'failed', // 실패
-] as const;
+/** @see packages/schemas/src/calibration.ts - CalibrationStatusEnum (SSOT) */
+export const calibrationStatus = CALIBRATION_STATUS_VALUES;
 
-// 교정 승인 상태 정의
-export const calibrationApprovalStatus = [
-  'pending_approval', // 승인 대기
-  'approved', // 승인됨
-  'rejected', // 반려됨
-] as const;
+/** @see packages/schemas/src/enums.ts - CalibrationApprovalStatusEnum (SSOT) */
+export const calibrationApprovalStatus = CALIBRATION_APPROVAL_STATUS_VALUES;
 
-// 교정 등록자 역할 정의
-export const calibrationRegisteredByRole = [
-  'test_engineer', // 시험실무자
-  'technical_manager', // 기술책임자
-] as const;
+/** @see packages/schemas/src/enums.ts - CalibrationRegisteredByRoleEnum (SSOT) */
+export const calibrationRegisteredByRole = CALIBRATION_REGISTERED_BY_ROLE_VALUES;
 
 // 교정 테이블 스키마
 export const calibrations = pgTable(
@@ -42,7 +40,10 @@ export const calibrations = pgTable(
     id: uuid('id').primaryKey().defaultRandom().notNull(),
     equipmentId: uuid('equipment_id').notNull(),
     technicianId: uuid('technician_id'),
-    status: varchar('status', { length: 50 }).notNull().default('scheduled'),
+    status: varchar('status', { length: 50 })
+      .$type<CalibrationStatus>()
+      .notNull()
+      .default('scheduled'),
 
     // 교정 정보
     calibrationDate: timestamp('calibration_date').notNull(),
@@ -60,11 +61,14 @@ export const calibrations = pgTable(
 
     // 승인 프로세스 필드
     approvalStatus: varchar('approval_status', { length: 50 })
+      .$type<CalibrationApprovalStatus>()
       .notNull()
       .default('pending_approval'),
     registeredBy: uuid('registered_by'), // 등록자 ID
     approvedBy: uuid('approved_by'), // 승인자 ID (기술책임자)
-    registeredByRole: varchar('registered_by_role', { length: 50 }), // 등록자 역할
+    registeredByRole: varchar('registered_by_role', {
+      length: 50,
+    }).$type<CalibrationRegisteredByRole>(), // 등록자 역할
     registrarComment: text('registrar_comment'), // 등록자 코멘트 (기술책임자 직접 등록 시 필수)
     approverComment: text('approver_comment'), // 승인자 코멘트 (기술책임자 승인 시 필수)
     rejectionReason: text('rejection_reason'), // 반려 사유
@@ -77,7 +81,7 @@ export const calibrations = pgTable(
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => ({
-    equipmentIdIdx: index('calibrations_equipment_id_idx').on(table.equipmentId),
+    // equipmentIdIdx 제거: equipmentApprovalIdx(equipmentId, approvalStatus) leading prefix로 커버됨
     statusIdx: index('calibrations_status_idx').on(table.status),
     approvalStatusIdx: index('calibrations_approval_status_idx').on(table.approvalStatus),
     nextCalibrationDateIdx: index('calibrations_next_calibration_date_idx').on(

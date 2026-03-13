@@ -1,47 +1,23 @@
 import { pgTable, varchar, timestamp, text, uuid, date, index, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import {
+  NON_CONFORMANCE_STATUS_VALUES,
+  NON_CONFORMANCE_TYPE_VALUES,
+  RESOLUTION_TYPE_VALUES,
+} from '@equipment-management/schemas';
+import type { NonConformanceStatus, NonConformanceType } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
 import { repairHistory } from './repair-history';
 
-/**
- * 부적합 상태 정의
- * ⚠️ 중요: 이 값들은 packages/schemas/src/enums.ts의 NonConformanceStatusEnum과 반드시 일치해야 함
- * Single Source of Truth 원칙: schemas 패키지의 값이 우선
- * @see packages/schemas/src/enums.ts
- */
-export const nonConformanceStatus = [
-  'open', // 부적합 등록 (발견됨)
-  'analyzing', // 원인 분석 중
-  'corrected', // 조치 완료 (종료 승인 대기)
-  'closed', // 종료됨 (기술책임자 승인)
-] as const;
+/** @see packages/schemas/src/enums.ts - NonConformanceStatusEnum (SSOT) */
+export const nonConformanceStatus = NON_CONFORMANCE_STATUS_VALUES;
 
-/**
- * 부적합 유형 정의
- * 부적합의 원인을 분류하여 적절한 해결 방법을 선택할 수 있도록 함
- * ⚠️ SSOT: packages/schemas/src/enums.ts의 NON_CONFORMANCE_TYPE_VALUES와 동기화 필수
- */
-export const nonConformanceType = [
-  'damage', // 손상 (물리적 파손)
-  'malfunction', // 오작동 (기능 이상)
-  'calibration_failure', // 교정 실패
-  'calibration_overdue', // 교정 기한 초과 (시스템 자동 생성)
-  'measurement_error', // 측정 오류
-  'other', // 기타
-] as const;
+/** @see packages/schemas/src/enums.ts - NonConformanceTypeEnum (SSOT) */
+export const nonConformanceType = NON_CONFORMANCE_TYPE_VALUES;
 
-/**
- * 부적합 해결 방법 정의
- * 부적합이 어떤 방식으로 해결되었는지 기록
- */
-export const resolutionType = [
-  'repair', // 수리
-  'recalibration', // 재교정
-  'replacement', // 교체
-  'disposal', // 폐기
-  'other', // 기타
-] as const;
+/** @see packages/schemas/src/enums.ts - ResolutionTypeEnum (SSOT) */
+export const resolutionType = RESOLUTION_TYPE_VALUES;
 
 /**
  * 부적합 기록 테이블 스키마
@@ -65,7 +41,7 @@ export const nonConformances = pgTable(
     cause: text('cause').notNull(), // 부적합 원인
 
     // 부적합 유형 및 해결 방법
-    ncType: varchar('nc_type', { length: 50 }).notNull(), // 부적합 유형 (damage | malfunction | calibration_failure | measurement_error | other)
+    ncType: varchar('nc_type', { length: 50 }).$type<NonConformanceType>().notNull(), // 부적합 유형 (damage | malfunction | calibration_failure | measurement_error | other)
     resolutionType: varchar('resolution_type', { length: 50 }), // 해결 방법 (repair | recalibration | replacement | disposal | other)
 
     // 연결된 조치 기록
@@ -82,7 +58,10 @@ export const nonConformances = pgTable(
     correctedBy: uuid('corrected_by'), // 조치자 ID
 
     // 상태 관리
-    status: varchar('status', { length: 20 }).notNull().default('open'), // 'open' | 'analyzing' | 'corrected' | 'closed'
+    status: varchar('status', { length: 20 })
+      .$type<NonConformanceStatus>()
+      .notNull()
+      .default('open'), // 'open' | 'analyzing' | 'corrected' | 'closed'
 
     // 종료 정보 (기술책임자)
     closedBy: uuid('closed_by'), // 종료 승인자 ID (기술책임자)

@@ -359,9 +359,7 @@ export const CHECKOUT_STATUS_VALUES = [
   'canceled', // 취소됨
 ] as const;
 
-export const CheckoutStatusEnum = z.enum(
-  CHECKOUT_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const CheckoutStatusEnum = z.enum(CHECKOUT_STATUS_VALUES);
 export type CheckoutStatus = z.infer<typeof CheckoutStatusEnum>;
 
 /**
@@ -375,9 +373,7 @@ export const CHECKOUT_PURPOSE_VALUES = [
   'return_to_vendor', // 렌탈 반납
 ] as const;
 
-export const CheckoutPurposeEnum = z.enum(
-  CHECKOUT_PURPOSE_VALUES as unknown as [string, ...string[]]
-);
+export const CheckoutPurposeEnum = z.enum(CHECKOUT_PURPOSE_VALUES);
 export type CheckoutPurpose = z.infer<typeof CheckoutPurposeEnum>;
 
 /**
@@ -394,9 +390,7 @@ export const CALIBRATION_APPROVAL_STATUS_VALUES = [
   'rejected', // 반려됨
 ] as const;
 
-export const CalibrationApprovalStatusEnum = z.enum(
-  CALIBRATION_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const CalibrationApprovalStatusEnum = z.enum(CALIBRATION_APPROVAL_STATUS_VALUES);
 export type CalibrationApprovalStatus = z.infer<typeof CalibrationApprovalStatusEnum>;
 
 /**
@@ -407,9 +401,7 @@ export const CALIBRATION_REGISTERED_BY_ROLE_VALUES = [
   'technical_manager', // 기술책임자 (Technical Manager)
 ] as const;
 
-export const CalibrationRegisteredByRoleEnum = z.enum(
-  CALIBRATION_REGISTERED_BY_ROLE_VALUES as unknown as [string, ...string[]]
-);
+export const CalibrationRegisteredByRoleEnum = z.enum(CALIBRATION_REGISTERED_BY_ROLE_VALUES);
 export type CalibrationRegisteredByRole = z.infer<typeof CalibrationRegisteredByRoleEnum>;
 
 /**
@@ -426,9 +418,7 @@ export const CALIBRATION_RESULT_VALUES = [
   'conditional', // 조건부 적합
 ] as const;
 
-export const CalibrationResultEnum = z.enum(
-  CALIBRATION_RESULT_VALUES as unknown as [string, ...string[]]
-);
+export const CalibrationResultEnum = z.enum(CALIBRATION_RESULT_VALUES);
 export type CalibrationResult = z.infer<typeof CalibrationResultEnum>;
 
 export const CALIBRATION_RESULT_LABELS: Record<CalibrationResult, string> = {
@@ -472,9 +462,7 @@ export const CALIBRATION_FACTOR_TYPE_VALUES = [
   'other', // 기타
 ] as const;
 
-export const CalibrationFactorTypeEnum = z.enum(
-  CALIBRATION_FACTOR_TYPE_VALUES as unknown as [string, ...string[]]
-);
+export const CalibrationFactorTypeEnum = z.enum(CALIBRATION_FACTOR_TYPE_VALUES);
 export type CalibrationFactorType = z.infer<typeof CalibrationFactorTypeEnum>;
 
 /**
@@ -492,7 +480,7 @@ export const CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES = [
 ] as const;
 
 export const CalibrationFactorApprovalStatusEnum = z.enum(
-  CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
+  CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES
 );
 export type CalibrationFactorApprovalStatus = z.infer<typeof CalibrationFactorApprovalStatusEnum>;
 
@@ -512,9 +500,7 @@ export const NON_CONFORMANCE_STATUS_VALUES = [
   'closed', // 종료됨 (기술책임자 승인)
 ] as const;
 
-export const NonConformanceStatusEnum = z.enum(
-  NON_CONFORMANCE_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const NonConformanceStatusEnum = z.enum(NON_CONFORMANCE_STATUS_VALUES);
 export type NonConformanceStatus = z.infer<typeof NonConformanceStatusEnum>;
 
 /**
@@ -567,9 +553,7 @@ export const SOFTWARE_APPROVAL_STATUS_VALUES = [
   'rejected', // 반려됨
 ] as const;
 
-export const SoftwareApprovalStatusEnum = z.enum(
-  SOFTWARE_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const SoftwareApprovalStatusEnum = z.enum(SOFTWARE_APPROVAL_STATUS_VALUES);
 export type SoftwareApprovalStatus = z.infer<typeof SoftwareApprovalStatusEnum>;
 
 /**
@@ -609,9 +593,7 @@ export const CalibrationPlanStatusValues = {
   REJECTED: 'rejected',
 } as const;
 
-export const CalibrationPlanStatusEnum = z.enum(
-  CALIBRATION_PLAN_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const CalibrationPlanStatusEnum = z.enum(CALIBRATION_PLAN_STATUS_VALUES);
 export type CalibrationPlanStatus = z.infer<typeof CalibrationPlanStatusEnum>;
 
 /**
@@ -687,9 +669,7 @@ export const AUDIT_ENTITY_TYPE_VALUES = [
   'settings', // 설정
 ] as const;
 
-export const AuditEntityTypeEnum = z.enum(
-  AUDIT_ENTITY_TYPE_VALUES as unknown as [string, ...string[]]
-);
+export const AuditEntityTypeEnum = z.enum(AUDIT_ENTITY_TYPE_VALUES);
 export type AuditEntityType = z.infer<typeof AuditEntityTypeEnum>;
 
 /**
@@ -739,9 +719,7 @@ export const CALIBRATION_REQUIRED_VALUES = [
   'not_required', // 불필요
 ] as const;
 
-export const CalibrationRequiredEnum = z.enum(
-  CALIBRATION_REQUIRED_VALUES as unknown as [string, ...string[]]
-);
+export const CalibrationRequiredEnum = z.enum(CALIBRATION_REQUIRED_VALUES);
 export type CalibrationRequired = z.infer<typeof CalibrationRequiredEnum>;
 
 // NOTE: CalibrationStatusEnum/CalibrationStatus는 calibration.ts에서 정의 (SSOT)
@@ -775,9 +753,7 @@ export const NON_CONFORMANCE_TYPE_VALUES = [
   'other', // 기타
 ] as const;
 
-export const NonConformanceTypeEnum = z.enum(
-  NON_CONFORMANCE_TYPE_VALUES as unknown as [string, ...string[]]
-);
+export const NonConformanceTypeEnum = z.enum(NON_CONFORMANCE_TYPE_VALUES);
 export type NonConformanceType = z.infer<typeof NonConformanceTypeEnum>;
 
 /**
@@ -798,9 +774,7 @@ export const RESOLUTION_TYPE_VALUES = [
   'other', // 기타
 ] as const;
 
-export const ResolutionTypeEnum = z.enum(
-  RESOLUTION_TYPE_VALUES as unknown as [string, ...string[]]
-);
+export const ResolutionTypeEnum = z.enum(RESOLUTION_TYPE_VALUES);
 export type ResolutionType = z.infer<typeof ResolutionTypeEnum>;
 
 /**
@@ -895,9 +869,7 @@ export const NOTIFICATION_TYPE_VALUES = [
   'maintenance', // 레거시
 ] as const;
 
-export const NotificationTypeEnum = z.enum(
-  NOTIFICATION_TYPE_VALUES as unknown as [string, ...string[]]
-);
+export const NotificationTypeEnum = z.enum(NOTIFICATION_TYPE_VALUES);
 export type NotificationType = z.infer<typeof NotificationTypeEnum>;
 
 /**
@@ -910,9 +882,7 @@ export type NotificationType = z.infer<typeof NotificationTypeEnum>;
  */
 export const NOTIFICATION_PRIORITY_VALUES = ['low', 'medium', 'high'] as const;
 
-export const NotificationPriorityEnum = z.enum(
-  NOTIFICATION_PRIORITY_VALUES as unknown as [string, ...string[]]
-);
+export const NotificationPriorityEnum = z.enum(NOTIFICATION_PRIORITY_VALUES);
 export type NotificationPriority = z.infer<typeof NotificationPriorityEnum>;
 
 /**
@@ -933,9 +903,7 @@ export const RETURN_CONDITION_VALUES = [
   'needs_calibration', // 교정 필요
 ] as const;
 
-export const ReturnConditionEnum = z.enum(
-  RETURN_CONDITION_VALUES as unknown as [string, ...string[]]
-);
+export const ReturnConditionEnum = z.enum(RETURN_CONDITION_VALUES);
 export type ReturnCondition = z.infer<typeof ReturnConditionEnum>;
 
 /**
@@ -948,9 +916,7 @@ export type ReturnCondition = z.infer<typeof ReturnConditionEnum>;
  */
 export const RETURN_APPROVAL_STATUS_VALUES = ['pending', 'approved', 'rejected'] as const;
 
-export const ReturnApprovalStatusEnum = z.enum(
-  RETURN_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const ReturnApprovalStatusEnum = z.enum(RETURN_APPROVAL_STATUS_VALUES);
 export type ReturnApprovalStatus = z.infer<typeof ReturnApprovalStatusEnum>;
 
 // ============================================================================
@@ -973,9 +939,7 @@ export const CONDITION_CHECK_STEP_VALUES = [
   'lender_return', // ④ 반입 시 (빌려준 측)
 ] as const;
 
-export const ConditionCheckStepEnum = z.enum(
-  CONDITION_CHECK_STEP_VALUES as unknown as [string, ...string[]]
-);
+export const ConditionCheckStepEnum = z.enum(CONDITION_CHECK_STEP_VALUES);
 export type ConditionCheckStep = z.infer<typeof ConditionCheckStepEnum>;
 
 /**
@@ -987,9 +951,7 @@ export type ConditionCheckStep = z.infer<typeof ConditionCheckStepEnum>;
  */
 export const CONDITION_STATUS_VALUES = ['normal', 'abnormal'] as const;
 
-export const ConditionStatusEnum = z.enum(
-  CONDITION_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const ConditionStatusEnum = z.enum(CONDITION_STATUS_VALUES);
 export type ConditionStatus = z.infer<typeof ConditionStatusEnum>;
 
 /**
@@ -1001,9 +963,7 @@ export type ConditionStatus = z.infer<typeof ConditionStatusEnum>;
  */
 export const ACCESSORIES_STATUS_VALUES = ['complete', 'incomplete'] as const;
 
-export const AccessoriesStatusEnum = z.enum(
-  ACCESSORIES_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const AccessoriesStatusEnum = z.enum(ACCESSORIES_STATUS_VALUES);
 export type AccessoriesStatus = z.infer<typeof AccessoriesStatusEnum>;
 
 // ============================================================================
@@ -1307,6 +1267,16 @@ export const CALIBRATION_APPROVAL_STATUS_LABELS: Record<CalibrationApprovalStatu
   approved: '승인됨',
   rejected: '반려됨',
 };
+
+/**
+ * 교정 승인 상태 값 객체 (dot-notation 접근용)
+ * @example CalibrationApprovalStatusValues.PENDING_APPROVAL // 'pending_approval'
+ */
+export const CalibrationApprovalStatusValues = {
+  PENDING_APPROVAL: 'pending_approval',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
 
 /**
  * 보정계수 승인 상태 라벨 (UI 표시용)
@@ -1657,9 +1627,7 @@ export const UNIFIED_APPROVAL_STATUS_VALUES = [
   'rejected', // 반려
 ] as const;
 
-export const UnifiedApprovalStatusEnum = z.enum(
-  UNIFIED_APPROVAL_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const UnifiedApprovalStatusEnum = z.enum(UNIFIED_APPROVAL_STATUS_VALUES);
 export type UnifiedApprovalStatus = z.infer<typeof UnifiedApprovalStatusEnum>;
 
 /**
@@ -1687,9 +1655,7 @@ export const UnifiedApprovalStatusValues = {
 
 // Disposal reason enum
 export const DISPOSAL_REASON_VALUES = ['obsolete', 'broken', 'inaccurate', 'other'] as const;
-export const DisposalReasonEnum = z.enum(
-  DISPOSAL_REASON_VALUES as unknown as [string, ...string[]]
-);
+export const DisposalReasonEnum = z.enum(DISPOSAL_REASON_VALUES);
 export type DisposalReason = z.infer<typeof DisposalReasonEnum>;
 
 export const DISPOSAL_REASON_LABELS: Record<DisposalReason, string> = {
@@ -1706,9 +1672,7 @@ export const DISPOSAL_REVIEW_STATUS_VALUES = [
   'approved',
   'rejected',
 ] as const;
-export const DisposalReviewStatusEnum = z.enum(
-  DISPOSAL_REVIEW_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const DisposalReviewStatusEnum = z.enum(DISPOSAL_REVIEW_STATUS_VALUES);
 export type DisposalReviewStatus = z.infer<typeof DisposalReviewStatusEnum>;
 
 export const DISPOSAL_REVIEW_STATUS_LABELS: Record<DisposalReviewStatus, string> = {
@@ -1747,9 +1711,7 @@ export const EQUIPMENT_IMPORT_SOURCE_VALUES = [
   'internal_shared', // 내부 공용장비
 ] as const;
 
-export const EquipmentImportSourceEnum = z.enum(
-  EQUIPMENT_IMPORT_SOURCE_VALUES as unknown as [string, ...string[]]
-);
+export const EquipmentImportSourceEnum = z.enum(EQUIPMENT_IMPORT_SOURCE_VALUES);
 export type EquipmentImportSource = z.infer<typeof EquipmentImportSourceEnum>;
 
 /**
@@ -1782,9 +1744,7 @@ export const EQUIPMENT_IMPORT_STATUS_VALUES = [
   'canceled', // 취소됨
 ] as const;
 
-export const EquipmentImportStatusEnum = z.enum(
-  EQUIPMENT_IMPORT_STATUS_VALUES as unknown as [string, ...string[]]
-);
+export const EquipmentImportStatusEnum = z.enum(EQUIPMENT_IMPORT_STATUS_VALUES);
 export type EquipmentImportStatus = z.infer<typeof EquipmentImportStatusEnum>;
 
 /**

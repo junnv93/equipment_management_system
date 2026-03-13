@@ -1,36 +1,22 @@
 import { pgTable, varchar, timestamp, text, uuid, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import {
+  CONDITION_CHECK_STEP_VALUES,
+  CONDITION_STATUS_VALUES,
+  ACCESSORIES_STATUS_VALUES,
+} from '@equipment-management/schemas';
+import type { ConditionCheckStep } from '@equipment-management/schemas';
 import { checkouts } from './checkouts';
 import { users } from './users';
 
-/**
- * 상태 확인 단계 열거형
- * @see packages/schemas/src/enums.ts - ConditionCheckStepEnum
- */
-export const conditionCheckStep = [
-  'lender_checkout', // ① 반출 전 (빌려주는 측)
-  'borrower_receive', // ② 인수 시 (빌리는 측)
-  'borrower_return', // ③ 반납 전 (빌린 측)
-  'lender_return', // ④ 반입 시 (빌려준 측)
-] as const;
+/** @see packages/schemas/src/enums.ts - ConditionCheckStepEnum (SSOT) */
+export const conditionCheckStep = CONDITION_CHECK_STEP_VALUES;
 
-/**
- * 외관/작동 상태 열거형
- * @see packages/schemas/src/enums.ts - ConditionStatusEnum
- */
-export const conditionStatus = [
-  'normal', // 정상
-  'abnormal', // 이상
-] as const;
+/** @see packages/schemas/src/enums.ts - ConditionStatusEnum (SSOT) */
+export const conditionStatus = CONDITION_STATUS_VALUES;
 
-/**
- * 부속품 상태 열거형
- * @see packages/schemas/src/enums.ts - AccessoriesStatusEnum
- */
-export const accessoriesStatus = [
-  'complete', // 완전
-  'incomplete', // 불완전
-] as const;
+/** @see packages/schemas/src/enums.ts - AccessoriesStatusEnum (SSOT) */
+export const accessoriesStatus = ACCESSORIES_STATUS_VALUES;
 
 /**
  * 상태 확인 기록 테이블 (대여 목적 양측 4단계 확인용)
@@ -54,7 +40,7 @@ export const conditionChecks = pgTable(
       .references(() => checkouts.id, { onDelete: 'cascade' }),
 
     // 확인 단계
-    step: varchar('step', { length: 50 }).notNull(), // lender_checkout, borrower_receive, ...
+    step: varchar('step', { length: 50 }).$type<ConditionCheckStep>().notNull(), // lender_checkout, borrower_receive, ...
 
     // 확인자 정보
     checkedBy: uuid('checked_by')
@@ -83,7 +69,7 @@ export const conditionChecks = pgTable(
   (table) => ({
     checkoutIdIdx: index('condition_checks_checkout_id_idx').on(table.checkoutId),
     checkedByIdx: index('condition_checks_checked_by_idx').on(table.checkedBy),
-    stepIdx: index('condition_checks_step_idx').on(table.step),
+    // stepIdx 제거: 4값 저선택도 enum, 단독 쿼리 없음
   })
 );
 

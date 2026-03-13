@@ -78,6 +78,7 @@ export {
   CHECKOUT_HIDDEN_STATUSES,
   CHECKOUT_BLOCKED_REASONS,
   getBlockedReason,
+  CHECKOUT_MAX_EQUIPMENT_COUNT,
   type EquipmentSelectability,
 } from './checkout-selectability';
 

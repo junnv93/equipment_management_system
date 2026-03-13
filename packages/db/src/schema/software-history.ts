@@ -1,32 +1,18 @@
 import { pgTable, varchar, timestamp, text, uuid, index, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import {
+  SOFTWARE_TYPE_VALUES,
+  SOFTWARE_APPROVAL_STATUS_VALUES,
+} from '@equipment-management/schemas';
+import type { SoftwareApprovalStatus } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
 
-/**
- * 소프트웨어 타입 정의
- * 중요: 이 값들은 packages/schemas/src/enums.ts의 SoftwareTypeEnum과 반드시 일치해야 함
- * Single Source of Truth 원칙: schemas 패키지의 값이 우선
- * @see packages/schemas/src/enums.ts
- */
-export const softwareTypes = [
-  'measurement', // 측정 소프트웨어
-  'analysis', // 분석 소프트웨어
-  'control', // 제어 소프트웨어
-  'other', // 기타
-] as const;
+/** @see packages/schemas/src/enums.ts - SoftwareTypeEnum (SSOT) */
+export const softwareTypes = SOFTWARE_TYPE_VALUES;
 
-/**
- * 소프트웨어 변경 승인 상태 정의
- * 중요: 이 값들은 packages/schemas/src/enums.ts의 SoftwareApprovalStatusEnum과 반드시 일치해야 함
- * Single Source of Truth 원칙: schemas 패키지의 값이 우선
- * @see packages/schemas/src/enums.ts
- */
-export const softwareApprovalStatus = [
-  'pending', // 승인 대기
-  'approved', // 승인됨
-  'rejected', // 반려됨
-] as const;
+/** @see packages/schemas/src/enums.ts - SoftwareApprovalStatusEnum (SSOT) */
+export const softwareApprovalStatus = SOFTWARE_APPROVAL_STATUS_VALUES;
 
 /**
  * 소프트웨어 변경 이력 테이블 스키마
@@ -57,7 +43,10 @@ export const softwareHistory = pgTable(
     verificationRecord: text('verification_record').notNull(), // 검증 기록 (변경 후 검증 내용)
 
     // 승인 프로세스
-    approvalStatus: varchar('approval_status', { length: 20 }).notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
+    approvalStatus: varchar('approval_status', { length: 20 })
+      .$type<SoftwareApprovalStatus>()
+      .notNull()
+      .default('pending'), // 'pending' | 'approved' | 'rejected'
     approvedBy: uuid('approved_by'), // 승인자 ID (기술책임자)
     approvedAt: timestamp('approved_at'), // 승인 시각
     approverComment: text('approver_comment'), // 승인/반려 시 코멘트

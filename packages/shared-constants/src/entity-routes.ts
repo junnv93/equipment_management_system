@@ -18,6 +18,7 @@ export const ENTITY_ROUTES: Record<AuditEntityType, (id: string) => string> = {
   calibration: (id) => `/calibration/history?selected=${id}`,
   checkout: (id) => `/checkouts/${id}`,
   rental: (id) => `/equipment-imports/${id}`,
+  rental_import: (id) => `/equipment-imports/${id}`,
   calibration_plan: (id) => `/calibration-plans/${id}`,
   non_conformance: (id) => `/non-conformances/${id}`,
   user: (id) => `/admin/users/${id}`,

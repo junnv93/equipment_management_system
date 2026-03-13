@@ -25,6 +25,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@equipment-management/schemas": "workspace:*",
     "dotenv": "^16.0.0",
     "drizzle-orm": "^0.45.1",
     "pg": "^8.11.3"

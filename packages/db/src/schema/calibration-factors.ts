@@ -11,35 +11,19 @@ import {
   integer,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import {
+  CALIBRATION_FACTOR_TYPE_VALUES,
+  CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES,
+} from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { calibrations } from './calibrations';
 import { users } from './users';
 
-/**
- * 보정계수 타입 정의
- * ⚠️ 중요: 이 값들은 packages/schemas/src/enums.ts의 CalibrationFactorTypeEnum과 반드시 일치해야 함
- * Single Source of Truth 원칙: schemas 패키지의 값이 우선
- * @see packages/schemas/src/enums.ts
- */
-export const calibrationFactorTypes = [
-  'antenna_gain', // 안테나 이득
-  'cable_loss', // 케이블 손실
-  'path_loss', // 경로 손실
-  'amplifier_gain', // 증폭기 이득
-  'other', // 기타
-] as const;
+/** @see packages/schemas/src/enums.ts - CalibrationFactorTypeEnum (SSOT) */
+export const calibrationFactorTypes = CALIBRATION_FACTOR_TYPE_VALUES;
 
-/**
- * 보정계수 승인 상태 정의
- * ⚠️ 중요: 이 값들은 packages/schemas/src/enums.ts의 CalibrationFactorApprovalStatusEnum과 반드시 일치해야 함
- * Single Source of Truth 원칙: schemas 패키지의 값이 우선
- * @see packages/schemas/src/enums.ts
- */
-export const calibrationFactorApprovalStatus = [
-  'pending', // 승인 대기
-  'approved', // 승인됨
-  'rejected', // 반려됨
-] as const;
+/** @see packages/schemas/src/enums.ts - CalibrationFactorApprovalStatusEnum (SSOT) */
+export const calibrationFactorApprovalStatus = CALIBRATION_FACTOR_APPROVAL_STATUS_VALUES;
 
 /**
  * 보정계수 이력 테이블 스키마

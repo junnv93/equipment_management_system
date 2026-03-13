@@ -9,21 +9,14 @@ import {
   index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { CALIBRATION_PLAN_STATUS_VALUES } from '@equipment-management/schemas';
+import type { CalibrationPlanStatus } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { users } from './users';
 import { teams } from './teams';
 
-/**
- * 교정계획서 상태 정의 (3단계 승인 워크플로우)
- * @see packages/schemas/src/enums.ts - CalibrationPlanStatusEnum
- */
-export const calibrationPlanStatus = [
-  'draft', // 작성 중
-  'pending_review', // 검토 대기 (품질책임자)
-  'pending_approval', // 승인 대기 (시험소장)
-  'approved', // 승인됨
-  'rejected', // 반려됨
-] as const;
+/** @see packages/schemas/src/enums.ts - CalibrationPlanStatusEnum (SSOT) */
+export const calibrationPlanStatus = CALIBRATION_PLAN_STATUS_VALUES;
 
 /**
  * 반려 단계 정의
@@ -48,7 +41,10 @@ export const calibrationPlans = pgTable(
     teamId: uuid('team_id'), // 팀 ID (선택)
 
     // 상태 관리
-    status: varchar('status', { length: 20 }).notNull().default('draft'),
+    status: varchar('status', { length: 20 })
+      .$type<CalibrationPlanStatus>()
+      .notNull()
+      .default('draft'),
 
     // 작성자 정보 (기술책임자)
     createdBy: uuid('created_by').notNull(), // 작성자 ID

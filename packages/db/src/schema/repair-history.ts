@@ -9,6 +9,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { REPAIR_RESULT_VALUES } from '@equipment-management/schemas';
 import { equipment } from './equipment';
 import { nonConformances } from './non-conformances';
 
@@ -66,7 +67,8 @@ export const repairHistory = pgTable(
 );
 
 // 수리 결과 타입
-export const repairResultValues = ['completed', 'partial', 'failed'] as const;
+/** @see packages/schemas/src/enums.ts - RepairResultEnum (SSOT) */
+export const repairResultValues = REPAIR_RESULT_VALUES;
 export type RepairResult = (typeof repairResultValues)[number];
 
 // 타입 정의
