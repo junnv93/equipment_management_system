@@ -8,6 +8,7 @@ import {
   ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_TOKEN_EXPIRES_IN,
 } from '@equipment-management/shared-constants';
+import { type SiteCode, CODE_TO_SITE, SITE_TO_LOCATION } from '@equipment-management/schemas';
 import { UserRoleValues, type UserRole } from './rbac/roles.enum';
 import { LoginDto } from './dto/login.dto';
 import { UsersService } from '../users/users.service';
@@ -288,36 +289,24 @@ export class AuthService {
       },
     };
 
-    const siteMapping: Record<
-      string,
-      {
-        site: 'suwon' | 'uiwang' | 'pyeongtaek';
-        location: '수원랩' | '의왕랩' | '평택랩';
-      }
-    > = {
-      SUW: { site: 'suwon', location: '수원랩' },
-      UIW: { site: 'uiwang', location: '의왕랩' },
-      PYT: { site: 'pyeongtaek', location: '평택랩' },
-    };
-
     for (const group of azureGroups) {
       // 그룹 이름 패턴 파싱: LST.SUW.RF
       const parts = group.split('.');
       if (parts.length >= 3 && parts[0] === 'LST') {
-        const siteCode = parts[1]; // SUW, UIW, PYT
+        const siteCode = parts[1] as SiteCode; // SUW, UIW, PYT
         const teamCode = parts[2]; // RF, SAR, EMC, Automotive
 
-        const siteInfo = siteMapping[siteCode];
-        if (siteInfo) {
-          const siteTeams = teamMapping[siteInfo.site];
+        const site = CODE_TO_SITE[siteCode];
+        if (site) {
+          const siteTeams = teamMapping[site];
           const teamId = siteTeams ? siteTeams[teamCode] : undefined;
 
           // ✅ 사이트별 팀 매핑 성공
           if (teamId) {
             return {
               teamId,
-              site: siteInfo.site,
-              location: siteInfo.location,
+              site,
+              location: SITE_TO_LOCATION[site],
             };
           }
         }

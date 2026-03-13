@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -54,10 +55,15 @@ export class EquipmentImportsController {
     @Body() dto: CreateEquipmentImportInput,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
+    if (!req.user.site) {
+      throw new BadRequestException(
+        '사용자 사이트 정보가 설정되지 않았습니다. 관리자에게 문의하세요.'
+      );
+    }
     return this.equipmentImportsService.create(
       dto,
       req.user.userId,
-      req.user.site || 'suwon',
+      req.user.site,
       req.user.teamId || ''
     );
   }

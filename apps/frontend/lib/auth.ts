@@ -46,7 +46,7 @@ interface AuthorizedUser extends User {
   accessTokenExpires?: number;
 }
 
-import { DEFAULT_LOCALE } from '@equipment-management/schemas';
+import { DEFAULT_LOCALE, SITE_TO_LOCATION, type Site } from '@equipment-management/schemas';
 import {
   ABSOLUTE_SESSION_MAX_AGE_SECONDS,
   REFRESH_BUFFER_SECONDS,
@@ -368,13 +368,8 @@ export const authOptions = {
           email: user.email,
           name: user.name || user.email.split('@')[0],
           role: authUser.role || (azureProfile?.roles && azureProfile.roles[0]) || 'test_engineer',
-          site: authUser.site || 'suwon',
-          location:
-            authUser.site === 'uiwang'
-              ? '의왕랩'
-              : authUser.site === 'pyeongtaek'
-                ? '평택랩'
-                : '수원랩',
+          site: (authUser.site as Site | undefined) || 'suwon',
+          location: SITE_TO_LOCATION[(authUser.site as Site | undefined) || 'suwon'],
           teamId: authUser.teamId,
           position: azureProfile?.department,
         };

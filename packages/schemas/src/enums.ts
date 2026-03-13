@@ -76,6 +76,13 @@ export const SITE_VALUES: readonly Site[] = SiteEnum.options;
 export const LocationEnum = z.enum(['수원랩', '의왕랩', '평택랩']);
 export type Location = z.infer<typeof LocationEnum>;
 
+/** Site → Location SSOT 매핑 (하드코딩 조건문 대신 사용) */
+export const SITE_TO_LOCATION: Record<Site, Location> = {
+  suwon: '수원랩',
+  uiwang: '의왕랩',
+  pyeongtaek: '평택랩',
+};
+
 // ============================================================================
 // 관리번호 체계 관련 타입 및 상수 (UL-QP-18)
 // ============================================================================
@@ -736,6 +743,14 @@ export const CalibrationRequiredEnum = z.enum(
   CALIBRATION_REQUIRED_VALUES as unknown as [string, ...string[]]
 );
 export type CalibrationRequired = z.infer<typeof CalibrationRequiredEnum>;
+
+// NOTE: CalibrationStatusEnum/CalibrationStatus는 calibration.ts에서 정의 (SSOT)
+// 여기서 재정의 금지 — 중복 export 충돌 발생
+
+/**
+ * 위치 값 배열 (LocationEnum SSOT — 중복 선언 금지)
+ */
+export const LOCATION_VALUES = LocationEnum.options;
 
 // ============================================================================
 // Phase 1: 추가 ENUM 정의 (SSOT 통합)
@@ -1806,6 +1821,42 @@ export const EquipmentImportStatusValues = {
 export const NotificationFrequencyEnum = z.enum(['immediate', 'daily', 'weekly']);
 export type NotificationFrequency = z.infer<typeof NotificationFrequencyEnum>;
 export const NOTIFICATION_FREQUENCY_VALUES = NotificationFrequencyEnum.options;
+
+// ============================================================================
+// 승인 액션 (approve/reject — 공통)
+// ============================================================================
+
+export const APPROVAL_ACTION_VALUES = ['approve', 'reject'] as const;
+export const ApprovalActionEnum = z.enum(APPROVAL_ACTION_VALUES);
+export type ApprovalAction = z.infer<typeof ApprovalActionEnum>;
+
+// ============================================================================
+// 보고서 형식/기간
+// ============================================================================
+
+export const REPORT_FORMAT_VALUES = ['excel', 'csv', 'pdf'] as const;
+export const ReportFormatEnum = z.enum(REPORT_FORMAT_VALUES);
+export type ReportFormat = z.infer<typeof ReportFormatEnum>;
+
+export const REPORT_PERIOD_VALUES = ['week', 'month', 'quarter', 'year'] as const;
+export const ReportPeriodEnum = z.enum(REPORT_PERIOD_VALUES);
+export type ReportPeriod = z.infer<typeof ReportPeriodEnum>;
+
+// ============================================================================
+// 정렬 순서 (공통)
+// ============================================================================
+
+export const SORT_ORDER_VALUES = ['asc', 'desc'] as const;
+export const SortOrderEnum = z.enum(SORT_ORDER_VALUES);
+export type SortOrder = z.infer<typeof SortOrderEnum>;
+
+// ============================================================================
+// 반출 방향 (outbound/inbound)
+// ============================================================================
+
+export const CHECKOUT_DIRECTION_VALUES = ['outbound', 'inbound'] as const;
+export const CheckoutDirectionEnum = z.enum(CHECKOUT_DIRECTION_VALUES);
+export type CheckoutDirection = z.infer<typeof CheckoutDirectionEnum>;
 
 // ============================================================================
 // DEPRECATED: Legacy rental import types (backward compatibility)
