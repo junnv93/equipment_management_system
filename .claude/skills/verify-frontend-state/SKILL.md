@@ -44,6 +44,7 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/components/equipment/CalibrationFactorsClient.tsx`                                        | 보정계수 생성 direct useMutation 참조                       |
 | `apps/frontend/components/calibration/CalibrationPlanDetailClient.tsx`                                   | 교정계획 상세 direct useMutation + placeholderData 참조     |
 | `apps/frontend/components/calibration/ApprovalTimeline.tsx`                                              | 교정계획 승인 타임라인 direct useMutation 참조              |
+| `apps/frontend/components/teams/TeamDetail.tsx`                                                          | 팀 상세 컴포넌트 (useQuery 참조)                            |
 | `apps/frontend/components/calibration/PlanItemsTable.tsx`                                                | 교정계획 항목 테이블 direct useMutation 참조                |
 | `apps/frontend/components/calibration/VersionHistory.tsx`                                                | 교정계획 버전 이력 useQuery 참조                            |
 | `apps/frontend/hooks/use-equipment-kpi.ts`                                                               | 장비 KPI 계산 훅 (TanStack Query 참조)                      |

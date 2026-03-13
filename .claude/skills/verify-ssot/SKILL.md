@@ -32,6 +32,7 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `packages/db/src/schema/audit-logs.ts`                                       | DB enum 배열 (auditAction, auditEntityType — schemas와 동기화 필수)                            |
 | `packages/db/src/index.ts`                                                   | AppDatabase SSOT 타입 (NodePgDatabase 직접 import 금지)                                        |
 | `packages/schemas/src/enums.ts`                                              | SSOT enum 정의 (EquipmentStatus, CheckoutStatus 등)                                            |
+| `packages/schemas/src/errors.ts`                                             | SSOT ErrorCode enum + errorCodeToStatusCode 매핑                                               |
 | `packages/schemas/src/user.ts`                                               | UserRole 타입 정의                                                                             |
 | `packages/schemas/src/settings.ts`                                           | SSOT 설정 타입/기본값 (SystemSettings, DisplayPreferences)                                     |
 | `packages/schemas/src/audit-log.ts`                                          | SSOT 감사 로그 타입 (AuditAction, AuditEntityType, AuditLogDetails)                            |
