@@ -4,6 +4,10 @@ import ReturnCheckoutClient from './ReturnCheckoutClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
+import {
+  CheckoutStatusValues as CSVal,
+  CheckoutPurposeValues as CPVal,
+} from '@equipment-management/schemas';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
@@ -31,13 +35,13 @@ type PageProps = {
  */
 function canReturn(status: string, purpose: string): boolean {
   // 교정/수리: checked_out 상태에서 반입 가능
-  if (purpose === 'calibration' || purpose === 'repair') {
-    return status === 'checked_out';
+  if (purpose === CPVal.CALIBRATION || purpose === CPVal.REPAIR) {
+    return status === CSVal.CHECKED_OUT;
   }
 
   // 대여: lender_received 상태에서 반입 가능 (4단계 확인 완료 후)
-  if (purpose === 'rental') {
-    return status === 'lender_received';
+  if (purpose === CPVal.RENTAL) {
+    return status === CSVal.LENDER_RECEIVED;
   }
 
   return false;

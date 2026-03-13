@@ -5,6 +5,7 @@ import {
   CONDITION_CHECK_STEP_VALUES,
   CONDITION_STATUS_VALUES,
   ACCESSORIES_STATUS_VALUES,
+  type ConditionCheckStep,
 } from '@equipment-management/schemas';
 import { VersionedDto, versionedSchema } from '../../../common/dto/base-versioned.dto';
 
@@ -44,7 +45,7 @@ export class CreateConditionCheckDto extends VersionedDto {
     enum: CONDITION_CHECK_STEP_VALUES,
     example: 'lender_checkout',
   })
-  step: string;
+  step: ConditionCheckStep;
 
   @ApiProperty({
     description: '외관 상태',

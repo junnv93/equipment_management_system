@@ -48,7 +48,10 @@ import { useTranslations } from 'next-intl';
 import { isBefore, startOfDay } from 'date-fns';
 import { formatDate, toDate } from '@/lib/utils/date';
 import { useAuth } from '@/hooks/use-auth';
-import { UserRoleValues as URVal } from '@equipment-management/schemas';
+import {
+  UserRoleValues as URVal,
+  IncidentTypeValues as ITVal,
+} from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
@@ -287,7 +290,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
     };
 
     // 교정 기한 초과가 아닌 경우에만 createNonConformance 추가
-    if (data.incidentType !== 'calibration_overdue') {
+    if (data.incidentType !== ITVal.CALIBRATION_OVERDUE) {
       payload.createNonConformance = data.createNonConformance;
       payload.changeEquipmentStatus = changeEquipmentStatus;
     }
@@ -566,7 +569,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
               />
 
               {/* 교정 기한 초과 자동 부적합 안내 */}
-              {incidentType === 'calibration_overdue' && (
+              {incidentType === ITVal.CALIBRATION_OVERDUE && (
                 <div className="space-y-3">
                   <div className={getSemanticContainerClasses('warning')}>
                     <div className="flex items-start gap-3">
@@ -671,7 +674,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
               )}
 
               {/* 조치 계획 (부적합 생성 시) */}
-              {(createNonConformance || incidentType === 'calibration_overdue') && (
+              {(createNonConformance || incidentType === ITVal.CALIBRATION_OVERDUE) && (
                 <FormField
                   control={form.control}
                   name="actionPlan"
@@ -679,13 +682,13 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                     <FormItem>
                       <FormLabel>
                         {t('incidentHistoryTab.nonConformance.actionPlan')}
-                        {incidentType === 'calibration_overdue' &&
+                        {incidentType === ITVal.CALIBRATION_OVERDUE &&
                           t('incidentHistoryTab.nonConformance.actionPlanAutoSet')}
                       </FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder={
-                            incidentType === 'calibration_overdue'
+                            incidentType === ITVal.CALIBRATION_OVERDUE
                               ? t('incidentHistoryTab.nonConformance.actionPlanPlaceholderOverdue')
                               : t('incidentHistoryTab.nonConformance.actionPlanPlaceholderDefault')
                           }

@@ -597,6 +597,16 @@ export const CalibrationPlanStatusEnum = z.enum(CALIBRATION_PLAN_STATUS_VALUES);
 export type CalibrationPlanStatus = z.infer<typeof CalibrationPlanStatusEnum>;
 
 /**
+ * ⚠️ SINGLE SOURCE OF TRUTH: 교정계획서 반려 단계 열거형
+ *
+ * - review: 품질책임자 검토 단계에서 반려
+ * - approval: 시험소장 승인 단계에서 반려
+ */
+export const REJECTION_STAGE_VALUES = ['review', 'approval'] as const;
+export const RejectionStageEnum = z.enum(REJECTION_STAGE_VALUES);
+export type RejectionStage = z.infer<typeof RejectionStageEnum>;
+
+/**
  * SINGLE SOURCE OF TRUTH: 감사 로그 액션 열거형
  *
  * 표준 액션값 (소문자 + 언더스코어):

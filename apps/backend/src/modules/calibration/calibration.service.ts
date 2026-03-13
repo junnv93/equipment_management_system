@@ -18,6 +18,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import {
   CalibrationStatus,
+  type CalibrationApprovalStatus,
   CalibrationApprovalStatusEnum,
   NonConformanceStatusValues as NCStatusVal,
   NonConformanceTypeValues as NCTypeVal,
@@ -158,7 +159,7 @@ export class CalibrationService extends VersionedBaseService {
    */
   private transformDtoToInsert(
     dto: CreateCalibrationDto,
-    approvalStatus: string
+    approvalStatus: CalibrationApprovalStatus
   ): typeof schema.calibrations.$inferInsert {
     // result: 대소문자 정규화 (PASS → pass, FAIL → fail, CONDITIONAL → conditional)
     const resultValue = dto.result || null;
@@ -645,7 +646,9 @@ export class CalibrationService extends VersionedBaseService {
     }
 
     if (approvalStatus) {
-      whereConditions.push(eq(schema.calibrations.approvalStatus, approvalStatus));
+      whereConditions.push(
+        eq(schema.calibrations.approvalStatus, approvalStatus as CalibrationApprovalStatus)
+      );
     }
 
     if (search) {
