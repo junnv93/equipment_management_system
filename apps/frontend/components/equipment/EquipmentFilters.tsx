@@ -445,7 +445,7 @@ function EquipmentFiltersComponent({
               <SelectTrigger className="h-9 w-[150px] text-sm" aria-label={t('filters.teamFilter')}>
                 {isLoadingTeams ? (
                   <span className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
                     {t('filters.loading')}
                   </span>
                 ) : (

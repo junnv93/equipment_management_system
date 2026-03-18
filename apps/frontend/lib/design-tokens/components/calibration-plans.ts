@@ -180,8 +180,10 @@ export const CALIBRATION_PLAN_LIST_TOKENS = {
   },
   /** 호버 스타일 */
   hover: ['hover:bg-muted/40', TRANSITION_PRESETS.instantBg].join(' '),
+  /** 첫 번째 셀 좌측 여백 — 데이터 행과 헤더 행에서 공유 */
+  firstCellPadding: 'pl-1',
   /** 연도 셀 (강조) */
-  yearCell: 'font-semibold tabular-nums',
+  yearCell: 'font-semibold tabular-nums pl-1',
   /** 사이트 셀 */
   siteCell: 'flex items-center gap-1.5 text-sm',
   /** 팀 셀 (optional) */

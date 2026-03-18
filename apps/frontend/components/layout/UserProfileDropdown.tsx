@@ -26,7 +26,7 @@ const roleBadgeColors: Record<string, string> = {
   technical_manager: 'bg-brand-ok/10 text-brand-ok',
   quality_manager: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
   lab_manager: 'bg-brand-purple/10 text-brand-purple',
-  system_admin: 'bg-ul-red/10 text-ul-red dark:bg-ul-red/20',
+  system_admin: 'bg-brand-critical/10 text-brand-critical',
 };
 
 /**
@@ -148,7 +148,7 @@ export function UserProfileDropdown() {
         {/* 로그아웃 버튼 */}
         <DropdownMenuItem
           onClick={handleLogout}
-          className="text-ul-red focus-visible:text-ul-red focus-visible:bg-ul-red/10 cursor-pointer"
+          className="text-brand-critical focus-visible:text-brand-critical focus-visible:bg-brand-critical/10 cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
           <span>{t('layout.logout')}</span>

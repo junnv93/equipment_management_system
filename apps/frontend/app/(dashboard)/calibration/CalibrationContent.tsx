@@ -44,8 +44,8 @@ import {
   CALIBRATION_THRESHOLDS,
   CALIBRATION_FILTER_BAR,
   getPageContainerClasses,
-  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { useTranslations } from 'next-intl';
 import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
 import { useCalibrationFilters } from '@/hooks/use-calibration-filters';
@@ -237,16 +237,16 @@ export default function CalibrationContent({
   return (
     <div className={getPageContainerClasses()}>
       {/* 헤더 */}
-      <div className={PAGE_HEADER_TOKENS.container}>
-        <div className={PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('subtitle')}</p>
-        </div>
-        <Button onClick={() => router.push('/calibration/register')}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('content.registerButton')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
+          <Button onClick={() => router.push('/calibration/register')}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('content.registerButton')}
+          </Button>
+        }
+      />
 
       {/* Alert Banner (교정기한 초과 / 30일 이내 교정 예정) */}
       <CalibrationAlertBanners overdue={stats.overdue} upcoming={stats.upcoming} />

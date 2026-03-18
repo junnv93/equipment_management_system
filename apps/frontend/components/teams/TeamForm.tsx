@@ -335,7 +335,7 @@ export function TeamForm({ team, mode }: TeamFormProps) {
           <Button type="submit" disabled={isPending}>
             {isPending ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 mr-2 motion-safe:animate-spin" />
                 {isEditMode ? t('form.submittingEdit') : t('form.submitting')}
               </>
             ) : isEditMode ? (

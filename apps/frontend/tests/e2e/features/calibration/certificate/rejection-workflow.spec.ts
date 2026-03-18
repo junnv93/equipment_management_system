@@ -86,9 +86,9 @@ test.describe('교정 반려 워크플로우', () => {
     const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
-    // 방금 등록한 기록 찾기 (individual card: border-l-yellow-500)
+    // 방금 등록한 기록 찾기 (individual card: border-l-brand-warning)
     const targetCard = techManagerPage
-      .locator('.border-l-yellow-500')
+      .locator('.border-l-brand-warning')
       .filter({ hasText: calibrationAgency });
     await expect(targetCard).toBeVisible({ timeout: 10000 });
 
@@ -122,9 +122,9 @@ test.describe('교정 반려 워크플로우', () => {
     const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
-    // 2. 해당 기록의 '반려' 버튼 클릭 (individual card: border-l-yellow-500)
+    // 2. 해당 기록의 '반려' 버튼 클릭 (individual card: border-l-brand-warning)
     const targetCard = techManagerPage
-      .locator('.border-l-yellow-500')
+      .locator('.border-l-brand-warning')
       .filter({ hasText: calibrationAgency });
     await expect(targetCard).toBeVisible({ timeout: 10000 });
 
@@ -150,7 +150,7 @@ test.describe('교정 반려 워크플로우', () => {
 
     // 6. 해당 기록이 승인 대기 목록에서 사라지는지 확인
     const disappearedCard = techManagerPage
-      .locator('.border-l-yellow-500')
+      .locator('.border-l-brand-warning')
       .filter({ hasText: calibrationAgency });
     await expect(disappearedCard).not.toBeVisible({ timeout: 10000 });
   });

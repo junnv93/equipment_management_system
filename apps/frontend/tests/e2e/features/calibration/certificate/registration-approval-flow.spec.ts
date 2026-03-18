@@ -108,9 +108,9 @@ test.describe('등록→승인→장비 업데이트 통합 플로우', () => {
     const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
-    // 8. Find the newly registered record in approval list (individual card: border-l-yellow-500)
+    // 8. Find the newly registered record in approval list (individual card: border-l-brand-warning)
     const targetCard = techManagerPage
-      .locator('.border-l-yellow-500')
+      .locator('.border-l-brand-warning')
       .filter({ hasText: registeredAgency });
     await expect(targetCard).toBeVisible({ timeout: 10000 });
 
@@ -132,9 +132,9 @@ test.describe('등록→승인→장비 업데이트 통합 플로우', () => {
     const pageHeading = techManagerPage.getByRole('heading', { name: /교정 승인/ });
     await expect(pageHeading).toBeVisible({ timeout: 10000 });
 
-    // 2. Find the approval item from previous test (individual card: border-l-yellow-500)
+    // 2. Find the approval item from previous test (individual card: border-l-brand-warning)
     const targetCard = techManagerPage
-      .locator('.border-l-yellow-500')
+      .locator('.border-l-brand-warning')
       .filter({ hasText: registeredAgency });
     await expect(targetCard).toBeVisible({ timeout: 10000 });
 

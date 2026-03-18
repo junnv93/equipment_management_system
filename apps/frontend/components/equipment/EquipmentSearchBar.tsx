@@ -109,7 +109,7 @@ function EquipmentSearchBarComponent({
         {/* 검색 아이콘 또는 로딩 스피너 */}
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
           ) : (
             <Search className="h-4 w-4" aria-hidden="true" />
           )}

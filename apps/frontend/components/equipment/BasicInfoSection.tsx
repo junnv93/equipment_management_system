@@ -357,7 +357,7 @@ export function BasicInfoSection({
                     {/* 검사 상태 아이콘 */}
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       {isCheckingManagementNumber ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        <Loader2 className="h-4 w-4 motion-safe:animate-spin text-muted-foreground" />
                       ) : managementNumberCheckResult?.available === true ? (
                         <CheckCircle2 className="h-4 w-4 text-brand-ok" />
                       ) : managementNumberCheckResult?.available === false ? (
@@ -429,7 +429,7 @@ export function BasicInfoSection({
                     </span>
                     {/* 검사 상태 아이콘 */}
                     {isCheckingManagementNumber ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin text-muted-foreground" />
                     ) : managementNumberCheckResult?.available === true ? (
                       <CheckCircle2 className="h-4 w-4 text-brand-ok" />
                     ) : managementNumberCheckResult?.available === false ? (

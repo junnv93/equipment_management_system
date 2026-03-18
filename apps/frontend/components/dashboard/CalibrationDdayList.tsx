@@ -123,7 +123,7 @@ export function CalibrationDdayList({
         <h2 className={T.title}>{t('title')}</h2>
         <div className="flex items-center gap-2 text-xs">
           {overdueCount > 0 && (
-            <span className="text-ul-red font-medium">
+            <span className="text-brand-critical font-medium">
               {t('overdueCount', { count: overdueCount })}
             </span>
           )}

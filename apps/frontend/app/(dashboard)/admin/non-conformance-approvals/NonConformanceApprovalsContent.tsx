@@ -9,9 +9,9 @@ import nonConformancesApi, { NonConformance } from '@/lib/api/non-conformances-a
 import { formatDate } from '@/lib/utils/date';
 import {
   getSemanticBadgeClasses,
-  getSemanticContainerColorClasses,
   ncStatusToSemantic,
   NC_APPROVE_BUTTON_TOKENS,
+  NC_INFO_NOTICE_TOKENS,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -153,14 +153,11 @@ export default function NonConformanceApprovalsContent() {
       {/* 헤더 */}
       <PageHeader title={t('approvals.title')} subtitle={t('approvals.description')} />
 
-      {/* 안내 메시지 — border-l-4 notice 패턴 (info 위계 강조) */}
-      <div className={`border-l-4 p-4 rounded-r-md ${getSemanticContainerColorClasses('info')}`}>
+      {/* 안내 메시지 — NC_INFO_NOTICE_TOKENS SSOT */}
+      <div className={NC_INFO_NOTICE_TOKENS.container}>
         <div className="flex items-start gap-3">
-          <AlertTriangle
-            className="h-4 w-4 text-brand-info flex-shrink-0 mt-0.5"
-            aria-hidden="true"
-          />
-          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+          <AlertTriangle className={NC_INFO_NOTICE_TOKENS.icon} aria-hidden="true" />
+          <p className={`${NC_INFO_NOTICE_TOKENS.text} whitespace-pre-line`}>
             {t('approvals.infoMessage')}
           </p>
         </div>

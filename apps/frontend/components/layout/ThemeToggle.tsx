@@ -67,7 +67,7 @@ export function ThemeToggle() {
         >
           <Sun className="h-4 w-4" aria-hidden="true" />
           <span>{t('layout.lightMode')}</span>
-          {theme === 'light' && <span className="ml-auto text-ul-green">✓</span>}
+          {theme === 'light' && <span className="ml-auto text-brand-ok">✓</span>}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setTheme('dark')}
@@ -75,7 +75,7 @@ export function ThemeToggle() {
         >
           <Moon className="h-4 w-4" aria-hidden="true" />
           <span>{t('layout.darkMode')}</span>
-          {theme === 'dark' && <span className="ml-auto text-ul-green">✓</span>}
+          {theme === 'dark' && <span className="ml-auto text-brand-ok">✓</span>}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => setTheme('system')}
@@ -83,7 +83,7 @@ export function ThemeToggle() {
         >
           <Monitor className="h-4 w-4" aria-hidden="true" />
           <span>{t('layout.systemMode')}</span>
-          {theme === 'system' && <span className="ml-auto text-ul-green">✓</span>}
+          {theme === 'system' && <span className="ml-auto text-brand-ok">✓</span>}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

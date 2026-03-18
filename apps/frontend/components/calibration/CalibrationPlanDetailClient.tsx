@@ -26,6 +26,7 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { CalibrationPlansCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { CalibrationPlanStatusValues as CPStatus } from '@equipment-management/schemas';
 import { formatDate } from '@/lib/utils/date';
+import { resolveDisplayName } from '@/lib/utils/display-name';
 import {
   ArrowLeft,
   Send,
@@ -301,8 +302,8 @@ export function CalibrationPlanDetailClient({
               </Badge>
             </div>
             <p className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.meta}>
-              {t('planDetail.header.author')}: {plan.authorName || plan.createdBy} |{' '}
-              {t('planDetail.header.createdAt')}:{' '}
+              {t('planDetail.header.author')}: {resolveDisplayName(plan.authorName, plan.createdBy)}{' '}
+              | {t('planDetail.header.createdAt')}:{' '}
               <time dateTime={plan.createdAt}>{formatDate(plan.createdAt, 'yyyy-MM-dd')}</time>
             </p>
           </div>

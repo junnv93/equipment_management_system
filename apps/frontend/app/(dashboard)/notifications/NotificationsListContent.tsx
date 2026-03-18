@@ -26,7 +26,6 @@ import { useNotificationFilters } from '@/hooks/use-notification-filters';
 import { NOTIFICATION_CATEGORIES } from '@equipment-management/shared-constants';
 import type { UINotificationFilters } from '@/lib/utils/notification-filter-utils';
 import {
-  NOTIFICATION_LIST_HEADER_TOKENS,
   NOTIFICATION_LIST_FILTER_TOKENS,
   NOTIFICATION_LIST_SKELETON_TOKENS,
   NOTIFICATION_LIST_EMPTY_TOKENS,
@@ -34,8 +33,8 @@ import {
   NOTIFICATION_LIST_ITEM_TOKENS,
   getStaggerDelay,
   getPageContainerClasses,
-  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 /**
  * 알림 목록 페이지 (클라이언트 컴포넌트)
@@ -85,25 +84,25 @@ export default function NotificationsListContent() {
   return (
     <div className={getPageContainerClasses()}>
       {/* 헤더 */}
-      <div className={NOTIFICATION_LIST_HEADER_TOKENS.container}>
-        <div className={PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-          <p className={PAGE_HEADER_TOKENS.subtitle}>
-            {unreadCount > 0 ? t('list.unreadCount', { count: unreadCount }) : t('list.noUnread')}
-          </p>
-        </div>
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => markAllAsReadMutation.mutate()}
-            disabled={markAllAsReadMutation.isPending}
-          >
-            <CheckCheck className="h-4 w-4 mr-2" aria-hidden="true" />
-            {t('list.markAllRead')}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={t('title')}
+        subtitle={
+          unreadCount > 0 ? t('list.unreadCount', { count: unreadCount }) : t('list.noUnread')
+        }
+        actions={
+          unreadCount > 0 ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={markAllAsReadMutation.isPending}
+            >
+              <CheckCheck className="h-4 w-4 mr-2" aria-hidden="true" />
+              {t('list.markAllRead')}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* 탭 + 필터 */}
       <Tabs

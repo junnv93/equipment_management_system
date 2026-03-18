@@ -26,6 +26,7 @@ import calibrationPlansApi, {
 } from '@/lib/api/calibration-plans-api';
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
+import { resolveDisplayName } from '@/lib/utils/display-name';
 import { CheckCircle2, XCircle, Calendar, Building2, User, Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
@@ -215,7 +216,9 @@ export default function CalibrationPlanApprovalsContent() {
                               <p className="text-muted-foreground">
                                 {t('planApprovals.fields.author')}
                               </p>
-                              <p className="font-medium">{plan.createdBy}</p>
+                              <p className="font-medium">
+                                {resolveDisplayName(plan.authorName, plan.createdBy)}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -287,7 +290,8 @@ export default function CalibrationPlanApprovalsContent() {
                   {SITE_LABELS[selectedPlan.siteId]}
                 </p>
                 <p>
-                  <strong>{t('planApprovals.dialogLabels.author')}</strong> {selectedPlan.createdBy}
+                  <strong>{t('planApprovals.dialogLabels.author')}</strong>{' '}
+                  {resolveDisplayName(selectedPlan.authorName, selectedPlan.createdBy)}
                 </p>
               </div>
             )}
@@ -321,7 +325,8 @@ export default function CalibrationPlanApprovalsContent() {
               {SITE_LABELS[selectedPlan.siteId]}
             </p>
             <p>
-              <strong>{t('planApprovals.dialogLabels.author')}</strong> {selectedPlan.createdBy}
+              <strong>{t('planApprovals.dialogLabels.author')}</strong>{' '}
+              {resolveDisplayName(selectedPlan.authorName, selectedPlan.createdBy)}
             </p>
           </div>
         )}

@@ -198,7 +198,7 @@ export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
             >
               {loadingEmail === user.email ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />
                   {t('devLogin.loggingIn')}
                 </>
               ) : (

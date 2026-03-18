@@ -313,7 +313,7 @@ export default function NonConformancesContent({
 
         {/* 로딩 인디케이터 */}
         {isFetching && (
-          <div className="ml-auto h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <div className="ml-auto h-4 w-4 motion-safe:animate-spin rounded-full border-2 border-primary border-t-transparent" />
         )}
       </div>
 

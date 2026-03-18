@@ -179,7 +179,7 @@ export function DisposalRequestDialog({
             disabled={!isValid || mutation.isPending}
             className={DISPOSAL_BUTTON_TOKENS.submit}
           >
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('requestDialog.submit')}
           </Button>
         </DialogFooter>

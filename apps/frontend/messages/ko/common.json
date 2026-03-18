@@ -198,7 +198,8 @@
     "boolFalse": "아니오"
   },
   "entity": {
-    "viewDetail": "{type} 상세 보기"
+    "viewDetail": "{type} 상세 보기",
+    "unknownUser": "알 수 없는 사용자"
   },
   "datePicker": {
     "selectDate": "날짜 선택",

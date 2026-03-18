@@ -142,7 +142,7 @@ export function LeaderCombobox({ value, onChange, site, teamId, disabled }: Lead
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <Loader2 className="h-5 w-5 motion-safe:animate-spin text-muted-foreground" />
             </div>
           ) : !debouncedSearch ? (
             <p className="text-sm text-muted-foreground text-center py-6">

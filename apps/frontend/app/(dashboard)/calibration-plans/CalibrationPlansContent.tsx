@@ -26,6 +26,7 @@ import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { useCalibrationPlansFilters } from '@/hooks/use-calibration-plans-filters';
 import type { UICalibrationPlansFilters } from '@/lib/utils/calibration-plans-filter-utils';
 import { format } from 'date-fns';
+import { resolveDisplayName } from '@/lib/utils/display-name';
 import {
   Plus,
   FileText,
@@ -380,7 +381,9 @@ export default function CalibrationPlansContent({
           <>
             {/* 헤더 행 */}
             <div className={CALIBRATION_PLAN_LIST_TOKENS.container.header}>
-              <span>{t('plansList.table.year')}</span>
+              <span className={CALIBRATION_PLAN_LIST_TOKENS.firstCellPadding}>
+                {t('plansList.table.year')}
+              </span>
               <span>{t('plansList.table.site')}</span>
               <span>{t('planCreate.fields.team')}</span>
               <span>{t('plansList.table.status')}</span>
@@ -432,7 +435,7 @@ export default function CalibrationPlansContent({
 
                   {/* 작성자 — authorName 우선, UUID 폴백 */}
                   <div className={cn(CALIBRATION_PLAN_LIST_TOKENS.authorCell, 'truncate')}>
-                    {plan.authorName || plan.createdBy}
+                    {resolveDisplayName(plan.authorName, plan.createdBy)}
                   </div>
 
                   {/* 작성일 */}

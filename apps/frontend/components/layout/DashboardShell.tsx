@@ -230,7 +230,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   >
                     <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
                   </div>
-                  <span className={cn('group-hover:text-ul-info', TRANSITION_PRESETS.fastColor)}>
+                  <span className={cn('group-hover:text-brand-info', TRANSITION_PRESETS.fastColor)}>
                     {t('layout.systemName')}
                   </span>
                 </Link>

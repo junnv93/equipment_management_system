@@ -287,7 +287,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
             <div key={item.id} className="relative flex gap-4">
               <div className="relative flex-shrink-0">
                 <div
-                  className={`${TIMELINE_TOKENS.node.container} bg-ul-green text-white shadow-lg`}
+                  className={`${TIMELINE_TOKENS.node.container} bg-brand-ok text-white shadow-lg`}
                 >
                   <Wrench className={TIMELINE_TOKENS.node.icon} />
                 </div>

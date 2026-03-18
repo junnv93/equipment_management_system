@@ -92,11 +92,11 @@ export const DASHBOARD_ROLE_BADGES = {
     bgColor: 'bg-brand-ok/10',
   },
   quality_manager: {
-    color: 'text-ul-fog dark:text-ul-info',
+    color: 'text-ul-fog dark:text-brand-info',
     bgColor: 'bg-ul-fog/10 dark:bg-ul-fog/20',
   },
   lab_manager: {
-    color: 'text-ul-midnight dark:text-ul-info',
+    color: 'text-ul-midnight dark:text-brand-info',
     bgColor: 'bg-ul-midnight/10 dark:bg-ul-midnight/20',
   },
   system_admin: {

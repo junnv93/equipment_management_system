@@ -185,7 +185,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
               <Badge
                 variant="secondary"
                 className={cn(
-                  'bg-ul-red/10 text-ul-red dark:bg-ul-red/20',
+                  'bg-brand-critical/10 text-brand-critical',
                   getUrgencyFeedbackClasses(getCountBasedUrgency(totalPending), false) // 애니메이션 없음
                 )}
                 aria-live="polite"
@@ -228,7 +228,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
                   'hover:shadow-md hover:scale-[1.02]',
                   'cursor-pointer',
                   DASHBOARD_FOCUS.brand,
-                  hasItems && 'ring-2 ring-ul-red/30 dark:ring-ul-red/50'
+                  hasItems && 'ring-2 ring-brand-critical/30'
                 )}
               >
                 <CardContent className="p-4 flex flex-col items-center text-center">
@@ -247,7 +247,7 @@ export function PendingApprovalCard({ className, compact = false }: PendingAppro
                     className={cn(
                       'text-2xl font-bold mt-1 tracking-tight tabular-nums',
                       DASHBOARD_MOTION.textColor,
-                      hasItems ? 'text-ul-red' : 'text-muted-foreground'
+                      hasItems ? 'text-brand-critical' : 'text-muted-foreground'
                     )}
                   >
                     {count}

@@ -198,7 +198,8 @@
     "boolFalse": "No"
   },
   "entity": {
-    "viewDetail": "View {type} detail"
+    "viewDetail": "View {type} detail",
+    "unknownUser": "Unknown User"
   },
   "datePicker": {
     "selectDate": "Select date",

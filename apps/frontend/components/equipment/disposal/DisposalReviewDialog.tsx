@@ -204,7 +204,7 @@ export function DisposalReviewDialog({
             disabled={mutation.isPending || (showRejectInput && !isValid)}
             className={DISPOSAL_BUTTON_TOKENS.reject}
           >
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('common.reject')}
           </Button>
           <Button
@@ -212,7 +212,7 @@ export function DisposalReviewDialog({
             disabled={!isValid || mutation.isPending || showRejectInput}
             className={DISPOSAL_BUTTON_TOKENS.review}
           >
-            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" />}
             {t('reviewDialog.reviewComplete')}
           </Button>
         </DialogFooter>

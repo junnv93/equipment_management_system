@@ -129,7 +129,7 @@ function LoadingFallback() {
       <Card className="border-0 shadow-xl rounded-2xl bg-background">
         <CardHeader className="text-center pt-8 pb-4">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-            <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+            <Loader2 className="h-8 w-8 text-muted-foreground motion-safe:animate-spin" />
           </div>
           <div className="h-8 w-32 mx-auto bg-muted rounded animate-pulse" />
         </CardHeader>

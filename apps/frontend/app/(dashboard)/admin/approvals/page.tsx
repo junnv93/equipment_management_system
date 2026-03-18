@@ -7,7 +7,8 @@ import type { UserRole } from '@equipment-management/schemas';
 import { APPROVAL_ROLES } from '@equipment-management/shared-constants';
 import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 /**
  * 승인 관리 통합 페이지 — PPR Non-Blocking Pattern
@@ -146,10 +147,7 @@ async function ApprovalsContentAsync({
 
   return (
     <>
-      <div className={PAGE_HEADER_TOKENS.titleGroup}>
-        <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('subtitle')}</p>
-      </div>
+      <PageHeader title={t('title')} subtitle={t('subtitle')} />
       <ApprovalsClient
         userRole={userRole}
         userId={userId}

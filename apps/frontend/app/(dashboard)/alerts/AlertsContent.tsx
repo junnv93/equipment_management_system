@@ -33,7 +33,8 @@ import {
   useDeleteNotification,
 } from '@/hooks/use-notifications';
 import type { NotificationItem } from '@/lib/api/notifications-api';
-import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 // 알림 타입별 아이콘 및 색상
 const alertTypeConfig: Record<
@@ -214,18 +215,16 @@ export default function AlertsContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div className={PAGE_HEADER_TOKENS.container}>
-        <div className={PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('subtitle')}</p>
-        </div>
-        <div className={PAGE_HEADER_TOKENS.actionsGroup}>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
           <Button variant="outline" size="sm" onClick={() => markAllAsReadMutate()}>
             <CheckCircle className="h-4 w-4 mr-2" />
             {t('markAllRead')}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">

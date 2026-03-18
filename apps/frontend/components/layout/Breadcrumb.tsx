@@ -110,7 +110,7 @@ export function Breadcrumb({ className, dynamicLabels, maxItems }: BreadcrumbPro
                   'hover:underline',
                   TRANSITION_PRESETS.fastColor,
                   'truncate max-w-[200px]',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ul-info focus-visible:ring-offset-2 rounded'
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-info focus-visible:ring-offset-2 rounded'
                 )}
               >
                 {Icon && <Icon className="inline h-3.5 w-3.5 mr-1" aria-hidden="true" />}

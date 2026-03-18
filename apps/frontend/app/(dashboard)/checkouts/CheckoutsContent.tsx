@@ -60,8 +60,8 @@ import {
   CHECKOUT_FILTER_BAR_TOKENS,
   CHECKOUT_TAB_BADGE_TOKENS,
   getPageContainerClasses,
-  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
 
@@ -210,41 +210,41 @@ export default function CheckoutsContent({
   return (
     <div className={getPageContainerClasses()}>
       {/* ── 헤더 ── */}
-      <div className={PAGE_HEADER_TOKENS.container}>
-        <div className={PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            {t('actions.create')}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline">
-                <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
-                {t('import.requestInbound')}
-                <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
-              >
-                <Building className="mr-2 h-4 w-4" />
-                {t('import.externalRental')}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                {t('import.internalShared')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('description')}
+        actions={
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              {t('actions.create')}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <PackagePlus className="mr-1.5 h-3.5 w-3.5" />
+                  {t('import.requestInbound')}
+                  <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_RENTAL)}
+                >
+                  <Building className="mr-2 h-4 w-4" />
+                  {t('import.externalRental')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.CREATE_INTERNAL)}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  {t('import.internalShared')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        }
+      />
 
       {/* ── 탭 (Alert·필터바·콘텐츠 전체 포함 — WCAG TabsContent 시맨틱) ── */}
       <Tabs value={filters.view} className="w-full" onValueChange={handleViewChange}>
