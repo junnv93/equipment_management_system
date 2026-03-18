@@ -116,7 +116,9 @@
   "list": {
     "title": "승인 대기 목록",
     "countDescription": "총 {count}개의 승인 대기 요청이 있습니다",
-    "empty": "승인 대기 중인 요청이 없습니다"
+    "empty": "현재 카테고리에 대기 중인 승인이 없습니다",
+    "allClear": "모든 승인을 완료했습니다",
+    "countUnit": "건"
   },
   "item": {
     "requester": "요청자",
@@ -234,7 +236,6 @@
     "cause": "원인",
     "correctionContent": "조치 내용",
     "correctionDate": "조치일",
-    "analysisContent": "분석 내용",
     "actionPlan": "조치 계획",
     "previousRejectionReason": "이전 반려 사유",
     "rejectionDate": "반려일",

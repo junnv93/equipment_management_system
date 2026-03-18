@@ -1169,7 +1169,6 @@ class ApprovalsApi {
         correctionContent: nc.correctionContent,
         correctionDate: nc.correctionDate,
         actionPlan: nc.actionPlan,
-        analysisContent: nc.analysisContent,
         rejectionReason: nc.rejectionReason,
         rejectedAt: nc.rejectedAt,
       },

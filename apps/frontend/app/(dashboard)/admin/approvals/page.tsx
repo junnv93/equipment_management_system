@@ -7,6 +7,7 @@ import type { UserRole } from '@equipment-management/schemas';
 import { APPROVAL_ROLES } from '@equipment-management/shared-constants';
 import { ApprovalsClient } from '@/components/approvals/ApprovalsClient';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 승인 관리 통합 페이지 — PPR Non-Blocking Pattern
@@ -108,7 +109,7 @@ export default function ApprovalsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   return (
-    <div className="container mx-auto py-6">
+    <div className={getPageContainerClasses('list', '')}>
       {/* Dynamic Hole: 헤더(i18n) + 세션 체크 + 승인 클라이언트 */}
       <Suspense fallback={<ApprovalsLoadingFallback />}>
         <ApprovalsContentAsync searchParamsPromise={props.searchParams} />

@@ -76,7 +76,7 @@ export function ApprovalCategorySidebar({
                 onClick={() => onTabChange(tab)}
                 className={cn(
                   tokens.item.base,
-                  isActive ? tokens.item.active : tokens.item.inactive
+                  isActive ? `${tokens.item.active} ${tokens.item.activeBar}` : tokens.item.inactive
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >

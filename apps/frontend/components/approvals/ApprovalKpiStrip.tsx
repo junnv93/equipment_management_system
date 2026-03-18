@@ -25,6 +25,7 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: KpiCardProps) {
   const tokens = APPROVAL_KPI_STRIP_TOKENS;
+  const isUrgent = colorVariant === 'urgent';
   return (
     <div
       className={cn(
@@ -37,13 +38,20 @@ function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: Kpi
       role="group"
       aria-label={label}
     >
+      {/* 긴급 KPI pulse dot */}
+      {isUrgent && !isLoading && Number(value) > 0 && (
+        <div className={tokens.pulseDot.container}>
+          <div className={tokens.pulseDot.dot} />
+          <div className={tokens.pulseDot.ring} />
+        </div>
+      )}
       <div className={cn(tokens.iconContainer, tokens.iconBg[colorVariant])}>
         <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
       <div className="flex-1 min-w-0">
         <div className={tokens.label}>{label}</div>
         {isLoading ? (
-          <Skeleton className="h-6 w-12 mt-0.5" />
+          <Skeleton className="h-8 w-14 mt-0.5" />
         ) : (
           <div className={tokens.value}>{value}</div>
         )}
@@ -89,7 +97,8 @@ export function ApprovalKpiStrip({
       />
       <KpiCard
         label={t('kpi.avgWait')}
-        value={avgWaitDays > 0 ? t('kpi.days', { days: avgWaitDays }) : '-'}
+        value={avgWaitDays > 0 ? String(avgWaitDays) : '-'}
+        sub={avgWaitDays > 0 ? t('kpi.dayUnit') : undefined}
         icon={Clock}
         colorVariant="avgWait"
         isLoading={isLoading}

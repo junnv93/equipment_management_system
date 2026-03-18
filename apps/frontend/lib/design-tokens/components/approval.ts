@@ -156,11 +156,18 @@ export const APPROVAL_TIMELINE_TOKENS = {
  * SSOT: ApprovalItem, BulkActionBar, ApprovalDetailModal, RejectModal 6곳 중복 제거
  */
 export const APPROVAL_ACTION_BUTTON_TOKENS = {
-  /** 승인 버튼 (UL Green outline) */
-  approve: 'border border-ul-green text-ul-green hover:bg-ul-green/10',
+  /** 승인 버튼 (UL Green solid — Primary action으로 시각적 우선순위 부여) */
+  approve:
+    'bg-ul-green text-white border border-ul-green hover:bg-ul-green/90 hover:shadow-[0_2px_8px_rgba(0,164,81,0.25)]',
 
-  /** 반려 버튼 (UL Red outline) */
+  /** 승인 아이콘 버튼 (ghost — 데스크탑 컴팩트 로우용) */
+  approveIcon: 'text-ul-green hover:bg-ul-green/10',
+
+  /** 반려 버튼 (UL Red outline — 비대칭으로 approve 대비 억제) */
   reject: 'border border-ul-red text-ul-red hover:bg-ul-red/10',
+
+  /** 반려 아이콘 버튼 (ghost — 데스크탑 컴팩트 로우용) */
+  rejectIcon: 'text-ul-red hover:bg-ul-red/10',
 
   /** 상세 보기 버튼 (Neutral outline) */
   detail: 'border border-border text-foreground hover:bg-muted/80',
@@ -236,14 +243,36 @@ export const APPROVAL_INFO_GRID_TOKENS = {
  * 패턴: EQUIPMENT_EMPTY_STATE_TOKENS 참조
  */
 export const APPROVAL_EMPTY_STATE_TOKENS = {
-  /** 아이콘 컨테이너 */
-  iconContainer: 'mx-auto mb-4 w-16 h-16 rounded-full bg-muted flex items-center justify-center',
+  /** 컨테이너 — radial gradient 배경으로 분위기 연출 */
+  container: 'text-center py-16 relative overflow-hidden',
+  /** 배경 radial gradient (::before pseudo) */
+  bgGradient:
+    'before:absolute before:inset-0 before:bg-[radial-gradient(ellipse_at_50%_30%,hsl(var(--brand-color-ok)/0.08),transparent_70%)] before:pointer-events-none',
 
-  /** 아이콘 크기 */
-  icon: 'h-8 w-8 text-muted-foreground/50',
+  /** 아이콘 링 — pop 애니메이션 */
+  iconRing:
+    'mx-auto mb-5 w-[72px] h-[72px] rounded-full bg-brand-ok/10 flex items-center justify-center relative motion-safe:animate-approval-ring-pop',
+  /** 외곽 확장 링 (::after pseudo) */
+  iconRingExpand:
+    'after:absolute after:inset-[-4px] after:rounded-full after:border-2 after:border-brand-ok after:opacity-20 after:motion-safe:animate-approval-ring-expand',
 
-  /** 텍스트 */
-  text: 'text-center text-muted-foreground',
+  /** 체크마크 아이콘 */
+  icon: 'h-8 w-8 text-brand-ok motion-safe:animate-approval-check-draw',
+
+  /** 타이틀 */
+  title:
+    'text-lg font-semibold text-foreground font-display relative motion-safe:animate-approval-text-up-1',
+  /** 설명 */
+  description:
+    'text-sm text-muted-foreground mt-1.5 relative motion-safe:animate-approval-text-up-2',
+
+  /** 오늘 처리 건수 영역 */
+  stat: {
+    container: 'mt-5 pt-5 border-t border-border relative motion-safe:animate-approval-text-up-3',
+    label: 'text-xs text-muted-foreground',
+    value: 'text-xl font-bold text-brand-ok font-display',
+    unit: 'text-sm text-muted-foreground font-normal ml-0.5',
+  },
 } as const;
 
 // ============================================================================
@@ -274,14 +303,16 @@ export const APPROVAL_MOTION = {
   skeleton: 'motion-safe:animate-pulse',
 
   /** 처리 중 (opacity 감소) — transition 없음 = rollback 시 즉시 복원 */
-  processing: 'opacity-40',
+  processing: 'opacity-40 pointer-events-none',
 
-  /** 퇴장 애니메이션 (opacity 0 + moderate transition) */
-  exiting: `${TRANSITION_PRESETS.moderateOpacity} opacity-0`,
+  /** 승인 성공 퇴장 — Green 플래시 → 우측 슬라이드 아웃 */
+  exitingSuccess: 'motion-safe:animate-approval-exit-success',
 
-  /** 퇴장 애니메이션 duration (ms) — JS setTimeout용
-   *  SSOT: getTransitionClasses('moderate') 와 동일 소스(MOTION_TOKENS) 참조 */
-  exitDurationMs: MOTION_TOKENS.transition.moderate.duration,
+  /** 반려 퇴장 — 좌측 슬라이드 아웃 */
+  exitingReject: 'motion-safe:animate-approval-exit-reject',
+
+  /** 퇴장 애니메이션 duration (ms) — JS setTimeout용 */
+  exitDurationMs: 600,
 } as const;
 
 // ============================================================================
@@ -365,13 +396,22 @@ export const APPROVAL_ROW_TOKENS = {
 export const APPROVAL_KPI_STRIP_TOKENS = {
   container: 'grid grid-cols-2 lg:grid-cols-4 gap-3',
   card: {
-    base: 'bg-card border border-border rounded-lg p-3 flex items-start gap-3 border-l-4',
+    base: 'bg-card border border-border rounded-lg p-4 flex items-start gap-3.5 border-l-4 relative overflow-hidden',
     hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
     focus: FOCUS_TOKENS.classes.default,
   },
-  value: 'text-xl font-semibold tabular-nums leading-tight',
-  label: 'text-xs text-muted-foreground',
+  /** KPI 핵심 숫자 — 32px DM Sans Bold로 시선 유도 */
+  value: 'text-3xl font-bold tabular-nums leading-tight font-display tracking-tight',
+  /** 숫자 단위 (일, 건) */
+  valueUnit: 'text-base font-normal text-muted-foreground ml-0.5',
+  label: 'text-[11px] font-medium text-muted-foreground uppercase tracking-wider',
   sub: 'text-[11px] text-muted-foreground/70',
+  /** 긴급 pulse dot (urgent KPI 카드 우상단) */
+  pulseDot: {
+    container: 'absolute top-3 right-3',
+    dot: 'w-2 h-2 rounded-full bg-brand-critical',
+    ring: 'absolute inset-[-3px] rounded-full bg-brand-critical opacity-40 motion-safe:animate-approval-pulse-dot',
+  },
   borderColors: {
     total: getSemanticLeftBorderClasses('info'),
     urgent: getSemanticLeftBorderClasses('critical'),
@@ -403,10 +443,14 @@ export const APPROVAL_CATEGORY_SIDEBAR_TOKENS = {
   sectionLabel: 'text-[11px] font-medium uppercase tracking-wider text-muted-foreground px-3 py-2',
   item: {
     base: [
-      'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm',
+      'flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm relative',
       TRANSITION_PRESETS.fastBgColor,
     ].join(' '),
-    active: 'bg-primary text-primary-foreground font-medium',
+    /** Active: 좌측 accent bar + 연한 배경 (전체 반전 대비 유연한 시각 위계) */
+    active: 'bg-brand-info/10 text-brand-info font-semibold',
+    /** Active 좌측 accent bar (3px, ::before pseudo로 렌더링) */
+    activeBar:
+      'before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-brand-info',
     inactive: 'text-muted-foreground hover:bg-muted hover:text-foreground',
   },
   icon: 'h-4 w-4 flex-shrink-0',
@@ -497,13 +541,11 @@ export const APPROVAL_DETAIL_PANEL_TOKENS = {
   kbdBadge:
     'ml-auto text-[10px] font-mono text-muted-foreground bg-muted px-1 py-0.5 rounded border border-border',
 
-  /** 빈 상태 (항목 미선택) — APPROVAL_EMPTY_STATE_TOKENS 패턴 축소판 */
+  /** 빈 상태 (항목 미선택) — 패널 전용 축소판 */
   empty: {
     wrapper: 'flex-1 flex items-center justify-center p-8',
-    iconContainer: APPROVAL_EMPTY_STATE_TOKENS.iconContainer
-      .replace('w-16 h-16', 'w-12 h-12')
-      .replace('mb-4', 'mb-3'),
-    icon: APPROVAL_EMPTY_STATE_TOKENS.icon.replace('h-8 w-8', 'h-6 w-6'),
+    iconContainer: 'mx-auto mb-3 w-12 h-12 rounded-full bg-muted flex items-center justify-center',
+    icon: 'h-6 w-6 text-muted-foreground/50',
     text: 'text-sm font-medium text-foreground',
     hint: 'text-xs text-muted-foreground mt-1',
   },
@@ -549,7 +591,9 @@ export function getApprovalStepperNodeClasses(
 /**
  * 승인 액션 버튼 클래스 반환
  */
-export function getApprovalActionButtonClasses(action: 'approve' | 'reject' | 'detail'): string {
+export function getApprovalActionButtonClasses(
+  action: 'approve' | 'reject' | 'detail' | 'approveIcon' | 'rejectIcon'
+): string {
   return APPROVAL_ACTION_BUTTON_TOKENS[action];
 }
 

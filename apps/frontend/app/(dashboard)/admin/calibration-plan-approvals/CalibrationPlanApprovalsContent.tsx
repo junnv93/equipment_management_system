@@ -28,7 +28,7 @@ import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calendar, Building2, User, Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { CALIBRATION_PLAN_STATUS_BADGE_COLORS } from '@/lib/design-tokens';
+import { CALIBRATION_PLAN_STATUS_BADGE_COLORS, getPageContainerClasses } from '@/lib/design-tokens';
 
 export default function CalibrationPlanApprovalsContent() {
   const router = useRouter();
@@ -151,7 +151,7 @@ export default function CalibrationPlanApprovalsContent() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('planApprovals.title')}</h1>
         <p className="text-muted-foreground">{t('planApprovals.description')}</p>

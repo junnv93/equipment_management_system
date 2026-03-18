@@ -49,6 +49,7 @@ import {
   APPROVAL_STATUS_LABELS as STATUS_LABELS,
   APPROVAL_STATUS_COLORS as STATUS_COLORS,
 } from '@/components/admin/approval-constants';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 export default function EquipmentApprovalsContent() {
   const t = useTranslations('approvals');
@@ -158,7 +159,7 @@ export default function EquipmentApprovalsContent() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('equipmentApprovals.title')}</h1>
         <p className="text-muted-foreground">{t('equipmentApprovals.description')}</p>

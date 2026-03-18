@@ -27,6 +27,7 @@ import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkele
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import { useSession } from 'next-auth/react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 const PURPOSE_COLORS: Record<string, string> = {
   calibration: 'bg-brand-info/10 text-brand-info',
@@ -163,7 +164,7 @@ export default function ReturnApprovalsContent() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">{t('description')}</p>

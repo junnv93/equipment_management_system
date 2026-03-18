@@ -66,7 +66,7 @@ export function ApprovalsClient({
 
   // 처리 중/퇴장 애니메이션 상태
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
-  const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
+  const [exitingIds, setExitingIds] = useState<Map<string, 'success' | 'reject'>>(new Map());
 
   // 승인 코멘트 다이얼로그 상태 (commentRequired 카테고리용)
   const [approveCommentItem, setApproveCommentItem] = useState<ApprovalItem | null>(null);
@@ -151,12 +151,12 @@ export function ApprovalsClient({
         s.delete(item.id);
         return s;
       });
-      setExitingIds((prev) => new Set(prev).add(item.id));
+      setExitingIds((prev) => new Map(prev).set(item.id, 'success'));
       setTimeout(() => {
         setExitingIds((prev) => {
-          const s = new Set(prev);
-          s.delete(item.id);
-          return s;
+          const m = new Map(prev);
+          m.delete(item.id);
+          return m;
         });
       }, APPROVAL_MOTION.exitDurationMs);
       setDetailModalItem(null);
@@ -225,12 +225,12 @@ export function ApprovalsClient({
         s.delete(item.id);
         return s;
       });
-      setExitingIds((prev) => new Set(prev).add(item.id));
+      setExitingIds((prev) => new Map(prev).set(item.id, 'reject'));
       setTimeout(() => {
         setExitingIds((prev) => {
-          const s = new Set(prev);
-          s.delete(item.id);
-          return s;
+          const m = new Map(prev);
+          m.delete(item.id);
+          return m;
         });
       }, APPROVAL_MOTION.exitDurationMs);
       setRejectModalItem(null);
@@ -281,12 +281,16 @@ export function ApprovalsClient({
         ids.forEach((id) => s.delete(id));
         return s;
       });
-      setExitingIds((prev) => new Set(Array.from(prev).concat(ids)));
+      setExitingIds((prev) => {
+        const m = new Map(prev);
+        ids.forEach((id) => m.set(id, 'success'));
+        return m;
+      });
       setTimeout(() => {
         setExitingIds((prev) => {
-          const s = new Set(prev);
-          ids.forEach((id) => s.delete(id));
-          return s;
+          const m = new Map(prev);
+          ids.forEach((id) => m.delete(id));
+          return m;
         });
       }, APPROVAL_MOTION.exitDurationMs);
       setSelectedItems([]);
@@ -352,12 +356,16 @@ export function ApprovalsClient({
         ids.forEach((id) => s.delete(id));
         return s;
       });
-      setExitingIds((prev) => new Set(Array.from(prev).concat(ids)));
+      setExitingIds((prev) => {
+        const m = new Map(prev);
+        ids.forEach((id) => m.set(id, 'reject'));
+        return m;
+      });
       setTimeout(() => {
         setExitingIds((prev) => {
-          const s = new Set(prev);
-          ids.forEach((id) => s.delete(id));
-          return s;
+          const m = new Map(prev);
+          ids.forEach((id) => m.delete(id));
+          return m;
         });
       }, APPROVAL_MOTION.exitDurationMs);
       setSelectedItems([]);
@@ -459,6 +467,7 @@ export function ApprovalsClient({
               onReject={(item) => setRejectModalItem(item)}
               onViewDetail={(item) => setDetailModalItem(item)}
               actionLabel={t(TAB_META[activeTab].actionKey as Parameters<typeof t>[0])}
+              todayProcessed={kpi.todayProcessed}
             />
           </div>
         </div>

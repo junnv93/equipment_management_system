@@ -49,6 +49,7 @@ import {
   AUDIT_HEADER_TOKENS,
   AUDIT_PAGINATION_TOKENS,
   getAuditActionChipClasses,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
@@ -164,7 +165,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-4">
+    <div className={getPageContainerClasses('list', 'space-y-4')}>
       {/* ── 헤더 ──────────────────────────────────────────────── */}
       <div className={AUDIT_HEADER_TOKENS.container}>
         <div className={AUDIT_HEADER_TOKENS.titleGroup}>

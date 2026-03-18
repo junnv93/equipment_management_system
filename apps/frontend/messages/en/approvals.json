@@ -116,7 +116,9 @@
   "list": {
     "title": "Pending Approvals",
     "countDescription": "{count} pending approval requests",
-    "empty": "No pending approval requests"
+    "empty": "No pending approval requests in this category",
+    "allClear": "All approvals completed",
+    "countUnit": "items"
   },
   "item": {
     "requester": "Requester",
@@ -234,7 +236,6 @@
     "cause": "Cause",
     "correctionContent": "Correction Content",
     "correctionDate": "Correction Date",
-    "analysisContent": "Analysis Content",
     "actionPlan": "Action Plan",
     "previousRejectionReason": "Previous Rejection Reason",
     "rejectionDate": "Rejection Date",

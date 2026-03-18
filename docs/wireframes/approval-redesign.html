@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>승인 관리 — Redesign Wireframe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════
+   CSS Variables — UL Solutions Brand (Light / Dark)
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --bg-base: #ebebeb;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f7f8f9;
+  --bg-overlay: #f2f3f4;
+  --fg-primary: #122c49;
+  --fg-secondary: #577e9e;
+  --fg-muted: #8a9bb0;
+  --fg-inverse: #f5f5f5;
+
+  --border-subtle: #e2e4e8;
+  --border-default: #d0d4da;
+  --border-strong: #b0b6c0;
+
+  --brand-ok: #00a451;
+  --brand-ok-soft: rgba(0, 164, 81, 0.08);
+  --brand-ok-mid: rgba(0, 164, 81, 0.15);
+  --brand-warning: #f59e0b;
+  --brand-warning-soft: rgba(245, 158, 11, 0.08);
+  --brand-critical: #ca0123;
+  --brand-critical-soft: rgba(202, 1, 35, 0.06);
+  --brand-critical-mid: rgba(202, 1, 35, 0.12);
+  --brand-info: #3b82f6;
+  --brand-info-soft: rgba(59, 130, 246, 0.08);
+  --brand-neutral: #6b7280;
+
+  --ul-midnight: #122c49;
+  --ul-orange: #ff9d55;
+  --ul-green: #00a451;
+  --ul-blue: #0067b1;
+  --ul-red: #ca0123;
+
+  --card-shadow: 0 1px 3px rgba(18, 44, 73, 0.06), 0 1px 2px rgba(18, 44, 73, 0.04);
+  --card-shadow-hover: 0 4px 12px rgba(18, 44, 73, 0.08), 0 2px 4px rgba(18, 44, 73, 0.04);
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+[data-theme="dark"] {
+  --bg-base: #0a1c30;
+  --bg-surface: #122c49;
+  --bg-elevated: #1a3a5c;
+  --bg-overlay: #15344f;
+  --fg-primary: #f5f5f5;
+  --fg-secondary: #a0b8d0;
+  --fg-muted: #6b8aaa;
+  --fg-inverse: #122c49;
+
+  --border-subtle: #1e4060;
+  --border-default: #264a6e;
+  --border-strong: #3a6590;
+
+  --brand-ok-soft: rgba(0, 164, 81, 0.12);
+  --brand-ok-mid: rgba(0, 164, 81, 0.2);
+  --brand-warning-soft: rgba(245, 158, 11, 0.12);
+  --brand-critical-soft: rgba(202, 1, 35, 0.1);
+  --brand-critical-mid: rgba(202, 1, 35, 0.18);
+  --brand-info-soft: rgba(59, 130, 246, 0.12);
+
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Reset & Base
+   ═══════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--bg-base);
+  color: var(--fg-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display { font-family: 'DM Sans', 'Noto Sans KR', sans-serif; }
+.font-mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+/* ═══════════════════════════════════════════════════════════
+   Layout Shell
+   ═══════════════════════════════════════════════════════════ */
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+.page-header {
+  margin-bottom: 28px;
+}
+.page-header h1 {
+  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fg-primary);
+}
+.page-header p {
+  font-size: 14px;
+  color: var(--fg-secondary);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   KPI Strip — REDESIGNED: Larger numbers, bolder presence
+   ═══════════════════════════════════════════════════════════ */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-left: 4px solid transparent;
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.kpi-card:hover::after { opacity: 1; }
+
+.kpi-card--total { border-left-color: var(--brand-info); }
+.kpi-card--total::after { background: var(--brand-info-soft); }
+.kpi-card--urgent { border-left-color: var(--brand-critical); }
+.kpi-card--urgent::after { background: var(--brand-critical-soft); }
+.kpi-card--wait { border-left-color: var(--brand-warning); }
+.kpi-card--wait::after { background: var(--brand-warning-soft); }
+.kpi-card--done { border-left-color: var(--brand-ok); }
+.kpi-card--done::after { background: var(--brand-ok-soft); }
+
+.kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.kpi-icon--total { background: var(--brand-info-soft); color: var(--brand-info); }
+.kpi-icon--urgent { background: var(--brand-critical-soft); color: var(--brand-critical); }
+.kpi-icon--wait { background: var(--brand-warning-soft); color: var(--brand-warning); }
+.kpi-icon--done { background: var(--brand-ok-soft); color: var(--brand-ok); }
+
+.kpi-content { position: relative; z-index: 1; }
+.kpi-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kpi-value {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-sub {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 2px;
+}
+
+/* Urgent pulse dot */
+.kpi-card--urgent .kpi-pulse {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-critical);
+}
+.kpi-card--urgent .kpi-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: var(--brand-critical);
+  opacity: 0.4;
+  animation: kpi-pulse 2s ease-in-out infinite;
+}
+@keyframes kpi-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(2); opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Main Layout: Sidebar + Content
+   ═══════════════════════════════════════════════════════════ */
+.main-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  padding: 0 12px;
+  margin-bottom: 6px;
+}
+.sidebar-section-label:not(:first-child) {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--fg-secondary);
+  transition: background 0.15s ease, color 0.15s ease;
+  position: relative;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+.sidebar-item:hover {
+  background: var(--bg-overlay);
+  color: var(--fg-primary);
+}
+.sidebar-item.active {
+  background: var(--brand-info-soft);
+  color: var(--brand-info);
+  font-weight: 600;
+}
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--brand-info);
+}
+
+.sidebar-icon {
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.sidebar-item.active .sidebar-icon { opacity: 1; }
+
+.sidebar-badge {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  text-align: center;
+}
+.sidebar-badge--urgent {
+  color: var(--brand-critical);
+  font-weight: 700;
+}
+
+/* ── Content ── */
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Bulk Action Bar
+   ═══════════════════════════════════════════════════════════ */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+.bulk-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--fg-secondary);
+}
+.bulk-left label { cursor: pointer; }
+.bulk-right {
+  display: flex;
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Buttons
+   ═══════════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ✅ REDESIGNED: Solid approve button */
+.btn--approve {
+  background: var(--brand-ok);
+  color: #fff;
+  border-color: var(--brand-ok);
+}
+.btn--approve:hover:not(:disabled) {
+  background: #009645;
+  box-shadow: 0 2px 8px rgba(0, 164, 81, 0.25);
+}
+
+/* Reject stays outline */
+.btn--reject {
+  background: transparent;
+  color: var(--brand-critical);
+  border-color: var(--brand-critical);
+}
+.btn--reject:hover:not(:disabled) {
+  background: var(--brand-critical-soft);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--fg-secondary);
+  border-color: var(--border-default);
+}
+.btn--ghost:hover { background: var(--bg-overlay); }
+
+.btn--icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 8px;
+}
+.btn--icon.btn--approve {
+  background: transparent;
+  color: var(--brand-ok);
+  border: none;
+}
+.btn--icon.btn--approve:hover:not(:disabled) {
+  background: var(--brand-ok-soft);
+  box-shadow: none;
+}
+.btn--icon.btn--reject {
+  background: transparent;
+  color: var(--brand-critical);
+  border: none;
+}
+.btn--icon.btn--reject:hover:not(:disabled) {
+  background: var(--brand-critical-soft);
+}
+.btn--icon.btn--detail {
+  background: transparent;
+  color: var(--fg-muted);
+  border: none;
+}
+.btn--icon.btn--detail:hover { background: var(--bg-overlay); color: var(--fg-primary); }
+
+/* ═══════════════════════════════════════════════════════════
+   Approval List
+   ═══════════════════════════════════════════════════════════ */
+.approval-list {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
+}
+
+/* Column header */
+.list-header {
+  display: grid;
+  grid-template-columns: 36px 4px 1fr 150px 90px 80px 110px;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Row */
+.approval-row {
+  display: grid;
+  grid-template-columns: 36px 4px 1fr 150px 90px 80px 110px;
+  gap: 12px;
+  padding: 12px 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.12s ease, opacity 0.3s ease, transform 0.3s ease;
+  position: relative;
+  animation: row-enter 0.3s ease-out both;
+}
+.approval-row:last-child { border-bottom: none; }
+.approval-row:hover { background: var(--bg-elevated); }
+
+@keyframes row-enter {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Stagger */
+.approval-row:nth-child(2) { animation-delay: 40ms; }
+.approval-row:nth-child(3) { animation-delay: 80ms; }
+.approval-row:nth-child(4) { animation-delay: 120ms; }
+.approval-row:nth-child(5) { animation-delay: 160ms; }
+.approval-row:nth-child(6) { animation-delay: 200ms; }
+
+/* Urgency backgrounds */
+.approval-row--warning { background: var(--brand-warning-soft); }
+.approval-row--warning:hover { background: rgba(245, 158, 11, 0.12); }
+.approval-row--critical { background: var(--brand-critical-soft); }
+.approval-row--critical:hover { background: var(--brand-critical-mid); }
+
+/* Checkbox col */
+.row-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.row-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand-info);
+  cursor: pointer;
+}
+
+/* Urgency bar */
+.urgency-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--border-subtle);
+}
+.urgency-bar--warning { background: var(--brand-warning); }
+.urgency-bar--critical {
+  background: var(--brand-critical);
+  animation: bar-pulse 2.5s ease-in-out infinite;
+}
+@keyframes bar-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Summary col */
+.row-summary { min-width: 0; }
+.row-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.badge--pending { background: var(--ul-orange); color: #fff; }
+.badge--reviewed { background: var(--ul-blue); color: #fff; }
+.badge--corrected { background: #8b5cf6; color: #fff; }
+
+.row-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+}
+
+/* Multi-step mini dots */
+.step-dots {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--fg-muted);
+  letter-spacing: 1px;
+}
+.step-dots .filled { color: var(--brand-ok); }
+
+/* Requester col */
+.row-requester-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row-requester-team {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+/* Date col */
+.row-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-secondary);
+}
+
+/* Elapsed col */
+.elapsed { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-variant-numeric: tabular-nums; }
+.elapsed--ok { color: var(--fg-muted); }
+.elapsed--warning { color: var(--brand-warning); font-weight: 600; }
+.elapsed--critical { color: var(--brand-critical); font-weight: 700; }
+
+/* Actions col */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Row Processing / Exit States
+   ═══════════════════════════════════════════════════════════ */
+.approval-row.processing {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ✅ REDESIGNED: Success flash + slide-out */
+.approval-row.exit-success {
+  animation: row-success-exit 0.6s ease-out forwards;
+}
+@keyframes row-success-exit {
+  0% { background: var(--brand-ok-mid); opacity: 1; transform: translateX(0); }
+  40% { background: var(--brand-ok-mid); opacity: 1; transform: translateX(0); }
+  100% { background: var(--brand-ok-mid); opacity: 0; transform: translateX(24px); height: 0; padding: 0 16px; margin: 0; border: none; }
+}
+
+.approval-row.exit-reject {
+  animation: row-reject-exit 0.5s ease-out forwards;
+}
+@keyframes row-reject-exit {
+  0% { background: var(--brand-critical-soft); opacity: 1; }
+  100% { opacity: 0; transform: translateX(-16px); height: 0; padding: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Empty State — REDESIGNED: "All Clear" celebration
+   ═══════════════════════════════════════════════════════════ */
+.empty-state {
+  text-align: center;
+  padding: 64px 32px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+.empty-state::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, var(--brand-ok-soft) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.empty-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--brand-ok-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  position: relative;
+  animation: ring-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+@keyframes ring-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.empty-icon-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--brand-ok);
+  opacity: 0.2;
+  animation: ring-expand 1.5s ease-out 0.6s both;
+}
+@keyframes ring-expand {
+  from { transform: scale(0.8); opacity: 0.4; }
+  to { transform: scale(1.3); opacity: 0; }
+}
+
+.empty-check {
+  width: 32px;
+  height: 32px;
+  color: var(--brand-ok);
+  animation: check-draw 0.4s ease-out 0.4s both;
+}
+@keyframes check-draw {
+  from { transform: scale(0) rotate(-45deg); opacity: 0; }
+  to { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+.empty-title {
+  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg-primary);
+  margin-bottom: 6px;
+  position: relative;
+  animation: text-up 0.4s ease-out 0.5s both;
+}
+.empty-desc {
+  font-size: 13px;
+  color: var(--fg-muted);
+  position: relative;
+  animation: text-up 0.4s ease-out 0.6s both;
+}
+.empty-stat {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--fg-muted);
+  position: relative;
+  animation: text-up 0.4s ease-out 0.7s both;
+}
+.empty-stat strong {
+  color: var(--brand-ok);
+  font-weight: 700;
+  font-size: 20px;
+  font-family: 'DM Sans', sans-serif;
+}
+@keyframes text-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Detail Modal
+   ═══════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 44, 73, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  animation: overlay-in 0.2s ease-out;
+}
+.modal-overlay.open { display: flex; }
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 640px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(18, 44, 73, 0.25);
+  animation: modal-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modal-in {
+  from { transform: scale(0.95) translateY(12px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.modal-header h2 {
+  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+.modal-header p {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Detail sections */
+.detail-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.detail-meta-item label {
+  display: block;
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-bottom: 4px;
+}
+.detail-meta-item span {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.detail-section {
+  margin-top: 20px;
+}
+.detail-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-primary);
+  margin-bottom: 12px;
+}
+.detail-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row-label { color: var(--fg-muted); }
+.detail-row-value { font-weight: 500; text-align: right; max-width: 60%; }
+
+/* Step indicator in modal */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+}
+.step-node {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  color: var(--fg-muted);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.step-node--done {
+  border-color: var(--brand-ok);
+  background: var(--brand-ok);
+  color: #fff;
+}
+.step-node--current {
+  border-color: var(--brand-info);
+  background: var(--brand-info);
+  color: #fff;
+}
+.step-info { min-width: 70px; }
+.step-info-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+.step-info-role {
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+.step-connector {
+  width: 32px;
+  height: 2px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+.step-connector--done { background: var(--brand-ok); }
+
+/* ═══════════════════════════════════════════════════════════
+   Theme Toggle
+   ═══════════════════════════════════════════════════════════ */
+.theme-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 200;
+}
+.theme-toggle button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--fg-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--card-shadow);
+  transition: background 0.2s;
+  font-size: 18px;
+}
+.theme-toggle button:hover { background: var(--bg-elevated); }
+
+/* ═══════════════════════════════════════════════════════════
+   View toggle (list vs empty)
+   ═══════════════════════════════════════════════════════════ */
+.view-toggle {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 200;
+  display: flex;
+  gap: 8px;
+}
+.view-toggle button {
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--fg-primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  box-shadow: var(--card-shadow);
+  transition: all 0.15s;
+}
+.view-toggle button:hover { background: var(--bg-elevated); }
+.view-toggle button.active {
+  background: var(--ul-midnight);
+  color: #fff;
+  border-color: var(--ul-midnight);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Responsive: mobile
+   ═══════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .sidebar { display: none; }
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+  .list-header { display: none; }
+  .approval-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .urgency-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 0;
+  }
+  .row-requester, .row-date-col, .row-elapsed { display: none; }
+  .row-actions { justify-content: flex-start; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SVG icon inline helpers
+   ═══════════════════════════════════════════════════════════ */
+.icon { width: 16px; height: 16px; display: inline-block; vertical-align: middle; }
+.icon--sm { width: 14px; height: 14px; }
+.icon--lg { width: 20px; height: 20px; }
+.icon--xl { width: 24px; height: 24px; }
+
+/* ═══════════════════════════════════════════════════════════
+   Mobile category bar
+   ═══════════════════════════════════════════════════════════ */
+.mobile-category-bar {
+  display: none;
+  overflow-x: auto;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.mobile-category-bar::-webkit-scrollbar { display: none; }
+@media (max-width: 1024px) {
+  .mobile-category-bar { display: flex; }
+}
+
+.mobile-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--fg-secondary);
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.mobile-pill:hover { background: var(--bg-overlay); }
+.mobile-pill.active {
+  background: var(--ul-midnight);
+  color: #fff;
+  border-color: var(--ul-midnight);
+}
+</style>
+</head>
+<body>
+
+<!-- Theme Toggle -->
+<div class="theme-toggle">
+  <button onclick="toggleTheme()" id="theme-btn" title="테마 전환">🌙</button>
+</div>
+
+<!-- View Toggle -->
+<div class="view-toggle">
+  <button class="active" onclick="showView('list')" id="btn-list">목록 뷰</button>
+  <button onclick="showView('empty')" id="btn-empty">Empty 뷰</button>
+  <button onclick="triggerApprove()" id="btn-demo">승인 데모 ▶</button>
+</div>
+
+<div class="page-container">
+
+  <!-- ──────────── Header ──────────── -->
+  <div class="page-header">
+    <h1 class="font-display">승인 관리</h1>
+    <p>장비, 교정, 반출 등 각종 승인 요청을 통합 관리합니다</p>
+  </div>
+
+  <!-- ──────────── KPI Strip ──────────── -->
+  <div class="kpi-strip">
+    <div class="kpi-card kpi-card--total">
+      <div class="kpi-icon kpi-icon--total">
+        <svg class="icon--lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      </div>
+      <div class="kpi-content">
+        <div class="kpi-label">전체 대기</div>
+        <div class="kpi-value" style="color: var(--brand-info)">12</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-card--urgent">
+      <div class="kpi-pulse"></div>
+      <div class="kpi-icon kpi-icon--urgent">
+        <svg class="icon--lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div class="kpi-content">
+        <div class="kpi-label">긴급 (8일+)</div>
+        <div class="kpi-value" style="color: var(--brand-critical)">3</div>
+        <div class="kpi-sub">즉시 처리 필요</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-card--wait">
+      <div class="kpi-icon kpi-icon--wait">
+        <svg class="icon--lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <div class="kpi-content">
+        <div class="kpi-label">평균 대기</div>
+        <div class="kpi-value" style="color: var(--brand-warning)">4<span style="font-size:16px;font-weight:400;color:var(--fg-muted)">일</span></div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-card--done">
+      <div class="kpi-icon kpi-icon--done">
+        <svg class="icon--lg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      </div>
+      <div class="kpi-content">
+        <div class="kpi-label">오늘 처리</div>
+        <div class="kpi-value" style="color: var(--brand-ok)">7</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ──────────── Mobile Category Bar ──────────── -->
+  <div class="mobile-category-bar">
+    <button class="mobile-pill active">반출 <span class="font-mono" style="font-size:11px">5</span></button>
+    <button class="mobile-pill">반입 <span class="font-mono" style="font-size:11px">3</span></button>
+    <button class="mobile-pill">장비</button>
+    <button class="mobile-pill">교정 <span class="font-mono" style="font-size:11px">2</span></button>
+    <button class="mobile-pill">부적합 <span class="font-mono" style="font-size:11px;color:var(--brand-critical)">1</span></button>
+    <button class="mobile-pill">폐기검토 <span class="font-mono" style="font-size:11px">1</span></button>
+  </div>
+
+  <!-- ──────────── Main Layout ──────────── -->
+  <div class="main-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section-label">반출 / 반입</div>
+      <button class="sidebar-item active" onclick="setActive(this)">
+        <svg class="sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+        반출
+        <span class="sidebar-badge">5</span>
+      </button>
+      <button class="sidebar-item" onclick="setActive(this)">
+        <svg class="sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+        반입
+        <span class="sidebar-badge">3</span>
+      </button>
+
+      <div class="sidebar-section-label">승인</div>
+      <button class="sidebar-item" onclick="setActive(this)">
+        <svg class="sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M11.42 15.17l-5.59-5.59L4.41 11l7.01 7.01 10.18-10.18-1.42-1.41z"/></svg>
+        장비
+        <span class="sidebar-badge">0</span>
+      </button>
+      <button class="sidebar-item" onclick="setActive(this)">
+        <svg class="sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
+        교정
+        <span class="sidebar-badge">2</span>
+      </button>
+      <button class="sidebar-item" onclick="setActive(this)">
+        <svg class="sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/></svg>
+        부적합
+        <span class="sidebar-badge sidebar-badge--urgent">1</span>
+      </button>
+
+      <div class="sidebar-section-label">다단계</div>
+      <button class="sidebar-item" onclick="setActive(this)">
+        <svg class="sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+        폐기 검토
+        <span class="sidebar-badge">1</span>
+      </button>
+      <button class="sidebar-item" onclick="setActive(this)">
+        <svg class="sidebar-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        폐기 최종
+        <span class="sidebar-badge">0</span>
+      </button>
+    </nav>
+
+    <!-- Content Area -->
+    <div class="content">
+
+      <!-- ──── List View ──── -->
+      <div id="view-list">
+        <!-- Bulk Action Bar -->
+        <div class="bulk-bar">
+          <div class="bulk-left">
+            <input type="checkbox" id="select-all">
+            <label for="select-all">전체 선택 (0/5)</label>
+          </div>
+          <div class="bulk-right">
+            <button class="btn btn--approve" disabled>
+              <svg class="icon--sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/></svg>
+              일괄 승인
+            </button>
+            <button class="btn btn--reject" disabled>
+              <svg class="icon--sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              일괄 반려
+            </button>
+          </div>
+        </div>
+
+        <!-- Approval List -->
+        <div class="approval-list">
+          <!-- Header -->
+          <div class="list-header">
+            <div></div>
+            <div></div>
+            <div>요청 내용</div>
+            <div>요청자</div>
+            <div>요청일</div>
+            <div>경과</div>
+            <div style="text-align:right">액션</div>
+          </div>
+
+          <!-- Row 1: Critical (12일) -->
+          <div class="approval-row approval-row--critical" id="row-1">
+            <div class="row-checkbox"><input type="checkbox"></div>
+            <div class="urgency-bar urgency-bar--critical"></div>
+            <div class="row-summary">
+              <div class="row-badges">
+                <span class="badge badge--pending">대기</span>
+                <span class="row-title">만능재료시험기 교정 반출 요청</span>
+              </div>
+            </div>
+            <div class="row-requester">
+              <div class="row-requester-name">김시험</div>
+              <div class="row-requester-team">수원 재료팀</div>
+            </div>
+            <div class="row-date-col">
+              <span class="row-date">03-06</span>
+            </div>
+            <div class="row-elapsed">
+              <span class="elapsed elapsed--critical">12일</span>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn--icon btn--detail" title="상세" onclick="openModal()">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="btn btn--icon btn--approve" title="승인" onclick="approveRow('row-1')">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="btn btn--icon btn--reject" title="반려">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 2: Critical (10일) -->
+          <div class="approval-row approval-row--critical" id="row-2">
+            <div class="row-checkbox"><input type="checkbox"></div>
+            <div class="urgency-bar urgency-bar--critical"></div>
+            <div class="row-summary">
+              <div class="row-badges">
+                <span class="badge badge--pending">대기</span>
+                <span class="row-title">디지털 멀티미터 DMM-7510 수리 반출</span>
+              </div>
+            </div>
+            <div class="row-requester">
+              <div class="row-requester-name">이기술</div>
+              <div class="row-requester-team">의왕 전기팀</div>
+            </div>
+            <div class="row-date-col">
+              <span class="row-date">03-08</span>
+            </div>
+            <div class="row-elapsed">
+              <span class="elapsed elapsed--critical">10일</span>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn--icon btn--detail" title="상세" onclick="openModal()">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="btn btn--icon btn--approve" title="승인" onclick="approveRow('row-2')">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="btn btn--icon btn--reject" title="반려">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 3: Warning (5일) -->
+          <div class="approval-row approval-row--warning" id="row-3">
+            <div class="row-checkbox"><input type="checkbox"></div>
+            <div class="urgency-bar urgency-bar--warning"></div>
+            <div class="row-summary">
+              <div class="row-badges">
+                <span class="badge badge--pending">대기</span>
+                <span class="row-title">항온항습기 렌탈 반출</span>
+              </div>
+            </div>
+            <div class="row-requester">
+              <div class="row-requester-name">박연구</div>
+              <div class="row-requester-team">평택 환경팀</div>
+            </div>
+            <div class="row-date-col">
+              <span class="row-date">03-13</span>
+            </div>
+            <div class="row-elapsed">
+              <span class="elapsed elapsed--warning">5일</span>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn--icon btn--detail" title="상세" onclick="openModal()">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="btn btn--icon btn--approve" title="승인" onclick="approveRow('row-3')">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="btn btn--icon btn--reject" title="반려">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 4: Normal (2일) + Multi-step -->
+          <div class="approval-row" id="row-4">
+            <div class="row-checkbox"><input type="checkbox"></div>
+            <div class="urgency-bar"></div>
+            <div class="row-summary">
+              <div class="row-badges">
+                <span class="badge badge--reviewed">검토완료</span>
+                <span class="row-title">내전압 시험기 폐기 요청</span>
+                <span class="step-dots"><span class="filled">●●</span>○ 2/3</span>
+              </div>
+            </div>
+            <div class="row-requester">
+              <div class="row-requester-name">최관리</div>
+              <div class="row-requester-team">수원 안전팀</div>
+            </div>
+            <div class="row-date-col">
+              <span class="row-date">03-16</span>
+            </div>
+            <div class="row-elapsed">
+              <span class="elapsed elapsed--ok">2일</span>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn--icon btn--detail" title="상세" onclick="openModal()">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="btn btn--icon btn--approve" title="최종 승인" onclick="approveRow('row-4')">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="btn btn--icon btn--reject" title="반려">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 5: Normal (당일) -->
+          <div class="approval-row" id="row-5">
+            <div class="row-checkbox"><input type="checkbox"></div>
+            <div class="urgency-bar"></div>
+            <div class="row-summary">
+              <div class="row-badges">
+                <span class="badge badge--pending">대기</span>
+                <span class="row-title">오실로스코프 MSO5204B 교정 반출</span>
+              </div>
+            </div>
+            <div class="row-requester">
+              <div class="row-requester-name">정실무</div>
+              <div class="row-requester-team">의왕 EMC팀</div>
+            </div>
+            <div class="row-date-col">
+              <span class="row-date">03-18</span>
+            </div>
+            <div class="row-elapsed">
+              <span class="elapsed elapsed--ok">오늘</span>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn--icon btn--detail" title="상세" onclick="openModal()">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+              <button class="btn btn--icon btn--approve" title="승인" onclick="approveRow('row-5')">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+              </button>
+              <button class="btn btn--icon btn--reject" title="반려">
+                <svg class="icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ──── Empty View ──── -->
+      <div id="view-empty" style="display:none">
+        <div class="empty-state">
+          <div class="empty-icon-ring">
+            <svg class="empty-check" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <div class="empty-title">모든 승인을 완료했습니다</div>
+          <div class="empty-desc">현재 반출 카테고리에 대기 중인 승인이 없습니다</div>
+          <div class="empty-stat">
+            오늘 처리한 건수 <br>
+            <strong>7</strong> <span>건</span>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main-layout -->
+</div><!-- /page-container -->
+
+<!-- ──────────── Detail Modal ──────────── -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="font-display">승인 상세</h2>
+      <p>요청 정보를 확인하고 승인 또는 반려를 결정합니다</p>
+    </div>
+    <div class="modal-body">
+      <!-- Status + Category -->
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <span class="badge badge--pending">대기</span>
+        <span class="badge" style="background:var(--bg-overlay);color:var(--fg-secondary);border:1px solid var(--border-default)">반출</span>
+      </div>
+
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:16px" class="font-display">만능재료시험기 교정 반출 요청</h3>
+
+      <!-- Meta -->
+      <div class="detail-meta">
+        <div class="detail-meta-item">
+          <label>요청자</label>
+          <span>김시험 · 수원 재료팀</span>
+        </div>
+        <div class="detail-meta-item">
+          <label>요청일</label>
+          <span class="font-mono" style="font-size:12px">2026-03-06 14:32</span>
+        </div>
+        <div class="detail-meta-item">
+          <label>경과일</label>
+          <span class="elapsed elapsed--critical">12일 (긴급)</span>
+        </div>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="detail-section">
+        <div class="detail-section-title">승인 진행</div>
+        <div class="step-indicator">
+          <div class="step-node step-node--done">
+            <svg class="icon--sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <div class="step-info">
+            <div class="step-info-label">요청</div>
+            <div class="step-info-role">시험실무자</div>
+          </div>
+          <div class="step-connector step-connector--done"></div>
+          <div class="step-node step-node--current">
+            <svg class="icon--sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div class="step-info">
+            <div class="step-info-label" style="color:var(--brand-info)">승인</div>
+            <div class="step-info-role">기술책임자</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Request details -->
+      <div class="detail-section">
+        <div class="detail-section-title">요청 상세 정보</div>
+        <div style="background:var(--bg-elevated);border-radius:var(--radius);padding:16px">
+          <div class="detail-row"><span class="detail-row-label">반출 목적</span><span class="detail-row-value">교정</span></div>
+          <div class="detail-row"><span class="detail-row-label">반출처</span><span class="detail-row-value">한국표준과학연구원(KRISS)</span></div>
+          <div class="detail-row"><span class="detail-row-label">장비</span><span class="detail-row-value">만능재료시험기 (SUW-E0042)</span></div>
+          <div class="detail-row"><span class="detail-row-label">반입 예정일</span><span class="detail-row-value font-mono">2026-04-06</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn--ghost" onclick="closeModal()">닫기</button>
+      <button class="btn btn--approve">
+        <svg class="icon--sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+        승인
+      </button>
+      <button class="btn btn--reject">
+        <svg class="icon--sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        반려
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Theme toggle
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.getElementById('theme-btn');
+  if (html.dataset.theme === 'dark') {
+    html.dataset.theme = 'light';
+    btn.textContent = '🌙';
+  } else {
+    html.dataset.theme = 'dark';
+    btn.textContent = '☀️';
+  }
+}
+
+// View toggle
+function showView(view) {
+  document.getElementById('view-list').style.display = view === 'list' ? 'block' : 'none';
+  document.getElementById('view-empty').style.display = view === 'empty' ? 'block' : 'none';
+  document.getElementById('btn-list').classList.toggle('active', view === 'list');
+  document.getElementById('btn-empty').classList.toggle('active', view === 'empty');
+}
+
+// Sidebar active
+function setActive(el) {
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Modal
+function openModal() {
+  document.getElementById('detail-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+document.getElementById('detail-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ✅ Approve animation demo
+function approveRow(id) {
+  const row = document.getElementById(id);
+  if (!row || row.classList.contains('processing')) return;
+  row.classList.add('processing');
+  setTimeout(() => {
+    row.classList.remove('processing');
+    row.classList.add('exit-success');
+  }, 600);
+  setTimeout(() => {
+    row.style.display = 'none';
+  }, 1200);
+}
+
+// Demo button: approve first row
+function triggerApprove() {
+  const rows = document.querySelectorAll('.approval-row:not([style*="display: none"])');
+  if (rows.length > 0) approveRow(rows[0].id);
+}
+</script>
+
+</body>
+</html>

@@ -30,6 +30,7 @@ import calibrationFactorsApi, {
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calculator, Calendar } from 'lucide-react';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 export default function CalibrationFactorApprovalsContent() {
   const { toast } = useToast();
@@ -181,7 +182,7 @@ export default function CalibrationFactorApprovalsContent() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">{t('description')}</p>

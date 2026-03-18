@@ -175,7 +175,6 @@ function renderNonConformityDetails(details: Record<string, unknown>, t: TFunc) 
       <DetailRow label={t('detailRows.cause')} value={details.cause} />
       <DetailRow label={t('detailRows.correctionContent')} value={details.correctionContent} />
       <DateRow label={t('detailRows.correctionDate')} value={details.correctionDate} />
-      <DetailRow label={t('detailRows.analysisContent')} value={details.analysisContent} />
       <DetailRow label={t('detailRows.actionPlan')} value={details.actionPlan} />
       {details.rejectionReason && (
         <div className={`mt-2 pt-2 ${APPROVAL_TIMELINE_TOKENS.rejectionBorder}`}>

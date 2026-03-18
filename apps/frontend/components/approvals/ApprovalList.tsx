@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ApprovalItem } from '@/lib/api/approvals-api';
 import { ApprovalRow } from './ApprovalRow';
@@ -16,12 +16,15 @@ interface ApprovalListProps {
   isLoading: boolean;
   selectedItems: string[];
   processingIds: Set<string>;
-  exitingIds: Set<string>;
+  /** exitingIds: id → 'success' | 'reject' 매핑 */
+  exitingIds: Map<string, 'success' | 'reject'>;
   onToggleSelect: (id: string) => void;
   onApprove: (item: ApprovalItem) => void;
   onReject: (item: ApprovalItem) => void;
   onViewDetail: (item: ApprovalItem) => void;
   actionLabel: string;
+  /** 오늘 처리 건수 (Empty state 표시용) */
+  todayProcessed?: number | null;
 }
 
 export function ApprovalList({
@@ -35,6 +38,7 @@ export function ApprovalList({
   onReject,
   onViewDetail,
   actionLabel,
+  todayProcessed,
 }: ApprovalListProps) {
   const t = useTranslations('approvals');
 
@@ -75,14 +79,27 @@ export function ApprovalList({
   }
 
   if (items.length === 0) {
+    const tokens = APPROVAL_EMPTY_STATE_TOKENS;
     return (
-      <div className="border border-border rounded-lg py-16">
-        <div className={APPROVAL_EMPTY_STATE_TOKENS.text} role="status" aria-live="polite">
-          <div className={APPROVAL_EMPTY_STATE_TOKENS.iconContainer}>
-            <Clock className={APPROVAL_EMPTY_STATE_TOKENS.icon} />
-          </div>
-          <p>{t('list.empty')}</p>
+      <div
+        className={`border border-border rounded-lg ${tokens.container} ${tokens.bgGradient}`}
+        role="status"
+        aria-live="polite"
+      >
+        <div className={`${tokens.iconRing} ${tokens.iconRingExpand}`}>
+          <CheckCircle2 className={tokens.icon} />
         </div>
+        <p className={tokens.title}>{t('list.allClear')}</p>
+        <p className={tokens.description}>{t('list.empty')}</p>
+        {todayProcessed !== null && todayProcessed !== undefined && todayProcessed > 0 && (
+          <div className={tokens.stat.container}>
+            <div className={tokens.stat.label}>{t('kpi.todayProcessed')}</div>
+            <div>
+              <span className={tokens.stat.value}>{todayProcessed}</span>
+              <span className={tokens.stat.unit}>{t('list.countUnit')}</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -111,7 +128,7 @@ export function ApprovalList({
             item={item}
             isSelected={selectedItems.includes(item.id)}
             isMutating={processingIds.has(item.id)}
-            isExiting={exitingIds.has(item.id)}
+            isExiting={exitingIds.get(item.id) || false}
             onToggleSelect={() => onToggleSelect(item.id)}
             onApprove={() => onApprove(item)}
             onReject={() => onReject(item)}

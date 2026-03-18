@@ -12,6 +12,7 @@ import {
   getSemanticContainerColorClasses,
   ncStatusToSemantic,
   NC_APPROVE_BUTTON_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
@@ -90,7 +91,7 @@ export default function NonConformanceApprovalsContent() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className={getPageContainerClasses()}>
         <div className="space-y-2">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />
@@ -124,7 +125,7 @@ export default function NonConformanceApprovalsContent() {
 
   if (isError) {
     return (
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className={getPageContainerClasses('list', '')}>
         <Card className="p-6 bg-destructive/10 border-destructive/20 dark:bg-destructive/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -147,7 +148,7 @@ export default function NonConformanceApprovalsContent() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className={getPageContainerClasses('list', '')}>
       {/* 헤더 */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -221,15 +222,6 @@ export default function NonConformanceApprovalsContent() {
                   </h4>
                   <p className="text-foreground mt-1 leading-relaxed">{nc.cause}</p>
                 </div>
-
-                {nc.analysisContent && (
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">
-                      {t('approvals.analysis')}
-                    </h4>
-                    <p className="text-foreground mt-1 leading-relaxed">{nc.analysisContent}</p>
-                  </div>
-                )}
 
                 {nc.correctionContent && (
                   <div>

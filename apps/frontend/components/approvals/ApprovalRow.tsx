@@ -25,7 +25,7 @@ interface ApprovalRowProps {
   item: ApprovalItem;
   isSelected: boolean;
   isMutating?: boolean;
-  isExiting?: boolean;
+  isExiting?: 'success' | 'reject' | false;
   onToggleSelect: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -66,7 +66,8 @@ export function ApprovalRow({
         tokens.urgencyBg[urgency],
         APPROVAL_FOCUS.card,
         isMutating && APPROVAL_MOTION.processing,
-        isExiting && APPROVAL_MOTION.exiting
+        isExiting === 'success' && APPROVAL_MOTION.exitingSuccess,
+        isExiting === 'reject' && APPROVAL_MOTION.exitingReject
       )}
       data-testid="approval-item"
     >
@@ -149,7 +150,7 @@ export function ApprovalRow({
                 size="icon"
                 variant="ghost"
                 onClick={onViewDetail}
-                disabled={isMutating || isExiting}
+                disabled={isMutating || !!isExiting}
                 className={tokens.actions.iconButton}
               >
                 <Eye className="h-4 w-4" />
@@ -165,8 +166,11 @@ export function ApprovalRow({
                 size="icon"
                 variant="ghost"
                 onClick={onApprove}
-                disabled={isMutating || isExiting}
-                className={cn(tokens.actions.iconButton, getApprovalActionButtonClasses('approve'))}
+                disabled={isMutating || !!isExiting}
+                className={cn(
+                  tokens.actions.iconButton,
+                  getApprovalActionButtonClasses('approveIcon')
+                )}
                 aria-busy={isMutating}
               >
                 <CheckCircle2 className="h-4 w-4" />
@@ -182,8 +186,11 @@ export function ApprovalRow({
                 size="icon"
                 variant="ghost"
                 onClick={onReject}
-                disabled={isMutating || isExiting}
-                className={cn(tokens.actions.iconButton, getApprovalActionButtonClasses('reject'))}
+                disabled={isMutating || !!isExiting}
+                className={cn(
+                  tokens.actions.iconButton,
+                  getApprovalActionButtonClasses('rejectIcon')
+                )}
               >
                 <XCircle className="h-4 w-4" />
                 <span className="sr-only">{t('row.tooltipReject')}</span>
@@ -200,7 +207,7 @@ export function ApprovalRow({
             size="sm"
             variant="outline"
             onClick={onViewDetail}
-            disabled={isMutating || isExiting}
+            disabled={isMutating || !!isExiting}
           >
             <Eye className="h-4 w-4 mr-1" />
             {t('item.detail')}
@@ -208,9 +215,8 @@ export function ApprovalRow({
           <Button
             type="button"
             size="sm"
-            variant="outline"
             onClick={onApprove}
-            disabled={isMutating || isExiting}
+            disabled={isMutating || !!isExiting}
             className={getApprovalActionButtonClasses('approve')}
             aria-busy={isMutating}
           >
@@ -222,7 +228,7 @@ export function ApprovalRow({
             size="sm"
             variant="outline"
             onClick={onReject}
-            disabled={isMutating || isExiting}
+            disabled={isMutating || !!isExiting}
             className={getApprovalActionButtonClasses('reject')}
           >
             <XCircle className="h-4 w-4 mr-1" />

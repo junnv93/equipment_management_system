@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 interface ApprovalLoadingSkeletonProps {
   cardHeight?: string;
@@ -10,7 +11,7 @@ interface ApprovalLoadingSkeletonProps {
  */
 export function ApprovalLoadingSkeleton({ cardHeight = 'h-20' }: ApprovalLoadingSkeletonProps) {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <Skeleton className="h-10 w-64" />
       <Card>
         <CardHeader>

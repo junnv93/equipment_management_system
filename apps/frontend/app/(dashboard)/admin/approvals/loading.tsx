@@ -1,9 +1,10 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 export default function ApprovalsLoading() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 스켈레톤 */}
       <div className="space-y-2">
         <Skeleton className="h-9 w-48" />
