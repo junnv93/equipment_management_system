@@ -6,6 +6,8 @@
  * - 테이블/상세/Diff/엔티티 링크/빈 상태/페이지네이션 스타일
  * - 필터 바 / 헤더 토큰 (Layer 3 확장)
  * - Motion system (specific property transitions, no transition-all)
+ * - Responsive breakpoints (Summary grid, Sheet width)
+ * - WCAG minimum font size compliance (≥11px)
  */
 
 import { type AuditAction } from '@equipment-management/schemas';
@@ -191,8 +193,8 @@ export const AUDIT_MOTION = {
  * 요약 바 그리드 레이아웃
  */
 export const AUDIT_SUMMARY_TOKENS = {
-  /** 5열 그리드 */
-  grid: 'grid grid-cols-5 gap-3',
+  /** 반응형 그리드: 모바일 2열 → 태블릿 3열 → 데스크탑 5열 */
+  grid: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3',
 
   /** 카드 상단 색상 스트라이프 */
   stripe: 'absolute top-0 left-0 right-0 h-[2px] rounded-t-xl',
@@ -203,8 +205,8 @@ export const AUDIT_SUMMARY_TOKENS = {
   /** 총 건수 (전체 카드에만) */
   count: 'font-mono text-xl font-bold tabular-nums tracking-tight',
 
-  /** 서브 라벨 */
-  sublabel: 'text-[10px] text-brand-text-muted mt-0.5',
+  /** 서브 라벨 (WCAG: ≥11px) */
+  sublabel: 'text-[11px] text-brand-text-muted mt-0.5',
 } as const;
 
 /**
@@ -221,6 +223,20 @@ export const AUDIT_SUMMARY_COLOR_MAP = {
 /**
  * 요약 카드 클래스 생성 (active / inactive)
  */
+/**
+ * 활성/비활성 배경색 맵
+ *
+ * 활성 상태에서 해당 색상의 연한 배경을 적용하여
+ * border + stripe만으로는 부족한 시각적 구분력을 강화합니다.
+ */
+const SUMMARY_ACTIVE_BG: Record<keyof typeof AUDIT_SUMMARY_COLOR_MAP, string> = {
+  all: 'bg-brand/[0.06]',
+  create: 'bg-brand-ok/[0.06]',
+  update: 'bg-brand-info/[0.06]',
+  delete: 'bg-brand-critical/[0.06]',
+  approve: 'bg-brand-purple/[0.06]',
+};
+
 export function getAuditSummaryCardClasses(
   isActive: boolean,
   color: keyof typeof AUDIT_SUMMARY_COLOR_MAP
@@ -240,7 +256,7 @@ export function getAuditSummaryCardClasses(
   };
 
   return isActive
-    ? `${base} bg-brand-bg-elevated ${borderActive[color]}`
+    ? `${base} ${SUMMARY_ACTIVE_BG[color]} ${borderActive[color]} shadow-sm`
     : `${base} bg-brand-bg-surface border-brand-border-subtle hover:border-brand-border-default hover:bg-brand-bg-elevated`;
 }
 
@@ -268,9 +284,9 @@ export const AUDIT_TIMELINE_TOKENS = {
   /** 구분선 */
   groupLine: 'flex-1 h-px bg-brand-border-subtle',
 
-  /** 건수 배지 */
+  /** 건수 배지 (WCAG: ≥11px) */
   groupCount: [
-    'text-[10px] font-mono text-brand-text-muted shrink-0',
+    'text-[11px] font-mono text-brand-text-muted shrink-0',
     'px-2 py-0.5 rounded-full border border-brand-border-subtle bg-brand-bg-elevated',
   ].join(' '),
 
@@ -311,24 +327,24 @@ export const AUDIT_TIMELINE_TOKENS = {
   targetText: 'text-[12px] text-brand-text-secondary',
   targetId: 'font-semibold',
   entityBadge: [
-    'inline-flex items-center px-1.5 py-0.5 text-[10px] rounded-md border',
+    'inline-flex items-center px-1.5 py-0.5 text-[11px] rounded-md border',
     'border-brand-border-subtle bg-brand-bg-elevated text-brand-text-muted',
   ].join(' '),
 
-  /** 위험 액션(delete) 강조 배지 — 토큰화하여 인라인 하드코딩 제거 */
+  /** 위험 액션(delete) 강조 배지 — 토큰화하여 인라인 하드코딩 제거 (WCAG: ≥11px) */
   dangerLabel: [
-    'inline-flex items-center px-1.5 py-0.5 text-[10px] rounded-md font-semibold',
+    'inline-flex items-center px-1.5 py-0.5 text-[11px] rounded-md font-semibold',
     'bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
   ].join(' '),
 
   subRow: 'flex items-center flex-wrap gap-2.5 mt-1',
   subItem: 'flex items-center gap-1 text-[11px] text-brand-text-muted',
-  subMono: 'font-mono text-[10px] text-brand-text-muted',
+  subMono: 'font-mono text-[11px] text-brand-text-muted',
 
   /** 인라인 Diff 미리보기 */
   diffPreview: [
     'mt-1.5 px-2.5 py-1.5 rounded-lg border border-brand-border-subtle',
-    'bg-brand-bg-elevated font-mono text-[10px] flex items-center gap-2 max-w-full overflow-hidden',
+    'bg-brand-bg-elevated font-mono text-[11px] flex items-center gap-2 max-w-full overflow-hidden',
   ].join(' '),
   diffOld: 'text-brand-critical truncate shrink-0 max-w-[30%]',
   diffArrow: 'text-brand-text-muted shrink-0',
