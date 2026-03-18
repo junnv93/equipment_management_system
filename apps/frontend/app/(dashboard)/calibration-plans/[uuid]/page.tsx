@@ -6,6 +6,7 @@ import * as calibrationPlansApiServer from '@/lib/api/calibration-plans-api-serv
 import { isNotFoundError } from '@/lib/api/error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -96,7 +97,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
  */
 function CalibrationPlanSkeleton() {
   return (
-    <div className="container mx-auto py-6 max-w-4xl space-y-6">
+    <div className={getPageContainerClasses('detail')}>
       <div className="space-y-2">
         <Skeleton className="h-8 w-56" />
         <Skeleton className="h-4 w-72" />

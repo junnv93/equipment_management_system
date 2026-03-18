@@ -1664,13 +1664,13 @@ async function seed() {
 
     // Raw SQL로 부적합 기록 삽입 (nc_type 필수)
     await db.execute(sql`
-      INSERT INTO non_conformances (id, equipment_id, nc_type, discovery_date, discovered_by, cause, action_plan, analysis_content, correction_content, correction_date, corrected_by, status, closed_by, closed_at, closure_notes)
+      INSERT INTO non_conformances (id, equipment_id, nc_type, discovery_date, discovered_by, cause, action_plan, correction_content, correction_date, corrected_by, status, closed_by, closed_at, closure_notes)
       VALUES
-        (${NC_001_ID}::uuid, ${EQUIP_NETWORK_ANALYZER_ID}::uuid, 'calibration_failure', ${daysAgo(10).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, '교정 기한 초과 및 측정 불확도 규격 초과로 인한 부적합', '외부 교정 및 필요시 수리 진행 예정', NULL, NULL, NULL, NULL, 'open', NULL, NULL, NULL),
-        (${NC_002_ID}::uuid, ${EQUIP_ANTENNA_SYSTEM_ID}::uuid, 'malfunction', ${daysAgo(7).toISOString().split('T')[0]}, ${USER_ENGINEER2_ID}::uuid, '포지셔너 정밀도 저하로 인한 측정 재현성 문제', '포지셔너 정렬 및 구동부 점검', '모터 백래시 증가로 인한 위치 정밀도 저하 확인', NULL, NULL, NULL, 'analyzing', NULL, NULL, NULL),
-        (${NC_003_ID}::uuid, ${EQUIP_AMPLIFIER_ID}::uuid, 'malfunction', ${daysAgo(20).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '출력 전력 정격 대비 30% 저하', '내부 증폭 소자 교체 필요', '내부 FET 소자 열화로 판단', '제조사 수리 의뢰 완료 (반출 상태)', ${daysAgo(7).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, 'corrected', NULL, NULL, NULL),
-        (${NC_004_ID}::uuid, ${EQUIP_EMC_RECEIVER_ID}::uuid, 'damage', ${daysAgo(60).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'RF 입력 커넥터 핀 휨으로 인한 접촉 불량', '커넥터 교체', '잦은 케이블 연결/분리로 인한 핀 마모', '커넥터 어셈블리 교체 완료', ${daysAgo(55).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'closed', ${USER_MANAGER_ID}::uuid, ${daysAgo(54).toISOString()}, '교체 후 측정 정상 동작 확인'),
-        (${NC_005_ID}::uuid, ${EQUIP_POWER_METER_RETIRED_ID}::uuid, 'malfunction', ${daysAgo(90).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '센서 소자 불량으로 측정 불가', '수리 가능 여부 검토', '센서 모듈 내부 회로 손상, 부품 단종으로 수리 불가', '폐기 처리', ${daysAgo(85).toISOString().split('T')[0]}, ${USER_ADMIN_ID}::uuid, 'closed', ${USER_ADMIN_ID}::uuid, ${daysAgo(84).toISOString()}, '수리 불가 판정으로 폐기 처리 완료')
+        (${NC_001_ID}::uuid, ${EQUIP_NETWORK_ANALYZER_ID}::uuid, 'calibration_failure', ${daysAgo(10).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, '교정 기한 초과 및 측정 불확도 규격 초과로 인한 부적합', '외부 교정 및 필요시 수리 진행 예정', NULL, NULL, NULL, 'open', NULL, NULL, NULL),
+        (${NC_002_ID}::uuid, ${EQUIP_ANTENNA_SYSTEM_ID}::uuid, 'malfunction', ${daysAgo(7).toISOString().split('T')[0]}, ${USER_ENGINEER2_ID}::uuid, '포지셔너 정밀도 저하로 인한 측정 재현성 문제', '포지셔너 정렬 및 구동부 점검', NULL, NULL, NULL, 'open', NULL, NULL, NULL),
+        (${NC_003_ID}::uuid, ${EQUIP_AMPLIFIER_ID}::uuid, 'malfunction', ${daysAgo(20).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '출력 전력 정격 대비 30% 저하', '내부 증폭 소자 교체 필요', '제조사 수리 의뢰 완료 (반출 상태)', ${daysAgo(7).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, 'corrected', NULL, NULL, NULL),
+        (${NC_004_ID}::uuid, ${EQUIP_EMC_RECEIVER_ID}::uuid, 'damage', ${daysAgo(60).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'RF 입력 커넥터 핀 휨으로 인한 접촉 불량', '커넥터 교체', '커넥터 어셈블리 교체 완료', ${daysAgo(55).toISOString().split('T')[0]}, ${USER_ENGINEER_ID}::uuid, 'closed', ${USER_MANAGER_ID}::uuid, ${daysAgo(54).toISOString()}, '교체 후 측정 정상 동작 확인'),
+        (${NC_005_ID}::uuid, ${EQUIP_POWER_METER_RETIRED_ID}::uuid, 'malfunction', ${daysAgo(90).toISOString().split('T')[0]}, ${USER_MANAGER_ID}::uuid, '센서 소자 불량으로 측정 불가', '수리 가능 여부 검토', '폐기 처리', ${daysAgo(85).toISOString().split('T')[0]}, ${USER_ADMIN_ID}::uuid, 'closed', ${USER_ADMIN_ID}::uuid, ${daysAgo(84).toISOString()}, '수리 불가 판정으로 폐기 처리 완료')
     `);
     const nonConformancesCount = 5;
     console.log(`  ✅ ${nonConformancesCount}건 부적합 기록 생성됨`);

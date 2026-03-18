@@ -39,6 +39,7 @@ import type {
 } from '@/lib/api/dashboard-api';
 import { DASHBOARD_ROLE_CONFIG, DEFAULT_ROLE, DASHBOARD_GRID } from '@/lib/config/dashboard-config';
 import { resolveDashboardScope } from '@/lib/utils/dashboard-scope';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 // Props 타입
 export interface DashboardClientProps {
@@ -122,7 +123,7 @@ function DashboardClientComponent({
   const upcomingCheckoutReturns = aggregate?.upcomingCheckoutReturns ?? [];
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className={getPageContainerClasses('list', 'space-y-4')}>
       {/* Row 0: Welcome + QuickActionBar (flex row) */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <header className="flex-1 min-w-0">

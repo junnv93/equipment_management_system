@@ -33,6 +33,7 @@ import {
   useDeleteNotification,
 } from '@/hooks/use-notifications';
 import type { NotificationItem } from '@/lib/api/notifications-api';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 // 알림 타입별 아이콘 및 색상
 const alertTypeConfig: Record<
@@ -212,7 +213,7 @@ export default function AlertsContent() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t('title')}</h1>
         <div className="flex gap-2">

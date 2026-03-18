@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getCheckoutServer, getConditionChecksServer } from '@/lib/api/checkout-api-server';
 import { CheckoutStatus, ConditionCheckStep } from '@equipment-management/schemas';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
@@ -149,7 +150,7 @@ export async function generateMetadata(props: PageProps) {
  */
 function ConditionCheckSkeleton() {
   return (
-    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+    <div className={getPageContainerClasses('form')}>
       <div className="space-y-2">
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-4 w-48" />

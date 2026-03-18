@@ -10,6 +10,7 @@ import {
   CHECKOUT_FORM_TOKENS,
   getEquipmentStatusTokenStyle,
   TRANSITION_PRESETS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -250,7 +251,7 @@ export default function CreateCheckoutContent() {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6">
+    <div className={getPageContainerClasses()}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('create.title')}</h1>

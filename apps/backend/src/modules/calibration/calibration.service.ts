@@ -23,13 +23,20 @@ import {
   NonConformanceStatusValues as NCStatusVal,
   NonConformanceTypeValues as NCTypeVal,
   EquipmentStatusValues as ESVal,
+  DEFAULT_LOCALE,
 } from '@equipment-management/schemas';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
-import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc } from '../../common/utils';
+import {
+  getUtcStartOfDay,
+  getUtcEndOfDay,
+  addDaysUtc,
+  calculateNextCalibrationDate,
+} from '../../common/utils';
 import * as schema from '@equipment-management/db/schema';
 import { and, eq, gte, lte, count, sql, or, desc, asc, SQL, isNull } from 'drizzle-orm';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import { I18nService } from '../../common/i18n/i18n.service';
 
 // Drizzle 추론 타입 (DB 컬럼과 1:1 대응)
 type CalibrationRow = typeof schema.calibrations.$inferSelect;
@@ -80,7 +87,8 @@ export class CalibrationService extends VersionedBaseService {
     @Inject('DRIZZLE_INSTANCE')
     protected readonly db: AppDatabase,
     private readonly cacheService: SimpleCacheService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly i18n: I18nService
   ) {
     super();
   }
@@ -241,7 +249,27 @@ export class CalibrationService extends VersionedBaseService {
     // 모든 교정 기록은 기술책임자 이상의 승인 필요
     const approvalStatus = CalibrationApprovalStatusEnum.enum.pending_approval;
 
-    const insertData = this.transformDtoToInsert(createCalibrationDto, approvalStatus);
+    // SSOT: nextCalibrationDate는 장비의 calibrationCycle 기반으로 백엔드에서 계산
+    const [equip] = await this.db
+      .select({ calibrationCycle: schema.equipment.calibrationCycle })
+      .from(schema.equipment)
+      .where(eq(schema.equipment.id, createCalibrationDto.equipmentId))
+      .limit(1);
+
+    const computedNextDate = calculateNextCalibrationDate(
+      createCalibrationDto.calibrationDate,
+      equip?.calibrationCycle ?? undefined
+    );
+
+    const dtoWithComputedDate = {
+      ...createCalibrationDto,
+      nextCalibrationDate:
+        computedNextDate ??
+        createCalibrationDto.nextCalibrationDate ??
+        createCalibrationDto.calibrationDate,
+    };
+
+    const insertData = this.transformDtoToInsert(dtoWithComputedDate, approvalStatus);
 
     const [inserted] = await this.db.insert(schema.calibrations).values(insertData).returning();
 
@@ -952,7 +980,6 @@ export class CalibrationService extends VersionedBaseService {
     await this.updateEquipmentCalibrationDates(
       calibration.equipmentId,
       calibration.calibrationDate,
-      calibration.nextCalibrationDate,
       id,
       approveDto.approverId
     );
@@ -989,21 +1016,33 @@ export class CalibrationService extends VersionedBaseService {
 
   /**
    * 장비의 교정일자를 자동 업데이트합니다.
-   * 교정 승인 시 호출되어 장비의 lastCalibrationDate, nextCalibrationDate를 갱신합니다.
+   * 교정 승인 시 호출되어 장비의 lastCalibrationDate를 갱신하고,
+   * nextCalibrationDate는 calibrationDate + calibrationCycle(개월)로 계산합니다.
    */
   private async updateEquipmentCalibrationDates(
     equipmentId: string,
     calibrationDate: Date,
-    nextCalibrationDate: Date,
     calibrationId?: string,
     approverId?: string
   ): Promise<void> {
     try {
+      // 장비의 교정 주기 조회
+      const [equip] = await this.db
+        .select({ calibrationCycle: schema.equipment.calibrationCycle })
+        .from(schema.equipment)
+        .where(eq(schema.equipment.id, equipmentId))
+        .limit(1);
+
+      // 차기 교정일 = 교정일 + 교정주기(개월) — SSOT 유틸리티 사용
+      const nextCalibrationDate =
+        calculateNextCalibrationDate(calibrationDate, equip?.calibrationCycle ?? undefined) ??
+        calibrationDate;
+
       await this.db
         .update(schema.equipment)
         .set({
           lastCalibrationDate: calibrationDate,
-          nextCalibrationDate: nextCalibrationDate,
+          nextCalibrationDate,
           updatedAt: new Date(),
           version: sql`${schema.equipment.version} + 1`,
         })
@@ -1043,7 +1082,7 @@ export class CalibrationService extends VersionedBaseService {
             eq(nonConformances.equipmentId, equipmentId),
             eq(nonConformances.ncType, NCTypeVal.CALIBRATION_OVERDUE),
             isNull(nonConformances.deletedAt),
-            sql`${nonConformances.status} IN (${NCStatusVal.OPEN}, ${NCStatusVal.ANALYZING})`
+            eq(nonConformances.status, NCStatusVal.OPEN)
           )
         )
         .limit(1);
@@ -1063,7 +1102,10 @@ export class CalibrationService extends VersionedBaseService {
             status: NCStatusVal.CORRECTED,
             resolutionType: 'recalibration',
             calibrationId,
-            correctionContent: '교정 완료로 인한 자동 조치 완료',
+            correctionContent: this.i18n.t(
+              'system.calibrationOverdue.correctionContent',
+              DEFAULT_LOCALE
+            ),
             correctionDate: today.toISOString().split('T')[0],
             correctedBy: correctedBy || null,
             updatedAt: today,

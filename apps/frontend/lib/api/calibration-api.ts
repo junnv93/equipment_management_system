@@ -77,7 +77,7 @@ export interface CalibrationQuery {
 export interface CreateCalibrationDto {
   equipmentId: string;
   calibrationDate: string;
-  nextCalibrationDate: string;
+  nextCalibrationDate?: string;
   calibrationAgency: string;
   certificateNumber?: string;
   result?: string; // lowercase: 'pass', 'fail', 'conditional'

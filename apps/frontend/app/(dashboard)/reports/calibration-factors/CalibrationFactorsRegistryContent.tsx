@@ -32,6 +32,7 @@ import {
   CAL_FACTORS_COLLAPSIBLE_TOKENS,
   CAL_FACTORS_TABLE_TOKENS,
   CAL_FACTORS_EMPTY_STATE_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 
 interface CalibrationFactorsRegistryContentProps {
@@ -143,7 +144,7 @@ export default function CalibrationFactorsRegistryContent({
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className={getPageContainerClasses()}>
         <Skeleton className="h-10 w-64" />
         <Card>
           <CardHeader>
@@ -162,7 +163,7 @@ export default function CalibrationFactorsRegistryContent({
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className={CAL_FACTORS_HEADER_TOKENS.container}>
         <div>

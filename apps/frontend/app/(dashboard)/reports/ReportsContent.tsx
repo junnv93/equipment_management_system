@@ -43,6 +43,7 @@ import {
   REPORTS_LAYOUT_TOKENS,
   REPORTS_SPINNER_TOKENS,
   REPORTS_ICON_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 
 export default function ReportsContent() {
@@ -243,7 +244,7 @@ export default function ReportsContent() {
   };
 
   return (
-    <>
+    <div className={getPageContainerClasses()}>
       <div className={REPORTS_HEADER_TOKENS.container}>
         <div>
           <h1 className={REPORTS_HEADER_TOKENS.title}>{t('reports.title')}</h1>
@@ -604,6 +605,6 @@ export default function ReportsContent() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

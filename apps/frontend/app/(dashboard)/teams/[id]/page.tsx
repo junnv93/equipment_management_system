@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import TeamDetailLoading from './loading';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * Next.js 16 PageProps 타입
@@ -23,7 +24,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  */
 export default function TeamDetailPage(props: PageProps) {
   return (
-    <div className="container mx-auto py-6">
+    <div className={getPageContainerClasses('list', '')}>
       <Suspense fallback={<TeamDetailLoading />}>
         <TeamDetailContentAsync paramsPromise={props.params} />
       </Suspense>

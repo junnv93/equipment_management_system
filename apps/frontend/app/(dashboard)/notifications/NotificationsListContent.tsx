@@ -33,6 +33,7 @@ import {
   NOTIFICATION_LIST_PAGINATION_TOKENS,
   NOTIFICATION_LIST_ITEM_TOKENS,
   getStaggerDelay,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 
 /**
@@ -81,7 +82,7 @@ export default function NotificationsListContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className={NOTIFICATION_LIST_HEADER_TOKENS.container}>
         <div className={NOTIFICATION_LIST_HEADER_TOKENS.titleGroup}>

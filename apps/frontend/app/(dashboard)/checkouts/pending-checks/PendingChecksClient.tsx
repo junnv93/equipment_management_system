@@ -16,7 +16,7 @@ import { CHECKOUT_PURPOSE_LABELS, CheckoutStatus } from '@equipment-management/s
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+import { TRANSITION_PRESETS, getPageContainerClasses } from '@/lib/design-tokens';
 
 interface PendingChecksClientProps {
   initialData: PaginatedResponse<Checkout>;
@@ -164,7 +164,7 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className={getPageContainerClasses('list', '')}>
       {/* 헤더 */}
       <div className="flex justify-between items-center mb-6">
         <div>

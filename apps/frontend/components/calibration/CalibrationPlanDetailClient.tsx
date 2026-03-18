@@ -43,6 +43,7 @@ import {
   CALIBRATION_PLAN_STATUS_BADGE_COLORS,
   CALIBRATION_PLAN_DETAIL_HEADER_TOKENS,
   ACTION_BUTTON_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { ApprovalTimeline } from './ApprovalTimeline';
 import { PlanItemsTable } from './PlanItemsTable';
@@ -229,7 +230,7 @@ export function CalibrationPlanDetailClient({
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className={getPageContainerClasses()}>
         <Skeleton className="h-10 w-64" />
         <Card>
           <CardContent className="pt-6">
@@ -245,7 +246,7 @@ export function CalibrationPlanDetailClient({
 
   if (isError || !plan) {
     return (
-      <div className="container mx-auto py-6">
+      <div className={getPageContainerClasses('list', '')}>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>{t('planDetail.error.title')}</AlertTitle>
@@ -275,7 +276,7 @@ export function CalibrationPlanDetailClient({
   const canApprove = isPendingApproval && (isLabManager || isSystemAdmin);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 — Design Token 적용 */}
       <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.container}>
         <div className={CALIBRATION_PLAN_DETAIL_HEADER_TOKENS.titleArea}>

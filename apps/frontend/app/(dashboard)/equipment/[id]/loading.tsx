@@ -1,5 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 장비 상세 라우트 로딩 UI
@@ -11,7 +12,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
  */
 export default function EquipmentDetailLoading() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 스켈레톤 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

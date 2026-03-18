@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { FileQuestion, ArrowLeft, List } from 'lucide-react';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 장비 상세 404 페이지
@@ -12,7 +13,7 @@ import { FileQuestion, ArrowLeft, List } from 'lucide-react';
  */
 export default function EquipmentNotFound() {
   return (
-    <div className="container mx-auto py-6">
+    <div className={getPageContainerClasses('list', '')}>
       <div className="flex flex-col items-center justify-center py-16 text-center">
         {/* 404 아이콘 */}
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted">
@@ -20,9 +21,7 @@ export default function EquipmentNotFound() {
         </div>
 
         {/* 404 메시지 */}
-        <h2 className="mt-6 text-2xl font-bold tracking-tight">
-          장비를 찾을 수 없습니다
-        </h2>
+        <h2 className="mt-6 text-2xl font-bold tracking-tight">장비를 찾을 수 없습니다</h2>
         <p className="mt-2 text-muted-foreground max-w-md">
           요청하신 장비가 존재하지 않거나 삭제되었습니다.
           <br />
@@ -47,9 +46,7 @@ export default function EquipmentNotFound() {
 
         {/* 도움말 */}
         <div className="mt-8 rounded-lg border border-border bg-muted/50 p-4 max-w-md">
-          <p className="text-sm text-muted-foreground">
-            찾으시는 장비가 있으신가요?
-          </p>
+          <p className="text-sm text-muted-foreground">찾으시는 장비가 있으신가요?</p>
           <p className="mt-2 text-sm text-muted-foreground">
             장비 목록에서 검색하거나, 관리번호로 직접 찾아보세요.
           </p>

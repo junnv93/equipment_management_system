@@ -49,20 +49,60 @@ export function addDaysUtc(date: Date, days: number): Date {
 }
 
 /**
- * UTC 기준으로 날짜에 개월수를 더함
+ * UTC 기준으로 날짜에 개월수를 더함 (월말 클램핑 적용)
+ *
+ * JavaScript의 setUTCMonth()는 월말 오버플로우 발생:
+ *   1월 31일 + 1개월 → 3월 3일 (2월 31일이 없으므로)
+ *
+ * 이 함수는 원래 일자가 대상 월의 마지막 일보다 크면 해당 월의 말일로 클램핑:
+ *   1월 31일 + 1개월 → 2월 28일 (또는 윤년이면 2월 29일)
+ *   3월 31일 + 1개월 → 4월 30일
+ *   8월 31일 + 6개월 → 2월 28일
  *
  * @param date 기준 날짜
  * @param months 더할 개월수 (음수 가능)
- * @returns 계산된 날짜
+ * @returns 계산된 날짜 (월말 클램핑 적용)
  *
  * @example
- * const lastCalibration = new Date('2025-01-15');
- * const nextCalibration = addMonthsUtc(lastCalibration, 12); // 2026-01-15
+ * addMonthsUtc(new Date('2025-01-15'), 12); // 2026-01-15
+ * addMonthsUtc(new Date('2025-01-31'), 1);  // 2025-02-28
+ * addMonthsUtc(new Date('2024-01-31'), 1);  // 2024-02-29 (윤년)
  */
 export function addMonthsUtc(date: Date, months: number): Date {
   const result = new Date(date);
+  const originalDay = result.getUTCDate();
+  result.setUTCDate(1); // 오버플로우 방지를 위해 1일로 설정 후 월 변경
   result.setUTCMonth(result.getUTCMonth() + months);
+  // 대상 월의 마지막 일 계산
+  const daysInTargetMonth = new Date(
+    Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+  result.setUTCDate(Math.min(originalDay, daysInTargetMonth));
   return result;
+}
+
+/**
+ * 차기 교정일 계산 (SSOT)
+ *
+ * 차기 교정일 = 마지막 교정일 + 교정 주기(개월)
+ * 모든 서비스에서 이 함수를 사용하여 일관된 계산을 보장합니다.
+ *
+ * @param lastCalibrationDate 마지막 교정일
+ * @param calibrationCycle 교정 주기 (개월)
+ * @returns 차기 교정일 (입력값이 없으면 undefined)
+ */
+export function calculateNextCalibrationDate(
+  lastCalibrationDate?: Date | string,
+  calibrationCycle?: number
+): Date | undefined {
+  if (!lastCalibrationDate || !calibrationCycle) {
+    return undefined;
+  }
+
+  const lastDate =
+    typeof lastCalibrationDate === 'string' ? new Date(lastCalibrationDate) : lastCalibrationDate;
+
+  return addMonthsUtc(lastDate, calibrationCycle);
 }
 
 /**

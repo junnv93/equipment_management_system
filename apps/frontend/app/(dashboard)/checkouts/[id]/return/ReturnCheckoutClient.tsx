@@ -23,6 +23,7 @@ import ReturnInspectionForm, {
 } from '@/components/checkouts/ReturnInspectionForm';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 interface ReturnCheckoutClientProps {
   checkout: Checkout;
@@ -93,7 +94,7 @@ export default function ReturnCheckoutClient({
       : t('condition.conditionStatus.abnormal');
 
   return (
-    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+    <div className={getPageContainerClasses('form')}>
       {/* 헤더 */}
       <div>
         <Button variant="ghost" size="sm" className="mb-2" asChild>

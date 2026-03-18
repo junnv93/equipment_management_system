@@ -284,10 +284,9 @@ export class NonConformanceCacheInvalidation {
    * NC 상태 변경 후 무효화 (장비 + 대시보드 포함)
    *
    * 사용 시점:
-   * - 분석 시작 (open → analyzing)
-   * - 조치 완료 (analyzing → corrected)
+   * - 조치 완료 (open → corrected)
    * - 종결 (corrected → closed) → 장비 상태 available 복원
-   * - 반려 (corrected → analyzing)
+   * - 반려 (corrected → open)
    */
   static async invalidateAfterStatusChange(
     queryClient: QueryClient,

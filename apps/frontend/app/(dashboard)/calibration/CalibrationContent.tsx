@@ -43,6 +43,7 @@ import {
   CALIBRATION_TAB_TRANSITION,
   CALIBRATION_THRESHOLDS,
   CALIBRATION_FILTER_BAR,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
@@ -233,7 +234,7 @@ export default function CalibrationContent({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t('title')}</h1>

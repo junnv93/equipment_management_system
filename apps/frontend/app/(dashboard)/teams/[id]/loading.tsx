@@ -1,5 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 팀 상세 페이지 로딩 UI
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
  */
 export default function TeamDetailLoading() {
   return (
-    <div className="container mx-auto py-6 space-y-6" aria-busy="true" aria-live="polite">
+    <div className={getPageContainerClasses()} aria-busy="true" aria-live="polite">
       {/* 뒤로가기 & 헤더 */}
       <div className="flex items-center gap-4">
         <Skeleton className="h-10 w-10 rounded-md" />

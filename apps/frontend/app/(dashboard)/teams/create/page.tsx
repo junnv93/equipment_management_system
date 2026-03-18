@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Button } from '@/components/ui/button';
 import { TeamForm } from '@/components/teams/TeamForm';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 팀 등록 페이지 (Server Component)
@@ -13,7 +14,7 @@ import { TeamForm } from '@/components/teams/TeamForm';
  */
 export default function CreateTeamPage() {
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-2xl">
+    <div className={getPageContainerClasses('form')}>
       {/* 헤더 */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
@@ -23,9 +24,7 @@ export default function CreateTeamPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">팀 등록</h1>
-          <p className="text-muted-foreground">
-            새로운 팀을 등록합니다
-          </p>
+          <p className="text-muted-foreground">새로운 팀을 등록합니다</p>
         </div>
       </div>
 

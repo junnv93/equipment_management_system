@@ -13,6 +13,7 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import type { UpdateEquipmentInput } from '@equipment-management/schemas';
 import type { Equipment } from '@/lib/api/equipment-api';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 interface EditEquipmentClientProps {
   /**
@@ -147,7 +148,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-5xl">
+    <div className={`${getPageContainerClasses()} max-w-5xl`}>
       {/* 헤더 */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>

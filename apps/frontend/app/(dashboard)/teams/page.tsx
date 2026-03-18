@@ -9,6 +9,7 @@ import {
   convertFiltersToApiParams,
 } from '@/lib/utils/team-filter-utils';
 import * as teamsApiServer from '@/lib/api/teams-api-server';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -23,7 +24,7 @@ type PageProps = {
  */
 export default function TeamsPage(props: PageProps) {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* Static Shell: 페이지 헤더 */}
       <div className="space-y-1">
         <h1 className="text-3xl font-bold tracking-tight">팀 관리</h1>

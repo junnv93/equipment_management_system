@@ -15,6 +15,7 @@ import { API_ENDPOINTS } from '@equipment-management/shared-constants';
 import CalibrationFactorsRegistryContent from './CalibrationFactorsRegistryContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -23,7 +24,7 @@ type PageProps = {
 
 function CalibrationFactorsLoadingSkeleton() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <div className="flex items-center justify-between">
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-10 w-32" />

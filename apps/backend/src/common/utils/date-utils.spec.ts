@@ -3,6 +3,7 @@ import {
   getUtcEndOfDay,
   addDaysUtc,
   addMonthsUtc,
+  calculateNextCalibrationDate,
   getDaysDifferenceUtc,
   isToday,
   isPast,
@@ -111,13 +112,66 @@ describe('UTC Date Utils', () => {
       expect(result.toISOString()).toBe('2026-01-15T00:00:00.000Z');
     });
 
-    it('월 말일 계산: JavaScript 표준 동작 (31일 + 1개월 = 다음 달 3일)', () => {
+    it('월말 클램핑: 1월 31일 + 1개월 = 2월 28일 (평년)', () => {
       const baseDate = new Date('2026-01-31T00:00:00.000Z');
       const result = addMonthsUtc(baseDate, 1);
 
-      // JavaScript 표준: 1월 31일 + 1개월 = 2월 31일(존재하지 않음) → 3월 3일
-      // 이것은 정상 동작이며, 교정 계획에서는 문제가 되지 않음
-      expect(result.toISOString()).toBe('2026-03-03T00:00:00.000Z');
+      expect(result.toISOString()).toBe('2026-02-28T00:00:00.000Z');
+    });
+
+    it('월말 클램핑: 1월 31일 + 1개월 = 2월 29일 (윤년)', () => {
+      const baseDate = new Date('2024-01-31T00:00:00.000Z');
+      const result = addMonthsUtc(baseDate, 1);
+
+      expect(result.toISOString()).toBe('2024-02-29T00:00:00.000Z');
+    });
+
+    it('월말 클램핑: 3월 31일 + 1개월 = 4월 30일', () => {
+      const baseDate = new Date('2026-03-31T00:00:00.000Z');
+      const result = addMonthsUtc(baseDate, 1);
+
+      expect(result.toISOString()).toBe('2026-04-30T00:00:00.000Z');
+    });
+
+    it('월말 클램핑: 8월 31일 + 6개월 = 2월 28일', () => {
+      const baseDate = new Date('2025-08-31T00:00:00.000Z');
+      const result = addMonthsUtc(baseDate, 6);
+
+      expect(result.toISOString()).toBe('2026-02-28T00:00:00.000Z');
+    });
+
+    it('30일 월은 그대로 유지: 4월 30일 + 1개월 = 5월 30일', () => {
+      const baseDate = new Date('2026-04-30T00:00:00.000Z');
+      const result = addMonthsUtc(baseDate, 1);
+
+      expect(result.toISOString()).toBe('2026-05-30T00:00:00.000Z');
+    });
+
+    it('12개월 더하면 동일 일자 유지', () => {
+      const baseDate = new Date('2025-04-17T00:00:00.000Z');
+      const result = addMonthsUtc(baseDate, 12);
+
+      expect(result.toISOString()).toBe('2026-04-17T00:00:00.000Z');
+    });
+  });
+
+  describe('calculateNextCalibrationDate (SSOT)', () => {
+    it('마지막 교정일 + 교정주기로 차기 교정일 계산', () => {
+      const result = calculateNextCalibrationDate('2025-04-17', 12);
+      expect(result?.toISOString()).toContain('2026-04-17');
+    });
+
+    it('마지막 교정일이 없으면 undefined', () => {
+      expect(calculateNextCalibrationDate(undefined, 12)).toBeUndefined();
+    });
+
+    it('교정주기가 없으면 undefined', () => {
+      expect(calculateNextCalibrationDate('2025-04-17', undefined)).toBeUndefined();
+    });
+
+    it('Date 객체도 동일하게 처리', () => {
+      const result = calculateNextCalibrationDate(new Date('2025-04-17'), 12);
+      expect(result?.toISOString()).toContain('2026-04-17');
     });
   });
 

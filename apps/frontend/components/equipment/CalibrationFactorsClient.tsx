@@ -47,6 +47,7 @@ import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 interface CalibrationFactorsClientProps {
   /**
@@ -180,7 +181,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

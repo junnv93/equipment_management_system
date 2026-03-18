@@ -20,7 +20,9 @@
 const { Pool } = require('pg');
 require('dotenv').config({ path: '../../../../.env.test' });
 
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5434/equipment_management_test';
+const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  'postgresql://postgres:postgres@localhost:5434/equipment_management_test';
 
 console.log('🌱 E2E 테스트 데이터베이스 시드 시작...');
 console.log(`📍 DATABASE_URL: ${DATABASE_URL.replace(/:[^:@]+@/, ':****@')}`);
@@ -293,7 +295,7 @@ async function seed() {
     `);
 
     const equipIdMap = {};
-    equipmentIds.rows.forEach(row => {
+    equipmentIds.rows.forEach((row) => {
       equipIdMap[row.uuid] = row.id;
     });
 
@@ -389,12 +391,12 @@ async function seed() {
     // =========================================================================
     console.log('\n⛔ 부적합 기록 생성 중...');
     await client.query(`
-      INSERT INTO non_conformances (id, equipment_id, discovery_date, discovered_by, cause, action_plan, analysis_content, correction_content, correction_date, corrected_by, status, closed_by, closed_at, closure_notes) VALUES
-        ('${NC_001_ID}', '${EQUIP_NETWORK_ANALYZER_ID}', '${toDate(daysAgo(10))}', '${USER_ENGINEER_ID}', '교정 기한 초과 및 측정 불확도 규격 초과로 인한 부적합', '외부 교정 및 필요시 수리 진행 예정', NULL, NULL, NULL, NULL, 'open', NULL, NULL, NULL),
-        ('${NC_002_ID}', '${EQUIP_ANTENNA_SYSTEM_ID}', '${toDate(daysAgo(7))}', '${USER_ENGINEER2_ID}', '포지셔너 정밀도 저하로 인한 측정 재현성 문제', '포지셔너 정렬 및 구동부 점검', '모터 백래시 증가로 인한 위치 정밀도 저하 확인', NULL, NULL, NULL, 'analyzing', NULL, NULL, NULL),
-        ('${NC_003_ID}', '${EQUIP_AMPLIFIER_ID}', '${toDate(daysAgo(20))}', '${USER_MANAGER_ID}', '출력 전력 정격 대비 30% 저하', '내부 증폭 소자 교체 필요', '내부 FET 소자 열화로 판단', '제조사 수리 의뢰 완료 (반출 상태)', '${toDate(daysAgo(7))}', '${USER_MANAGER_ID}', 'corrected', NULL, NULL, NULL),
-        ('${NC_004_ID}', '${EQUIP_EMC_RECEIVER_ID}', '${toDate(daysAgo(60))}', '${USER_ENGINEER_ID}', 'RF 입력 커넥터 핀 휨으로 인한 접촉 불량', '커넥터 교체', '잦은 케이블 연결/분리로 인한 핀 마모', '커넥터 어셈블리 교체 완료', '${toDate(daysAgo(55))}', '${USER_ENGINEER_ID}', 'closed', '${USER_MANAGER_ID}', '${toTimestamp(daysAgo(54))}', '교체 후 측정 정상 동작 확인'),
-        ('${NC_005_ID}', '${EQUIP_POWER_METER_RETIRED_ID}', '${toDate(daysAgo(90))}', '${USER_MANAGER_ID}', '센서 소자 불량으로 측정 불가', '수리 가능 여부 검토', '센서 모듈 내부 회로 손상, 부품 단종으로 수리 불가', '폐기 처리', '${toDate(daysAgo(85))}', '${USER_ADMIN_ID}', 'closed', '${USER_ADMIN_ID}', '${toTimestamp(daysAgo(84))}', '수리 불가 판정으로 폐기 처리 완료')
+      INSERT INTO non_conformances (id, equipment_id, discovery_date, discovered_by, cause, action_plan, correction_content, correction_date, corrected_by, status, closed_by, closed_at, closure_notes) VALUES
+        ('${NC_001_ID}', '${EQUIP_NETWORK_ANALYZER_ID}', '${toDate(daysAgo(10))}', '${USER_ENGINEER_ID}', '교정 기한 초과 및 측정 불확도 규격 초과로 인한 부적합', '외부 교정 및 필요시 수리 진행 예정', NULL, NULL, NULL, 'open', NULL, NULL, NULL),
+        ('${NC_002_ID}', '${EQUIP_ANTENNA_SYSTEM_ID}', '${toDate(daysAgo(7))}', '${USER_ENGINEER2_ID}', '포지셔너 정밀도 저하로 인한 측정 재현성 문제', '포지셔너 정렬 및 구동부 점검', NULL, NULL, NULL, 'open', NULL, NULL, NULL),
+        ('${NC_003_ID}', '${EQUIP_AMPLIFIER_ID}', '${toDate(daysAgo(20))}', '${USER_MANAGER_ID}', '출력 전력 정격 대비 30% 저하', '내부 증폭 소자 교체 필요', '제조사 수리 의뢰 완료 (반출 상태)', '${toDate(daysAgo(7))}', '${USER_MANAGER_ID}', 'corrected', NULL, NULL, NULL),
+        ('${NC_004_ID}', '${EQUIP_EMC_RECEIVER_ID}', '${toDate(daysAgo(60))}', '${USER_ENGINEER_ID}', 'RF 입력 커넥터 핀 휨으로 인한 접촉 불량', '커넥터 교체', '커넥터 어셈블리 교체 완료', '${toDate(daysAgo(55))}', '${USER_ENGINEER_ID}', 'closed', '${USER_MANAGER_ID}', '${toTimestamp(daysAgo(54))}', '교체 후 측정 정상 동작 확인'),
+        ('${NC_005_ID}', '${EQUIP_POWER_METER_RETIRED_ID}', '${toDate(daysAgo(90))}', '${USER_MANAGER_ID}', '센서 소자 불량으로 측정 불가', '수리 가능 여부 검토', '폐기 처리', '${toDate(daysAgo(85))}', '${USER_ADMIN_ID}', 'closed', '${USER_ADMIN_ID}', '${toTimestamp(daysAgo(84))}', '수리 불가 판정으로 폐기 처리 완료')
     `);
     console.log('  ✅ 5건 부적합 기록 생성됨');
 
@@ -437,7 +439,6 @@ async function seed() {
     console.log('  - spare: 1개');
     console.log('  - retired: 1개');
     console.log('  - pending_approval: 1개');
-
   } catch (error) {
     console.error('❌ 시드 실패:', error);
     throw error;

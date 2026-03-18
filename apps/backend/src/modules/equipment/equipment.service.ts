@@ -29,7 +29,12 @@ import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
 import type { Equipment } from '@equipment-management/db/schema/equipment';
 import type { Team } from '@equipment-management/db/schema/teams';
-import { getUtcStartOfDay, getUtcEndOfDay, addDaysUtc, addMonthsUtc } from '../../common/utils';
+import {
+  getUtcStartOfDay,
+  getUtcEndOfDay,
+  addDaysUtc,
+  calculateNextCalibrationDate,
+} from '../../common/utils';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
 
 /**
@@ -86,25 +91,7 @@ export class EquipmentService extends VersionedBaseService {
     super();
   }
 
-  /**
-   * 교정일 계산 헬퍼 메서드
-   * 다음 교정일 = 최종 교정일 + 교정 주기(개월)
-   * ✅ UTC 기준 계산으로 타임존 문제 방지
-   */
-  private calculateNextCalibrationDate(
-    lastCalibrationDate?: Date | string,
-    calibrationCycle?: number
-  ): Date | undefined {
-    if (!lastCalibrationDate || !calibrationCycle) {
-      return undefined;
-    }
-
-    const lastDate =
-      typeof lastCalibrationDate === 'string' ? new Date(lastCalibrationDate) : lastCalibrationDate;
-
-    // UTC 기준으로 개월수 더하기
-    return addMonthsUtc(lastDate, calibrationCycle);
-  }
+  // calculateNextCalibrationDate → common/utils/date-utils.ts (SSOT)
 
   /**
    * TeamId 정규화 헬퍼 메서드
@@ -435,7 +422,7 @@ export class EquipmentService extends VersionedBaseService {
    */
   private transformCreateDtoToEntity(dto: CreateEquipmentDto): Partial<Equipment> {
     const teamId = this.normalizeTeamId(dto.teamId);
-    const nextCalibrationDate = this.calculateNextCalibrationDate(
+    const nextCalibrationDate = calculateNextCalibrationDate(
       dto.lastCalibrationDate,
       dto.calibrationCycle
     );
@@ -533,7 +520,7 @@ export class EquipmentService extends VersionedBaseService {
       calibrationCycle &&
       (dto.lastCalibrationDate !== undefined || dto.calibrationCycle !== undefined)
     ) {
-      const nextCalibrationDate = this.calculateNextCalibrationDate(
+      const nextCalibrationDate = calculateNextCalibrationDate(
         lastCalibrationDate,
         calibrationCycle
       );
@@ -734,7 +721,7 @@ export class EquipmentService extends VersionedBaseService {
       }
 
       // 다음 교정일 계산
-      const nextCalibrationDate = this.calculateNextCalibrationDate(
+      const nextCalibrationDate = calculateNextCalibrationDate(
         createSharedEquipmentDto.lastCalibrationDate,
         createSharedEquipmentDto.calibrationCycle
       );

@@ -21,7 +21,7 @@ export const calibrationBaseSchema = z.object({
   equipmentId: z.string().uuid('유효한 UUID 형식이 아닙니다'),
   calibrationManagerId: z.string().uuid('유효한 UUID 형식이 아닙니다').optional(), // FE 미전송 시 registeredBy 폴백
   calibrationDate: z.coerce.date({ message: '유효한 날짜 형식이 아닙니다' }),
-  nextCalibrationDate: z.coerce.date({ message: '유효한 날짜 형식이 아닙니다' }),
+  nextCalibrationDate: z.coerce.date({ message: '유효한 날짜 형식이 아닙니다' }).optional(),
   calibrationMethod: CalibrationMethodEnum.optional().default('external_calibration'),
   status: CalibrationStatusEnum.default(CalibrationStatusEnum.enum.scheduled),
   calibrationAgency: z.string().min(1, '교정 기관을 입력해주세요').max(100),
@@ -65,8 +65,12 @@ export class CreateCalibrationDto {
   @ApiProperty({ description: '교정 일자', example: '2023-05-20' })
   calibrationDate: Date;
 
-  @ApiProperty({ description: '다음 교정 예정일', example: '2024-05-20' })
-  nextCalibrationDate: Date;
+  @ApiProperty({
+    description: '다음 교정 예정일 (미전송 시 백엔드에서 자동 계산)',
+    example: '2024-05-20',
+    required: false,
+  })
+  nextCalibrationDate?: Date;
 
   @ApiProperty({
     description: '교정 방법',

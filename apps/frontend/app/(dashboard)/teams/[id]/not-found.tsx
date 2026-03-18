@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { Users, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 팀 상세 Not Found 페이지
  */
 export default function TeamNotFound() {
   return (
-    <div className="container mx-auto py-6">
+    <div className={getPageContainerClasses('list', '')}>
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
         <div className="bg-muted rounded-full p-4 mb-4">
           <Users className="h-12 w-12 text-muted-foreground" />

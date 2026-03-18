@@ -17,6 +17,7 @@ import checkoutApi, {
 import { ConditionCheckStep } from '@equipment-management/schemas';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 interface ConditionCheckClientProps {
   checkout: Checkout;
@@ -72,7 +73,7 @@ export default function ConditionCheckClient({
   };
 
   return (
-    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+    <div className={getPageContainerClasses('form')}>
       {/* 헤더 */}
       <div>
         <Button variant="ghost" size="sm" className="mb-2" asChild>

@@ -23,6 +23,7 @@ import {
   SOFTWARE_SEARCH_TOKENS,
   SOFTWARE_EMPTY_STATE_TOKENS,
   getStaggerDelay,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 
 const STATS_ICONS = [
@@ -57,7 +58,7 @@ export default function SoftwareContent() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className={getPageContainerClasses()}>
         <div className="space-y-1">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="h-4 w-72" />
@@ -91,7 +92,7 @@ export default function SoftwareContent() {
   ] as const;
 
   return (
-    <div className="space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className={H.container}>
         <div>

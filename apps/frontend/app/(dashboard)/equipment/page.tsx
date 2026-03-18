@@ -15,6 +15,7 @@ import {
 } from '@/lib/utils/equipment-filter-utils';
 import { getServerAuthSession } from '@/lib/auth/server-session';
 import { buildRoleBasedRedirectUrl } from '@/lib/utils/role-filter-utils';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 // Next.js 16 PageProps 타입 정의
 type PageProps = {
@@ -40,7 +41,7 @@ type PageProps = {
  */
 export default function EquipmentPage(props: PageProps) {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* Static Shell: 페이지 헤더 (Client Component, i18n 사용) */}
       <EquipmentPageHeader />
 

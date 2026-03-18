@@ -35,7 +35,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EquipmentService } from '../equipment/equipment.service';
 import { CheckoutsService } from '../checkouts/checkouts.service';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
-import { addMonths } from 'date-fns';
+import { calculateNextCalibrationDate } from '../../common/utils';
 import {
   isRentalImport,
   getReturnDestination,
@@ -427,17 +427,18 @@ export class EquipmentImportsService extends VersionedBaseService {
       equipmentImport.classification as Classification
     );
 
-    // 다음 교정일 자동 계산
+    // 다음 교정일 자동 계산 — SSOT 유틸리티 사용
     let nextCalibrationDate: Date | null = null;
     if (
       dto.calibrationInfo?.calibrationMethod === 'external_calibration' &&
       dto.calibrationInfo.calibrationCycle &&
       dto.calibrationInfo.lastCalibrationDate
     ) {
-      nextCalibrationDate = addMonths(
-        new Date(dto.calibrationInfo.lastCalibrationDate),
-        dto.calibrationInfo.calibrationCycle
-      );
+      nextCalibrationDate =
+        calculateNextCalibrationDate(
+          dto.calibrationInfo.lastCalibrationDate,
+          dto.calibrationInfo.calibrationCycle
+        ) ?? null;
     }
 
     // sourceType 기반 동적 필드 결정

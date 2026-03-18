@@ -48,6 +48,7 @@ import {
   CHECKOUT_INTERACTION_TOKENS,
   CONDITION_COMPARISON_TOKENS,
   CHECKOUT_PURPOSE_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import {
   CheckoutStatus,
@@ -360,7 +361,7 @@ export default function CheckoutDetailClient({
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className="flex justify-between items-start">
         <div>

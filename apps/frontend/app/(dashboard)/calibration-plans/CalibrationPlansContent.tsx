@@ -51,6 +51,7 @@ import {
   CALIBRATION_PLAN_LIST_TOKENS,
   CALIBRATION_PLAN_FILTER_TOKENS,
   CALIBRATION_PLAN_STATUS_BADGE_COLORS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
@@ -174,7 +175,7 @@ export default function CalibrationPlansContent({
   ];
 
   return (
-    <div className="container mx-auto py-6 space-y-4">
+    <div className={getPageContainerClasses('list', 'space-y-4')}>
       {/* ── 헤더 ──────────────────────────────────────────────── */}
       <div className={CALIBRATION_PLAN_HEADER_TOKENS.container}>
         <div>

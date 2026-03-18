@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getTranslations } from 'next-intl/server';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * Next.js 16 PageProps 타입
@@ -27,7 +28,7 @@ type PageProps = {
  */
 export default function EditTeamPage(props: PageProps) {
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-2xl">
+    <div className={getPageContainerClasses('form')}>
       <Suspense fallback={<EditTeamPageSkeleton />}>
         <EditTeamContentAsync paramsPromise={props.params} />
       </Suspense>

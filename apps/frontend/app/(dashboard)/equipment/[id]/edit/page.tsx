@@ -6,6 +6,7 @@ import * as equipmentApiServer from '@/lib/api/equipment-api-server';
 import { isNotFoundError } from '@/lib/api/error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * React.cache()로 같은 render pass에서 중복 호출 방지
@@ -78,7 +79,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
  */
 function EditEquipmentSkeleton() {
   return (
-    <div className="container mx-auto py-6 max-w-4xl space-y-6">
+    <div className={getPageContainerClasses('detail')}>
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64" />

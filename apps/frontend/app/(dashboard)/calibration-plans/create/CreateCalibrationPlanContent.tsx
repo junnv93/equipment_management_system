@@ -36,7 +36,11 @@ import { useTranslations } from 'next-intl';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TEAM_RESTRICTED_ROLES } from '@equipment-management/shared-constants';
 import type { UserRole, Site } from '@equipment-management/schemas';
-import { CALIBRATION_PLAN_CREATE_TOKENS, NUMERIC_TOKENS } from '@/lib/design-tokens';
+import {
+  CALIBRATION_PLAN_CREATE_TOKENS,
+  NUMERIC_TOKENS,
+  getPageContainerClasses,
+} from '@/lib/design-tokens';
 
 export default function CreateCalibrationPlanContent() {
   const router = useRouter();
@@ -144,7 +148,7 @@ export default function CreateCalibrationPlanContent() {
   const yearOptions = Array.from({ length: 3 }, (_, i) => currentYear + i);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <div className={CALIBRATION_PLAN_CREATE_TOKENS.header.container}>
         <Button variant="ghost" size="icon" asChild>
           <Link href="/calibration-plans">

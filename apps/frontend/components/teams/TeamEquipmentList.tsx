@@ -164,7 +164,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
 
                     return (
                       <tr
-                        key={item.uuid || item.id}
+                        key={item.id}
                         className={cn(
                           `border-b last:border-0 hover:bg-muted/30 ${TRANSITION_PRESETS.fastColor}`,
                           'animate-in fade-in fill-mode-forwards'
@@ -177,7 +177,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                         <td className="p-4">
                           <div>
                             <Link
-                              href={`/equipment/${item.uuid || item.id}`}
+                              href={`/equipment/${item.id}`}
                               className="font-medium hover:underline"
                             >
                               {item.name}
@@ -205,9 +205,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                         </td>
                         <td className="p-4 text-right">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/equipment/${item.uuid || item.id}`}>
-                              {t('viewDetailShort')}
-                            </Link>
+                            <Link href={`/equipment/${item.id}`}>{t('viewDetailShort')}</Link>
                           </Button>
                         </td>
                       </tr>

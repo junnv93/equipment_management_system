@@ -22,7 +22,7 @@ import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import equipmentApi, { Equipment } from '@/lib/api/equipment-api';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import calibrationApi, { CreateCalibrationDto, Calibration } from '@/lib/api/calibration-api';
-import { format } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { type UserRole, UserRoleValues as URVal } from '@equipment-management/schemas';
@@ -30,6 +30,7 @@ import {
   getEquipmentSelectionClasses,
   CALIBRATION_SELECTION,
   CALIBRATION_EMPTY_STATE,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 
 export function CalibrationRegisterContent() {
@@ -95,16 +96,22 @@ export function CalibrationRegisterContent() {
         updateFormData('calibrationCycle', selectedEquipment.calibrationCycle);
       }
 
-      const date = new Date(formData.calibrationDate);
-      date.setMonth(date.getMonth() + formData.calibrationCycle);
-      updateFormData('nextCalibrationDate', format(date, 'yyyy-MM-dd'));
+      updateFormData(
+        'nextCalibrationDate',
+        format(
+          addMonths(new Date(formData.calibrationDate), formData.calibrationCycle),
+          'yyyy-MM-dd'
+        )
+      );
 
       // 중간점검일 자동 계산 (교정 주기의 절반)
-      const intermediateDate = new Date(formData.calibrationDate);
-      intermediateDate.setMonth(
-        intermediateDate.getMonth() + Math.floor(formData.calibrationCycle / 2)
+      updateFormData(
+        'intermediateCheckDate',
+        format(
+          addMonths(new Date(formData.calibrationDate), Math.floor(formData.calibrationCycle / 2)),
+          'yyyy-MM-dd'
+        )
       );
-      updateFormData('intermediateCheckDate', format(intermediateDate, 'yyyy-MM-dd'));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 장비 선택 시에만 초기값 설정, formData 변경 시 재실행 방지
   }, [selectedEquipmentId, selectedEquipment]);
@@ -123,16 +130,19 @@ export function CalibrationRegisterContent() {
     updateFormData('calibrationDate', newCalibrationDate);
 
     if (formData.calibrationCycle) {
-      const date = new Date(newCalibrationDate);
-      date.setMonth(date.getMonth() + formData.calibrationCycle);
-      updateFormData('nextCalibrationDate', format(date, 'yyyy-MM-dd'));
+      updateFormData(
+        'nextCalibrationDate',
+        format(addMonths(new Date(newCalibrationDate), formData.calibrationCycle), 'yyyy-MM-dd')
+      );
 
       // 중간점검일 자동 계산
-      const intermediateDate = new Date(newCalibrationDate);
-      intermediateDate.setMonth(
-        intermediateDate.getMonth() + Math.floor(formData.calibrationCycle / 2)
+      updateFormData(
+        'intermediateCheckDate',
+        format(
+          addMonths(new Date(newCalibrationDate), Math.floor(formData.calibrationCycle / 2)),
+          'yyyy-MM-dd'
+        )
       );
-      updateFormData('intermediateCheckDate', format(intermediateDate, 'yyyy-MM-dd'));
     }
   };
 
@@ -142,14 +152,16 @@ export function CalibrationRegisterContent() {
     updateFormData('calibrationCycle', cycle);
 
     if (formData.calibrationDate) {
-      const date = new Date(formData.calibrationDate);
-      date.setMonth(date.getMonth() + cycle);
-      updateFormData('nextCalibrationDate', format(date, 'yyyy-MM-dd'));
+      updateFormData(
+        'nextCalibrationDate',
+        format(addMonths(new Date(formData.calibrationDate), cycle), 'yyyy-MM-dd')
+      );
 
       // 중간점검일 자동 계산
-      const intermediateDate = new Date(formData.calibrationDate);
-      intermediateDate.setMonth(intermediateDate.getMonth() + Math.floor(cycle / 2));
-      updateFormData('intermediateCheckDate', format(intermediateDate, 'yyyy-MM-dd'));
+      updateFormData(
+        'intermediateCheckDate',
+        format(addMonths(new Date(formData.calibrationDate), Math.floor(cycle / 2)), 'yyyy-MM-dd')
+      );
     }
   };
 
@@ -231,7 +243,7 @@ export function CalibrationRegisterContent() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 상단 헤더 */}
       <div className="flex items-center">
         <Button variant="outline" size="icon" onClick={() => router.back()}>

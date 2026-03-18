@@ -2,13 +2,14 @@
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 반출 상세 페이지 로딩 스켈레톤
  */
 export function CheckoutDetailSkeleton() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className="flex justify-between items-center">
         <div className="space-y-2">

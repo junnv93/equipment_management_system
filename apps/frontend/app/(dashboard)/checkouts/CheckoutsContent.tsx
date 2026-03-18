@@ -59,6 +59,7 @@ import {
   CHECKOUT_PURPOSE_LEGEND_TOKENS,
   CHECKOUT_FILTER_BAR_TOKENS,
   CHECKOUT_TAB_BADGE_TOKENS,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
@@ -206,7 +207,7 @@ export default function CheckoutsContent({
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className={getPageContainerClasses('list', '')}>
       {/* ── 헤더 ── */}
       <div className="flex justify-between items-center mb-5">
         <div>
