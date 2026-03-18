@@ -332,6 +332,7 @@
   },
   "register": {
     "title": "교정 정보 등록",
+    "subtitle": "장비의 교정 결과를 등록합니다",
     "unauthorized": {
       "title": "교정 등록 권한 없음",
       "description": "UL-QP-18 절차서에 따라 시험실무자(test_engineer)만 교정 기록을 등록할 수 있습니다.",

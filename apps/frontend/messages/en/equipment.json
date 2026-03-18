@@ -1339,5 +1339,13 @@
     "count": "{count}",
     "lastDate": "Last: {date}",
     "navigateTo": "Navigate to {label} tab"
+  },
+  "notFound": {
+    "title": "Equipment not found",
+    "description": "The requested equipment does not exist or has been deleted.\nPlease check the equipment ID.",
+    "backToList": "Equipment list",
+    "backToHome": "Go to home",
+    "helpTitle": "Looking for specific equipment?",
+    "helpDescription": "Search from the equipment list or look up by management number."
   }
 }

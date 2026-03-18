@@ -69,7 +69,9 @@
     "groupCount": "{count} events",
     "diffArrow": "→",
     "systemActor": "System",
-    "dangerLabel": "Warning"
+    "dangerLabel": "Warning",
+    "loading": "Loading data...",
+    "diffSummary": "{field} changed: {from} → {to}"
   },
   "summary": {
     "totalSub": "All logs",

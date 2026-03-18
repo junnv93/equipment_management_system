@@ -1,6 +1,18 @@
 {
   "title": "Team Management",
   "subtitle": "Manage team members and assigned equipment",
+  "pageDescription": "Manage laboratory teams and view member and equipment status",
+  "create": {
+    "title": "Create Team",
+    "description": "Register a new team",
+    "backToList": "Back to team list"
+  },
+  "notFound": {
+    "title": "Team not found",
+    "description": "The requested team does not exist or has been deleted.",
+    "descriptionDetail": "The requested team does not exist or has been deleted. Please check the team ID.",
+    "backToList": "Back to team list"
+  },
   "toasts": {
     "createSuccess": "Team created.",
     "createError": "An error occurred while creating the team.",
@@ -48,6 +60,16 @@
     "noTeamMembers": "No active members in this team. Try a different search term."
   },
   "deleteModal": {
+    "title": "Delete Team",
+    "confirm": "Delete",
+    "deleting": "Deleting...",
+    "cancel": "Cancel",
+    "confirmMessage": "Are you sure you want to delete <bold>{name}</bold>?",
+    "relatedDataWarning": "This team has related data:",
+    "relatedMembers": "{count} members",
+    "relatedEquipment": "{count} equipment",
+    "relatedDataHint": "Please reassign members and equipment before deleting.",
+    "irreversible": "This action cannot be undone.",
     "successTitle": "Team deleted",
     "successDesc": "{name} has been successfully deleted.",
     "errorTitle": "Team deletion failed"
@@ -170,6 +192,14 @@
       "clearFilters": "Clear Filters",
       "addTeam": "Add Team"
     }
+  },
+  "card": {
+    "kpiMembers": "Members",
+    "kpiEquipment": "Equipment",
+    "kpiLeader": "Leader",
+    "leaderAssigned": "Assigned",
+    "leaderNotAssigned": "No Leader",
+    "kpiAriaLabel": "Team status"
   },
   "avatars": {
     "memberPlaceholder": "Member {index}",

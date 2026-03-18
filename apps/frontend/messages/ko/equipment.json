@@ -1339,5 +1339,13 @@
     "count": "{count}건",
     "lastDate": "최근: {date}",
     "navigateTo": "{label} 탭으로 이동"
+  },
+  "notFound": {
+    "title": "장비를 찾을 수 없습니다",
+    "description": "요청하신 장비가 존재하지 않거나 삭제되었습니다.\n장비 ID를 다시 확인해주세요.",
+    "backToList": "장비 목록으로",
+    "backToHome": "홈으로 이동",
+    "helpTitle": "찾으시는 장비가 있으신가요?",
+    "helpDescription": "장비 목록에서 검색하거나, 관리번호로 직접 찾아보세요."
   }
 }

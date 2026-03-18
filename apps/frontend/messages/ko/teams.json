@@ -1,6 +1,18 @@
 {
   "title": "팀 관리",
   "subtitle": "팀 구성원 및 담당 장비 관리",
+  "pageDescription": "시험소 팀을 관리하고 팀원 및 장비 현황을 확인합니다",
+  "create": {
+    "title": "팀 등록",
+    "description": "새로운 팀을 등록합니다",
+    "backToList": "팀 목록으로 돌아가기"
+  },
+  "notFound": {
+    "title": "팀을 찾을 수 없습니다",
+    "description": "요청하신 팀이 존재하지 않거나 삭제되었을 수 있습니다.",
+    "descriptionDetail": "요청하신 팀이 존재하지 않거나 삭제되었을 수 있습니다. 팀 ID를 확인해주세요.",
+    "backToList": "팀 목록으로 돌아가기"
+  },
   "toasts": {
     "createSuccess": "팀이 생성되었습니다.",
     "createError": "팀 생성 중 오류가 발생했습니다.",
@@ -48,6 +60,16 @@
     "noTeamMembers": "팀에 활성 멤버가 없습니다. 검색어를 변경하세요."
   },
   "deleteModal": {
+    "title": "팀 삭제",
+    "confirm": "삭제",
+    "deleting": "삭제 중...",
+    "cancel": "취소",
+    "confirmMessage": "<bold>{name}</bold> 팀을 삭제하시겠습니까?",
+    "relatedDataWarning": "연관된 데이터가 있습니다:",
+    "relatedMembers": "팀원 {count}명",
+    "relatedEquipment": "장비 {count}개",
+    "relatedDataHint": "삭제 전 팀원과 장비를 다른 팀으로 이동해주세요.",
+    "irreversible": "이 작업은 되돌릴 수 없습니다.",
     "successTitle": "팀이 삭제되었습니다",
     "successDesc": "{name} 팀이 성공적으로 삭제되었습니다.",
     "errorTitle": "팀 삭제 실패"
@@ -170,6 +192,14 @@
       "clearFilters": "필터 초기화",
       "addTeam": "팀 추가"
     }
+  },
+  "card": {
+    "kpiMembers": "팀원",
+    "kpiEquipment": "장비",
+    "kpiLeader": "팀장",
+    "leaderAssigned": "지정됨",
+    "leaderNotAssigned": "팀장 미지정",
+    "kpiAriaLabel": "팀 현황"
   },
   "avatars": {
     "memberPlaceholder": "팀원 {index}",

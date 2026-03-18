@@ -121,6 +121,7 @@
   },
   "alerts": {
     "title": "Notification Center",
+    "subtitle": "View and manage system notifications",
     "markAllRead": "Mark All as Read",
     "searchPlaceholder": "Search notifications...",
     "tabs": {

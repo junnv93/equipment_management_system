@@ -103,6 +103,7 @@
   },
   "alerts": {
     "title": "알림 센터",
+    "subtitle": "시스템 알림을 확인하고 관리합니다",
     "markAllRead": "모두 읽음 표시",
     "searchPlaceholder": "알림 검색...",
     "tabs": {

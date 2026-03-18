@@ -69,7 +69,9 @@
     "groupCount": "{count}건",
     "diffArrow": "→",
     "systemActor": "시스템",
-    "dangerLabel": "주의"
+    "dangerLabel": "주의",
+    "loading": "데이터를 불러오는 중...",
+    "diffSummary": "{field} 변경: {from} → {to}"
   },
   "summary": {
     "totalSub": "전체 로그",

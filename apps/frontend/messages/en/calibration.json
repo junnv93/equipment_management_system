@@ -332,6 +332,7 @@
   },
   "register": {
     "title": "Register Calibration",
+    "subtitle": "Register equipment calibration results",
     "unauthorized": {
       "title": "No Registration Permission",
       "description": "Per UL-QP-18 procedures, only test engineers can register calibration records.",
