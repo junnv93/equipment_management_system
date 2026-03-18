@@ -223,6 +223,10 @@ export const ANIMATION_PRESETS = {
 
   /** 스핀 (로딩) */
   spin: 'motion-safe:animate-spin',
+
+  /** 다이얼로그 진입 (zoom + fade) */
+  dialogEnter:
+    'motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:fade-in motion-safe:duration-200',
 } as const;
 
 /**

@@ -53,7 +53,11 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/lib/design-tokens/components/non-conformance.ts`                                    | Layer 3 Non-Conformance 토큰                               |
 | `apps/frontend/lib/design-tokens/components/settings.ts`                                           | Layer 3 Settings 토큰                                      |
 | `apps/frontend/lib/design-tokens/components/team.ts`                                               | Layer 3 Team 토큰                                          |
-| `apps/frontend/lib/design-tokens/components/page-layout.ts`                                        | Layer 3 Page Layout 토큰 (페이지 컨테이너 SSOT)            |
+| `apps/frontend/lib/design-tokens/components/page-layout.ts`                                        | Layer 3 Page Layout 토큰 (페이지 컨테이너 + 헤더 SSOT)     |
+| `apps/frontend/lib/design-tokens/components/reports.ts`                                            | Layer 3 Reports 토큰                                       |
+| `apps/frontend/lib/design-tokens/components/software.ts`                                           | Layer 3 Software 토큰                                      |
+| `apps/frontend/lib/design-tokens/components/calibration-factors.ts`                                | Layer 3 Calibration Factors 토큰                           |
+| `apps/frontend/components/shared/PageHeader.tsx`                                                   | 공유 PageHeader 컴포넌트 (PAGE_HEADER_TOKENS SSOT 사용)    |
 | `apps/frontend/styles/globals.css`                                                                 | Brand CSS 변수 정의 (--brand-color-\*)                     |
 | `apps/frontend/tailwind.config.js`                                                                 | Tailwind brand 팔레트 확장 설정                            |
 | `apps/frontend/lib/utils/calibration-status.ts`                                                    | 교정 상태 유틸리티 (design-tokens 사용)                    |
@@ -506,6 +510,77 @@ grep -rn "getUrgencyFeedbackClasses" apps/frontend/components --include="*.tsx" 
 
 **설계 철학:** "긴급함"은 사용자 피로도를 유발 → pulse는 신중하게 사용 (Architecture v3).
 
+### Step 8: 페이지 헤더 타이포그래피 SSOT
+
+페이지 제목(`h1`)이 `PAGE_HEADER_TOKENS.title` 또는 `SUB_PAGE_HEADER_TOKENS.title`을 사용하는지 확인합니다. 하드코딩된 `text-2xl font-bold` / `text-3xl font-bold` 등을 탐지합니다.
+
+#### Sub-step 8a: h1 하드코딩 탐지
+
+```bash
+# h1에 하드코딩된 타이포그래피 클래스 탐지 (not-found, error 페이지 면제)
+grep -rn '<h1 className="text-' apps/frontend/app --include="*.tsx" \
+  | grep -v "not-found\|error\|components/ui/"
+```
+
+**PASS 기준:** 0개 결과 (모든 h1이 토큰 사용).
+
+**FAIL 기준:** 하드코딩된 h1 발견 시 다음으로 변경 필요:
+
+```tsx
+// ❌ WRONG — 하드코딩
+<h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+
+// ✅ CORRECT — 리스트 페이지
+<h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+
+// ✅ CORRECT — 서브 페이지 (생성/편집/상세)
+<h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+```
+
+#### Sub-step 8b: 부제목 하드코딩 탐지
+
+```bash
+# 페이지 헤더 부제목에 하드코딩된 text-muted-foreground 탐지 (h1 근처)
+grep -rn 'className="text-muted-foreground' apps/frontend/app --include="*.tsx" \
+  | grep -v "not-found\|error\|components/ui/"
+```
+
+**PASS 기준:** 0개 결과 (모든 부제목이 토큰의 subtitle 속성 사용).
+
+**FAIL 기준:** `text-muted-foreground` 하드코딩 시 `PAGE_HEADER_TOKENS.subtitle` 또는 `SUB_PAGE_HEADER_TOKENS.subtitle` 사용.
+
+#### Sub-step 8c: 페이지 제목 아이콘 일관성
+
+```bash
+# h1 태그 안에 lucide 아이콘 컴포넌트가 포함된 경우 탐지 (설정 페이지 면제)
+grep -B2 -A2 'className={.*HEADER_TOKENS.title}' apps/frontend/app --include="*.tsx" -rn \
+  | grep -E "Icon|Shield|Bell|Clipboard|Calendar|AlertTriangle" \
+  | grep -v "settings\|titleIcon"
+```
+
+**PASS 기준:** 0개 결과 (페이지 제목에 아이콘 미포함 — 사이드바 네비에서 이미 표현).
+
+**면제:** `SETTINGS_PAGE_HEADER_TOKENS`를 사용하는 설정 페이지는 독립 디자인 토큰을 가지므로 예외.
+
+#### Sub-step 8d: Layer 3 헤더 토큰 SSOT 참조
+
+```bash
+# 모듈별 *_HEADER_TOKENS가 PAGE_HEADER_TOKENS를 spread하는지 확인
+for f in apps/frontend/lib/design-tokens/components/{audit,non-conformance,calibration-plans,equipment,notification,reports,software,calibration-factors}.ts; do
+  if grep -q "HEADER_TOKENS" "$f"; then
+    if grep -q "\.\.\.PAGE_HEADER_TOKENS" "$f"; then
+      echo "OK: $f"
+    else
+      echo "MISSING SPREAD: $f (PAGE_HEADER_TOKENS spread 없음)"
+    fi
+  fi
+done
+```
+
+**PASS 기준:** 모든 모듈별 헤더 토큰이 `...PAGE_HEADER_TOKENS`를 spread.
+
+**FAIL 기준:** 독립적으로 title/subtitle를 하드코딩하는 모듈 발견 시 `...PAGE_HEADER_TOKENS` spread로 변경.
+
 ## Output Format
 
 ```markdown
@@ -520,6 +595,10 @@ grep -rn "getUrgencyFeedbackClasses" apps/frontend/components --include="*.tsx" 
 | 6b  | getTransitionClasses 속성 지정 | PASS/FAIL | properties 미지정 호출 위치    |
 | 6c  | 컴포넌트 하드코딩 트랜지션     | PASS/FAIL | TRANSITION_PRESETS 미사용 위치 |
 | 7   | Architecture v3 패턴           | PASS/INFO | Deprecated 패턴, Urgency 함수  |
+| 8a  | h1 하드코딩 탐지               | PASS/FAIL | 토큰 미사용 h1 위치            |
+| 8b  | 부제목 하드코딩 탐지           | PASS/FAIL | text-muted-foreground 하드코딩 |
+| 8c  | 페이지 제목 아이콘 일관성      | PASS/FAIL | h1 내 아이콘 포함 페이지       |
+| 8d  | 헤더 토큰 SSOT 참조            | PASS/FAIL | spread 누락 모듈               |
 ```
 
 ## Exceptions
@@ -534,3 +613,6 @@ grep -rn "getUrgencyFeedbackClasses" apps/frontend/components --include="*.tsx" 
 6. **ANIMATION_PRESETS / TRANSITION_PRESETS import** — `motion.ts`에 정의된 애니메이션/트랜지션 프리셋은 Layer 3에서 직접 import 허용 (Layer 2 SSOT)
 7. **notification.ts의 NOTIFICATION_BADGE_VARIANTS** — deprecated 마킹되었지만 호환성을 위해 export 유지. 컴포넌트에서 직접 사용 금지 (Architecture v3 → getCountBasedUrgency + getUrgencyFeedbackClasses 사용)
 8. **calibration-status.ts** — 교정 D-day 계산 유틸리티로 CALIBRATION_BADGE_TOKENS를 import. 3개 컴포넌트(EquipmentHeader, EquipmentCardGrid, EquipmentTable)의 중복 로직 통합 SSOT
+9. **not-found.tsx / error.tsx** — 에러/404 페이지의 h1은 페이지 헤더 토큰 대상이 아님 (비정상 상태 표시, 독립 디자인)
+10. **SETTINGS_PAGE_HEADER_TOKENS** — 설정 페이지는 아이콘+border-b 포함 독립 헤더 디자인. PAGE_HEADER_TOKENS spread 대상 아님
+11. **`page-layout.ts`의 Layer 3 내부 import** — `PAGE_HEADER_TOKENS`/`SUB_PAGE_HEADER_TOKENS`는 다른 Layer 3 파일에서 import 허용 (cross-component SSOT 참조)

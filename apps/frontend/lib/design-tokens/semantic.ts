@@ -270,6 +270,43 @@ export const FOCUS_TOKENS = {
 } as const;
 
 /**
+ * Refetch Overlay Tokens (데이터 갱신 피드백)
+ *
+ * TanStack Query의 isRefetching 상태에서 콘텐츠 영역에
+ * 반투명 오버레이 + 스피너를 표시하는 공통 패턴.
+ *
+ * 사용처: 필터 전환, 페이지네이션 등 서버 재요청 시 시각적 피드백.
+ * Layer 2에 위치하여 모든 리스트 페이지에서 재사용 가능.
+ *
+ * @example
+ * ```tsx
+ * <div className={REFETCH_OVERLAY_TOKENS.wrapper}>
+ *   {isRefetching && (
+ *     <div className={REFETCH_OVERLAY_TOKENS.spinnerOverlay}>
+ *       <Loader2 className={REFETCH_OVERLAY_TOKENS.spinner} />
+ *     </div>
+ *   )}
+ *   <div className={cn(contentClass, isRefetching && REFETCH_OVERLAY_TOKENS.contentRefetching)}>
+ *     ...
+ *   </div>
+ * </div>
+ * ```
+ */
+export const REFETCH_OVERLAY_TOKENS = {
+  /** 상대 위치 래퍼 (스피너 절대 위치의 기준점) */
+  wrapper: 'relative',
+
+  /** 콘텐츠 영역 — refetch 시 반투명 + 포인터 차단 */
+  contentRefetching: 'opacity-40 pointer-events-none',
+
+  /** 스피너 오버레이 (absolute center) */
+  spinnerOverlay: 'absolute inset-0 flex items-center justify-center z-10',
+
+  /** 스피너 아이콘 */
+  spinner: 'h-5 w-5 text-brand-text-muted motion-safe:animate-spin',
+} as const;
+
+/**
  * Type Exports - 컴포넌트에서 타입 안전하게 사용
  */
 export type InteractiveSize = keyof typeof INTERACTIVE_TOKENS.size;

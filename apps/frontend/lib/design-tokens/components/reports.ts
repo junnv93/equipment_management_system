@@ -15,14 +15,15 @@
 
 import { TRANSITION_PRESETS } from '../motion';
 import { getSemanticContainerColorClasses, getSemanticContainerTextClasses } from '../brand';
+import { PAGE_HEADER_TOKENS } from './page-layout';
 
 /**
- * 페이지 헤더
+ * 페이지 헤더 — PAGE_HEADER_TOKENS 기반
  */
 export const REPORTS_HEADER_TOKENS = {
-  container: 'flex items-center justify-between mb-6',
-  title: 'text-2xl font-bold tracking-tight text-foreground',
-  subtitle: 'text-muted-foreground',
+  ...PAGE_HEADER_TOKENS,
+  /** 리포트 전용: 하단 여백 포함 */
+  container: `${PAGE_HEADER_TOKENS.container} mb-6`,
 } as const;
 
 /**

@@ -30,6 +30,7 @@ import {
 import { TRANSITION_PRESETS } from '../motion';
 import { FOCUS_TOKENS } from '../semantic';
 import type { NonConformanceStatus } from '@equipment-management/schemas';
+import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
 
 // ============================================================================
 // 0. NC_STATUS_SEMANTIC — 상태 → 시멘틱 매핑 (SSOT)
@@ -101,33 +102,26 @@ export const NC_APPROVE_BUTTON_TOKENS = {
 // ============================================================================
 
 /**
- * 리스트/상세 페이지 헤더
+ * 리스트 페이지 헤더 — PAGE_HEADER_TOKENS 기반
  */
 export const NC_HEADER_TOKENS = {
-  /** 리스트 페이지 컨테이너 */
-  container: 'flex items-start justify-between gap-4',
-  /** 제목 */
-  title: 'text-2xl font-bold tracking-tight text-foreground',
-  /** 부제목 */
-  subtitle: 'text-sm text-muted-foreground mt-1',
-  /** 액션 그룹 */
-  actionsGroup: 'flex items-center gap-2 flex-shrink-0',
+  ...PAGE_HEADER_TOKENS,
 } as const;
 
 /**
- * 상세 페이지 헤더 (CALIBRATION_PLAN_DETAIL_HEADER_TOKENS 대칭)
+ * 상세 페이지 헤더 — SUB_PAGE_HEADER_TOKENS 기반 확장
  */
 export const NC_DETAIL_HEADER_TOKENS = {
-  /** 컨테이너: 좌-타이틀 | 우-액션 */
+  /** 컨테이너: 좌-타이틀 | 우-액션 (반응형) */
   container: 'flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4',
   /** 타이틀 영역 (뒤로가기 + 제목 + 배지) */
-  titleArea: 'flex items-center gap-3',
+  titleArea: SUB_PAGE_HEADER_TOKENS.container,
   /** 제목 */
-  title: 'text-xl font-bold tracking-tight',
+  title: SUB_PAGE_HEADER_TOKENS.title,
   /** 메타 정보 (장비 링크, 발견일, 경과일) */
-  meta: 'text-sm text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1',
+  meta: `${SUB_PAGE_HEADER_TOKENS.subtitle} mt-1 flex flex-wrap items-center gap-x-2 gap-y-1`,
   /** 액션 그룹 */
-  actionsGroup: 'flex items-center gap-2 flex-shrink-0',
+  actionsGroup: PAGE_HEADER_TOKENS.actionsGroup,
 } as const;
 
 // ============================================================================

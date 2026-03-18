@@ -47,6 +47,26 @@ export function getSettingsCardClasses(): string {
 }
 
 // ============================================================================
+// Settings Card Danger Variant
+// ============================================================================
+
+/**
+ * 위험 설정 카드 변형 토큰
+ * - 시스템 설정 등 위험도 높은 카드에 사용
+ * - SSOT: SETTINGS_CARD_CONTAINER_TOKENS를 합성 + 좌측 경고 보더만 추가
+ */
+export const SETTINGS_CARD_DANGER_TOKENS = {
+  dangerBorder: 'border-l-4 border-l-warning',
+} as const;
+
+/**
+ * 위험 카드 클래스: 기본 카드 + 좌측 경고 보더
+ */
+export function getSettingsCardDangerClasses(): string {
+  return `${getSettingsCardClasses()} ${SETTINGS_CARD_DANGER_TOKENS.dangerBorder}`;
+}
+
+// ============================================================================
 // Settings Card Header
 // ============================================================================
 
@@ -211,8 +231,7 @@ export function getSettingsSelectTriggerClasses(): string {
  * - Display, System, Calibration 페이지의 하단 저장 영역
  */
 export const SETTINGS_SUBMIT_TOKENS = {
-  section:
-    'flex items-center justify-between pt-4 pb-1 -mx-6 px-6 -mb-6 mt-2 border-t border-border/50 bg-muted/50 rounded-b-lg',
+  footer: 'flex items-center justify-between border-t border-border/50 bg-muted/50 rounded-b-lg',
   note: 'text-xs text-muted-foreground',
   button: {
     base: 'min-w-[120px]',
@@ -279,6 +298,7 @@ export const SETTINGS_SPACING_TOKENS = {
   cardContent: 'space-y-6', // 카드 내부 섹션 간격 (24px)
   formFields: 'space-y-8', // 폼 필드 간격 (32px)
   chipGroup: 'flex flex-wrap gap-2', // chip 그룹 간격 (8px)
+  pageContent: 'space-y-6', // settings 콘텐츠 페이지 최상위 간격
 } as const;
 
 // ============================================================================
@@ -305,7 +325,10 @@ export const SETTINGS_TEXT_TOKENS = {
  */
 export const SETTINGS_PAGE_HEADER_TOKENS = {
   container: 'mb-6 pb-5 border-b border-border',
-  title: 'text-xl font-semibold tracking-tight text-foreground',
+  layout: 'flex items-center gap-3',
+  iconWrapper: 'flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0',
+  icon: 'h-5 w-5 text-primary',
+  title: 'text-2xl font-semibold tracking-tight text-foreground',
   description: 'text-sm text-muted-foreground mt-1',
 } as const;
 
@@ -391,7 +414,27 @@ export const SETTINGS_PERMISSIONS_CARD_TOKENS = {
   badge: 'text-[11px] font-medium bg-primary/8 text-primary border-primary/15',
   readOnlyBadge: 'text-[10px] font-medium',
   totalCount: 'text-xs text-muted-foreground pt-3 border-t border-border/40',
+
+  trigger: {
+    base: 'flex w-full items-center justify-between px-5 py-4 text-left',
+    hover: 'hover:bg-accent/30',
+    transition: TRANSITION_PRESETS.fastBg,
+  },
+  triggerLabel: 'flex items-center gap-2',
+  triggerCount: 'text-xs text-muted-foreground font-mono',
+  chevron: {
+    base: 'h-4 w-4 text-muted-foreground flex-shrink-0',
+    transition: TRANSITION_PRESETS.fastTransformOpacity,
+  },
 } as const;
+
+export function getSettingsPermissionsTriggerClasses(): string {
+  return [
+    SETTINGS_PERMISSIONS_CARD_TOKENS.trigger.base,
+    SETTINGS_PERMISSIONS_CARD_TOKENS.trigger.hover,
+    SETTINGS_PERMISSIONS_CARD_TOKENS.trigger.transition,
+  ].join(' ');
+}
 
 // ============================================================================
 // Settings Navigation (Sidebar)
@@ -403,14 +446,15 @@ export const SETTINGS_PERMISSIONS_CARD_TOKENS = {
  * - Active/Inactive 상태 분기
  */
 export const SETTINGS_NAV_TOKENS = {
-  container: 'lg:w-64 flex-shrink-0',
+  container: 'hidden lg:block lg:w-64 flex-shrink-0',
   stickyWrapper: 'sticky top-6',
 
   sectionLabel:
     'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5',
   adminSeparator: 'mt-4 mb-1.5',
   adminSectionLabel:
-    'text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5 pt-3 border-t border-border',
+    'flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pb-1.5 pt-3 border-t border-border',
+  adminIcon: 'h-3 w-3',
   adminHelp: 'mt-4 px-3 text-xs text-muted-foreground/60 leading-relaxed',
 
   item: {
@@ -419,6 +463,12 @@ export const SETTINGS_NAV_TOKENS = {
     active: 'border-primary bg-primary/10 text-primary',
     inactive:
       'border-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+  },
+
+  adminItem: {
+    active: 'border-warning bg-warning/10 text-warning-foreground',
+    inactive:
+      'border-transparent text-muted-foreground hover:bg-warning/5 hover:text-warning-foreground',
   },
 
   iconCircle: {
@@ -441,12 +491,16 @@ export const SETTINGS_NAV_TOKENS = {
 /**
  * 네비게이션 아이템 클래스 생성
  */
-export function getSettingsNavItemClasses(isActive: boolean): string {
-  return [
-    SETTINGS_NAV_TOKENS.item.base,
-    SETTINGS_NAV_TOKENS.item.transition,
-    isActive ? SETTINGS_NAV_TOKENS.item.active : SETTINGS_NAV_TOKENS.item.inactive,
-  ].join(' ');
+export function getSettingsNavItemClasses(isActive: boolean, isAdmin?: boolean): string {
+  let stateClass: string;
+  if (isAdmin) {
+    stateClass = isActive
+      ? SETTINGS_NAV_TOKENS.adminItem.active
+      : SETTINGS_NAV_TOKENS.adminItem.inactive;
+  } else {
+    stateClass = isActive ? SETTINGS_NAV_TOKENS.item.active : SETTINGS_NAV_TOKENS.item.inactive;
+  }
+  return [SETTINGS_NAV_TOKENS.item.base, SETTINGS_NAV_TOKENS.item.transition, stateClass].join(' ');
 }
 
 /**
@@ -468,6 +522,47 @@ export function getSettingsNavChevronClasses(isActive: boolean): string {
     SETTINGS_NAV_TOKENS.chevron.base,
     SETTINGS_NAV_TOKENS.chevron.transition,
     isActive ? SETTINGS_NAV_TOKENS.chevron.active : SETTINGS_NAV_TOKENS.chevron.inactive,
+  ].join(' ');
+}
+
+// ============================================================================
+// Settings Mobile Navigation (수평 스크롤 탭)
+// ============================================================================
+
+/**
+ * 모바일 네비게이션 토큰
+ * - lg 미만에서 수평 스크롤 탭으로 표시
+ * - lg 이상에서 숨김 (사이드바 사용)
+ */
+export const SETTINGS_NAV_MOBILE_TOKENS = {
+  container: 'lg:hidden mb-6 border-b border-border',
+  scrollWrapper: 'flex gap-1 overflow-x-auto scrollbar-hide pb-px',
+  item: {
+    base: 'flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-sm font-medium border-b-2 flex-shrink-0',
+    transition: TRANSITION_PRESETS.fastBgColor,
+    active: 'border-primary text-primary',
+    inactive: 'border-transparent text-muted-foreground hover:text-foreground',
+    adminActive: 'border-warning text-warning-foreground',
+    adminInactive: 'border-transparent text-muted-foreground hover:text-warning-foreground',
+  },
+  icon: 'h-4 w-4',
+} as const;
+
+export function getSettingsNavMobileItemClasses(isActive: boolean, isAdmin?: boolean): string {
+  let stateClass: string;
+  if (isAdmin) {
+    stateClass = isActive
+      ? SETTINGS_NAV_MOBILE_TOKENS.item.adminActive
+      : SETTINGS_NAV_MOBILE_TOKENS.item.adminInactive;
+  } else {
+    stateClass = isActive
+      ? SETTINGS_NAV_MOBILE_TOKENS.item.active
+      : SETTINGS_NAV_MOBILE_TOKENS.item.inactive;
+  }
+  return [
+    SETTINGS_NAV_MOBILE_TOKENS.item.base,
+    SETTINGS_NAV_MOBILE_TOKENS.item.transition,
+    stateClass,
   ].join(' ');
 }
 

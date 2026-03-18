@@ -26,6 +26,7 @@ import {
   TRANSITION_PRESETS,
 } from '../index';
 import { getSemanticLeftBorderClasses, getSemanticStatusClasses } from '../brand';
+import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
 
 /**
  * 교정계획서 상태별 스타일
@@ -103,23 +104,18 @@ export const CALIBRATION_PLAN_STATUS_BADGE_COLORS: Record<string, string> = {
 // ============================================================================
 
 /**
- * 교정계획서 목록 페이지 헤더
- *
- * 패턴: AUDIT_HEADER_TOKENS 참조 — 타이틀 + 액션 그룹
+ * 교정계획서 목록 페이지 헤더 — PAGE_HEADER_TOKENS 기반 확장
  */
 export const CALIBRATION_PLAN_HEADER_TOKENS = {
-  /** 전체 컨테이너 */
+  ...PAGE_HEADER_TOKENS,
+  /** 반응형 컨테이너 (모바일 세로 → 데스크톱 가로) */
   container: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3',
-  /** 타이틀 그룹 (아이콘 + 텍스트) */
-  titleGroup: 'flex items-center gap-3',
-  /** 페이지 타이틀 */
-  title: 'text-2xl font-bold tracking-tight flex items-center gap-2',
-  /** 서브타이틀 */
-  subtitle: 'text-sm text-muted-foreground flex items-center gap-1.5',
+  /** 타이틀에 아이콘 결합 시 flex 레이아웃 */
+  title: `${PAGE_HEADER_TOKENS.title} flex items-center gap-2`,
+  /** 서브타이틀에 아이콘 포함 */
+  subtitle: `${PAGE_HEADER_TOKENS.subtitle} flex items-center gap-1.5`,
   /** 스코프 배지 (역할 기반 필터 안내) */
   scopeBadge: 'text-xs text-brand-text-muted bg-muted/60 px-2 py-0.5 rounded-md',
-  /** 액션 그룹 (새 계획서 등) */
-  actionsGroup: 'flex items-center gap-2',
 } as const;
 
 // ============================================================================
@@ -235,17 +231,17 @@ export const CALIBRATION_PLAN_FILTER_TOKENS = {
 // ============================================================================
 
 /**
- * 교정계획서 상세 페이지 헤더
+ * 교정계획서 상세 페이지 헤더 — SUB_PAGE_HEADER_TOKENS 기반 확장
  */
 export const CALIBRATION_PLAN_DETAIL_HEADER_TOKENS = {
-  /** 전체 컨테이너 */
+  /** 반응형 컨테이너: 좌-타이틀 | 우-액션 */
   container: 'flex flex-col sm:flex-row sm:items-start justify-between gap-4',
   /** 제목 영역 (뒤로가기 + 제목 + 배지) */
-  titleArea: 'flex items-center gap-4',
+  titleArea: SUB_PAGE_HEADER_TOKENS.container,
   /** 제목 텍스트 */
-  title: 'text-2xl font-bold tracking-tight',
+  title: SUB_PAGE_HEADER_TOKENS.title,
   /** 메타 정보 (작성자/작성일) */
-  meta: 'text-sm text-muted-foreground',
+  meta: SUB_PAGE_HEADER_TOKENS.subtitle,
   /** 액션 버튼 그룹 */
   actionsGroup: 'flex flex-wrap gap-2',
 } as const;
@@ -931,11 +927,11 @@ export const VERSION_HISTORY_COLLAPSIBLE_TOKENS = {
  * 헤더, 프리뷰 테이블, 폼 액션 영역
  */
 export const CALIBRATION_PLAN_CREATE_TOKENS = {
-  /** 페이지 헤더 (뒤로가기 + 제목) — 상세 헤더 재사용 */
+  /** 페이지 헤더 (뒤로가기 + 제목) — SUB_PAGE_HEADER_TOKENS 기반 */
   header: {
-    container: 'flex items-center gap-4',
-    title: 'text-3xl font-bold tracking-tight',
-    subtitle: 'text-muted-foreground',
+    container: SUB_PAGE_HEADER_TOKENS.container,
+    title: SUB_PAGE_HEADER_TOKENS.title,
+    subtitle: SUB_PAGE_HEADER_TOKENS.subtitle,
   },
   /** 폼 그리드 */
   form: {

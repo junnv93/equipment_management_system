@@ -18,6 +18,21 @@ import {
   getSemanticLeftBorderClasses,
   getSemanticContainerTextClasses,
 } from '../brand';
+import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
+
+// ============================================================================
+// 0. Checkout Header Tokens (페이지 헤더 SSOT)
+// ============================================================================
+
+/** 리스트 페이지 헤더 (반출 관리, 대기 점검) */
+export const CHECKOUT_HEADER_TOKENS = {
+  ...PAGE_HEADER_TOKENS,
+} as const;
+
+/** 서브 페이지 헤더 (반출 생성, 반출 상세, 반입, 상태점검) */
+export const CHECKOUT_SUB_HEADER_TOKENS = {
+  ...SUB_PAGE_HEADER_TOKENS,
+} as const;
 
 // ============================================================================
 // 1. Checkout Status Badge Tokens (13개 상태 스타일 — brand 시멘틱 토큰)

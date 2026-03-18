@@ -17,15 +17,14 @@
 
 import { TRANSITION_PRESETS } from '../motion';
 import { getSemanticStatusClasses } from '../brand';
+import { PAGE_HEADER_TOKENS } from './page-layout';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 페이지 헤더
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CAL_FACTORS_HEADER_TOKENS = {
-  container: 'flex items-center justify-between',
-  title: 'text-3xl font-bold tracking-tight text-foreground',
-  subtitle: 'text-muted-foreground',
+  ...PAGE_HEADER_TOKENS,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────

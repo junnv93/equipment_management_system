@@ -19,6 +19,7 @@
 import { MOTION_TOKENS, ELEVATION_TOKENS } from '../semantic';
 import { getStaggerDelay, ANIMATION_PRESETS, TRANSITION_PRESETS } from '../motion';
 import { getCountBasedUrgency, getUrgencyFeedbackClasses } from '../visual-feedback';
+import { PAGE_HEADER_TOKENS } from './page-layout';
 
 /**
  * 배지 시각적 강조 레벨 (DEPRECATED)
@@ -186,18 +187,21 @@ export const NOTIFICATION_EMPTY_STATE = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * 리스트 페이지 헤더
+ * 리스트 페이지 헤더 — PAGE_HEADER_TOKENS 기반 확장
  */
 export const NOTIFICATION_LIST_HEADER_TOKENS = {
+  ...PAGE_HEADER_TOKENS,
+  /** 알림 전용: 가로 정렬 + 줄바꿈 */
   container: 'flex items-center justify-between flex-wrap gap-4',
   iconWrapper: 'relative',
   icon: 'h-6 w-6 text-primary',
   unreadBadge:
     'absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive flex items-center justify-center',
   unreadBadgeText: 'text-xs text-destructive-foreground tabular-nums font-bold',
+  /** 아이콘 + 타이틀 수평 그룹 */
   titleGroup: 'flex items-center gap-3',
-  title: 'text-2xl font-bold tracking-tight text-foreground',
-  subtitle: 'text-sm text-muted-foreground tabular-nums',
+  /** 건수 표시용 tabular-nums 추가 */
+  subtitle: `${PAGE_HEADER_TOKENS.subtitle} tabular-nums`,
 } as const;
 
 /**

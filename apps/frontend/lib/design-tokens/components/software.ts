@@ -20,15 +20,16 @@ import {
   getSemanticLeftBorderClasses,
   getSemanticContainerColorClasses,
 } from '../brand';
+import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from './page-layout';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 페이지 헤더
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const SOFTWARE_HEADER_TOKENS = {
+  ...PAGE_HEADER_TOKENS,
+  /** 반응형 컨테이너 (모바일 세로 → 데스크톱 가로) */
   container: 'flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between',
-  title: 'text-2xl font-bold tracking-tight text-foreground',
-  subtitle: 'text-sm text-muted-foreground',
   createBtn: [
     'inline-flex items-center gap-2',
     'bg-primary text-primary-foreground',
@@ -174,10 +175,10 @@ export const SOFTWARE_APPROVAL_PAGE_TOKENS = {
   /** 페이지 컨테이너 */
   container: 'container mx-auto py-6 space-y-6',
 
-  /** 페이지 헤더 */
+  /** 페이지 헤더 — PAGE_HEADER_TOKENS 기반 (리스트 페이지) */
   header: {
-    title: 'text-3xl font-bold tracking-tight text-foreground',
-    subtitle: 'text-muted-foreground',
+    title: PAGE_HEADER_TOKENS.title,
+    subtitle: PAGE_HEADER_TOKENS.subtitle,
   },
 
   /** 변경 요청 카드 */
@@ -238,11 +239,11 @@ export const SOFTWARE_HISTORY_PAGE_TOKENS = {
     backIcon: 'h-4 w-4 mr-2',
   },
 
-  /** 헤더 */
+  /** 헤더 — SUB_PAGE_HEADER_TOKENS 기반 (서브 페이지) */
   header: {
     container: 'flex items-center justify-between',
-    title: 'text-3xl font-bold tracking-tight text-foreground',
-    subtitle: 'text-muted-foreground',
+    title: SUB_PAGE_HEADER_TOKENS.title,
+    subtitle: SUB_PAGE_HEADER_TOKENS.subtitle,
   },
 
   /** 현재 소프트웨어 정보 카드 */

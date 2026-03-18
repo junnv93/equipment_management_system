@@ -17,6 +17,7 @@ import {
   getSemanticSolidBgClasses,
   getSemanticContainerTextClasses,
 } from '../brand';
+import { PAGE_HEADER_TOKENS } from './page-layout';
 import {
   CheckCircle,
   Play,
@@ -559,12 +560,12 @@ export const EQUIPMENT_TABLE_TOKENS = {
 // ============================================================================
 
 /**
- * 장비 목록 페이지 헤더 스타일
+ * 장비 목록 페이지 헤더 스타일 — PAGE_HEADER_TOKENS 기반 확장
  */
 export const EQUIPMENT_LIST_HEADER_TOKENS = {
+  ...PAGE_HEADER_TOKENS,
+  /** 반응형 컨테이너 (모바일 세로 → 데스크톱 가로) */
   container: 'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4',
-  title: 'text-2xl lg:text-3xl font-display font-bold tracking-tight text-brand-text-primary',
-  subtitle: 'text-sm text-brand-text-muted mt-1',
 } as const;
 
 /**

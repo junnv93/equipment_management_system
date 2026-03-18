@@ -346,13 +346,16 @@ export const APPROVAL_FOCUS = {
 export const APPROVAL_ROW_GRID_COLS = 'lg:grid-cols-[32px_4px_1fr_140px_100px_80px_auto]' as const;
 
 export const APPROVAL_ROW_TOKENS = {
+  /** 리스트 최외곽 컨테이너 — 와이어프레임: shadow + rounded-lg */
+  listContainer: 'bg-card border border-border rounded-lg overflow-hidden shadow-sm',
+
   /** 로우 컨테이너 — desktop grid, mobile stacked */
   container: {
     base: 'group relative border-b border-border last:border-b-0',
     desktop: `lg:grid ${APPROVAL_ROW_GRID_COLS} lg:items-center lg:gap-3 lg:px-4 lg:py-3`,
     mobile: 'flex flex-col gap-2 p-4 lg:p-0',
-    /** 헤더 행 (컬럼 라벨) */
-    header: `hidden lg:grid ${APPROVAL_ROW_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground`,
+    /** 헤더 행 (컬럼 라벨) — uppercase + tracking으로 데이터 테이블 위계 강화 */
+    header: `hidden lg:grid ${APPROVAL_ROW_GRID_COLS} lg:gap-3 lg:px-4 lg:py-2.5 bg-muted/50 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider`,
   },
 
   /** urgency 기반 행 배경색 (경과일 기반) */
@@ -363,12 +366,12 @@ export const APPROVAL_ROW_TOKENS = {
     emergency: 'bg-brand-critical/10',
   } as Record<UrgencyLevel, string>,
 
-  /** urgency 좌측 보더 (4px 수직 막대) */
+  /** urgency 좌측 보더 (4px 수직 막대) — critical/emergency에 pulse 맥동 */
   urgencyBorder: {
     info: 'bg-border',
     warning: 'bg-brand-warning',
-    critical: 'bg-brand-critical',
-    emergency: 'bg-brand-critical',
+    critical: 'bg-brand-critical motion-safe:animate-approval-pulse-dot',
+    emergency: 'bg-brand-critical motion-safe:animate-approval-pulse-dot',
   } as Record<UrgencyLevel, string>,
 
   /** 호버 스타일 */
@@ -396,12 +399,19 @@ export const APPROVAL_ROW_TOKENS = {
 export const APPROVAL_KPI_STRIP_TOKENS = {
   container: 'grid grid-cols-2 lg:grid-cols-4 gap-3',
   card: {
-    base: 'bg-card border border-border rounded-lg p-4 flex items-start gap-3.5 border-l-4 relative overflow-hidden',
+    base: 'bg-card border border-border rounded-lg p-4 flex items-start gap-3.5 border-l-4 relative overflow-hidden group/kpi',
     hover: ['hover:shadow-sm', TRANSITION_PRESETS.fastShadowBorder].join(' '),
+    /** hover color wash — ::after pseudo로 variant별 배경 오버레이 */
+    hoverWash:
+      'after:absolute after:inset-0 after:opacity-0 after:transition-opacity after:duration-300 after:pointer-events-none group-hover/kpi:after:opacity-100',
     focus: FOCUS_TOKENS.classes.default,
   },
+  /** KPI 카드 내 콘텐츠 z-index (hover wash 위에 표시) */
+  contentZ: 'relative z-[1]',
   /** KPI 핵심 숫자 — 32px DM Sans Bold로 시선 유도 */
   value: 'text-3xl font-bold tabular-nums leading-tight font-display tracking-tight',
+  /** KPI 0값/빈값 — muted 처리로 시각적 노이즈 억제 */
+  valueEmpty: 'text-muted-foreground/40',
   /** 숫자 단위 (일, 건) */
   valueUnit: 'text-base font-normal text-muted-foreground ml-0.5',
   label: 'text-[11px] font-medium text-muted-foreground uppercase tracking-wider',
@@ -424,7 +434,15 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
     avgWait: getSemanticStatusClasses('warning'),
     processed: getSemanticStatusClasses('ok'),
   },
-  iconContainer: 'rounded-md p-2 flex-shrink-0',
+  /** hover wash variant별 ::after 배경색 */
+  hoverWashBg: {
+    total: 'after:bg-brand-info/[0.06]',
+    urgent: 'after:bg-brand-critical/[0.05]',
+    avgWait: 'after:bg-brand-warning/[0.06]',
+    processed: 'after:bg-brand-ok/[0.06]',
+  } as Record<ApprovalKpiVariant, string>,
+  /** 아이콘 컨테이너 — 40px, 10px radius */
+  iconContainer: 'w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0',
 } as const;
 
 export type ApprovalKpiVariant = keyof typeof APPROVAL_KPI_STRIP_TOKENS.borderColors;

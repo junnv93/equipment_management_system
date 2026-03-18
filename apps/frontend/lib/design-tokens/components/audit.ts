@@ -14,6 +14,7 @@ import { type AuditAction } from '@equipment-management/schemas';
 import { FOCUS_TOKENS } from '../semantic';
 import { TRANSITION_PRESETS } from '../motion';
 import { getSemanticBadgeClasses } from '../brand';
+import { PAGE_HEADER_TOKENS } from './page-layout';
 
 // ============================================================================
 // 1. Audit Action Badge Tokens (12개 액션 색상)
@@ -185,6 +186,12 @@ export const AUDIT_MOTION = {
   refreshSpin: 'motion-safe:animate-spin',
 } as const;
 
+/**
+ * Refetch Overlay는 Layer 2 (semantic.ts)로 승격됨.
+ * → import { REFETCH_OVERLAY_TOKENS } from '@/lib/design-tokens';
+ * 모든 리스트 페이지에서 공통으로 사용.
+ */
+
 // ============================================================================
 // 9. Audit Summary Bar Tokens (액션별 요약 바)
 // ============================================================================
@@ -197,16 +204,22 @@ export const AUDIT_SUMMARY_TOKENS = {
   grid: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3',
 
   /** 카드 상단 색상 스트라이프 */
-  stripe: 'absolute top-0 left-0 right-0 h-[2px] rounded-t-xl',
+  stripe: 'absolute top-0 left-0 right-0 h-[2px] rounded-t-lg',
 
   /** 액션 라벨 */
   label: 'text-xs font-medium text-brand-text-muted',
 
-  /** 총 건수 (전체 카드에만) */
-  count: 'font-mono text-xl font-bold tabular-nums tracking-tight',
+  /** 총 건수 (전체 카드에만) — tabular-nums로 숫자 정렬, font-sans 유지 */
+  count: 'text-xl font-bold tabular-nums tracking-tight',
 
   /** 서브 라벨 (WCAG: ≥11px) */
   sublabel: 'text-[11px] text-brand-text-muted mt-0.5',
+
+  /** 로딩 중 액션 배지 폴백 (summary 미제공 시) — 기존 인라인 하드코딩 토큰화 */
+  fallbackBadge: 'text-[11px] px-1.5 py-0.5 self-start mt-0.5',
+
+  /** 건수 로딩 플레이스홀더 (summary 미제공 시 "—" 표시용) */
+  loadingPlaceholder: 'opacity-30',
 } as const;
 
 /**
@@ -242,7 +255,7 @@ export function getAuditSummaryCardClasses(
   color: keyof typeof AUDIT_SUMMARY_COLOR_MAP
 ): string {
   const base = [
-    'relative overflow-hidden flex flex-col gap-0.5 p-4 rounded-xl border text-left cursor-pointer',
+    'relative overflow-hidden flex flex-col gap-0.5 p-4 rounded-lg border text-left cursor-pointer',
     TRANSITION_PRESETS.instantBgBorder,
     FOCUS_TOKENS.classes.default,
   ].join(' ');
@@ -268,6 +281,9 @@ export function getAuditSummaryCardClasses(
  * 날짜 그룹 헤더 스타일
  */
 export const AUDIT_TIMELINE_TOKENS = {
+  /** 타임라인 피드 외부 컨테이너 카드 */
+  container: 'rounded-lg border border-brand-border-subtle bg-brand-bg-surface p-4',
+
   /**
    * 그룹 헤더 행 (sticky)
    *
@@ -278,23 +294,25 @@ export const AUDIT_TIMELINE_TOKENS = {
   groupHeader: 'flex items-center gap-3 py-2 sticky top-0 z-10 bg-brand-bg-surface',
 
   /** 날짜 라벨 */
-  groupDate:
-    'font-mono text-[11px] font-bold text-brand-text-muted tracking-widest uppercase shrink-0',
+  /** 날짜 라벨 — "오늘", "어제" 등 한국어 텍스트이므로 font-sans 유지 */
+  groupDate: 'text-[11px] font-bold text-brand-text-muted tracking-widest uppercase shrink-0',
 
   /** 구분선 */
   groupLine: 'flex-1 h-px bg-brand-border-subtle',
 
   /** 건수 배지 (WCAG: ≥11px) */
+  /** 건수 배지 — "3건" 등 한글 포함이므로 font-sans, 숫자만 tabular-nums */
   groupCount: [
-    'text-[11px] font-mono text-brand-text-muted shrink-0',
+    'text-[11px] tabular-nums text-brand-text-muted shrink-0',
     'px-2 py-0.5 rounded-full border border-brand-border-subtle bg-brand-bg-elevated',
   ].join(' '),
 
   /** 엔트리 컨테이너 */
   entries: 'flex flex-col gap-0.5',
 
-  /** 빈 상태 */
-  emptyState: 'text-center py-16 text-brand-text-muted',
+  /** 빈 상태 (border + rounded-lg 포함 — 컨테이너 카드 내부에서 독립 표시) */
+  emptyState:
+    'text-center py-16 text-brand-text-muted border border-brand-border-subtle rounded-lg',
 
   /** 단일 엔트리 (3열 그리드: time | spine | content)
    *
@@ -302,7 +320,7 @@ export const AUDIT_TIMELINE_TOKENS = {
    * ✅ `group`은 호버 화살표의 group-hover 클래스를 위해 필수.
    */
   entry: [
-    'grid gap-x-3 px-3 py-2.5 rounded-xl cursor-pointer group relative',
+    'grid gap-x-3 px-3 py-2.5 rounded-lg cursor-pointer group relative',
     'hover:bg-brand-bg-elevated',
     TRANSITION_PRESETS.instantBg,
     FOCUS_TOKENS.classes.default,
@@ -358,7 +376,7 @@ export const AUDIT_TIMELINE_TOKENS = {
   ].join(' '),
 
   /** 고위험(delete) 엔트리 강조 테두리 */
-  dangerEntry: 'bg-brand-critical/[0.03] border border-brand-critical/10 rounded-xl',
+  dangerEntry: 'bg-brand-critical/[0.03] border border-brand-critical/10 rounded-lg',
 } as const;
 
 /**
@@ -410,7 +428,7 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
    * position/z-index/animation/border-side는 Sheet가 처리하므로 미포함.
    */
   content: [
-    'w-[480px] max-w-[95vw] sm:max-w-[480px] p-0',
+    'w-[480px] max-w-[95vw] sm:max-w-[480px] lg:w-[560px] lg:max-w-[560px] p-0',
     'bg-brand-bg-surface border-brand-border-subtle',
     'flex flex-col shadow-2xl',
   ].join(' '),
@@ -418,7 +436,7 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
   /** 헤더 영역 */
   header: 'px-5 pt-5 pb-4 border-b border-brand-border-subtle flex-shrink-0',
   headerTop: 'flex items-center justify-between mb-3',
-  headerLabel: 'text-[10px] font-bold text-brand-text-muted uppercase tracking-widest',
+  headerLabel: 'text-[11px] font-bold text-brand-text-muted uppercase tracking-widest',
   closeBtn: [
     'w-7 h-7 rounded-md border border-brand-border-subtle bg-transparent',
     'flex items-center justify-center text-brand-text-muted',
@@ -432,14 +450,17 @@ export const AUDIT_DETAIL_SHEET_TOKENS = {
   /** 스크롤 본문 */
   body: 'flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4',
 
+  /** 본문 빈 상태 (log === null, 애니메이션 중 빈 콘텐츠 방지) */
+  bodyEmpty: 'flex-1 flex items-center justify-center text-brand-text-muted text-sm',
+
   /** 섹션 */
-  sectionLabel: 'text-[10px] font-bold text-brand-text-muted uppercase tracking-widest mb-2',
+  sectionLabel: 'text-[11px] font-bold text-brand-text-muted uppercase tracking-widest mb-2',
   sectionCard: 'bg-brand-bg-elevated border border-brand-border-subtle rounded-xl overflow-hidden',
   row: 'flex items-start gap-2 px-3 py-2 text-sm',
   rowBorder: 'border-t border-brand-border-subtle',
-  rowKey: 'text-[11px] text-brand-text-muted w-20 flex-shrink-0 pt-px',
+  rowKey: 'text-[11px] text-brand-text-muted min-w-20 flex-shrink-0 pt-px',
   rowVal: 'text-[12px] text-brand-text-primary min-w-0 break-all',
-  rowValMono: 'font-mono text-[10px] text-brand-text-secondary min-w-0 break-all',
+  rowValMono: 'font-mono text-[11px] text-brand-text-secondary min-w-0 break-all',
 
   /** 하단 액션 바 */
   footer: 'px-5 py-3 border-t border-brand-border-subtle flex gap-2 flex-shrink-0',
@@ -495,34 +516,35 @@ export function getAuditActionChipClasses(active: boolean): string {
 
 /**
  * 감사로그 페이지 헤더 스타일
+ *
+ * PAGE_HEADER_TOKENS 기반 확장 — 모듈 고유 배지/아이콘만 추가
  */
 export const AUDIT_HEADER_TOKENS = {
-  /** 헤더 레이아웃 컨테이너 */
-  container: 'flex items-start justify-between gap-4',
+  ...PAGE_HEADER_TOKENS,
 
-  /** 제목 그룹 (좌) */
-  titleGroup: 'min-w-0',
+  /** 타이틀에 아이콘 결합 시 flex 레이아웃 추가 */
+  title: `${PAGE_HEADER_TOKENS.title} flex items-center gap-2`,
 
-  /** 페이지 타이틀 */
-  title:
-    'font-display text-2xl font-semibold tracking-tight text-brand-text-primary flex items-center gap-2',
-
-  /** 스코프 부제목 */
+  /** 스코프 부제목 (감사로그 전용 — brand-text-muted 사용) */
   subtitle: 'flex items-center gap-1.5 text-sm text-brand-text-muted mt-1',
 
-  /** 액션 그룹 (우) */
-  actionsGroup: 'flex items-center gap-2 shrink-0',
-
-  /** 총 건수 배지 (mono font + terminal aesthetic) */
+  /** 총 건수 배지 — 한국어 텍스트 포함("총 N개의 로그")이므로 font-sans, 숫자만 tabular-nums */
   statsBadge:
-    'font-mono tabular-nums text-xs bg-brand-bg-elevated border border-brand-border-subtle px-2.5 py-1.5 rounded-md text-brand-text-muted',
+    'tabular-nums text-xs bg-brand-bg-elevated border border-brand-border-subtle px-2.5 py-1.5 rounded-md text-brand-text-muted',
 
-  /**
-   * 활성 필터 수 인디케이터 배지
-   * (기존: 인라인 하드코딩 className → 토큰 통합)
-   */
+  /** 활성 필터 수 인디케이터 배지 */
   activeFilterBadge:
     'font-mono tabular-nums text-xs bg-brand-info/10 text-brand-info border border-brand-info/20 px-1.5 py-0.5 rounded-full',
+
+  /** 타이틀 아이콘 (Shield 등) */
+  titleIcon: 'h-5 w-5 text-brand-text-muted shrink-0',
+} as const;
+
+/**
+ * 감사로그 필터 리셋 버튼 스타일
+ */
+export const AUDIT_FILTER_RESET_TOKENS = {
+  button: 'h-8 text-xs text-brand-text-muted hover:text-brand-text-primary',
 } as const;
 
 /**
