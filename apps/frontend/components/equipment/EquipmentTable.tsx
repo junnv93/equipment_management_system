@@ -403,11 +403,7 @@ function EquipmentTableComponent({
             </TableRow>
           ) : (
             items.map((equipment) => (
-              <EquipmentRow
-                key={equipment.id || equipment.uuid}
-                equipment={equipment}
-                searchTerm={searchTerm}
-              />
+              <EquipmentRow key={equipment.id} equipment={equipment} searchTerm={searchTerm} />
             ))
           )}
         </TableBody>

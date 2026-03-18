@@ -349,7 +349,7 @@
       },
       "technical_manager": {
         "label": "기술책임자",
-        "description": "직접 등록/수정이 가능합니다. (승인 불필요)"
+        "description": "등록/수정 요청 후 시험소장의 승인이 필요합니다."
       },
       "lab_manager": {
         "label": "시험소 관리자",
@@ -396,7 +396,50 @@
       "maintenanceHistoryError": "유지보수 내역 삭제",
       "incidentHistoryError": "손상/수리 내역 삭제",
       "unknownError": "알 수 없는 오류가 발생했습니다.",
-      "validationFailed": "입력 데이터 검증 실패"
+      "validationFailed": "입력 데이터 검증 실패",
+      "saveFailed": "저장 실패"
+    },
+    "historyTypes": {
+      "location": "위치 변동",
+      "maintenance": "유지보수",
+      "incident": "손상/수리",
+      "calibration": "교정"
+    },
+    "create": {
+      "pageTitle": "장비 등록",
+      "pageDescription": "새로운 장비를 시스템에 등록합니다",
+      "sharedLink": "공용장비 등록",
+      "approvalRequestComplete": "등록 요청 완료",
+      "approvalRequestDescription": "장비 등록 요청이 제출되었습니다. 기술책임자의 승인을 기다려주세요.",
+      "registrationComplete": "장비 등록 완료",
+      "registrationDescription": "새 장비가 성공적으로 등록되었습니다.",
+      "registrationWithHistory": "새 장비가 등록되었습니다. (이력 {count}건 저장됨)",
+      "historyPartialSuccess": "장비가 등록되었습니다. 이력 {saved}/{total}건 저장 완료.",
+      "historyPartialTitle": "장비 등록 완료 (일부 이력 저장 실패)",
+      "historyPartialDescription": "장비는 등록되었지만 이력 {count}건 저장에 실패했습니다.",
+      "registrationFailed": "등록 실패",
+      "registrationError": "장비 등록 중 오류가 발생했습니다.",
+      "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다."
+    },
+    "createShared": {
+      "pageTitle": "공용/렌탈 장비 임시등록",
+      "pageDescription": "타 팀 공용장비 또는 외부 렌탈장비를 임시로 등록합니다.",
+      "guideTitle": "임시등록이란?",
+      "guideCommon": "타 팀(Safety, Battery 등)에서 일시적으로 빌려오는 장비",
+      "guideRental": "외부 업체에서 대여하는 장비",
+      "guideCertRequired": "사용 기간 동안 교정이 유효해야 합니다.",
+      "guideExpiry": "사용 기간 만료 시 비활성화됩니다.",
+      "approvalRequestComplete": "등록 요청 완료",
+      "approvalRequestDescription": "장비 임시등록 요청이 제출되었습니다. 승인을 기다려주세요.",
+      "tempRegistrationComplete": "임시등록 완료",
+      "tempRegistrationDescription": "공용/렌탈 장비가 임시등록되었습니다.",
+      "tempRegistrationWithHistory": "장비가 임시등록되었습니다. (이력 {count}건 저장됨)",
+      "historyPartialSuccess": "장비가 임시등록되었습니다. 이력 {saved}/{total}건 저장 완료.",
+      "historyPartialTitle": "임시등록 완료 (일부 이력 저장 실패)",
+      "historyPartialDescription": "장비는 등록되었지만 이력 {count}건 저장에 실패했습니다.",
+      "registrationFailed": "등록 실패",
+      "registrationError": "장비 등록 중 오류가 발생했습니다.",
+      "unknownError": "장비 등록 중 알 수 없는 오류가 발생했습니다."
     },
     "temporary": {
       "title": "임시등록 장비 정보",
@@ -406,8 +449,8 @@
       "rentalEquipment": "렌탈장비 (외부)",
       "owner": "소유처",
       "ownerPlaceholder": "선택하세요",
-      "ownerTeam1": "Safety팀",
-      "ownerTeam2": "Battery팀",
+      "ownerSafetyTeam": "Safety팀",
+      "ownerBatteryTeam": "Battery팀",
       "ownerOther": "기타",
       "ownerRentalPlaceholder": "렌탈업체명을 입력하세요",
       "externalIdentifierLabel": "소유처 원본 식별번호 (선택)",
@@ -882,7 +925,6 @@
       "correctionPlaceholder": "조치 내용을 입력하세요.",
       "statusChange": "상태 변경",
       "keepStatus": "상태 유지",
-      "analyzing": "분석 중",
       "corrected": "조치 완료",
       "saving": "저장 중...",
       "save": "저장",
@@ -899,7 +941,6 @@
     },
     "ncStatus": {
       "open": "등록됨",
-      "analyzing": "분석 중",
       "corrected": "조치 완료",
       "closed": "종료됨"
     },

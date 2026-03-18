@@ -302,7 +302,7 @@ function EquipmentCardGridComponent({ items, isLoading, searchTerm }: EquipmentC
       aria-busy={isLoading}
     >
       {items.map((equipment) => (
-        <div key={equipment.id || equipment.uuid} className={EQUIPMENT_CARD_PERFORMANCE_CLASSES}>
+        <div key={equipment.id} className={EQUIPMENT_CARD_PERFORMANCE_CLASSES}>
           <EquipmentCard equipment={equipment} searchTerm={searchTerm} />
         </div>
       ))}

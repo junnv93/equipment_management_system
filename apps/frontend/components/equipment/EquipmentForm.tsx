@@ -12,6 +12,7 @@ import {
   updateEquipmentSchema,
   UserRoleValues as URVal,
 } from '@equipment-management/schemas';
+import { EQUIPMENT_OWNER_OPTIONS } from '@equipment-management/shared-constants';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -155,9 +156,9 @@ const ROLE_INFO = {
     color: 'bg-brand-warning/10 text-brand-warning',
   },
   technical_manager: {
-    needsApproval: false,
-    icon: CheckCircle2,
-    color: 'bg-brand-ok/10 text-brand-ok',
+    needsApproval: true,
+    icon: Clock,
+    color: 'bg-brand-warning/10 text-brand-warning',
   },
   lab_manager: {
     needsApproval: false,
@@ -931,7 +932,7 @@ export function EquipmentForm({
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
         {/* 역할별 안내 배너 */}
         <Alert className={roleInfo.color}>
           <RoleIcon className="h-4 w-4" />
@@ -1041,11 +1042,11 @@ export function EquipmentForm({
                           <SelectValue placeholder={t('form.temporary.ownerPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Safety팀">{t('form.temporary.ownerTeam1')}</SelectItem>
-                          <SelectItem value="Battery팀">
-                            {t('form.temporary.ownerTeam2')}
-                          </SelectItem>
-                          <SelectItem value="기타">{t('form.temporary.ownerOther')}</SelectItem>
+                          {EQUIPMENT_OWNER_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {t(`form.temporary.${opt.i18nKey}` as Parameters<typeof t>[0])}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     ) : (
@@ -1268,7 +1269,11 @@ export function EquipmentForm({
                 {t('form.wizard.next')}
               </Button>
             ) : (
-              <Button type="submit" disabled={isLoading}>
+              <Button
+                type="button"
+                disabled={isLoading}
+                onClick={() => form.handleSubmit(handleFormSubmit)()}
+              >
                 {isLoading
                   ? t('form.actions.saving')
                   : isEdit

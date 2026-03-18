@@ -13,6 +13,7 @@ import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
 import type { EquipmentStatus } from '@equipment-management/schemas';
 import equipmentApi, {
   type Equipment,
+  type EquipmentMutationResponse,
   type EquipmentQuery,
   type CreateEquipmentDto,
   type UpdateEquipmentDto,
@@ -95,7 +96,7 @@ export function useEquipmentWithInitialData(initialData: Equipment) {
  */
 export function useCreateEquipment() {
   return useOptimisticMutation<
-    Equipment | { requestUuid: string },
+    EquipmentMutationResponse,
     { data: CreateEquipmentDto; files?: File[] },
     { data: Equipment[] }
   >({

@@ -1,264 +1,113 @@
 // spec: 공용/렌탈 장비 임시등록 - 기본 기능
-// seed: apps/frontend/tests/e2e/equipment-create/seed.spec.ts
 
 /**
  * Test: 공용장비 임시등록 성공
  *
- * Verifies that technical managers can successfully register shared equipment from other teams:
- * - Navigate to create-shared page
- * - Verify temporary registration alert is displayed
- * - Select equipment type "공용장비 (타 팀)" (default)
- * - Select owner from dropdown (Safety팀)
- * - Input usage period (today to 6 months from today)
- * - Fill in basic equipment information
- * - Fill in calibration information (next calibration date after usage end date)
- * - Upload calibration certificate PDF
- * - Submit the form
- * - Verify redirect to equipment detail page (success verification via URL, not toast)
- * - Verify shared equipment banner is displayed
+ * 4-step wizard form:
+ *   Step 0: 기본 정보 → Step 1: 상태·위치 + 임시등록 → Step 2: 교정 정보 → Step 3: 이력·첨부 → 등록
  *
- * Expected Results:
- * - equipmentType: 'common' is set
- * - sharedSource: 'safety_lab' is set
- * - status: 'temporary' is automatically set
- * - isShared: true is automatically set
- * - Equipment data is saved to DB
+ * technical_manager creates an approval request (not direct creation),
+ * so the redirect goes to /equipment list with a success toast.
  */
 
 import { test, expect } from '../../../../shared/fixtures/auth.fixture';
 import { format, addMonths, addYears } from 'date-fns';
-import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import path from 'path';
 
 test.describe('공용/렌탈 장비 임시등록 - 기본 기능', () => {
-  /**
-   * FIXME: Database migration required
-   *
-   * This test correctly:
-   * - Fills all required form fields for shared equipment registration
-   * - Uploads calibration certificate PDF file
-   * - Submits the form to POST /api/equipment
-   *
-   * Expected behavior:
-   * - Backend should create equipment record with uploaded files
-   * - Frontend should navigate to equipment detail page
-   *
-   * Actual behavior:
-   * - Backend returns 500 error: "relation \"equipment_attachments\" does not exist"
-   * - The equipment_attachments table is missing from the database
-   *
-   * Resolution:
-   * - Run database migrations to create the equipment_attachments table
-   * - The schema exists at: packages/db/src/schema/equipment-attachments.ts
-   * - Once the table is created, this test should pass without modification
-   */
-  test.fixme('공용장비 임시등록 성공', async ({ techManagerPage }) => {
-    // Prepare test data - dates
+  test('공용장비 임시등록 성공', async ({ techManagerPage: page }) => {
+    test.setTimeout(120_000);
     const today = format(new Date(), 'yyyy-MM-dd');
     const sixMonthsLater = format(addMonths(new Date(), 6), 'yyyy-MM-dd');
     const oneYearLater = format(addYears(new Date(), 1), 'yyyy-MM-dd');
+    // 유니크한 시리얼 번호 생성
+    const uniqueSerial = String(Date.now()).slice(-4);
 
-    // Create a mock PDF file for calibration certificate
     const tmpDir = os.tmpdir();
     const pdfPath = path.join(tmpDir, 'calibration-cert-test.pdf');
     fs.writeFileSync(pdfPath, Buffer.from('%PDF-1.4\n%Mock PDF content for testing\n%%EOF'));
 
     try {
-      // 1. techManagerPage로 /equipment/create-shared 페이지 이동
-      await techManagerPage.goto('/equipment/create-shared');
-      await techManagerPage.waitForLoadState('networkidle');
-      console.log('✓ Navigated to /equipment/create-shared');
+      await page.goto('/equipment/create-shared');
+      await expect(page.locator('h1')).toContainText('임시등록');
 
-      // Verify page loaded
-      await expect(techManagerPage.locator('h1')).toContainText('공용/렌탈 장비 임시등록');
+      // ── Step 0: 기본 정보 ──
+      await page.locator('input[name="name"]').fill('공용장비 테스트');
+      await expect(page.getByRole('combobox', { name: '사이트 *' })).toBeDisabled();
+      await expect(page.getByRole('combobox', { name: '팀 *' })).toBeDisabled();
+      await page.locator('input[name="managementSerialNumberStr"]').fill(uniqueSerial);
+      await page.locator('input[name="modelName"]').fill('Shared Model');
+      await page.locator('input[name="manufacturer"]').first().fill('Shared Manufacturer');
+      await page.locator('input[name="serialNumber"]').first().fill(`SN-${uniqueSerial}`);
 
-      // 2. 임시등록 안내 Alert 표시 확인
-      const alertTitle = techManagerPage.locator('text=임시등록이란?');
-      await expect(alertTitle).toBeVisible();
+      // "다음" → Step 1
+      await page.getByRole('button', { name: '다음' }).click();
 
-      // Verify alert contains shared equipment information - use specific selectors to avoid strict mode violations
-      const alertDescription = techManagerPage
-        .locator('[role="alert"]')
-        .filter({ hasText: '임시등록이란?' });
-      await expect(alertDescription).toContainText('공용장비');
-      await expect(alertDescription).toContainText('타 팀');
-      await expect(alertDescription).toContainText('렌탈장비');
-      await expect(alertDescription).toContainText('교정성적서 필수');
-      console.log('✓ Temporary registration alert is displayed');
+      // ── Step 1: 상태·위치 + 임시등록 전용 ──
+      await expect(page.locator('input[name="location"]')).toBeVisible({ timeout: 5000 });
 
-      // 3. 장비 유형: '공용장비 (타 팀)' 라디오 버튼 선택 (기본값 확인)
-      const commonRadio = techManagerPage.locator('input[name="equipmentType"][value="common"]');
-      await expect(commonRadio).toBeChecked(); // Should be checked by default
-      console.log('✓ Equipment type "공용장비 (타 팀)" is selected by default');
+      await page.locator('input[name="location"]').fill('RF1 Room');
 
-      // 4. 소유처 드롭다운에서 'Safety팀' 선택
-      const ownerSelect = techManagerPage.locator('select#owner');
-      await expect(ownerSelect).toBeVisible();
-      await ownerSelect.selectOption('Safety팀');
-      // Verify the selection worked
-      await expect(ownerSelect).toHaveValue('Safety팀');
-      console.log('✓ Selected owner: Safety팀');
+      // 기술책임자 선택
+      await page.getByRole('combobox', { name: '기술책임자 *' }).click();
+      await page.getByRole('option').first().click();
 
-      // 5. 사용 시작일 입력: 오늘 날짜
-      const usageStartInput = techManagerPage.locator('input#usagePeriodStart');
-      await usageStartInput.fill(today);
-      console.log(`✓ Usage start date: ${today}`);
+      // 임시등록 전용: 장비 유형 기본 선택 확인
+      await expect(page.locator('#type-common')).toBeVisible();
 
-      // 6. 사용 종료일 입력: 오늘부터 6개월 후
-      const usageEndInput = techManagerPage.locator('input#usagePeriodEnd');
-      await usageEndInput.fill(sixMonthsLater);
-      console.log(`✓ Usage end date: ${sixMonthsLater}`);
+      // 소유처: SSOT (EQUIPMENT_OWNER_OPTIONS[0] → i18n label)
+      const ownerTrigger = page.locator('#owner').locator('..').getByRole('combobox');
+      await ownerTrigger.click();
+      await page.getByRole('option', { name: 'Safety팀' }).click();
 
-      // 7. 기본 정보 입력
-      // 장비명: '공용장비 테스트'
-      const nameInput = techManagerPage.locator('input[name="name"]');
-      await nameInput.fill('공용장비 테스트');
+      // 사용 기간
+      await page.locator('input#usagePeriodStart').fill(today);
+      await page.locator('input#usagePeriodEnd').fill(sixMonthsLater);
 
-      // 사이트/팀: 기술책임자는 자동 설정 (disabled)
-      await expect(techManagerPage.getByRole('combobox', { name: '사이트 *' })).toBeDisabled();
-      await techManagerPage.waitForTimeout(1000); // Wait for teams to load and auto-set
-      await expect(techManagerPage.getByRole('combobox', { name: '팀 *' })).toBeDisabled();
+      // 교정성적서 PDF
+      await page.locator('input#calibrationCertificate').setInputFiles(pdfPath);
 
-      // 관리번호 일련번호: '5001'
-      const serialInput = techManagerPage.locator('input[name="managementSerialNumberStr"]');
-      await serialInput.fill('5001');
+      // "다음" → Step 2
+      await page.getByRole('button', { name: '다음' }).click();
 
-      // 모델명: 'Shared Model'
-      const modelInput = techManagerPage.locator('input[name="modelName"]');
-      await modelInput.fill('Shared Model');
+      // ── Step 2: 교정 정보 ──
+      await expect(page.locator('input[name="calibrationCycle"]')).toBeVisible({ timeout: 5000 });
 
-      // 제조사: 'Shared Manufacturer'
-      const manufacturerInput = techManagerPage.locator(
-        'input[name="manufacturer"][placeholder*="Anritsu"]'
-      );
-      await manufacturerInput.fill('Shared Manufacturer');
+      await page.getByRole('combobox', { name: '관리 방법 *' }).click();
+      await page.getByRole('option', { name: '외부 교정' }).click();
+      await page.locator('input[name="calibrationCycle"]').fill('12');
+      await page.locator('input[name="lastCalibrationDate"]').fill(today);
+      await page.locator('input[name="nextCalibrationDate"]').fill(oneYearLater);
+      await page.locator('input[name="calibrationAgency"]').fill('KOLAS');
 
-      // 시리얼번호: 'SN-5001'
-      const serialNumberInput = techManagerPage.locator(
-        'input[name="serialNumber"][placeholder*="SN123456"]'
-      );
-      await serialNumberInput.fill('SN-5001');
+      // "다음" → Step 3
+      await page.getByRole('button', { name: '다음' }).click();
 
-      // 현재 위치: 'RF1 Room'
-      const locationInput = techManagerPage.locator('input[name="location"]');
-      await locationInput.fill('RF1 Room');
+      // ── Step 3: 이력·첨부 → 등록 ──
+      await expect(page.getByText('이력 관리 안내')).toBeVisible({ timeout: 10000 });
 
-      // 기술책임자 선택 (첫 번째 옵션) - shadcn/ui Select component
-      await techManagerPage.getByRole('combobox', { name: '기술책임자 *' }).click();
-      await techManagerPage.getByRole('option').first().click();
+      // 등록 버튼 클릭 (technical_manager → needsApproval=true → 확인 다이얼로그)
+      const submitBtn = page.getByRole('button', { name: /등록/ });
+      await expect(submitBtn).toBeVisible({ timeout: 5000 });
+      await submitBtn.click();
 
-      console.log('✓ All basic information fields filled');
+      // 확인 다이얼로그에서 승인 요청 제출
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible({ timeout: 10000 });
+      await dialog.getByRole('button', { name: '요청하기' }).click();
 
-      // 8. 교정 정보 입력
-      // 관리 방법: '외부 교정' - shadcn/ui Select component
-      await techManagerPage.getByRole('combobox', { name: '관리 방법 *' }).click();
-      await techManagerPage.getByRole('option', { name: '외부 교정' }).click();
+      // 기술책임자는 승인 요청 → 장비 목록 리다이렉트
+      await expect(page).toHaveURL(/\/equipment(\?.*)?$/, { timeout: 15000 });
 
-      // 교정 주기: 12
-      const calibrationCycleInput = techManagerPage.locator('input[name="calibrationCycle"]');
-      await calibrationCycleInput.fill('12');
-
-      // 최종 교정일: 오늘 날짜
-      const lastCalibrationDateInput = techManagerPage.locator('input[name="lastCalibrationDate"]');
-      await lastCalibrationDateInput.fill(today);
-
-      // 차기 교정일: 1년 후 (사용 종료일보다 이후)
-      const nextCalibrationDateInput = techManagerPage.locator('input[name="nextCalibrationDate"]');
-      await nextCalibrationDateInput.fill(oneYearLater);
-
-      // 교정 기관: 'KOLAS'
-      const calibrationAgencyInput = techManagerPage.locator('input[name="calibrationAgency"]');
-      await calibrationAgencyInput.fill('KOLAS');
-
-      console.log('✓ All calibration information fields filled');
-
-      // Wait a moment to allow validation checker to run
-      await techManagerPage.waitForTimeout(500);
-
-      // Verify calibration validity checker shows valid message
-      const validityMessage = techManagerPage.locator('text=교정 유효기간 확인됨');
-      await expect(validityMessage).toBeVisible();
-      console.log('✓ Calibration validity confirmed');
-
-      // 9. 교정성적서 PDF 파일 업로드
-      const fileInput = techManagerPage.locator('input#calibrationCertificate');
-      await fileInput.setInputFiles(pdfPath);
-      console.log('✓ Calibration certificate PDF uploaded');
-
-      // Wait for file to be processed
-      await techManagerPage.waitForTimeout(1000);
-
-      // 10. '등록' 버튼 클릭
-      const submitButton = techManagerPage
-        .locator('button[type="submit"]')
-        .filter({ hasText: '등록' });
-      await expect(submitButton).toBeVisible();
-      await expect(submitButton).toBeEnabled();
-
-      // Listen for console errors and network responses
-      const consoleMessages: string[] = [];
-      const apiResponses: { url: string; status: number; body?: unknown }[] = [];
-
-      techManagerPage.on('console', (msg) => {
-        consoleMessages.push(`[${msg.type()}] ${msg.text()}`);
+      // 성공 토스트 확인 (i18n: form.createShared.approvalRequestComplete)
+      await expect(page.getByText('등록 요청 완료', { exact: true })).toBeVisible({
+        timeout: 5000,
       });
-
-      techManagerPage.on('response', async (response) => {
-        if (response.url().includes('/api/equipment')) {
-          try {
-            const body = await response.json();
-            apiResponses.push({ url: response.url(), status: response.status(), body });
-          } catch {
-            apiResponses.push({ url: response.url(), status: response.status() });
-          }
-        }
-      });
-
-      // Wait for navigation after clicking submit
-      await submitButton.click();
-      console.log('✓ Submit button clicked');
-
-      // Wait a bit for any API calls to complete
-      await techManagerPage.waitForTimeout(3000);
-
-      // Log API responses for debugging
-      if (apiResponses.length > 0) {
-        console.log('API Responses:', JSON.stringify(apiResponses, null, 2));
-      }
-
-      // Log console messages for debugging
-      if (consoleMessages.length > 0) {
-        console.log('Console messages:');
-        consoleMessages.forEach((msg) => console.log('  ', msg));
-      }
-
-      // Wait for navigation to complete
-      await expect(techManagerPage).toHaveURL(/\/equipment\/[a-f0-9-]+$/, { timeout: 15000 });
-      console.log('✓ Redirected to equipment detail page after successful registration');
-
-      // 13. 공용장비 배너 표시 확인
-      // Wait for page to fully load
-      await techManagerPage.waitForLoadState('networkidle');
-      await techManagerPage.waitForTimeout(1000);
-
-      // Verify shared equipment banner - use specific selector to target the alert/banner component
-      const sharedBanner = techManagerPage
-        .locator('[role="alert"]')
-        .filter({ hasText: /공용장비|임시등록/ });
-      await expect(sharedBanner.first()).toBeVisible({ timeout: 5000 });
-      console.log('✓ Shared equipment banner is displayed');
-
-      // Verify equipment appears with correct management number format
-      await expect(techManagerPage.locator('text=/SUW-.*5001/')).toBeVisible({ timeout: 5000 });
-      console.log('✓ Equipment with management number SUW-*-5001 is displayed');
-
-      console.log('✅ Test complete: 공용장비 임시등록 성공');
     } finally {
-      // Clean up the temporary PDF file
       if (fs.existsSync(pdfPath)) {
         fs.unlinkSync(pdfPath);
-        console.log('✓ Cleaned up temporary PDF file');
       }
     }
   });

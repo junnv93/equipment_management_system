@@ -17,6 +17,7 @@ import type {
   EquipmentStatus,
   EquipmentRequest,
   EquipmentAttachment,
+  IncidentType,
 } from '@equipment-management/schemas';
 import {
   transformPaginatedResponse,
@@ -40,7 +41,6 @@ import { createFormData as createFormDataUtil } from '../utils/form-data-utils';
  */
 export type Equipment = Omit<SchemaEquipmentResponse, 'id' | 'createdAt' | 'updatedAt'> & {
   id: string | number; // 백엔드에서 UUID로 반환되지만 레거시 호환성 유지
-  uuid?: string; // 하위 호환성 (id가 이미 UUID)
   // 프론트엔드 전용 추가 필드
   model?: string; // 하위 호환성 (modelName의 별칭)
   image?: string; // 이미지 URL
@@ -92,14 +92,23 @@ export type UpdateEquipmentDto = UpdateEquipmentInput & {
 };
 
 /**
- * 장비 생성/수정 응답 타입
+ * 장비 생성/수정 응답 타입 (discriminated union)
  *
- * 승인 프로세스가 필요한 경우 requestUuid가 반환되고,
- * 직접 승인되는 경우 Equipment가 반환됩니다.
+ * 직접 승인되는 경우 Equipment가 반환되고,
+ * 승인 프로세스가 필요한 경우 { message, requestUuid, request }가 반환됩니다.
  */
-export type EquipmentMutationResponse = Equipment & {
-  requestUuid?: string; // 승인 요청이 생성된 경우 반환되는 UUID
-};
+export type EquipmentMutationResponse =
+  | Equipment
+  | { message: string; requestUuid: string; request: Record<string, unknown> };
+
+/**
+ * 승인 요청 응답인지 판별하는 타입 가드
+ */
+export function isApprovalResponse(
+  res: EquipmentMutationResponse
+): res is { message: string; requestUuid: string; request: Record<string, unknown> } {
+  return 'requestUuid' in res;
+}
 
 // 이력 관리 타입
 export interface LocationHistoryItem {
@@ -123,7 +132,7 @@ export interface MaintenanceHistoryItem {
   createdAt: string | Date;
 }
 
-export type IncidentType = 'damage' | 'malfunction' | 'change' | 'repair';
+export type { IncidentType };
 
 export interface IncidentHistoryItem {
   id: string;

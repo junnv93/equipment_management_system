@@ -349,7 +349,7 @@
       },
       "technical_manager": {
         "label": "Technical Manager",
-        "description": "Direct create/edit is allowed. (No approval required)"
+        "description": "Approval from Lab Manager is required after submitting a create/edit request."
       },
       "lab_manager": {
         "label": "Lab Manager",
@@ -396,7 +396,50 @@
       "maintenanceHistoryError": "Maintenance record deletion",
       "incidentHistoryError": "Damage/Repair record deletion",
       "unknownError": "An unknown error occurred.",
-      "validationFailed": "Input data validation failed"
+      "validationFailed": "Input data validation failed",
+      "saveFailed": "Save failed"
+    },
+    "historyTypes": {
+      "location": "Location Change",
+      "maintenance": "Maintenance",
+      "incident": "Damage/Repair",
+      "calibration": "Calibration"
+    },
+    "create": {
+      "pageTitle": "Register Equipment",
+      "pageDescription": "Register a new equipment in the system",
+      "sharedLink": "Shared Equipment",
+      "approvalRequestComplete": "Request Submitted",
+      "approvalRequestDescription": "Equipment registration request has been submitted. Please wait for Technical Manager's approval.",
+      "registrationComplete": "Registration Complete",
+      "registrationDescription": "New equipment has been registered successfully.",
+      "registrationWithHistory": "New equipment registered. ({count} history records saved)",
+      "historyPartialSuccess": "Equipment registered. {saved}/{total} history records saved.",
+      "historyPartialTitle": "Registration Complete (Some History Failed)",
+      "historyPartialDescription": "Equipment registered but {count} history records failed to save.",
+      "registrationFailed": "Registration Failed",
+      "registrationError": "An error occurred while registering the equipment.",
+      "unknownError": "An unknown error occurred while registering the equipment."
+    },
+    "createShared": {
+      "pageTitle": "Shared/Rental Equipment Temporary Registration",
+      "pageDescription": "Temporarily register shared equipment from other teams or rental equipment.",
+      "guideTitle": "What is Temporary Registration?",
+      "guideCommon": "Equipment temporarily borrowed from other teams (Safety, Battery, etc.)",
+      "guideRental": "Equipment rented from external companies",
+      "guideCertRequired": "Calibration must be valid during the usage period.",
+      "guideExpiry": "Equipment will be deactivated when the usage period expires.",
+      "approvalRequestComplete": "Request Submitted",
+      "approvalRequestDescription": "Temporary registration request has been submitted. Please wait for approval.",
+      "tempRegistrationComplete": "Temporary Registration Complete",
+      "tempRegistrationDescription": "Shared/rental equipment has been temporarily registered.",
+      "tempRegistrationWithHistory": "Equipment temporarily registered. ({count} history records saved)",
+      "historyPartialSuccess": "Equipment temporarily registered. {saved}/{total} history records saved.",
+      "historyPartialTitle": "Temporary Registration Complete (Some History Failed)",
+      "historyPartialDescription": "Equipment registered but {count} history records failed to save.",
+      "registrationFailed": "Registration Failed",
+      "registrationError": "An error occurred while registering the equipment.",
+      "unknownError": "An unknown error occurred while registering the equipment."
     },
     "temporary": {
       "title": "Temporary Equipment Info",
@@ -406,8 +449,8 @@
       "rentalEquipment": "Rental Equipment (External)",
       "owner": "Owner",
       "ownerPlaceholder": "Select",
-      "ownerTeam1": "Safety Team",
-      "ownerTeam2": "Battery Team",
+      "ownerSafetyTeam": "Safety Team",
+      "ownerBatteryTeam": "Battery Team",
       "ownerOther": "Other",
       "ownerRentalPlaceholder": "Enter rental company name",
       "externalIdentifierLabel": "Owner's Original ID (Optional)",
@@ -882,7 +925,6 @@
       "correctionPlaceholder": "Enter correction details.",
       "statusChange": "Change Status",
       "keepStatus": "Keep Status",
-      "analyzing": "Analyzing",
       "corrected": "Corrected",
       "saving": "Saving...",
       "save": "Save",
@@ -899,7 +941,6 @@
     },
     "ncStatus": {
       "open": "Open",
-      "analyzing": "Analyzing",
       "corrected": "Corrected",
       "closed": "Closed"
     },

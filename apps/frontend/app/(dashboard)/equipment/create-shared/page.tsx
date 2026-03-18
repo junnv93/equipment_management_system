@@ -9,10 +9,11 @@ import { getCurrentUser } from '@/lib/auth/server-session';
 import CreateSharedEquipmentContent from './CreateSharedEquipmentContent';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 function CreateSharedEquipmentFormSkeleton() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       <Skeleton className="h-9 w-48" />
       <Card>
         <CardHeader>
