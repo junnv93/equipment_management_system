@@ -270,10 +270,14 @@ export function CalibrationPlanDetailClient({
   const isLabManager = userRole === URVal.LAB_MANAGER;
   const isSystemAdmin = userRole === URVal.SYSTEM_ADMIN;
 
-  // 역할별 액션 가능 여부
+  // 역할별 액션 가능 여부 — 상태×역할 매트릭스
   const canSubmitForReview =
     (isDraft || isRejected) && (isTechnicalManager || isLabManager || isSystemAdmin);
   const canApprove = isPendingApproval && (isLabManager || isSystemAdmin);
+  const canReject =
+    (isPendingApproval && (isLabManager || isQualityManager || isSystemAdmin)) ||
+    (isPendingReview && (isQualityManager || isLabManager || isSystemAdmin));
+  const canDelete = isDraft && (isTechnicalManager || isLabManager || isSystemAdmin);
 
   return (
     <div className={getPageContainerClasses()}>
@@ -314,64 +318,46 @@ export function CalibrationPlanDetailClient({
               {t('planDetail.actions.printPdf')}
             </Button>
           )}
-          {/* 작성 중/반려됨 상태: 삭제 및 검토 요청 (기술책임자/시험소장) */}
-          {(isDraft || isRejected) && (
-            <>
-              {isDraft && (
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  disabled={deleteMutation.isPending}
-                  className={getActionButtonClasses('destructive')}
-                >
-                  <Trash2 className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
-                  {t('planDetail.actions.delete')}
-                </Button>
-              )}
-              {canSubmitForReview && (
-                <Button
-                  onClick={() => setIsSubmitDialogOpen(true)}
-                  disabled={submitForReviewMutation.isPending || !plan}
-                  className={getActionButtonClasses('primary')}
-                >
-                  <Send className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
-                  {t('planDetail.actions.submitForReview')}
-                </Button>
-              )}
-            </>
+          {canDelete && (
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={deleteMutation.isPending}
+              className={getActionButtonClasses('destructive')}
+            >
+              <Trash2 className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
+              {t('planDetail.actions.delete')}
+            </Button>
           )}
-          {/* 승인 대기 상태: 최종 승인/반려 (시험소장) */}
-          {canApprove && (
-            <>
-              <Button
-                variant="outline"
-                onClick={() => setIsRejectDialogOpen(true)}
-                disabled={rejectMutation.isPending || !plan}
-                className={getActionButtonClasses('destructive')}
-              >
-                <XCircle className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
-                {t('planDetail.actions.reject')}
-              </Button>
-              <Button
-                onClick={() => setIsApproveDialogOpen(true)}
-                disabled={approveMutation.isPending || !plan}
-                className={getActionButtonClasses('primary')}
-              >
-                <UserCheck className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
-                {t('planDetail.actions.finalApprove')}
-              </Button>
-            </>
-          )}
-          {/* 승인 대기 상태에서 품질책임자도 반려 가능 */}
-          {isPendingApproval && isQualityManager && !isLabManager && (
+          {canReject && (
             <Button
               variant="outline"
               onClick={() => setIsRejectDialogOpen(true)}
-              disabled={rejectMutation.isPending || !plan}
+              disabled={rejectMutation.isPending}
               className={getActionButtonClasses('destructive')}
             >
               <XCircle className={`${ACTION_BUTTON_TOKENS.destructive.iconSize} mr-2`} />
               {t('planDetail.actions.reject')}
+            </Button>
+          )}
+          {canSubmitForReview && (
+            <Button
+              onClick={() => setIsSubmitDialogOpen(true)}
+              disabled={submitForReviewMutation.isPending}
+              className={getActionButtonClasses('primary')}
+            >
+              <Send className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
+              {t('planDetail.actions.submitForReview')}
+            </Button>
+          )}
+          {canApprove && (
+            <Button
+              onClick={() => setIsApproveDialogOpen(true)}
+              disabled={approveMutation.isPending}
+              className={getActionButtonClasses('primary')}
+            >
+              <UserCheck className={`${ACTION_BUTTON_TOKENS.primary.iconSize} mr-2`} />
+              {t('planDetail.actions.finalApprove')}
             </Button>
           )}
         </div>
