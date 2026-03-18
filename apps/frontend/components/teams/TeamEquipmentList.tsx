@@ -19,6 +19,7 @@ import {
   TEAM_SEARCH_TOKENS,
   TEAM_ROW_TOKENS,
   MOTION_PRIMITIVES,
+  CODE_INLINE_TOKENS,
 } from '@/lib/design-tokens';
 
 interface TeamEquipmentListProps {
@@ -190,7 +191,7 @@ export function TeamEquipmentList({ teamId }: TeamEquipmentListProps) {
                           </div>
                         </td>
                         <td className="p-4">
-                          <code className="text-sm bg-muted px-1.5 py-0.5 rounded">
+                          <code className={CODE_INLINE_TOKENS.base}>
                             {item.managementNumber || '-'}
                           </code>
                         </td>

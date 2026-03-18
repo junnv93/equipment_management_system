@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Share2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/components/ui/use-toast';
 import { useTranslations } from 'next-intl';
@@ -15,7 +14,8 @@ import { ErrorAlert, PartialSuccessAlert } from '@/components/shared/ErrorAlert'
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import type { CreateEquipmentInput } from '@equipment-management/schemas';
 import { saveHistoryInParallel } from '@/lib/utils/equipment-history-utils';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 /**
  * 공용/렌탈 장비 임시등록 페이지
@@ -158,18 +158,11 @@ export default function CreateSharedEquipmentContent({
 
   return (
     <div className={getPageContainerClasses('detail')}>
-      {/* 헤더 */}
-      <div className={SUB_PAGE_HEADER_TOKENS.container}>
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className={SUB_PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('form.createShared.pageTitle')}</h1>
-          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>
-            {t('form.createShared.pageDescription')}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={t('form.createShared.pageTitle')}
+        subtitle={t('form.createShared.pageDescription')}
+        onBack={() => router.back()}
+      />
 
       {/* 에러 알림 */}
       {submitError && (

@@ -52,6 +52,7 @@ import {
   SUB_PAGE_HEADER_TOKENS,
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
+  CODE_INLINE_TOKENS,
 } from '@/lib/design-tokens';
 
 interface CalibrationFactorsClientProps {
@@ -400,7 +401,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {factor.parameters ? (
-                        <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                        <code className={CODE_INLINE_TOKENS.compact}>
                           {JSON.stringify(factor.parameters)}
                         </code>
                       ) : (

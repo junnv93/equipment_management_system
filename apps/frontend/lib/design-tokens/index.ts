@@ -612,6 +612,7 @@ export {
   type PageContainerVariant,
   PAGE_HEADER_TOKENS,
   SUB_PAGE_HEADER_TOKENS,
+  CODE_INLINE_TOKENS,
 } from './components/page-layout';
 
 // ============================================================================

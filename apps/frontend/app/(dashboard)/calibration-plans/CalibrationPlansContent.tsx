@@ -45,14 +45,13 @@ import {
   resolveDataScope,
 } from '@equipment-management/shared-constants';
 import {
-  CALIBRATION_PLAN_HEADER_TOKENS,
   CALIBRATION_PLAN_KPI_TOKENS,
   CALIBRATION_PLAN_LIST_TOKENS,
   CALIBRATION_PLAN_FILTER_TOKENS,
   CALIBRATION_PLAN_STATUS_BADGE_COLORS,
   getPageContainerClasses,
-  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { cn } from '@/lib/utils';
 
 interface CalibrationPlansContentProps {
@@ -176,20 +175,18 @@ export default function CalibrationPlansContent({
   return (
     <div className={getPageContainerClasses()}>
       {/* ── 헤더 ──────────────────────────────────────────────── */}
-      <div className={CALIBRATION_PLAN_HEADER_TOKENS.container}>
-        <div className={PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={PAGE_HEADER_TOKENS.title}>{t('plansList.title')}</h1>
-          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('plansList.subtitle')}</p>
-        </div>
-        <div className={CALIBRATION_PLAN_HEADER_TOKENS.actionsGroup}>
+      <PageHeader
+        title={t('plansList.title')}
+        subtitle={t('plansList.subtitle')}
+        actions={
           <Button asChild>
             <Link href="/calibration-plans/create">
               <Plus className="h-4 w-4 mr-2" />
               {t('plansList.createButton')}
             </Link>
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── KPI 스트립 ──────────────────────────────────────────── */}
       <div className={CALIBRATION_PLAN_KPI_TOKENS.container}>

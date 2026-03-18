@@ -126,6 +126,27 @@ export const PAGE_HEADER_TOKENS = {
  * </div>
  * ```
  */
+// ─────────────────────────────────────────────────────────────────────────────
+// 공용 인라인 코드/배지 토큰 — 교차 모듈 공유
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 인라인 코드 표시 토큰 (<code> 태그, 관리번호 등)
+ *
+ * 적용 대상: TeamEquipmentList, CalibrationFactorsClient, TeamCard 등
+ * 3곳 이상에서 동일 패턴 반복 → SSOT 토큰화
+ */
+export const CODE_INLINE_TOKENS = {
+  /** 기본 인라인 코드 (text-sm) */
+  base: 'text-sm bg-muted px-1.5 py-0.5 rounded font-mono',
+  /** 컴팩트 인라인 코드 (text-xs) */
+  compact: 'text-xs bg-muted px-1 py-0.5 rounded font-mono',
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 서브 페이지 헤더 토큰
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const SUB_PAGE_HEADER_TOKENS = {
   /** 뒤로가기 + 타이틀 수평 정렬 */
   container: 'flex items-center gap-4',

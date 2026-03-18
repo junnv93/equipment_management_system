@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 /**
  * 팀 목록 페이지 헤더 (Client Component)
@@ -12,10 +12,5 @@ import { PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 export function TeamPageHeader() {
   const t = useTranslations('teams');
 
-  return (
-    <div className={PAGE_HEADER_TOKENS.titleGroup}>
-      <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-      <p className={PAGE_HEADER_TOKENS.subtitle}>{t('pageDescription')}</p>
-    </div>
-  );
+  return <PageHeader title={t('title')} subtitle={t('pageDescription')} />;
 }

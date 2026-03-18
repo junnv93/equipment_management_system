@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { EquipmentForm, type PendingHistoryData } from '@/components/equipment/EquipmentForm';
 import { useCreateEquipment } from '@/hooks/use-equipment';
 import { CreateEquipmentInput, UpdateEquipmentInput } from '@equipment-management/schemas';
-import { ArrowLeft, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import Link from 'next/link';
@@ -14,7 +14,8 @@ import { isApprovalResponse } from '@/lib/api/equipment-api';
 import { ErrorAlert, PartialSuccessAlert } from '@/components/shared/ErrorAlert';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import { saveHistoryInParallel } from '@/lib/utils/equipment-history-utils';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 interface CreateEquipmentContentProps {
   userDefaults?: {
@@ -152,25 +153,19 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
   return (
     <div className={getPageContainerClasses('wide')}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={handleCancel}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('form.create.pageTitle')}</h1>
-            <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{t('form.create.pageDescription')}</p>
-          </div>
-        </div>
-
-        {/* 공용장비 등록 링크 */}
-        <Link href="/equipment/create-shared">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Info className="h-4 w-4" />
-            {t('form.create.sharedLink')}
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title={t('form.create.pageTitle')}
+        subtitle={t('form.create.pageDescription')}
+        onBack={handleCancel}
+        actions={
+          <Link href="/equipment/create-shared">
+            <Button variant="outline" size="sm" className="gap-2">
+              <Info className="h-4 w-4" />
+              {t('form.create.sharedLink')}
+            </Button>
+          </Link>
+        }
+      />
 
       {/* 에러 알림 */}
       {submitError && (

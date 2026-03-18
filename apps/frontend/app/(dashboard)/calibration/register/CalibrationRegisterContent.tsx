@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,8 +31,8 @@ import {
   CALIBRATION_SELECTION,
   CALIBRATION_EMPTY_STATE,
   getPageContainerClasses,
-  SUB_PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 export function CalibrationRegisterContent() {
   const router = useRouter();
@@ -246,15 +246,11 @@ export function CalibrationRegisterContent() {
   return (
     <div className={getPageContainerClasses()}>
       {/* 상단 헤더 */}
-      <div className={SUB_PAGE_HEADER_TOKENS.container}>
-        <Button variant="outline" size="icon" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className={SUB_PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('register.title')}</h1>
-          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{t('register.subtitle')}</p>
-        </div>
-      </div>
+      <PageHeader
+        title={t('register.title')}
+        subtitle={t('register.subtitle')}
+        onBack={() => router.back()}
+      />
 
       {/* 권한 안내 */}
       <Alert variant={isUnauthorized ? 'destructive' : 'default'}>
