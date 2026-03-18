@@ -237,10 +237,11 @@ async create(@Request() req: AuthenticatedRequest) {
 ### Step 10: enforceSiteAccess() 뮤테이션 엔드포인트 적용 확인
 
 크로스 사이트 데이터 변경을 방지하기 위해 mutation 엔드포인트에서 `enforceSiteAccess()`를 호출하는지 확인합니다.
+**참고:** 컨트롤러에서 직접 호출하거나, 서비스 내부에서 호출하는 두 가지 패턴 모두 허용됩니다.
 
 ```bash
-# enforceSiteAccess 사용 현황 확인
-grep -rn "enforceSiteAccess" apps/backend/src --include="*.ts"
+# enforceSiteAccess 사용 현황 확인 (컨트롤러 + 서비스 모두 포함)
+grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.ts" | grep -v "import\|__tests__"
 ```
 
 ```bash
@@ -248,13 +249,13 @@ grep -rn "enforceSiteAccess" apps/backend/src --include="*.ts"
 grep -rn "import.*enforceSiteAccess" apps/backend/src --include="*.ts" | grep -v "common/utils"
 ```
 
-**PASS 기준:** `enforceSiteAccess`가 `common/utils`에서 import되고, 주요 mutation 컨트롤러에서 사용됨.
+**PASS 기준:** `enforceSiteAccess`가 `common/utils`에서 import되고, 주요 mutation 모듈(컨트롤러 또는 서비스)에서 사용됨.
 
 **FAIL 기준:** mutation 엔드포인트에서 사이트 접근 제어 없이 다른 사이트 데이터 변경 가능.
 
 ```bash
 # 구식 시그니처 (5-param) 또는 하드코딩 에러 코드 잔존 확인
-grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.controller.ts" | grep "CROSS_SITE\|CROSS_TEAM\|DENIED"
+grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.ts" | grep "CROSS_SITE\|CROSS_TEAM\|DENIED"
 ```
 
 **PASS 기준:** 0개 결과 (4-param 시그니처: `req, entitySite, policy, entityTeamId?`).
@@ -263,7 +264,7 @@ grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.controller.ts
 
 ```bash
 # 인라인 사이트 체크 중복 구현 탐지 (enforceSiteAccess 대신 직접 구현)
-grep -rn "scope.type.*===.*site.*entitySite\|equipment.*\.site.*!==.*req" apps/backend/src/modules --include="*.controller.ts" | grep -v "// "
+grep -rn "scope.type.*===.*site.*entitySite\|equipment.*\.site.*!==.*req" apps/backend/src/modules --include="*.ts" | grep -v "// \|__tests__"
 ```
 
 **PASS 기준:** 0개 결과 (모든 사이트 체크가 `enforceSiteAccess()` 유틸리티를 통해 수행).

@@ -333,11 +333,11 @@ grep -rn "CROSS_SITE\|CROSS_TEAM" apps/backend/src/modules --include="*.controll
 **PASS 기준:** 0개 결과 (모든 컨트롤러가 `enforceSiteAccess()` 내부의 `ErrorCode.ScopeAccessDenied` 사용).
 
 ```bash
-# enforceSiteAccess 호출 시 entityTeamId 전달 여부 확인
-grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.controller.ts" | grep -v "import"
+# enforceSiteAccess 호출 시 entityTeamId 전달 여부 확인 (컨트롤러 + 서비스)
+grep -rn "enforceSiteAccess" apps/backend/src/modules --include="*.ts" | grep -v "import\|__tests__"
 ```
 
-**PASS 기준:** mutation 엔드포인트에서 `enforceSiteAccess()` 호출 시 가능하면 `entityTeamId`도 전달.
+**PASS 기준:** mutation 모듈(컨트롤러 또는 서비스)에서 `enforceSiteAccess()` 호출 시 가능하면 `entityTeamId`도 전달.
 
 ```typescript
 // ❌ WRONG — 하드코딩 에러 코드 + 5-param 구식 시그니처

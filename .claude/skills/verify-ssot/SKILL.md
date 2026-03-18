@@ -61,6 +61,8 @@ argument-hint: '[선택사항: 특정 패키지명]'
 | `apps/backend/src/modules/equipment-imports/types/equipment-import.types.ts` | Drizzle `$inferSelect` 기반 모듈 타입 SSOT                                                     |
 | `apps/frontend/lib/errors/equipment-errors.ts`                               | 프론트엔드 에러 코드 매핑 (ErrorCode ↔ EquipmentErrorCode, mapBackendErrorCode)               |
 | `packages/db/src/schema/calibration-plans.ts`                                | DB 스키마 rejectionStage (REJECTION_STAGE_VALUES SSOT import 필수)                             |
+| `apps/backend/src/modules/equipment/utils/request-data-codec.ts`             | requestData 직렬화/역직렬화 코덱 (JSON↔DTO 변환 SSOT)                                         |
+| `apps/backend/src/modules/equipment/equipment.service.ts`                    | DTO→Entity 매핑 (getTableColumns 기반 동적 컬럼 추출)                                          |
 
 ## Workflow
 
@@ -724,7 +726,42 @@ import { PAGE_SIZE_OPTIONS, DEFAULT_PAGE_SIZE } from '@/lib/config/pagination';
 | 11e | APPROVAL_KPI 임계값           | PASS/FAIL | 하드코딩 임계값/잘못된 import 위치     |
 | 11f | REJECTION_STAGE_VALUES SSOT   | PASS/FAIL | rejectionStage 로컬 선언 위치          |
 | 11g | ErrorCode↔프론트엔드 매핑    | PASS/FAIL | 누락된 ErrorCode 매핑 목록             |
+| 12  | DTO→Entity 동적 매핑 SSOT     | PASS/FAIL | 하드코딩 필드 목록 위치                |
+| 13  | requestData 코덱 사용         | PASS/FAIL | 직접 JSON.parse 위치                   |
 ```
+
+### Step 12: DTO→Entity 매핑 SSOT (getTableColumns)
+
+서비스의 `transformUpdateDtoToEntity`/`transformCreateDtoToEntity`에서 DTO 필드를 DB 엔티티로 매핑할 때, 하드코딩된 필드 목록 대신 `getTableColumns()`로 DB 스키마에서 유효 컬럼을 동적 추출하는지 확인합니다.
+
+```bash
+# getTableColumns 사용 여부 확인
+grep -n "getTableColumns\|EQUIPMENT_COLUMNS" apps/backend/src/modules/equipment/equipment.service.ts
+```
+
+**PASS 기준:** `EQUIPMENT_COLUMNS = new Set(Object.keys(getTableColumns(equipment)))` 패턴으로 DB 스키마에서 컬럼 목록 추출. DTO 필드 복사 시 `EQUIPMENT_COLUMNS.has(key)` 검증.
+
+**FAIL 기준:** 하드코딩된 `const fields: Array<keyof UpdateEquipmentDto> = [...]` 배열로 필드를 수동 나열 → 스키마에 필드 추가 시 누락 불가피.
+
+```bash
+# 하드코딩된 필드 배열 탐지
+grep -n "const fields.*Array.*keyof" apps/backend/src/modules/equipment/equipment.service.ts
+```
+
+**위반:** 위 명령에서 결과가 나오면 `getTableColumns()` 기반으로 전환 필요.
+
+### Step 13: requestData 직렬화 코덱 사용
+
+`equipment_requests.requestData`의 JSON 직렬화/역직렬화가 코덱을 통해 이루어지는지 확인합니다. `JSON.parse`/`JSON.stringify` 직접 호출은 Date 타입 손실을 유발합니다.
+
+```bash
+# equipment-approval.service.ts에서 직접 JSON.parse/stringify 사용 탐지
+grep -n "JSON\.\(parse\|stringify\)" apps/backend/src/modules/equipment/services/equipment-approval.service.ts
+```
+
+**PASS 기준:** 0개 결과. 모든 requestData 처리는 `serializeRequestData()`, `deserializeRequestData()`, `parseRequestDataForDisplay()`를 통해야 함.
+
+**FAIL 기준:** `JSON.parse(request.requestData)` 또는 `JSON.stringify(dto)` 직접 호출 → Date 필드가 문자열로 남아 Drizzle ORM `toISOString()` TypeError 유발.
 
 ## Exceptions
 

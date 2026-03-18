@@ -42,6 +42,8 @@ argument-hint: '[선택사항: 특정 모듈명]'
 | `apps/backend/src/modules/calibration-plans/calibration-plans.service.ts`            | 자체 CAS 구현 (casVersion 필드)                      |
 | `apps/backend/src/modules/equipment/services/equipment-history.service.ts`           | 시스템 내부 version bump (CAS WHERE 없이 version +1) |
 | `apps/backend/src/modules/notifications/schedulers/calibration-overdue-scheduler.ts` | 스케줄러 시스템 내부 version bump                    |
+| `apps/backend/src/modules/equipment/services/equipment-approval.service.ts`          | 승인 프로세스 (stale version 교체 패턴)              |
+| `apps/backend/src/modules/equipment/utils/request-data-codec.ts`                     | requestData 직렬화/역직렬화 코덱                     |
 | `apps/frontend/hooks/use-optimistic-mutation.ts`                                     | 프론트엔드 optimistic mutation 훅                    |
 
 ## Workflow
@@ -240,6 +242,32 @@ grep -rn "version" apps/frontend/lib/api/checkout-api.ts apps/frontend/lib/api/c
 | 7   | 시스템 내부 캐시 무효화   | PASS/FAIL | 캐시 무효화 누락 위치    |
 | 8   | 보상 트랜잭션 패턴        | PASS/FAIL | 보상 로직 누락 위치      |
 | 9   | 프론트엔드 version 전달   | PASS/FAIL | 누락 API 함수            |
+| 10  | 승인 CAS version 교체     | PASS/FAIL | stale version 사용 위치  |
+```
+
+### Step 10: 승인 프로세스의 CAS version 교체 검증
+
+JSON 직렬화된 requestData에서 역직렬화된 DTO의 version은 요청 생성 시점의 값이므로, 승인 시점에는 stale합니다.
+승인 서비스에서 현재 DB의 version으로 교체하는지 확인합니다.
+
+```bash
+# 승인 서비스에서 deserializeRequestData('update') 후 version 교체 여부 확인
+grep -n "deserializeRequestData\|requestData.version\|currentEquipment.version" apps/backend/src/modules/equipment/services/equipment-approval.service.ts
+```
+
+**PASS 기준:** `deserializeRequestData('update', ...)` 호출 후 `requestData.version = currentEquipment.version` 으로 현재 DB version을 주입.
+
+**FAIL 기준:** JSON에서 파싱된 stale version을 그대로 `equipmentService.update()`에 전달 → 승인 시 항상 409 CAS 충돌.
+
+```typescript
+// ❌ WRONG — stale version 사용
+const requestData = deserializeRequestData('update', request.requestData);
+await this.equipmentService.update(equipmentId, requestData); // requestData.version이 stale
+
+// ✅ CORRECT — 현재 DB version으로 교체
+const requestData = deserializeRequestData('update', request.requestData);
+requestData.version = currentEquipment.version; // 현재 DB version 주입
+await this.equipmentService.update(currentEquipment.id, requestData);
 ```
 
 ## Exceptions
