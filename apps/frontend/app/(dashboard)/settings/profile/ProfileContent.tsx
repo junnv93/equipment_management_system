@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertCircle, ChevronDown, Info } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { apiClient } from '@/lib/api/api-client';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
@@ -24,8 +25,10 @@ import {
   SETTINGS_PROFILE_GRID_TOKENS,
   SETTINGS_PERMISSIONS_CARD_TOKENS,
   SETTINGS_PROFILE_BADGE_TOKENS,
+  SETTINGS_SPACING_TOKENS,
   getSettingsCardClasses,
   getSettingsCardHeaderClasses,
+  getSettingsPermissionsTriggerClasses,
 } from '@/lib/design-tokens';
 
 function GridCell({ label, children }: { label: string; children: React.ReactNode }) {
@@ -99,6 +102,8 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
   const t = useTranslations('settings');
   const tNav = useTranslations('navigation');
   const tEquip = useTranslations('equipment');
+  const locale = useLocale();
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
 
   // 권한을 카테고리별로 그룹화 (SSOT: PERMISSION_CATEGORIES)
   const permissionsByCategory = useMemo(() => {
@@ -128,9 +133,10 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
     .slice(0, 2)
     .toUpperCase();
 
-  // 마지막 로그인 포맷
+  // 마지막 로그인 포맷 (locale 기반)
+  const localeTag = locale === 'ko' ? 'ko-KR' : 'en-US';
   const lastLoginFormatted = profile.lastLogin
-    ? new Date(profile.lastLogin).toLocaleString('ko-KR', {
+    ? new Date(profile.lastLogin).toLocaleString(localeTag, {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -140,7 +146,7 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className={SETTINGS_SPACING_TOKENS.pageContent}>
       {/* Profile Card — Plain header (wireframe v2) */}
       <Card className={getSettingsCardClasses()}>
         <CardHeader className={getSettingsCardHeaderClasses()}>
@@ -193,32 +199,47 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
             </div>
           </div>
 
-          {/* B-2: 중복 제거된 6필드 그리드 (와이어프레임 SSOT) */}
-          {/* 히어로에 이름/이메일/역할/활성/사이트 → 그리드에는 나머지만 */}
+          {/* 히어로에 이름/이메일/역할/활성/사이트 표시 → 그리드는 보완 필드만 */}
           <div className={SETTINGS_PROFILE_GRID_TOKENS.grid}>
-            <GridCell label={t('profile.fields.name')}>
-              <p className={SETTINGS_PROFILE_GRID_TOKENS.valueNormal}>{profile.name}</p>
-            </GridCell>
-            <GridCell label={t('profile.fields.email')}>
-              <p className={SETTINGS_PROFILE_GRID_TOKENS.value}>{profile.email}</p>
-            </GridCell>
-            <GridCell label={t('profile.fields.role')}>
-              <p className={SETTINGS_PROFILE_GRID_TOKENS.valueNormal}>
-                {roleLabel} ({profile.role})
-              </p>
-            </GridCell>
-            <GridCell label={t('profile.fields.site')}>
-              {siteLabel ? (
-                <p className={SETTINGS_PROFILE_GRID_TOKENS.value}>{profile.site}</p>
+            <GridCell label={t('profile.fields.department')}>
+              {profile.department ? (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.valueNormal}>{profile.department}</p>
               ) : (
                 <p className={SETTINGS_PROFILE_GRID_TOKENS.valueEmpty}>
                   {t('profile.notRegistered')}
                 </p>
               )}
             </GridCell>
-            <GridCell label={t('profile.fields.department')}>
-              {profile.department ? (
-                <p className={SETTINGS_PROFILE_GRID_TOKENS.valueNormal}>{profile.department}</p>
+            <GridCell label={t('profile.fields.team')}>
+              {profile.teamName ? (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.valueNormal}>{profile.teamName}</p>
+              ) : (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.valueEmpty}>
+                  {t('profile.notRegistered')}
+                </p>
+              )}
+            </GridCell>
+            <GridCell label={t('profile.fields.position')}>
+              {profile.position ? (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.valueNormal}>{profile.position}</p>
+              ) : (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.valueEmpty}>
+                  {t('profile.notRegistered')}
+                </p>
+              )}
+            </GridCell>
+            <GridCell label={t('profile.fields.phone')}>
+              {profile.phoneNumber ? (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.value}>{profile.phoneNumber}</p>
+              ) : (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.valueEmpty}>
+                  {t('profile.notRegistered')}
+                </p>
+              )}
+            </GridCell>
+            <GridCell label={t('profile.fields.employeeId')}>
+              {profile.employeeId ? (
+                <p className={SETTINGS_PROFILE_GRID_TOKENS.value}>{profile.employeeId}</p>
               ) : (
                 <p className={SETTINGS_PROFILE_GRID_TOKENS.valueEmpty}>
                   {t('profile.notRegistered')}
@@ -232,53 +253,69 @@ function ProfileDisplay({ profile }: { profile: UserProfile }) {
         </CardContent>
       </Card>
 
-      {/* Permissions Card — 읽기 전용 */}
+      {/* Permissions Card — 읽기 전용 Collapsible */}
       <Card className={getSettingsCardClasses()}>
-        <CardHeader className={getSettingsCardHeaderClasses()}>
-          <div className={SETTINGS_CARD_HEADER_TOKENS.layout}>
-            <div className={SETTINGS_CARD_HEADER_TOKENS.titleWrapper}>
-              <CardTitle className={SETTINGS_CARD_HEADER_TOKENS.title}>
-                {t('profile.permissions.title')}
-              </CardTitle>
-              <CardDescription className={SETTINGS_CARD_HEADER_TOKENS.description}>
-                {t('profile.permissions.description')}
-              </CardDescription>
-            </div>
-            <Badge variant="outline" className={SETTINGS_PERMISSIONS_CARD_TOKENS.readOnlyBadge}>
-              {t('profile.permissions.readOnly')}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className={SETTINGS_PERMISSIONS_CARD_TOKENS.content}>
-          {permissionsByCategory.map((category) => (
-            <div key={category.key} className={SETTINGS_PERMISSIONS_CARD_TOKENS.categorySection}>
-              <p className={SETTINGS_PERMISSIONS_CARD_TOKENS.categoryLabel}>
-                {t(`profile.permissions.categories.${category.key}` as Parameters<typeof t>[0])}
-              </p>
-              <div
-                className={SETTINGS_PERMISSIONS_CARD_TOKENS.badgeWrap}
-                role="list"
-                aria-label={t(
-                  `profile.permissions.categories.${category.key}` as Parameters<typeof t>[0]
-                )}
-              >
-                {category.permissions.map((permission) => (
-                  <Badge
-                    key={permission}
-                    variant="secondary"
-                    className={SETTINGS_PERMISSIONS_CARD_TOKENS.badge}
-                    role="listitem"
-                  >
-                    {PERMISSION_LABELS[permission]}
-                  </Badge>
-                ))}
+        <Collapsible open={permissionsOpen} onOpenChange={setPermissionsOpen}>
+          <CollapsibleTrigger asChild>
+            <button type="button" className={getSettingsPermissionsTriggerClasses()}>
+              <div className={SETTINGS_PERMISSIONS_CARD_TOKENS.triggerLabel}>
+                <div>
+                  <CardTitle className={SETTINGS_CARD_HEADER_TOKENS.title}>
+                    {t('profile.permissions.title')}
+                  </CardTitle>
+                  <CardDescription className={SETTINGS_CARD_HEADER_TOKENS.description}>
+                    {t('profile.permissions.description')}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className={SETTINGS_PERMISSIONS_CARD_TOKENS.readOnlyBadge}>
+                  {t('profile.permissions.readOnly')}
+                </Badge>
+                <span className={SETTINGS_PERMISSIONS_CARD_TOKENS.triggerCount}>
+                  {totalPermissions}
+                </span>
               </div>
-            </div>
-          ))}
-          <p className={SETTINGS_PERMISSIONS_CARD_TOKENS.totalCount}>
-            {t('profile.permissions.totalCount', { count: totalPermissions })}
-          </p>
-        </CardContent>
+              <ChevronDown
+                className={`${SETTINGS_PERMISSIONS_CARD_TOKENS.chevron.base} ${SETTINGS_PERMISSIONS_CARD_TOKENS.chevron.transition} transition-transform ${permissionsOpen ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className={SETTINGS_PERMISSIONS_CARD_TOKENS.content}>
+              {permissionsByCategory.map((category) => (
+                <div
+                  key={category.key}
+                  className={SETTINGS_PERMISSIONS_CARD_TOKENS.categorySection}
+                >
+                  <p className={SETTINGS_PERMISSIONS_CARD_TOKENS.categoryLabel}>
+                    {t(`profile.permissions.categories.${category.key}` as Parameters<typeof t>[0])}
+                  </p>
+                  <div
+                    className={SETTINGS_PERMISSIONS_CARD_TOKENS.badgeWrap}
+                    role="list"
+                    aria-label={t(
+                      `profile.permissions.categories.${category.key}` as Parameters<typeof t>[0]
+                    )}
+                  >
+                    {category.permissions.map((permission) => (
+                      <Badge
+                        key={permission}
+                        variant="secondary"
+                        className={SETTINGS_PERMISSIONS_CARD_TOKENS.badge}
+                        role="listitem"
+                      >
+                        {PERMISSION_LABELS[permission]}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <p className={SETTINGS_PERMISSIONS_CARD_TOKENS.totalCount}>
+                {t('profile.permissions.totalCount', { count: totalPermissions })}
+              </p>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
 
       {/* Info Alert */}

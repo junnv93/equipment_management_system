@@ -4,7 +4,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -36,6 +43,7 @@ import {
   SETTINGS_SUBMIT_TOKENS,
   SETTINGS_SAVE_INDICATOR_TOKENS,
   getSettingsCardClasses,
+  getSettingsCardDangerClasses,
   getSettingsCardHeaderClasses,
   getSettingsSelectTriggerClasses,
   getSettingsSubmitButtonClasses,
@@ -96,10 +104,10 @@ export default function SystemSettingsContent() {
     maintenanceMessage: data?.maintenanceMessage ?? DEFAULT_SYSTEM_SETTINGS.maintenanceMessage,
   };
 
-  return <SystemSettingsForm initialSettings={mergedSettings} />;
+  return <SystemSettingsFormContent initialSettings={mergedSettings} />;
 }
 
-function SystemSettingsForm({ initialSettings }: { initialSettings: SystemSettingsForm }) {
+function SystemSettingsFormContent({ initialSettings }: { initialSettings: SystemSettingsForm }) {
   const t = useTranslations('settings');
   const queryClient = useQueryClient();
 
@@ -130,7 +138,7 @@ function SystemSettingsForm({ initialSettings }: { initialSettings: SystemSettin
   const selectTriggerClasses = getSettingsSelectTriggerClasses();
 
   return (
-    <div className="space-y-6">
+    <div className={SETTINGS_SPACING_TOKENS.pageContent}>
       {/* Warning Alert */}
       <Alert
         variant="default"
@@ -142,8 +150,8 @@ function SystemSettingsForm({ initialSettings }: { initialSettings: SystemSettin
         </AlertDescription>
       </Alert>
 
-      {/* Settings Card — Design Token SSOT */}
-      <Card className={getSettingsCardClasses()}>
+      {/* Settings Card — Danger variant: base 카드 + 좌측 경고 보더 합성 */}
+      <Card className={getSettingsCardDangerClasses()}>
         <CardHeader className={getSettingsCardHeaderClasses()}>
           <div className={SETTINGS_CARD_HEADER_TOKENS.titleWrapper}>
             <CardTitle className={SETTINGS_CARD_HEADER_TOKENS.title}>{t('system.title')}</CardTitle>
@@ -152,155 +160,147 @@ function SystemSettingsForm({ initialSettings }: { initialSettings: SystemSettin
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit((d) => mutation.mutate(d))}
-              className={SETTINGS_SPACING_TOKENS.formFields}
-            >
-              {/* Audit Log Retention */}
-              <FormField
-                control={form.control}
-                name="auditLogRetentionDays"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel className="text-base font-semibold">
-                      {t('system.auditLogRetention')}
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={selectTriggerClasses}>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="0">
-                          <span className="font-mono">&#8734;</span>
-                          <span className="ml-2">{t('system.unlimited')}</span>
-                        </SelectItem>
-                        <SelectItem value="90">
-                          <span className="font-mono">90</span>
-                          <span className="ml-2">{t('system.days')}</span>
-                        </SelectItem>
-                        <SelectItem value="180">
-                          <span className="font-mono">180</span>
-                          <span className="ml-2">
-                            {t('system.days')} ({t('system.recommended')})
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="365">
-                          <span className="font-mono">365</span>
-                          <span className="ml-2">{t('system.days')}</span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-xs leading-relaxed">
-                      {t.rich('system.auditLogRetentionDescription', {
-                        code: (chunks) => (
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{chunks}</code>
-                        ),
-                      })}
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              {/* Notification Retention */}
-              <FormField
-                control={form.control}
-                name="notificationRetentionDays"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel className="text-base font-semibold">
-                      {t('system.notificationRetention')}
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className={selectTriggerClasses}>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="30">
-                          <span className="font-mono">30</span>
-                          <span className="ml-2">{t('system.days')}</span>
-                        </SelectItem>
-                        <SelectItem value="60">
-                          <span className="font-mono">60</span>
-                          <span className="ml-2">
-                            {t('system.days')} ({t('system.recommended')})
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="90">
-                          <span className="font-mono">90</span>
-                          <span className="ml-2">{t('system.days')}</span>
-                        </SelectItem>
-                        <SelectItem value="180">
-                          <span className="font-mono">180</span>
-                          <span className="ml-2">{t('system.days')}</span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-xs leading-relaxed">
-                      {t('system.notificationRetentionDescription')}
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              {/* Maintenance Message */}
-              <FormField
-                control={form.control}
-                name="maintenanceMessage"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel className="text-base font-semibold">
-                      {t('system.maintenanceMessage')}
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder={t('system.maintenanceMessagePlaceholder')}
-                        className={getSettingsTextareaClasses()}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs leading-relaxed">
-                      {t('system.maintenanceMessageDescription')}{' '}
-                      <span className="text-muted-foreground/70">({t('system.maxChars')})</span>
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              {/* Submit Button */}
-              <div className={SETTINGS_SUBMIT_TOKENS.section}>
-                <p className={SETTINGS_SUBMIT_TOKENS.note}>
-                  {t('system.changesAppliedImmediately')}
-                </p>
-                <Button
-                  type="submit"
-                  disabled={mutation.isPending || !form.formState.isDirty}
-                  className={getSettingsSubmitButtonClasses()}
-                >
-                  {mutation.isPending ? (
-                    <>
-                      <Loader2
-                        className={SETTINGS_SAVE_INDICATOR_TOKENS.saving}
-                        aria-hidden="true"
-                      />
-                      <span className="ml-2">{t('common.saving')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                      {t('common.save')}
-                    </>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((d) => mutation.mutate(d))}>
+            <CardContent className="pt-6">
+              <div className={SETTINGS_SPACING_TOKENS.formFields}>
+                {/* Audit Log Retention */}
+                <FormField
+                  control={form.control}
+                  name="auditLogRetentionDays"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-semibold">
+                        {t('system.auditLogRetention')}
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={selectTriggerClasses}>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="0">
+                            <span className="font-mono">&#8734;</span>
+                            <span className="ml-2">{t('system.unlimited')}</span>
+                          </SelectItem>
+                          <SelectItem value="90">
+                            <span className="font-mono">90</span>
+                            <span className="ml-2">{t('system.days')}</span>
+                          </SelectItem>
+                          <SelectItem value="180">
+                            <span className="font-mono">180</span>
+                            <span className="ml-2">
+                              {t('system.days')} ({t('system.recommended')})
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="365">
+                            <span className="font-mono">365</span>
+                            <span className="ml-2">{t('system.days')}</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription className="text-xs leading-relaxed">
+                        {t.rich('system.auditLogRetentionDescription', {
+                          code: (chunks) => (
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{chunks}</code>
+                          ),
+                        })}
+                      </FormDescription>
+                    </FormItem>
                   )}
-                </Button>
+                />
+
+                {/* Notification Retention */}
+                <FormField
+                  control={form.control}
+                  name="notificationRetentionDays"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-semibold">
+                        {t('system.notificationRetention')}
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={selectTriggerClasses}>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="30">
+                            <span className="font-mono">30</span>
+                            <span className="ml-2">{t('system.days')}</span>
+                          </SelectItem>
+                          <SelectItem value="60">
+                            <span className="font-mono">60</span>
+                            <span className="ml-2">
+                              {t('system.days')} ({t('system.recommended')})
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="90">
+                            <span className="font-mono">90</span>
+                            <span className="ml-2">{t('system.days')}</span>
+                          </SelectItem>
+                          <SelectItem value="180">
+                            <span className="font-mono">180</span>
+                            <span className="ml-2">{t('system.days')}</span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription className="text-xs leading-relaxed">
+                        {t('system.notificationRetentionDescription')}
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Maintenance Message */}
+                <FormField
+                  control={form.control}
+                  name="maintenanceMessage"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel className="text-base font-semibold">
+                        {t('system.maintenanceMessage')}
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder={t('system.maintenanceMessagePlaceholder')}
+                          className={getSettingsTextareaClasses()}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs leading-relaxed">
+                        {t('system.maintenanceMessageDescription')}{' '}
+                        <span className="text-muted-foreground/70">({t('system.maxChars')})</span>
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
               </div>
-            </form>
-          </Form>
-        </CardContent>
+            </CardContent>
+            <CardFooter className={SETTINGS_SUBMIT_TOKENS.footer}>
+              <p className={SETTINGS_SUBMIT_TOKENS.note}>{t('system.changesAppliedImmediately')}</p>
+              <Button
+                type="submit"
+                disabled={mutation.isPending || !form.formState.isDirty}
+                className={getSettingsSubmitButtonClasses()}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
+                    <span className="ml-2">{t('common.saving')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+                    {t('common.save')}
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </form>
+        </Form>
       </Card>
     </div>
   );

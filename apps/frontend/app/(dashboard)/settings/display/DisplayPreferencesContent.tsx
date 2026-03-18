@@ -3,7 +3,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -133,164 +140,163 @@ function PreferencesForm({ initialPreferences }: { initialPreferences: DisplayPr
           </CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
-            className={SETTINGS_SPACING_TOKENS.formFields}
-          >
-            {/* Language / Locale */}
-            <FormField
-              control={form.control}
-              name="locale"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel className="text-base font-semibold">{t('display.language')}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className={selectTriggerClasses}>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="ko">{t('display.languageOptions.ko')}</SelectItem>
-                      <SelectItem value="en">{t('display.languageOptions.en')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription className="text-xs leading-relaxed">
-                    {t('display.languageDescription')}
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            {/* Items Per Page */}
-            <FormField
-              control={form.control}
-              name="itemsPerPage"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel className="text-base font-semibold">
-                    {t('display.itemsPerPage')}
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className={selectTriggerClasses}>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="10">{t('display.itemsPerPageOptions.10')}</SelectItem>
-                      <SelectItem value="20">{t('display.itemsPerPageOptions.20')}</SelectItem>
-                      <SelectItem value="50">{t('display.itemsPerPageOptions.50')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription className="text-xs leading-relaxed">
-                    {t('display.itemsPerPageDescription')}
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            {/* Date Format */}
-            <FormField
-              control={form.control}
-              name="dateFormat"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel className="text-base font-semibold">
-                    {t('display.dateFormat')}
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className={selectTriggerClasses}>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="YYYY-MM-DD">
-                        <span className="font-mono">2026-02-15</span>
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          ({t('display.dateFormatOptions.iso')})
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="YYYY.MM.DD">
-                        <span className="font-mono">2026.02.15</span>
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          ({t('display.dateFormatOptions.korean')})
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription className="text-xs leading-relaxed">
-                    {t('display.dateFormatDescription')}
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            {/* Default Equipment Sort */}
-            <FormField
-              control={form.control}
-              name="defaultEquipmentSort"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel className="text-base font-semibold">
-                    {t('display.equipmentSort')}
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className={selectTriggerClasses}>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="managementNumber">
-                        {t('sortOptions.managementNumber')}
-                      </SelectItem>
-                      <SelectItem value="name">{t('sortOptions.name')}</SelectItem>
-                      <SelectItem value="updatedAt">{t('sortOptions.updatedAt')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription className="text-xs leading-relaxed">
-                    {t('display.equipmentSortDescription')}
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            {/* Show Retired Equipment — SettingsToggleField 사용 */}
-            <SettingsToggleField
-              control={form.control}
-              name="showRetiredEquipment"
-              label={t('display.showRetiredEquipment')}
-              description={t('display.showRetiredDescription')}
-            />
-
-            {/* Submit Button */}
-            <div className={SETTINGS_SUBMIT_TOKENS.section}>
-              <p className={SETTINGS_SUBMIT_TOKENS.note}>{t('display.saveNote')}</p>
-              <Button
-                type="submit"
-                disabled={mutation.isPending || !form.formState.isDirty}
-                className={getSettingsSubmitButtonClasses()}
-              >
-                {mutation.isPending ? (
-                  <>
-                    <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
-                    <span className="ml-2">{t('common.saving')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {t('common.save')}
-                  </>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))}>
+          <CardContent className="pt-6">
+            <div className={SETTINGS_SPACING_TOKENS.formFields}>
+              {/* Language / Locale */}
+              <FormField
+                control={form.control}
+                name="locale"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">
+                      {t('display.language')}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={selectTriggerClasses}>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="ko">{t('display.languageOptions.ko')}</SelectItem>
+                        <SelectItem value="en">{t('display.languageOptions.en')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs leading-relaxed">
+                      {t('display.languageDescription')}
+                    </FormDescription>
+                  </FormItem>
                 )}
-              </Button>
+              />
+
+              {/* Items Per Page */}
+              <FormField
+                control={form.control}
+                name="itemsPerPage"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">
+                      {t('display.itemsPerPage')}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={selectTriggerClasses}>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="10">{t('display.itemsPerPageOptions.10')}</SelectItem>
+                        <SelectItem value="20">{t('display.itemsPerPageOptions.20')}</SelectItem>
+                        <SelectItem value="50">{t('display.itemsPerPageOptions.50')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs leading-relaxed">
+                      {t('display.itemsPerPageDescription')}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              {/* Date Format */}
+              <FormField
+                control={form.control}
+                name="dateFormat"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">
+                      {t('display.dateFormat')}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={selectTriggerClasses}>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="YYYY-MM-DD">
+                          <span className="font-mono">2026-02-15</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            ({t('display.dateFormatOptions.iso')})
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="YYYY.MM.DD">
+                          <span className="font-mono">2026.02.15</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            ({t('display.dateFormatOptions.korean')})
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs leading-relaxed">
+                      {t('display.dateFormatDescription')}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              {/* Default Equipment Sort */}
+              <FormField
+                control={form.control}
+                name="defaultEquipmentSort"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel className="text-base font-semibold">
+                      {t('display.equipmentSort')}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={selectTriggerClasses}>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="managementNumber">
+                          {t('sortOptions.managementNumber')}
+                        </SelectItem>
+                        <SelectItem value="name">{t('sortOptions.name')}</SelectItem>
+                        <SelectItem value="updatedAt">{t('sortOptions.updatedAt')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs leading-relaxed">
+                      {t('display.equipmentSortDescription')}
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              {/* Show Retired Equipment — SettingsToggleField 사용 */}
+              <SettingsToggleField
+                control={form.control}
+                name="showRetiredEquipment"
+                label={t('display.showRetiredEquipment')}
+                description={t('display.showRetiredDescription')}
+              />
             </div>
-          </form>
-        </Form>
-      </CardContent>
+          </CardContent>
+          <CardFooter className={SETTINGS_SUBMIT_TOKENS.footer}>
+            <p className={SETTINGS_SUBMIT_TOKENS.note}>{t('display.saveNote')}</p>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || !form.formState.isDirty}
+              className={getSettingsSubmitButtonClasses()}
+            >
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
+                  <span className="ml-2">{t('common.saving')}</span>
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {t('common.save')}
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
     </Card>
   );
 }

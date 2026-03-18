@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Settings } from 'lucide-react';
 import { SETTINGS_PAGE_HEADER_TOKENS, getSettingsPageHeaderClasses } from '@/lib/design-tokens';
 
 /**
@@ -10,15 +11,22 @@ import { SETTINGS_PAGE_HEADER_TOKENS, getSettingsPageHeaderClasses } from '@/lib
  * layout.tsx(RSC)에서 임포트하여 PPR 정적 셸을 유지하면서
  * 다국어 텍스트를 클라이언트에서 렌더링합니다.
  *
- * 와이어프레임 v2: 그라디언트/격자 overlay 제거 → 단순 border-b 구분선
+ * 와이어프레임 v2: 아이콘 + 배경 처리로 시각적 무게감
  */
 export function SettingsPageHeader() {
   const t = useTranslations('settings');
 
   return (
     <div className={getSettingsPageHeaderClasses()}>
-      <h1 className={SETTINGS_PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-      <p className={SETTINGS_PAGE_HEADER_TOKENS.description}>{t('description')}</p>
+      <div className={SETTINGS_PAGE_HEADER_TOKENS.layout}>
+        <div className={SETTINGS_PAGE_HEADER_TOKENS.iconWrapper}>
+          <Settings className={SETTINGS_PAGE_HEADER_TOKENS.icon} aria-hidden="true" />
+        </div>
+        <div>
+          <h1 className={SETTINGS_PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+          <p className={SETTINGS_PAGE_HEADER_TOKENS.description}>{t('description')}</p>
+        </div>
+      </div>
     </div>
   );
 }

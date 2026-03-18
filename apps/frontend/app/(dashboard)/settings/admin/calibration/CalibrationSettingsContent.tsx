@@ -3,7 +3,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Check, X, Plus } from 'lucide-react';
@@ -32,7 +39,6 @@ import {
 } from '@/lib/design-tokens';
 import { z } from 'zod';
 import { useTranslations } from 'next-intl';
-import { useEffect } from 'react';
 
 // 프론트엔드 로컬 Zod 스키마
 const calibrationSettingsFormSchema = z.object({
@@ -45,10 +51,13 @@ interface CalibrationSettings {
   alertDays: number[];
 }
 
+/**
+ * CalibrationSettingsContent — 데이터 페칭 레이어 (부모)
+ *
+ * useQuery로 데이터 로드 → 로딩 스켈레톤 / CalibrationSettingsForm에 위임
+ * useEffect + isDirty guard 패턴 제거 → defaultValues만 사용
+ */
 export default function CalibrationSettingsContent() {
-  const t = useTranslations('settings');
-  const queryClient = useQueryClient();
-
   const { data, isLoading } = useQuery<CalibrationSettings>({
     queryKey: queryKeys.settings.calibration(),
     queryFn: async () => {
@@ -57,50 +66,6 @@ export default function CalibrationSettingsContent() {
     },
     staleTime: CACHE_TIMES.MEDIUM,
   });
-
-  const form = useForm<CalibrationSettingsForm>({
-    resolver: zodResolver(calibrationSettingsFormSchema),
-    defaultValues: {
-      alertDays: DEFAULT_CALIBRATION_ALERT_DAYS,
-    },
-  });
-
-  // Sync form when server data arrives (with isDirty guard)
-  useEffect(() => {
-    if (data && !form.formState.isDirty) {
-      form.reset({ alertDays: data.alertDays });
-    }
-  }, [data, form]);
-
-  const mutation = useMutation({
-    mutationFn: (formData: CalibrationSettingsForm) =>
-      apiClient.patch(API_ENDPOINTS.SETTINGS.CALIBRATION, formData),
-    onSuccess: (_, variables) => {
-      toast.success(t('toasts.calibrationSaveSuccess'));
-      form.reset(variables);
-    },
-    onError: () => {
-      toast.error(t('toasts.calibrationSaveError'));
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.settings.calibration() });
-    },
-  });
-
-  // useWatch: react-hook-form 권장 패턴 (안전한 값 구독)
-  const alertDays = useWatch({
-    control: form.control,
-    name: 'alertDays',
-    defaultValue: DEFAULT_CALIBRATION_ALERT_DAYS,
-  });
-
-  const toggleDay = (day: number) => {
-    const currentDays = alertDays;
-    const updatedDays = currentDays.includes(day)
-      ? currentDays.filter((d) => d !== day)
-      : [...currentDays, day].sort((a, b) => b - a);
-    form.setValue('alertDays', updatedDays, { shouldDirty: true });
-  };
 
   if (isLoading) {
     return (
@@ -118,6 +83,61 @@ export default function CalibrationSettingsContent() {
       </Card>
     );
   }
+
+  const initialSettings: CalibrationSettingsForm = {
+    alertDays: data?.alertDays ?? DEFAULT_CALIBRATION_ALERT_DAYS,
+  };
+
+  return <CalibrationSettingsFormContent initialSettings={initialSettings} />;
+}
+
+/**
+ * CalibrationSettingsFormContent — 폼 레이어 (자식)
+ *
+ * 부모가 isLoading=false 이후에만 마운트 → defaultValues 동기적으로 유효
+ * useEffect 제거됨 — defaultValues만 사용
+ */
+function CalibrationSettingsFormContent({
+  initialSettings,
+}: {
+  initialSettings: CalibrationSettingsForm;
+}) {
+  const t = useTranslations('settings');
+  const queryClient = useQueryClient();
+
+  const form = useForm<CalibrationSettingsForm>({
+    resolver: zodResolver(calibrationSettingsFormSchema),
+    defaultValues: initialSettings,
+  });
+
+  const mutation = useMutation({
+    mutationFn: (formData: CalibrationSettingsForm) =>
+      apiClient.patch(API_ENDPOINTS.SETTINGS.CALIBRATION, formData),
+    onSuccess: (_, variables) => {
+      toast.success(t('toasts.calibrationSaveSuccess'));
+      form.reset(variables);
+    },
+    onError: () => {
+      toast.error(t('toasts.calibrationSaveError'));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings.calibration() });
+    },
+  });
+
+  const alertDays = useWatch({
+    control: form.control,
+    name: 'alertDays',
+    defaultValue: initialSettings.alertDays,
+  });
+
+  const toggleDay = (day: number) => {
+    const currentDays = alertDays;
+    const updatedDays = currentDays.includes(day)
+      ? currentDays.filter((d) => d !== day)
+      : [...currentDays, day].sort((a, b) => b - a);
+    form.setValue('alertDays', updatedDays, { shouldDirty: true });
+  };
 
   return (
     <Card className={getSettingsCardClasses()}>
@@ -137,11 +157,12 @@ export default function CalibrationSettingsContent() {
           <div className={SETTINGS_SPACING_TOKENS.chipGroup}>
             {CALIBRATION_ALERT_DAYS_OPTIONS.map((day) => {
               const isSelected = alertDays.includes(day);
+              const chipVariant = isSelected && day === 0 ? ('highlight' as const) : false;
               return (
                 <button
                   key={day}
                   type="button"
-                  className={getSettingsChipClasses(isSelected)}
+                  className={getSettingsChipClasses(isSelected, chipVariant)}
                   onClick={() => toggleDay(day)}
                   aria-pressed={isSelected}
                 >
@@ -175,34 +196,33 @@ export default function CalibrationSettingsContent() {
             <li>{t('calibration.howItWorksItems.overdue')}</li>
           </ul>
         </div>
-
-        {/* Submit Section — 통일된 토큰 패턴 */}
-        <div className={SETTINGS_SUBMIT_TOKENS.section}>
-          <p className={SETTINGS_SUBMIT_TOKENS.note}>
-            {t('calibration.currentSelection')}{' '}
-            {alertDays.length > 0
-              ? t('calibration.selectionCount', { count: alertDays.length })
-              : t('calibration.noSelection')}
-          </p>
-          <Button
-            onClick={() => mutation.mutate({ alertDays })}
-            disabled={mutation.isPending || !form.formState.isDirty || alertDays.length === 0}
-            className={getSettingsSubmitButtonClasses()}
-          >
-            {mutation.isPending ? (
-              <>
-                <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
-                <span className="ml-2">{t('common.saving')}</span>
-              </>
-            ) : (
-              <>
-                <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                {t('common.save')}
-              </>
-            )}
-          </Button>
-        </div>
       </CardContent>
+
+      <CardFooter className={SETTINGS_SUBMIT_TOKENS.footer}>
+        <p className={SETTINGS_SUBMIT_TOKENS.note}>
+          {t('calibration.currentSelection')}{' '}
+          {alertDays.length > 0
+            ? t('calibration.selectionCount', { count: alertDays.length })
+            : t('calibration.noSelection')}
+        </p>
+        <Button
+          onClick={() => mutation.mutate({ alertDays })}
+          disabled={mutation.isPending || !form.formState.isDirty || alertDays.length === 0}
+          className={getSettingsSubmitButtonClasses()}
+        >
+          {mutation.isPending ? (
+            <>
+              <Loader2 className={SETTINGS_SAVE_INDICATOR_TOKENS.saving} aria-hidden="true" />
+              <span className="ml-2">{t('common.saving')}</span>
+            </>
+          ) : (
+            <>
+              <Check className="mr-2 h-4 w-4" aria-hidden="true" />
+              {t('common.save')}
+            </>
+          )}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

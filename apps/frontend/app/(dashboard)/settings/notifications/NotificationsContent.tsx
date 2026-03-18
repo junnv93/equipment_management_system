@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -24,6 +24,7 @@ import { SettingsToggleField } from '@/components/settings/SettingsToggleField';
 import {
   SETTINGS_CARD_HEADER_TOKENS,
   SETTINGS_FORM_ITEM_TOKENS,
+  SETTINGS_SPACING_TOKENS,
   getSettingsCardClasses,
   getSettingsCardHeaderClasses,
   getSettingsFormItemClasses,
@@ -53,12 +54,6 @@ const categoryDefaults = Object.fromEntries(
   NOTIFICATION_CATEGORIES.map((cat) => [NOTIFICATION_CATEGORY_FORM_FIELDS[cat], true])
 ) as Record<string, boolean>;
 
-const defaultValues: NotificationFormValues = {
-  emailEnabled: false,
-  inAppEnabled: true,
-  ...categoryDefaults,
-};
-
 /** 카테고리 토글용 boolean 필드 타입 */
 type BooleanFieldName = {
   [K in keyof NotificationFormValues]: NotificationFormValues[K] extends boolean ? K : never;
@@ -75,7 +70,7 @@ function useCategoryItems(tNotif: ReturnType<typeof useTranslations>) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className={SETTINGS_SPACING_TOKENS.pageContent}>
       {[1, 2].map((i) => (
         <Card key={i} className={getSettingsCardClasses()}>
           <CardHeader className={getSettingsCardHeaderClasses()}>
@@ -95,11 +90,47 @@ function LoadingSkeleton() {
   );
 }
 
+/**
+ * NotificationsContent — 데이터 페칭 레이어 (부모)
+ *
+ * useQuery로 preferences 로드 → 로딩 스켈레톤 / NotificationsForm에 위임
+ * useEffect + isDirty guard 패턴 제거
+ */
 export default function NotificationsContent() {
+  const { data: preferences, isLoading } = useNotificationPreferences();
+
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
+  // 서버 데이터와 기본값 병합
+  const categoryValues = Object.fromEntries(
+    NOTIFICATION_CATEGORIES.map((cat) => {
+      const field = NOTIFICATION_CATEGORY_FORM_FIELDS[cat];
+      return [field, (preferences as unknown as Record<string, unknown>)?.[field] ?? true];
+    })
+  ) as Record<string, boolean>;
+
+  const mergedValues: NotificationFormValues = {
+    emailEnabled: preferences?.emailEnabled ?? false,
+    inAppEnabled: preferences?.inAppEnabled ?? true,
+    ...categoryDefaults,
+    ...categoryValues,
+  };
+
+  return <NotificationsForm initialPreferences={mergedValues} />;
+}
+
+/**
+ * NotificationsForm — 폼 레이어 (자식)
+ *
+ * 부모가 isLoading=false 이후에만 마운트 → defaultValues 동기적으로 유효
+ * useEffect 제거됨 — defaultValues만 사용
+ */
+function NotificationsForm({ initialPreferences }: { initialPreferences: NotificationFormValues }) {
   const t = useTranslations('settings');
   const tNotif = useTranslations('notifications');
   const categoryItems = useCategoryItems(tNotif);
-  const { data: preferences, isLoading } = useNotificationPreferences();
   const updateMutation = useUpdateNotificationPreferences();
 
   const [savingField, setSavingField] = useState<string | null>(null);
@@ -107,26 +138,8 @@ export default function NotificationsContent() {
 
   const form = useForm<NotificationFormValues>({
     resolver: zodResolver(notificationFormSchema),
-    defaultValues,
+    defaultValues: initialPreferences,
   });
-
-  // 서버에서 설정을 로드한 후 폼에 반영 (isDirty 가드: 사용자 변경 중 리셋 방지)
-  useEffect(() => {
-    if (preferences && !form.formState.isDirty) {
-      const categoryValues = Object.fromEntries(
-        NOTIFICATION_CATEGORIES.map((cat) => {
-          const field = NOTIFICATION_CATEGORY_FORM_FIELDS[cat];
-          return [field, (preferences as unknown as Record<string, unknown>)[field] ?? true];
-        })
-      ) as Record<string, boolean>;
-
-      form.reset({
-        emailEnabled: preferences.emailEnabled,
-        inAppEnabled: preferences.inAppEnabled,
-        ...categoryValues,
-      });
-    }
-  }, [preferences, form]);
 
   const handleToggleChange = useCallback(
     (fieldName: string, checked: boolean) => {
@@ -152,12 +165,8 @@ export default function NotificationsContent() {
     [updateMutation, form, t]
   );
 
-  if (isLoading) {
-    return <LoadingSkeleton />;
-  }
-
   return (
-    <div className="space-y-6">
+    <div className={SETTINGS_SPACING_TOKENS.pageContent}>
       {/* Card 1: 알림 채널 */}
       <Card className={getSettingsCardClasses()}>
         <CardHeader className={getSettingsCardHeaderClasses()}>
