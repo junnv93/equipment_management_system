@@ -43,17 +43,16 @@ import calibrationFactorsApi, {
 import { queryKeys } from '@/lib/api/query-config';
 import { formatDate } from '@/lib/utils/date';
 import { CalibrationFactorApprovalStatusValues as CFASVal } from '@equipment-management/schemas';
-import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
-import Link from 'next/link';
+import { Plus, Calculator, Clock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
 import {
   getPageContainerClasses,
-  SUB_PAGE_HEADER_TOKENS,
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
   CODE_INLINE_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 interface CalibrationFactorsClientProps {
   /**
@@ -189,124 +188,119 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
   return (
     <div className={getPageContainerClasses()}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild aria-label={t('backAriaLabel')}>
-            <Link href={`/equipment/${equipmentId}`}>
-              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-            <p className="text-muted-foreground">{t('equipmentId', { id: equipmentId })}</p>
-          </div>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('requestButton')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{t('requestDialogTitle')}</DialogTitle>
-              <DialogDescription>{t('requestDialogDescription')}</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <PageHeader
+          title={t('title')}
+          subtitle={t('equipmentId', { id: equipmentId })}
+          backUrl={`/equipment/${equipmentId}`}
+          backLabel={t('backAriaLabel')}
+          actions={
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                {t('requestButton')}
+              </Button>
+            </DialogTrigger>
+          }
+        />
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('requestDialogTitle')}</DialogTitle>
+            <DialogDescription>{t('requestDialogDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="factorType">{t('formFactorType')}</Label>
+              <Select
+                value={newFactor.factorType}
+                onValueChange={(value) =>
+                  setNewFactor({ ...newFactor, factorType: value as CalibrationFactorType })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('formFactorTypePlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(FACTOR_TYPE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="factorName">{t('formFactorName')}</Label>
+              <Input
+                id="factorName"
+                placeholder={t('formFactorNamePlaceholder')}
+                value={newFactor.factorName}
+                onChange={(e) => setNewFactor({ ...newFactor, factorName: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="factorType">{t('formFactorType')}</Label>
-                <Select
-                  value={newFactor.factorType}
-                  onValueChange={(value) =>
-                    setNewFactor({ ...newFactor, factorType: value as CalibrationFactorType })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('formFactorTypePlaceholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(FACTOR_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="factorName">{t('formFactorName')}</Label>
+                <Label htmlFor="factorValue">{t('formFactorValue')}</Label>
                 <Input
-                  id="factorName"
-                  placeholder={t('formFactorNamePlaceholder')}
-                  value={newFactor.factorName}
-                  onChange={(e) => setNewFactor({ ...newFactor, factorName: e.target.value })}
+                  id="factorValue"
+                  type="number"
+                  step="0.000001"
+                  placeholder="12.5"
+                  value={newFactor.factorValue}
+                  onChange={(e) => setNewFactor({ ...newFactor, factorValue: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="factorValue">{t('formFactorValue')}</Label>
-                  <Input
-                    id="factorValue"
-                    type="number"
-                    step="0.000001"
-                    placeholder="12.5"
-                    value={newFactor.factorValue}
-                    onChange={(e) => setNewFactor({ ...newFactor, factorValue: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unit">{t('formUnit')}</Label>
-                  <Input
-                    id="unit"
-                    placeholder={t('formUnitPlaceholder')}
-                    value={newFactor.unit}
-                    onChange={(e) => setNewFactor({ ...newFactor, unit: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="effectiveDate">{t('formEffectiveDate')}</Label>
-                  <Input
-                    id="effectiveDate"
-                    type="date"
-                    value={newFactor.effectiveDate}
-                    onChange={(e) => setNewFactor({ ...newFactor, effectiveDate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="expiryDate">{t('formExpiryDate')}</Label>
-                  <Input
-                    id="expiryDate"
-                    type="date"
-                    value={newFactor.expiryDate}
-                    onChange={(e) => setNewFactor({ ...newFactor, expiryDate: e.target.value })}
-                  />
-                </div>
-              </div>
               <div className="space-y-2">
-                <Label htmlFor="parameters">{t('formParameters')}</Label>
-                <Textarea
-                  id="parameters"
-                  placeholder='{"frequency": "3GHz", "temperature": "25C"}'
-                  value={newFactor.parameters}
-                  onChange={(e) => setNewFactor({ ...newFactor, parameters: e.target.value })}
-                  className="font-mono text-sm"
+                <Label htmlFor="unit">{t('formUnit')}</Label>
+                <Input
+                  id="unit"
+                  placeholder={t('formUnitPlaceholder')}
+                  value={newFactor.unit}
+                  onChange={(e) => setNewFactor({ ...newFactor, unit: e.target.value })}
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                {t('cancel')}
-              </Button>
-              <Button onClick={handleCreate} disabled={createMutation.isPending}>
-                {createMutation.isPending ? t('requesting') : t('submitRequest')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="effectiveDate">{t('formEffectiveDate')}</Label>
+                <Input
+                  id="effectiveDate"
+                  type="date"
+                  value={newFactor.effectiveDate}
+                  onChange={(e) => setNewFactor({ ...newFactor, effectiveDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">{t('formExpiryDate')}</Label>
+                <Input
+                  id="expiryDate"
+                  type="date"
+                  value={newFactor.expiryDate}
+                  onChange={(e) => setNewFactor({ ...newFactor, expiryDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="parameters">{t('formParameters')}</Label>
+              <Textarea
+                id="parameters"
+                placeholder='{"frequency": "3GHz", "temperature": "25C"}'
+                value={newFactor.parameters}
+                onChange={(e) => setNewFactor({ ...newFactor, parameters: e.target.value })}
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleCreate} disabled={createMutation.isPending}>
+              {createMutation.isPending ? t('requesting') : t('submitRequest')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 승인 대기 중인 요청 */}
       {pendingFactors.length > 0 && (

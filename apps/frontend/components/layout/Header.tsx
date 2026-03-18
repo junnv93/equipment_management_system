@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { getHeaderBarClasses } from '@/lib/design-tokens';
 import { ResponsiveBreadcrumb } from './Breadcrumb';
 import { useBreadcrumb } from '@/contexts/BreadcrumbContext';
 
@@ -35,14 +36,7 @@ export function Header({
     ...propDynamicLabels,
   };
   return (
-    <header
-      role="banner"
-      className={cn(
-        'flex h-14 items-center gap-4 border-b border-border bg-card px-4 md:px-6',
-        'sticky top-0 z-30',
-        className
-      )}
-    >
+    <header role="banner" className={cn(getHeaderBarClasses(), className)}>
       {/* 왼쪽 영역 (모바일 메뉴 등) */}
       <div className="flex items-center gap-2">{leftContent}</div>
 

@@ -20,13 +20,13 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Check, X, Package, Undo2, Ban } from 'lucide-react';
+import { Check, X, Package, Undo2, Ban } from 'lucide-react';
 import {
   getPageContainerClasses,
-  SUB_PAGE_HEADER_TOKENS,
   getSemanticContainerColorClasses,
   getSemanticContainerTextClasses,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
@@ -195,20 +195,14 @@ export default function EquipmentImportDetail({ id }: Props) {
 
   return (
     <div className={getPageContainerClasses('detail')}>
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/checkouts?view=inbound')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{equipmentImport.equipmentName}</h1>
-          <p className="text-muted-foreground">
-            {t('equipmentImport.detailSubtitle', {
-              source: EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType],
-            })}
-          </p>
-        </div>
-        <EquipmentImportStatusBadge status={status} />
-      </div>
+      <PageHeader
+        title={equipmentImport.equipmentName}
+        subtitle={t('equipmentImport.detailSubtitle', {
+          source: EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType],
+        })}
+        onBack={() => router.push('/checkouts?view=inbound')}
+        actions={<EquipmentImportStatusBadge status={status} />}
+      />
 
       {/* Equipment Information */}
       <Card>

@@ -38,6 +38,7 @@ import { queryKeys, CACHE_TIMES, REFETCH_INTERVALS } from '@/lib/api/query-confi
 import { BreadcrumbProvider } from '@/contexts/BreadcrumbContext';
 import {
   getHeaderSpacingClass,
+  getHeaderBarClasses,
   FOCUS_TOKENS,
   ANIMATION_PRESETS,
   TRANSITION_PRESETS,
@@ -45,6 +46,8 @@ import {
   SIDEBAR_COLORS,
   SIDEBAR_ITEM_TOKENS,
   SIDEBAR_SECTION_TOKENS,
+  LAYOUT_Z_INDEX,
+  SIDEBAR_ELEVATION,
   getSidebarItemClasses,
   getSidebarWidthClasses,
   getSidebarMarginClasses,
@@ -168,17 +171,20 @@ export function DashboardShell({ children }: DashboardShellProps) {
         {/* 데스크톱 사이드바 - UL Midnight Blue */}
         <aside
           className={cn(
-            'fixed inset-y-0 z-20 hidden md:flex md:flex-col',
+            'fixed inset-y-0 hidden md:flex md:flex-col',
+            LAYOUT_Z_INDEX.sidebar,
             getSidebarWidthClasses(isCollapsed),
             SIDEBAR_COLORS.background,
+            SIDEBAR_ELEVATION.shadow,
             SIDEBAR_LAYOUT.transition
           )}
-          aria-label={t('layout.mainNav')}
+          aria-label={t('layout.sidebar')}
         >
-          {/* 사이드바 헤더 — 펼침/접힘 모두 h-14 동일 영역 내 토글 버튼 배치 */}
+          {/* 사이드바 헤더 — 펼침/접힘 모두 동일 높이 영역 내 토글 버튼 배치 */}
           <div
             className={cn(
-              'flex h-14 items-center border-b shrink-0',
+              'flex items-center border-b shrink-0',
+              SIDEBAR_LAYOUT.headerHeight,
               SIDEBAR_COLORS.border,
               isCollapsed ? 'px-2 justify-between' : 'px-4'
             )}
@@ -295,9 +301,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
             ))}
           </nav>
 
-          {/* 사이드바 하단 — 브랜딩 (펼쳐진 상태에서만) */}
+          {/* 사이드바 하단 — 브랜딩 (mt-auto로 항상 하단 고정) */}
           {!isCollapsed && (
-            <div className={cn('p-4 border-t shrink-0', SIDEBAR_COLORS.border)}>
+            <div className={cn('mt-auto p-4 border-t shrink-0', SIDEBAR_COLORS.border)}>
               <div className="flex items-center gap-2">
                 <span className={cn('font-bold text-xs', SIDEBAR_COLORS.brandPrimary)}>
                   UL Solutions
@@ -342,7 +348,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           />
 
           {/* 메인 콘텐츠 */}
-          <main id="main-content" className="flex-1 overflow-auto" role="main" tabIndex={-1}>
+          <main id="main-content" className="flex-1 overflow-auto" tabIndex={-1}>
             {children}
           </main>
         </div>
@@ -366,12 +372,21 @@ export function DashboardShellSkeleton() {
       {/* 데스크톱 사이드바 스켈레톤 */}
       <aside
         className={cn(
-          'fixed inset-y-0 z-20 hidden md:block',
+          'fixed inset-y-0 hidden md:block',
+          LAYOUT_Z_INDEX.sidebar,
           SIDEBAR_LAYOUT.expanded.width,
-          SIDEBAR_COLORS.background
+          SIDEBAR_COLORS.background,
+          SIDEBAR_ELEVATION.shadow
         )}
+        aria-label={t('layout.sidebar')}
       >
-        <div className={cn('flex h-14 items-center border-b px-4', SIDEBAR_COLORS.border)}>
+        <div
+          className={cn(
+            'flex items-center border-b px-4',
+            SIDEBAR_LAYOUT.headerHeight,
+            SIDEBAR_COLORS.border
+          )}
+        >
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-ul-red">
               <Wrench className="h-4 w-4 text-white" aria-hidden="true" />
@@ -380,7 +395,7 @@ export function DashboardShellSkeleton() {
           </div>
         </div>
 
-        <nav className="flex flex-col gap-1 p-4">
+        <nav className="flex flex-col gap-1 p-4" aria-label={t('layout.mainNav')}>
           {Array.from({ length: 7 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2">
               <Skeleton className="h-5 w-5 rounded bg-white/10" />
@@ -391,16 +406,20 @@ export function DashboardShellSkeleton() {
 
         <div className={cn('absolute bottom-0 left-0 right-0 p-4 border-t', SIDEBAR_COLORS.border)}>
           <div className="flex items-center gap-2">
-            <span className="text-ul-red font-bold text-xs">UL Solutions</span>
+            <span className={cn('font-bold text-xs', SIDEBAR_COLORS.brandPrimary)}>
+              UL Solutions
+            </span>
             <span className="text-white/30 text-xs">|</span>
-            <span className="text-white/40 text-xs">Working for a safer world.</span>
+            <span className={cn('text-xs', SIDEBAR_COLORS.brandSecondary)}>
+              Working for a safer world.
+            </span>
           </div>
         </div>
       </aside>
 
       {/* 메인 콘텐츠 영역 스켈레톤 */}
       <div className={cn('flex flex-col flex-1', SIDEBAR_LAYOUT.expanded.marginLeft)}>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6">
+        <header className={getHeaderBarClasses()}>
           <Skeleton className="h-6 w-6 md:hidden" />
           <div className="flex-1" />
           <div className="flex items-center gap-2">

@@ -18,7 +18,7 @@
  * - memo로 NavLink 컴포넌트 최적화
  */
 
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -95,6 +95,7 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
   const pathname = usePathname();
   const t = useTranslations('navigation');
   const displayBrandName = brandName ?? t('layout.systemName');
+  const navRef = useRef<HTMLElement>(null);
 
   // 경로 변경 시 드로어 닫기
   useEffect(() => {
@@ -145,6 +146,12 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
         hideClose
         className={MOBILE_NAV_DRAWER_TOKENS.content}
         aria-describedby={undefined}
+        onOpenAutoFocus={(e) => {
+          // 기본 포커스(컨테이너)를 막고 첫 번째 네비게이션 링크로 이동
+          e.preventDefault();
+          const firstLink = navRef.current?.querySelector('a');
+          firstLink?.focus();
+        }}
       >
         <SheetTitle className="sr-only">{t('layout.mainNav')}</SheetTitle>
 
@@ -174,6 +181,7 @@ export function MobileNav({ navSections, brandName, brandIcon }: MobileNavProps)
 
         {/* 네비게이션 섹션 */}
         <nav
+          ref={navRef}
           aria-label={t('layout.mainNav')}
           className="flex flex-col overflow-y-auto max-h-[calc(100vh-3.5rem)] p-2"
         >

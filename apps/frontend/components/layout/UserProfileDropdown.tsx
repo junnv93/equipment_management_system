@@ -15,7 +15,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getHeaderSizeClasses, HEADER_INTERACTIVE_STYLES } from '@/lib/design-tokens';
+import {
+  getHeaderSizeClasses,
+  HEADER_INTERACTIVE_STYLES,
+  getSemanticSolidBgClasses,
+} from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { UserRoleValues as URVal } from '@equipment-management/schemas';
@@ -98,7 +102,7 @@ export function UserProfileDropdown() {
               getHeaderSizeClasses('avatar')
             )}
           >
-            <AvatarFallback className="bg-ul-midnight text-white text-xs font-medium">
+            <AvatarFallback className={`${getSemanticSolidBgClasses('info')} text-xs font-medium`}>
               {getInitials(user.name)}
             </AvatarFallback>
           </Avatar>

@@ -27,6 +27,11 @@ import {
   isAuthError,
 } from '@/lib/errors/equipment-errors';
 import { formatDate } from '@/lib/utils/date';
+import {
+  type SemanticColorKey,
+  getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
+} from '@/lib/design-tokens';
 
 /**
  * ErrorAlert 컴포넌트 Props
@@ -51,30 +56,21 @@ interface ErrorAlertProps {
 }
 
 /**
- * 에러 심각도별 스타일
+ * 심각도 → SemanticColorKey 매핑
+ */
+const SEVERITY_COLOR: Record<string, SemanticColorKey> = {
+  error: 'critical',
+  warning: 'warning',
+  info: 'info',
+};
+
+/**
+ * 에러 심각도별 스타일 (색상은 SEVERITY_COLOR → semantic 함수로 해석)
  */
 const severityStyles = {
-  error: {
-    variant: 'destructive' as const,
-    icon: AlertCircle,
-    bgClass: 'bg-brand-critical/10 border-brand-critical/20',
-    iconClass: 'text-brand-critical',
-    titleClass: 'text-brand-critical',
-  },
-  warning: {
-    variant: 'default' as const,
-    icon: AlertTriangle,
-    bgClass: 'bg-brand-warning/10 border-brand-warning/20',
-    iconClass: 'text-brand-warning',
-    titleClass: 'text-brand-warning',
-  },
-  info: {
-    variant: 'default' as const,
-    icon: Info,
-    bgClass: 'bg-brand-info/10 border-brand-info/20',
-    iconClass: 'text-brand-info',
-    titleClass: 'text-brand-info',
-  },
+  error: { variant: 'destructive' as const, icon: AlertCircle },
+  warning: { variant: 'default' as const, icon: AlertTriangle },
+  info: { variant: 'default' as const, icon: Info },
 };
 
 /**
@@ -159,6 +155,7 @@ export function ErrorAlert({
   const { info, apiError } = getErrorInfo(error);
   const style = severityStyles[info.severity];
   const Icon = style.icon;
+  const colorKey = SEVERITY_COLOR[info.severity];
 
   // 표시할 제목과 메시지
   const displayTitle = title || info.title;
@@ -274,9 +271,11 @@ export function ErrorAlert({
   };
 
   return (
-    <Alert className={`${style.bgClass} ${className}`}>
-      <Icon className={`h-4 w-4 ${style.iconClass}`} />
-      <AlertTitle className={`flex items-center justify-between ${style.titleClass}`}>
+    <Alert className={`${getSemanticContainerColorClasses(colorKey)} ${className}`}>
+      <Icon className={`h-4 w-4 ${getSemanticContainerTextClasses(colorKey)}`} />
+      <AlertTitle
+        className={`flex items-center justify-between ${getSemanticContainerTextClasses(colorKey)}`}
+      >
         <span>{displayTitle}</span>
         {onDismiss && (
           <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={onDismiss}>
@@ -339,9 +338,11 @@ export function PartialSuccessAlert({
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   return (
-    <Alert className={`bg-brand-warning/10 border-brand-warning/20 ${className}`}>
-      <AlertTriangle className="h-4 w-4 text-brand-warning" />
-      <AlertTitle className="flex items-center justify-between text-brand-warning">
+    <Alert className={`${getSemanticContainerColorClasses('warning')} ${className}`}>
+      <AlertTriangle className={`h-4 w-4 ${getSemanticContainerTextClasses('warning')}`} />
+      <AlertTitle
+        className={`flex items-center justify-between ${getSemanticContainerTextClasses('warning')}`}
+      >
         <span>{t('partialSaveTitle')}</span>
         {onDismiss && (
           <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={onDismiss}>
@@ -355,7 +356,7 @@ export function PartialSuccessAlert({
 
         {failedItems.length > 0 && (
           <>
-            <p className="text-sm text-brand-warning mt-2">
+            <p className={`text-sm ${getSemanticContainerTextClasses('warning')} mt-2`}>
               {t('partialSaveFailed', { count: failedItems.length })}
             </p>
 
@@ -364,7 +365,7 @@ export function PartialSuccessAlert({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="p-0 h-auto font-normal text-brand-warning hover:text-brand-warning/80"
+                  className={`p-0 h-auto font-normal ${getSemanticContainerTextClasses('warning')} hover:opacity-80`}
                 >
                   {isDetailOpen ? (
                     <ChevronUp className="h-3 w-3 mr-1" />
@@ -391,7 +392,7 @@ export function PartialSuccessAlert({
           </>
         )}
 
-        <div className="mt-3 pt-3 border-t border-brand-warning/20">
+        <div className="mt-3 pt-3 border-t border-current/10">
           <div className="flex items-center gap-1 text-sm font-medium mb-2">
             <Lightbulb className="h-3 w-3" />
             {t('partialSaveNote')}

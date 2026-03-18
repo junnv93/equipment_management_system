@@ -31,7 +31,7 @@ export const FIELD_LABELS: Record<string, Record<string, string>> = {
     calibrationDate: '교정일',
     nextCalibrationDate: '차기 교정일',
     calibrationCycle: '교정 주기',
-    purchaseDate: '구매일',
+    purchaseYear: '구입년도',
     purchasePrice: '구매 가격',
     assetNumber: '자산번호',
     notes: '비고',

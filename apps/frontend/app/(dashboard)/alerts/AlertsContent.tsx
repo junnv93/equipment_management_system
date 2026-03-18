@@ -33,54 +33,55 @@ import {
   useDeleteNotification,
 } from '@/hooks/use-notifications';
 import type { NotificationItem } from '@/lib/api/notifications-api';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  type SemanticColorKey,
+  getSemanticStatusClasses,
+  getSemanticBgLightClasses,
+  getSemanticContainerTextClasses,
+} from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 
-// 알림 타입별 아이콘 및 색상
-const alertTypeConfig: Record<
-  string,
-  { icon: React.ReactNode; bgColor: string; textColor: string }
-> = {
-  calibration_due: {
-    icon: <Calendar className="h-5 w-5" />,
-    bgColor: 'bg-brand-warning/10',
-    textColor: 'text-brand-warning',
-  },
-  calibration_overdue: {
-    icon: <Calendar className="h-5 w-5" />,
-    bgColor: 'bg-brand-critical/10',
-    textColor: 'text-brand-critical',
-  },
-  calibration_completed: {
-    icon: <CheckCircle className="h-5 w-5" />,
-    bgColor: 'bg-brand-ok/10',
-    textColor: 'text-brand-ok',
-  },
-  maintenance_scheduled: {
-    icon: <Settings className="h-5 w-5" />,
-    bgColor: 'bg-brand-info/10',
-    textColor: 'text-brand-info',
-  },
-  checkout_request: {
-    icon: <Clock className="h-5 w-5" />,
-    bgColor: 'bg-brand-purple/10',
-    textColor: 'text-brand-purple',
-  },
-  checkout_overdue: {
-    icon: <Clock className="h-5 w-5" />,
-    bgColor: 'bg-brand-critical/10',
-    textColor: 'text-brand-critical',
-  },
-};
+// 알림 타입별 아이콘 및 색상 — SemanticColorKey로 SSOT
+const alertTypeConfig: Record<string, { icon: React.ReactNode; semanticColor: SemanticColorKey }> =
+  {
+    calibration_due: {
+      icon: <Calendar className="h-5 w-5" />,
+      semanticColor: 'warning',
+    },
+    calibration_overdue: {
+      icon: <Calendar className="h-5 w-5" />,
+      semanticColor: 'critical',
+    },
+    calibration_completed: {
+      icon: <CheckCircle className="h-5 w-5" />,
+      semanticColor: 'ok',
+    },
+    maintenance_scheduled: {
+      icon: <Settings className="h-5 w-5" />,
+      semanticColor: 'info',
+    },
+    checkout_request: {
+      icon: <Clock className="h-5 w-5" />,
+      semanticColor: 'purple',
+    },
+    checkout_overdue: {
+      icon: <Clock className="h-5 w-5" />,
+      semanticColor: 'critical',
+    },
+  };
 
-const PRIORITY_BADGE_COLORS: Record<string, string> = {
-  high: 'bg-brand-critical/10 text-brand-critical',
-  medium: 'bg-brand-warning/10 text-brand-warning',
-  low: 'bg-brand-ok/10 text-brand-ok',
+const PRIORITY_SEMANTIC_COLOR: Record<string, SemanticColorKey> = {
+  high: 'critical',
+  medium: 'warning',
+  low: 'ok',
 };
 
 function PriorityBadge({ priority, label }: { priority: string; label: string }) {
-  const colorClass = PRIORITY_BADGE_COLORS[priority] || 'bg-muted text-muted-foreground';
+  const semanticKey = PRIORITY_SEMANTIC_COLOR[priority];
+  const colorClass = semanticKey
+    ? getSemanticStatusClasses(semanticKey)
+    : 'bg-muted text-muted-foreground';
   return (
     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>{label}</span>
   );
@@ -142,8 +143,7 @@ export default function AlertsContent() {
           {items.map((notification) => {
             const typeConfig = alertTypeConfig[notification.type] ?? {
               icon: <Bell className="h-5 w-5" />,
-              bgColor: 'bg-muted',
-              textColor: 'text-muted-foreground',
+              semanticColor: 'neutral' as SemanticColorKey,
             };
 
             return (
@@ -153,7 +153,9 @@ export default function AlertsContent() {
                   !notification.isRead ? 'bg-brand-info/10' : 'bg-background'
                 }`}
               >
-                <div className={`p-2 rounded-full ${typeConfig.bgColor} ${typeConfig.textColor}`}>
+                <div
+                  className={`p-2 rounded-full ${getSemanticBgLightClasses(typeConfig.semanticColor)} ${getSemanticContainerTextClasses(typeConfig.semanticColor)}`}
+                >
                   {typeConfig.icon}
                 </div>
 

@@ -16,7 +16,7 @@ export function SoftwareTab({ equipment }: SoftwareTabProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Code className="h-5 w-5 text-ul-midnight" />
+          <Code className="h-5 w-5 text-brand-info" />
           {t('softwareTab.title')}
         </CardTitle>
       </CardHeader>

@@ -8,7 +8,13 @@ import { useAuthProviders } from '@/components/auth/AuthProviders';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { DevLoginButtons } from '@/components/auth/DevLoginButtons';
 import { getSafeCallbackUrl } from '@/lib/auth/auth-utils';
-import { AUTH_CONTENT, AUTH_LAYOUT_TOKENS, getAuthStaggerDelay } from '@/lib/design-tokens';
+import {
+  AUTH_CONTENT,
+  AUTH_LAYOUT_TOKENS,
+  getAuthStaggerDelay,
+  getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
+} from '@/lib/design-tokens';
 
 function LoginProviders() {
   const searchParams = useSearchParams();
@@ -47,7 +53,7 @@ function LoginProviders() {
       {hasCredentials && <LoginForm callbackUrl={callbackUrl} />}
       {!hasAzureAD && !hasCredentials && (
         <div
-          className="flex items-start gap-3 p-4 text-sm text-brand-critical bg-brand-critical/10 border border-brand-critical/20 rounded-lg"
+          className={`flex items-start gap-3 p-4 text-sm border rounded-lg ${getSemanticContainerColorClasses('critical')} ${getSemanticContainerTextClasses('critical')}`}
           role="alert"
           aria-live="polite"
         >

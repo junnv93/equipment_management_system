@@ -16,7 +16,7 @@ export function AttachmentsTab({ equipment: _equipment }: AttachmentsTabProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Paperclip className="h-5 w-5 text-ul-midnight" />
+          <Paperclip className="h-5 w-5 text-brand-info" />
           {t('attachmentsTab.title')}
         </CardTitle>
       </CardHeader>

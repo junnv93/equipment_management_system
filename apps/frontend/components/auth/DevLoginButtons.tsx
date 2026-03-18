@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { type SemanticColorKey, getSemanticSolidBgClasses } from '@/lib/design-tokens';
 import {
   Select,
   SelectContent,
@@ -26,31 +27,31 @@ const TEST_USERS_BY_TEAM = {
         email: 'test.engineer@example.com',
         role: 'test_engineer',
         label: '시험실무자',
-        color: 'bg-brand-info hover:bg-brand-info/90',
+        semanticColor: 'info' as SemanticColorKey,
       },
       {
         email: 'tech.manager@example.com',
         role: 'technical_manager',
         label: '기술책임자',
-        color: 'bg-brand-ok hover:bg-brand-ok/90',
+        semanticColor: 'ok' as SemanticColorKey,
       },
       {
         email: 'quality.manager@example.com',
         role: 'quality_manager',
         label: '품질책임자',
-        color: 'bg-brand-warning hover:bg-brand-warning/90',
+        semanticColor: 'warning' as SemanticColorKey,
       },
       {
         email: 'lab.manager@example.com',
         role: 'lab_manager',
         label: '시험소장',
-        color: 'bg-brand-purple hover:bg-brand-purple/90',
+        semanticColor: 'purple' as SemanticColorKey,
       },
       {
         email: 'system.admin@example.com',
         role: 'system_admin',
         label: '시스템 관리자',
-        color: 'bg-brand-critical hover:bg-brand-critical/90',
+        semanticColor: 'critical' as SemanticColorKey,
       },
     ],
   },
@@ -61,13 +62,13 @@ const TEST_USERS_BY_TEAM = {
         email: 'test.engineer.suwon.general.emc@example.com',
         role: 'test_engineer',
         label: '시험실무자',
-        color: 'bg-brand-info hover:bg-brand-info/90',
+        semanticColor: 'info' as SemanticColorKey,
       },
       {
         email: 'tech.manager.suwon.general.emc@example.com',
         role: 'technical_manager',
         label: '기술책임자',
-        color: 'bg-brand-ok hover:bg-brand-ok/90',
+        semanticColor: 'ok' as SemanticColorKey,
       },
     ],
   },
@@ -78,13 +79,13 @@ const TEST_USERS_BY_TEAM = {
         email: 'test.engineer.suwon.sar@example.com',
         role: 'test_engineer',
         label: '시험실무자',
-        color: 'bg-brand-info hover:bg-brand-info/90',
+        semanticColor: 'info' as SemanticColorKey,
       },
       {
         email: 'tech.manager.suwon.sar@example.com',
         role: 'technical_manager',
         label: '기술책임자',
-        color: 'bg-brand-ok hover:bg-brand-ok/90',
+        semanticColor: 'ok' as SemanticColorKey,
       },
     ],
   },
@@ -95,13 +96,13 @@ const TEST_USERS_BY_TEAM = {
         email: 'user1@example.com',
         role: 'test_engineer',
         label: '시험실무자',
-        color: 'bg-brand-info hover:bg-brand-info/90',
+        semanticColor: 'info' as SemanticColorKey,
       },
       {
         email: 'manager2@example.com',
         role: 'technical_manager',
         label: '기술책임자',
-        color: 'bg-brand-ok hover:bg-brand-ok/90',
+        semanticColor: 'ok' as SemanticColorKey,
       },
     ],
   },
@@ -112,19 +113,19 @@ const TEST_USERS_BY_TEAM = {
         email: 'test.engineer.pyeongtaek@example.com',
         role: 'test_engineer',
         label: '시험실무자',
-        color: 'bg-brand-info hover:bg-brand-info/90',
+        semanticColor: 'info' as SemanticColorKey,
       },
       {
         email: 'tech.manager.pyeongtaek@example.com',
         role: 'technical_manager',
         label: '기술책임자',
-        color: 'bg-brand-ok hover:bg-brand-ok/90',
+        semanticColor: 'ok' as SemanticColorKey,
       },
       {
         email: 'admin2@example.com',
         role: 'lab_manager',
         label: '시험소장',
-        color: 'bg-brand-purple hover:bg-brand-purple/90',
+        semanticColor: 'purple' as SemanticColorKey,
       },
     ],
   },
@@ -193,7 +194,7 @@ export function DevLoginButtons({ callbackUrl = '/' }: DevLoginButtonsProps) {
               type="button"
               onClick={() => handleLogin(user.email, user.role)}
               disabled={loadingEmail !== null}
-              className={`w-full ${user.color} text-white font-medium`}
+              className={`w-full ${getSemanticSolidBgClasses(user.semanticColor)} hover:opacity-90 font-medium`}
               size="sm"
             >
               {loadingEmail === user.email ? (

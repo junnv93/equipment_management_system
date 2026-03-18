@@ -16,7 +16,7 @@ export function CalibrationFactorsTab({ equipment: _equipment }: CalibrationFact
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Gauge className="h-5 w-5 text-ul-midnight" />
+          <Gauge className="h-5 w-5 text-brand-info" />
           {t('calibrationFactorsTab.title')}
         </CardTitle>
       </CardHeader>

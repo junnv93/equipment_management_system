@@ -496,12 +496,17 @@ export {
   getWizardConnectorClasses,
 } from './components/form-wizard';
 
-// Sidebar
+// Sidebar & Layout Z-Index
 export {
   SIDEBAR_LAYOUT,
   SIDEBAR_COLORS,
   SIDEBAR_ITEM_TOKENS,
   SIDEBAR_SECTION_TOKENS,
+  LAYOUT_Z_INDEX,
+  HEADER_BAR_TOKENS,
+  SIDEBAR_ELEVATION,
+  HEADER_SEARCH_TOKENS,
+  getHeaderBarClasses,
   getSidebarItemClasses,
   getSidebarWidthClasses,
   getSidebarMarginClasses,

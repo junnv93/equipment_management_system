@@ -92,6 +92,7 @@
     "globalErrorTitle": "Something went wrong",
     "globalErrorDescription": "An unexpected error has occurred.",
     "goToEquipment": "Equipment List",
+    "sidebar": "Sidebar",
     "collapseSidebar": "Collapse sidebar",
     "expandSidebar": "Expand sidebar",
     "toggleSidebarShortcut": "Toggle sidebar (Ctrl+B)",

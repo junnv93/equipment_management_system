@@ -213,6 +213,12 @@ const EquipmentRow = memo(function EquipmentRow({
   const statusToken =
     EQUIPMENT_STATUS_TOKENS[equipment.status || 'available'] || DEFAULT_STATUS_CONFIG;
 
+  // 상태명 (상태 바 tooltip + StatusBadge 공용)
+  const statusStyle = useMemo(
+    () => getEquipmentStatusTokenStyle(equipment.status, equipment.nextCalibrationDate),
+    [equipment.status, equipment.nextCalibrationDate]
+  );
+
   /**
    * 교정 기한 표시 (D-day 형식)
    */
@@ -268,10 +274,11 @@ const EquipmentRow = memo(function EquipmentRow({
       data-testid="equipment-row"
       onClick={handleRowClick}
     >
-      {/* 4px 상태 세로 바 */}
+      {/* 상태 인디케이터 바 — 색상이 상태 배지와 대응 (tooltip으로 상태명 표시) */}
       <TableCell className={EQUIPMENT_TABLE_TOKENS.statusBar.cell} aria-hidden="true">
         <div
           className={`${EQUIPMENT_TABLE_TOKENS.statusBar.indicator} ${statusToken.card.statusBarColor}`}
+          title={statusStyle.label}
         />
       </TableCell>
 

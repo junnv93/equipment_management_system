@@ -36,6 +36,7 @@ import { formatDate, toDate } from '@/lib/utils/date';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ApiError } from '@/lib/errors/equipment-errors';
+import { type SemanticColorKey, getSemanticStatusClasses } from '@/lib/design-tokens';
 
 export interface CalibrationRecord {
   id: string;
@@ -68,23 +69,23 @@ interface CalibrationHistorySectionProps {
   isCreateMode?: boolean; // 등록 모드 여부
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: 'bg-brand-info/10 text-brand-info',
-  in_progress: 'bg-brand-warning/10 text-brand-warning',
-  completed: 'bg-brand-ok/10 text-brand-ok',
-  failed: 'bg-brand-critical/10 text-brand-critical',
+const STATUS_SEMANTIC: Record<string, SemanticColorKey> = {
+  scheduled: 'info',
+  in_progress: 'warning',
+  completed: 'ok',
+  failed: 'critical',
 };
 
-const APPROVAL_STATUS_COLORS: Record<string, string> = {
-  pending_approval: 'bg-brand-warning/10 text-brand-warning',
-  approved: 'bg-brand-ok/10 text-brand-ok',
-  rejected: 'bg-brand-critical/10 text-brand-critical',
+const APPROVAL_STATUS_SEMANTIC: Record<string, SemanticColorKey> = {
+  pending_approval: 'warning',
+  approved: 'ok',
+  rejected: 'critical',
 };
 
-const RESULT_COLORS: Record<string, string> = {
-  pass: 'bg-brand-ok/10 text-brand-ok',
-  fail: 'bg-brand-critical/10 text-brand-critical',
-  conditional: 'bg-brand-warning/10 text-brand-warning',
+const RESULT_SEMANTIC: Record<string, SemanticColorKey> = {
+  pass: 'ok',
+  fail: 'critical',
+  conditional: 'warning',
 };
 
 const STATUS_LABEL_KEYS: Record<string, string> = {
@@ -314,7 +315,11 @@ export function CalibrationHistorySection({
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={RESULT_COLORS[resultKey] || 'bg-muted text-muted-foreground'}
+                        className={
+                          RESULT_SEMANTIC[resultKey]
+                            ? getSemanticStatusClasses(RESULT_SEMANTIC[resultKey])
+                            : 'bg-muted text-muted-foreground'
+                        }
                       >
                         {RESULT_LABEL_KEYS[resultKey]
                           ? t(
@@ -329,7 +334,14 @@ export function CalibrationHistorySection({
                     <TableCell>{formatDate(item.nextCalibrationDate, 'yyyy-MM-dd')}</TableCell>
                     <TableCell>{item.calibrationAgency || '-'}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={STATUS_COLORS[item.status] || 'bg-muted'}>
+                      <Badge
+                        variant="outline"
+                        className={
+                          STATUS_SEMANTIC[item.status]
+                            ? getSemanticStatusClasses(STATUS_SEMANTIC[item.status])
+                            : 'bg-muted'
+                        }
+                      >
                         {STATUS_LABEL_KEYS[item.status]
                           ? t(
                               STATUS_LABEL_KEYS[item.status] as
@@ -346,8 +358,11 @@ export function CalibrationHistorySection({
                         <Badge
                           variant="outline"
                           className={
-                            APPROVAL_STATUS_COLORS[item.approvalStatus] ||
-                            'bg-brand-neutral/10 text-brand-neutral'
+                            APPROVAL_STATUS_SEMANTIC[item.approvalStatus]
+                              ? getSemanticStatusClasses(
+                                  APPROVAL_STATUS_SEMANTIC[item.approvalStatus]
+                                )
+                              : getSemanticStatusClasses('neutral')
                           }
                         >
                           {APPROVAL_LABEL_KEYS[item.approvalStatus]

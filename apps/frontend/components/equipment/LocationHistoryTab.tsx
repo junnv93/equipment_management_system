@@ -41,6 +41,7 @@ import { getErrorMessage } from '@/lib/api/error';
 import {
   TIMELINE_TOKENS,
   getTimelineCardClasses,
+  getSemanticSolidBgClasses,
   TIMELINE_SKELETON_TOKENS,
 } from '@/lib/design-tokens';
 
@@ -304,7 +305,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-ul-midnight" />
+            <MapPin className="h-5 w-5 text-brand-info" />
             {t('locationHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
@@ -323,7 +324,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5 text-ul-midnight" />
+          <MapPin className="h-5 w-5 text-brand-info" />
           위치 변동 이력
         </CardTitle>
         {canCreate && RegisterDialog}
@@ -339,7 +340,7 @@ export function LocationHistoryTab({ equipment }: LocationHistoryTabProps) {
               {/* 타임라인 점 */}
               <div className="relative flex-shrink-0">
                 <div
-                  className={`${TIMELINE_TOKENS.node.container} bg-ul-midnight text-white shadow-lg`}
+                  className={`${TIMELINE_TOKENS.node.container} ${getSemanticSolidBgClasses('info')} shadow-lg`}
                 >
                   <MapPin className={TIMELINE_TOKENS.node.icon} />
                 </div>

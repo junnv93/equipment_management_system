@@ -1,11 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useTranslations, useFormatter } from 'next-intl';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { queryKeys } from '@/lib/api/query-config';
@@ -17,7 +15,8 @@ import checkoutApi, {
 import { ConditionCheckStep } from '@equipment-management/schemas';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 interface ConditionCheckClientProps {
   checkout: Checkout;
@@ -75,16 +74,12 @@ export default function ConditionCheckClient({
   return (
     <div className={getPageContainerClasses('form')}>
       {/* 헤더 */}
-      <div>
-        <Button variant="ghost" size="sm" className="mb-2" asChild>
-          <Link href={`/checkouts/${checkout.id}`}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('conditionCheck.backToDetail')}
-          </Link>
-        </Button>
-        <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('conditionCheck.title')}</h1>
-        <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
-      </div>
+      <PageHeader
+        title={t('conditionCheck.title')}
+        subtitle={checkout.destination}
+        backUrl={`/checkouts/${checkout.id}`}
+        backLabel={t('conditionCheck.backToDetail')}
+      />
 
       {/* 진행 상태 */}
       <Card>

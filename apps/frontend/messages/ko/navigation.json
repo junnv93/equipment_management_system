@@ -92,6 +92,7 @@
     "globalErrorTitle": "문제가 발생했습니다",
     "globalErrorDescription": "예기치 않은 오류가 발생했습니다.",
     "goToEquipment": "장비 목록",
+    "sidebar": "사이드바",
     "collapseSidebar": "사이드바 접기",
     "expandSidebar": "사이드바 펼치기",
     "toggleSidebarShortcut": "사이드바 토글 (Ctrl+B)",

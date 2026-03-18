@@ -26,8 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft } from 'lucide-react';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import equipmentImportApi, {
   type ReceivingCondition,
   type ReceiveEquipmentImportDto,
@@ -170,21 +170,11 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
 
   return (
     <div className={getPageContainerClasses('form')}>
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(id))}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('receiveEquipmentImport.title')}</h1>
-          <p className="text-muted-foreground">
-            {equipmentImport.equipmentName} — {sourceLabel} ({ownerLabel})
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={t('receiveEquipmentImport.title')}
+        subtitle={`${equipmentImport.equipmentName} — ${sourceLabel} (${ownerLabel})`}
+        onBack={() => router.push(FRONTEND_ROUTES.EQUIPMENT_IMPORTS.DETAIL(id))}
+      />
 
       <Card>
         <CardHeader>

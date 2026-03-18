@@ -7,7 +7,7 @@ import { AlertCircle, ArrowLeft, RefreshCw, Wrench, Loader2 } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { useTranslations } from 'next-intl';
-import { TRANSITION_PRESETS } from '@/lib/design-tokens';
+import { TRANSITION_PRESETS, getSemanticSolidBgClasses } from '@/lib/design-tokens';
 
 /** 유효한 에러 타입 목록 (auth.json의 errorPage 하위 키와 대응) */
 const VALID_ERROR_TYPES = [
@@ -78,7 +78,7 @@ function ErrorPageContent() {
         <CardFooter className="flex flex-col gap-3 px-8 pb-8">
           <Button
             asChild
-            className={`w-full h-12 text-base font-medium bg-brand-info hover:bg-brand-info/90 text-white ${TRANSITION_PRESETS.fastBgTransform} hover:scale-[1.02] active:scale-[0.98]`}
+            className={`w-full h-12 text-base font-medium ${getSemanticSolidBgClasses('info')} hover:opacity-90 ${TRANSITION_PRESETS.fastBgTransform} hover:scale-[1.02] active:scale-[0.98]`}
             aria-label={t('errorPage.backToLogin')}
           >
             <Link href="/login">

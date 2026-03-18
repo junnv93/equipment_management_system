@@ -76,8 +76,7 @@ export const baseEquipmentSchema = z.object({
   nextIntermediateCheckDate: z.coerce.date().optional(), // 차기 중간 점검일
 
   // 관리 정보
-  purchaseYear: z.number().int().min(1990).max(2100).optional(), // UI 입력용: 연도 (프론트엔드 호환)
-  purchaseDate: z.coerce.date().nullable().optional(), // DB와 동기화: purchaseDate (timestamp)
+  purchaseYear: z.number().int().min(1990).max(2100).optional().nullable(), // 구입년도 (연도 정수)
   price: z.number().int().positive().nullable().optional(), // DB와 동기화: price (integer)
   teamId: z.string().uuid().optional().nullable(), // ✅ 스키마 일치화: uuid 타입으로 변경
   site: SiteEnum, // ✅ 사이트별 권한 관리: 필수 필드로 변경

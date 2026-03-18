@@ -14,6 +14,7 @@ import {
   AUTH_MOTION_TOKENS,
   MOTION_PRIMITIVES,
   TRANSITION_PRESETS,
+  getSemanticStatusClasses,
 } from '@/lib/design-tokens';
 
 const loginSchema = z.object({
@@ -123,7 +124,7 @@ export function LoginForm({
         <div
           className={cn(
             'flex items-center gap-2.5 p-3 rounded-lg',
-            'bg-brand-critical/10 text-brand-critical',
+            getSemanticStatusClasses('critical'),
             'motion-safe:animate-slide-down motion-reduce:animate-none'
           )}
           role="alert"

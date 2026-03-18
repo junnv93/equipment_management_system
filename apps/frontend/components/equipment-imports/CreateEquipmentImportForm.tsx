@@ -26,8 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft } from 'lucide-react';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import equipmentImportApi, {
   type CreateEquipmentImportDto,
   type CreateRentalImportDto,
@@ -185,23 +185,19 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
 
   return (
     <form onSubmit={handleSubmit} className={getPageContainerClasses('detail')}>
-      <div className="flex items-center gap-4">
-        <Button type="button" variant="ghost" size="icon" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>
-            {isRental
-              ? t('equipmentImport.createForm.rentalTitle')
-              : t('equipmentImport.createForm.internalTitle')}
-          </h1>
-          <p className="text-muted-foreground">
-            {isRental
-              ? t('equipmentImport.createForm.rentalSubtitle')
-              : t('equipmentImport.createForm.internalSubtitle')}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={
+          isRental
+            ? t('equipmentImport.createForm.rentalTitle')
+            : t('equipmentImport.createForm.internalTitle')
+        }
+        subtitle={
+          isRental
+            ? t('equipmentImport.createForm.rentalSubtitle')
+            : t('equipmentImport.createForm.internalSubtitle')
+        }
+        onBack={handleBack}
+      />
 
       {/* 장비 정보 */}
       <Card>

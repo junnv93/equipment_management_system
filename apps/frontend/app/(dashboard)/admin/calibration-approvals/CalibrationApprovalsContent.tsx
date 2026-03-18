@@ -36,17 +36,22 @@ const getResultLabel = (result: string): string => {
 };
 
 // 결과 색상 (소문자 값만 지원 — 백엔드 정규화 완료)
-const RESULT_COLORS: Record<string, string> = {
-  pass: 'bg-brand-ok/10 text-brand-ok',
-  fail: 'bg-brand-critical/10 text-brand-critical',
-  conditional: 'bg-brand-warning/10 text-brand-warning',
+const RESULT_SEMANTIC: Record<string, SemanticColorKey> = {
+  pass: 'ok',
+  fail: 'critical',
+  conditional: 'warning',
 };
 
 import {
   APPROVAL_STATUS_LABELS as STATUS_LABELS,
   APPROVAL_STATUS_COLORS as STATUS_COLORS,
 } from '@/components/admin/approval-constants';
-import { getPageContainerClasses, APPROVAL_CARD_BORDER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  APPROVAL_CARD_BORDER_TOKENS,
+  getSemanticStatusClasses,
+  type SemanticColorKey,
+} from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 
 export default function CalibrationApprovalsContent() {
@@ -209,8 +214,9 @@ export default function CalibrationApprovalsContent() {
                           </Badge>
                           <Badge
                             className={
-                              (request.result && RESULT_COLORS[request.result]) ||
-                              'bg-brand-neutral/10 text-muted-foreground'
+                              request.result && RESULT_SEMANTIC[request.result]
+                                ? getSemanticStatusClasses(RESULT_SEMANTIC[request.result!])
+                                : getSemanticStatusClasses('neutral')
                             }
                           >
                             {request.result ? getResultLabel(request.result) : t('noResult')}

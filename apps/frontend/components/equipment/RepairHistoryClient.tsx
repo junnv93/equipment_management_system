@@ -54,18 +54,17 @@ import {
 } from '@/lib/api/repair-history-api';
 import RepairHistoryTimeline from '@/components/equipment/RepairHistoryTimeline';
 import { formatDate } from '@/lib/utils/date';
-import { ArrowLeft, Plus, Wrench, Hash, Info } from 'lucide-react';
-import Link from 'next/link';
+import { Plus, Wrench, Hash, Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
 import {
   getPageContainerClasses,
-  SUB_PAGE_HEADER_TOKENS,
   getSemanticContainerClasses,
   getSemanticContainerTextClasses,
   getSemanticSolidBgClasses,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 function createRepairHistoryFormSchema(t: (key: string) => string) {
   return z.object({
@@ -321,23 +320,18 @@ export function RepairHistoryClient({
   return (
     <div className={getPageContainerClasses()}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild aria-label={t('backAriaLabel')}>
-            <Link href={`/equipment/${equipmentId}`}>
-              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-            </Link>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('equipmentId', { id: equipmentId })}
+        backUrl={`/equipment/${equipmentId}`}
+        backLabel={t('backAriaLabel')}
+        actions={
+          <Button onClick={handleOpenCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('addButton')}
           </Button>
-          <div>
-            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-            <p className="text-muted-foreground">{t('equipmentId', { id: equipmentId })}</p>
-          </div>
-        </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('addButton')}
-        </Button>
-      </div>
+        }
+      />
 
       {/* 요약 카드 */}
       <Card>

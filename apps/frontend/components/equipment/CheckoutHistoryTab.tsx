@@ -50,7 +50,11 @@ import {
   UserRoleValues as URVal,
 } from '@equipment-management/schemas';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import { TIMELINE_TOKENS, getTimelineCardClasses } from '@/lib/design-tokens';
+import {
+  TIMELINE_TOKENS,
+  getTimelineCardClasses,
+  getSemanticSolidBgClasses,
+} from '@/lib/design-tokens';
 import { STATUS_NOT_ALLOWED_FOR_CHECKOUT } from '@/lib/constants/equipment-status-styles';
 
 // 반출 신청 스키마
@@ -415,7 +419,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <FileOutput className="h-5 w-5 text-ul-midnight" />
+            <FileOutput className="h-5 w-5 text-brand-info" />
             {t('checkoutHistoryTab.title')}
           </CardTitle>
           {canCreate && (
@@ -443,7 +447,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
-          <FileOutput className="h-5 w-5 text-ul-midnight" />
+          <FileOutput className="h-5 w-5 text-brand-info" />
           반출 이력
         </CardTitle>
         {canCreate && (
@@ -467,7 +471,7 @@ export function CheckoutHistoryTab({ equipment }: CheckoutHistoryTabProps) {
               {/* 타임라인 점 */}
               <div className="relative flex-shrink-0">
                 <div
-                  className={`${TIMELINE_TOKENS.node.container} bg-ul-midnight text-white shadow-lg`}
+                  className={`${TIMELINE_TOKENS.node.container} ${getSemanticSolidBgClasses('info')} shadow-lg`}
                 >
                   <FileOutput className={TIMELINE_TOKENS.node.icon} />
                 </div>

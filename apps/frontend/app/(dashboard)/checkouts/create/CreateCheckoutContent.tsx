@@ -11,8 +11,10 @@ import {
   getEquipmentStatusTokenStyle,
   TRANSITION_PRESETS,
   getPageContainerClasses,
-  PAGE_HEADER_TOKENS,
+  getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -253,19 +255,19 @@ export default function CreateCheckoutContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div className={`${PAGE_HEADER_TOKENS.container} flex-col sm:flex-row sm:items-center mb-6`}>
-        <div className={PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={PAGE_HEADER_TOKENS.title}>{t('create.title')}</h1>
-          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('create.subtitle')}</p>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.LIST)}
-          className="w-full sm:w-auto"
-        >
-          {t('actions.backToCheckouts')}
-        </Button>
-      </div>
+      <PageHeader
+        title={t('create.title')}
+        subtitle={t('create.subtitle')}
+        actions={
+          <Button
+            variant="outline"
+            onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.LIST)}
+            className="w-full sm:w-auto"
+          >
+            {t('actions.backToCheckouts')}
+          </Button>
+        }
+      />
 
       {/* 안내 메시지 */}
       <Alert className="mb-6">
@@ -296,8 +298,12 @@ export default function CreateCheckoutContent() {
             <div className="space-y-3">
               {/* 목적 선택 (장비 목록 필터링) */}
               {purpose === 'rental' && (
-                <div className="p-3 bg-brand-warning/10 border border-brand-warning/30 rounded-md">
-                  <p className="text-xs text-brand-warning font-medium">
+                <div
+                  className={`p-3 border rounded-md ${getSemanticContainerColorClasses('warning')}`}
+                >
+                  <p
+                    className={`text-xs font-medium ${getSemanticContainerTextClasses('warning')}`}
+                  >
                     {t('create.rentalNotice')}
                   </p>
                 </div>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Calendar, Wrench, AlertTriangle, Clock } from 'lucide-react';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { formatDate, toDate } from '@/lib/utils/date';
+import { formatDate } from '@/lib/utils/date';
 import { differenceInDays } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
@@ -17,7 +17,7 @@ export function EquipmentHistorySummary({ equipment }: EquipmentHistorySummaryPr
   const [isExpanded, setIsExpanded] = useState(false);
   const t = useTranslations('disposal.historySummary');
 
-  const purchaseDate = toDate(equipment.purchaseDate);
+  const purchaseDate = equipment.purchaseYear ? new Date(equipment.purchaseYear, 0, 1) : null;
   const usagePeriod = purchaseDate ? differenceInDays(new Date(), purchaseDate) : 0;
 
   const usageYears = Math.floor(usagePeriod / 365);

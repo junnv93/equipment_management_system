@@ -42,8 +42,13 @@ import { BasicInfoSection, type FormValues } from './BasicInfoSection';
 import { CalibrationValidityChecker } from './CalibrationValidityChecker';
 import { ManagementNumberPreviewBar } from './ManagementNumberPreviewBar';
 import { FormWizardStepper, type WizardStep } from '@/components/shared/FormWizardStepper';
-import { AlertCircle, CheckCircle2, Clock, Shield } from 'lucide-react';
-import { FORM_WIZARD_STEP_TRANSITION, FORM_WIZARD_NAVIGATION_TOKENS } from '@/lib/design-tokens';
+import { AlertCircle, Clock, Shield } from 'lucide-react';
+import {
+  FORM_WIZARD_STEP_TRANSITION,
+  FORM_WIZARD_NAVIGATION_TOKENS,
+  getSemanticStatusClasses,
+  type SemanticColorKey,
+} from '@/lib/design-tokens';
 import { formatDate, toDate } from '@/lib/utils/date';
 import type { CreateCalibrationHistoryInput, CalibrationRecord } from './CalibrationHistorySection';
 
@@ -149,26 +154,33 @@ interface EquipmentFormProps {
 /**
  * 역할별 권한 정보 (i18n 키와 정적 속성만 유지)
  */
+const ROLE_SEMANTIC: Record<string, SemanticColorKey> = {
+  test_engineer: 'warning',
+  technical_manager: 'warning',
+  lab_manager: 'info',
+  system_admin: 'purple',
+};
+
 const ROLE_INFO = {
   test_engineer: {
     needsApproval: true,
     icon: Clock,
-    color: 'bg-brand-warning/10 text-brand-warning',
+    color: getSemanticStatusClasses(ROLE_SEMANTIC.test_engineer),
   },
   technical_manager: {
     needsApproval: true,
     icon: Clock,
-    color: 'bg-brand-warning/10 text-brand-warning',
+    color: getSemanticStatusClasses(ROLE_SEMANTIC.technical_manager),
   },
   lab_manager: {
     needsApproval: false,
     icon: Shield,
-    color: 'bg-brand-info/10 text-brand-info',
+    color: getSemanticStatusClasses(ROLE_SEMANTIC.lab_manager),
   },
   system_admin: {
     needsApproval: false,
     icon: Shield,
-    color: 'bg-brand-purple/10 text-brand-purple',
+    color: getSemanticStatusClasses(ROLE_SEMANTIC.system_admin),
   },
 };
 

@@ -4,8 +4,12 @@
  * ResponsiveTable (Client Component)
  *
  * 반응형 테이블 컴포넌트
- * - 데스크톱: 일반 테이블 뷰
- * - 모바일: 카드 뷰 또는 수평 스크롤
+ * - 데스크톱 (≥768px): 일반 테이블 뷰
+ * - 모바일 (<768px): 카드 뷰 (mobileCardRender 제공 시) 또는 수평 스크롤
+ *
+ * 반응형 전환: CSS `hidden`/`md:hidden` 기반 (SSR-safe)
+ * - JS `window.innerWidth` 방식 제거 → 하이드레이션 불일치 해소
+ * - MobileNav 등 다른 레이아웃 컴포넌트와 동일한 패턴
  *
  * 접근성 (WCAG 2.1 AA):
  * - 키보드 네비게이션 지원
@@ -13,10 +17,9 @@
  * - prefers-reduced-motion 존중
  *
  * 성능 최적화 (vercel-react-best-practices):
- * - React.memo로 불필요한 리렌더 방지
  * - useCallback으로 이벤트 핸들러 안정화
  */
-import { ReactNode, useState, useEffect, useCallback } from 'react';
+import { ReactNode, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { TRANSITION_PRESETS } from '@/lib/design-tokens';
 import {
@@ -59,18 +62,6 @@ export function ResponsiveTable<T>({
   stickyHeader = false,
   className,
 }: ResponsiveTableProps<T>) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   // getCellValue를 useCallback으로 최적화 (rerender-functional-setstate)
   const getCellValue = useCallback((item: T, column: Column<T>): ReactNode => {
     if (column.render) {
@@ -91,80 +82,24 @@ export function ResponsiveTable<T>({
     [onRowClick]
   );
 
-  // 모바일에서 카드 뷰로 표시
-  if (isMobile && mobileCardRender) {
-    return (
-      <div className={cn('space-y-3', className)} data-testid="responsive-table-mobile">
-        {data.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              {emptyMessage}
-            </CardContent>
-          </Card>
-        ) : (
-          data.map((item) => (
-            <Card
-              key={keyExtractor(item)}
-              className={cn(
-                // prefers-reduced-motion 지원
-                TRANSITION_PRESETS.fastShadow,
-                onRowClick && 'cursor-pointer hover:shadow-md',
-                'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-              )}
-              onClick={() => onRowClick?.(item)}
-              role={onRowClick ? 'button' : undefined}
-              tabIndex={onRowClick ? 0 : undefined}
-              onKeyDown={(e) => handleKeyDown(e, item)}
-            >
-              <CardContent className="p-4">{mobileCardRender(item)}</CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-    );
-  }
-
-  // 테이블 뷰 (스크롤 가능)
   return (
-    <div
-      className={cn('relative overflow-x-auto rounded-lg border', className)}
-      data-testid="responsive-table"
-    >
-      <Table>
-        <TableHeader className={cn(stickyHeader && 'sticky top-0 bg-background z-10')}>
-          <TableRow>
-            {columns.map((column) => (
-              <TableHead
-                key={String(column.key)}
-                className={cn(
-                  column.className,
-                  column.hideOnMobile && 'hidden sm:table-cell',
-                  column.hideOnTablet && 'hidden md:table-cell'
-                )}
-              >
-                {column.header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+    <>
+      {/* 모바일 카드 뷰 (<768px) — mobileCardRender가 있을 때만 렌더링 */}
+      {mobileCardRender && (
+        <div className={cn('md:hidden space-y-3', className)} data-testid="responsive-table-mobile">
           {data.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-24 text-center text-muted-foreground"
-              >
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
                 {emptyMessage}
-              </TableCell>
-            </TableRow>
+              </CardContent>
+            </Card>
           ) : (
             data.map((item) => (
-              <TableRow
+              <Card
                 key={keyExtractor(item)}
                 className={cn(
-                  // prefers-reduced-motion 지원
-                  TRANSITION_PRESETS.fastColor,
-                  onRowClick && 'cursor-pointer hover:bg-muted/50',
+                  TRANSITION_PRESETS.fastShadow,
+                  onRowClick && 'cursor-pointer hover:shadow-md',
                   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                 )}
                 onClick={() => onRowClick?.(item)}
@@ -172,23 +107,81 @@ export function ResponsiveTable<T>({
                 tabIndex={onRowClick ? 0 : undefined}
                 onKeyDown={(e) => handleKeyDown(e, item)}
               >
-                {columns.map((column) => (
-                  <TableCell
-                    key={String(column.key)}
-                    className={cn(
-                      column.className,
-                      column.hideOnMobile && 'hidden sm:table-cell',
-                      column.hideOnTablet && 'hidden md:table-cell'
-                    )}
-                  >
-                    {getCellValue(item, column)}
-                  </TableCell>
-                ))}
-              </TableRow>
+                <CardContent className="p-4">{mobileCardRender(item)}</CardContent>
+              </Card>
             ))
           )}
-        </TableBody>
-      </Table>
-    </div>
+        </div>
+      )}
+
+      {/* 테이블 뷰 (≥768px, 또는 mobileCardRender 없으면 항상 표시) */}
+      <div
+        className={cn(
+          'relative overflow-x-auto rounded-lg border',
+          mobileCardRender ? 'hidden md:block' : '',
+          className
+        )}
+        data-testid="responsive-table"
+      >
+        <Table>
+          <TableHeader className={cn(stickyHeader && 'sticky top-0 bg-background z-10')}>
+            <TableRow>
+              {columns.map((column) => (
+                <TableHead
+                  key={String(column.key)}
+                  className={cn(
+                    column.className,
+                    column.hideOnMobile && 'hidden sm:table-cell',
+                    column.hideOnTablet && 'hidden md:table-cell'
+                  )}
+                >
+                  {column.header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  {emptyMessage}
+                </TableCell>
+              </TableRow>
+            ) : (
+              data.map((item) => (
+                <TableRow
+                  key={keyExtractor(item)}
+                  className={cn(
+                    TRANSITION_PRESETS.fastColor,
+                    onRowClick && 'cursor-pointer hover:bg-muted/50',
+                    'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                  )}
+                  onClick={() => onRowClick?.(item)}
+                  role={onRowClick ? 'button' : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={(e) => handleKeyDown(e, item)}
+                >
+                  {columns.map((column) => (
+                    <TableCell
+                      key={String(column.key)}
+                      className={cn(
+                        column.className,
+                        column.hideOnMobile && 'hidden sm:table-cell',
+                        column.hideOnTablet && 'hidden md:table-cell'
+                      )}
+                    >
+                      {getCellValue(item, column)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }

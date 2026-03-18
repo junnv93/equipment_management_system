@@ -255,7 +255,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Wrench className="h-5 w-5 text-ul-midnight" />
+            <Wrench className="h-5 w-5 text-brand-info" />
             {t('maintenanceHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
@@ -274,7 +274,7 @@ export function MaintenanceHistoryTab({ equipment }: MaintenanceHistoryTabProps)
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
-          <Wrench className="h-5 w-5 text-ul-midnight" />
+          <Wrench className="h-5 w-5 text-brand-info" />
           유지보수 이력
         </CardTitle>
         {canCreate && RegisterDialog}

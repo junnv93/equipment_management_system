@@ -459,14 +459,15 @@ export const EQUIPMENT_TAB_TOKENS = {
  * 장비 필터 스타일
  */
 export const EQUIPMENT_FILTER_TOKENS = {
-  /** Active 필터 배지 */
-  activeBadge: 'bg-ul-midnight/10 text-ul-midnight border-ul-midnight/20',
+  /** Active 필터 배지 (라이트: midnight 톤 / 다크: 밝은 톤으로 대비 확보) */
+  activeBadge:
+    'bg-ul-midnight/10 text-ul-midnight border-ul-midnight/20 dark:bg-white/10 dark:text-white/90 dark:border-white/20',
 
   /** Remove 버튼 */
   removeButton: [
     'h-4 w-4',
-    'text-ul-midnight/60',
-    'hover:text-ul-midnight',
+    'text-ul-midnight/60 dark:text-white/50',
+    'hover:text-ul-midnight dark:hover:text-white',
     TRANSITION_PRESETS.fastColor,
   ].join(' '),
 

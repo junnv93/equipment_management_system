@@ -27,13 +27,18 @@ import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkele
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import { useSession } from 'next-auth/react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import { getPageContainerClasses, APPROVAL_CARD_BORDER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  APPROVAL_CARD_BORDER_TOKENS,
+  getSemanticStatusClasses,
+  type SemanticColorKey,
+} from '@/lib/design-tokens';
 import { PageHeader } from '@/components/shared/PageHeader';
 
-const PURPOSE_COLORS: Record<string, string> = {
-  calibration: 'bg-brand-info/10 text-brand-info',
-  repair: 'bg-brand-repair/10 text-brand-repair',
-  rental: 'bg-brand-purple/10 text-brand-purple',
+const PURPOSE_SEMANTIC: Record<string, SemanticColorKey> = {
+  calibration: 'info',
+  repair: 'repair',
+  rental: 'purple',
 };
 
 export default function ReturnApprovalsContent() {
@@ -188,7 +193,11 @@ export default function ReturnApprovalsContent() {
                         <div className="flex items-center gap-4">
                           <CheckoutStatusBadge status={checkout.status} />
                           <Badge
-                            className={PURPOSE_COLORS[checkout.purpose] || 'bg-brand-neutral/10'}
+                            className={
+                              PURPOSE_SEMANTIC[checkout.purpose]
+                                ? getSemanticStatusClasses(PURPOSE_SEMANTIC[checkout.purpose])
+                                : getSemanticStatusClasses('neutral')
+                            }
                           >
                             {t(
                               `purpose.${checkout.purpose}` as

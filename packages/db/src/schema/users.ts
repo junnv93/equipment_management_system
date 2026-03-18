@@ -58,6 +58,10 @@ export const users = pgTable(
   })
 );
 
+// 사용자 타입 정의
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
 // 관계 정의
 // NOTE: users↔teams 관계가 2개 (teamMembers, teamLeader)이므로 relationName으로 구분
 // NOTE: 다중 FK 참조 테이블은 반드시 양쪽 모두 relationName 필요 (Drizzle ORM 규칙)

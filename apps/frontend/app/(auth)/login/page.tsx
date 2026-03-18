@@ -15,7 +15,7 @@ export default function LoginPage() {
       fallback={
         <div className="flex min-h-screen">
           {/* 좌측 브랜딩 스켈레톤 */}
-          <div className="hidden lg:flex lg:w-2/5 bg-[#122C49]" />
+          <div className="hidden lg:flex lg:w-2/5 bg-ul-midnight" />
           {/* 우측 폼 스켈레톤 */}
           <div className="flex flex-1 items-center justify-center bg-brand-bg-base p-8">
             <div className="w-full max-w-sm space-y-6">

@@ -14,7 +14,13 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
-import { NOTIFICATION_LIST_ITEM_TOKENS } from '@/lib/design-tokens';
+import {
+  NOTIFICATION_LIST_ITEM_TOKENS,
+  type SemanticColorKey,
+  getSemanticContainerTextClasses,
+  getSemanticLeftBorderClasses,
+  getSemanticBgLightClasses,
+} from '@/lib/design-tokens';
 import { useDateFormatter } from '@/hooks/use-date-formatter';
 import type { NotificationItem as NotificationItemType } from '@/lib/api/notifications-api';
 import type { NotificationCategory } from '@equipment-management/shared-constants';
@@ -34,71 +40,59 @@ import type { NotificationCategory } from '@equipment-management/shared-constant
  */
 interface CategoryStyle {
   icon: LucideIcon;
-  color: string;
-  borderColor: string;
-  bgColor: string; // Icon background color
+  /** null = non-semantic (disposal, default) — 직접 클래스 사용 */
+  semanticColor: SemanticColorKey | null;
+  /** semanticColor가 null일 때 폴백 클래스 */
+  fallbackColor?: string;
+  fallbackBorder?: string;
+  fallbackBg?: string;
 }
 
 const CATEGORY_STYLE_MAP: Record<NotificationCategory, CategoryStyle> = {
-  checkout: {
-    icon: Box,
-    color: 'text-brand-repair',
-    borderColor: 'border-l-brand-repair',
-    bgColor: 'bg-brand-repair/10',
-  },
-  calibration: {
-    icon: Calendar,
-    color: 'text-brand-info',
-    borderColor: 'border-l-brand-info',
-    bgColor: 'bg-brand-info/10',
-  },
-  calibration_plan: {
-    icon: Calendar,
-    color: 'text-brand-purple',
-    borderColor: 'border-l-brand-purple',
-    bgColor: 'bg-brand-purple/10',
-  },
-  non_conformance: {
-    icon: AlertCircle,
-    color: 'text-brand-critical',
-    borderColor: 'border-l-brand-critical',
-    bgColor: 'bg-brand-critical/10',
-  },
+  checkout: { icon: Box, semanticColor: 'repair' },
+  calibration: { icon: Calendar, semanticColor: 'info' },
+  calibration_plan: { icon: Calendar, semanticColor: 'purple' },
+  non_conformance: { icon: AlertCircle, semanticColor: 'critical' },
   disposal: {
     icon: XCircle,
-    color: 'text-muted-foreground',
-    borderColor: 'border-l-muted-foreground',
-    bgColor: 'bg-muted/50',
+    semanticColor: null,
+    fallbackColor: 'text-muted-foreground',
+    fallbackBorder: 'border-l-muted-foreground',
+    fallbackBg: 'bg-muted/50',
   },
-  equipment_import: {
-    icon: ArrowLeft,
-    color: 'text-brand-purple',
-    borderColor: 'border-l-brand-purple',
-    bgColor: 'bg-brand-purple/10',
-  },
-  equipment: {
-    icon: Settings,
-    color: 'text-brand-ok',
-    borderColor: 'border-l-brand-ok',
-    bgColor: 'bg-brand-ok/10',
-  },
-  system: {
-    icon: AlertCircle,
-    color: 'text-brand-critical',
-    borderColor: 'border-l-brand-critical',
-    bgColor: 'bg-brand-critical/10',
-  },
+  equipment_import: { icon: ArrowLeft, semanticColor: 'purple' },
+  equipment: { icon: Settings, semanticColor: 'ok' },
+  system: { icon: AlertCircle, semanticColor: 'critical' },
 };
 
 const DEFAULT_STYLE: CategoryStyle = {
   icon: Bell,
-  color: 'text-muted-foreground',
-  borderColor: 'border-l-muted-foreground',
-  bgColor: 'bg-muted/50',
+  semanticColor: null,
+  fallbackColor: 'text-muted-foreground',
+  fallbackBorder: 'border-l-muted-foreground',
+  fallbackBg: 'bg-muted/50',
 };
 
 function getCategoryStyle(category: string): CategoryStyle {
   return CATEGORY_STYLE_MAP[category as NotificationCategory] ?? DEFAULT_STYLE;
+}
+
+function resolveColor(style: CategoryStyle): string {
+  return style.semanticColor
+    ? getSemanticContainerTextClasses(style.semanticColor)
+    : (style.fallbackColor ?? '');
+}
+
+function resolveBorder(style: CategoryStyle): string {
+  return style.semanticColor
+    ? getSemanticLeftBorderClasses(style.semanticColor)
+    : (style.fallbackBorder ?? '');
+}
+
+function resolveBg(style: CategoryStyle): string {
+  return style.semanticColor
+    ? getSemanticBgLightClasses(style.semanticColor)
+    : (style.fallbackBg ?? '');
 }
 
 interface NotificationItemProps {
@@ -131,8 +125,8 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
         </div>
       )}
       <div className="flex items-start gap-3">
-        <div className={cn(T.iconCircle, style.bgColor)}>
-          <Icon className={cn(T.iconSize, style.color)} aria-hidden="true" />
+        <div className={cn(T.iconCircle, resolveBg(style))}>
+          <Icon className={cn(T.iconSize, resolveColor(style))} aria-hidden="true" />
         </div>
 
         <div className={T.content}>
@@ -152,7 +146,7 @@ export function NotificationItem({ notification, onMarkAsRead }: NotificationIte
   const baseClassName = cn(
     T.card.base,
     notification.isRead ? T.card.read : T.card.unread,
-    style.borderColor
+    resolveBorder(style)
   );
 
   // 내부 링크가 있으면 Next.js Link (SPA 내비게이션)

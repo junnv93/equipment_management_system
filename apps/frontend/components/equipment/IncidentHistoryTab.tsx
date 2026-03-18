@@ -750,7 +750,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-ul-midnight" />
+            <AlertTriangle className="h-5 w-5 text-brand-info" />
             {t('incidentHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}
@@ -770,7 +770,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-ul-midnight" />
+            <AlertTriangle className="h-5 w-5 text-brand-info" />
             {t('incidentHistoryTab.title')}
           </CardTitle>
           {canCreate && RegisterDialog}

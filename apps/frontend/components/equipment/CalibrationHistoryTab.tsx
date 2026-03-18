@@ -94,7 +94,7 @@ export function CalibrationHistoryTab({ equipment }: CalibrationHistoryTabProps)
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-ul-midnight" />
+            <Calendar className="h-5 w-5 text-brand-info" />
             {t('calibrationHistoryTab.title')}
           </CardTitle>
           {canCreate && <CalibrationRegisterDialog equipmentId={equipmentId} />}

@@ -74,7 +74,7 @@ export const equipment = pgTable(
     teamId: uuid('team_id').references(() => teams.id, { onDelete: 'set null' }),
     managerId: varchar('manager_id', { length: 36 }),
     site: varchar('site', { length: 20 }).notNull(), // ✅ 사이트별 권한 관리: 필수 필드 'suwon' | 'uiwang'
-    purchaseDate: timestamp('purchase_date'),
+    purchaseYear: integer('purchase_year'), // 구입년도 (연도 정수, 예: 2026)
     price: integer('price'),
 
     // 추가 정보
