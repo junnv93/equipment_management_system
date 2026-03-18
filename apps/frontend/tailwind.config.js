@@ -232,6 +232,48 @@ module.exports = {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(400%)' },
         },
+        // Approval page animations
+        'approval-exit-success': {
+          '0%': {
+            backgroundColor: 'hsl(var(--brand-color-ok) / 0.15)',
+            opacity: '1',
+            transform: 'translateX(0)',
+          },
+          '40%': {
+            backgroundColor: 'hsl(var(--brand-color-ok) / 0.15)',
+            opacity: '1',
+            transform: 'translateX(0)',
+          },
+          '100%': {
+            backgroundColor: 'hsl(var(--brand-color-ok) / 0.15)',
+            opacity: '0',
+            transform: 'translateX(24px)',
+          },
+        },
+        'approval-exit-reject': {
+          '0%': { backgroundColor: 'hsl(var(--brand-color-critical) / 0.08)', opacity: '1' },
+          '100%': { opacity: '0', transform: 'translateX(-16px)' },
+        },
+        'approval-pulse-dot': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.4' },
+          '50%': { transform: 'scale(2.2)', opacity: '0' },
+        },
+        'approval-ring-pop': {
+          from: { transform: 'scale(0.6)', opacity: '0' },
+          to: { transform: 'scale(1)', opacity: '1' },
+        },
+        'approval-ring-expand': {
+          from: { transform: 'scale(0.8)', opacity: '0.4' },
+          to: { transform: 'scale(1.3)', opacity: '0' },
+        },
+        'approval-check-draw': {
+          from: { transform: 'scale(0) rotate(-45deg)', opacity: '0' },
+          to: { transform: 'scale(1) rotate(0)', opacity: '1' },
+        },
+        'approval-text-up': {
+          from: { transform: 'translateY(8px)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -250,6 +292,16 @@ module.exports = {
         shake: 'shake 0.5s ease-in-out',
         'fade-in-up': 'fade-in-up 0.6s ease-out forwards',
         'progress-indeterminate': 'progress-indeterminate 1.5s ease-in-out infinite',
+        // Approval page animations
+        'approval-exit-success': 'approval-exit-success 0.6s ease-out forwards',
+        'approval-exit-reject': 'approval-exit-reject 0.5s ease-out forwards',
+        'approval-pulse-dot': 'approval-pulse-dot 2s ease-in-out infinite',
+        'approval-ring-pop': 'approval-ring-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both',
+        'approval-ring-expand': 'approval-ring-expand 1.5s ease-out 0.6s both',
+        'approval-check-draw': 'approval-check-draw 0.4s ease-out 0.4s both',
+        'approval-text-up-1': 'approval-text-up 0.4s ease-out 0.5s both',
+        'approval-text-up-2': 'approval-text-up 0.4s ease-out 0.6s both',
+        'approval-text-up-3': 'approval-text-up 0.4s ease-out 0.7s both',
       },
     },
   },

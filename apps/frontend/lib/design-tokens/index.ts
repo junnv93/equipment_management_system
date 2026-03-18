@@ -594,6 +594,9 @@ export {
   CAL_FACTORS_EMPTY_STATE_TOKENS,
 } from './components/calibration-factors';
 
+// Page Layout
+export { getPageContainerClasses, type PageContainerVariant } from './components/page-layout';
+
 // ============================================================================
 // Usage Guidelines
 // ============================================================================

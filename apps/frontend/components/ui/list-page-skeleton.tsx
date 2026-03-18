@@ -27,6 +27,7 @@
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 interface ListPageSkeletonProps {
   /** Page title (optional, shows skeleton title if provided) */
@@ -76,7 +77,7 @@ export function ListPageSkeleton({
   );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -152,7 +153,7 @@ export function TablePageSkeleton({
   columnCount?: number;
 }) {
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
