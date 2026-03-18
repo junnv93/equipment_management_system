@@ -42,7 +42,6 @@
   },
   "ncStatus": {
     "open": "등록됨",
-    "analyzing": "분석 중",
     "corrected": "조치 완료",
     "closed": "종료됨"
   },

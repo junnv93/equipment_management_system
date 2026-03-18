@@ -12,7 +12,7 @@
  * - app/(dashboard)/non-conformances/NonConformancesContent.tsx (Client Component)
  *
  * 백엔드 지원 쿼리 파라미터:
- * - status: 'open' | 'analyzing' | 'corrected' | 'closed'
+ * - status: 'open' | 'corrected' | 'closed'
  * - site: 'suwon' | 'uiwang' | 'pyeongtaek'
  * - search: string (원인 검색)
  * - sort: string (예: 'discoveryDate.desc')

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useOptimisticMutation } from '@/hooks/use-optimistic-mutation';
@@ -11,7 +10,6 @@ import {
   ArrowLeft,
   AlertTriangle,
   CheckCircle2,
-  BarChart3,
   XCircle,
   Wrench,
   LinkIcon,
@@ -80,7 +78,6 @@ const NC_STEP_CONFIG: Record<
   { label: string; icon: typeof AlertTriangle }
 > = {
   open: { label: '등록', icon: AlertTriangle },
-  analyzing: { label: '분석', icon: BarChart3 },
   corrected: { label: '조치', icon: CheckCircle2 },
   closed: { label: '종결', icon: XCircle },
 };
@@ -101,7 +98,6 @@ interface NCDetailClientProps {
 export default function NCDetailClient({ ncId, initialData }: NCDetailClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
   const { isManager } = useAuth();
   const { toast } = useToast();
 
@@ -113,14 +109,11 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   const [rejectionReason, setRejectionReason] = useState('');
 
   // Collapsible state
-  const [analysisOpen, setAnalysisOpen] = useState(true);
   const [correctionOpen, setCorrectionOpen] = useState(true);
   const [closureOpen, setClosureOpen] = useState(false);
 
   // Collapsible edit mode
-  const [editingAnalysis, setEditingAnalysis] = useState(false);
   const [editingCorrection, setEditingCorrection] = useState(false);
-  const [analysisText, setAnalysisText] = useState('');
   const [correctionText, setCorrectionText] = useState('');
 
   // ✅ TanStack Query
@@ -145,21 +138,20 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
   // Mutations
   // ============================================================================
 
-  // 상태 변경 (open→analyzing, analyzing→corrected)
+  // 상태 변경 (open→corrected)
   const updateMutation = useOptimisticMutation<
     NonConformance,
-    { status: NonConformanceStatus; analysisContent?: string; correctionContent?: string },
+    { status: NonConformanceStatus; correctionContent?: string },
     NonConformance
   >({
     mutationFn: (vars) =>
       nonConformancesApi.updateNonConformance(ncId, {
         version: nc.version,
-        status: vars.status as 'open' | 'analyzing' | 'corrected',
-        analysisContent: vars.analysisContent,
+        status: vars.status as 'open' | 'corrected',
         correctionContent: vars.correctionContent,
         correctionDate:
           vars.status === 'corrected' ? new Date().toISOString().split('T')[0] : undefined,
-        correctedBy: vars.status === 'corrected' ? session?.user?.id : undefined,
+        // correctedBy는 서버에서 JWT로 추출 (Rule 2: 클라이언트 body 신뢰 금지)
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
     optimisticUpdate: (old, vars) => ({ ...old!, status: vars.status }),
@@ -175,10 +167,10 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     },
   });
 
-  // 내용 저장 (분석/조치 — 상태 변경 없이)
+  // 내용 저장 (조치 — 상태 변경 없이)
   const saveMutation = useOptimisticMutation<
     NonConformance,
-    { analysisContent?: string; correctionContent?: string },
+    { correctionContent?: string },
     NonConformance
   >({
     mutationFn: (vars) =>
@@ -192,7 +184,6 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
     successMessage: '저장되었습니다',
     errorMessage: '저장에 실패했습니다',
     onSuccessCallback: () => {
-      setEditingAnalysis(false);
       setEditingCorrection(false);
     },
   });
@@ -236,7 +227,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         rejectionReason: vars.rejectionReason,
       }),
     queryKey: queryKeys.nonConformances.detail(ncId),
-    optimisticUpdate: (old) => ({ ...old!, status: 'analyzing' as NonConformanceStatus }),
+    optimisticUpdate: (old) => ({ ...old!, status: 'open' as NonConformanceStatus }),
     invalidateKeys: [queryKeys.nonConformances.lists()],
     successMessage: '조치가 반려되었습니다',
     errorMessage: '반려에 실패했습니다',
@@ -250,13 +241,6 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       );
     },
   });
-
-  /** 분석 편집 시작 */
-  const startEditAnalysis = () => {
-    setAnalysisText(nc.analysisContent ?? '');
-    setEditingAnalysis(true);
-    setAnalysisOpen(true);
-  };
 
   /** 조치 편집 시작 */
   const startEditCorrection = () => {
@@ -317,11 +301,11 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       </div>
 
       {/* 반려 알림 */}
-      {nc.rejectionReason && nc.status === 'analyzing' && (
+      {nc.rejectionReason && nc.status === 'open' && (
         <div className={NC_REJECTION_ALERT_TOKENS.container}>
           <XCircle className={NC_REJECTION_ALERT_TOKENS.icon} />
           <div>
-            <p className={NC_REJECTION_ALERT_TOKENS.title}>조치 반려 — 추가 분석 필요</p>
+            <p className={NC_REJECTION_ALERT_TOKENS.title}>조치 반려 — 재조치 필요</p>
             <p className={NC_REJECTION_ALERT_TOKENS.description}>{nc.rejectionReason}</p>
             {nc.rejectedAt && (
               <p className={NC_REJECTION_ALERT_TOKENS.date}>
@@ -366,51 +350,12 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
       {/* 정보 카드 */}
       <InfoCards nc={nc} />
 
-      {/* 분석/조치/종결 섹션 */}
-      <CollapsibleSection
-        title="📋 원인 분석"
-        isOpen={analysisOpen}
-        onToggle={() => setAnalysisOpen(!analysisOpen)}
-        canEdit={nc.status === 'analyzing' && !isClosed}
-        isEditing={editingAnalysis}
-        onEdit={startEditAnalysis}
-      >
-        {editingAnalysis ? (
-          <div>
-            <textarea
-              className={NC_COLLAPSIBLE_EDIT_TOKENS.textarea}
-              value={analysisText}
-              onChange={(e) => setAnalysisText(e.target.value)}
-              placeholder="원인 분석 내용을 입력하세요..."
-              rows={4}
-            />
-            <div className={NC_COLLAPSIBLE_EDIT_TOKENS.saveRow}>
-              <Button variant="ghost" size="sm" onClick={() => setEditingAnalysis(false)}>
-                취소
-              </Button>
-              <Button
-                size="sm"
-                disabled={saveMutation.isPending}
-                onClick={() => saveMutation.mutate({ analysisContent: analysisText })}
-              >
-                저장
-              </Button>
-            </div>
-          </div>
-        ) : nc.analysisContent ? (
-          <div>
-            <p className={NC_COLLAPSIBLE_TOKENS.fieldValue}>{nc.analysisContent}</p>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground italic">아직 원인 분석 내용이 없습니다</p>
-        )}
-      </CollapsibleSection>
-
+      {/* 조치/종결 섹션 */}
       <CollapsibleSection
         title="🔧 시정 조치"
         isOpen={correctionOpen}
         onToggle={() => setCorrectionOpen(!correctionOpen)}
-        canEdit={nc.status === 'analyzing' && !isClosed}
+        canEdit={nc.status === 'open' && !isClosed}
         isEditing={editingCorrection}
         onEdit={startEditCorrection}
       >
@@ -478,9 +423,6 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         <ActionBar
           nc={nc}
           isManager={isManager()}
-          onStartAnalysis={() =>
-            updateMutation.mutate({ status: 'analyzing' as NonConformanceStatus })
-          }
           onMarkCorrected={() =>
             updateMutation.mutate({ status: 'corrected' as NonConformanceStatus })
           }
@@ -525,7 +467,7 @@ export default function NCDetailClient({ ncId, initialData }: NCDetailClientProp
         <DialogContent>
           <DialogHeader>
             <DialogTitle>조치 반려</DialogTitle>
-            <DialogDescription>시정 조치를 반려하고 재분석을 요청합니다.</DialogDescription>
+            <DialogDescription>시정 조치를 반려하고 재조치를 요청합니다.</DialogDescription>
           </DialogHeader>
           <Textarea
             placeholder="반려 사유를 입력하세요"
@@ -628,12 +570,6 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
       dateStr = nc.discoveryDate;
       actor = nc.discoverer?.name ?? null;
       break;
-    case 'analyzing':
-      // analyzing 시작일은 별도 필드 없음 — updatedAt 사용
-      if (NC_STATUS_STEP_INDEX[nc.status] >= 1) {
-        actor = nc.discoverer?.name ?? null;
-      }
-      break;
     case 'corrected':
       dateStr = nc.correctionDate;
       actor = nc.corrector?.name ?? null;
@@ -644,7 +580,7 @@ function StepDate({ nc, stepKey }: { nc: NonConformance; stepKey: NonConformance
       break;
   }
 
-  if (!dateStr && stepKey !== 'analyzing') return null;
+  if (!dateStr) return null;
 
   return (
     <>
@@ -841,7 +777,6 @@ function CollapsibleSection({
 function ActionBar({
   nc,
   isManager,
-  onStartAnalysis,
   onMarkCorrected,
   onClose,
   onReject,
@@ -849,7 +784,6 @@ function ActionBar({
 }: {
   nc: NonConformance;
   isManager: boolean;
-  onStartAnalysis: () => void;
   onMarkCorrected: () => void;
   onClose: () => void;
   onReject: () => void;
@@ -860,18 +794,12 @@ function ActionBar({
       <div className={NC_ACTION_BAR_TOKENS.left}>
         {/* 시험실무자 액션 */}
         {nc.status === 'open' && (
-          <Button size="sm" onClick={onStartAnalysis} disabled={isUpdating}>
-            분석 시작
-          </Button>
-        )}
-        {nc.status === 'analyzing' && (
           <Button size="sm" onClick={onMarkCorrected} disabled={isUpdating}>
             조치 완료
           </Button>
         )}
         <span className={NC_ACTION_BAR_TOKENS.roleHint}>
-          {nc.status === 'open' && '분석을 시작하면 상태가 "분석 중"으로 변경됩니다'}
-          {nc.status === 'analyzing' && '조치를 완료하면 기술책임자의 종결 승인이 필요합니다'}
+          {nc.status === 'open' && '조치를 완료하면 기술책임자의 종결 승인이 필요합니다'}
           {nc.status === 'corrected' && !isManager && '기술책임자의 종결 승인을 기다리고 있습니다'}
         </span>
       </div>

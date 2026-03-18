@@ -46,7 +46,6 @@ export interface NonConformance {
   repairHistoryId: string | null;
   calibrationId: string | null;
   actionPlan: string | null;
-  analysisContent: string | null;
   correctionContent: string | null;
   correctionDate: string | null;
   correctedBy: string | null;
@@ -97,11 +96,10 @@ export interface CreateNonConformanceDto {
 export interface UpdateNonConformanceDto {
   version: number;
   actionPlan?: string;
-  analysisContent?: string;
   correctionContent?: string;
   correctionDate?: string;
   correctedBy?: string;
-  status?: 'open' | 'analyzing' | 'corrected';
+  status?: 'open' | 'corrected';
 }
 
 // 부적합 종료 DTO (closedBy는 서버에서 JWT로 추출)
@@ -164,7 +162,7 @@ const nonConformancesApi = {
     return apiClient.patch(API_ENDPOINTS.NON_CONFORMANCES.CLOSE(id), data).then((res) => res.data);
   },
 
-  // 부적합 조치 반려 (기술책임자: corrected → analyzing)
+  // 부적합 조치 반려 (기술책임자: corrected → open)
   rejectCorrection: async (
     id: string,
     data: { version: number; rejectionReason: string }

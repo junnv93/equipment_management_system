@@ -16,8 +16,8 @@ export const TEST_EQUIPMENT_AVAILABLE_ID = 'eeee1001-0001-4001-8001-000000000001
 // NC_001: malfunction, open, no repair link - used for repair guidance card tests
 export const NC_WITHOUT_REPAIR_ID = 'aaaa0001-0001-0001-0001-000000000001';
 
-// NC_002: malfunction, analyzing, no repair link - alternative for repair guidance
-export const NC_ANALYZING_NO_REPAIR_ID = 'aaaa0002-0002-0002-0002-000000000002';
+// NC_002: malfunction, open, no repair link - alternative for repair guidance
+export const NC_OPEN_NO_REPAIR_ID = 'aaaa0002-0002-0002-0002-000000000002';
 
 // NC_006: calibration_failure, corrected, linked to REPAIR_001 - used for success message tests
 export const NC_WITH_REPAIR_ID = 'aaaa0006-0006-0006-0006-000000000006';
@@ -25,8 +25,8 @@ export const NC_WITH_REPAIR_ID = 'aaaa0006-0006-0006-0006-000000000006';
 // NC_004: malfunction, closed, linked to REPAIR_004 - used for closed state tests
 export const NC_CLOSED_ID = 'aaaa0004-0004-0004-0004-000000000004';
 
-// NC_003: damage, analyzing - used for damage type workflow
-export const NC_DAMAGE_ANALYZING_ID = 'aaaa0003-0003-0003-0003-000000000003';
+// NC_003: damage, open - used for damage type workflow
+export const NC_DAMAGE_OPEN_ID = 'aaaa0003-0003-0003-0003-000000000003';
 
 // NC_007: damage, corrected, linked to REPAIR_002
 export const NC_DAMAGE_CORRECTED_ID = 'aaaa0007-0007-0007-0007-000000000007';

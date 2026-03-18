@@ -2,9 +2,9 @@
  * Non-Conformance Component Tokens (Layer 3: Component-Specific)
  *
  * 부적합 관리 페이지 전용 디자인 토큰
- * - 4단계 워크플로우 (open → analyzing → corrected → closed)
+ * - 3단계 워크플로우 (open → corrected → closed)
  * - 리스트 페이지: KPI 스트립, 필터, 테이블, 미니 워크플로우
- * - 상세 페이지: 워크플로우 타임라인, 정보 카드, 분석 섹션, 액션 바
+ * - 상세 페이지: 워크플로우 타임라인, 정보 카드, 조치 섹션, 액션 바
  * - 경과일 긴급도 시각화
  *
  * 색상 원칙:
@@ -38,7 +38,6 @@ import type { NonConformanceStatus } from '@equipment-management/schemas';
 /** NC 상태 → 시멘틱 색상 매핑 (SSOT) */
 const NC_STATUS_SEMANTIC_MAP: Record<NonConformanceStatus, SemanticColorKey> = {
   open: 'critical',
-  analyzing: 'warning',
   corrected: 'info',
   closed: 'ok',
 };
@@ -138,7 +137,7 @@ export const NC_DETAIL_HEADER_TOKENS = {
 /**
  * KPI variant 타입
  */
-export type NCKpiVariant = 'open' | 'analyzing' | 'corrected' | 'closed';
+export type NCKpiVariant = 'open' | 'corrected' | 'closed';
 
 /**
  * KPI 전용 라벨 (SSOT)
@@ -148,7 +147,6 @@ export type NCKpiVariant = 'open' | 'analyzing' | 'corrected' | 'closed';
  */
 export const NC_KPI_LABELS: Record<NCKpiVariant, string> = {
   open: '미해결',
-  analyzing: '분석 중',
   corrected: '조치 완료',
   closed: '종결',
 } as const;
@@ -157,7 +155,6 @@ export const NC_KPI_LABELS: Record<NCKpiVariant, string> = {
  * KPI 카드 스타일 — 시멘틱 색상 기반
  *
  * - open: critical (미해결 — 빨강)
- * - analyzing: warning (분석중 — 주황)
  * - corrected: info (조치완료 — 파랑)
  * - closed: ok (종결 — 초록)
  */
@@ -170,12 +167,6 @@ export const NC_KPI_TOKENS: Record<
     iconBg: 'bg-brand-critical/10',
     iconColor: 'text-brand-critical',
     valueColor: 'text-brand-critical',
-  },
-  analyzing: {
-    leftBorder: 'border-l-brand-warning',
-    iconBg: 'bg-brand-warning/10',
-    iconColor: 'text-brand-warning',
-    valueColor: 'text-brand-warning',
   },
   corrected: {
     leftBorder: 'border-l-brand-info',
@@ -310,13 +301,13 @@ export const NC_TYPE_CHIP_TOKENS = {
 } as const;
 
 // ============================================================================
-// 8. NC_MINI_WORKFLOW_TOKENS — 테이블 행 내 미니 4-step 프로그레스
+// 8. NC_MINI_WORKFLOW_TOKENS — 테이블 행 내 미니 3-step 프로그레스
 // ============================================================================
 
 /**
  * 미니 워크플로우 프로그레스 (리스트 행 내 인라인)
  *
- * 4개 dot + 3개 connector로 open → analyzing → corrected → closed 표현
+ * 3개 dot + 2개 connector로 open → corrected → closed 표현
  */
 export const NC_MINI_WORKFLOW_TOKENS = {
   container: 'flex items-center gap-0 mt-1.5',
@@ -366,13 +357,13 @@ export function getNCMiniConnectorClasses(
 }
 
 // ============================================================================
-// 9. NC_WORKFLOW_TOKENS — 상세 페이지 4단계 수평 타임라인
+// 9. NC_WORKFLOW_TOKENS — 상세 페이지 3단계 수평 타임라인
 // ============================================================================
 
 /**
- * 4단계 워크플로우 타임라인 (ApprovalTimeline 패턴 기반)
+ * 3단계 워크플로우 타임라인 (ApprovalTimeline 패턴 기반)
  *
- * open → analyzing → corrected → closed
+ * open → corrected → closed
  */
 export const NC_WORKFLOW_TOKENS = {
   /** 전체 컨테이너 */
@@ -421,19 +412,18 @@ export const NC_WORKFLOW_TOKENS = {
 } as const;
 
 /**
- * NC 워크플로우 4단계 스텝 정의 (SSOT)
+ * NC 워크플로우 3단계 스텝 정의 (SSOT)
  *
  * 리스트(MiniWorkflow) + 상세(WorkflowTimeline) 양쪽에서 재사용.
  * 스텝 순서 변경 시 이 배열만 수정하면 됩니다.
  */
-export const NC_WORKFLOW_STEPS = ['open', 'analyzing', 'corrected', 'closed'] as const;
+export const NC_WORKFLOW_STEPS = ['open', 'corrected', 'closed'] as const;
 
 /** 상태 → 워크플로우 스텝 인덱스 매핑 */
 export const NC_STATUS_STEP_INDEX: Record<string, number> = {
   open: 0,
-  analyzing: 1,
-  corrected: 2,
-  closed: 3,
+  corrected: 1,
+  closed: 2,
 };
 
 /**
@@ -448,7 +438,7 @@ export function getNCWorkflowNodeClasses(
   if (stepIndex < currentStepIndex) return [node.base, node.completed].join(' ');
   if (stepIndex === currentStepIndex) {
     if (isLongOverdue && currentStepIndex === 0) return [node.base, node.currentCritical].join(' ');
-    if (currentStepIndex === 2) return [node.base, node.currentInfo].join(' ');
+    if (currentStepIndex === 1) return [node.base, node.currentInfo].join(' ');
     return [node.base, node.current].join(' ');
   }
   return [node.base, node.pending].join(' ');
@@ -467,7 +457,7 @@ export function getNCWorkflowLabelClasses(
   if (stepIndex === currentStepIndex) {
     if (isLongOverdue && currentStepIndex === 0)
       return [label.base, label.currentCritical].join(' ');
-    if (currentStepIndex === 2) return [label.base, label.currentInfo].join(' ');
+    if (currentStepIndex === 1) return [label.base, label.currentInfo].join(' ');
     return [label.base, label.current].join(' ');
   }
   return [label.base, label.pending].join(' ');

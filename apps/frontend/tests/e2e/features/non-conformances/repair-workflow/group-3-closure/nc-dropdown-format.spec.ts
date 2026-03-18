@@ -125,7 +125,7 @@ test.describe('Repair History Form Validation', () => {
         throw new Error('NC option does not contain date in YYYY-MM-DD format');
       }
 
-      // Only open/analyzing/corrected NCs appear (not closed)
+      // Only open/corrected NCs appear (not closed)
       // NCs already linked to repair do not appear
       // These are verified by the filtering logic in the component
     }

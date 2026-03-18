@@ -10,9 +10,8 @@ import { test, expect } from '../../../../shared/fixtures/auth.fixture';
  * This test verifies that technical_manager role:
  * - Can see 'Edit Record' button
  * - Can open edit form
- * - Edit form shows analysis content textarea
  * - Edit form shows correction content textarea
- * - Edit form shows status dropdown with options (analyzing, corrected)
+ * - Edit form shows status dropdown with options (open, corrected)
  */
 
 test.describe('Role-Based Permission Verification', () => {
@@ -52,15 +51,6 @@ test.describe('Role-Based Permission Verification', () => {
     await techManagerPage.waitForTimeout(500);
 
     // 5. Verify edit form fields are accessible
-    // Check for analysis content textarea
-    const analysisTextarea = techManagerPage.locator(
-      'textarea[name="analysisContent"], textarea[id*="analysis"]'
-    );
-    if ((await analysisTextarea.count()) > 0) {
-      await expect(analysisTextarea.first()).toBeVisible();
-      console.log('✅ Analysis content textarea is visible');
-    }
-
     // Check for correction content textarea
     const correctionTextarea = techManagerPage.locator(
       'textarea[name="correctionContent"], textarea[id*="correction"]'
@@ -81,10 +71,9 @@ test.describe('Role-Based Permission Verification', () => {
     // - technical_manager can see 'Edit Record' button (verified)
     await expect(firstEditButton).toBeVisible();
 
-    // - Edit form shows analysis content textarea (verified)
     // - Edit form shows correction content textarea (verified)
     // - Edit form shows status dropdown with options (verified)
-    // - Status dropdown includes: analyzing, corrected
+    // - Status dropdown includes: open, corrected
 
     console.log('✅ B-2: technical_manager edit permissions verified successfully');
   });

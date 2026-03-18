@@ -35,9 +35,9 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     const hasClosedStatus = optionTexts.some((text) => closedNcPattern.test(text));
     expect(hasClosedStatus).toBe(false);
 
-    // Only open, analyzing, corrected status NCs appear
+    // Only open, corrected status NCs appear
     // Verify options only contain valid statuses
-    const validStatusPattern = /(열림|분석중|시정완료|open|analyzing|corrected)/i;
+    const validStatusPattern = /(열림|시정완료|open|corrected)/i;
     const nonEmptyOptions = optionTexts.filter(
       (text) => text !== '선택 안함' && text.trim() !== ''
     );
@@ -53,7 +53,7 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     expect(optionTexts[0]).toContain('선택 안함');
   });
 
-  test('E-5. should show only open/analyzing/corrected NCs', async ({ techManagerPage: page }) => {
+  test('E-5. should show only open/corrected NCs', async ({ techManagerPage: page }) => {
     // Navigate to equipment with mixed NC statuses
     await page.goto('/equipment/SUW-E0006/repair-history');
 

@@ -91,7 +91,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     expect(rejectResponse.ok()).toBeTruthy();
 
     const rejectedNc = await rejectResponse.json();
-    expect(rejectedNc.status).toBe('analyzing');
+    expect(rejectedNc.status).toBe('open');
     expect(rejectedNc.rejectionReason).toBe(REJECTION_REASON);
     expect(rejectedNc.rejectedBy).toBeTruthy();
     expect(rejectedNc.rejectedAt).toBeTruthy();
@@ -113,8 +113,8 @@ test.describe('부적합 반려 전체 프로세스', () => {
     await expect(testOperatorPage.getByText('재교정 성적서 번호가 누락')).toBeVisible();
     await expect(testOperatorPage.getByText(/반려일:/)).toBeVisible();
 
-    // NC 상태 "분석 중" 확인
-    await expect(testOperatorPage.getByText('분석 중')).toBeVisible();
+    // NC 상태 "열림" 확인
+    await expect(testOperatorPage.getByText('열림')).toBeVisible();
 
     console.log('✅ Step 2 완료: 반려 사유 배너 정상 표시');
   });
@@ -129,7 +129,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     );
     expect(ncResponse.ok()).toBeTruthy();
     const ncData = await ncResponse.json();
-    expect(ncData.status).toBe('analyzing');
+    expect(ncData.status).toBe('open');
 
     const updateResponse = await testOperatorPage.request.patch(
       `${BACKEND_URL}/api/non-conformances/${TEST_NC_ID}`,
@@ -139,7 +139,6 @@ test.describe('부적합 반려 전체 프로세스', () => {
           version: ncData.version,
           correctionContent: '내부 연결부 교체 및 재교정 완료. 성적서 번호: CAL-2026-0312',
           correctionDate: '2026-02-12',
-          analysisContent: '내부 연결부 산화 확인',
           status: 'corrected',
         },
       }
@@ -243,7 +242,7 @@ test.describe('부적합 반려 전체 프로세스', () => {
     // 종료 메모 표시
     await expect(testOperatorPage.getByText('CAL-2026-0312').first()).toBeVisible();
 
-    // 반려 배너 미표시 (status !== 'analyzing')
+    // 반려 배너 미표시 (status !== 'open')
     await expect(testOperatorPage.getByText('조치 반려됨')).not.toBeVisible();
 
     console.log('✅ Step 5 완료: 전체 프로세스 검증 완료');
@@ -297,7 +296,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
     );
     expect(rejectRes.ok()).toBeTruthy();
     const rejected = await rejectRes.json();
-    expect(rejected.status).toBe('analyzing');
+    expect(rejected.status).toBe('open');
     expect(rejected.rejectionReason).toBe(REASON_1);
     expect(rejected.version).toBe(2);
     console.log('✅ D-1: 첫 번째 반려 성공, version:', rejected.version);
@@ -311,7 +310,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
       { headers: { Authorization: `Bearer ${teToken}` } }
     );
     const nc = await ncRes.json();
-    expect(nc.status).toBe('analyzing');
+    expect(nc.status).toBe('open');
     expect(nc.version).toBe(2);
 
     const updateRes = await testOperatorPage.request.patch(
@@ -322,7 +321,6 @@ test.describe('이중 반려 후 종료 프로세스', () => {
           version: nc.version,
           correctionContent: 'BNC 커넥터 N-type 50ohm으로 교체 완료. 교체 사진 첨부.',
           correctionDate: '2026-02-12',
-          analysisContent: '접촉 불량으로 인한 신호 손실',
           status: 'corrected',
         },
       }
@@ -356,7 +354,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
     );
     expect(rejectRes.ok()).toBeTruthy();
     const rejected = await rejectRes.json();
-    expect(rejected.status).toBe('analyzing');
+    expect(rejected.status).toBe('open');
     expect(rejected.rejectionReason).toBe(REASON_2); // 두 번째 반려 사유로 덮어씀
     expect(rejected.version).toBe(4);
     console.log('✅ D-3: 두 번째 반려 성공 (사유 덮어쓰기 확인), version:', rejected.version);
@@ -394,7 +392,6 @@ test.describe('이중 반려 후 종료 프로세스', () => {
           version: nc.version,
           correctionContent: 'N-type 50ohm 커넥터 교체 완료. 사양서: SPEC-BNC-2026-001 첨부.',
           correctionDate: '2026-02-12',
-          analysisContent: '접촉 불량 → 커넥터 교체',
           status: 'corrected',
         },
       }
@@ -438,7 +435,7 @@ test.describe('이중 반려 후 종료 프로세스', () => {
     expect(closed.closureNotes).toContain('두 번의 보완 요청 후 종료');
     console.log('✅ D-5: 이중 반려 후 종료 성공, final version:', closed.version);
     console.log(
-      '  → version 체인: v1(corrected) → v2(reject#1) → v3(resubmit) → v4(reject#2) → v5(resubmit) → v6(closed)'
+      '  → version 체인: v1(corrected) → v2(reject#1→open) → v3(resubmit) → v4(reject#2→open) → v5(resubmit) → v6(closed)'
     );
   });
 });

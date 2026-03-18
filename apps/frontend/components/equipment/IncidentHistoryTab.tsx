@@ -51,12 +51,14 @@ import { useAuth } from '@/hooks/use-auth';
 import {
   UserRoleValues as URVal,
   IncidentTypeValues as ITVal,
+  IncidentTypeEnum,
 } from '@equipment-management/schemas';
 import { useToast } from '@/components/ui/use-toast';
 import { EquipmentCacheInvalidation } from '@/lib/api/cache-invalidation';
 import { queryKeys } from '@/lib/api/query-config';
 import { createRepairHistory, type CreateRepairHistoryDto } from '@/lib/api/repair-history-api';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
+import { EntityLinkCell } from '@/components/ui/entity-link-cell';
 import {
   TIMELINE_TOKENS,
   getTimelineCardClasses,
@@ -68,7 +70,7 @@ import {
 // 사고 이력 등록 스키마
 const incidentHistorySchema = z.object({
   occurredAt: z.string().min(1, '발생 일시를 입력하세요'),
-  incidentType: z.enum(['damage', 'malfunction', 'change', 'repair', 'calibration_overdue']),
+  incidentType: IncidentTypeEnum,
   content: z.string().min(1, '내용을 입력하세요').max(500, '500자 이하로 입력하세요'),
   // 부적합 생성 관련 필드
   createNonConformance: z.boolean().default(false),
@@ -174,7 +176,7 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
       }
       return data.data.filter(
         (nc) =>
-          ['open', 'analyzing', 'corrected'].includes(nc.status) &&
+          ['open', 'corrected'].includes(nc.status) &&
           ['damage', 'malfunction', 'calibration_failure', 'measurement_error'].includes(nc.ncType)
       );
     },
@@ -837,9 +839,12 @@ export function IncidentHistoryTab({ equipment }: IncidentHistoryTabProps) {
                         )}
 
                         {item.nonConformanceId && (
-                          <Badge variant="destructive" className="text-xs">
-                            {t('incidentHistoryTab.ncLinked')}
-                          </Badge>
+                          <EntityLinkCell
+                            entityType="non_conformance"
+                            entityId={item.nonConformanceId}
+                            entityName={t('incidentHistoryTab.ncLinked')}
+                            className="text-xs"
+                          />
                         )}
                       </div>
                     </CardContent>

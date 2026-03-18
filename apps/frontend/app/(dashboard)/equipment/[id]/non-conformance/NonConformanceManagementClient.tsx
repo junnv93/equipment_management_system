@@ -114,9 +114,8 @@ export default function NonConformanceManagementClient({
   // 업데이트 폼 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [updateForm, setUpdateForm] = useState({
-    analysisContent: '',
     correctionContent: '',
-    status: '' as 'open' | 'analyzing' | 'corrected' | '',
+    status: '' as 'open' | 'corrected' | '',
   });
 
   // 부적합 등록 mutation - Optimistic Update 패턴
@@ -180,11 +179,10 @@ export default function NonConformanceManagementClient({
       id: string;
       updateData: {
         version: number;
-        analysisContent?: string;
         correctionContent?: string;
         correctionDate?: string;
         correctedBy?: string;
-        status?: 'open' | 'analyzing' | 'corrected';
+        status?: 'open' | 'corrected';
       };
     },
     { data: NonConformance[] }
@@ -211,7 +209,7 @@ export default function NonConformanceManagementClient({
     errorMessage: t('nonConformanceManagement.toasts.updateError'),
     onSuccessCallback: () => {
       setEditingId(null);
-      setUpdateForm({ analysisContent: '', correctionContent: '', status: '' });
+      setUpdateForm({ correctionContent: '', status: '' });
       router.refresh();
     },
   });
@@ -237,13 +235,11 @@ export default function NonConformanceManagementClient({
 
     const updateData: {
       version: number;
-      analysisContent?: string;
       correctionContent?: string;
       correctionDate?: string;
       correctedBy?: string;
-      status?: 'open' | 'analyzing' | 'corrected';
+      status?: 'open' | 'corrected';
     } = { version: nc.version };
-    if (updateForm.analysisContent) updateData.analysisContent = updateForm.analysisContent;
     if (updateForm.correctionContent) {
       updateData.correctionContent = updateForm.correctionContent;
       updateData.correctionDate = new Date().toISOString().split('T')[0];
@@ -257,7 +253,6 @@ export default function NonConformanceManagementClient({
   const startEditing = (nc: NonConformance) => {
     setEditingId(nc.id);
     setUpdateForm({
-      analysisContent: nc.analysisContent || '',
       correctionContent: nc.correctionContent || '',
       status: '',
     });
@@ -268,8 +263,6 @@ export default function NonConformanceManagementClient({
     switch (status) {
       case 'open':
         return <AlertTriangle className={cls} aria-hidden="true" />;
-      case 'analyzing':
-        return <FileText className={cls} aria-hidden="true" />;
       case 'corrected':
         return <Clock className={cls} aria-hidden="true" />;
       case 'closed':
@@ -521,7 +514,7 @@ export default function NonConformanceManagementClient({
                 </div>
 
                 {/* 반려 사유 배너 */}
-                {nc.status === 'analyzing' && nc.rejectionReason && (
+                {nc.status === 'open' && nc.rejectionReason && (
                   <div className={getSemanticContainerClasses('critical')}>
                     <div className="flex items-start gap-3">
                       <XCircle
@@ -563,15 +556,6 @@ export default function NonConformanceManagementClient({
                       {t('nonConformanceManagement.actionPlanLabel')}
                     </h4>
                     <p className="text-foreground mt-1 leading-relaxed">{nc.actionPlan}</p>
-                  </div>
-                )}
-
-                {nc.analysisContent && (
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground">
-                      {t('nonConformanceManagement.analysisLabel')}
-                    </h4>
-                    <p className="text-foreground mt-1 leading-relaxed">{nc.analysisContent}</p>
                   </div>
                 )}
 
@@ -669,21 +653,6 @@ export default function NonConformanceManagementClient({
               {editingId === nc.id && nc.status !== 'closed' && (
                 <div className="mt-4 pt-4 border-t border-border space-y-4">
                   <div>
-                    <Label htmlFor={`analysis-${nc.id}`}>
-                      {t('nonConformanceManagement.update.analysis')}
-                    </Label>
-                    <Textarea
-                      id={`analysis-${nc.id}`}
-                      value={updateForm.analysisContent}
-                      onChange={(e) =>
-                        setUpdateForm({ ...updateForm, analysisContent: e.target.value })
-                      }
-                      rows={2}
-                      className="mt-1.5"
-                      placeholder={t('nonConformanceManagement.update.analysisPlaceholder')}
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor={`correction-${nc.id}`}>
                       {t('nonConformanceManagement.update.correction')}
                     </Label>
@@ -707,7 +676,7 @@ export default function NonConformanceManagementClient({
                       onValueChange={(v) =>
                         setUpdateForm({
                           ...updateForm,
-                          status: v === '_keep' ? '' : (v as 'open' | 'analyzing' | 'corrected'),
+                          status: v === '_keep' ? '' : (v as 'open' | 'corrected'),
                         })
                       }
                     >
@@ -719,9 +688,6 @@ export default function NonConformanceManagementClient({
                       <SelectContent>
                         <SelectItem value="_keep">
                           {t('nonConformanceManagement.update.keepStatus')}
-                        </SelectItem>
-                        <SelectItem value="analyzing">
-                          {t('nonConformanceManagement.update.analyzing')}
                         </SelectItem>
                         <SelectItem value="corrected">
                           {t('nonConformanceManagement.update.corrected')}
@@ -739,7 +705,7 @@ export default function NonConformanceManagementClient({
                       variant="outline"
                       onClick={() => {
                         setEditingId(null);
-                        setUpdateForm({ analysisContent: '', correctionContent: '', status: '' });
+                        setUpdateForm({ correctionContent: '', status: '' });
                       }}
                     >
                       {t('nonConformanceManagement.update.cancel')}

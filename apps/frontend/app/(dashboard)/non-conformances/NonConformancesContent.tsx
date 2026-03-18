@@ -13,7 +13,6 @@ import {
   X,
   FileWarning,
   Eye,
-  BarChart3,
   CheckCircle2,
   XCircle,
   Download,
@@ -53,6 +52,7 @@ import {
   NC_STAGGER_DELAY_MS,
   NC_REJECTION_BADGE_TOKENS,
   type NCKpiVariant,
+  getPageContainerClasses,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -72,7 +72,6 @@ import { Button } from '@/components/ui/button';
 /** KPI 아이콘 매핑 */
 const KPI_ICONS: Record<NCKpiVariant, typeof AlertTriangle> = {
   open: AlertTriangle,
-  analyzing: BarChart3,
   corrected: CheckCircle2,
   closed: XCircle,
 };
@@ -127,7 +126,6 @@ export default function NonConformancesContent({
   const kpiCounts: Record<NCKpiVariant, number> = serverSummary
     ? {
         open: serverSummary.open ?? 0,
-        analyzing: serverSummary.analyzing ?? 0,
         corrected: serverSummary.corrected ?? 0,
         closed: serverSummary.closed ?? 0,
       }
@@ -160,7 +158,7 @@ export default function NonConformancesContent({
   };
 
   return (
-    <div className="space-y-5">
+    <div className={getPageContainerClasses('list', 'space-y-5')}>
       {/* 헤더 */}
       <div className={NC_HEADER_TOKENS.container}>
         <div>
@@ -176,7 +174,7 @@ export default function NonConformancesContent({
       </div>
 
       {/* KPI 스트립 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {(Object.keys(NC_KPI_LABELS) as NCKpiVariant[]).map((variant) => {
           const Icon = KPI_ICONS[variant];
           const tokens = NC_KPI_TOKENS[variant];
@@ -397,7 +395,7 @@ function NCListRow({ nc, index }: { nc: NonConformance; index: number }) {
   const elapsedDays = computeElapsedDays(nc);
   const longOverdue = isNCLongOverdue(elapsedDays);
   const statusIndex = NC_STATUS_STEP_INDEX[nc.status] ?? 0;
-  const hasRejection = !!nc.rejectionReason && nc.status === 'analyzing';
+  const hasRejection = !!nc.rejectionReason && nc.status === 'open';
 
   return (
     <Link
@@ -519,7 +517,7 @@ function computeElapsedDays(nc: NonConformance): number {
 
 /** KPI 카운트 계산 — 현재 페이지 데이터 기반 */
 function computeKpiCounts(ncList: NonConformance[]): Record<NCKpiVariant, number> {
-  const counts: Record<NCKpiVariant, number> = { open: 0, analyzing: 0, corrected: 0, closed: 0 };
+  const counts: Record<NCKpiVariant, number> = { open: 0, corrected: 0, closed: 0 };
   for (const nc of ncList) {
     const key = nc.status as NCKpiVariant;
     if (key in counts) counts[key]++;

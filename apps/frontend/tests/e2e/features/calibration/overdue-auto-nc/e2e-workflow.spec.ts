@@ -511,13 +511,13 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     );
     console.log('Created calibration_overdue NC:', calibrationOverdueNC.id);
 
-    // - `damage` (status: analyzing)
+    // - `damage` (status: open)
     const damageNC = await createNonConformance(
       request,
       labManagerToken,
       equipment.id,
       'damage',
-      'analyzing'
+      'open'
     );
     console.log('Created damage NC:', damageNC.id);
 
@@ -549,11 +549,11 @@ test.describe('Subgroup E1-E2: Main Workflows (Sequential)', () => {
     expect(updatedCalibrationOverdueNC.resolutionType).toBe('recalibration');
     console.log('calibration_overdue NC auto-corrected');
 
-    // Damage NC remains in 'analyzing' status
+    // Damage NC remains in 'open' status
     const updatedDamageNC = ncs.data.find((nc: any) => nc.id === damageNC.id);
     expect(updatedDamageNC).toBeDefined();
-    expect(updatedDamageNC.status).toBe('analyzing');
-    console.log('damage NC remains in analyzing status');
+    expect(updatedDamageNC.status).toBe('open');
+    console.log('damage NC remains in open status');
 
     // Equipment may still have `non_conforming` status if other NC is open
     const updatedEquipment = await getEquipment(request, techManagerToken, equipment.id);

@@ -42,7 +42,6 @@
   },
   "ncStatus": {
     "open": "Open",
-    "analyzing": "Analyzing",
     "corrected": "Corrected",
     "closed": "Closed"
   },

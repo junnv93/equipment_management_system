@@ -59,6 +59,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 function createRepairHistoryFormSchema(t: (key: string) => string) {
   return z.object({
@@ -159,7 +160,7 @@ export function RepairHistoryClient({
       }
       return data.data.filter(
         (nc) =>
-          ['open', 'analyzing', 'corrected'].includes(nc.status) &&
+          ['open', 'corrected'].includes(nc.status) &&
           ['damage', 'malfunction', 'calibration_failure', 'measurement_error'].includes(nc.ncType)
       );
     },
@@ -312,7 +313,7 @@ export function RepairHistoryClient({
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

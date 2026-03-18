@@ -38,7 +38,7 @@ test.describe('Group E: Data Integrity and Business Rules', () => {
     const hasLinkedNc = optionTexts.some((text) => linkedNcPattern.test(text));
     expect(hasLinkedNc).toBe(false);
 
-    // Only unlinked open/analyzing/corrected NCs appear in dropdown
+    // Only unlinked open/corrected NCs appear in dropdown
     // Verify 'None selected' option exists
     expect(optionTexts).toContain('선택 안함');
 

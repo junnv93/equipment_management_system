@@ -6,6 +6,7 @@ import * as nonConformancesApiServer from '@/lib/api/non-conformances-api-server
 import { isNotFoundError } from '@/lib/api/error';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 부적합 관리 페이지 (Server Component with Prefetch)
@@ -79,7 +80,7 @@ async function NonConformanceAsync({ paramsPromise }: { paramsPromise: Promise<{
  */
 function NonConformanceSkeleton() {
   return (
-    <div className="container mx-auto py-6 max-w-4xl space-y-6">
+    <div className={getPageContainerClasses('detail')}>
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64" />

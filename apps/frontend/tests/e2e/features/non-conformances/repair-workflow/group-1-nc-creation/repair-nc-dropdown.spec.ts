@@ -73,7 +73,7 @@ test.describe('Group A-1: NC Dropdown Display in Repair Form', () => {
     const optionCount = await options.count();
 
     // Should have at least 2 options: "선택 안 함" + at least one NC
-    // Based on seed data: NC_001 (open), NC_002 (analyzing) should appear
+    // Based on seed data: NC_001 (open), NC_002 (open) should appear
     expect(optionCount).toBeGreaterThanOrEqual(2);
   });
 

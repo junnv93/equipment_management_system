@@ -50,12 +50,19 @@ import type {
   CreateIncidentHistoryInput,
   IncidentType,
 } from '@/lib/api/equipment-api';
+import { IncidentTypeValues as ITVal } from '@equipment-management/schemas';
 
-const INCIDENT_TYPES: IncidentType[] = ['damage', 'malfunction', 'change', 'repair'];
+// 수동 등록 가능한 타입만 (calibration_overdue는 스케줄러 자동 생성)
+const MANUAL_INCIDENT_TYPES: IncidentType[] = [
+  ITVal.DAMAGE,
+  ITVal.MALFUNCTION,
+  ITVal.CHANGE,
+  ITVal.REPAIR,
+];
 
 const incidentHistorySchema = z.object({
   occurredAt: z.string().min(1, '발생 일시를 입력하세요'),
-  incidentType: z.enum(['damage', 'malfunction', 'change', 'repair']),
+  incidentType: z.enum([ITVal.DAMAGE, ITVal.MALFUNCTION, ITVal.CHANGE, ITVal.REPAIR]),
   content: z.string().min(1, '주요 내용을 입력하세요'),
 });
 
@@ -174,7 +181,7 @@ export function IncidentHistorySection({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {INCIDENT_TYPES.map((type) => (
+                            {MANUAL_INCIDENT_TYPES.map((type) => (
                               <SelectItem key={type} value={type}>
                                 <Badge
                                   variant="outline"

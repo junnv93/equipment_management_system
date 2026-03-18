@@ -95,7 +95,7 @@ async function NonConformancesAsync({
           currentPage: 1,
           totalPages: 0,
         },
-        summary: { open: 0, analyzing: 0, corrected: 0, closed: 0 },
+        summary: { open: 0, corrected: 0, closed: 0 },
       },
     };
   }
