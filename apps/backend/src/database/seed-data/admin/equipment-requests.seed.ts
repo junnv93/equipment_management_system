@@ -5,6 +5,7 @@
  */
 
 import { equipmentRequests } from '@equipment-management/db/schema';
+import { CODE_TO_SITE, CODE_TO_CLASSIFICATION } from '@equipment-management/schemas';
 import { daysAgo } from '../../utils/date-helpers';
 import {
   EQUIP_REQ_001_ID,
@@ -34,8 +35,8 @@ export const EQUIPMENT_REQUESTS_SEED_DATA: (typeof equipmentRequests.$inferInser
     requestData: JSON.stringify({
       name: 'EMI 테스트 리시버 (신규)',
       managementNumber: 'SUW-E0501',
-      site: 'SUW',
-      classification: 'E',
+      site: CODE_TO_SITE.SUW,
+      classification: CODE_TO_CLASSIFICATION.E,
     }),
     version: 1,
   },
@@ -51,8 +52,8 @@ export const EQUIPMENT_REQUESTS_SEED_DATA: (typeof equipmentRequests.$inferInser
     requestData: JSON.stringify({
       name: '디지털 파워미터 (신규)',
       managementNumber: 'UIW-W0201',
-      site: 'UIW',
-      classification: 'W',
+      site: CODE_TO_SITE.UIW,
+      classification: CODE_TO_CLASSIFICATION.W,
     }),
     version: 1,
   },

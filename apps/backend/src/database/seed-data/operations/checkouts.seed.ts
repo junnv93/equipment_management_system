@@ -34,13 +34,6 @@ import {
   EQUIP_FILTER_SUW_E_ID,
   EQUIP_ANTENNA_1_SUW_E_ID,
   EQUIP_COUPLER_SUW_E_ID,
-  // Equipment IDs (Suwon R - General EMC)
-  EQUIP_OSCILLOSCOPE_SUW_R_ID,
-  EQUIP_POWER_SUPPLY_SUW_R_ID,
-  EQUIP_MULTIMETER_SUW_R_ID,
-  EQUIP_SIGNAL_INT_SUW_R_ID,
-  EQUIP_ATTENUATOR_SUW_R_ID,
-  EQUIP_ABSORBER_SUW_R_ID,
   // Equipment IDs (Uiwang W - General RF)
   EQUIP_RECEIVER_UIW_W_ID,
   EQUIP_TRANSMITTER_UIW_W_ID,
@@ -1458,74 +1451,121 @@ function createCheckoutItem(
   };
 }
 
-export const CHECKOUT_ITEMS_SEED_DATA: CheckoutItemInsert[] = [
-  // Single equipment checkouts (1-6, 9-26, 42-64) - 56 items
-  ...CHECKOUTS_SEED_DATA.slice(0, 6).map((checkout, idx) =>
-    createCheckoutItem(
-      checkout.id!,
-      idx % 2 === 0 ? EQUIP_SPECTRUM_ANALYZER_SUW_E_ID : EQUIP_RECEIVER_UIW_W_ID
-    )
-  ),
-  ...CHECKOUTS_SEED_DATA.slice(8, 26).map((checkout, idx) =>
-    createCheckoutItem(
-      checkout.id!,
-      idx % 2 === 0 ? EQUIP_SIGNAL_GEN_SUW_E_ID : EQUIP_TRANSMITTER_UIW_W_ID
-    )
-  ),
-  ...CHECKOUTS_SEED_DATA.slice(41, 63).map((checkout, idx) =>
-    createCheckoutItem(
-      checkout.id!,
-      idx % 3 === 0
-        ? EQUIP_NETWORK_ANALYZER_SUW_E_ID
-        : idx % 3 === 1
-          ? EQUIP_OSCILLOSCOPE_SUW_R_ID
-          : EQUIP_ANTENNA_2_UIW_W_ID
-    )
-  ),
+// ----------------------------------------------------------------------------
+// Equipment pools by team — 장비 배정의 SSOT
+//
+// 접근 제어는 팀 단위 (CHECKOUT_DATA_SCOPE: technical_manager → 'team')
+// 따라서 장비 풀도 팀 단위로 관리해야 크로스팀 위반 방지.
+//
+// 도메인 규칙:
+// - calibration/repair: 요청자 팀 장비만 사용 (CHECKOUT_OWN_TEAM_ONLY)
+// - rental: lender 팀 장비 사용
+// ----------------------------------------------------------------------------
 
-  // Dual equipment checkouts (7-8) - 4 items
+/** 팀 ID → 해당 팀 소속 장비 풀 */
+const TEAM_EQUIPMENT_POOLS: Record<string, string[]> = {
+  // 수원 FCC EMC/RF (E팀)
+  [TEAM_FCC_EMC_RF_SUWON_ID]: [
+    EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
+    EQUIP_SIGNAL_GEN_SUW_E_ID,
+    EQUIP_NETWORK_ANALYZER_SUW_E_ID,
+    EQUIP_POWER_METER_SUW_E_ID,
+    EQUIP_EMC_RECEIVER_SUW_E_ID,
+    EQUIP_FILTER_SUW_E_ID,
+    EQUIP_ANTENNA_1_SUW_E_ID,
+    EQUIP_COUPLER_SUW_E_ID,
+  ],
+  // 의왕 General RF (W팀)
+  [TEAM_GENERAL_RF_UIWANG_ID]: [
+    EQUIP_RECEIVER_UIW_W_ID,
+    EQUIP_TRANSMITTER_UIW_W_ID,
+    EQUIP_ANTENNA_2_UIW_W_ID,
+    EQUIP_AMPLIFIER_UIW_W_ID,
+  ],
+};
+
+/** 사용자 ID → 소속 팀 ID (체크아웃 시드에 사용되는 사용자만) */
+const USER_TEAM_MAP: Record<string, string> = {
+  [USER_TEST_ENGINEER_SUWON_ID]: TEAM_FCC_EMC_RF_SUWON_ID,
+  [USER_TECHNICAL_MANAGER_SUWON_ID]: TEAM_FCC_EMC_RF_SUWON_ID,
+  [USER_TEST_ENGINEER_UIWANG_ID]: TEAM_GENERAL_RF_UIWANG_ID,
+  [USER_TECHNICAL_MANAGER_UIWANG_ID]: TEAM_GENERAL_RF_UIWANG_ID,
+};
+
+/**
+ * 체크아웃의 비즈니스 규칙에 따라 장비 소속 팀 결정:
+ * - rental: lender 팀 장비 (빌려주는 측 소유)
+ * - calibration/repair: 요청자 팀 장비 (자기 팀 장비만 반출)
+ */
+function resolveEquipmentTeam(checkout: CheckoutInsert): string {
+  if (checkout.purpose === 'rental' && checkout.lenderTeamId) {
+    return checkout.lenderTeamId;
+  }
+  return USER_TEAM_MAP[checkout.requesterId!];
+}
+
+/** 팀별 풀에서 라운드로빈으로 장비 선택 */
+function pickEquipment(teamId: string, counters: Record<string, number>): string {
+  const pool = TEAM_EQUIPMENT_POOLS[teamId];
+  if (!pool) {
+    throw new Error(`No equipment pool for team ${teamId}`);
+  }
+  const count = counters[teamId] ?? 0;
+  counters[teamId] = count + 1;
+  return pool[count % pool.length];
+}
+
+// Multi-equipment 체크아웃 — 수동 정의 (아래에서 별도 관리)
+const MULTI_EQUIPMENT_IDS = new Set([
+  CHECKOUT_007_ID,
+  CHECKOUT_008_ID,
+  CHECKOUT_029_ID,
+  CHECKOUT_035_ID,
+  CHECKOUT_065_ID,
+  CHECKOUT_066_ID,
+  CHECKOUT_067_ID,
+  CHECKOUT_068_ID,
+]);
+
+// Single-equipment items: 체크아웃 데이터에서 팀을 도출하여 자동 배정
+const teamCounters: Record<string, number> = {};
+const singleEquipmentItems: CheckoutItemInsert[] = CHECKOUTS_SEED_DATA.filter(
+  (checkout) => !MULTI_EQUIPMENT_IDS.has(checkout.id!)
+).map((checkout) => {
+  const teamId = resolveEquipmentTeam(checkout);
+  return createCheckoutItem(checkout.id!, pickEquipment(teamId, teamCounters));
+});
+
+export const CHECKOUT_ITEMS_SEED_DATA: CheckoutItemInsert[] = [
+  // Single-equipment items (사이트 규칙 기반 자동 배정)
+  ...singleEquipmentItems,
+
+  // Multi-equipment items (수동 정의 — 사이트 일치 검증 완료)
+  // #7: Suwon calibration (2 items)
   createCheckoutItem(CHECKOUT_007_ID, EQUIP_POWER_METER_SUW_E_ID),
   createCheckoutItem(CHECKOUT_007_ID, EQUIP_EMC_RECEIVER_SUW_E_ID),
+  // #8: Uiwang repair (2 items)
   createCheckoutItem(CHECKOUT_008_ID, EQUIP_AMPLIFIER_UIW_W_ID),
   createCheckoutItem(CHECKOUT_008_ID, EQUIP_RECEIVER_UIW_W_ID),
-
-  // Rental 4-step checkouts (27-41) - 15 items (single + multi)
-  ...CHECKOUTS_SEED_DATA.slice(26, 28).map((checkout) =>
-    createCheckoutItem(checkout.id!, EQUIP_FILTER_SUW_E_ID)
-  ),
-  // #29: Multi-equipment (2 items)
+  // #29: Suwon rental, lender=Suwon (2 items)
   createCheckoutItem(CHECKOUT_029_ID, EQUIP_ANTENNA_1_SUW_E_ID),
   createCheckoutItem(CHECKOUT_029_ID, EQUIP_COUPLER_SUW_E_ID),
-  ...CHECKOUTS_SEED_DATA.slice(29, 32).map((checkout) =>
-    createCheckoutItem(checkout.id!, EQUIP_POWER_SUPPLY_SUW_R_ID)
-  ),
-  ...CHECKOUTS_SEED_DATA.slice(32, 35).map((checkout, idx) =>
-    createCheckoutItem(
-      checkout.id!,
-      idx === 2 ? EQUIP_MULTIMETER_SUW_R_ID : EQUIP_SIGNAL_INT_SUW_R_ID
-    )
-  ),
-  // #35: Multi-equipment (3 items)
-  createCheckoutItem(CHECKOUT_035_ID, EQUIP_ATTENUATOR_SUW_R_ID),
-  createCheckoutItem(CHECKOUT_035_ID, EQUIP_ABSORBER_SUW_R_ID),
-  createCheckoutItem(CHECKOUT_035_ID, EQUIP_POWER_SUPPLY_SUW_R_ID),
-  ...CHECKOUTS_SEED_DATA.slice(35, 41).map((checkout) =>
-    createCheckoutItem(checkout.id!, EQUIP_SPECTRUM_ANALYZER_SUW_E_ID)
-  ),
-
-  // Multi-equipment variations (65-68) - 10 items
-  // #65: 3 items
+  // #35: Suwon rental, lender=FCC_EMC_RF_SUWON (3 items)
+  createCheckoutItem(CHECKOUT_035_ID, EQUIP_FILTER_SUW_E_ID),
+  createCheckoutItem(CHECKOUT_035_ID, EQUIP_ANTENNA_1_SUW_E_ID),
+  createCheckoutItem(CHECKOUT_035_ID, EQUIP_COUPLER_SUW_E_ID),
+  // #65: Suwon calibration (3 items)
   createCheckoutItem(CHECKOUT_065_ID, EQUIP_SPECTRUM_ANALYZER_SUW_E_ID),
   createCheckoutItem(CHECKOUT_065_ID, EQUIP_SIGNAL_GEN_SUW_E_ID),
   createCheckoutItem(CHECKOUT_065_ID, EQUIP_NETWORK_ANALYZER_SUW_E_ID),
-  // #66: 3 items
+  // #66: Uiwang repair (3 items)
   createCheckoutItem(CHECKOUT_066_ID, EQUIP_RECEIVER_UIW_W_ID),
   createCheckoutItem(CHECKOUT_066_ID, EQUIP_TRANSMITTER_UIW_W_ID),
   createCheckoutItem(CHECKOUT_066_ID, EQUIP_AMPLIFIER_UIW_W_ID),
-  // #67: 2 items
+  // #67: Suwon calibration (2 items)
   createCheckoutItem(CHECKOUT_067_ID, EQUIP_POWER_METER_SUW_E_ID),
   createCheckoutItem(CHECKOUT_067_ID, EQUIP_EMC_RECEIVER_SUW_E_ID),
-  // #68: 2 items
+  // #68: Uiwang repair (2 items)
   createCheckoutItem(CHECKOUT_068_ID, EQUIP_ANTENNA_2_UIW_W_ID),
   createCheckoutItem(CHECKOUT_068_ID, EQUIP_RECEIVER_UIW_W_ID),
 ];

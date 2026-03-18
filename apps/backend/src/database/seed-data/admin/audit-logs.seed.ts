@@ -4,6 +4,7 @@
  */
 
 import { auditLogs } from '@equipment-management/db/schema';
+import { SITE_TO_CODE, CLASSIFICATION_TO_CODE } from '@equipment-management/schemas';
 import { daysAgo, addHours } from '../../utils/date-helpers';
 import {
   EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
@@ -11,7 +12,6 @@ import {
   EQUIP_POWER_METER_SUW_E_ID,
   EQUIP_NETWORK_ANALYZER_SUW_E_ID,
   EQUIP_RECEIVER_UIW_W_ID,
-  EQUIP_EMC32_SUW_P_ID,
   CALIB_001_ID,
   CALIB_002_ID,
   NC_001_ID,
@@ -39,9 +39,15 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityType: 'equipment',
     entityId: EQUIP_SPECTRUM_ANALYZER_SUW_E_ID,
     entityName: '스펙트럼 분석기 (SUW-E0001)',
-    details: { newValue: { name: '스펙트럼 분석기', site: 'SUW', classification: 'E' } },
+    details: {
+      newValue: {
+        name: '스펙트럼 분석기',
+        site: SITE_TO_CODE.suwon,
+        classification: CLASSIFICATION_TO_CODE.fcc_emc_rf,
+      },
+    },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -55,7 +61,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '스펙트럼 분석기 (SUW-E0001)',
     details: { additionalInfo: { action: 'equipment_registration_approved' } },
     ipAddress: '192.168.1.101',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -72,7 +78,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
       newValue: { location: '수원 본관 2층 EMC 시험실 A' },
     },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 
@@ -88,7 +94,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '스펙트럼 분석기 교정 (2026-01)',
     details: { newValue: { calibrationType: 'external', provider: 'KOLAS 인증 기관' } },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -102,7 +108,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '스펙트럼 분석기 교정 (2026-01)',
     details: { additionalInfo: { comment: '교정 성적서 확인 완료' } },
     ipAddress: '192.168.1.101',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -116,7 +122,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '신호 발생기 교정 (2026-01)',
     details: { additionalInfo: { reason: '교정 성적서 누락' } },
     ipAddress: '192.168.1.101',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 
@@ -132,7 +138,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '네트워크 분석기 반출',
     details: { additionalInfo: { purpose: '외부 교정', expectedReturn: '2026-03-01' } },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -146,7 +152,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '네트워크 분석기 반입',
     details: { additionalInfo: { condition: 'normal' } },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 
@@ -162,7 +168,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '파워미터 부적합 보고',
     details: { newValue: { equipmentId: EQUIP_POWER_METER_SUW_E_ID, type: 'measurement_error' } },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -176,7 +182,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '파워미터 부적합 보고',
     details: { additionalInfo: { correctionPlan: '센서 헤드 교체 후 재교정' } },
     ipAddress: '192.168.1.101',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -190,7 +196,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '하네스 커플러 부적합 종결',
     details: { additionalInfo: { resolution: '수리 완료, 재교정 통과' } },
     ipAddress: '192.168.1.101',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 
@@ -206,7 +212,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '하네스 커플러 수리 기록',
     details: { newValue: { result: 'completed', provider: '케이사이트 서비스센터' } },
     ipAddress: '192.168.1.101',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 
@@ -222,7 +228,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: 'EMC32 v10.0.0 설치',
     details: { newValue: { softwareName: 'EMC32', version: '10.0.0' } },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -236,7 +242,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: 'EMC32 v10.0.0 설치 승인',
     details: { additionalInfo: { comment: '설치 확인 완료' } },
     ipAddress: '192.168.1.101',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 
@@ -252,7 +258,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '김시험',
     details: { additionalInfo: { method: 'azure_ad' } },
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -265,7 +271,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityId: USER_TEST_ENGINEER_SUWON_ID,
     entityName: '김시험',
     ipAddress: '192.168.1.100',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -279,7 +285,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '이시험소장',
     details: { additionalInfo: { method: 'azure_ad' } },
     ipAddress: '192.168.1.102',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
   {
@@ -293,7 +299,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: '최품질',
     details: { additionalInfo: { method: 'azure_ad' } },
     ipAddress: '192.168.1.103',
-    userSite: 'SUW',
+    userSite: SITE_TO_CODE.suwon,
     userTeamId: TEAM_FCC_EMC_RF_SUWON_ID,
   },
 
@@ -307,9 +313,15 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityType: 'equipment',
     entityId: EQUIP_RECEIVER_UIW_W_ID,
     entityName: 'RF 수신기 (UIW-W0001)',
-    details: { newValue: { name: 'RF 수신기', site: 'UIW', classification: 'W' } },
+    details: {
+      newValue: {
+        name: 'RF 수신기',
+        site: SITE_TO_CODE.uiwang,
+        classification: CLASSIFICATION_TO_CODE.general_rf,
+      },
+    },
     ipAddress: '192.168.2.100',
-    userSite: 'UIW',
+    userSite: SITE_TO_CODE.uiwang,
     userTeamId: TEAM_GENERAL_RF_UIWANG_ID,
   },
   {
@@ -323,7 +335,7 @@ export const AUDIT_LOGS_SEED_DATA: (typeof auditLogs.$inferInsert)[] = [
     entityName: 'RF 수신기 (UIW-W0001)',
     details: { additionalInfo: { action: 'equipment_registration_approved' } },
     ipAddress: '192.168.2.101',
-    userSite: 'UIW',
+    userSite: SITE_TO_CODE.uiwang,
     userTeamId: TEAM_GENERAL_RF_UIWANG_ID,
   },
 ];
