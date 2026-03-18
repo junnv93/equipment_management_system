@@ -31,24 +31,24 @@ import { getStaggerDelay, TRANSITION_PRESETS } from '../motion';
  */
 export const DASHBOARD_STATS_VARIANTS = {
   success: {
-    card: 'bg-ul-green/10 text-ul-green border-ul-green/20 dark:bg-ul-green/20 dark:text-ul-green dark:border-ul-green/30',
-    icon: 'bg-ul-green/20 text-ul-green dark:bg-ul-green/30 dark:text-ul-green',
+    card: 'bg-brand-ok/10 text-brand-ok border-brand-ok/20',
+    icon: 'bg-brand-ok/20 text-brand-ok',
   },
   warning: {
-    card: 'bg-ul-orange/10 text-ul-orange border-ul-orange/20 dark:bg-ul-orange/20 dark:text-ul-orange dark:border-ul-orange/30',
-    icon: 'bg-ul-orange/20 text-ul-orange dark:bg-ul-orange/30 dark:text-ul-orange',
+    card: 'bg-brand-warning/10 text-brand-warning border-brand-warning/20',
+    icon: 'bg-brand-warning/20 text-brand-warning',
   },
   danger: {
-    card: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-ul-red/20 dark:text-ul-red dark:border-ul-red/30',
-    icon: 'bg-ul-red/20 text-ul-red dark:bg-ul-red/30 dark:text-ul-red',
+    card: 'bg-brand-critical/10 text-brand-critical border-brand-critical/20',
+    icon: 'bg-brand-critical/20 text-brand-critical',
   },
   primary: {
-    card: 'bg-ul-midnight/10 text-ul-midnight border-ul-midnight/20 dark:bg-ul-info/20 dark:text-ul-info dark:border-ul-info/30',
-    icon: 'bg-ul-midnight/20 text-ul-midnight dark:bg-ul-info/30 dark:text-ul-info',
+    card: 'bg-brand-info/10 text-brand-info border-brand-info/20',
+    icon: 'bg-brand-info/20 text-brand-info',
   },
   default: {
     card: 'bg-card text-card-foreground border-border',
-    icon: 'bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground',
+    icon: 'bg-muted text-muted-foreground',
   },
 } as const;
 
@@ -84,12 +84,12 @@ export function getStatsIconClasses(variant: StatsVariant = 'default'): string {
  */
 export const DASHBOARD_ROLE_BADGES = {
   test_engineer: {
-    color: 'text-ul-blue dark:text-ul-info',
-    bgColor: 'bg-ul-blue/10 dark:bg-ul-blue/20',
+    color: 'text-brand-info',
+    bgColor: 'bg-brand-info/10',
   },
   technical_manager: {
-    color: 'text-ul-green dark:text-ul-green',
-    bgColor: 'bg-ul-green/10 dark:bg-ul-green/20',
+    color: 'text-brand-ok',
+    bgColor: 'bg-brand-ok/10',
   },
   quality_manager: {
     color: 'text-ul-fog dark:text-ul-info',
@@ -100,12 +100,12 @@ export const DASHBOARD_ROLE_BADGES = {
     bgColor: 'bg-ul-midnight/10 dark:bg-ul-midnight/20',
   },
   system_admin: {
-    color: 'text-ul-orange dark:text-ul-orange',
-    bgColor: 'bg-ul-orange/10 dark:bg-ul-orange/20',
+    color: 'text-brand-warning',
+    bgColor: 'bg-brand-warning/10',
   },
   admin: {
-    color: 'text-ul-red dark:text-brand-critical',
-    bgColor: 'bg-ul-red/10 dark:bg-ul-red/20',
+    color: 'text-brand-critical',
+    bgColor: 'bg-brand-critical/10',
   },
   user: {
     color: 'text-muted-foreground',
@@ -162,16 +162,16 @@ export function getStatusChartColor(status: string): string {
  */
 export const DASHBOARD_CALIBRATION_STATUS_COLORS = {
   upcoming: {
-    indicator: 'bg-ul-blue dark:bg-ul-blue',
-    text: 'text-ul-blue dark:text-ul-info',
+    indicator: 'bg-brand-info',
+    text: 'text-brand-info',
   },
   urgent: {
-    indicator: 'bg-ul-orange dark:bg-ul-orange',
-    text: 'text-ul-orange dark:text-ul-orange',
+    indicator: 'bg-brand-warning',
+    text: 'text-brand-warning',
   },
   overdue: {
-    indicator: 'bg-ul-red dark:bg-ul-red',
-    text: 'text-ul-red dark:text-brand-critical',
+    indicator: 'bg-brand-critical',
+    text: 'text-brand-critical',
   },
 } as const;
 
@@ -326,13 +326,13 @@ export const DASHBOARD_KPI_TOKENS = {
     /** 가동률 70%+ 또는 정상 상태 */
     good: 'text-brand-ok',
     /** 가동률 40-70% 또는 주의 필요 */
-    warning: 'text-ul-orange dark:text-brand-warning',
+    warning: 'text-brand-warning',
     /** 가동률 <40% 또는 위험 상태 */
-    danger: 'text-ul-red dark:text-brand-critical',
+    danger: 'text-brand-critical',
     /** 반출 중 (양수인 경우) */
-    active: 'text-ul-blue dark:text-ul-info',
+    active: 'text-brand-info',
     /** 부적합 존재 시 카드 테두리 */
-    alertBorder: 'border-ul-red/30 dark:border-brand-critical/30',
+    alertBorder: 'border-brand-critical/30',
   },
 } as const;
 
@@ -354,13 +354,13 @@ export const DASHBOARD_DDAY_COMPACT_TOKENS = {
   list: 'flex-1 overflow-y-auto',
   item: 'flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50',
   bar: 'w-1 rounded-full self-stretch flex-shrink-0',
-  barOverdue: 'bg-ul-red dark:bg-brand-critical',
-  barUrgent: 'bg-ul-orange dark:bg-brand-repair',
+  barOverdue: 'bg-brand-critical',
+  barUrgent: 'bg-brand-warning',
   barWarning: 'bg-brand-warning',
   barOk: 'bg-brand-ok',
   dday: 'font-mono tabular-nums font-bold text-sm w-14 flex-shrink-0',
-  ddayOverdue: 'text-ul-red dark:text-brand-critical',
-  ddayUrgent: 'text-ul-orange dark:text-brand-repair',
+  ddayOverdue: 'text-brand-critical',
+  ddayUrgent: 'text-brand-warning',
   ddayWarning: 'text-brand-warning',
   ddayOk: 'text-brand-ok',
   info: 'min-w-0 flex-1',
@@ -393,15 +393,15 @@ export const DASHBOARD_CALENDAR_TOKENS = {
   grid: 'grid grid-cols-7 px-3 pb-3',
   dayLabel: 'text-center text-[10px] font-medium text-muted-foreground py-1',
   cell: 'relative flex flex-col items-center py-1 rounded hover:bg-muted/50 cursor-default',
-  cellToday: 'bg-ul-blue/10 dark:bg-ul-blue/20',
+  cellToday: 'bg-brand-info/10',
   cellNumber: 'text-xs text-foreground leading-tight',
-  cellNumberToday: 'font-bold text-ul-blue dark:text-ul-info',
-  cellNumberHoliday: 'font-medium text-ul-red dark:text-brand-critical',
+  cellNumberToday: 'font-bold text-brand-info',
+  cellNumberHoliday: 'font-medium text-brand-critical',
   cellNumberOtherMonth: 'text-muted-foreground/40',
   dots: 'flex gap-0.5 mt-0.5 flex-wrap justify-center max-w-[28px]',
-  dotOverdue: 'w-1.5 h-1.5 rounded-full bg-ul-red dark:bg-brand-critical flex-shrink-0',
+  dotOverdue: 'w-1.5 h-1.5 rounded-full bg-brand-critical flex-shrink-0',
   dotUpcoming: 'w-1.5 h-1.5 rounded-full bg-brand-warning flex-shrink-0',
-  dotReturn: 'w-1.5 h-1.5 rounded-full bg-ul-blue dark:bg-ul-info flex-shrink-0',
+  dotReturn: 'w-1.5 h-1.5 rounded-full bg-brand-info flex-shrink-0',
   popup:
     'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-20 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[160px] max-w-[220px]',
   popupTitle: 'text-[10px] font-medium text-muted-foreground mb-1',
@@ -428,7 +428,7 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   containerLoading: 'bg-card border border-border rounded-lg p-4 flex flex-col gap-3 min-h-[12rem]',
   header: 'flex items-center justify-between',
   title: 'text-sm font-semibold text-foreground',
-  countAlert: 'text-xs font-medium text-ul-red dark:text-brand-critical',
+  countAlert: 'text-xs font-medium text-brand-critical',
   /** 내부 탭 스트립 */
   tabBar: 'flex border-b border-border -mx-0 mb-1',
   tab: `text-xs font-medium px-3 py-2 text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px ${TRANSITION_PRESETS.instantColor} focus-visible:outline-none`,
@@ -438,9 +438,8 @@ export const DASHBOARD_OVERDUE_CHECKOUTS_TOKENS = {
   listFade:
     'pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent',
   item: 'flex items-center gap-3 p-2 rounded hover:bg-muted/50 group',
-  dday: 'font-mono tabular-nums font-bold text-xs text-ul-red dark:text-brand-critical w-12 flex-shrink-0',
-  ddayReturn:
-    'font-mono tabular-nums font-bold text-xs text-ul-blue dark:text-ul-info w-12 flex-shrink-0',
+  dday: 'font-mono tabular-nums font-bold text-xs text-brand-critical w-12 flex-shrink-0',
+  ddayReturn: 'font-mono tabular-nums font-bold text-xs text-brand-info w-12 flex-shrink-0',
   info: 'min-w-0 flex-1',
   name: 'text-xs text-foreground truncate',
   user: 'text-[10px] text-muted-foreground truncate',
@@ -473,7 +472,7 @@ export const DASHBOARD_TEAM_DISTRIBUTION_TOKENS = {
   teamName: 'text-xs text-foreground truncate',
   teamCount: 'text-xs font-mono tabular-nums text-muted-foreground flex-shrink-0',
   barTrack: 'h-2 bg-muted rounded-full overflow-hidden',
-  barFill: 'h-full rounded-full bg-ul-blue dark:bg-ul-info',
+  barFill: 'h-full rounded-full bg-brand-info',
   emptyText: 'text-xs text-muted-foreground text-center py-4',
 } as const;
 
@@ -508,13 +507,13 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
     'flex items-center gap-3 min-h-[2.75rem] px-3 py-2 rounded-lg border bg-card overflow-hidden',
   /** 좌측 severity 색상 바 (border-l-4) */
   severityBorder: {
-    critical: 'border-l-4 border-l-ul-red',
-    warning: 'border-l-4 border-l-ul-orange',
+    critical: 'border-l-4 border-l-brand-critical',
+    warning: 'border-l-4 border-l-brand-warning',
     none: 'border-l-4 border-l-transparent',
   },
   /** 원형 카운트 배지 */
   countCircle:
-    'flex-shrink-0 h-6 w-6 rounded-full bg-ul-red text-white text-[10px] font-bold flex items-center justify-center tabular-nums',
+    'flex-shrink-0 h-6 w-6 rounded-full bg-brand-critical text-white text-[10px] font-bold flex items-center justify-center tabular-nums',
   /** 요약 텍스트 */
   summaryText: 'text-xs font-medium text-foreground',
   /** pill 칩 컨테이너 — ml-auto로 우측 정렬 (와이어프레임 준수) */
@@ -523,10 +522,10 @@ export const DASHBOARD_ALERT_BANNER_TOKENS = {
   chip: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border',
   /** 긴급 카테고리 pill (non-conforming 등) */
   chipUrgent:
-    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-red/10 text-ul-red dark:text-brand-critical border border-ul-red/20',
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-brand-critical/10 text-brand-critical border border-brand-critical/20',
   /** 경고 카테고리 pill (overdue 등) */
   chipWarning:
-    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-ul-orange/10 text-ul-orange dark:text-brand-repair border border-ul-orange/20',
+    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-brand-warning/10 text-brand-warning border border-brand-warning/20',
   /** "이상 없음" 인라인 상태 */
   clearState: 'flex items-center gap-2 text-xs text-muted-foreground',
   clearIcon: 'h-4 w-4 text-brand-ok flex-shrink-0',
@@ -563,7 +562,7 @@ export const DASHBOARD_STATUS_MINI_TOKENS = {
 
 export const DASHBOARD_KPI_TREND_TOKENS = {
   up: 'text-brand-ok text-[10px] tabular-nums font-semibold leading-none',
-  down: 'text-ul-red dark:text-brand-critical text-[10px] tabular-nums font-semibold leading-none',
+  down: 'text-brand-critical text-[10px] tabular-nums font-semibold leading-none',
   same: 'text-muted-foreground text-[10px] tabular-nums leading-none',
   badge: 'inline-flex items-center gap-0.5',
 } as const;
@@ -583,7 +582,7 @@ export const DASHBOARD_WELCOME_TOKENS = {
   badgeLayout: 'flex items-center gap-1.5 py-1 px-2.5',
   roleIcon: 'h-3.5 w-3.5',
   onlineContainer: 'inline-flex items-center gap-1.5 text-sm text-muted-foreground',
-  onlineDot: 'inline-block w-2 h-2 rounded-full bg-ul-green',
+  onlineDot: 'inline-block w-2 h-2 rounded-full bg-brand-ok',
   divider: 'hidden sm:inline text-muted-foreground/30',
   date: 'text-sm text-muted-foreground',
   description: 'text-xs text-muted-foreground/70 hidden md:block leading-relaxed',
@@ -606,13 +605,13 @@ export const DASHBOARD_RECENT_ACTIVITIES_TOKENS = {
   /** 아이콘 컨테이너 — 기본(중립) */
   iconContainerDefault: 'bg-muted',
   /** 아이콘 컨테이너 — 승인 */
-  iconContainerApproval: 'bg-ul-green/10 dark:bg-ul-green/20',
+  iconContainerApproval: 'bg-brand-ok/10',
   /** 아이콘 컨테이너 — 반려 */
-  iconContainerRejection: 'bg-ul-red/10 dark:bg-ul-red/20',
+  iconContainerRejection: 'bg-brand-critical/10',
   /** 아이템 행 배경 — 승인 */
-  rowApproval: 'bg-ul-green/5 dark:bg-ul-green/10',
+  rowApproval: 'bg-brand-ok/5',
   /** 아이템 행 배경 — 반려 */
-  rowRejection: 'bg-ul-red/5 dark:bg-ul-red/10',
+  rowRejection: 'bg-brand-critical/5',
   /** 콘텐츠 영역 */
   content: 'flex-1 space-y-1 min-w-0',
   /** 메타 텍스트 (시간, 작은 정보) */

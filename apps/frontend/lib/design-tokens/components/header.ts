@@ -60,7 +60,7 @@ export const HEADER_INTERACTIVE_STYLES = {
   focus: [
     'focus-visible:outline-none',
     'focus-visible:ring-2',
-    'focus-visible:ring-ul-info',
+    'focus-visible:ring-brand-info',
     'focus-visible:ring-offset-2',
   ].join(' '),
 

@@ -184,7 +184,7 @@ export const NC_KPI_CARD_TOKENS = {
   card: [
     'bg-card border border-border/60 rounded-lg p-4',
     'flex items-center gap-3.5',
-    'border-l-[3px]',
+    'border-l-4',
     TRANSITION_PRESETS.fastBgBorder,
   ].join(' '),
   /** 카드 hover */
@@ -262,7 +262,7 @@ export const NC_LIST_TOKENS = {
     NC_LIST_GRID_COLS,
   ].join(' '),
   /** 장기 미조치 행 (14일+) */
-  rowOverdue: 'border-l-[3px] border-l-brand-critical bg-brand-critical/[0.03]',
+  rowOverdue: 'border-l-4 border-l-brand-critical bg-brand-critical/[0.03]',
   /** 장비 링크 */
   equipmentLink: [
     'text-sm text-brand-info hover:underline inline-flex items-center gap-1',

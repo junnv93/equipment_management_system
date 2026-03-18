@@ -17,12 +17,10 @@ import {
   ELEVATION_TOKENS,
   FOCUS_TOKENS,
   CONTENT_TOKENS,
+  MOTION_TOKENS,
   toTailwindSize,
   toTailwindGap,
   getStaggerDelay,
-  SPACING_PRIMITIVES,
-  SIZE_PRIMITIVES,
-  MOTION_PRIMITIVES,
   TRANSITION_PRESETS,
 } from '../index';
 import { getSemanticLeftBorderClasses, getSemanticStatusClasses } from '../brand';
@@ -110,9 +108,7 @@ export const CALIBRATION_PLAN_HEADER_TOKENS = {
   ...PAGE_HEADER_TOKENS,
   /** 반응형 컨테이너 (모바일 세로 → 데스크톱 가로) */
   container: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3',
-  /** 타이틀에 아이콘 결합 시 flex 레이아웃 */
-  title: `${PAGE_HEADER_TOKENS.title} flex items-center gap-2`,
-  /** 서브타이틀에 아이콘 포함 */
+  /** subtitle에 scope 아이콘 결합 시 flex 레이아웃 */
   subtitle: `${PAGE_HEADER_TOKENS.subtitle} flex items-center gap-1.5`,
   /** 스코프 배지 (역할 기반 필터 안내) */
   scopeBadge: 'text-xs text-brand-text-muted bg-muted/60 px-2 py-0.5 rounded-md',
@@ -171,7 +167,7 @@ export type CalibrationPlanKpiVariant = keyof typeof CALIBRATION_PLAN_KPI_TOKENS
  * Mobile: stacked flex
  */
 export const CALIBRATION_PLAN_LIST_GRID_COLS =
-  'lg:grid-cols-[100px_120px_1fr_140px_120px_100px_80px]' as const;
+  'lg:grid-cols-[120px_120px_1fr_140px_140px_110px_80px]' as const;
 
 export const CALIBRATION_PLAN_LIST_TOKENS = {
   /** 로우 컨테이너 */
@@ -257,7 +253,7 @@ export const CALIBRATION_PLAN_DETAIL_HEADER_TOKENS = {
 export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
   /** 타임라인 노드 크기 */
   node: {
-    size: SIZE_PRIMITIVES.touch.minimal, // 44px mobile, 40px desktop (WCAG AAA)
+    size: INTERACTIVE_TOKENS.size.standard, // 44px mobile, 40px desktop (WCAG AAA)
     /** Web Interface Guidelines: Use border-radius for circular elements */
     radius: 'rounded-full',
   },
@@ -297,7 +293,11 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
 
   /** 연결선 (connector) */
   connector: {
+    /** 수평 연결선 (Desktop) */
     height: 'h-0.5',
+    /** 수직 연결선 (Mobile) */
+    verticalWidth: 'w-0.5',
+    verticalHeight: 'h-6',
     /** 완료된 구간 */
     completed: 'bg-brand-ok',
     /** 대기 중 구간 */
@@ -306,9 +306,21 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
     transition: TRANSITION_PRESETS.fastBg,
   },
 
+  /** 반응형 레이아웃 */
+  layout: {
+    /** Desktop: 수평 (sm 이상) */
+    horizontal: 'hidden sm:flex items-center justify-between',
+    /** Mobile: 수직 (sm 미만) */
+    vertical: 'flex sm:hidden flex-col items-start gap-0',
+    /** 수직 모드의 각 단계 행 */
+    verticalStep: 'flex items-start gap-3',
+    /** 수직 모드의 연결선 래퍼 */
+    verticalConnectorWrap: 'flex items-center pl-[18px] py-0',
+  },
+
   /** 라벨 스타일 */
   label: {
-    title: 'mt-2 text-sm font-medium',
+    title: 'mt-2 sm:mt-2 text-sm font-medium',
     subtitle: 'text-xs text-muted-foreground',
     timestamp: 'text-xs text-muted-foreground',
   },
@@ -316,11 +328,11 @@ export const CALIBRATION_PLAN_TIMELINE_TOKENS = {
   /** Motion: Progressive Reveal */
   motion: {
     /** 각 노드의 stagger delay */
-    staggerDelay: MOTION_PRIMITIVES.stagger.comfortable, // 60ms
+    staggerDelay: MOTION_TOKENS.stagger.grid, // 60ms
     /** 등장 애니메이션 */
     entrance: {
-      duration: MOTION_PRIMITIVES.duration.moderate, // 300ms
-      easing: MOTION_PRIMITIVES.easing.decelerate,
+      duration: MOTION_TOKENS.transition.moderate.duration, // 300ms
+      easing: MOTION_TOKENS.transition.emphasized.easing,
     },
   },
 } as const;
@@ -337,7 +349,7 @@ export const FILTER_TOKENS = {
   /** 필터 컨테이너 */
   container: {
     /** Web Interface Guidelines: Use gap for flex spacing */
-    gap: toTailwindGap(SPACING_PRIMITIVES.gap.comfortable), // gap-3 md:gap-2
+    gap: toTailwindGap(INTERACTIVE_TOKENS.spacing.gap), // gap-3 md:gap-2
     padding: 'p-4 md:p-3',
   },
 
@@ -530,8 +542,8 @@ export const DIALOG_TOKENS = {
     maxWidth: 'max-w-md',
     /** Motion */
     entrance: {
-      duration: MOTION_PRIMITIVES.duration.moderate,
-      easing: MOTION_PRIMITIVES.easing.decelerate,
+      duration: MOTION_TOKENS.transition.moderate.duration,
+      easing: MOTION_TOKENS.transition.emphasized.easing,
     },
   },
 
@@ -543,7 +555,7 @@ export const DIALOG_TOKENS = {
 
   /** Footer */
   footer: {
-    gap: toTailwindGap(SPACING_PRIMITIVES.gap.comfortable),
+    gap: toTailwindGap(INTERACTIVE_TOKENS.spacing.gap),
     alignment: 'justify-end',
   },
 } as const;
@@ -563,7 +575,7 @@ export const CALIBRATION_PLAN_MOTION = {
   /** 카드 등장 */
   cardEntrance: {
     className: 'motion-safe:animate-fadeIn',
-    duration: MOTION_PRIMITIVES.duration.fast,
+    duration: MOTION_TOKENS.transition.fast.duration,
   },
 
   /** 테이블 행 등장 */
@@ -682,7 +694,7 @@ export const SKELETON_TOKENS = {
 
   /** 타임라인 노드 스켈레톤 */
   timelineNode: {
-    size: toTailwindSize(SIZE_PRIMITIVES.touch.minimal, 'h'),
+    size: toTailwindSize(INTERACTIVE_TOKENS.size.standard, 'h'),
     radius: 'rounded-full',
   },
 } as const;
@@ -724,13 +736,26 @@ export function getCalibrationPlanTimelineNodeClasses(
 }
 
 /**
- * 타임라인 연결선 클래스 생성
+ * 타임라인 수평 연결선 클래스 생성 (Desktop)
  */
 export function getCalibrationPlanTimelineConnectorClasses(completed: boolean): string {
   const connector = CALIBRATION_PLAN_TIMELINE_TOKENS.connector;
   return [
     connector.height,
     'flex-1',
+    completed ? connector.completed : connector.pending,
+    connector.transition,
+  ].join(' ');
+}
+
+/**
+ * 타임라인 수직 연결선 클래스 생성 (Mobile)
+ */
+export function getCalibrationPlanTimelineVerticalConnectorClasses(completed: boolean): string {
+  const connector = CALIBRATION_PLAN_TIMELINE_TOKENS.connector;
+  return [
+    connector.verticalWidth,
+    connector.verticalHeight,
     completed ? connector.completed : connector.pending,
     connector.transition,
   ].join(' ');
@@ -885,6 +910,27 @@ export const PLAN_PROGRESS_TOKENS = {
   /** 애니메이션 (progress bar는 의도적으로 느린 500ms) */
   transition:
     'motion-safe:transition-[width] motion-safe:duration-500 motion-safe:ease-out motion-reduce:transition-none',
+} as const;
+
+// ============================================================================
+// 테이블 스크롤 힌트 토큰 (모바일 가로 스크롤 인지)
+// ============================================================================
+
+/**
+ * 모바일에서 테이블이 가로 스크롤 가능함을 시각적으로 안내
+ *
+ * 우측 그라데이션 fade로 "더 있음"을 암시
+ * sm 이상에서는 테이블이 충분히 넓으므로 숨김
+ */
+export const TABLE_SCROLL_HINT_TOKENS = {
+  /** 상대 위치 래퍼 */
+  wrapper: 'relative',
+  /** 우측 그라데이션 오버레이 */
+  fadeRight: [
+    'absolute right-0 top-0 bottom-0 w-8 pointer-events-none z-10',
+    'bg-gradient-to-l from-card to-transparent',
+    'sm:hidden',
+  ].join(' '),
 } as const;
 
 // ============================================================================

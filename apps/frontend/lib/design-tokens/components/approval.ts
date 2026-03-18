@@ -33,16 +33,16 @@ import type { UrgencyLevel } from '../visual-feedback';
  * 5개 상태: pending, pending_review, reviewed, approved, rejected
  */
 export const APPROVAL_STATUS_BADGE_TOKENS = {
-  /** 대기 (UL Orange) */
-  pending: 'bg-ul-orange text-white',
-  /** 검토 대기 (UL Orange) */
-  pending_review: 'bg-ul-orange text-white',
-  /** 검토 완료 (UL Blue) */
-  reviewed: 'bg-ul-blue text-white',
-  /** 승인 완료 (UL Green) */
-  approved: 'bg-ul-green text-white',
-  /** 반려 (UL Red) */
-  rejected: 'bg-ul-red text-white',
+  /** 대기 (Warning — brand-warning solid) */
+  pending: getSemanticSolidBgClasses('warning'),
+  /** 검토 대기 (Warning — brand-warning solid) */
+  pending_review: getSemanticSolidBgClasses('warning'),
+  /** 검토 완료 (Info — brand-info solid) */
+  reviewed: getSemanticSolidBgClasses('info'),
+  /** 승인 완료 (OK — brand-ok solid) */
+  approved: getSemanticSolidBgClasses('ok'),
+  /** 반려 (Critical — brand-critical solid) */
+  rejected: getSemanticSolidBgClasses('critical'),
 } as const;
 
 /**
@@ -51,11 +51,11 @@ export const APPROVAL_STATUS_BADGE_TOKENS = {
  * SSOT: ApprovalItem.tsx의 BORDER_COLORS 통합
  */
 export const APPROVAL_CARD_BORDER_TOKENS = {
-  pending: 'border-l-ul-orange',
-  pending_review: 'border-l-ul-orange',
-  reviewed: 'border-l-ul-blue',
-  approved: 'border-l-ul-green',
-  rejected: 'border-l-ul-red',
+  pending: getSemanticLeftBorderClasses('warning'),
+  pending_review: getSemanticLeftBorderClasses('warning'),
+  reviewed: getSemanticLeftBorderClasses('info'),
+  approved: getSemanticLeftBorderClasses('ok'),
+  rejected: getSemanticLeftBorderClasses('critical'),
 } as const;
 
 // ============================================================================
@@ -78,21 +78,21 @@ export const APPROVAL_STEPPER_TOKENS = {
 
   /** 스텝 상태별 스타일 */
   status: {
-    /** 완료 (UL Green) */
-    completed: 'border-ul-green bg-ul-green text-white',
-    /** 진행 중 (UL Blue) */
-    current: 'border-ul-blue bg-ul-blue text-white',
-    /** 대기 (Gray) */
+    /** 완료 (OK — brand-ok) */
+    completed: 'border-brand-ok bg-brand-ok text-white',
+    /** 진행 중 (Info — brand-info) */
+    current: 'border-brand-info bg-brand-info text-white',
+    /** 대기 (Neutral) */
     pending: 'border-brand-neutral/30 bg-background text-muted-foreground',
-    /** 반려 (UL Red) */
-    rejected: 'border-ul-red bg-ul-red text-white',
+    /** 반려 (Critical — brand-critical) */
+    rejected: 'border-brand-critical bg-brand-critical text-white',
   },
 
   /** 스텝 라벨 */
   label: {
     base: 'text-sm font-medium',
-    /** 진행 중 (UL Blue - 기존 hex #0067B1 대체) */
-    current: 'text-ul-blue dark:text-ul-info',
+    /** 진행 중 (Info — brand-info) */
+    current: 'text-brand-info',
     /** 완료/대기 */
     inactive: 'text-muted-foreground',
   },
@@ -100,7 +100,7 @@ export const APPROVAL_STEPPER_TOKENS = {
   /** 연결선 */
   connector: {
     base: 'w-8 h-0.5 mx-2',
-    completed: 'bg-ul-green',
+    completed: 'bg-brand-ok',
     pending: 'bg-brand-neutral/20',
   },
 
@@ -156,18 +156,18 @@ export const APPROVAL_TIMELINE_TOKENS = {
  * SSOT: ApprovalItem, BulkActionBar, ApprovalDetailModal, RejectModal 6곳 중복 제거
  */
 export const APPROVAL_ACTION_BUTTON_TOKENS = {
-  /** 승인 버튼 (UL Green solid — Primary action으로 시각적 우선순위 부여) */
+  /** 승인 버튼 (OK solid — Primary action으로 시각적 우선순위 부여) */
   approve:
-    'bg-ul-green text-white border border-ul-green hover:bg-ul-green/90 hover:shadow-[0_2px_8px_rgba(0,164,81,0.25)]',
+    'bg-brand-ok text-white border border-brand-ok hover:bg-brand-ok/90 hover:shadow-[0_2px_8px_rgba(0,164,81,0.25)]',
 
   /** 승인 아이콘 버튼 (ghost — 데스크탑 컴팩트 로우용) */
-  approveIcon: 'text-ul-green hover:bg-ul-green/10',
+  approveIcon: 'text-brand-ok hover:bg-brand-ok/10',
 
-  /** 반려 버튼 (UL Red outline — 비대칭으로 approve 대비 억제) */
-  reject: 'border border-ul-red text-ul-red hover:bg-ul-red/10',
+  /** 반려 버튼 (Critical outline — 비대칭으로 approve 대비 억제) */
+  reject: 'border border-brand-critical text-brand-critical hover:bg-brand-critical/10',
 
   /** 반려 아이콘 버튼 (ghost — 데스크탑 컴팩트 로우용) */
-  rejectIcon: 'text-ul-red hover:bg-ul-red/10',
+  rejectIcon: 'text-brand-critical hover:bg-brand-critical/10',
 
   /** 상세 보기 버튼 (Neutral outline) */
   detail: 'border border-border text-foreground hover:bg-muted/80',
@@ -186,8 +186,8 @@ export const APPROVAL_TAB_TOKENS = {
   /** 탭 리스트 컨테이너 */
   listContainer: 'bg-muted/50',
 
-  /** Active indicator (UL Red 언더라인) */
-  activeIndicator: 'data-[state=active]:border-b-2 data-[state=active]:border-ul-red',
+  /** Active indicator (Critical 언더라인) */
+  activeIndicator: 'data-[state=active]:border-b-2 data-[state=active]:border-brand-critical',
 
   /** 탭 배지 기본 스타일 (count 기반 urgency는 getUrgencyFeedbackClasses 사용) */
   badge: {
@@ -391,6 +391,9 @@ export const APPROVAL_ROW_TOKENS = {
 // 13. Approval KPI Strip Tokens (4개 KPI 카드)
 // ============================================================================
 
+/** KPI 카드 4가지 variant */
+export type ApprovalKpiVariant = 'total' | 'urgent' | 'avgWait' | 'processed';
+
 /**
  * 승인 KPI 스트립 — EQUIPMENT_KPI_STRIP_TOKENS 패턴 참조
  *
@@ -444,8 +447,6 @@ export const APPROVAL_KPI_STRIP_TOKENS = {
   /** 아이콘 컨테이너 — 40px, 10px radius */
   iconContainer: 'w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0',
 } as const;
-
-export type ApprovalKpiVariant = keyof typeof APPROVAL_KPI_STRIP_TOKENS.borderColors;
 
 // ============================================================================
 // 14. Approval Category Sidebar Tokens

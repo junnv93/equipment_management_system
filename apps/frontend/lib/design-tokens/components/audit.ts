@@ -198,13 +198,13 @@ export const AUDIT_MOTION = {
 
 /**
  * 요약 바 그리드 레이아웃
+ *
+ * 좌측 색상 라인 패턴: 승인/반출/부적합/장비 KPI 카드와 동일
+ * (이전 상단 stripe → 좌측 border-l 통일)
  */
 export const AUDIT_SUMMARY_TOKENS = {
   /** 반응형 그리드: 모바일 2열 → 태블릿 3열 → 데스크탑 5열 */
   grid: 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3',
-
-  /** 카드 상단 색상 스트라이프 */
-  stripe: 'absolute top-0 left-0 right-0 h-[2px] rounded-t-lg',
 
   /** 액션 라벨 */
   label: 'text-xs font-medium text-brand-text-muted',
@@ -223,14 +223,17 @@ export const AUDIT_SUMMARY_TOKENS = {
 } as const;
 
 /**
- * 색상 체계: 액션 타입별 (stripe + count 색상)
+ * 색상 체계: 액션 타입별 (leftBorder + count 색상)
+ *
+ * leftBorder: 좌측 3px 라인 색상 (border-l-brand-*)
+ * count: 건수 텍스트 색상
  */
 export const AUDIT_SUMMARY_COLOR_MAP = {
-  all: { stripe: 'bg-brand', count: 'text-brand-text-primary' },
-  create: { stripe: 'bg-brand-ok', count: 'text-brand-ok' },
-  update: { stripe: 'bg-brand-info', count: 'text-brand-info' },
-  delete: { stripe: 'bg-brand-critical', count: 'text-brand-critical' },
-  approve: { stripe: 'bg-brand-purple', count: 'text-brand-purple' },
+  all: { leftBorder: 'border-l-brand', count: 'text-brand-text-primary' },
+  create: { leftBorder: 'border-l-brand-ok', count: 'text-brand-ok' },
+  update: { leftBorder: 'border-l-brand-info', count: 'text-brand-info' },
+  delete: { leftBorder: 'border-l-brand-critical', count: 'text-brand-critical' },
+  approve: { leftBorder: 'border-l-brand-purple', count: 'text-brand-purple' },
 } as const;
 
 /**
@@ -255,7 +258,8 @@ export function getAuditSummaryCardClasses(
   color: keyof typeof AUDIT_SUMMARY_COLOR_MAP
 ): string {
   const base = [
-    'relative overflow-hidden flex flex-col gap-0.5 p-4 rounded-lg border text-left cursor-pointer',
+    'flex flex-col gap-0.5 p-4 rounded-lg border border-l-4 text-left cursor-pointer',
+    AUDIT_SUMMARY_COLOR_MAP[color].leftBorder,
     TRANSITION_PRESETS.instantBgBorder,
     FOCUS_TOKENS.classes.default,
   ].join(' ');
@@ -325,6 +329,9 @@ export const AUDIT_TIMELINE_TOKENS = {
     TRANSITION_PRESETS.instantBg,
     FOCUS_TOKENS.classes.default,
   ].join(' '),
+
+  /** 엔트리 grid template columns — 시간 | 스파인 | 콘텐츠 */
+  entryGridCols: '56px 16px 1fr' as const,
 
   /** 시간 컬럼 */
   time: 'font-mono text-[11px] text-brand-text-muted pt-0.5 text-right tabular-nums leading-none',
@@ -522,8 +529,7 @@ export function getAuditActionChipClasses(active: boolean): string {
 export const AUDIT_HEADER_TOKENS = {
   ...PAGE_HEADER_TOKENS,
 
-  /** 타이틀에 아이콘 결합 시 flex 레이아웃 추가 */
-  title: `${PAGE_HEADER_TOKENS.title} flex items-center gap-2`,
+  /** 타이틀 — PAGE_HEADER_TOKENS 기반 (아이콘 없음, 통일) */
 
   /** 스코프 부제목 (감사로그 전용 — brand-text-muted 사용) */
   subtitle: 'flex items-center gap-1.5 text-sm text-brand-text-muted mt-1',

@@ -14,19 +14,21 @@
  */
 
 /** 페이지 컨테이너 variant */
-export type PageContainerVariant = 'list' | 'detail' | 'form' | 'centered';
+export type PageContainerVariant = 'list' | 'detail' | 'wide' | 'form' | 'centered';
 
 /**
  * 페이지 컨테이너 max-width variants
  *
  * - list: 전체 너비 (container의 2xl: 1400px 제한)
  * - detail: 넓은 폼/상세 (56rem)
+ * - wide: 넓은 폼/생성/편집 (64rem) — 장비 등록/수정 등
  * - form: 좁은 폼 (42rem)
  * - centered: 전체 너비 + 수직 중앙 정렬 (로딩/빈 상태)
  */
 const PAGE_MAX_WIDTH: Record<PageContainerVariant, string> = {
   list: '',
   detail: 'max-w-4xl',
+  wide: 'max-w-5xl',
   form: 'max-w-2xl',
   centered: '',
 } as const;
@@ -44,6 +46,9 @@ const PAGE_MAX_WIDTH: Record<PageContainerVariant, string> = {
  *
  * // 상세/편집 페이지
  * <div className={getPageContainerClasses('detail')}>
+ *
+ * // 넓은 폼 페이지 (장비 등록/수정)
+ * <div className={getPageContainerClasses('wide')}>
  *
  * // 좁은 폼 페이지 (생성, 체크)
  * <div className={getPageContainerClasses('form')}>

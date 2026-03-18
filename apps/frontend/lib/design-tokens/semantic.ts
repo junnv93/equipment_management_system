@@ -262,10 +262,10 @@ export const FOCUS_TOKENS = {
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     /** 브랜드: UL 색상 (헤더 영역) */
     brand:
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ul-info focus-visible:ring-offset-2',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-info focus-visible:ring-offset-2',
     /** 어두운 배경 (사이드바, 모바일 네비) */
     onDark:
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ul-info focus-visible:ring-offset-2 focus-visible:ring-offset-ul-midnight',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-info focus-visible:ring-offset-2 focus-visible:ring-offset-ul-midnight',
   },
 } as const;
 

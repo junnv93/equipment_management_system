@@ -345,7 +345,7 @@ export const EQUIPMENT_CARD_TOKENS = {
   focus: [
     'focus-visible:outline-none',
     'focus-visible:ring-2',
-    'focus-visible:ring-ul-info',
+    'focus-visible:ring-brand-info',
     'focus-visible:ring-offset-2',
   ].join(' '),
 } as const;
@@ -428,7 +428,7 @@ export const EQUIPMENT_TAB_TOKENS = {
     base: ['px-3 py-1.5 text-sm font-medium rounded-md', TRANSITION_PRESETS.fastBgColor].join(' '),
     /** 활성 상태 (Radix UI data-state=active 포함) */
     active:
-      'data-[state=active]:bg-ul-midnight data-[state=active]:text-white dark:data-[state=active]:bg-ul-info dark:data-[state=active]:text-ul-midnight',
+      'data-[state=active]:bg-ul-midnight data-[state=active]:text-white dark:data-[state=active]:bg-brand-info dark:data-[state=active]:text-ul-midnight',
     inactive: 'text-muted-foreground hover:text-foreground hover:bg-muted',
     focus: FOCUS_TOKENS.classes.brand,
   },
@@ -757,7 +757,7 @@ export const EQUIPMENT_TAB_UNDERLINE_TOKENS = {
   ].join(' '),
   /** 활성 상태 */
   triggerActive:
-    'data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[3px] data-[state=active]:after:bg-ul-red data-[state=active]:after:rounded-t-sm',
+    'data-[state=active]:text-foreground data-[state=active]:after:absolute data-[state=active]:after:bottom-0 data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:h-[3px] data-[state=active]:after:bg-brand-critical data-[state=active]:after:rounded-t-sm',
   /** 비활성 상태 */
   triggerInactive: 'text-muted-foreground hover:text-foreground',
   /** 포커스 */

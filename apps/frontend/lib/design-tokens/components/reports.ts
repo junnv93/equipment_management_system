@@ -91,7 +91,7 @@ export const REPORTS_LAYOUT_TOKENS = {
  */
 export const REPORTS_SPINNER_TOKENS = {
   container: 'flex items-center',
-  spinner: 'animate-spin -ml-1 mr-3 h-4 w-4 text-white',
+  spinner: 'motion-safe:animate-spin -ml-1 mr-3 h-4 w-4 text-white',
 } as const;
 
 /**

@@ -62,20 +62,20 @@ export const CALIBRATION_STATUS_INDICATOR: Record<
   { dot: string; text: string }
 > = {
   overdue: {
-    dot: 'bg-ul-red dark:bg-ul-red',
-    text: 'text-ul-red dark:text-brand-critical',
+    dot: 'bg-brand-critical',
+    text: 'text-brand-critical',
   },
   upcoming: {
-    dot: 'bg-ul-orange dark:bg-ul-orange',
-    text: 'text-ul-orange dark:text-ul-orange',
+    dot: 'bg-brand-warning',
+    text: 'text-brand-warning',
   },
   ok: {
-    dot: 'bg-ul-green dark:bg-ul-green',
+    dot: 'bg-brand-ok',
     text: 'text-brand-ok',
   },
   none: {
-    dot: 'bg-muted dark:bg-muted',
-    text: 'text-muted-foreground dark:text-muted-foreground',
+    dot: 'bg-muted',
+    text: 'text-muted-foreground',
   },
 };
 
@@ -108,12 +108,11 @@ export const CALIBRATION_CHECK_BADGE: Record<
   { badge: string; icon: LucideIcon }
 > = {
   overdue: {
-    badge: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-ul-red/20 dark:text-brand-critical',
+    badge: getSemanticStatusClasses('critical'),
     icon: AlertCircle,
   },
   today: {
-    badge:
-      'bg-ul-orange/10 text-ul-orange border-ul-orange/20 dark:bg-ul-orange/20 dark:text-brand-repair',
+    badge: getSemanticStatusClasses('repair'),
     icon: Clock,
   },
   upcoming: {
@@ -121,7 +120,7 @@ export const CALIBRATION_CHECK_BADGE: Record<
     icon: AlertTriangle,
   },
   future: {
-    badge: 'bg-ul-blue/10 text-ul-blue border-ul-blue/20 dark:bg-ul-blue/20 dark:text-brand-info',
+    badge: getSemanticStatusClasses('info'),
     icon: Calendar,
   },
 };
@@ -176,9 +175,9 @@ export function getCalibrationStatsVariant(type: CalibrationStatsType): StatsVar
 export const CALIBRATION_STATS_TEXT: Record<CalibrationStatsType | 'pending', string> = {
   total: 'text-foreground',
   compliant: 'text-brand-ok',
-  overdue: 'text-ul-red dark:text-brand-critical',
-  upcoming: 'text-ul-orange dark:text-brand-repair',
-  pending: 'text-ul-blue dark:text-brand-info',
+  overdue: 'text-brand-critical',
+  upcoming: 'text-brand-warning',
+  pending: 'text-brand-info',
 };
 
 // ============================================================================
@@ -199,7 +198,7 @@ export type CalibrationTabType = 'list' | 'intermediate' | 'self-inspection';
  */
 export const CALIBRATION_TAB_COLORS: Record<CalibrationTabType, string> = {
   list: 'text-foreground',
-  intermediate: 'text-ul-fog dark:text-ul-info',
+  intermediate: 'text-brand-neutral',
   'self-inspection': 'text-brand-ok',
 };
 
@@ -255,7 +254,7 @@ export const CALIBRATION_TABLE = {
 
   /** 링크 (색상 + 아이콘 정렬 + hover 포함) */
   link: [
-    'inline-flex items-center gap-1 text-sm text-ul-blue hover:underline',
+    'inline-flex items-center gap-1 text-sm text-brand-info hover:underline',
     CALIBRATION_MOTION.link,
   ].join(' '),
 } as const;
@@ -293,7 +292,7 @@ export const CALIBRATION_SELECTION = {
   hover: 'hover:bg-muted dark:hover:bg-muted',
 
   /** 선택됨 (UL Blue) */
-  selected: 'bg-ul-blue/10 border-l-4 border-ul-blue dark:bg-ul-blue/20 dark:border-ul-info',
+  selected: 'bg-brand-info/10 border-l-4 border-brand-info',
 
   /** Transition */
   transition: CALIBRATION_MOTION.equipmentItem,
@@ -342,10 +341,10 @@ export const CALIBRATION_FOCUS = FOCUS_TOKENS.classes;
  * 중간점검 아이콘 색상 (테이블에서 사용)
  */
 export const CALIBRATION_INTERMEDIATE_CHECK_ICON_COLORS: Record<IntermediateCheckStatus, string> = {
-  overdue: 'text-ul-red dark:text-brand-critical',
-  today: 'text-ul-orange dark:text-brand-repair',
-  upcoming: 'text-ul-blue dark:text-brand-info',
-  future: 'text-ul-blue dark:text-brand-info',
+  overdue: 'text-brand-critical',
+  today: 'text-brand-repair',
+  upcoming: 'text-brand-info',
+  future: 'text-brand-info',
 };
 
 /**
@@ -363,8 +362,8 @@ export function getIntermediateCheckIconColor(status: IntermediateCheckStatus): 
  * 중간점검 요약 카드 border (상태별)
  */
 export const CALIBRATION_CARD_BORDER: Record<string, string> = {
-  overdue: 'border-ul-red/20 dark:border-ul-red/30',
-  pending: 'border-ul-blue/20 dark:border-ul-blue/30',
+  overdue: 'border-brand-critical/20',
+  pending: 'border-brand-info/20',
   default: 'border-border',
 };
 
@@ -564,7 +563,7 @@ export const CALIBRATION_TAB_TRANSITION = TRANSITION_PRESETS.fastOpacity;
  */
 export const CALIBRATION_RESULT_BADGE: Record<string, string> = {
   pass: `${getSemanticContainerColorClasses('ok')} ${getSemanticContainerTextClasses('ok')}`,
-  fail: 'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',
+  fail: 'bg-brand-critical/10 text-brand-critical border-brand-critical/20',
   conditional: `${getSemanticContainerColorClasses('warning')} ${getSemanticContainerTextClasses('warning')}`,
 };
 export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground border-border';
@@ -583,8 +582,7 @@ export const DEFAULT_CALIBRATION_RESULT_BADGE = 'bg-muted text-muted-foreground 
 export const CALIBRATION_APPROVAL_BADGE: Record<string, string> = {
   pending_approval: `${getSemanticContainerColorClasses('warning')} ${getSemanticContainerTextClasses('warning')}`,
   approved: `${getSemanticContainerColorClasses('ok')} ${getSemanticContainerTextClasses('ok')}`,
-  rejected:
-    'bg-ul-red/10 text-ul-red border-ul-red/20 dark:bg-brand-critical/10 dark:text-brand-critical',
+  rejected: 'bg-brand-critical/10 text-brand-critical border-brand-critical/20',
 };
 export const DEFAULT_CALIBRATION_APPROVAL_BADGE = 'bg-muted text-muted-foreground border-border';
 
@@ -600,7 +598,7 @@ export const DEFAULT_CALIBRATION_APPROVAL_BADGE = 'bg-muted text-muted-foregroun
  */
 export const CALIBRATION_INLINE_ACTION_BUTTONS = {
   base: 'h-7 px-2 text-xs',
-  approve: 'text-ul-green border-ul-green/30 hover:bg-ul-green/10',
+  approve: 'text-brand-ok border-brand-ok/30 hover:bg-brand-ok/10',
   reject: 'text-destructive border-destructive/30 hover:bg-destructive/10',
 } as const;
 
@@ -660,7 +658,7 @@ export const CALIBRATION_VERSION_HISTORY = {
   row: {
     /** 공통 레이아웃 (padding, border, radius, transition) */
     base: `flex items-center justify-between p-3 border rounded-lg ${TRANSITION_PRESETS.fastColor}`,
-    current: 'bg-ul-green/5 border-ul-green/30',
+    current: 'bg-brand-ok/5 border-brand-ok/30',
     default: 'hover:bg-muted/50',
   },
   icon: {

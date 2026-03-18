@@ -115,6 +115,7 @@ export const TEAM_CARD_TOKENS = {
 // 팀 목록 필터 패널 (좌측 sticky)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** @deprecated v3 리디자인에서 사이트 패널 구조로 대체됨. 다음 정리 시 제거 예정. */
 export const TEAM_FILTER_PANEL_TOKENS = {
   container: 'w-56 flex-shrink-0',
 
@@ -153,6 +154,7 @@ export const TEAM_FILTER_PANEL_TOKENS = {
 // 팀 분류 섹션 (TeamListContent 메인 영역)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** @deprecated v3 리디자인에서 사이트 패널 구조로 대체됨. 다음 정리 시 제거 예정. */
 export const TEAM_SECTION_TOKENS = {
   section: 'space-y-3',
   header: 'flex items-center gap-2.5',

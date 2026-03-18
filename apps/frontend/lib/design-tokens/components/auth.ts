@@ -118,7 +118,7 @@ export function getAuthButtonClasses(variant: 'primary' | 'success' = 'primary')
       'bg-ul-midnight hover:bg-ul-midnight-dark text-white',
       'focus-visible:ring-ul-midnight/50',
     ],
-    success: ['bg-ul-green hover:bg-ul-green text-white', 'focus-visible:ring-ul-green/50'],
+    success: ['bg-brand-ok hover:bg-brand-ok/90 text-white', 'focus-visible:ring-brand-ok/50'],
   };
 
   return [...baseClasses, ...variantClasses[variant]].join(' ');

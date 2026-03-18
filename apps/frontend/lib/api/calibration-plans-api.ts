@@ -64,6 +64,8 @@ export interface CalibrationPlan {
   status: CalibrationPlanStatus;
   // 작성자 정보
   createdBy: string;
+  authorName: string | null;
+  teamName: string | null;
   // 검토 요청 단계
   submittedAt: string | null;
   // 검토 단계 (품질책임자)

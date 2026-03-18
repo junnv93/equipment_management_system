@@ -485,7 +485,7 @@ export const CHECKOUT_DETAIL_TOKENS = {
   personCard: 'bg-muted/50 dark:bg-muted/30',
 
   /** 담당자 아이콘 컨테이너 */
-  personIconContainer: 'bg-ul-midnight/10 dark:bg-ul-info/20',
+  personIconContainer: 'bg-ul-midnight/10 dark:bg-brand-info/20',
 
   /** 이상 내용 영역 */
   abnormalContent: 'bg-brand-critical/5',
