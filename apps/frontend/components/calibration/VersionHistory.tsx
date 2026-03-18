@@ -8,6 +8,7 @@ import calibrationPlansApi, { CalibrationPlanVersion } from '@/lib/api/calibrati
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 import { History, FileText, ExternalLink } from 'lucide-react';
 import {
   CALIBRATION_VERSION_HISTORY,
@@ -141,14 +142,15 @@ export function VersionHistory({ planUuid, currentVersion }: VersionHistoryProps
                 </div>
               </div>
               {!isCurrent && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(`/calibration-plans/${version.id}`, '_blank')}
-                  aria-label={t(`${vh}.viewAriaLabel`, { version: version.version })}
-                >
-                  <ExternalLink className="h-4 w-4 mr-1" aria-hidden="true" />
-                  {t(`${vh}.viewButton`)}
+                <Button variant="outline" size="sm" asChild>
+                  <Link
+                    href={`/calibration-plans/${version.id}`}
+                    target="_blank"
+                    aria-label={t(`${vh}.viewAriaLabel`, { version: version.version })}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-1" aria-hidden="true" />
+                    {t(`${vh}.viewButton`)}
+                  </Link>
                 </Button>
               )}
             </div>

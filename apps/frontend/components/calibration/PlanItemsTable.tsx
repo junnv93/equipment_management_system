@@ -40,6 +40,7 @@ import {
   CONFIRMATION_BADGE_TOKENS,
   NUMERIC_TOKENS,
   TABLE_TOKENS,
+  TABLE_SCROLL_HINT_TOKENS,
   VERSION_HISTORY_COLLAPSIBLE_TOKENS,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
@@ -199,238 +200,245 @@ export function PlanItemsTable({ plan, planUuid }: PlanItemsTableProps) {
             <p className={TABLE_TOKENS.empty.text}>{t('planDetail.items.empty')}</p>
           </div>
         ) : (
-          <div className="overflow-auto">
-            <Table>
-              <TableHeader>
-                {/* W-2: 컬럼 그룹 헤더 (1행) */}
-                <TableRow>
-                  <TableHead
-                    className={cn(colGroup.base.header, colGroup.groupHeader.text)}
-                    colSpan={3}
-                  >
-                    <span className={colGroup.groupHeader.gap}>
-                      {t('planDetail.items.columnGroup.base')}
-                    </span>
-                  </TableHead>
-                  <TableHead
-                    className={cn(
-                      colGroup.snapshot.header,
-                      colGroup.snapshot.borderStart,
-                      colGroup.groupHeader.text,
-                      'text-center'
-                    )}
-                    colSpan={3}
-                  >
-                    <span className={colGroup.groupHeader.gap}>
-                      <Camera className={colGroup.groupHeader.icon} />
-                      {t('planDetail.items.columnGroup.snapshot')}
-                    </span>
-                  </TableHead>
-                  <TableHead
-                    className={cn(
-                      colGroup.plan.header,
-                      colGroup.plan.borderStart,
-                      colGroup.groupHeader.text,
-                      'text-center'
-                    )}
-                    colSpan={4}
-                  >
-                    <span className={colGroup.groupHeader.gap}>
-                      <CalendarClock className={colGroup.groupHeader.icon} />
-                      {t('planDetail.items.columnGroup.plan')}
-                    </span>
-                  </TableHead>
-                  {showActions && <TableHead className={colGroup.base.header} />}
-                </TableRow>
-
-                {/* 서브 헤더 (2행) */}
-                <TableRow className={colGroup.subHeader.bg}>
-                  <TableHead className={cn(colGroup.subHeader.text, 'w-[50px] text-center')}>
-                    {t('planDetail.items.headers.sequence')}
-                  </TableHead>
-                  <TableHead className={colGroup.subHeader.text}>
-                    {t('planDetail.items.headers.managementNumber')}
-                  </TableHead>
-                  <TableHead className={colGroup.subHeader.text}>
-                    {t('planDetail.items.headers.equipmentName')}
-                  </TableHead>
-                  <TableHead className={cn(colGroup.subHeader.text, colGroup.snapshot.borderStart)}>
-                    {t('planDetail.items.headers.validityDate')}
-                  </TableHead>
-                  <TableHead className={colGroup.subHeader.text}>
-                    {t('planDetail.items.headers.calibrationCycle')}
-                  </TableHead>
-                  <TableHead className={colGroup.subHeader.text}>
-                    {t('planDetail.items.headers.calibrationAgency')}
-                  </TableHead>
-                  <TableHead className={cn(colGroup.subHeader.text, colGroup.plan.borderStart)}>
-                    {t('planDetail.items.headers.plannedDate')}
-                  </TableHead>
-                  <TableHead className={colGroup.subHeader.text}>
-                    {t('planDetail.items.headers.plannedAgency')}
-                  </TableHead>
-                  <TableHead className={colGroup.subHeader.text}>
-                    {t('planDetail.items.headers.confirmation')}
-                  </TableHead>
-                  <TableHead className={colGroup.subHeader.text}>
-                    {t('planDetail.items.headers.notes')}
-                  </TableHead>
-                  {showActions && <TableHead className={cn(colGroup.subHeader.text, 'w-[80px]')} />}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item: CalibrationPlanItem) => (
-                  <TableRow key={item.id}>
-                    {/* 기본정보 그룹 */}
-                    <TableCell
-                      className={cn(
-                        'text-center font-medium text-muted-foreground',
-                        NUMERIC_TOKENS.tabular
-                      )}
+          <div className={TABLE_SCROLL_HINT_TOKENS.wrapper}>
+            <div className={TABLE_SCROLL_HINT_TOKENS.fadeRight} />
+            <div className="overflow-auto">
+              <Table>
+                <TableHeader>
+                  {/* W-2: 컬럼 그룹 헤더 (1행) */}
+                  <TableRow>
+                    <TableHead
+                      className={cn(colGroup.base.header, colGroup.groupHeader.text)}
+                      colSpan={3}
                     >
-                      {item.sequenceNumber}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {item.equipment?.managementNumber || '-'}
-                    </TableCell>
-                    <TableCell>{item.equipment?.name || '-'}</TableCell>
-
-                    {/* 스냅샷 그룹 (W-2: 배경색) */}
-                    <TableCell
+                      <span className={colGroup.groupHeader.gap}>
+                        {t('planDetail.items.columnGroup.base')}
+                      </span>
+                    </TableHead>
+                    <TableHead
                       className={cn(
-                        colGroup.snapshot.cell,
+                        colGroup.snapshot.header,
                         colGroup.snapshot.borderStart,
-                        'font-mono text-sm'
+                        colGroup.groupHeader.text,
+                        'text-center'
                       )}
+                      colSpan={3}
                     >
-                      {item.snapshotValidityDate
-                        ? formatDate(item.snapshotValidityDate, 'yyyy-MM-dd')
-                        : '-'}
-                    </TableCell>
-                    <TableCell className={colGroup.snapshot.cell}>
-                      {item.snapshotCalibrationCycle
-                        ? t('planDetail.items.monthUnit', {
-                            count: item.snapshotCalibrationCycle,
-                          })
-                        : '-'}
-                    </TableCell>
-                    <TableCell className={colGroup.snapshot.cell}>
-                      {item.snapshotCalibrationAgency || '-'}
-                    </TableCell>
-
-                    {/* 계획 그룹 (W-2: 배경색) */}
-                    <TableCell
+                      <span className={colGroup.groupHeader.gap}>
+                        <Camera className={colGroup.groupHeader.icon} />
+                        {t('planDetail.items.columnGroup.snapshot')}
+                      </span>
+                    </TableHead>
+                    <TableHead
                       className={cn(
-                        colGroup.plan.cell,
+                        colGroup.plan.header,
                         colGroup.plan.borderStart,
-                        'font-mono text-sm'
+                        colGroup.groupHeader.text,
+                        'text-center'
                       )}
+                      colSpan={4}
                     >
-                      {item.plannedCalibrationDate
-                        ? formatDate(item.plannedCalibrationDate, 'yyyy-MM-dd')
-                        : '-'}
-                    </TableCell>
-                    <TableCell className={colGroup.plan.cell}>
-                      {editingItemId === item.id ? (
-                        <Input
-                          value={editingAgency}
-                          onChange={(e) => setEditingAgency(e.target.value)}
-                          className={TABLE_TOKENS.inlineEdit.inputWidth}
-                        />
-                      ) : (
-                        item.plannedCalibrationAgency || '-'
-                      )}
-                    </TableCell>
-                    <TableCell className={cn(colGroup.plan.cell, 'text-center')}>
-                      {item.confirmedBy ? (
-                        <Badge
-                          variant="outline"
-                          className={CONFIRMATION_BADGE_TOKENS.confirmed.background}
-                        >
-                          <CheckCircle2
-                            className={cn(CONFIRMATION_BADGE_TOKENS.confirmed.icon, 'mr-1')}
-                          />
-                          {t('planDetail.items.confirmed')}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className={colGroup.plan.cell}>
-                      {editingItemId === item.id ? (
-                        <Input
-                          value={editingNotes}
-                          onChange={(e) => setEditingNotes(e.target.value)}
-                          placeholder={t('planDetail.placeholders.notes')}
-                          className={TABLE_TOKENS.inlineEdit.inputWidth}
-                        />
-                      ) : (
-                        <>
-                          {item.actualCalibrationDate
-                            ? formatDate(item.actualCalibrationDate, 'yyyy-MM-dd')
-                            : item.notes || <span className="text-muted-foreground">—</span>}
-                        </>
-                      )}
-                    </TableCell>
+                      <span className={colGroup.groupHeader.gap}>
+                        <CalendarClock className={colGroup.groupHeader.icon} />
+                        {t('planDetail.items.columnGroup.plan')}
+                      </span>
+                    </TableHead>
+                    {showActions && <TableHead className={colGroup.base.header} />}
+                  </TableRow>
 
-                    {/* 액션 */}
+                  {/* 서브 헤더 (2행) */}
+                  <TableRow className={colGroup.subHeader.bg}>
+                    <TableHead className={cn(colGroup.subHeader.text, 'w-[50px] text-center')}>
+                      {t('planDetail.items.headers.sequence')}
+                    </TableHead>
+                    <TableHead className={colGroup.subHeader.text}>
+                      {t('planDetail.items.headers.managementNumber')}
+                    </TableHead>
+                    <TableHead className={colGroup.subHeader.text}>
+                      {t('planDetail.items.headers.equipmentName')}
+                    </TableHead>
+                    <TableHead
+                      className={cn(colGroup.subHeader.text, colGroup.snapshot.borderStart)}
+                    >
+                      {t('planDetail.items.headers.validityDate')}
+                    </TableHead>
+                    <TableHead className={colGroup.subHeader.text}>
+                      {t('planDetail.items.headers.calibrationCycle')}
+                    </TableHead>
+                    <TableHead className={colGroup.subHeader.text}>
+                      {t('planDetail.items.headers.calibrationAgency')}
+                    </TableHead>
+                    <TableHead className={cn(colGroup.subHeader.text, colGroup.plan.borderStart)}>
+                      {t('planDetail.items.headers.plannedDate')}
+                    </TableHead>
+                    <TableHead className={colGroup.subHeader.text}>
+                      {t('planDetail.items.headers.plannedAgency')}
+                    </TableHead>
+                    <TableHead className={colGroup.subHeader.text}>
+                      {t('planDetail.items.headers.confirmation')}
+                    </TableHead>
+                    <TableHead className={colGroup.subHeader.text}>
+                      {t('planDetail.items.headers.notes')}
+                    </TableHead>
                     {showActions && (
-                      <TableCell className="text-center">
-                        {editingItemId === item.id ? (
-                          <div className="flex gap-1 justify-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleSaveEdit}
-                              disabled={updateItemMutation.isPending}
-                              className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
-                            >
-                              <Save className={TABLE_TOKENS.inlineEdit.button.iconSize} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleCancelEdit}
-                              className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
-                            >
-                              <X className={TABLE_TOKENS.inlineEdit.button.iconSize} />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1 justify-center">
-                            {isDraft && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleStartEdit(item)}
-                                className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
-                              >
-                                <Edit2 className={TABLE_TOKENS.inlineEdit.button.iconSize} />
-                              </Button>
-                            )}
-                            {isApproved && !item.confirmedBy && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => confirmItemMutation.mutate(item.id)}
-                                disabled={confirmItemMutation.isPending}
-                                title={t('planDetail.items.confirm')}
-                                className={cn(
-                                  'h-8 w-8 p-0',
-                                  CONFIRMATION_BADGE_TOKENS.confirmed.text
-                                )}
-                              >
-                                <CheckCircle2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </TableCell>
+                      <TableHead className={cn(colGroup.subHeader.text, 'w-[80px]')} />
                     )}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {items.map((item: CalibrationPlanItem) => (
+                    <TableRow key={item.id}>
+                      {/* 기본정보 그룹 */}
+                      <TableCell
+                        className={cn(
+                          'text-center font-medium text-muted-foreground',
+                          NUMERIC_TOKENS.tabular
+                        )}
+                      >
+                        {item.sequenceNumber}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {item.equipment?.managementNumber || '-'}
+                      </TableCell>
+                      <TableCell>{item.equipment?.name || '-'}</TableCell>
+
+                      {/* 스냅샷 그룹 (W-2: 배경색) */}
+                      <TableCell
+                        className={cn(
+                          colGroup.snapshot.cell,
+                          colGroup.snapshot.borderStart,
+                          'font-mono text-sm'
+                        )}
+                      >
+                        {item.snapshotValidityDate
+                          ? formatDate(item.snapshotValidityDate, 'yyyy-MM-dd')
+                          : '-'}
+                      </TableCell>
+                      <TableCell className={colGroup.snapshot.cell}>
+                        {item.snapshotCalibrationCycle
+                          ? t('planDetail.items.monthUnit', {
+                              count: item.snapshotCalibrationCycle,
+                            })
+                          : '-'}
+                      </TableCell>
+                      <TableCell className={colGroup.snapshot.cell}>
+                        {item.snapshotCalibrationAgency || '-'}
+                      </TableCell>
+
+                      {/* 계획 그룹 (W-2: 배경색) */}
+                      <TableCell
+                        className={cn(
+                          colGroup.plan.cell,
+                          colGroup.plan.borderStart,
+                          'font-mono text-sm'
+                        )}
+                      >
+                        {item.plannedCalibrationDate
+                          ? formatDate(item.plannedCalibrationDate, 'yyyy-MM-dd')
+                          : '-'}
+                      </TableCell>
+                      <TableCell className={colGroup.plan.cell}>
+                        {editingItemId === item.id ? (
+                          <Input
+                            value={editingAgency}
+                            onChange={(e) => setEditingAgency(e.target.value)}
+                            className={TABLE_TOKENS.inlineEdit.inputWidth}
+                          />
+                        ) : (
+                          item.plannedCalibrationAgency || '-'
+                        )}
+                      </TableCell>
+                      <TableCell className={cn(colGroup.plan.cell, 'text-center')}>
+                        {item.confirmedBy ? (
+                          <Badge
+                            variant="outline"
+                            className={CONFIRMATION_BADGE_TOKENS.confirmed.background}
+                          >
+                            <CheckCircle2
+                              className={cn(CONFIRMATION_BADGE_TOKENS.confirmed.icon, 'mr-1')}
+                            />
+                            {t('planDetail.items.confirmed')}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className={colGroup.plan.cell}>
+                        {editingItemId === item.id ? (
+                          <Input
+                            value={editingNotes}
+                            onChange={(e) => setEditingNotes(e.target.value)}
+                            placeholder={t('planDetail.placeholders.notes')}
+                            className={TABLE_TOKENS.inlineEdit.inputWidth}
+                          />
+                        ) : (
+                          <>
+                            {item.actualCalibrationDate
+                              ? formatDate(item.actualCalibrationDate, 'yyyy-MM-dd')
+                              : item.notes || <span className="text-muted-foreground">—</span>}
+                          </>
+                        )}
+                      </TableCell>
+
+                      {/* 액션 */}
+                      {showActions && (
+                        <TableCell className="text-center">
+                          {editingItemId === item.id ? (
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleSaveEdit}
+                                disabled={updateItemMutation.isPending}
+                                className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
+                              >
+                                <Save className={TABLE_TOKENS.inlineEdit.button.iconSize} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleCancelEdit}
+                                className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
+                              >
+                                <X className={TABLE_TOKENS.inlineEdit.button.iconSize} />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-1 justify-center">
+                              {isDraft && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleStartEdit(item)}
+                                  className={cn(TABLE_TOKENS.inlineEdit.button.size, 'p-0')}
+                                >
+                                  <Edit2 className={TABLE_TOKENS.inlineEdit.button.iconSize} />
+                                </Button>
+                              )}
+                              {isApproved && !item.confirmedBy && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => confirmItemMutation.mutate(item.id)}
+                                  disabled={confirmItemMutation.isPending}
+                                  title={t('planDetail.items.confirm')}
+                                  className={cn(
+                                    'h-8 w-8 p-0',
+                                    CONFIRMATION_BADGE_TOKENS.confirmed.text
+                                  )}
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </CardContent>
