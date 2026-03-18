@@ -129,8 +129,10 @@
       "unread": "Unread",
       "read": "Read"
     },
+    "loading": "Loading...",
     "emptyState": "No notifications to display.",
     "viewEquipment": "View equipment: {name}",
+    "viewDetail": "View Detail",
     "markRead": "Mark as Read",
     "delete": "Delete",
     "priorityLabels": {

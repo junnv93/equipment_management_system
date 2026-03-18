@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft } from 'lucide-react';
-import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import equipmentImportApi, {
   type ReceivingCondition,
   type ReceiveEquipmentImportDto,
@@ -169,7 +169,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
       : equipmentImport.ownerDepartment;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className={getPageContainerClasses('form')}>
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"

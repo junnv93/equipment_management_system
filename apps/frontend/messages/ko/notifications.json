@@ -111,8 +111,10 @@
       "unread": "읽지 않음",
       "read": "읽음"
     },
+    "loading": "로딩 중...",
     "emptyState": "표시할 알림이 없습니다.",
     "viewEquipment": "장비 상세 보기: {name}",
+    "viewDetail": "상세 보기",
     "markRead": "읽음 표시",
     "delete": "삭제",
     "priorityLabels": {

@@ -64,12 +64,6 @@ export function AuditSummaryBar({
             onClick={() => onActionChange(action)}
             className={getAuditSummaryCardClasses(isActive, colorKey)}
           >
-            {/* 상단 색상 스트라이프 */}
-            <span
-              className={cn(AUDIT_SUMMARY_TOKENS.stripe, AUDIT_SUMMARY_COLOR_MAP[colorKey].stripe)}
-              aria-hidden="true"
-            />
-
             <span className={AUDIT_SUMMARY_TOKENS.label}>{label}</span>
 
             {isAll ? (

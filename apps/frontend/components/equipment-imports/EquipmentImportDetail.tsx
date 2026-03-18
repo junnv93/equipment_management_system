@@ -21,7 +21,12 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Check, X, Package, Undo2, Ban } from 'lucide-react';
-import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  SUB_PAGE_HEADER_TOKENS,
+  getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
+} from '@/lib/design-tokens';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
@@ -189,7 +194,7 @@ export default function EquipmentImportDetail({ id }: Props) {
   const isInternalShared = equipmentImport.sourceType === 'internal_shared';
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className={getPageContainerClasses('detail')}>
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => router.push('/checkouts?view=inbound')}>
           <ArrowLeft className="h-4 w-4" />
@@ -408,9 +413,9 @@ export default function EquipmentImportDetail({ id }: Props) {
 
       {/* Rejection Reason */}
       {status === EISVal.REJECTED && equipmentImport.rejectionReason && (
-        <Card className="border-brand-critical/40">
+        <Card className={getSemanticContainerColorClasses('critical')}>
           <CardHeader>
-            <CardTitle className="text-brand-critical">
+            <CardTitle className={getSemanticContainerTextClasses('critical')}>
               {t('equipmentImport.rejectionReason')}
             </CardTitle>
           </CardHeader>

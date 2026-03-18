@@ -13,7 +13,7 @@ import type { TeamDetail as TeamDetailType, TeamMember } from '@/lib/api/teams-a
 import { SITE_CONFIG, CLASSIFICATION_CONFIG } from '@/lib/api/teams-api';
 import { TeamTypeIcon, TeamTypeBadge } from './TeamTypeIcon';
 import { TeamMemberList } from './TeamMemberList';
-import { SITE_PANEL_TOKENS } from '@/lib/design-tokens';
+import { SITE_PANEL_TOKENS, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 // 삭제 모달은 dynamic import로 지연 로딩
 const DeleteTeamModal = dynamic(
@@ -76,7 +76,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
           <div className="flex items-center gap-3">
             <TeamTypeIcon classification={team.classification || team.id} size="lg" />
             <div>
-              <h1 className="text-2xl font-bold">{team.name}</h1>
+              <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{team.name}</h1>
               {siteInfo && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="h-3 w-3" />
@@ -125,10 +125,7 @@ export function TeamDetail({ team, members = [], currentUser }: TeamDetailProps)
                 {t('detail.leaderLabel')} {team.leaderName}
               </span>
             )}
-            <span
-              className="text-muted-foreground flex items-center gap-1"
-              style={{ fontVariantNumeric: 'tabular-nums' }}
-            >
+            <span className="text-muted-foreground flex items-center gap-1 tabular-nums">
               <Users className="h-3 w-3" aria-hidden="true" />
               {team.memberCount || 0}명
             </span>

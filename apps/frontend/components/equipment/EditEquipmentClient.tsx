@@ -149,7 +149,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
   };
 
   return (
-    <div className={`${getPageContainerClasses()} max-w-5xl`}>
+    <div className={getPageContainerClasses('wide')}>
       {/* 헤더 */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>

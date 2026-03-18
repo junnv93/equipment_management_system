@@ -210,7 +210,7 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
                     className={cn(
                       AUDIT_DETAIL_TOKENS.codeBlock,
                       AUDIT_DETAIL_TOKENS.mono,
-                      'p-3 overflow-x-auto rounded-xl border border-brand-border-subtle'
+                      'p-3 overflow-x-auto border border-brand-border-subtle'
                     )}
                   >
                     {JSON.stringify(log.details!.additionalInfo, null, 2)}

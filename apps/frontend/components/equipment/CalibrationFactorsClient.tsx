@@ -47,7 +47,12 @@ import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  SUB_PAGE_HEADER_TOKENS,
+  getSemanticContainerColorClasses,
+  getSemanticContainerTextClasses,
+} from '@/lib/design-tokens';
 
 interface CalibrationFactorsClientProps {
   /**
@@ -304,13 +309,15 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
 
       {/* 승인 대기 중인 요청 */}
       {pendingFactors.length > 0 && (
-        <Card className="border-brand-warning bg-brand-warning/10">
+        <Card className={getSemanticContainerColorClasses('warning')}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-brand-warning">
+            <CardTitle
+              className={`flex items-center gap-2 ${getSemanticContainerTextClasses('warning')}`}
+            >
               <Clock className="h-5 w-5" />
               {t('pendingTitle')}
             </CardTitle>
-            <CardDescription className="text-brand-warning">
+            <CardDescription className={getSemanticContainerTextClasses('warning')}>
               {t('pendingDescription')}
             </CardDescription>
           </CardHeader>

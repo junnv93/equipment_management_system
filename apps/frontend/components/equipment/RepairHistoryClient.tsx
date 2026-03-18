@@ -59,7 +59,13 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import {
+  getPageContainerClasses,
+  SUB_PAGE_HEADER_TOKENS,
+  getSemanticContainerClasses,
+  getSemanticContainerTextClasses,
+  getSemanticSolidBgClasses,
+} from '@/lib/design-tokens';
 
 function createRepairHistoryFormSchema(t: (key: string) => string) {
   return z.object({
@@ -471,10 +477,14 @@ export function RepairHistoryClient({
                 />
 
                 {form.watch('nonConformanceId') && openNonConformances && (
-                  <div className="rounded-md border p-3 bg-brand-info/10 border-brand-info">
+                  <div className={getSemanticContainerClasses('info')}>
                     <div className="flex items-start gap-2">
-                      <Info className="h-4 w-4 text-brand-info mt-0.5" />
-                      <div className="text-sm text-brand-info">{t('formAutoLinkInfo')}</div>
+                      <Info
+                        className={`h-4 w-4 ${getSemanticContainerTextClasses('info')} mt-0.5`}
+                      />
+                      <div className={`text-sm ${getSemanticContainerTextClasses('info')}`}>
+                        {t('formAutoLinkInfo')}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -664,7 +674,7 @@ export function RepairHistoryClient({
             <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-brand-critical hover:bg-brand-critical/90"
+              className={`${getSemanticSolidBgClasses('critical')} hover:opacity-90`}
             >
               {deleteMutation.isPending ? tCommon('deleting') : tCommon('delete')}
             </AlertDialogAction>

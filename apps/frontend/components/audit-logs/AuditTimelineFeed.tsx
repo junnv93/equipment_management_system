@@ -166,14 +166,13 @@ export function AuditTimelineFeed({
                     key={log.id}
                     role="listitem"
                     className={cn(
-                      'grid gap-x-3',
                       AUDIT_TIMELINE_TOKENS.entry,
                       isDelete && AUDIT_TIMELINE_TOKENS.dangerEntry,
                       ANIMATION_PRESETS.fadeIn,
-                      'motion-safe:duration-150'
+                      'motion-safe:duration-200'
                     )}
                     style={{
-                      gridTemplateColumns: '56px 16px 1fr',
+                      gridTemplateColumns: AUDIT_TIMELINE_TOKENS.entryGridCols,
                       animationDelay: getStaggerDelay(Math.min(flatIdx, 9), 'list'),
                     }}
                     onClick={() => onLogClick(log)}
