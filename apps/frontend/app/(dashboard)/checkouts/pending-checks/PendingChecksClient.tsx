@@ -16,7 +16,11 @@ import { CHECKOUT_PURPOSE_LABELS, CheckoutStatus } from '@equipment-management/s
 import { FRONTEND_ROUTES } from '@equipment-management/shared-constants';
 import { queryKeys, CACHE_TIMES } from '@/lib/api/query-config';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import { TRANSITION_PRESETS, getPageContainerClasses } from '@/lib/design-tokens';
+import {
+  TRANSITION_PRESETS,
+  getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
+} from '@/lib/design-tokens';
 
 interface PendingChecksClientProps {
   initialData: PaginatedResponse<Checkout>;
@@ -166,10 +170,10 @@ export default function PendingChecksClient({ initialData }: PendingChecksClient
   return (
     <div className={getPageContainerClasses('list', '')}>
       {/* 헤더 */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('pendingChecks.title')}</h1>
-          <p className="text-muted-foreground">{t('pendingChecks.subtitle')}</p>
+      <div className={`${PAGE_HEADER_TOKENS.container} mb-6`}>
+        <div className={PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={PAGE_HEADER_TOKENS.title}>{t('pendingChecks.title')}</h1>
+          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('pendingChecks.subtitle')}</p>
         </div>
         <Button variant="outline" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.LIST)}>
           {t('pendingChecks.backToList')}

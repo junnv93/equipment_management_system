@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft } from 'lucide-react';
+import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import equipmentImportApi, {
   type CreateEquipmentImportDto,
   type CreateRentalImportDto,
@@ -189,7 +190,7 @@ export default function CreateEquipmentImportForm({ sourceType }: CreateEquipmen
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>
             {isRental
               ? t('equipmentImport.createForm.rentalTitle')
               : t('equipmentImport.createForm.internalTitle')}

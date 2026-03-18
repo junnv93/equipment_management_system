@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowLeft } from 'lucide-react';
+import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import equipmentImportApi, {
   type ReceivingCondition,
   type ReceiveEquipmentImportDto,
@@ -178,7 +179,7 @@ export default function ReceiveEquipmentImportForm({ id }: Props) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{t('receiveEquipmentImport.title')}</h1>
+          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('receiveEquipmentImport.title')}</h1>
           <p className="text-muted-foreground">
             {equipmentImport.equipmentName} — {sourceLabel} ({ownerLabel})
           </p>

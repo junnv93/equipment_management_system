@@ -47,7 +47,7 @@ import { ArrowLeft, Plus, Calculator, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 interface CalibrationFactorsClientProps {
   /**
@@ -191,7 +191,7 @@ export function CalibrationFactorsClient({ equipmentId }: CalibrationFactorsClie
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
             <p className="text-muted-foreground">{t('equipmentId', { id: equipmentId })}</p>
           </div>
         </div>

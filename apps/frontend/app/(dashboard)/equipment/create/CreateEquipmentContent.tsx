@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { EquipmentForm, type PendingHistoryData } from '@/components/equipment/EquipmentForm';
 import { useCreateEquipment } from '@/hooks/use-equipment';
 import { CreateEquipmentInput, UpdateEquipmentInput } from '@equipment-management/schemas';
-import { ArrowLeft, PlusCircle, Info } from 'lucide-react';
+import { ArrowLeft, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import Link from 'next/link';
@@ -14,7 +14,7 @@ import { isApprovalResponse } from '@/lib/api/equipment-api';
 import { ErrorAlert, PartialSuccessAlert } from '@/components/shared/ErrorAlert';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import { saveHistoryInParallel } from '@/lib/utils/equipment-history-utils';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 interface CreateEquipmentContentProps {
   userDefaults?: {
@@ -158,11 +158,8 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <PlusCircle className="h-6 w-6 text-primary" />
-              {t('form.create.pageTitle')}
-            </h1>
-            <p className="text-muted-foreground text-sm">{t('form.create.pageDescription')}</p>
+            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('form.create.pageTitle')}</h1>
+            <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{t('form.create.pageDescription')}</p>
           </div>
         </div>
 

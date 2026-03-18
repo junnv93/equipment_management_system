@@ -50,6 +50,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 interface NonConformanceManagementClientProps {
   equipmentId: string;
@@ -338,11 +339,9 @@ export default function NonConformanceManagementClient({
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              {t('nonConformanceManagement.title')}
-            </h1>
+            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('nonConformanceManagement.title')}</h1>
             {equipment && (
-              <p className="text-muted-foreground mt-1">
+              <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>
                 {equipment.name} ({equipment.managementNumber})
               </p>
             )}

@@ -49,6 +49,7 @@ import {
   CONDITION_COMPARISON_TOKENS,
   CHECKOUT_PURPOSE_TOKENS,
   getPageContainerClasses,
+  SUB_PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import {
   CheckoutStatus,
@@ -372,11 +373,11 @@ export default function CheckoutDetailClient({
             </Link>
           </Button>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{t('detail.title')}</h1>
+            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('detail.title')}</h1>
             <CheckoutStatusBadge status={checkout.status} />
             {renderPurposeBadge(checkout.purpose)}
           </div>
-          <p className="text-muted-foreground mt-1">{checkout.destination}</p>
+          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
         </div>
         <div className="flex gap-2">{renderActions()}</div>
       </div>

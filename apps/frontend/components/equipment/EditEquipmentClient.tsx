@@ -13,7 +13,8 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert';
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import type { UpdateEquipmentInput } from '@equipment-management/schemas';
 import type { Equipment } from '@/lib/api/equipment-api';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { cn } from '@/lib/utils';
 
 interface EditEquipmentClientProps {
   /**
@@ -157,7 +158,7 @@ export function EditEquipmentClient({ equipment }: EditEquipmentClientProps) {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className={cn(SUB_PAGE_HEADER_TOKENS.title, 'flex items-center gap-2')}>
             <Edit3 className="h-6 w-6 text-primary" />
             {t('editPage.title')}
           </h1>

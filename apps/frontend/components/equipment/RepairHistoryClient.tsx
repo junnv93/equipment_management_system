@@ -59,7 +59,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { getErrorMessage } from '@/lib/api/error';
 import nonConformancesApi, { NON_CONFORMANCE_TYPE_LABELS } from '@/lib/api/non-conformances-api';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 function createRepairHistoryFormSchema(t: (key: string) => string) {
   return z.object({
@@ -323,7 +323,7 @@ export function RepairHistoryClient({
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+            <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
             <p className="text-muted-foreground">{t('equipmentId', { id: equipmentId })}</p>
           </div>
         </div>

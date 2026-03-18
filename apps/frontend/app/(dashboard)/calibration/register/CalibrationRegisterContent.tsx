@@ -31,6 +31,7 @@ import {
   CALIBRATION_SELECTION,
   CALIBRATION_EMPTY_STATE,
   getPageContainerClasses,
+  SUB_PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 
 export function CalibrationRegisterContent() {
@@ -245,11 +246,14 @@ export function CalibrationRegisterContent() {
   return (
     <div className={getPageContainerClasses()}>
       {/* 상단 헤더 */}
-      <div className="flex items-center">
+      <div className={SUB_PAGE_HEADER_TOKENS.container}>
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold ml-2">{t('register.title')}</h1>
+        <div className={SUB_PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('register.title')}</h1>
+          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{t('register.subtitle')}</p>
+        </div>
       </div>
 
       {/* 권한 안내 */}

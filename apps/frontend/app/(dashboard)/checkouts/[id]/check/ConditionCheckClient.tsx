@@ -17,7 +17,7 @@ import checkoutApi, {
 import { ConditionCheckStep } from '@equipment-management/schemas';
 import EquipmentConditionForm from '@/components/checkouts/EquipmentConditionForm';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 interface ConditionCheckClientProps {
   checkout: Checkout;
@@ -82,8 +82,8 @@ export default function ConditionCheckClient({
             {t('conditionCheck.backToDetail')}
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold">{t('conditionCheck.title')}</h1>
-        <p className="text-muted-foreground">{checkout.destination}</p>
+        <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('conditionCheck.title')}</h1>
+        <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
       </div>
 
       {/* 진행 상태 */}

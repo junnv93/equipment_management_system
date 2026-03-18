@@ -15,7 +15,7 @@ import { ErrorAlert, PartialSuccessAlert } from '@/components/shared/ErrorAlert'
 import { ApiError, EquipmentErrorCode } from '@/lib/errors/equipment-errors';
 import type { CreateEquipmentInput } from '@equipment-management/schemas';
 import { saveHistoryInParallel } from '@/lib/utils/equipment-history-utils';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 /**
  * 공용/렌탈 장비 임시등록 페이지
@@ -159,16 +159,15 @@ export default function CreateSharedEquipmentContent({
   return (
     <div className={getPageContainerClasses('detail')}>
       {/* 헤더 */}
-      <div className="flex items-center gap-4">
+      <div className={SUB_PAGE_HEADER_TOKENS.container}>
         <Button variant="outline" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Share2 className="h-6 w-6 text-primary" />
-            {t('form.createShared.pageTitle')}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t('form.createShared.pageDescription')}</p>
+        <div className={SUB_PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('form.createShared.pageTitle')}</h1>
+          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>
+            {t('form.createShared.pageDescription')}
+          </p>
         </div>
       </div>
 

@@ -23,7 +23,7 @@ import ReturnInspectionForm, {
 } from '@/components/checkouts/ReturnInspectionForm';
 import CheckoutStatusStepper from '@/components/checkouts/CheckoutStatusStepper';
 import ConditionComparisonCard from '@/components/checkouts/ConditionComparisonCard';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 interface ReturnCheckoutClientProps {
   checkout: Checkout;
@@ -104,13 +104,13 @@ export default function ReturnCheckoutClient({
           </Link>
         </Button>
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">{t('actions.processReturn')}</h1>
+          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('actions.processReturn')}</h1>
           <Badge variant="outline">
             {CHECKOUT_PURPOSE_LABELS[checkout.purpose as keyof typeof CHECKOUT_PURPOSE_LABELS] ||
               checkout.purpose}
           </Badge>
         </div>
-        <p className="text-muted-foreground">{checkout.destination}</p>
+        <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{checkout.destination}</p>
       </div>
 
       {/* 기한 초과 경고 */}

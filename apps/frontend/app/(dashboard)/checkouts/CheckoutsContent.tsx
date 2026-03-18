@@ -60,6 +60,7 @@ import {
   CHECKOUT_FILTER_BAR_TOKENS,
   CHECKOUT_TAB_BADGE_TOKENS,
   getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import CheckoutAlertBanners from '@/components/checkouts/CheckoutAlertBanners';
 import { CheckoutListSkeleton } from '@/components/checkouts/CheckoutListSkeleton';
@@ -209,10 +210,10 @@ export default function CheckoutsContent({
   return (
     <div className={getPageContainerClasses('list', '')}>
       {/* ── 헤더 ── */}
-      <div className="flex justify-between items-center mb-5">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{t('description')}</p>
+      <div className={`${PAGE_HEADER_TOKENS.container} mb-5`}>
+        <div className={PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => router.push(FRONTEND_ROUTES.CHECKOUTS.CREATE)}>

@@ -44,6 +44,7 @@ import {
   CALIBRATION_THRESHOLDS,
   CALIBRATION_FILTER_BAR,
   getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import { useTranslations } from 'next-intl';
 import type { UICalibrationFilters } from '@/lib/utils/calibration-filter-utils';
@@ -236,8 +237,11 @@ export default function CalibrationContent({
   return (
     <div className={getPageContainerClasses()}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
+      <div className={PAGE_HEADER_TOKENS.container}>
+        <div className={PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('subtitle')}</p>
+        </div>
         <Button onClick={() => router.push('/calibration/register')}>
           <Plus className="w-4 h-4 mr-2" />
           {t('content.registerButton')}

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { PAGE_HEADER_TOKENS, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 interface PageHeaderProps {
   title: string;
@@ -19,7 +20,8 @@ export function PageHeader({
   backUrl,
   backLabel = '뒤로 가기',
 }: PageHeaderProps) {
-  // 컴포넌트 구현
+  const tokens = backUrl ? SUB_PAGE_HEADER_TOKENS : PAGE_HEADER_TOKENS;
+
   return (
     <div className="flex flex-col space-y-2 mb-6">
       {backUrl && (
@@ -35,10 +37,8 @@ export function PageHeader({
 
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">{title}</h1>
-          {subtitle && (
-            <p className="text-muted-foreground mt-1 text-sm sm:text-base">{subtitle}</p>
-          )}
+          <h1 className={tokens.title}>{title}</h1>
+          {subtitle && <p className={`${tokens.subtitle} mt-1`}>{subtitle}</p>}
         </div>
 
         {actionButton && <div className="flex-shrink-0 mt-2 sm:mt-0">{actionButton}</div>}

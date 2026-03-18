@@ -52,6 +52,7 @@ import {
   CALIBRATION_PLAN_FILTER_TOKENS,
   CALIBRATION_PLAN_STATUS_BADGE_COLORS,
   getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 
@@ -178,12 +179,9 @@ export default function CalibrationPlansContent({
     <div className={getPageContainerClasses('list', 'space-y-4')}>
       {/* ── 헤더 ──────────────────────────────────────────────── */}
       <div className={CALIBRATION_PLAN_HEADER_TOKENS.container}>
-        <div>
-          <h1 className={CALIBRATION_PLAN_HEADER_TOKENS.title}>
-            <ClipboardList className="h-5 w-5 text-brand-text-muted shrink-0" />
-            {t('plansList.title')}
-          </h1>
-          <p className={CALIBRATION_PLAN_HEADER_TOKENS.subtitle}>{t('plansList.subtitle')}</p>
+        <div className={PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={PAGE_HEADER_TOKENS.title}>{t('plansList.title')}</h1>
+          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('plansList.subtitle')}</p>
         </div>
         <div className={CALIBRATION_PLAN_HEADER_TOKENS.actionsGroup}>
           <Button asChild>

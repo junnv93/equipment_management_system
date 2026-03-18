@@ -11,6 +11,7 @@ import {
   getEquipmentStatusTokenStyle,
   TRANSITION_PRESETS,
   getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -252,10 +253,10 @@ export default function CreateCheckoutContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('create.title')}</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('create.subtitle')}</p>
+      <div className={`${PAGE_HEADER_TOKENS.container} flex-col sm:flex-row sm:items-center mb-6`}>
+        <div className={PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={PAGE_HEADER_TOKENS.title}>{t('create.title')}</h1>
+          <p className={PAGE_HEADER_TOKENS.subtitle}>{t('create.subtitle')}</p>
         </div>
         <Button
           variant="outline"

@@ -21,6 +21,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Check, X, Package, Undo2, Ban } from 'lucide-react';
+import { SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import equipmentImportApi from '@/lib/api/equipment-import-api';
@@ -194,7 +195,7 @@ export default function EquipmentImportDetail({ id }: Props) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{equipmentImport.equipmentName}</h1>
+          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{equipmentImport.equipmentName}</h1>
           <p className="text-muted-foreground">
             {t('equipmentImport.detailSubtitle', {
               source: EQUIPMENT_IMPORT_SOURCE_LABELS[equipmentImport.sourceType],
