@@ -8,7 +8,6 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, desc, sql, inArray, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import {
   calibrationPlans,
   calibrationPlanItems,

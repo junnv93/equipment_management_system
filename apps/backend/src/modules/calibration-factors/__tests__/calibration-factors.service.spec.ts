@@ -33,7 +33,7 @@ const MOCK_FACTOR = {
 };
 
 /** DB 메서드 체인 mock 빌더 */
-const createChain = (resolvedValue: unknown) => {
+const createChain = (resolvedValue: unknown): Record<string, jest.Mock> => {
   const chain: Record<string, jest.Mock> = {};
   const methods = ['from', 'where', 'orderBy', 'limit', 'offset', 'set', 'values', 'returning'];
   for (const m of methods) {

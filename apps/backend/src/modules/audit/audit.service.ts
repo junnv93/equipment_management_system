@@ -2,7 +2,6 @@ import { Injectable, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { eq, and, gte, lte, desc, sql, SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import { auditLogs, NewAuditLog, AuditLog, AuditLogDetails } from '@equipment-management/db/schema';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import {
@@ -20,8 +19,9 @@ import {
   type ResolvedDataScope,
 } from '@equipment-management/shared-constants';
 import { SYSTEM_USER_UUID } from '../../database/utils/uuid-constants';
+import type { PaginationMeta } from '../../common/types/api-response';
 
-export type { AuditLogFilter };
+export type { AuditLogFilter, PaginationMeta };
 
 /**
  * 페이지네이션 옵션
@@ -29,17 +29,6 @@ export type { AuditLogFilter };
 export interface PaginationOptions {
   page: number;
   limit: number;
-}
-
-/**
- * 페이지네이션 메타데이터
- */
-export interface PaginationMeta {
-  totalItems: number;
-  itemCount: number;
-  itemsPerPage: number;
-  totalPages: number;
-  currentPage: number;
 }
 
 /**

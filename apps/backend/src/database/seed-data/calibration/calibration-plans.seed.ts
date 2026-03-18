@@ -62,7 +62,7 @@ import {
 
 // rejectionStage 타입 안전 참조 (DB 스키마 SSOT)
 const REVIEW_STAGE = REJECTION_STAGES[0]; // 'review'
-const APPROVAL_STAGE = REJECTION_STAGES[1]; // 'approval'
+const _APPROVAL_STAGE = REJECTION_STAGES[1]; // 'approval'
 
 /**
  * 교정계획서 시드 데이터 (6건)

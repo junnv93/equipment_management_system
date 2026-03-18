@@ -18,6 +18,13 @@ import {
   REPORT_PERIOD_VALUES,
 } from '@equipment-management/schemas';
 import type { AuthenticatedRequest } from '../../types/auth';
+import type {
+  EquipmentUsageReport,
+  CalibrationStatusReport,
+  CheckoutStatisticsReport,
+  UtilizationRateReport,
+  EquipmentDowntimeReport,
+} from './reports.types';
 
 const VALID_FORMATS = new Set<ReportFormat>(['excel', 'csv', 'pdf']);
 
@@ -51,7 +58,7 @@ export class ReportsController {
     @Query('endDate') endDate?: string,
     @Query('equipmentId') equipmentId?: string,
     @Query('departmentId') departmentId?: string
-  ) {
+  ): Promise<EquipmentUsageReport> {
     return this.reportsService.getEquipmentUsage(startDate, endDate, equipmentId, departmentId);
   }
 
@@ -68,7 +75,10 @@ export class ReportsController {
   })
   @ApiResponse({ status: 200, description: '교정 상태 통계 조회 성공' })
   @RequirePermissions(Permission.VIEW_STATISTICS)
-  getCalibrationStatus(@Query('status') status?: string, @Query('timeframe') timeframe?: string) {
+  getCalibrationStatus(
+    @Query('status') status?: string,
+    @Query('timeframe') timeframe?: string
+  ): Promise<CalibrationStatusReport> {
     return this.reportsService.getCalibrationStatus(status, timeframe);
   }
 
@@ -87,7 +97,7 @@ export class ReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('departmentId') departmentId?: string
-  ) {
+  ): Promise<CheckoutStatisticsReport> {
     return this.reportsService.getRentalStatistics(startDate, endDate, departmentId);
   }
 
@@ -115,7 +125,7 @@ export class ReportsController {
     @Query('period') period: 'week' | 'month' | 'quarter' | 'year' = 'month',
     @Query('equipmentId') equipmentId?: string,
     @Query('categoryId') categoryId?: string
-  ) {
+  ): Promise<UtilizationRateReport> {
     return this.reportsService.getUtilizationRate(period, equipmentId, categoryId);
   }
 
@@ -137,7 +147,7 @@ export class ReportsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('equipmentId') equipmentId?: string
-  ) {
+  ): Promise<EquipmentDowntimeReport> {
     return this.reportsService.getEquipmentDowntime(startDate, endDate, equipmentId);
   }
 

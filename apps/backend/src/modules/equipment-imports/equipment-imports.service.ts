@@ -12,7 +12,6 @@ import type { AppDatabase } from '@equipment-management/db';
 import { VersionedBaseService } from '../../common/base/versioned-base.service';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
-import * as schema from '@equipment-management/db/schema';
 import { equipmentImports } from '@equipment-management/db/schema/equipment-imports';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import {

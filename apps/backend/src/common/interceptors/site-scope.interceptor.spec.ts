@@ -11,7 +11,10 @@ import {
 } from '@equipment-management/shared-constants';
 
 /** mock ExecutionContext + request 객체 생성 */
-function createMockContext(user: Record<string, unknown> | null = {}) {
+function createMockContext(user: Record<string, unknown> | null = {}): {
+  context: Record<string, jest.Mock>;
+  request: { user: Record<string, unknown> | null; query: Record<string, string> };
+} {
   const request = { user, query: {} as Record<string, string> };
   const context = {
     getHandler: jest.fn().mockReturnValue({}),
@@ -24,12 +27,12 @@ function createMockContext(user: Record<string, unknown> | null = {}) {
 }
 
 /** mock CallHandler 생성 */
-function createCallHandler() {
+function createCallHandler(): { handle: jest.Mock } {
   return { handle: jest.fn().mockReturnValue(of('response')) };
 }
 
 /** Reflector mock + SiteScopeInterceptor 인스턴스 생성 */
-function createInterceptor(options: SiteScopedOptions | undefined) {
+function createInterceptor(options: SiteScopedOptions | undefined): SiteScopeInterceptor {
   const reflector = {
     getAllAndOverride: jest.fn().mockReturnValue(options),
   } as unknown as Reflector;

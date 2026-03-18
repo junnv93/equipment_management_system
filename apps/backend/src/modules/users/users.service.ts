@@ -9,7 +9,6 @@ import {
 import { eq, inArray, and, sql, count, asc, desc, type SQL } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
-import * as schema from '@equipment-management/db/schema';
 import {
   users as usersTable,
   userPreferences as userPreferencesTable,
@@ -40,7 +39,15 @@ export class UsersService {
   ) {}
 
   /** 정렬 가능한 컬럼 매핑 (동적 sort 파라미터 → Drizzle 컬럼) */
-  private static getSortColumn(field?: string) {
+  private static getSortColumn(
+    field?: string
+  ):
+    | typeof usersTable.email
+    | typeof usersTable.role
+    | typeof usersTable.site
+    | typeof usersTable.createdAt
+    | typeof usersTable.updatedAt
+    | typeof usersTable.name {
     switch (field) {
       case 'email':
         return usersTable.email;

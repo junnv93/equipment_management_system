@@ -72,27 +72,17 @@ const USERS = {
   },
 };
 
-// DB mock: role + isActive + (teamId | site) 조건으로 필터링
-function createMockDb() {
-  const allUsers = Object.values(USERS);
-
-  return {
-    select: jest.fn().mockReturnThis(),
-    from: jest.fn().mockReturnThis(),
-    where: jest.fn().mockImplementation((condition) => {
-      // condition은 Drizzle 내부 표현 — 실제 테스트에서는 쿼리 결과를 직접 제어하므로
-      // 여기서는 __mockFilter__ 패턴으로 우회
-      return { _condition: condition, then: undefined };
-    }),
-  };
-}
-
 describe('NotificationRecipientResolver', () => {
   let resolver: NotificationRecipientResolver;
   let mockDb: ReturnType<typeof buildDrizzleMock>;
 
   // Drizzle의 체이닝 API를 흉내 낸 mock — 최종 결과를 __resolvedRows에 설정
-  function buildDrizzleMock(rows: { id: string }[]) {
+  function buildDrizzleMock(rows: { id: string }[]): {
+    __resolvedRows: { id: string }[];
+    select: jest.Mock;
+    from: jest.Mock;
+    where: jest.Mock;
+  } {
     const mock = {
       __resolvedRows: rows,
       select: jest.fn().mockReturnThis(),
@@ -102,7 +92,7 @@ describe('NotificationRecipientResolver', () => {
     return mock;
   }
 
-  async function buildResolver(resolvedRows: { id: string }[]) {
+  async function buildResolver(resolvedRows: { id: string }[]): Promise<void> {
     mockDb = buildDrizzleMock(resolvedRows);
     const module: TestingModule = await Test.createTestingModule({
       providers: [NotificationRecipientResolver, { provide: 'DRIZZLE_INSTANCE', useValue: mockDb }],

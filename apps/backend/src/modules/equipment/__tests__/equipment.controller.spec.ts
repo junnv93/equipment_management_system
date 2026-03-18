@@ -41,7 +41,7 @@ describe('EquipmentController', () => {
     teamId: null,
     teamName: null,
     managerId: null,
-    purchaseDate: null,
+    purchaseYear: null,
     price: null,
     supplier: null,
     contactInfo: null,

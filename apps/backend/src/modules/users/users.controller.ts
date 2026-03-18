@@ -32,8 +32,7 @@ import {
   UpdatePreferencesValidationPipe,
   DEFAULT_DISPLAY_PREFERENCES,
 } from './dto/user-preferences.dto';
-import { User, UserListResponse } from '../../types/models';
-import type { UserRole } from '@equipment-management/schemas';
+import type { User, UserListResponse, UserRole } from '@equipment-management/schemas';
 import { AuthenticatedRequest } from '../../types/auth';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator';
 import { SkipPermissions } from '../auth/decorators/skip-permissions.decorator';

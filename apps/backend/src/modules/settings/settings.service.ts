@@ -1,7 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import { systemSettings as settingsTable } from '@equipment-management/db/schema';
 import { DEFAULT_CALIBRATION_ALERT_DAYS } from './dto/calibration-settings.dto';
 import { DEFAULT_SYSTEM_SETTINGS, type SystemSettings } from './dto/system-settings.dto';

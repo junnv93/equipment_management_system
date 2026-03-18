@@ -1,7 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import {
   equipment as equipmentTable,
   calibrations as calibrationsTable,
@@ -25,6 +24,13 @@ import {
 } from '@equipment-management/schemas';
 import { USER_ROLE_LABELS, type UserRole } from '@equipment-management/shared-constants';
 import type { ReportColumn, ReportData } from './report-export.service';
+import type {
+  EquipmentUsageReport,
+  CalibrationStatusReport,
+  CheckoutStatisticsReport,
+  UtilizationRateReport,
+  EquipmentDowntimeReport,
+} from './reports.types';
 
 // ─── 공통 날짜 유틸 ───────────────────────────────────────────────────────────
 
@@ -106,7 +112,7 @@ export class ReportsService {
     endDate?: string,
     equipmentId?: string,
     _departmentId?: string
-  ) {
+  ): Promise<EquipmentUsageReport> {
     const { start, end } = resolveDateRange('last_month', startDate, endDate);
 
     // checkouts ←→ checkoutItems ←→ equipment ←→ teams
@@ -170,7 +176,10 @@ export class ReportsService {
   /**
    * 교정 상태 통계
    */
-  async getCalibrationStatus(status?: string, timeframe?: string) {
+  async getCalibrationStatus(
+    status?: string,
+    timeframe?: string
+  ): Promise<CalibrationStatusReport> {
     const { start, end } = resolveDateRange(timeframe ?? 'last_month');
 
     const calConditions = [
@@ -229,14 +238,22 @@ export class ReportsService {
   /**
    * @deprecated Use getCheckoutStatistics. 메서드 이름 호환성 유지.
    */
-  async getRentalStatistics(startDate?: string, endDate?: string, departmentId?: string) {
+  async getRentalStatistics(
+    startDate?: string,
+    endDate?: string,
+    departmentId?: string
+  ): Promise<CheckoutStatisticsReport> {
     return this.getCheckoutStatistics(startDate, endDate, departmentId);
   }
 
   /**
    * 반출 통계 (대여/교정/수리 포함)
    */
-  async getCheckoutStatistics(startDate?: string, endDate?: string, _departmentId?: string) {
+  async getCheckoutStatistics(
+    startDate?: string,
+    endDate?: string,
+    _departmentId?: string
+  ): Promise<CheckoutStatisticsReport> {
     const { start, end } = resolveDateRange('last_month', startDate, endDate);
 
     const dateConditions = [
@@ -319,7 +336,7 @@ export class ReportsService {
     period: 'week' | 'month' | 'quarter' | 'year' = 'month',
     equipmentId?: string,
     _categoryId?: string
-  ) {
+  ): Promise<UtilizationRateReport> {
     const { start, end } = resolveDateRange(`last_${period}`);
 
     const checkoutDateConditions = [
@@ -402,7 +419,11 @@ export class ReportsService {
   /**
    * 장비 가동 중단(수리) 통계
    */
-  async getEquipmentDowntime(startDate?: string, endDate?: string, equipmentId?: string) {
+  async getEquipmentDowntime(
+    startDate?: string,
+    endDate?: string,
+    equipmentId?: string
+  ): Promise<EquipmentDowntimeReport> {
     const { start, end } = resolveDateRange('last_month', startDate, endDate);
 
     const conditions = [
@@ -495,7 +516,7 @@ export class ReportsService {
       { header: '시험소', key: 'siteCode', width: 10 },
     ];
 
-    const fmtDate = (d: Date | null | undefined) =>
+    const fmtDate = (d: Date | null | undefined): string =>
       d ? new Date(d).toLocaleDateString('ko-KR') : '-';
 
     return {
@@ -557,7 +578,7 @@ export class ReportsService {
       approved: '승인됨',
       rejected: '반려됨',
     };
-    const fmtDate = (d: Date | null | undefined) =>
+    const fmtDate = (d: Date | null | undefined): string =>
       d ? new Date(d).toLocaleDateString('ko-KR') : '-';
 
     return {
@@ -638,7 +659,7 @@ export class ReportsService {
       )
       .orderBy(desc(sql`COALESCE(COUNT(DISTINCT ${checkoutsTable.id}), 0)`));
 
-    const getGrade = (rate: number) => {
+    const getGrade = (rate: number): string => {
       if (rate >= 80) return '고활용';
       if (rate >= 40) return '보통';
       return '저활용';
@@ -693,7 +714,7 @@ export class ReportsService {
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(teamsTable.name, equipmentTable.managementNumber);
 
-    const fmtDate = (d: Date | null | undefined) =>
+    const fmtDate = (d: Date | null | undefined): string =>
       d ? new Date(d).toLocaleDateString('ko-KR') : '-';
 
     return {
@@ -836,7 +857,7 @@ export class ReportsService {
       { header: '시험소', key: 'userSite', width: 10 },
     ];
 
-    const fmtTs = (d: Date | string) =>
+    const fmtTs = (d: Date | string): string =>
       new Date(d).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
 
     return {

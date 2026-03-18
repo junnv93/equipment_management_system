@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import {
@@ -20,16 +20,23 @@ import {
  */
 @Injectable()
 export class I18nService implements OnModuleInit {
+  private readonly logger = new Logger(I18nService.name);
   private readonly messages: Partial<Record<SupportedLocale, Record<string, string>>> = {};
 
-  onModuleInit() {
+  onModuleInit(): void {
     for (const locale of SUPPORTED_LOCALES) {
       try {
         const filePath = join(__dirname, 'messages', `${locale}.json`);
         const raw = readFileSync(filePath, 'utf-8');
         this.messages[locale] = JSON.parse(raw) as Record<string, string>;
-      } catch {
-        // 메시지 파일이 없는 경우 무시 (점진적 추가 지원)
+        this.logger.log(
+          `i18n loaded: ${locale} (${Object.keys(this.messages[locale]!).length} keys)`
+        );
+      } catch (error) {
+        this.logger.warn(
+          `i18n messages not found for locale "${locale}" at ${join(__dirname, 'messages', `${locale}.json`)}. ` +
+            `Ensure nest-cli.json assets includes "common/i18n/messages/*.json".`
+        );
       }
     }
   }

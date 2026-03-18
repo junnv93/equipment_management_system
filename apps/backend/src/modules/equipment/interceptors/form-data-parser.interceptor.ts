@@ -27,7 +27,6 @@ export class FormDataParserInterceptor implements NestInterceptor {
       const dateFields = [
         'lastCalibrationDate',
         'nextCalibrationDate',
-        'purchaseDate',
         'intermediateCheckSchedule',
         'lastIntermediateCheckDate',
         'nextIntermediateCheckDate',

@@ -52,7 +52,6 @@ import {
 // 표준 상태값은 schemas 패키지에서 import (SSOT)
 import {
   UserRoleValues,
-  Site,
   SharedSourceEnum,
   SiteEnum,
   AttachmentTypeEnum,
@@ -65,6 +64,14 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
 import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 import { RejectRequestPipe, type RejectRequestDto } from './dto/reject-request.dto';
+import type {
+  EquipmentCreateOrRequestResult,
+  SharedEquipmentCreateResult,
+  EquipmentDetailResult,
+  EquipmentRequestDetailResult,
+} from './equipment.controller.types';
+import type { Equipment } from '@equipment-management/db/schema/equipment';
+import type { EquipmentRequest } from '@equipment-management/db/schema/equipment-requests';
 
 @ApiTags('장비 관리')
 @ApiBearerAuth()
@@ -117,87 +124,7 @@ export class EquipmentController {
     @Body() createEquipmentDto: CreateEquipmentDto,
     @UploadedFiles() files: MulterFile[] | undefined,
     @Req() req: AuthenticatedRequest
-  ): Promise<
-    | {
-        id: string;
-        name: string;
-        managementNumber: string;
-        siteCode: string | null;
-        classificationCode: string | null;
-        managementSerialNumber: number | null;
-        assetNumber: string | null;
-        modelName: string | null;
-        manufacturer: string | null;
-        manufacturerContact: string | null;
-        serialNumber: string | null;
-        description: string | null;
-        location: string | null;
-        specMatch: string | null;
-        calibrationRequired: string | null;
-        initialLocation: string | null;
-        installationDate: Date | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-        needsIntermediateCheck: boolean | null;
-        calibrationMethod: string | null;
-        lastIntermediateCheckDate: Date | null;
-        intermediateCheckCycle: number | null;
-        nextIntermediateCheckDate: Date | null;
-        site: string;
-        createdAt: Date | null;
-        updatedAt: Date | null;
-        teamId: string | null;
-        managerId: string | null;
-        purchaseDate: Date | null;
-        price: number | null;
-        supplier: string | null;
-        contactInfo: string | null;
-        softwareVersion: string | null;
-        firmwareVersion: string | null;
-        softwareName: string | null;
-        softwareType: string | null;
-        manualLocation: string | null;
-        accessories: string | null;
-        mainFeatures: string | null;
-        technicalManager: string | null;
-        status: string;
-        isActive: boolean | null;
-        approvalStatus: string | null;
-        requestedBy: string | null;
-        approvedBy: string | null;
-        equipmentType: string | null;
-        calibrationResult: string | null;
-        correctionFactor: string | null;
-        intermediateCheckSchedule: Date | null;
-        repairHistory: string | null;
-        isShared: boolean;
-        sharedSource: string | null;
-        owner: string | null;
-        externalIdentifier: string | null;
-        usagePeriodStart: Date | null;
-        usagePeriodEnd: Date | null;
-      }
-    | {
-        message: string;
-        requestUuid: string;
-        request: {
-          id: string;
-          createdAt: Date | null;
-          updatedAt: Date | null;
-          approvalStatus: 'approved' | 'pending_approval' | 'rejected';
-          requestedBy: string;
-          approvedBy: string | null;
-          requestType: 'create' | 'update' | 'delete';
-          equipmentId: string | null;
-          requestedAt: Date;
-          approvedAt: Date | null;
-          rejectionReason: string | null;
-          requestData: string | null;
-        };
-      }
-  > {
+  ): Promise<EquipmentCreateOrRequestResult> {
     const userRoles = req.user?.roles ?? [];
     const userId = req.user?.userId ?? '';
     const userSite = req.user?.site;
@@ -298,70 +225,7 @@ export class EquipmentController {
   async createShared(
     @Body() createSharedEquipmentDto: CreateSharedEquipmentDto,
     @UploadedFiles() files?: MulterFile[]
-  ): Promise<{
-    message: string;
-    equipment: {
-      id: string;
-      name: string;
-      managementNumber: string;
-      siteCode: string | null;
-      classificationCode: string | null;
-      managementSerialNumber: number | null;
-      assetNumber: string | null;
-      modelName: string | null;
-      manufacturer: string | null;
-      manufacturerContact: string | null;
-      serialNumber: string | null;
-      description: string | null;
-      location: string | null;
-      specMatch: string | null;
-      calibrationRequired: string | null;
-      initialLocation: string | null;
-      installationDate: Date | null;
-      calibrationCycle: number | null;
-      lastCalibrationDate: Date | null;
-      nextCalibrationDate: Date | null;
-      calibrationAgency: string | null;
-      needsIntermediateCheck: boolean | null;
-      calibrationMethod: string | null;
-      lastIntermediateCheckDate: Date | null;
-      intermediateCheckCycle: number | null;
-      nextIntermediateCheckDate: Date | null;
-      site: string;
-      createdAt: Date | null;
-      updatedAt: Date | null;
-      teamId: string | null;
-      managerId: string | null;
-      purchaseDate: Date | null;
-      price: number | null;
-      supplier: string | null;
-      contactInfo: string | null;
-      softwareVersion: string | null;
-      firmwareVersion: string | null;
-      softwareName: string | null;
-      softwareType: string | null;
-      manualLocation: string | null;
-      accessories: string | null;
-      mainFeatures: string | null;
-      technicalManager: string | null;
-      status: string;
-      isActive: boolean | null;
-      approvalStatus: string | null;
-      requestedBy: string | null;
-      approvedBy: string | null;
-      equipmentType: string | null;
-      calibrationResult: string | null;
-      correctionFactor: string | null;
-      intermediateCheckSchedule: Date | null;
-      repairHistory: string | null;
-      isShared: boolean;
-      sharedSource: string | null;
-      owner: string | null;
-      externalIdentifier: string | null;
-      usagePeriodStart: Date | null;
-      usagePeriodEnd: Date | null;
-    };
-  }> {
+  ): Promise<SharedEquipmentCreateResult> {
     // 파일 업로드 처리 (교정성적서)
     if (files && files.length > 0) {
       const attachmentType = 'inspection_report'; // 교정성적서
@@ -455,68 +319,7 @@ export class EquipmentController {
   async findOne(
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Req() req: AuthenticatedRequest
-  ): Promise<{
-    teamName: string | null;
-    id: string;
-    name: string;
-    managementNumber: string;
-    siteCode: string | null;
-    classificationCode: string | null;
-    managementSerialNumber: number | null;
-    assetNumber: string | null;
-    modelName: string | null;
-    manufacturer: string | null;
-    manufacturerContact: string | null;
-    serialNumber: string | null;
-    description: string | null;
-    location: string | null;
-    specMatch: string | null;
-    calibrationRequired: string | null;
-    initialLocation: string | null;
-    installationDate: Date | null;
-    calibrationCycle: number | null;
-    lastCalibrationDate: Date | null;
-    nextCalibrationDate: Date | null;
-    calibrationAgency: string | null;
-    needsIntermediateCheck: boolean | null;
-    calibrationMethod: string | null;
-    lastIntermediateCheckDate: Date | null;
-    intermediateCheckCycle: number | null;
-    nextIntermediateCheckDate: Date | null;
-    site: string;
-    createdAt: Date | null;
-    updatedAt: Date | null;
-    teamId: string | null;
-    managerId: string | null;
-    purchaseDate: Date | null;
-    price: number | null;
-    supplier: string | null;
-    contactInfo: string | null;
-    softwareVersion: string | null;
-    firmwareVersion: string | null;
-    softwareName: string | null;
-    softwareType: string | null;
-    manualLocation: string | null;
-    accessories: string | null;
-    mainFeatures: string | null;
-    technicalManager: string | null;
-    status: string;
-    isActive: boolean | null;
-    approvalStatus: string | null;
-    requestedBy: string | null;
-    approvedBy: string | null;
-    equipmentType: string | null;
-    calibrationResult: string | null;
-    correctionFactor: string | null;
-    intermediateCheckSchedule: Date | null;
-    repairHistory: string | null;
-    isShared: boolean;
-    sharedSource: string | null;
-    owner: string | null;
-    externalIdentifier: string | null;
-    usagePeriodStart: Date | null;
-    usagePeriodEnd: Date | null;
-  }> {
+  ): Promise<EquipmentDetailResult> {
     // ✅ includeTeam=true로 팀 정보 포함 조회
     const equipmentWithTeam = await this.equipmentService.findOne(uuid, true);
 
@@ -563,87 +366,7 @@ export class EquipmentController {
     @Body() updateEquipmentDto: UpdateEquipmentDto,
     @UploadedFiles() files: MulterFile[] | undefined,
     @Req() req: AuthenticatedRequest
-  ): Promise<
-    | {
-        id: string;
-        name: string;
-        managementNumber: string;
-        siteCode: string | null;
-        classificationCode: string | null;
-        managementSerialNumber: number | null;
-        assetNumber: string | null;
-        modelName: string | null;
-        manufacturer: string | null;
-        manufacturerContact: string | null;
-        serialNumber: string | null;
-        description: string | null;
-        location: string | null;
-        specMatch: string | null;
-        calibrationRequired: string | null;
-        initialLocation: string | null;
-        installationDate: Date | null;
-        calibrationCycle: number | null;
-        lastCalibrationDate: Date | null;
-        nextCalibrationDate: Date | null;
-        calibrationAgency: string | null;
-        needsIntermediateCheck: boolean | null;
-        calibrationMethod: string | null;
-        lastIntermediateCheckDate: Date | null;
-        intermediateCheckCycle: number | null;
-        nextIntermediateCheckDate: Date | null;
-        site: string;
-        createdAt: Date | null;
-        updatedAt: Date | null;
-        teamId: string | null;
-        managerId: string | null;
-        purchaseDate: Date | null;
-        price: number | null;
-        supplier: string | null;
-        contactInfo: string | null;
-        softwareVersion: string | null;
-        firmwareVersion: string | null;
-        softwareName: string | null;
-        softwareType: string | null;
-        manualLocation: string | null;
-        accessories: string | null;
-        mainFeatures: string | null;
-        technicalManager: string | null;
-        status: string;
-        isActive: boolean | null;
-        approvalStatus: string | null;
-        requestedBy: string | null;
-        approvedBy: string | null;
-        equipmentType: string | null;
-        calibrationResult: string | null;
-        correctionFactor: string | null;
-        intermediateCheckSchedule: Date | null;
-        repairHistory: string | null;
-        isShared: boolean;
-        sharedSource: string | null;
-        owner: string | null;
-        externalIdentifier: string | null;
-        usagePeriodStart: Date | null;
-        usagePeriodEnd: Date | null;
-      }
-    | {
-        message: string;
-        requestUuid: string;
-        request: {
-          id: string;
-          createdAt: Date | null;
-          updatedAt: Date | null;
-          approvalStatus: 'approved' | 'pending_approval' | 'rejected';
-          requestedBy: string;
-          approvedBy: string | null;
-          requestType: 'create' | 'update' | 'delete';
-          equipmentId: string | null;
-          requestedAt: Date;
-          approvedAt: Date | null;
-          rejectionReason: string | null;
-          requestData: string | null;
-        };
-      }
-  > {
+  ): Promise<EquipmentCreateOrRequestResult> {
     // ✅ 공용장비도 수정 가능하도록 isShared 체크 제거
     // (렌탈 장비는 수령 후 교정 정보 업데이트 필요)
     const existingEquipment = await this.equipmentService.findOne(uuid);
@@ -746,68 +469,7 @@ export class EquipmentController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Body() updateStatusDto: UpdateStatusDto,
     @Req() req: AuthenticatedRequest
-  ): Promise<{
-    id: string;
-    name: string;
-    managementNumber: string;
-    siteCode: string | null;
-    classificationCode: string | null;
-    managementSerialNumber: number | null;
-    assetNumber: string | null;
-    modelName: string | null;
-    manufacturer: string | null;
-    manufacturerContact: string | null;
-    serialNumber: string | null;
-    description: string | null;
-    location: string | null;
-    specMatch: string | null;
-    calibrationRequired: string | null;
-    initialLocation: string | null;
-    installationDate: Date | null;
-    calibrationCycle: number | null;
-    lastCalibrationDate: Date | null;
-    nextCalibrationDate: Date | null;
-    calibrationAgency: string | null;
-    needsIntermediateCheck: boolean | null;
-    calibrationMethod: string | null;
-    lastIntermediateCheckDate: Date | null;
-    intermediateCheckCycle: number | null;
-    nextIntermediateCheckDate: Date | null;
-    site: string;
-    createdAt: Date | null;
-    updatedAt: Date | null;
-    teamId: string | null;
-    managerId: string | null;
-    purchaseDate: Date | null;
-    price: number | null;
-    supplier: string | null;
-    contactInfo: string | null;
-    softwareVersion: string | null;
-    firmwareVersion: string | null;
-    softwareName: string | null;
-    softwareType: string | null;
-    manualLocation: string | null;
-    accessories: string | null;
-    mainFeatures: string | null;
-    technicalManager: string | null;
-    status: string;
-    isActive: boolean | null;
-    approvalStatus: string | null;
-    requestedBy: string | null;
-    approvedBy: string | null;
-    equipmentType: string | null;
-    calibrationResult: string | null;
-    correctionFactor: string | null;
-    intermediateCheckSchedule: Date | null;
-    repairHistory: string | null;
-    isShared: boolean;
-    sharedSource: string | null;
-    owner: string | null;
-    externalIdentifier: string | null;
-    usagePeriodStart: Date | null;
-    usagePeriodEnd: Date | null;
-    version: number;
-  }> {
+  ): Promise<Equipment> {
     const existingEquipment = await this.equipmentService.findOne(uuid);
     enforceSiteAccess(req, existingEquipment.site, EQUIPMENT_DATA_SCOPE, existingEquipment.teamId);
     return this.equipmentService.updateStatus(
@@ -830,69 +492,7 @@ export class EquipmentController {
   async findByTeam(
     @Param('teamId') teamId: string,
     @Req() req: AuthenticatedRequest
-  ): Promise<
-    {
-      id: string;
-      name: string;
-      managementNumber: string;
-      siteCode: string | null;
-      classificationCode: string | null;
-      managementSerialNumber: number | null;
-      assetNumber: string | null;
-      modelName: string | null;
-      manufacturer: string | null;
-      manufacturerContact: string | null;
-      serialNumber: string | null;
-      description: string | null;
-      location: string | null;
-      specMatch: string | null;
-      calibrationRequired: string | null;
-      initialLocation: string | null;
-      installationDate: Date | null;
-      calibrationCycle: number | null;
-      lastCalibrationDate: Date | null;
-      nextCalibrationDate: Date | null;
-      calibrationAgency: string | null;
-      needsIntermediateCheck: boolean | null;
-      calibrationMethod: string | null;
-      lastIntermediateCheckDate: Date | null;
-      intermediateCheckCycle: number | null;
-      nextIntermediateCheckDate: Date | null;
-      site: string;
-      createdAt: Date | null;
-      updatedAt: Date | null;
-      teamId: string | null;
-      managerId: string | null;
-      purchaseDate: Date | null;
-      price: number | null;
-      supplier: string | null;
-      contactInfo: string | null;
-      softwareVersion: string | null;
-      firmwareVersion: string | null;
-      softwareName: string | null;
-      softwareType: string | null;
-      manualLocation: string | null;
-      accessories: string | null;
-      mainFeatures: string | null;
-      technicalManager: string | null;
-      status: string;
-      isActive: boolean | null;
-      approvalStatus: string | null;
-      requestedBy: string | null;
-      approvedBy: string | null;
-      equipmentType: string | null;
-      calibrationResult: string | null;
-      correctionFactor: string | null;
-      intermediateCheckSchedule: Date | null;
-      repairHistory: string | null;
-      isShared: boolean;
-      sharedSource: string | null;
-      owner: string | null;
-      externalIdentifier: string | null;
-      usagePeriodStart: Date | null;
-      usagePeriodEnd: Date | null;
-    }[]
-  > {
+  ): Promise<Equipment[]> {
     const equipmentList = await this.equipmentService.findByTeam(teamId);
 
     // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
@@ -922,69 +522,7 @@ export class EquipmentController {
   async findCalibrationDue(
     @Query('days') days: number = 30,
     @Req() req: AuthenticatedRequest
-  ): Promise<
-    {
-      id: string;
-      name: string;
-      managementNumber: string;
-      siteCode: string | null;
-      classificationCode: string | null;
-      managementSerialNumber: number | null;
-      assetNumber: string | null;
-      modelName: string | null;
-      manufacturer: string | null;
-      manufacturerContact: string | null;
-      serialNumber: string | null;
-      description: string | null;
-      location: string | null;
-      specMatch: string | null;
-      calibrationRequired: string | null;
-      initialLocation: string | null;
-      installationDate: Date | null;
-      calibrationCycle: number | null;
-      lastCalibrationDate: Date | null;
-      nextCalibrationDate: Date | null;
-      calibrationAgency: string | null;
-      needsIntermediateCheck: boolean | null;
-      calibrationMethod: string | null;
-      lastIntermediateCheckDate: Date | null;
-      intermediateCheckCycle: number | null;
-      nextIntermediateCheckDate: Date | null;
-      site: string;
-      createdAt: Date | null;
-      updatedAt: Date | null;
-      teamId: string | null;
-      managerId: string | null;
-      purchaseDate: Date | null;
-      price: number | null;
-      supplier: string | null;
-      contactInfo: string | null;
-      softwareVersion: string | null;
-      firmwareVersion: string | null;
-      softwareName: string | null;
-      softwareType: string | null;
-      manualLocation: string | null;
-      accessories: string | null;
-      mainFeatures: string | null;
-      technicalManager: string | null;
-      status: string;
-      isActive: boolean | null;
-      approvalStatus: string | null;
-      requestedBy: string | null;
-      approvedBy: string | null;
-      equipmentType: string | null;
-      calibrationResult: string | null;
-      correctionFactor: string | null;
-      intermediateCheckSchedule: Date | null;
-      repairHistory: string | null;
-      isShared: boolean;
-      sharedSource: string | null;
-      owner: string | null;
-      externalIdentifier: string | null;
-      usagePeriodStart: Date | null;
-      usagePeriodEnd: Date | null;
-    }[]
-  > {
+  ): Promise<Equipment[]> {
     const equipmentList = await this.equipmentService.findCalibrationDue(days);
 
     // SSOT: EQUIPMENT_DATA_SCOPE 정책으로 역할별 in-memory 사이트 필터 적용
@@ -1013,22 +551,7 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT_REQUESTS)
-  async findPendingRequests(@Req() req: AuthenticatedRequest): Promise<
-    {
-      id: string;
-      requestType: 'create' | 'update' | 'delete';
-      createdAt: Date | null;
-      updatedAt: Date | null;
-      approvalStatus: 'approved' | 'pending_approval' | 'rejected';
-      requestedBy: string;
-      approvedBy: string | null;
-      equipmentId: string | null;
-      requestedAt: Date;
-      approvedAt: Date | null;
-      rejectionReason: string | null;
-      requestData: string | null;
-    }[]
-  > {
+  async findPendingRequests(@Req() req: AuthenticatedRequest): Promise<EquipmentRequest[]> {
     const userRoles = req.user?.roles || [];
     const userSite = req.user?.site;
     const userTeamId = req.user?.teamId;
@@ -1046,136 +569,9 @@ export class EquipmentController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '인증되지 않은 요청' })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: '권한 없음' })
   @RequirePermissions(Permission.VIEW_EQUIPMENT_REQUESTS)
-  async findRequestByUuid(@Param('requestUuid', ParseUUIDPipe) requestUuid: string): Promise<
-    {
-      id: string;
-      requestType: 'create' | 'update' | 'delete';
-      createdAt: Date | null;
-      updatedAt: Date | null;
-      approvalStatus: 'approved' | 'pending_approval' | 'rejected';
-      requestedBy: string;
-      approvedBy: string | null;
-      equipmentId: string | null;
-      requestedAt: Date;
-      approvedAt: Date | null;
-      rejectionReason: string | null;
-      requestData: string | null;
-    } & {
-      requester?:
-        | {
-            id: string;
-            name: string;
-            location: string | null;
-            site: string | null;
-            createdAt: Date;
-            updatedAt: Date;
-            teamId: string | null;
-            email: string;
-            role: string;
-            azureAdId: string | null;
-            position: string | null;
-          }
-        | null
-        | undefined;
-      approver?:
-        | {
-            id: string;
-            name: string;
-            location: string | null;
-            site: string | null;
-            createdAt: Date;
-            updatedAt: Date;
-            teamId: string | null;
-            email: string;
-            role: string;
-            azureAdId: string | null;
-            position: string | null;
-          }
-        | null
-        | undefined;
-      equipment?:
-        | {
-            id: string;
-            name: string;
-            managementNumber: string;
-            siteCode: string | null;
-            classificationCode: string | null;
-            managementSerialNumber: number | null;
-            assetNumber: string | null;
-            modelName: string | null;
-            manufacturer: string | null;
-            manufacturerContact: string | null;
-            serialNumber: string | null;
-            description: string | null;
-            location: string | null;
-            specMatch: string | null;
-            calibrationRequired: string | null;
-            initialLocation: string | null;
-            installationDate: Date | null;
-            calibrationCycle: number | null;
-            lastCalibrationDate: Date | null;
-            nextCalibrationDate: Date | null;
-            calibrationAgency: string | null;
-            needsIntermediateCheck: boolean | null;
-            calibrationMethod: string | null;
-            lastIntermediateCheckDate: Date | null;
-            intermediateCheckCycle: number | null;
-            nextIntermediateCheckDate: Date | null;
-            site: string;
-            createdAt: Date | null;
-            updatedAt: Date | null;
-            teamId: string | null;
-            managerId: string | null;
-            purchaseDate: Date | null;
-            price: number | null;
-            supplier: string | null;
-            contactInfo: string | null;
-            softwareVersion: string | null;
-            firmwareVersion: string | null;
-            softwareName: string | null;
-            softwareType: string | null;
-            manualLocation: string | null;
-            accessories: string | null;
-            mainFeatures: string | null;
-            technicalManager: string | null;
-            status: string;
-            isActive: boolean | null;
-            approvalStatus: string | null;
-            requestedBy: string | null;
-            approvedBy: string | null;
-            equipmentType: string | null;
-            calibrationResult: string | null;
-            correctionFactor: string | null;
-            intermediateCheckSchedule: Date | null;
-            repairHistory: string | null;
-            isShared: boolean;
-            sharedSource: string | null;
-            owner: string | null;
-            externalIdentifier: string | null;
-            usagePeriodStart: Date | null;
-            usagePeriodEnd: Date | null;
-          }
-        | null
-        | undefined;
-      attachments?:
-        | {
-            id: string;
-            description: string | null;
-            createdAt: Date | null;
-            updatedAt: Date | null;
-            equipmentId: string | null;
-            requestId: string | null;
-            attachmentType: 'inspection_report' | 'history_card' | 'other';
-            fileName: string;
-            originalFileName: string;
-            filePath: string;
-            fileSize: number;
-            mimeType: string;
-            uploadedAt: Date;
-          }[]
-        | undefined;
-    }
-  > {
+  async findRequestByUuid(
+    @Param('requestUuid', ParseUUIDPipe) requestUuid: string
+  ): Promise<EquipmentRequestDetailResult> {
     return this.approvalService.findRequestByUuid(requestUuid);
   }
 
@@ -1198,20 +594,7 @@ export class EquipmentController {
   async approveRequest(
     @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
     @Req() req: AuthenticatedRequest
-  ): Promise<{
-    id: string;
-    requestType: 'create' | 'update' | 'delete';
-    createdAt: Date | null;
-    updatedAt: Date | null;
-    approvalStatus: 'approved' | 'pending_approval' | 'rejected';
-    requestedBy: string;
-    approvedBy: string | null;
-    equipmentId: string | null;
-    requestedAt: Date;
-    approvedAt: Date | null;
-    rejectionReason: string | null;
-    requestData: string | null;
-  }> {
+  ): Promise<EquipmentRequest> {
     const userRoles = req.user?.roles ?? [];
     const userId = extractUserId(req);
     return this.approvalService.approveRequest(requestUuid, userId, userRoles);
@@ -1238,20 +621,7 @@ export class EquipmentController {
     @Param('requestUuid', ParseUUIDPipe) requestUuid: string,
     @Body() dto: RejectRequestDto,
     @Req() req: AuthenticatedRequest
-  ): Promise<{
-    id: string;
-    requestType: 'create' | 'update' | 'delete';
-    createdAt: Date | null;
-    updatedAt: Date | null;
-    approvalStatus: 'approved' | 'pending_approval' | 'rejected';
-    requestedBy: string;
-    approvedBy: string | null;
-    equipmentId: string | null;
-    requestedAt: Date;
-    approvedAt: Date | null;
-    rejectionReason: string | null;
-    requestData: string | null;
-  }> {
+  ): Promise<EquipmentRequest> {
     const userRoles = req.user?.roles ?? [];
     const userId = extractUserId(req);
     return this.approvalService.rejectRequest(requestUuid, userId, dto.rejectionReason, userRoles);

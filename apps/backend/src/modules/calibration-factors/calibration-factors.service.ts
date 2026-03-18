@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, BadRequestException, Inject } from '@nes
 import { eq, and, asc, desc, sql, isNull, or, lte, gte } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
-import * as schema from '@equipment-management/db/schema';
 import { calibrationFactors, CalibrationFactor } from '@equipment-management/db/schema';
 import { CreateCalibrationFactorDto } from './dto/create-calibration-factor.dto';
 import { CalibrationFactorQueryDto } from './dto/calibration-factor-query.dto';

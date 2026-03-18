@@ -208,7 +208,7 @@ export class ReportExportService {
       const colWidth = pageWidth / colCount;
       const rowHeight = 20;
 
-      const drawRow = (cols: string[], y: number, isHeader: boolean, isEven: boolean) => {
+      const drawRow = (cols: string[], y: number, isHeader: boolean, isEven: boolean): void => {
         if (isHeader) {
           doc.rect(40, y, pageWidth, rowHeight).fill('#2563EB');
         } else if (isEven) {

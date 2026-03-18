@@ -19,11 +19,10 @@ import {
   CLASSIFICATION_TO_CODE,
 } from '@equipment-management/schemas';
 import { CreateSharedEquipmentDto } from './dto/create-shared-equipment.dto';
-import { eq, and, or, desc, asc, sql, SQL, inArray } from 'drizzle-orm';
+import { eq, and, or, desc, asc, sql, SQL, inArray, getTableColumns } from 'drizzle-orm';
 import { equipment } from '@equipment-management/db/schema/equipment';
 import { teams } from '@equipment-management/db/schema/teams';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import { CACHE_TTL } from '@equipment-management/shared-constants';
 import { SimpleCacheService } from '../../common/cache/simple-cache.service';
 import { CACHE_KEY_PREFIXES } from '../../common/cache/cache-key-prefixes';
@@ -36,6 +35,7 @@ import {
   calculateNextCalibrationDate,
 } from '../../common/utils';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import type { PaginationMeta } from '../../common/types/api-response';
 
 /**
  * 쿼리 조건 빌더 인터페이스
@@ -46,23 +46,18 @@ interface QueryConditions {
 }
 
 /**
- * 페이지네이션 메타데이터 인터페이스
- */
-interface PaginationMeta {
-  totalItems: number;
-  itemCount: number;
-  itemsPerPage: number;
-  totalPages: number;
-  currentPage: number;
-}
-
-/**
  * 장비 목록 응답 인터페이스
  */
 export interface EquipmentListResponse {
   items: Equipment[];
   meta: PaginationMeta;
 }
+
+/**
+ * DB equipment 테이블의 유효 컬럼 이름 (SSOT: Drizzle 스키마에서 동적 추출)
+ * DTO → Entity 변환 시, 이 Set에 없는 필드는 자동으로 무시됨.
+ */
+const EQUIPMENT_COLUMNS = new Set(Object.keys(getTableColumns(equipment)));
 
 @Injectable()
 export class EquipmentService extends VersionedBaseService {
@@ -430,71 +425,50 @@ export class EquipmentService extends VersionedBaseService {
     // 관리번호 컴포넌트 파싱
     const managementNumberComponents = this.parseManagementNumberComponents(dto.managementNumber);
 
-    // id (uuid)는 자동 생성됨
+    // 특수 처리 필드: 기본값, 파싱, 정규화가 필요한 필드만 명시
     const entity: Partial<Equipment> = {
-      name: dto.name,
-      managementNumber: dto.managementNumber,
-      // 관리번호 컴포넌트 (파싱된 값 또는 DTO에서 직접 전달된 값)
+      // 관리번호 컴포넌트 (DTO 직접 전달 > 관리번호에서 파싱)
       siteCode: dto.siteCode || managementNumberComponents.siteCode,
       classificationCode: dto.classificationCode || managementNumberComponents.classificationCode,
       managementSerialNumber:
         dto.managementSerialNumber || managementNumberComponents.managementSerialNumber,
-      assetNumber: dto.assetNumber,
-      modelName: dto.modelName,
-      manufacturer: dto.manufacturer,
-      serialNumber: dto.serialNumber,
-      location: dto.location,
-      calibrationCycle: dto.calibrationCycle,
+      // 정규화/기본값
       teamId,
-      site: dto.site, // 사이트 필드 추가
-      lastCalibrationDate: dto.lastCalibrationDate ? new Date(dto.lastCalibrationDate) : undefined,
       nextCalibrationDate,
-      calibrationAgency: dto.calibrationAgency,
       needsIntermediateCheck: dto.needsIntermediateCheck ?? false,
-      calibrationMethod: dto.calibrationMethod,
-      manufacturerContact: dto.manufacturerContact,
-      supplier: dto.supplier,
-      contactInfo: dto.contactInfo,
-      softwareVersion: dto.softwareVersion,
-      firmwareVersion: dto.firmwareVersion,
-      manualLocation: dto.manualLocation,
-      accessories: dto.accessories,
-      technicalManager: dto.technicalManager,
       status: dto.status ?? EquipmentStatusEnum.enum.available,
       isActive: true,
-
-      // 위치 및 설치 정보
-      initialLocation: dto.initialLocation,
-      installationDate: dto.installationDate ? new Date(dto.installationDate) : undefined,
-
-      // 중간점검 정보
-      lastIntermediateCheckDate: dto.lastIntermediateCheckDate
-        ? new Date(dto.lastIntermediateCheckDate)
-        : undefined,
-      intermediateCheckCycle: dto.intermediateCheckCycle,
-      nextIntermediateCheckDate: dto.nextIntermediateCheckDate
-        ? new Date(dto.nextIntermediateCheckDate)
-        : undefined,
-
-      // 시방일치 여부 및 교정필요 여부
-      specMatch: dto.specMatch,
-      calibrationRequired: dto.calibrationRequired,
-
-      // 승인 프로세스 필드
-      approvalStatus: dto.approvalStatus ?? 'approved', // 시스템 관리자는 직접 승인 가능
-      // requestedBy와 approvedBy는 승인 프로세스에서 별도로 설정됨
-
-      // 교정 결과 및 보정계수
-      calibrationResult: dto.calibrationResult,
-      correctionFactor: dto.correctionFactor,
-
+      approvalStatus: dto.approvalStatus ?? 'approved',
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    // description은 값이 있을 때만 추가
-    if (dto.description !== undefined) {
-      entity.description = dto.description;
+    // 나머지: DB 컬럼에 존재하는 DTO 필드를 자동 매핑 (SSOT: EQUIPMENT_COLUMNS)
+    const CUSTOM_HANDLED = new Set<string>([
+      'teamId',
+      'siteCode',
+      'classificationCode',
+      'managementSerialNumber',
+      'nextCalibrationDate',
+      'needsIntermediateCheck',
+      'status',
+      'isActive',
+      'approvalStatus',
+      'version',
+      'id',
+      'createdAt',
+      'updatedAt',
+    ]);
+
+    for (const [key, value] of Object.entries(dto)) {
+      if (
+        value !== undefined &&
+        EQUIPMENT_COLUMNS.has(key) &&
+        !CUSTOM_HANDLED.has(key) &&
+        !(key in entity)
+      ) {
+        (entity as Record<string, unknown>)[key] = value;
+      }
     }
 
     return entity;
@@ -544,51 +518,24 @@ export class EquipmentService extends VersionedBaseService {
         updateData.managementSerialNumber = components.managementSerialNumber;
     }
 
-    // 나머지 필드 업데이트 (undefined가 아닌 경우만)
-    const fields: Array<keyof UpdateEquipmentDto> = [
-      'name',
-      'managementNumber',
-      'assetNumber',
-      'modelName',
-      'manufacturer',
-      'manufacturerContact',
-      'serialNumber',
-      'location',
-      'description',
-      'specMatch',
-      'calibrationRequired',
-      'calibrationCycle',
-      'lastCalibrationDate',
-      'calibrationAgency',
-      'needsIntermediateCheck',
-      'calibrationMethod',
-      'lastIntermediateCheckDate',
-      'intermediateCheckCycle',
-      'nextIntermediateCheckDate',
-      'supplier',
-      'contactInfo',
-      'softwareVersion',
-      'firmwareVersion',
-      'manualLocation',
-      'accessories',
-      'technicalManager',
-      'initialLocation',
-      'installationDate',
-      'status',
-      'site',
-      'approvalStatus',
-      // 관리번호 컴포넌트 필드 (개별 업데이트 허용)
-      'siteCode',
-      'classificationCode',
-      'managementSerialNumber',
-      // 'requestedBy', 'approvedBy'는 승인 프로세스에서 별도로 관리됨
-      'calibrationResult',
-      'correctionFactor',
-    ];
+    // 나머지 필드: DB 컬럼에 존재하는 필드만 자동 매핑 (SSOT: EQUIPMENT_COLUMNS)
+    // - DB에 없는 DTO 필드(classification, managementSerialNumberStr 등)는 자동 제외
+    // - 위에서 이미 처리된 필드(teamId, nextCalibrationDate 등)는 덮어쓰지 않음
+    const CUSTOM_HANDLED = new Set<string>([
+      'teamId', // normalizeTeamId()로 별도 처리
+      'version', // CAS — updateWithVersion이 관리
+      'id', // PK 변경 불가
+      'createdAt', // 생성 시점 고정
+    ]);
 
-    for (const field of fields) {
-      if (dto[field] !== undefined) {
-        (updateData as Record<string, unknown>)[field] = dto[field];
+    for (const [key, value] of Object.entries(dto)) {
+      if (
+        value !== undefined &&
+        EQUIPMENT_COLUMNS.has(key) &&
+        !CUSTOM_HANDLED.has(key) &&
+        !(key in updateData)
+      ) {
+        (updateData as Record<string, unknown>)[key] = value;
       }
     }
 

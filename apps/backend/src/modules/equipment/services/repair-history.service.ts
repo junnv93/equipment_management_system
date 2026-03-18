@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { eq, and, gte, lte, asc, desc, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import { repairHistory, RepairHistory } from '@equipment-management/db/schema';
 import {
   CreateRepairHistoryDto,

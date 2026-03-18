@@ -5,7 +5,6 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   CHECKOUT_PURPOSE_VALUES,
   CheckoutDirectionEnum,
-  CheckoutPurposeEnum,
   SiteEnum,
   type CheckoutDirection,
   type Site,

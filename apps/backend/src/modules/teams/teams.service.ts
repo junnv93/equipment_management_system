@@ -2,7 +2,6 @@ import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { eq, inArray, and, sql, SQL, count } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
-import * as schema from '@equipment-management/db/schema';
 import {
   teams as teamsTable,
   users as usersTable,

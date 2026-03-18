@@ -7,7 +7,7 @@ import {
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { eq, desc, sql, inArray } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import {
   equipmentRequests,
   equipmentAttachments,
@@ -16,11 +16,15 @@ import {
 } from '@equipment-management/db/schema';
 import { UserRoleValues } from '@equipment-management/schemas';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import { EquipmentService } from '../equipment.service';
-import { CreateEquipmentDto } from '../dto/create-equipment.dto';
-import { UpdateEquipmentDto } from '../dto/update-equipment.dto';
+import type { CreateEquipmentDto } from '../dto/create-equipment.dto';
+import type { UpdateEquipmentDto } from '../dto/update-equipment.dto';
 import { NOTIFICATION_EVENTS } from '../../notifications/events/notification-events';
+import {
+  serializeRequestData,
+  deserializeRequestData,
+  parseRequestDataForDisplay,
+} from '../utils/request-data-codec';
 import type { EquipmentRequest } from '@equipment-management/db/schema/equipment-requests';
 import type { EquipmentAttachment } from '@equipment-management/db/schema/equipment-attachments';
 import type {
@@ -68,9 +72,6 @@ export class EquipmentApprovalService {
         });
       }
 
-      // 요청 데이터를 JSON으로 직렬화
-      const requestData = JSON.stringify(createDto);
-
       // 요청 생성 (id는 자동 생성됨)
       const [request] = await this.db
         .insert(equipmentRequests)
@@ -78,7 +79,7 @@ export class EquipmentApprovalService {
           requestType: 'create',
           requestedBy,
           approvalStatus: 'pending_approval',
-          requestData,
+          requestData: serializeRequestData(createDto as unknown as Record<string, unknown>),
         })
         .returning();
 
@@ -133,9 +134,6 @@ export class EquipmentApprovalService {
         });
       }
 
-      // 요청 데이터를 JSON으로 직렬화
-      const requestData = JSON.stringify(updateDto);
-
       // 사용자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
       const user = await this.db.query.users.findFirst({
         where: eq(users.id, requestedBy),
@@ -156,7 +154,7 @@ export class EquipmentApprovalService {
           equipmentId: existingEquipment.id,
           requestedBy,
           approvalStatus: 'pending_approval',
-          requestData,
+          requestData: serializeRequestData(updateDto as unknown as Record<string, unknown>),
         })
         .returning();
 
@@ -291,6 +289,19 @@ export class EquipmentApprovalService {
   }
 
   /**
+   * equipmentId 필수 검증 (update/delete 요청에서 사용)
+   */
+  private requireEquipmentId(equipmentId: string | null): string {
+    if (!equipmentId) {
+      throw new BadRequestException({
+        code: 'EQUIPMENT_REQUEST_NO_EQUIPMENT_ID',
+        message: 'Equipment ID is missing.',
+      });
+    }
+    return equipmentId;
+  }
+
+  /**
    * 요청 상세 조회
    */
   async findRequestByUuid(requestUuid: string): Promise<
@@ -378,43 +389,35 @@ export class EquipmentApprovalService {
 
       // 요청 타입에 따라 처리
       if (request.requestType === 'create') {
-        const requestData = JSON.parse(request.requestData || '{}') as CreateEquipmentDto;
+        const requestData = deserializeRequestData('create', request.requestData);
         await this.equipmentService.create(requestData);
       } else if (request.requestType === 'update') {
-        if (!request.equipmentId) {
-          throw new BadRequestException({
-            code: 'EQUIPMENT_REQUEST_NO_EQUIPMENT_ID',
-            message: 'Equipment ID is missing.',
-          });
-        }
-        const equipmentData = await this.db.query.equipment.findFirst({
-          where: eq(equipment.id, request.equipmentId),
+        const equipmentData = this.requireEquipmentId(request.equipmentId);
+        const currentEquipment = await this.db.query.equipment.findFirst({
+          where: eq(equipment.id, equipmentData),
         });
-        if (!equipmentData) {
+        if (!currentEquipment) {
           throw new NotFoundException({
             code: 'EQUIPMENT_NOT_FOUND',
             message: 'Equipment not found.',
           });
         }
-        const requestData = JSON.parse(request.requestData || '{}') as UpdateEquipmentDto;
-        await this.equipmentService.update(equipmentData.id, requestData);
+        const requestData = deserializeRequestData('update', request.requestData);
+        // CAS: 요청 생성 시의 version은 stale → 현재 DB version으로 교체
+        requestData.version = currentEquipment.version;
+        await this.equipmentService.update(currentEquipment.id, requestData);
       } else if (request.requestType === 'delete') {
-        if (!request.equipmentId) {
-          throw new BadRequestException({
-            code: 'EQUIPMENT_REQUEST_NO_EQUIPMENT_ID',
-            message: 'Equipment ID is missing.',
-          });
-        }
-        const equipmentData = await this.db.query.equipment.findFirst({
-          where: eq(equipment.id, request.equipmentId),
+        const equipmentId = this.requireEquipmentId(request.equipmentId);
+        const currentEquipment = await this.db.query.equipment.findFirst({
+          where: eq(equipment.id, equipmentId),
         });
-        if (!equipmentData) {
+        if (!currentEquipment) {
           throw new NotFoundException({
             code: 'EQUIPMENT_NOT_FOUND',
             message: 'Equipment not found.',
           });
         }
-        await this.equipmentService.remove(equipmentData.id);
+        await this.equipmentService.remove(currentEquipment.id);
       }
 
       // 승인자 존재 여부 확인 (JWT 인증 통과 시 반드시 존재해야 함)
@@ -441,12 +444,12 @@ export class EquipmentApprovalService {
         .returning();
 
       // 📢 알림 이벤트 발행
-      const requestData = JSON.parse(request.requestData || '{}');
+      const displayData = parseRequestDataForDisplay(request.requestData);
       this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_APPROVED, {
         requestId: requestUuid,
         equipmentId: request.equipmentId ?? '',
-        equipmentName: requestData.name || 'Equipment',
-        managementNumber: requestData.managementNumber || '',
+        equipmentName: displayData.name || 'Equipment',
+        managementNumber: displayData.managementNumber || '',
         requesterId: request.requestedBy,
         requesterTeamId: '',
         actorId: approvedBy,
@@ -538,12 +541,12 @@ export class EquipmentApprovalService {
         .returning();
 
       // 📢 알림 이벤트 발행
-      const rejectRequestData = JSON.parse(request.requestData || '{}');
+      const rejectDisplayData = parseRequestDataForDisplay(request.requestData);
       this.eventEmitter.emit(NOTIFICATION_EVENTS.EQUIPMENT_REQUEST_REJECTED, {
         requestId: requestUuid,
         equipmentId: request.equipmentId ?? '',
-        equipmentName: rejectRequestData.name || 'Equipment',
-        managementNumber: rejectRequestData.managementNumber || '',
+        equipmentName: rejectDisplayData.name || 'Equipment',
+        managementNumber: rejectDisplayData.managementNumber || '',
         requesterId: request.requestedBy,
         requesterTeamId: '',
         reason: rejectionReason,

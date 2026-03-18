@@ -92,7 +92,7 @@ function createDisposalEquipment(
     location: `${site.toUpperCase()} Lab`,
     modelName: name,
     manufacturer: 'Generic Manufacturer',
-    purchaseDate: PAST_DATE,
+    purchaseYear: 2025,
     createdAt: PAST_DATE,
     updatedAt: PAST_DATE,
     ...overrides,

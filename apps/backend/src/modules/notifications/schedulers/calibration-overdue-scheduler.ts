@@ -3,7 +3,6 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { eq, and, inArray, isNull, notInArray, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import { equipment, equipmentIncidentHistory } from '@equipment-management/db/schema';
 import { nonConformances } from '@equipment-management/db/schema/non-conformances';
 import {

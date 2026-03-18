@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { eq, and, isNull, SQL, ne, sql } from 'drizzle-orm';
 import type { AppDatabase } from '@equipment-management/db';
-import * as schema from '@equipment-management/db/schema';
 import {
   nonConformances,
   type NonConformance,
@@ -34,6 +33,7 @@ import {
   type NonConformanceStatus as NonConformanceStatusType,
   type NonConformanceType,
 } from '@equipment-management/schemas';
+import type { NonConformanceDetail } from './non-conformances.types';
 
 /**
  * 부적합 상태 전이 규칙 (State Machine)
@@ -477,7 +477,7 @@ export class NonConformancesService extends VersionedBaseService {
   /**
    * 단일 부적합 조회 (cache-aside)
    */
-  async findOne(id: string) {
+  async findOne(id: string): Promise<NonConformanceDetail> {
     const cacheKey = this.buildCacheKey('detail', id);
     return this.cacheService.getOrSet(
       cacheKey,

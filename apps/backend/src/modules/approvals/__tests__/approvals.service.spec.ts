@@ -14,7 +14,7 @@ describe('ApprovalsService', () => {
    */
   const tableCounts = new Map<object, number>();
 
-  const createSelectChain = (table: object) => {
+  const createSelectChain = (table: object): Record<string, jest.Mock> => {
     const cnt = tableCounts.get(table) ?? 0;
     const chain: Record<string, jest.Mock> = {
       where: jest.fn().mockResolvedValue([{ count: cnt }]),
