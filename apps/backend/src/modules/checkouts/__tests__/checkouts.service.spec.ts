@@ -6,6 +6,17 @@ import { TeamsService } from '../../teams/teams.service';
 import { EquipmentImportsService } from '../../equipment-imports/equipment-imports.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../../types/auth';
+
+// 테스트용 mock req — 스코프 체크에서 사용
+const mockReq = {
+  user: {
+    userId: '550e8400-e29b-41d4-a716-446655440004',
+    roles: ['technical_manager'],
+    site: 'suwon',
+    teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1',
+  },
+} as unknown as AuthenticatedRequest;
 
 describe('CheckoutsService', () => {
   let service: CheckoutsService;
@@ -236,7 +247,7 @@ describe('CheckoutsService', () => {
       approverId: approverId,
       comment: '승인합니다.',
     };
-    const approverTeamId = '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1'; // 수원 RF팀 UUID
+    const _approverTeamId = '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1'; // 수원 RF팀 UUID
 
     const mockPendingCheckout = {
       id: checkoutId,
@@ -255,7 +266,7 @@ describe('CheckoutsService', () => {
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([nonPendingCheckout]);
 
-      await expect(service.approve(checkoutId, mockApproveDto, approverTeamId)).rejects.toThrow(
+      await expect(service.approve(checkoutId, mockApproveDto, mockReq)).rejects.toThrow(
         BadRequestException
       );
     });
@@ -293,7 +304,7 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
       mockCacheService.deleteByPattern.mockResolvedValue(undefined);
 
-      const result = await service.reject(checkoutId, mockRejectDto);
+      const result = await service.reject(checkoutId, mockRejectDto, mockReq);
 
       expect(result).toBeDefined();
       expect(result.status).toBe('rejected');
@@ -305,7 +316,9 @@ describe('CheckoutsService', () => {
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([mockPendingCheckout]);
 
-      await expect(service.reject(checkoutId, emptyReasonDto)).rejects.toThrow(BadRequestException);
+      await expect(service.reject(checkoutId, emptyReasonDto, mockReq)).rejects.toThrow(
+        BadRequestException
+      );
     });
   });
 
@@ -344,7 +357,7 @@ describe('CheckoutsService', () => {
       mockDrizzle.limit.mockResolvedValueOnce([{ teamId: '7dc3b94c-82b8-488e-9ea5-4fe71bb086e1' }]);
       mockCacheService.deleteByPattern.mockResolvedValue(undefined);
 
-      const result = await service.returnCheckout(checkoutId, mockReturnDto, returnerId);
+      const result = await service.returnCheckout(checkoutId, mockReturnDto, returnerId, mockReq);
 
       expect(result).toBeDefined();
       expect(result.status).toBe('returned');
@@ -356,9 +369,9 @@ describe('CheckoutsService', () => {
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([notCheckedOut]);
 
-      await expect(service.returnCheckout(checkoutId, mockReturnDto, returnerId)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.returnCheckout(checkoutId, mockReturnDto, returnerId, mockReq)
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -388,9 +401,9 @@ describe('CheckoutsService', () => {
       mockCacheService.getOrSet.mockImplementation(async (key, factory) => factory());
       mockDrizzle.limit.mockResolvedValueOnce([notReturnedCheckout]);
 
-      await expect(service.approveReturn(checkoutId, mockApproveReturnDto)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        service.approveReturn(checkoutId, mockApproveReturnDto, mockReq)
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
