@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/use-toast';
@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import {
   getCalibrationPlanTimelineNodeClasses,
   getCalibrationPlanTimelineConnectorClasses,
+  getCalibrationPlanTimelineVerticalConnectorClasses,
   getLoadingSpinnerClasses,
   CALIBRATION_PLAN_TIMELINE_TOKENS,
   ACTION_BUTTON_TOKENS,
@@ -86,195 +87,208 @@ export function ApprovalTimeline({ plan, planUuid, onRejectClick }: ApprovalTime
     },
   });
 
+  // 단계별 상태 매핑 — 3단계 노드 렌더링에 필요한 데이터 구조
+  type StepState = 'active' | 'completed' | 'pending' | 'rejected';
+  const steps: Array<{
+    titleKey: string;
+    subtitleKey: string;
+    state: StepState;
+    timestamp: string | null;
+  }> = [
+    {
+      titleKey: 'planDetail.timeline.step1',
+      subtitleKey: 'planDetail.timeline.technicalManager',
+      state: isDraft ? 'active' : 'completed',
+      timestamp: plan.submittedAt,
+    },
+    {
+      titleKey: 'planDetail.timeline.step2',
+      subtitleKey: 'planDetail.timeline.qualityManager',
+      state: isPendingReview
+        ? 'active'
+        : isPendingApproval || isApproved
+          ? 'completed'
+          : isRejected && plan.rejectionStage === 'review'
+            ? 'rejected'
+            : 'pending',
+      timestamp: plan.reviewedAt,
+    },
+    {
+      titleKey: 'planDetail.timeline.step3',
+      subtitleKey: 'planDetail.timeline.labManager',
+      state: isPendingApproval
+        ? 'active'
+        : isApproved
+          ? 'completed'
+          : isRejected && plan.rejectionStage === 'approval'
+            ? 'rejected'
+            : 'pending',
+      timestamp: plan.approvedAt,
+    },
+  ];
+
+  const connectorCompleted = [
+    isPendingReview || isPendingApproval || isApproved,
+    isPendingApproval || isApproved,
+  ];
+
+  const iconMap: Record<StepState, React.ReactNode> = {
+    active: <Circle className="h-5 w-5" />,
+    completed: <CheckCircle2 className="h-5 w-5" />,
+    rejected: <XCircle className="h-5 w-5" />,
+    pending: <Circle className="h-5 w-5" />,
+  };
+
+  /** QM 인라인 액션 (2단계에서만 표시) */
+  const reviewActions = canReview ? (
+    <div className="mt-3 flex flex-col items-center sm:items-center gap-1">
+      <Button
+        size="sm"
+        onClick={() => reviewMutation.mutate()}
+        disabled={reviewMutation.isPending || !plan}
+        className={`${ACTION_BUTTON_TOKENS.inline.size} w-24`}
+        aria-label={t('planDetail.timeline.ariaConfirmReview')}
+      >
+        {reviewMutation.isPending ? (
+          <Loader2 className={getLoadingSpinnerClasses()} aria-hidden="true" />
+        ) : (
+          <>
+            <Check className={ACTION_BUTTON_TOKENS.inline.iconSize} />
+            {t('planDetail.actions.confirmReview')}
+          </>
+        )}
+      </Button>
+
+      <Collapsible open={showReviewComment} onOpenChange={setShowReviewComment}>
+        <CollapsibleTrigger
+          className={cn(
+            COLLAPSIBLE_TOKENS.trigger.fontSize,
+            COLLAPSIBLE_TOKENS.trigger.color,
+            COLLAPSIBLE_TOKENS.trigger.gap,
+            COLLAPSIBLE_TOKENS.trigger.focus,
+            COLLAPSIBLE_TOKENS.trigger.transition,
+            'flex items-center mt-1'
+          )}
+        >
+          {showReviewComment ? (
+            <>
+              <ChevronUp className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
+              {t('planDetail.actions.collapseComment')}
+            </>
+          ) : (
+            <>
+              <Plus className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
+              {t('planDetail.actions.addComment')}
+            </>
+          )}
+        </CollapsibleTrigger>
+        <CollapsibleContent className={COLLAPSIBLE_TOKENS.content.marginTop}>
+          <Input
+            placeholder={t('planDetail.placeholders.reviewComment')}
+            value={reviewComment}
+            onChange={(e) => setReviewComment(e.target.value)}
+            className={cn(
+              COLLAPSIBLE_TOKENS.content.input.width,
+              COLLAPSIBLE_TOKENS.content.input.fontSize,
+              COLLAPSIBLE_TOKENS.content.input.height
+            )}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      <Button
+        variant="link"
+        size="sm"
+        onClick={onRejectClick}
+        className={cn(
+          COLLAPSIBLE_TOKENS.trigger.fontSize,
+          COLLAPSIBLE_TOKENS.trigger.transition,
+          'text-muted-foreground hover:text-destructive underline mt-1 h-auto p-0'
+        )}
+        disabled={!plan}
+      >
+        {t('planDetail.actions.reject')}
+      </Button>
+    </div>
+  ) : null;
+
+  const layout = CALIBRATION_PLAN_TIMELINE_TOKENS.layout;
+
   return (
     <Card>
       <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          {/* 1단계: 작성 */}
-          <div className="flex flex-col items-center flex-1">
-            <div
-              className={getCalibrationPlanTimelineNodeClasses(isDraft ? 'active' : 'completed')}
-            >
-              {isDraft ? <Circle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-            </div>
-            <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
-              {t('planDetail.timeline.step1')}
-            </span>
-            <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
-              {t('planDetail.timeline.technicalManager')}
-            </span>
-            {plan.submittedAt && (
-              <time
-                dateTime={plan.submittedAt}
-                className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
-              >
-                {formatDate(plan.submittedAt, 'MM/dd HH:mm')}
-              </time>
-            )}
-          </div>
-
-          {/* 연결선 1-2 */}
-          <div
-            className={getCalibrationPlanTimelineConnectorClasses(
-              isPendingReview || isPendingApproval || isApproved
-            )}
-          />
-
-          {/* 2단계: 확인 */}
-          <div className="flex flex-col items-center flex-1">
-            <div
-              className={getCalibrationPlanTimelineNodeClasses(
-                isPendingReview
-                  ? 'active'
-                  : isPendingApproval || isApproved
-                    ? 'completed'
-                    : isRejected && plan.rejectionStage === 'review'
-                      ? 'rejected'
-                      : 'pending'
-              )}
-            >
-              {isPendingReview ? (
-                <Circle className="h-5 w-5" />
-              ) : isPendingApproval || isApproved ? (
-                <CheckCircle2 className="h-5 w-5" />
-              ) : isRejected && plan.rejectionStage === 'review' ? (
-                <XCircle className="h-5 w-5" />
-              ) : (
-                <Circle className="h-5 w-5" />
-              )}
-            </div>
-            <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
-              {t('planDetail.timeline.step2')}
-            </span>
-            <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
-              {t('planDetail.timeline.qualityManager')}
-            </span>
-            {plan.reviewedAt && (
-              <time
-                dateTime={plan.reviewedAt}
-                className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
-              >
-                {formatDate(plan.reviewedAt, 'MM/dd HH:mm')}
-              </time>
-            )}
-
-            {/* QM 인라인 액션 */}
-            {canReview && (
-              <div className="mt-3 flex flex-col items-center gap-1">
-                <Button
-                  size="sm"
-                  onClick={() => reviewMutation.mutate()}
-                  disabled={reviewMutation.isPending || !plan}
-                  className={`${ACTION_BUTTON_TOKENS.inline.size} w-24`}
-                  aria-label={t('planDetail.timeline.ariaConfirmReview')}
-                >
-                  {reviewMutation.isPending ? (
-                    <Loader2 className={getLoadingSpinnerClasses()} aria-hidden="true" />
-                  ) : (
-                    <>
-                      <Check className={ACTION_BUTTON_TOKENS.inline.iconSize} />
-                      {t('planDetail.actions.confirmReview')}
-                    </>
+        {/* ── Desktop: 수평 타임라인 (sm 이상) ── */}
+        <div className={layout.horizontal}>
+          {steps.map((step, idx) => (
+            <React.Fragment key={step.titleKey}>
+              {idx > 0 && (
+                <div
+                  className={getCalibrationPlanTimelineConnectorClasses(
+                    connectorCompleted[idx - 1]
                   )}
-                </Button>
-
-                <Collapsible open={showReviewComment} onOpenChange={setShowReviewComment}>
-                  <CollapsibleTrigger
-                    className={cn(
-                      COLLAPSIBLE_TOKENS.trigger.fontSize,
-                      COLLAPSIBLE_TOKENS.trigger.color,
-                      COLLAPSIBLE_TOKENS.trigger.gap,
-                      COLLAPSIBLE_TOKENS.trigger.focus,
-                      COLLAPSIBLE_TOKENS.trigger.transition,
-                      'flex items-center mt-1'
-                    )}
+                />
+              )}
+              <div className="flex flex-col items-center flex-1">
+                <div className={getCalibrationPlanTimelineNodeClasses(step.state)}>
+                  {iconMap[step.state]}
+                </div>
+                <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
+                  {t(step.titleKey as Parameters<typeof t>[0])}
+                </span>
+                <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
+                  {t(step.subtitleKey as Parameters<typeof t>[0])}
+                </span>
+                {step.timestamp && (
+                  <time
+                    dateTime={step.timestamp}
+                    className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
                   >
-                    {showReviewComment ? (
-                      <>
-                        <ChevronUp className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
-                        {t('planDetail.actions.collapseComment')}
-                      </>
-                    ) : (
-                      <>
-                        <Plus className={COLLAPSIBLE_TOKENS.trigger.iconSize} />
-                        {t('planDetail.actions.addComment')}
-                      </>
-                    )}
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className={COLLAPSIBLE_TOKENS.content.marginTop}>
-                    <Input
-                      placeholder={t('planDetail.placeholders.reviewComment')}
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      className={cn(
-                        COLLAPSIBLE_TOKENS.content.input.width,
-                        COLLAPSIBLE_TOKENS.content.input.fontSize,
-                        COLLAPSIBLE_TOKENS.content.input.height
-                      )}
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
-
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={onRejectClick}
-                  className={cn(
-                    COLLAPSIBLE_TOKENS.trigger.fontSize,
-                    COLLAPSIBLE_TOKENS.trigger.transition,
-                    'text-muted-foreground hover:text-destructive underline mt-1 h-auto p-0'
-                  )}
-                  disabled={!plan}
-                >
-                  {t('planDetail.actions.reject')}
-                </Button>
+                    {formatDate(step.timestamp, 'MM/dd HH:mm')}
+                  </time>
+                )}
+                {idx === 1 && reviewActions}
               </div>
-            )}
-          </div>
+            </React.Fragment>
+          ))}
+        </div>
 
-          {/* 연결선 2-3 */}
-          <div
-            className={getCalibrationPlanTimelineConnectorClasses(isPendingApproval || isApproved)}
-          />
-
-          {/* 3단계: 승인 */}
-          <div className="flex flex-col items-center flex-1">
-            <div
-              className={getCalibrationPlanTimelineNodeClasses(
-                isPendingApproval
-                  ? 'active'
-                  : isApproved
-                    ? 'completed'
-                    : isRejected && plan.rejectionStage === 'approval'
-                      ? 'rejected'
-                      : 'pending'
+        {/* ── Mobile: 수직 타임라인 (sm 미만) ── */}
+        <div className={layout.vertical}>
+          {steps.map((step, idx) => (
+            <React.Fragment key={step.titleKey}>
+              {idx > 0 && (
+                <div className={layout.verticalConnectorWrap}>
+                  <div
+                    className={getCalibrationPlanTimelineVerticalConnectorClasses(
+                      connectorCompleted[idx - 1]
+                    )}
+                  />
+                </div>
               )}
-            >
-              {isPendingApproval ? (
-                <Circle className="h-5 w-5" />
-              ) : isApproved ? (
-                <CheckCircle2 className="h-5 w-5" />
-              ) : isRejected && plan.rejectionStage === 'approval' ? (
-                <XCircle className="h-5 w-5" />
-              ) : (
-                <Circle className="h-5 w-5" />
-              )}
-            </div>
-            <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.title}>
-              {t('planDetail.timeline.step3')}
-            </span>
-            <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
-              {t('planDetail.timeline.labManager')}
-            </span>
-            {plan.approvedAt && (
-              <time
-                dateTime={plan.approvedAt}
-                className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
-              >
-                {formatDate(plan.approvedAt, 'MM/dd HH:mm')}
-              </time>
-            )}
-          </div>
+              <div className={layout.verticalStep}>
+                <div className={cn(getCalibrationPlanTimelineNodeClasses(step.state), 'shrink-0')}>
+                  {iconMap[step.state]}
+                </div>
+                <div className="flex flex-col pt-1">
+                  <span className="text-sm font-medium">
+                    {t(step.titleKey as Parameters<typeof t>[0])}
+                  </span>
+                  <span className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.subtitle}>
+                    {t(step.subtitleKey as Parameters<typeof t>[0])}
+                  </span>
+                  {step.timestamp && (
+                    <time
+                      dateTime={step.timestamp}
+                      className={CALIBRATION_PLAN_TIMELINE_TOKENS.label.timestamp}
+                    >
+                      {formatDate(step.timestamp, 'MM/dd HH:mm')}
+                    </time>
+                  )}
+                  {idx === 1 && reviewActions}
+                </div>
+              </div>
+            </React.Fragment>
+          ))}
         </div>
       </CardContent>
     </Card>
