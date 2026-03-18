@@ -52,6 +52,8 @@ argument-hint: '[선택사항: 특정 컴포넌트 경로]'
 | `apps/frontend/hooks/use-sidebar-state.ts`                                                               | 사이드바 상태 훅 (localStorage UI 상태, 서버 상태 아님)     |
 | `apps/frontend/hooks/use-idle-timeout.ts`                                                                | Idle Timeout 훅 (UI 타이머 상태, 서버 상태 아님)            |
 | `apps/frontend/hooks/use-debounced-value.ts`                                                             | 디바운스 훅 (UI 입력 지연 — 서버 상태 아님, 재사용 유틸)    |
+| `apps/frontend/components/non-conformances/NCDetailClient.tsx`                                           | NC 상세 클라이언트 (useOptimisticMutation 참조)             |
+| `apps/frontend/app/(dashboard)/non-conformances/NonConformancesContent.tsx`                              | NC 목록 콘텐츠 (useQuery + KPI 참조)                        |
 
 ## Workflow
 

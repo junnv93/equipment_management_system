@@ -53,6 +53,7 @@ Design Token System v2의 3계층 아키텍처(Primitives → Semantic → Compo
 | `apps/frontend/lib/design-tokens/components/non-conformance.ts`                                    | Layer 3 Non-Conformance 토큰                               |
 | `apps/frontend/lib/design-tokens/components/settings.ts`                                           | Layer 3 Settings 토큰                                      |
 | `apps/frontend/lib/design-tokens/components/team.ts`                                               | Layer 3 Team 토큰                                          |
+| `apps/frontend/lib/design-tokens/components/page-layout.ts`                                        | Layer 3 Page Layout 토큰 (페이지 컨테이너 SSOT)            |
 | `apps/frontend/styles/globals.css`                                                                 | Brand CSS 변수 정의 (--brand-color-\*)                     |
 | `apps/frontend/tailwind.config.js`                                                                 | Tailwind brand 팔레트 확장 설정                            |
 | `apps/frontend/lib/utils/calibration-status.ts`                                                    | 교정 상태 유틸리티 (design-tokens 사용)                    |
