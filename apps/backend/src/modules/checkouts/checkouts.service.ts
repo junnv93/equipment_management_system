@@ -28,6 +28,7 @@ import {
 } from '@equipment-management/schemas';
 import {
   CACHE_TTL,
+  CHECKOUT_DATA_SCOPE,
   getAllowedStatusesForPurpose,
   Permission,
 } from '@equipment-management/shared-constants';
@@ -46,6 +47,9 @@ import { ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '../notifications/events/notification-events';
 import { likeContains, safeIlike } from '../../common/utils/like-escape';
+import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
+import type { AuthenticatedRequest } from '../../types/auth';
+import type { PaginationMeta } from '../../common/types/api-response';
 // Drizzle에서 자동 추론되는 타입 사용
 type Checkout = typeof checkouts.$inferSelect;
 
@@ -80,17 +84,6 @@ export interface CheckoutWithMeta extends Checkout {
 interface QueryConditions {
   whereConditions: SQL<unknown>[];
   orderBy: SQL<unknown>[];
-}
-
-/**
- * 페이지네이션 메타데이터 인터페이스
- */
-interface PaginationMeta {
-  totalItems: number;
-  itemCount: number;
-  itemsPerPage: number;
-  totalPages: number;
-  currentPage: number;
 }
 
 /**
@@ -841,6 +834,61 @@ export class CheckoutsService extends VersionedBaseService {
     return checkout;
   }
 
+  // ==========================================================================
+  // 스코프 접근 제어 헬퍼 (purpose-aware)
+  //
+  // 도메인 규칙:
+  // - calibration/repair: 장비 사이트/팀 기준 (자기 팀 장비만)
+  // - rental: lender 사이트/팀 기준 (빌려주는 측이 관리 주체)
+  //
+  // enforceScopeFromData: 이미 조회한 장비 데이터 재활용 (0 추가 쿼리)
+  // enforceScopeFromCheckout: checkout만으로 검증 (rental=0, cal/repair=1 쿼리)
+  // ==========================================================================
+
+  /**
+   * 이미 조회한 장비 데이터로 스코프 검증 (추가 DB 쿼리 없음)
+   * approve, rejectReturn 등 장비 데이터를 이미 가진 메서드에서 사용
+   */
+  private enforceScopeFromData(
+    checkout: { purpose: string; lenderSiteId: string | null; lenderTeamId: string | null },
+    equipmentSite: string,
+    equipmentTeamId: string | null,
+    req: AuthenticatedRequest
+  ): void {
+    const { site, teamId } =
+      checkout.purpose === CPVal.RENTAL && checkout.lenderSiteId
+        ? { site: checkout.lenderSiteId, teamId: checkout.lenderTeamId }
+        : { site: equipmentSite, teamId: equipmentTeamId };
+
+    enforceSiteAccess(req, site, CHECKOUT_DATA_SCOPE, teamId);
+  }
+
+  /**
+   * checkout 레코드만으로 스코프 검증
+   * rental: lenderSiteId/lenderTeamId 사용 (0 추가 쿼리)
+   * calibration/repair: 첫 번째 장비의 사이트/팀 조회 (1 쿼리)
+   */
+  private async enforceScopeFromCheckout(
+    checkout: Checkout,
+    req: AuthenticatedRequest
+  ): Promise<void> {
+    if (checkout.purpose === CPVal.RENTAL && checkout.lenderSiteId) {
+      enforceSiteAccess(req, checkout.lenderSiteId, CHECKOUT_DATA_SCOPE, checkout.lenderTeamId);
+      return;
+    }
+
+    const [equip] = await this.db
+      .select({ site: schema.equipment.site, teamId: schema.equipment.teamId })
+      .from(checkoutItems)
+      .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
+      .where(eq(checkoutItems.checkoutId, checkout.id))
+      .limit(1);
+
+    if (equip) {
+      enforceSiteAccess(req, equip.site, CHECKOUT_DATA_SCOPE, equip.teamId);
+    }
+  }
+
   /**
    * 팀별 권한 체크 헬퍼 메서드
    * EMC팀은 RF팀 장비 반출 신청/승인 불가 (같은 사이트 내에서도)
@@ -1007,7 +1055,7 @@ export class CheckoutsService extends VersionedBaseService {
       const allowedStatuses = getAllowedStatusesForPurpose(createCheckoutDto.purpose);
       const purposeVal = createCheckoutDto.purpose;
 
-      for (const [equipmentId, equip] of equipmentMap) {
+      for (const [_equipmentId, equip] of equipmentMap) {
         // 목적별 허용 상태 검증 (SSOT: shared-constants에서 규칙 import)
         if (!allowedStatuses.includes(equip.status as never)) {
           const statusLabel =
@@ -1151,7 +1199,7 @@ export class CheckoutsService extends VersionedBaseService {
   async approve(
     uuid: string,
     approveDto: ApproveCheckoutDto & { approverId: string },
-    approverTeamId?: string
+    req: AuthenticatedRequest
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
@@ -1184,7 +1232,14 @@ export class CheckoutsService extends VersionedBaseService {
       const equipmentIds = items.map((item) => item.equipmentId);
       const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
 
+      // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0)
+      const firstEquip = equipmentMap.values().next().value;
+      if (firstEquip) {
+        this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+      }
+
       // 사용자 팀 classification 조회 (1회)
+      const approverTeamId = req.user?.teamId;
       let approverTeamClassification: string | null | undefined;
       if (approverTeamId) {
         const approverTeam = await this.teamsService.findOne(approverTeamId);
@@ -1258,7 +1313,8 @@ export class CheckoutsService extends VersionedBaseService {
    */
   async reject(
     uuid: string,
-    rejectDto: RejectCheckoutDto & { approverId: string }
+    rejectDto: RejectCheckoutDto & { approverId: string },
+    req: AuthenticatedRequest
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
@@ -1268,6 +1324,7 @@ export class CheckoutsService extends VersionedBaseService {
       }
 
       const checkout = await this.findOne(uuid);
+      await this.enforceScopeFromCheckout(checkout, req);
 
       // 대기 중인 상태만 반려 가능
       if (checkout.status !== CSVal.PENDING) {
@@ -1340,13 +1397,15 @@ export class CheckoutsService extends VersionedBaseService {
     dto: {
       version: number;
       itemConditions?: Array<{ equipmentId: string; conditionBefore: string }>;
-    }
+    },
+    req: AuthenticatedRequest
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
 
       const checkout = await this.findOne(uuid);
+      await this.enforceScopeFromCheckout(checkout, req);
 
       if (checkout.status !== CSVal.APPROVED) {
         throw new BadRequestException({
@@ -1433,7 +1492,8 @@ export class CheckoutsService extends VersionedBaseService {
   async returnCheckout(
     uuid: string,
     returnDto: ReturnCheckoutDto,
-    returnerId: string
+    returnerId: string,
+    req: AuthenticatedRequest
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
@@ -1441,6 +1501,7 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(returnerId, 'returnerId');
 
       const checkout = await this.findOne(uuid);
+      await this.enforceScopeFromCheckout(checkout, req);
 
       if (checkout.status !== CSVal.CHECKED_OUT) {
         throw new BadRequestException({
@@ -1554,7 +1615,8 @@ export class CheckoutsService extends VersionedBaseService {
    */
   async approveReturn(
     uuid: string,
-    approveReturnDto: ApproveReturnDto & { approverId: string }
+    approveReturnDto: ApproveReturnDto & { approverId: string },
+    req: AuthenticatedRequest
   ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
@@ -1562,6 +1624,7 @@ export class CheckoutsService extends VersionedBaseService {
       this.validateUuid(approveReturnDto.approverId, 'approverId');
 
       const checkout = await this.findOne(uuid);
+      await this.enforceScopeFromCheckout(checkout, req);
 
       if (checkout.status !== CSVal.RETURNED) {
         throw new BadRequestException({
@@ -1641,7 +1704,8 @@ export class CheckoutsService extends VersionedBaseService {
    */
   async rejectReturn(
     uuid: string,
-    rejectReturnDto: RejectReturnDto & { approverId: string; approverTeamId?: string }
+    rejectReturnDto: RejectReturnDto & { approverId: string; approverTeamId?: string },
+    req: AuthenticatedRequest
   ): Promise<Checkout> {
     try {
       this.validateUuid(uuid, 'checkoutId');
@@ -1672,6 +1736,13 @@ export class CheckoutsService extends VersionedBaseService {
       if (rejectReturnDto.approverTeamId) {
         const equipmentIds = items.map((item) => item.equipmentId);
         const equipmentMap = await this.equipmentService.findByIds(equipmentIds, true);
+
+        // ✅ 스코프 접근 제어 — 이미 조회한 장비 데이터 재활용 (추가 쿼리 0)
+        const firstEquip = equipmentMap.values().next().value;
+        if (firstEquip) {
+          this.enforceScopeFromData(checkout, firstEquip.site, firstEquip.teamId, req);
+        }
+
         const approverTeam = await this.teamsService.findOne(rejectReturnDto.approverTeamId);
         const approverClassification = approverTeam?.classification;
 
@@ -1760,13 +1831,15 @@ export class CheckoutsService extends VersionedBaseService {
   async submitConditionCheck(
     uuid: string,
     dto: CreateConditionCheckDto,
-    checkerId: string
+    checkerId: string,
+    req: AuthenticatedRequest
   ): Promise<typeof conditionChecks.$inferSelect> {
     try {
       this.validateUuid(uuid, 'checkoutId');
       this.validateUuid(checkerId, 'checkerId');
 
       const checkout = await this.findOne(uuid);
+      await this.enforceScopeFromCheckout(checkout, req);
 
       // 대여 목적만 상태 확인 가능
       if (checkout.purpose !== CPVal.RENTAL) {
@@ -1916,12 +1989,15 @@ export class CheckoutsService extends VersionedBaseService {
    * 승인 전 신청자만 취소 가능 (요구사항)
    * ✅ 개선: UUID 검증 추가 (Rentals와 동일한 패턴)
    */
-  async cancel(uuid: string): Promise<Checkout> {
+  async cancel(uuid: string, req?: AuthenticatedRequest): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
 
       const checkout = await this.findOne(uuid);
+      if (req) {
+        await this.enforceScopeFromCheckout(checkout, req);
+      }
 
       if (checkout.status !== CSVal.PENDING) {
         throw new BadRequestException({
@@ -1957,12 +2033,17 @@ export class CheckoutsService extends VersionedBaseService {
    * UUID로 반출 업데이트
    * ✅ 개선: UUID 검증, 날짜 처리 강화 (Rentals와 동일한 패턴)
    */
-  async update(uuid: string, updateCheckoutDto: UpdateCheckoutDto): Promise<Checkout> {
+  async update(
+    uuid: string,
+    updateCheckoutDto: UpdateCheckoutDto,
+    req: AuthenticatedRequest
+  ): Promise<Checkout> {
     try {
       // ✅ UUID 형식 검증
       this.validateUuid(uuid, 'checkoutId');
 
       const existingCheckout = await this.findOne(uuid);
+      await this.enforceScopeFromCheckout(existingCheckout, req);
 
       // 승인된 반출은 수정 불가
       if (existingCheckout.status !== CSVal.PENDING) {
@@ -2048,39 +2129,60 @@ export class CheckoutsService extends VersionedBaseService {
   /**
    * UUID로 반출 삭제 (취소로 처리)
    */
-  async remove(uuid: string): Promise<Checkout> {
-    return this.cancel(uuid);
+  async remove(uuid: string, req?: AuthenticatedRequest): Promise<Checkout> {
+    return this.cancel(uuid, req);
   }
 
   /**
-   * 반출의 사이트 및 팀 조회 (checkout_items → equipment 경유)
-   * 크로스사이트/크로스팀 접근 제어에 사용
+   * 반출의 접근 제어 스코프 결정 (purpose-aware)
+   *
+   * 도메인 규칙:
+   * - calibration/repair: 요청자(requester)의 사이트/팀 기준
+   *   → 리스트 필터(SiteScopeInterceptor)와 동일한 데이터 소스 사용
+   *   → 교정/수리는 자기 팀 장비만 반출 가능 (생성 시 보장)
+   * - rental: lender 사이트/팀 기준 (빌려주는 측이 관리 주체)
+   *
+   * 리스트 쿼리와 단건 접근 제어가 동일한 기준(requester 팀)을 사용하여
+   * "리스트에 보이지만 승인 불가" 불일치를 방지한다.
    */
-  async getCheckoutSiteAndTeam(
+  async getCheckoutScopeContext(
     checkoutId: string
   ): Promise<{ site: string; teamId: string | null }> {
-    const result = await this.db
-      .select({ site: schema.equipment.site, teamId: schema.equipment.teamId })
-      .from(checkoutItems)
-      .innerJoin(schema.equipment, eq(checkoutItems.equipmentId, schema.equipment.id))
-      .where(eq(checkoutItems.checkoutId, checkoutId));
+    const [checkout] = await this.db
+      .select({
+        purpose: checkouts.purpose,
+        requesterId: checkouts.requesterId,
+        lenderSiteId: checkouts.lenderSiteId,
+        lenderTeamId: checkouts.lenderTeamId,
+      })
+      .from(checkouts)
+      .where(eq(checkouts.id, checkoutId));
 
-    if (result.length === 0) {
+    if (!checkout) {
       throw new NotFoundException({
         code: 'CHECKOUT_NOT_FOUND',
-        message: `Checkout ${checkoutId} not found or has no equipment items.`,
+        message: `Checkout ${checkoutId} not found.`,
       });
     }
 
-    // defense-in-depth: 다중 사이트 장비 혼합 방지
-    const sites = new Set(result.map((r) => r.site));
-    if (sites.size > 1) {
-      throw new BadRequestException({
-        code: 'CHECKOUT_CROSS_SITE_MIXED',
-        message: 'Checkout contains equipment from multiple sites',
+    // rental + lender 정보 → lender 기준 (장비 JOIN 불필요)
+    if (checkout.purpose === CPVal.RENTAL && checkout.lenderSiteId) {
+      return { site: checkout.lenderSiteId, teamId: checkout.lenderTeamId };
+    }
+
+    // calibration/repair → 요청자의 사이트/팀 기준
+    const [requester] = await this.db
+      .select({ site: schema.users.site, teamId: schema.users.teamId })
+      .from(schema.users)
+      .where(eq(schema.users.id, checkout.requesterId));
+
+    if (!requester?.site) {
+      throw new NotFoundException({
+        code: 'CHECKOUT_NOT_FOUND',
+        message: `Checkout ${checkoutId} requester not found.`,
       });
     }
 
-    return result[0];
+    return { site: requester.site, teamId: requester.teamId };
   }
 }

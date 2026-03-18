@@ -52,19 +52,12 @@ import { Permission, CHECKOUT_DATA_SCOPE } from '@equipment-management/shared-co
 import { AuthenticatedRequest } from '../../types/auth';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { extractUserId } from '../../common/utils/extract-user';
-import { enforceSiteAccess } from '../../common/utils/enforce-site-access';
 
 @ApiTags('반출입 관리')
 @ApiBearerAuth()
 @Controller('checkouts')
 export class CheckoutsController {
   constructor(private readonly checkoutsService: CheckoutsService) {}
-
-  /** 크로스사이트/크로스팀 접근 제어 — checkout_items → equipment 경유 */
-  private async enforceCheckoutAccess(uuid: string, req: AuthenticatedRequest): Promise<void> {
-    const { site, teamId } = await this.checkoutsService.getCheckoutSiteAndTeam(uuid);
-    enforceSiteAccess(req, site, CHECKOUT_DATA_SCOPE, teamId);
-  }
 
   @Post()
   @RequirePermissions(Permission.CREATE_CHECKOUT)
@@ -197,8 +190,7 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    await this.enforceCheckoutAccess(uuid, req);
-    return this.checkoutsService.update(uuid, updateCheckoutDto);
+    return this.checkoutsService.update(uuid, updateCheckoutDto, req);
   }
 
   @Delete(':uuid')
@@ -217,8 +209,7 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    await this.enforceCheckoutAccess(uuid, req);
-    return this.checkoutsService.remove(uuid);
+    return this.checkoutsService.remove(uuid, req);
   }
 
   @Patch(':uuid/approve')
@@ -270,14 +261,10 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    await this.enforceCheckoutAccess(uuid, req);
     // 승인자 ID는 인증된 세션에서 추출 (클라이언트 입력 신뢰 금지)
     const approverId = extractUserId(req);
-
-    const approverTeamId = req.user?.teamId; // 승인자 팀 ID
-
-    // DTO의 approverId는 무시하고 세션에서 추출한 값 사용
-    return this.checkoutsService.approve(uuid, { ...approveDto, approverId }, approverTeamId);
+    // 스코프 접근 제어 + 팀 권한 체크는 서비스 내부에서 수행 (쿼리 중복 제거)
+    return this.checkoutsService.approve(uuid, { ...approveDto, approverId }, req);
   }
 
   @Patch(':uuid/reject')
@@ -295,17 +282,14 @@ export class CheckoutsController {
     @Body() rejectDto: RejectCheckoutDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    await this.enforceCheckoutAccess(uuid, req);
-    // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
     const approverId = extractUserId(req);
-    // 반려 사유 필수 검증 (요구사항)
     if (!rejectDto.reason || rejectDto.reason.trim().length === 0) {
       throw new BadRequestException({
         code: 'CHECKOUT_REJECTION_REASON_REQUIRED',
         message: 'Rejection reason is required.',
       });
     }
-    return this.checkoutsService.reject(uuid, { ...rejectDto, approverId });
+    return this.checkoutsService.reject(uuid, { ...rejectDto, approverId }, req);
   }
 
   @Post(':uuid/start')
@@ -357,11 +341,14 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    await this.enforceCheckoutAccess(uuid, req);
-    return this.checkoutsService.startCheckout(uuid, {
-      version: startDto.version,
-      itemConditions: startDto.itemConditions,
-    });
+    return this.checkoutsService.startCheckout(
+      uuid,
+      {
+        version: startDto.version,
+        itemConditions: startDto.itemConditions,
+      },
+      req
+    );
   }
 
   @Post(':uuid/return')
@@ -421,9 +408,8 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    await this.enforceCheckoutAccess(uuid, req);
     const returnerId = extractUserId(req);
-    return this.checkoutsService.returnCheckout(uuid, returnDto, returnerId);
+    return this.checkoutsService.returnCheckout(uuid, returnDto, returnerId, req);
   }
 
   @Patch(':uuid/approve-return')
@@ -483,10 +469,8 @@ export class CheckoutsController {
     lenderConfirmedAt: Date | null;
     lenderConfirmNotes: string | null;
   }> {
-    await this.enforceCheckoutAccess(uuid, req);
-    // ✅ Rule 2: approverId는 서버에서 추출 (클라이언트 body 무시)
     const approverId = extractUserId(req);
-    return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId });
+    return this.checkoutsService.approveReturn(uuid, { ...approveReturnDto, approverId }, req);
   }
 
   @Patch(':uuid/reject-return')
@@ -516,14 +500,17 @@ export class CheckoutsController {
     @Body() rejectReturnDto: RejectReturnDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    await this.enforceCheckoutAccess(uuid, req);
     const approverId = extractUserId(req);
     const approverTeamId = req.user?.teamId;
-    return this.checkoutsService.rejectReturn(uuid, {
-      ...rejectReturnDto,
-      approverId,
-      approverTeamId,
-    });
+    return this.checkoutsService.rejectReturn(
+      uuid,
+      {
+        ...rejectReturnDto,
+        approverId,
+        approverTeamId,
+      },
+      req
+    );
   }
 
   @Post(':uuid/condition-check')
@@ -547,9 +534,8 @@ export class CheckoutsController {
     @Body() dto: CreateConditionCheckDto,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    await this.enforceCheckoutAccess(uuid, req);
     const checkerId = extractUserId(req);
-    return this.checkoutsService.submitConditionCheck(uuid, dto, checkerId);
+    return this.checkoutsService.submitConditionCheck(uuid, dto, checkerId, req);
   }
 
   @Get(':uuid/condition-checks')
@@ -579,7 +565,6 @@ export class CheckoutsController {
     @Param('uuid', ParseUUIDPipe) uuid: string,
     @Request() req: AuthenticatedRequest
   ): Promise<unknown> {
-    await this.enforceCheckoutAccess(uuid, req);
-    return this.checkoutsService.cancel(uuid);
+    return this.checkoutsService.cancel(uuid, req);
   }
 }
