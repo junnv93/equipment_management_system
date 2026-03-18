@@ -46,7 +46,7 @@ import {
   APPROVAL_STATUS_LABELS as STATUS_LABELS,
   APPROVAL_STATUS_COLORS as STATUS_COLORS,
 } from '@/components/admin/approval-constants';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 export default function CalibrationApprovalsContent() {
   const _router = useRouter();
@@ -177,9 +177,9 @@ export default function CalibrationApprovalsContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground">{t('description')}</p>
+      <div className={PAGE_HEADER_TOKENS.titleGroup}>
+        <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>
       </div>
 
       <Card>

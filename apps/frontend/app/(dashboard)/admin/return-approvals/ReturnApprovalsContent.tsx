@@ -27,7 +27,7 @@ import { ApprovalLoadingSkeleton } from '@/components/admin/ApprovalLoadingSkele
 import { ApprovalEmptyState } from '@/components/admin/ApprovalEmptyState';
 import { useSession } from 'next-auth/react';
 import { CheckoutStatusBadge } from '@/components/checkouts/CheckoutStatusBadge';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 const PURPOSE_COLORS: Record<string, string> = {
   calibration: 'bg-brand-info/10 text-brand-info',
@@ -165,9 +165,9 @@ export default function ReturnApprovalsContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground">{t('description')}</p>
+      <div className={PAGE_HEADER_TOKENS.titleGroup}>
+        <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>
       </div>
 
       <Card>

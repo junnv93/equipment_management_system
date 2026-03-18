@@ -13,6 +13,7 @@ import {
   ncStatusToSemantic,
   NC_APPROVE_BUTTON_TOKENS,
   getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
@@ -150,11 +151,9 @@ export default function NonConformanceApprovalsContent() {
   return (
     <div className={getPageContainerClasses('list', '')}>
       {/* 헤더 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {t('approvals.title')}
-        </h1>
-        <p className="text-muted-foreground mt-1 leading-relaxed">{t('approvals.description')}</p>
+      <div className={`${PAGE_HEADER_TOKENS.titleGroup} mb-6`}>
+        <h1 className={PAGE_HEADER_TOKENS.title}>{t('approvals.title')}</h1>
+        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('approvals.description')}</p>
       </div>
 
       {/* 안내 메시지 — border-l-4 notice 패턴 (info 위계 강조) */}

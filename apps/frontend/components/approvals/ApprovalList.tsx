@@ -44,7 +44,7 @@ export function ApprovalList({
 
   if (isLoading) {
     return (
-      <div className="border border-border rounded-lg overflow-hidden">
+      <div className={APPROVAL_ROW_TOKENS.listContainer}>
         {/* Column header skeleton */}
         <div className={APPROVAL_ROW_TOKENS.container.header}>
           <Skeleton className="h-4 w-4" />
@@ -105,7 +105,7 @@ export function ApprovalList({
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden" data-testid="approval-list">
+    <div className={APPROVAL_ROW_TOKENS.listContainer} data-testid="approval-list">
       {/* Column headers — desktop only */}
       <div className={APPROVAL_ROW_TOKENS.container.header}>
         <div /> {/* checkbox col */}

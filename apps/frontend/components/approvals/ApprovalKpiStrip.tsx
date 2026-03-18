@@ -26,34 +26,43 @@ interface KpiCardProps {
 function KpiCard({ label, value, sub, icon: Icon, colorVariant, isLoading }: KpiCardProps) {
   const tokens = APPROVAL_KPI_STRIP_TOKENS;
   const isUrgent = colorVariant === 'urgent';
+  const numValue = Number(value);
   return (
     <div
       className={cn(
         tokens.card.base,
         tokens.card.hover,
+        tokens.card.hoverWash,
         tokens.card.focus,
-        tokens.borderColors[colorVariant]
+        tokens.borderColors[colorVariant],
+        tokens.hoverWashBg[colorVariant]
       )}
       tabIndex={0}
       role="group"
       aria-label={label}
     >
-      {/* 긴급 KPI pulse dot */}
-      {isUrgent && !isLoading && Number(value) > 0 && (
-        <div className={tokens.pulseDot.container}>
+      {/* 긴급 KPI pulse dot — 0보다 클 때만 */}
+      {isUrgent && !isLoading && numValue > 0 && (
+        <div className={cn(tokens.pulseDot.container, tokens.contentZ)}>
           <div className={tokens.pulseDot.dot} />
           <div className={tokens.pulseDot.ring} />
         </div>
       )}
-      <div className={cn(tokens.iconContainer, tokens.iconBg[colorVariant])}>
+      <div className={cn(tokens.iconContainer, tokens.iconBg[colorVariant], tokens.contentZ)}>
         <Icon className="h-4 w-4" aria-hidden="true" />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className={cn('flex-1 min-w-0', tokens.contentZ)}>
         <div className={tokens.label}>{label}</div>
         {isLoading ? (
           <Skeleton className="h-8 w-14 mt-0.5" />
         ) : (
-          <div className={tokens.value}>{value}</div>
+          <div className={tokens.value}>
+            {value === '0' || value === '-' ? (
+              <span className={tokens.valueEmpty}>{value === '0' ? '–' : value}</span>
+            ) : (
+              value
+            )}
+          </div>
         )}
         {sub && !isLoading && <div className={tokens.sub}>{sub}</div>}
       </div>

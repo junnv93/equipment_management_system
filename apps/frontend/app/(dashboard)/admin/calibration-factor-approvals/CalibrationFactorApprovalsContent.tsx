@@ -30,7 +30,7 @@ import calibrationFactorsApi, {
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calculator, Calendar } from 'lucide-react';
-import { getPageContainerClasses } from '@/lib/design-tokens';
+import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
 
 export default function CalibrationFactorApprovalsContent() {
   const { toast } = useToast();
@@ -183,9 +183,9 @@ export default function CalibrationFactorApprovalsContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground">{t('description')}</p>
+      <div className={PAGE_HEADER_TOKENS.titleGroup}>
+        <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>
       </div>
 
       <Card>

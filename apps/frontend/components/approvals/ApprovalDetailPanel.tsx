@@ -184,7 +184,6 @@ export function ApprovalDetailPanel({
         <div className={tokens.footer.container}>
           <Button
             type="button"
-            variant="ghost"
             className={cn(tokens.footer.button, getApprovalActionButtonClasses('approve'))}
             onClick={() => onApprove(item)}
             disabled={isProcessing}
@@ -196,7 +195,7 @@ export function ApprovalDetailPanel({
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             className={cn(tokens.footer.button, getApprovalActionButtonClasses('reject'))}
             onClick={() => onReject(item)}
             disabled={isProcessing}
