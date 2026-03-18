@@ -34,6 +34,7 @@ import {
   NOTIFICATION_LIST_ITEM_TOKENS,
   getStaggerDelay,
   getPageContainerClasses,
+  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
 
 /**
@@ -85,23 +86,11 @@ export default function NotificationsListContent() {
     <div className={getPageContainerClasses()}>
       {/* 헤더 */}
       <div className={NOTIFICATION_LIST_HEADER_TOKENS.container}>
-        <div className={NOTIFICATION_LIST_HEADER_TOKENS.titleGroup}>
-          <div className={NOTIFICATION_LIST_HEADER_TOKENS.iconWrapper}>
-            <Bell className={NOTIFICATION_LIST_HEADER_TOKENS.icon} aria-hidden="true" />
-            {unreadCount > 0 && (
-              <span className={NOTIFICATION_LIST_HEADER_TOKENS.unreadBadge}>
-                <span className={NOTIFICATION_LIST_HEADER_TOKENS.unreadBadgeText}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              </span>
-            )}
-          </div>
-          <div>
-            <h1 className={NOTIFICATION_LIST_HEADER_TOKENS.title}>{t('title')}</h1>
-            <p className={NOTIFICATION_LIST_HEADER_TOKENS.subtitle}>
-              {unreadCount > 0 ? t('list.unreadCount', { count: unreadCount }) : t('list.noUnread')}
-            </p>
-          </div>
+        <div className={PAGE_HEADER_TOKENS.titleGroup}>
+          <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
+          <p className={PAGE_HEADER_TOKENS.subtitle}>
+            {unreadCount > 0 ? t('list.unreadCount', { count: unreadCount }) : t('list.noUnread')}
+          </p>
         </div>
         {unreadCount > 0 && (
           <Button

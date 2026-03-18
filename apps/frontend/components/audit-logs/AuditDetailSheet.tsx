@@ -83,6 +83,11 @@ export function AuditDetailSheet({ open, onOpenChange, log }: AuditDetailSheetPr
           </div>
 
           {/* ── 본문 ── */}
+          {!log && (
+            <div className={AUDIT_DETAIL_SHEET_TOKENS.body}>
+              <div className={AUDIT_DETAIL_SHEET_TOKENS.bodyEmpty}>{t('emptyLogs')}</div>
+            </div>
+          )}
           {log && (
             <div className={AUDIT_DETAIL_SHEET_TOKENS.body}>
               {/* 사용자 정보 */}

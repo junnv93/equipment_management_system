@@ -4,8 +4,6 @@ import { useTranslations } from 'next-intl';
 import {
   AUDIT_SUMMARY_TOKENS,
   AUDIT_SUMMARY_COLOR_MAP,
-  AUDIT_ACTION_BADGE_TOKENS,
-  DEFAULT_AUDIT_ACTION_BADGE,
   getAuditSummaryCardClasses,
 } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
@@ -51,7 +49,7 @@ export function AuditSummaryBar({
   const t = useTranslations('audit');
 
   return (
-    <div className={AUDIT_SUMMARY_TOKENS.grid} role="group" aria-label={t('filter')}>
+    <div className={AUDIT_SUMMARY_TOKENS.grid} role="radiogroup" aria-label={t('filter')}>
       {SUMMARY_TILES.map(({ action, colorKey }) => {
         const isActive = activeAction === action;
         const isAll = action === '';
@@ -61,7 +59,8 @@ export function AuditSummaryBar({
           <button
             key={action === '' ? 'all' : action}
             type="button"
-            aria-pressed={isActive}
+            role="radio"
+            aria-checked={isActive}
             onClick={() => onActionChange(action)}
             className={getAuditSummaryCardClasses(isActive, colorKey)}
           >
@@ -88,15 +87,16 @@ export function AuditSummaryBar({
                 {(actionCounts[action] ?? 0).toLocaleString()}
               </span>
             ) : (
-              /* 로딩 중 또는 summary 미제공 시 배지로 대체 */
+              /* 로딩 중 또는 summary 미제공 시 —로 대체 */
               <span
                 className={cn(
-                  AUDIT_ACTION_BADGE_TOKENS[action as AuditAction] ?? DEFAULT_AUDIT_ACTION_BADGE,
-                  'text-[9px] px-1.5 py-0.5 self-start mt-0.5'
+                  AUDIT_SUMMARY_TOKENS.count,
+                  AUDIT_SUMMARY_COLOR_MAP[colorKey].count,
+                  AUDIT_SUMMARY_TOKENS.loadingPlaceholder
                 )}
                 aria-hidden="true"
               >
-                {label}
+                —
               </span>
             )}
 

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
-import { ChevronRight, User, MonitorDot, History } from 'lucide-react';
+import { ChevronRight, User, MonitorDot, History, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   AUDIT_ACTION_BADGE_TOKENS,
@@ -10,6 +10,7 @@ import {
   AUDIT_TIMELINE_TOKENS,
   AUDIT_TIMELINE_DOT_COLORS,
   AUDIT_EMPTY_STATE_TOKENS,
+  REFETCH_OVERLAY_TOKENS,
   ANIMATION_PRESETS,
   getStaggerDelay,
 } from '@/lib/design-tokens';
@@ -72,6 +73,8 @@ interface AuditTimelineFeedProps {
   onLogClick: (log: AuditLog) => void;
   getActionLabel: (action: string) => string;
   getEntityTypeLabel: (entityType: string) => string;
+  /** 필터 전환 등으로 데이터 refetch 중일 때 로딩 오버레이 표시 */
+  isRefetching?: boolean;
 }
 
 /**
@@ -87,6 +90,7 @@ export function AuditTimelineFeed({
   onLogClick,
   getActionLabel,
   getEntityTypeLabel,
+  isRefetching = false,
 }: AuditTimelineFeedProps) {
   const t = useTranslations('audit');
 
@@ -109,12 +113,7 @@ export function AuditTimelineFeed({
 
   if (logs.length === 0) {
     return (
-      <div
-        className={cn(
-          AUDIT_TIMELINE_TOKENS.emptyState,
-          'border border-brand-border-subtle rounded-xl'
-        )}
-      >
+      <div className={AUDIT_TIMELINE_TOKENS.emptyState}>
         <History className={AUDIT_EMPTY_STATE_TOKENS.icon} />
         <p className={AUDIT_EMPTY_STATE_TOKENS.text}>{t('emptyLogs')}</p>
       </div>
@@ -122,147 +121,174 @@ export function AuditTimelineFeed({
   }
 
   return (
-    <div className={AUDIT_TIMELINE_TOKENS.entries} aria-label={t('logList')}>
-      {groups.map((group) => (
-        <div key={group.key}>
-          {/* ── 날짜 그룹 헤더 ── */}
-          <div className={AUDIT_TIMELINE_TOKENS.groupHeader}>
-            <span className={AUDIT_TIMELINE_TOKENS.groupDate}>{group.label}</span>
-            <span className={AUDIT_TIMELINE_TOKENS.groupLine} aria-hidden="true" />
-            <span className={AUDIT_TIMELINE_TOKENS.groupCount}>
-              {t('timeline.groupCount', { count: group.logs.length })}
-            </span>
-          </div>
-
-          {/* ── 엔트리 목록 ── */}
-          <div role="list">
-            {group.logs.map((log, idxInGroup) => {
-              const isLast = idxInGroup === group.logs.length - 1;
-              const isDelete = log.action === 'delete';
-              const isSystem = log.userId === SYSTEM_USER_UUID;
-              const dotColor = AUDIT_TIMELINE_DOT_COLORS[log.action] ?? 'bg-brand-text-muted';
-              const flatIdx = flatIndexMap.get(log.id) ?? 0;
-              const diff = getFirstDiff(
-                log.details?.previousValue as Record<string, unknown> | undefined,
-                log.details?.newValue as Record<string, unknown> | undefined
-              );
-
-              return (
-                <div
-                  key={log.id}
-                  role="listitem"
-                  className={cn(
-                    'grid gap-x-3',
-                    AUDIT_TIMELINE_TOKENS.entry,
-                    isDelete && AUDIT_TIMELINE_TOKENS.dangerEntry,
-                    ANIMATION_PRESETS.fadeIn,
-                    'motion-safe:duration-150'
-                  )}
-                  style={{
-                    gridTemplateColumns: '56px 16px 1fr',
-                    animationDelay: getStaggerDelay(Math.min(flatIdx, 9), 'list'),
-                  }}
-                  onClick={() => onLogClick(log)}
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onLogClick(log);
-                    }
-                  }}
-                  aria-label={`${format(new Date(log.timestamp), 'HH:mm')} ${log.userName} ${getActionLabel(log.action)}`}
-                >
-                  {/* 시간 */}
-                  <time
-                    className={AUDIT_TIMELINE_TOKENS.time}
-                    dateTime={
-                      typeof log.timestamp === 'string' ? log.timestamp : String(log.timestamp)
-                    }
-                  >
-                    {format(new Date(log.timestamp), 'HH:mm')}
-                  </time>
-
-                  {/* 스파인 (도트 + 연결선) */}
-                  <div className={AUDIT_TIMELINE_TOKENS.spineWrapper} aria-hidden="true">
-                    <span className={cn(AUDIT_TIMELINE_TOKENS.dot, dotColor)} />
-                    {!isLast && <span className={AUDIT_TIMELINE_TOKENS.line} />}
-                  </div>
-
-                  {/* 본문 */}
-                  <div className={AUDIT_TIMELINE_TOKENS.contentWrapper}>
-                    {/* 메인 행 */}
-                    <div className={AUDIT_TIMELINE_TOKENS.mainRow}>
-                      <span className={AUDIT_TIMELINE_TOKENS.actor}>
-                        {isSystem ? t('systemActor') : log.userName}
-                      </span>
-
-                      <Badge
-                        className={
-                          AUDIT_ACTION_BADGE_TOKENS[log.action as AuditAction] ??
-                          DEFAULT_AUDIT_ACTION_BADGE
-                        }
-                      >
-                        {getActionLabel(log.action)}
-                      </Badge>
-
-                      {log.entityName && (
-                        <span className={AUDIT_TIMELINE_TOKENS.targetText}>
-                          <span className={AUDIT_TIMELINE_TOKENS.targetId}>{log.entityName}</span>
-                        </span>
-                      )}
-
-                      <span className={AUDIT_TIMELINE_TOKENS.entityBadge}>
-                        {getEntityTypeLabel(log.entityType)}
-                      </span>
-
-                      {isDelete && (
-                        <span className={AUDIT_TIMELINE_TOKENS.dangerLabel}>
-                          {t('timeline.dangerLabel')}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 서브 행 (역할, IP) */}
-                    <div className={AUDIT_TIMELINE_TOKENS.subRow}>
-                      {isSystem ? (
-                        <span className={AUDIT_TIMELINE_TOKENS.subItem}>
-                          <MonitorDot aria-hidden="true" className="h-3 w-3" />
-                          Scheduler
-                        </span>
-                      ) : (
-                        <span className={AUDIT_TIMELINE_TOKENS.subItem}>
-                          <User aria-hidden="true" className="h-3 w-3" />
-                          {USER_ROLE_LABELS[log.userRole as UserRole] ?? log.userRole}
-                        </span>
-                      )}
-                      {log.ipAddress && (
-                        <span className={AUDIT_TIMELINE_TOKENS.subMono}>{log.ipAddress}</span>
-                      )}
-                    </div>
-
-                    {/* 인라인 Diff 미리보기 (변경 사항 있을 때만) */}
-                    {diff && (
-                      <div className={AUDIT_TIMELINE_TOKENS.diffPreview} aria-hidden="true">
-                        <span className={AUDIT_TIMELINE_TOKENS.diffOld}>{diff.from}</span>
-                        <span className={AUDIT_TIMELINE_TOKENS.diffArrow}>
-                          {t('timeline.diffArrow')}
-                        </span>
-                        <span className={AUDIT_TIMELINE_TOKENS.diffNew}>{diff.to}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 호버 화살표 */}
-                  <ChevronRight
-                    aria-hidden="true"
-                    className={cn(AUDIT_TIMELINE_TOKENS.hoverArrow, 'h-4 w-4')}
-                  />
-                </div>
-              );
-            })}
-          </div>
+    <div className={REFETCH_OVERLAY_TOKENS.wrapper}>
+      {/* refetch 로딩 스피너 */}
+      {isRefetching && (
+        <div className={REFETCH_OVERLAY_TOKENS.spinnerOverlay} aria-live="polite">
+          <Loader2 className={REFETCH_OVERLAY_TOKENS.spinner} aria-label={t('timeline.loading')} />
         </div>
-      ))}
+      )}
+
+      <div
+        className={cn(
+          AUDIT_TIMELINE_TOKENS.entries,
+          isRefetching && REFETCH_OVERLAY_TOKENS.contentRefetching
+        )}
+        aria-label={t('logList')}
+        aria-busy={isRefetching}
+      >
+        {groups.map((group) => (
+          <div key={group.key}>
+            {/* ── 날짜 그룹 헤더 ── */}
+            <div className={AUDIT_TIMELINE_TOKENS.groupHeader}>
+              <span className={AUDIT_TIMELINE_TOKENS.groupDate}>{group.label}</span>
+              <span className={AUDIT_TIMELINE_TOKENS.groupLine} aria-hidden="true" />
+              <span className={AUDIT_TIMELINE_TOKENS.groupCount}>
+                {t('timeline.groupCount', { count: group.logs.length })}
+              </span>
+            </div>
+
+            {/* ── 엔트리 목록 ── */}
+            <div role="list">
+              {group.logs.map((log, idxInGroup) => {
+                const isLast = idxInGroup === group.logs.length - 1;
+                const isDelete = log.action === 'delete';
+                const isSystem = log.userId === SYSTEM_USER_UUID;
+                const dotColor = AUDIT_TIMELINE_DOT_COLORS[log.action] ?? 'bg-brand-text-muted';
+                const flatIdx = flatIndexMap.get(log.id) ?? 0;
+                const diff = getFirstDiff(
+                  log.details?.previousValue as Record<string, unknown> | undefined,
+                  log.details?.newValue as Record<string, unknown> | undefined
+                );
+
+                return (
+                  <div
+                    key={log.id}
+                    role="listitem"
+                    className={cn(
+                      'grid gap-x-3',
+                      AUDIT_TIMELINE_TOKENS.entry,
+                      isDelete && AUDIT_TIMELINE_TOKENS.dangerEntry,
+                      ANIMATION_PRESETS.fadeIn,
+                      'motion-safe:duration-150'
+                    )}
+                    style={{
+                      gridTemplateColumns: '56px 16px 1fr',
+                      animationDelay: getStaggerDelay(Math.min(flatIdx, 9), 'list'),
+                    }}
+                    onClick={() => onLogClick(log)}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onLogClick(log);
+                      }
+                    }}
+                    aria-label={`${format(new Date(log.timestamp), 'HH:mm')} ${log.userName} ${getActionLabel(log.action)}`}
+                  >
+                    {/* 시간 */}
+                    <time
+                      className={AUDIT_TIMELINE_TOKENS.time}
+                      dateTime={
+                        typeof log.timestamp === 'string' ? log.timestamp : String(log.timestamp)
+                      }
+                    >
+                      {format(new Date(log.timestamp), 'HH:mm')}
+                    </time>
+
+                    {/* 스파인 (도트 + 연결선) */}
+                    <div className={AUDIT_TIMELINE_TOKENS.spineWrapper} aria-hidden="true">
+                      <span className={cn(AUDIT_TIMELINE_TOKENS.dot, dotColor)} />
+                      {!isLast && <span className={AUDIT_TIMELINE_TOKENS.line} />}
+                    </div>
+
+                    {/* 본문 */}
+                    <div className={AUDIT_TIMELINE_TOKENS.contentWrapper}>
+                      {/* 메인 행 */}
+                      <div className={AUDIT_TIMELINE_TOKENS.mainRow}>
+                        <span className={AUDIT_TIMELINE_TOKENS.actor}>
+                          {isSystem ? t('systemActor') : log.userName}
+                        </span>
+
+                        <Badge
+                          className={
+                            AUDIT_ACTION_BADGE_TOKENS[log.action as AuditAction] ??
+                            DEFAULT_AUDIT_ACTION_BADGE
+                          }
+                        >
+                          {getActionLabel(log.action)}
+                        </Badge>
+
+                        {log.entityName && (
+                          <span className={AUDIT_TIMELINE_TOKENS.targetText}>
+                            <span className={AUDIT_TIMELINE_TOKENS.targetId}>{log.entityName}</span>
+                          </span>
+                        )}
+
+                        <span className={AUDIT_TIMELINE_TOKENS.entityBadge}>
+                          {getEntityTypeLabel(log.entityType)}
+                        </span>
+
+                        {isDelete && (
+                          <span className={AUDIT_TIMELINE_TOKENS.dangerLabel}>
+                            {t('timeline.dangerLabel')}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 서브 행 (역할, IP) */}
+                      <div className={AUDIT_TIMELINE_TOKENS.subRow}>
+                        {isSystem ? (
+                          <span className={AUDIT_TIMELINE_TOKENS.subItem}>
+                            <MonitorDot aria-hidden="true" className="h-3 w-3" />
+                            Scheduler
+                          </span>
+                        ) : (
+                          <span className={AUDIT_TIMELINE_TOKENS.subItem}>
+                            <User aria-hidden="true" className="h-3 w-3" />
+                            {USER_ROLE_LABELS[log.userRole as UserRole] ?? log.userRole}
+                          </span>
+                        )}
+                        {log.ipAddress && (
+                          <span className={AUDIT_TIMELINE_TOKENS.subMono}>{log.ipAddress}</span>
+                        )}
+                      </div>
+
+                      {/* 인라인 Diff 미리보기 (변경 사항 있을 때만) */}
+                      {diff && (
+                        <div
+                          className={AUDIT_TIMELINE_TOKENS.diffPreview}
+                          aria-label={t('timeline.diffSummary', {
+                            field: diff.field,
+                            from: diff.from,
+                            to: diff.to,
+                          })}
+                        >
+                          <span className={AUDIT_TIMELINE_TOKENS.diffOld} aria-hidden="true">
+                            {diff.from}
+                          </span>
+                          <span className={AUDIT_TIMELINE_TOKENS.diffArrow} aria-hidden="true">
+                            {t('timeline.diffArrow')}
+                          </span>
+                          <span className={AUDIT_TIMELINE_TOKENS.diffNew} aria-hidden="true">
+                            {diff.to}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 호버 화살표 */}
+                    <ChevronRight
+                      aria-hidden="true"
+                      className={cn(AUDIT_TIMELINE_TOKENS.hoverArrow, 'h-4 w-4')}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

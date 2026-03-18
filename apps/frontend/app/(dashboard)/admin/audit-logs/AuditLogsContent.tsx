@@ -34,7 +34,7 @@ import {
   countActiveFilters,
   type UIAuditLogFilters,
 } from '@/lib/utils/audit-log-filter-utils';
-import { ChevronLeft, ChevronRight, RefreshCw, Shield, Download, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Download, Info } from 'lucide-react';
 import { AUDIT_ACTION_VALUES, AUDIT_ENTITY_TYPE_VALUES } from '@equipment-management/schemas';
 import { createAuditLabelFns } from '@/lib/utils/audit-label-utils';
 import {
@@ -48,6 +48,8 @@ import {
   AUDIT_FILTER_TOKENS,
   AUDIT_HEADER_TOKENS,
   AUDIT_PAGINATION_TOKENS,
+  AUDIT_TIMELINE_TOKENS,
+  AUDIT_FILTER_RESET_TOKENS,
   getAuditActionChipClasses,
   getPageContainerClasses,
 } from '@/lib/design-tokens';
@@ -165,14 +167,11 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
   };
 
   return (
-    <div className={getPageContainerClasses('list', 'space-y-4')}>
+    <div className={getPageContainerClasses('list')}>
       {/* ── 헤더 ──────────────────────────────────────────────── */}
       <div className={AUDIT_HEADER_TOKENS.container}>
         <div className={AUDIT_HEADER_TOKENS.titleGroup}>
-          <h1 className={AUDIT_HEADER_TOKENS.title}>
-            <Shield className="h-5 w-5 text-brand-text-muted shrink-0" />
-            {t('title')}
-          </h1>
+          <h1 className={AUDIT_HEADER_TOKENS.title}>{t('title')}</h1>
           {scope && (
             <p className={AUDIT_HEADER_TOKENS.subtitle}>
               <Info className="h-3.5 w-3.5 shrink-0" />
@@ -230,9 +229,14 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
         {/* 액션 타입 칩 */}
         <div className="space-y-1.5">
           <p className={AUDIT_FILTER_TOKENS.fieldLabel}>{t('filters.action')}</p>
-          <div className={AUDIT_FILTER_TOKENS.actionChipsRow}>
+          <div
+            className={AUDIT_FILTER_TOKENS.actionChipsRow}
+            role="group"
+            aria-label={t('filters.action')}
+          >
             <button
               type="button"
+              aria-pressed={filters.action === ''}
               className={getAuditActionChipClasses(filters.action === '')}
               onClick={() => updateFilters({ action: '' })}
             >
@@ -242,6 +246,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
               <button
                 key={action}
                 type="button"
+                aria-pressed={filters.action === action}
                 className={getAuditActionChipClasses(filters.action === action)}
                 onClick={() => updateFilters({ action: filters.action === action ? '' : action })}
               >
@@ -320,7 +325,7 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 text-xs text-brand-text-muted hover:text-brand-text-primary"
+              className={AUDIT_FILTER_RESET_TOKENS.button}
               onClick={handleReset}
             >
               {tc('actions.reset')}
@@ -330,12 +335,13 @@ export default function AuditLogsContent({ initialData }: AuditLogsContentProps)
       </div>
 
       {/* ── 타임라인 피드 ────────────────────────────────────────── */}
-      <div className="rounded-xl border border-brand-border-subtle bg-brand-bg-surface p-4">
+      <div className={AUDIT_TIMELINE_TOKENS.container}>
         <AuditTimelineFeed
           logs={logs}
           onLogClick={handleRowClick}
           getActionLabel={getActionLabel}
           getEntityTypeLabel={getEntityTypeLabel}
+          isRefetching={isRefetching}
         />
       </div>
 
