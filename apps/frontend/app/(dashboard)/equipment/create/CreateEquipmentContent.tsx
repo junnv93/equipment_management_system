@@ -150,7 +150,7 @@ export default function CreateEquipmentContent({ userDefaults }: CreateEquipment
   };
 
   return (
-    <div className={`${getPageContainerClasses()} max-w-5xl`}>
+    <div className={getPageContainerClasses('wide')}>
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

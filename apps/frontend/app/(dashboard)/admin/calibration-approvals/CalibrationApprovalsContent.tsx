@@ -46,7 +46,8 @@ import {
   APPROVAL_STATUS_LABELS as STATUS_LABELS,
   APPROVAL_STATUS_COLORS as STATUS_COLORS,
 } from '@/components/admin/approval-constants';
-import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses, APPROVAL_CARD_BORDER_TOKENS } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 export default function CalibrationApprovalsContent() {
   const _router = useRouter();
@@ -177,10 +178,7 @@ export default function CalibrationApprovalsContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div className={PAGE_HEADER_TOKENS.titleGroup}>
-        <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>
-      </div>
+      <PageHeader title={t('title')} subtitle={t('description')} />
 
       <Card>
         <CardHeader>
@@ -195,7 +193,7 @@ export default function CalibrationApprovalsContent() {
           ) : (
             <div className="space-y-4">
               {pendingRequests.map((request) => (
-                <Card key={request.id} className="border-l-4 border-l-brand-warning">
+                <Card key={request.id} className={APPROVAL_CARD_BORDER_TOKENS.pending}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">

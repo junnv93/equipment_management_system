@@ -13,8 +13,8 @@ import {
   ncStatusToSemantic,
   NC_APPROVE_BUTTON_TOKENS,
   getPageContainerClasses,
-  PAGE_HEADER_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { queryKeys, QUERY_CONFIG } from '@/lib/api/query-config';
 import { getErrorMessage } from '@/lib/api/error';
 import { useToast } from '@/components/ui/use-toast';
@@ -126,7 +126,7 @@ export default function NonConformanceApprovalsContent() {
 
   if (isError) {
     return (
-      <div className={getPageContainerClasses('list', '')}>
+      <div className={getPageContainerClasses()}>
         <Card className="p-6 bg-destructive/10 border-destructive/20 dark:bg-destructive/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -149,17 +149,12 @@ export default function NonConformanceApprovalsContent() {
   }
 
   return (
-    <div className={getPageContainerClasses('list', '')}>
+    <div className={getPageContainerClasses()}>
       {/* 헤더 */}
-      <div className={`${PAGE_HEADER_TOKENS.titleGroup} mb-6`}>
-        <h1 className={PAGE_HEADER_TOKENS.title}>{t('approvals.title')}</h1>
-        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('approvals.description')}</p>
-      </div>
+      <PageHeader title={t('approvals.title')} subtitle={t('approvals.description')} />
 
       {/* 안내 메시지 — border-l-4 notice 패턴 (info 위계 강조) */}
-      <div
-        className={`mb-6 border-l-4 p-4 rounded-r-md ${getSemanticContainerColorClasses('info')}`}
-      >
+      <div className={`border-l-4 p-4 rounded-r-md ${getSemanticContainerColorClasses('info')}`}>
         <div className="flex items-start gap-3">
           <AlertTriangle
             className="h-4 w-4 text-brand-info flex-shrink-0 mt-0.5"

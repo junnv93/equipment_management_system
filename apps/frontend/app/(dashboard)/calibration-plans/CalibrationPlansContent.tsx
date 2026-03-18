@@ -1,7 +1,6 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,6 @@ import {
   FileText,
   Calendar,
   Building2,
-  Eye,
   Users,
   ClipboardList,
   ChevronLeft,
@@ -74,7 +72,6 @@ export default function CalibrationPlansContent({
   initialData,
   initialFilters,
 }: CalibrationPlansContentProps) {
-  const router = useRouter();
   const currentYear = new Date().getFullYear();
   const { data: session } = useSession();
   const t = useTranslations('calibration');
@@ -176,7 +173,7 @@ export default function CalibrationPlansContent({
   ];
 
   return (
-    <div className={getPageContainerClasses('list', 'space-y-4')}>
+    <div className={getPageContainerClasses()}>
       {/* ── 헤더 ──────────────────────────────────────────────── */}
       <div className={CALIBRATION_PLAN_HEADER_TOKENS.container}>
         <div className={PAGE_HEADER_TOKENS.titleGroup}>
@@ -195,41 +192,51 @@ export default function CalibrationPlansContent({
 
       {/* ── KPI 스트립 ──────────────────────────────────────────── */}
       <div className={CALIBRATION_PLAN_KPI_TOKENS.container}>
-        {kpiItems.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            className={cn(
-              CALIBRATION_PLAN_KPI_TOKENS.card.base,
-              CALIBRATION_PLAN_KPI_TOKENS.card.hover,
-              CALIBRATION_PLAN_KPI_TOKENS.card.focus,
-              CALIBRATION_PLAN_KPI_TOKENS.borderColors[item.variant],
-              item.filterStatus && CALIBRATION_PLAN_KPI_TOKENS.card.clickable,
-              filters.status === (item.filterStatus ?? '') &&
-                CALIBRATION_PLAN_KPI_TOKENS.card.active
-            )}
-            onClick={() => {
-              if (item.filterStatus) {
-                updateStatus(filters.status === item.filterStatus ? '' : item.filterStatus);
-              } else {
-                updateStatus('');
+        {kpiItems.map((item) => {
+          const isClickable = !!item.filterStatus;
+          const isActive = filters.status === (item.filterStatus ?? '');
+          const cardClasses = cn(
+            CALIBRATION_PLAN_KPI_TOKENS.card.base,
+            CALIBRATION_PLAN_KPI_TOKENS.borderColors[item.variant],
+            isClickable && CALIBRATION_PLAN_KPI_TOKENS.card.hover,
+            isClickable && CALIBRATION_PLAN_KPI_TOKENS.card.focus,
+            isClickable && CALIBRATION_PLAN_KPI_TOKENS.card.clickable,
+            isActive && CALIBRATION_PLAN_KPI_TOKENS.card.active
+          );
+          const content = (
+            <>
+              <div
+                className={cn(
+                  CALIBRATION_PLAN_KPI_TOKENS.iconContainer,
+                  CALIBRATION_PLAN_KPI_TOKENS.iconBg[item.variant]
+                )}
+              >
+                <ClipboardList className="h-4 w-4" />
+              </div>
+              <div>
+                <div className={CALIBRATION_PLAN_KPI_TOKENS.value}>{item.count}</div>
+                <div className={CALIBRATION_PLAN_KPI_TOKENS.label}>{item.label}</div>
+              </div>
+            </>
+          );
+
+          return isClickable ? (
+            <button
+              key={item.key}
+              type="button"
+              className={cardClasses}
+              onClick={() =>
+                updateStatus(filters.status === item.filterStatus ? '' : item.filterStatus!)
               }
-            }}
-          >
-            <div
-              className={cn(
-                CALIBRATION_PLAN_KPI_TOKENS.iconContainer,
-                CALIBRATION_PLAN_KPI_TOKENS.iconBg[item.variant]
-              )}
             >
-              <ClipboardList className="h-4 w-4" />
+              {content}
+            </button>
+          ) : (
+            <div key={item.key} className={cardClasses}>
+              {content}
             </div>
-            <div>
-              <div className={CALIBRATION_PLAN_KPI_TOKENS.value}>{item.count}</div>
-              <div className={CALIBRATION_PLAN_KPI_TOKENS.label}>{item.label}</div>
-            </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── 필터 바 ──────────────────────────────────────────── */}

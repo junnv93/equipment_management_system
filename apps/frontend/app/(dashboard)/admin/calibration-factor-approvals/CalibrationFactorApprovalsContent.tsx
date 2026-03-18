@@ -30,7 +30,8 @@ import calibrationFactorsApi, {
 import { queryKeys } from '@/lib/api/query-config';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, Calculator, Calendar } from 'lucide-react';
-import { getPageContainerClasses, PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { getPageContainerClasses, APPROVAL_CARD_BORDER_TOKENS } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 export default function CalibrationFactorApprovalsContent() {
   const { toast } = useToast();
@@ -183,10 +184,7 @@ export default function CalibrationFactorApprovalsContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div className={PAGE_HEADER_TOKENS.titleGroup}>
-        <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
-        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>
-      </div>
+      <PageHeader title={t('title')} subtitle={t('description')} />
 
       <Card>
         <CardHeader>
@@ -201,7 +199,7 @@ export default function CalibrationFactorApprovalsContent() {
           ) : (
             <div className="space-y-4">
               {pendingFactors.map((factor) => (
-                <Card key={factor.id} className="border-l-4 border-l-yellow-500">
+                <Card key={factor.id} className={APPROVAL_CARD_BORDER_TOKENS.pending}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">

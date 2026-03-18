@@ -109,7 +109,7 @@ export default function ApprovalsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   return (
-    <div className={getPageContainerClasses('list', '')}>
+    <div className={getPageContainerClasses()}>
       {/* Dynamic Hole: 헤더(i18n) + 세션 체크 + 승인 클라이언트 */}
       <Suspense fallback={<ApprovalsLoadingFallback />}>
         <ApprovalsContentAsync searchParamsPromise={props.searchParams} />
@@ -146,7 +146,7 @@ async function ApprovalsContentAsync({
 
   return (
     <>
-      <div className={`${PAGE_HEADER_TOKENS.titleGroup} mb-6`}>
+      <div className={PAGE_HEADER_TOKENS.titleGroup}>
         <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
         <p className={PAGE_HEADER_TOKENS.subtitle}>{t('subtitle')}</p>
       </div>

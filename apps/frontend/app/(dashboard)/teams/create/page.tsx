@@ -1,13 +1,11 @@
 import { Suspense } from 'react';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { TeamForm } from '@/components/teams/TeamForm';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * 팀 등록 페이지 (Server Component)
@@ -37,17 +35,12 @@ async function CreateTeamContentAsync() {
   return (
     <>
       {/* 헤더 */}
-      <div className={SUB_PAGE_HEADER_TOKENS.container}>
-        <Button variant="outline" size="icon" asChild>
-          <Link href="/teams" aria-label={t('create.backToList')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className={SUB_PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('create.title')}</h1>
-          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{t('create.description')}</p>
-        </div>
-      </div>
+      <PageHeader
+        title={t('create.title')}
+        subtitle={t('create.description')}
+        backUrl="/teams"
+        backLabel={t('create.backToList')}
+      />
 
       {/* 폼 */}
       <TeamForm mode="create" />

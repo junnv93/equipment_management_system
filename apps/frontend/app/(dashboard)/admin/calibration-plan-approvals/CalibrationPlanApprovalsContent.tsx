@@ -31,8 +31,9 @@ import { useTranslations } from 'next-intl';
 import {
   CALIBRATION_PLAN_STATUS_BADGE_COLORS,
   getPageContainerClasses,
-  PAGE_HEADER_TOKENS,
+  APPROVAL_CARD_BORDER_TOKENS,
 } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
 
 export default function CalibrationPlanApprovalsContent() {
   const router = useRouter();
@@ -156,10 +157,7 @@ export default function CalibrationPlanApprovalsContent() {
 
   return (
     <div className={getPageContainerClasses()}>
-      <div className={PAGE_HEADER_TOKENS.titleGroup}>
-        <h1 className={PAGE_HEADER_TOKENS.title}>{t('planApprovals.title')}</h1>
-        <p className={PAGE_HEADER_TOKENS.subtitle}>{t('planApprovals.description')}</p>
-      </div>
+      <PageHeader title={t('planApprovals.title')} subtitle={t('planApprovals.description')} />
 
       <Card>
         <CardHeader>
@@ -174,7 +172,7 @@ export default function CalibrationPlanApprovalsContent() {
           ) : (
             <div className="space-y-4">
               {pendingPlans.map((plan: CalibrationPlan) => (
-                <Card key={plan.id} className="border-l-4 border-l-yellow-500">
+                <Card key={plan.id} className={APPROVAL_CARD_BORDER_TOKENS.pending}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 space-y-4">

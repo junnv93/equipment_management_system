@@ -208,9 +208,9 @@ export default function CheckoutsContent({
   };
 
   return (
-    <div className={getPageContainerClasses('list', '')}>
+    <div className={getPageContainerClasses()}>
       {/* ── 헤더 ── */}
-      <div className={`${PAGE_HEADER_TOKENS.container} mb-5`}>
+      <div className={PAGE_HEADER_TOKENS.container}>
         <div className={PAGE_HEADER_TOKENS.titleGroup}>
           <h1 className={PAGE_HEADER_TOKENS.title}>{t('title')}</h1>
           <p className={PAGE_HEADER_TOKENS.subtitle}>{t('description')}</p>

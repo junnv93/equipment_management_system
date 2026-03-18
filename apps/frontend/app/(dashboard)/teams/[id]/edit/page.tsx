@@ -1,13 +1,11 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getTranslations } from 'next-intl/server';
-import { getPageContainerClasses, SUB_PAGE_HEADER_TOKENS } from '@/lib/design-tokens';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { getPageContainerClasses } from '@/lib/design-tokens';
 
 /**
  * Next.js 16 PageProps 타입
@@ -51,17 +49,12 @@ async function EditTeamContentAsync({ paramsPromise }: { paramsPromise: Promise<
   return (
     <>
       {/* 헤더 */}
-      <div className={SUB_PAGE_HEADER_TOKENS.container}>
-        <Button variant="outline" size="icon" asChild>
-          <Link href={`/teams/${id}`} aria-label={t('edit.backToDetail')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <div className={SUB_PAGE_HEADER_TOKENS.titleGroup}>
-          <h1 className={SUB_PAGE_HEADER_TOKENS.title}>{t('edit.title')}</h1>
-          <p className={SUB_PAGE_HEADER_TOKENS.subtitle}>{t('edit.description')}</p>
-        </div>
-      </div>
+      <PageHeader
+        title={t('edit.title')}
+        subtitle={t('edit.description')}
+        backUrl={`/teams/${id}`}
+        backLabel={t('edit.backToDetail')}
+      />
 
       {/* 폼 (Client Component) */}
       <EditTeamFormWrapper teamId={id} />

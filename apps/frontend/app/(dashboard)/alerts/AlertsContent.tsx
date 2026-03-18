@@ -120,8 +120,8 @@ export default function AlertsContent() {
     if (isLoading) {
       return (
         <div className="flex items-center justify-center py-8 text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin mr-2" />
-          <span>로딩 중...</span>
+          <Loader2 className="h-6 w-6 motion-safe:animate-spin mr-2" />
+          <span>{t('loading')}</span>
         </div>
       );
     }
@@ -179,7 +179,7 @@ export default function AlertsContent() {
                       >
                         {notification.entityType === 'equipment'
                           ? t('viewEquipment', { name: notification.title })
-                          : '상세 보기'}
+                          : t('viewDetail')}
                       </Link>
                     </div>
                   )}
